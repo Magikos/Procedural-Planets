@@ -14,8 +14,8 @@ public class Planet : MonoBehaviour
 
     TerrainChunk[] rootChunks; // Now a field
 
-    ShapeGenerator shapeGenerator;
-    ColorGenerator colorGenerator;
+    public ShapeGenerator shapeGenerator { get; private set; }
+    public ColorGenerator colorGenerator { get; private set; }
 
     void Initialize()
     {
@@ -23,6 +23,12 @@ public class Planet : MonoBehaviour
 
         shapeGenerator = new ShapeGenerator(shapeSettings);
         colorGenerator = new ColorGenerator(colorSettings, shapeGenerator);
+
+        // Initialize colors
+        if (colorGenerator != null)
+        {
+            colorGenerator.UpdateColors();
+        }
 
         rootChunks = new TerrainChunk[6];
         Vector3[] directions = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
