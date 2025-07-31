@@ -1,48 +1,76 @@
 # Procedural Planets Project Description
 
 ## Overview
+
 This project is a Unity 6 implementation of a procedural planet generator, inspired by Sebastian Lague's "Procedural Planets" tutorial series (GitHub: https://github.com/SebLague/Procedural-Planets, ~2018-2019). The goal is to create a scalable, performant planet with procedural terrain, biomes, and a character controller for a 1.8m-tall character to walk on the surface, feeling like a true planetary environment. The project modernizes the original with Unity 6 features (e.g., URP, Jobs) and adds spherical gravity, not present in the original.
 
-## Current State
-- **Base Planet**: Implemented a cube-sphere (6 faces projected to a sphere) using C# scripts (Planet.cs, TerrainFace.cs, ShapeSettings.cs, Noise.cs, ColorSettings.cs).
-  - Planet radius: ~1000 units (1km), adjustable for "planetary" scale.
-  - Terrain: Generated with simplex and ridged noise, but currently produces spiky, unrealistic features (needs tuning for hills, valleys, mountains, oceans).
-  - Colors: Basic biome system (3 biomes: ocean, plains, mountains), but stuck on blue, likely due to narrow elevation range or normalization issues in heightPercent.
-- **LOD (Level of Detail)**: Implemented quadtree-based LOD for each face (TerrainChunk.cs, LODSettings.cs).
-  - Chunks subdivide based on camera distance (high res near, low far).
-  - Issue: All chunks initially disabled (SetVisible(true) fixed, but needs testing).
-- **Gravity and Character**: Added spherical gravity (GravityAttractor.cs, GravityBody.cs) and a basic walking controller (PlanetWalker.cs).
-  - Gravity pulls to planet center, aligns character to surface normal.
-  - Character (1.8m) can walk/jump, but needs testing with fixed LOD/terrain.
-- **Assets**: ShapeSettings (noise config), ColorSettings (biomes), LODSettings (LOD config).
-- **Issues**:
-  - Noise produces spiky terrain, not realistic hills/valleys/mountains.
-  - Colors stuck on blue (likely elevation normalization in UpdateColors).
-  - LOD chunks may not display correctly (visibility bug).
-  - Performance not optimized yet (no Jobs/Burst for noise/mesh).
+## Project Plan
 
-## Project Goals
-1. **Realistic Terrain**:
-   - Refine noise (Noise.cs, ShapeSettings.cs) for broad hills (~50-100m), valleys/oceans (-50m), and smooth mountains (~100-200m).
-   - Use multiple layers: simple for base, ridged for peaks, optional for details.
-   - Target: Visually appealing, varied landscape at radius=1000-5000 units.
-2. **Biome Colors**:
+This project is a fresh start for a procedural planet generator in Unity 6, inspired by modern best practices and leveraging Unity's latest features (URP, Jobs, Burst, etc.). The goal is to create a scalable, performant, and visually appealing planet with procedural terrain, biomes, and a character controller for planetary exploration.
+
+### Phase 1: Core Planet Generation
+
+- Implement a cube-sphere mesh (6 faces projected to a sphere) for the planet base.
+- Create a flexible noise system for terrain elevation (supporting multiple noise layers: base, ridged, detail).
+- Expose planet radius and noise parameters for easy tuning.
+
+### Phase 2: Terrain and Biomes
+
+- Design a system for realistic terrain: broad hills, valleys/oceans, smooth mountains.
+- Implement a biome system (e.g., ocean, plains, mountains) with color gradients based on elevation and position.
+- Ensure proper normalization of elevation for accurate biome/color mapping.
+
+### Phase 3: Level of Detail (LOD)
+
+- Implement quadtree-based LOD for each planet face to optimize mesh detail based on camera distance.
+- Ensure seamless transitions between LOD levels.
+- Optimize mesh generation using Unity Jobs/Burst for performance.
+
+### Phase 4: Gravity and Character Controller
+
+- Add spherical gravity so objects/characters are attracted to the planet center.
+- Implement a character controller that walks/jumps on the planet surface, aligned to the local normal.
+- Ensure stable collision and smooth movement on procedural terrain.
+
+### Phase 5: Polish and Optimization
+
+- Refine noise and biome settings for visually appealing results at various planet scales (radius 1000-5000 units).
+- Profile and optimize performance (Jobs, Burst, mesh updates).
+- Add optional features: atmosphere, water, clouds, vegetation scattering.
+
+### Stretch Goals
+
+- Support for runtime planet generation and editing.
+- Advanced biome blending and climate simulation.
+- Integration with Unity's DOTS for massive scalability.
+
+---
+
+**Next Steps:**
+
+1. Set up Unity 6 project with URP.
+2. Implement basic cube-sphere mesh and noise-based terrain.
+3. Add simple biome coloring and test elevation normalization.
+4. Develop LOD system and test with large planet radii.
+5. Add spherical gravity and character controller for surface exploration.
+6. Iterate on noise, biomes, and performance optimizations.
    - Fix biome coloring (ColorSettings.cs, TerrainChunk.cs) to show blue oceans, green plains, brown/white mountains.
    - Ensure heightPercent spans 0-1, reflecting elevation range.
-3. **Performant LOD**:
+7. **Performant LOD**:
    - Ensure quadtree LOD works: high res (e.g., 241) near camera, low res (e.g., 10) far away.
    - Use Unity Jobs for async mesh generation.
    - Test with large radius (1000-5000) without lag.
-4. **Character Walking**:
+8. **Character Walking**:
    - 1.8m character walks/jumps on surface, aligned to spherical gravity.
    - Stable collision with procedural terrain (using CharacterController or Rigidbody).
    - Target: Seamless exploration on a large planet.
-5. **Future Enhancements**:
+9. **Future Enhancements**:
    - Add atmosphere, water, clouds (as in later tutorial episodes).
    - Optimize noise with compute shaders/Burst Compiler.
    - Basic vegetation scattering or simple biomes.
 
 ## Current Setup
+
 - **Unity Version**: Unity 6 (latest stable, e.g., 6.0.11f1 or newer).
 - **Render Pipeline**: Universal Render Pipeline (URP) for better lighting/performance.
 - **Scripts**:
@@ -58,6 +86,7 @@ This project is a Unity 6 implementation of a procedural planet generator, inspi
   - LODSettings: maxLOD=5, lodDistances={0,0.8,0.4,0.2,0.1,0.05}.
 
 ## Next Steps
+
 1. **Fix LOD Visibility**:
    - Ensure root chunks and subchunks display (TerrainChunk.cs: SetVisible(true) for leaves).
    - Debug bounds and subdivision logic (UpdateChunk).
@@ -75,6 +104,7 @@ This project is a Unity 6 implementation of a procedural planet generator, inspi
    - Test performance at radius=1000-5000.
 
 ## Notes for Collaborators
+
 - Check console for errors or debug logs (e.g., elevation ranges, chunk visibility).
 - Share screenshots (e.g., via Imgur) of Inspector settings or planet visuals.
 - Current planet radius (1000) is for testing; may scale to 5000 for more "planetary" feel.
