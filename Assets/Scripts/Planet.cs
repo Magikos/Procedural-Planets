@@ -13,6 +13,7 @@ public class Planet : MonoBehaviour
     public Transform viewer; // Assign Main Camera here
 
     TerrainChunk[] rootChunks; // Now a field
+    Coroutine lodUpdateCoroutine; // Track the coroutine for proper cleanup
 
     public ShapeGenerator shapeGenerator { get; private set; }
     public ColorGenerator colorGenerator { get; private set; }
@@ -44,22 +45,47 @@ public class Planet : MonoBehaviour
 
     public void GeneratePlanet()
     {
+        // Stop any existing coroutine
+        if (lodUpdateCoroutine != null)
+        {
+            StopCoroutine(lodUpdateCoroutine);
+        }
+
         Initialize();
+        lodUpdateCoroutine = StartCoroutine(UpdateLODCoroutine());
     }
 
-    void Update()
+    System.Collections.IEnumerator UpdateLODCoroutine()
     {
-        if (rootChunks != null)
+        while (rootChunks != null && viewer != null)
         {
             for (int i = 0; i < rootChunks.Length; i++)
             {
-                rootChunks[i].UpdateChunk();
+                if (rootChunks[i] != null)
+                {
+                    rootChunks[i].UpdateChunk();
+                }
             }
+            // Update LOD every 100ms instead of every frame for better performance
+            yield return new WaitForSeconds(0.1f);
         }
     }
 
     void ClearChildren()
     {
+        // Properly dispose of existing terrain chunks
+        if (rootChunks != null)
+        {
+            for (int i = 0; i < rootChunks.Length; i++)
+            {
+                if (rootChunks[i] != null)
+                {
+                    rootChunks[i].Dispose();
+                }
+            }
+            rootChunks = null;
+        }
+
         // Destroy all existing child GameObjects (face objects)
         for (int i = transform.childCount - 1; i >= 0; i--)
         {
@@ -89,5 +115,14 @@ public class Planet : MonoBehaviour
         {
             GeneratePlanet();
         }
+    }
+
+    void OnDestroy()
+    {
+        if (lodUpdateCoroutine != null)
+        {
+            StopCoroutine(lodUpdateCoroutine);
+        }
+        ClearChildren();
     }
 }

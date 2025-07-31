@@ -66,9 +66,11 @@ public class ColorGenerator
         texture.SetPixels(colors);
         texture.Apply();
 
+        // Note: PlanetVertexColor shader uses vertex colors, not textures
+        // The texture generation is kept for potential future use or other materials
         if (settings?.planetMaterial != null)
         {
-            settings.planetMaterial.SetTexture("_texture", texture);
+            settings.planetMaterial.SetTexture("_MainTex", texture);
         }
     }
 
@@ -111,12 +113,6 @@ public class ColorGenerator
         color2 = Color.Lerp(color2, tint2, biomeSettings.biomes[biome2].tintPercent);
 
         Color finalColor = Color.Lerp(color1, color2, blend);
-
-        // Debug first few calls
-        if (Time.frameCount % 60 == 0) // Log every 60 frames to avoid spam
-        {
-            Debug.Log($"ColorGen: heightPercent={heightPercent:F3}, biomeIndex={biomeIndex:F2}, finalColor={finalColor}");
-        }
 
         return finalColor;
     }

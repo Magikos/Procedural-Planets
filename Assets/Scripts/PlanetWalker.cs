@@ -10,7 +10,11 @@ public class PlanetWalker : MonoBehaviour
     void Awake()
     {
         controller = GetComponent<CharacterController>();
-        planet = FindFirstObjectByType<GravityAttractor>();
+        planet = FindObjectOfType<GravityAttractor>();
+        if (planet == null)
+        {
+            Debug.LogError("No GravityAttractor found on Planet.");
+        }
     }
 
     void Update()
