@@ -97,10 +97,15 @@ public class TerrainChunk
         mesh.Clear();
         mesh.vertices = vertices;
         mesh.triangles = triangles;
-        mesh.colors = colors; // For custom shader
-        mesh.RecalculateNormals();
+        mesh.colors = colors;
 
-        meshRenderer.material = colorGenerator.settings.planetMaterial; // Assign custom shader material
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+
+        Debug.Log($"LOD {lod} elevation range: {minElev:F4} → {maxElev:F4}");
+        Debug.Log($"Mesh.bounds extents: {mesh.bounds.extents}");
+
+        meshRenderer.material = colorGenerator.settings.planetMaterial;
     }
 
     int GetResolutionForLOD(int lod)

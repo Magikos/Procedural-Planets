@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Planet/LODSettings")]
+[CreateAssetMenu(menuName = "Planet/LOD Settings")]
 public class LODSettings : ScriptableObject
 {
     public int maxLOD = 5; // Levels: 0 (lowest res) to max

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Planet/ShapeSettings")]
+[CreateAssetMenu(menuName = "Planet/Shape Settings")]
 public class ShapeSettings : ScriptableObject
 {
     public float planetRadius = 1f;

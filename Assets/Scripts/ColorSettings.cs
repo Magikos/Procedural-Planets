@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Planet/ColorSettings")]
+[CreateAssetMenu(menuName = "Planet/Color Settings")]
 public class ColorSettings : ScriptableObject
 {
     public Material planetMaterial;

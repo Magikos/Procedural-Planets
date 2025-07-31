@@ -61,15 +61,18 @@ public class RidgedNoiseFilter : INoiseFilter
 
     public float Evaluate(Vector3 point)
     {
-        float noiseValue = 0;
+        float noiseValue = 0f;
         float frequency = settings.baseRoughness;
-        float amplitude = 1;
-        float weight = 1;
+        float amplitude = 1f;
+        float weight = 1f;
 
         for (int i = 0; i < settings.numLayers; i++)
         {
-            float v = 1 - Mathf.Abs(Noise.Evaluate(point * frequency + settings.centre));
+            float n = Mathf.Clamp(Noise.Evaluate(point * frequency + settings.centre), -1f, 1f);
+            float v = 1f - Mathf.Abs(n);
+            v = Mathf.Clamp01(v);
             v *= v;
+
             v *= weight;
             weight = Mathf.Clamp01(v * settings.weightMultiplier);
 
@@ -78,7 +81,8 @@ public class RidgedNoiseFilter : INoiseFilter
             amplitude *= settings.persistence;
         }
 
-        noiseValue = Mathf.Max(0, noiseValue - settings.minValue);
+        noiseValue = Mathf.Max(0f, noiseValue - settings.minValue);
         return noiseValue * settings.strength;
     }
+
 }
