@@ -9,6 +9,9 @@ public class Planet : MonoBehaviour
     public ShapeSettings _shapeSettings;
     public ColorSettings _colorSettings;
 
+    [Header("Deterministic Generation")]
+    public int Seed = 12345;
+
     [SerializeField, HideInInspector] public bool ShapeSettingsFoldout = true;
     [SerializeField, HideInInspector] public bool ColorSettingsFoldout = true;
 
@@ -27,7 +30,7 @@ public class Planet : MonoBehaviour
         if (_meshFilters == null || _meshFilters.Length == 0) { _meshFilters = new MeshFilter[6]; }
         _terrainFaces = new TerrainFace[6];
 
-        _shapeGenerator.UpdateSettings(_shapeSettings);
+        _shapeGenerator.UpdateSettings(_shapeSettings, Seed);
         _colorGenerator.UpdateSettings(_colorSettings);
 
         Vector3[] directions = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };

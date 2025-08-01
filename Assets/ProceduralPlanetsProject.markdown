@@ -73,40 +73,81 @@ This project is a fresh start for a procedural planet generator in Unity 6, insp
 
 - **Unity Version**: Unity 6 (latest stable, e.g., 6.0.11f1 or newer).
 - **Render Pipeline**: Universal Render Pipeline (URP) for better lighting/performance.
-- **Scripts**:
-  - Planet.cs: Manages 6 root chunks, initializes ShapeGenerator, ColorGenerator.
-  - TerrainChunk.cs: Handles quadtree LOD, mesh generation per chunk.
-  - ShapeGenerator.cs, NoiseFilterFactory.cs: Compute elevations via noise.
-  - ColorGenerator.cs: Stub for biome colors (needs fixing).
-  - GravityAttractor.cs, GravityBody.cs, PlanetWalker.cs: Spherical gravity and character movement.
-  - ShapeSettings.cs, ColorSettings.cs, LODSettings.cs: Config assets.
-- **Settings** (example, to be tuned):
-  - ShapeSettings: radius=1000, noise layers (simple: strength=0.08, numLayers=6, baseRoughness=0.5; ridged: strength=0.15, baseRoughness=1.5).
-  - ColorSettings: 3 biomes (ocean: startHeight=0, plains: 0.2, mountains: 0.5).
-  - LODSettings: maxLOD=5, lodDistances={0,0.8,0.4,0.2,0.1,0.05}.
 
-## Next Steps
+## Project Plan & Goals
 
-1. **Fix LOD Visibility**:
-   - Ensure root chunks and subchunks display (TerrainChunk.cs: SetVisible(true) for leaves).
-   - Debug bounds and subdivision logic (UpdateChunk).
-2. **Test Gravity/Character**:
-   - Verify player falls to surface, walks/jumps, aligns to normals.
-   - Fix PlanetWalker.cs planet reference (via FindObjectOfType or public field).
-3. **Refine Noise**:
-   - Adjust noise layers for realistic terrain (broad hills, smooth mountains, deep valleys).
-   - Add debug logs for elevationMin/Max, heightPercent.
-4. **Fix Colors**:
-   - Ensure biome gradients apply correctly (blue lows, green mids, brown/white highs).
-   - Fix normalization in TerrainChunk.UpdateColors.
-5. **Optimize**:
-   - Use Jobs/Burst for noise/mesh generation.
-   - Test performance at radius=1000-5000.
+This project aims to create a scalable, performant procedural planet in Unity 6, featuring:
 
-## Notes for Collaborators
+### 1. Core Planet Generation
 
-- Check console for errors or debug logs (e.g., elevation ranges, chunk visibility).
-- Share screenshots (e.g., via Imgur) of Inspector settings or planet visuals.
-- Current planet radius (1000) is for testing; may scale to 5000 for more "planetary" feel.
-- Focus on LOD and gravity functionality before noise/color polish.
-- Use American English spelling (e.g., "color", not "colour").
+- Cube-sphere mesh for the planet base
+- Flexible, multi-layered noise system for terrain
+- Exposed parameters for easy tuning
+
+### 2. Biomes & Color Gradients
+
+- Biome system (ocean, sand, grass, forest, mountain, etc.)
+- Color gradients based on elevation and position
+- Accurate normalization for biome/color mapping
+
+### 3. Object Spawning (Vegetation, Rocks, etc.)
+
+- Use Poisson-disc sampling for natural, non-overlapping placement
+- For each spawn point:
+  - Project to planet surface (from 2D to 3D)
+  - Sample elevation/biome at that location
+  - Select asset list based on biome (e.g., palm trees for sand, pines for mountains)
+  - Instantiate and align prefab to surface normal
+
+### 4. Level of Detail (LOD) & Culling
+
+- Quadtree-based LOD for planet mesh and spawned objects
+- High detail near player, low detail at distance
+- Cull objects on the far side of the planet
+
+### 5. Performance Optimization
+
+- Profile and optimize Poisson-disc and mesh generation
+- Convert to Unity Jobs/Burst for large-scale performance
+
+### 6. Gravity & Character Controller
+
+- Spherical gravity (attract to planet center)
+- Character controller for walking/jumping on surface
+- Stable collision and smooth movement
+
+### 7. Stretch Goals
+
+- Runtime planet generation/editing
+- Advanced biome blending and climate simulation
+- DOTS integration for massive scalability
+
+---
+
+**Next Steps:**
+
+1. Implement object spawning on the planet surface with biome-based asset selection
+2. Validate placement and biome logic visually
+3. Profile and optimize Poisson-disc generation (convert to Burst/Jobs if needed)
+4. Integrate with LOD/culling system for performance
+5. Continue with polish, optimization, and stretch goals
+
+## Deterministic Generation (Seed Support)
+
+To ensure that the same planet, terrain, and object placements can be recreated every time, all procedural systems (terrain, biomes, object spawning, etc.) will use a seed-based random number generator. This seed will be stored in project settings or as a field in the main planet/manager script, and passed to all systems that require randomness. Using the same seed will always produce the same results, which is essential for sharing, debugging, and multiplayer consistency.
+
+## Task List
+
+- [ ] Add a seed field to the main planet/manager script and propagate it to all procedural systems
+- [ ] Refactor Poisson-disc sampling and noise/biome generation to use a deterministic random number generator (e.g., System.Random or Unity.Mathematics.Random)
+- [ ] Implement cube-sphere mesh generation for the planet
+- [ ] Implement multi-layered noise system for terrain elevation
+- [ ] Implement biome/color gradient system based on elevation and position
+- [ ] Implement object spawning using Poisson-disc sampling, projected to the planet surface
+- [ ] Sample biome/elevation at each spawn point and select assets accordingly
+- [ ] Instantiate and align prefabs to the planet surface normal
+- [ ] Implement quadtree-based LOD for planet mesh and spawned objects
+- [ ] Implement culling for distant/hidden objects
+- [ ] Add spherical gravity and character controller for surface exploration
+- [ ] Profile and optimize performance; convert to Jobs/Burst as needed
+- [ ] Add polish, optional features, and stretch goals (atmosphere, water, runtime editing, etc.)

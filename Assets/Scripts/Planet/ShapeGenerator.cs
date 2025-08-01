@@ -5,14 +5,16 @@ public class ShapeGenerator
     ShapeSettings _shapeSettings;
     INoiseFilter[] _noiseFilters;
     public MinMax _elevationMinMax = new MinMax();
+    int _seed;
 
-    public void UpdateSettings(ShapeSettings shapeSettings)
+    public void UpdateSettings(ShapeSettings shapeSettings, int seed)
     {
         _shapeSettings = shapeSettings;
+        _seed = seed;
         _noiseFilters = new INoiseFilter[_shapeSettings.NoiseLayers.Length];
         for (int i = 0; i < _noiseFilters.Length; i++)
         {
-            _noiseFilters[i] = NoiseFilterFactory.CreateNoiseFilter(_shapeSettings.NoiseLayers[i].NoiseSettings);
+            _noiseFilters[i] = NoiseFilterFactory.CreateNoiseFilter(_shapeSettings.NoiseLayers[i].NoiseSettings, _seed + i);
         }
     }
 

@@ -2,12 +2,13 @@ using UnityEngine;
 
 public class SimpleNoiseFilter : INoiseFilter
 {
-    protected Noise _noise = new Noise();
+    protected Noise _noise;
     protected NoiseSettings _noiseSettings;
 
-    public SimpleNoiseFilter(NoiseSettings noiseSettings)
+    public SimpleNoiseFilter(NoiseSettings noiseSettings, int seed = 0)
     {
         _noiseSettings = noiseSettings;
+        _noise = new Noise(seed);
     }
 
     public virtual float Evaluate(Vector3 point)

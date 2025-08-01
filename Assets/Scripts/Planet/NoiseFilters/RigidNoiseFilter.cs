@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class RigidNoiseFilter : SimpleNoiseFilter
 {
-    public RigidNoiseFilter(NoiseSettings noiseSettings) : base(noiseSettings) { }
+    public RigidNoiseFilter(NoiseSettings noiseSettings, int seed = 0) : base(noiseSettings, seed) { }
 
     public override float Evaluate(Vector3 point)
     {
