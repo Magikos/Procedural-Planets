@@ -1,0 +1,16 @@
+{
+    "name": "ProceduralPlanets.Planet",
+    "rootNamespace": "",
+    "references": [
+        "ProceduralPlanets.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

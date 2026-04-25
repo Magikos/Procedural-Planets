@@ -1,0 +1,19 @@
+{
+    "name": "ProceduralPlanets.Editor",
+    "rootNamespace": "",
+    "references": [
+        "ProceduralPlanets.Core",
+        "ProceduralPlanets.Planet"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
