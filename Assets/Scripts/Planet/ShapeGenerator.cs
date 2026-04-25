@@ -4,13 +4,15 @@ public class ShapeGenerator
 {
     ShapeSettings _shapeSettings;
     INoiseFilter[] _noiseFilters;
-    public MinMax _elevationMinMax = new MinMax();
     int _seed;
+
+    public MinMax ElevationMinMax { get; private set; } = new MinMax();
 
     public void UpdateSettings(ShapeSettings shapeSettings, int seed)
     {
         _shapeSettings = shapeSettings;
         _seed = seed;
+        ElevationMinMax = new MinMax();
         _noiseFilters = new INoiseFilter[_shapeSettings.NoiseLayers.Length];
         for (int i = 0; i < _noiseFilters.Length; i++)
         {
@@ -36,7 +38,7 @@ public class ShapeGenerator
             elevation += _noiseFilters[i].Evaluate(pointOnUnitSphere) * mask;
         }
 
-        _elevationMinMax.AddValue(elevation);
+        ElevationMinMax.AddValue(elevation);
         return elevation;
     }
 
@@ -46,5 +48,4 @@ public class ShapeGenerator
         elevation = _shapeSettings.PlanetRadius * (1 + elevation);
         return elevation;
     }
-
 }

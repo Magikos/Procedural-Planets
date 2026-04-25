@@ -8,16 +8,16 @@ public class Test : MonoBehaviour
     [SerializeField] private float displayRadius = 1f;
     [SerializeField] private Vector2 sampleRegionSize = new Vector2(10f, 10f);
     [SerializeField] private int maxAttempts = 30;
+    [SerializeField] private int seed = 12345;
     private List<Vector2> _points;
 
     private void OnValidate()
     {
-        _points = PoissonDiscSampling.GeneratePoints(radius, sampleRegionSize, maxAttempts);
+        _points = PoissonDiscSampling.GeneratePoints(radius, sampleRegionSize, maxAttempts, seed);
     }
 
     private void OnDrawGizmos()
     {
-        // Draw rectangle outline
         Draw.LineGeometry = LineGeometry.Flat2D;
         Draw.Thickness = 0.1f;
         Draw.Color = Color.white;

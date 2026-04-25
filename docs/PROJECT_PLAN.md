@@ -16,6 +16,7 @@ A planetary survival/exploration game built in Unity 6. Players explore a proced
 ## Phase Documents
 - [00 — Architecture Decisions](phases/00-architecture.md)
 - [00 — Code Architecture: Interfaces, Services & Patterns](phases/00-code-architecture.md)
+- [00 — Cross-Cutting Concerns: Logging, Events, Pooling, Coordinates](phases/00-cross-cutting.md)
 - [01 — Code Quality Fixes](phases/01-code-quality-fixes.md)
 - [02 — Phase 3: Foundation & Architecture](phases/02-phase3-foundation.md)
 - [03 — Phase 4: Enhanced Biome System](phases/03-phase4-biomes.md)

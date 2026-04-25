@@ -2,9 +2,12 @@ using UnityEngine;
 
 public class Planet : MonoBehaviour
 {
+    public enum FaceRenderMask { All, Top, Bottom, Left, Right, Front, Back }
+
     [Range(2, 256)]
-    public int _resolution = 10;
+    public int Resolution = 10;
     public bool AutoUpdate = true;
+    public FaceRenderMask RenderMask = FaceRenderMask.All;
 
     public ShapeSettings _shapeSettings;
     public ColorSettings _colorSettings;
@@ -49,12 +52,21 @@ public class Planet : MonoBehaviour
             }
 
             _meshFilters[i].GetComponent<MeshRenderer>().sharedMaterial = _colorSettings.PlanetMaterial;
-            _terrainFaces[i] = new TerrainFace(_shapeGenerator, _meshFilters[i].sharedMesh, _resolution, directions[i]);
+            _terrainFaces[i] = new TerrainFace(_shapeGenerator, _meshFilters[i].sharedMesh, Resolution, directions[i]);
+
+            bool renderFace = RenderMask == FaceRenderMask.All || (int)RenderMask - 1 == i;
+            _meshFilters[i].gameObject.SetActive(renderFace);
         }
     }
 
     public void GeneratePlanet()
     {
+        if (_shapeSettings == null || _colorSettings == null)
+        {
+            Debug.LogWarning("Planet: ShapeSettings or ColorSettings is not assigned.");
+            return;
+        }
+
         Initialize();
         GenerateMesh();
         GenerateColors();
@@ -63,6 +75,7 @@ public class Planet : MonoBehaviour
     public void OnShapeSettingsChanged()
     {
         if (!AutoUpdate) return;
+        if (_shapeSettings == null || _colorSettings == null) return;
 
         Initialize();
         GenerateMesh();
@@ -71,6 +84,7 @@ public class Planet : MonoBehaviour
     public void OnColorSettingsChanged()
     {
         if (!AutoUpdate) return;
+        if (_shapeSettings == null || _colorSettings == null) return;
 
         Initialize();
         GenerateColors();
@@ -83,7 +97,7 @@ public class Planet : MonoBehaviour
             terrainFace.ConstructMesh();
         }
 
-        _colorGenerator.UpdateElevation(_shapeGenerator._elevationMinMax);
+        _colorGenerator.UpdateElevation(_shapeGenerator.ElevationMinMax);
     }
 
     void GenerateColors()
