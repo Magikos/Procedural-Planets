@@ -8,12 +8,12 @@ public class TerrainFace
     Vector3 _axisA;
     Vector3 _axisB;
 
-    ShapeGenerator _shapeGenerator;
+    ITerrainProvider _terrainProvider;
     Vector3[] _unitSpherePoints;
 
-    public TerrainFace(ShapeGenerator shapeGenerator, Mesh mesh, int resolution, Vector3 localUp)
+    public TerrainFace(ITerrainProvider terrainProvider, Mesh mesh, int resolution, Vector3 localUp)
     {
-        _shapeGenerator = shapeGenerator;
+        _terrainProvider = terrainProvider;
         _mesh = mesh;
         _resolution = resolution;
         _localUp = localUp;
@@ -41,8 +41,8 @@ public class TerrainFace
                 Vector3 pointOnUnitSphere = pointOnUnitCube.normalized;
                 _unitSpherePoints[i] = pointOnUnitSphere;
 
-                float unscaledElevation = _shapeGenerator.CalculateUnscaledElevation(pointOnUnitSphere);
-                vertices[i] = pointOnUnitSphere * _shapeGenerator.GetScaledElevation(unscaledElevation);
+                float unscaledElevation = _terrainProvider.EvaluateElevation(pointOnUnitSphere);
+                vertices[i] = pointOnUnitSphere * _terrainProvider.GetScaledElevation(unscaledElevation);
                 uvCache[i].y = unscaledElevation;
 
                 if (x < _resolution - 1 && y < _resolution - 1)
@@ -68,12 +68,12 @@ public class TerrainFace
         _mesh.uv = uvCache;
     }
 
-    public void UpdateUVs(ColorGenerator colorGenerator)
+    public void UpdateUVs(IBiomeProvider biomeProvider)
     {
         Vector2[] uv = _mesh.uv;
         for (int i = 0; i < _unitSpherePoints.Length; i++)
         {
-            uv[i].x = colorGenerator.BiomePercentFromPoint(_unitSpherePoints[i]);
+            uv[i].x = biomeProvider.BiomePercentFromPoint(_unitSpherePoints[i]);
         }
 
         _mesh.uv = uv;

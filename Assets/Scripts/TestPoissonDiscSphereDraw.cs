@@ -13,7 +13,7 @@ public class TestPoissonDiscSphereDraw : MonoBehaviour
     public float drawSize = 2f;
     public bool autoUpdate = true;
 
-    private List<PoissonDiscSphereSampling.SpawnLocation> _points;
+    List<PoissonDiscSphereSampling.SpawnLocation> _points;
 
     void OnValidate()
     {
@@ -35,13 +35,12 @@ public class TestPoissonDiscSphereDraw : MonoBehaviour
 
     int BiomeSelector(Vector3 position)
     {
-        // Example: Use y (up) to pick a biome (replace with your own logic)
         float height = position.y;
-        if (height < -0.3f) return 0; // ocean
-        if (height < 0.1f) return 1; // beach/grass
-        if (height < 0.5f) return 2; // forest
-        if (height < 0.8f) return 3; // mountain
-        return 4; // snow
+        if (height < -0.3f) return 0;
+        if (height < 0.1f) return 1;
+        if (height < 0.5f) return 2;
+        if (height < 0.8f) return 3;
+        return 4;
     }
 
     void OnDrawGizmos()
@@ -49,8 +48,8 @@ public class TestPoissonDiscSphereDraw : MonoBehaviour
         if (_points == null || _points.Count == 0) return;
         foreach (var pt in _points)
         {
-            Draw.Color = biomeColors[Mathf.Clamp(pt.biomeIndex, 0, biomeColors.Length - 1)];
-            Draw.Sphere(pt.position, drawSize);
+            Draw.Color = biomeColors[Mathf.Clamp(pt.BiomeIndex, 0, biomeColors.Length - 1)];
+            Draw.Sphere(pt.Position, drawSize);
         }
     }
 }

@@ -5,24 +5,24 @@ public static class PoissonDiscSphereSampling
 {
     public struct SpawnLocation
     {
-        public Vector3 position;
-        public float elevation;
-        public Vector3 normal;
-        public int biomeIndex;
+        public Vector3 Position;
+        public float Elevation;
+        public Vector3 Normal;
+        public int BiomeIndex;
 
         public SpawnLocation(Vector3 position, float elevation, Vector3 normal, int biomeIndex)
         {
-            this.position = position;
-            this.elevation = elevation;
-            this.normal = normal;
-            this.biomeIndex = biomeIndex;
+            Position = position;
+            Elevation = elevation;
+            Normal = normal;
+            BiomeIndex = biomeIndex;
         }
     }
 
     public static List<SpawnLocation> GeneratePoints(
         float minimumSpacing,
         int maxAttempts,
-        ShapeGenerator shapeGenerator,
+        ITerrainProvider terrainProvider,
         int seed,
         System.Func<Vector3, int> biomeSelector = null)
     {
@@ -30,9 +30,9 @@ public static class PoissonDiscSphereSampling
         var spawnPoints = new List<Vector3>();
         var rand = new System.Random(seed);
 
-        // Start with a random point on the sphere
         Vector3 startingDirection = RandomUnitVector(rand);
-        float initialElevation = shapeGenerator.GetScaledElevation(shapeGenerator.CalculateUnscaledElevation(startingDirection));
+        float unscaled = terrainProvider.EvaluateElevation(startingDirection);
+        float initialElevation = terrainProvider.GetScaledElevation(unscaled);
         Vector3 startingSamplePosition = startingDirection * initialElevation;
         int startingBiomeId = biomeSelector != null ? biomeSelector(startingDirection) : 0;
 
@@ -47,13 +47,13 @@ public static class PoissonDiscSphereSampling
             for (int i = 0; i < maxAttempts; i++)
             {
                 Vector3 sampleDirection = RandomUnitVector(rand);
-                float elevation = shapeGenerator.GetScaledElevation(shapeGenerator.CalculateUnscaledElevation(sampleDirection));
-                Vector3 candidate = sampleDirection * elevation;
+                float elev = terrainProvider.GetScaledElevation(terrainProvider.EvaluateElevation(sampleDirection));
+                Vector3 candidate = sampleDirection * elev;
                 int biome = biomeSelector != null ? biomeSelector(sampleDirection) : 0;
 
                 if (IsValid(candidate, minimumSpacing, points))
                 {
-                    points.Add(new SpawnLocation(candidate, elevation, sampleDirection, biome));
+                    points.Add(new SpawnLocation(candidate, elev, sampleDirection, biome));
                     spawnPoints.Add(candidate);
                     candidateAccepted = true;
                     break;
@@ -69,19 +69,18 @@ public static class PoissonDiscSphereSampling
         return points;
     }
 
-    private static bool IsValid(Vector3 candidate, float minDist, List<SpawnLocation> points)
+    static bool IsValid(Vector3 candidate, float minDist, List<SpawnLocation> points)
     {
         foreach (var pt in points)
         {
-            if (Vector3.Distance(candidate, pt.position) < minDist)
+            if (Vector3.Distance(candidate, pt.Position) < minDist)
                 return false;
         }
         return true;
     }
 
-    private static Vector3 RandomUnitVector(System.Random rand)
+    static Vector3 RandomUnitVector(System.Random rand)
     {
-        // Uniformly sample a point on a sphere
         float z = 2f * (float)rand.NextDouble() - 1f;
         float t = 2f * Mathf.PI * (float)rand.NextDouble();
         float r = Mathf.Sqrt(1f - z * z);

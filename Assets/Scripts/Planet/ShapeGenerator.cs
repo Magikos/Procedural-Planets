@@ -1,26 +1,27 @@
 using UnityEngine;
 
-public class ShapeGenerator
+public class ShapeGenerator : ITerrainProvider
 {
     ShapeSettings _shapeSettings;
     INoiseFilter[] _noiseFilters;
     int _seed;
 
-    public MinMax ElevationMinMax { get; private set; } = new MinMax();
+    public MinMax ElevationRange { get; private set; } = new MinMax();
 
-    public void UpdateSettings(ShapeSettings shapeSettings, int seed)
+    public void Initialize(ShapeSettings settings, int seed)
     {
-        _shapeSettings = shapeSettings;
+        _shapeSettings = settings;
         _seed = seed;
-        ElevationMinMax = new MinMax();
+        ElevationRange = new MinMax();
         _noiseFilters = new INoiseFilter[_shapeSettings.NoiseLayers.Length];
         for (int i = 0; i < _noiseFilters.Length; i++)
         {
-            _noiseFilters[i] = NoiseFilterFactory.CreateNoiseFilter(_shapeSettings.NoiseLayers[i].NoiseSettings, _seed + i);
+            _noiseFilters[i] = NoiseFilterFactory.CreateNoiseFilter(
+                _shapeSettings.NoiseLayers[i].NoiseSettings, _seed + i);
         }
     }
 
-    public float CalculateUnscaledElevation(Vector3 pointOnUnitSphere)
+    public float EvaluateElevation(Vector3 pointOnUnitSphere)
     {
         float elevation = 0;
         float firstLayerValue = 0;
@@ -38,7 +39,7 @@ public class ShapeGenerator
             elevation += _noiseFilters[i].Evaluate(pointOnUnitSphere) * mask;
         }
 
-        ElevationMinMax.AddValue(elevation);
+        ElevationRange.AddValue(elevation);
         return elevation;
     }
 
