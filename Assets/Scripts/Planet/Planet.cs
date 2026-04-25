@@ -20,6 +20,8 @@ public class Planet : MonoBehaviour
     TerrainFace[] _terrainFaces;
     [SerializeField, HideInInspector] MeshFilter[] _meshFilters;
 
+    public ShapeGenerator ShapeGenerator => _shapeGenerator;
+
     void OnValidate()
     {
         GeneratePlanet();
