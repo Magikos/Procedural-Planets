@@ -19,9 +19,16 @@ public class PlanetEditor : Editor
             }
         }
 
+        EditorGUILayout.Space();
+
         if (GUILayout.Button("Generate Planet"))
         {
             _planet.GeneratePlanet();
+        }
+
+        if (GUILayout.Button("Generate Planet (Async)"))
+        {
+            _planet.GeneratePlanetAsync();
         }
 
         DrawSettingsEditor(_planet._shapeSettings, _planet.OnShapeSettingsChanged, ref _planet.ShapeSettingsFoldout, ref _shapeSettingsEditor);

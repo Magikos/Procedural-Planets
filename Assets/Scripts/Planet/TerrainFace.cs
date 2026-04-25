@@ -11,6 +11,11 @@ public class TerrainFace
     ITerrainProvider _terrainProvider;
     Vector3[] _unitSpherePoints;
 
+    // Cached results from async generation
+    Vector3[] _pendingVertices;
+    Vector2[] _pendingUVs;
+    int[] _pendingTriangles;
+
     public TerrainFace(ITerrainProvider terrainProvider, Mesh mesh, int resolution, Vector3 localUp)
     {
         _terrainProvider = terrainProvider;
@@ -22,12 +27,12 @@ public class TerrainFace
         _axisB = Vector3.Cross(_localUp, _axisA);
     }
 
-    public void ConstructMesh()
+    public void CalculateMeshData()
     {
         int vertexCount = _resolution * _resolution;
-        Vector3[] vertices = new Vector3[vertexCount];
-        Vector2[] uvCache = (_mesh.uv.Length == vertexCount) ? _mesh.uv : new Vector2[vertexCount];
-        int[] triangles = new int[(_resolution - 1) * (_resolution - 1) * 6];
+        _pendingVertices = new Vector3[vertexCount];
+        _pendingUVs = new Vector2[vertexCount];
+        _pendingTriangles = new int[(_resolution - 1) * (_resolution - 1) * 6];
         _unitSpherePoints = new Vector3[vertexCount];
         int triIndex = 0;
 
@@ -42,40 +47,58 @@ public class TerrainFace
                 _unitSpherePoints[i] = pointOnUnitSphere;
 
                 float unscaledElevation = _terrainProvider.EvaluateElevation(pointOnUnitSphere);
-                vertices[i] = pointOnUnitSphere * _terrainProvider.GetScaledElevation(unscaledElevation);
-                uvCache[i].y = unscaledElevation;
+                _pendingVertices[i] = pointOnUnitSphere * _terrainProvider.GetScaledElevation(unscaledElevation);
+                _pendingUVs[i].y = unscaledElevation;
 
                 if (x < _resolution - 1 && y < _resolution - 1)
                 {
-                    triangles[triIndex] = i;
-                    triangles[triIndex + 1] = i + _resolution + 1;
-                    triangles[triIndex + 2] = i + _resolution;
+                    _pendingTriangles[triIndex] = i;
+                    _pendingTriangles[triIndex + 1] = i + _resolution + 1;
+                    _pendingTriangles[triIndex + 2] = i + _resolution;
 
-                    triangles[triIndex + 3] = i;
-                    triangles[triIndex + 4] = i + 1;
-                    triangles[triIndex + 5] = i + _resolution + 1;
+                    _pendingTriangles[triIndex + 3] = i;
+                    _pendingTriangles[triIndex + 4] = i + 1;
+                    _pendingTriangles[triIndex + 5] = i + _resolution + 1;
 
                     triIndex += 6;
                 }
             }
         }
+    }
 
+    public void ApplyMeshData()
+    {
         _mesh.Clear();
-        _mesh.vertices = vertices;
-        _mesh.triangles = triangles;
+        _mesh.vertices = _pendingVertices;
+        _mesh.triangles = _pendingTriangles;
         _mesh.RecalculateNormals();
         _mesh.RecalculateBounds();
-        _mesh.uv = uvCache;
+        _mesh.uv = _pendingUVs;
+    }
+
+    public void ConstructMesh()
+    {
+        CalculateMeshData();
+        ApplyMeshData();
+    }
+
+    public void CalculateUVData(IBiomeProvider biomeProvider)
+    {
+        _pendingUVs = _mesh.uv;
+        for (int i = 0; i < _unitSpherePoints.Length; i++)
+        {
+            _pendingUVs[i].x = biomeProvider.BiomePercentFromPoint(_unitSpherePoints[i]);
+        }
+    }
+
+    public void ApplyUVData()
+    {
+        _mesh.uv = _pendingUVs;
     }
 
     public void UpdateUVs(IBiomeProvider biomeProvider)
     {
-        Vector2[] uv = _mesh.uv;
-        for (int i = 0; i < _unitSpherePoints.Length; i++)
-        {
-            uv[i].x = biomeProvider.BiomePercentFromPoint(_unitSpherePoints[i]);
-        }
-
-        _mesh.uv = uv;
+        CalculateUVData(biomeProvider);
+        ApplyUVData();
     }
 }

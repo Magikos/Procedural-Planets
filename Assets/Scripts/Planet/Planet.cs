@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class Planet : MonoBehaviour
@@ -23,6 +25,8 @@ public class Planet : MonoBehaviour
     TerrainFace[] _terrainFaces;
     [SerializeField, HideInInspector] MeshFilter[] _meshFilters;
 
+    CancellationTokenSource _cts;
+
     ITerrainProvider TerrainProvider => _shapeGenerator;
     IBiomeProvider BiomeProvider => _colorGenerator;
     IColorProvider ColorProvider => _colorGenerator;
@@ -44,6 +48,12 @@ public class Planet : MonoBehaviour
     void OnValidate()
     {
         GeneratePlanet();
+    }
+
+    void OnDestroy()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
     }
 
     void Initialize()
@@ -87,6 +97,55 @@ public class Planet : MonoBehaviour
         GenerateMesh();
         GenerateColors();
         Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, resolution {Resolution}");
+    }
+
+    public async void GeneratePlanetAsync()
+    {
+        if (_shapeSettings == null || _colorSettings == null)
+        {
+            Logger.Log(LogLevel.Warning, "Planet", "ShapeSettings or ColorSettings is not assigned.");
+            return;
+        }
+
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+
+        try
+        {
+            Initialize();
+            await GenerateMeshAsync(_cts.Token);
+            GenerateColors();
+            Logger.Log(LogLevel.Debug, "Planet", $"Generated planet async with seed {Seed}, resolution {Resolution}");
+        }
+        catch (System.OperationCanceledException) { }
+        catch (System.Exception ex)
+        {
+            Logger.LogException("Planet", ex);
+        }
+    }
+
+    async Awaitable GenerateMeshAsync(CancellationToken ct)
+    {
+        var faces = _terrainFaces;
+
+        await Awaitable.BackgroundThreadAsync();
+        ct.ThrowIfCancellationRequested();
+
+        Parallel.For(0, faces.Length, i =>
+        {
+            faces[i].CalculateMeshData();
+        });
+
+        ct.ThrowIfCancellationRequested();
+        await Awaitable.MainThreadAsync();
+
+        for (int i = 0; i < faces.Length; i++)
+        {
+            faces[i].ApplyMeshData();
+        }
+
+        ColorProvider.UpdateElevation(TerrainProvider.ElevationRange);
     }
 
     public void OnShapeSettingsChanged()
