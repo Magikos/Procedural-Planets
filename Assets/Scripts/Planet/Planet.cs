@@ -193,7 +193,7 @@ public class Planet : MonoBehaviour
 
         _waterObject.SetActive(true);
 
-        float waterRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel);
+        float waterRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel) + 0.01f * _planetSettings.PlanetRadius;
         // Unity sphere primitive has diameter 1, so scale = diameter = radius * 2
         _waterObject.transform.localScale = Vector3.one * waterRadius * 2f;
 
