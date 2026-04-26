@@ -15,15 +15,25 @@ public class PlanetEditor : Editor
             base.OnInspectorGUI();
             if (check.changed)
             {
-                _planet.GeneratePlanet();
+                _planet.GeneratePlanetAsync();
             }
         }
 
         EditorGUILayout.Space();
 
-        if (GUILayout.Button("Generate Planet"))
+        using (new EditorGUI.DisabledScope(_planet.IsGenerating))
         {
-            _planet.GeneratePlanetAsync();
+            if (GUILayout.Button(_planet.IsGenerating ? "Generating..." : "Generate Planet"))
+            {
+                _planet.GeneratePlanetAsync();
+            }
+        }
+
+        if (_planet.IsGenerating)
+        {
+            var rect = GUILayoutUtility.GetRect(18, 18, "TextField");
+            EditorGUI.ProgressBar(rect, 1f, "Generating planet...");
+            Repaint();
         }
 
         DrawSettingsEditor(_planet._shapeSettings, _planet.OnShapeSettingsChanged, ref _planet.ShapeSettingsFoldout, ref _shapeSettingsEditor);

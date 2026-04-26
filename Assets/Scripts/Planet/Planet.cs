@@ -26,6 +26,9 @@ public class Planet : MonoBehaviour
     [SerializeField, HideInInspector] MeshFilter[] _meshFilters;
 
     CancellationTokenSource _cts;
+    bool _isGenerating;
+
+    public bool IsGenerating => _isGenerating;
 
     ITerrainProvider TerrainProvider => _shapeGenerator;
     IBiomeProvider BiomeProvider => _colorGenerator;
@@ -101,6 +104,7 @@ public class Planet : MonoBehaviour
 
         try
         {
+            _isGenerating = true;
             Initialize();
             await GenerateMeshAsync(_cts.Token);
             GenerateColors();
@@ -113,6 +117,10 @@ public class Planet : MonoBehaviour
         catch (System.Exception ex)
         {
             Logger.LogException("Planet", ex);
+        }
+        finally
+        {
+            _isGenerating = false;
         }
     }
 
