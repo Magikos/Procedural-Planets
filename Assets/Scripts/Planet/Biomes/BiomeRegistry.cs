@@ -132,14 +132,17 @@ public class BiomeRegistry : ScriptableObject, IBiomeRegistry
 
     public BiomeDefinition GetDefinitionByIndex(int index)
     {
-        if (index == 0 && OceanBiome != null) return OceanBiome;
-        if (index == 1 && BeachBiome != null) return BeachBiome;
-        if (index == 2 && MountainBiome != null) return MountainBiome;
-        if (index == 3 && SnowyMountainBiome != null) return SnowyMountainBiome;
+        // Layout: Ocean(0), Beach(1), Grid(2..N+1), Mountain(N+2), SnowyMountain(N+3)
+        if (index == 0) return OceanBiome;
+        if (index == 1) return BeachBiome;
 
-        int gridIdx = index - 4;
-        if (GridEntries != null && gridIdx >= 0 && gridIdx < GridEntries.Length)
+        int gridCount = GridEntries != null ? GridEntries.Length : 0;
+        int gridIdx = index - 2;
+        if (gridIdx >= 0 && gridIdx < gridCount)
             return GridEntries[gridIdx];
+
+        if (index == gridCount + 2) return MountainBiome;
+        if (index == gridCount + 3) return SnowyMountainBiome;
         return null;
     }
 }
