@@ -23,11 +23,6 @@ public class PlanetEditor : Editor
 
         if (GUILayout.Button("Generate Planet"))
         {
-            _planet.GeneratePlanet();
-        }
-
-        if (GUILayout.Button("Generate Planet (Async)"))
-        {
             _planet.GeneratePlanetAsync();
         }
 
