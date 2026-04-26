@@ -114,8 +114,6 @@ public class Planet : MonoBehaviour
             float scaledRadius = _shapeSettings.PlanetRadius * (1 + TerrainProvider.ElevationMax);
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius));
             Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, resolution {Resolution}, radius {scaledRadius:F1}");
-            Logger.Log(LogLevel.Debug, "Planet", $"Elevation range: {TerrainProvider.ElevationMin:F6} to {TerrainProvider.ElevationMax:F6}");
-            LogBiomeDiagnostics();
         }
         catch (System.OperationCanceledException) { }
         catch (System.Exception ex)
@@ -170,37 +168,5 @@ public class Planet : MonoBehaviour
         {
             terrainFace.UpdateUVs(BiomeProvider);
         }
-    }
-
-    void LogBiomeDiagnostics()
-    {
-        var points = new (string name, Vector3 dir)[]
-        {
-            ("North Pole",  Vector3.up),
-            ("75N",         new Vector3(0, 0.966f, 0.259f).normalized),
-            ("60N",         new Vector3(0, 0.866f, 0.5f).normalized),
-            ("45N",         new Vector3(0, 0.707f, 0.707f).normalized),
-            ("30N",         new Vector3(0, 0.5f, 0.866f).normalized),
-            ("15N",         new Vector3(0, 0.259f, 0.966f).normalized),
-            ("Equator",     Vector3.forward),
-            ("15S",         new Vector3(0, -0.259f, 0.966f).normalized),
-            ("30S",         new Vector3(0, -0.5f, 0.866f).normalized),
-            ("South Pole",  Vector3.down),
-        };
-
-        System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        sb.AppendLine("=== BIOME DIAGNOSTICS ===");
-        sb.AppendLine($"{"Location",-14} {"Elev",8} {"NormElev",8} {"Temp",6} {"Moist",6} {"UV.x",6} {"Biome",-12}");
-
-        foreach (var (name, dir) in points)
-        {
-            float elev = TerrainProvider.EvaluateElevation(dir);
-            var biome = BiomeProvider.EvaluateBiome(dir, elev);
-            float uvx = BiomeProvider.BiomePercentFromPoint(dir, elev);
-            float normElev = Mathf.InverseLerp(TerrainProvider.ElevationMin, TerrainProvider.ElevationMax, elev);
-            sb.AppendLine($"{name,-14} {elev,8:F5} {normElev,8:F3} {biome.Temperature,6:F3} {biome.Moisture,6:F3} {uvx,6:F3} {biome.PrimaryBiome,-12}");
-        }
-
-        Logger.Log(LogLevel.Info, "Planet", sb.ToString());
     }
 }

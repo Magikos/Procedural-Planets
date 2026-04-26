@@ -36,6 +36,9 @@
 - `Assets/Scripts/Planet/ColorSettings.cs` — replaced BiomeColorSettings with BiomeSettings reference
 - `Assets/Scripts/Planet/ColorGenerator.cs` — refactored to use new temp/moisture/registry providers
 
+## Known Bugs
+- **Coastline rainbow strip**: At the ocean-to-land transition, a thin multi-colored strip appears tracing the coastline. Likely caused by the shader's elevation-based texture sampling interacting with the biome texture at very small elevation values near sea level. Expected to resolve when: (a) planet scale increases to ~5km radius, (b) water mesh is added (Phase 5) covering the transition zone, or (c) shader is updated to use vertex colors instead of texture lookup.
+
 ## Setup Instructions (in Unity)
 1. Create BiomeDefinition assets: Right-click → Create → Planet → Biomes → Biome Definition (one per biome)
 2. Create BiomeRegistry asset: Right-click → Create → Planet → Biomes → Biome Registry

@@ -175,16 +175,5 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
         _texture.SetPixels(colors);
         _texture.Apply();
         _colorSettings.PlanetMaterial.SetTexture("_Texture", _texture);
-
-        // Debug: log texture row colors
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine("=== TEXTURE ROWS ===");
-        for (int b = 0; b < biomeCount; b++)
-        {
-            var def = registry.GetDefinitionByIndex(b);
-            string name = def != null ? def.name : "NULL";
-            sb.AppendLine($"Row {b}: ({colors[b].r:F2}, {colors[b].g:F2}, {colors[b].b:F2}) = {name}");
-        }
-        Debug.Log(sb.ToString());
     }
 }
