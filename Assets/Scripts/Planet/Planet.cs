@@ -112,6 +112,8 @@ public class Planet : MonoBehaviour
             return;
         }
 
+        if (_isGenerating) return;
+
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
