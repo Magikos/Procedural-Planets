@@ -190,14 +190,15 @@ public class Planet : MonoBehaviour
 
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
         sb.AppendLine("=== BIOME DIAGNOSTICS ===");
-        sb.AppendLine($"{"Location",-14} {"Elev",8} {"Temp",6} {"Moist",6} {"UV.x",6} {"Biome",-12}");
+        sb.AppendLine($"{"Location",-14} {"Elev",8} {"NormElev",8} {"Temp",6} {"Moist",6} {"UV.x",6} {"Biome",-12}");
 
         foreach (var (name, dir) in points)
         {
             float elev = TerrainProvider.EvaluateElevation(dir);
             var biome = BiomeProvider.EvaluateBiome(dir, elev);
             float uvx = BiomeProvider.BiomePercentFromPoint(dir, elev);
-            sb.AppendLine($"{name,-14} {elev,8:F5} {biome.Temperature,6:F3} {biome.Moisture,6:F3} {uvx,6:F3} {biome.PrimaryBiome,-12}");
+            float normElev = Mathf.InverseLerp(TerrainProvider.ElevationMin, TerrainProvider.ElevationMax, elev);
+            sb.AppendLine($"{name,-14} {elev,8:F5} {normElev,8:F3} {biome.Temperature,6:F3} {biome.Moisture,6:F3} {uvx,6:F3} {biome.PrimaryBiome,-12}");
         }
 
         Logger.Log(LogLevel.Info, "Planet", sb.ToString());
