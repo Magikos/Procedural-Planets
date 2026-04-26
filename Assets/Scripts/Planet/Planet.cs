@@ -190,28 +190,20 @@ public class Planet : MonoBehaviour
 
         _waterObject.SetActive(true);
         _waterObject.transform.localScale = Vector3.one;
+        _waterObject.transform.localPosition = Vector3.zero;
 
         float waterRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel);
 
-        // Build a simple sphere mesh
+        // Always rebuild mesh with current radius
         var meshFilter = _waterObject.GetComponent<MeshFilter>();
         if (meshFilter.sharedMesh == null)
-            meshFilter.sharedMesh = CreateSphereMesh(32, waterRadius);
-        else
-            UpdateSphereMesh(meshFilter.sharedMesh, 32, waterRadius);
+            meshFilter.sharedMesh = new Mesh { name = "WaterSphere" };
+        UpdateSphereMesh(meshFilter.sharedMesh, 32, waterRadius);
 
         var renderer = _waterObject.GetComponent<Renderer>();
         if (renderer.sharedMaterial == null || renderer.sharedMaterial.name == "Default-Material")
             renderer.sharedMaterial = CreateWaterMaterial();
         UpdateWaterMaterial(renderer.sharedMaterial);
-    }
-
-    Mesh CreateSphereMesh(int resolution, float radius)
-    {
-        var mesh = new Mesh();
-        mesh.name = "WaterSphere";
-        UpdateSphereMesh(mesh, resolution, radius);
-        return mesh;
     }
 
     void UpdateSphereMesh(Mesh mesh, int resolution, float radius)
