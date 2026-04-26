@@ -68,11 +68,7 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
         int totalBiomes = _biomeRegistry.BiomeCount;
         if (totalBiomes <= 1) return 0f;
 
-        // Elevation overrides with soft transitions at boundaries
-        float beachTop = registry.OceanThreshold + registry.BeachWidth;
-        float blendWidth = registry.BlendWidth;
-
-        if (elevation < registry.OceanThreshold - blendWidth)
+        if (elevation < registry.OceanThreshold)
             return 0f / (totalBiomes - 1);
 
         float temperature = _temperatureProvider.Evaluate(pointOnUnitSphere);
@@ -132,22 +128,17 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
 
         float gridPercent = blendedIndex / (totalBiomes - 1);
 
-        // Soft transition into elevation overrides
-        if (elevation > registry.MountainThreshold - blendWidth)
+        // Mountain override at high elevation
+        if (elevation > registry.MountainThreshold)
         {
             int gridCount = registry.GridEntries != null ? registry.GridEntries.Length : 0;
-            // Cold mountains → snowy (last row), warm mountains → rocky (second to last)
             float mountainIdx = temperature < 0.4f ? gridCount + 3f : gridCount + 2f;
-            float mountainPercent = mountainIdx / (totalBiomes - 1);
-            float t = Mathf.InverseLerp(registry.MountainThreshold - blendWidth, registry.MountainThreshold, elevation);
-            return Mathf.Lerp(gridPercent, mountainPercent, t);
+            return mountainIdx / (totalBiomes - 1);
         }
-        if (elevation < beachTop + blendWidth)
-        {
-            float beachPercent = 1f / (totalBiomes - 1);
-            float t = Mathf.InverseLerp(beachTop + blendWidth, beachTop, elevation);
-            return Mathf.Lerp(gridPercent, beachPercent, t);
-        }
+
+        // Beach override at sea level
+        if (elevation < registry.OceanThreshold + registry.BeachWidth)
+            return 1f / (totalBiomes - 1);
 
         return gridPercent;
     }
