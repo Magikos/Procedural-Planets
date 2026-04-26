@@ -1,7 +1,12 @@
+using System.Threading;
+
 public class MinMax
 {
-    public float Min { get; private set; }
-    public float Max { get; private set; }
+    float _min;
+    float _max;
+
+    public float Min => _min;
+    public float Max => _max;
 
     public MinMax()
     {
@@ -10,13 +15,35 @@ public class MinMax
 
     public void Reset()
     {
-        Min = float.MaxValue;
-        Max = float.MinValue;
+        _min = float.MaxValue;
+        _max = float.MinValue;
     }
 
     public void AddValue(float value)
     {
-        if (value < Min) Min = value;
-        if (value > Max) Max = value;
+        InterlockedMin(ref _min, value);
+        InterlockedMax(ref _max, value);
+    }
+
+    static void InterlockedMin(ref float target, float value)
+    {
+        float current = target;
+        while (value < current)
+        {
+            float previous = Interlocked.CompareExchange(ref target, value, current);
+            if (previous == current) break;
+            current = previous;
+        }
+    }
+
+    static void InterlockedMax(ref float target, float value)
+    {
+        float current = target;
+        while (value > current)
+        {
+            float previous = Interlocked.CompareExchange(ref target, value, current);
+            if (previous == current) break;
+            current = previous;
+        }
     }
 }
