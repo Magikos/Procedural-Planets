@@ -33,11 +33,11 @@ public class BiomeRegistryEditor : Editor
 
         // Column headers
         EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.LabelField("", GUILayout.Width(50));
+        GUILayout.Space(54);
         for (int m = 0; m < moistSteps; m++)
         {
             string label = m < MoistLabels.Length ? MoistLabels[m] : $"M{m}";
-            EditorGUILayout.LabelField(label, EditorStyles.centeredGreyMiniLabel);
+            GUILayout.Label(label, EditorStyles.centeredGreyMiniLabel, GUILayout.MinWidth(40));
         }
         EditorGUILayout.EndHorizontal();
 
