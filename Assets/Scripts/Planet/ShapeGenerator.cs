@@ -52,8 +52,6 @@ public class ShapeGenerator : ITerrainProvider
 
     public float GetScaledElevation(float unscaledElevation)
     {
-        float elevation = Mathf.Max(0, unscaledElevation);
-        elevation = _shapeSettings.PlanetRadius * (1 + elevation);
-        return elevation;
+        return _shapeSettings.PlanetRadius * (1 + unscaledElevation);
     }
 }
