@@ -16,13 +16,15 @@ public class TestPoissonDiscSphereDraw : MonoBehaviour
 
     void OnValidate()
     {
-        if (autoUpdate)
+        if (autoUpdate && planet != null && planet._shapeSettings != null)
             Generate();
     }
 
     public void Generate()
     {
-        if (planet == null) return;
+        if (planet == null || planet._shapeSettings == null) return;
+
+        planet.GeneratePlanet();
         _points = PoissonDiscSphereSampling.GeneratePoints(
             minDistance,
             maxAttempts,
