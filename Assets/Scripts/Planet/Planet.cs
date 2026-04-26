@@ -176,12 +176,15 @@ public class Planet : MonoBehaviour
             terrainFace.UpdateColors(BiomeProvider);
         }
 
-        // Determinism check: log color at a fixed point
-        var testPoint = Vector3.up;
-        float testElev = TerrainProvider.EvaluateElevation(testPoint);
-        var testBiome = BiomeProvider.EvaluateBiome(testPoint, testElev);
-        var testColor = BiomeProvider.GetBiomeColor(testPoint, testElev);
-        Logger.Log(LogLevel.Debug, "Planet", $"Determinism check: point=up elev={testElev:F6} temp={testBiome.Temperature:F4} moist={testBiome.Moisture:F4} biome={testBiome.PrimaryBiome} color=({testColor.r:F3},{testColor.g:F3},{testColor.b:F3})");
+        // Log first few vertex colors from face 0 mesh
+        var colors = _meshFilters[0].sharedMesh.colors;
+        if (colors != null && colors.Length >= 3)
+        {
+            Logger.Log(LogLevel.Debug, "Planet",
+                $"Face0 v0=({colors[0].r:F3},{colors[0].g:F3},{colors[0].b:F3}) " +
+                $"v1=({colors[1].r:F3},{colors[1].g:F3},{colors[1].b:F3}) " +
+                $"v2=({colors[2].r:F3},{colors[2].g:F3},{colors[2].b:F3})");
+        }
     }
 
     void GenerateWater()
