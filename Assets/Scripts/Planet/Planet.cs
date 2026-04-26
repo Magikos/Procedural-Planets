@@ -191,7 +191,7 @@ public class Planet : MonoBehaviour
         _waterObject.SetActive(true);
         _waterObject.transform.localScale = Vector3.one;
 
-        float waterRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel) + 0.01f * _planetSettings.PlanetRadius;
+        float waterRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel) + 0.001f * _planetSettings.PlanetRadius;
 
         // Build a simple sphere mesh
         var meshFilter = _waterObject.GetComponent<MeshFilter>();
