@@ -176,7 +176,7 @@ Texture is 4×16 with Point filtering. Each row is a flat color.
 Shader samples texture at (elevationNormalized, UV.x) where UV.x = biome row percent.
 
 ### Known Bugs
-- **Coastline rainbow strip**: Multi-colored band at ocean-to-land transition. Caused by shader elevation sampling interacting with biome texture at tiny elevation values. Will resolve with water mesh (Phase 5) or planet scale increase.
+- ~~**Coastline rainbow strip**: Fixed by switching to vertex colors + PlanetVertexColor shader~~
 
 ### Key Patterns
 - **ScriptableObject Settings**: PlanetSettings (user-friendly), ShapeSettings, ColorSettings, BiomeSettings, BiomeRegistry, BiomeDefinition

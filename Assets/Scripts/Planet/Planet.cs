@@ -175,17 +175,6 @@ public class Planet : MonoBehaviour
         {
             terrainFace.UpdateColors(BiomeProvider);
         }
-
-        // Log first few vertex colors from face 0 mesh
-        var colors = _meshFilters[0].sharedMesh.colors;
-        if (colors != null && colors.Length >= 3)
-        {
-            Logger.Log(LogLevel.Debug, "Planet",
-                $"Face0 v0=({colors[0].r:F3},{colors[0].g:F3},{colors[0].b:F3}) " +
-                $"v1=({colors[1].r:F3},{colors[1].g:F3},{colors[1].b:F3}) " +
-                $"v2=({colors[2].r:F3},{colors[2].g:F3},{colors[2].b:F3}) " +
-                $"shader={_planetSettings.PlanetMaterial.shader.name}");
-        }
     }
 
     void GenerateWater()
