@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class FreeCameraController : MonoBehaviour
 {
@@ -18,28 +19,35 @@ public class FreeCameraController : MonoBehaviour
     float _pitch;
     bool _looking;
 
+    Mouse _mouse;
+    Keyboard _keyboard;
+
     void Start()
     {
         _yaw = transform.eulerAngles.y;
         _pitch = transform.eulerAngles.x;
+        _mouse = Mouse.current;
+        _keyboard = Keyboard.current;
     }
 
     void Update()
     {
+        if (_mouse == null || _keyboard == null) return;
+
         HandleLook();
         HandleMovement();
     }
 
     void HandleLook()
     {
-        if (Input.GetMouseButtonDown(1))
+        if (_mouse.rightButton.wasPressedThisFrame)
         {
             _looking = true;
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
 
-        if (Input.GetMouseButtonUp(1))
+        if (_mouse.rightButton.wasReleasedThisFrame)
         {
             _looking = false;
             Cursor.lockState = CursorLockMode.None;
@@ -48,8 +56,9 @@ public class FreeCameraController : MonoBehaviour
 
         if (!_looking) return;
 
-        _yaw += Input.GetAxis("Mouse X") * LookSensitivity;
-        _pitch -= Input.GetAxis("Mouse Y") * LookSensitivity;
+        Vector2 mouseDelta = _mouse.delta.ReadValue();
+        _yaw += mouseDelta.x * LookSensitivity * 0.1f;
+        _pitch -= mouseDelta.y * LookSensitivity * 0.1f;
         _pitch = Mathf.Clamp(_pitch, -90f, 90f);
         transform.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
     }
@@ -57,21 +66,21 @@ public class FreeCameraController : MonoBehaviour
     void HandleMovement()
     {
         float speed = MoveSpeed;
-        if (Input.GetKey(KeyCode.LeftShift)) speed *= FastMultiplier;
+        if (_keyboard.leftShiftKey.isPressed) speed *= FastMultiplier;
 
         Vector3 move = Vector3.zero;
-        if (Input.GetKey(KeyCode.W)) move += transform.forward;
-        if (Input.GetKey(KeyCode.S)) move -= transform.forward;
-        if (Input.GetKey(KeyCode.A)) move -= transform.right;
-        if (Input.GetKey(KeyCode.D)) move += transform.right;
-        if (Input.GetKey(KeyCode.E)) move += transform.up;
-        if (Input.GetKey(KeyCode.Q)) move -= transform.up;
+        if (_keyboard.wKey.isPressed) move += transform.forward;
+        if (_keyboard.sKey.isPressed) move -= transform.forward;
+        if (_keyboard.aKey.isPressed) move -= transform.right;
+        if (_keyboard.dKey.isPressed) move += transform.right;
+        if (_keyboard.eKey.isPressed) move += transform.up;
+        if (_keyboard.qKey.isPressed) move -= transform.up;
 
         transform.position += move.normalized * speed * Time.deltaTime;
 
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
+        float scroll = _mouse.scroll.ReadValue().y;
         if (scroll != 0)
-            transform.position += transform.forward * scroll * ScrollSpeed;
+            transform.position += transform.forward * scroll * ScrollSpeed * Time.deltaTime;
     }
 
     void OnGUI()
