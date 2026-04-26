@@ -3,8 +3,7 @@
     "rootNamespace": "",
     "references": [
         "ProceduralPlanets.Core",
-        "ProceduralPlanets.Planet",
-        "ShapesRuntime"
+        "ProceduralPlanets.Planet"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

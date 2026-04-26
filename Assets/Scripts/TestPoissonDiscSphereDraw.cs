@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Shapes;
 
 [ExecuteAlways]
 public class TestPoissonDiscSphereDraw : MonoBehaviour
@@ -10,7 +9,7 @@ public class TestPoissonDiscSphereDraw : MonoBehaviour
     public int maxAttempts = 30;
     public int seed = 12345;
     public Color[] biomeColors = { Color.blue, Color.green, Color.yellow, Color.gray, Color.white };
-    public float drawSize = 2f;
+    public float drawSize = 0.5f;
     public bool autoUpdate = true;
 
     List<PoissonDiscSphereSampling.SpawnLocation> _points;
@@ -48,8 +47,8 @@ public class TestPoissonDiscSphereDraw : MonoBehaviour
         if (_points == null || _points.Count == 0) return;
         foreach (var pt in _points)
         {
-            Draw.Color = biomeColors[Mathf.Clamp(pt.BiomeIndex, 0, biomeColors.Length - 1)];
-            Draw.Sphere(pt.Position, drawSize);
+            Gizmos.color = biomeColors[Mathf.Clamp(pt.BiomeIndex, 0, biomeColors.Length - 1)];
+            Gizmos.DrawSphere(pt.Position, drawSize);
         }
     }
 }
