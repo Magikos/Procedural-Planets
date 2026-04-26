@@ -24,9 +24,9 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
         }
 
         int biomeCount = Mathf.Max(1, _biomeRegistry != null ? _biomeRegistry.BiomeCount : 1);
-        if (_texture == null || _texture.width != TextureResolution * 2 || _texture.height != biomeCount)
+        if (_texture == null || _texture.width != 1 || _texture.height != biomeCount)
         {
-            _texture = new Texture2D(TextureResolution * 2, biomeCount, TextureFormat.RGBA32, false);
+            _texture = new Texture2D(1, biomeCount, TextureFormat.RGBA32, false);
             _texture.filterMode = FilterMode.Bilinear;
             _texture.wrapMode = TextureWrapMode.Clamp;
         }
@@ -50,7 +50,7 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
 
     public BiomeResult EvaluateBiome(Vector3 pointOnUnitSphere, float elevation)
     {
-        if (_biomeRegistry == null)
+        if (_biomeRegistry == null || _temperatureProvider == null || _moistureProvider == null)
             return new BiomeResult(BiomeType.Grassland, 0.5f, 0.5f);
 
         float temperature = _temperatureProvider.Evaluate(pointOnUnitSphere);
@@ -61,7 +61,8 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
 
     public float BiomePercentFromPoint(Vector3 pointOnUnitSphere, float elevation)
     {
-        if (_biomeRegistry == null) return 0f;
+        if (_biomeRegistry == null || _temperatureProvider == null || _moistureProvider == null)
+            return 0f;
 
         var registry = _colorSettings.BiomeSettings.Registry;
         int totalBiomes = _biomeRegistry.BiomeCount;
@@ -184,5 +185,16 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
         _texture.SetPixels(colors);
         _texture.Apply();
         _colorSettings.PlanetMaterial.SetTexture("_Texture", _texture);
+
+        // Debug: log texture row colors
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("=== TEXTURE ROWS ===");
+        for (int b = 0; b < biomeCount; b++)
+        {
+            var def = registry.GetDefinitionByIndex(b);
+            string name = def != null ? def.name : "NULL";
+            sb.AppendLine($"Row {b}: ({colors[b].r:F2}, {colors[b].g:F2}, {colors[b].b:F2}) = {name}");
+        }
+        Debug.Log(sb.ToString());
     }
 }
