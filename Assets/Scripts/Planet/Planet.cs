@@ -96,6 +96,7 @@ public class Planet : MonoBehaviour
                 var vcShader = Shader.Find("Planet/VertexColor");
                 if (vcShader != null) _planetSettings.PlanetMaterial.shader = vcShader;
             }
+            _planetSettings.PlanetMaterial.SetFloat("_Smoothness", 0f);
 
             _terrainFaces[i] = new TerrainFace(TerrainProvider, _meshFilters[i].sharedMesh, Resolution, directions[i]);
 

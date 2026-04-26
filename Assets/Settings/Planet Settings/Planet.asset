@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f586d198c624bb428be3336c759724b, type: 3}
   m_Name: Planet
   m_EditorClassIdentifier: 
-  PlanetRadius: 50
+  PlanetRadius: 5000
   ContinentSize: 0.5
   OceanDepth: 0.3
   MountainHeight: 0.5

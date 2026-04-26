@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Planet
-  m_Shader: {fileID: -6465566751694194690, guid: ba8c3f1f697e0a84595fd2550e4d8db1, type: 3}
+  m_Shader: {fileID: 4800000, guid: 92c960920bbe5de4a9514939c205c848, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -122,7 +122,7 @@ Material:
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 0.8773585, g: 0.13656996, b: 0.13656996, a: 1}
-    - _ElevationMinMax: {r: -0.0834628, g: 0.08191073, b: 0, a: 0}
+    - _ElevationMinMax: {r: -0.055731446, g: 0.051756967, b: 0, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
