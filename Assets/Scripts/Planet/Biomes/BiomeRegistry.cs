@@ -16,11 +16,11 @@ public class BiomeRegistry : ScriptableObject, IBiomeRegistry
     public BiomeDefinition MountainBiome;
 
     [Range(-0.1f, 0.1f)] public float OceanThreshold = 0f;
-    [Range(0f, 0.05f)] public float BeachWidth = 0.01f;
-    [Range(0.5f, 1f)] public float MountainThreshold = 0.8f;
+    [Range(0f, 0.1f)] public float BeachWidth = 0.003f;
+    [Range(0f, 1f)] public float MountainThreshold = 0.08f;
 
     [Header("Blending")]
-    [Range(0f, 0.2f)] public float BlendWidth = 0.05f;
+    [Range(0f, 0.1f)] public float BlendWidth = 0.005f;
 
     public int BiomeCount => GridEntries != null ? GridEntries.Length + 3 : 3;
 
