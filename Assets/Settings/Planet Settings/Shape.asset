@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ce8bc147c8255648abaa5dad2cdc136, type: 3}
   m_Name: Shape
   m_EditorClassIdentifier: Assembly-CSharp::ShapeSettings
-  PlanetRadius: 50
+  PlanetRadius: 75
   NoiseLayers:
   - UseFirstLayerAsMask: 0
     Enabled: 1

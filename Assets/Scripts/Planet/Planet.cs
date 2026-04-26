@@ -181,28 +181,87 @@ public class Planet : MonoBehaviour
 
         if (_waterObject == null)
         {
-            _waterObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            _waterObject.name = "Water";
+            _waterObject = new GameObject("Water");
             _waterObject.transform.parent = transform;
             _waterObject.transform.localPosition = Vector3.zero;
-
-            // Remove collider — we don't need physics on the water sphere
-            var collider = _waterObject.GetComponent<Collider>();
-            if (collider != null) DestroyImmediate(collider);
+            _waterObject.AddComponent<MeshRenderer>();
+            _waterObject.AddComponent<MeshFilter>();
         }
 
         _waterObject.SetActive(true);
 
         float waterRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel) + 0.01f * _planetSettings.PlanetRadius;
-        // Unity sphere primitive has diameter 1, so scale = diameter = radius * 2
-        _waterObject.transform.localScale = Vector3.one * waterRadius * 2f;
+
+        // Build a simple sphere mesh
+        var meshFilter = _waterObject.GetComponent<MeshFilter>();
+        if (meshFilter.sharedMesh == null)
+            meshFilter.sharedMesh = CreateSphereMesh(32, waterRadius);
+        else
+            UpdateSphereMesh(meshFilter.sharedMesh, 32, waterRadius);
 
         var renderer = _waterObject.GetComponent<Renderer>();
         if (renderer.sharedMaterial == null || renderer.sharedMaterial.name == "Default-Material")
-        {
             renderer.sharedMaterial = CreateWaterMaterial();
-        }
         UpdateWaterMaterial(renderer.sharedMaterial);
+    }
+
+    Mesh CreateSphereMesh(int resolution, float radius)
+    {
+        var mesh = new Mesh();
+        mesh.name = "WaterSphere";
+        UpdateSphereMesh(mesh, resolution, radius);
+        return mesh;
+    }
+
+    void UpdateSphereMesh(Mesh mesh, int resolution, float radius)
+    {
+        // 6-face cube sphere, same as terrain but simpler
+        Vector3[] directions = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
+        int vertsPerFace = resolution * resolution;
+        int trisPerFace = (resolution - 1) * (resolution - 1) * 6;
+
+        var vertices = new Vector3[vertsPerFace * 6];
+        var triangles = new int[trisPerFace * 6];
+
+        for (int face = 0; face < 6; face++)
+        {
+            Vector3 localUp = directions[face];
+            Vector3 axisA = new Vector3(localUp.y, localUp.z, localUp.x);
+            Vector3 axisB = Vector3.Cross(localUp, axisA);
+
+            int vertOffset = face * vertsPerFace;
+            int triOffset = face * trisPerFace;
+            int triIdx = 0;
+
+            for (int y = 0; y < resolution; y++)
+            {
+                for (int x = 0; x < resolution; x++)
+                {
+                    int i = x + y * resolution;
+                    Vector2 percent = new Vector2(x, y) / (resolution - 1);
+                    Vector3 pointOnCube = localUp + (percent.x - 0.5f) * 2 * axisA + (percent.y - 0.5f) * 2 * axisB;
+                    vertices[vertOffset + i] = pointOnCube.normalized * radius;
+
+                    if (x < resolution - 1 && y < resolution - 1)
+                    {
+                        int vi = vertOffset + i;
+                        triangles[triOffset + triIdx]     = vi;
+                        triangles[triOffset + triIdx + 1] = vi + resolution + 1;
+                        triangles[triOffset + triIdx + 2] = vi + resolution;
+                        triangles[triOffset + triIdx + 3] = vi;
+                        triangles[triOffset + triIdx + 4] = vi + 1;
+                        triangles[triOffset + triIdx + 5] = vi + resolution + 1;
+                        triIdx += 6;
+                    }
+                }
+            }
+        }
+
+        mesh.Clear();
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
     }
 
     Material CreateWaterMaterial()

@@ -51,6 +51,7 @@ public class PlanetSettings : ScriptableObject
     ShapeSettings.NoiseLayer[] BuildNoiseLayers()
     {
         // Layer 0: Continental shelf — large-scale land vs ocean
+        // Output range: ~-0.02 to ~0.07 (controls land vs ocean)
         var continent = new ShapeSettings.NoiseLayer
         {
             Enabled = true,
@@ -58,17 +59,18 @@ public class PlanetSettings : ScriptableObject
             NoiseSettings = new NoiseSettings
             {
                 Filter = NoiseSettings.FilterType.Simple,
-                Strength = Mathf.Lerp(0.03f, 0.12f, OceanDepth),
+                Strength = Mathf.Lerp(0.04f, 0.09f, OceanDepth),
                 Layers = 4,
-                BaseRoughness = Mathf.Lerp(0.5f, 1.5f, 1f - ContinentSize),
+                BaseRoughness = Mathf.Lerp(0.6f, 1.4f, 1f - ContinentSize),
                 Roughness = 2.2f,
                 Persistence = 0.5f,
                 Center = Vector3.zero,
-                MinValue = Mathf.Lerp(0.85f, 1.0f, 1f - OceanDepth)
+                MinValue = Mathf.Lerp(0.9f, 1.0f, 1f - OceanDepth)
             }
         };
 
         // Layer 1: Mountains — rigid noise masked by continents
+        // Output range: 0 to ~0.08 (masked by continent layer)
         var mountains = new ShapeSettings.NoiseLayer
         {
             Enabled = MountainHeight > 0.05f,
@@ -76,9 +78,9 @@ public class PlanetSettings : ScriptableObject
             NoiseSettings = new NoiseSettings
             {
                 Filter = NoiseSettings.FilterType.Rigid,
-                Strength = Mathf.Lerp(0.2f, 1.5f, MountainHeight),
+                Strength = Mathf.Lerp(0.1f, 0.6f, MountainHeight),
                 Layers = 4,
-                BaseRoughness = Mathf.Lerp(1.5f, 4f, MountainDensity),
+                BaseRoughness = Mathf.Lerp(1.8f, 3.5f, MountainDensity),
                 Roughness = 3f,
                 Persistence = 0.5f,
                 Center = new Vector3(0, 0, 4.61f),
@@ -87,6 +89,7 @@ public class PlanetSettings : ScriptableObject
         };
 
         // Layer 2: Surface detail — small bumps and roughness
+        // Output range: 0 to ~0.02 (subtle detail)
         var detail = new ShapeSettings.NoiseLayer
         {
             Enabled = TerrainRoughness > 0.05f,
@@ -94,9 +97,9 @@ public class PlanetSettings : ScriptableObject
             NoiseSettings = new NoiseSettings
             {
                 Filter = NoiseSettings.FilterType.Simple,
-                Strength = Mathf.Lerp(0.01f, 0.08f, TerrainRoughness),
-                Layers = Mathf.Clamp((int)(TerrainRoughness * 6) + 1, 1, 6),
-                BaseRoughness = Mathf.Lerp(2f, 6f, TerrainRoughness),
+                Strength = Mathf.Lerp(0.005f, 0.03f, TerrainRoughness),
+                Layers = Mathf.Clamp((int)(TerrainRoughness * 4) + 1, 1, 5),
+                BaseRoughness = Mathf.Lerp(3f, 8f, TerrainRoughness),
                 Roughness = 2.5f,
                 Persistence = 0.5f,
                 Center = new Vector3(100, 0, 0),
