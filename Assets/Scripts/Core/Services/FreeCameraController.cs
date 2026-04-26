@@ -11,6 +11,11 @@ public class FreeCameraController : MonoBehaviour
     [Header("Look")]
     public float LookSensitivity = 2f;
 
+    [Header("Auto Position")]
+    [Tooltip("Multiplier for camera distance from planet surface. 2.5 = 2.5x planet radius from center.")]
+    public float ViewDistanceMultiplier = 2.5f;
+    public bool AutoPositionOnGenerate = true;
+
     [Header("Debug Info")]
     public bool ShowDebugOverlay = true;
     public Transform TargetCenter;
@@ -21,6 +26,31 @@ public class FreeCameraController : MonoBehaviour
 
     Mouse _mouse;
     Keyboard _keyboard;
+
+    void OnEnable()
+    {
+        EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+    }
+
+    void OnDisable()
+    {
+        EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
+    }
+
+    void OnPlanetGenerated(PlanetGeneratedEvent evt)
+    {
+        if (!AutoPositionOnGenerate) return;
+
+        float distance = evt.PlanetRadius * ViewDistanceMultiplier;
+        transform.position = evt.PlanetCenter + Vector3.back * distance;
+        transform.LookAt(evt.PlanetCenter);
+
+        _yaw = transform.eulerAngles.y;
+        _pitch = transform.eulerAngles.x;
+
+        MoveSpeed = evt.PlanetRadius * 0.5f;
+        ScrollSpeed = evt.PlanetRadius * 2f;
+    }
 
     void Start()
     {
