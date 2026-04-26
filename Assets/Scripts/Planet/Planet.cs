@@ -50,6 +50,7 @@ public class Planet : MonoBehaviour
 
     void OnValidate()
     {
+        if (Application.isPlaying) return;
         GeneratePlanetAsync();
     }
 
@@ -107,6 +108,7 @@ public class Planet : MonoBehaviour
             _isGenerating = true;
             Initialize();
             await GenerateMeshAsync(_cts.Token);
+            if (this == null) return;
             GenerateColors();
 
             float scaledRadius = _shapeSettings.PlanetRadius * (1 + TerrainProvider.ElevationMax);
