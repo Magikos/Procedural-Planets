@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+[ExecuteAlways]
 public class FreeCameraController : MonoBehaviour
 {
     [Header("Movement")]
