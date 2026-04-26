@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc501929c3853f5478026222b43b8044, type: 3}
+  m_Name: BiomeRegistry
+  m_EditorClassIdentifier: 
+  TemperatureSteps: 4
+  MoistureSteps: 3
+  GridEntries:
+  - {fileID: 11400000, guid: a1b2c3d4e5f6000da1b2c3d4e5f6000d, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f6000ea1b2c3d4e5f6000e, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f6000fa1b2c3d4e5f6000f, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f6000aa1b2c3d4e5f6000a, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f6000ba1b2c3d4e5f6000b, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f6000ca1b2c3d4e5f6000c, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f60007a1b2c3d4e5f60007, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f60008a1b2c3d4e5f60008, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f60009a1b2c3d4e5f60009, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f60004a1b2c3d4e5f60004, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f60005a1b2c3d4e5f60005, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f60006a1b2c3d4e5f60006, type: 2}
+  OceanBiome: {fileID: 11400000, guid: a1b2c3d4e5f60001a1b2c3d4e5f60001, type: 2}
+  BeachBiome: {fileID: 11400000, guid: a1b2c3d4e5f60002a1b2c3d4e5f60002, type: 2}
+  MountainBiome: {fileID: 11400000, guid: a1b2c3d4e5f60003a1b2c3d4e5f60003, type: 2}
+  OceanThreshold: 0
+  BeachWidth: 0.01
+  MountainThreshold: 0.8
+  BlendWidth: 0.05

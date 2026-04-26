@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ffbdb5be2a94bd4a936242887d87948, type: 3}
+  m_Name: BiomeSettings
+  m_EditorClassIdentifier: 
+  Registry: {fileID: 11400000, guid: a1b2c3d4e5f60010a1b2c3d4e5f60010, type: 2}
+  TemperatureNoise:
+    Filter: 0
+    Strength: 1
+    Layers: 3
+    BaseRoughness: 0.8
+    Roughness: 2
+    Persistence: 0.5
+    Center: {x: 100, y: 0, z: 0}
+    MinValue: 0
+  TemperatureNoiseStrength: 0.15
+  MoistureNoise:
+    Filter: 0
+    Strength: 1
+    Layers: 4
+    BaseRoughness: 1.2
+    Roughness: 2.5
+    Persistence: 0.5
+    Center: {x: 0, y: 0, z: 200}
+    MinValue: 0
