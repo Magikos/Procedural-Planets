@@ -47,7 +47,7 @@ public class Planet : MonoBehaviour
 
     void OnValidate()
     {
-        GeneratePlanet();
+        GeneratePlanetAsync();
     }
 
     void OnDestroy()
@@ -87,23 +87,6 @@ public class Planet : MonoBehaviour
         }
     }
 
-    public void GeneratePlanet()
-    {
-        if (_shapeSettings == null || _colorSettings == null)
-        {
-            Logger.Log(LogLevel.Warning, "Planet", "ShapeSettings or ColorSettings is not assigned.");
-            return;
-        }
-
-        Initialize();
-        GenerateMesh();
-        GenerateColors();
-
-        float scaledRadius = _shapeSettings.PlanetRadius * (1 + TerrainProvider.ElevationMax);
-        EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius));
-        Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, resolution {Resolution}, radius {scaledRadius:F1}");
-    }
-
     public async void GeneratePlanetAsync()
     {
         if (_shapeSettings == null || _colorSettings == null)
@@ -124,13 +107,25 @@ public class Planet : MonoBehaviour
 
             float scaledRadius = _shapeSettings.PlanetRadius * (1 + TerrainProvider.ElevationMax);
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius));
-            Logger.Log(LogLevel.Debug, "Planet", $"Generated planet async with seed {Seed}, resolution {Resolution}, radius {scaledRadius:F1}");
+            Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, resolution {Resolution}, radius {scaledRadius:F1}");
         }
         catch (System.OperationCanceledException) { }
         catch (System.Exception ex)
         {
             Logger.LogException("Planet", ex);
         }
+    }
+
+    public void OnShapeSettingsChanged()
+    {
+        if (!AutoUpdate) return;
+        GeneratePlanetAsync();
+    }
+
+    public void OnColorSettingsChanged()
+    {
+        if (!AutoUpdate) return;
+        GeneratePlanetAsync();
     }
 
     async Awaitable GenerateMeshAsync(CancellationToken ct)
@@ -151,35 +146,6 @@ public class Planet : MonoBehaviour
         for (int i = 0; i < faces.Length; i++)
         {
             faces[i].ApplyMeshData();
-        }
-
-        ColorProvider.UpdateElevation(TerrainProvider.ElevationMin, TerrainProvider.ElevationMax);
-    }
-
-    public void OnShapeSettingsChanged()
-    {
-        if (!AutoUpdate) return;
-        if (_shapeSettings == null || _colorSettings == null) return;
-
-        Initialize();
-        GenerateMesh();
-        GenerateColors();
-    }
-
-    public void OnColorSettingsChanged()
-    {
-        if (!AutoUpdate) return;
-        if (_shapeSettings == null || _colorSettings == null) return;
-
-        Initialize();
-        GenerateColors();
-    }
-
-    void GenerateMesh()
-    {
-        foreach (var terrainFace in _terrainFaces)
-        {
-            terrainFace.ConstructMesh();
         }
 
         ColorProvider.UpdateElevation(TerrainProvider.ElevationMin, TerrainProvider.ElevationMax);
