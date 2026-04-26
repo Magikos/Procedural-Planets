@@ -5,7 +5,8 @@
 ProceduralPlanets/
 ├── Assets/
 │   ├── Editor/
-│   │   └── PlanetEditor.cs              # Custom inspector for Planet component
+│   │   ├── PlanetEditor.cs              # Custom inspector for Planet component
+│   │   └── BiomeRegistryEditor.cs       # Custom grid inspector for BiomeRegistry
 │   ├── Graphics/
 │   │   ├── Materials/
 │   │   │   └── Planet.mat               # Planet material (URP)
@@ -65,7 +66,7 @@ ProceduralPlanets/
 │   │   │   ├── Noise.cs                 # Simplex noise implementation (seed-based)
 │   │   │   ├── MinMax.cs                # Thread-safe min/max elevation tracking
 │   │   │   ├── ShapeSettings.cs         # ScriptableObject: radius + noise layers
-│   │   │   ├── ColorSettings.cs         # ScriptableObject: material + BiomeSettings + ocean gradient
+│   │   │   ├── ColorSettings.cs         # ScriptableObject: material + BiomeSettings
 │   │   │   ├── NoiseSettings.cs         # Serializable noise parameters
 │   │   │   └── ProceduralPlanets.Planet.asmdef
 │   │   ├── PoissonDiscSampling.cs       # 2D Poisson-disc point generation
@@ -74,7 +75,13 @@ ProceduralPlanets/
 │   │   ├── TestPoissonDiscSphereDraw.cs # 3D sphere placement visualization test (Gizmos)
 │   │   └── ProceduralPlanets.Sampling.asmdef
 │   ├── Settings/
-│   │   ├── Planet Settings/             # ScriptableObject instances for planet config
+│   │   ├── Planet Settings/
+│   │   │   ├── Shape.asset              # ShapeSettings instance (radius 50, 3 noise layers)
+│   │   │   ├── Color.asset              # ColorSettings instance (material + BiomeSettings ref)
+│   │   │   └── Biomes/                  # All biome ScriptableObject assets
+│   │   │       ├── BiomeRegistry.asset  # 4×3 temp×moisture grid + elevation overrides
+│   │   │       ├── BiomeSettings.asset  # Temperature/moisture noise config
+│   │   │       └── *.asset              # 15 BiomeDefinition assets (flat debug colors)
 │   │   ├── PC_RPAsset.asset             # URP render pipeline asset (PC)
 │   │   ├── Mobile_RPAsset.asset         # URP render pipeline asset (Mobile)
 │   │   └── DefaultVolumeProfile.asset   # Post-processing volume
@@ -125,6 +132,20 @@ pointOnUnitSphere
     → temp × moisture grid lookup with boundary blending
     → BiomeResult (primary, secondary, blend weight, temp, moisture)
 ```
+
+### Biome Texture Layout
+```
+Row 0:  Ocean          (sand/brown — ocean floor, water mesh will cover)
+Row 1:  Beach          (sandy yellow)
+Rows 2-13: Grid biomes (temp × moisture: Tundra→Snow→IceBog→Steppe→Taiga→Swamp→Scrub→Grassland→Forest→Desert→Savanna→Tropical)
+Row 14: Mountain       (grey rock — warm/hot high elevation)
+Row 15: SnowyMountain  (white — cold high elevation)
+```
+Texture is 4×16 with Point filtering. Each row is a flat color.
+Shader samples texture at (elevationNormalized, UV.x) where UV.x = biome row percent.
+
+### Known Bugs
+- **Coastline rainbow strip**: Multi-colored band at ocean-to-land transition. Caused by shader elevation sampling interacting with biome texture at tiny elevation values. Will resolve with water mesh (Phase 5) or planet scale increase.
 
 ### Key Patterns
 - **ScriptableObject Settings**: ShapeSettings, ColorSettings, BiomeSettings, BiomeRegistry, BiomeDefinition
