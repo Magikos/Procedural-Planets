@@ -156,44 +156,27 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
 
         var registry = _colorSettings.BiomeSettings.Registry;
         int biomeCount = _biomeRegistry.BiomeCount;
-        Color[] colors = new Color[_texture.width * biomeCount];
 
-        // Resize texture if needed
-        if (_texture.height != biomeCount)
+        // Single-column texture: one color per biome, no ocean/land split
+        if (_texture == null || _texture.width != 1 || _texture.height != biomeCount)
         {
-            _texture = new Texture2D(TextureResolution * 2, biomeCount, TextureFormat.RGBA32, false);
+            _texture = new Texture2D(1, biomeCount, TextureFormat.RGBA32, false);
             _texture.filterMode = FilterMode.Bilinear;
             _texture.wrapMode = TextureWrapMode.Clamp;
         }
 
-        int colorIndex = 0;
+        Color[] colors = new Color[biomeCount];
         for (int b = 0; b < biomeCount; b++)
         {
             var def = registry.GetDefinitionByIndex(b);
-            for (int i = 0; i < TextureResolution * 2; i++)
+            if (def != null)
             {
-                Color gradientColor;
-                if (i < TextureResolution)
-                {
-                    gradientColor = _colorSettings.OceanColorGradient.Evaluate(i / (TextureResolution - 1f));
-                }
-                else
-                {
-                    gradientColor = def != null
-                        ? def.ColorGradient.Evaluate((i - TextureResolution) / (TextureResolution - 1f))
-                        : Color.magenta;
-                }
-
-                if (def != null)
-                {
-                    Color tint = def.TintColor;
-                    colors[colorIndex] = gradientColor * (1 - def.TintPercent) + tint * def.TintPercent;
-                }
-                else
-                {
-                    colors[colorIndex] = gradientColor;
-                }
-                colorIndex++;
+                Color c = def.ColorGradient.Evaluate(0.5f);
+                colors[b] = c * (1 - def.TintPercent) + def.TintColor * def.TintPercent;
+            }
+            else
+            {
+                colors[b] = Color.magenta;
             }
         }
 
