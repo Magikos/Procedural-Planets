@@ -189,6 +189,7 @@ public class Planet : MonoBehaviour
         }
 
         _waterObject.SetActive(true);
+        _waterObject.transform.localScale = Vector3.one;
 
         float waterRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel) + 0.01f * _planetSettings.PlanetRadius;
 
