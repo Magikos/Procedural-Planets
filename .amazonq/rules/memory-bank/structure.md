@@ -59,14 +59,15 @@ ProceduralPlanets/
 │   │   │   │   ├── NoiseFilterFactory.cs # Factory for creating noise filters
 │   │   │   │   ├── SimpleNoiseFilter.cs  # Standard layered simplex noise
 │   │   │   │   └── RigidNoiseFilter.cs   # Ridge-style noise (extends Simple)
-│   │   │   ├── Planet.cs                # Main planet MonoBehaviour (orchestrator)
-│   │   │   ├── ShapeGenerator.cs        # Evaluates noise layers → elevation
+│   │   │   ├── Planet.cs                # Main planet MonoBehaviour (orchestrator + water mesh)
+│   │   │   ├── PlanetSettings.cs        # ScriptableObject: user-friendly generation params
+│   │   │   ├── ShapeGenerator.cs        # Evaluates noise layers → elevation (no clamp)
 │   │   │   ├── TerrainFace.cs           # Generates mesh for one cube face
 │   │   │   ├── ColorGenerator.cs        # Biome texture via temp/moisture/registry
 │   │   │   ├── Noise.cs                 # Simplex noise implementation (seed-based)
 │   │   │   ├── MinMax.cs                # Thread-safe min/max elevation tracking
-│   │   │   ├── ShapeSettings.cs         # ScriptableObject: radius + noise layers
-│   │   │   ├── ColorSettings.cs         # ScriptableObject: material + BiomeSettings
+│   │   │   ├── ShapeSettings.cs         # ScriptableObject: radius + noise layers (built by PlanetSettings)
+│   │   │   ├── ColorSettings.cs         # ScriptableObject: material + BiomeSettings (built by PlanetSettings)
 │   │   │   ├── NoiseSettings.cs         # Serializable noise parameters
 │   │   │   └── ProceduralPlanets.Planet.asmdef
 │   │   ├── PoissonDiscSampling.cs       # 2D Poisson-disc point generation
@@ -76,8 +77,9 @@ ProceduralPlanets/
 │   │   └── ProceduralPlanets.Sampling.asmdef
 │   ├── Settings/
 │   │   ├── Planet Settings/
-│   │   │   ├── Shape.asset              # ShapeSettings instance (radius 50, 3 noise layers)
-│   │   │   ├── Color.asset              # ColorSettings instance (material + BiomeSettings ref)
+│   │   │   ├── Planet.asset             # PlanetSettings instance (user-friendly params)
+│   │   │   ├── Shape.asset              # ShapeSettings instance (legacy, kept for reference)
+│   │   │   ├── Color.asset              # ColorSettings instance (legacy, kept for reference)
 │   │   │   └── Biomes/                  # All biome ScriptableObject assets
 │   │   │       ├── BiomeRegistry.asset  # 4×3 temp×moisture grid + elevation overrides
 │   │   │       ├── BiomeSettings.asset  # Temperature/moisture noise config
@@ -103,24 +105,53 @@ ProceduralPlanets/
 ### Generation Pipeline
 ```
 Planet (MonoBehaviour — orchestrator)
-  ├── ShapeGenerator : ITerrainProvider (elevation calculation)
+  ├── PlanetSettings (user-friendly ScriptableObject)
+  │   ├── BuildShapeSettings() → ShapeSettings (noise layers from friendly params)
+  │   └── BuildColorSettings() → ColorSettings (material + biome refs)
+  ├── ShapeGenerator : ITerrainProvider (elevation calculation, no clamp)
   │   ├── NoiseFilterFactory → INoiseFilter[]
   │   │   ├── SimpleNoiseFilter (layered simplex)
   │   │   └── RigidNoiseFilter (ridge noise, extends Simple)
   │   └── Noise (simplex noise, seed-based permutation)
   ├── TerrainFace[6] (one per cube face → mesh, uses ITerrainProvider)
-  └── ColorGenerator : IBiomeProvider + IColorProvider
-      ├── TemperatureProvider : ITemperatureProvider (latitude + noise → temperature)
-      ├── MoistureProvider : IMoistureProvider (noise → moisture)
-      └── BiomeRegistry : IBiomeRegistry (temp × moisture grid → BiomeResult)
+  ├── ColorGenerator : IBiomeProvider + IColorProvider
+  │   ├── TemperatureProvider : ITemperatureProvider (latitude + noise → temperature)
+  │   ├── MoistureProvider : IMoistureProvider (noise → moisture)
+  │   └── BiomeRegistry : IBiomeRegistry (temp × moisture grid → BiomeResult)
+  └── Water Mesh (cube-sphere at base radius, transparent URP Lit material)
 ```
 
+### Unified Scale Model
+```
+Mountain peak:  radius = PlanetRadius * (1 + positiveElevation)  → above water
+Sea level:      radius = PlanetRadius * (1 + OceanLevel)         → water sphere
+Ocean floor:    radius = PlanetRadius * (1 + negativeElevation)  → below water
+```
+- Terrain goes both above AND below base radius (no elevation clamp)
+- Water sphere sits at exactly PlanetRadius (+ OceanLevel offset)
+- Land above water = visible continents; terrain below water = hidden ocean basins
+
+### PlanetSettings Parameters
+```
+PlanetRadius:      1-5000 (Unity units)
+ContinentSize:     0.1-1.0 (small islands → large landmasses)
+OceanDepth:        0-1.0 (shallow → deep basins)
+MountainHeight:    0-1.0 (flat → extreme peaks)
+MountainDensity:   0-1.0 (few → many)
+TerrainRoughness:  0-1.0 (smooth → jagged detail)
+HasOceans:         bool (toggles water sphere)
+OceanLevel:        -0.05 to 0.05 (raise/lower water)
+WaterColor:        Color with alpha
+```
+These translate internally to 3 noise layers: continent shelf, mountains (rigid), surface detail.
+
 ### Data Flow
-1. **Planet.Initialize()** — Creates 6 TerrainFaces, configures generators with settings + seed
+1. **Planet.Initialize()** — PlanetSettings builds ShapeSettings + ColorSettings, creates 6 TerrainFaces
 2. **Planet.GenerateMeshAsync()** — Parallel.For across 6 faces on background thread via Awaitable
 3. **ShapeGenerator** — Evaluates noise layers per vertex, tracks elevation MinMax (thread-safe)
 4. **Planet.GenerateColors()** — ColorGenerator builds biome texture, TerrainFace updates UVs
-5. **Shader** — Uses `_ElevationMinMax` and `_Texture` to render biome colors
+5. **Planet.GenerateWater()** — Builds cube-sphere water mesh at base radius
+6. **Shader** — Uses `_ElevationMinMax` and `_Texture` to render biome colors
 
 ### Biome Resolution Flow
 ```
@@ -128,14 +159,14 @@ pointOnUnitSphere
   → TemperatureProvider.Evaluate() → temperature (latitude + noise)
   → MoistureProvider.Evaluate() → moisture (noise)
   → BiomeRegistry.Resolve(temp, moisture, elevation)
-    → elevation overrides (Ocean/Beach/Mountain) checked first
+    → elevation overrides (Ocean/Beach/Mountain/SnowyMountain) checked first
     → temp × moisture grid lookup with boundary blending
     → BiomeResult (primary, secondary, blend weight, temp, moisture)
 ```
 
 ### Biome Texture Layout
 ```
-Row 0:  Ocean          (sand/brown — ocean floor, water mesh will cover)
+Row 0:  Ocean          (sand/brown — ocean floor visible through water)
 Row 1:  Beach          (sandy yellow)
 Rows 2-13: Grid biomes (temp × moisture: Tundra→Snow→IceBog→Steppe→Taiga→Swamp→Scrub→Grassland→Forest→Desert→Savanna→Tropical)
 Row 14: Mountain       (grey rock — warm/hot high elevation)
@@ -148,7 +179,7 @@ Shader samples texture at (elevationNormalized, UV.x) where UV.x = biome row per
 - **Coastline rainbow strip**: Multi-colored band at ocean-to-land transition. Caused by shader elevation sampling interacting with biome texture at tiny elevation values. Will resolve with water mesh (Phase 5) or planet scale increase.
 
 ### Key Patterns
-- **ScriptableObject Settings**: ShapeSettings, ColorSettings, BiomeSettings, BiomeRegistry, BiomeDefinition
+- **ScriptableObject Settings**: PlanetSettings (user-friendly), ShapeSettings, ColorSettings, BiomeSettings, BiomeRegistry, BiomeDefinition
 - **Factory Pattern**: NoiseFilterFactory creates appropriate INoiseFilter based on FilterType
 - **Interface Abstraction**: ITerrainProvider, IBiomeProvider, IColorProvider, ITemperatureProvider, IMoistureProvider, IBiomeRegistry
 - **Inheritance**: RigidNoiseFilter extends SimpleNoiseFilter, overriding Evaluate
