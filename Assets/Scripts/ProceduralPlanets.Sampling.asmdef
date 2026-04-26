@@ -4,7 +4,7 @@
     "references": [
         "ProceduralPlanets.Core",
         "ProceduralPlanets.Planet",
-        "Shapes"
+        "ShapesRuntime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -6,13 +6,20 @@ public class ShapeGenerator : ITerrainProvider
     INoiseFilter[] _noiseFilters;
     int _seed;
 
-    public MinMax ElevationRange { get; private set; } = new MinMax();
+    public float ElevationMin => _elevationMinMax.Min;
+    public float ElevationMax => _elevationMinMax.Max;
 
-    public void Initialize(ShapeSettings settings, int seed)
+    MinMax _elevationMinMax = new MinMax();
+
+    public void Configure(ShapeSettings settings)
     {
         _shapeSettings = settings;
+    }
+
+    public void Initialize(int seed)
+    {
         _seed = seed;
-        ElevationRange = new MinMax();
+        _elevationMinMax = new MinMax();
         _noiseFilters = new INoiseFilter[_shapeSettings.NoiseLayers.Length];
         for (int i = 0; i < _noiseFilters.Length; i++)
         {
@@ -39,7 +46,7 @@ public class ShapeGenerator : ITerrainProvider
             elevation += _noiseFilters[i].Evaluate(pointOnUnitSphere) * mask;
         }
 
-        ElevationRange.AddValue(elevation);
+        _elevationMinMax.AddValue(elevation);
         return elevation;
     }
 

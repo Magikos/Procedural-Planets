@@ -2,8 +2,7 @@ using UnityEngine;
 
 public interface IColorProvider
 {
-    void Initialize(ColorSettings settings);
-    void UpdateElevation(MinMax elevationMinMax);
+    void Initialize();
+    void UpdateElevation(float min, float max);
     void UpdateColors();
-    Texture2D BiomeTexture { get; }
 }

@@ -12,7 +12,7 @@ public class FreeCameraController : MonoBehaviour
 
     [Header("Debug Info")]
     public bool ShowDebugOverlay = true;
-    public Planet TargetPlanet;
+    public Transform TargetCenter;
 
     float _yaw;
     float _pitch;
@@ -83,13 +83,13 @@ public class FreeCameraController : MonoBehaviour
         GUILayout.Label($"Position: {transform.position:F1}");
         GUILayout.Label($"FPS: {1f / Time.unscaledDeltaTime:F0}");
 
-        if (TargetPlanet != null)
+        if (TargetCenter != null)
         {
-            Vector3 dirToSurface = (transform.position - TargetPlanet.transform.position).normalized;
+            Vector3 dirToSurface = (transform.position - TargetCenter.position).normalized;
             var (lat, lon) = CoordinateConverter.UnitSphereToLatLong(dirToSurface);
             GUILayout.Label($"Lat: {lat * Mathf.Rad2Deg:F1}° Lon: {lon * Mathf.Rad2Deg:F1}°");
 
-            float distToCenter = Vector3.Distance(transform.position, TargetPlanet.transform.position);
+            float distToCenter = Vector3.Distance(transform.position, TargetCenter.position);
             GUILayout.Label($"Distance to center: {distToCenter:F1}");
         }
 

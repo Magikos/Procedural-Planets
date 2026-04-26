@@ -61,8 +61,10 @@ public class Planet : MonoBehaviour
         if (_meshFilters == null || _meshFilters.Length == 0) { _meshFilters = new MeshFilter[6]; }
         _terrainFaces = new TerrainFace[6];
 
-        TerrainProvider.Initialize(_shapeSettings, Seed);
-        _colorGenerator.Initialize(_colorSettings, Seed);
+        _shapeGenerator.Configure(_shapeSettings);
+        _shapeGenerator.Initialize(Seed);
+        _colorGenerator.Configure(_colorSettings);
+        _colorGenerator.Initialize(Seed);
 
         Vector3[] directions = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
         for (int i = 0; i < 6; i++)
@@ -145,7 +147,7 @@ public class Planet : MonoBehaviour
             faces[i].ApplyMeshData();
         }
 
-        ColorProvider.UpdateElevation(TerrainProvider.ElevationRange);
+        ColorProvider.UpdateElevation(TerrainProvider.ElevationMin, TerrainProvider.ElevationMax);
     }
 
     public void OnShapeSettingsChanged()
@@ -173,7 +175,7 @@ public class Planet : MonoBehaviour
             terrainFace.ConstructMesh();
         }
 
-        ColorProvider.UpdateElevation(TerrainProvider.ElevationRange);
+        ColorProvider.UpdateElevation(TerrainProvider.ElevationMin, TerrainProvider.ElevationMax);
     }
 
     void GenerateColors()

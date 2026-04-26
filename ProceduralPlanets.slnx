@@ -1,0 +1,9 @@
+﻿<Solution>
+  <Project Path="ShapesRuntime.csproj" />
+  <Project Path="ProceduralPlanets.Core.csproj" />
+  <Project Path="ShapesEditor.csproj" />
+  <Project Path="ShapesSamples.csproj" />
+  <Project Path="ProceduralPlanets.Planet.csproj" />
+  <Project Path="ProceduralPlanets.Sampling.csproj" />
+  <Project Path="ProceduralPlanets.Editor.csproj" />
+</Solution>

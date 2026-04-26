@@ -7,23 +7,28 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
     ColorSettings _colorSettings;
     INoiseFilter _biomeNoiseFilter;
 
-    public Texture2D BiomeTexture => _texture;
-
-    public void Initialize(ColorSettings settings, int seed)
+    public void Configure(ColorSettings settings)
     {
         _colorSettings = settings;
 
         int biomeCount = Mathf.Max(1, _colorSettings.BiomeSettings.Biomes.Length);
         if (_texture == null || _texture.width != TextureResolution * 2 || _texture.height != biomeCount)
             _texture = new Texture2D(TextureResolution * 2, biomeCount, TextureFormat.RGBA32, false);
+    }
 
+    public void Initialize(int seed)
+    {
         _biomeNoiseFilter = NoiseFilterFactory.CreateNoiseFilter(_colorSettings.BiomeSettings.NoiseSettings, seed);
     }
 
-    public void UpdateElevation(MinMax elevationMinMax)
+    public void Initialize()
     {
-        _colorSettings.PlanetMaterial.SetVector("_ElevationMinMax",
-            new Vector4(elevationMinMax.Min, elevationMinMax.Max));
+        _biomeNoiseFilter = NoiseFilterFactory.CreateNoiseFilter(_colorSettings.BiomeSettings.NoiseSettings);
+    }
+
+    public void UpdateElevation(float min, float max)
+    {
+        _colorSettings.PlanetMaterial.SetVector("_ElevationMinMax", new Vector4(min, max));
     }
 
     public BiomeResult EvaluateBiome(Vector3 pointOnUnitSphere, float elevation)
