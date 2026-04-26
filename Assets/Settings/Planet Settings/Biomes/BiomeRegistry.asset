@@ -32,5 +32,5 @@ MonoBehaviour:
   MountainBiome: {fileID: 11400000, guid: 35940dfc10b2bee4ea371197d6a2d250, type: 2}
   OceanThreshold: 0
   BeachWidth: 0.001
-  MountainThreshold: 0.08
-  BlendWidth: 0.005
+  MountainThreshold: 0.1
+  BlendWidth: 0.003
