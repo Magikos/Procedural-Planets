@@ -163,6 +163,7 @@ public class Planet : MonoBehaviour
 
         Initialize();
         GenerateMesh();
+        GenerateColors();
     }
 
     public void OnColorSettingsChanged()
