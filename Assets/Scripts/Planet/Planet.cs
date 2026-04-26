@@ -121,7 +121,10 @@ public class Planet : MonoBehaviour
             Initialize();
             await GenerateMeshAsync(_cts.Token);
             GenerateColors();
-            Logger.Log(LogLevel.Debug, "Planet", $"Generated planet async with seed {Seed}, resolution {Resolution}");
+
+            float scaledRadius = _shapeSettings.PlanetRadius * (1 + TerrainProvider.ElevationMax);
+            EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius));
+            Logger.Log(LogLevel.Debug, "Planet", $"Generated planet async with seed {Seed}, resolution {Resolution}, radius {scaledRadius:F1}");
         }
         catch (System.OperationCanceledException) { }
         catch (System.Exception ex)
