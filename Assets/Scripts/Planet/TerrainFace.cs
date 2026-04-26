@@ -84,6 +84,7 @@ public class TerrainFace
 
     public void CalculateUVData(IBiomeProvider biomeProvider)
     {
+        if (_unitSpherePoints == null) return;
         _pendingUVs = _mesh.uv;
         for (int i = 0; i < _unitSpherePoints.Length; i++)
         {
@@ -93,6 +94,7 @@ public class TerrainFace
 
     public void ApplyUVData()
     {
+        if (_pendingUVs == null) return;
         _mesh.uv = _pendingUVs;
     }
 
