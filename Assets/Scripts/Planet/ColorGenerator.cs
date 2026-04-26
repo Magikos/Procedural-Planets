@@ -55,26 +55,33 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
         return _biomeRegistry.Resolve(temperature, moisture, elevation);
     }
 
-    public float BiomePercentFromPoint(Vector3 pointOnUnitSphere)
+    public float BiomePercentFromPoint(Vector3 pointOnUnitSphere, float elevation)
     {
         if (_biomeRegistry == null) return 0f;
+
+        var registry = _colorSettings.BiomeSettings.Registry;
+        int totalBiomes = _biomeRegistry.BiomeCount;
+        if (totalBiomes <= 1) return 0f;
+
+        // Elevation overrides: Ocean=0, Beach=1, Mountain=2
+        if (elevation < registry.OceanThreshold)
+            return 0f / (totalBiomes - 1);
+        if (elevation < registry.OceanThreshold + registry.BeachWidth)
+            return 1f / (totalBiomes - 1);
+        if (elevation > registry.MountainThreshold)
+            return 2f / (totalBiomes - 1);
 
         float temperature = _temperatureProvider.Evaluate(pointOnUnitSphere);
         float moisture = _moistureProvider.Evaluate(pointOnUnitSphere);
 
-        // Map temperature × moisture to a biome index, normalized to 0-1
-        var registry = _colorSettings.BiomeSettings.Registry;
         float tempCont = Mathf.Clamp01(temperature) * (registry.TemperatureSteps - 1);
         float moistCont = Mathf.Clamp01(moisture) * (registry.MoistureSteps - 1);
 
         int tempIdx = Mathf.Clamp(Mathf.FloorToInt(tempCont), 0, registry.TemperatureSteps - 1);
         int moistIdx = Mathf.Clamp(Mathf.FloorToInt(moistCont), 0, registry.MoistureSteps - 1);
 
-        // Grid index offset by 3 (Ocean, Beach, Mountain are indices 0-2)
         int gridIndex = tempIdx * registry.MoistureSteps + moistIdx + 3;
-        int totalBiomes = _biomeRegistry.BiomeCount;
-
-        return totalBiomes > 1 ? (float)gridIndex / (totalBiomes - 1) : 0f;
+        return (float)gridIndex / (totalBiomes - 1);
     }
 
     public void UpdateColors()

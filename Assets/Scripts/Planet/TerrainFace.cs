@@ -88,7 +88,7 @@ public class TerrainFace
         _pendingUVs = _mesh.uv;
         for (int i = 0; i < _unitSpherePoints.Length; i++)
         {
-            _pendingUVs[i].x = biomeProvider.BiomePercentFromPoint(_unitSpherePoints[i]);
+            _pendingUVs[i].x = biomeProvider.BiomePercentFromPoint(_unitSpherePoints[i], _pendingUVs[i].y);
         }
     }
 

@@ -15,21 +15,21 @@ MonoBehaviour:
   TemperatureSteps: 4
   MoistureSteps: 3
   GridEntries:
-  - {fileID: 11400000, guid: a1b2c3d4e5f6000da1b2c3d4e5f6000d, type: 2}
-  - {fileID: 11400000, guid: a1b2c3d4e5f6000ea1b2c3d4e5f6000e, type: 2}
-  - {fileID: 11400000, guid: a1b2c3d4e5f6000fa1b2c3d4e5f6000f, type: 2}
-  - {fileID: 11400000, guid: a1b2c3d4e5f6000aa1b2c3d4e5f6000a, type: 2}
-  - {fileID: 11400000, guid: a1b2c3d4e5f6000ba1b2c3d4e5f6000b, type: 2}
-  - {fileID: 11400000, guid: a1b2c3d4e5f6000ca1b2c3d4e5f6000c, type: 2}
-  - {fileID: 11400000, guid: a1b2c3d4e5f60007a1b2c3d4e5f60007, type: 2}
-  - {fileID: 11400000, guid: a1b2c3d4e5f60008a1b2c3d4e5f60008, type: 2}
-  - {fileID: 11400000, guid: a1b2c3d4e5f60009a1b2c3d4e5f60009, type: 2}
-  - {fileID: 11400000, guid: a1b2c3d4e5f60004a1b2c3d4e5f60004, type: 2}
-  - {fileID: 11400000, guid: a1b2c3d4e5f60005a1b2c3d4e5f60005, type: 2}
-  - {fileID: 11400000, guid: a1b2c3d4e5f60006a1b2c3d4e5f60006, type: 2}
-  OceanBiome: {fileID: 11400000, guid: a1b2c3d4e5f60001a1b2c3d4e5f60001, type: 2}
-  BeachBiome: {fileID: 11400000, guid: a1b2c3d4e5f60002a1b2c3d4e5f60002, type: 2}
-  MountainBiome: {fileID: 11400000, guid: a1b2c3d4e5f60003a1b2c3d4e5f60003, type: 2}
+  - {fileID: 11400000, guid: 3483255a6aa6c614fbd2e4277cca57bf, type: 2}
+  - {fileID: 11400000, guid: a66ec3b10d0457544b7f5b7a79db3b2b, type: 2}
+  - {fileID: 11400000, guid: 9be84f5f10f315f41b345930801c60a8, type: 2}
+  - {fileID: 11400000, guid: fe4158bcadc8f3c4495f3250d19e4abe, type: 2}
+  - {fileID: 11400000, guid: 21fb3f8cd618ec3449f812cfd8d98ece, type: 2}
+  - {fileID: 11400000, guid: bcd96ecfa4284b540bc6ff0eb3a7bff2, type: 2}
+  - {fileID: 11400000, guid: dd71a3eff8d8e514da0fc4e1aaca7b6f, type: 2}
+  - {fileID: 11400000, guid: 179dddb1498071b4ba4b6fb830cf0a29, type: 2}
+  - {fileID: 11400000, guid: 823e95423a34e814c9cb7952807a0e95, type: 2}
+  - {fileID: 11400000, guid: 02fcf3880ae726d4eb683d014becd75e, type: 2}
+  - {fileID: 11400000, guid: 2bf3de1ed1192644eab8e6dce614291c, type: 2}
+  - {fileID: 11400000, guid: e54e5164ccba5af40a05d40c2d0c96e8, type: 2}
+  OceanBiome: {fileID: 11400000, guid: 3b2ededae815f8c48b998eb338bfb911, type: 2}
+  BeachBiome: {fileID: 11400000, guid: 7ded9e5dfa093f148b57dc19c1c8ebae, type: 2}
+  MountainBiome: {fileID: 11400000, guid: 35940dfc10b2bee4ea371197d6a2d250, type: 2}
   OceanThreshold: 0
   BeachWidth: 0.01
   MountainThreshold: 0.8

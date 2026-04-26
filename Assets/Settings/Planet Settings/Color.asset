@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Color
   m_EditorClassIdentifier: 
   PlanetMaterial: {fileID: 2100000, guid: 0c0c2029bb5cefd4688b7c29bd17a0bb, type: 2}
-  BiomeSettings: {fileID: 11400000, guid: a1b2c3d4e5f60011a1b2c3d4e5f60011, type: 2}
+  BiomeSettings: {fileID: 11400000, guid: ce38419e62833254b94ec0386401682b, type: 2}
   OceanColorGradient:
     serializedVersion: 2
     key0: {r: 0, g: 0.09411766, b: 0.28235295, a: 1}
