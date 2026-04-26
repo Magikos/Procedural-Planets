@@ -24,10 +24,10 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
         }
 
         int biomeCount = Mathf.Max(1, _biomeRegistry != null ? _biomeRegistry.BiomeCount : 1);
-        if (_texture == null || _texture.width != 1 || _texture.height != biomeCount)
+        if (_texture == null || _texture.width != 4 || _texture.height != biomeCount)
         {
-            _texture = new Texture2D(1, biomeCount, TextureFormat.RGBA32, false);
-            _texture.filterMode = FilterMode.Bilinear;
+            _texture = new Texture2D(4, biomeCount, TextureFormat.RGBA32, false);
+            _texture.filterMode = FilterMode.Point;
             _texture.wrapMode = TextureWrapMode.Clamp;
         }
     }
@@ -158,28 +158,27 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
 
         var registry = _colorSettings.BiomeSettings.Registry;
         int biomeCount = _biomeRegistry.BiomeCount;
+        int width = 4;
 
-        // Single-column texture: one color per biome, no ocean/land split
-        if (_texture == null || _texture.width != 1 || _texture.height != biomeCount)
+        if (_texture == null || _texture.width != width || _texture.height != biomeCount)
         {
-            _texture = new Texture2D(1, biomeCount, TextureFormat.RGBA32, false);
-            _texture.filterMode = FilterMode.Bilinear;
+            _texture = new Texture2D(width, biomeCount, TextureFormat.RGBA32, false);
+            _texture.filterMode = FilterMode.Point;
             _texture.wrapMode = TextureWrapMode.Clamp;
         }
 
-        Color[] colors = new Color[biomeCount];
+        Color[] colors = new Color[width * biomeCount];
         for (int b = 0; b < biomeCount; b++)
         {
             var def = registry.GetDefinitionByIndex(b);
+            Color c;
             if (def != null)
-            {
-                Color c = def.ColorGradient.Evaluate(0.5f);
-                colors[b] = c * (1 - def.TintPercent) + def.TintColor * def.TintPercent;
-            }
+                c = def.ColorGradient.Evaluate(0.5f) * (1 - def.TintPercent) + def.TintColor * def.TintPercent;
             else
-            {
-                colors[b] = Color.magenta;
-            }
+                c = Color.magenta;
+
+            for (int x = 0; x < width; x++)
+                colors[b * width + x] = c;
         }
 
         _texture.SetPixels(colors);
