@@ -25,7 +25,11 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
 
         int biomeCount = Mathf.Max(1, _biomeRegistry != null ? _biomeRegistry.BiomeCount : 1);
         if (_texture == null || _texture.width != TextureResolution * 2 || _texture.height != biomeCount)
+        {
             _texture = new Texture2D(TextureResolution * 2, biomeCount, TextureFormat.RGBA32, false);
+            _texture.filterMode = FilterMode.Bilinear;
+            _texture.wrapMode = TextureWrapMode.Clamp;
+        }
     }
 
     public void Initialize(int seed)
@@ -63,25 +67,85 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
         int totalBiomes = _biomeRegistry.BiomeCount;
         if (totalBiomes <= 1) return 0f;
 
-        // Elevation overrides: Ocean=0, Beach=1, Mountain=2
-        if (elevation < registry.OceanThreshold)
+        // Elevation overrides with soft transitions at boundaries
+        float beachTop = registry.OceanThreshold + registry.BeachWidth;
+        float blendWidth = registry.BlendWidth;
+
+        if (elevation < registry.OceanThreshold - blendWidth)
             return 0f / (totalBiomes - 1);
-        if (elevation < registry.OceanThreshold + registry.BeachWidth)
-            return 1f / (totalBiomes - 1);
-        if (elevation > registry.MountainThreshold)
-            return 2f / (totalBiomes - 1);
 
         float temperature = _temperatureProvider.Evaluate(pointOnUnitSphere);
         float moisture = _moistureProvider.Evaluate(pointOnUnitSphere);
 
+        // Continuous grid position (fractional = between biome rows)
         float tempCont = Mathf.Clamp01(temperature) * (registry.TemperatureSteps - 1);
         float moistCont = Mathf.Clamp01(moisture) * (registry.MoistureSteps - 1);
 
         int tempIdx = Mathf.Clamp(Mathf.FloorToInt(tempCont), 0, registry.TemperatureSteps - 1);
         int moistIdx = Mathf.Clamp(Mathf.FloorToInt(moistCont), 0, registry.MoistureSteps - 1);
+        float tempFrac = tempCont - tempIdx;
+        float moistFrac = moistCont - moistIdx;
 
-        int gridIndex = tempIdx * registry.MoistureSteps + moistIdx + 3;
-        return (float)gridIndex / (totalBiomes - 1);
+        // Base grid index + fractional blend toward neighbor
+        float gridIndex = tempIdx * registry.MoistureSteps + moistIdx;
+
+        // Blend along the dominant axis
+        int neighborOffset = 0;
+        float frac = 0f;
+        if (Mathf.Abs(tempFrac - 0.5f) < Mathf.Abs(moistFrac - 0.5f))
+        {
+            // Moisture is closer to a boundary
+            if (moistFrac > 0.5f && moistIdx < registry.MoistureSteps - 1)
+            {
+                neighborOffset = 1;
+                frac = (moistFrac - 0.5f) * 2f;
+            }
+            else if (moistFrac < 0.5f && moistIdx > 0)
+            {
+                neighborOffset = -1;
+                frac = (0.5f - moistFrac) * 2f;
+            }
+        }
+        else
+        {
+            // Temperature is closer to a boundary
+            if (tempFrac > 0.5f && tempIdx < registry.TemperatureSteps - 1)
+            {
+                neighborOffset = registry.MoistureSteps;
+                frac = (tempFrac - 0.5f) * 2f;
+            }
+            else if (tempFrac < 0.5f && tempIdx > 0)
+            {
+                neighborOffset = -registry.MoistureSteps;
+                frac = (0.5f - tempFrac) * 2f;
+            }
+        }
+
+        // Smooth blend: interpolate between current and neighbor grid row
+        float blendedIndex = gridIndex + 3;
+        if (neighborOffset != 0)
+        {
+            float neighborIndex = gridIndex + neighborOffset + 3;
+            blendedIndex = Mathf.Lerp(blendedIndex, neighborIndex, frac * 0.5f);
+        }
+
+        float gridPercent = blendedIndex / (totalBiomes - 1);
+
+        // Soft transition into elevation overrides
+        if (elevation > registry.MountainThreshold - blendWidth)
+        {
+            float mountainPercent = 2f / (totalBiomes - 1);
+            float t = Mathf.InverseLerp(registry.MountainThreshold - blendWidth, registry.MountainThreshold, elevation);
+            return Mathf.Lerp(gridPercent, mountainPercent, t);
+        }
+        if (elevation < beachTop + blendWidth)
+        {
+            float beachPercent = 1f / (totalBiomes - 1);
+            float t = Mathf.InverseLerp(beachTop + blendWidth, beachTop, elevation);
+            return Mathf.Lerp(gridPercent, beachPercent, t);
+        }
+
+        return gridPercent;
     }
 
     public void UpdateColors()
@@ -94,7 +158,11 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
 
         // Resize texture if needed
         if (_texture.height != biomeCount)
+        {
             _texture = new Texture2D(TextureResolution * 2, biomeCount, TextureFormat.RGBA32, false);
+            _texture.filterMode = FilterMode.Bilinear;
+            _texture.wrapMode = TextureWrapMode.Clamp;
+        }
 
         int colorIndex = 0;
         for (int b = 0; b < biomeCount; b++)
