@@ -122,10 +122,10 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
         }
 
         // Smooth blend: interpolate between current and neighbor grid row
-        float blendedIndex = gridIndex + 3;
+        float blendedIndex = gridIndex + 4;
         if (neighborOffset != 0)
         {
-            float neighborIndex = gridIndex + neighborOffset + 3;
+            float neighborIndex = gridIndex + neighborOffset + 4;
             blendedIndex = Mathf.Lerp(blendedIndex, neighborIndex, frac * 0.5f);
         }
 
@@ -134,7 +134,9 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
         // Soft transition into elevation overrides
         if (elevation > registry.MountainThreshold - blendWidth)
         {
-            float mountainPercent = 2f / (totalBiomes - 1);
+            // Cold mountains → snowy (index 3), warm mountains → rocky (index 2)
+            float mountainIdx = temperature < 0.4f ? 3f : 2f;
+            float mountainPercent = mountainIdx / (totalBiomes - 1);
             float t = Mathf.InverseLerp(registry.MountainThreshold - blendWidth, registry.MountainThreshold, elevation);
             return Mathf.Lerp(gridPercent, mountainPercent, t);
         }

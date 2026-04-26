@@ -14,6 +14,7 @@ public class BiomeRegistry : ScriptableObject, IBiomeRegistry
     public BiomeDefinition OceanBiome;
     public BiomeDefinition BeachBiome;
     public BiomeDefinition MountainBiome;
+    public BiomeDefinition SnowyMountainBiome;
 
     [Range(-0.1f, 0.1f)] public float OceanThreshold = 0f;
     [Range(0f, 0.1f)] public float BeachWidth = 0.003f;
@@ -22,7 +23,7 @@ public class BiomeRegistry : ScriptableObject, IBiomeRegistry
     [Header("Blending")]
     [Range(0f, 0.1f)] public float BlendWidth = 0.005f;
 
-    public int BiomeCount => GridEntries != null ? GridEntries.Length + 3 : 3;
+    public int BiomeCount => (GridEntries != null ? GridEntries.Length : 0) + 4;
 
     public BiomeResult Resolve(float temperature, float moisture, float elevation)
     {
@@ -34,7 +35,12 @@ public class BiomeRegistry : ScriptableObject, IBiomeRegistry
             return new BiomeResult(BiomeType.Beach, temperature, moisture);
 
         if (elevation > MountainThreshold)
+        {
+            // Cold mountains get snow, warm mountains get bare rock
+            if (temperature < 0.4f)
+                return new BiomeResult(BiomeType.Snow, temperature, moisture);
             return new BiomeResult(BiomeType.Mountain, temperature, moisture);
+        }
 
         // Grid lookup
         if (GridEntries == null || GridEntries.Length == 0)
@@ -112,6 +118,7 @@ public class BiomeRegistry : ScriptableObject, IBiomeRegistry
         if (OceanBiome != null && OceanBiome.Type == type) return OceanBiome;
         if (BeachBiome != null && BeachBiome.Type == type) return BeachBiome;
         if (MountainBiome != null && MountainBiome.Type == type) return MountainBiome;
+        if (SnowyMountainBiome != null && SnowyMountainBiome.Type == type) return SnowyMountainBiome;
 
         if (GridEntries != null)
         {
@@ -128,8 +135,9 @@ public class BiomeRegistry : ScriptableObject, IBiomeRegistry
         if (index == 0 && OceanBiome != null) return OceanBiome;
         if (index == 1 && BeachBiome != null) return BeachBiome;
         if (index == 2 && MountainBiome != null) return MountainBiome;
+        if (index == 3 && SnowyMountainBiome != null) return SnowyMountainBiome;
 
-        int gridIdx = index - 3;
+        int gridIdx = index - 4;
         if (GridEntries != null && gridIdx >= 0 && gridIdx < GridEntries.Length)
             return GridEntries[gridIdx];
         return null;
