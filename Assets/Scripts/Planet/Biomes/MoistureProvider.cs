@@ -4,6 +4,7 @@ public class MoistureProvider : IMoistureProvider
 {
     NoiseSettings _noiseSettings;
     INoiseFilter _noiseFilter;
+    float _maxValue;
 
     public MoistureProvider(NoiseSettings noiseSettings)
     {
@@ -13,13 +14,23 @@ public class MoistureProvider : IMoistureProvider
     public void Initialize(int seed)
     {
         _noiseFilter = NoiseFilterFactory.CreateNoiseFilter(_noiseSettings, seed);
+
+        // Compute theoretical max output of SimpleNoiseFilter
+        // Each layer outputs 0-1 (after (v+1)*0.5), scaled by amplitude
+        float amp = 1f;
+        _maxValue = 0f;
+        for (int i = 0; i < _noiseSettings.Layers; i++)
+        {
+            _maxValue += amp;
+            amp *= _noiseSettings.Persistence;
+        }
+        _maxValue *= _noiseSettings.Strength;
+        if (_maxValue < 0.001f) _maxValue = 1f;
     }
 
     public float Evaluate(Vector3 pointOnUnitSphere)
     {
-        // SimpleNoiseFilter already outputs ~0 to ~1.87 (positive-biased)
-        // Normalize to 0-1 by dividing by approximate max
         float raw = _noiseFilter.Evaluate(pointOnUnitSphere);
-        return Mathf.Clamp01(raw);
+        return Mathf.Clamp01(raw / _maxValue);
     }
 }

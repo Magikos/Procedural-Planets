@@ -5,6 +5,7 @@ public class TemperatureProvider : ITemperatureProvider
     NoiseSettings _noiseSettings;
     INoiseFilter _noiseFilter;
     float _noiseStrength;
+    float _maxValue;
 
     public TemperatureProvider(NoiseSettings noiseSettings, float noiseStrength = 0.15f)
     {
@@ -15,6 +16,16 @@ public class TemperatureProvider : ITemperatureProvider
     public void Initialize(int seed)
     {
         _noiseFilter = NoiseFilterFactory.CreateNoiseFilter(_noiseSettings, seed);
+
+        float amp = 1f;
+        _maxValue = 0f;
+        for (int i = 0; i < _noiseSettings.Layers; i++)
+        {
+            _maxValue += amp;
+            amp *= _noiseSettings.Persistence;
+        }
+        _maxValue *= _noiseSettings.Strength;
+        if (_maxValue < 0.001f) _maxValue = 1f;
     }
 
     public float Evaluate(Vector3 pointOnUnitSphere)
@@ -23,9 +34,9 @@ public class TemperatureProvider : ITemperatureProvider
         float absLatitude = CoordinateConverter.NormalizedLatitude(pointOnUnitSphere);
         float baseTemp = 1f - absLatitude;
 
-        // Noise perturbation centered around 0 for organic variation
-        // SimpleNoiseFilter outputs ~0 to ~1.87, center it by subtracting ~0.9
-        float noise = (_noiseFilter.Evaluate(pointOnUnitSphere) - 0.9f) * _noiseStrength;
+        // Normalize noise to 0-1, then center around 0 (-0.5 to +0.5)
+        float normalized = _noiseFilter.Evaluate(pointOnUnitSphere) / _maxValue;
+        float noise = (normalized - 0.5f) * _noiseStrength;
 
         return Mathf.Clamp01(baseTemp + noise);
     }
