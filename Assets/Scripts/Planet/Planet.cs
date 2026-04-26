@@ -11,19 +11,21 @@ public class Planet : MonoBehaviour
     public bool AutoUpdate = true;
     public FaceRenderMask RenderMask = FaceRenderMask.All;
 
-    public ShapeSettings _shapeSettings;
-    public ColorSettings _colorSettings;
+    public PlanetSettings _planetSettings;
 
     [Header("Deterministic Generation")]
     public int Seed = 12345;
 
-    [SerializeField, HideInInspector] public bool ShapeSettingsFoldout = true;
-    [SerializeField, HideInInspector] public bool ColorSettingsFoldout = true;
+    [SerializeField, HideInInspector] public bool SettingsFoldout = true;
 
     ShapeGenerator _shapeGenerator = new ShapeGenerator();
     ColorGenerator _colorGenerator = new ColorGenerator();
     TerrainFace[] _terrainFaces;
     [SerializeField, HideInInspector] MeshFilter[] _meshFilters;
+    [SerializeField, HideInInspector] GameObject _waterObject;
+
+    ShapeSettings _builtShapeSettings;
+    ColorSettings _builtColorSettings;
 
     CancellationTokenSource _cts;
     bool _isGenerating;
@@ -65,9 +67,12 @@ public class Planet : MonoBehaviour
         if (_meshFilters == null || _meshFilters.Length == 0) { _meshFilters = new MeshFilter[6]; }
         _terrainFaces = new TerrainFace[6];
 
-        _shapeGenerator.Configure(_shapeSettings);
+        _builtShapeSettings = _planetSettings.BuildShapeSettings();
+        _builtColorSettings = _planetSettings.BuildColorSettings();
+
+        _shapeGenerator.Configure(_builtShapeSettings);
         _shapeGenerator.Initialize(Seed);
-        _colorGenerator.Configure(_colorSettings);
+        _colorGenerator.Configure(_builtColorSettings);
         _colorGenerator.Initialize(Seed);
 
         Vector3[] directions = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
@@ -83,7 +88,7 @@ public class Planet : MonoBehaviour
                 _meshFilters[i].sharedMesh = new Mesh();
             }
 
-            _meshFilters[i].GetComponent<MeshRenderer>().sharedMaterial = _colorSettings.PlanetMaterial;
+            _meshFilters[i].GetComponent<MeshRenderer>().sharedMaterial = _planetSettings.PlanetMaterial;
             _terrainFaces[i] = new TerrainFace(TerrainProvider, _meshFilters[i].sharedMesh, Resolution, directions[i]);
 
             bool renderFace = RenderMask == FaceRenderMask.All || (int)RenderMask - 1 == i;
@@ -93,9 +98,9 @@ public class Planet : MonoBehaviour
 
     public async void GeneratePlanetAsync()
     {
-        if (_shapeSettings == null || _colorSettings == null)
+        if (_planetSettings == null)
         {
-            Logger.Log(LogLevel.Warning, "Planet", "ShapeSettings or ColorSettings is not assigned.");
+            Logger.Log(LogLevel.Warning, "Planet", "PlanetSettings is not assigned.");
             return;
         }
 
@@ -110,8 +115,9 @@ public class Planet : MonoBehaviour
             await GenerateMeshAsync(_cts.Token);
             if (this == null) return;
             GenerateColors();
+            GenerateWater();
 
-            float scaledRadius = _shapeSettings.PlanetRadius * (1 + TerrainProvider.ElevationMax);
+            float scaledRadius = _planetSettings.PlanetRadius * (1 + TerrainProvider.ElevationMax);
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius));
             Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, resolution {Resolution}, radius {scaledRadius:F1}");
         }
@@ -126,13 +132,7 @@ public class Planet : MonoBehaviour
         }
     }
 
-    public void OnShapeSettingsChanged()
-    {
-        if (!AutoUpdate) return;
-        GeneratePlanetAsync();
-    }
-
-    public void OnColorSettingsChanged()
+    public void OnSettingsChanged()
     {
         if (!AutoUpdate) return;
         GeneratePlanetAsync();
@@ -168,5 +168,67 @@ public class Planet : MonoBehaviour
         {
             terrainFace.UpdateUVs(BiomeProvider);
         }
+    }
+
+    void GenerateWater()
+    {
+        if (!_planetSettings.HasOceans)
+        {
+            if (_waterObject != null)
+                _waterObject.SetActive(false);
+            return;
+        }
+
+        if (_waterObject == null)
+        {
+            _waterObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            _waterObject.name = "Water";
+            _waterObject.transform.parent = transform;
+            _waterObject.transform.localPosition = Vector3.zero;
+
+            // Remove collider — we don't need physics on the water sphere
+            var collider = _waterObject.GetComponent<Collider>();
+            if (collider != null) DestroyImmediate(collider);
+        }
+
+        _waterObject.SetActive(true);
+
+        float waterRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel);
+        // Unity sphere primitive has diameter 1, so scale = diameter = radius * 2
+        _waterObject.transform.localScale = Vector3.one * waterRadius * 2f;
+
+        var renderer = _waterObject.GetComponent<Renderer>();
+        if (renderer.sharedMaterial == null || renderer.sharedMaterial.name == "Default-Material")
+        {
+            renderer.sharedMaterial = CreateWaterMaterial();
+        }
+        UpdateWaterMaterial(renderer.sharedMaterial);
+    }
+
+    Material CreateWaterMaterial()
+    {
+        var shader = Shader.Find("Universal Render Pipeline/Lit");
+        if (shader == null) shader = Shader.Find("Standard");
+        var mat = new Material(shader);
+        mat.name = "Water";
+        return mat;
+    }
+
+    void UpdateWaterMaterial(Material mat)
+    {
+        var color = _planetSettings.WaterColor;
+
+        // Set surface type to transparent
+        mat.SetFloat("_Surface", 1); // 0=Opaque, 1=Transparent
+        mat.SetFloat("_Blend", 0);   // 0=Alpha
+        mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        mat.SetFloat("_ZWrite", 0);
+        mat.SetFloat("_Smoothness", 0.9f);
+        mat.SetFloat("_Metallic", 0f);
+        mat.SetColor("_BaseColor", color);
+        mat.renderQueue = 3000;
+        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        mat.SetOverrideTag("RenderType", "Transparent");
     }
 }

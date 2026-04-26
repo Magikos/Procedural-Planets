@@ -5,8 +5,7 @@ using UnityEditor;
 public class PlanetEditor : Editor
 {
     Planet _planet;
-    Editor _shapeSettingsEditor;
-    Editor _colorSettingsEditor;
+    Editor _settingsEditor;
 
     public override void OnInspectorGUI()
     {
@@ -36,15 +35,14 @@ public class PlanetEditor : Editor
             Repaint();
         }
 
-        DrawSettingsEditor(_planet._shapeSettings, _planet.OnShapeSettingsChanged, ref _planet.ShapeSettingsFoldout, ref _shapeSettingsEditor);
-        DrawSettingsEditor(_planet._colorSettings, _planet.OnColorSettingsChanged, ref _planet.ColorSettingsFoldout, ref _colorSettingsEditor);
+        DrawSettingsEditor(_planet._planetSettings, _planet.OnSettingsChanged, ref _planet.SettingsFoldout, ref _settingsEditor);
     }
 
     void DrawSettingsEditor(Object settings, System.Action onSettingsChanged, ref bool foldout, ref Editor editor)
     {
         if (settings == null)
         {
-            EditorGUILayout.HelpBox("Settings object is missing.", MessageType.Warning);
+            EditorGUILayout.HelpBox("PlanetSettings is not assigned.", MessageType.Warning);
             return;
         }
 
