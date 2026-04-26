@@ -23,8 +23,9 @@ public class TemperatureProvider : ITemperatureProvider
         float absLatitude = CoordinateConverter.NormalizedLatitude(pointOnUnitSphere);
         float baseTemp = 1f - absLatitude;
 
-        // Noise perturbation for organic variation
-        float noise = _noiseFilter.Evaluate(pointOnUnitSphere) * _noiseStrength;
+        // Noise perturbation centered around 0 for organic variation
+        // SimpleNoiseFilter outputs ~0 to ~1.87, center it by subtracting ~0.9
+        float noise = (_noiseFilter.Evaluate(pointOnUnitSphere) - 0.9f) * _noiseStrength;
 
         return Mathf.Clamp01(baseTemp + noise);
     }

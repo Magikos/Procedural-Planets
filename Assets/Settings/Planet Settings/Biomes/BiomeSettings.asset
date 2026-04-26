@@ -15,7 +15,7 @@ MonoBehaviour:
   Registry: {fileID: 11400000, guid: 5c8993c0922932b488d904678a4e85bb, type: 2}
   TemperatureNoise:
     Filter: 0
-    Strength: 1
+    Strength: 0.55
     Layers: 3
     BaseRoughness: 0.8
     Roughness: 2
@@ -25,7 +25,7 @@ MonoBehaviour:
   TemperatureNoiseStrength: 0.15
   MoistureNoise:
     Filter: 0
-    Strength: 1
+    Strength: 0.55
     Layers: 4
     BaseRoughness: 1.2
     Roughness: 2.5

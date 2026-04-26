@@ -17,8 +17,9 @@ public class MoistureProvider : IMoistureProvider
 
     public float Evaluate(Vector3 pointOnUnitSphere)
     {
-        // Raw noise centered around 0, shift to 0-1 range
+        // SimpleNoiseFilter already outputs ~0 to ~1.87 (positive-biased)
+        // Normalize to 0-1 by dividing by approximate max
         float raw = _noiseFilter.Evaluate(pointOnUnitSphere);
-        return Mathf.Clamp01(raw * 0.5f + 0.5f);
+        return Mathf.Clamp01(raw);
     }
 }
