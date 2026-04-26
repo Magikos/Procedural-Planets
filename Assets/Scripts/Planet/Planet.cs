@@ -89,6 +89,14 @@ public class Planet : MonoBehaviour
             }
 
             _meshFilters[i].GetComponent<MeshRenderer>().sharedMaterial = _planetSettings.PlanetMaterial;
+
+            // Ensure material uses vertex color shader
+            if (_planetSettings.PlanetMaterial.shader.name != "Planet/VertexColor")
+            {
+                var vcShader = Shader.Find("Planet/VertexColor");
+                if (vcShader != null) _planetSettings.PlanetMaterial.shader = vcShader;
+            }
+
             _terrainFaces[i] = new TerrainFace(TerrainProvider, _meshFilters[i].sharedMesh, Resolution, directions[i]);
 
             bool renderFace = RenderMask == FaceRenderMask.All || (int)RenderMask - 1 == i;
@@ -157,16 +165,13 @@ public class Planet : MonoBehaviour
         {
             faces[i].ApplyMeshData();
         }
-
-        ColorProvider.UpdateElevation(TerrainProvider.ElevationMin, TerrainProvider.ElevationMax);
     }
 
     void GenerateColors()
     {
-        ColorProvider.UpdateColors();
         foreach (var terrainFace in _terrainFaces)
         {
-            terrainFace.UpdateUVs(BiomeProvider);
+            terrainFace.UpdateColors(BiomeProvider);
         }
     }
 

@@ -10,11 +10,11 @@ public class TerrainFace
 
     ITerrainProvider _terrainProvider;
     Vector3[] _unitSpherePoints;
+    float[] _elevations;
 
-    // Cached results from async generation
     Vector3[] _pendingVertices;
-    Vector2[] _pendingUVs;
     int[] _pendingTriangles;
+    Color[] _pendingColors;
 
     public TerrainFace(ITerrainProvider terrainProvider, Mesh mesh, int resolution, Vector3 localUp)
     {
@@ -31,9 +31,9 @@ public class TerrainFace
     {
         int vertexCount = _resolution * _resolution;
         _pendingVertices = new Vector3[vertexCount];
-        _pendingUVs = new Vector2[vertexCount];
         _pendingTriangles = new int[(_resolution - 1) * (_resolution - 1) * 6];
         _unitSpherePoints = new Vector3[vertexCount];
+        _elevations = new float[vertexCount];
         int triIndex = 0;
 
         for (int y = 0; y < _resolution; y++)
@@ -47,8 +47,8 @@ public class TerrainFace
                 _unitSpherePoints[i] = pointOnUnitSphere;
 
                 float unscaledElevation = _terrainProvider.EvaluateElevation(pointOnUnitSphere);
+                _elevations[i] = unscaledElevation;
                 _pendingVertices[i] = pointOnUnitSphere * _terrainProvider.GetScaledElevation(unscaledElevation);
-                _pendingUVs[i].y = unscaledElevation;
 
                 if (x < _resolution - 1 && y < _resolution - 1)
                 {
@@ -73,7 +73,6 @@ public class TerrainFace
         _mesh.triangles = _pendingTriangles;
         _mesh.RecalculateNormals();
         _mesh.RecalculateBounds();
-        _mesh.uv = _pendingUVs;
     }
 
     public void ConstructMesh()
@@ -82,25 +81,16 @@ public class TerrainFace
         ApplyMeshData();
     }
 
-    public void CalculateUVData(IBiomeProvider biomeProvider)
+    public void UpdateColors(IBiomeProvider biomeProvider)
     {
-        if (_unitSpherePoints == null) return;
-        _pendingUVs = _mesh.uv;
+        if (_unitSpherePoints == null || _elevations == null) return;
+
+        _pendingColors = new Color[_unitSpherePoints.Length];
         for (int i = 0; i < _unitSpherePoints.Length; i++)
         {
-            _pendingUVs[i].x = biomeProvider.BiomePercentFromPoint(_unitSpherePoints[i], _pendingUVs[i].y);
+            _pendingColors[i] = biomeProvider.GetBiomeColor(_unitSpherePoints[i], _elevations[i]);
         }
-    }
 
-    public void ApplyUVData()
-    {
-        if (_pendingUVs == null) return;
-        _mesh.uv = _pendingUVs;
-    }
-
-    public void UpdateUVs(IBiomeProvider biomeProvider)
-    {
-        CalculateUVData(biomeProvider);
-        ApplyUVData();
+        _mesh.colors = _pendingColors;
     }
 }
