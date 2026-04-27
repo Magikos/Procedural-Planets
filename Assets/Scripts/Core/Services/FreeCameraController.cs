@@ -39,19 +39,19 @@ public class FreeCameraController : MonoBehaviour
         EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
     }
 
-    void OnPlanetGenerated(PlanetGeneratedEvent evt)
-    {
-        _lastPlanetCenter = evt.PlanetCenter;
-        _lastPlanetRadius = evt.PlanetRadius;
-        InitFromPlanet();
-    }
-
     void Start()
     {
         _yaw = transform.eulerAngles.y;
         _pitch = transform.eulerAngles.x;
         _mouse = Mouse.current;
         _keyboard = Keyboard.current;
+    }
+
+    void OnPlanetGenerated(PlanetGeneratedEvent evt)
+    {
+        _lastPlanetCenter = evt.PlanetCenter;
+        _lastPlanetRadius = evt.PlanetRadius;
+        InitFromPlanet();
     }
 
     void Update()

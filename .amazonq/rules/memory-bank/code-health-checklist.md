@@ -40,6 +40,11 @@ Run this checklist periodically (every few features, before branch merges).
 - [ ] No System.Random without seed
 - [ ] No reliance on execution order for determinism
 
+## Event Bus
+- [ ] Subscribe in OnEnable, unsubscribe in OnDisable (not Start/OnDestroy)
+- [ ] Initialization logic in Start, not in subscription callbacks
+- [ ] No dependency on execution order between listeners
+
 ## Project Hygiene
 - [ ] No compiler warnings
 - [ ] No missing script references in scenes

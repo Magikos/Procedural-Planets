@@ -16,6 +16,7 @@ public class Planet : MonoBehaviour
     public int Seed = 12345;
 
     [SerializeField, HideInInspector] public bool SettingsFoldout = true;
+    [SerializeField, HideInInspector] float _lastGeneratedRadius;
 
     ShapeGenerator _shapeGenerator = new ShapeGenerator();
     ColorGenerator _colorGenerator = new ColorGenerator();
@@ -28,6 +29,7 @@ public class Planet : MonoBehaviour
 
     public bool IsGenerating => _isGenerating;
     public ShapeGenerator ShapeGenerator => _shapeGenerator;
+    public float LastGeneratedRadius => _lastGeneratedRadius;
 
     ILogger _logger;
 
@@ -116,6 +118,7 @@ public class Planet : MonoBehaviour
             GenerateWater();
 
             float scaledRadius = _planetSettings.PlanetRadius * (1 + _shapeGenerator.ElevationMax);
+            _lastGeneratedRadius = scaledRadius;
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius));
             Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, resolution {Resolution}, radius {scaledRadius:F1}");
         }

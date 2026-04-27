@@ -53,16 +53,20 @@ public class CelestialManager : MonoBehaviour
     /// <summary>0-1 progress through the current season cycle.</summary>
     public float SeasonProgress => 0f;
 
+    void OnEnable()
+    {
+        EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+    }
+
+    void OnDisable()
+    {
+        EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
+    }
+
     void Start()
     {
         _timeOfDay = StartTimeOfDay;
-        EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
         InitFromPlanet();
-    }
-
-    void OnDestroy()
-    {
-        EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
     }
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
@@ -81,13 +85,12 @@ public class CelestialManager : MonoBehaviour
         if (PlanetCenter == null) return;
 
         var p = PlanetCenter.GetComponent<Planet>();
-        if (p == null || p._planetSettings == null || p.ShapeGenerator == null) return;
+        if (p == null || p.LastGeneratedRadius <= 0f) return;
 
-        float elevMax = p.ShapeGenerator.ElevationMax;
-        if (elevMax == float.MinValue) return;
-
-        _planetRadius = p._planetSettings.PlanetRadius * (1 + elevMax);
+        _planetRadius = p.LastGeneratedRadius;
         MoonOrbitRadius = _planetRadius * 3f;
+
+        EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(PlanetCenter.position, _planetRadius));
     }
 
     void Update()
