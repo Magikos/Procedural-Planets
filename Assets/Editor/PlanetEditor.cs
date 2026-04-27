@@ -9,14 +9,7 @@ public class PlanetEditor : Editor
 
     public override void OnInspectorGUI()
     {
-        using (var check = new EditorGUI.ChangeCheckScope())
-        {
-            base.OnInspectorGUI();
-            if (check.changed)
-            {
-                _planet.GeneratePlanetAsync();
-            }
-        }
+        base.OnInspectorGUI();
 
         EditorGUILayout.Space();
 
@@ -35,10 +28,10 @@ public class PlanetEditor : Editor
             Repaint();
         }
 
-        DrawSettingsEditor(_planet._planetSettings, _planet.OnSettingsChanged, ref _planet.SettingsFoldout, ref _settingsEditor);
+        DrawSettingsEditor(_planet._planetSettings, ref _planet.SettingsFoldout, ref _settingsEditor);
     }
 
-    void DrawSettingsEditor(Object settings, System.Action onSettingsChanged, ref bool foldout, ref Editor editor)
+    void DrawSettingsEditor(Object settings, ref bool foldout, ref Editor editor)
     {
         if (settings == null)
         {
@@ -49,16 +42,8 @@ public class PlanetEditor : Editor
         foldout = EditorGUILayout.InspectorTitlebar(foldout, settings);
         if (!foldout) return;
 
-        using (var check = new EditorGUI.ChangeCheckScope())
-        {
-            CreateCachedEditor(settings, null, ref editor);
-            editor.OnInspectorGUI();
-
-            if (check.changed)
-            {
-                onSettingsChanged?.Invoke();
-            }
-        }
+        CreateCachedEditor(settings, null, ref editor);
+        editor.OnInspectorGUI();
     }
 
     void OnEnable() { _planet = (Planet)target; }

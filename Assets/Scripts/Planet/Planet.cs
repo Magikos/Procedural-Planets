@@ -8,7 +8,6 @@ public class Planet : MonoBehaviour
 
     [Range(2, 256)]
     public int Resolution = 10;
-    public bool AutoUpdate = true;
     public FaceRenderMask RenderMask = FaceRenderMask.All;
 
     public PlanetSettings _planetSettings;
@@ -21,8 +20,8 @@ public class Planet : MonoBehaviour
     ShapeGenerator _shapeGenerator = new ShapeGenerator();
     ColorGenerator _colorGenerator = new ColorGenerator();
     TerrainFace[] _terrainFaces;
-    [SerializeField, HideInInspector] MeshFilter[] _meshFilters;
-    [SerializeField, HideInInspector] GameObject _waterObject;
+    MeshFilter[] _meshFilters;
+    GameObject _waterObject;
 
     ShapeSettings _builtShapeSettings;
     ColorSettings _builtColorSettings;
@@ -50,11 +49,7 @@ public class Planet : MonoBehaviour
         }
     }
 
-    void OnValidate()
-    {
-        if (Application.isPlaying) return;
-        GeneratePlanetAsync();
-    }
+
 
     void OnDestroy()
     {
@@ -64,8 +59,13 @@ public class Planet : MonoBehaviour
 
     void Initialize()
     {
-        if (_meshFilters == null || _meshFilters.Length == 0) { _meshFilters = new MeshFilter[6]; }
+        // Destroy old generated children
+        for (int i = transform.childCount - 1; i >= 0; i--)
+            DestroyImmediate(transform.GetChild(i).gameObject);
+
+        _meshFilters = new MeshFilter[6];
         _terrainFaces = new TerrainFace[6];
+        _waterObject = null;
 
         _builtShapeSettings = _planetSettings.BuildShapeSettings();
         _builtColorSettings = _planetSettings.BuildColorSettings();
@@ -78,15 +78,12 @@ public class Planet : MonoBehaviour
         Vector3[] directions = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
         for (int i = 0; i < 6; i++)
         {
-            if (_meshFilters[i] == null)
-            {
-                GameObject meshObject = new GameObject("mesh");
-                meshObject.transform.parent = transform;
+            GameObject meshObject = new GameObject("mesh");
+            meshObject.transform.parent = transform;
 
-                meshObject.AddComponent<MeshRenderer>();
-                _meshFilters[i] = meshObject.AddComponent<MeshFilter>();
-                _meshFilters[i].sharedMesh = new Mesh();
-            }
+            meshObject.AddComponent<MeshRenderer>();
+            _meshFilters[i] = meshObject.AddComponent<MeshFilter>();
+            _meshFilters[i].sharedMesh = new Mesh();
 
             _meshFilters[i].GetComponent<MeshRenderer>().sharedMaterial = _planetSettings.PlanetMaterial;
 
@@ -143,11 +140,6 @@ public class Planet : MonoBehaviour
         }
     }
 
-    public void OnSettingsChanged()
-    {
-        if (!AutoUpdate) return;
-        GeneratePlanetAsync();
-    }
 
     async Awaitable GenerateMeshAsync(CancellationToken ct)
     {
