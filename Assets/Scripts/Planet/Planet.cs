@@ -23,7 +23,6 @@ public class Planet : MonoBehaviour
     TerrainFace[] _terrainFaces;
     MeshFilter[] _meshFilters;
     GameObject _waterObject;
-    GameObject _atmosphereObject;
 
     CancellationTokenSource _cts;
     bool _isGenerating;
@@ -66,7 +65,6 @@ public class Planet : MonoBehaviour
         _meshFilters = new MeshFilter[6];
         _terrainFaces = new TerrainFace[6];
         _waterObject = null;
-        _atmosphereObject = null;
 
         var shapeSettings = _planetSettings.BuildShapeSettings();
         _shapeGenerator.Configure(shapeSettings);
@@ -126,7 +124,7 @@ public class Planet : MonoBehaviour
             if (this == null) return;
             GenerateColors();
             GenerateWater();
-            GenerateAtmosphere();
+            // Atmosphere is rendered by AtmosphereController + AtmosphereRenderFeature (post-process).
 
             float scaledRadius = _planetSettings.PlanetRadius * (1 + _shapeGenerator.ElevationMax);
             _lastGeneratedRadius = scaledRadius;
@@ -222,45 +220,5 @@ public class Planet : MonoBehaviour
         mat.renderQueue = 3000;
         mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
         mat.SetOverrideTag("RenderType", "Transparent");
-    }
-
-    void GenerateAtmosphere()
-    {
-        if (!_planetSettings.HasAtmosphere)
-        {
-            if (_atmosphereObject != null) _atmosphereObject.SetActive(false);
-            return;
-        }
-
-        if (_atmosphereObject == null)
-        {
-            _atmosphereObject = new GameObject("Atmosphere");
-            _atmosphereObject.transform.parent = transform;
-            _atmosphereObject.transform.localPosition = Vector3.zero;
-            _atmosphereObject.AddComponent<MeshRenderer>();
-            _atmosphereObject.AddComponent<MeshFilter>();
-        }
-
-        _atmosphereObject.SetActive(true);
-        _atmosphereObject.transform.localScale = Vector3.one;
-        _atmosphereObject.transform.localPosition = Vector3.zero;
-
-        float atmosphereRadius = _lastGeneratedRadius * _planetSettings.AtmosphereScale;
-
-        var meshFilter = _atmosphereObject.GetComponent<MeshFilter>();
-        if (meshFilter.sharedMesh == null)
-            meshFilter.sharedMesh = new Mesh { name = "AtmosphereSphere" };
-        CubeSphereMeshBuilder.Build(meshFilter.sharedMesh, 32, atmosphereRadius);
-
-        var renderer = _atmosphereObject.GetComponent<Renderer>();
-        if (renderer.sharedMaterial == null || renderer.sharedMaterial.name == "Default-Material")
-        {
-            var shader = Shader.Find("Planet/Atmosphere");
-            if (shader == null) shader = Shader.Find("Universal Render Pipeline/Lit");
-            renderer.sharedMaterial = new Material(shader) { name = "Atmosphere" };
-        }
-
-        var mat = renderer.sharedMaterial;
-        mat.SetColor("_AtmosphereColor", _planetSettings.AtmosphereColor);
     }
 }

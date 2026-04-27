@@ -2,7 +2,9 @@
     "name": "ProceduralPlanets.Planet",
     "rootNamespace": "",
     "references": [
-        "ProceduralPlanets.Core"
+        "ProceduralPlanets.Core",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

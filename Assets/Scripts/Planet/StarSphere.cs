@@ -4,13 +4,12 @@ public class StarSphere : MonoBehaviour
 {
     [Header("Generation")]
     [Range(500, 10000)] public int StarCount = 3000;
-    public float SphereRadius = 5000f;
-    [Range(0.1f, 5f)] public float StarSize = 1.5f;
     public int Seed = 42;
 
     [Header("References")]
     public Transform PlanetCenter;
 
+    float _sphereRadius = 5000f;
     MeshFilter _meshFilter;
     MeshRenderer _meshRenderer;
 
@@ -26,13 +25,26 @@ public class StarSphere : MonoBehaviour
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
-        SphereRadius = evt.PlanetRadius * 80f;
+        _sphereRadius = evt.PlanetRadius * 80f;
+        if (PlanetCenter == null)
+        {
+            var planet = FindAnyObjectByType<Planet>();
+            if (planet != null) PlanetCenter = planet.transform;
+        }
         Generate();
     }
 
     void Start()
     {
+        if (_sphereRadius <= 0f) _sphereRadius = 5000f;
         Generate();
+    }
+
+    void LateUpdate()
+    {
+        // Keep star sphere centered on planet so it's always surrounding the camera
+        if (PlanetCenter != null)
+            transform.position = PlanetCenter.position;
     }
 
     public void Generate()
@@ -47,24 +59,24 @@ public class StarSphere : MonoBehaviour
         var colors = new Color[vertCount];
         var triangles = new int[triCount];
 
+        // Star size scales with sphere radius
+        float baseStarSize = _sphereRadius * 0.002f;
+
         for (int i = 0; i < StarCount; i++)
         {
             Vector3 dir = RandomUnitVector(rand);
-            Vector3 pos = dir * SphereRadius;
+            Vector3 pos = dir * _sphereRadius;
 
-            // Brightness variation
             float brightness = 0.4f + (float)rand.NextDouble() * 0.6f;
-            // Slight color variation: warm or cool white
             float temp = (float)rand.NextDouble();
             Color starColor = Color.Lerp(
                 new Color(0.8f, 0.85f, 1f),
                 new Color(1f, 0.95f, 0.8f),
                 temp) * brightness;
 
-            // Size variation
-            float size = StarSize * (0.5f + (float)rand.NextDouble() * 0.5f);
+            float size = baseStarSize * (0.5f + (float)rand.NextDouble() * 1.5f);
 
-            // Build a camera-facing quad (two triangles)
+            // Build quad perpendicular to direction from center
             Vector3 up = Vector3.Cross(dir, Vector3.right).normalized;
             if (up.sqrMagnitude < 0.01f)
                 up = Vector3.Cross(dir, Vector3.forward).normalized;
@@ -101,8 +113,6 @@ public class StarSphere : MonoBehaviour
         mesh.vertices = vertices;
         mesh.colors = colors;
         mesh.triangles = triangles;
-
-        // No normals needed, no lighting
     }
 
     void EnsureComponents()
@@ -124,7 +134,6 @@ public class StarSphere : MonoBehaviour
         _meshRenderer.receiveShadows = false;
     }
 
-    /// <summary>Returns the star direction (unit vector) for a given star index. Useful for future constellation queries.</summary>
     public Vector3 GetStarDirection(int index)
     {
         var rand = new System.Random(Seed);

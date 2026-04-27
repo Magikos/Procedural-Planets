@@ -1,95 +1,79 @@
-Shader "Planet/Atmosphere"
+Shader "Hidden/Atmosphere"
 {
-    Properties
-    {
-        _AtmosphereColor ("Atmosphere Color", Color) = (0.3, 0.5, 1.0, 1.0)
-        _SunsetColor ("Sunset Color", Color) = (1.0, 0.4, 0.1, 1.0)
-        _FresnelPower ("Fresnel Power", Range(1, 8)) = 3.0
-        _Intensity ("Intensity", Range(0, 3)) = 1.2
-        _SunInfluence ("Sun Influence", Range(0, 1)) = 0.7
-    }
+HLSLINCLUDE
+
+#include "Includes/Common.hlsl"
+#include "Includes/Math.hlsl"
+
+TEXTURE2D(_CameraDepthTexture);
+SAMPLER(sampler_CameraDepthTexture);
+
+float CompositeDepthScaled(float2 uv, float viewLength)
+{
+    float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r;
+    return LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
+}
+
+#include "Includes/Atmosphere.hlsl"
+
+ENDHLSL
 
     SubShader
     {
-        Tags { "RenderType"="Transparent" "Queue"="Transparent+100" "RenderPipeline"="UniversalPipeline" }
-        LOD 100
+        Cull Off ZWrite Off ZTest Off
 
         Pass
         {
-            Name "Atmosphere"
-            Blend SrcAlpha OneMinusSrcAlpha
-            ZWrite Off
-            Cull Off
+            Name "RenderAtmosphere"
 
             HLSLPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
 
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #pragma vertex AtmosphereVertex
+            #pragma fragment AtmosphereFragment
 
-            struct Attributes
+            #pragma target 4.0
+
+            #define ATMOSPHERE_MODEL_SIM
+
+            struct appdata
             {
-                float4 positionOS : POSITION;
-                float3 normalOS : NORMAL;
+                float4 vertex : POSITION;
+                float4 uv : TEXCOORD0;
             };
 
-            struct Varyings
+            struct v2f
             {
-                float4 positionCS : SV_POSITION;
-                float3 normalWS : TEXCOORD0;
-                float3 viewDirWS : TEXCOORD1;
-                float3 positionWS : TEXCOORD2;
+                float4 pos : SV_POSITION;
+                float2 uv : TEXCOORD0;
+                float3 viewVector : TEXCOORD1;
             };
 
-            CBUFFER_START(UnityPerMaterial)
-                float4 _AtmosphereColor;
-                float4 _SunsetColor;
-                float _FresnelPower;
-                float _Intensity;
-                float _SunInfluence;
-            CBUFFER_END
+            TEXTURE2D(_Source);
+            SAMPLER(sampler_Source);
 
-            Varyings vert(Attributes input)
+            v2f AtmosphereVertex(appdata v)
             {
-                Varyings output;
-                VertexPositionInputs posInputs = GetVertexPositionInputs(input.positionOS.xyz);
-                output.positionCS = posInputs.positionCS;
-                output.positionWS = posInputs.positionWS;
-                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
-                output.viewDirWS = GetWorldSpaceNormalizeViewDir(posInputs.positionWS);
+                v2f output;
+                output.pos = TransformObjectToHClip(v.vertex.xyz);
+                output.uv = v.uv.xy;
+                float3 viewVector = mul(unity_CameraInvProjection, float4(v.uv.xy * 2 - 1, 0, -1)).xyz;
+                output.viewVector = mul(unity_CameraToWorld, float4(viewVector, 0)).xyz;
                 return output;
             }
 
-            half4 frag(Varyings input) : SV_Target
+            float4 AtmosphereFragment(v2f i) : SV_Target
             {
-                float3 normal = normalize(input.normalWS);
-                float3 viewDir = normalize(input.viewDirWS);
+                float4 originalCol = SAMPLE_TEXTURE2D(_Source, sampler_Source, i.uv);
 
-                // Fresnel: bright at edges, transparent at center
-                // Cull Front means normals point inward, so flip
-                float fresnel = pow(saturate(dot(normal, viewDir)), _FresnelPower);
+                float viewLength = length(i.viewVector);
 
-                // Sun lighting
-                Light mainLight = GetMainLight();
-                float3 sunDir = normalize(mainLight.direction);
-                float sunDot = dot(-normal, sunDir);
+                float sceneDepth = CompositeDepthScaled(i.uv, viewLength);
 
-                // Day side brightness
-                float dayAmount = saturate(sunDot);
+                float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz);
 
-                // Sunset zone: where sunDot is near 0 (terminator)
-                float sunsetAmount = 1.0 - saturate(abs(sunDot) * 4.0);
-
-                // Blend atmosphere and sunset colors
-                float3 color = lerp(_AtmosphereColor.rgb, _SunsetColor.rgb, sunsetAmount * 0.5);
-
-                // Final opacity: fresnel * sun influence
-                float sunFade = lerp(1.0, saturate(dayAmount + 0.3), _SunInfluence);
-                float alpha = fresnel * _Intensity * sunFade;
-
-                return half4(color, saturate(alpha));
+                return float4(color, originalCol.w);
             }
+
             ENDHLSL
         }
     }
