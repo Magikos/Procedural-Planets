@@ -41,6 +41,8 @@ public class FreeCameraController : MonoBehaviour
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
+        _lastPlanetCenter = evt.PlanetCenter;
+        _lastPlanetRadius = evt.PlanetRadius;
         InitFromPlanet();
     }
 
@@ -50,22 +52,6 @@ public class FreeCameraController : MonoBehaviour
         _pitch = transform.eulerAngles.x;
         _mouse = Mouse.current;
         _keyboard = Keyboard.current;
-        InitFromPlanet();
-    }
-
-    void InitFromPlanet()
-    {
-        if (!AutoPositionOnGenerate || TargetCenter == null) return;
-
-        var planet = TargetCenter.GetComponent<Planet>();
-        if (planet == null || planet._planetSettings == null || planet.ShapeGenerator == null) return;
-
-        float elevMax = planet.ShapeGenerator.ElevationMax;
-        if (elevMax == float.MinValue) return;
-
-        _lastPlanetRadius = planet._planetSettings.PlanetRadius * (1 + elevMax);
-        _lastPlanetCenter = TargetCenter.position;
-        RepositionCamera(_lastPlanetCenter, _lastPlanetRadius);
     }
 
     void Update()
@@ -76,7 +62,7 @@ public class FreeCameraController : MonoBehaviour
         HandleMovement();
 
         if (_keyboard.spaceKey.wasPressedThisFrame && _lastPlanetRadius > 0f)
-            RepositionCamera(_lastPlanetCenter, _lastPlanetRadius);
+            InitFromPlanet();
     }
 
     void HandleLook()
@@ -122,6 +108,12 @@ public class FreeCameraController : MonoBehaviour
         float scroll = _mouse.scroll.ReadValue().y;
         if (scroll != 0)
             transform.position += transform.forward * scroll * ScrollSpeed * Time.deltaTime;
+    }
+
+    void InitFromPlanet()
+    {
+        if (!AutoPositionOnGenerate) return;
+        RepositionCamera(_lastPlanetCenter, _lastPlanetRadius);
     }
 
     void RepositionCamera(Vector3 center, float radius)
