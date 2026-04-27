@@ -16,7 +16,7 @@ public class CelestialManager : MonoBehaviour
     [Header("Moon")]
     [Tooltip("How many days per full moon cycle")]
     public float MoonCycleDays = 8f;
-    [Tooltip("Distance from planet center (set automatically from planet radius if 0)")]
+    [Tooltip("Distance from planet center (auto-set from planet radius)")]
     public float MoonOrbitRadius;
     [Range(0f, 15f), Tooltip("Moon orbital plane tilt relative to sun")]
     public float MoonInclination = 5f;
@@ -28,9 +28,7 @@ public class CelestialManager : MonoBehaviour
     float _timeOfDay;
     float _moonCycleProgress;
     float _planetRadius;
-    bool _wasDay;
-
-    // 8 moon phases, track which we're in to fire events on change
+    bool _wasDay = true;
     int _lastMoonPhaseIndex = -1;
 
     public float TimeOfDay => _timeOfDay;
@@ -43,28 +41,23 @@ public class CelestialManager : MonoBehaviour
         return Vector3.Dot(surfaceNormal, SunDirection) > 0f;
     }
 
-    /// <summary>
-    /// -1 = full moon, 0 = half, +1 = new moon.
-    /// Derived from angle between sun and moon as seen from planet.
-    /// </summary>
+    /// <summary>-1 = full moon, 0 = half, +1 = new moon.</summary>
     public float MoonPhase { get; private set; }
 
-    /// <summary>0-7 discrete phase index: 0=New, 1=WaxingCrescent, 2=FirstQuarter, 3=WaxingGibbous, 4=Full, 5=WaningGibbous, 6=LastQuarter, 7=WaningCrescent</summary>
+    /// <summary>0-7 discrete phase index.</summary>
     public int MoonPhaseIndex => Mathf.FloorToInt((_moonCycleProgress % 1f) * 8f) % 8;
 
     /// <summary>0 at new moon, 1 at full moon. Useful for magic intensity.</summary>
     public float MoonFullness => (1f - MoonPhase) * 0.5f;
 
-    /// <summary>0-1 progress through the current season cycle</summary>
-    public float SeasonProgress => 0f; // TODO: implement when seasons are needed
+    /// <summary>0-1 progress through the current season cycle.</summary>
+    public float SeasonProgress => 0f;
 
     void Start()
     {
         _timeOfDay = StartTimeOfDay;
-        _wasDay = true;
-
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
-        TryInitFromExistingPlanet();
+        InitFromPlanet();
     }
 
     void OnDestroy()
@@ -74,26 +67,26 @@ public class CelestialManager : MonoBehaviour
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
-        _planetRadius = evt.PlanetRadius;
+        InitFromPlanet();
+    }
+
+    void InitFromPlanet()
+    {
         if (PlanetCenter == null)
         {
             var planet = FindAnyObjectByType<Planet>();
             if (planet != null) PlanetCenter = planet.transform;
         }
 
-        MoonOrbitRadius = _planetRadius * 3f;
-    }
-
-    void TryInitFromExistingPlanet()
-    {
         if (PlanetCenter == null) return;
-        var planet = PlanetCenter.GetComponent<Planet>();
-        if (planet == null || planet.ShapeGenerator == null) return;
 
-        float elevMax = planet.ShapeGenerator.ElevationMax;
+        var p = PlanetCenter.GetComponent<Planet>();
+        if (p == null || p._planetSettings == null || p.ShapeGenerator == null) return;
+
+        float elevMax = p.ShapeGenerator.ElevationMax;
         if (elevMax == float.MinValue) return;
 
-        _planetRadius = planet._planetSettings.PlanetRadius * (1 + elevMax);
+        _planetRadius = p._planetSettings.PlanetRadius * (1 + elevMax);
         MoonOrbitRadius = _planetRadius * 3f;
     }
 
@@ -114,7 +107,6 @@ public class CelestialManager : MonoBehaviour
         float sunAngle = _timeOfDay * 360f;
         Vector3 center = PlanetCenter != null ? PlanetCenter.position : Vector3.zero;
 
-        // Sun orbits in a tilted plane
         Quaternion tilt = Quaternion.Euler(AxialTilt, 0f, 0f);
         Vector3 sunDir = tilt * new Vector3(
             Mathf.Sin(sunAngle * Mathf.Deg2Rad),
@@ -124,7 +116,6 @@ public class CelestialManager : MonoBehaviour
 
         if (SunLight != null)
         {
-            // Position far away so it acts as directional
             SunLight.transform.position = center - sunDir * (_planetRadius > 0 ? _planetRadius * 10f : 1000f);
             SunLight.transform.LookAt(center);
         }
@@ -132,7 +123,7 @@ public class CelestialManager : MonoBehaviour
 
     void UpdateMoon(float dt)
     {
-        if (MoonTransform == null) return;
+        if (MoonTransform == null || MoonOrbitRadius <= 0f) return;
 
         float moonDayLength = DayLengthSeconds * MoonCycleDays;
         if (moonDayLength <= 0f) return;
@@ -152,7 +143,6 @@ public class CelestialManager : MonoBehaviour
         MoonTransform.position = center + moonDir * MoonOrbitRadius;
         MoonTransform.LookAt(center);
 
-        // Phase = dot between sun direction and moon direction from planet
         Vector3 toMoon = (MoonTransform.position - center).normalized;
         MoonPhase = Vector3.Dot(SunDirection, toMoon);
     }
