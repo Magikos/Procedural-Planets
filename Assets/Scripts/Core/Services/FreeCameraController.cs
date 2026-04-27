@@ -54,6 +54,7 @@ public class FreeCameraController : MonoBehaviour
         _pitch = transform.eulerAngles.x;
         _mouse = Mouse.current;
         _keyboard = Keyboard.current;
+        TryInitFromExistingPlanet();
     }
 
     void Update()
@@ -123,6 +124,21 @@ public class FreeCameraController : MonoBehaviour
 
         MoveSpeed = radius * 0.5f;
         ScrollSpeed = radius * 2f;
+    }
+
+    void TryInitFromExistingPlanet()
+    {
+        if (!AutoPositionOnGenerate || TargetCenter == null) return;
+        var planet = TargetCenter.GetComponent<Planet>();
+        if (planet == null || planet._planetSettings == null || planet.ShapeGenerator == null) return;
+
+        float elevMax = planet.ShapeGenerator.ElevationMax;
+        if (elevMax == float.MinValue) return;
+
+        float radius = planet._planetSettings.PlanetRadius * (1 + elevMax);
+        _lastPlanetCenter = TargetCenter.position;
+        _lastPlanetRadius = radius;
+        RepositionCamera(_lastPlanetCenter, _lastPlanetRadius);
     }
 
     void OnGUI()

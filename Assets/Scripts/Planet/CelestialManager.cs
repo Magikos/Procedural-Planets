@@ -64,6 +64,7 @@ public class CelestialManager : MonoBehaviour
         _wasDay = true;
 
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+        TryInitFromExistingPlanet();
     }
 
     void OnDestroy()
@@ -80,6 +81,19 @@ public class CelestialManager : MonoBehaviour
             if (planet != null) PlanetCenter = planet.transform;
         }
 
+        MoonOrbitRadius = _planetRadius * 3f;
+    }
+
+    void TryInitFromExistingPlanet()
+    {
+        if (PlanetCenter == null) return;
+        var planet = PlanetCenter.GetComponent<Planet>();
+        if (planet == null || planet.ShapeGenerator == null) return;
+
+        float elevMax = planet.ShapeGenerator.ElevationMax;
+        if (elevMax == float.MinValue) return;
+
+        _planetRadius = planet._planetSettings.PlanetRadius * (1 + elevMax);
         MoonOrbitRadius = _planetRadius * 3f;
     }
 
