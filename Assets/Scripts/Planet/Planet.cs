@@ -23,18 +23,10 @@ public class Planet : MonoBehaviour
     MeshFilter[] _meshFilters;
     GameObject _waterObject;
 
-    ShapeSettings _builtShapeSettings;
-    ColorSettings _builtColorSettings;
-
     CancellationTokenSource _cts;
     bool _isGenerating;
 
     public bool IsGenerating => _isGenerating;
-
-    ITerrainProvider TerrainProvider => _shapeGenerator;
-    IBiomeProvider BiomeProvider => _colorGenerator;
-    IColorProvider ColorProvider => _colorGenerator;
-
     public ShapeGenerator ShapeGenerator => _shapeGenerator;
 
     ILogger _logger;
@@ -49,8 +41,6 @@ public class Planet : MonoBehaviour
         }
     }
 
-
-
     void OnDestroy()
     {
         _cts?.Cancel();
@@ -59,7 +49,6 @@ public class Planet : MonoBehaviour
 
     void Initialize()
     {
-        // Destroy old generated children
         for (int i = transform.childCount - 1; i >= 0; i--)
             DestroyImmediate(transform.GetChild(i).gameObject);
 
@@ -67,13 +56,13 @@ public class Planet : MonoBehaviour
         _terrainFaces = new TerrainFace[6];
         _waterObject = null;
 
-        _builtShapeSettings = _planetSettings.BuildShapeSettings();
-        _builtColorSettings = _planetSettings.BuildColorSettings();
-
-        _shapeGenerator.Configure(_builtShapeSettings);
+        var shapeSettings = _planetSettings.BuildShapeSettings();
+        _shapeGenerator.Configure(shapeSettings);
         _shapeGenerator.Initialize(Seed);
-        _colorGenerator.Configure(_builtColorSettings);
+        _colorGenerator.Configure(_planetSettings.BiomeSettings);
         _colorGenerator.Initialize(Seed);
+
+        ConfigureMaterial();
 
         Vector3[] directions = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
         for (int i = 0; i < 6; i++)
@@ -81,25 +70,26 @@ public class Planet : MonoBehaviour
             GameObject meshObject = new GameObject("mesh");
             meshObject.transform.parent = transform;
 
-            meshObject.AddComponent<MeshRenderer>();
+            meshObject.AddComponent<MeshRenderer>().sharedMaterial = _planetSettings.PlanetMaterial;
             _meshFilters[i] = meshObject.AddComponent<MeshFilter>();
             _meshFilters[i].sharedMesh = new Mesh();
 
-            _meshFilters[i].GetComponent<MeshRenderer>().sharedMaterial = _planetSettings.PlanetMaterial;
-
-            // Ensure material uses vertex color shader
-            if (_planetSettings.PlanetMaterial.shader.name != "Planet/VertexColor")
-            {
-                var vcShader = Shader.Find("Planet/VertexColor");
-                if (vcShader != null) _planetSettings.PlanetMaterial.shader = vcShader;
-            }
-            _planetSettings.PlanetMaterial.SetFloat("_Smoothness", 0f);
-
-            _terrainFaces[i] = new TerrainFace(TerrainProvider, _meshFilters[i].sharedMesh, Resolution, directions[i]);
+            _terrainFaces[i] = new TerrainFace(_shapeGenerator, _meshFilters[i].sharedMesh, Resolution, directions[i]);
 
             bool renderFace = RenderMask == FaceRenderMask.All || (int)RenderMask - 1 == i;
             _meshFilters[i].gameObject.SetActive(renderFace);
         }
+    }
+
+    void ConfigureMaterial()
+    {
+        var mat = _planetSettings.PlanetMaterial;
+        if (mat.shader.name != "Planet/VertexColor")
+        {
+            var vcShader = Shader.Find("Planet/VertexColor");
+            if (vcShader != null) mat.shader = vcShader;
+        }
+        mat.SetFloat("_Smoothness", 0f);
     }
 
     public async void GeneratePlanetAsync()
@@ -125,7 +115,7 @@ public class Planet : MonoBehaviour
             GenerateColors();
             GenerateWater();
 
-            float scaledRadius = _planetSettings.PlanetRadius * (1 + TerrainProvider.ElevationMax);
+            float scaledRadius = _planetSettings.PlanetRadius * (1 + _shapeGenerator.ElevationMax);
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius));
             Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, resolution {Resolution}, radius {scaledRadius:F1}");
         }
@@ -140,7 +130,6 @@ public class Planet : MonoBehaviour
         }
     }
 
-
     async Awaitable GenerateMeshAsync(CancellationToken ct)
     {
         var faces = _terrainFaces;
@@ -148,34 +137,26 @@ public class Planet : MonoBehaviour
         await Awaitable.BackgroundThreadAsync();
         ct.ThrowIfCancellationRequested();
 
-        Parallel.For(0, faces.Length, i =>
-        {
-            faces[i].CalculateMeshData();
-        });
+        Parallel.For(0, faces.Length, i => { faces[i].CalculateMeshData(); });
 
         ct.ThrowIfCancellationRequested();
         await Awaitable.MainThreadAsync();
 
         for (int i = 0; i < faces.Length; i++)
-        {
             faces[i].ApplyMeshData();
-        }
     }
 
     void GenerateColors()
     {
-        foreach (var terrainFace in _terrainFaces)
-        {
-            terrainFace.UpdateColors(BiomeProvider);
-        }
+        foreach (var face in _terrainFaces)
+            face.UpdateColors(_colorGenerator);
     }
 
     void GenerateWater()
     {
         if (!_planetSettings.HasOceans)
         {
-            if (_waterObject != null)
-                _waterObject.SetActive(false);
+            if (_waterObject != null) _waterObject.SetActive(false);
             return;
         }
 
@@ -194,11 +175,10 @@ public class Planet : MonoBehaviour
 
         float waterRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel);
 
-        // Always rebuild mesh with current radius
         var meshFilter = _waterObject.GetComponent<MeshFilter>();
         if (meshFilter.sharedMesh == null)
             meshFilter.sharedMesh = new Mesh { name = "WaterSphere" };
-        UpdateSphereMesh(meshFilter.sharedMesh, 32, waterRadius);
+        CubeSphereMeshBuilder.Build(meshFilter.sharedMesh, 32, waterRadius);
 
         var renderer = _waterObject.GetComponent<Renderer>();
         if (renderer.sharedMaterial == null || renderer.sharedMaterial.name == "Default-Material")
@@ -206,73 +186,19 @@ public class Planet : MonoBehaviour
         UpdateWaterMaterial(renderer.sharedMaterial);
     }
 
-    void UpdateSphereMesh(Mesh mesh, int resolution, float radius)
-    {
-        // 6-face cube sphere, same as terrain but simpler
-        Vector3[] directions = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
-        int vertsPerFace = resolution * resolution;
-        int trisPerFace = (resolution - 1) * (resolution - 1) * 6;
-
-        var vertices = new Vector3[vertsPerFace * 6];
-        var triangles = new int[trisPerFace * 6];
-
-        for (int face = 0; face < 6; face++)
-        {
-            Vector3 localUp = directions[face];
-            Vector3 axisA = new Vector3(localUp.y, localUp.z, localUp.x);
-            Vector3 axisB = Vector3.Cross(localUp, axisA);
-
-            int vertOffset = face * vertsPerFace;
-            int triOffset = face * trisPerFace;
-            int triIdx = 0;
-
-            for (int y = 0; y < resolution; y++)
-            {
-                for (int x = 0; x < resolution; x++)
-                {
-                    int i = x + y * resolution;
-                    Vector2 percent = new Vector2(x, y) / (resolution - 1);
-                    Vector3 pointOnCube = localUp + (percent.x - 0.5f) * 2 * axisA + (percent.y - 0.5f) * 2 * axisB;
-                    vertices[vertOffset + i] = pointOnCube.normalized * radius;
-
-                    if (x < resolution - 1 && y < resolution - 1)
-                    {
-                        int vi = vertOffset + i;
-                        triangles[triOffset + triIdx]     = vi;
-                        triangles[triOffset + triIdx + 1] = vi + resolution + 1;
-                        triangles[triOffset + triIdx + 2] = vi + resolution;
-                        triangles[triOffset + triIdx + 3] = vi;
-                        triangles[triOffset + triIdx + 4] = vi + 1;
-                        triangles[triOffset + triIdx + 5] = vi + resolution + 1;
-                        triIdx += 6;
-                    }
-                }
-            }
-        }
-
-        mesh.Clear();
-        mesh.vertices = vertices;
-        mesh.triangles = triangles;
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-    }
-
     Material CreateWaterMaterial()
     {
         var shader = Shader.Find("Universal Render Pipeline/Lit");
         if (shader == null) shader = Shader.Find("Standard");
-        var mat = new Material(shader);
-        mat.name = "Water";
+        var mat = new Material(shader) { name = "Water" };
         return mat;
     }
 
     void UpdateWaterMaterial(Material mat)
     {
         var color = _planetSettings.WaterColor;
-
-        // Set surface type to transparent
-        mat.SetFloat("_Surface", 1); // 0=Opaque, 1=Transparent
-        mat.SetFloat("_Blend", 0);   // 0=Alpha
+        mat.SetFloat("_Surface", 1);
+        mat.SetFloat("_Blend", 0);
         mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
         mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
         mat.SetFloat("_ZWrite", 0);

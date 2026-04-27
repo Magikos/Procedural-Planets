@@ -1,24 +1,24 @@
 using UnityEngine;
 
-public class ColorGenerator : IBiomeProvider, IColorProvider
+public class ColorGenerator : IBiomeProvider
 {
-    ColorSettings _colorSettings;
+    BiomeSettings _biomeSettings;
     ITemperatureProvider _temperatureProvider;
     IMoistureProvider _moistureProvider;
     IBiomeRegistry _biomeRegistry;
     Color[] _biomeColors;
 
-    public void Configure(ColorSettings settings)
+    public void Configure(BiomeSettings settings)
     {
-        _colorSettings = settings;
+        _biomeSettings = settings;
 
-        if (_colorSettings.BiomeSettings != null && _colorSettings.BiomeSettings.Registry != null)
+        if (_biomeSettings != null && _biomeSettings.Registry != null)
         {
-            _biomeRegistry = _colorSettings.BiomeSettings.Registry;
+            _biomeRegistry = _biomeSettings.Registry;
             _temperatureProvider = new TemperatureProvider(
-                _colorSettings.BiomeSettings.TemperatureNoise,
-                _colorSettings.BiomeSettings.TemperatureNoiseStrength);
-            _moistureProvider = new MoistureProvider(_colorSettings.BiomeSettings.MoistureNoise);
+                _biomeSettings.TemperatureNoise,
+                _biomeSettings.TemperatureNoiseStrength);
+            _moistureProvider = new MoistureProvider(_biomeSettings.MoistureNoise);
         }
 
         BuildBiomeColorLookup();
@@ -29,13 +29,6 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
         _temperatureProvider?.Initialize(seed);
         _moistureProvider?.Initialize(seed + 100);
     }
-
-    public void Initialize()
-    {
-        Initialize(0);
-    }
-
-    public void UpdateElevation(float min, float max) { }
 
     public BiomeResult EvaluateBiome(Vector3 pointOnUnitSphere, float elevation)
     {
@@ -53,24 +46,20 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
         if (_biomeRegistry == null || _temperatureProvider == null || _moistureProvider == null)
             return Color.magenta;
 
-        var registry = _colorSettings.BiomeSettings.Registry;
+        var registry = _biomeSettings.Registry;
 
-        // Ocean
         if (elevation < registry.OceanThreshold)
             return _biomeColors[0];
 
         float temperature = _temperatureProvider.Evaluate(pointOnUnitSphere);
         float moisture = _moistureProvider.Evaluate(pointOnUnitSphere);
 
-        // Mountain
         if (elevation > registry.MountainThreshold)
             return temperature < 0.4f ? _biomeColors[_biomeColors.Length - 1] : _biomeColors[_biomeColors.Length - 2];
 
-        // Beach
         if (elevation < registry.OceanThreshold + registry.BeachWidth)
             return _biomeColors[1];
 
-        // Grid biome with blending
         float tempCont = Mathf.Clamp01(temperature) * (registry.TemperatureSteps - 1);
         float moistCont = Mathf.Clamp01(moisture) * (registry.MoistureSteps - 1);
 
@@ -82,7 +71,6 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
         int primaryIdx = tempIdx * registry.MoistureSteps + moistIdx + 2;
         Color primary = _biomeColors[Mathf.Clamp(primaryIdx, 0, _biomeColors.Length - 1)];
 
-        // Blend toward nearest neighbor
         float tempDist = Mathf.Abs(tempFrac - 0.5f);
         float moistDist = Mathf.Abs(moistFrac - 0.5f);
 
@@ -125,13 +113,11 @@ public class ColorGenerator : IBiomeProvider, IColorProvider
         return primary;
     }
 
-    public void UpdateColors() { }
-
     void BuildBiomeColorLookup()
     {
         if (_biomeRegistry == null) return;
 
-        var registry = _colorSettings.BiomeSettings.Registry;
+        var registry = _biomeSettings.Registry;
         int count = _biomeRegistry.BiomeCount;
         _biomeColors = new Color[count];
 

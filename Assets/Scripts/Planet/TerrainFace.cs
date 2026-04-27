@@ -75,12 +75,6 @@ public class TerrainFace
         _mesh.RecalculateBounds();
     }
 
-    public void ConstructMesh()
-    {
-        CalculateMeshData();
-        ApplyMeshData();
-    }
-
     public void UpdateColors(IBiomeProvider biomeProvider)
     {
         if (_unitSpherePoints == null || _elevations == null) return;

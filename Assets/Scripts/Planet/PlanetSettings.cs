@@ -39,19 +39,8 @@ public class PlanetSettings : ScriptableObject
         return shape;
     }
 
-    public ColorSettings BuildColorSettings()
-    {
-        var color = CreateInstance<ColorSettings>();
-        color.PlanetMaterial = PlanetMaterial;
-        color.BiomeSettings = BiomeSettings;
-        color.OceanColorGradient = new Gradient();
-        return color;
-    }
-
     ShapeSettings.NoiseLayer[] BuildNoiseLayers()
     {
-        // Layer 0: Continental shelf — large-scale land vs ocean
-        // Output range: ~-0.02 to ~0.07 (controls land vs ocean)
         var continent = new ShapeSettings.NoiseLayer
         {
             Enabled = true,
@@ -69,8 +58,6 @@ public class PlanetSettings : ScriptableObject
             }
         };
 
-        // Layer 1: Mountains — rigid noise masked by continents
-        // Output range: 0 to ~0.08 (masked by continent layer)
         var mountains = new ShapeSettings.NoiseLayer
         {
             Enabled = MountainHeight > 0.05f,
@@ -88,8 +75,6 @@ public class PlanetSettings : ScriptableObject
             }
         };
 
-        // Layer 2: Surface detail — small bumps and roughness
-        // Output range: 0 to ~0.02 (subtle detail)
         var detail = new ShapeSettings.NoiseLayer
         {
             Enabled = TerrainRoughness > 0.05f,

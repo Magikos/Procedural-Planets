@@ -10,7 +10,7 @@ public class Test : MonoBehaviour
     [SerializeField] private int seed = 12345;
     private List<Vector2> _points;
 
-    private void OnValidate()
+    public void Generate()
     {
         _points = PoissonDiscSampling.GeneratePoints(radius, sampleRegionSize, maxAttempts, seed);
     }

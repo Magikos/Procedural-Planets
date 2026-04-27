@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[ExecuteAlways]
 public class TestPoissonDiscSphereDraw : MonoBehaviour
 {
     public Planet planet;
@@ -10,15 +9,8 @@ public class TestPoissonDiscSphereDraw : MonoBehaviour
     public int seed = 12345;
     public Color[] biomeColors = { Color.blue, Color.green, Color.yellow, Color.gray, Color.white };
     public float drawSize = 0.5f;
-    public bool autoUpdate = true;
 
     List<PoissonDiscSphereSampling.SpawnLocation> _points;
-
-    void OnValidate()
-    {
-        if (autoUpdate && planet != null && planet._planetSettings != null)
-            Generate();
-    }
 
     public void Generate()
     {
