@@ -45,6 +45,13 @@ public class FreeCameraController : MonoBehaviour
         _pitch = transform.eulerAngles.x;
         _mouse = Mouse.current;
         _keyboard = Keyboard.current;
+
+        var cam = GetComponent<Camera>();
+        if (cam != null)
+        {
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = Color.black;
+        }
     }
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
