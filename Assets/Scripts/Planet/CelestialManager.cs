@@ -80,8 +80,7 @@ public class CelestialManager : MonoBehaviour
             if (planet != null) PlanetCenter = planet.transform;
         }
 
-        if (MoonOrbitRadius <= 0f)
-            MoonOrbitRadius = _planetRadius * 3f;
+        MoonOrbitRadius = _planetRadius * 3f;
     }
 
     void Update()

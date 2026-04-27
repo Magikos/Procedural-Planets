@@ -23,6 +23,8 @@ public class FreeCameraController : MonoBehaviour
     float _yaw;
     float _pitch;
     bool _looking;
+    float _lastPlanetRadius;
+    Vector3 _lastPlanetCenter;
 
     Mouse _mouse;
     Keyboard _keyboard;
@@ -41,15 +43,9 @@ public class FreeCameraController : MonoBehaviour
     {
         if (!AutoPositionOnGenerate) return;
 
-        float distance = evt.PlanetRadius * ViewDistanceMultiplier;
-        transform.position = evt.PlanetCenter + Vector3.back * distance;
-        transform.LookAt(evt.PlanetCenter);
-
-        _yaw = transform.eulerAngles.y;
-        _pitch = transform.eulerAngles.x;
-
-        MoveSpeed = evt.PlanetRadius * 0.5f;
-        ScrollSpeed = evt.PlanetRadius * 2f;
+        _lastPlanetCenter = evt.PlanetCenter;
+        _lastPlanetRadius = evt.PlanetRadius;
+        RepositionCamera(_lastPlanetCenter, _lastPlanetRadius);
     }
 
     void Start()
@@ -66,6 +62,9 @@ public class FreeCameraController : MonoBehaviour
 
         HandleLook();
         HandleMovement();
+
+        if (_keyboard.spaceKey.wasPressedThisFrame && _lastPlanetRadius > 0f)
+            RepositionCamera(_lastPlanetCenter, _lastPlanetRadius);
     }
 
     void HandleLook()
@@ -113,6 +112,19 @@ public class FreeCameraController : MonoBehaviour
             transform.position += transform.forward * scroll * ScrollSpeed * Time.deltaTime;
     }
 
+    void RepositionCamera(Vector3 center, float radius)
+    {
+        float distance = radius * ViewDistanceMultiplier;
+        transform.position = center + Vector3.back * distance;
+        transform.LookAt(center);
+
+        _yaw = transform.eulerAngles.y;
+        _pitch = transform.eulerAngles.x;
+
+        MoveSpeed = radius * 0.5f;
+        ScrollSpeed = radius * 2f;
+    }
+
     void OnGUI()
     {
         if (!ShowDebugOverlay) return;
@@ -132,7 +144,7 @@ public class FreeCameraController : MonoBehaviour
             GUILayout.Label($"Distance to center: {distToCenter:F1}");
         }
 
-        GUILayout.Label("<i>WASD=Move, Shift=Fast, RMB=Look, QE=Up/Down</i>");
+        GUILayout.Label("<i>WASD=Move, Shift=Fast, RMB=Look, QE=Up/Down, Space=Reset</i>");
         GUILayout.EndArea();
     }
 }
