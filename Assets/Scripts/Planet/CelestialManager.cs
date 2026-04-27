@@ -34,8 +34,14 @@ public class CelestialManager : MonoBehaviour
     int _lastMoonPhaseIndex = -1;
 
     public float TimeOfDay => _timeOfDay;
-    public bool IsDay => _timeOfDay > 0.2f && _timeOfDay < 0.8f;
     public Vector3 SunDirection => SunLight != null ? -SunLight.transform.forward : Vector3.up;
+
+    public bool IsDayAt(Vector3 worldPosition)
+    {
+        Vector3 center = PlanetCenter != null ? PlanetCenter.position : Vector3.zero;
+        Vector3 surfaceNormal = (worldPosition - center).normalized;
+        return Vector3.Dot(surfaceNormal, SunDirection) > 0f;
+    }
 
     /// <summary>
     /// -1 = full moon, 0 = half, +1 = new moon.
@@ -140,7 +146,8 @@ public class CelestialManager : MonoBehaviour
 
     void FireEvents()
     {
-        bool isDay = IsDay;
+        Vector3 center = PlanetCenter != null ? PlanetCenter.position : Vector3.zero;
+        bool isDay = IsDayAt(center + Vector3.forward * _planetRadius);
         if (isDay != _wasDay)
         {
             _wasDay = isDay;
