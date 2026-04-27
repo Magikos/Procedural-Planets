@@ -134,8 +134,8 @@ public class FreeCameraController : MonoBehaviour
         if (!ShowDebugOverlay) return;
 
         GUILayout.BeginArea(new Rect(10, 10, 350, 200));
-        GUILayout.Label($"<b>Debug Camera</b>");
-        GUILayout.Label($"Position: {transform.position:F1}");
+        GUILayout.Label("Debug Camera");
+        GUILayout.Label($"Position: {transform.position.x:F1}, {transform.position.y:F1}, {transform.position.z:F1}");
         GUILayout.Label($"FPS: {1f / Time.unscaledDeltaTime:F0}");
 
         if (TargetCenter != null)
@@ -148,7 +148,7 @@ public class FreeCameraController : MonoBehaviour
             GUILayout.Label($"Distance to center: {distToCenter:F1}");
         }
 
-        GUILayout.Label("<i>WASD=Move, Shift=Fast, RMB=Look, QE=Up/Down, Space=Reset</i>");
+        GUILayout.Label("WASD=Move, Shift=Fast, RMB=Look, QE=Up/Down, Space=Reset");
         GUILayout.EndArea();
     }
 }
