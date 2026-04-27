@@ -19,7 +19,7 @@ Shader "Planet/Atmosphere"
             Name "Atmosphere"
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
-            Cull Front
+            Cull Off
 
             HLSLPROGRAM
             #pragma vertex vert

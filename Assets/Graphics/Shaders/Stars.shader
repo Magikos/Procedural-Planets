@@ -14,7 +14,7 @@ Shader "Planet/Stars"
         {
             Name "Stars"
             ZWrite Off
-            Cull Front
+            Cull Off
 
             HLSLPROGRAM
             #pragma vertex vert
