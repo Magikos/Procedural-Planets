@@ -61,7 +61,7 @@ public class CelestialManager : MonoBehaviour
     void Start()
     {
         _timeOfDay = StartTimeOfDay;
-        _wasDay = IsDay;
+        _wasDay = true;
 
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
     }
