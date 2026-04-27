@@ -66,7 +66,6 @@ public class CelestialManager : MonoBehaviour
     void Start()
     {
         _timeOfDay = StartTimeOfDay;
-        InitFromPlanet();
     }
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
@@ -89,8 +88,6 @@ public class CelestialManager : MonoBehaviour
 
         _planetRadius = p.LastGeneratedRadius;
         MoonOrbitRadius = _planetRadius * 3f;
-
-        EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(PlanetCenter.position, _planetRadius));
     }
 
     void Update()

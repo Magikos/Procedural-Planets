@@ -43,6 +43,14 @@ public class Planet : MonoBehaviour
         }
     }
 
+    void Start()
+    {
+        if (_lastGeneratedRadius > 0f)
+            EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, _lastGeneratedRadius));
+        else
+            GeneratePlanetAsync();
+    }
+
     void OnDestroy()
     {
         _cts?.Cancel();
