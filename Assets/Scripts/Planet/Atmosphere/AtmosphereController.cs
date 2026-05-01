@@ -20,11 +20,11 @@ public class AtmosphereController : MonoBehaviour
     [Header("Scattering")]
     [Range(1, 30)] public int InScatteringPoints = 10;
     [Range(0.1f, 20f)] public float Intensity = 1f;
-    [Range(0.1f, 100f)] public float ScatteringStrength = 8f;
+    [Range(0.1f, 100f)] public float ScatteringStrength = 20f;
     public Vector3 Wavelengths = new Vector3(700, 530, 460);
 
     [Header("Density")]
-    [Range(0.1f, 30f)] public float DensityFalloff = 4f;
+    [Range(0.1f, 30f)] public float DensityFalloff = 0.25f;
 
     [Header("Sun Disc")]
     [Range(0.99f, 0.9999f)] public float SunDiscSize = 0.9998f;
