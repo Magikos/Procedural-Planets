@@ -30,6 +30,14 @@ public class AtmosphereController : MonoBehaviour
     [Range(0.99f, 0.9999f)] public float SunDiscSize = 0.9998f;
     [Range(0.0001f, 0.01f)] public float SunDiscBlend = 0.001f;
 
+    [Header("Surface")]
+    [Range(0.1f, 5f), Tooltip("How much atmosphere dims the planet surface. Lower = less white washout.")]
+    public float SurfaceAttenuation = 1f;
+
+    [Header("Night")]
+    [Tooltip("Ambient color on the dark side (simulates moonlight/starlight)")]
+    public Color NightAmbient = new Color(0.01f, 0.012f, 0.02f, 1f);
+
     [Header("Dithering")]
     public Texture2D BlueNoise;
     [Range(0f, 2f)] public float DitherStrength = 0.8f;
@@ -62,6 +70,8 @@ public class AtmosphereController : MonoBehaviour
     static readonly int _ditherScaleId = Shader.PropertyToID("_DitherScale");
     static readonly int _sunDiscSizeId = Shader.PropertyToID("_SunDiscSize");
     static readonly int _sunDiscBlendId = Shader.PropertyToID("_SunDiscBlend");
+    static readonly int _surfaceAttenuationId = Shader.PropertyToID("_SurfaceAttenuation");
+    static readonly int _nightAmbientId = Shader.PropertyToID("_NightAmbient");
 
     void OnEnable()
     {
@@ -172,6 +182,8 @@ public class AtmosphereController : MonoBehaviour
         Shader.SetGlobalFloat(_ditherScaleId, DitherScale);
         Shader.SetGlobalFloat(_sunDiscSizeId, SunDiscSize);
         Shader.SetGlobalFloat(_sunDiscBlendId, SunDiscBlend);
+        Shader.SetGlobalFloat(_surfaceAttenuationId, SurfaceAttenuation);
+        Shader.SetGlobalVector(_nightAmbientId, new Vector3(NightAmbient.r, NightAmbient.g, NightAmbient.b));
 
         if (BlueNoise != null)
             Shader.SetGlobalTexture(_blueNoiseId, BlueNoise);

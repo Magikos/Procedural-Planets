@@ -28,6 +28,9 @@ float _DitherScale;
 float _SunDiscSize;
 float _SunDiscBlend;
 
+float _SurfaceAttenuation;
+float3 _NightAmbient;
+
 float DensityAtPoint(float3 samplePoint)
 {
     float heightAboveSurface = length(samplePoint - _PlanetCenter) - _PlanetRadius;
@@ -67,16 +70,14 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
 {
     float2 hitInfo = RaySphere(_PlanetCenter, _AtmosphereRadius, rayOrigin, rayDir);
     float dstToAtmosphere = hitInfo.x;
-    float fullAtmosphereRayLength = hitInfo.y; // unclamped distance through atmosphere
+    float fullAtmosphereRayLength = hitInfo.y;
 
-    // Did geometry block the ray before it exited the atmosphere?
     float dstToSurface = sceneDepth - dstToAtmosphere;
     bool hitGeometry = dstToSurface < fullAtmosphereRayLength;
     float dstThroughAtmosphere = hitGeometry ? dstToSurface : fullAtmosphereRayLength;
 
     if (dstThroughAtmosphere <= 0)
     {
-        // Ray missed atmosphere — sun disc in deep space
         float sunDot = dot(rayDir, _DirToSun);
         float sunDisc = smoothstep(_SunDiscSize - _SunDiscBlend, _SunDiscSize, sunDot);
         return sceneColor + sunDisc * float3(1.2, 1.1, 0.9);
@@ -109,15 +110,18 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
     inScatteredLight *= _ScatteringCoefficients * _Intensity * stepSize / _PlanetRadius;
     inScatteredLight += blueNoise * 0.01;
 
-    // Attenuate scene color
-    float brightnessSum = viewRayOpticalDepth * _Intensity * 3;
+    // Attenuate scene color — _SurfaceAttenuation controls how much atmosphere dims the surface
+    float brightnessSum = viewRayOpticalDepth * _Intensity * _SurfaceAttenuation;
     float reflectedLightStrength = exp(-brightnessSum);
     float hdrStrength = saturate(dot(sceneColor, 1) / 3 - 1);
     reflectedLightStrength = lerp(reflectedLightStrength, 1, hdrStrength);
 
     float3 finalColor = sceneColor * reflectedLightStrength + inScatteredLight;
 
-    // Sun disc — only where ray passed through atmosphere without hitting geometry
+    // Night ambient — faint illumination on the dark side (moonlight/starlight)
+    finalColor += _NightAmbient * (1 - saturate(dot(normalize(rayOrigin - _PlanetCenter), _DirToSun) * 2));
+
+    // Sun disc
     if (!hitGeometry)
     {
         float sunDot = dot(rayDir, _DirToSun);
