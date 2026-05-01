@@ -96,8 +96,8 @@ public class FreeCameraController : MonoBehaviour
         float deltaYaw = mouseDelta.x * LookSensitivity * 0.1f;
         float deltaPitch = -mouseDelta.y * LookSensitivity * 0.1f;
 
-        // Rotate around the camera's own local up (yaw) and right (pitch)
-        transform.Rotate(Vector3.up, deltaYaw, Space.World);
+        // Yaw around camera's local up (works on planet surface where up = surface normal)
+        transform.Rotate(Vector3.up, deltaYaw, Space.Self);
         transform.Rotate(Vector3.right, deltaPitch, Space.Self);
     }
 

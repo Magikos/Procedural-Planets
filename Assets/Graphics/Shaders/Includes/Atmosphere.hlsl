@@ -114,7 +114,8 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
     inScatteredLight += blueNoise * 0.01;
 
     // Attenuate scene color through atmosphere (Beer-Lambert)
-    float3 opacity = exp(-viewRayOpticalDepth * _ScatteringCoefficients);
+    // Divide by _PlanetRadius to match normalized-scale LUT values
+    float3 opacity = exp(-viewRayOpticalDepth * _ScatteringCoefficients / _PlanetRadius);
     float3 finalColor = sceneColor * opacity + inScatteredLight;
 
     // Sun disc (visible through atmosphere)
