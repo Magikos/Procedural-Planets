@@ -25,7 +25,7 @@ public class StarSphere : MonoBehaviour
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
-        _sphereRadius = evt.PlanetRadius * 80f;
+        _sphereRadius = evt.PlanetRadius * 8f;
         if (PlanetCenter == null)
         {
             var planet = FindAnyObjectByType<Planet>();

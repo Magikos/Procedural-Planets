@@ -109,20 +109,8 @@ public class AtmosphereController : MonoBehaviour
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
-        var planet = FindAnyObjectByType<Planet>();
-        if (planet != null && planet._planetSettings != null)
-        {
-            float baseRadius = planet._planetSettings.PlanetRadius;
-            float elevMin = planet.ShapeGenerator.ElevationMin;
-            // Planet surface radius at lowest point
-            _planetRadius = baseRadius * (1 + elevMin);
-        }
-        else
-        {
-            _planetRadius = evt.PlanetRadius;
-        }
-
-        _atmosphereRadius = evt.PlanetRadius * AtmosphereScale;
+        _planetRadius = evt.PlanetRadius;
+        _atmosphereRadius = _planetRadius * AtmosphereScale;
 
         BakeOpticalDepth();
         SetGlobalProperties();
@@ -177,8 +165,8 @@ public class AtmosphereController : MonoBehaviour
 
         Shader.SetGlobalFloat(_planetRadiusId, _planetRadius);
         Shader.SetGlobalFloat(_atmosphereRadiusId, _atmosphereRadius);
-        // Cutoff below lowest terrain so atmosphere doesn't clip through valleys
-        Shader.SetGlobalFloat(_cutoffRadiusId, _planetRadius * 0.99f);
+        // Cutoff slightly below planet surface so atmosphere doesn't clip through terrain
+        Shader.SetGlobalFloat(_cutoffRadiusId, _planetRadius - 5f);
         Shader.SetGlobalVector(_planetCenterId, center);
         Shader.SetGlobalInt(_numInScatteringPointsId, InScatteringPoints);
         Shader.SetGlobalVector(_rayleighScatteringId, new Vector4(RayleighScattering.x, RayleighScattering.y, RayleighScattering.z, 0f));

@@ -47,6 +47,7 @@ public class FreeCameraController : MonoBehaviour
         {
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = Color.black;
+            cam.farClipPlane = 100000f;
         }
     }
 
