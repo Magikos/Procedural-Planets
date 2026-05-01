@@ -32,6 +32,7 @@ ENDHLSL
             #pragma fragment AtmosphereFragment
 
             #pragma target 4.0
+            #pragma multi_compile _ ATMOSPHERE_DEBUG_DEPTH
 
             struct Attributes
             {
@@ -70,6 +71,13 @@ ENDHLSL
                 float4 originalCol = SAMPLE_TEXTURE2D(_Source, sampler_Source, i.uv);
                 float viewLength = length(i.viewVector);
                 float sceneDepth = CompositeDepthScaled(i.uv, viewLength);
+
+                #if defined(ATMOSPHERE_DEBUG_DEPTH)
+                    // Visualize depth: white = far/sky, black = close surface
+                    float depthVis = saturate(sceneDepth / (_PlanetRadius * 4));
+                    return float4(depthVis, depthVis, depthVis, 1);
+                #endif
+
                 float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz, i.uv);
                 return float4(color, originalCol.w);
             }

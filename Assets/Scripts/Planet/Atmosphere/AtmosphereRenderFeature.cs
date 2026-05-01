@@ -17,6 +17,7 @@ using UnityEngine.Rendering.Universal;
 [DisallowMultipleRendererFeature("AtmosphereRenderFeature")]
 public class AtmosphereRenderFeature : ScriptableRendererFeature
 {
+    public bool DebugDepth = false;
     AtmosphereRenderPass _pass;
     Material _material;
     AtmosphereController _cachedController;
@@ -54,6 +55,12 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
         }
 
         _pass.Setup(_material);
+
+        if (DebugDepth)
+            _material.EnableKeyword("ATMOSPHERE_DEBUG_DEPTH");
+        else
+            _material.DisableKeyword("ATMOSPHERE_DEBUG_DEPTH");
+
         renderer.EnqueuePass(_pass);
     }
 
