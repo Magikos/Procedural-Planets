@@ -51,8 +51,6 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
             }
 
             _material = CoreUtils.CreateEngineMaterial(shader);
-            // Use the directional-sun variant — CelestialManager exposes a direction, not a position
-            _material.EnableKeyword("DIRECTIONAL_SUN");
         }
 
         _pass.Setup(_material);

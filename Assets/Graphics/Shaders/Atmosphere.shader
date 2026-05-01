@@ -33,11 +33,6 @@ ENDHLSL
 
             #pragma target 4.0
 
-            // Both variants always compiled so the runtime keyword works in editor & builds.
-            #pragma multi_compile _ DIRECTIONAL_SUN
-
-            #define ATMOSPHERE_MODEL_SIM
-
             struct Attributes
             {
                 uint vertexID : SV_VertexID;
@@ -56,13 +51,10 @@ ENDHLSL
             v2f AtmosphereVertex(Attributes v)
             {
                 v2f output;
-                // Generate fullscreen triangle from SV_VertexID (DrawProcedural, 3 verts).
-                // GetFullScreenTriangleVertexPosition/TexCoord are in Core ShaderLibrary/Common.hlsl.
                 output.pos = GetFullScreenTriangleVertexPosition(v.vertexID);
                 float2 uv = GetFullScreenTriangleTexCoord(v.vertexID);
                 output.uv = uv;
-                // GetFullScreenTriangleTexCoord: on DX (UNITY_UV_STARTS_AT_TOP) y=1 at screen-top;
-                // on non-DX y=0 at screen-top. NDC y=+1 = screen-top in both cases.
+
                 #if UNITY_UV_STARTS_AT_TOP
                     float2 ndcForView = float2(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0);
                 #else
@@ -76,13 +68,9 @@ ENDHLSL
             float4 AtmosphereFragment(v2f i) : SV_Target
             {
                 float4 originalCol = SAMPLE_TEXTURE2D(_Source, sampler_Source, i.uv);
-
                 float viewLength = length(i.viewVector);
-
                 float sceneDepth = CompositeDepthScaled(i.uv, viewLength);
-
-                float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz);
-
+                float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz, i.uv);
                 return float4(color, originalCol.w);
             }
 

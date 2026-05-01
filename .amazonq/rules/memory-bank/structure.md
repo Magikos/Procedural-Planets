@@ -12,9 +12,8 @@ ProceduralPlanets/
 │   │   │   └── Planet.mat               # Planet material (URP, vertex color)
 │   │   └── Shaders/
 │   │       ├── PlanetVertexColor.shader # URP HLSL: vertex color as albedo, PBR lighting
-│   │       ├── Atmosphere.shader        # Post-process: ray-marched Rayleigh/Mie scattering
-│   │       ├── Stars.shader             # Unlit vertex color for star quads
-│   │       ├── OpticalDepth.compute     # Compute shader: bakes optical depth LUT
+│   │       ├── Atmosphere.shader        # Post-process: wavelength-based scattering, sun disc
+│   │       ├── OpticalDepth.compute     # Compute shader: bakes optical depth LUT (normalized radius)
 │   │       ├── BlueNoise.png            # Dither texture for atmosphere
 │   │       ├── Planet.shadergraph       # OLD shader graph (unused, kept for reference)
 │   │       └── Includes/
@@ -79,7 +78,6 @@ ProceduralPlanets/
 │   │   │   ├── TerrainFace.cs           # Generates mesh for one cube face
 │   │   │   ├── ColorGenerator.cs        # Biome colors via temp/moisture/registry
 │   │   │   ├── CelestialManager.cs      # Sun/moon orbits, day/night, moon phases
-│   │   │   ├── StarSphere.cs            # Procedural star field mesh
 │   │   │   ├── Noise.cs                 # Simplex noise (seed-based)
 │   │   │   ├── MinMax.cs                # Thread-safe min/max tracking
 │   │   │   ├── ShapeSettings.cs         # Runtime noise layer config (built by PlanetSettings)
@@ -151,11 +149,10 @@ AtmosphereRenderFeature → AtmosphereRenderPass
 
 ### Star System
 ```
-StarSphere (MonoBehaviour)
-  ├── Generates star quads on large sphere from seed
-  ├── Vertex colors for brightness/temperature variation
-  ├── GetStarDirection(index) for future constellation queries
-  └── Centered on planet, scales with planet radius
+Stars rendered inside atmosphere post-process shader (no mesh).
+StarSphere.cs and Stars.shader are DELETED.
+Planet.EnsureStarSphere() is DELETED.
+Future: constellation system will query star directions from C# seed-based generation.
 ```
 
 ### Startup Flow
@@ -180,3 +177,31 @@ All listeners receive PlanetGeneratedEvent:
 - **No serialized meshes**: All meshes generated at runtime, _lastGeneratedRadius persisted for startup.
 - **Global shader properties**: Atmosphere uses Shader.SetGlobal* for all parameters.
 - **Assembly separation**: Core (no Planet dependency) ← Planet (references Core + URP).
+
+## Atmosphere Rewrite (In Progress)
+
+### Problem
+Current atmosphere uses raw Rayleigh/Mie/Absorption coefficients from URP-Atmosphere reference.
+These are scale-dependent — tuned for a specific planet radius. At our radius (~5257),
+the sky is white/foggy or black at zenith. Stars as mesh quads don't render (far clip, atmosphere overwrite).
+
+### Solution: Solar System Project Model
+Wavelength-based scattering with `/planetRadius` normalization for scale independence.
+
+### What Changes
+1. **Atmosphere.hlsl** → Rewrite: single `densityFalloff`, wavelength-based `scatteringCoefficients`,
+   `opticalDepthBaked2` for bidirectional view-ray sampling, `/planetRadius` normalization.
+   Add sun disc rendering. Add procedural star rendering (seed-based, no mesh).
+2. **Atmosphere.shader** → Update: pass UV to fragment for blue noise dithering.
+3. **OpticalDepth.compute** → Simplify: single-channel density (no separate Rayleigh/Mie/Ozone),
+   single `densityFalloff`, normalized radius (planetRadius=1).
+4. **AtmosphereController.cs** → Rewrite fields: remove Rayleigh/Mie/Absorption vectors,
+   add wavelengths (700,530,460), scatteringStrength, single densityFalloff.
+   Compute scatteringCoefficients from wavelengths: `(400/λ)^4 * strength`.
+5. **DELETE**: StarSphere.cs, Stars.shader, Planet.EnsureStarSphere()
+
+### What Stays
+- AtmosphereRenderFeature.cs (RenderGraph infrastructure) — unchanged
+- AtmosphereRenderPass.cs (RenderGraph pass) — unchanged
+- Common.hlsl, Math.hlsl — unchanged
+- BlueNoise.png — now used for dithering in atmosphere shader

@@ -25,8 +25,13 @@
 - **ShapesRuntime / ShapesEditor / ShapesSamples** — Shapes plugin assemblies
 
 ## Shader Stack
-- **Shader Graph** — Planet.shadergraph for planet surface rendering
-- Custom properties: `_ElevationMinMax` (Vector4), `_Texture` (Texture2D biome map)
+- **PlanetVertexColor.shader** — URP HLSL vertex color as albedo, PBR lighting
+- **Atmosphere.shader** — Post-process: wavelength-based Rayleigh scattering, sun disc, procedural stars
+  - Scale-independent via `/planetRadius` normalization (Solar System project model)
+  - Single `densityFalloff` parameter, `scatteringCoefficients` computed from wavelengths: `(400/λ)^4 * strength`
+  - `opticalDepthBaked2` for bidirectional view-ray optical depth sampling
+- **OpticalDepth.compute** — Bakes single-channel optical depth LUT (normalized radius, planetRadius=1)
+- **Planet.shadergraph** — OLD shader graph (unused, kept for reference)
 
 ## Rendering Configuration
 - PC and Mobile URP renderer assets (PC_RPAsset, Mobile_RPAsset)
