@@ -67,10 +67,16 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
 {
     float2 hitInfo = RaySphere(_PlanetCenter, _AtmosphereRadius, rayOrigin, rayDir);
     float dstToAtmosphere = hitInfo.x;
-    float dstThroughAtmosphere = min(hitInfo.y, sceneDepth - dstToAtmosphere);
+    float fullAtmosphereRayLength = hitInfo.y; // unclamped distance through atmosphere
+
+    // Did geometry block the ray before it exited the atmosphere?
+    float dstToSurface = sceneDepth - dstToAtmosphere;
+    bool hitGeometry = dstToSurface < fullAtmosphereRayLength;
+    float dstThroughAtmosphere = hitGeometry ? dstToSurface : fullAtmosphereRayLength;
 
     if (dstThroughAtmosphere <= 0)
     {
+        // Ray missed atmosphere — sun disc in deep space
         float sunDot = dot(rayDir, _DirToSun);
         float sunDisc = smoothstep(_SunDiscSize - _SunDiscBlend, _SunDiscSize, sunDot);
         return sceneColor + sunDisc * float3(1.2, 1.1, 0.9);
@@ -103,7 +109,7 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
     inScatteredLight *= _ScatteringCoefficients * _Intensity * stepSize / _PlanetRadius;
     inScatteredLight += blueNoise * 0.01;
 
-    // Attenuate scene color (from Solar System reference)
+    // Attenuate scene color
     float brightnessSum = viewRayOpticalDepth * _Intensity * 3;
     float reflectedLightStrength = exp(-brightnessSum);
     float hdrStrength = saturate(dot(sceneColor, 1) / 3 - 1);
@@ -111,11 +117,13 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
 
     float3 finalColor = sceneColor * reflectedLightStrength + inScatteredLight;
 
-    // Sun disc — only visible where ray didn't hit any geometry
-    float sunDot = dot(rayDir, _DirToSun);
-    float sunDisc = smoothstep(_SunDiscSize - _SunDiscBlend, _SunDiscSize, sunDot);
-    float isSky = sceneDepth >= dstToAtmosphere + dstThroughAtmosphere;
-    finalColor += sunDisc * float3(1.2, 1.1, 0.9) * isSky;
+    // Sun disc — only where ray passed through atmosphere without hitting geometry
+    if (!hitGeometry)
+    {
+        float sunDot = dot(rayDir, _DirToSun);
+        float sunDisc = smoothstep(_SunDiscSize - _SunDiscBlend, _SunDiscSize, sunDot);
+        finalColor += sunDisc * float3(1.2, 1.1, 0.9);
+    }
 
     return finalColor;
 }
