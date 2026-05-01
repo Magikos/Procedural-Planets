@@ -1,9 +1,10 @@
 #pragma once
 
 // Wavelength-based atmospheric scattering.
-// Based on Sebastian Lague's Solar System project.
-// LUT baked at normalized scale (planetRadius=1).
-// Only /planetRadius normalization is on the final inScatteredLight line.
+// Combines approaches from:
+// - Fluid Planet: clean transmittance-based surface attenuation (no hacks)
+// - Geographical Adventures: /atmosphereThickness normalization, phase functions
+// - Solar System: wavelength-based coefficients, baked optical depth LUT
 
 TEXTURE2D(_BakedOpticalDepth);
 SAMPLER(sampler_BakedOpticalDepth);
@@ -28,7 +29,6 @@ float _DitherScale;
 float _SunDiscSize;
 float _SunDiscBlend;
 
-float _SurfaceAttenuation;
 float3 _NightAmbient;
 
 float DensityAtPoint(float3 samplePoint)
@@ -89,37 +89,39 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
     const float epsilon = 0.0001;
     float3 pointInAtmosphere = rayOrigin + rayDir * (dstToAtmosphere + epsilon);
     float rayLength = dstThroughAtmosphere - epsilon * 2;
+    float atmosphereThickness = _AtmosphereRadius - _PlanetRadius;
 
     float stepSize = rayLength / (_NumInScatteringPoints - 1);
+    // Normalize step size by atmosphere thickness (from Geographical Adventures)
+    float scaledStepSize = stepSize / atmosphereThickness;
     float3 inScatterPoint = pointInAtmosphere;
     float3 inScatteredLight = 0;
-    float viewRayOpticalDepth = 0;
+    float3 transmittance = 1;
 
     [loop]
     for (int i = 0; i < _NumInScatteringPoints; i++)
     {
         float sunRayOpticalDepth = OpticalDepthBaked(inScatterPoint, _DirToSun);
         float localDensity = DensityAtPoint(inScatterPoint);
-        viewRayOpticalDepth = OpticalDepthBaked2(pointInAtmosphere, rayDir, stepSize * i);
-        float3 transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * _ScatteringCoefficients);
+        float viewRayOpticalDepth = OpticalDepthBaked2(pointInAtmosphere, rayDir, stepSize * i);
 
-        inScatteredLight += localDensity * transmittance;
+        // Transmittance: how much light survives from sun through atmosphere to this point and back to camera
+        transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * _ScatteringCoefficients * scaledStepSize);
+
+        inScatteredLight += localDensity * transmittance * scaledStepSize;
         inScatterPoint += rayDir * stepSize;
     }
 
-    inScatteredLight *= _ScatteringCoefficients * _Intensity * stepSize / _PlanetRadius;
+    inScatteredLight *= _ScatteringCoefficients * _Intensity;
     inScatteredLight += blueNoise * 0.01;
 
-    // Attenuate scene color — _SurfaceAttenuation controls how much atmosphere dims the surface
-    float brightnessSum = viewRayOpticalDepth * _Intensity * _SurfaceAttenuation;
-    float reflectedLightStrength = exp(-brightnessSum);
-    float hdrStrength = saturate(dot(sceneColor, 1) / 3 - 1);
-    reflectedLightStrength = lerp(reflectedLightStrength, 1, hdrStrength);
+    // Surface attenuation: use transmittance directly (from Fluid Planet)
+    // transmittance at end of loop = how much scene light survives through the atmosphere
+    float3 finalColor = sceneColor * transmittance + inScatteredLight;
 
-    float3 finalColor = sceneColor * reflectedLightStrength + inScatteredLight;
-
-    // Night ambient — faint illumination on the dark side (moonlight/starlight)
-    finalColor += _NightAmbient * (1 - saturate(dot(normalize(rayOrigin - _PlanetCenter), _DirToSun) * 2));
+    // Night ambient
+    float sunFacing = dot(normalize(rayOrigin - _PlanetCenter), _DirToSun);
+    finalColor += _NightAmbient * (1 - saturate(sunFacing * 2));
 
     // Sun disc
     if (!hitGeometry)
