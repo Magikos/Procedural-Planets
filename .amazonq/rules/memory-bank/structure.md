@@ -9,9 +9,18 @@ ProceduralPlanets/
 │   │   └── BiomeRegistryEditor.cs       # Custom grid inspector for BiomeRegistry
 │   ├── Graphics/
 │   │   ├── Materials/
-│   │   │   └── Planet.mat               # Planet material (URP)
+│   │   │   └── Planet.mat               # Planet material (URP, vertex color)
 │   │   └── Shaders/
-│   │       └── Planet.shadergraph       # Shader Graph for planet rendering
+│   │       ├── PlanetVertexColor.shader # URP HLSL: vertex color as albedo, PBR lighting
+│   │       ├── Atmosphere.shader        # Post-process: ray-marched Rayleigh/Mie scattering
+│   │       ├── Stars.shader             # Unlit vertex color for star quads
+│   │       ├── OpticalDepth.compute     # Compute shader: bakes optical depth LUT
+│   │       ├── BlueNoise.png            # Dither texture for atmosphere
+│   │       ├── Planet.shadergraph       # OLD shader graph (unused, kept for reference)
+│   │       └── Includes/
+│   │           ├── Atmosphere.hlsl      # Scattering math (Rayleigh, Mie, optical depth)
+│   │           ├── Common.hlsl          # Unity shader variable declarations
+│   │           └── Math.hlsl            # Ray-sphere intersection, utility functions
 │   ├── Scenes/
 │   │   ├── Planet.unity                 # Main planet scene
 │   │   └── Placement.unity              # Object placement test scene
@@ -24,20 +33,20 @@ ProceduralPlanets/
 │   │   │   │   ├── EventBus.cs          # Generic static event bus
 │   │   │   │   ├── EventBusProcessor.cs # Deferred event processing
 │   │   │   │   ├── IGameEvent.cs        # Marker interface for events
-│   │   │   │   └── PlanetGeneratedEvent.cs
+│   │   │   │   ├── IProgressEvent.cs    # Progress reporting interface
+│   │   │   │   ├── PlanetGeneratedEvent.cs # + PlanetGenerationProgressEvent
+│   │   │   │   └── CelestialEvents.cs   # DayNightChangedEvent, MoonPhaseChangedEvent
 │   │   │   ├── Interfaces/
 │   │   │   │   ├── IBiomeProvider.cs    # Biome evaluation interface
 │   │   │   │   ├── IBiomeRegistry.cs    # Temperature × moisture → biome lookup
-│   │   │   │   ├── IColorProvider.cs    # Color/texture management interface
 │   │   │   │   ├── ILogger.cs           # Logging interface
-│   │   │   │   ├── IMeshBuilder.cs      # Mesh building interface
 │   │   │   │   ├── IMoistureProvider.cs # Moisture evaluation interface
 │   │   │   │   ├── ISeedProvider.cs     # Deterministic seed interface
 │   │   │   │   ├── ITemperatureProvider.cs # Temperature evaluation interface
 │   │   │   │   ├── ITerrainProvider.cs  # Elevation evaluation interface
 │   │   │   │   └── IWorldAction.cs      # Command pattern interface
 │   │   │   ├── Services/
-│   │   │   │   ├── FreeCameraController.cs
+│   │   │   │   ├── FreeCameraController.cs # WASD + mouse camera, spacebar reset
 │   │   │   │   ├── GameBootstrap.cs
 │   │   │   │   ├── SeedProvider.cs
 │   │   │   │   ├── ServiceLocator.cs
@@ -45,59 +54,55 @@ ProceduralPlanets/
 │   │   │   │   └── WorldActionManager.cs
 │   │   │   ├── Utilities/
 │   │   │   │   ├── CoordinateConverter.cs
+│   │   │   │   ├── CubeSphereMeshBuilder.cs # Shared cube-sphere mesh generation
 │   │   │   │   └── ObjectPool.cs
 │   │   │   └── ProceduralPlanets.Core.asmdef
 │   │   ├── Planet/
+│   │   │   ├── Atmosphere/
+│   │   │   │   ├── AtmosphereController.cs    # Drives atmosphere: bakes LUT, sets globals
+│   │   │   │   ├── AtmosphereRenderFeature.cs # URP ScriptableRendererFeature
+│   │   │   │   └── AtmosphereRenderPass.cs    # RenderGraph pass: fullscreen scattering
 │   │   │   ├── Biomes/
-│   │   │   │   ├── BiomeDefinition.cs   # ScriptableObject: per-biome color/tint
-│   │   │   │   ├── BiomeRegistry.cs     # ScriptableObject: temp×moisture grid + elevation overrides
-│   │   │   │   ├── BiomeSettings.cs     # ScriptableObject: noise config for temp/moisture
-│   │   │   │   ├── TemperatureProvider.cs # Latitude-based + noise perturbation
-│   │   │   │   └── MoistureProvider.cs  # Noise-based moisture evaluation
+│   │   │   │   ├── BiomeDefinition.cs
+│   │   │   │   ├── BiomeRegistry.cs
+│   │   │   │   ├── BiomeSettings.cs
+│   │   │   │   ├── TemperatureProvider.cs
+│   │   │   │   └── MoistureProvider.cs
 │   │   │   ├── NoiseFilters/
-│   │   │   │   ├── INoiseFilter.cs      # Noise filter interface
-│   │   │   │   ├── NoiseFilterFactory.cs # Factory for creating noise filters
-│   │   │   │   ├── SimpleNoiseFilter.cs  # Standard layered simplex noise
-│   │   │   │   └── RigidNoiseFilter.cs   # Ridge-style noise (extends Simple)
-│   │   │   ├── Planet.cs                # Main planet MonoBehaviour (orchestrator + water mesh)
+│   │   │   │   ├── INoiseFilter.cs
+│   │   │   │   ├── NoiseFilterFactory.cs
+│   │   │   │   ├── SimpleNoiseFilter.cs
+│   │   │   │   └── RigidNoiseFilter.cs
+│   │   │   ├── Planet.cs                # Main orchestrator (terrain, water, events)
 │   │   │   ├── PlanetSettings.cs        # ScriptableObject: user-friendly generation params
-│   │   │   ├── ShapeGenerator.cs        # Evaluates noise layers → elevation (no clamp)
+│   │   │   ├── ShapeGenerator.cs        # Evaluates noise layers → elevation
 │   │   │   ├── TerrainFace.cs           # Generates mesh for one cube face
-│   │   │   ├── ColorGenerator.cs        # Biome texture via temp/moisture/registry
-│   │   │   ├── Noise.cs                 # Simplex noise implementation (seed-based)
-│   │   │   ├── MinMax.cs                # Thread-safe min/max elevation tracking
-│   │   │   ├── ShapeSettings.cs         # ScriptableObject: radius + noise layers (built by PlanetSettings)
-│   │   │   ├── ColorSettings.cs         # ScriptableObject: material + BiomeSettings (built by PlanetSettings)
+│   │   │   ├── ColorGenerator.cs        # Biome colors via temp/moisture/registry
+│   │   │   ├── CelestialManager.cs      # Sun/moon orbits, day/night, moon phases
+│   │   │   ├── StarSphere.cs            # Procedural star field mesh
+│   │   │   ├── Noise.cs                 # Simplex noise (seed-based)
+│   │   │   ├── MinMax.cs                # Thread-safe min/max tracking
+│   │   │   ├── ShapeSettings.cs         # Runtime noise layer config (built by PlanetSettings)
 │   │   │   ├── NoiseSettings.cs         # Serializable noise parameters
 │   │   │   └── ProceduralPlanets.Planet.asmdef
-│   │   ├── PoissonDiscSampling.cs       # 2D Poisson-disc point generation
-│   │   ├── PoissonDiscSphereSampling.cs # 3D sphere Poisson-disc with biome data
-│   │   ├── Test.cs                      # 2D Poisson-disc visualization test (Gizmos)
-│   │   ├── TestPoissonDiscSphereDraw.cs # 3D sphere placement visualization test (Gizmos)
+│   │   ├── PoissonDiscSampling.cs
+│   │   ├── PoissonDiscSphereSampling.cs
+│   │   ├── Test.cs
+│   │   ├── TestPoissonDiscSphereDraw.cs
 │   │   └── ProceduralPlanets.Sampling.asmdef
-│   ├── Settings/
-│   │   ├── Planet Settings/
-│   │   │   ├── Planet.asset             # PlanetSettings instance (user-friendly params)
-│   │   │   ├── Shape.asset              # ShapeSettings instance (legacy, kept for reference)
-│   │   │   ├── Color.asset              # ColorSettings instance (legacy, kept for reference)
-│   │   │   └── Biomes/                  # All biome ScriptableObject assets
-│   │   │       ├── BiomeRegistry.asset  # 4×3 temp×moisture grid + elevation overrides
-│   │   │       ├── BiomeSettings.asset  # Temperature/moisture noise config
-│   │   │       └── *.asset              # 15 BiomeDefinition assets (flat debug colors)
-│   │   ├── PC_RPAsset.asset             # URP render pipeline asset (PC)
-│   │   ├── Mobile_RPAsset.asset         # URP render pipeline asset (Mobile)
-│   │   └── DefaultVolumeProfile.asset   # Post-processing volume
-│   └── PlanetBiomeGradient.png          # Biome gradient texture reference
-├── docs/
-│   ├── PROJECT_PLAN.md                  # Master index of all phases
-│   └── phases/                          # Individual phase documents
+│   └── Settings/
+│       ├── Planet Settings/
+│       │   ├── Planet.asset             # PlanetSettings instance
+│       │   └── Biomes/                  # BiomeRegistry, BiomeSettings, 15 BiomeDefinitions
+│       ├── PC_RPAsset.asset             # URP pipeline asset (has AtmosphereRenderFeature)
+│       └── PC_Renderer.asset            # URP renderer asset
 ├── local-only/                          # Reference projects (not in main build)
-│   ├── Fluid-Planet-main/               # Fluid planet reference project
-│   └── Procedural Planet E01–E07/       # Sebastian Lague tutorial episodes
-├── Packages/
-│   └── manifest.json                    # Unity package dependencies
-├── ProjectSettings/                     # Unity project configuration
-└── ProceduralPlanets.sln                # Visual Studio solution
+│   ├── Fluid-Planet-main/               # Sebastian Lague fluid planet
+│   ├── Geographical-Adventures-main/    # Full planet game reference
+│   ├── URP-Atmosphere-main/             # URP atmosphere reference (basis for our implementation)
+│   ├── Clouds-master/                   # Volumetric clouds reference
+│   └── Procedural Planet E01–E07/       # Tutorial episodes
+└── ProceduralPlanets.sln
 ```
 
 ## Core Architecture
@@ -106,84 +111,72 @@ ProceduralPlanets/
 ```
 Planet (MonoBehaviour — orchestrator)
   ├── PlanetSettings (user-friendly ScriptableObject)
-  │   ├── BuildShapeSettings() → ShapeSettings (noise layers from friendly params)
-  │   └── BuildColorSettings() → ColorSettings (material + biome refs)
+  │   └── BuildShapeSettings() → ShapeSettings (noise layers from friendly params)
   ├── ShapeGenerator : ITerrainProvider (elevation calculation, no clamp)
   │   ├── NoiseFilterFactory → INoiseFilter[]
-  │   │   ├── SimpleNoiseFilter (layered simplex)
-  │   │   └── RigidNoiseFilter (ridge noise, extends Simple)
   │   └── Noise (simplex noise, seed-based permutation)
-  ├── TerrainFace[6] (one per cube face → mesh, uses ITerrainProvider)
-  ├── ColorGenerator : IBiomeProvider + IColorProvider
-  │   ├── TemperatureProvider : ITemperatureProvider (latitude + noise → temperature)
-  │   ├── MoistureProvider : IMoistureProvider (noise → moisture)
-  │   └── BiomeRegistry : IBiomeRegistry (temp × moisture grid → BiomeResult)
-  └── Water Mesh (cube-sphere at base radius, transparent URP Lit material)
+  ├── TerrainFace[6] (one per cube face → mesh)
+  ├── ColorGenerator : IBiomeProvider (vertex colors from biome system)
+  │   ├── TemperatureProvider : ITemperatureProvider
+  │   ├── MoistureProvider : IMoistureProvider
+  │   └── BiomeRegistry : IBiomeRegistry
+  ├── Water Mesh (CubeSphereMeshBuilder, transparent URP Lit material)
+  └── PlanetGeneratedEvent → triggers all dependent systems
 ```
 
-### Unified Scale Model
+### Celestial System
 ```
-Mountain peak:  radius = PlanetRadius * (1 + positiveElevation)  → above water
-Sea level:      radius = PlanetRadius * (1 + OceanLevel)         → water sphere
-Ocean floor:    radius = PlanetRadius * (1 + negativeElevation)  → below water
-```
-- Terrain goes both above AND below base radius (no elevation clamp)
-- Water sphere sits at exactly PlanetRadius (+ OceanLevel offset)
-- Land above water = visible continents; terrain below water = hidden ocean basins
-
-### PlanetSettings Parameters
-```
-PlanetRadius:      1-5000 (Unity units)
-ContinentSize:     0.1-1.0 (small islands → large landmasses)
-OceanDepth:        0-1.0 (shallow → deep basins)
-MountainHeight:    0-1.0 (flat → extreme peaks)
-MountainDensity:   0-1.0 (few → many)
-TerrainRoughness:  0-1.0 (smooth → jagged detail)
-HasOceans:         bool (toggles water sphere)
-OceanLevel:        -0.05 to 0.05 (raise/lower water)
-WaterColor:        Color with alpha
-```
-These translate internally to 3 noise layers: continent shelf, mountains (rigid), surface detail.
-
-### Data Flow
-1. **Planet.Initialize()** — PlanetSettings builds ShapeSettings + ColorSettings, creates 6 TerrainFaces
-2. **Planet.GenerateMeshAsync()** — Parallel.For across 6 faces on background thread via Awaitable
-3. **ShapeGenerator** — Evaluates noise layers per vertex, tracks elevation MinMax (thread-safe)
-4. **Planet.GenerateColors()** — ColorGenerator builds biome texture, TerrainFace updates UVs
-5. **Planet.GenerateWater()** — Builds cube-sphere water mesh at base radius
-6. **Shader** — Uses `_ElevationMinMax` and `_Texture` to render biome colors
-
-### Biome Resolution Flow
-```
-pointOnUnitSphere
-  → TemperatureProvider.Evaluate() → temperature (latitude + noise)
-  → MoistureProvider.Evaluate() → moisture (noise)
-  → BiomeRegistry.Resolve(temp, moisture, elevation)
-    → elevation overrides (Ocean/Beach/Mountain/SnowyMountain) checked first
-    → temp × moisture grid lookup with boundary blending
-    → BiomeResult (primary, secondary, blend weight, temp, moisture)
+CelestialManager (MonoBehaviour)
+  ├── Sun orbit (directional light, tilted plane, configurable day length)
+  ├── Moon orbit (separate speed/inclination, phase tracking)
+  ├── IsDayAt(worldPosition) — position-based day/night check
+  ├── MoonPhase / MoonFullness / MoonPhaseIndex
+  └── Events: DayNightChangedEvent, MoonPhaseChangedEvent
 ```
 
-### Biome Texture Layout
+### Atmosphere System (Post-Process)
 ```
-Row 0:  Ocean          (sand/brown — ocean floor visible through water)
-Row 1:  Beach          (sandy yellow)
-Rows 2-13: Grid biomes (temp × moisture: Tundra→Snow→IceBog→Steppe→Taiga→Swamp→Scrub→Grassland→Forest→Desert→Savanna→Tropical)
-Row 14: Mountain       (grey rock — warm/hot high elevation)
-Row 15: SnowyMountain  (white — cold high elevation)
-```
-Texture is 4×16 with Point filtering. Each row is a flat color.
-Shader samples texture at (elevationNormalized, UV.x) where UV.x = biome row percent.
+AtmosphereController (MonoBehaviour)
+  ├── Bakes optical depth LUT via compute shader (once per generation)
+  ├── Sets global shader properties each frame (sun direction)
+  └── Listens to PlanetGeneratedEvent for radius/position
 
-### Known Bugs
-- ~~**Coastline rainbow strip**: Fixed by switching to vertex colors + PlanetVertexColor shader~~
+AtmosphereRenderFeature → AtmosphereRenderPass
+  ├── URP ScriptableRendererFeature + RenderGraph pass
+  ├── Fullscreen triangle via SV_VertexID (DrawProcedural)
+  ├── Ray-marched Rayleigh + Mie scattering
+  ├── Reads _CameraDepthTexture for depth-aware rendering
+  └── Works from both space and surface views
+```
+
+### Star System
+```
+StarSphere (MonoBehaviour)
+  ├── Generates star quads on large sphere from seed
+  ├── Vertex colors for brightness/temperature variation
+  ├── GetStarDirection(index) for future constellation queries
+  └── Centered on planet, scales with planet radius
+```
+
+### Startup Flow
+```
+OnEnable (all listeners subscribe to EventBus)
+  ↓
+Planet.Start()
+  ├── Has _lastGeneratedRadius? → Raise PlanetGeneratedEvent
+  └── No data? → GeneratePlanetAsync() → Raise event when done
+  ↓
+All listeners receive PlanetGeneratedEvent:
+  ├── FreeCameraController → reposition camera
+  ├── CelestialManager → set planet radius, moon orbit
+  ├── AtmosphereController → bake LUT, set shader globals
+  └── StarSphere → set sphere radius, regenerate mesh
+```
 
 ### Key Patterns
-- **ScriptableObject Settings**: PlanetSettings (user-friendly), ShapeSettings, ColorSettings, BiomeSettings, BiomeRegistry, BiomeDefinition
-- **Factory Pattern**: NoiseFilterFactory creates appropriate INoiseFilter based on FilterType
-- **Interface Abstraction**: ITerrainProvider, IBiomeProvider, IColorProvider, ITemperatureProvider, IMoistureProvider, IBiomeRegistry
-- **Inheritance**: RigidNoiseFilter extends SimpleNoiseFilter, overriding Evaluate
-- **Cube-Sphere**: 6 faces × resolution² vertices, projected to unit sphere, scaled by elevation
-- **Deterministic Seed**: Planet → ShapeGenerator (seed+i per layer), TemperatureProvider (seed), MoistureProvider (seed+100)
-- **Async Generation**: Single async path via GeneratePlanetAsync, Parallel.For for 6 faces, CancellationToken support
-- **Temperature × Moisture Grid**: Biomes placed on continuous 2D gradient, preventing illogical adjacencies
+- **EventBus**: Subscribe in OnEnable, unsubscribe in OnDisable. Initialization in Start.
+- **Planet owns startup**: Raises event if data exists, otherwise auto-generates.
+- **No OnValidate**: Generation only via button press or Start.
+- **No serialized meshes**: All meshes generated at runtime, _lastGeneratedRadius persisted for startup.
+- **Global shader properties**: Atmosphere uses Shader.SetGlobal* for all parameters.
+- **Assembly separation**: Core (no Planet dependency) ← Planet (references Core + URP).
