@@ -1,10 +1,8 @@
 #pragma once
 
 // Wavelength-based atmospheric scattering.
-// Combines approaches from:
-// - Fluid Planet: clean transmittance-based surface attenuation (no hacks)
-// - Geographical Adventures: /atmosphereThickness normalization, phase functions
-// - Solar System: wavelength-based coefficients, baked optical depth LUT
+// Loop structure from Fluid Planet (proven working).
+// Final normalization by atmosphereThickness (from Geographical Adventures).
 
 TEXTURE2D(_BakedOpticalDepth);
 SAMPLER(sampler_BakedOpticalDepth);
@@ -89,15 +87,13 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
     const float epsilon = 0.0001;
     float3 pointInAtmosphere = rayOrigin + rayDir * (dstToAtmosphere + epsilon);
     float rayLength = dstThroughAtmosphere - epsilon * 2;
-    float atmosphereThickness = _AtmosphereRadius - _PlanetRadius;
 
     float stepSize = rayLength / (_NumInScatteringPoints - 1);
-    // Normalize step size by atmosphere thickness (from Geographical Adventures)
-    float scaledStepSize = stepSize / atmosphereThickness;
     float3 inScatterPoint = pointInAtmosphere;
     float3 inScatteredLight = 0;
     float3 transmittance = 1;
 
+    // Exact Fluid Planet loop structure
     [loop]
     for (int i = 0; i < _NumInScatteringPoints; i++)
     {
@@ -105,18 +101,19 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
         float localDensity = DensityAtPoint(inScatterPoint);
         float viewRayOpticalDepth = OpticalDepthBaked2(pointInAtmosphere, rayDir, stepSize * i);
 
-        // Transmittance: how much light survives from sun through atmosphere to this point and back to camera
-        transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * _ScatteringCoefficients * scaledStepSize);
+        // Raw LUT optical depths — no step size multiplication here
+        transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * _ScatteringCoefficients);
 
-        inScatteredLight += localDensity * transmittance * scaledStepSize;
+        inScatteredLight += localDensity * transmittance;
         inScatterPoint += rayDir * stepSize;
     }
 
-    inScatteredLight *= _ScatteringCoefficients * _Intensity;
+    // Normalize by atmosphere thickness instead of planet radius
+    float atmosphereThickness = _AtmosphereRadius - _PlanetRadius;
+    inScatteredLight *= _ScatteringCoefficients * _Intensity * stepSize / atmosphereThickness;
     inScatteredLight += blueNoise * 0.01;
 
-    // Surface attenuation: use transmittance directly (from Fluid Planet)
-    // transmittance at end of loop = how much scene light survives through the atmosphere
+    // Surface attenuation: transmittance from loop (Fluid Planet approach)
     float3 finalColor = sceneColor * transmittance + inScatteredLight;
 
     // Night ambient
