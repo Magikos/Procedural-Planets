@@ -139,16 +139,19 @@ public class FreeCameraController : MonoBehaviour
 
     void PositionOnSurface(Vector3 center, float radius)
     {
-        // Place on equator (+Z), slightly above surface, looking east (+X)
-        Vector3 surfaceNormal = Vector3.forward;
+        // Place in the sun's orbital plane (XY) so the full sunrise->noon->sunset arc is visible.
+        // Sun orbits in XY: noon at +Y, sunrise from one horizon, sunset to the other.
+        // Camera at +X on the surface, looking along +Y (toward where sun is at noon),
+        // tilted up ~30° to see the sky.
+        Vector3 surfaceNormal = Vector3.right; // +X on the equator of the sun's orbit
         Vector3 surfacePos = center + surfaceNormal * (radius + 2f);
         transform.position = surfacePos;
 
-        // Look east along the horizon
-        Vector3 east = Vector3.Cross(Vector3.up, surfaceNormal).normalized;
-        if (east.sqrMagnitude < 0.01f)
-            east = Vector3.Cross(Vector3.forward, surfaceNormal).normalized;
-        transform.rotation = Quaternion.LookRotation(east, surfaceNormal);
+        // "Up" is the surface normal (+X), "forward" looks along the horizon in the sun's orbital plane
+        // Look toward +Y (where the sun will be at noon), tilted up 30° from horizon
+        Vector3 horizonForward = Vector3.up; // toward noon sun position
+        Vector3 forward = Vector3.Slerp(horizonForward, surfaceNormal, 0.15f).normalized; // ~30° above horizon
+        transform.rotation = Quaternion.LookRotation(forward, surfaceNormal);
 
         MoveSpeed = radius * 0.02f;
         ScrollSpeed = radius * 0.1f;
@@ -174,6 +177,16 @@ public class FreeCameraController : MonoBehaviour
         }
 
         GUILayout.Label("WASD=Move, Shift=Fast, RMB=Look, QE=Up/Down, Space=Reset, Ctrl+Space=Surface");
+
+        // Show time of day if CelestialManager exists (found via brute search since Core can't reference Planet)
+        var sunLight = FindAnyObjectByType<Light>();
+        if (sunLight != null && sunLight.type == LightType.Directional)
+        {
+            Vector3 sunDir = -sunLight.transform.forward;
+            float sunElevation = Vector3.Dot(sunDir, (transform.position - _lastPlanetCenter).normalized);
+            GUILayout.Label($"Sun elevation: {Mathf.Asin(sunElevation) * Mathf.Rad2Deg:F1}°");
+        }
+
         GUILayout.EndArea();
     }
 }
