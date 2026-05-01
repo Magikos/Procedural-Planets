@@ -103,7 +103,7 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
         float sunRayOpticalDepth = OpticalDepthBaked(inScatterPoint, _DirToSun);
         float localDensity = DensityAtPoint(inScatterPoint);
         viewRayOpticalDepth = OpticalDepthBaked2(pointInAtmosphere, rayDir, stepSize * i);
-        float3 transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * _ScatteringCoefficients);
+        float3 transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * _ScatteringCoefficients / _PlanetRadius);
 
         inScatteredLight += localDensity * transmittance;
         inScatterPoint += rayDir * stepSize;
