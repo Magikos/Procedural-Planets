@@ -24,21 +24,21 @@ public class AtmosphereController : MonoBehaviour
     [Range(1, 30), Tooltip("Number of in-scattering sample steps (quality vs. performance)")]
     public int InScatteringPoints = 10;
     [Range(1f, 80f), Tooltip("Overall light intensity multiplier")]
-    public float Intensity = 20f;
+    public float Intensity = 15f;
 
     [Header("Rayleigh (Sky Color)")]
-    [Tooltip("Rayleigh scattering coefficients — controls sky colour (dimensionless, wavelength-proportional; tune visually)")]
-    public Vector3 RayleighScattering = new Vector3(1.0e-3f, 2.5e-3f, 4.0e-3f);
-    [Range(1f, 20f), Tooltip("Scale height for Rayleigh scattering — higher = thicker lower atmosphere")]
-    public float RayleighFalloff = 7.5f;
+    [Tooltip("Rayleigh scattering coefficients — controls sky colour")]
+    public Vector3 RayleighScattering = new Vector3(5.8e-3f, 13.5e-3f, 33.1e-3f);
+    [Range(1f, 20f), Tooltip("Scale height for Rayleigh scattering")]
+    public float RayleighFalloff = 8f;
 
     [Header("Mie (Haze / Sun Glow)")]
-    [Tooltip("Mie scattering coefficients — controls haze and sun glow size (dimensionless; tune visually)")]
-    public Vector3 MieScattering = new Vector3(5.0e-4f, 5.0e-4f, 5.0e-4f);
+    [Tooltip("Mie scattering coefficients — controls haze and sun glow")]
+    public Vector3 MieScattering = new Vector3(2.0e-3f, 2.0e-3f, 2.0e-3f);
     [Range(0.5f, 20f), Tooltip("Scale height for Mie scattering")]
     public float MieFalloff = 1.2f;
     [Range(0f, 0.99f), Tooltip("Mie anisotropy — higher = tighter glow around sun")]
-    public float MieAnisotropy = 0.7f;
+    public float MieAnisotropy = 0.76f;
 
     [Header("Absorption (Ozone)")]
     [Tooltip("Absorption coefficients — controls ozone-like colour tinting")]

@@ -36,7 +36,12 @@ public class StarSphere : MonoBehaviour
 
     void Start()
     {
-        if (_sphereRadius <= 0f) _sphereRadius = 5000f;
+        if (PlanetCenter != null)
+        {
+            var planet = PlanetCenter.GetComponent<Planet>();
+            if (planet != null && planet.LastGeneratedRadius > 0f)
+                _sphereRadius = planet.LastGeneratedRadius * 80f;
+        }
         Generate();
     }
 

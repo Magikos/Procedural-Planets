@@ -69,7 +69,12 @@ public class FreeCameraController : MonoBehaviour
         HandleMovement();
 
         if (_keyboard.spaceKey.wasPressedThisFrame && _lastPlanetRadius > 0f)
-            InitFromPlanet();
+        {
+            if (_keyboard.leftCtrlKey.isPressed)
+                PositionOnSurface(_lastPlanetCenter, _lastPlanetRadius);
+            else
+                InitFromPlanet();
+        }
     }
 
     void HandleLook()
@@ -136,6 +141,20 @@ public class FreeCameraController : MonoBehaviour
         ScrollSpeed = radius * 2f;
     }
 
+    void PositionOnSurface(Vector3 center, float radius)
+    {
+        // Place on equator, looking east along the horizon
+        Vector3 surfacePos = center + Vector3.forward * (radius + 1f);
+        transform.position = surfacePos;
+        transform.rotation = Quaternion.LookRotation(Vector3.right, Vector3.forward);
+
+        _yaw = transform.eulerAngles.y;
+        _pitch = transform.eulerAngles.x;
+
+        MoveSpeed = radius * 0.05f;
+        ScrollSpeed = radius * 0.2f;
+    }
+
     void OnGUI()
     {
         if (!ShowDebugOverlay) return;
@@ -155,7 +174,7 @@ public class FreeCameraController : MonoBehaviour
             GUILayout.Label($"Distance to center: {distToCenter:F1}");
         }
 
-        GUILayout.Label("WASD=Move, Shift=Fast, RMB=Look, QE=Up/Down, Space=Reset");
+        GUILayout.Label("WASD=Move, Shift=Fast, RMB=Look, QE=Up/Down, Space=Reset, Ctrl+Space=Surface");
         GUILayout.EndArea();
     }
 }

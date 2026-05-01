@@ -135,6 +135,7 @@ public class Planet : MonoBehaviour
             float scaledRadius = _planetSettings.PlanetRadius * (1 + _shapeGenerator.ElevationMax);
             _lastGeneratedRadius = scaledRadius;
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius));
+            EnsureStarSphere();
             Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, resolution {Resolution}, radius {scaledRadius:F1}");
         }
         catch (System.OperationCanceledException) { }
@@ -226,5 +227,16 @@ public class Planet : MonoBehaviour
         mat.renderQueue = 3000;
         mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
         mat.SetOverrideTag("RenderType", "Transparent");
+    }
+
+    void EnsureStarSphere()
+    {
+        var existing = FindAnyObjectByType<StarSphere>();
+        if (existing != null) return;
+
+        var go = new GameObject("StarSphere");
+        var stars = go.AddComponent<StarSphere>();
+        stars.PlanetCenter = transform;
+        stars.Seed = Seed;
     }
 }
