@@ -32,7 +32,7 @@ ENDHLSL
             #pragma fragment AtmosphereFragment
 
             #pragma target 4.0
-            #pragma multi_compile _ ATMOSPHERE_DEBUG_DEPTH
+            #pragma multi_compile _ ATMOSPHERE_DEBUG_DEPTH ATMOSPHERE_DEBUG_SCATTER ATMOSPHERE_DEBUG_SURFACE
 
             struct Attributes
             {
@@ -73,9 +73,18 @@ ENDHLSL
                 float sceneDepth = CompositeDepthScaled(i.uv, viewLength);
 
                 #if defined(ATMOSPHERE_DEBUG_DEPTH)
-                    // Visualize depth: white = far/sky, black = close surface
                     float depthVis = saturate(sceneDepth / (_PlanetRadius * 4));
                     return float4(depthVis, depthVis, depthVis, 1);
+                #elif defined(ATMOSPHERE_DEBUG_SCATTER)
+                    // Show ONLY the in-scattered light (no scene color)
+                    float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, float3(0,0,0), i.uv);
+                    return float4(color, 1);
+                #elif defined(ATMOSPHERE_DEBUG_SURFACE)
+                    // Show ONLY the attenuated scene color (no scattering)
+                    float3 color2 = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz, i.uv);
+                    // Subtract what we'd get with black scene to isolate surface contribution
+                    float3 scatterOnly = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, float3(0,0,0), i.uv);
+                    return float4(color2 - scatterOnly, 1);
                 #endif
 
                 float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz, i.uv);
