@@ -161,14 +161,20 @@ public class AtmosphereController : MonoBehaviour
         _lastBakedDensityFalloff = DensityFalloff;
         _lastBakedAtmosphereScale = AtmosphereScale;
 
-        // Debug: read back a sample to verify LUT has non-zero values
-        var readback = new Texture2D(1, 1, TextureFormat.RFloat, false);
+        // Debug: read back samples to verify LUT values at different heights
+        var readback = new Texture2D(BakeTextureSize, BakeTextureSize, TextureFormat.RFloat, false);
         RenderTexture.active = _bakedOpticalDepth;
-        readback.ReadPixels(new Rect(BakeTextureSize / 2, BakeTextureSize / 2, 1, 1), 0, 0);
+        readback.ReadPixels(new Rect(0, 0, BakeTextureSize, BakeTextureSize), 0, 0);
         readback.Apply();
         RenderTexture.active = null;
-        float sample = readback.GetPixel(0, 0).r;
-        UnityEngine.Debug.Log($"[Atmosphere] LUT baked. Center sample = {sample:F6} (should be > 0)");
+        // Sample at different heights (y) and angles (x)
+        // y=0 = surface, y=0.5 = mid atmosphere, y=1 = top
+        // x=0.5 = looking straight up
+        float surfaceUp = readback.GetPixelBilinear(0.5f, 0.0f).r;
+        float surfaceTangent = readback.GetPixelBilinear(0.0f, 0.0f).r;
+        float midUp = readback.GetPixelBilinear(0.5f, 0.5f).r;
+        float topUp = readback.GetPixelBilinear(0.5f, 1.0f).r;
+        UnityEngine.Debug.Log($"[Atmosphere] LUT samples — surface-up: {surfaceUp:F6}, surface-tangent: {surfaceTangent:F6}, mid-up: {midUp:F6}, top-up: {topUp:F6}");
         Object.Destroy(readback);
 
         Shader.SetGlobalTexture(_bakedOpticalDepthId, _bakedOpticalDepth);
