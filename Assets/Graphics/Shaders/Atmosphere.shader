@@ -33,12 +33,14 @@ ENDHLSL
 
             #pragma target 4.0
 
+            // Both variants always compiled so the runtime keyword works in editor & builds.
+            #pragma multi_compile _ DIRECTIONAL_SUN
+
             #define ATMOSPHERE_MODEL_SIM
 
-            struct appdata
+            struct Attributes
             {
-                float4 vertex : POSITION;
-                float4 uv : TEXCOORD0;
+                uint vertexID : SV_VertexID;
             };
 
             struct v2f
@@ -51,12 +53,22 @@ ENDHLSL
             TEXTURE2D(_Source);
             SAMPLER(sampler_Source);
 
-            v2f AtmosphereVertex(appdata v)
+            v2f AtmosphereVertex(Attributes v)
             {
                 v2f output;
-                output.pos = TransformObjectToHClip(v.vertex.xyz);
-                output.uv = v.uv.xy;
-                float3 viewVector = mul(unity_CameraInvProjection, float4(v.uv.xy * 2 - 1, 0, -1)).xyz;
+                // Generate fullscreen triangle from SV_VertexID (DrawProcedural, 3 verts).
+                // GetFullScreenTriangleVertexPosition/TexCoord are in Core ShaderLibrary/Common.hlsl.
+                output.pos = GetFullScreenTriangleVertexPosition(v.vertexID);
+                float2 uv = GetFullScreenTriangleTexCoord(v.vertexID);
+                output.uv = uv;
+                // GetFullScreenTriangleTexCoord: on DX (UNITY_UV_STARTS_AT_TOP) y=1 at screen-top;
+                // on non-DX y=0 at screen-top. NDC y=+1 = screen-top in both cases.
+                #if UNITY_UV_STARTS_AT_TOP
+                    float2 ndcForView = float2(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0);
+                #else
+                    float2 ndcForView = float2(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
+                #endif
+                float3 viewVector = mul(unity_CameraInvProjection, float4(ndcForView, 0, -1)).xyz;
                 output.viewVector = mul(unity_CameraToWorld, float4(viewVector, 0)).xyz;
                 return output;
             }

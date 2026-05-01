@@ -27,14 +27,14 @@ public class AtmosphereController : MonoBehaviour
     public float Intensity = 20f;
 
     [Header("Rayleigh (Sky Color)")]
-    [Tooltip("Rayleigh scattering coefficients — controls sky colour (Earth default: 5.5e-6, 13e-6, 22.4e-6)")]
-    public Vector3 RayleighScattering = new Vector3(5.5e-6f, 13.0e-6f, 22.4e-6f);
+    [Tooltip("Rayleigh scattering coefficients — controls sky colour (dimensionless, wavelength-proportional; tune visually)")]
+    public Vector3 RayleighScattering = new Vector3(1.0e-3f, 2.5e-3f, 4.0e-3f);
     [Range(1f, 20f), Tooltip("Scale height for Rayleigh scattering — higher = thicker lower atmosphere")]
     public float RayleighFalloff = 7.5f;
 
     [Header("Mie (Haze / Sun Glow)")]
-    [Tooltip("Mie scattering coefficients — controls haze and sun glow size")]
-    public Vector3 MieScattering = new Vector3(21e-6f, 21e-6f, 21e-6f);
+    [Tooltip("Mie scattering coefficients — controls haze and sun glow size (dimensionless; tune visually)")]
+    public Vector3 MieScattering = new Vector3(5.0e-4f, 5.0e-4f, 5.0e-4f);
     [Range(0.5f, 20f), Tooltip("Scale height for Mie scattering")]
     public float MieFalloff = 1.2f;
     [Range(0f, 0.99f), Tooltip("Mie anisotropy — higher = tighter glow around sun")]
@@ -62,22 +62,22 @@ public class AtmosphereController : MonoBehaviour
     RenderTexture _bakedOpticalDepth;
 
     // ─── shader property IDs ───────────────────────────────────────────────────
-    static readonly int _bakedOpticalDepthId       = Shader.PropertyToID("_BakedOpticalDepth");
-    static readonly int _sunParamsId               = Shader.PropertyToID("_SunParams");
-    static readonly int _planetCenterId            = Shader.PropertyToID("_PlanetCenter");
-    static readonly int _planetRadiusId            = Shader.PropertyToID("_PlanetRadius");
-    static readonly int _atmosphereRadiusId        = Shader.PropertyToID("_AtmosphereRadius");
-    static readonly int _cutoffRadiusId            = Shader.PropertyToID("_CutoffRadius");
-    static readonly int _numInScatteringPointsId   = Shader.PropertyToID("_NumInScatteringPoints");
-    static readonly int _rayleighScatteringId      = Shader.PropertyToID("_RayleighScattering");
-    static readonly int _mieScatteringId           = Shader.PropertyToID("_MieScattering");
-    static readonly int _mieGId                    = Shader.PropertyToID("_MieG");
-    static readonly int _absorbtionBetaId          = Shader.PropertyToID("_AbsorbtionBeta"); // note: shader typo preserved
-    static readonly int _ambientBetaId             = Shader.PropertyToID("_AmbientBeta");
-    static readonly int _rayleighFalloffId         = Shader.PropertyToID("_RayleighFalloff");
-    static readonly int _mieFalloffId              = Shader.PropertyToID("_MieFalloff");
-    static readonly int _heightAbsorbtionId        = Shader.PropertyToID("_HeightAbsorbtion"); // note: shader typo preserved
-    static readonly int _intensityId               = Shader.PropertyToID("_Intensity");
+    static readonly int _bakedOpticalDepthId = Shader.PropertyToID("_BakedOpticalDepth");
+    static readonly int _sunParamsId = Shader.PropertyToID("_SunParams");
+    static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
+    static readonly int _planetRadiusId = Shader.PropertyToID("_PlanetRadius");
+    static readonly int _atmosphereRadiusId = Shader.PropertyToID("_AtmosphereRadius");
+    static readonly int _cutoffRadiusId = Shader.PropertyToID("_CutoffRadius");
+    static readonly int _numInScatteringPointsId = Shader.PropertyToID("_NumInScatteringPoints");
+    static readonly int _rayleighScatteringId = Shader.PropertyToID("_RayleighScattering");
+    static readonly int _mieScatteringId = Shader.PropertyToID("_MieScattering");
+    static readonly int _mieGId = Shader.PropertyToID("_MieG");
+    static readonly int _absorbtionBetaId = Shader.PropertyToID("_AbsorbtionBeta"); // note: shader typo preserved
+    static readonly int _ambientBetaId = Shader.PropertyToID("_AmbientBeta");
+    static readonly int _rayleighFalloffId = Shader.PropertyToID("_RayleighFalloff");
+    static readonly int _mieFalloffId = Shader.PropertyToID("_MieFalloff");
+    static readonly int _heightAbsorbtionId = Shader.PropertyToID("_HeightAbsorbtion"); // note: shader typo preserved
+    static readonly int _intensityId = Shader.PropertyToID("_Intensity");
 
     // ─── Unity lifecycle ───────────────────────────────────────────────────────
 
@@ -89,6 +89,9 @@ public class AtmosphereController : MonoBehaviour
     void OnDisable()
     {
         EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
+        // Clear the global so the shader doesn't sample a stale/released texture
+        // (visible in the Editor scene view after play stops).
+        Shader.SetGlobalTexture(_bakedOpticalDepthId, null);
     }
 
     void OnDestroy()
@@ -156,12 +159,14 @@ public class AtmosphereController : MonoBehaviour
     {
         if (_planetRadius <= 0f) return;
 
+        Vector3 center = Vector3.zero;
         var planet = FindAnyObjectByType<Planet>();
-        Vector3 center = planet != null ? planet.transform.position : Vector3.zero;
+        if (planet != null) center = planet.transform.position;
 
         Shader.SetGlobalFloat(_planetRadiusId, _planetRadius);
         Shader.SetGlobalFloat(_atmosphereRadiusId, _atmosphereRadius);
-        Shader.SetGlobalFloat(_cutoffRadiusId, _atmosphereRadius * 1.01f);
+        // Cutoff sphere limits rays from going underground. Must be <= planet radius.
+        Shader.SetGlobalFloat(_cutoffRadiusId, _planetRadius);
         Shader.SetGlobalVector(_planetCenterId, center);
         Shader.SetGlobalInt(_numInScatteringPointsId, InScatteringPoints);
         Shader.SetGlobalVector(_rayleighScatteringId, new Vector4(RayleighScattering.x, RayleighScattering.y, RayleighScattering.z, 0f));

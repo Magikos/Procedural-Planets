@@ -59,8 +59,7 @@ public class Planet : MonoBehaviour
 
     void Initialize()
     {
-        for (int i = transform.childCount - 1; i >= 0; i--)
-            DestroyImmediate(transform.GetChild(i).gameObject);
+        DestroyChildrenImmediate();
 
         _meshFilters = new MeshFilter[6];
         _terrainFaces = new TerrainFace[6];
@@ -90,6 +89,13 @@ public class Planet : MonoBehaviour
             _meshFilters[i].gameObject.SetActive(renderFace);
         }
     }
+
+    void DestroyChildrenImmediate()
+    {
+        for (int i = transform.childCount - 1; i >= 0; i--)
+            DestroyImmediate(transform.GetChild(i).gameObject);
+    }
+
 
     void ConfigureMaterial()
     {

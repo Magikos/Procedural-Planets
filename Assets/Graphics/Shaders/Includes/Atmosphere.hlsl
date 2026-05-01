@@ -6,13 +6,11 @@
 
 
 #define MAX_LOOP_ITERATIONS 30
-#pragma shader_feature DIRECTIONAL_SUN 
 
 
 TEXTURE2D(_BakedOpticalDepth);
 float4 _BakedOpticalDepth_TexelSize;
 SAMPLER(sampler_BakedOpticalDepth);
-
 
 float3 _SunParams;
 float3 _PlanetCenter;

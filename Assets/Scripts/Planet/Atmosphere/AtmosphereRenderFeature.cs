@@ -19,6 +19,7 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
 {
     AtmosphereRenderPass _pass;
     Material _material;
+    AtmosphereController _cachedController;
 
     public override void Create()
     {
@@ -33,8 +34,9 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
             return;
 
         // Require an active AtmosphereController in the scene
-        var controller = Object.FindAnyObjectByType<AtmosphereController>();
-        if (controller == null || !controller.isActiveAndEnabled)
+        if (_cachedController == null || !_cachedController.isActiveAndEnabled)
+            _cachedController = Object.FindAnyObjectByType<AtmosphereController>();
+        if (_cachedController == null)
             return;
 
         // Lazily create the atmosphere material

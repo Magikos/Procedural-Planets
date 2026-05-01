@@ -27,12 +27,6 @@ public class PlanetSettings : ScriptableObject
     [Range(-0.05f, 0.05f)] public float OceanLevel = 0f;
     public Color WaterColor = new Color(0.07f, 0.35f, 0.63f, 0.7f);
 
-    [Header("Atmosphere")]
-    public bool HasAtmosphere = false; // TODO: re-enable when post-process atmosphere is implemented
-    [Range(1.01f, 1.3f), Tooltip("Atmosphere radius as multiplier of planet radius")]
-    public float AtmosphereScale = 1.08f;
-    public Color AtmosphereColor = new Color(0.3f, 0.5f, 1.0f, 1.0f);
-
     [Header("Biomes")]
     public BiomeSettings BiomeSettings;
     public Material PlanetMaterial;
