@@ -34,7 +34,7 @@ public class AtmosphereController : MonoBehaviour
 
     [Header("Mie (Haze / Sun Glow)")]
     [Tooltip("Mie scattering coefficients — controls haze and sun glow")]
-    public Vector3 MieScattering = new Vector3(2.0e-3f, 2.0e-3f, 2.0e-3f);
+    public Vector3 MieScattering = new Vector3(4.0e-4f, 4.0e-4f, 4.0e-4f);
     [Range(0.5f, 20f), Tooltip("Scale height for Mie scattering")]
     public float MieFalloff = 1.2f;
     [Range(0f, 0.99f), Tooltip("Mie anisotropy — higher = tighter glow around sun")]

@@ -143,16 +143,23 @@ public class FreeCameraController : MonoBehaviour
 
     void PositionOnSurface(Vector3 center, float radius)
     {
-        // Place on equator, looking east along the horizon
-        Vector3 surfacePos = center + Vector3.forward * (radius + 1f);
+        // Place on equator (+Z), slightly above surface, looking east (+X)
+        Vector3 surfaceNormal = Vector3.forward;
+        Vector3 surfacePos = center + surfaceNormal * (radius + 2f);
         transform.position = surfacePos;
-        transform.rotation = Quaternion.LookRotation(Vector3.right, Vector3.forward);
+
+        // Look east along the horizon
+        Vector3 east = Vector3.Cross(Vector3.up, surfaceNormal).normalized;
+        if (east.sqrMagnitude < 0.01f)
+            east = Vector3.Cross(Vector3.forward, surfaceNormal).normalized;
+        transform.rotation = Quaternion.LookRotation(east, surfaceNormal);
 
         _yaw = transform.eulerAngles.y;
         _pitch = transform.eulerAngles.x;
+        if (_pitch > 180f) _pitch -= 360f;
 
-        MoveSpeed = radius * 0.05f;
-        ScrollSpeed = radius * 0.2f;
+        MoveSpeed = radius * 0.02f;
+        ScrollSpeed = radius * 0.1f;
     }
 
     void OnGUI()

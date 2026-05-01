@@ -72,7 +72,7 @@ public class StarSphere : MonoBehaviour
             Vector3 dir = RandomUnitVector(rand);
             Vector3 pos = dir * _sphereRadius;
 
-            float brightness = 0.4f + (float)rand.NextDouble() * 0.6f;
+            float brightness = 0.6f + (float)rand.NextDouble() * 0.4f;
             float temp = (float)rand.NextDouble();
             Color starColor = Color.Lerp(
                 new Color(0.8f, 0.85f, 1f),
@@ -118,6 +118,11 @@ public class StarSphere : MonoBehaviour
         mesh.vertices = vertices;
         mesh.colors = colors;
         mesh.triangles = triangles;
+
+        // Ensure bounds are large enough to prevent frustum culling
+        mesh.bounds = new Bounds(Vector3.zero, Vector3.one * _sphereRadius * 2.5f);
+
+        Debug.Log($"[StarSphere] Generated {StarCount} stars at radius {_sphereRadius:F0}, mesh verts: {mesh.vertexCount}");
     }
 
     void EnsureComponents()
