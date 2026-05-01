@@ -34,11 +34,11 @@ public class AtmosphereController : MonoBehaviour
 
     [Header("Mie (Haze / Sun Glow)")]
     [Tooltip("Mie scattering coefficients — controls haze and sun glow")]
-    public Vector3 MieScattering = new Vector3(4.0e-4f, 4.0e-4f, 4.0e-4f);
+    public Vector3 MieScattering = new Vector3(3.0e-5f, 3.0e-5f, 3.0e-5f);
     [Range(0.5f, 20f), Tooltip("Scale height for Mie scattering")]
     public float MieFalloff = 1.2f;
     [Range(0f, 0.99f), Tooltip("Mie anisotropy — higher = tighter glow around sun")]
-    public float MieAnisotropy = 0.76f;
+    public float MieAnisotropy = 0.85f;
 
     [Header("Absorption (Ozone)")]
     [Tooltip("Absorption coefficients — controls ozone-like colour tinting")]
@@ -109,8 +109,20 @@ public class AtmosphereController : MonoBehaviour
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
-        _planetRadius = evt.PlanetRadius;
-        _atmosphereRadius = _planetRadius * AtmosphereScale;
+        var planet = FindAnyObjectByType<Planet>();
+        if (planet != null && planet._planetSettings != null)
+        {
+            float baseRadius = planet._planetSettings.PlanetRadius;
+            float elevMin = planet.ShapeGenerator.ElevationMin;
+            // Planet surface radius at lowest point
+            _planetRadius = baseRadius * (1 + elevMin);
+        }
+        else
+        {
+            _planetRadius = evt.PlanetRadius;
+        }
+
+        _atmosphereRadius = evt.PlanetRadius * AtmosphereScale;
 
         BakeOpticalDepth();
         SetGlobalProperties();
@@ -165,8 +177,8 @@ public class AtmosphereController : MonoBehaviour
 
         Shader.SetGlobalFloat(_planetRadiusId, _planetRadius);
         Shader.SetGlobalFloat(_atmosphereRadiusId, _atmosphereRadius);
-        // Cutoff sphere limits rays from going underground. Must be <= planet radius.
-        Shader.SetGlobalFloat(_cutoffRadiusId, _planetRadius);
+        // Cutoff below lowest terrain so atmosphere doesn't clip through valleys
+        Shader.SetGlobalFloat(_cutoffRadiusId, _planetRadius * 0.99f);
         Shader.SetGlobalVector(_planetCenterId, center);
         Shader.SetGlobalInt(_numInScatteringPointsId, InScatteringPoints);
         Shader.SetGlobalVector(_rayleighScatteringId, new Vector4(RayleighScattering.x, RayleighScattering.y, RayleighScattering.z, 0f));

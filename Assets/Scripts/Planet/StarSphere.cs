@@ -136,7 +136,11 @@ public class StarSphere : MonoBehaviour
         if (_meshRenderer.sharedMaterial == null || _meshRenderer.sharedMaterial.name == "Default-Material")
         {
             var shader = Shader.Find("Planet/Stars");
-            if (shader == null) shader = Shader.Find("Unlit/Color");
+            if (shader == null)
+            {
+                Debug.LogWarning("[StarSphere] Could not find Planet/Stars shader, using Unlit/Color fallback");
+                shader = Shader.Find("Unlit/Color");
+            }
             _meshRenderer.sharedMaterial = new Material(shader) { name = "Stars" };
         }
 

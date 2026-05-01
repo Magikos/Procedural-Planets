@@ -20,14 +20,12 @@ public class FreeCameraController : MonoBehaviour
     public bool ShowDebugOverlay = true;
     public Transform TargetCenter;
 
-    float _yaw;
-    float _pitch;
-    bool _looking;
     float _lastPlanetRadius;
     Vector3 _lastPlanetCenter;
 
     Mouse _mouse;
     Keyboard _keyboard;
+    bool _looking;
 
     void OnEnable()
     {
@@ -41,8 +39,6 @@ public class FreeCameraController : MonoBehaviour
 
     void Start()
     {
-        _yaw = transform.eulerAngles.y;
-        _pitch = transform.eulerAngles.x;
         _mouse = Mouse.current;
         _keyboard = Keyboard.current;
 
@@ -96,10 +92,12 @@ public class FreeCameraController : MonoBehaviour
         if (!_looking) return;
 
         Vector2 mouseDelta = _mouse.delta.ReadValue();
-        _yaw += mouseDelta.x * LookSensitivity * 0.1f;
-        _pitch -= mouseDelta.y * LookSensitivity * 0.1f;
-        _pitch = Mathf.Clamp(_pitch, -90f, 90f);
-        transform.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
+        float deltaYaw = mouseDelta.x * LookSensitivity * 0.1f;
+        float deltaPitch = -mouseDelta.y * LookSensitivity * 0.1f;
+
+        // Rotate around the camera's own local up (yaw) and right (pitch)
+        transform.Rotate(Vector3.up, deltaYaw, Space.World);
+        transform.Rotate(Vector3.right, deltaPitch, Space.Self);
     }
 
     void HandleMovement()
@@ -134,9 +132,6 @@ public class FreeCameraController : MonoBehaviour
         transform.position = center + Vector3.back * distance;
         transform.LookAt(center);
 
-        _yaw = transform.eulerAngles.y;
-        _pitch = transform.eulerAngles.x;
-
         MoveSpeed = radius * 0.5f;
         ScrollSpeed = radius * 2f;
     }
@@ -153,10 +148,6 @@ public class FreeCameraController : MonoBehaviour
         if (east.sqrMagnitude < 0.01f)
             east = Vector3.Cross(Vector3.forward, surfaceNormal).normalized;
         transform.rotation = Quaternion.LookRotation(east, surfaceNormal);
-
-        _yaw = transform.eulerAngles.y;
-        _pitch = transform.eulerAngles.x;
-        if (_pitch > 180f) _pitch -= 360f;
 
         MoveSpeed = radius * 0.02f;
         ScrollSpeed = radius * 0.1f;
