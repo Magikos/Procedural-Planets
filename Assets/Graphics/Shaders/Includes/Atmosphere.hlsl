@@ -2,8 +2,8 @@
 
 // Wavelength-based atmospheric scattering.
 // Based on Sebastian Lague's Solar System project.
-// Key difference from previous implementation: divides inScatteredLight by planetRadius
-// for scale-independent scattering that works at any planet radius.
+// LUT baked at normalized scale (planetRadius=1).
+// Only /planetRadius normalization is on the final inScatteredLight line.
 
 TEXTURE2D(_BakedOpticalDepth);
 SAMPLER(sampler_BakedOpticalDepth);
@@ -25,9 +25,8 @@ float _Intensity;
 float _DitherStrength;
 float _DitherScale;
 
-// Sun disc
-float _SunDiscSize;    // cos(angular radius), e.g. 0.9998
-float _SunDiscBlend;   // softness of edge
+float _SunDiscSize;
+float _SunDiscBlend;
 
 float DensityAtPoint(float3 samplePoint)
 {
@@ -44,9 +43,6 @@ float OpticalDepthBaked(float3 rayOrigin, float3 rayDir)
     return SAMPLE_TEXTURE2D(_BakedOpticalDepth, sampler_BakedOpticalDepth, float2(uvX, height01)).r;
 }
 
-// Bidirectional optical depth sampling for view ray segments.
-// Blends forward/backward lookups to handle rays that pass through
-// the densest part of the atmosphere (near the planet surface).
 float OpticalDepthBaked2(float3 rayOrigin, float3 rayDir, float rayLength)
 {
     float3 endPoint = rayOrigin + rayDir * rayLength;
@@ -69,22 +65,17 @@ float2 SquareUV(float2 uv)
 
 float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, float3 sceneColor, float2 uv)
 {
-    rayOrigin -= _PlanetCenter;
-    float3 planetCenter = 0; // origin-relative
-
-    float2 hitInfo = RaySphere(planetCenter, _AtmosphereRadius, rayOrigin, rayDir);
+    float2 hitInfo = RaySphere(_PlanetCenter, _AtmosphereRadius, rayOrigin, rayDir);
     float dstToAtmosphere = hitInfo.x;
     float dstThroughAtmosphere = min(hitInfo.y, sceneDepth - dstToAtmosphere);
 
     if (dstThroughAtmosphere <= 0)
     {
-        // Sun disc for rays that miss atmosphere entirely (deep space)
         float sunDot = dot(rayDir, _DirToSun);
         float sunDisc = smoothstep(_SunDiscSize - _SunDiscBlend, _SunDiscSize, sunDot);
         return sceneColor + sunDisc * float3(1.2, 1.1, 0.9);
     }
 
-    // Blue noise dithering to reduce banding
     float blueNoise = SAMPLE_TEXTURE2D(_BlueNoise, sampler_BlueNoise, SquareUV(uv) * _DitherScale).r;
     blueNoise = (blueNoise - 0.5) * _DitherStrength;
 
@@ -103,25 +94,26 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
         float sunRayOpticalDepth = OpticalDepthBaked(inScatterPoint, _DirToSun);
         float localDensity = DensityAtPoint(inScatterPoint);
         viewRayOpticalDepth = OpticalDepthBaked2(pointInAtmosphere, rayDir, stepSize * i);
-        float3 transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * _ScatteringCoefficients / _PlanetRadius);
+        float3 transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * _ScatteringCoefficients);
 
         inScatteredLight += localDensity * transmittance;
         inScatterPoint += rayDir * stepSize;
     }
 
-    // Division by _PlanetRadius makes scattering scale-independent
     inScatteredLight *= _ScatteringCoefficients * _Intensity * stepSize / _PlanetRadius;
     inScatteredLight += blueNoise * 0.01;
 
-    // Attenuate scene color through atmosphere (Beer-Lambert)
-    // Divide by _PlanetRadius to match normalized-scale LUT values
-    float3 opacity = exp(-viewRayOpticalDepth * _ScatteringCoefficients / _PlanetRadius);
-    float3 finalColor = sceneColor * opacity + inScatteredLight;
+    // Attenuate scene color (from Solar System reference)
+    float brightnessSum = viewRayOpticalDepth * _Intensity * 3;
+    float reflectedLightStrength = exp(-brightnessSum);
+    float hdrStrength = saturate(dot(sceneColor, 1) / 3 - 1);
+    reflectedLightStrength = lerp(reflectedLightStrength, 1, hdrStrength);
 
-    // Sun disc (visible through atmosphere)
+    float3 finalColor = sceneColor * reflectedLightStrength + inScatteredLight;
+
+    // Sun disc
     float sunDot = dot(rayDir, _DirToSun);
     float sunDisc = smoothstep(_SunDiscSize - _SunDiscBlend, _SunDiscSize, sunDot);
-    // Only show sun disc when looking at sky (not through terrain)
     float isSky = sceneDepth > dstToAtmosphere + dstThroughAtmosphere - 1;
     finalColor += sunDisc * float3(1.2, 1.1, 0.9) * isSky;
 
