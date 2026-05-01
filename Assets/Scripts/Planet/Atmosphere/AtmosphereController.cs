@@ -136,9 +136,10 @@ public class AtmosphereController : MonoBehaviour
 
         if (_bakedOpticalDepth == null)
         {
-            _bakedOpticalDepth = new RenderTexture(BakeTextureSize, BakeTextureSize, 0, RenderTextureFormat.RHalf)
+            _bakedOpticalDepth = new RenderTexture(BakeTextureSize, BakeTextureSize, 0, RenderTextureFormat.RFloat)
             {
                 enableRandomWrite = true,
+                filterMode = FilterMode.Bilinear,
                 name = "BakedOpticalDepth"
             };
             _bakedOpticalDepth.Create();
@@ -159,6 +160,16 @@ public class AtmosphereController : MonoBehaviour
 
         _lastBakedDensityFalloff = DensityFalloff;
         _lastBakedAtmosphereScale = AtmosphereScale;
+
+        // Debug: read back a sample to verify LUT has non-zero values
+        var readback = new Texture2D(1, 1, TextureFormat.RFloat, false);
+        RenderTexture.active = _bakedOpticalDepth;
+        readback.ReadPixels(new Rect(BakeTextureSize / 2, BakeTextureSize / 2, 1, 1), 0, 0);
+        readback.Apply();
+        RenderTexture.active = null;
+        float sample = readback.GetPixel(0, 0).r;
+        UnityEngine.Debug.Log($"[Atmosphere] LUT baked. Center sample = {sample:F6} (should be > 0)");
+        Object.Destroy(readback);
 
         Shader.SetGlobalTexture(_bakedOpticalDepthId, _bakedOpticalDepth);
     }
