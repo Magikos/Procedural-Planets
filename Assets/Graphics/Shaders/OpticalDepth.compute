@@ -1,7 +1,7 @@
 #pragma kernel Main
 #include "Includes/Math.hlsl"
 
-RWTexture2D<float4> _Result;
+RWTexture2D<float> _Result;
 
 int _TextureSize;
 int _NumOutScatteringSteps;

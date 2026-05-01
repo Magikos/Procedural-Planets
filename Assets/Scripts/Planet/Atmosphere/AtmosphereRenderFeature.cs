@@ -18,7 +18,7 @@ using UnityEngine.Rendering.Universal;
 public class AtmosphereRenderFeature : ScriptableRendererFeature
 {
     public enum DebugMode { Off, Depth, ScatterOnly, SurfaceOnly }
-    public DebugMode Debug = DebugMode.Off;
+    public DebugMode DebugView = DebugMode.Off;
     AtmosphereRenderPass _pass;
     Material _material;
     AtmosphereController _cachedController;
@@ -60,7 +60,7 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
         _material.DisableKeyword("ATMOSPHERE_DEBUG_DEPTH");
         _material.DisableKeyword("ATMOSPHERE_DEBUG_SCATTER");
         _material.DisableKeyword("ATMOSPHERE_DEBUG_SURFACE");
-        switch (Debug)
+        switch (DebugView)
         {
             case DebugMode.Depth: _material.EnableKeyword("ATMOSPHERE_DEBUG_DEPTH"); break;
             case DebugMode.ScatterOnly: _material.EnableKeyword("ATMOSPHERE_DEBUG_SCATTER"); break;

@@ -76,15 +76,12 @@ ENDHLSL
                     float depthVis = saturate(sceneDepth / (_PlanetRadius * 4));
                     return float4(depthVis, depthVis, depthVis, 1);
                 #elif defined(ATMOSPHERE_DEBUG_SCATTER)
-                    // Show ONLY the in-scattered light (no scene color)
-                    float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, float3(0,0,0), i.uv);
-                    return float4(color, 1);
+                    float3 dbgScatter = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, float3(0,0,0), i.uv);
+                    return float4(dbgScatter, 1);
                 #elif defined(ATMOSPHERE_DEBUG_SURFACE)
-                    // Show ONLY the attenuated scene color (no scattering)
-                    float3 color2 = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz, i.uv);
-                    // Subtract what we'd get with black scene to isolate surface contribution
-                    float3 scatterOnly = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, float3(0,0,0), i.uv);
-                    return float4(color2 - scatterOnly, 1);
+                    float3 dbgFull = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz, i.uv);
+                    float3 dbgNoScene = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, float3(0,0,0), i.uv);
+                    return float4(dbgFull - dbgNoScene, 1);
                 #endif
 
                 float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz, i.uv);
