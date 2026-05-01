@@ -97,9 +97,10 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
     float3 inScatteredLight = 0;
     float viewRayOpticalDepth = 0;
 
+    [loop]
     for (int i = 0; i < _NumInScatteringPoints; i++)
     {
-        float sunRayOpticalDepth = OpticalDepthBaked(inScatterPoint + _DirToSun * _DitherStrength, _DirToSun);
+        float sunRayOpticalDepth = OpticalDepthBaked(inScatterPoint, _DirToSun);
         float localDensity = DensityAtPoint(inScatterPoint);
         viewRayOpticalDepth = OpticalDepthBaked2(pointInAtmosphere, rayDir, stepSize * i);
         float3 transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * _ScatteringCoefficients);
@@ -112,17 +113,9 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
     inScatteredLight *= _ScatteringCoefficients * _Intensity * stepSize / _PlanetRadius;
     inScatteredLight += blueNoise * 0.01;
 
-    // Attenuate scene color through atmosphere
-    const float brightnessAdaptionStrength = 0.15;
-    const float reflectedLightOutScatterStrength = 3;
-    float brightnessAdaption = dot(inScatteredLight, 1) * brightnessAdaptionStrength;
-    float brightnessSum = viewRayOpticalDepth * _Intensity * reflectedLightOutScatterStrength + brightnessAdaption;
-    float reflectedLightStrength = exp(-brightnessSum);
-    float hdrStrength = saturate(dot(sceneColor, 1) / 3 - 1);
-    reflectedLightStrength = lerp(reflectedLightStrength, 1, hdrStrength);
-    float3 reflectedLight = sceneColor * reflectedLightStrength;
-
-    float3 finalColor = reflectedLight + inScatteredLight;
+    // Attenuate scene color through atmosphere (Beer-Lambert)
+    float3 opacity = exp(-viewRayOpticalDepth * _ScatteringCoefficients);
+    float3 finalColor = sceneColor * opacity + inScatteredLight;
 
     // Sun disc (visible through atmosphere)
     float sunDot = dot(rayDir, _DirToSun);

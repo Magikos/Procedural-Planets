@@ -20,6 +20,6 @@ MonoBehaviour:
   TerrainRoughness: 0.5
   HasOceans: 1
   OceanLevel: 0
-  WaterColor: {r: 0.07, g: 0.35, b: 0.63, a: 0.7}
+  WaterColor: {r: 0.07, g: 0.35, b: 0.63, a: 0.92156863}
   BiomeSettings: {fileID: 11400000, guid: ce38419e62833254b94ec0386401682b, type: 2}
   PlanetMaterial: {fileID: 2100000, guid: 0c0c2029bb5cefd4688b7c29bd17a0bb, type: 2}
