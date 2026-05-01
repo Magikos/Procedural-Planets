@@ -43,6 +43,10 @@ public class AtmosphereController : MonoBehaviour
     float _atmosphereRadius;
     RenderTexture _bakedOpticalDepth;
 
+    // Track LUT-affecting values to re-bake when they change
+    float _lastBakedDensityFalloff;
+    float _lastBakedAtmosphereScale;
+
     // Shader property IDs
     static readonly int _bakedOpticalDepthId = Shader.PropertyToID("_BakedOpticalDepth");
     static readonly int _blueNoiseId = Shader.PropertyToID("_BlueNoise");
@@ -79,6 +83,17 @@ public class AtmosphereController : MonoBehaviour
     {
         if (CelestialManager != null)
             Shader.SetGlobalVector(_dirToSunId, CelestialManager.SunDirection);
+
+        // Push all properties every frame so inspector changes are reflected in real time
+        if (_planetRadius > 0f)
+        {
+            _atmosphereRadius = _planetRadius * (1 + AtmosphereScale);
+
+            if (DensityFalloff != _lastBakedDensityFalloff || AtmosphereScale != _lastBakedAtmosphereScale)
+                BakeOpticalDepth();
+
+            SetGlobalProperties();
+        }
     }
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
@@ -131,6 +146,9 @@ public class AtmosphereController : MonoBehaviour
 
         int groups = Mathf.CeilToInt(BakeTextureSize / 8f);
         OpticalDepthCompute.Dispatch(kernel, groups, groups, 1);
+
+        _lastBakedDensityFalloff = DensityFalloff;
+        _lastBakedAtmosphereScale = AtmosphereScale;
 
         Shader.SetGlobalTexture(_bakedOpticalDepthId, _bakedOpticalDepth);
     }

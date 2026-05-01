@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: AtmosphereRenderFeature
   m_EditorClassIdentifier: ProceduralPlanets.Planet::AtmosphereRenderFeature
   m_Active: 1
+  DebugDepth: 0
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
