@@ -20,7 +20,7 @@ public class AtmosphereController : MonoBehaviour
     [Header("Scattering")]
     [Range(1, 30)] public int InScatteringPoints = 10;
     [Range(0.1f, 20f)] public float Intensity = 1f;
-    [Range(0.1f, 100f)] public float ScatteringStrength = 20f;
+    [Range(0.1f, 100f)] public float ScatteringStrength = 8f;
     public Vector3 Wavelengths = new Vector3(700, 530, 460);
 
     [Header("Density")]

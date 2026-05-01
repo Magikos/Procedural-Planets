@@ -111,10 +111,10 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
 
     float3 finalColor = sceneColor * reflectedLightStrength + inScatteredLight;
 
-    // Sun disc
+    // Sun disc — only visible where ray didn't hit any geometry
     float sunDot = dot(rayDir, _DirToSun);
     float sunDisc = smoothstep(_SunDiscSize - _SunDiscBlend, _SunDiscSize, sunDot);
-    float isSky = sceneDepth > dstToAtmosphere + dstThroughAtmosphere - 1;
+    float isSky = sceneDepth >= dstToAtmosphere + dstThroughAtmosphere;
     finalColor += sunDisc * float3(1.2, 1.1, 0.9) * isSky;
 
     return finalColor;
