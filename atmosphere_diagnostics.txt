@@ -1,7 +1,7 @@
 === ATMOSPHERE DIAGNOSTICS ===
 Screen: 2156x824
-Camera pos: (5000.17, 2.97, 1.07)
-Camera fwd: (-0.01, -0.94, -0.34)
+Camera pos: (4999.11, 52.94, 26.28)
+Camera fwd: (1.00, -0.01, 0.00)
 
 --- Shader Globals ---
 _PlanetRadius: 5257.3
@@ -18,29 +18,29 @@ _NumInScatteringPoints: 10
 _DirToSun: (0.888, -0.421, -0.183)
 
 --- Screen Samples ---
-  Center              : R=0.0000 G=0.0000 B=0.0000
-  Top (zenith)        : R=0.0000 G=0.0000 B=0.0000
-  Bottom (ground)     : R=0.1843 G=0.3020 B=0.4275
-  Left                : R=0.0000 G=0.0000 B=0.0000
-  Right               : R=0.0000 G=0.0000 B=0.0000
+  Center              : R=1.0000 G=1.0000 B=1.0000
+  Top (zenith)        : R=0.3333 G=0.0078 B=0.0000
+  Bottom (ground)     : R=0.3255 G=0.0078 B=0.0000
+  Left                : R=0.1922 G=0.0000 B=0.0000
+  Right               : R=0.1922 G=0.0000 B=0.0000
 
 --- Vertical Strip (center, top to bottom) ---
-    0%: R=0.0000 G=0.0000 B=0.0000
-   10%: R=0.0000 G=0.0000 B=0.0000
-   20%: R=0.0000 G=0.0000 B=0.0000
-   30%: R=0.0000 G=0.0000 B=0.0000
-   40%: R=0.0000 G=0.0000 B=0.0000
-   50%: R=0.0000 G=0.0000 B=0.0000
-   60%: R=0.0471 G=0.2588 B=0.4118
-   70%: R=0.1843 G=0.3020 B=0.4275
-   80%: R=0.1882 G=0.3059 B=0.4275
-   90%: R=0.1843 G=0.3020 B=0.4275
-  100%: R=0.1804 G=0.3020 B=0.4275
+    0%: R=0.3059 G=0.0078 B=0.0000
+   10%: R=0.3255 G=0.0078 B=0.0000
+   20%: R=0.3490 G=0.0118 B=0.0000
+   30%: R=0.3647 G=0.0118 B=0.0000
+   40%: R=0.3882 G=0.0157 B=0.0000
+   50%: R=1.0000 G=1.0000 B=1.0000
+   60%: R=0.3882 G=0.0157 B=0.0000
+   70%: R=0.3647 G=0.0118 B=0.0000
+   80%: R=0.3451 G=0.0118 B=0.0000
+   90%: R=0.3216 G=0.0078 B=0.0000
+  100%: R=0.2980 G=0.0039 B=0.0000
 
 --- Region Averages ---
-  Sky (top quarter): Avg R=0.0000 G=0.0000 B=0.0000
-  Horizon (mid strip): Avg R=0.0139 G=0.0812 B=0.1293
-  Ground (bottom qtr): Avg R=0.1855 G=0.3041 B=0.4274
+  Sky (top quarter): Avg R=0.2979 G=0.0062 B=0.0000
+  Horizon (mid strip): Avg R=0.2809 G=0.0318 B=0.0262
+  Ground (bottom qtr): Avg R=0.2920 G=0.0055 B=0.0000
 
 --- Assessment ---
-BLACK — no light reaching camera
+WHITE — all channels blown out
