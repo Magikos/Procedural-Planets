@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::AtmosphereSettings
   AtmosphereScale: 0.15
   InScatteringPoints: 10
-  Intensity: 10
+  Intensity: 30
   RayleighScattering: {x: 0.0058, y: 0.0135, z: 0.0331}
   RayleighFalloff: 15
   MieStrength: 0.001

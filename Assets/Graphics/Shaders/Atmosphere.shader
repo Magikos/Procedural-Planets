@@ -32,7 +32,7 @@ ENDHLSL
             #pragma fragment AtmosphereFragment
 
             #pragma target 4.0
-            #pragma multi_compile _ ATMOSPHERE_DEBUG_DEPTH ATMOSPHERE_DEBUG_SCATTER ATMOSPHERE_DEBUG_SURFACE
+            #pragma multi_compile _ ATMOSPHERE_DEBUG_DEPTH ATMOSPHERE_DEBUG_SCATTER ATMOSPHERE_DEBUG_SURFACE ATMOSPHERE_DEBUG_OFF
 
             struct Attributes
             {
@@ -82,6 +82,8 @@ ENDHLSL
                     float3 dbgFull = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz, i.uv);
                     float3 dbgNoScene = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, float3(0,0,0), i.uv);
                     return float4(dbgFull - dbgNoScene, 1);
+                #elif defined(ATMOSPHERE_DEBUG_OFF)
+                    return originalCol;
                 #endif
 
                 float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz, i.uv);

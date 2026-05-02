@@ -17,7 +17,7 @@ using UnityEngine.Rendering.Universal;
 [DisallowMultipleRendererFeature("AtmosphereRenderFeature")]
 public class AtmosphereRenderFeature : ScriptableRendererFeature
 {
-    public enum DebugMode { Off, Depth, ScatterOnly, SurfaceOnly }
+    public enum DebugMode { Off, Depth, ScatterOnly, SurfaceOnly, AtmosphereOff }
     public DebugMode DebugView = DebugMode.Off;
     AtmosphereRenderPass _pass;
     Material _material;
@@ -60,11 +60,13 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
         _material.DisableKeyword("ATMOSPHERE_DEBUG_DEPTH");
         _material.DisableKeyword("ATMOSPHERE_DEBUG_SCATTER");
         _material.DisableKeyword("ATMOSPHERE_DEBUG_SURFACE");
+        _material.DisableKeyword("ATMOSPHERE_DEBUG_OFF");
         switch (DebugView)
         {
             case DebugMode.Depth: _material.EnableKeyword("ATMOSPHERE_DEBUG_DEPTH"); break;
             case DebugMode.ScatterOnly: _material.EnableKeyword("ATMOSPHERE_DEBUG_SCATTER"); break;
             case DebugMode.SurfaceOnly: _material.EnableKeyword("ATMOSPHERE_DEBUG_SURFACE"); break;
+            case DebugMode.AtmosphereOff: _material.EnableKeyword("ATMOSPHERE_DEBUG_OFF"); break;
         }
 
         renderer.EnqueuePass(_pass);
