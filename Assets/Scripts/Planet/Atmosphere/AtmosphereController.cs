@@ -48,10 +48,15 @@ public class AtmosphereController : MonoBehaviour
 
     void Update()
     {
-        if (Settings == null) return;
-
+        // Always update sun direction, even if Settings isn't assigned yet
         if (CelestialManager != null)
             Shader.SetGlobalVector(_sunParamsId, CelestialManager.SunDirection);
+
+        if (Settings == null)
+        {
+            Debug.LogWarning("[AtmosphereController] Settings asset is not assigned!");
+            return;
+        }
 
         if (_planetRadius > 0f)
         {

@@ -74,8 +74,8 @@ public class AtmosphereDiagnostics : MonoBehaviour
         sb.AppendLine($"_HeightAbsorption: {Shader.GetGlobalFloat("_HeightAbsorption"):F3}");
         sb.AppendLine($"_Intensity: {Shader.GetGlobalFloat("_Intensity"):F2}");
         sb.AppendLine($"_NumInScatteringPoints: {Shader.GetGlobalFloat("_NumInScatteringPoints"):F0}");
-        Vector4 sunDir = Shader.GetGlobalVector("_DirToSun");
-        sb.AppendLine($"_DirToSun: ({sunDir.x:F3}, {sunDir.y:F3}, {sunDir.z:F3})");
+        Vector4 sunDir = Shader.GetGlobalVector("_SunParams");
+        sb.AppendLine($"_SunParams: ({sunDir.x:F3}, {sunDir.y:F3}, {sunDir.z:F3})");
         if (cam != null)
         {
             float sunAngle = Vector3.Angle(cam.transform.forward, new Vector3(sunDir.x, sunDir.y, sunDir.z));
