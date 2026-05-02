@@ -24,7 +24,7 @@ public class AtmosphereController : MonoBehaviour
     public Vector3 Wavelengths = new Vector3(700, 530, 460);
 
     [Header("Density")]
-    [Range(0.1f, 30f)] public float DensityFalloff = 0.25f;
+    [Range(0.1f, 30f)] public float DensityFalloff = 4f;
 
     [Header("Sun Disc")]
     [Range(0.99f, 0.9999f)] public float SunDiscSize = 0.9998f;

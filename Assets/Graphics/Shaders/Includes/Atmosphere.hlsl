@@ -108,9 +108,8 @@ float3 CalculateScattering(float3 rayOrigin, float3 rayDir, float sceneDepth, fl
         inScatterPoint += rayDir * stepSize;
     }
 
-    // Normalize by atmosphere thickness instead of planet radius
-    float atmosphereThickness = _AtmosphereRadius - _PlanetRadius;
-    inScatteredLight *= _ScatteringCoefficients * _Intensity * stepSize / atmosphereThickness;
+    // Normalize by planet radius (Fluid Planet / Solar System approach)
+    inScatteredLight *= _ScatteringCoefficients * _Intensity * stepSize / _PlanetRadius;
     inScatteredLight += blueNoise * 0.01;
 
     // Surface attenuation: transmittance from loop (Fluid Planet approach)
