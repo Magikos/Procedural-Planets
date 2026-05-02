@@ -12,11 +12,11 @@ public class AtmosphereSettings : ScriptableObject
 
     [Header("Rayleigh (Sky Color)")]
     public Vector3 RayleighScattering = new Vector3(5.8e-3f, 13.5e-3f, 33.1e-3f);
-    [Range(1f, 30f)] public float RayleighFalloff = 8f;
+    [Range(1f, 30f)] public float RayleighFalloff = 15f;
 
     [Header("Mie (Sun Glow / Haze)")]
     [Range(0f, 0.01f)] public float MieStrength = 0.001f;
-    [Range(1f, 30f)] public float MieFalloff = 1.2f;
+    [Range(1f, 30f)] public float MieFalloff = 5f;
     [Range(0f, 0.999f)] public float MieAnisotropy = 0.76f;
 
     [Header("Absorption (Ozone)")]

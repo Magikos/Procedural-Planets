@@ -16,9 +16,9 @@ MonoBehaviour:
   InScatteringPoints: 10
   Intensity: 10
   RayleighScattering: {x: 0.0058, y: 0.0135, z: 0.0331}
-  RayleighFalloff: 8
+  RayleighFalloff: 15
   MieStrength: 0.001
-  MieFalloff: 1.2
+  MieFalloff: 5
   MieAnisotropy: 0.76
   AbsorptionBeta: {x: 0.0000204, y: 0.0000497, z: 0.00000195}
   HeightAbsorption: 0.25
