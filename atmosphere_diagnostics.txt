@@ -1,0 +1,56 @@
+=== ATMOSPHERE DIAGNOSTICS ===
+Screen: 2156x824
+Camera pos: (0.00, 0.00, -13143.17)
+Camera fwd: (0.00, 0.00, 1.00)
+
+--- Controller Settings ---
+PlanetRadius (shader): 5257.3
+AtmosphereRadius (shader): 6045.9
+AtmosphereScale: 0.15
+Intensity: 20
+RayleighScattering: (0.01, 0.01, 0.03)
+RayleighFalloff: 8
+MieStrength: 0.001
+MieFalloff: 1.2
+MieAnisotropy: 0.76
+HeightAbsorption: 0.25
+AbsorptionBeta: (0.00, 0.00, 0.00)
+InScatteringPoints: 10
+BakeSteps: 40
+
+--- Screen Samples ---
+  Center               (1078, 412): R=0.2706 G=0.2980 B=0.3333
+  Top (zenith)         (1078, 721): R=0.2980 G=0.3059 B=0.3490
+  Bottom (ground)      (1078, 103): R=0.4353 G=0.4431 B=0.4510
+  Left horizon         ( 269, 412): R=0.0000 G=0.0000 B=0.0000
+  Right horizon        (1887, 412): R=0.0000 G=0.0000 B=0.0000
+
+--- Vertical Strip (center column, top to bottom) ---
+    0% from top: R=0.0000 G=0.0000 B=0.0000
+   10% from top: R=0.3765 G=0.3882 B=0.3843
+   20% from top: R=0.2510 G=0.2824 B=0.3176
+   30% from top: R=0.2471 G=0.2784 B=0.3137
+   40% from top: R=0.2549 G=0.2824 B=0.3216
+   50% from top: R=0.2706 G=0.2980 B=0.3333
+   60% from top: R=0.2902 G=0.3176 B=0.3529
+   70% from top: R=0.3216 G=0.3529 B=0.3843
+   80% from top: R=0.3608 G=0.3922 B=0.4275
+   90% from top: R=0.5255 G=0.5922 B=0.6078
+  100% from top: R=0.0000 G=0.0000 B=0.0000
+
+--- Region Averages ---
+  Sky (top quarter) (594 samples):
+    Avg: R=0.0819 G=0.0894 B=0.1016
+    Min: R=0.0000 G=0.0000 B=0.0000
+    Max: R=0.6235 G=0.7059 B=0.7569
+  Horizon (mid strip) (2376 samples):
+    Avg: R=0.0985 G=0.1049 B=0.1169
+    Min: R=0.0000 G=0.0000 B=0.0000
+    Max: R=0.7294 G=0.7765 B=0.8235
+  Ground (bottom quarter) (594 samples):
+    Avg: R=0.0998 G=0.1078 B=0.1194
+    Min: R=0.0000 G=0.0000 B=0.0000
+    Max: R=0.6745 G=0.7137 B=0.7961
+
+--- Quick Assessment ---
+CENTER IS GRAY (0.271) - no wavelength differentiation
