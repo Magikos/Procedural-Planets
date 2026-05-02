@@ -2,54 +2,63 @@ using UnityEngine;
 
 /// <summary>
 /// Drives the screen-space atmospheric scattering render pass.
-/// Bakes the optical depth look-up texture via compute shader and sets
-/// all atmosphere-related global shader properties each frame.
-///
-/// Uses wavelength-based scattering with /planetRadius normalization
-/// for scale-independent rendering at any planet radius.
+/// Uses URP-Atmosphere approach: world-scale 3-channel LUT, incremental optical depth,
+/// phase functions, wavelength-based coefficients.
 /// </summary>
 public class AtmosphereController : MonoBehaviour
 {
     [Header("References")]
     public ComputeShader OpticalDepthCompute;
     public CelestialManager CelestialManager;
+    public Texture2D BlueNoise;
 
     [Header("Scale")]
     [Range(0.01f, 1f)] public float AtmosphereScale = 0.15f;
 
     [Header("Scattering")]
     [Range(1, 30)] public int InScatteringPoints = 10;
-    [Range(0.1f, 20f)] public float Intensity = 1f;
-    [Range(0.1f, 100f)] public float ScatteringStrength = 20f;
-    public Vector3 Wavelengths = new Vector3(700, 530, 460);
+    [Range(0.1f, 100f)] public float Intensity = 20f;
 
-    [Header("Density")]
-    [Range(0.1f, 30f)] public float DensityFalloff = 4f;
+    [Header("Rayleigh (Sky Color)")]
+    public Vector3 Wavelengths = new Vector3(700, 530, 460);
+    [Range(0.001f, 1f), Tooltip("Scales wavelength-based coefficients to match planet radius")]
+    public float ScatteringScale = 0.01f;
+    [Range(1f, 30f)] public float RayleighFalloff = 8f;
+
+    [Header("Mie (Sun Glow / Haze)")]
+    [Range(0f, 0.01f)] public float MieStrength = 0.001f;
+    [Range(1f, 30f)] public float MieFalloff = 1.2f;
+    [Range(0f, 0.999f)] public float MieAnisotropy = 0.76f;
+
+    [Header("Absorption (Ozone)")]
+    public Vector3 AbsorptionBeta = new Vector3(2.04e-5f, 4.97e-5f, 1.95e-6f);
+    [Range(0f, 1f)] public float HeightAbsorption = 0.25f;
+
+    [Header("Ambient")]
+    public Color AmbientBeta = Color.black;
+
+    [Header("Night")]
+    public Color NightAmbient = new Color(0.01f, 0.012f, 0.02f, 1f);
 
     [Header("Sun Disc")]
     [Range(0.99f, 0.9999f)] public float SunDiscSize = 0.9998f;
     [Range(0.0001f, 0.01f)] public float SunDiscBlend = 0.001f;
 
-    [Header("Night")]
-    [Tooltip("Ambient color on the dark side (simulates moonlight/starlight)")]
-    public Color NightAmbient = new Color(0.01f, 0.012f, 0.02f, 1f);
-
     [Header("Dithering")]
-    public Texture2D BlueNoise;
     [Range(0f, 2f)] public float DitherStrength = 0.8f;
     [Range(1f, 8f)] public float DitherScale = 4f;
 
     [Header("Optical Depth Bake")]
     [Range(64, 512)] public int BakeTextureSize = 256;
-    [Range(8, 64)] public int BakeSteps = 10;
+    [Range(8, 64)] public int BakeSteps = 40;
 
     float _planetRadius;
     float _atmosphereRadius;
     RenderTexture _bakedOpticalDepth;
 
     // Track LUT-affecting values to re-bake when they change
-    float _lastBakedDensityFalloff;
-    float _lastBakedAtmosphereScale;
+    float _lastRayleighFalloff, _lastMieFalloff, _lastHeightAbsorption, _lastAtmosphereScale;
+    int _lastBakeSteps;
 
     // Shader property IDs
     static readonly int _bakedOpticalDepthId = Shader.PropertyToID("_BakedOpticalDepth");
@@ -59,8 +68,14 @@ public class AtmosphereController : MonoBehaviour
     static readonly int _planetRadiusId = Shader.PropertyToID("_PlanetRadius");
     static readonly int _atmosphereRadiusId = Shader.PropertyToID("_AtmosphereRadius");
     static readonly int _numInScatteringPointsId = Shader.PropertyToID("_NumInScatteringPoints");
-    static readonly int _densityFalloffId = Shader.PropertyToID("_DensityFalloff");
-    static readonly int _scatteringCoefficientsId = Shader.PropertyToID("_ScatteringCoefficients");
+    static readonly int _rayleighScatteringId = Shader.PropertyToID("_RayleighScattering");
+    static readonly int _mieScatteringId = Shader.PropertyToID("_MieScattering");
+    static readonly int _mieGId = Shader.PropertyToID("_MieG");
+    static readonly int _absorptionBetaId = Shader.PropertyToID("_AbsorptionBeta");
+    static readonly int _ambientBetaId = Shader.PropertyToID("_AmbientBeta");
+    static readonly int _rayleighFalloffId = Shader.PropertyToID("_RayleighFalloff");
+    static readonly int _mieFalloffId = Shader.PropertyToID("_MieFalloff");
+    static readonly int _heightAbsorptionId = Shader.PropertyToID("_HeightAbsorption");
     static readonly int _intensityId = Shader.PropertyToID("_Intensity");
     static readonly int _ditherStrengthId = Shader.PropertyToID("_DitherStrength");
     static readonly int _ditherScaleId = Shader.PropertyToID("_DitherScale");
@@ -68,33 +83,24 @@ public class AtmosphereController : MonoBehaviour
     static readonly int _sunDiscBlendId = Shader.PropertyToID("_SunDiscBlend");
     static readonly int _nightAmbientId = Shader.PropertyToID("_NightAmbient");
 
-    void OnEnable()
-    {
-        EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
-    }
-
+    void OnEnable() => EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
     void OnDisable()
     {
         EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
         Shader.SetGlobalTexture(_bakedOpticalDepthId, null);
     }
-
-    void OnDestroy()
-    {
-        _bakedOpticalDepth?.Release();
-    }
+    void OnDestroy() => _bakedOpticalDepth?.Release();
 
     void Update()
     {
         if (CelestialManager != null)
             Shader.SetGlobalVector(_dirToSunId, CelestialManager.SunDirection);
 
-        // Push all properties every frame so inspector changes are reflected in real time
         if (_planetRadius > 0f)
         {
             _atmosphereRadius = _planetRadius * (1 + AtmosphereScale);
 
-            if (DensityFalloff != _lastBakedDensityFalloff || AtmosphereScale != _lastBakedAtmosphereScale)
+            if (LutNeedsRebake())
                 BakeOpticalDepth();
 
             SetGlobalProperties();
@@ -105,18 +111,25 @@ public class AtmosphereController : MonoBehaviour
     {
         _planetRadius = evt.PlanetRadius;
         _atmosphereRadius = _planetRadius * (1 + AtmosphereScale);
-
         BakeOpticalDepth();
         SetGlobalProperties();
     }
 
-    Vector3 ComputeScatteringCoefficients()
+    bool LutNeedsRebake()
     {
-        // Rayleigh scattering is inversely proportional to wavelength^4
+        return RayleighFalloff != _lastRayleighFalloff
+            || MieFalloff != _lastMieFalloff
+            || HeightAbsorption != _lastHeightAbsorption
+            || AtmosphereScale != _lastAtmosphereScale
+            || BakeSteps != _lastBakeSteps;
+    }
+
+    Vector3 ComputeRayleighCoefficients()
+    {
         float scatterX = Mathf.Pow(400f / Wavelengths.x, 4f);
         float scatterY = Mathf.Pow(400f / Wavelengths.y, 4f);
         float scatterZ = Mathf.Pow(400f / Wavelengths.z, 4f);
-        return new Vector3(scatterX, scatterY, scatterZ) * ScatteringStrength;
+        return new Vector3(scatterX, scatterY, scatterZ) * ScatteringScale;
     }
 
     void BakeOpticalDepth()
@@ -131,46 +144,36 @@ public class AtmosphereController : MonoBehaviour
 
         if (_bakedOpticalDepth == null)
         {
-            _bakedOpticalDepth = new RenderTexture(BakeTextureSize, BakeTextureSize, 0, RenderTextureFormat.RFloat)
+            // ARGBHalf: 4-channel half-float, matches RWTexture2D<float4> and stores 3-channel density
+            _bakedOpticalDepth = new RenderTexture(BakeTextureSize, BakeTextureSize, 0, RenderTextureFormat.ARGBHalf)
             {
                 enableRandomWrite = true,
                 filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
                 name = "BakedOpticalDepth"
             };
             _bakedOpticalDepth.Create();
         }
 
-        // Compute shader uses normalized radius (planetRadius = 1)
-        float normalizedAtmosphereRadius = 1f + AtmosphereScale;
-
+        // Bake at WORLD SCALE — pass actual planet and atmosphere radii
         int kernel = OpticalDepthCompute.FindKernel("Main");
         OpticalDepthCompute.SetTexture(kernel, "_Result", _bakedOpticalDepth);
         OpticalDepthCompute.SetInt("_TextureSize", BakeTextureSize);
         OpticalDepthCompute.SetInt("_NumOutScatteringSteps", BakeSteps);
-        OpticalDepthCompute.SetFloat("_AtmosphereRadius", normalizedAtmosphereRadius);
-        OpticalDepthCompute.SetFloat("_DensityFalloff", DensityFalloff);
+        OpticalDepthCompute.SetFloat("_PlanetRadius", _planetRadius);
+        OpticalDepthCompute.SetFloat("_AtmosphereRadius", _atmosphereRadius);
+        OpticalDepthCompute.SetFloat("_RayleighFalloff", RayleighFalloff);
+        OpticalDepthCompute.SetFloat("_MieFalloff", MieFalloff);
+        OpticalDepthCompute.SetFloat("_HeightAbsorbtion", HeightAbsorption);
 
         int groups = Mathf.CeilToInt(BakeTextureSize / 8f);
         OpticalDepthCompute.Dispatch(kernel, groups, groups, 1);
 
-        _lastBakedDensityFalloff = DensityFalloff;
-        _lastBakedAtmosphereScale = AtmosphereScale;
-
-        // Debug: read back samples to verify LUT values at different heights
-        var readback = new Texture2D(BakeTextureSize, BakeTextureSize, TextureFormat.RFloat, false);
-        RenderTexture.active = _bakedOpticalDepth;
-        readback.ReadPixels(new Rect(0, 0, BakeTextureSize, BakeTextureSize), 0, 0);
-        readback.Apply();
-        RenderTexture.active = null;
-        // Sample at different heights (y) and angles (x)
-        // y=0 = surface, y=0.5 = mid atmosphere, y=1 = top
-        // x=0.5 = looking straight up
-        float surfaceUp = readback.GetPixelBilinear(0.5f, 0.0f).r;
-        float surfaceTangent = readback.GetPixelBilinear(0.0f, 0.0f).r;
-        float midUp = readback.GetPixelBilinear(0.5f, 0.5f).r;
-        float topUp = readback.GetPixelBilinear(0.5f, 1.0f).r;
-        UnityEngine.Debug.Log($"[Atmosphere] LUT samples — surface-up: {surfaceUp:F6}, surface-tangent: {surfaceTangent:F6}, mid-up: {midUp:F6}, top-up: {topUp:F6}");
-        Object.Destroy(readback);
+        _lastRayleighFalloff = RayleighFalloff;
+        _lastMieFalloff = MieFalloff;
+        _lastHeightAbsorption = HeightAbsorption;
+        _lastAtmosphereScale = AtmosphereScale;
+        _lastBakeSteps = BakeSteps;
 
         Shader.SetGlobalTexture(_bakedOpticalDepthId, _bakedOpticalDepth);
     }
@@ -187,9 +190,18 @@ public class AtmosphereController : MonoBehaviour
         Shader.SetGlobalFloat(_atmosphereRadiusId, _atmosphereRadius);
         Shader.SetGlobalVector(_planetCenterId, center);
         Shader.SetGlobalInt(_numInScatteringPointsId, InScatteringPoints);
-        Shader.SetGlobalFloat(_densityFalloffId, DensityFalloff);
-        Shader.SetGlobalVector(_scatteringCoefficientsId, ComputeScatteringCoefficients());
+
+        Shader.SetGlobalVector(_rayleighScatteringId, ComputeRayleighCoefficients());
+        Shader.SetGlobalVector(_mieScatteringId, Vector3.one * MieStrength);
+        Shader.SetGlobalFloat(_mieGId, MieAnisotropy);
+        Shader.SetGlobalVector(_absorptionBetaId, AbsorptionBeta);
+        Shader.SetGlobalVector(_ambientBetaId, new Vector4(AmbientBeta.r, AmbientBeta.g, AmbientBeta.b, 0));
+
+        Shader.SetGlobalFloat(_rayleighFalloffId, RayleighFalloff);
+        Shader.SetGlobalFloat(_mieFalloffId, MieFalloff);
+        Shader.SetGlobalFloat(_heightAbsorptionId, HeightAbsorption);
         Shader.SetGlobalFloat(_intensityId, Intensity);
+
         Shader.SetGlobalFloat(_ditherStrengthId, DitherStrength);
         Shader.SetGlobalFloat(_ditherScaleId, DitherScale);
         Shader.SetGlobalFloat(_sunDiscSizeId, SunDiscSize);

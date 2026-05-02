@@ -1,20 +1,31 @@
 #pragma kernel Main
 #include "Includes/Math.hlsl"
 
-RWTexture2D<float> _Result;
+RWTexture2D<float4> _Result;
 
 int _TextureSize;
 int _NumOutScatteringSteps;
 
-float _AtmosphereRadius; // normalized: (1 + atmosphereScale)
-float _DensityFalloff;
+float _PlanetRadius;
+float _AtmosphereRadius;
 
-float DensityAtPoint(float2 position)
+float _RayleighFalloff;
+float _MieFalloff;
+float _HeightAbsorbtion;
+
+float3 DensityAtPoint(float2 position)
 {
-    float planetRadius = 1;
-    float heightAboveSurface = length(position) - planetRadius;
-    float height01 = heightAboveSurface / (_AtmosphereRadius - planetRadius);
-    return exp(-height01 * _DensityFalloff) * (1 - height01);
+    float height = length(position) - _PlanetRadius;
+    float height01 = height / (_AtmosphereRadius - _PlanetRadius);
+
+    float rayleighDensity = exp(-height01 * _RayleighFalloff) * (1 - height01);
+    float mieDensity = exp(-height01 * _MieFalloff) * (1 - height01);
+
+    float denom = (_HeightAbsorbtion + height01);
+    float ozoneDensity = (1.0 / (denom * denom + 1.0)) * rayleighDensity;
+    ozoneDensity = saturate(ozoneDensity);
+
+    return float3(rayleighDensity, mieDensity, ozoneDensity);
 }
 
 [numthreads(8, 8, 1)]
@@ -27,13 +38,13 @@ void Main(uint2 id : SV_DispatchThreadID)
     float x = sin(acos(y));
     float2 dir = float2(x, y);
 
-    float2 inPoint = float2(0, lerp(1, _AtmosphereRadius, height01));
+    float2 inPoint = float2(0, lerp(_PlanetRadius, _AtmosphereRadius, height01));
     float dstThroughAtmosphere = RaySphere(0, _AtmosphereRadius, float3(inPoint, 0), float3(dir, 0)).y;
 
     inPoint += dir * 0.0001;
 
     float stepSize = dstThroughAtmosphere / (_NumOutScatteringSteps - 1);
-    float outScattering = 0;
+    float3 outScattering = 0;
 
     for (int i = 0; i < _NumOutScatteringSteps; i++)
     {
@@ -41,5 +52,5 @@ void Main(uint2 id : SV_DispatchThreadID)
         inPoint += dir * stepSize;
     }
 
-    _Result[id.xy] = outScattering;
+    _Result[id.xy] = float4(outScattering.xyz, 0);
 }
