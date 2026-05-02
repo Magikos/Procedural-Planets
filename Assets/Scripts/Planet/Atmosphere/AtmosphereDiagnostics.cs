@@ -76,6 +76,13 @@ public class AtmosphereDiagnostics : MonoBehaviour
         sb.AppendLine($"_NumInScatteringPoints: {Shader.GetGlobalFloat("_NumInScatteringPoints"):F0}");
         Vector4 sunDir = Shader.GetGlobalVector("_DirToSun");
         sb.AppendLine($"_DirToSun: ({sunDir.x:F3}, {sunDir.y:F3}, {sunDir.z:F3})");
+        if (cam != null)
+        {
+            float sunAngle = Vector3.Angle(cam.transform.forward, new Vector3(sunDir.x, sunDir.y, sunDir.z));
+            sb.AppendLine($"Angle camera->sun: {sunAngle:F1}° (0=looking at sun, 90=perpendicular, 180=away)");
+            float camDist = Vector3.Distance(cam.transform.position, Vector3.zero);
+            sb.AppendLine($"Camera distance from origin: {camDist:F1} (planetRadius={Shader.GetGlobalFloat("_PlanetRadius"):F1})");
+        }
         sb.AppendLine();
 
         // Screen samples

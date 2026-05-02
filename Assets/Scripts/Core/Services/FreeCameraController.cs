@@ -74,6 +74,21 @@ public class FreeCameraController : MonoBehaviour
             else
                 InitFromPlanet();
         }
+
+        // Backspace: face the sun from current position
+        if (_keyboard.backspaceKey.wasPressedThisFrame)
+        {
+            var sunLight = FindAnyObjectByType<Light>();
+            if (sunLight != null && sunLight.type == LightType.Directional)
+            {
+                Vector3 toSun = -sunLight.transform.forward;
+                Vector3 up = (_lastPlanetRadius > 0f)
+                    ? (transform.position - _lastPlanetCenter).normalized
+                    : Vector3.up;
+                transform.rotation = Quaternion.LookRotation(toSun, up);
+                _pitch = 0;
+            }
+        }
     }
 
     void HandleLook()
@@ -164,20 +179,32 @@ public class FreeCameraController : MonoBehaviour
 
     void PositionOnSurface(Vector3 center, float radius)
     {
-        // Place in the sun's orbital plane (XY) so the full sunrise->noon->sunset arc is visible.
-        // Sun orbits in XY: noon at +Y, sunrise from one horizon, sunset to the other.
-        // Camera at +X on the surface, looking along +Y (toward where sun is at noon),
-        // tilted up ~30° to see the sky.
-        Vector3 surfaceNormal = Vector3.right; // +X on the equator of the sun's orbit
+        // Find the sun direction to position camera where sunrise is visible
+        Vector3 sunDir = Vector3.up;
+        var sunLight = FindAnyObjectByType<Light>();
+        if (sunLight != null && sunLight.type == LightType.Directional)
+            sunDir = -sunLight.transform.forward;
+
+        // Place camera on the terminator (90° from sun) so the sun is at the horizon
+        Vector3 toSun = sunDir.normalized;
+        // Find a vector perpendicular to the sun direction to place us on the terminator
+        Vector3 perpendicular = Vector3.Cross(toSun, Vector3.up).normalized;
+        if (perpendicular.sqrMagnitude < 0.01f)
+            perpendicular = Vector3.Cross(toSun, Vector3.forward).normalized;
+
+        Vector3 surfaceNormal = perpendicular;
         Vector3 surfacePos = center + surfaceNormal * (radius + 2f);
         transform.position = surfacePos;
 
-        // "Up" is the surface normal (+X), "forward" looks along the horizon in the sun's orbital plane
-        // Look toward +Y (where the sun will be at noon), tilted up 30° from horizon
-        Vector3 horizonForward = Vector3.up; // toward noon sun position
-        Vector3 forward = Vector3.Slerp(horizonForward, surfaceNormal, 0.15f).normalized; // ~30° above horizon
-        transform.rotation = Quaternion.LookRotation(forward, surfaceNormal);
+        // Look toward the sun (which should be at/near the horizon from this position)
+        Vector3 lookDir = Vector3.ProjectOnPlane(toSun, surfaceNormal).normalized;
+        if (lookDir.sqrMagnitude < 0.01f)
+            lookDir = Vector3.ProjectOnPlane(Vector3.up, surfaceNormal).normalized;
+        // Tilt up slightly to see the sky
+        lookDir = Vector3.Slerp(lookDir, surfaceNormal, 0.1f).normalized;
+        transform.rotation = Quaternion.LookRotation(lookDir, surfaceNormal);
 
+        _pitch = 0;
         MoveSpeed = radius * 0.02f;
         ScrollSpeed = radius * 0.1f;
     }
@@ -201,7 +228,8 @@ public class FreeCameraController : MonoBehaviour
             GUILayout.Label($"Distance to center: {distToCenter:F1}");
         }
 
-        GUILayout.Label("WASD=Move, Shift=Fast, RMB=Look, QE=Up/Down, Space=Reset, Ctrl+Space=Surface");
+        GUILayout.Label("WASD=Move, Shift=Fast, RMB=Look, QE=Up/Down");
+        GUILayout.Label("Space=Orbit, Ctrl+Space=Surface, Backspace=Face Sun");
 
         // Show time of day if CelestialManager exists (found via brute search since Core can't reference Planet)
         var sunLight = FindAnyObjectByType<Light>();
