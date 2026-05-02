@@ -26,6 +26,8 @@ public class FreeCameraController : MonoBehaviour
     Mouse _mouse;
     Keyboard _keyboard;
     bool _looking;
+    float _yaw;
+    float _pitch;
 
     void OnEnable()
     {
@@ -93,12 +95,28 @@ public class FreeCameraController : MonoBehaviour
         if (!_looking) return;
 
         Vector2 mouseDelta = _mouse.delta.ReadValue();
-        float deltaYaw = mouseDelta.x * LookSensitivity * 0.1f;
-        float deltaPitch = -mouseDelta.y * LookSensitivity * 0.1f;
+        _yaw += mouseDelta.x * LookSensitivity * 0.1f;
+        _pitch = Mathf.Clamp(_pitch - mouseDelta.y * LookSensitivity * 0.1f, -89f, 89f);
 
-        // Yaw around camera's local up (works on planet surface where up = surface normal)
-        transform.Rotate(Vector3.up, deltaYaw, Space.Self);
-        transform.Rotate(Vector3.right, deltaPitch, Space.Self);
+        // Determine "up" — surface normal when near planet, world up otherwise
+        Vector3 up = (_lastPlanetRadius > 0f)
+            ? (transform.position - _lastPlanetCenter).normalized
+            : Vector3.up;
+
+        // Build rotation: yaw around surface up, then pitch
+        // Find a stable right vector from the current forward projected onto the horizon plane
+        Vector3 baseForward = Vector3.ProjectOnPlane(transform.forward, up).normalized;
+        if (baseForward.sqrMagnitude < 0.01f)
+            baseForward = Vector3.ProjectOnPlane(Vector3.forward, up).normalized;
+
+        Quaternion yawRot = Quaternion.AngleAxis(_yaw, up);
+        Vector3 yawedForward = yawRot * baseForward;
+        Vector3 right = Vector3.Cross(up, yawedForward).normalized;
+        Quaternion pitchRot = Quaternion.AngleAxis(_pitch, right);
+        Vector3 finalForward = pitchRot * yawedForward;
+
+        transform.rotation = Quaternion.LookRotation(finalForward, up);
+        _yaw = 0; // consumed — yaw is relative per frame
     }
 
     void HandleMovement()
