@@ -55,23 +55,23 @@ public class AtmosphereDiagnostics : MonoBehaviour
         }
         sb.AppendLine();
 
-        if (AtmosphereController != null)
+        if (AtmosphereController != null && AtmosphereController.Settings != null)
         {
-            var ac = AtmosphereController;
+            var s = AtmosphereController.Settings;
             sb.AppendLine("--- Controller Settings ---");
             sb.AppendLine($"PlanetRadius (shader): {Shader.GetGlobalFloat("_PlanetRadius"):F1}");
             sb.AppendLine($"AtmosphereRadius (shader): {Shader.GetGlobalFloat("_AtmosphereRadius"):F1}");
-            sb.AppendLine($"AtmosphereScale: {ac.AtmosphereScale}");
-            sb.AppendLine($"Intensity: {ac.Intensity}");
-            sb.AppendLine($"RayleighScattering: {ac.RayleighScattering}");
-            sb.AppendLine($"RayleighFalloff: {ac.RayleighFalloff}");
-            sb.AppendLine($"MieStrength: {ac.MieStrength}");
-            sb.AppendLine($"MieFalloff: {ac.MieFalloff}");
-            sb.AppendLine($"MieAnisotropy: {ac.MieAnisotropy}");
-            sb.AppendLine($"HeightAbsorption: {ac.HeightAbsorption}");
-            sb.AppendLine($"AbsorptionBeta: {ac.AbsorptionBeta}");
-            sb.AppendLine($"InScatteringPoints: {ac.InScatteringPoints}");
-            sb.AppendLine($"BakeSteps: {ac.BakeSteps}");
+            sb.AppendLine($"AtmosphereScale: {s.AtmosphereScale}");
+            sb.AppendLine($"Intensity: {s.Intensity}");
+            sb.AppendLine($"RayleighScattering: ({s.RayleighScattering.x:E2}, {s.RayleighScattering.y:E2}, {s.RayleighScattering.z:E2})");
+            sb.AppendLine($"RayleighFalloff: {s.RayleighFalloff}");
+            sb.AppendLine($"MieStrength: {s.MieStrength}");
+            sb.AppendLine($"MieFalloff: {s.MieFalloff}");
+            sb.AppendLine($"MieAnisotropy: {s.MieAnisotropy}");
+            sb.AppendLine($"HeightAbsorption: {s.HeightAbsorption}");
+            sb.AppendLine($"AbsorptionBeta: ({s.AbsorptionBeta.x:E2}, {s.AbsorptionBeta.y:E2}, {s.AbsorptionBeta.z:E2})");
+            sb.AppendLine($"InScatteringPoints: {s.InScatteringPoints}");
+            sb.AppendLine($"BakeSteps: {s.BakeSteps}");
             Vector4 sunDir = Shader.GetGlobalVector("_DirToSun");
             sb.AppendLine($"SunDirection (shader): ({sunDir.x:F3}, {sunDir.y:F3}, {sunDir.z:F3})");
             sb.AppendLine();

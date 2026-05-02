@@ -2,64 +2,22 @@ using UnityEngine;
 
 /// <summary>
 /// Drives the screen-space atmospheric scattering render pass.
-/// Uses URP-Atmosphere approach: world-scale 3-channel LUT, incremental optical depth,
-/// phase functions, wavelength-based coefficients.
+/// All settings live in an AtmosphereSettings ScriptableObject asset.
 /// </summary>
 public class AtmosphereController : MonoBehaviour
 {
     [Header("References")]
+    public AtmosphereSettings Settings;
     public ComputeShader OpticalDepthCompute;
     public CelestialManager CelestialManager;
-    public Texture2D BlueNoise;
-
-    [Header("Scale")]
-    [Range(0.01f, 1f)] public float AtmosphereScale = 0.15f;
-
-    [Header("Scattering")]
-    [Range(1, 30)] public int InScatteringPoints = 10;
-    [Range(0.1f, 100f)] public float Intensity = 10f;
-
-    [Header("Rayleigh (Sky Color)")]
-    [Tooltip("Rayleigh scattering coefficients")]
-    public Vector3 RayleighScattering = new Vector3(5.8e-3f, 13.5e-3f, 33.1e-3f);
-    [Range(1f, 30f)] public float RayleighFalloff = 8f;
-
-    [Header("Mie (Sun Glow / Haze)")]
-    [Range(0f, 0.01f)] public float MieStrength = 0.001f;
-    [Range(1f, 30f)] public float MieFalloff = 1.2f;
-    [Range(0f, 0.999f)] public float MieAnisotropy = 0.76f;
-
-    [Header("Absorption (Ozone)")]
-    public Vector3 AbsorptionBeta = new Vector3(2.04e-5f, 4.97e-5f, 1.95e-6f);
-    [Range(0f, 1f)] public float HeightAbsorption = 0.25f;
-
-    [Header("Ambient")]
-    public Color AmbientBeta = Color.black;
-
-    [Header("Night")]
-    public Color NightAmbient = new Color(0.01f, 0.012f, 0.02f, 1f);
-
-    [Header("Sun Disc")]
-    [Range(0.99f, 0.9999f)] public float SunDiscSize = 0.9998f;
-    [Range(0.0001f, 0.01f)] public float SunDiscBlend = 0.001f;
-
-    [Header("Dithering")]
-    [Range(0f, 2f)] public float DitherStrength = 0.8f;
-    [Range(1f, 8f)] public float DitherScale = 4f;
-
-    [Header("Optical Depth Bake")]
-    [Range(64, 512)] public int BakeTextureSize = 256;
-    [Range(8, 64)] public int BakeSteps = 40;
 
     float _planetRadius;
     float _atmosphereRadius;
     RenderTexture _bakedOpticalDepth;
 
-    // Track LUT-affecting values to re-bake when they change
     float _lastRayleighFalloff, _lastMieFalloff, _lastHeightAbsorption, _lastAtmosphereScale;
     int _lastBakeSteps;
 
-    // Shader property IDs
     static readonly int _bakedOpticalDepthId = Shader.PropertyToID("_BakedOpticalDepth");
     static readonly int _blueNoiseId = Shader.PropertyToID("_BlueNoise");
     static readonly int _dirToSunId = Shader.PropertyToID("_DirToSun");
@@ -92,12 +50,14 @@ public class AtmosphereController : MonoBehaviour
 
     void Update()
     {
+        if (Settings == null) return;
+
         if (CelestialManager != null)
             Shader.SetGlobalVector(_dirToSunId, CelestialManager.SunDirection);
 
         if (_planetRadius > 0f)
         {
-            _atmosphereRadius = _planetRadius * (1 + AtmosphereScale);
+            _atmosphereRadius = _planetRadius * (1 + Settings.AtmosphereScale);
 
             if (LutNeedsRebake())
                 BakeOpticalDepth();
@@ -109,30 +69,25 @@ public class AtmosphereController : MonoBehaviour
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
         _planetRadius = evt.PlanetRadius;
-        _atmosphereRadius = _planetRadius * (1 + AtmosphereScale);
+        _atmosphereRadius = _planetRadius * (1 + Settings.AtmosphereScale);
         BakeOpticalDepth();
         SetGlobalProperties();
     }
 
     bool LutNeedsRebake()
     {
-        return RayleighFalloff != _lastRayleighFalloff
-            || MieFalloff != _lastMieFalloff
-            || HeightAbsorption != _lastHeightAbsorption
-            || AtmosphereScale != _lastAtmosphereScale
-            || BakeSteps != _lastBakeSteps;
-    }
-
-    Vector3 ComputeRayleighCoefficients()
-    {
-        return RayleighScattering;
+        return Settings.RayleighFalloff != _lastRayleighFalloff
+            || Settings.MieFalloff != _lastMieFalloff
+            || Settings.HeightAbsorption != _lastHeightAbsorption
+            || Settings.AtmosphereScale != _lastAtmosphereScale
+            || Settings.BakeSteps != _lastBakeSteps;
     }
 
     void BakeOpticalDepth()
     {
-        if (OpticalDepthCompute == null || _planetRadius <= 0f) return;
+        if (OpticalDepthCompute == null || Settings == null || _planetRadius <= 0f) return;
 
-        if (_bakedOpticalDepth != null && _bakedOpticalDepth.width != BakeTextureSize)
+        if (_bakedOpticalDepth != null && _bakedOpticalDepth.width != Settings.BakeTextureSize)
         {
             _bakedOpticalDepth.Release();
             _bakedOpticalDepth = null;
@@ -140,8 +95,7 @@ public class AtmosphereController : MonoBehaviour
 
         if (_bakedOpticalDepth == null)
         {
-            // ARGBHalf: 4-channel half-float, matches RWTexture2D<float4> and stores 3-channel density
-            _bakedOpticalDepth = new RenderTexture(BakeTextureSize, BakeTextureSize, 0, RenderTextureFormat.ARGBHalf)
+            _bakedOpticalDepth = new RenderTexture(Settings.BakeTextureSize, Settings.BakeTextureSize, 0, RenderTextureFormat.ARGBHalf)
             {
                 enableRandomWrite = true,
                 filterMode = FilterMode.Bilinear,
@@ -151,32 +105,31 @@ public class AtmosphereController : MonoBehaviour
             _bakedOpticalDepth.Create();
         }
 
-        // Bake at WORLD SCALE — pass actual planet and atmosphere radii
         int kernel = OpticalDepthCompute.FindKernel("Main");
         OpticalDepthCompute.SetTexture(kernel, "_Result", _bakedOpticalDepth);
-        OpticalDepthCompute.SetInt("_TextureSize", BakeTextureSize);
-        OpticalDepthCompute.SetInt("_NumOutScatteringSteps", BakeSteps);
+        OpticalDepthCompute.SetInt("_TextureSize", Settings.BakeTextureSize);
+        OpticalDepthCompute.SetInt("_NumOutScatteringSteps", Settings.BakeSteps);
         OpticalDepthCompute.SetFloat("_PlanetRadius", _planetRadius);
         OpticalDepthCompute.SetFloat("_AtmosphereRadius", _atmosphereRadius);
-        OpticalDepthCompute.SetFloat("_RayleighFalloff", RayleighFalloff);
-        OpticalDepthCompute.SetFloat("_MieFalloff", MieFalloff);
-        OpticalDepthCompute.SetFloat("_HeightAbsorbtion", HeightAbsorption);
+        OpticalDepthCompute.SetFloat("_RayleighFalloff", Settings.RayleighFalloff);
+        OpticalDepthCompute.SetFloat("_MieFalloff", Settings.MieFalloff);
+        OpticalDepthCompute.SetFloat("_HeightAbsorbtion", Settings.HeightAbsorption);
 
-        int groups = Mathf.CeilToInt(BakeTextureSize / 8f);
+        int groups = Mathf.CeilToInt(Settings.BakeTextureSize / 8f);
         OpticalDepthCompute.Dispatch(kernel, groups, groups, 1);
 
-        _lastRayleighFalloff = RayleighFalloff;
-        _lastMieFalloff = MieFalloff;
-        _lastHeightAbsorption = HeightAbsorption;
-        _lastAtmosphereScale = AtmosphereScale;
-        _lastBakeSteps = BakeSteps;
+        _lastRayleighFalloff = Settings.RayleighFalloff;
+        _lastMieFalloff = Settings.MieFalloff;
+        _lastHeightAbsorption = Settings.HeightAbsorption;
+        _lastAtmosphereScale = Settings.AtmosphereScale;
+        _lastBakeSteps = Settings.BakeSteps;
 
         Shader.SetGlobalTexture(_bakedOpticalDepthId, _bakedOpticalDepth);
     }
 
     void SetGlobalProperties()
     {
-        if (_planetRadius <= 0f) return;
+        if (_planetRadius <= 0f || Settings == null) return;
 
         Vector3 center = Vector3.zero;
         var planet = FindAnyObjectByType<Planet>();
@@ -185,26 +138,26 @@ public class AtmosphereController : MonoBehaviour
         Shader.SetGlobalFloat(_planetRadiusId, _planetRadius);
         Shader.SetGlobalFloat(_atmosphereRadiusId, _atmosphereRadius);
         Shader.SetGlobalVector(_planetCenterId, center);
-        Shader.SetGlobalInt(_numInScatteringPointsId, InScatteringPoints);
+        Shader.SetGlobalInt(_numInScatteringPointsId, Settings.InScatteringPoints);
 
-        Shader.SetGlobalVector(_rayleighScatteringId, ComputeRayleighCoefficients());
-        Shader.SetGlobalVector(_mieScatteringId, Vector3.one * MieStrength);
-        Shader.SetGlobalFloat(_mieGId, MieAnisotropy);
-        Shader.SetGlobalVector(_absorptionBetaId, AbsorptionBeta);
-        Shader.SetGlobalVector(_ambientBetaId, new Vector4(AmbientBeta.r, AmbientBeta.g, AmbientBeta.b, 0));
+        Shader.SetGlobalVector(_rayleighScatteringId, Settings.RayleighScattering);
+        Shader.SetGlobalVector(_mieScatteringId, Vector3.one * Settings.MieStrength);
+        Shader.SetGlobalFloat(_mieGId, Settings.MieAnisotropy);
+        Shader.SetGlobalVector(_absorptionBetaId, Settings.AbsorptionBeta);
+        Shader.SetGlobalVector(_ambientBetaId, new Vector4(Settings.AmbientBeta.r, Settings.AmbientBeta.g, Settings.AmbientBeta.b, 0));
 
-        Shader.SetGlobalFloat(_rayleighFalloffId, RayleighFalloff);
-        Shader.SetGlobalFloat(_mieFalloffId, MieFalloff);
-        Shader.SetGlobalFloat(_heightAbsorptionId, HeightAbsorption);
-        Shader.SetGlobalFloat(_intensityId, Intensity);
+        Shader.SetGlobalFloat(_rayleighFalloffId, Settings.RayleighFalloff);
+        Shader.SetGlobalFloat(_mieFalloffId, Settings.MieFalloff);
+        Shader.SetGlobalFloat(_heightAbsorptionId, Settings.HeightAbsorption);
+        Shader.SetGlobalFloat(_intensityId, Settings.Intensity);
 
-        Shader.SetGlobalFloat(_ditherStrengthId, DitherStrength);
-        Shader.SetGlobalFloat(_ditherScaleId, DitherScale);
-        Shader.SetGlobalFloat(_sunDiscSizeId, SunDiscSize);
-        Shader.SetGlobalFloat(_sunDiscBlendId, SunDiscBlend);
-        Shader.SetGlobalVector(_nightAmbientId, new Vector3(NightAmbient.r, NightAmbient.g, NightAmbient.b));
+        Shader.SetGlobalFloat(_ditherStrengthId, Settings.DitherStrength);
+        Shader.SetGlobalFloat(_ditherScaleId, Settings.DitherScale);
+        Shader.SetGlobalFloat(_sunDiscSizeId, Settings.SunDiscSize);
+        Shader.SetGlobalFloat(_sunDiscBlendId, Settings.SunDiscBlend);
+        Shader.SetGlobalVector(_nightAmbientId, new Vector3(Settings.NightAmbient.r, Settings.NightAmbient.g, Settings.NightAmbient.b));
 
-        if (BlueNoise != null)
-            Shader.SetGlobalTexture(_blueNoiseId, BlueNoise);
+        if (Settings.BlueNoise != null)
+            Shader.SetGlobalTexture(_blueNoiseId, Settings.BlueNoise);
     }
 }
