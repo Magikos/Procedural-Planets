@@ -98,8 +98,8 @@ float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sc
     // add an offset to the camera position, so that the atmosphere is in the correct position
     start -= _PlanetCenter;
 
-    float2 cutoffHit = RaySphere(0, _CutoffRadius, start, dir);
-    sceneDepth = min(sceneDepth, cutoffHit.x);
+    // Scene depth is just the raw depth buffer value
+    // (CutoffRadius removed — it was killing atmosphere for cameras on/near the surface)
 
     float2 rayLength = RaySphere(0, _AtmosphereRadius, start, dir);
     float fullAtmosphereLength = rayLength.x + rayLength.y; // unclamped
