@@ -13,34 +13,34 @@ _MieG: 0.760
 _MieFalloff: 5.00
 _AbsorptionBeta: (2.040E-005, 4.970E-005, 1.950E-006)
 _HeightAbsorption: 0.250
-_Intensity: 10.00
+_Intensity: 30.00
 _NumInScatteringPoints: 10
-_DirToSun: (-0.982, -0.171, -0.075)
+_DirToSun: (-0.965, -0.242, -0.105)
 
 --- Screen Samples ---
-  Center              : R=0.3569 G=0.3490 B=0.3804
-  Top (zenith)        : R=0.3843 G=0.3569 B=0.4118
-  Bottom (ground)     : R=0.2824 G=0.3294 B=0.3882
+  Center              : R=0.6157 G=0.5961 B=0.6471
+  Top (zenith)        : R=0.6353 G=0.5922 B=0.6863
+  Bottom (ground)     : R=0.5333 G=0.5725 B=0.6824
   Left                : R=0.0000 G=0.0000 B=0.0000
   Right               : R=0.0000 G=0.0000 B=0.0000
 
 --- Vertical Strip (center, top to bottom) ---
     0%: R=0.0000 G=0.0000 B=0.0000
-   10%: R=0.2118 G=0.2784 B=0.3843
-   20%: R=0.3725 G=0.3765 B=0.4157
-   30%: R=0.3608 G=0.3490 B=0.3725
-   40%: R=0.3843 G=0.3725 B=0.3843
-   50%: R=0.3569 G=0.3490 B=0.3804
-   60%: R=0.3686 G=0.3569 B=0.3686
-   70%: R=0.3490 G=0.3490 B=0.3804
-   80%: R=0.3490 G=0.3490 B=0.3569
-   90%: R=0.2039 G=0.2706 B=0.3647
+   10%: R=0.3686 G=0.4745 B=0.6392
+   20%: R=0.6235 G=0.6275 B=0.6941
+   30%: R=0.6157 G=0.5961 B=0.6196
+   40%: R=0.6549 G=0.6392 B=0.6510
+   50%: R=0.6157 G=0.5961 B=0.6471
+   60%: R=0.6392 G=0.6157 B=0.6353
+   70%: R=0.6039 G=0.6000 B=0.6510
+   80%: R=0.6118 G=0.6196 B=0.6157
+   90%: R=0.3647 G=0.4745 B=0.6353
   100%: R=0.0000 G=0.0000 B=0.0000
 
 --- Region Averages ---
-  Sky (top quarter): Avg R=0.0775 G=0.0820 B=0.0887
-  Horizon (mid strip): Avg R=0.0939 G=0.0947 B=0.1002
-  Ground (bottom qtr): Avg R=0.0582 G=0.0622 B=0.0687
+  Sky (top quarter): Avg R=0.1293 G=0.1362 B=0.1449
+  Horizon (mid strip): Avg R=0.1625 G=0.1632 B=0.1699
+  Ground (bottom qtr): Avg R=0.1076 G=0.1137 B=0.1211
 
 --- Assessment ---
-NEUTRAL — R=0.357 G=0.349 B=0.380
+NEUTRAL — R=0.616 G=0.596 B=0.647
