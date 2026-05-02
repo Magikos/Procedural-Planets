@@ -130,7 +130,14 @@ public class FreeCameraController : MonoBehaviour
     void RepositionCamera(Vector3 center, float radius)
     {
         float distance = radius * ViewDistanceMultiplier;
-        transform.position = center + Vector3.back * distance;
+
+        // Position camera on the sunlit side by finding the directional light
+        Vector3 viewDir = Vector3.back; // default fallback
+        var sunLight = FindAnyObjectByType<Light>();
+        if (sunLight != null && sunLight.type == LightType.Directional)
+            viewDir = sunLight.transform.forward; // light forward = direction light travels = away from sun
+
+        transform.position = center + viewDir * distance;
         transform.LookAt(center);
 
         MoveSpeed = radius * 0.5f;

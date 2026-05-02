@@ -26,7 +26,7 @@ MonoBehaviour:
   NightAmbient: {r: 0.01, g: 0.012, b: 0.02, a: 1}
   SunDiscSize: 0.9998
   SunDiscBlend: 0.001
-  BlueNoise: {fileID: 0}
+  BlueNoise: {fileID: 2800000, guid: 626acd0223e41844ba8f9fb37d733e31, type: 3}
   DitherStrength: 0.8
   DitherScale: 4
   BakeTextureSize: 256
