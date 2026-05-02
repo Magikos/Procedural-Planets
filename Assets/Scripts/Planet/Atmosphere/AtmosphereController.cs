@@ -20,8 +20,8 @@ public class AtmosphereController : MonoBehaviour
     [Range(0.1f, 100f)] public float Intensity = 20f;
 
     [Header("Rayleigh (Sky Color)")]
-    [Tooltip("Rayleigh scattering coefficients per unit length")]
-    public Vector3 RayleighScattering = new Vector3(5.8e-6f, 13.5e-6f, 33.1e-6f);
+    [Tooltip("Rayleigh scattering coefficients — tune for planet scale")]
+    public Vector3 RayleighScattering = new Vector3(2.0e-3f, 5.0e-3f, 10.0e-3f);
     [Range(1f, 30f)] public float RayleighFalloff = 8f;
 
     [Header("Mie (Sun Glow / Haze)")]
