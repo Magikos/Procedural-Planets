@@ -7,8 +7,8 @@ Camera fwd: (0.00, 0.00, 1.00)
 PlanetRadius (shader): 5257.3
 AtmosphereRadius (shader): 6045.9
 AtmosphereScale: 0.15
-Intensity: 20
-RayleighScattering: (0.00, 0.01, 0.01)
+Intensity: 1
+RayleighScattering: (0.01, 0.01, 0.03)
 RayleighFalloff: 8
 MieStrength: 0.001
 MieFalloff: 1.2
@@ -19,38 +19,38 @@ InScatteringPoints: 10
 BakeSteps: 40
 
 --- Screen Samples ---
-  Center               (1078, 412): R=0.2588 G=0.2588 B=0.2941
-  Top (zenith)         (1078, 721): R=0.2980 G=0.3176 B=0.3333
-  Bottom (ground)      (1078, 103): R=0.3961 G=0.4157 B=0.4314
+  Center               (1078, 412): R=0.0902 G=0.1059 B=0.1451
+  Top (zenith)         (1078, 721): R=0.0980 G=0.1098 B=0.1490
+  Bottom (ground)      (1078, 103): R=0.1294 G=0.1373 B=0.1686
   Left horizon         ( 269, 412): R=0.0000 G=0.0000 B=0.0000
   Right horizon        (1887, 412): R=0.0000 G=0.0000 B=0.0000
 
 --- Vertical Strip (center column, top to bottom) ---
     0% from top: R=0.0000 G=0.0000 B=0.0000
-   10% from top: R=0.3569 G=0.4000 B=0.4314
-   20% from top: R=0.2314 G=0.2588 B=0.2941
-   30% from top: R=0.2353 G=0.2471 B=0.2824
-   40% from top: R=0.2431 G=0.2471 B=0.2824
-   50% from top: R=0.2588 G=0.2588 B=0.2941
-   60% from top: R=0.2745 G=0.2745 B=0.3059
-   70% from top: R=0.3059 G=0.3059 B=0.3373
-   80% from top: R=0.3216 G=0.3373 B=0.3725
-   90% from top: R=0.4314 G=0.5020 B=0.5608
+   10% from top: R=0.1059 G=0.1176 B=0.1490
+   20% from top: R=0.1020 G=0.1137 B=0.1490
+   30% from top: R=0.0863 G=0.1020 B=0.1373
+   40% from top: R=0.0824 G=0.0980 B=0.1373
+   50% from top: R=0.0902 G=0.1059 B=0.1451
+   60% from top: R=0.0941 G=0.1098 B=0.1451
+   70% from top: R=0.1255 G=0.1373 B=0.1686
+   80% from top: R=0.1255 G=0.1412 B=0.1725
+   90% from top: R=0.1451 G=0.1647 B=0.1922
   100% from top: R=0.0000 G=0.0000 B=0.0000
 
 --- Region Averages ---
   Sky (top quarter) (594 samples):
-    Avg: R=0.0798 G=0.0857 B=0.0967
+    Avg: R=0.0318 G=0.0363 B=0.0481
     Min: R=0.0000 G=0.0000 B=0.0000
-    Max: R=0.6000 G=0.6235 B=0.6941
+    Max: R=0.1686 G=0.1961 B=0.2275
   Horizon (mid strip) (2376 samples):
-    Avg: R=0.0969 G=0.0994 B=0.1094
+    Avg: R=0.0363 G=0.0406 B=0.0528
     Min: R=0.0000 G=0.0000 B=0.0000
-    Max: R=0.6902 G=0.7294 B=0.7765
+    Max: R=0.2039 G=0.2196 B=0.2471
   Ground (bottom quarter) (594 samples):
-    Avg: R=0.0904 G=0.0964 B=0.1066
+    Avg: R=0.0343 G=0.0386 B=0.0496
     Min: R=0.0000 G=0.0000 B=0.0000
-    Max: R=0.6431 G=0.6745 B=0.6941
+    Max: R=0.1804 G=0.2000 B=0.2353
 
 --- Quick Assessment ---
-CENTER IS GRAY (0.259) - no wavelength differentiation
+CENTER IS GRAY (0.090) - no wavelength differentiation

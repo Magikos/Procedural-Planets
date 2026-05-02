@@ -17,7 +17,7 @@ public class AtmosphereController : MonoBehaviour
 
     [Header("Scattering")]
     [Range(1, 30)] public int InScatteringPoints = 10;
-    [Range(0.1f, 100f)] public float Intensity = 1f;
+    [Range(0.1f, 100f)] public float Intensity = 10f;
 
     [Header("Rayleigh (Sky Color)")]
     [Tooltip("Rayleigh scattering coefficients")]

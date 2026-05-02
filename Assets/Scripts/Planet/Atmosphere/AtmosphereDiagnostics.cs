@@ -72,6 +72,8 @@ public class AtmosphereDiagnostics : MonoBehaviour
             sb.AppendLine($"AbsorptionBeta: {ac.AbsorptionBeta}");
             sb.AppendLine($"InScatteringPoints: {ac.InScatteringPoints}");
             sb.AppendLine($"BakeSteps: {ac.BakeSteps}");
+            Vector4 sunDir = Shader.GetGlobalVector("_DirToSun");
+            sb.AppendLine($"SunDirection (shader): ({sunDir.x:F3}, {sunDir.y:F3}, {sunDir.z:F3})");
             sb.AppendLine();
         }
 
