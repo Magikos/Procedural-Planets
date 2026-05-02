@@ -20,9 +20,8 @@ public class AtmosphereController : MonoBehaviour
     [Range(0.1f, 100f)] public float Intensity = 20f;
 
     [Header("Rayleigh (Sky Color)")]
-    public Vector3 Wavelengths = new Vector3(700, 530, 460);
-    [Range(0.001f, 1f), Tooltip("Scales wavelength-based coefficients to match planet radius")]
-    public float ScatteringScale = 0.01f;
+    [Tooltip("Rayleigh scattering coefficients — controls sky color")]
+    public Vector3 RayleighScattering = new Vector3(5.8e-3f, 13.5e-3f, 33.1e-3f);
     [Range(1f, 30f)] public float RayleighFalloff = 8f;
 
     [Header("Mie (Sun Glow / Haze)")]
@@ -126,10 +125,7 @@ public class AtmosphereController : MonoBehaviour
 
     Vector3 ComputeRayleighCoefficients()
     {
-        float scatterX = Mathf.Pow(400f / Wavelengths.x, 4f);
-        float scatterY = Mathf.Pow(400f / Wavelengths.y, 4f);
-        float scatterZ = Mathf.Pow(400f / Wavelengths.z, 4f);
-        return new Vector3(scatterX, scatterY, scatterZ) * ScatteringScale;
+        return RayleighScattering;
     }
 
     void BakeOpticalDepth()
