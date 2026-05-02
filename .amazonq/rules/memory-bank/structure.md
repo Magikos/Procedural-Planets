@@ -178,30 +178,62 @@ All listeners receive PlanetGeneratedEvent:
 - **Global shader properties**: Atmosphere uses Shader.SetGlobal* for all parameters.
 - **Assembly separation**: Core (no Planet dependency) ← Planet (references Core + URP).
 
-## Atmosphere Rewrite (In Progress)
+## Atmosphere Rewrite v3 (In Progress)
 
-### Problem
-Current atmosphere uses raw Rayleigh/Mie/Absorption coefficients from URP-Atmosphere reference.
-These are scale-dependent — tuned for a specific planet radius. At our radius (~5257),
-the sky is white/foggy or black at zenith. Stars as mesh quads don't render (far clip, atmosphere overwrite).
+### Why Previous Approaches Failed
+- **URP-Atmosphere (v1)**: Raw coefficients tuned for specific small planet radius. At our radius (~5257), optical depth too large, all channels blown out or killed equally (gray/white).
+- **Solar System hybrid (v2)**: `/planetRadius` normalization + normalized LUT. Scale mismatch between LUT (normalized) and shader (world-space). Hacky attenuation didn't generalize. Wavelength-based coefficients couldn't be tuned to work at our scale.
+- **Core issue**: Both approaches used baked LUT for sun ray optical depth, adding complexity and scale-dependent bugs. Coefficients from reference projects don't transfer to different planet radii.
 
-### Solution: Solar System Project Model
-Wavelength-based scattering with `/planetRadius` normalization for scale independence.
+### New Approach: Step-by-Step from First Principles
+Based on `local-only/atmospheric_scattering_shader_unity_guide.md` (from cpp-rendering.io article).
 
-### What Changes
-1. **Atmosphere.hlsl** → Rewrite: single `densityFalloff`, wavelength-based `scatteringCoefficients`,
-   `opticalDepthBaked2` for bidirectional view-ray sampling, `/planetRadius` normalization.
-   Add sun disc rendering. Add procedural star rendering (seed-based, no mesh).
-2. **Atmosphere.shader** → Update: pass UV to fragment for blue noise dithering.
-3. **OpticalDepth.compute** → Simplify: single-channel density (no separate Rayleigh/Mie/Ozone),
-   single `densityFalloff`, normalized radius (planetRadius=1).
-4. **AtmosphereController.cs** → Rewrite fields: remove Rayleigh/Mie/Absorption vectors,
-   add wavelengths (700,530,460), scatteringStrength, single densityFalloff.
-   Compute scatteringCoefficients from wavelengths: `(400/λ)^4 * strength`.
-5. **DELETE**: StarSphere.cs, Stars.shader, Planet.EnsureStarSphere()
+**Key principles:**
+- Brute-force ray marching for BOTH view and sun rays (no LUT initially)
+- Verify each step with debug modes before adding the next
+- Use `exp(-height / scaleHeight)` density (no extra `* (1-height01)` term)
+- Scale-independent by design — parameterize everything, no hardcoded Earth values
+- Keep infrastructure: RenderGraph pass, ScriptableObject settings, diagnostics, DepthOnly pass
 
-### What Stays
-- AtmosphereRenderFeature.cs (RenderGraph infrastructure) — unchanged
-- AtmosphereRenderPass.cs (RenderGraph pass) — unchanged
-- Common.hlsl, Math.hlsl — unchanged
-- BlueNoise.png — now used for dithering in atmosphere shader
+**Implementation roadmap (from guide Section 20):**
+1. **Ray-sphere intersection** — verify atmosphere/planet hit detection, camera inside/outside
+2. **Basic density visualization** — render density as grayscale, verify falloff
+3. **View ray marching** — accumulate density, verify horizon thicker than zenith
+4. **Sun ray optical depth** — add sun transmittance, verify day/night
+5. **Rayleigh scattering** — wavelength-dependent, verify blue sky + red sunset
+6. **Mie scattering** — sun glow/haze
+7. **Artist controls + debug modes** — expose all parameters, debug views
+
+**Debug modes (from guide Section 18):**
+0=final, 1=height, 2=Rayleigh density, 3=Mie density, 4=sun transmittance, 5=view transmittance, 6=Rayleigh only, 7=Mie only, 8=optical depth
+
+**Starting parameters (from guide Section 21, adapted for our scale):**
+- planetRadius: ~5257 (from generation)
+- atmosphereRadius: planetRadius * 1.05 to 1.1
+- rayleighScaleHeight: 0.08 * atmosphereThickness
+- mieScaleHeight: 0.02 * atmosphereThickness
+- rayleighScattering: float3(5.8, 13.5, 33.1) * scale factor TBD
+- mieScattering: 0.01
+- mieAnisotropy: 0.76
+- sunIntensity: 20
+- viewSteps: 16, sunSteps: 8
+
+### What We Keep
+- AtmosphereRenderFeature.cs + AtmosphereRenderPass.cs (RenderGraph infrastructure)
+- AtmosphereController.cs (EventBus, ScriptableObject settings, real-time update)
+- AtmosphereSettings.cs (ScriptableObject)
+- AtmosphereDiagnostics.cs (F12 capture)
+- Atmosphere.shader (fullscreen pass structure)
+- PlanetVertexColor.shader DepthOnly/DepthNormals passes
+- Common.hlsl, Math.hlsl
+- BlueNoise.png
+- FreeCameraController improvements (backspace=face sun, surface positioning)
+
+### What We Rewrite
+- Atmosphere.hlsl — from scratch, step by step
+- OpticalDepth.compute — removed initially, add back as optimization later
+- AtmosphereSettings.cs — simplified parameters matching the guide
+
+### Git Reference
+- Tag: `atmosphere-v2-checkpoint` — last commit before v3 rewrite
+- All previous atmosphere code is preserved in git history

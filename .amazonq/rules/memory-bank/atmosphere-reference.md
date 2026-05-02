@@ -210,6 +210,16 @@ The issue may be that **red and green accumulate too much** relative to blue bec
 
 ## Recommended Approach
 
-**Option A or D** — the URP-Atmosphere approach is the only one that was designed to work at arbitrary scale with proper physics. The Solar System approach was designed for small planets and uses hacks (`/planetRadius`, hacky attenuation) that don't generalize well.
+**Step-by-step from first principles** (from `local-only/atmospheric_scattering_shader_unity_guide.md`).
 
-The key insight from URP-Atmosphere: **accumulate optical depth incrementally in the loop** instead of using `opticalDepthBaked2`. This avoids the LUT scale mismatch entirely — the density function returns the same values regardless of scale (it uses `height01`), and the step size naturally scales with the ray length.
+Previous attempts to copy reference implementations failed because:
+1. Baked LUT adds scale-dependent complexity — remove it initially
+2. Reference coefficients are tuned for specific radii — don't copy them
+3. The `* (1 - height01)` density term from URP-Atmosphere changes the profile — use standard `exp(-height/scaleHeight)`
+4. Trying to do all steps at once makes debugging impossible — build incrementally
+5. The diagnostics showed `_DirToSun` was reading wrong uniform name (`_SunParams` vs `_DirToSun`) — always verify globals match between C# and shader
+6. Scene serialization kept overriding code defaults — use ScriptableObject assets
+7. The DepthOnly pass was missing from PlanetVertexColor.shader — atmosphere couldn't see terrain
+8. The `_CutoffRadius` killed atmosphere when camera was on the surface (below max elevation)
+
+The new approach: brute-force ray march both view and sun rays, verify each step with debug modes, then optimize with LUTs once it's visually correct.
