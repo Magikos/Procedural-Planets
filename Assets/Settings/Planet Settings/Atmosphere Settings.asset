@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0113be1b4af76246878877c386b9c1b, type: 3}
+  m_Name: Atmosphere Settings
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::AtmosphereSettings
+  AtmosphereScale: 0.15
+  InScatteringPoints: 10
+  Intensity: 10
+  RayleighScattering: {x: 0.0058, y: 0.0135, z: 0.0331}
+  RayleighFalloff: 8
+  MieStrength: 0.001
+  MieFalloff: 1.2
+  MieAnisotropy: 0.76
+  AbsorptionBeta: {x: 0.0000204, y: 0.0000497, z: 0.00000195}
+  HeightAbsorption: 0.25
+  AmbientBeta: {r: 0, g: 0, b: 0, a: 1}
+  NightAmbient: {r: 0.01, g: 0.012, b: 0.02, a: 1}
+  SunDiscSize: 0.9998
+  SunDiscBlend: 0.001
+  BlueNoise: {fileID: 0}
+  DitherStrength: 0.8
+  DitherScale: 4
+  BakeTextureSize: 256
+  BakeSteps: 40
