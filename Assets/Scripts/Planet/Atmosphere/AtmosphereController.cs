@@ -35,6 +35,8 @@ public class AtmosphereController : MonoBehaviour
     static readonly int _mieFalloffId = Shader.PropertyToID("_MieFalloff");
     static readonly int _heightAbsorbtionId = Shader.PropertyToID("_HeightAbsorbtion");
     static readonly int _intensityId = Shader.PropertyToID("_Intensity");
+    static readonly int _sunDiscSizeId = Shader.PropertyToID("_SunDiscSize");
+    static readonly int _sunDiscBlendId = Shader.PropertyToID("_SunDiscBlend");
 
     void OnEnable() => EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
     void OnDisable()
@@ -145,5 +147,7 @@ public class AtmosphereController : MonoBehaviour
         Shader.SetGlobalFloat(_mieFalloffId, Settings.MieFalloff);
         Shader.SetGlobalFloat(_heightAbsorbtionId, Settings.HeightAbsorption);
         Shader.SetGlobalFloat(_intensityId, Settings.Intensity);
+        Shader.SetGlobalFloat(_sunDiscSizeId, Settings.SunDiscSize);
+        Shader.SetGlobalFloat(_sunDiscBlendId, Settings.SunDiscBlend);
     }
 }

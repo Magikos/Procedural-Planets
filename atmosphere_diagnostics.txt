@@ -1,46 +1,46 @@
 === ATMOSPHERE DIAGNOSTICS ===
 Screen: 2156x824
-Camera pos: (-4224.13, -10068.25, 7316.42)
-Camera fwd: (0.32, 0.77, -0.56)
+Camera pos: (5259.27, 0.00, 0.00)
+Camera fwd: (0.23, 0.97, 0.00)
 
 --- Shader Globals ---
 _PlanetRadius: 5257.3
-_AtmosphereRadius: 6045.9
+_AtmosphereRadius: 6571.6
 _RayleighScattering: (5.800E-003, 1.350E-002, 3.310E-002)
-_RayleighFalloff: 15.00
-_MieScattering: (1.000E-003, 1.000E-003, 1.000E-003)
-_MieG: 0.760
-_MieFalloff: 5.00
+_RayleighFalloff: 8.00
+_MieScattering: (3.000E-005, 3.000E-005, 3.000E-005)
+_MieG: 0.850
+_MieFalloff: 1.20
 _AbsorptionBeta: (2.040E-005, 4.970E-005, 1.950E-006)
-_HeightAbsorption: 0.250
-_Intensity: 30.00
+_HeightAbsorption: 0.772
+_Intensity: 15.00
 _NumInScatteringPoints: 10
-_DirToSun: (-0.965, -0.242, -0.105)
+_DirToSun: (0.888, -0.421, -0.183)
 
 --- Screen Samples ---
-  Center              : R=0.6157 G=0.5961 B=0.6471
-  Top (zenith)        : R=0.6353 G=0.5922 B=0.6863
-  Bottom (ground)     : R=0.5333 G=0.5725 B=0.6824
+  Center              : R=0.0039 G=0.0000 B=0.0000
+  Top (zenith)        : R=0.0000 G=0.0000 B=0.0000
+  Bottom (ground)     : R=0.0000 G=0.0000 B=0.0000
   Left                : R=0.0000 G=0.0000 B=0.0000
-  Right               : R=0.0000 G=0.0000 B=0.0000
+  Right               : R=0.0039 G=0.0000 B=0.0000
 
 --- Vertical Strip (center, top to bottom) ---
     0%: R=0.0000 G=0.0000 B=0.0000
-   10%: R=0.3686 G=0.4745 B=0.6392
-   20%: R=0.6235 G=0.6275 B=0.6941
-   30%: R=0.6157 G=0.5961 B=0.6196
-   40%: R=0.6549 G=0.6392 B=0.6510
-   50%: R=0.6157 G=0.5961 B=0.6471
-   60%: R=0.6392 G=0.6157 B=0.6353
-   70%: R=0.6039 G=0.6000 B=0.6510
-   80%: R=0.6118 G=0.6196 B=0.6157
-   90%: R=0.3647 G=0.4745 B=0.6353
+   10%: R=0.0000 G=0.0000 B=0.0000
+   20%: R=0.0000 G=0.0000 B=0.0000
+   30%: R=0.0039 G=0.0000 B=0.0000
+   40%: R=0.0039 G=0.0000 B=0.0000
+   50%: R=0.0039 G=0.0000 B=0.0000
+   60%: R=0.0039 G=0.0000 B=0.0000
+   70%: R=0.0000 G=0.0000 B=0.0000
+   80%: R=0.0000 G=0.0000 B=0.0000
+   90%: R=0.0000 G=0.0000 B=0.0000
   100%: R=0.0000 G=0.0000 B=0.0000
 
 --- Region Averages ---
-  Sky (top quarter): Avg R=0.1293 G=0.1362 B=0.1449
-  Horizon (mid strip): Avg R=0.1625 G=0.1632 B=0.1699
-  Ground (bottom qtr): Avg R=0.1076 G=0.1137 B=0.1211
+  Sky (top quarter): Avg R=0.0008 G=0.0000 B=0.0000
+  Horizon (mid strip): Avg R=0.0038 G=0.0000 B=0.0000
+  Ground (bottom qtr): Avg R=0.0000 G=0.0000 B=0.0000
 
 --- Assessment ---
-NEUTRAL — R=0.616 G=0.596 B=0.647
+BLACK — no light reaching camera

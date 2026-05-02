@@ -47,6 +47,11 @@ float _Intensity;
 
 
 
+float _SunDiscSize;
+float _SunDiscBlend;
+
+
+
 float3 DensityAtPoint(float3 position)
 {
     float height = length(position) - _PlanetRadius;
@@ -97,7 +102,8 @@ float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sc
     sceneDepth = min(sceneDepth, cutoffHit.x);
 
     float2 rayLength = RaySphere(0, _AtmosphereRadius, start, dir);
-    rayLength.y = min(rayLength.x + rayLength.y, sceneDepth);
+    float fullAtmosphereLength = rayLength.x + rayLength.y; // unclamped
+    rayLength.y = min(fullAtmosphereLength, sceneDepth);
 
     // Did the ray miss the atmosphere?   
     if (rayLength.x > rayLength.y) 
@@ -191,6 +197,16 @@ float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sc
     float3 ambient = opticalDepth.x * _AmbientBeta * 0.00001 /* Fudge factor */;
 
 	// Apply final color
-    return (rayleigh + mie + ambient) * _Intensity + sceneColor * opacity;
+    float3 result = (rayleigh + mie + ambient) * _Intensity + sceneColor * opacity;
+
+    // Sun disc — only on sky pixels (ray passed through atmosphere without hitting geometry)
+    if (sceneDepth >= fullAtmosphereLength)
+    {
+        float sunDot = dot(dir, dirToSun);
+        float sunDisc = smoothstep(_SunDiscSize - _SunDiscBlend, _SunDiscSize, sunDot);
+        result += sunDisc * float3(1.2, 1.1, 0.9) * _Intensity * 0.1;
+    }
+
+    return result;
 }
 

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0113be1b4af76246878877c386b9c1b, type: 3}
   m_Name: Atmosphere Settings
   m_EditorClassIdentifier: ProceduralPlanets.Planet::AtmosphereSettings
-  AtmosphereScale: 1.08
+  AtmosphereScale: 1.25
   InScatteringPoints: 10
   Intensity: 15
   RayleighScattering: {x: 0.0058, y: 0.0135, z: 0.0331}
@@ -23,5 +23,7 @@ MonoBehaviour:
   AbsorptionBeta: {x: 0.0000204, y: 0.0000497, z: 0.00000195}
   HeightAbsorption: 0.3
   AmbientBeta: {x: 0, y: 0, z: 0}
+  SunDiscSize: 0.9995
+  SunDiscBlend: 0.002
   BakeTextureSize: 256
   BakeSteps: 40

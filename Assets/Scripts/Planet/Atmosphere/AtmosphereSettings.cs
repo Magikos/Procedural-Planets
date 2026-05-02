@@ -4,8 +4,8 @@ using UnityEngine;
 public class AtmosphereSettings : ScriptableObject
 {
     [Header("Scale")]
-    [Range(1.01f, 1.3f), Tooltip("Atmosphere outer radius as a multiple of planet radius")]
-    public float AtmosphereScale = 1.08f;
+    [Range(1.01f, 1.5f), Tooltip("Atmosphere outer radius as a multiple of planet radius")]
+    public float AtmosphereScale = 1.25f;
 
     [Header("Scattering")]
     [Range(1, 30)] public int InScatteringPoints = 10;
@@ -26,6 +26,10 @@ public class AtmosphereSettings : ScriptableObject
 
     [Header("Ambient")]
     public Vector3 AmbientBeta = Vector3.zero;
+
+    [Header("Sun Disc")]
+    [Range(0.99f, 0.9999f)] public float SunDiscSize = 0.9995f;
+    [Range(0.0001f, 0.01f)] public float SunDiscBlend = 0.002f;
 
     [Header("Optical Depth Bake")]
     [Range(64, 512)] public int BakeTextureSize = 256;
