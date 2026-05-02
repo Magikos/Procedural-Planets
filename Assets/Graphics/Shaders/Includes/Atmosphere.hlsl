@@ -104,8 +104,8 @@ float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sc
 
     if (missedAtmo)
     {
-        float3 skyResult = sceneColor + sunColor;
-        return skyResult / (1.0 + skyResult);
+        float3 sun = sunColor / (1.0 + sunColor);
+        return sceneColor + sun;
     }
 
     float2 hitPlanet = RaySphere(0, _PlanetRadius, origin, dir);
@@ -196,15 +196,17 @@ float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sc
     float3 viewTransmittance = exp(-_RayleighScattering * viewRayleighOD
                                    - _MieScatteringCoeff * viewMieOD);
 
-    float3 result = sceneColor * viewTransmittance + inScattered;
+    // Tone map only the atmosphere (in-scattered light), not the terrain
+    float3 toneMappedScatter = inScattered / (1.0 + inScattered);
+    float3 result = sceneColor * viewTransmittance + toneMappedScatter;
 
     // Sun disc — only on sky pixels
     bool hitGeometry = sceneDepth < (dstToAtmo + dstThroughAtmo);
     if (!hitGeometry)
-        result += sunColor * viewTransmittance;
-
-    // Tone map
-    result = result / (1.0 + result);
+    {
+        float3 sun = sunColor * viewTransmittance;
+        result += sun / (1.0 + sun);
+    }
 
     return result;
 }

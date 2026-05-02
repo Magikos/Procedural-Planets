@@ -1,7 +1,7 @@
 === ATMOSPHERE DIAGNOSTICS ===
 Screen: 2156x824
-Camera pos: (3157.26, -3359.46, -2079.41)
-Camera fwd: (0.87, 0.47, 0.15)
+Camera pos: (708.11, -4085.97, -2931.02)
+Camera fwd: (0.96, -0.14, -0.25)
 
 --- Shader Globals ---
 _PlanetRadius: 4994.4
@@ -16,34 +16,34 @@ _SunIntensity: 15.00
 _ViewSteps: 16
 _SunSteps: 8
 _DebugMode: 0
-_SunParams: (0.953, -0.278, -0.121)
-Angle camera->sun: 46.9° (0=looking at sun, 90=perpendicular, 180=away)
-Camera distance from origin: 5057.5 (planetRadius=4994.4)
+_SunParams: (0.975, 0.204, 0.089)
+Angle camera->sun: 28.0° (0=looking at sun, 90=perpendicular, 180=away)
+Camera distance from origin: 5078.1 (planetRadius=4994.4)
 
 --- Screen Samples ---
-  Center              : R=0.3961 G=0.5255 B=0.6275
-  Top (zenith)        : R=0.3020 G=0.4157 B=0.5451
-  Bottom (ground)     : R=0.4863 G=0.5804 B=0.6353
-  Left                : R=0.3922 G=0.5098 B=0.6078
-  Right               : R=0.4157 G=0.5373 B=0.6275
+  Center              : R=0.2667 G=0.3451 B=0.3882
+  Top (zenith)        : R=0.1765 G=0.2392 B=0.2745
+  Bottom (ground)     : R=0.1529 G=0.1569 B=0.1020
+  Left                : R=0.2627 G=0.3373 B=0.3686
+  Right               : R=0.2784 G=0.3569 B=0.3882
 
 --- Vertical Strip (center, top to bottom) ---
-    0%: R=0.2941 G=0.4039 B=0.5333
-   10%: R=0.3020 G=0.4157 B=0.5373
-   20%: R=0.3137 G=0.4314 B=0.5529
-   30%: R=0.3294 G=0.4510 B=0.5725
-   40%: R=0.3569 G=0.4784 B=0.5961
-   50%: R=0.3961 G=0.5255 B=0.6275
-   60%: R=0.4667 G=0.5843 B=0.6588
-   70%: R=0.5725 G=0.6549 B=0.6627
-   80%: R=0.6039 G=0.6627 B=0.6627
-   90%: R=0.4667 G=0.5686 B=0.6275
-  100%: R=0.6235 G=0.6000 B=0.5255
+    0%: R=0.1608 G=0.2196 B=0.2549
+   10%: R=0.1725 G=0.2353 B=0.2706
+   20%: R=0.1882 G=0.2510 B=0.2902
+   30%: R=0.2118 G=0.2784 B=0.3176
+   40%: R=0.2353 G=0.3098 B=0.3529
+   50%: R=0.2667 G=0.3451 B=0.3882
+   60%: R=0.3137 G=0.3961 B=0.4353
+   70%: R=0.3725 G=0.4588 B=0.4902
+   80%: R=0.4667 G=0.5412 B=0.5373
+   90%: R=0.1059 G=0.1059 B=0.0627
+  100%: R=0.0588 G=0.0588 B=0.0275
 
 --- Region Averages ---
-  Sky (top quarter): Avg R=0.3022 G=0.4176 B=0.5443
-  Horizon (mid strip): Avg R=0.4035 G=0.5255 B=0.6218
-  Ground (bottom qtr): Avg R=0.5509 G=0.6079 B=0.6116
+  Sky (top quarter): Avg R=0.1812 G=0.2430 B=0.2804
+  Horizon (mid strip): Avg R=0.2708 G=0.3472 B=0.3830
+  Ground (bottom qtr): Avg R=0.2508 G=0.2896 B=0.2669
 
 --- Assessment ---
-BLUE TINT — B/R ratio: 1.58x
+BLUE TINT — B/R ratio: 1.46x
