@@ -4,11 +4,17 @@ public struct PlanetGeneratedEvent : IGameEvent
 {
     public Vector3 PlanetCenter;
     public float PlanetRadius;
+    public float SeaLevelRadius;
+    public float ElevationMin;
+    public float ElevationMax;
 
-    public PlanetGeneratedEvent(Vector3 center, float radius)
+    public PlanetGeneratedEvent(Vector3 center, float radius, float seaLevelRadius = 0f, float elevationMin = 0f, float elevationMax = 0f)
     {
         PlanetCenter = center;
         PlanetRadius = radius;
+        SeaLevelRadius = seaLevelRadius;
+        ElevationMin = elevationMin;
+        ElevationMax = elevationMax;
     }
 }
 

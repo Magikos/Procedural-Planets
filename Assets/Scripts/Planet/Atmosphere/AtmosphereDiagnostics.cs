@@ -61,19 +61,18 @@ public class AtmosphereDiagnostics : MonoBehaviour
         // Read shader globals directly
         sb.AppendLine("--- Shader Globals ---");
         sb.AppendLine($"_PlanetRadius: {Shader.GetGlobalFloat("_PlanetRadius"):F1}");
+        sb.AppendLine($"_DensityOriginRadius: {Shader.GetGlobalFloat("_DensityOriginRadius"):F1}");
         sb.AppendLine($"_AtmosphereRadius: {Shader.GetGlobalFloat("_AtmosphereRadius"):F1}");
         Vector4 rc = Shader.GetGlobalVector("_RayleighScattering");
         sb.AppendLine($"_RayleighScattering: ({rc.x:E3}, {rc.y:E3}, {rc.z:E3})");
-        sb.AppendLine($"_RayleighFalloff: {Shader.GetGlobalFloat("_RayleighFalloff"):F2}");
-        Vector4 mc = Shader.GetGlobalVector("_MieScattering");
-        sb.AppendLine($"_MieScattering: ({mc.x:E3}, {mc.y:E3}, {mc.z:E3})");
-        sb.AppendLine($"_MieG: {Shader.GetGlobalFloat("_MieG"):F3}");
-        sb.AppendLine($"_MieFalloff: {Shader.GetGlobalFloat("_MieFalloff"):F2}");
-        Vector4 ab = Shader.GetGlobalVector("_AbsorptionBeta");
-        sb.AppendLine($"_AbsorptionBeta: ({ab.x:E3}, {ab.y:E3}, {ab.z:E3})");
-        sb.AppendLine($"_HeightAbsorption: {Shader.GetGlobalFloat("_HeightAbsorption"):F3}");
-        sb.AppendLine($"_Intensity: {Shader.GetGlobalFloat("_Intensity"):F2}");
-        sb.AppendLine($"_NumInScatteringPoints: {Shader.GetGlobalFloat("_NumInScatteringPoints"):F0}");
+        sb.AppendLine($"_RayleighScaleHeight: {Shader.GetGlobalFloat("_RayleighScaleHeight"):F2}");
+        sb.AppendLine($"_MieScatteringCoeff: {Shader.GetGlobalFloat("_MieScatteringCoeff"):E3}");
+        sb.AppendLine($"_MieScaleHeight: {Shader.GetGlobalFloat("_MieScaleHeight"):F2}");
+        sb.AppendLine($"_MieAnisotropy: {Shader.GetGlobalFloat("_MieAnisotropy"):F3}");
+        sb.AppendLine($"_SunIntensity: {Shader.GetGlobalFloat("_SunIntensity"):F2}");
+        sb.AppendLine($"_ViewSteps: {Shader.GetGlobalFloat("_ViewSteps"):F0}");
+        sb.AppendLine($"_SunSteps: {Shader.GetGlobalFloat("_SunSteps"):F0}");
+        sb.AppendLine($"_DebugMode: {Shader.GetGlobalFloat("_DebugMode"):F0}");
         Vector4 sunDir = Shader.GetGlobalVector("_SunParams");
         sb.AppendLine($"_SunParams: ({sunDir.x:F3}, {sunDir.y:F3}, {sunDir.z:F3})");
         if (cam != null)

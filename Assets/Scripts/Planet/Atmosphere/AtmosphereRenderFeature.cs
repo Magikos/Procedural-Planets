@@ -4,21 +4,11 @@ using UnityEngine.Rendering.Universal;
 
 /// <summary>
 /// URP Renderer Feature that injects the screen-space atmospheric scattering pass.
-///
-/// Setup:
-///   1. Open the URP Renderer Asset (e.g. Assets/Settings/PC_RPAsset).
-///   2. Click "Add Renderer Feature" → "Atmosphere Render Feature".
-///   3. Add an AtmosphereController component to a GameObject in your scene
-///      and assign the OpticalDepthCompute shader and CelestialManager references.
-///
-/// The pass is automatically skipped when no AtmosphereController is active in the scene,
-/// or when the planet radius has not yet been set (i.e., before first planet generation).
+/// Debug mode is controlled via AtmosphereSettings.DebugMode (int uniform in shader).
 /// </summary>
 [DisallowMultipleRendererFeature("AtmosphereRenderFeature")]
 public class AtmosphereRenderFeature : ScriptableRendererFeature
 {
-    public enum DebugMode { Off, Depth, ScatterOnly, SurfaceOnly, AtmosphereOff }
-    public DebugMode DebugView = DebugMode.Off;
     AtmosphereRenderPass _pass;
     Material _material;
     AtmosphereController _cachedController;
@@ -30,46 +20,24 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        // Only render during gameplay (not in edit mode) and only in game/scene cameras
         var camType = renderingData.cameraData.camera.cameraType;
         if (camType == CameraType.Preview || camType == CameraType.Reflection)
             return;
 
-        // Require an active AtmosphereController in the scene
         if (_cachedController == null || !_cachedController.isActiveAndEnabled)
             _cachedController = Object.FindAnyObjectByType<AtmosphereController>();
         if (_cachedController == null)
             return;
 
-        // Lazily create the atmosphere material
         if (_material == null)
         {
             var shader = Shader.Find("Hidden/Atmosphere");
-            if (shader == null)
-            {
-                Debug.LogWarning("AtmosphereRenderFeature: could not find shader 'Hidden/Atmosphere'. " +
-                                 "Make sure Assets/Graphics/Shaders/Atmosphere.shader is present.");
-                return;
-            }
-
+            if (shader == null) return;
             _material = CoreUtils.CreateEngineMaterial(shader);
             _material.EnableKeyword("DIRECTIONAL_SUN");
         }
 
         _pass.Setup(_material);
-
-        _material.DisableKeyword("ATMOSPHERE_DEBUG_DEPTH");
-        _material.DisableKeyword("ATMOSPHERE_DEBUG_SCATTER");
-        _material.DisableKeyword("ATMOSPHERE_DEBUG_SURFACE");
-        _material.DisableKeyword("ATMOSPHERE_DEBUG_OFF");
-        switch (DebugView)
-        {
-            case DebugMode.Depth: _material.EnableKeyword("ATMOSPHERE_DEBUG_DEPTH"); break;
-            case DebugMode.ScatterOnly: _material.EnableKeyword("ATMOSPHERE_DEBUG_SCATTER"); break;
-            case DebugMode.SurfaceOnly: _material.EnableKeyword("ATMOSPHERE_DEBUG_SURFACE"); break;
-            case DebugMode.AtmosphereOff: _material.EnableKeyword("ATMOSPHERE_DEBUG_OFF"); break;
-        }
-
         renderer.EnqueuePass(_pass);
     }
 

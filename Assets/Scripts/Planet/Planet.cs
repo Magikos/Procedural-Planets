@@ -17,6 +17,9 @@ public class Planet : MonoBehaviour
 
     [SerializeField, HideInInspector] public bool SettingsFoldout = true;
     [SerializeField, HideInInspector] float _lastGeneratedRadius;
+    [SerializeField, HideInInspector] float _lastSeaLevelRadius;
+    [SerializeField, HideInInspector] float _lastElevationMin;
+    [SerializeField, HideInInspector] float _lastElevationMax;
 
     ShapeGenerator _shapeGenerator = new ShapeGenerator();
     ColorGenerator _colorGenerator = new ColorGenerator();
@@ -46,7 +49,7 @@ public class Planet : MonoBehaviour
     void Start()
     {
         if (_lastGeneratedRadius > 0f)
-            EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, _lastGeneratedRadius));
+            EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, _lastGeneratedRadius, _lastSeaLevelRadius, _lastElevationMin, _lastElevationMax));
         else
             GeneratePlanetAsync();
     }
@@ -133,8 +136,12 @@ public class Planet : MonoBehaviour
             // Atmosphere is rendered by AtmosphereController + AtmosphereRenderFeature (post-process).
 
             float scaledRadius = _planetSettings.PlanetRadius * (1 + _shapeGenerator.ElevationMax);
+            float seaLevelRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel);
             _lastGeneratedRadius = scaledRadius;
-            EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius));
+            _lastSeaLevelRadius = seaLevelRadius;
+            _lastElevationMin = _shapeGenerator.ElevationMin;
+            _lastElevationMax = _shapeGenerator.ElevationMax;
+            EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _lastElevationMin, _lastElevationMax));
             Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, resolution {Resolution}, radius {scaledRadius:F1}");
         }
         catch (System.OperationCanceledException) { }

@@ -1,212 +1,210 @@
 #pragma once
 
-// ShaderToy by Dimas Leenman under the MIT license: https://www.shadertoy.com/view/wlBXWK
-// Modified and ported to HLSL by Kai Angulo
-// Adjusted to use baked optical depth based on examples from Sebastian Lague's atmosphere rendering series : https://www.youtube.com/watch?v=DxfEbulyFcY
+// Atmosphere v3 — Rayleigh + Mie scattering with brute-force sun ray marching
+// No LUT. Sea level as density origin.
 
-
-#define MAX_LOOP_ITERATIONS 30
-
-
-TEXTURE2D(_BakedOpticalDepth);
-float4 _BakedOpticalDepth_TexelSize;
-SAMPLER(sampler_BakedOpticalDepth);
-
-float3 _SunParams;
+// --- Uniforms ---
+float3 _SunParams;          // Directional sun (normalized direction)
 float3 _PlanetCenter;
-
-// Celestial body radii
-float _PlanetRadius;
+float _PlanetRadius;        // Sea level — ray intersection floor
+float _DensityOriginRadius; // Same as _PlanetRadius — density height=0 at sea level
 float _AtmosphereRadius;
-float _CutoffRadius;
 
-// Scttering steps
-int _NumInScatteringPoints;
-int _NumOpticalDepthPoints;
+int _ViewSteps;
+int _SunSteps;
 
-// Rayleigh scattering coefficients
 float3 _RayleighScattering;
+float _RayleighScaleHeight;
 
-// Mie scattering coeficcients
-float3 _MieScattering;
-float _MieG;
+float _MieScatteringCoeff;
+float _MieScaleHeight;
+float _MieAnisotropy;
 
-// Ozone absorbtion coefficients
-float3 _AbsorbtionBeta; 
-
-// Ambient atmosphere color
-float3 _AmbientBeta;
-
-// Density falloffs
-float _RayleighFalloff;
-float _MieFalloff;
-float _HeightAbsorbtion;
-
-// Light intensity
-float _Intensity;
-
-
+float _SunIntensity;
 
 float _SunDiscSize;
 float _SunDiscBlend;
 
+int _DebugMode;
+// 0 = final, 1 = min height01, 2 = Rayleigh density, 3 = Mie density,
+// 4 = sun transmittance, 5 = atmosphere mask
 
+// --- Density ---
 
-float3 DensityAtPoint(float3 position)
+float DensityHeight(float3 pos)
 {
-    float height = length(position) - _PlanetRadius;
-    float height01 = height / (_AtmosphereRadius - _PlanetRadius);
-
-    float2 scaleHeight = float2(_RayleighFalloff, _MieFalloff);
-
-    // Rayleigh and Mie density falloffs are both calculated with the same equation
-    float rayleighDensity = exp(-height01 * _RayleighFalloff) * (1 - height01);
-    float mieDensity = exp(-height01 * _MieFalloff) * (1 - height01);
-
-    // Absorption density. This is for ozone, which scales together with the rayleigh.
-    float denom = (_HeightAbsorbtion + height01);
-    float ozoneDensity = (1.0 / (denom * denom + 1.0)) * rayleighDensity;
-
-    return float3(rayleighDensity, mieDensity, ozoneDensity);
+    return length(pos) - _DensityOriginRadius;
 }
 
-
-// While slightly more cumbersome, baking optical depth beforehand with a compute shader + render texture provides a significant performance boost
-// Take for example a non-baked fragment sample with 20 steps in the view direction and 10 steps in the sun direction -
-// that's 10*20: 200 marches per pixel, not good due to the frequent use of transcendent functions like exp() and sqrt()
-
-// When baked, this is reduced to only 1 call to OpticalDepthBaked, reducing the iterations to only 20, while keeping near identical visual quality.
-
-float3 OpticalDepthBaked(float3 rayOrigin, float3 rayDir) 
+float RayleighDensity(float height)
 {
-	float rayLen = length(rayOrigin);
-	float height = rayLen - _PlanetRadius;
-
-	float height01 = saturate(height / (_AtmosphereRadius - _PlanetRadius));
-
-    float3 normal = rayOrigin / rayLen;
-
-	float uvX = 1 - (dot(normal, rayDir) * 0.5 + 0.5);
-
-	return SAMPLE_TEXTURE2D(_BakedOpticalDepth, sampler_BakedOpticalDepth, float2(uvX, height01)).xyz;
+    return exp(-height / _RayleighScaleHeight);
 }
 
-
-
-float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sceneColor) 
+float MieDensity(float height)
 {
-    // add an offset to the camera position, so that the atmosphere is in the correct position
-    start -= _PlanetCenter;
+    return exp(-height / _MieScaleHeight);
+}
 
-    // Scene depth is just the raw depth buffer value
-    // (CutoffRadius removed — it was killing atmosphere for cameras on/near the surface)
+// --- Phase functions ---
 
-    float2 rayLength = RaySphere(0, _AtmosphereRadius, start, dir);
-    float fullAtmosphereLength = rayLength.x + rayLength.y; // unclamped
-    rayLength.y = min(fullAtmosphereLength, sceneDepth);
+float RayleighPhase(float cosTheta)
+{
+    return (3.0 / (16.0 * MATH_PI)) * (1.0 + cosTheta * cosTheta);
+}
 
-    // Did the ray miss the atmosphere?   
-    if (rayLength.x > rayLength.y) 
+float MiePhase(float cosTheta, float g)
+{
+    float gg = g * g;
+    float denom = 1.0 + gg - 2.0 * g * cosTheta;
+    return (3.0 / (8.0 * MATH_PI)) * ((1.0 - gg) * (1.0 + cosTheta * cosTheta))
+         / ((2.0 + gg) * pow(abs(denom), 1.5));
+}
+
+// --- Sun ray optical depth (brute force) ---
+
+float2 SunOpticalDepth(float3 pos, float3 dirToSun)
+{
+    float2 hitAtmo = RaySphere(0, _AtmosphereRadius, pos, dirToSun);
+
+    float stepSize = hitAtmo.y / (float)_SunSteps;
+    float3 samplePos = pos + dirToSun * (stepSize * 0.5);
+
+    float rayleighOD = 0;
+    float mieOD = 0;
+
+    for (int i = 0; i < _SunSteps; i++)
     {
+        float height = DensityHeight(samplePos);
+        if (height < 0) return float2(1e6, 1e6); // hit planet
+
+        rayleighOD += RayleighDensity(height) * stepSize;
+        mieOD += MieDensity(height) * stepSize;
+
+        samplePos += dirToSun * stepSize;
+    }
+
+    return float2(rayleighOD, mieOD);
+}
+
+// --- Main ---
+
+float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sceneColor)
+{
+    float3 origin = start - _PlanetCenter;
+    float3 dirToSun = _SunParams.xyz;
+
+    float2 hitAtmo = RaySphere(0, _AtmosphereRadius, origin, dir);
+    bool missedAtmo = hitAtmo.y <= 0;
+
+    // Sun disc — render even if ray misses atmosphere
+    float sunDot = dot(dir, dirToSun);
+    float sunDisc = smoothstep(_SunDiscSize - _SunDiscBlend, _SunDiscSize, sunDot);
+    float3 sunColor = sunDisc * float3(1.2, 1.1, 0.9) * _SunIntensity;
+
+    if (missedAtmo)
+    {
+        float3 skyResult = sceneColor + sunColor;
+        return skyResult / (1.0 + skyResult);
+    }
+
+    float2 hitPlanet = RaySphere(0, _PlanetRadius, origin, dir);
+
+    float dstToAtmo = hitAtmo.x;
+    float dstThroughAtmo = hitAtmo.y;
+
+    float maxDst = dstThroughAtmo;
+    maxDst = min(maxDst, sceneDepth - dstToAtmo);
+    if (hitPlanet.y > 0)
+        maxDst = min(maxDst, hitPlanet.x - dstToAtmo);
+
+    if (maxDst <= 0)
         return sceneColor;
-    }
 
-    // Get camera-relative sun direction
-    #if !defined(DIRECTIONAL_SUN)
-        float3 sunPos = _SunParams.xyz - _PlanetCenter;
-        float3 dirToSun = -normalize(start - sunPos.xyz);
-    #else
-        float3 dirToSun = _SunParams.xyz;
-    #endif
+    if (_DebugMode == 5)
+        return float3(0.2, 0.5, 0.2);
 
+    float stepSize = maxDst / (float)_ViewSteps;
+    float3 rayPos = origin + dir * (dstToAtmo + stepSize * 0.5);
 
-    // Clamp maximum ray length to proper values
-    rayLength.y = min(rayLength.y, sceneDepth);
-    rayLength.x = max(rayLength.x, 0.0);
+    float cosTheta = dot(dir, dirToSun);
+    float phaseR = RayleighPhase(cosTheta);
+    float phaseM = MiePhase(cosTheta, _MieAnisotropy);
 
-    // Frequently used values
-    float mu = dot(dir, dirToSun);
-    float mumu = mu * mu;
-    float gg = _MieG * _MieG;
-
-    // Magic number is (pi * 16)
-    float phaseRay = 3.0 / (50.2654824574) * (1.0 + mumu);
-
-    // Magic number is (pi * 8)
-    float phaseMie = 3.0 / (25.1327412287) * ((1.0 - gg) * (mumu + 1.0)) / (pow(abs(1.0 + gg - 2.0 * mu * _MieG), 1.5) * (2.0 + gg));
-
-    // Does object block mie glow?
-    phaseMie = sceneDepth > rayLength.y ? phaseMie : 0.0;
-
-
-    float inScatterStepSize = (rayLength.y - rayLength.x) / float(_NumInScatteringPoints);
-
-    float3 inScatterPoint = start + dir * (rayLength.x + inScatterStepSize * 0.5);
-
-    // Scattered light accumulators
-    float3 totalRay = 0;
+    float3 totalRayleigh = 0;
     float3 totalMie = 0;
-    float3 opticalDepth = 0;
+    float viewRayleighOD = 0;
+    float viewMieOD = 0;
+    float minHeight01 = 1;
 
-    // Primary in-scatter loop
-    [unroll(MAX_LOOP_ITERATIONS)]
-    for (int i = 0; i < _NumInScatteringPoints; i++) 
+    for (int i = 0; i < _ViewSteps; i++)
     {
-        // Particle density at sample position
-        float3 density = DensityAtPoint(inScatterPoint) * inScatterStepSize;
-        
-        // Accumulate optical depth
-        opticalDepth += density;
+        float height = DensityHeight(rayPos);
+        float h01 = saturate(height / (_AtmosphereRadius - _DensityOriginRadius));
+        minHeight01 = min(minHeight01, h01);
 
-        // Get sample point relative sun direction
-    #if !defined(DIRECTIONAL_SUN)
-        dirToSun = -normalize(inScatterPoint - sunPos.xyz);
-    #endif
+        float densityR = RayleighDensity(height) * stepSize;
+        float densityM = MieDensity(height) * stepSize;
 
-        // Light ray optical depth - Original optical depth function can be found in OutScattering.compute
-        //float3 lightOpticalDepth = OpticalDepth(inScatterPoint, dirToSun);
-        float3 lightOpticalDepth = OpticalDepthBaked(inScatterPoint, dirToSun);
+        viewRayleighOD += densityR;
+        viewMieOD += densityM;
 
-        // Attenuation calculation
-        float3 attenuation = exp(
-            -_RayleighScattering * (opticalDepth.x + lightOpticalDepth.x) 
-            - _MieScattering * (opticalDepth.y + lightOpticalDepth.y) 
-            - _AbsorbtionBeta * (opticalDepth.z + lightOpticalDepth.z)
-        );
+        float2 sunOD = SunOpticalDepth(rayPos, dirToSun);
 
-        // Accumulate scttered light
-        totalRay += density.x * attenuation;
-        totalMie += density.y * attenuation;
+        float3 totalOD = _RayleighScattering * (viewRayleighOD + sunOD.x)
+                       + _MieScatteringCoeff * (viewMieOD + sunOD.y);
 
-        inScatterPoint += dir * inScatterStepSize;
+        float3 transmittance = exp(-totalOD);
+
+        totalRayleigh += densityR * transmittance;
+        totalMie += densityM * transmittance;
+
+        rayPos += dir * stepSize;
     }
 
+    // Debug modes
+    if (_DebugMode == 1)
+        return float3(minHeight01, minHeight01, minHeight01);
 
-    // Calculate how much light can pass through the atmosphere
-    float3 opacity = exp(
-        -(_MieScattering * opticalDepth.y
-        + _RayleighScattering * opticalDepth.x 
-        + _AbsorbtionBeta * opticalDepth.z)
-    );
+    float atmosphereThickness = _AtmosphereRadius - _DensityOriginRadius;
 
-
-    // Calculate final scattering factors
-    float3 rayleigh = phaseRay * _RayleighScattering * totalRay;
-    float3 mie = phaseMie * _MieScattering * totalMie;
-
-    float3 ambient = opticalDepth.x * _AmbientBeta * 0.00001 /* Fudge factor */;
-
-	// Apply final color
-    float3 result = (rayleigh + mie + ambient) * _Intensity + sceneColor * opacity;
-
-    // Sun disc — only on sky pixels (ray passed through atmosphere without hitting geometry)
-    if (sceneDepth >= fullAtmosphereLength)
+    if (_DebugMode == 2)
     {
-        float sunDot = dot(dir, dirToSun);
-        float sunDisc = smoothstep(_SunDiscSize - _SunDiscBlend, _SunDiscSize, sunDot);
-        result += sunDisc * float3(1.2, 1.1, 0.9) * _Intensity * 0.1;
+        float vis = saturate(viewRayleighOD / atmosphereThickness);
+        return float3(vis, vis, vis);
     }
+
+    if (_DebugMode == 3)
+    {
+        float vis = saturate(viewMieOD / atmosphereThickness);
+        return float3(vis, vis, vis);
+    }
+
+    if (_DebugMode == 4)
+    {
+        float3 midPos = origin + dir * (dstToAtmo + maxDst * 0.5);
+        float2 sunOD = SunOpticalDepth(midPos, dirToSun);
+        float3 sunT = exp(-_RayleighScattering * sunOD.x - _MieScatteringCoeff * sunOD.y);
+        return sunT;
+    }
+
+    // Final scattering
+    float3 rayleigh = phaseR * _RayleighScattering * totalRayleigh;
+    float3 mie = phaseM * _MieScatteringCoeff * totalMie;
+    float3 inScattered = (rayleigh + mie) * _SunIntensity;
+
+    float3 viewTransmittance = exp(-_RayleighScattering * viewRayleighOD
+                                   - _MieScatteringCoeff * viewMieOD);
+
+    float3 result = sceneColor * viewTransmittance + inScattered;
+
+    // Sun disc — only on sky pixels
+    bool hitGeometry = sceneDepth < (dstToAtmo + dstThroughAtmo);
+    if (!hitGeometry)
+        result += sunColor * viewTransmittance;
+
+    // Tone map
+    result = result / (1.0 + result);
 
     return result;
 }
-

@@ -21,6 +21,8 @@ public class FreeCameraController : MonoBehaviour
     public Transform TargetCenter;
 
     float _lastPlanetRadius;
+    float _lastElevationMin;
+    float _lastElevationMax;
     Vector3 _lastPlanetCenter;
 
     Mouse _mouse;
@@ -57,6 +59,8 @@ public class FreeCameraController : MonoBehaviour
     {
         _lastPlanetCenter = evt.PlanetCenter;
         _lastPlanetRadius = evt.PlanetRadius;
+        _lastElevationMin = evt.ElevationMin;
+        _lastElevationMax = evt.ElevationMax;
         InitFromPlanet();
     }
 
@@ -142,10 +146,17 @@ public class FreeCameraController : MonoBehaviour
         Vector3 move = Vector3.zero;
         if (_keyboard.wKey.isPressed) move += transform.forward;
         if (_keyboard.sKey.isPressed) move -= transform.forward;
-        if (_keyboard.aKey.isPressed) move -= transform.right;
-        if (_keyboard.dKey.isPressed) move += transform.right;
+        if (!_keyboard.leftShiftKey.isPressed && _keyboard.aKey.isPressed) move -= transform.right;
+        if (!_keyboard.leftShiftKey.isPressed && _keyboard.dKey.isPressed) move += transform.right;
         if (_keyboard.eKey.isPressed) move += transform.up;
         if (_keyboard.qKey.isPressed) move -= transform.up;
+
+        // Shift+A/D = roll
+        float rollSpeed = 60f;
+        if (_keyboard.leftShiftKey.isPressed && _keyboard.aKey.isPressed)
+            transform.Rotate(Vector3.forward, rollSpeed * Time.deltaTime, Space.Self);
+        if (_keyboard.leftShiftKey.isPressed && _keyboard.dKey.isPressed)
+            transform.Rotate(Vector3.forward, -rollSpeed * Time.deltaTime, Space.Self);
 
         transform.position += move.normalized * speed * Time.deltaTime;
 
@@ -187,13 +198,18 @@ public class FreeCameraController : MonoBehaviour
 
         // Place camera on the terminator (90° from sun) so the sun is at the horizon
         Vector3 toSun = sunDir.normalized;
-        // Find a vector perpendicular to the sun direction to place us on the terminator
         Vector3 perpendicular = Vector3.Cross(toSun, Vector3.up).normalized;
         if (perpendicular.sqrMagnitude < 0.01f)
             perpendicular = Vector3.Cross(toSun, Vector3.forward).normalized;
 
+        // Use average elevation to approximate actual ground level
+        // radius is max elevation; scale down to average terrain height
+        float avgElevation = (_lastElevationMin + _lastElevationMax) * 0.5f;
+        float baseRadius = radius / (1 + _lastElevationMax); // recover base planet radius
+        float groundRadius = baseRadius * (1 + avgElevation);
+
         Vector3 surfaceNormal = perpendicular;
-        Vector3 surfacePos = center + surfaceNormal * (radius + 2f);
+        Vector3 surfacePos = center + surfaceNormal * (groundRadius + 2f);
         transform.position = surfacePos;
 
         // Look toward the sun (which should be at/near the horizon from this position)
@@ -228,7 +244,7 @@ public class FreeCameraController : MonoBehaviour
             GUILayout.Label($"Distance to center: {distToCenter:F1}");
         }
 
-        GUILayout.Label("WASD=Move, Shift=Fast, RMB=Look, QE=Up/Down");
+        GUILayout.Label("WASD=Move, Shift+W/S=Fast, Shift+A/D=Roll, QE=Up/Down");
         GUILayout.Label("Space=Orbit, Ctrl+Space=Surface, Backspace=Face Sun");
 
         // Show time of day if CelestialManager exists (found via brute search since Core can't reference Planet)
