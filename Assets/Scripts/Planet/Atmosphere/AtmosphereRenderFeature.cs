@@ -53,6 +53,7 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
             }
 
             _material = CoreUtils.CreateEngineMaterial(shader);
+            _material.EnableKeyword("DIRECTIONAL_SUN");
         }
 
         _pass.Setup(_material);

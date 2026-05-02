@@ -12,22 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0113be1b4af76246878877c386b9c1b, type: 3}
   m_Name: Atmosphere Settings
   m_EditorClassIdentifier: ProceduralPlanets.Planet::AtmosphereSettings
-  AtmosphereScale: 0.15
+  AtmosphereScale: 1.08
   InScatteringPoints: 10
-  Intensity: 20
+  Intensity: 15
   RayleighScattering: {x: 0.0058, y: 0.0135, z: 0.0331}
-  RayleighFalloff: 25
-  MieStrength: 0.001
-  MieFalloff: 5
-  MieAnisotropy: 0.76
+  RayleighFalloff: 8
+  MieScattering: {x: 0.00003, y: 0.00003, z: 0.00003}
+  MieFalloff: 1.2
+  MieAnisotropy: 0.85
   AbsorptionBeta: {x: 0.0000204, y: 0.0000497, z: 0.00000195}
-  HeightAbsorption: 0.25
-  AmbientBeta: {r: 0, g: 0, b: 0, a: 1}
-  NightAmbient: {r: 0.01, g: 0.012, b: 0.02, a: 1}
-  SunDiscSize: 0.9998
-  SunDiscBlend: 0.001
-  BlueNoise: {fileID: 2800000, guid: 626acd0223e41844ba8f9fb37d733e31, type: 3}
-  DitherStrength: 0.8
-  DitherScale: 4
+  HeightAbsorption: 0.3
+  AmbientBeta: {x: 0, y: 0, z: 0}
   BakeTextureSize: 256
   BakeSteps: 40

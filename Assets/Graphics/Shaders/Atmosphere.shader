@@ -32,7 +32,11 @@ ENDHLSL
             #pragma fragment AtmosphereFragment
 
             #pragma target 4.0
-            #pragma multi_compile _ ATMOSPHERE_DEBUG_DEPTH ATMOSPHERE_DEBUG_SCATTER ATMOSPHERE_DEBUG_SURFACE ATMOSPHERE_DEBUG_OFF
+
+            // Both variants always compiled so the runtime keyword works in editor & builds.
+            #pragma multi_compile _ DIRECTIONAL_SUN
+
+            #define ATMOSPHERE_MODEL_SIM
 
             struct Attributes
             {
@@ -52,10 +56,13 @@ ENDHLSL
             v2f AtmosphereVertex(Attributes v)
             {
                 v2f output;
+                // Generate fullscreen triangle from SV_VertexID (DrawProcedural, 3 verts).
+                // GetFullScreenTriangleVertexPosition/TexCoord are in Core ShaderLibrary/Common.hlsl.
                 output.pos = GetFullScreenTriangleVertexPosition(v.vertexID);
                 float2 uv = GetFullScreenTriangleTexCoord(v.vertexID);
                 output.uv = uv;
-
+                // GetFullScreenTriangleTexCoord: on DX (UNITY_UV_STARTS_AT_TOP) y=1 at screen-top;
+                // on non-DX y=0 at screen-top. NDC y=+1 = screen-top in both cases.
                 #if UNITY_UV_STARTS_AT_TOP
                     float2 ndcForView = float2(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0);
                 #else
@@ -69,24 +76,13 @@ ENDHLSL
             float4 AtmosphereFragment(v2f i) : SV_Target
             {
                 float4 originalCol = SAMPLE_TEXTURE2D(_Source, sampler_Source, i.uv);
+
                 float viewLength = length(i.viewVector);
+
                 float sceneDepth = CompositeDepthScaled(i.uv, viewLength);
 
-                #if defined(ATMOSPHERE_DEBUG_DEPTH)
-                    float depthVis = saturate(sceneDepth / (_PlanetRadius * 4));
-                    return float4(depthVis, depthVis, depthVis, 1);
-                #elif defined(ATMOSPHERE_DEBUG_SCATTER)
-                    float3 dbgScatter = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, float3(0,0,0), i.uv);
-                    return float4(dbgScatter, 1);
-                #elif defined(ATMOSPHERE_DEBUG_SURFACE)
-                    float3 dbgFull = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz, i.uv);
-                    float3 dbgNoScene = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, float3(0,0,0), i.uv);
-                    return float4(dbgFull - dbgNoScene, 1);
-                #elif defined(ATMOSPHERE_DEBUG_OFF)
-                    return originalCol;
-                #endif
+                float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz);
 
-                float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz, i.uv);
                 return float4(color, originalCol.w);
             }
 
