@@ -99,7 +99,7 @@ All set via `Shader.SetGlobal*` from AtmosphereController (no material propertie
 
 ## Known Limitations
 
-- **Performance**: 128 ray marches per pixel (16 view × 8 sun). No LUT optimization yet.
+- **Performance**: 16 view ray marches + 16 LUT lookups per pixel. Sun ray optical depth baked to 256×256 RGHalf texture via compute shader.
 - **No stars**: Night sky is black. Stars planned as next feature.
 - **No night ambient**: Night side has no ambient light — pitch black.
 - **No ozone/absorption**: Upper atmosphere color layer not implemented.
