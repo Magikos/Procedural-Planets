@@ -100,8 +100,8 @@ All set via `Shader.SetGlobal*` from AtmosphereController (no material propertie
 ## Known Limitations
 
 - **Performance**: 16 view ray marches + 16 LUT lookups per pixel. Sun ray optical depth baked to 256×256 RGHalf texture via compute shader.
-- **No stars**: Night sky is black. Stars planned as next feature.
-- **No night ambient**: Night side has no ambient light — pitch black.
+- **Stars**: Rendered as separate early render pass (StarRenderFeature, before opaques). Procedural hash-based, deterministic from seed. Geometry naturally occludes them.
+- **Night ambient**: Terrain shader adds faint albedo-colored light via _NightAmbientIntensity global, modulated by moon phase. Water unaffected.
 - **No ozone/absorption**: Upper atmosphere color layer not implemented.
 - **No aerial perspective**: Distant terrain doesn't fade into atmosphere.
 - **No clouds**: Will need to integrate with atmosphere when added.
