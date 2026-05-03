@@ -14,9 +14,6 @@ public class Planet : MonoBehaviour
 
     public PlanetSettings PlanetSettingsAsset => _planetSettings;
 
-    [Header("Deterministic Generation")]
-    public int Seed = 12345;
-
     [SerializeField, HideInInspector] public bool SettingsFoldout = true;
     [SerializeField, HideInInspector] float _lastGeneratedRadius;
     [SerializeField, HideInInspector] float _lastSeaLevelRadius;
@@ -35,6 +32,7 @@ public class Planet : MonoBehaviour
     public bool IsGenerating => _isGenerating;
     public ShapeGenerator ShapeGenerator => _shapeGenerator;
     public float LastGeneratedRadius => _lastGeneratedRadius;
+    public int Seed { get; private set; }
 
     ILogger _logger;
 
@@ -65,6 +63,10 @@ public class Planet : MonoBehaviour
     void Initialize()
     {
         DestroyChildrenImmediate();
+
+        Seed = ServiceLocator.TryGet<ISeedProvider>(out var seedProvider)
+            ? seedProvider.GetSeedForSystem("Planet")
+            : 12345;
 
         _meshFilters = new MeshFilter[6];
         _terrainFaces = new TerrainFace[6];
