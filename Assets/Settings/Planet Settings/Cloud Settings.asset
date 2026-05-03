@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 868d3c45f49639d4494abd8c7ce8164f, type: 3}
+  m_Name: Cloud Settings
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::CloudSettings
+  CloudAltitudeScale: 1.02
+  CloudThickness: 0.08
+  NoiseScale: 4
+  DetailNoiseScale: 8
+  DetailWeight: 0.3
+  DensityMultiplier: 1.5
+  DensityOffset: 0
+  LightAbsorption: 1
+  DarknessThreshold: 0.15
+  ForwardScattering: 0.8
+  BackScattering: 0.3
+  BaseBrightness: 0.8
+  AnimationSpeed: 0.5
+  ViewSteps: 24
+  LightSteps: 4
+  MeshResolution: 32

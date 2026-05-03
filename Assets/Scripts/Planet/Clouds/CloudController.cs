@@ -1,18 +1,14 @@
 using UnityEngine;
 
 /// <summary>
-/// Creates and manages a spherical cloud shell around the planet.
-/// The shell is transparent geometry rendered between terrain and atmosphere.
-/// Cloud density is computed in the shader via noise sampling.
-/// Wind direction and coverage come from IWeatherProvider (WeatherManager).
+/// Sets cloud shader globals from CloudSettings and planet data.
+/// Cloud rendering is handled by CloudRenderFeature (fullscreen ray march).
 /// </summary>
 public class CloudController : MonoBehaviour
 {
     [Header("References")]
     public CloudSettings Settings;
 
-    GameObject _cloudObject;
-    Material _cloudMaterial;
     float _planetRadius;
     Vector3 _planetCenter;
 
@@ -38,53 +34,12 @@ public class CloudController : MonoBehaviour
     {
         _planetRadius = evt.PlanetRadius;
         _planetCenter = evt.PlanetCenter;
-        BuildCloudShell();
+        SetGlobalProperties();
     }
 
     void Update()
     {
         if (Settings == null || _planetRadius <= 0f) return;
-        SetGlobalProperties();
-    }
-
-    void BuildCloudShell()
-    {
-        if (Settings == null || _planetRadius <= 0f) return;
-
-        float innerRadius = _planetRadius * Settings.CloudAltitudeScale;
-        float outerRadius = innerRadius + _planetRadius * Settings.CloudThickness;
-        float shellRadius = (innerRadius + outerRadius) * 0.5f;
-
-        if (_cloudObject == null)
-        {
-            _cloudObject = new GameObject("Clouds");
-            _cloudObject.transform.parent = transform;
-            _cloudObject.transform.localPosition = Vector3.zero;
-            _cloudObject.AddComponent<MeshRenderer>();
-            _cloudObject.AddComponent<MeshFilter>();
-        }
-
-        var meshFilter = _cloudObject.GetComponent<MeshFilter>();
-        if (meshFilter.sharedMesh == null)
-            meshFilter.sharedMesh = new Mesh { name = "CloudShell" };
-        CubeSphereMeshBuilder.Build(meshFilter.sharedMesh, Settings.MeshResolution, shellRadius);
-
-        if (_cloudMaterial == null)
-        {
-            var shader = Shader.Find("Planet/Clouds");
-            if (shader == null)
-            {
-                Debug.LogWarning("[CloudController] Cloud shader not found");
-                return;
-            }
-            _cloudMaterial = new Material(shader) { name = "CloudMaterial" };
-        }
-
-        var renderer = _cloudObject.GetComponent<MeshRenderer>();
-        renderer.sharedMaterial = _cloudMaterial;
-        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        renderer.receiveShadows = false;
-
         SetGlobalProperties();
     }
 
@@ -108,10 +63,5 @@ public class CloudController : MonoBehaviour
         Shader.SetGlobalFloat(_cloudAnimSpeedId, Settings.AnimationSpeed);
         Shader.SetGlobalInt(_cloudViewStepsId, Settings.ViewSteps);
         Shader.SetGlobalInt(_cloudLightStepsId, Settings.LightSteps);
-    }
-
-    void OnDestroy()
-    {
-        if (_cloudMaterial != null) Destroy(_cloudMaterial);
     }
 }
