@@ -1,225 +1,124 @@
-# Atmosphere Implementation Reference — All Projects Compared
+# Atmosphere v3 — Implementation Reference
 
-## The Four Reference Implementations
+## Architecture Overview
 
-### 1. URP-Atmosphere (Kai Angulo / ShaderToy port)
-**Our original basis. Scale-dependent, works at specific radius.**
+Brute-force ray-marched Rayleigh + Mie scattering as a URP fullscreen post-process.
+No baked LUT — both view and sun rays are marched in the fragment shader.
 
-**Key characteristics:**
-- Separate Rayleigh/Mie/Ozone density channels (3-channel LUT: `float3`)
-- LUT baked at **world scale** (passes actual `planetRadius` and `atmosphereRadius` to compute)
-- **Phase functions**: Rayleigh `3/(16π)(1+cos²θ)` and Mie HG phase
-- **Separate accumulation**: `totalRay` and `totalMie` accumulated separately, combined with phase at the end
-- **Opacity**: `exp(-coefficients * opticalDepth)` computed from accumulated density (NOT from LUT)
-- **Final**: `(rayleigh * phaseRay + mie * phaseMie + ambient) * intensity + sceneColor * opacity`
-- **No `/planetRadius`** — coefficients are raw physical values tuned for specific scale
-- LUT format: `ARGBHalf` (4-channel, stores Rayleigh/Mie/Ozone densities)
-- Compute `RWTexture2D<float4>` matches `ARGBHalf`
+## Three Radii (Critical)
 
-**Critical difference from our code:**
-- Accumulates `density * stepSize` into `opticalDepth` INSIDE the loop (running sum)
-- Uses running `opticalDepth` + baked `lightOpticalDepth` for attenuation
-- Does NOT use `OpticalDepthBaked2` for view ray — computes it incrementally
-- Opacity for scene color uses the accumulated `opticalDepth`, not a baked lookup
+The atmosphere uses three concentric spheres, all set by AtmosphereController from PlanetGeneratedEvent data:
 
-### 2. Solar System (Sebastian Lague — early project)
-**Wavelength-based, `/planetRadius` normalization. Simple but scale-dependent in practice.**
+| Uniform | Value | Purpose |
+|---------|-------|---------|
+| `_PlanetRadius` | Sea level (ocean sphere radius) | Ray-planet intersection floor. Camera on beach is always above this. |
+| `_DensityOriginRadius` | Same as `_PlanetRadius` | Height=0 for density calculations. `exp(-height/scaleHeight)` where height = `length(pos) - _DensityOriginRadius`. |
+| `_AtmosphereRadius` | Max terrain radius × AtmosphereScale | Outer edge of atmosphere shell. |
 
-**Key characteristics:**
-- Single-channel density (no separate Rayleigh/Mie)
-- LUT baked at **normalized scale** (planetRadius=1)
-- **No phase functions** — uniform scattering in all directions
-- Single `scatteringCoefficients` from wavelengths: `(400/λ)^4 * strength`
-- `opticalDepthBaked2` for bidirectional view ray sampling
-- **Final**: `inScatteredLight *= coefficients * intensity * stepSize / planetRadius`
-- **Scene attenuation**: Hacky `exp(-viewRayOD * intensity * 3)` with brightness adaptation
-- Planet radius: **100-1000 units** (small)
-- Tuned values (Humble Abode asset): `densityFalloff: 4.3`, `scatteringStrength: 21.23`, `atmosphereScale: 0.322`
+**Why sea level?** Previous attempts used max elevation radius (~5257) which meant the camera on the beach (~5060) was "inside the planet" and got no atmosphere. Using the ocean sphere (~4994) ensures the camera is always inside the atmosphere shell. The depth buffer handles actual terrain occlusion — the ray-planet intersection sphere is just a safety floor.
 
-**Critical difference:**
-- The `/planetRadius` compensates for `stepSize` being in world units
-- The hacky attenuation works at small scale but breaks at large scale
-- `opticalDepthBaked2` uses bidirectional blending to handle rays passing through dense regions
+**Why not lower?** Using 85% of max radius put the dense atmosphere 600 units underground — all orange, no blue sky. Sea level puts density=1.0 right at the ocean surface where the player stands.
 
-### 3. Fluid Planet (Sebastian Lague — newer project)
-**Same as Solar System but with cleaner scene attenuation.**
+## Scattering Coefficients (Critical)
 
-**Key characteristics:**
-- Identical loop to Solar System
-- **Scene attenuation**: `originalCol * transmittance` — uses the transmittance from the LAST loop iteration directly
-- No hacky `exp(-OD * intensity * 3)` — just raw transmittance
-- Same `/planetRadius` normalization
-- Same single-channel LUT at normalized scale
+Earth reference values (5.8e-3, 13.5e-3, 33.1e-3) are tuned for ~100km atmosphere on a 6371km planet.
+Our planet has ~789 unit atmosphere on a ~4994 unit radius — proportionally 6× thicker.
 
-**Critical difference from Solar System:**
-- The `transmittance` variable at end of loop = `exp(-(sunOD + viewOD) * coefficients)`
-- This naturally handles scene dimming — more atmosphere = more dimming
-- Much cleaner and more physically correct
+**Scaled coefficients**: Divided by ~5 to produce similar total optical depth:
+- Rayleigh: (1.2e-3, 2.8e-3, 6.9e-3)
+- Blue optical depth through full atmosphere: ~3.5 (similar to Earth's ~3.3)
+- Red optical depth: ~0.6 (red passes through — correct)
 
-### 4. Geographical Adventures (Sebastian Lague — most mature, full game)
-**Multi-LUT approach, physically-based, tone-mapped.**
+**If coefficients are too high**: Blue gets completely attenuated → everything orange/red.
+**If coefficients are too low**: No color differentiation → gray/white sky.
 
-**Key characteristics:**
-- **3-channel transmittance LUT** (RGB, stores actual transmittance not optical depth)
-- **Aerial perspective LUT** (3D texture, precomputed per-pixel scattering)
-- **Sky rendered to separate texture** (compute shader, high step count ~100)
-- Separate Rayleigh/Mie/Ozone with proper extinction
-- **Phase functions**: Rayleigh + Mie HG
-- **Normalization**: `scaledStepSize = stepSize / atmosphereThickness`
-- **Better integration**: `(inScattering - inScattering * sampleTransmittance) / extinction` (converges faster)
-- **Tone mapping**: Reinhard extended with white point, contrast, intensity
-- **Transmittance LUT**: Stores `getSunTransmittance()` result (RGB transmittance, not scalar OD)
-- Planet center at origin (0,0,0)
+## Tone Mapping (Critical)
 
-**Critical differences:**
-- The transmittance LUT stores **RGB transmittance** (3 channels), not scalar optical depth
-- Uses `/ atmosphereThickness` not `/ planetRadius`
-- Per-step transmittance accumulated multiplicatively: `transmittance *= exp(-extinction * scaledStepSize)`
-- Tone mapping prevents white blowout
-- Aerial perspective (surface view) is a SEPARATE pass from sky rendering
+Reinhard `x/(1+x)` is applied ONLY to in-scattered light, NOT to terrain color:
+```hlsl
+float3 toneMappedScatter = inScattered / (1.0 + inScattered);
+float3 result = sceneColor * viewTransmittance + toneMappedScatter;
+```
 
----
+**Why?** Applying Reinhard to the full result compressed terrain colors toward gray (green grass → grayish-green). Separating them preserves terrain fidelity while preventing sky blowout.
 
-## Key Architectural Differences
+## Current Parameters (Atmosphere Settings.asset)
 
-### LUT Contents
-| Project | LUT Channels | LUT Stores | LUT Scale |
-|---------|-------------|------------|-----------|
-| URP-Atmosphere | 3 (RGB) | Rayleigh/Mie/Ozone density integrals | World scale |
-| Solar System | 1 (R) | Scalar optical depth | Normalized (planetRadius=1) |
-| Fluid Planet | 1 (R) | Scalar optical depth | Normalized (planetRadius=1) |
-| Geo Adventures | 3 (RGB) | RGB transmittance values | World scale |
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| AtmosphereScale | 1.1 | Outer radius = maxRadius × 1.1 |
+| ViewSteps | 16 | View ray march steps |
+| SunSteps | 8 | Sun ray steps per view sample |
+| SunIntensity | 17 | Multiplier on final scattered light |
+| RayleighScattering | (1.2e-3, 2.8e-3, 6.9e-3) | Scaled for our planet size |
+| RayleighScaleHeight | 0.08 | Fraction of atmosphere thickness |
+| MieScattering | 0.002 | Scalar (renamed to _MieScatteringCoeff to avoid type conflict) |
+| MieScaleHeight | 0.02 | Fraction of atmosphere thickness |
+| MieAnisotropy | 0.76 | HG phase function forward scattering |
+| SunDiscSize | 0.9995 | Smoothstep threshold for sun disc |
+| SunDiscBlend | 0.002 | Smoothstep blend width |
 
-### View Ray Optical Depth
-| Project | Method |
-|---------|--------|
-| URP-Atmosphere | Accumulated incrementally in loop (`opticalDepth += density * stepSize`) |
-| Solar System | `opticalDepthBaked2()` — bidirectional LUT lookup |
-| Fluid Planet | `opticalDepthBaked2()` — bidirectional LUT lookup |
-| Geo Adventures | Accumulated incrementally (`transmittance *= exp(-extinction * scaledStepSize)`) |
+Scale heights are stored as fractions (0.08 = 8% of atmosphere thickness). The controller converts to world units: `fraction * (atmosphereRadius - seaLevelRadius)`.
 
-### Scene Color Attenuation
-| Project | Method |
-|---------|--------|
-| URP-Atmosphere | `sceneColor * exp(-coefficients * accumulatedOpticalDepth)` |
-| Solar System | `sceneColor * exp(-viewRayOD * intensity * 3)` (hacky) |
-| Fluid Planet | `sceneColor * transmittance` (from last loop iteration) |
-| Geo Adventures | `sceneColor * transmittanceLUT3D` (precomputed 3D texture) |
+## File Roles
 
-### Normalization
-| Project | Step Size Normalization |
-|---------|----------------------|
-| URP-Atmosphere | None — raw world-scale coefficients |
-| Solar System | `* stepSize / planetRadius` on final result |
-| Fluid Planet | `* stepSize / planetRadius` on final result |
-| Geo Adventures | `scaledStepSize = stepSize / atmosphereThickness` used throughout loop |
+| File | Role |
+|------|------|
+| `Atmosphere.hlsl` | All scattering math, density, phase functions, ray marching |
+| `Atmosphere.shader` | Fullscreen pass structure, vertex shader, depth read |
+| `AtmosphereController.cs` | Sets shader globals, receives planet event, converts settings to world units |
+| `AtmosphereSettings.cs` | ScriptableObject with all tunable parameters |
+| `AtmosphereRenderFeature.cs` | URP renderer feature, creates material, enqueues pass |
+| `AtmosphereRenderPass.cs` | RenderGraph API, DrawProcedural, texture management |
+| `AtmosphereDiagnostics.cs` | F12 screen capture, reads all shader globals, writes analysis |
 
-### Phase Functions
-| Project | Rayleigh Phase | Mie Phase |
-|---------|---------------|-----------|
-| URP-Atmosphere | `3/(16π)(1+cos²θ)` | HG phase with anisotropy `g` |
-| Solar System | None | None |
-| Fluid Planet | None | None |
-| Geo Adventures | `3/(16π)(1+cos²θ)` (commented out, set to 1) | HG phase with g=0.8 |
+## Shader Uniforms
 
----
+All set via `Shader.SetGlobal*` from AtmosphereController (no material properties):
 
-## Our Current Implementation
+| Uniform | Type | Source |
+|---------|------|--------|
+| `_SunParams` | float3 | CelestialManager.SunDirection (normalized) |
+| `_PlanetCenter` | float3 | Planet transform position |
+| `_PlanetRadius` | float | Sea level radius |
+| `_DensityOriginRadius` | float | Same as _PlanetRadius |
+| `_AtmosphereRadius` | float | maxRadius × AtmosphereScale |
+| `_ViewSteps` | int | 16 |
+| `_SunSteps` | int | 8 |
+| `_RayleighScattering` | float3 | Coefficients per channel |
+| `_RayleighScaleHeight` | float | In world units (fraction × thickness) |
+| `_MieScatteringCoeff` | float | Scalar (NOT float3 — renamed to avoid Unity type conflict) |
+| `_MieScaleHeight` | float | In world units |
+| `_MieAnisotropy` | float | HG phase g parameter |
+| `_SunIntensity` | float | Light multiplier |
+| `_SunDiscSize` | float | Smoothstep threshold |
+| `_SunDiscBlend` | float | Smoothstep width |
+| `_DebugMode` | int | 0-5 |
 
-**Hybrid of Solar System + Fluid Planet:**
-- Single-channel LUT at normalized scale (Solar System)
-- `opticalDepthBaked2` for view ray (Solar System)
-- `sceneColor * transmittance` attenuation (Fluid Planet)
-- `* stepSize / planetRadius` normalization (Solar System)
-- No phase functions
-- No tone mapping
-- Planet radius: ~5257 (much larger than any reference)
+**Important**: `_MieScattering` was renamed to `_MieScatteringCoeff` because the old v1 shader registered `_MieScattering` as a float3 in Unity's global property sheet. Changing type within a session causes errors. The rename avoids the conflict.
 
-**Known issues:**
-- White blowout on planet surface during daytime
-- In-scattered light exceeds 1.0 on all channels → appears white
-- Transmittance from loop may not correctly attenuate scene color
+## Known Limitations
 
----
+- **Performance**: 128 ray marches per pixel (16 view × 8 sun). No LUT optimization yet.
+- **No stars**: Night sky is black. Stars planned as next feature.
+- **No night ambient**: Night side has no ambient light — pitch black.
+- **No ozone/absorption**: Upper atmosphere color layer not implemented.
+- **No aerial perspective**: Distant terrain doesn't fade into atmosphere.
+- **No clouds**: Will need to integrate with atmosphere when added.
 
-## Root Cause Analysis: Why White?
+## Lessons Learned (for future changes)
 
-The white comes from `inScatteredLight` having all RGB channels > 1.0.
+1. **Don't copy reference coefficients** — they're tuned for specific planet scales. Calculate optical depth and verify it's ~3-4 for blue channel through full atmosphere.
+2. **Sea level as density origin** — any lower and the dense atmosphere is underground (all orange). Any higher and the camera on the beach has no atmosphere.
+3. **Tone map scatter only** — applying to full result kills terrain color.
+4. **Unity global property types are sticky** — renaming a uniform is safer than changing its type.
+5. **Scene serialization overrides code defaults** — use ScriptableObject assets (YAML) for settings.
+6. **PlanetVertexColor.shader needs DepthOnly pass** — without it, atmosphere can't read depth buffer.
+7. **RaySphere returns (dstToNear, dstThrough)** — not (near, far). `hitAtmo.y` is distance through, not far point.
+8. **Test with version tags in logs** — `[AtmosphereController v3.5]` confirms Unity compiled the latest code.
 
-With our values (radius 5257, strength 20, falloff 4, atmosphereScale 0.15):
-- Blue coefficient: `(400/460)^4 * 20 = 11.44`
-- stepSize / planetRadius ≈ 0.0167
-- If `sum(density * transmittance)` over 10 steps ≈ 5-8
-- Blue channel: `8 * 11.44 * 0.0167 ≈ 1.53` → exceeds 1.0
-- Red channel: `8 * 2.14 * 0.0167 ≈ 0.29` → fine
-- Green channel: `8 * 6.46 * 0.0167 ≈ 0.86` → close to 1.0
+## Git References
 
-So blue clips at 1.0, green is close, red is low → should appear blue-white, not pure white.
-
-**But if transmittance ≈ 1 (weak attenuation), the density sum is higher:**
-- With LUT optical depth ~0.04 (surface-up) and coefficients ~11:
-- `transmittance = exp(-0.04 * 11.44) = exp(-0.46) = 0.63` for blue
-- So blue transmittance reduces accumulation... but red transmittance = `exp(-0.04 * 2.14) = 0.92`
-- Red accumulates at nearly full strength
-
-The issue may be that **red and green accumulate too much** relative to blue because their transmittance is higher (less attenuation). This makes the color shift toward white.
-
----
-
-## Possible Solutions
-
-### Option A: URP-Atmosphere approach (proven at any scale)
-- Use 3-channel LUT (Rayleigh/Mie/Ozone)
-- Bake at world scale
-- Accumulate optical depth incrementally in loop (no `opticalDepthBaked2`)
-- Use phase functions
-- Use raw coefficients (no wavelength calculation)
-- Scene attenuation via accumulated optical depth
-
-**Pros:** Scale-independent by design, phase functions add realism
-**Cons:** Need to tune raw Rayleigh/Mie coefficients per planet scale, 3-channel LUT
-
-### Option B: Geographical Adventures approach (best quality)
-- Multi-LUT system (transmittance + aerial perspective + sky)
-- Tone mapping to prevent blowout
-- Phase functions
-- `/ atmosphereThickness` normalization
-
-**Pros:** Best visual quality, handles all edge cases
-**Cons:** Most complex, multiple compute passes, 3D textures
-
-### Option C: Fix current approach (Solar System + Fluid Planet hybrid)
-- Keep single-channel LUT
-- Keep `/ planetRadius` normalization
-- **Add tone mapping** to prevent white blowout (Reinhard extended)
-- **Add Rayleigh phase function** to reduce uniform scattering
-- Tune `scatteringStrength` down until values stay in displayable range
-
-**Pros:** Minimal changes
-**Cons:** Tone mapping is a band-aid, doesn't fix the underlying scale issue
-
-### Option D: Revert to URP-Atmosphere with scale fix
-- Go back to the original URP-Atmosphere code (3-channel, phase functions, world-scale LUT)
-- Add the `/planetRadius` normalization only where needed
-- Keep our RenderGraph infrastructure
-
-**Pros:** Was working before (just scale-dependent), known good code
-**Cons:** Need to figure out where exactly to add scale normalization
-
----
-
-## Recommended Approach
-
-**Step-by-step from first principles** (from `local-only/atmospheric_scattering_shader_unity_guide.md`).
-
-Previous attempts to copy reference implementations failed because:
-1. Baked LUT adds scale-dependent complexity — remove it initially
-2. Reference coefficients are tuned for specific radii — don't copy them
-3. The `* (1 - height01)` density term from URP-Atmosphere changes the profile — use standard `exp(-height/scaleHeight)`
-4. Trying to do all steps at once makes debugging impossible — build incrementally
-5. The diagnostics showed `_DirToSun` was reading wrong uniform name (`_SunParams` vs `_DirToSun`) — always verify globals match between C# and shader
-6. Scene serialization kept overriding code defaults — use ScriptableObject assets
-7. The DepthOnly pass was missing from PlanetVertexColor.shader — atmosphere couldn't see terrain
-8. The `_CutoffRadius` killed atmosphere when camera was on the surface (below max elevation)
-
-The new approach: brute-force ray march both view and sun rays, verify each step with debug modes, then optimize with LUTs once it's visually correct.
+- Tag: `atmosphere-v2-checkpoint` — last commit before v3 rewrite
+- Tag: `atmosphere-v3-good` — best visual result, committed working state
+- Branch: `phase4-biomes`

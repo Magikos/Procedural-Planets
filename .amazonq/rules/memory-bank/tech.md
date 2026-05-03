@@ -25,12 +25,13 @@
 - **ShapesRuntime / ShapesEditor / ShapesSamples** — Shapes plugin assemblies
 
 ## Shader Stack
-- **PlanetVertexColor.shader** — URP HLSL vertex color as albedo, PBR lighting
-- **Atmosphere.shader** — Post-process: wavelength-based Rayleigh scattering, sun disc, procedural stars
-  - Scale-independent via `/planetRadius` normalization (Solar System project model)
-  - Single `densityFalloff` parameter, `scatteringCoefficients` computed from wavelengths: `(400/λ)^4 * strength`
-  - `opticalDepthBaked2` for bidirectional view-ray optical depth sampling
-- **OpticalDepth.compute** — Bakes single-channel optical depth LUT (normalized radius, planetRadius=1)
+- **PlanetVertexColor.shader** — URP HLSL vertex color as albedo, PBR lighting. Has DepthOnly/DepthNormals passes.
+- **Atmosphere.shader** — Post-process fullscreen pass structure
+  - **Atmosphere.hlsl** — v3: brute-force Rayleigh+Mie ray marching (16 view steps × 8 sun steps)
+  - Sea level as density origin, scaled coefficients for planet size
+  - Reinhard tone mapping on scatter only (preserves terrain color)
+  - Sun disc rendered even outside atmosphere
+- **OpticalDepth.compute** — UNUSED in v3 (kept for future LUT optimization)
 - **Planet.shadergraph** — OLD shader graph (unused, kept for reference)
 
 ## Rendering Configuration
