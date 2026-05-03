@@ -14,7 +14,7 @@ public class TestPoissonDiscSphereDraw : MonoBehaviour
 
     public void Generate()
     {
-        if (planet == null || planet._planetSettings == null) return;
+        if (planet == null || planet.PlanetSettingsAsset == null) return;
 
         planet.GeneratePlanetAsync();
         _points = PoissonDiscSphereSampling.GeneratePoints(

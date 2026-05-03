@@ -73,6 +73,10 @@ public class AtmosphereDiagnostics : MonoBehaviour
         sb.AppendLine($"_ViewSteps: {Shader.GetGlobalFloat("_ViewSteps"):F0}");
         sb.AppendLine($"_SunSteps: {Shader.GetGlobalFloat("_SunSteps"):F0}");
         sb.AppendLine($"_DebugMode: {Shader.GetGlobalFloat("_DebugMode"):F0}");
+        sb.AppendLine($"_StarSeed: {Shader.GetGlobalFloat("_StarSeed"):F2}");
+        sb.AppendLine($"_StarDensity: {Shader.GetGlobalFloat("_StarDensity"):F0}");
+        sb.AppendLine($"_StarBrightness: {Shader.GetGlobalFloat("_StarBrightness"):F2}");
+        sb.AppendLine($"_NightAmbientIntensity: {Shader.GetGlobalFloat("_NightAmbientIntensity"):F3}");
         Vector4 sunDir = Shader.GetGlobalVector("_SunParams");
         sb.AppendLine($"_SunParams: ({sunDir.x:F3}, {sunDir.y:F3}, {sunDir.z:F3})");
         if (cam != null)

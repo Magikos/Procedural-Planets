@@ -12,15 +12,15 @@ public class AtmosphereSettings : ScriptableObject
     [Range(4, 16)] public int SunSteps = 8;
 
     [Header("Scattering")]
-    [Range(1f, 100f)] public float SunIntensity = 20f;
+    [Range(1f, 100f)] public float SunIntensity = 17f;
 
     [Header("Rayleigh (Sky Color)")]
-    public Vector3 RayleighScattering = new Vector3(5.8e-3f, 13.5e-3f, 33.1e-3f);
+    public Vector3 RayleighScattering = new Vector3(1.2e-3f, 2.8e-3f, 6.9e-3f);
     [Range(0.01f, 0.5f), Tooltip("Fraction of atmosphere thickness")]
     public float RayleighScaleHeight = 0.08f;
 
     [Header("Mie (Haze / Sun Glow)")]
-    [Range(0f, 0.1f)] public float MieScattering = 0.01f;
+    [Range(0f, 0.1f)] public float MieScattering = 0.002f;
     [Range(0.01f, 0.5f), Tooltip("Fraction of atmosphere thickness")]
     public float MieScaleHeight = 0.02f;
     [Range(0f, 0.99f)] public float MieAnisotropy = 0.76f;

@@ -35,6 +35,8 @@ public class CelestialManager : MonoBehaviour
     bool _wasDay = true;
     int _lastMoonPhaseIndex = -1;
 
+    static readonly int _nightAmbientIntensityId = Shader.PropertyToID("_NightAmbientIntensity");
+
     public float TimeOfDay => _timeOfDay;
     public Vector3 SunDirection => SunLight != null ? -SunLight.transform.forward : Vector3.up;
 
@@ -187,6 +189,6 @@ public class CelestialManager : MonoBehaviour
         }
 
         float intensity = Mathf.Lerp(AmbientMinIntensity, AmbientMaxIntensity, moonInfluence);
-        Shader.SetGlobalFloat("_NightAmbientIntensity", intensity);
+        Shader.SetGlobalFloat(_nightAmbientIntensityId, intensity);
     }
 }

@@ -8,6 +8,8 @@ public class AtmosphereController : MonoBehaviour
 
     float _planetRadius;
     float _seaLevelRadius;
+    Vector3 _planetCenter;
+    int _planetSeed = 12345;
 
     static readonly int _sunParamsId = Shader.PropertyToID("_SunParams");
     static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
@@ -47,8 +49,9 @@ public class AtmosphereController : MonoBehaviour
         _planetRadius = evt.PlanetRadius;
         _seaLevelRadius = evt.SeaLevelRadius > 0f ? evt.SeaLevelRadius : _planetRadius * 0.95f;
 
-        float atmosphereRadius = _planetRadius * Settings.AtmosphereScale;
-        Debug.Log($"[AtmosphereController v3.5] maxRadius={_planetRadius:F1}, seaLevel={_seaLevelRadius:F1}, atmosphereRadius={atmosphereRadius:F1}");
+        var planet = FindAnyObjectByType<Planet>();
+        _planetCenter = planet != null ? planet.transform.position : Vector3.zero;
+        _planetSeed = planet != null ? planet.Seed : 12345;
 
         SetGlobalProperties();
     }
@@ -58,9 +61,7 @@ public class AtmosphereController : MonoBehaviour
         float atmosphereRadius = _planetRadius * Settings.AtmosphereScale;
         float atmosphereThickness = atmosphereRadius - _seaLevelRadius;
 
-        Vector3 center = Vector3.zero;
-        var planet = FindAnyObjectByType<Planet>();
-        if (planet != null) center = planet.transform.position;
+        Vector3 center = _planetCenter;
 
         Shader.SetGlobalVector(_planetCenterId, center);
         Shader.SetGlobalFloat(_planetRadiusId, _seaLevelRadius);
@@ -81,8 +82,7 @@ public class AtmosphereController : MonoBehaviour
         Shader.SetGlobalFloat(_sunDiscBlendId, Settings.SunDiscBlend);
         Shader.SetGlobalInt(_debugModeId, Settings.DebugMode);
 
-        int seed = planet != null ? planet.Seed : 12345;
-        Shader.SetGlobalFloat(_starSeedId, seed * 0.01f);
+        Shader.SetGlobalFloat(_starSeedId, _planetSeed * 0.01f);
         Shader.SetGlobalFloat(_starDensityId, Settings.StarDensity);
         Shader.SetGlobalFloat(_starBrightnessId, Settings.StarBrightness);
     }

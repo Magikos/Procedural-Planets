@@ -28,6 +28,7 @@ public class FreeCameraController : MonoBehaviour
     Keyboard _keyboard;
     bool _looking;
     bool _skipNextDelta;
+    Light _cachedSunLight;
 
     void OnEnable() => EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
     void OnDisable() => EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
@@ -73,10 +74,10 @@ public class FreeCameraController : MonoBehaviour
 
         if (_keyboard.backspaceKey.wasPressedThisFrame)
         {
-            var sunLight = FindAnyObjectByType<Light>();
-            if (sunLight != null && sunLight.type == LightType.Directional)
+            if (_cachedSunLight == null) _cachedSunLight = FindSunLight();
+            if (_cachedSunLight != null)
             {
-                Vector3 toSun = -sunLight.transform.forward;
+                Vector3 toSun = -_cachedSunLight.transform.forward;
                 transform.rotation = Quaternion.LookRotation(toSun, GetUp());
             }
         }
@@ -163,14 +164,20 @@ public class FreeCameraController : MonoBehaviour
             transform.position += transform.forward * scroll * ScrollSpeed * Time.deltaTime;
     }
 
+    Light FindSunLight()
+    {
+        var light = FindAnyObjectByType<Light>();
+        return (light != null && light.type == LightType.Directional) ? light : null;
+    }
+
     void RepositionCamera(Vector3 center, float radius)
     {
         float distance = radius * ViewDistanceMultiplier;
 
         Vector3 viewDir = Vector3.back;
-        var sunLight = FindAnyObjectByType<Light>();
-        if (sunLight != null && sunLight.type == LightType.Directional)
-            viewDir = sunLight.transform.forward;
+        if (_cachedSunLight == null) _cachedSunLight = FindSunLight();
+        if (_cachedSunLight != null)
+            viewDir = _cachedSunLight.transform.forward;
 
         transform.position = center + viewDir * distance;
         transform.LookAt(center);
@@ -182,9 +189,9 @@ public class FreeCameraController : MonoBehaviour
     void PositionOnSurface(Vector3 center, float radius)
     {
         Vector3 sunDir = Vector3.up;
-        var sunLight = FindAnyObjectByType<Light>();
-        if (sunLight != null && sunLight.type == LightType.Directional)
-            sunDir = -sunLight.transform.forward;
+        if (_cachedSunLight == null) _cachedSunLight = FindSunLight();
+        if (_cachedSunLight != null)
+            sunDir = -_cachedSunLight.transform.forward;
 
         Vector3 toSun = sunDir.normalized;
         Vector3 perpendicular = Vector3.Cross(toSun, Vector3.up).normalized;
@@ -230,10 +237,10 @@ public class FreeCameraController : MonoBehaviour
         GUILayout.Label("WASD=Move, Shift+W/S=Fast, Shift+A/D=Roll, QE=Up/Down");
         GUILayout.Label("Space=Orbit, Ctrl+Space=Surface, Backspace=Face Sun");
 
-        var sunLight = FindAnyObjectByType<Light>();
-        if (sunLight != null && sunLight.type == LightType.Directional)
+        if (_cachedSunLight == null) _cachedSunLight = FindSunLight();
+        if (_cachedSunLight != null)
         {
-            Vector3 sd = -sunLight.transform.forward;
+            Vector3 sd = -_cachedSunLight.transform.forward;
             float sunElevation = Vector3.Dot(sd, (transform.position - _lastPlanetCenter).normalized);
             GUILayout.Label($"Sun elevation: {Mathf.Asin(sunElevation) * Mathf.Rad2Deg:F1}\u00b0");
         }

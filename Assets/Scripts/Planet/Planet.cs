@@ -10,7 +10,9 @@ public class Planet : MonoBehaviour
     public int Resolution = 10;
     public FaceRenderMask RenderMask = FaceRenderMask.All;
 
-    public PlanetSettings _planetSettings;
+    [SerializeField] PlanetSettings _planetSettings;
+
+    public PlanetSettings PlanetSettingsAsset => _planetSettings;
 
     [Header("Deterministic Generation")]
     public int Seed = 12345;
@@ -197,7 +199,6 @@ public class Planet : MonoBehaviour
         _waterObject.SetActive(true);
         _waterObject.transform.localScale = Vector3.one;
         _waterObject.transform.localPosition = Vector3.zero;
-        _waterObject.layer = LayerMask.NameToLayer("Water");
 
         float waterRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel);
 
