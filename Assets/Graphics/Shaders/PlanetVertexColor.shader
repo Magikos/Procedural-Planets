@@ -44,6 +44,8 @@ Shader "Planet/VertexColor"
                 float _Smoothness;
             CBUFFER_END
 
+            float _NightAmbientIntensity;
+
             Varyings vert(Attributes input)
             {
                 Varyings output;
@@ -74,6 +76,10 @@ Shader "Planet/VertexColor"
                 surfaceData.occlusion = 1;
 
                 half4 color = UniversalFragmentPBR(inputData, surfaceData);
+
+                // Night ambient: add faint terrain-colored light independent of Unity lighting
+                color.rgb += input.color.rgb * _NightAmbientIntensity;
+
                 color.rgb = MixFog(color.rgb, input.fogFactor);
                 return color;
             }

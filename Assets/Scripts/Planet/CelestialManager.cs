@@ -25,6 +25,10 @@ public class CelestialManager : MonoBehaviour
     [Range(0f, 1f), Tooltip("Starting time of day: 0=midnight, 0.25=sunrise, 0.5=noon, 0.75=sunset")]
     public float StartTimeOfDay = 0.25f;
 
+    [Header("Ambient Light")]
+    [Range(0f, 1f)] public float AmbientMaxIntensity = 0.15f;
+    [Range(0f, 0.1f)] public float AmbientMinIntensity = 0.03f;
+
     float _timeOfDay;
     float _moonCycleProgress;
     float _planetRadius;
@@ -97,6 +101,7 @@ public class CelestialManager : MonoBehaviour
         float dt = Time.deltaTime;
         UpdateSun(dt);
         UpdateMoon(dt);
+        UpdateAmbient();
         FireEvents();
     }
 
@@ -163,5 +168,25 @@ public class CelestialManager : MonoBehaviour
             _lastMoonPhaseIndex = phaseIdx;
             EventBus<MoonPhaseChangedEvent>.Raise(new MoonPhaseChangedEvent(MoonPhase));
         }
+    }
+
+    void UpdateAmbient()
+    {
+        if (SunLight == null) return;
+
+        // Moon influence: how close is the moon to the anti-sun direction?
+        float moonInfluence = 0f;
+        if (MoonTransform != null && PlanetCenter != null)
+        {
+            Vector3 center = PlanetCenter.position;
+            Vector3 toMoon = (MoonTransform.position - center).normalized;
+            float alignment = Vector3.Dot(toMoon, SunDirection);
+            // Moon opposite sun (full moon) = alignment ~ -1 → influence = 1
+            // Moon same side as sun (new moon) = alignment ~ +1 → influence = 0
+            moonInfluence = Mathf.Clamp01(-alignment);
+        }
+
+        float intensity = Mathf.Lerp(AmbientMinIntensity, AmbientMaxIntensity, moonInfluence);
+        Shader.SetGlobalFloat("_NightAmbientIntensity", intensity);
     }
 }
