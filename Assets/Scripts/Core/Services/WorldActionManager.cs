@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 
+// FUTURE: Command pattern for undoable world modifications (terrain deform, building place/remove).
+// Will be used when player interaction systems are implemented.
+// Registered in GameBootstrap, accessed via ServiceLocator.Get<WorldActionManager>().
 public class WorldActionManager
 {
     readonly List<IWorldAction> _history = new();

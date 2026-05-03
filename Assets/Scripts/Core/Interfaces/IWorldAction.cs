@@ -1,6 +1,9 @@
 using System.Threading;
 using UnityEngine;
 
+// FUTURE: Command pattern interface for undoable world actions.
+// Implementations: TerrainDeformAction, BuildingPlaceAction, etc.
+// Executed via WorldActionManager.ExecuteAsync().
 public interface IWorldAction
 {
     WorldActionType ActionType { get; }

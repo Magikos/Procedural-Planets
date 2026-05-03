@@ -18,6 +18,8 @@ public struct PlanetGeneratedEvent : IGameEvent
     }
 }
 
+// FUTURE: Raised during planet generation to report progress.
+// Will be used for loading screens / progress bars.
 public struct PlanetGenerationProgressEvent : IProgressEvent
 {
     public float Progress { get; private set; }

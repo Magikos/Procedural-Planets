@@ -51,3 +51,13 @@ Run this checklist periodically (every few features, before branch merges).
 - [ ] Assembly definitions are correct and minimal
 - [ ] Memory bank files (guidelines, structure, product, tech) are up to date
 - [ ] Git: clean commits, no generated files committed
+
+## Health Check Tracking
+
+After each health check, record the commit hash here. Future checks can diff against this
+to focus on new/modified files, while still periodically doing a full scan for cross-file
+duplication.
+
+| Date | Commit | Scope | Notes |
+|------|--------|-------|-------|
+| Session 2 | 9aa5597 | Full scan | Atmosphere v3 complete, stars, night ambient, seed unification |

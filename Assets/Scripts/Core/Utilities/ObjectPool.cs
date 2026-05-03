@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 
+// FUTURE: Generic object pool for reusable instances (mesh chunks, particles, etc.).
+// Will be used when LOD system or entity spawning is implemented.
 public interface IObjectPool<T> where T : class
 {
     T Get();
