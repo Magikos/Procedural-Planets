@@ -15,7 +15,7 @@ MonoBehaviour:
   AtmosphereScale: 1.1
   ViewSteps: 16
   SunSteps: 8
-  SunIntensity: 15
+  SunIntensity: 17
   RayleighScattering: {x: 0.0012, y: 0.0028, z: 0.0069}
   RayleighScaleHeight: 0.08
   MieScattering: 0.002
