@@ -25,6 +25,9 @@ public class AtmosphereController : MonoBehaviour
     static readonly int _sunDiscSizeId = Shader.PropertyToID("_SunDiscSize");
     static readonly int _sunDiscBlendId = Shader.PropertyToID("_SunDiscBlend");
     static readonly int _debugModeId = Shader.PropertyToID("_DebugMode");
+    static readonly int _starSeedId = Shader.PropertyToID("_StarSeed");
+    static readonly int _starDensityId = Shader.PropertyToID("_StarDensity");
+    static readonly int _starBrightnessId = Shader.PropertyToID("_StarBrightness");
 
     void OnEnable() => EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
     void OnDisable() => EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
@@ -77,5 +80,10 @@ public class AtmosphereController : MonoBehaviour
         Shader.SetGlobalFloat(_sunDiscSizeId, Settings.SunDiscSize);
         Shader.SetGlobalFloat(_sunDiscBlendId, Settings.SunDiscBlend);
         Shader.SetGlobalInt(_debugModeId, Settings.DebugMode);
+
+        int seed = planet != null ? planet.Seed : 12345;
+        Shader.SetGlobalFloat(_starSeedId, seed * 0.01f);
+        Shader.SetGlobalFloat(_starDensityId, Settings.StarDensity);
+        Shader.SetGlobalFloat(_starBrightnessId, Settings.StarBrightness);
     }
 }

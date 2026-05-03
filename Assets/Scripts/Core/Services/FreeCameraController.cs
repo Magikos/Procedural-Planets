@@ -12,7 +12,6 @@ public class FreeCameraController : MonoBehaviour
     public float LookSensitivity = 2f;
 
     [Header("Auto Position")]
-    [Tooltip("Multiplier for camera distance from planet surface. 2.5 = 2.5x planet radius from center.")]
     public float ViewDistanceMultiplier = 2.5f;
     public bool AutoPositionOnGenerate = true;
 
@@ -28,18 +27,10 @@ public class FreeCameraController : MonoBehaviour
     Mouse _mouse;
     Keyboard _keyboard;
     bool _looking;
-    float _yaw;
-    float _pitch;
+    bool _skipNextDelta;
 
-    void OnEnable()
-    {
-        EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
-    }
-
-    void OnDisable()
-    {
-        EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
-    }
+    void OnEnable() => EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+    void OnDisable() => EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
 
     void Start()
     {
@@ -61,7 +52,8 @@ public class FreeCameraController : MonoBehaviour
         _lastPlanetRadius = evt.PlanetRadius;
         _lastElevationMin = evt.ElevationMin;
         _lastElevationMax = evt.ElevationMax;
-        InitFromPlanet();
+        if (AutoPositionOnGenerate)
+            RepositionCamera(_lastPlanetCenter, _lastPlanetRadius);
     }
 
     void Update()
@@ -76,23 +68,25 @@ public class FreeCameraController : MonoBehaviour
             if (_keyboard.leftCtrlKey.isPressed)
                 PositionOnSurface(_lastPlanetCenter, _lastPlanetRadius);
             else
-                InitFromPlanet();
+                RepositionCamera(_lastPlanetCenter, _lastPlanetRadius);
         }
 
-        // Backspace: face the sun from current position
         if (_keyboard.backspaceKey.wasPressedThisFrame)
         {
             var sunLight = FindAnyObjectByType<Light>();
             if (sunLight != null && sunLight.type == LightType.Directional)
             {
                 Vector3 toSun = -sunLight.transform.forward;
-                Vector3 up = (_lastPlanetRadius > 0f)
-                    ? (transform.position - _lastPlanetCenter).normalized
-                    : Vector3.up;
-                transform.rotation = Quaternion.LookRotation(toSun, up);
-                _pitch = 0;
+                transform.rotation = Quaternion.LookRotation(toSun, GetUp());
             }
         }
+    }
+
+    Vector3 GetUp()
+    {
+        return (_lastPlanetRadius > 0f)
+            ? (transform.position - _lastPlanetCenter).normalized
+            : Vector3.up;
     }
 
     void HandleLook()
@@ -100,6 +94,7 @@ public class FreeCameraController : MonoBehaviour
         if (_mouse.rightButton.wasPressedThisFrame)
         {
             _looking = true;
+            _skipNextDelta = true;
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
@@ -113,29 +108,33 @@ public class FreeCameraController : MonoBehaviour
 
         if (!_looking) return;
 
-        Vector2 mouseDelta = _mouse.delta.ReadValue();
-        _yaw += mouseDelta.x * LookSensitivity * 0.1f;
-        _pitch = Mathf.Clamp(_pitch - mouseDelta.y * LookSensitivity * 0.1f, -89f, 89f);
+        if (_skipNextDelta)
+        {
+            _skipNextDelta = false;
+            _mouse.delta.ReadValue(); // consume the snap delta
+            return;
+        }
 
-        // Determine "up" — surface normal when near planet, world up otherwise
-        Vector3 up = (_lastPlanetRadius > 0f)
-            ? (transform.position - _lastPlanetCenter).normalized
-            : Vector3.up;
+        Vector2 delta = _mouse.delta.ReadValue();
+        if (delta.sqrMagnitude < 0.001f) return;
 
-        // Build rotation: yaw around surface up, then pitch
-        // Find a stable right vector from the current forward projected onto the horizon plane
-        Vector3 baseForward = Vector3.ProjectOnPlane(transform.forward, up).normalized;
-        if (baseForward.sqrMagnitude < 0.01f)
-            baseForward = Vector3.ProjectOnPlane(Vector3.forward, up).normalized;
+        float yawAmount = delta.x * LookSensitivity * 0.1f;
+        float pitchAmount = -delta.y * LookSensitivity * 0.1f;
 
-        Quaternion yawRot = Quaternion.AngleAxis(_yaw, up);
-        Vector3 yawedForward = yawRot * baseForward;
-        Vector3 right = Vector3.Cross(up, yawedForward).normalized;
-        Quaternion pitchRot = Quaternion.AngleAxis(_pitch, right);
-        Vector3 finalForward = pitchRot * yawedForward;
+        Vector3 up = GetUp();
 
-        transform.rotation = Quaternion.LookRotation(finalForward, up);
-        _yaw = 0; // consumed — yaw is relative per frame
+        // Yaw: rotate around up axis
+        transform.RotateAround(transform.position, up, yawAmount);
+
+        // Pitch: rotate around local right axis, clamped
+        Vector3 right = transform.right;
+        float currentPitch = Vector3.SignedAngle(
+            Vector3.ProjectOnPlane(transform.forward, up).normalized,
+            transform.forward, right);
+
+        float newPitch = Mathf.Clamp(currentPitch + pitchAmount, -89f, 89f);
+        float actualPitch = newPitch - currentPitch;
+        transform.RotateAround(transform.position, right, actualPitch);
     }
 
     void HandleMovement()
@@ -151,7 +150,6 @@ public class FreeCameraController : MonoBehaviour
         if (_keyboard.eKey.isPressed) move += transform.up;
         if (_keyboard.qKey.isPressed) move -= transform.up;
 
-        // Shift+A/D = roll
         float rollSpeed = 60f;
         if (_keyboard.leftShiftKey.isPressed && _keyboard.aKey.isPressed)
             transform.Rotate(Vector3.forward, rollSpeed * Time.deltaTime, Space.Self);
@@ -165,21 +163,14 @@ public class FreeCameraController : MonoBehaviour
             transform.position += transform.forward * scroll * ScrollSpeed * Time.deltaTime;
     }
 
-    void InitFromPlanet()
-    {
-        if (!AutoPositionOnGenerate) return;
-        RepositionCamera(_lastPlanetCenter, _lastPlanetRadius);
-    }
-
     void RepositionCamera(Vector3 center, float radius)
     {
         float distance = radius * ViewDistanceMultiplier;
 
-        // Position camera on the sunlit side by finding the directional light
-        Vector3 viewDir = Vector3.back; // default fallback
+        Vector3 viewDir = Vector3.back;
         var sunLight = FindAnyObjectByType<Light>();
         if (sunLight != null && sunLight.type == LightType.Directional)
-            viewDir = sunLight.transform.forward; // light forward = direction light travels = away from sun
+            viewDir = sunLight.transform.forward;
 
         transform.position = center + viewDir * distance;
         transform.LookAt(center);
@@ -190,37 +181,29 @@ public class FreeCameraController : MonoBehaviour
 
     void PositionOnSurface(Vector3 center, float radius)
     {
-        // Find the sun direction to position camera where sunrise is visible
         Vector3 sunDir = Vector3.up;
         var sunLight = FindAnyObjectByType<Light>();
         if (sunLight != null && sunLight.type == LightType.Directional)
             sunDir = -sunLight.transform.forward;
 
-        // Place camera on the terminator (90° from sun) so the sun is at the horizon
         Vector3 toSun = sunDir.normalized;
         Vector3 perpendicular = Vector3.Cross(toSun, Vector3.up).normalized;
         if (perpendicular.sqrMagnitude < 0.01f)
             perpendicular = Vector3.Cross(toSun, Vector3.forward).normalized;
 
-        // Use average elevation to approximate actual ground level
-        // radius is max elevation; scale down to average terrain height
         float avgElevation = (_lastElevationMin + _lastElevationMax) * 0.5f;
-        float baseRadius = radius / (1 + _lastElevationMax); // recover base planet radius
+        float baseRadius = (_lastElevationMax != 0f) ? radius / (1 + _lastElevationMax) : radius;
         float groundRadius = baseRadius * (1 + avgElevation);
 
         Vector3 surfaceNormal = perpendicular;
-        Vector3 surfacePos = center + surfaceNormal * (groundRadius + 2f);
-        transform.position = surfacePos;
+        transform.position = center + surfaceNormal * (groundRadius + 2f);
 
-        // Look toward the sun (which should be at/near the horizon from this position)
         Vector3 lookDir = Vector3.ProjectOnPlane(toSun, surfaceNormal).normalized;
         if (lookDir.sqrMagnitude < 0.01f)
             lookDir = Vector3.ProjectOnPlane(Vector3.up, surfaceNormal).normalized;
-        // Tilt up slightly to see the sky
         lookDir = Vector3.Slerp(lookDir, surfaceNormal, 0.1f).normalized;
         transform.rotation = Quaternion.LookRotation(lookDir, surfaceNormal);
 
-        _pitch = 0;
         MoveSpeed = radius * 0.02f;
         ScrollSpeed = radius * 0.1f;
     }
@@ -238,7 +221,7 @@ public class FreeCameraController : MonoBehaviour
         {
             Vector3 dirToSurface = (transform.position - TargetCenter.position).normalized;
             var (lat, lon) = CoordinateConverter.UnitSphereToLatLong(dirToSurface);
-            GUILayout.Label($"Lat: {lat * Mathf.Rad2Deg:F1}° Lon: {lon * Mathf.Rad2Deg:F1}°");
+            GUILayout.Label($"Lat: {lat * Mathf.Rad2Deg:F1}\u00b0 Lon: {lon * Mathf.Rad2Deg:F1}\u00b0");
 
             float distToCenter = Vector3.Distance(transform.position, TargetCenter.position);
             GUILayout.Label($"Distance to center: {distToCenter:F1}");
@@ -247,13 +230,12 @@ public class FreeCameraController : MonoBehaviour
         GUILayout.Label("WASD=Move, Shift+W/S=Fast, Shift+A/D=Roll, QE=Up/Down");
         GUILayout.Label("Space=Orbit, Ctrl+Space=Surface, Backspace=Face Sun");
 
-        // Show time of day if CelestialManager exists (found via brute search since Core can't reference Planet)
         var sunLight = FindAnyObjectByType<Light>();
         if (sunLight != null && sunLight.type == LightType.Directional)
         {
-            Vector3 sunDir = -sunLight.transform.forward;
-            float sunElevation = Vector3.Dot(sunDir, (transform.position - _lastPlanetCenter).normalized);
-            GUILayout.Label($"Sun elevation: {Mathf.Asin(sunElevation) * Mathf.Rad2Deg:F1}°");
+            Vector3 sd = -sunLight.transform.forward;
+            float sunElevation = Vector3.Dot(sd, (transform.position - _lastPlanetCenter).normalized);
+            GUILayout.Label($"Sun elevation: {Mathf.Asin(sunElevation) * Mathf.Rad2Deg:F1}\u00b0");
         }
 
         GUILayout.EndArea();
