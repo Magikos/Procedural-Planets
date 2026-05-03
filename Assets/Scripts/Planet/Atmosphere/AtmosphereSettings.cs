@@ -35,8 +35,4 @@ public class AtmosphereSettings : ScriptableObject
 
     [Header("Debug")]
     [Range(0, 5)] public int DebugMode = 0;
-
-    [Header("Stars")]
-    [Range(10, 100)] public float StarDensity = 40f;
-    [Range(0.5f, 5f)] public float StarBrightness = 2f;
 }

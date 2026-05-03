@@ -28,86 +28,6 @@ int _DebugMode;
 // 0 = final, 1 = min height01, 2 = Rayleigh density, 3 = Mie density,
 // 4 = sun transmittance, 5 = atmosphere mask
 
-float _StarSeed;
-float _StarDensity;
-float _StarBrightness;
-
-// --- Procedural stars ---
-// Hash-based star field: divide sky into grid cells, hash each cell to place a star.
-// Deterministic from seed. Fixed positions on the celestial sphere.
-
-float Hash31(float3 p)
-{
-    p = frac(p * float3(443.897, 441.423, 437.195));
-    p += dot(p, p.yzx + 19.19);
-    return frac((p.x + p.y) * p.z);
-}
-
-float2 Hash32(float3 p)
-{
-    p = frac(p * float3(443.897, 441.423, 437.195));
-    p += dot(p, p.yzx + 19.19);
-    return frac(float2((p.x + p.y) * p.z, (p.z + p.x) * p.y));
-}
-
-float3 ProceduralStars(float3 dir)
-{
-    // Convert direction to spherical coordinates for grid
-    float theta = atan2(dir.z, dir.x); // [-pi, pi]
-    float phi = asin(dir.y);           // [-pi/2, pi/2]
-
-    // Grid resolution — higher = more potential star positions
-    float gridScale = _StarDensity;
-    float2 gridUV = float2(theta * (gridScale / MATH_PI), phi * (gridScale / (MATH_PI * 0.5)));
-    float2 cellID = floor(gridUV);
-    float2 cellUV = frac(gridUV) - 0.5;
-
-    float3 starColor = 0;
-
-    // Check this cell and neighbors to avoid edge clipping
-    for (int x = -1; x <= 1; x++)
-    {
-        for (int y = -1; y <= 1; y++)
-        {
-            float2 neighbor = float2(x, y);
-            float2 id = cellID + neighbor;
-
-            // Hash the cell + seed to decide if there's a star
-            float3 hashInput = float3(id.x, id.y, _StarSeed);
-            float starPresence = Hash31(hashInput);
-            if (starPresence > 0.3) continue; // ~30% of cells have stars
-
-            // Star position within cell
-            float2 starOffset = Hash32(hashInput + 7.0) - 0.5;
-            float2 delta = neighbor + starOffset - cellUV;
-
-            // Distance to star center
-            float dist = length(delta);
-
-            // Star size varies with hash
-            float sizeFactor = Hash31(hashInput + 13.0);
-            float starRadius = lerp(0.01, 0.04, sizeFactor * sizeFactor);
-
-            // Soft circular falloff
-            float glow = saturate(1.0 - dist / starRadius);
-            glow = glow * glow * glow;
-
-            // Brightness: biased toward dim
-            float brightness = lerp(0.2, 1.0, sizeFactor * sizeFactor) * _StarBrightness;
-
-            // Subtle color variation
-            float colorHash = Hash31(hashInput + 23.0);
-            float3 tint = colorHash > 0.85 ? float3(0.85, 0.9, 1.0)   // blue-white
-                         : colorHash < 0.1  ? float3(1.0, 0.92, 0.8)  // warm
-                         : float3(1, 1, 1);                            // white
-
-            starColor += glow * brightness * tint;
-        }
-    }
-
-    return starColor;
-}
-
 // --- Density ---
 
 float DensityHeight(float3 pos)
@@ -177,9 +97,8 @@ float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sc
 
     if (missedAtmo)
     {
-        float3 stars = ProceduralStars(dir);
         float3 sun = sunColor / (1.0 + sunColor);
-        return sceneColor + stars + sun;
+        return sceneColor + sun;
     }
 
     float2 hitPlanet = RaySphere(0, _PlanetRadius, origin, dir);
@@ -274,16 +193,10 @@ float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sc
     float3 toneMappedScatter = inScattered / (1.0 + inScattered);
     float3 result = sceneColor * viewTransmittance + toneMappedScatter;
 
-    // Sun disc + stars — only on sky pixels
+    // Sun disc — only on sky pixels
     bool hitGeometry = sceneDepth < (dstToAtmo + dstThroughAtmo);
     if (!hitGeometry)
     {
-        // Stars: added to raw in-scattered light so bright daytime sky drowns them out
-        float3 stars = ProceduralStars(dir) * viewTransmittance;
-        // Re-tonemap the combined scatter + stars
-        float3 scatterPlusStars = (inScattered + stars);
-        result = sceneColor * viewTransmittance + scatterPlusStars / (1.0 + scatterPlusStars);
-
         float3 sun = sunColor * viewTransmittance;
         result += sun / (1.0 + sun);
     }

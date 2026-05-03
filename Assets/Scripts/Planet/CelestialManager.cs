@@ -29,6 +29,10 @@ public class CelestialManager : MonoBehaviour
     [Range(0f, 1f)] public float AmbientMaxIntensity = 0.15f;
     [Range(0f, 0.1f)] public float AmbientMinIntensity = 0.03f;
 
+    [Header("Stars")]
+    [Range(10, 100)] public float StarDensity = 40f;
+    [Range(0.5f, 5f)] public float StarBrightness = 1f;
+
     float _timeOfDay;
     float _moonCycleProgress;
     float _planetRadius;
@@ -36,6 +40,9 @@ public class CelestialManager : MonoBehaviour
     int _lastMoonPhaseIndex = -1;
 
     static readonly int _nightAmbientIntensityId = Shader.PropertyToID("_NightAmbientIntensity");
+    static readonly int _starSeedId = Shader.PropertyToID("_StarSeed");
+    static readonly int _starDensityId = Shader.PropertyToID("_StarDensity");
+    static readonly int _starBrightnessId = Shader.PropertyToID("_StarBrightness");
 
     public float TimeOfDay => _timeOfDay;
     public Vector3 SunDirection => SunLight != null ? -SunLight.transform.forward : Vector3.up;
@@ -94,6 +101,8 @@ public class CelestialManager : MonoBehaviour
 
         _planetRadius = p.LastGeneratedRadius;
         MoonOrbitRadius = _planetRadius * 3f;
+
+        Shader.SetGlobalFloat(_starSeedId, p.Seed * 0.01f);
     }
 
     void Update()
@@ -190,5 +199,8 @@ public class CelestialManager : MonoBehaviour
 
         float intensity = Mathf.Lerp(AmbientMinIntensity, AmbientMaxIntensity, moonInfluence);
         Shader.SetGlobalFloat(_nightAmbientIntensityId, intensity);
+
+        Shader.SetGlobalFloat(_starDensityId, StarDensity);
+        Shader.SetGlobalFloat(_starBrightnessId, StarBrightness);
     }
 }
