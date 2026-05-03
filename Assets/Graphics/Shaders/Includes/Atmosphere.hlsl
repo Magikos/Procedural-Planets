@@ -11,7 +11,6 @@ float _DensityOriginRadius; // Same as _PlanetRadius — density height=0 at sea
 float _AtmosphereRadius;
 
 int _ViewSteps;
-int _SunSteps;
 
 float3 _RayleighScattering;
 float _RayleighScaleHeight;
@@ -141,30 +140,24 @@ float MiePhase(float cosTheta, float g)
          / ((2.0 + gg) * pow(abs(denom), 1.5));
 }
 
-// --- Sun ray optical depth (brute force) ---
+// --- Sun ray optical depth (LUT-based) ---
+
+TEXTURE2D(_BakedOpticalDepth);
+SAMPLER(sampler_BakedOpticalDepth);
 
 float2 SunOpticalDepth(float3 pos, float3 dirToSun)
 {
-    float2 hitAtmo = RaySphere(0, _AtmosphereRadius, pos, dirToSun);
+    float height = length(pos) - _PlanetRadius;
+    float height01 = saturate(height / (_AtmosphereRadius - _PlanetRadius));
 
-    float stepSize = hitAtmo.y / (float)_SunSteps;
-    float3 samplePos = pos + dirToSun * (stepSize * 0.5);
+    // Angle between ray direction and surface normal
+    float3 normal = normalize(pos);
+    float cosAngle = dot(normal, dirToSun);
+    // Remap from [-1,1] to [0,1]: dot=1 (up) -> u=0, dot=-1 (down) -> u=1
+    float uvX = (1.0 - cosAngle) * 0.5;
 
-    float rayleighOD = 0;
-    float mieOD = 0;
-
-    for (int i = 0; i < _SunSteps; i++)
-    {
-        float height = DensityHeight(samplePos);
-        if (height < 0) return float2(1e6, 1e6); // hit planet
-
-        rayleighOD += RayleighDensity(height) * stepSize;
-        mieOD += MieDensity(height) * stepSize;
-
-        samplePos += dirToSun * stepSize;
-    }
-
-    return float2(rayleighOD, mieOD);
+    float2 od = SAMPLE_TEXTURE2D_LOD(_BakedOpticalDepth, sampler_BakedOpticalDepth, float2(uvX, height01), 0).rg;
+    return od;
 }
 
 // --- Main ---

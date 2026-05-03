@@ -29,6 +29,10 @@ public class AtmosphereSettings : ScriptableObject
     [Range(0.99f, 0.9999f)] public float SunDiscSize = 0.9995f;
     [Range(0.0001f, 0.01f)] public float SunDiscBlend = 0.002f;
 
+    [Header("Optical Depth LUT")]
+    [Range(64, 512)] public int BakeTextureSize = 256;
+    [Range(16, 128)] public int BakeSteps = 64;
+
     [Header("Debug")]
     [Range(0, 5)] public int DebugMode = 0;
 

@@ -28,7 +28,7 @@ public class PlanetEditor : Editor
             Repaint();
         }
 
-        DrawSettingsEditor(_planet._planetSettings, ref _planet.SettingsFoldout, ref _settingsEditor);
+        DrawSettingsEditor(_planet.PlanetSettingsAsset, ref _planet.SettingsFoldout, ref _settingsEditor);
     }
 
     void DrawSettingsEditor(Object settings, ref bool foldout, ref Editor editor)

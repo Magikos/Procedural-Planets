@@ -5,11 +5,15 @@ public class AtmosphereController : MonoBehaviour
     [Header("References")]
     public AtmosphereSettings Settings;
     public CelestialManager CelestialManager;
+    public ComputeShader OpticalDepthCompute;
 
     float _planetRadius;
     float _seaLevelRadius;
     Vector3 _planetCenter;
     int _planetSeed = 12345;
+    RenderTexture _bakedOpticalDepth;
+    float _lastBakedScaleR, _lastBakedScaleM, _lastBakedAtmoScale;
+    int _lastBakedSize, _lastBakedSteps;
 
     static readonly int _sunParamsId = Shader.PropertyToID("_SunParams");
     static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
@@ -30,9 +34,16 @@ public class AtmosphereController : MonoBehaviour
     static readonly int _starSeedId = Shader.PropertyToID("_StarSeed");
     static readonly int _starDensityId = Shader.PropertyToID("_StarDensity");
     static readonly int _starBrightnessId = Shader.PropertyToID("_StarBrightness");
+    static readonly int _bakedOpticalDepthId = Shader.PropertyToID("_BakedOpticalDepth");
 
     void OnEnable() => EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
-    void OnDisable() => EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
+    void OnDisable()
+    {
+        EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
+        Shader.SetGlobalTexture(_bakedOpticalDepthId, null);
+    }
+
+    void OnDestroy() => _bakedOpticalDepth?.Release();
 
     void Update()
     {
@@ -53,6 +64,7 @@ public class AtmosphereController : MonoBehaviour
         _planetCenter = planet != null ? planet.transform.position : Vector3.zero;
         _planetSeed = planet != null ? planet.Seed : 12345;
 
+        BakeOpticalDepth();
         SetGlobalProperties();
     }
 
@@ -60,6 +72,8 @@ public class AtmosphereController : MonoBehaviour
     {
         float atmosphereRadius = _planetRadius * Settings.AtmosphereScale;
         float atmosphereThickness = atmosphereRadius - _seaLevelRadius;
+
+        if (LutNeedsRebake()) BakeOpticalDepth();
 
         Vector3 center = _planetCenter;
 
@@ -85,5 +99,61 @@ public class AtmosphereController : MonoBehaviour
         Shader.SetGlobalFloat(_starSeedId, _planetSeed * 0.01f);
         Shader.SetGlobalFloat(_starDensityId, Settings.StarDensity);
         Shader.SetGlobalFloat(_starBrightnessId, Settings.StarBrightness);
+    }
+
+    bool LutNeedsRebake()
+    {
+        return Settings.RayleighScaleHeight != _lastBakedScaleR
+            || Settings.MieScaleHeight != _lastBakedScaleM
+            || Settings.AtmosphereScale != _lastBakedAtmoScale
+            || Settings.BakeTextureSize != _lastBakedSize
+            || Settings.BakeSteps != _lastBakedSteps;
+    }
+
+    void BakeOpticalDepth()
+    {
+        if (OpticalDepthCompute == null || Settings == null || _seaLevelRadius <= 0f) return;
+
+        float atmosphereRadius = _planetRadius * Settings.AtmosphereScale;
+        float atmosphereThickness = atmosphereRadius - _seaLevelRadius;
+        int size = Settings.BakeTextureSize;
+
+        if (_bakedOpticalDepth != null && _bakedOpticalDepth.width != size)
+        {
+            _bakedOpticalDepth.Release();
+            _bakedOpticalDepth = null;
+        }
+
+        if (_bakedOpticalDepth == null)
+        {
+            _bakedOpticalDepth = new RenderTexture(size, size, 0, RenderTextureFormat.RGHalf)
+            {
+                enableRandomWrite = true,
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+                name = "BakedOpticalDepth"
+            };
+            _bakedOpticalDepth.Create();
+        }
+
+        int kernel = OpticalDepthCompute.FindKernel("Main");
+        OpticalDepthCompute.SetTexture(kernel, "_Result", _bakedOpticalDepth);
+        OpticalDepthCompute.SetInt("_TextureSize", size);
+        OpticalDepthCompute.SetInt("_NumSteps", Settings.BakeSteps);
+        OpticalDepthCompute.SetFloat("_PlanetRadius", _seaLevelRadius);
+        OpticalDepthCompute.SetFloat("_AtmosphereRadius", atmosphereRadius);
+        OpticalDepthCompute.SetFloat("_RayleighScaleHeight", Settings.RayleighScaleHeight * atmosphereThickness);
+        OpticalDepthCompute.SetFloat("_MieScaleHeight", Settings.MieScaleHeight * atmosphereThickness);
+
+        int groups = Mathf.CeilToInt(size / 8f);
+        OpticalDepthCompute.Dispatch(kernel, groups, groups, 1);
+
+        Shader.SetGlobalTexture(_bakedOpticalDepthId, _bakedOpticalDepth);
+
+        _lastBakedScaleR = Settings.RayleighScaleHeight;
+        _lastBakedScaleM = Settings.MieScaleHeight;
+        _lastBakedAtmoScale = Settings.AtmosphereScale;
+        _lastBakedSize = Settings.BakeTextureSize;
+        _lastBakedSteps = Settings.BakeSteps;
     }
 }

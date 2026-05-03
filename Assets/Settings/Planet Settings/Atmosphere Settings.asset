@@ -23,6 +23,8 @@ MonoBehaviour:
   MieAnisotropy: 0.76
   SunDiscSize: 0.9995
   SunDiscBlend: 0.002
+  BakeTextureSize: 256
+  BakeSteps: 64
   DebugMode: 0
   StarDensity: 40
   StarBrightness: 1
