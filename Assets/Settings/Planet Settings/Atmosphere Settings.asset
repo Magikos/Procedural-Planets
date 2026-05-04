@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0113be1b4af76246878877c386b9c1b, type: 3}
   m_Name: Atmosphere Settings
   m_EditorClassIdentifier: ProceduralPlanets.Planet::AtmosphereSettings
-  AtmosphereScale: 1.1
+  AtmosphereScale: 1.15
   ViewSteps: 16
   SunSteps: 8
   SunIntensity: 17

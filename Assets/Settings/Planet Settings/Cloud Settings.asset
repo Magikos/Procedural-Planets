@@ -12,19 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 868d3c45f49639d4494abd8c7ce8164f, type: 3}
   m_Name: Cloud Settings
   m_EditorClassIdentifier: ProceduralPlanets.Planet::CloudSettings
-  CloudAltitudeScale: 1.02
-  CloudThickness: 0.08
-  NoiseScale: 4
-  DetailNoiseScale: 8
+  NoiseScale: 0.003
+  DetailNoiseScale: 0.008
   DetailWeight: 0.3
-  DensityMultiplier: 1.5
-  DensityOffset: 0
-  LightAbsorption: 1
-  DarknessThreshold: 0.15
+  ShapeNoiseWeights: {x: 1, y: 0.5, z: 0.25, w: 0.125}
+  DensityMultiplier: 3
+  LightAbsorption: 1.2
+  DarknessThreshold: 0.1
   ForwardScattering: 0.8
   BackScattering: 0.3
   BaseBrightness: 0.8
   AnimationSpeed: 0.5
   ViewSteps: 24
   LightSteps: 4
-  MeshResolution: 32
+  ShapeNoiseResolution: 128
+  DetailNoiseResolution: 32

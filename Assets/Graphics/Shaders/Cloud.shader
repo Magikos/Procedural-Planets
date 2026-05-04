@@ -10,17 +10,32 @@ SAMPLER(sampler_CameraDepthTexture);
 TEXTURE2D(_Source);
 SAMPLER(sampler_Source);
 
-// Cloud shell
+TEXTURE3D(_CloudShapeNoise);
+SAMPLER(sampler_CloudShapeNoise);
+TEXTURE3D(_CloudDetailNoise);
+SAMPLER(sampler_CloudDetailNoise);
+
+// Cloud instances
+struct CloudData
+{
+    float3 position;
+    float horizontalRadius;
+    float verticalThickness;
+    float density;
+    float pad1, pad2;
+};
+
+StructuredBuffer<CloudData> _CloudBuffer;
+int _CloudCount;
+
 float3 _CloudPlanetCenter;
-float _CloudInnerRadius;
-float _CloudOuterRadius;
 
 // Shape
 float _CloudNoiseScale;
 float _CloudDetailNoiseScale;
 float _CloudDetailWeight;
+float4 _CloudShapeWeights;
 float _CloudDensityMultiplier;
-float _CloudDensityOffset;
 
 // Lighting
 float _CloudLightAbsorption;
@@ -34,50 +49,15 @@ float _CloudAnimSpeed;
 int _CloudViewSteps;
 int _CloudLightSteps;
 
-// Weather (from WeatherManager)
+// Weather
 float3 _WindDirection;
 float _WindSpeed;
-float _CloudCoverage;
 
-// Sun (from AtmosphereController)
+// Sun
 float3 _SunParams;
 
-// --- Noise ---
-
-float Hash(float3 p)
-{
-    p = frac(p * float3(443.897, 441.423, 437.195));
-    p += dot(p, p.yzx + 19.19);
-    return frac((p.x + p.y) * p.z);
-}
-
-float ValueNoise(float3 p)
-{
-    float3 i = floor(p);
-    float3 f = frac(p);
-    f = f * f * (3.0 - 2.0 * f);
-
-    return lerp(
-        lerp(lerp(Hash(i), Hash(i + float3(1,0,0)), f.x),
-             lerp(Hash(i + float3(0,1,0)), Hash(i + float3(1,1,0)), f.x), f.y),
-        lerp(lerp(Hash(i + float3(0,0,1)), Hash(i + float3(1,0,1)), f.x),
-             lerp(Hash(i + float3(0,1,1)), Hash(i + float3(1,1,1)), f.x), f.y),
-        f.z);
-}
-
-float FBM(float3 p, int octaves)
-{
-    float value = 0;
-    float amp = 0.5;
-    float freq = 1;
-    for (int i = 0; i < octaves; i++)
-    {
-        value += ValueNoise(p * freq) * amp;
-        amp *= 0.5;
-        freq *= 2.0;
-    }
-    return value;
-}
+// Night ambient
+float _NightAmbientIntensity;
 
 // --- Phase function ---
 
@@ -94,50 +74,75 @@ float CloudPhase(float cosAngle)
     return _CloudPhaseParams.z + lerp(back, forward, 0.5) * 0.5;
 }
 
-// --- Cloud density ---
+// --- Density at a point (checks all cloud instances) ---
 
 float SampleDensity(float3 worldPos)
 {
-    float3 relPos = worldPos - _CloudPlanetCenter;
-    float dist = length(relPos);
+    float totalDensity = 0;
 
-    float thickness = _CloudOuterRadius - _CloudInnerRadius;
-    float height01 = saturate((dist - _CloudInnerRadius) / thickness);
+    for (int c = 0; c < _CloudCount; c++)
+    {
+        CloudData cloud = _CloudBuffer[c];
+        float3 delta = worldPos - cloud.position;
 
-    // Height gradient: thickest in middle, thin at top/bottom edges
-    float heightGradient = saturate(height01 * 2.0) * saturate((1.0 - height01) * 2.0);
+        // Decompose into horizontal and vertical components relative to planet surface
+        float3 surfaceNormal = normalize(cloud.position - _CloudPlanetCenter);
+        float verticalDist = dot(delta, surfaceNormal);
+        float3 horizontalDelta = delta - surfaceNormal * verticalDist;
+        float horizontalDist = length(horizontalDelta);
 
-    // Sample noise in world space so clouds are anchored and have 3D depth
-    float time = _Time.y * _CloudAnimSpeed;
-    float3 windOffset = _WindDirection * _WindSpeed * time * 10.0;
-    float3 noisePos = (worldPos + windOffset) * _CloudNoiseScale * 0.001;
+        // Check if inside the ellipsoid bounding volume
+        float hNorm = horizontalDist / cloud.horizontalRadius;
+        float vNorm = verticalDist / (cloud.verticalThickness * 0.5);
+        if (hNorm > 1.0 || abs(vNorm) > 1.0) continue;
 
-    float baseNoise = FBM(noisePos, 4);
+        // Edge fade: soft boundary at the edges of the volume
+        float hFade = saturate((1.0 - hNorm) * 3.0);
+        float vFade = saturate((1.0 - abs(vNorm)) * 3.0);
+        float edgeFade = hFade * vFade;
 
-    float3 detailPos = (worldPos + windOffset * 2.0) * _CloudDetailNoiseScale * 0.001;
-    float detailNoise = FBM(detailPos + 7.7, 3);
+        // Height gradient: flat bottom, puffy top
+        float height01 = vNorm * 0.5 + 0.5; // 0=bottom, 1=top
+        float heightGradient = saturate(height01 / 0.2) * saturate((1.0 - height01) / 0.4);
 
-    float density = baseNoise * heightGradient;
-    density -= (1.0 - detailNoise) * _CloudDetailWeight * (1.0 - density);
-    density += _CloudDensityOffset;
-    density = saturate(density - (1.0 - _CloudCoverage));
+        // Noise in local cloud space — tiles across the volume
+        float3 localPos = float3(
+            horizontalDelta.x / cloud.horizontalRadius,
+            verticalDist / cloud.verticalThickness,
+            horizontalDelta.z / cloud.horizontalRadius
+        );
+        float3 noisePos = localPos * 3.0 + cloud.position * 0.001;
+        float4 shapeNoise = SAMPLE_TEXTURE3D_LOD(_CloudShapeNoise, sampler_CloudShapeNoise, noisePos, 0);
+        float4 normalizedWeights = _CloudShapeWeights / dot(_CloudShapeWeights, 1);
+        float shapeFBM = dot(shapeNoise, normalizedWeights);
 
-    return max(0, density * _CloudDensityMultiplier);
+        // Only noise peaks form cloud — creates irregular puffs within the volume
+        float cloudShape = shapeFBM * heightGradient * edgeFade;
+        float baseDensity = cloudShape - 0.45;
+        if (baseDensity <= 0) continue;
+
+        // Detail noise erodes for wispy edges
+        float3 detailPos = localPos * 8.0 + cloud.position * 0.002;
+        float4 detailNoise = SAMPLE_TEXTURE3D_LOD(_CloudDetailNoise, sampler_CloudDetailNoise, detailPos, 0);
+        float detailFBM = dot(detailNoise.rgb, float3(0.5, 0.35, 0.15));
+        float oneMinusShape = 1.0 - cloudShape;
+        baseDensity -= (1.0 - detailFBM) * oneMinusShape * _CloudDetailWeight;
+
+        totalDensity += max(0, baseDensity * cloud.density * 0.1);
+    }
+
+    return totalDensity * _CloudDensityMultiplier;
 }
 
 // --- Light march ---
 
-float LightMarch(float3 pos)
+float LightMarch(float3 pos, float stepSize)
 {
-    // Check if this point can see the sun at all (night side = no light)
     float3 surfaceNormal = normalize(pos - _CloudPlanetCenter);
     float sunDot = dot(surfaceNormal, _SunParams.xyz);
-    // Smooth transition: fully lit when sun > 10° above horizon, dark when below -5°
     float sunVisibility = saturate((sunDot + 0.09) * 5.0);
-    if (sunVisibility <= 0) return 0;
 
     float3 dirToSun = _SunParams.xyz;
-    float stepSize = (_CloudOuterRadius - _CloudInnerRadius) / (float)_CloudLightSteps;
     float totalDensity = 0;
 
     for (int i = 0; i < _CloudLightSteps; i++)
@@ -147,7 +152,40 @@ float LightMarch(float3 pos)
     }
 
     float transmittance = exp(-totalDensity * _CloudLightAbsorption);
-    return transmittance * sunVisibility;
+    float lit = _CloudDarknessThreshold + transmittance * (1.0 - _CloudDarknessThreshold);
+    return lit * sunVisibility;
+}
+
+// --- Find ray intersection with any cloud ---
+
+// Returns (nearestEntry, totalTraversal) across all cloud spheres along the ray
+float2 FindCloudIntersection(float3 rayOrigin, float3 rayDir, float maxDist)
+{
+    float nearestEntry = maxDist;
+    float farthestExit = 0;
+    bool anyHit = false;
+
+    for (int c = 0; c < _CloudCount; c++)
+    {
+        CloudData cloud = _CloudBuffer[c];
+        // Use horizontal radius as bounding sphere (conservative)
+        float2 hit = RaySphere(cloud.position, cloud.horizontalRadius, rayOrigin, rayDir);
+
+        if (hit.y > 0) // ray intersects this cloud
+        {
+            float entry = max(hit.x, 0);
+            float exit = entry + hit.y;
+            if (exit > 0 && entry < maxDist)
+            {
+                nearestEntry = min(nearestEntry, entry);
+                farthestExit = max(farthestExit, min(exit, maxDist));
+                anyHit = true;
+            }
+        }
+    }
+
+    if (!anyHit) return float2(0, 0);
+    return float2(nearestEntry, farthestExit - nearestEntry);
 }
 
 ENDHLSL
@@ -163,7 +201,7 @@ ENDHLSL
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            #pragma target 4.0
+            #pragma target 4.5
 
             struct v2f
             {
@@ -191,55 +229,24 @@ ENDHLSL
             float4 frag(v2f i) : SV_Target
             {
                 float4 sceneColor = SAMPLE_TEXTURE2D(_Source, sampler_Source, i.uv);
+
+                if (_CloudCount <= 0) return sceneColor;
+
                 float viewLength = length(i.viewVector);
                 float3 rayDir = i.viewVector / viewLength;
                 float3 rayOrigin = _WorldSpaceCameraPos.xyz;
 
-                // Scene depth
                 float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, i.uv).r;
                 float sceneDepth = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
 
-                // Ray-sphere intersections for cloud shell
-                float2 hitInner = RaySphere(_CloudPlanetCenter, _CloudInnerRadius, rayOrigin, rayDir);
-                float2 hitOuter = RaySphere(_CloudPlanetCenter, _CloudOuterRadius, rayOrigin, rayDir);
+                // Find if ray hits any cloud
+                float2 cloudHit = FindCloudIntersection(rayOrigin, rayDir, sceneDepth);
+                if (cloudHit.y <= 0) return sceneColor;
 
-                // No cloud intersection
-                if (hitOuter.y <= 0) return sceneColor;
+                float dstToCloud = cloudHit.x;
+                float dstThroughClouds = cloudHit.y;
 
-                // Calculate entry and exit distances through the cloud shell
-                float camDist = length(rayOrigin - _CloudPlanetCenter);
-                float dstToCloud, dstThroughCloud;
-
-                if (camDist < _CloudInnerRadius)
-                {
-                    // Camera below clouds: enter at inner sphere, exit at inner sphere (going up through shell)
-                    dstToCloud = hitInner.x;
-                    dstThroughCloud = hitOuter.x + hitOuter.y - dstToCloud;
-                }
-                else if (camDist > _CloudOuterRadius)
-                {
-                    // Camera above clouds (space): enter at outer sphere near, exit at outer sphere far
-                    dstToCloud = hitOuter.x;
-                    // If ray also hits inner sphere, cloud shell is the gap
-                    if (hitInner.y > 0)
-                        dstThroughCloud = hitInner.x - dstToCloud;
-                    else
-                        dstThroughCloud = hitOuter.y;
-                }
-                else
-                {
-                    // Camera inside cloud shell
-                    dstToCloud = 0;
-                    dstThroughCloud = hitOuter.y;
-                    if (hitInner.y > 0 && hitInner.x > 0)
-                        dstThroughCloud = min(dstThroughCloud, hitInner.x);
-                }
-
-                // Clamp to scene depth (terrain in front of clouds)
-                dstThroughCloud = min(dstThroughCloud, sceneDepth - dstToCloud);
-                if (dstThroughCloud <= 0) return sceneColor;
-
-                float stepSize = dstThroughCloud / (float)_CloudViewSteps;
+                float stepSize = dstThroughClouds / (float)_CloudViewSteps;
                 float3 samplePos = rayOrigin + rayDir * (dstToCloud + stepSize * 0.5);
 
                 float cosAngle = dot(rayDir, _SunParams.xyz);
@@ -254,8 +261,9 @@ ENDHLSL
 
                     if (density > 0.001)
                     {
-                        float lightTransmittance = LightMarch(samplePos);
+                        float lightTransmittance = LightMarch(samplePos, stepSize * 2.0);
                         lightEnergy += density * stepSize * transmittance * lightTransmittance * phase;
+                        lightEnergy += density * stepSize * transmittance * _NightAmbientIntensity * 0.15;
                         transmittance *= exp(-density * stepSize * _CloudLightAbsorption);
 
                         if (transmittance < 0.01) break;
@@ -264,7 +272,7 @@ ENDHLSL
                     samplePos += rayDir * stepSize;
                 }
 
-                float3 cloudColor = lightEnergy;
+                float3 cloudColor = saturate(lightEnergy);
                 float3 result = sceneColor.rgb * transmittance + cloudColor;
 
                 return float4(result, sceneColor.a);

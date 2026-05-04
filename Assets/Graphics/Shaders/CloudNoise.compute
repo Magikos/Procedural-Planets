@@ -1,0 +1,71 @@
+// Generates 3D Worley noise for cloud shape/detail textures.
+// Each channel (RGBA) stores a different frequency layer.
+// Dispatched once at startup, result stored as a 3D RenderTexture.
+
+#pragma kernel CSWorley
+
+RWTexture3D<half4> _Result;
+StructuredBuffer<float3> _Points;
+
+int _Resolution;
+int _NumCells;
+int _Channel; // 0=R, 1=G, 2=B, 3=A
+int _Tile;
+
+static const int3 offsets[] =
+{
+    int3(0,0,0),
+    int3(0,0,1), int3(-1,1,1), int3(-1,0,1), int3(-1,-1,1),
+    int3(0,1,1), int3(0,-1,1), int3(1,1,1), int3(1,0,1), int3(1,-1,1),
+    int3(0,0,-1), int3(-1,1,-1), int3(-1,0,-1), int3(-1,-1,-1),
+    int3(0,1,-1), int3(0,-1,-1), int3(1,1,-1), int3(1,0,-1), int3(1,-1,-1),
+    int3(-1,1,0), int3(-1,0,0), int3(-1,-1,0),
+    int3(0,1,0), int3(0,-1,0), int3(1,1,0), int3(1,0,0), int3(1,-1,0)
+};
+
+float Worley(float3 samplePos)
+{
+    samplePos = frac(samplePos * _Tile);
+    int3 cellID = floor(samplePos * _NumCells);
+    float minSqrDst = 1;
+
+    for (int i = 0; i < 27; i++)
+    {
+        int3 adjID = cellID + offsets[i];
+        int3 wrappedID = (adjID + _NumCells) % (uint3)_NumCells;
+        int adjCellIndex = wrappedID.x + _NumCells * (wrappedID.y + wrappedID.z * _NumCells);
+        float3 cellPoint = _Points[adjCellIndex];
+
+        // Check all wrap offsets for seamless tiling
+        if (any(adjID < 0) || any(adjID >= _NumCells))
+        {
+            for (int w = 0; w < 27; w++)
+            {
+                float3 sampleOffset = samplePos - (cellPoint + offsets[w]);
+                minSqrDst = min(minSqrDst, dot(sampleOffset, sampleOffset));
+            }
+        }
+        else
+        {
+            float3 sampleOffset = samplePos - cellPoint;
+            minSqrDst = min(minSqrDst, dot(sampleOffset, sampleOffset));
+        }
+    }
+    return sqrt(minSqrDst);
+}
+
+[numthreads(8, 8, 8)]
+void CSWorley(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id >= (uint3)_Resolution)) return;
+
+    float3 pos = id / (float)_Resolution;
+    float noise = 1.0 - Worley(pos); // Invert so dense areas = high value
+
+    half4 current = _Result[id];
+    if (_Channel == 0) current.r = (half)noise;
+    else if (_Channel == 1) current.g = (half)noise;
+    else if (_Channel == 2) current.b = (half)noise;
+    else current.a = (half)noise;
+    _Result[id] = current;
+}
