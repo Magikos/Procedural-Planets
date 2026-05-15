@@ -12,18 +12,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 868d3c45f49639d4494abd8c7ce8164f, type: 3}
   m_Name: Cloud Settings
   m_EditorClassIdentifier: ProceduralPlanets.Planet::CloudSettings
+  WeatherResolution: 256
+  InitialCoverage: 0.48
+  FrontScale: 4
+  FrontSharpness: 18
+  StormThreshold: 0.78
+  BiomeInfluence: 0.15
+  BaseAltitude: 330
+  LayerThickness: 300
+  BottomFeather: 0.06
+  TopFeather: 0.45
+  TopDensityBias: 1.2
   NoiseScale: 0.003
   DetailNoiseScale: 0.008
   DetailWeight: 0.3
   ShapeNoiseWeights: {x: 1, y: 0.5, z: 0.25, w: 0.125}
-  DensityMultiplier: 3
+  DensityMultiplier: 0.018
+  DensityThreshold: 0.22
+  ShapeSharpness: 8
+  CloudColor: {r: 1, g: 0.98, b: 0.92, a: 1}
+  StormColor: {r: 0.35, g: 0.37, b: 0.42, a: 1}
   LightAbsorption: 1.2
   DarknessThreshold: 0.1
   ForwardScattering: 0.8
   BackScattering: 0.3
   BaseBrightness: 0.8
-  AnimationSpeed: 0.5
-  ViewSteps: 24
-  LightSteps: 4
+  PhaseStrength: 0.15
+  AmbientStrength: 0.12
+  StormDarkening: 0.65
+  AnimationSpeed: 0.35
+  ViewSteps: 48
+  LightSteps: 6
+  RayOffsetStrength: 0.65
   ShapeNoiseResolution: 128
   DetailNoiseResolution: 32

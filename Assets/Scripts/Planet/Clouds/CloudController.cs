@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Packs cloud instance data from WeatherManager into a GPU buffer
-/// and sets all cloud shader globals. Generates 3D noise textures once.
+/// Uploads planet-scale cloud data and render settings to the cloud shader.
+/// Weather state lives in WeatherManager; this component owns render-only noise textures.
 /// </summary>
 public class CloudController : MonoBehaviour
 {
@@ -10,124 +10,157 @@ public class CloudController : MonoBehaviour
     public CloudSettings Settings;
     public ComputeShader NoiseCompute;
 
-    const int MaxClouds = 64;
-
     float _planetRadius;
+    float _seaLevelRadius;
     Vector3 _planetCenter;
     RenderTexture _shapeNoise;
     RenderTexture _detailNoise;
-    ComputeBuffer _cloudBuffer;
     WeatherManager _weather;
 
     static readonly int _cloudPlanetCenterId = Shader.PropertyToID("_CloudPlanetCenter");
+    static readonly int _cloudInnerRadiusId = Shader.PropertyToID("_CloudInnerRadius");
+    static readonly int _cloudOuterRadiusId = Shader.PropertyToID("_CloudOuterRadius");
+    static readonly int _cloudWeatherMapId = Shader.PropertyToID("_CloudWeatherMap");
+    static readonly int _cloudWeatherResolutionId = Shader.PropertyToID("_CloudWeatherResolution");
     static readonly int _cloudNoiseScaleId = Shader.PropertyToID("_CloudNoiseScale");
     static readonly int _cloudDetailNoiseScaleId = Shader.PropertyToID("_CloudDetailNoiseScale");
     static readonly int _cloudDetailWeightId = Shader.PropertyToID("_CloudDetailWeight");
     static readonly int _cloudShapeWeightsId = Shader.PropertyToID("_CloudShapeWeights");
     static readonly int _cloudDensityMultiplierId = Shader.PropertyToID("_CloudDensityMultiplier");
+    static readonly int _cloudDensityThresholdId = Shader.PropertyToID("_CloudDensityThreshold");
+    static readonly int _cloudShapeSharpnessId = Shader.PropertyToID("_CloudShapeSharpness");
+    static readonly int _cloudBottomFeatherId = Shader.PropertyToID("_CloudBottomFeather");
+    static readonly int _cloudTopFeatherId = Shader.PropertyToID("_CloudTopFeather");
+    static readonly int _cloudTopDensityBiasId = Shader.PropertyToID("_CloudTopDensityBias");
     static readonly int _cloudLightAbsorptionId = Shader.PropertyToID("_CloudLightAbsorption");
     static readonly int _cloudDarknessThresholdId = Shader.PropertyToID("_CloudDarknessThreshold");
     static readonly int _cloudPhaseParamsId = Shader.PropertyToID("_CloudPhaseParams");
+    static readonly int _cloudColorId = Shader.PropertyToID("_CloudColor");
+    static readonly int _cloudStormColorId = Shader.PropertyToID("_CloudStormColor");
+    static readonly int _cloudAmbientStrengthId = Shader.PropertyToID("_CloudAmbientStrength");
+    static readonly int _cloudStormDarkeningId = Shader.PropertyToID("_CloudStormDarkening");
     static readonly int _cloudAnimSpeedId = Shader.PropertyToID("_CloudAnimSpeed");
     static readonly int _cloudViewStepsId = Shader.PropertyToID("_CloudViewSteps");
     static readonly int _cloudLightStepsId = Shader.PropertyToID("_CloudLightSteps");
+    static readonly int _cloudRayOffsetStrengthId = Shader.PropertyToID("_CloudRayOffsetStrength");
     static readonly int _cloudShapeNoiseId = Shader.PropertyToID("_CloudShapeNoise");
     static readonly int _cloudDetailNoiseId = Shader.PropertyToID("_CloudDetailNoise");
-    static readonly int _cloudBufferId = Shader.PropertyToID("_CloudBuffer");
-    static readonly int _cloudCountId = Shader.PropertyToID("_CloudCount");
 
     void OnEnable() => EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+
     void OnDisable() => EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
         _planetRadius = evt.PlanetRadius;
+        _seaLevelRadius = evt.SeaLevelRadius > 0f ? evt.SeaLevelRadius : evt.PlanetRadius;
         _planetCenter = evt.PlanetCenter;
-        _weather = FindAnyObjectByType<WeatherManager>();
+
+        EnsureWeatherManager();
         GenerateNoiseTextures();
-        EnsureBuffer();
         SetGlobalProperties();
     }
 
     void Update()
     {
-        if (Settings == null || _planetRadius <= 0f) return;
-        UploadCloudData();
+        if (Settings == null || _planetRadius <= 0f)
+        {
+            Shader.SetGlobalInt(_cloudWeatherResolutionId, 0);
+            return;
+        }
+
+        EnsureWeatherManager();
         SetGlobalProperties();
+    }
+
+    void EnsureWeatherManager()
+    {
+        if (_weather == null)
+            _weather = FindAnyObjectByType<WeatherManager>();
+
+        if (_weather != null && _weather.Settings != Settings)
+            _weather.Configure(Settings);
     }
 
     void GenerateNoiseTextures()
     {
         if (NoiseCompute == null || Settings == null) return;
 
-        var planet = FindAnyObjectByType<Planet>();
-        int seed = planet != null ? planet.Seed : 12345;
+        int seed = 12345;
+        if (ServiceLocator.TryGet<ISeedProvider>(out var seedProvider))
+            seed = seedProvider.GetSeedForSystem("CloudNoise");
 
         ReleaseTextures();
         _shapeNoise = CloudNoiseGenerator.GenerateShapeNoise(NoiseCompute, Settings.ShapeNoiseResolution, seed);
         _detailNoise = CloudNoiseGenerator.GenerateDetailNoise(NoiseCompute, Settings.DetailNoiseResolution, seed);
     }
 
-    void EnsureBuffer()
-    {
-        if (_cloudBuffer == null || _cloudBuffer.count != MaxClouds)
-        {
-            _cloudBuffer?.Release();
-            // 32 bytes per cloud: float3 pos (12) + float radius (4) + float density (4) + 3 padding (12)
-            _cloudBuffer = new ComputeBuffer(MaxClouds, 32);
-        }
-    }
-
-    void UploadCloudData()
-    {
-        if (_cloudBuffer == null || _weather == null) return;
-
-        var clouds = _weather.Clouds;
-        int count = Mathf.Min(clouds.Count, MaxClouds);
-
-        if (count > 0)
-        {
-            var data = new WeatherManager.CloudInstance[MaxClouds];
-            for (int i = 0; i < count; i++)
-                data[i] = clouds[i];
-            _cloudBuffer.SetData(data);
-        }
-
-        Shader.SetGlobalBuffer(_cloudBufferId, _cloudBuffer);
-        Shader.SetGlobalInt(_cloudCountId, count);
-    }
-
     void SetGlobalProperties()
     {
+        if (Settings == null) return;
+
+        float innerRadius = _seaLevelRadius + Settings.BaseAltitude;
+        float outerRadius = innerRadius + Settings.LayerThickness;
+
         Shader.SetGlobalVector(_cloudPlanetCenterId, _planetCenter);
+        Shader.SetGlobalFloat(_cloudInnerRadiusId, innerRadius);
+        Shader.SetGlobalFloat(_cloudOuterRadiusId, outerRadius);
         Shader.SetGlobalFloat(_cloudNoiseScaleId, Settings.NoiseScale);
         Shader.SetGlobalFloat(_cloudDetailNoiseScaleId, Settings.DetailNoiseScale);
         Shader.SetGlobalFloat(_cloudDetailWeightId, Settings.DetailWeight);
         Shader.SetGlobalVector(_cloudShapeWeightsId, Settings.ShapeNoiseWeights);
         Shader.SetGlobalFloat(_cloudDensityMultiplierId, Settings.DensityMultiplier);
+        Shader.SetGlobalFloat(_cloudDensityThresholdId, Settings.DensityThreshold);
+        Shader.SetGlobalFloat(_cloudShapeSharpnessId, Settings.ShapeSharpness);
+        Shader.SetGlobalFloat(_cloudBottomFeatherId, Settings.BottomFeather);
+        Shader.SetGlobalFloat(_cloudTopFeatherId, Settings.TopFeather);
+        Shader.SetGlobalFloat(_cloudTopDensityBiasId, Settings.TopDensityBias);
         Shader.SetGlobalFloat(_cloudLightAbsorptionId, Settings.LightAbsorption);
         Shader.SetGlobalFloat(_cloudDarknessThresholdId, Settings.DarknessThreshold);
         Shader.SetGlobalVector(_cloudPhaseParamsId, new Vector4(
-            Settings.ForwardScattering, Settings.BackScattering, Settings.BaseBrightness, 0));
+            Settings.ForwardScattering, Settings.BackScattering, Settings.BaseBrightness, Settings.PhaseStrength));
+        Shader.SetGlobalColor(_cloudColorId, Settings.CloudColor);
+        Shader.SetGlobalColor(_cloudStormColorId, Settings.StormColor);
+        Shader.SetGlobalFloat(_cloudAmbientStrengthId, Settings.AmbientStrength);
+        Shader.SetGlobalFloat(_cloudStormDarkeningId, Settings.StormDarkening);
         Shader.SetGlobalFloat(_cloudAnimSpeedId, Settings.AnimationSpeed);
         Shader.SetGlobalInt(_cloudViewStepsId, Settings.ViewSteps);
         Shader.SetGlobalInt(_cloudLightStepsId, Settings.LightSteps);
+        Shader.SetGlobalFloat(_cloudRayOffsetStrengthId, Settings.RayOffsetStrength);
 
         if (_shapeNoise != null)
             Shader.SetGlobalTexture(_cloudShapeNoiseId, _shapeNoise);
         if (_detailNoise != null)
             Shader.SetGlobalTexture(_cloudDetailNoiseId, _detailNoise);
+
+        if (_weather != null && _weather.WeatherTexture != null)
+        {
+            Shader.SetGlobalTexture(_cloudWeatherMapId, _weather.WeatherTexture);
+            Shader.SetGlobalInt(_cloudWeatherResolutionId, _weather.WeatherResolution);
+        }
+        else
+        {
+            Shader.SetGlobalInt(_cloudWeatherResolutionId, 0);
+        }
     }
 
     void ReleaseTextures()
     {
-        if (_shapeNoise != null) { _shapeNoise.Release(); _shapeNoise = null; }
-        if (_detailNoise != null) { _detailNoise.Release(); _detailNoise = null; }
+        if (_shapeNoise != null)
+        {
+            _shapeNoise.Release();
+            _shapeNoise = null;
+        }
+
+        if (_detailNoise != null)
+        {
+            _detailNoise.Release();
+            _detailNoise = null;
+        }
     }
 
     void OnDestroy()
     {
         ReleaseTextures();
-        _cloudBuffer?.Release();
     }
 }

@@ -70,7 +70,8 @@ ENDHLSL
                 float4 originalCol = SAMPLE_TEXTURE2D(_Source, sampler_Source, i.uv);
                 float viewLength = length(i.viewVector);
                 float sceneDepth = CompositeDepthScaled(i.uv, viewLength);
-                float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength, sceneDepth, originalCol.xyz);
+                float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength,
+                    sceneDepth, originalCol.xyz, originalCol.w);
                 return float4(color, originalCol.w);
             }
 

@@ -82,10 +82,11 @@ float2 SunOpticalDepth(float3 pos, float3 dirToSun)
 
 // --- Main ---
 
-float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sceneColor)
+float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sceneColor, float cloudTransmittance)
 {
     float3 origin = start - _PlanetCenter;
     float3 dirToSun = _SunParams.xyz;
+    float sunOcclusion = saturate(cloudTransmittance);
 
     float2 hitAtmo = RaySphere(0, _AtmosphereRadius, origin, dir);
     bool missedAtmo = hitAtmo.y <= 0;
@@ -97,7 +98,8 @@ float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sc
 
     if (missedAtmo)
     {
-        float3 sun = sunColor / (1.0 + sunColor);
+        float3 sun = sunColor * sunOcclusion;
+        sun = sun / (1.0 + sun);
         return sceneColor + sun;
     }
 
@@ -197,7 +199,7 @@ float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sc
     bool hitGeometry = sceneDepth < (dstToAtmo + dstThroughAtmo);
     if (!hitGeometry)
     {
-        float3 sun = sunColor * viewTransmittance;
+        float3 sun = sunColor * viewTransmittance * sunOcclusion;
         result += sun / (1.0 + sun);
     }
 

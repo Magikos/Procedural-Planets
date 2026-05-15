@@ -1,66 +1,44 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Manages weather state including cloud placement and wind.
-/// Clouds are explicit instances at world positions — the weather system decides
-/// where clouds form, how big they are, and how dense they are.
-///
-/// CURRENT: Static test clouds + wind movement.
-///
-/// FUTURE PLANS:
-/// - Weather simulation spawns/grows/dissipates clouds over time
-/// - Storm cells: clusters of dense clouds that produce rain/lightning
-/// - Regional weather: different areas have different cloud patterns
-/// - Biome influence: deserts = few clouds, tropics = frequent storms
-/// - Weather map texture for spatial queries from shaders
-/// - Cloud types: cumulus, stratus, cumulonimbus with different shapes
+/// Owns planet-scale weather state. Current implementation generates a static
+/// cube-sphere condensation grid; later phases will advect and evolve the same data.
 /// </summary>
 public class WeatherManager : MonoBehaviour, IWeatherProvider
 {
-    [Header("Wind")]
-    public Vector3 WindDir = new Vector3(1, 0, 0.3f);
-    [Range(0f, 5f)] public float Speed = 0.5f;
+    [Header("References")]
+    public CloudSettings Settings;
 
-    [Header("Test Clouds")]
-    [Tooltip("Spawn test clouds on start for development")]
-    public bool SpawnTestClouds = true;
-    [Range(1, 50)] public int TestCloudCount = 10;
-    [Range(50f, 500f)] public float TestCloudRadius = 300f;
-    [Range(20f, 200f)] public float TestCloudThickness = 60f;
-    [Range(0.5f, 3f)] public float TestCloudDensity = 1f;
+    [Header("Wind")]
+    public Vector3 WindDir = new Vector3(1f, 0f, 0.3f);
+    [Range(0f, 5f)] public float Speed = 0.5f;
 
     [Header("Precipitation (future)")]
     [Range(0f, 1f)] public float Precipitation = 0f;
 
-    [Header("Storm (future)")]
-    [Range(0f, 1f)] public float StormIntensity = 0f;
-
-    // GPU data layout — must match shader struct
-    public struct CloudInstance
-    {
-        public Vector3 Position;
-        public float HorizontalRadius;
-        public float VerticalThickness;
-        public float Density;
-        public float Padding1, Padding2; // pad to 32 bytes
-    }
-
-    List<CloudInstance> _clouds = new();
-    float _planetRadius;
+    SphericalWeatherGrid _grid;
     Vector3 _planetCenter;
+    float _seaLevelRadius;
+    ILogger _logger;
 
     static readonly int _windDirectionId = Shader.PropertyToID("_WindDirection");
     static readonly int _windSpeedId = Shader.PropertyToID("_WindSpeed");
 
-    public Vector3 WindDirection => WindDir.normalized;
+    public Vector3 WindDirection => WindDir.sqrMagnitude > 0.0001f ? WindDir.normalized : Vector3.right;
     public float WindSpeed => Speed;
-    public List<CloudInstance> Clouds => _clouds;
+    public Texture2DArray WeatherTexture => _grid != null ? _grid.Texture : null;
+    public int WeatherResolution => _grid != null ? _grid.Resolution : 0;
+    public bool HasWeatherGrid => _grid != null;
 
-    public float GetCloudCoverage(Vector3 worldPosition) => _clouds.Count > 0 ? 0.5f : 0f;
-    public float GetPrecipitation(Vector3 worldPosition) => Precipitation;
-    public float GetStormIntensity(Vector3 worldPosition) => StormIntensity;
-    public float GetTemperature(Vector3 worldPosition) => 0.5f;
+    ILogger Logger
+    {
+        get
+        {
+            if (_logger == null && !ServiceLocator.TryGet(out _logger))
+                _logger = new UnityLogger();
+            return _logger;
+        }
+    }
 
     void Awake()
     {
@@ -68,82 +46,73 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
     }
 
     void OnEnable() => EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+
     void OnDisable() => EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
 
-    void OnPlanetGenerated(PlanetGeneratedEvent evt)
+    void OnDestroy()
     {
-        _planetRadius = evt.PlanetRadius;
-        _planetCenter = evt.PlanetCenter;
-
-        if (SpawnTestClouds)
-            GenerateTestClouds();
+        _grid?.Dispose();
+        _grid = null;
     }
 
     void Update()
     {
         Shader.SetGlobalVector(_windDirectionId, WindDirection);
         Shader.SetGlobalFloat(_windSpeedId, WindSpeed);
-
-        MoveCloudsByWind();
     }
 
-    void MoveCloudsByWind()
+    public void Configure(CloudSettings settings)
     {
-        if (_planetRadius <= 0f || _clouds.Count == 0) return;
-
-        float dt = Time.deltaTime;
-        Vector3 windDelta = WindDirection * WindSpeed * dt * 10f;
-
-        for (int i = 0; i < _clouds.Count; i++)
-        {
-            var cloud = _clouds[i];
-
-            // Move cloud along the planet surface (project wind onto tangent plane)
-            Vector3 surfaceNormal = (cloud.Position - _planetCenter).normalized;
-            Vector3 tangentWind = Vector3.ProjectOnPlane(windDelta, surfaceNormal);
-            cloud.Position += tangentWind;
-
-            // Re-project onto cloud altitude sphere to keep at correct height
-            float cloudAltitude = Vector3.Distance(cloud.Position, _planetCenter);
-            float targetAltitude = _planetRadius * 1.02f;
-            cloud.Position = _planetCenter + (cloud.Position - _planetCenter).normalized * targetAltitude;
-
-            _clouds[i] = cloud;
-        }
+        Settings = settings;
+        if (_seaLevelRadius > 0f)
+            GenerateWeatherGrid();
     }
 
-    void GenerateTestClouds()
+    public void RegenerateWeatherGrid()
     {
-        _clouds.Clear();
+        if (_seaLevelRadius > 0f)
+            GenerateWeatherGrid();
+    }
 
+    public float GetCloudCoverage(Vector3 worldPosition)
+    {
+        if (_grid == null)
+            return Settings != null ? Settings.InitialCoverage : 0f;
+
+        return _grid.GetCondensation(worldPosition, _planetCenter);
+    }
+
+    public float GetPrecipitation(Vector3 worldPosition)
+    {
+        return Precipitation * GetStormIntensity(worldPosition);
+    }
+
+    public float GetStormIntensity(Vector3 worldPosition)
+    {
+        return _grid != null ? _grid.GetStorm(worldPosition, _planetCenter) : 0f;
+    }
+
+    public float GetTemperature(Vector3 worldPosition) => 0.5f;
+
+    void OnPlanetGenerated(PlanetGeneratedEvent evt)
+    {
+        _planetCenter = evt.PlanetCenter;
+        _seaLevelRadius = evt.SeaLevelRadius > 0f ? evt.SeaLevelRadius : evt.PlanetRadius;
+
+        if (Settings != null)
+            GenerateWeatherGrid();
+    }
+
+    void GenerateWeatherGrid()
+    {
+        if (Settings == null) return;
+
+        int seed = 12345;
         if (ServiceLocator.TryGet<ISeedProvider>(out var seedProvider))
-        {
-            var rand = new System.Random(seedProvider.GetSeedForSystem("Weather"));
-            float cloudAltitude = _planetRadius * 1.02f;
+            seed = seedProvider.GetSeedForSystem("Weather");
 
-            for (int i = 0; i < TestCloudCount; i++)
-            {
-                // Random direction on unit sphere
-                float z = (float)(rand.NextDouble() * 2.0 - 1.0);
-                float theta = (float)(rand.NextDouble() * 2.0 * Mathf.PI);
-                float r = Mathf.Sqrt(1f - z * z);
-                Vector3 dir = new Vector3(r * Mathf.Cos(theta), r * Mathf.Sin(theta), z);
-
-                Vector3 pos = _planetCenter + dir * cloudAltitude;
-                float radius = Mathf.Lerp(TestCloudRadius * 0.7f, TestCloudRadius * 1.5f, (float)rand.NextDouble());
-                float thickness = Mathf.Lerp(TestCloudThickness * 0.7f, TestCloudThickness * 1.3f, (float)rand.NextDouble());
-                float density = Mathf.Lerp(TestCloudDensity * 0.7f, TestCloudDensity * 1.3f, (float)rand.NextDouble());
-
-                _clouds.Add(new CloudInstance
-                {
-                    Position = pos,
-                    HorizontalRadius = radius,
-                    VerticalThickness = thickness,
-                    Density = density
-                });
-            }
-
-            Debug.Log($"[WeatherManager] Spawned {_clouds.Count} test clouds at altitude {cloudAltitude:F0}");
-        }
+        _grid?.Dispose();
+        _grid = SphericalWeatherGrid.Generate(Settings, seed);
+        Logger.Log(LogLevel.Debug, "Weather", $"Generated {WeatherResolution}x{WeatherResolution}x6 condensation grid.");
     }
 }

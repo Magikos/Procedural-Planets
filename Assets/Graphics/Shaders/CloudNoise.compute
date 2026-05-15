@@ -60,7 +60,8 @@ void CSWorley(uint3 id : SV_DispatchThreadID)
     if (any(id >= (uint3)_Resolution)) return;
 
     float3 pos = id / (float)_Resolution;
-    float noise = 1.0 - Worley(pos); // Invert so dense areas = high value
+    float normalizedDistance = saturate(Worley(pos) * _NumCells);
+    float noise = 1.0 - normalizedDistance; // Invert so dense areas = high value
 
     half4 current = _Result[id];
     if (_Channel == 0) current.r = (half)noise;

@@ -58,9 +58,8 @@ public class CloudRenderPass : ScriptableRenderPass
 
     public CloudRenderPass()
     {
-        // Render after atmosphere so clouds composite on top of the scattered sky.
-        // sceneColor already has atmosphere applied, so clouds naturally blend with it.
-        renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
+        // Render before the atmosphere pass so scattering and aerial perspective tint clouds.
+        renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
         ConfigureInput(ScriptableRenderPassInput.Depth);
         requiresIntermediateTexture = true;
         _propertyBlock = new MaterialPropertyBlock();

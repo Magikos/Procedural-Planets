@@ -3,26 +3,49 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Planet/Settings/Cloud Settings")]
 public class CloudSettings : ScriptableObject
 {
+    [Header("Weather Grid")]
+    [Range(32, 512)] public int WeatherResolution = 256;
+    [Range(0f, 1f)] public float InitialCoverage = 0.48f;
+    [Range(0.5f, 12f)] public float FrontScale = 4f;
+    [Range(1f, 40f)] public float FrontSharpness = 18f;
+    [Range(0f, 1f)] public float StormThreshold = 0.78f;
+    [Range(0f, 1f)] public float BiomeInfluence = 0.15f;
+
+    [Header("Layer")]
+    [Range(20f, 1000f)] public float BaseAltitude = 330f;
+    [Range(50f, 1000f)] public float LayerThickness = 300f;
+    [Range(0.01f, 0.4f)] public float BottomFeather = 0.06f;
+    [Range(0.05f, 0.8f)] public float TopFeather = 0.45f;
+    [Range(0.1f, 4f)] public float TopDensityBias = 1.2f;
+
     [Header("Shape")]
     [Range(0.0001f, 0.01f)] public float NoiseScale = 0.003f;
     [Range(0.0001f, 0.02f)] public float DetailNoiseScale = 0.008f;
     [Range(0f, 1f)] public float DetailWeight = 0.3f;
     public Vector4 ShapeNoiseWeights = new Vector4(1f, 0.5f, 0.25f, 0.125f);
-    [Range(0f, 5f)] public float DensityMultiplier = 1.5f;
+    [Range(0f, 0.08f)] public float DensityMultiplier = 0.018f;
+    [Range(0f, 1f)] public float DensityThreshold = 0.22f;
+    [Range(1f, 24f)] public float ShapeSharpness = 8f;
 
     [Header("Lighting")]
+    public Color CloudColor = new Color(1f, 0.98f, 0.92f, 1f);
+    public Color StormColor = new Color(0.35f, 0.37f, 0.42f, 1f);
     [Range(0f, 3f)] public float LightAbsorption = 1.2f;
     [Range(0f, 1f)] public float DarknessThreshold = 0.1f;
     [Range(0f, 1f)] public float ForwardScattering = 0.8f;
     [Range(0f, 1f)] public float BackScattering = 0.3f;
     [Range(0f, 1f)] public float BaseBrightness = 0.8f;
+    [Range(0f, 1f)] public float PhaseStrength = 0.15f;
+    [Range(0f, 1f)] public float AmbientStrength = 0.12f;
+    [Range(0f, 1f)] public float StormDarkening = 0.65f;
 
     [Header("Animation")]
-    [Range(0f, 2f)] public float AnimationSpeed = 0.5f;
+    [Range(0f, 2f)] public float AnimationSpeed = 0.35f;
 
     [Header("Ray March")]
-    [Range(4, 64)] public int ViewSteps = 24;
-    [Range(2, 8)] public int LightSteps = 4;
+    [Range(8, 96)] public int ViewSteps = 48;
+    [Range(2, 16)] public int LightSteps = 6;
+    [Range(0f, 2f)] public float RayOffsetStrength = 0.65f;
 
     [Header("Noise Textures")]
     [Range(32, 256)] public int ShapeNoiseResolution = 128;
