@@ -44,6 +44,10 @@ MonoBehaviour:
   SilverLiningPower: 10
   SilverLiningEdgePower: 1.6
   SilverLiningStormSuppression: 0.85
+  ShadowStrength: 0.35
+  ShadowSoftness: 0.45
+  StormShadowBoost: 1.35
+  ShadowHorizonFade: 0.18
   AnimationSpeed: 0.35
   ViewSteps: 48
   LightSteps: 6

@@ -23,6 +23,7 @@ Shader "Planet/VertexColor"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Includes/CloudShadows.hlsl"
 
             struct Attributes
             {
@@ -90,6 +91,8 @@ Shader "Planet/VertexColor"
                 float3 coolNightAlbedo = lerp(input.color.rgb, float3(0.12, 0.16, 0.22), 0.65);
                 float nightAmbient = max(_NightAmbientIntensity, 0.035);
                 color.rgb += coolNightAlbedo * nightAmbient * 0.65 * nightSide;
+
+                color.rgb *= CloudShadowFactor(input.positionWS, sunDir, localSun);
 
                 color.rgb = MixFog(color.rgb, input.fogFactor);
                 return color;

@@ -30,6 +30,9 @@ public class AtmosphereController : MonoBehaviour
     static readonly int _sunIntensityId = Shader.PropertyToID("_SunIntensity");
     static readonly int _sunDiscSizeId = Shader.PropertyToID("_SunDiscSize");
     static readonly int _sunDiscBlendId = Shader.PropertyToID("_SunDiscBlend");
+    static readonly int _lightShaftParamsId = Shader.PropertyToID("_LightShaftParams");
+    static readonly int _lightShaftParams2Id = Shader.PropertyToID("_LightShaftParams2");
+    static readonly int _lightShaftSamplesId = Shader.PropertyToID("_LightShaftSamples");
     static readonly int _debugModeId = Shader.PropertyToID("_DebugMode");
     static readonly int _bakedOpticalDepthId = Shader.PropertyToID("_BakedOpticalDepth");
 
@@ -91,6 +94,17 @@ public class AtmosphereController : MonoBehaviour
         Shader.SetGlobalFloat(_sunIntensityId, Settings.SunIntensity);
         Shader.SetGlobalFloat(_sunDiscSizeId, Settings.SunDiscSize);
         Shader.SetGlobalFloat(_sunDiscBlendId, Settings.SunDiscBlend);
+        Shader.SetGlobalVector(_lightShaftParamsId, new Vector4(
+            Settings.EnableLightShafts ? Settings.LightShaftStrength : 0f,
+            Settings.LightShaftDensity,
+            Settings.LightShaftDecay,
+            Settings.LightShaftWeight));
+        Shader.SetGlobalVector(_lightShaftParams2Id, new Vector4(
+            Settings.LightShaftExposure,
+            Settings.LightShaftThreshold,
+            0.25f,
+            1.35f));
+        Shader.SetGlobalInt(_lightShaftSamplesId, Settings.EnableLightShafts ? Settings.LightShaftSamples : 0);
         Shader.SetGlobalInt(_debugModeId, Settings.DebugMode);
     }
 

@@ -29,6 +29,16 @@ public class AtmosphereSettings : ScriptableObject
     [Range(0.99f, 0.9999f)] public float SunDiscSize = 0.9995f;
     [Range(0.0001f, 0.01f)] public float SunDiscBlend = 0.002f;
 
+    [Header("Light Shafts")]
+    public bool EnableLightShafts = true;
+    [Range(0, 32)] public int LightShaftSamples = 24;
+    [Range(0f, 1f)] public float LightShaftStrength = 0.35f;
+    [Range(0.1f, 2f)] public float LightShaftDensity = 0.85f;
+    [Range(0.7f, 0.99f)] public float LightShaftDecay = 0.96f;
+    [Range(0f, 0.5f)] public float LightShaftWeight = 0.12f;
+    [Range(0f, 2f)] public float LightShaftExposure = 0.8f;
+    [Range(0f, 1.5f)] public float LightShaftThreshold = 0.25f;
+
     [Header("Optical Depth LUT")]
     [Range(64, 512)] public int BakeTextureSize = 256;
     [Range(16, 128)] public int BakeSteps = 64;

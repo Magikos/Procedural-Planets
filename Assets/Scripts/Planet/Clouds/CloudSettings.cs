@@ -53,6 +53,12 @@ public class CloudSettings : ScriptableObject
     [Range(0.25f, 4f)] public float SilverLiningEdgePower = 1.6f;
     [Range(0f, 1f)] public float SilverLiningStormSuppression = 0.85f;
 
+    [Header("Shadows")]
+    [Range(0f, 1f)] public float ShadowStrength = 0.35f;
+    [Range(0.01f, 1f)] public float ShadowSoftness = 0.45f;
+    [Range(0.5f, 3f)] public float StormShadowBoost = 1.35f;
+    [Range(0f, 0.4f)] public float ShadowHorizonFade = 0.18f;
+
     [Header("Animation")]
     [Range(0f, 2f)] public float AnimationSpeed = 0.35f;
 
