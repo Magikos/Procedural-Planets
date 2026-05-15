@@ -19,6 +19,13 @@ MonoBehaviour:
   StormThreshold: 0.78
   BiomeInfluence: 0.15
   FrontAdvectionDegreesPerSecond: 0.4
+  EnableWeatherEvolution: 1
+  EvolutionInterval: 0.5
+  MoistureSourceStrength: 0.04
+  DryAirEvaporationRate: 0.03
+  StormGrowthRate: 0.12
+  StormDecayRate: 0.08
+  StormMoistureBias: 0.35
   BaseAltitude: 330
   LayerThickness: 300
   BottomFeather: 0.06

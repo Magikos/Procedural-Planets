@@ -53,7 +53,7 @@ void CloudShadowCubeFaceUv(float3 direction, out int face, out float2 uv)
     uv = saturate(float2(u, v) * 0.5 + 0.5);
 }
 
-float2 SampleCloudShadowWeather(float3 direction)
+float4 SampleCloudShadowWeather(float3 direction)
 {
     float3 weatherDirection = mul((float3x3)_CloudWeatherRotation, direction);
     direction = dot(weatherDirection, weatherDirection) > 0.0001 ? normalize(weatherDirection) : direction;
@@ -61,7 +61,7 @@ float2 SampleCloudShadowWeather(float3 direction)
     int face;
     float2 uv;
     CloudShadowCubeFaceUv(direction, face, uv);
-    return SAMPLE_TEXTURE2D_ARRAY_LOD(_CloudWeatherMap, sampler_CloudWeatherMap, uv, face, 0).rg;
+    return SAMPLE_TEXTURE2D_ARRAY_LOD(_CloudWeatherMap, sampler_CloudWeatherMap, uv, face, 0);
 }
 
 float WeightedCloudShadowNoise(float4 noise, float4 weights)
@@ -74,8 +74,8 @@ float SampleCloudShadowDensity(float3 worldPos)
     float3 fromCenter = worldPos - _CloudPlanetCenter;
     float radius = length(fromCenter);
     float3 direction = fromCenter / max(radius, 0.0001);
-    float2 weather = SampleCloudShadowWeather(direction);
-    float condensation = weather.x;
+    float4 weather = SampleCloudShadowWeather(direction);
+    float condensation = weather.r;
 
     if (condensation <= 0.001)
         return 0.0;
@@ -87,7 +87,7 @@ float SampleCloudShadowDensity(float3 worldPos)
 
     float cloudShape = shapeFBM * condensation;
     float density = saturate((cloudShape - _CloudDensityThreshold) * _CloudShapeSharpness);
-    float stormBoost = lerp(1.0, max(_CloudShadowParams.z, 0.5), weather.y);
+    float stormBoost = lerp(1.0, max(_CloudShadowParams.z, 0.5), weather.g);
     return density * condensation * stormBoost;
 }
 

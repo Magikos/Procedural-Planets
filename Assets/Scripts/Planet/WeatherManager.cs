@@ -1,13 +1,14 @@
 using UnityEngine;
 
 /// <summary>
-/// Owns planet-scale weather state. Current implementation generates a static
-/// cube-sphere condensation grid; later phases will advect and evolve the same data.
+/// Owns planet-scale weather state. The CPU seeds the initial cube-sphere weather
+/// grid, then runtime evolution is dispatched to a GPU ping-pong texture.
 /// </summary>
 public class WeatherManager : MonoBehaviour, IWeatherProvider
 {
     [Header("References")]
     public CloudSettings Settings;
+    public ComputeShader WeatherCompute;
 
     [Header("Wind")]
     public Vector3 WindDir = new Vector3(1f, 0f, 0.3f);
@@ -20,6 +21,8 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
     Vector3 _planetCenter;
     float _seaLevelRadius;
     Quaternion _weatherVisualRotation = Quaternion.identity;
+    float _evolutionAccumulator;
+    bool _missingWeatherComputeLogged;
     ILogger _logger;
 
     static readonly int _windDirectionId = Shader.PropertyToID("_WindDirection");
@@ -28,7 +31,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
 
     public Vector3 WindDirection => WindDir.sqrMagnitude > 0.0001f ? WindDir.normalized : Vector3.right;
     public float WindSpeed => Speed;
-    public Texture2DArray WeatherTexture => _grid != null ? _grid.Texture : null;
+    public Texture WeatherTexture => _grid != null ? _grid.Texture : null;
     public int WeatherResolution => _grid != null ? _grid.Resolution : 0;
     public bool HasWeatherGrid => _grid != null;
 
@@ -61,6 +64,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
     void Update()
     {
         UpdateWeatherAdvection();
+        UpdateWeatherEvolution();
         Shader.SetGlobalVector(_windDirectionId, WindDirection);
         Shader.SetGlobalFloat(_windSpeedId, WindSpeed);
     }
@@ -118,6 +122,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         _grid?.Dispose();
         _grid = SphericalWeatherGrid.Generate(Settings, seed);
         _weatherVisualRotation = Quaternion.identity;
+        _evolutionAccumulator = 0f;
         UploadWeatherAdvection();
         Logger.Log(LogLevel.Debug, "Weather", $"Generated {WeatherResolution}x{WeatherResolution}x6 condensation grid.");
     }
@@ -141,6 +146,35 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         }
 
         UploadWeatherAdvection();
+    }
+
+    void UpdateWeatherEvolution()
+    {
+        if (_grid == null || Settings == null || !Settings.EnableWeatherEvolution)
+        {
+            _evolutionAccumulator = 0f;
+            return;
+        }
+
+        if (WeatherCompute == null)
+        {
+            if (!_missingWeatherComputeLogged)
+            {
+                Logger.Log(LogLevel.Warning, "Weather", "WeatherCompute is not assigned; dynamic weather evolution is disabled.");
+                _missingWeatherComputeLogged = true;
+            }
+            _evolutionAccumulator = 0f;
+            return;
+        }
+
+        _evolutionAccumulator += Time.deltaTime;
+        float interval = Mathf.Max(Settings.EvolutionInterval, 0.05f);
+        if (_evolutionAccumulator < interval)
+            return;
+
+        float simulationDelta = Mathf.Min(_evolutionAccumulator, interval * 4f);
+        _evolutionAccumulator = 0f;
+        _grid.Advance(WeatherCompute, Settings, simulationDelta, _weatherVisualRotation);
     }
 
     void UploadWeatherAdvection()

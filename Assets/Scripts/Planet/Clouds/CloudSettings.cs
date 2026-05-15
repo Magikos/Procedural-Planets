@@ -10,7 +10,9 @@ public class CloudSettings : ScriptableObject
         Storm = 2,
         Density = 3,
         OpticalDepth = 4,
-        SilverLining = 5
+        SilverLining = 5,
+        MoistureSource = 6,
+        CondensationChange = 7
     }
 
     [Header("Weather Grid")]
@@ -23,6 +25,15 @@ public class CloudSettings : ScriptableObject
 
     [Header("Weather Motion")]
     [Range(0f, 5f)] public float FrontAdvectionDegreesPerSecond = 0.4f;
+
+    [Header("Weather Evolution")]
+    public bool EnableWeatherEvolution = true;
+    [Range(0.05f, 5f)] public float EvolutionInterval = 0.5f;
+    [Range(0f, 0.2f)] public float MoistureSourceStrength = 0.04f;
+    [Range(0f, 0.2f)] public float DryAirEvaporationRate = 0.03f;
+    [Range(0f, 0.5f)] public float StormGrowthRate = 0.12f;
+    [Range(0f, 0.5f)] public float StormDecayRate = 0.08f;
+    [Range(0f, 1f)] public float StormMoistureBias = 0.35f;
 
     [Header("Layer")]
     [Range(20f, 1000f)] public float BaseAltitude = 330f;

@@ -69,6 +69,8 @@ struct CloudSample
     float density;
     float condensation;
     float storm;
+    float moistureSource;
+    float condensationDelta;
     float height01;
 };
 
@@ -123,7 +125,7 @@ void CubeFaceUv(float3 direction, out int face, out float2 uv)
     uv = saturate(float2(u, v) * 0.5 + 0.5);
 }
 
-float2 SampleWeather(float3 direction)
+float4 SampleWeather(float3 direction)
 {
     float3 weatherDirection = mul((float3x3)_CloudWeatherRotation, direction);
     direction = dot(weatherDirection, weatherDirection) > 0.0001 ? normalize(weatherDirection) : direction;
@@ -131,8 +133,7 @@ float2 SampleWeather(float3 direction)
     int face;
     float2 uv;
     CubeFaceUv(direction, face, uv);
-    float4 weather = SAMPLE_TEXTURE2D_ARRAY_LOD(_CloudWeatherMap, sampler_CloudWeatherMap, uv, face, 0);
-    return weather.rg;
+    return SAMPLE_TEXTURE2D_ARRAY_LOD(_CloudWeatherMap, sampler_CloudWeatherMap, uv, face, 0);
 }
 
 float WeightedNoise(float4 noise, float4 weights)
@@ -146,6 +147,8 @@ CloudSample SampleCloud(float3 worldPos)
     sampleData.density = 0;
     sampleData.condensation = 0;
     sampleData.storm = 0;
+    sampleData.moistureSource = 0;
+    sampleData.condensationDelta = 0;
     sampleData.height01 = 0;
 
     float layerThickness = max(_CloudOuterRadius - _CloudInnerRadius, 0.0001);
@@ -157,9 +160,13 @@ CloudSample SampleCloud(float3 worldPos)
         return sampleData;
 
     float3 direction = fromCenter / max(radius, 0.0001);
-    float2 weather = SampleWeather(direction);
-    float condensation = weather.x;
-    float storm = weather.y;
+    float4 weather = SampleWeather(direction);
+    float condensation = weather.r;
+    float storm = weather.g;
+    sampleData.condensation = condensation;
+    sampleData.storm = storm;
+    sampleData.moistureSource = weather.b;
+    sampleData.condensationDelta = weather.a * 2.0 - 1.0;
 
     if (condensation <= 0.001)
         return sampleData;
@@ -186,8 +193,6 @@ CloudSample SampleCloud(float3 worldPos)
     density = saturate(density - edgeErosion) * _CloudDensityMultiplier;
 
     sampleData.density = density;
-    sampleData.condensation = condensation;
-    sampleData.storm = storm;
     sampleData.height01 = height01;
     return sampleData;
 }
@@ -296,6 +301,9 @@ ENDHLSL
                 float debugStorm = 0.0;
                 float debugDensity = 0.0;
                 float debugSilverLining = 0.0;
+                float debugMoistureSource = 0.0;
+                float debugCondensationChange = 0.0;
+                float debugCondensationSign = 0.0;
 
                 UNITY_LOOP
                 for (int s = 0; s < viewSteps; s++)
@@ -303,6 +311,13 @@ ENDHLSL
                     CloudSample cloud = SampleCloud(samplePos);
                     debugWeather = max(debugWeather, cloud.condensation);
                     debugStorm = max(debugStorm, cloud.storm);
+                    debugMoistureSource = max(debugMoistureSource, cloud.moistureSource);
+                    float condensationChange = abs(cloud.condensationDelta);
+                    if (condensationChange > debugCondensationChange)
+                    {
+                        debugCondensationChange = condensationChange;
+                        debugCondensationSign = cloud.condensationDelta >= 0.0 ? 1.0 : -1.0;
+                    }
 
                     if (cloud.density > 0.0001)
                     {
@@ -353,8 +368,21 @@ ENDHLSL
                         debugColor = lerp(float3(0.02, 0.04, 0.1), float3(1.0, 0.8, 0.1), opticalDepth);
                     if (_CloudDebugMode == 5)
                         debugColor = lerp(float3(0.02, 0.02, 0.02), float3(1.0, 0.92, 0.55), debugSilverLining);
+                    if (_CloudDebugMode == 6)
+                        debugColor = lerp(float3(0.22, 0.12, 0.04), float3(0.15, 0.85, 1.0), debugMoistureSource);
+                    if (_CloudDebugMode == 7)
+                    {
+                        float3 drying = float3(1.0, 0.18, 0.08);
+                        float3 condensing = float3(0.1, 0.75, 1.0);
+                        debugColor = lerp(drying, condensing, step(0.0, debugCondensationSign));
+                    }
 
-                    float debugMask = max(max(max(debugWeather, debugStorm), max(debugDensity, opticalDepth)), debugSilverLining);
+                    float debugMask = max(max(max(debugWeather, debugStorm), max(debugDensity, opticalDepth)),
+                        debugSilverLining);
+                    if (_CloudDebugMode == 6)
+                        debugMask = debugMoistureSource;
+                    if (_CloudDebugMode == 7)
+                        debugMask = saturate(debugCondensationChange);
                     return float4(baseScene + debugColor * saturate(debugMask), sceneColor.a);
                 }
 

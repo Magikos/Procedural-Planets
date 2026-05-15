@@ -1,0 +1,116 @@
+// Evolves the cloud weather map on the GPU.
+// RGBA channels: condensation, storm, moisture source, condensation delta debug.
+
+#pragma kernel CSEvolveWeather
+
+Texture2DArray<float4> _WeatherRead;
+RWTexture2DArray<float4> _WeatherWrite;
+
+int _Resolution;
+float _DeltaTime;
+float _StormThreshold;
+float _MoistureSourceStrength;
+float _DryAirEvaporationRate;
+float _StormGrowthRate;
+float _StormDecayRate;
+float _StormMoistureBias;
+float _DeltaVisualizationScale;
+float4x4 _WeatherVisualRotation;
+
+float3 CubeFaceToUnitSphere(int face, float2 uv)
+{
+    float u = uv.x * 2.0 - 1.0;
+    float v = uv.y * 2.0 - 1.0;
+
+    float3 localUp = float3(0.0, 1.0, 0.0);
+    if (face == 1) localUp = float3(0.0, -1.0, 0.0);
+    else if (face == 2) localUp = float3(-1.0, 0.0, 0.0);
+    else if (face == 3) localUp = float3(1.0, 0.0, 0.0);
+    else if (face == 4) localUp = float3(0.0, 0.0, 1.0);
+    else if (face == 5) localUp = float3(0.0, 0.0, -1.0);
+
+    float3 axisA = float3(localUp.y, localUp.z, localUp.x);
+    float3 axisB = cross(localUp, axisA);
+    return normalize(localUp + u * axisA + v * axisB);
+}
+
+void CubeFaceUv(float3 direction, out int face, out float2 uv)
+{
+    float3 absDirection = abs(direction);
+    float u;
+    float v;
+
+    if (absDirection.y >= absDirection.x && absDirection.y >= absDirection.z)
+    {
+        face = direction.y > 0.0 ? 0 : 1;
+        float faceSign = direction.y > 0.0 ? 1.0 : -1.0;
+        u = direction.x / max(absDirection.y, 0.00001);
+        v = direction.z / max(absDirection.y, 0.00001) * faceSign;
+    }
+    else if (absDirection.x >= absDirection.y && absDirection.x >= absDirection.z)
+    {
+        face = direction.x > 0.0 ? 3 : 2;
+        float faceSign = direction.x > 0.0 ? 1.0 : -1.0;
+        u = direction.z / max(absDirection.x, 0.00001) * -faceSign;
+        v = direction.y / max(absDirection.x, 0.00001);
+    }
+    else
+    {
+        face = direction.z > 0.0 ? 4 : 5;
+        float faceSign = direction.z > 0.0 ? 1.0 : -1.0;
+        u = direction.x / max(absDirection.z, 0.00001) * faceSign;
+        v = direction.y / max(absDirection.z, 0.00001);
+    }
+
+    uv = saturate(float2(u, v) * 0.5 + 0.5);
+}
+
+float SampleMoistureSource(float3 direction)
+{
+    int face;
+    float2 uv;
+    CubeFaceUv(direction, face, uv);
+
+    int2 pixel = clamp(int2(floor(uv * _Resolution)), int2(0, 0), int2(_Resolution - 1, _Resolution - 1));
+    return _WeatherRead.Load(int4(pixel, face, 0)).b;
+}
+
+float MoveTowards(float current, float target, float maxDelta)
+{
+    if (target > current)
+        return min(current + maxDelta, target);
+
+    return max(current - maxDelta, target);
+}
+
+[numthreads(8, 8, 1)]
+void CSEvolveWeather(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_Resolution || id.y >= (uint)_Resolution || id.z >= 6)
+        return;
+
+    int3 pixel = int3(id.x, id.y, id.z);
+    float4 current = _WeatherRead.Load(int4(pixel, 0));
+
+    float2 uv = (float2(id.xy) + 0.5) / _Resolution;
+    float3 direction = CubeFaceToUnitSphere((int)id.z, uv);
+    float3 sourceDirection = mul((float3x3)_WeatherVisualRotation, direction);
+    float source = SampleMoistureSource(sourceDirection);
+
+    float condensation = saturate(current.r);
+    float storm = saturate(current.g);
+
+    float condensationGain = source * _MoistureSourceStrength * (1.0 - condensation);
+    float evaporation = (1.0 - source) * _DryAirEvaporationRate * condensation;
+    float nextCondensation = saturate(condensation + (condensationGain - evaporation) * _DeltaTime);
+    float condensationDelta = nextCondensation - condensation;
+
+    float stormCondensation = smoothstep(_StormThreshold, 1.0, nextCondensation);
+    float stormSource = lerp(1.0 - _StormMoistureBias, 1.0, source);
+    float stormTarget = stormCondensation * stormSource;
+    float stormRate = stormTarget > storm ? _StormGrowthRate : _StormDecayRate;
+    float nextStorm = MoveTowards(storm, stormTarget, stormRate * _DeltaTime);
+
+    float deltaDebug = saturate(0.5 + condensationDelta * _DeltaVisualizationScale);
+    _WeatherWrite[pixel] = float4(nextCondensation, nextStorm, current.b, deltaDebug);
+}

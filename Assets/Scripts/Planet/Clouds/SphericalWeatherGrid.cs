@@ -1,18 +1,42 @@
 using System;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public sealed class SphericalWeatherGrid : IDisposable
 {
     public int Resolution { get; }
-    public Texture2DArray Texture { get; }
+    public Texture Texture => _activeTexture;
+
+    const float DeltaVisualizationScale = 16f;
 
     readonly float[] _condensation;
     readonly float[] _storm;
+    RenderTexture _activeTexture;
+    RenderTexture _scratchTexture;
 
-    SphericalWeatherGrid(int resolution, Texture2DArray texture, float[] condensation, float[] storm)
+    static readonly int _weatherReadId = Shader.PropertyToID("_WeatherRead");
+    static readonly int _weatherWriteId = Shader.PropertyToID("_WeatherWrite");
+    static readonly int _resolutionId = Shader.PropertyToID("_Resolution");
+    static readonly int _deltaTimeId = Shader.PropertyToID("_DeltaTime");
+    static readonly int _stormThresholdId = Shader.PropertyToID("_StormThreshold");
+    static readonly int _moistureSourceStrengthId = Shader.PropertyToID("_MoistureSourceStrength");
+    static readonly int _dryAirEvaporationRateId = Shader.PropertyToID("_DryAirEvaporationRate");
+    static readonly int _stormGrowthRateId = Shader.PropertyToID("_StormGrowthRate");
+    static readonly int _stormDecayRateId = Shader.PropertyToID("_StormDecayRate");
+    static readonly int _stormMoistureBiasId = Shader.PropertyToID("_StormMoistureBias");
+    static readonly int _deltaVisualizationScaleId = Shader.PropertyToID("_DeltaVisualizationScale");
+    static readonly int _weatherVisualRotationId = Shader.PropertyToID("_WeatherVisualRotation");
+
+    SphericalWeatherGrid(
+        int resolution,
+        RenderTexture activeTexture,
+        RenderTexture scratchTexture,
+        float[] condensation,
+        float[] storm)
     {
         Resolution = resolution;
-        Texture = texture;
+        _activeTexture = activeTexture;
+        _scratchTexture = scratchTexture;
         _condensation = condensation;
         _storm = storm;
     }
@@ -23,7 +47,7 @@ public sealed class SphericalWeatherGrid : IDisposable
         int cellCount = resolution * resolution * 6;
         var condensation = new float[cellCount];
         var storm = new float[cellCount];
-        var texture = new Texture2DArray(resolution, resolution, 6, TextureFormat.RGBAHalf, false, true)
+        var stagingTexture = new Texture2DArray(resolution, resolution, 6, TextureFormat.RGBAHalf, false, true)
         {
             name = $"CloudWeather_{resolution}_{seed}",
             filterMode = FilterMode.Bilinear,
@@ -34,6 +58,7 @@ public sealed class SphericalWeatherGrid : IDisposable
         var pixels = new Color[resolution * resolution];
         var frontNoise = new Noise(seed);
         var detailNoise = new Noise(seed + 7919);
+        var climateNoise = new Noise(seed + 104729);
         float coverageThreshold = Mathf.Lerp(0.84f, 0.18f, settings.InitialCoverage);
         float edgeWidth = Mathf.Clamp(1f / Mathf.Max(1f, settings.FrontSharpness), 0.015f, 0.25f);
 
@@ -50,6 +75,8 @@ public sealed class SphericalWeatherGrid : IDisposable
                     float largeFronts = Fbm(frontNoise, direction * settings.FrontScale, 5, 2.05f, 0.54f);
                     float smallFronts = Fbm(detailNoise, direction * settings.FrontScale * 3.25f, 3, 2.2f, 0.48f);
                     float latitudeWetness = 1f - CoordinateConverter.NormalizedLatitude(direction);
+                    float climate = Fbm(climateNoise, direction * 2.35f, 4, 2.1f, 0.52f);
+                    float source = Mathf.Clamp01(latitudeWetness * 0.62f + climate * 0.38f);
                     float biomeBias = (latitudeWetness - 0.5f) * settings.BiomeInfluence;
                     float frontValue = Mathf.Clamp01(largeFronts * 0.82f + smallFronts * 0.18f + biomeBias);
 
@@ -61,15 +88,26 @@ public sealed class SphericalWeatherGrid : IDisposable
                     int gridIndex = GetIndex(face, x, y, resolution);
                     condensation[gridIndex] = cellCondensation;
                     storm[gridIndex] = cellStorm;
-                    pixels[pixelIndex] = new Color(cellCondensation, cellStorm, latitudeWetness, 1f);
+                    pixels[pixelIndex] = new Color(cellCondensation, cellStorm, source, 0.5f);
                 }
             }
 
-            texture.SetPixels(pixels, face);
+            stagingTexture.SetPixels(pixels, face);
         }
 
-        texture.Apply(false, true);
-        return new SphericalWeatherGrid(resolution, texture, condensation, storm);
+        stagingTexture.Apply(false, false);
+
+        var activeTexture = CreateWeatherTexture(resolution, $"CloudWeatherActive_{resolution}_{seed}");
+        var scratchTexture = CreateWeatherTexture(resolution, $"CloudWeatherScratch_{resolution}_{seed}");
+        Graphics.CopyTexture(stagingTexture, activeTexture);
+        Graphics.CopyTexture(stagingTexture, scratchTexture);
+
+        if (Application.isPlaying)
+            UnityEngine.Object.Destroy(stagingTexture);
+        else
+            UnityEngine.Object.DestroyImmediate(stagingTexture);
+
+        return new SphericalWeatherGrid(resolution, activeTexture, scratchTexture, condensation, storm);
     }
 
     public float GetCondensation(Vector3 worldPosition, Vector3 planetCenter, Quaternion sampleRotation)
@@ -84,13 +122,35 @@ public sealed class SphericalWeatherGrid : IDisposable
         return _storm[GetIndex(face, x, y, Resolution)];
     }
 
+    public bool Advance(ComputeShader compute, CloudSettings settings, float deltaTime, Quaternion visualRotation)
+    {
+        if (compute == null || settings == null || !settings.EnableWeatherEvolution || deltaTime <= 0f)
+            return false;
+
+        int kernel = compute.FindKernel("CSEvolveWeather");
+        compute.SetTexture(kernel, _weatherReadId, _activeTexture);
+        compute.SetTexture(kernel, _weatherWriteId, _scratchTexture);
+        compute.SetInt(_resolutionId, Resolution);
+        compute.SetFloat(_deltaTimeId, deltaTime);
+        compute.SetFloat(_stormThresholdId, settings.StormThreshold);
+        compute.SetFloat(_moistureSourceStrengthId, settings.MoistureSourceStrength);
+        compute.SetFloat(_dryAirEvaporationRateId, settings.DryAirEvaporationRate);
+        compute.SetFloat(_stormGrowthRateId, settings.StormGrowthRate);
+        compute.SetFloat(_stormDecayRateId, settings.StormDecayRate);
+        compute.SetFloat(_stormMoistureBiasId, settings.StormMoistureBias);
+        compute.SetFloat(_deltaVisualizationScaleId, DeltaVisualizationScale);
+        compute.SetMatrix(_weatherVisualRotationId, Matrix4x4.Rotate(visualRotation));
+
+        int groups = Mathf.CeilToInt(Resolution / 8f);
+        compute.Dispatch(kernel, groups, groups, 6);
+        (_activeTexture, _scratchTexture) = (_scratchTexture, _activeTexture);
+        return true;
+    }
+
     public void Dispose()
     {
-        if (Texture == null) return;
-        if (Application.isPlaying)
-            UnityEngine.Object.Destroy(Texture);
-        else
-            UnityEngine.Object.DestroyImmediate(Texture);
+        ReleaseTexture(ref _activeTexture);
+        ReleaseTexture(ref _scratchTexture);
     }
 
     void GetCell(Vector3 worldPosition, Vector3 planetCenter, Quaternion sampleRotation, out int face, out int x, out int y)
@@ -107,6 +167,41 @@ public sealed class SphericalWeatherGrid : IDisposable
     static int GetIndex(int face, int x, int y, int resolution)
     {
         return face * resolution * resolution + x + y * resolution;
+    }
+
+    static RenderTexture CreateWeatherTexture(int resolution, string name)
+    {
+        var desc = new RenderTextureDescriptor(resolution, resolution, RenderTextureFormat.ARGBHalf, 0)
+        {
+            dimension = TextureDimension.Tex2DArray,
+            volumeDepth = 6,
+            enableRandomWrite = true,
+            msaaSamples = 1,
+            useMipMap = false
+        };
+
+        var texture = new RenderTexture(desc)
+        {
+            name = name,
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp,
+            anisoLevel = 1
+        };
+        texture.Create();
+        return texture;
+    }
+
+    static void ReleaseTexture(ref RenderTexture texture)
+    {
+        if (texture == null) return;
+
+        texture.Release();
+        if (Application.isPlaying)
+            UnityEngine.Object.Destroy(texture);
+        else
+            UnityEngine.Object.DestroyImmediate(texture);
+
+        texture = null;
     }
 
     static float Fbm(Noise noise, Vector3 point, int octaves, float lacunarity, float persistence)
