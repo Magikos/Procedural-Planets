@@ -45,6 +45,8 @@ Shader "Planet/VertexColor"
             CBUFFER_END
 
             float _NightAmbientIntensity;
+            float3 _SunParams;
+            float3 _PlanetCenter;
 
             Varyings vert(Attributes input)
             {
@@ -77,8 +79,17 @@ Shader "Planet/VertexColor"
 
                 half4 color = UniversalFragmentPBR(inputData, surfaceData);
 
-                // Night ambient: add faint terrain-colored light independent of Unity lighting
-                color.rgb += input.color.rgb * _NightAmbientIntensity;
+                float3 planetNormal = normalize(input.positionWS - _PlanetCenter);
+                float3 sunDir = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : float3(0.0, 1.0, 0.0);
+                float localSun = dot(planetNormal, sunDir);
+                float daylight = smoothstep(-0.08, 0.18, localSun);
+                float nightSide = 1.0 - daylight;
+
+                color.rgb *= lerp(0.34, 1.0, daylight);
+
+                float3 coolNightAlbedo = lerp(input.color.rgb, float3(0.12, 0.16, 0.22), 0.65);
+                float nightAmbient = max(_NightAmbientIntensity, 0.035);
+                color.rgb += coolNightAlbedo * nightAmbient * 0.65 * nightSide;
 
                 color.rgb = MixFog(color.rgb, input.fogFactor);
                 return color;

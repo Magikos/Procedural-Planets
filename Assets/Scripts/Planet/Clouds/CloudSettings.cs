@@ -38,6 +38,10 @@ public class CloudSettings : ScriptableObject
     [Range(0f, 1f)] public float PhaseStrength = 0.15f;
     [Range(0f, 1f)] public float AmbientStrength = 0.12f;
     [Range(0f, 1f)] public float StormDarkening = 0.65f;
+    [Range(0f, 3f)] public float SilverLiningStrength = 0.9f;
+    [Range(1f, 32f)] public float SilverLiningPower = 10f;
+    [Range(0.25f, 4f)] public float SilverLiningEdgePower = 1.6f;
+    [Range(0f, 1f)] public float SilverLiningStormSuppression = 0.85f;
 
     [Header("Animation")]
     [Range(0f, 2f)] public float AnimationSpeed = 0.35f;

@@ -40,6 +40,10 @@ MonoBehaviour:
   PhaseStrength: 0.15
   AmbientStrength: 0.12
   StormDarkening: 0.65
+  SilverLiningStrength: 0.9
+  SilverLiningPower: 10
+  SilverLiningEdgePower: 1.6
+  SilverLiningStormSuppression: 0.85
   AnimationSpeed: 0.35
   ViewSteps: 48
   LightSteps: 6

@@ -42,6 +42,7 @@ float4 _CloudColor;
 float4 _CloudStormColor;
 float _CloudAmbientStrength;
 float _CloudStormDarkening;
+float4 _CloudSilverLiningParams;
 
 // Animation
 float _CloudAnimSpeed;
@@ -299,9 +300,18 @@ ENDHLSL
                         float localSun = saturate((dot(surfaceNormal, _SunParams.xyz) + 0.12) * 2.5);
                         float3 cloudAlbedo = lerp(_CloudColor.rgb, _CloudStormColor.rgb, cloud.storm);
                         float stormLight = lerp(1.0, 1.0 - _CloudStormDarkening, cloud.storm);
-                        float ambientStrength = lerp(_CloudAmbientStrength * 0.08, _CloudAmbientStrength, localSun);
-                        float ambient = (_NightAmbientIntensity * 0.05 + ambientStrength) * (0.35 + 0.65 * cloud.height01);
+                        float ambientStrength = lerp(_CloudAmbientStrength * 0.12, _CloudAmbientStrength, localSun);
+                        float ambient = (_NightAmbientIntensity * 0.25 + ambientStrength) * (0.35 + 0.65 * cloud.height01);
                         float3 lighting = cloudAlbedo * (lightTransmittance * phase * stormLight + ambient);
+
+                        float density01 = saturate(cloud.density / max(_CloudDensityMultiplier, 0.0001));
+                        float thinEdge = pow(saturate(1.0 - density01), max(_CloudSilverLiningParams.z, 0.001));
+                        float forwardSun = pow(saturate(cosAngle), max(_CloudSilverLiningParams.y, 1.0));
+                        float horizonSun = saturate((dot(surfaceNormal, _SunParams.xyz) + 0.35) * 1.6);
+                        float stormSuppression = saturate(1.0 - cloud.storm * _CloudSilverLiningParams.w);
+                        float silverLining = _CloudSilverLiningParams.x * forwardSun * thinEdge
+                            * lightTransmittance * horizonSun * stormSuppression;
+                        lighting += _CloudColor.rgb * silverLining;
 
                         lightEnergy += cloud.density * stepSize * transmittance * lighting;
                         transmittance *= exp(-cloud.density * stepSize * _CloudLightAbsorption);

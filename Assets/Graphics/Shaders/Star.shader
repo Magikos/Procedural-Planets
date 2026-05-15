@@ -12,6 +12,9 @@ float3 _SunParams;
 float _SunIntensity;
 float _SunDiscSize;
 float _SunDiscBlend;
+float3 _PlanetCenter;
+float _PlanetRadius;
+float _AtmosphereRadius;
 
 float Hash31(float3 p)
 {
@@ -85,6 +88,23 @@ float3 SunDisc(float3 dir)
     return sunColor / (1.0 + sunColor);
 }
 
+float StarVisibility(float3 dir)
+{
+    float3 sunDir = dot(_SunParams.xyz, _SunParams.xyz) > 0.0001 ? normalize(_SunParams.xyz) : float3(0.0, 1.0, 0.0);
+    float3 fromCenter = _WorldSpaceCameraPos.xyz - _PlanetCenter;
+    float cameraRadius = length(fromCenter);
+
+    if (_AtmosphereRadius <= _PlanetRadius || cameraRadius <= 0.0001)
+        return 1.0;
+
+    float insideAtmosphere = 1.0 - smoothstep(_AtmosphereRadius * 0.92, _AtmosphereRadius * 1.08, cameraRadius);
+    float localDay = smoothstep(-0.06, 0.18, dot(fromCenter / cameraRadius, sunDir));
+    float sunFacing = smoothstep(-0.15, 0.55, dot(dir, sunDir));
+    float daylightFade = saturate(localDay * lerp(0.82, 1.0, sunFacing) * insideAtmosphere);
+
+    return 1.0 - daylightFade;
+}
+
 ENDHLSL
 
     SubShader
@@ -124,7 +144,7 @@ ENDHLSL
             float4 StarFragment(v2f i) : SV_Target
             {
                 float3 dir = normalize(i.viewVector);
-                float3 background = ProceduralStars(dir) + SunDisc(dir);
+                float3 background = ProceduralStars(dir) * StarVisibility(dir) + SunDisc(dir);
                 return float4(background, 1);
             }
             ENDHLSL
