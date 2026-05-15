@@ -50,3 +50,4 @@ MonoBehaviour:
   RayOffsetStrength: 0.65
   ShapeNoiseResolution: 128
   DetailNoiseResolution: 32
+  DebugMode: 0

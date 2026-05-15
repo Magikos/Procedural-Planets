@@ -99,3 +99,7 @@ InitTestScene*.unity*
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 
 local-only
+
+# Local AI/editor tool artifacts
+.clinerules-*
+*.lscache

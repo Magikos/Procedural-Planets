@@ -44,6 +44,7 @@ public class CloudController : MonoBehaviour
     static readonly int _cloudViewStepsId = Shader.PropertyToID("_CloudViewSteps");
     static readonly int _cloudLightStepsId = Shader.PropertyToID("_CloudLightSteps");
     static readonly int _cloudRayOffsetStrengthId = Shader.PropertyToID("_CloudRayOffsetStrength");
+    static readonly int _cloudDebugModeId = Shader.PropertyToID("_CloudDebugMode");
     static readonly int _cloudShapeNoiseId = Shader.PropertyToID("_CloudShapeNoise");
     static readonly int _cloudDetailNoiseId = Shader.PropertyToID("_CloudDetailNoise");
 
@@ -133,6 +134,7 @@ public class CloudController : MonoBehaviour
         Shader.SetGlobalInt(_cloudViewStepsId, Settings.ViewSteps);
         Shader.SetGlobalInt(_cloudLightStepsId, Settings.LightSteps);
         Shader.SetGlobalFloat(_cloudRayOffsetStrengthId, Settings.RayOffsetStrength);
+        Shader.SetGlobalInt(_cloudDebugModeId, (int)Settings.DebugMode);
 
         if (_shapeNoise != null)
             Shader.SetGlobalTexture(_cloudShapeNoiseId, _shapeNoise);

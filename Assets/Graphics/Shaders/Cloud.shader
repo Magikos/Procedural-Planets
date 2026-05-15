@@ -51,6 +51,7 @@ float _CloudAnimSpeed;
 int _CloudViewSteps;
 int _CloudLightSteps;
 float _CloudRayOffsetStrength;
+int _CloudDebugMode;
 
 // Weather
 float3 _WindDirection;
@@ -287,11 +288,17 @@ ENDHLSL
 
                 float transmittance = 1.0;
                 float3 lightEnergy = 0;
+                float debugWeather = 0.0;
+                float debugStorm = 0.0;
+                float debugDensity = 0.0;
+                float debugSilverLining = 0.0;
 
                 UNITY_LOOP
                 for (int s = 0; s < viewSteps; s++)
                 {
                     CloudSample cloud = SampleCloud(samplePos);
+                    debugWeather = max(debugWeather, cloud.condensation);
+                    debugStorm = max(debugStorm, cloud.storm);
 
                     if (cloud.density > 0.0001)
                     {
@@ -313,6 +320,9 @@ ENDHLSL
                             * lightTransmittance * horizonSun * stormSuppression;
                         lighting += _CloudColor.rgb * silverLining;
 
+                        debugDensity = max(debugDensity, density01);
+                        debugSilverLining = max(debugSilverLining, saturate(silverLining));
+
                         lightEnergy += cloud.density * stepSize * transmittance * lighting;
                         transmittance *= exp(-cloud.density * stepSize * _CloudLightAbsorption);
 
@@ -321,6 +331,27 @@ ENDHLSL
                     }
 
                     samplePos += rayDir * stepSize;
+                }
+
+                if (_CloudDebugMode > 0)
+                {
+                    float opticalDepth = saturate(1.0 - transmittance);
+                    float3 baseScene = sceneColor.rgb * 0.25;
+                    float3 debugColor = 0;
+
+                    if (_CloudDebugMode == 1)
+                        debugColor = lerp(float3(0.02, 0.05, 0.08), float3(0.15, 0.75, 1.0), debugWeather);
+                    if (_CloudDebugMode == 2)
+                        debugColor = lerp(float3(0.02, 0.04, 0.12), float3(1.0, 0.18, 0.08), debugStorm);
+                    if (_CloudDebugMode == 3)
+                        debugColor = lerp(float3(0.02, 0.02, 0.02), float3(1.0, 1.0, 1.0), debugDensity);
+                    if (_CloudDebugMode == 4)
+                        debugColor = lerp(float3(0.02, 0.04, 0.1), float3(1.0, 0.8, 0.1), opticalDepth);
+                    if (_CloudDebugMode == 5)
+                        debugColor = lerp(float3(0.02, 0.02, 0.02), float3(1.0, 0.92, 0.55), debugSilverLining);
+
+                    float debugMask = max(max(max(debugWeather, debugStorm), max(debugDensity, opticalDepth)), debugSilverLining);
+                    return float4(baseScene + debugColor * saturate(debugMask), sceneColor.a);
                 }
 
                 float3 result = sceneColor.rgb * transmittance + lightEnergy;

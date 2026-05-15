@@ -3,6 +3,16 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Planet/Settings/Cloud Settings")]
 public class CloudSettings : ScriptableObject
 {
+    public enum DebugView
+    {
+        Off = 0,
+        Weather = 1,
+        Storm = 2,
+        Density = 3,
+        OpticalDepth = 4,
+        SilverLining = 5
+    }
+
     [Header("Weather Grid")]
     [Range(32, 512)] public int WeatherResolution = 256;
     [Range(0f, 1f)] public float InitialCoverage = 0.48f;
@@ -54,4 +64,7 @@ public class CloudSettings : ScriptableObject
     [Header("Noise Textures")]
     [Range(32, 256)] public int ShapeNoiseResolution = 128;
     [Range(16, 64)] public int DetailNoiseResolution = 32;
+
+    [Header("Debug")]
+    public DebugView DebugMode = DebugView.Off;
 }
