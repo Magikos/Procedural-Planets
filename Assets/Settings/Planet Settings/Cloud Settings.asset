@@ -26,6 +26,11 @@ MonoBehaviour:
   StormGrowthRate: 0.12
   StormDecayRate: 0.08
   StormMoistureBias: 0.35
+  UseValidationEvolutionRates: 0
+  ValidationEvolutionInterval: 0.1
+  ValidationMoistureMultiplier: 8
+  ValidationEvaporationMultiplier: 8
+  ValidationStormMultiplier: 6
   BaseAltitude: 330
   LayerThickness: 300
   BottomFeather: 0.06
@@ -63,3 +68,5 @@ MonoBehaviour:
   ShapeNoiseResolution: 128
   DetailNoiseResolution: 32
   DebugMode: 0
+  CondensationChangeDebugThreshold: 0.0002
+  CondensationChangeDebugSaturation: 0.004

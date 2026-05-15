@@ -53,6 +53,7 @@ int _CloudViewSteps;
 int _CloudLightSteps;
 float _CloudRayOffsetStrength;
 int _CloudDebugMode;
+float4 _CloudDebugParams;
 
 // Weather
 float3 _WindDirection;
@@ -166,7 +167,7 @@ CloudSample SampleCloud(float3 worldPos)
     sampleData.condensation = condensation;
     sampleData.storm = storm;
     sampleData.moistureSource = weather.b;
-    sampleData.condensationDelta = weather.a * 2.0 - 1.0;
+    sampleData.condensationDelta = (weather.a - 0.5) / max(_CloudDebugParams.z, 1.0);
 
     if (condensation <= 0.001)
         return sampleData;
@@ -382,7 +383,11 @@ ENDHLSL
                     if (_CloudDebugMode == 6)
                         debugMask = debugMoistureSource;
                     if (_CloudDebugMode == 7)
-                        debugMask = saturate(debugCondensationChange);
+                    {
+                        float changeThreshold = max(_CloudDebugParams.x, 0.0);
+                        float changeSaturation = max(_CloudDebugParams.y, changeThreshold + 0.00001);
+                        debugMask = smoothstep(changeThreshold, changeSaturation, debugCondensationChange);
+                    }
                     return float4(baseScene + debugColor * saturate(debugMask), sceneColor.a);
                 }
 

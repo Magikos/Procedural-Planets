@@ -35,6 +35,13 @@ public class CloudSettings : ScriptableObject
     [Range(0f, 0.5f)] public float StormDecayRate = 0.08f;
     [Range(0f, 1f)] public float StormMoistureBias = 0.35f;
 
+    [Header("Weather Validation")]
+    public bool UseValidationEvolutionRates = false;
+    [Range(0.05f, 1f)] public float ValidationEvolutionInterval = 0.1f;
+    [Range(1f, 20f)] public float ValidationMoistureMultiplier = 8f;
+    [Range(1f, 20f)] public float ValidationEvaporationMultiplier = 8f;
+    [Range(1f, 20f)] public float ValidationStormMultiplier = 6f;
+
     [Header("Layer")]
     [Range(20f, 1000f)] public float BaseAltitude = 330f;
     [Range(50f, 1000f)] public float LayerThickness = 300f;
@@ -87,4 +94,21 @@ public class CloudSettings : ScriptableObject
 
     [Header("Debug")]
     public DebugView DebugMode = DebugView.Off;
+    [Range(0f, 0.01f)] public float CondensationChangeDebugThreshold = 0.0002f;
+    [Range(0.0005f, 0.02f)] public float CondensationChangeDebugSaturation = 0.004f;
+
+    public float ActiveEvolutionInterval =>
+        UseValidationEvolutionRates ? ValidationEvolutionInterval : EvolutionInterval;
+
+    public float ActiveMoistureSourceStrength =>
+        MoistureSourceStrength * (UseValidationEvolutionRates ? ValidationMoistureMultiplier : 1f);
+
+    public float ActiveDryAirEvaporationRate =>
+        DryAirEvaporationRate * (UseValidationEvolutionRates ? ValidationEvaporationMultiplier : 1f);
+
+    public float ActiveStormGrowthRate =>
+        StormGrowthRate * (UseValidationEvolutionRates ? ValidationStormMultiplier : 1f);
+
+    public float ActiveStormDecayRate =>
+        StormDecayRate * (UseValidationEvolutionRates ? ValidationStormMultiplier : 1f);
 }

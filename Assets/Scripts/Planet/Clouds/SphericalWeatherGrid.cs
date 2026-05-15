@@ -1,4 +1,5 @@
 using System;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -7,10 +8,11 @@ public sealed class SphericalWeatherGrid : IDisposable
     public int Resolution { get; }
     public Texture Texture => _activeTexture;
 
-    const float DeltaVisualizationScale = 16f;
+    public const float DeltaVisualizationScale = 16f;
 
     readonly float[] _condensation;
     readonly float[] _storm;
+    readonly float[] _moistureSource;
     RenderTexture _activeTexture;
     RenderTexture _scratchTexture;
 
@@ -32,13 +34,15 @@ public sealed class SphericalWeatherGrid : IDisposable
         RenderTexture activeTexture,
         RenderTexture scratchTexture,
         float[] condensation,
-        float[] storm)
+        float[] storm,
+        float[] moistureSource)
     {
         Resolution = resolution;
         _activeTexture = activeTexture;
         _scratchTexture = scratchTexture;
         _condensation = condensation;
         _storm = storm;
+        _moistureSource = moistureSource;
     }
 
     public static SphericalWeatherGrid Generate(CloudSettings settings, int seed)
@@ -47,6 +51,7 @@ public sealed class SphericalWeatherGrid : IDisposable
         int cellCount = resolution * resolution * 6;
         var condensation = new float[cellCount];
         var storm = new float[cellCount];
+        var moistureSource = new float[cellCount];
         var stagingTexture = new Texture2DArray(resolution, resolution, 6, TextureFormat.RGBAHalf, false, true)
         {
             name = $"CloudWeather_{resolution}_{seed}",
@@ -88,6 +93,7 @@ public sealed class SphericalWeatherGrid : IDisposable
                     int gridIndex = GetIndex(face, x, y, resolution);
                     condensation[gridIndex] = cellCondensation;
                     storm[gridIndex] = cellStorm;
+                    moistureSource[gridIndex] = source;
                     pixels[pixelIndex] = new Color(cellCondensation, cellStorm, source, 0.5f);
                 }
             }
@@ -107,7 +113,7 @@ public sealed class SphericalWeatherGrid : IDisposable
         else
             UnityEngine.Object.DestroyImmediate(stagingTexture);
 
-        return new SphericalWeatherGrid(resolution, activeTexture, scratchTexture, condensation, storm);
+        return new SphericalWeatherGrid(resolution, activeTexture, scratchTexture, condensation, storm, moistureSource);
     }
 
     public float GetCondensation(Vector3 worldPosition, Vector3 planetCenter, Quaternion sampleRotation)
@@ -122,6 +128,40 @@ public sealed class SphericalWeatherGrid : IDisposable
         return _storm[GetIndex(face, x, y, Resolution)];
     }
 
+    public void GetWeatherCell(
+        Vector3 worldPosition,
+        Vector3 planetCenter,
+        Quaternion sampleRotation,
+        out float condensation,
+        out float storm,
+        out float moistureSource)
+    {
+        GetCell(worldPosition, planetCenter, sampleRotation, out int face, out int x, out int y);
+        int index = GetIndex(face, x, y, Resolution);
+        condensation = _condensation[index];
+        storm = _storm[index];
+        moistureSource = _moistureSource[index];
+    }
+
+    public void ApplyWeatherFaceReadback(int face, NativeArray<Color> pixels)
+    {
+        if (face < 0 || face >= 6)
+            return;
+
+        int faceCellCount = Resolution * Resolution;
+        if (pixels.Length < faceCellCount)
+            return;
+
+        int baseIndex = face * faceCellCount;
+        for (int i = 0; i < faceCellCount; i++)
+        {
+            Color pixel = pixels[i];
+            _condensation[baseIndex + i] = Mathf.Clamp01(pixel.r);
+            _storm[baseIndex + i] = Mathf.Clamp01(pixel.g);
+            _moistureSource[baseIndex + i] = Mathf.Clamp01(pixel.b);
+        }
+    }
+
     public bool Advance(ComputeShader compute, CloudSettings settings, float deltaTime, Quaternion visualRotation)
     {
         if (compute == null || settings == null || !settings.EnableWeatherEvolution || deltaTime <= 0f)
@@ -133,10 +173,10 @@ public sealed class SphericalWeatherGrid : IDisposable
         compute.SetInt(_resolutionId, Resolution);
         compute.SetFloat(_deltaTimeId, deltaTime);
         compute.SetFloat(_stormThresholdId, settings.StormThreshold);
-        compute.SetFloat(_moistureSourceStrengthId, settings.MoistureSourceStrength);
-        compute.SetFloat(_dryAirEvaporationRateId, settings.DryAirEvaporationRate);
-        compute.SetFloat(_stormGrowthRateId, settings.StormGrowthRate);
-        compute.SetFloat(_stormDecayRateId, settings.StormDecayRate);
+        compute.SetFloat(_moistureSourceStrengthId, settings.ActiveMoistureSourceStrength);
+        compute.SetFloat(_dryAirEvaporationRateId, settings.ActiveDryAirEvaporationRate);
+        compute.SetFloat(_stormGrowthRateId, settings.ActiveStormGrowthRate);
+        compute.SetFloat(_stormDecayRateId, settings.ActiveStormDecayRate);
         compute.SetFloat(_stormMoistureBiasId, settings.StormMoistureBias);
         compute.SetFloat(_deltaVisualizationScaleId, DeltaVisualizationScale);
         compute.SetMatrix(_weatherVisualRotationId, Matrix4x4.Rotate(visualRotation));
