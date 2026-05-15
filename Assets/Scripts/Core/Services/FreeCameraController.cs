@@ -17,6 +17,7 @@ public class FreeCameraController : MonoBehaviour
     [Header("Auto Position")]
     public float ViewDistanceMultiplier = 2.5f;
     public float SurfaceHeight = 2f;
+    [Range(1f, 30f)] public float SurfaceSunriseOffsetDegrees = 8f;
     public bool AutoPositionOnGenerate = true;
 
     [Header("Debug Info")]
@@ -34,6 +35,8 @@ public class FreeCameraController : MonoBehaviour
     bool _skipNextDelta;
     bool _surfaceView;
     Light _cachedSunLight;
+    Vector3 _sunOrbitAxis = Vector3.forward;
+    Vector3 _lastSunDirectionToSun;
 
     void OnEnable()
     {
@@ -67,6 +70,7 @@ public class FreeCameraController : MonoBehaviour
         _lastPlanetRadius = evt.PlanetRadius;
         _lastElevationMin = evt.ElevationMin;
         _lastElevationMax = evt.ElevationMax;
+        UpdateSunOrbitAxis();
 
         if (AutoPositionOnGenerate)
             RepositionCamera(_lastPlanetCenter, _lastPlanetRadius);
@@ -75,6 +79,7 @@ public class FreeCameraController : MonoBehaviour
     void Update()
     {
         RefreshInputDevices();
+        UpdateSunOrbitAxis();
 
         HandleLook();
         HandleMovement();
@@ -108,6 +113,8 @@ public class FreeCameraController : MonoBehaviour
 
     void ToggleOrbitSurfaceView()
     {
+        UpdateSunOrbitAxis();
+
         float distance = Vector3.Distance(transform.position, _lastPlanetCenter);
         bool nearSurface = _surfaceView || distance < _lastPlanetRadius * 1.25f;
 
@@ -117,13 +124,42 @@ public class FreeCameraController : MonoBehaviour
             PositionOnSurface(_lastPlanetCenter, _lastPlanetRadius);
     }
 
-    Vector3 GetUp()
+    Vector3 GetSunDirectionToSun()
     {
-        if (_lastPlanetRadius <= 0f)
+        if (_cachedSunLight == null)
+            _cachedSunLight = FindSunLight();
+
+        if (_cachedSunLight == null)
             return Vector3.up;
 
-        Vector3 fromCenter = transform.position - _lastPlanetCenter;
-        return fromCenter.sqrMagnitude > 0.0001f ? fromCenter.normalized : Vector3.up;
+        return -_cachedSunLight.transform.forward.normalized;
+    }
+
+    void UpdateSunOrbitAxis()
+    {
+        Vector3 toSun = GetSunDirectionToSun();
+        if (toSun.sqrMagnitude < 0.0001f)
+            return;
+
+        if (_lastSunDirectionToSun.sqrMagnitude > 0.0001f)
+        {
+            Vector3 axis = Vector3.Cross(_lastSunDirectionToSun.normalized, toSun.normalized);
+            if (axis.sqrMagnitude > 0.00000001f)
+                _sunOrbitAxis = axis.normalized;
+        }
+
+        _lastSunDirectionToSun = toSun.normalized;
+    }
+
+    Vector3 GetStableViewUp(Vector3 forward)
+    {
+        Vector3 up = Vector3.ProjectOnPlane(_sunOrbitAxis, forward);
+        if (up.sqrMagnitude < 0.0001f)
+            up = Vector3.ProjectOnPlane(Vector3.up, forward);
+        if (up.sqrMagnitude < 0.0001f)
+            up = Vector3.ProjectOnPlane(Vector3.right, forward);
+
+        return up.sqrMagnitude > 0.0001f ? up.normalized : Vector3.up;
     }
 
     void HandleLook()
@@ -148,21 +184,8 @@ public class FreeCameraController : MonoBehaviour
 
         float yawAmount = delta.x * LookSensitivity * 0.1f;
         float pitchAmount = -delta.y * LookSensitivity * 0.1f;
-        Vector3 up = GetUp();
-
-        transform.RotateAround(transform.position, up, yawAmount);
-
-        Vector3 right = transform.right;
-        Vector3 flatForward = Vector3.ProjectOnPlane(transform.forward, up);
-        if (flatForward.sqrMagnitude < 0.0001f)
-            flatForward = Vector3.ProjectOnPlane(transform.up, up);
-
-        if (flatForward.sqrMagnitude < 0.0001f)
-            return;
-
-        float currentPitch = Vector3.SignedAngle(flatForward.normalized, transform.forward, right);
-        float newPitch = Mathf.Clamp(currentPitch + pitchAmount, -89f, 89f);
-        transform.RotateAround(transform.position, right, newPitch - currentPitch);
+        transform.Rotate(Vector3.up, yawAmount, Space.Self);
+        transform.Rotate(Vector3.right, pitchAmount, Space.Self);
     }
 
     void StartLooking()
@@ -192,8 +215,8 @@ public class FreeCameraController : MonoBehaviour
         if (IsKeyPressed(_keyboard?.sKey, KeyCode.S)) move -= transform.forward;
         if (IsKeyPressed(_keyboard?.aKey, KeyCode.A)) move -= transform.right;
         if (IsKeyPressed(_keyboard?.dKey, KeyCode.D)) move += transform.right;
-        if (IsKeyPressed(_keyboard?.eKey, KeyCode.E)) move += GetUp();
-        if (IsKeyPressed(_keyboard?.qKey, KeyCode.Q)) move -= GetUp();
+        if (IsKeyPressed(_keyboard?.eKey, KeyCode.E)) move += transform.up;
+        if (IsKeyPressed(_keyboard?.qKey, KeyCode.Q)) move -= transform.up;
 
         if (move.sqrMagnitude > 0.0001f)
             transform.position += move.normalized * speed * Time.deltaTime;
@@ -216,8 +239,8 @@ public class FreeCameraController : MonoBehaviour
         if (_cachedSunLight == null)
             return;
 
-        Vector3 toSun = -_cachedSunLight.transform.forward;
-        transform.rotation = Quaternion.LookRotation(toSun, GetUp());
+        Vector3 toSun = GetSunDirectionToSun();
+        transform.rotation = Quaternion.LookRotation(toSun, GetStableViewUp(toSun));
     }
 
     Light FindSunLight()
@@ -235,15 +258,11 @@ public class FreeCameraController : MonoBehaviour
     void RepositionCamera(Vector3 center, float radius)
     {
         float distance = radius * ViewDistanceMultiplier;
-        Vector3 viewDir = Vector3.back;
+        Vector3 toSun = GetSunDirectionToSun();
 
-        if (_cachedSunLight == null)
-            _cachedSunLight = FindSunLight();
-        if (_cachedSunLight != null)
-            viewDir = _cachedSunLight.transform.forward;
-
-        transform.position = center + viewDir.normalized * distance;
-        transform.LookAt(center, GetUp());
+        transform.position = center + toSun.normalized * distance;
+        Vector3 forward = (center - transform.position).normalized;
+        transform.rotation = Quaternion.LookRotation(forward, GetStableViewUp(forward));
 
         MoveSpeed = Mathf.Max(1f, radius * OrbitSpeedMultiplier);
         ScrollSpeed = Mathf.Max(5f, radius * 2f);
@@ -252,17 +271,16 @@ public class FreeCameraController : MonoBehaviour
 
     void PositionOnSurface(Vector3 center, float radius)
     {
-        Vector3 sunDir = Vector3.up;
-        if (_cachedSunLight == null)
-            _cachedSunLight = FindSunLight();
-        if (_cachedSunLight != null)
-            sunDir = -_cachedSunLight.transform.forward;
+        Vector3 toSun = GetSunDirectionToSun();
+        Vector3 sunMotion = Vector3.Cross(_sunOrbitAxis, toSun);
+        if (sunMotion.sqrMagnitude < 0.0001f)
+            sunMotion = Vector3.Cross(Vector3.up, toSun);
+        if (sunMotion.sqrMagnitude < 0.0001f)
+            sunMotion = Vector3.Cross(Vector3.right, toSun);
 
-        Vector3 toSun = sunDir.normalized;
-        Vector3 surfaceNormal = Vector3.Cross(toSun, Vector3.up);
-        if (surfaceNormal.sqrMagnitude < 0.01f)
-            surfaceNormal = Vector3.Cross(toSun, Vector3.forward);
-        surfaceNormal.Normalize();
+        sunMotion.Normalize();
+        float offsetRadians = SurfaceSunriseOffsetDegrees * Mathf.Deg2Rad;
+        Vector3 surfaceNormal = (sunMotion * Mathf.Cos(offsetRadians) - toSun * Mathf.Sin(offsetRadians)).normalized;
 
         float avgElevation = (_lastElevationMin + _lastElevationMax) * 0.5f;
         float baseRadius = Mathf.Abs(_lastElevationMax) > 0.0001f ? radius / (1f + _lastElevationMax) : radius;
@@ -272,7 +290,7 @@ public class FreeCameraController : MonoBehaviour
 
         Vector3 lookDir = Vector3.ProjectOnPlane(toSun, surfaceNormal);
         if (lookDir.sqrMagnitude < 0.01f)
-            lookDir = Vector3.ProjectOnPlane(Vector3.up, surfaceNormal);
+            lookDir = Vector3.ProjectOnPlane(sunMotion, surfaceNormal);
 
         transform.rotation = Quaternion.LookRotation(lookDir.normalized, surfaceNormal);
 

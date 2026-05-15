@@ -8,6 +8,10 @@ HLSLINCLUDE
 float _StarSeed;
 float _StarDensity;
 float _StarBrightness;
+float3 _SunParams;
+float _SunIntensity;
+float _SunDiscSize;
+float _SunDiscBlend;
 
 float Hash31(float3 p)
 {
@@ -70,6 +74,17 @@ float3 ProceduralStars(float3 dir)
     return starColor;
 }
 
+float3 SunDisc(float3 dir)
+{
+    float discSize = _SunDiscSize > 0.0 ? _SunDiscSize : 0.9995;
+    float discBlend = _SunDiscBlend > 0.0 ? _SunDiscBlend : 0.002;
+    float3 sunDir = dot(_SunParams.xyz, _SunParams.xyz) > 0.0001 ? normalize(_SunParams.xyz) : float3(0.0, 1.0, 0.0);
+    float sunDot = dot(dir, sunDir);
+    float sunDisc = smoothstep(discSize - discBlend, discSize, sunDot);
+    float3 sunColor = sunDisc * float3(1.2, 1.1, 0.9) * _SunIntensity;
+    return sunColor / (1.0 + sunColor);
+}
+
 ENDHLSL
 
     SubShader
@@ -109,8 +124,8 @@ ENDHLSL
             float4 StarFragment(v2f i) : SV_Target
             {
                 float3 dir = normalize(i.viewVector);
-                float3 stars = ProceduralStars(dir);
-                return float4(stars, 1);
+                float3 background = ProceduralStars(dir) + SunDisc(dir);
+                return float4(background, 1);
             }
             ENDHLSL
         }

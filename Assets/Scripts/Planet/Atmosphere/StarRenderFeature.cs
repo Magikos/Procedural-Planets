@@ -4,10 +4,9 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering.RenderGraphModule;
 
 /// <summary>
-/// Renders procedural stars as a fullscreen pass before opaque geometry.
-/// Stars are drawn right after the buffer clear, so all geometry (planet, trees,
-/// moon, buildings, clouds) naturally draws over them via the depth buffer.
-/// The atmosphere post-process then dims them during daytime via scattering.
+/// Renders procedural stars and the hard sun disc as a fullscreen background pass.
+/// It runs before opaque geometry so terrain, water, clouds, and later transparents
+/// naturally composite over celestial bodies instead of needing special occlusion.
 /// </summary>
 [DisallowMultipleRendererFeature("StarRenderFeature")]
 public class StarRenderFeature : ScriptableRendererFeature
@@ -80,7 +79,7 @@ public class StarRenderPass : ScriptableRenderPass
         destinationDesc.clearBuffer = false;
         TextureHandle destination = renderGraph.CreateTexture(destinationDesc);
 
-        using (var builder = renderGraph.AddRasterRenderPass<PassData>("StarBackground", out var passData))
+        using (var builder = renderGraph.AddRasterRenderPass<PassData>("CelestialBackground", out var passData))
         {
             passData.material = _material;
             passData.source = source;

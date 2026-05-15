@@ -314,7 +314,7 @@ ENDHLSL
                 }
 
                 float3 result = sceneColor.rgb * transmittance + lightEnergy;
-                return float4(result, saturate(transmittance));
+                return float4(result, sceneColor.a);
             }
             ENDHLSL
         }

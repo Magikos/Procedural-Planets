@@ -21,9 +21,6 @@ float _MieAnisotropy;
 
 float _SunIntensity;
 
-float _SunDiscSize;
-float _SunDiscBlend;
-
 int _DebugMode;
 // 0 = final, 1 = min height01, 2 = Rayleigh density, 3 = Mie density,
 // 4 = sun transmittance, 5 = atmosphere mask
@@ -82,26 +79,16 @@ float2 SunOpticalDepth(float3 pos, float3 dirToSun)
 
 // --- Main ---
 
-float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sceneColor, float cloudTransmittance)
+float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sceneColor)
 {
     float3 origin = start - _PlanetCenter;
     float3 dirToSun = _SunParams.xyz;
-    float sunOcclusion = saturate(cloudTransmittance);
 
     float2 hitAtmo = RaySphere(0, _AtmosphereRadius, origin, dir);
     bool missedAtmo = hitAtmo.y <= 0;
 
-    // Sun disc — render even if ray misses atmosphere
-    float sunDot = dot(dir, dirToSun);
-    float sunDisc = smoothstep(_SunDiscSize - _SunDiscBlend, _SunDiscSize, sunDot);
-    float3 sunColor = sunDisc * float3(1.2, 1.1, 0.9) * _SunIntensity;
-
     if (missedAtmo)
-    {
-        float3 sun = sunColor * sunOcclusion;
-        sun = sun / (1.0 + sun);
-        return sceneColor + sun;
-    }
+        return sceneColor;
 
     float2 hitPlanet = RaySphere(0, _PlanetRadius, origin, dir);
 
@@ -194,14 +181,6 @@ float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sc
     // Tone map only the atmosphere (in-scattered light), not the terrain
     float3 toneMappedScatter = inScattered / (1.0 + inScattered);
     float3 result = sceneColor * viewTransmittance + toneMappedScatter;
-
-    // Sun disc — only on sky pixels
-    bool hitGeometry = sceneDepth < (dstToAtmo + dstThroughAtmo);
-    if (!hitGeometry)
-    {
-        float3 sun = sunColor * viewTransmittance * sunOcclusion;
-        result += sun / (1.0 + sun);
-    }
 
     return result;
 }
