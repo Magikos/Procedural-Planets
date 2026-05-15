@@ -18,6 +18,7 @@ MonoBehaviour:
   FrontSharpness: 18
   StormThreshold: 0.78
   BiomeInfluence: 0.15
+  FrontAdvectionDegreesPerSecond: 0.4
   BaseAltitude: 330
   LayerThickness: 300
   BottomFeather: 0.06

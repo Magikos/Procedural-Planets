@@ -72,15 +72,15 @@ public sealed class SphericalWeatherGrid : IDisposable
         return new SphericalWeatherGrid(resolution, texture, condensation, storm);
     }
 
-    public float GetCondensation(Vector3 worldPosition, Vector3 planetCenter)
+    public float GetCondensation(Vector3 worldPosition, Vector3 planetCenter, Quaternion sampleRotation)
     {
-        GetCell(worldPosition, planetCenter, out int face, out int x, out int y);
+        GetCell(worldPosition, planetCenter, sampleRotation, out int face, out int x, out int y);
         return _condensation[GetIndex(face, x, y, Resolution)];
     }
 
-    public float GetStorm(Vector3 worldPosition, Vector3 planetCenter)
+    public float GetStorm(Vector3 worldPosition, Vector3 planetCenter, Quaternion sampleRotation)
     {
-        GetCell(worldPosition, planetCenter, out int face, out int x, out int y);
+        GetCell(worldPosition, planetCenter, sampleRotation, out int face, out int x, out int y);
         return _storm[GetIndex(face, x, y, Resolution)];
     }
 
@@ -93,10 +93,11 @@ public sealed class SphericalWeatherGrid : IDisposable
             UnityEngine.Object.DestroyImmediate(Texture);
     }
 
-    void GetCell(Vector3 worldPosition, Vector3 planetCenter, out int face, out int x, out int y)
+    void GetCell(Vector3 worldPosition, Vector3 planetCenter, Quaternion sampleRotation, out int face, out int x, out int y)
     {
         Vector3 fromCenter = worldPosition - planetCenter;
         Vector3 direction = fromCenter.sqrMagnitude > 0.000001f ? fromCenter.normalized : Vector3.up;
+        direction = sampleRotation * direction;
         var faceUv = CoordinateConverter.UnitSphereToCubeFace(direction);
         face = faceUv.face;
         x = Mathf.Clamp(Mathf.FloorToInt(faceUv.uv.x * Resolution), 0, Resolution - 1);

@@ -21,6 +21,9 @@ public class CloudSettings : ScriptableObject
     [Range(0f, 1f)] public float StormThreshold = 0.78f;
     [Range(0f, 1f)] public float BiomeInfluence = 0.15f;
 
+    [Header("Weather Motion")]
+    [Range(0f, 5f)] public float FrontAdvectionDegreesPerSecond = 0.4f;
+
     [Header("Layer")]
     [Range(20f, 1000f)] public float BaseAltitude = 330f;
     [Range(50f, 1000f)] public float LayerThickness = 300f;

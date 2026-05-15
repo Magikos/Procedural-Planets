@@ -21,6 +21,7 @@ float3 _CloudPlanetCenter;
 float _CloudInnerRadius;
 float _CloudOuterRadius;
 int _CloudWeatherResolution;
+float4x4 _CloudWeatherRotation;
 
 // Shape
 float _CloudNoiseScale;
@@ -124,6 +125,9 @@ void CubeFaceUv(float3 direction, out int face, out float2 uv)
 
 float2 SampleWeather(float3 direction)
 {
+    float3 weatherDirection = mul((float3x3)_CloudWeatherRotation, direction);
+    direction = dot(weatherDirection, weatherDirection) > 0.0001 ? normalize(weatherDirection) : direction;
+
     int face;
     float2 uv;
     CubeFaceUv(direction, face, uv);

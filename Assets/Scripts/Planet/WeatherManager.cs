@@ -19,10 +19,12 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
     SphericalWeatherGrid _grid;
     Vector3 _planetCenter;
     float _seaLevelRadius;
+    Quaternion _weatherVisualRotation = Quaternion.identity;
     ILogger _logger;
 
     static readonly int _windDirectionId = Shader.PropertyToID("_WindDirection");
     static readonly int _windSpeedId = Shader.PropertyToID("_WindSpeed");
+    static readonly int _cloudWeatherRotationId = Shader.PropertyToID("_CloudWeatherRotation");
 
     public Vector3 WindDirection => WindDir.sqrMagnitude > 0.0001f ? WindDir.normalized : Vector3.right;
     public float WindSpeed => Speed;
@@ -43,6 +45,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
     void Awake()
     {
         ServiceLocator.Register<IWeatherProvider>(this);
+        Shader.SetGlobalMatrix(_cloudWeatherRotationId, Matrix4x4.identity);
     }
 
     void OnEnable() => EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
@@ -57,6 +60,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
 
     void Update()
     {
+        UpdateWeatherAdvection();
         Shader.SetGlobalVector(_windDirectionId, WindDirection);
         Shader.SetGlobalFloat(_windSpeedId, WindSpeed);
     }
@@ -79,7 +83,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         if (_grid == null)
             return Settings != null ? Settings.InitialCoverage : 0f;
 
-        return _grid.GetCondensation(worldPosition, _planetCenter);
+        return _grid.GetCondensation(worldPosition, _planetCenter, SampleWeatherRotation);
     }
 
     public float GetPrecipitation(Vector3 worldPosition)
@@ -89,7 +93,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
 
     public float GetStormIntensity(Vector3 worldPosition)
     {
-        return _grid != null ? _grid.GetStorm(worldPosition, _planetCenter) : 0f;
+        return _grid != null ? _grid.GetStorm(worldPosition, _planetCenter, SampleWeatherRotation) : 0f;
     }
 
     public float GetTemperature(Vector3 worldPosition) => 0.5f;
@@ -113,6 +117,54 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
 
         _grid?.Dispose();
         _grid = SphericalWeatherGrid.Generate(Settings, seed);
+        _weatherVisualRotation = Quaternion.identity;
+        UploadWeatherAdvection();
         Logger.Log(LogLevel.Debug, "Weather", $"Generated {WeatherResolution}x{WeatherResolution}x6 condensation grid.");
+    }
+
+    Quaternion SampleWeatherRotation => Quaternion.Inverse(_weatherVisualRotation);
+
+    void UpdateWeatherAdvection()
+    {
+        if (_grid == null || Settings == null)
+        {
+            Shader.SetGlobalMatrix(_cloudWeatherRotationId, Matrix4x4.identity);
+            return;
+        }
+
+        float degrees = Settings.FrontAdvectionDegreesPerSecond * WindSpeed * Time.deltaTime;
+        if (degrees > 0f)
+        {
+            Vector3 axis = GetAdvectionAxis(WindDirection);
+            _weatherVisualRotation = Quaternion.AngleAxis(degrees, axis) * _weatherVisualRotation;
+            _weatherVisualRotation = Normalize(_weatherVisualRotation);
+        }
+
+        UploadWeatherAdvection();
+    }
+
+    void UploadWeatherAdvection()
+    {
+        Shader.SetGlobalMatrix(_cloudWeatherRotationId, Matrix4x4.Rotate(SampleWeatherRotation));
+    }
+
+    static Vector3 GetAdvectionAxis(Vector3 windDirection)
+    {
+        Vector3 wind = windDirection.sqrMagnitude > 0.0001f ? windDirection.normalized : Vector3.right;
+        Vector3 referenceNormal = Mathf.Abs(Vector3.Dot(wind, Vector3.up)) > 0.92f ? Vector3.forward : Vector3.up;
+        Vector3 axis = Vector3.Cross(referenceNormal, wind);
+        return axis.sqrMagnitude > 0.0001f ? axis.normalized : Vector3.forward;
+    }
+
+    static Quaternion Normalize(Quaternion rotation)
+    {
+        float magnitude = Mathf.Sqrt(rotation.x * rotation.x + rotation.y * rotation.y
+            + rotation.z * rotation.z + rotation.w * rotation.w);
+        if (magnitude <= 0.000001f)
+            return Quaternion.identity;
+
+        float invMagnitude = 1f / magnitude;
+        return new Quaternion(rotation.x * invMagnitude, rotation.y * invMagnitude,
+            rotation.z * invMagnitude, rotation.w * invMagnitude);
     }
 }
