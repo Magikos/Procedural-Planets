@@ -20,12 +20,19 @@ MonoBehaviour:
   BiomeInfluence: 0.15
   FrontAdvectionDegreesPerSecond: 0.4
   EnableWeatherEvolution: 1
-  EvolutionInterval: 0.5
+  EvolutionInterval: 0.1
   MoistureSourceStrength: 0.04
   DryAirEvaporationRate: 0.03
   StormGrowthRate: 0.12
   StormDecayRate: 0.08
   StormMoistureBias: 0.35
+  RainFormationThreshold: 0.25
+  RainFormationSoftness: 0.35
+  PrecipitationBuildRate: 0.1
+  PrecipitationDecayRate: 0.06
+  RainOutRate: 0.05
+  HumidityRecoveryRate: 0.025
+  CondensationRainDrain: 0.22
   UseValidationEvolutionRates: 0
   ValidationEvolutionInterval: 0.1
   ValidationMoistureMultiplier: 8

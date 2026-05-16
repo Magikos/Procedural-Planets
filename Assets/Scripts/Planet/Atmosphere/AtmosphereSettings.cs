@@ -31,13 +31,13 @@ public class AtmosphereSettings : ScriptableObject
 
     [Header("Light Shafts")]
     public bool EnableLightShafts = true;
-    [Range(0, 32)] public int LightShaftSamples = 24;
-    [Range(0f, 1f)] public float LightShaftStrength = 0.35f;
-    [Range(0.1f, 2f)] public float LightShaftDensity = 0.85f;
-    [Range(0.7f, 0.99f)] public float LightShaftDecay = 0.96f;
-    [Range(0f, 0.5f)] public float LightShaftWeight = 0.12f;
-    [Range(0f, 2f)] public float LightShaftExposure = 0.8f;
-    [Range(0f, 1.5f)] public float LightShaftThreshold = 0.25f;
+    [Range(0, 32)] public int LightShaftSamples = 20;
+    [Range(0f, 1f)] public float LightShaftStrength = 0.32f;
+    [Range(0.1f, 2f)] public float LightShaftDensity = 0.78f;
+    [Range(0.7f, 0.99f)] public float LightShaftDecay = 0.95f;
+    [Range(0f, 0.5f)] public float LightShaftWeight = 0.09f;
+    [Range(0f, 2f)] public float LightShaftExposure = 0.68f;
+    [Range(0f, 1.5f)] public float LightShaftThreshold = 0.32f;
 
     [Header("Optical Depth LUT")]
     [Range(64, 512)] public int BakeTextureSize = 256;

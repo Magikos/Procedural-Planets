@@ -21,6 +21,7 @@ public class CloudController : MonoBehaviour
     static readonly int _cloudInnerRadiusId = Shader.PropertyToID("_CloudInnerRadius");
     static readonly int _cloudOuterRadiusId = Shader.PropertyToID("_CloudOuterRadius");
     static readonly int _cloudWeatherMapId = Shader.PropertyToID("_CloudWeatherMap");
+    static readonly int _weatherDynamicsMapId = Shader.PropertyToID("_WeatherDynamicsMap");
     static readonly int _cloudWeatherResolutionId = Shader.PropertyToID("_CloudWeatherResolution");
     static readonly int _cloudNoiseScaleId = Shader.PropertyToID("_CloudNoiseScale");
     static readonly int _cloudDetailNoiseScaleId = Shader.PropertyToID("_CloudDetailNoiseScale");
@@ -156,6 +157,8 @@ public class CloudController : MonoBehaviour
         if (_weather != null && _weather.WeatherTexture != null)
         {
             Shader.SetGlobalTexture(_cloudWeatherMapId, _weather.WeatherTexture);
+            if (_weather.WeatherDynamicsTexture != null)
+                Shader.SetGlobalTexture(_weatherDynamicsMapId, _weather.WeatherDynamicsTexture);
             Shader.SetGlobalInt(_cloudWeatherResolutionId, _weather.WeatherResolution);
         }
         else

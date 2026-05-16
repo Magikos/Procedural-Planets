@@ -44,6 +44,12 @@ float4 _CloudStormColor;
 float _CloudAmbientStrength;
 float _CloudStormDarkening;
 float4 _CloudSilverLiningParams;
+float4 _WeatherLightningParams;
+float4 _WeatherLightningColor;
+float4 _WeatherLightningCell0;
+float4 _WeatherLightningCell1;
+float4 _WeatherLightningCell2;
+float4 _WeatherLightningCell3;
 
 // Animation
 float _CloudAnimSpeed;
@@ -90,9 +96,38 @@ float CloudPhase(float cosAngle)
     return _CloudPhaseParams.z + lerp(back, forward, 0.5) * _CloudPhaseParams.w;
 }
 
+float WeatherLightningCell(float4 cell, float3 normal, float storm)
+{
+    if (cell.w <= 0.0)
+        return 0.0;
+
+    float3 direction = dot(cell.xyz, cell.xyz) > 0.0001
+        ? normalize(cell.xyz)
+        : float3(0.0, 1.0, 0.0);
+    float stormMask = smoothstep(_WeatherLightningParams.z, 1.0, storm);
+    float locationMask = smoothstep(_WeatherLightningParams.y, _WeatherLightningParams.x, dot(normal, direction));
+    return cell.w * stormMask * pow(saturate(locationMask), 1.35);
+}
+
+float WeatherLightning(float3 normal, float storm)
+{
+    float lightning = WeatherLightningCell(_WeatherLightningCell0, normal, storm);
+    lightning = max(lightning, WeatherLightningCell(_WeatherLightningCell1, normal, storm));
+    lightning = max(lightning, WeatherLightningCell(_WeatherLightningCell2, normal, storm));
+    lightning = max(lightning, WeatherLightningCell(_WeatherLightningCell3, normal, storm));
+    return lightning;
+}
+
 float InterleavedGradientNoise(float2 pixel)
 {
     return frac(52.9829189 * frac(dot(pixel, float2(0.06711056, 0.00583715))));
+}
+
+float Hash12(float2 p)
+{
+    float3 p3 = frac(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return frac((p3.x + p3.y) * p3.z);
 }
 
 void CubeFaceUv(float3 direction, out int face, out float2 uv)
@@ -289,8 +324,12 @@ ENDHLSL
 
                 int viewSteps = max(_CloudViewSteps, 1);
                 float stepSize = (endDistance - startDistance) / viewSteps;
-                float jitter = (InterleavedGradientNoise(i.uv * _ScreenParams.xy) - 0.5) * saturate(_CloudRayOffsetStrength);
-                float3 samplePos = rayOrigin + rayDir * (startDistance + stepSize * (0.5 + jitter));
+                float rayJitter = lerp(
+                    InterleavedGradientNoise(i.uv * _ScreenParams.xy),
+                    Hash12(floor(i.uv * _ScreenParams.xy)),
+                    0.7);
+                float jitter = lerp(0.5, rayJitter, saturate(_CloudRayOffsetStrength));
+                float3 samplePos = rayOrigin + rayDir * (startDistance + stepSize * saturate(jitter));
 
                 float cosAngle = dot(rayDir, _SunParams.xyz);
                 float phase = CloudPhase(cosAngle);
@@ -339,6 +378,10 @@ ENDHLSL
                         float silverLining = _CloudSilverLiningParams.x * forwardSun * thinEdge
                             * lightTransmittance * horizonSun * stormSuppression;
                         lighting += _CloudColor.rgb * silverLining;
+
+                        float lightning = WeatherLightning(surfaceNormal, cloud.storm);
+                        lighting += _WeatherLightningColor.rgb * lightning * lerp(0.75, 1.2, cloud.height01)
+                            * lerp(0.7, 1.1, density01);
 
                         debugDensity = max(debugDensity, density01);
                         debugSilverLining = max(debugSilverLining, saturate(silverLining));

@@ -109,6 +109,9 @@ public class FreeCameraController : MonoBehaviour
 
         if (WasKeyPressed(_keyboard?.backspaceKey, KeyCode.Backspace))
             FaceSun();
+
+        if (WasKeyPressed(_keyboard?.rKey, KeyCode.R))
+            FrameStrongestStorm();
     }
 
     void ToggleOrbitSurfaceView()
@@ -241,6 +244,48 @@ public class FreeCameraController : MonoBehaviour
 
         Vector3 toSun = GetSunDirectionToSun();
         transform.rotation = Quaternion.LookRotation(toSun, GetStableViewUp(toSun));
+    }
+
+    void FrameStrongestStorm()
+    {
+        if (_lastPlanetRadius <= 0f)
+            return;
+
+        if (!ServiceLocator.TryGet<IWeatherProvider>(out var weather))
+            return;
+
+        if (!weather.TryFindStrongestPrecipitation(out Vector3 stormPosition, out _))
+            return;
+
+        Vector3 stormNormal = (stormPosition - _lastPlanetCenter).normalized;
+        if (stormNormal.sqrMagnitude < 0.0001f)
+            stormNormal = Vector3.up;
+
+        if (_surfaceView)
+        {
+            Vector3 tangent = Vector3.Cross(stormNormal, GetSunDirectionToSun());
+            if (tangent.sqrMagnitude < 0.0001f)
+                tangent = Vector3.Cross(stormNormal, Vector3.up);
+            if (tangent.sqrMagnitude < 0.0001f)
+                tangent = Vector3.Cross(stormNormal, Vector3.right);
+
+            tangent.Normalize();
+            Vector3 viewNormal = Quaternion.AngleAxis(10f, tangent) * stormNormal;
+            transform.position = _lastPlanetCenter + viewNormal.normalized * (_lastPlanetRadius + SurfaceHeight);
+            Vector3 lookDir = (stormPosition - transform.position).normalized;
+            transform.rotation = Quaternion.LookRotation(lookDir, viewNormal.normalized);
+            MoveSpeed = Mathf.Max(0.25f, _lastPlanetRadius * SurfaceSpeedMultiplier);
+            ScrollSpeed = Mathf.Max(1f, _lastPlanetRadius * 0.1f);
+        }
+        else
+        {
+            float distance = Mathf.Max(_lastPlanetRadius * 1.85f, _lastPlanetRadius + 1000f);
+            transform.position = _lastPlanetCenter + stormNormal * distance;
+            Vector3 lookDir = (stormPosition - transform.position).normalized;
+            transform.rotation = Quaternion.LookRotation(lookDir, GetStableViewUp(lookDir));
+            MoveSpeed = Mathf.Max(1f, _lastPlanetRadius * OrbitSpeedMultiplier);
+            ScrollSpeed = Mathf.Max(5f, _lastPlanetRadius * 2f);
+        }
     }
 
     Light FindSunLight()
@@ -385,7 +430,7 @@ public class FreeCameraController : MonoBehaviour
         }
 
         GUILayout.Label("RMB=Look, WASD=Move, Shift=Fast, QE=Up/Down, ZC=Roll");
-        GUILayout.Label("Space=Toggle Orbit/Surface, Backspace=Face Sun");
+        GUILayout.Label("Space=Toggle Orbit/Surface, Backspace=Face Sun, R=Frame Storm");
 
         if (_cachedSunLight == null)
             _cachedSunLight = FindSunLight();

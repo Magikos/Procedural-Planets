@@ -24,13 +24,13 @@ MonoBehaviour:
   SunDiscSize: 0.9995
   SunDiscBlend: 0.002
   EnableLightShafts: 1
-  LightShaftSamples: 24
-  LightShaftStrength: 0.35
-  LightShaftDensity: 0.85
-  LightShaftDecay: 0.96
-  LightShaftWeight: 0.12
-  LightShaftExposure: 0.8
-  LightShaftThreshold: 0.25
+  LightShaftSamples: 20
+  LightShaftStrength: 0.32
+  LightShaftDensity: 0.78
+  LightShaftDecay: 0.95
+  LightShaftWeight: 0.09
+  LightShaftExposure: 0.68
+  LightShaftThreshold: 0.32
   BakeTextureSize: 256
   BakeSteps: 64
   DebugMode: 0

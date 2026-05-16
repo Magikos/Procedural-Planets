@@ -43,6 +43,7 @@ public interface IWeatherProvider
     Vector3 WindDirection { get; }
     float WindSpeed { get; }
 
+    bool TryFindStrongestPrecipitation(out Vector3 worldPosition, out WeatherSample sample);
     WeatherSample SampleWeather(Vector3 worldPosition);
     float GetCloudCoverage(Vector3 worldPosition);
     float GetPrecipitation(Vector3 worldPosition);

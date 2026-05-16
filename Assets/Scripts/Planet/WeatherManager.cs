@@ -1,4 +1,9 @@
+using System;
+using System.Globalization;
+using System.IO;
+using System.Text;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
 /// <summary>
@@ -28,6 +33,8 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
     [Header("Diagnostics")]
     public bool ShowWeatherDiagnostics = false;
     [Range(0.25f, 10f)] public float WeatherDiagnosticsInterval = 2f;
+    public bool EnableWeatherDiagnosticHotkey = true;
+    public bool WriteWeatherDiagnosticsFile = true;
 
     SphericalWeatherGrid _grid;
     Vector3 _planetCenter;
@@ -67,6 +74,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
     public Vector3 WindDirection => WindDir.sqrMagnitude > 0.0001f ? WindDir.normalized : Vector3.right;
     public float WindSpeed => Speed;
     public Texture WeatherTexture => _grid != null ? _grid.Texture : null;
+    public Texture WeatherDynamicsTexture => _grid != null ? _grid.DynamicsTexture : null;
     public int WeatherResolution => _grid != null ? _grid.Resolution : 0;
     public bool HasWeatherGrid => _grid != null;
 
@@ -102,6 +110,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         UpdateWeatherEvolution();
         UpdateWeatherQueryCache();
         UpdateWeatherDiagnostics();
+        HandleWeatherDiagnosticsInput();
         Shader.SetGlobalVector(_windDirectionId, WindDirection);
         Shader.SetGlobalFloat(_windSpeedId, WindSpeed);
     }
@@ -156,6 +165,78 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
     }
 
     public float GetTemperature(Vector3 worldPosition) => 0.5f;
+
+    public bool TryFindStrongestPrecipitation(out Vector3 worldPosition, out WeatherSample sample)
+    {
+        worldPosition = Vector3.zero;
+        sample = default;
+
+        if (_grid == null || _seaLevelRadius <= 0f)
+            return false;
+
+        if (!_grid.TryFindStrongestStorm(out Vector3 weatherDirection,
+            out float cloudCoverage,
+            out float stormIntensity,
+            out float moistureSource))
+            return false;
+
+        Vector3 worldDirection = (_weatherVisualRotation * weatherDirection).normalized;
+        worldPosition = _planetCenter + worldDirection * (_seaLevelRadius + 25f);
+
+        float precipitation = CalculatePrecipitation(stormIntensity);
+        WeatherCellState state = stormIntensity >= PrecipitationStormThreshold
+            ? WeatherCellState.Storm
+            : cloudCoverage >= CloudyThreshold ? WeatherCellState.Cloudy : WeatherCellState.Clear;
+
+        sample = new WeatherSample(cloudCoverage, stormIntensity, precipitation, 0.5f, moistureSource, state);
+        return true;
+    }
+
+    public string DumpWeatherDiagnostics(string reason)
+    {
+        if (_grid == null)
+        {
+            const string noGrid = "[WeatherDiagnostics] No weather grid generated.";
+            Debug.Log(noGrid);
+            return noGrid;
+        }
+
+        var precipitationController = FindAnyObjectByType<PrecipitationController>();
+        float rainThreshold = precipitationController != null
+            ? precipitationController.StormThreshold
+            : PrecipitationStormThreshold;
+        var stats = _grid.CalculateStats(CloudyThreshold, PrecipitationStormThreshold, rainThreshold);
+        TryFindStrongestPrecipitation(out Vector3 strongestPosition, out WeatherSample strongestSample);
+
+        bool precipitationRenderEnabled = precipitationController != null
+            && precipitationController.RenderPrecipitation
+            && precipitationController.IsRenderingEnabled;
+        string report = BuildWeatherDiagnosticsJson(reason, stats, strongestPosition, strongestSample, precipitationController);
+        string path = string.Empty;
+        if (WriteWeatherDiagnosticsFile)
+        {
+            string fileName = $"weather-diagnostics-{DateTime.Now:yyyyMMdd-HHmmss}.json";
+            path = Path.Combine(Application.persistentDataPath, fileName);
+            File.WriteAllText(path, report);
+        }
+
+        float invCellCount = stats.CellCount > 0 ? 1f / stats.CellCount : 0f;
+        int queryCacheFaces = GetQueryCacheFaceCount();
+        string summary = $"[WeatherDiagnostics] cells={stats.CellCount}, " +
+            $"avgCloud={stats.AverageCondensation:F3}, cloudy={stats.CloudyCellCount * invCellCount:P1}, " +
+            $"avgPotential={stats.AverageMoistureSource:F3}, maxCloud={stats.MaxCondensation:F3}, " +
+            $"avgStorm={stats.AverageStorm:F3}, storm={stats.StormCellCount * invCellCount:P1}, maxStorm={stats.MaxStorm:F3}, " +
+            $"avgRain={stats.AverageRainRate:F3}, raining={stats.RainingCellCount * invCellCount:P1}, maxRain={stats.MaxRainRate:F3}, " +
+            $"rainCandidates={stats.RainCandidateCellCount}, rainRender={(precipitationRenderEnabled ? "on" : "off")}, " +
+            $"queryCacheFaces={queryCacheFaces}/6";
+        if (queryCacheFaces < 6)
+            summary += ", cache=warming";
+        if (!string.IsNullOrEmpty(path))
+            summary += $", file={path}";
+
+        Debug.Log(summary);
+        return report;
+    }
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
@@ -228,14 +309,24 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         if (_evolutionAccumulator < interval)
             return;
 
-        float simulationDelta = Mathf.Min(_evolutionAccumulator, interval * 4f);
-        _evolutionAccumulator = 0f;
-        if (_grid.Advance(WeatherCompute, Settings, simulationDelta, _weatherVisualRotation))
+        int maxSteps = 3;
+        int steps = 0;
+        while (_evolutionAccumulator >= interval && steps < maxSteps)
         {
-            _evolutionDispatchCount++;
-            _lastEvolutionDelta = simulationDelta;
-            _lastEvolutionTime = Time.time;
+            if (_grid.Advance(WeatherCompute, Settings, interval, _weatherVisualRotation))
+            {
+                _evolutionDispatchCount++;
+                _lastEvolutionDelta = interval;
+                _lastEvolutionTime = Time.time;
+            }
+
+            _evolutionAccumulator -= interval;
+            steps++;
         }
+
+        float maxCarry = interval * maxSteps;
+        if (_evolutionAccumulator > maxCarry)
+            _evolutionAccumulator = maxCarry;
     }
 
     void UpdateWeatherDiagnostics()
@@ -261,6 +352,15 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
             face, 1,
             TextureFormat.RGBAFloat,
             OnWeatherDiagnosticsReadback);
+    }
+
+    void HandleWeatherDiagnosticsInput()
+    {
+        if (!EnableWeatherDiagnosticHotkey)
+            return;
+
+        if (Keyboard.current?.f9Key.wasPressedThisFrame == true)
+            DumpWeatherDiagnostics("F9");
     }
 
     void UpdateWeatherQueryCache()
@@ -297,6 +397,15 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
 
         var data = request.GetData<Color>();
         _grid?.ApplyWeatherFaceReadback(face, data);
+        if (_grid != null && _grid.DynamicsTexture != null)
+        {
+            AsyncGPUReadback.Request(_grid.DynamicsTexture, 0,
+                0, WeatherResolution,
+                0, WeatherResolution,
+                face, 1,
+                TextureFormat.RGBAFloat,
+                request => OnWeatherDynamicsQueryCacheReadback(request, face));
+        }
         _weatherQueryCacheFaceMask |= 1 << face;
 
         if (ShowWeatherDiagnostics)
@@ -304,6 +413,14 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
             _weatherDiagnosticsLastFace = face;
             UpdateWeatherDiagnosticsStats(data);
         }
+    }
+
+    void OnWeatherDynamicsQueryCacheReadback(AsyncGPUReadbackRequest request, int face)
+    {
+        if (request.hasError)
+            return;
+
+        _grid?.ApplyDynamicsFaceReadback(face, request.GetData<Color>());
     }
 
     void OnWeatherDiagnosticsReadback(AsyncGPUReadbackRequest request)
@@ -426,6 +543,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         GUILayout.Label($"Moisture source avg: {_weatherAverageMoistureSource:F3}");
         GUILayout.Label($"Delta avg/max: {_weatherAverageCondensationChange:+0.0000;-0.0000;0.0000} / {_weatherMaxCondensationChange:F4}");
         GUILayout.Label($"Condensing: {_weatherCondensingFraction * 100f:F1}%, drying: {_weatherDryingFraction * 100f:F1}%");
+        GUILayout.Label("F9=Dump weather diagnostics");
         if (Settings != null && Settings.DebugMode == CloudSettings.DebugView.CondensationChange)
         {
             GUILayout.Label("Delta view: cyan condensing, red drying, dim below threshold");
@@ -453,6 +571,104 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
             PrecipitationStormThreshold,
             Mathf.Min(1f, PrecipitationStormThreshold + PrecipitationStormSoftness),
             stormIntensity);
+    }
+
+    string BuildWeatherDiagnosticsJson(
+        string reason,
+        WeatherGridStats stats,
+        Vector3 strongestPosition,
+        WeatherSample strongestSample,
+        PrecipitationController precipitationController)
+    {
+        var culture = CultureInfo.InvariantCulture;
+        var sb = new StringBuilder(2048);
+        sb.AppendLine("{");
+        AppendJsonString(sb, "reason", reason, 1, true);
+        AppendJsonString(sb, "utc", DateTime.UtcNow.ToString("O", culture), 1, true);
+        AppendJsonNumber(sb, "weatherResolution", WeatherResolution, 1, true);
+        int queryCacheFaces = GetQueryCacheFaceCount();
+        AppendJsonNumber(sb, "queryCacheFaces", queryCacheFaces, 1, true);
+        AppendJsonBool(sb, "queryCacheComplete", queryCacheFaces >= 6, 1, true);
+        AppendJsonNumber(sb, "evolutionDispatches", _evolutionDispatchCount, 1, true);
+        AppendJsonNumber(sb, "lastEvolutionDelta", _lastEvolutionDelta, 1, true);
+        AppendJsonBool(sb, "validationEvolutionRates", Settings != null && Settings.UseValidationEvolutionRates, 1, true);
+        AppendJsonBool(sb, "precipitationRenderEnabled",
+            precipitationController != null && precipitationController.RenderPrecipitation && precipitationController.IsRenderingEnabled,
+            1, true);
+        AppendJsonNumber(sb, "precipitationStormThreshold", precipitationController != null ? precipitationController.StormThreshold : PrecipitationStormThreshold, 1, true);
+
+        Indent(sb, 1).AppendLine("\"gridStats\": {");
+        float invCellCount = stats.CellCount > 0 ? 1f / stats.CellCount : 0f;
+        AppendJsonNumber(sb, "cellCount", stats.CellCount, 2, true);
+        AppendJsonNumber(sb, "cloudyCellCount", stats.CloudyCellCount, 2, true);
+        AppendJsonNumber(sb, "stormCellCount", stats.StormCellCount, 2, true);
+        AppendJsonNumber(sb, "rainCandidateCellCount", stats.RainCandidateCellCount, 2, true);
+        AppendJsonNumber(sb, "rainingCellCount", stats.RainingCellCount, 2, true);
+        AppendJsonNumber(sb, "cloudyFraction", stats.CloudyCellCount * invCellCount, 2, true);
+        AppendJsonNumber(sb, "stormFraction", stats.StormCellCount * invCellCount, 2, true);
+        AppendJsonNumber(sb, "rainCandidateFraction", stats.RainCandidateCellCount * invCellCount, 2, true);
+        AppendJsonNumber(sb, "rainingFraction", stats.RainingCellCount * invCellCount, 2, true);
+        AppendJsonNumber(sb, "averageCondensation", stats.AverageCondensation, 2, true);
+        AppendJsonNumber(sb, "averageStorm", stats.AverageStorm, 2, true);
+        AppendJsonNumber(sb, "averageMoistureSource", stats.AverageMoistureSource, 2, true);
+        AppendJsonNumber(sb, "averageRainRate", stats.AverageRainRate, 2, true);
+        AppendJsonNumber(sb, "maxCondensation", stats.MaxCondensation, 2, true);
+        AppendJsonNumber(sb, "maxStorm", stats.MaxStorm, 2, true);
+        AppendJsonNumber(sb, "maxMoistureSource", stats.MaxMoistureSource, 2, true);
+        AppendJsonNumber(sb, "maxRainRate", stats.MaxRainRate, 2, false);
+        Indent(sb, 1).AppendLine("},");
+
+        Indent(sb, 1).AppendLine("\"strongestStorm\": {");
+        AppendJsonVector(sb, "weatherDirection", stats.StrongestStormDirection, 2, true);
+        AppendJsonVector(sb, "worldPosition", strongestPosition, 2, true);
+        AppendJsonNumber(sb, "condensation", stats.StrongestStormCondensation, 2, true);
+        AppendJsonNumber(sb, "storm", stats.StrongestStorm, 2, true);
+        AppendJsonNumber(sb, "moistureSource", stats.StrongestStormMoistureSource, 2, true);
+        AppendJsonNumber(sb, "samplePrecipitation", strongestSample.Precipitation, 2, false);
+        Indent(sb, 1).AppendLine("}");
+        sb.AppendLine("}");
+        return sb.ToString();
+    }
+
+    static StringBuilder Indent(StringBuilder sb, int count)
+    {
+        for (int i = 0; i < count; i++)
+            sb.Append("  ");
+        return sb;
+    }
+
+    static void AppendJsonString(StringBuilder sb, string name, string value, int indent, bool comma)
+    {
+        Indent(sb, indent).Append('"').Append(name).Append("\": \"")
+            .Append((value ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\""))
+            .Append('"').AppendLine(comma ? "," : string.Empty);
+    }
+
+    static void AppendJsonBool(StringBuilder sb, string name, bool value, int indent, bool comma)
+    {
+        Indent(sb, indent).Append('"').Append(name).Append("\": ")
+            .Append(value ? "true" : "false").AppendLine(comma ? "," : string.Empty);
+    }
+
+    static void AppendJsonNumber(StringBuilder sb, string name, float value, int indent, bool comma)
+    {
+        Indent(sb, indent).Append('"').Append(name).Append("\": ")
+            .Append(value.ToString("0.####", CultureInfo.InvariantCulture)).AppendLine(comma ? "," : string.Empty);
+    }
+
+    static void AppendJsonNumber(StringBuilder sb, string name, int value, int indent, bool comma)
+    {
+        Indent(sb, indent).Append('"').Append(name).Append("\": ")
+            .Append(value.ToString(CultureInfo.InvariantCulture)).AppendLine(comma ? "," : string.Empty);
+    }
+
+    static void AppendJsonVector(StringBuilder sb, string name, Vector3 value, int indent, bool comma)
+    {
+        Indent(sb, indent).Append('"').Append(name).Append("\": { ")
+            .Append("\"x\": ").Append(value.x.ToString("0.####", CultureInfo.InvariantCulture)).Append(", ")
+            .Append("\"y\": ").Append(value.y.ToString("0.####", CultureInfo.InvariantCulture)).Append(", ")
+            .Append("\"z\": ").Append(value.z.ToString("0.####", CultureInfo.InvariantCulture)).Append(" }")
+            .AppendLine(comma ? "," : string.Empty);
     }
 
     void UploadWeatherAdvection()

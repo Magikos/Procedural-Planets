@@ -28,12 +28,21 @@ public class CloudSettings : ScriptableObject
 
     [Header("Weather Evolution")]
     public bool EnableWeatherEvolution = true;
-    [Range(0.05f, 5f)] public float EvolutionInterval = 0.5f;
+    [Range(0.05f, 5f)] public float EvolutionInterval = 0.1f;
     [Range(0f, 0.2f)] public float MoistureSourceStrength = 0.04f;
     [Range(0f, 0.2f)] public float DryAirEvaporationRate = 0.03f;
     [Range(0f, 0.5f)] public float StormGrowthRate = 0.12f;
     [Range(0f, 0.5f)] public float StormDecayRate = 0.08f;
     [Range(0f, 1f)] public float StormMoistureBias = 0.35f;
+
+    [Header("Precipitation Dynamics")]
+    [Range(0f, 1f)] public float RainFormationThreshold = 0.25f;
+    [Range(0.01f, 1f)] public float RainFormationSoftness = 0.35f;
+    [Range(0f, 0.5f)] public float PrecipitationBuildRate = 0.1f;
+    [Range(0f, 0.5f)] public float PrecipitationDecayRate = 0.06f;
+    [Range(0f, 0.5f)] public float RainOutRate = 0.05f;
+    [Range(0f, 0.5f)] public float HumidityRecoveryRate = 0.025f;
+    [Range(0f, 1f)] public float CondensationRainDrain = 0.22f;
 
     [Header("Weather Validation")]
     public bool UseValidationEvolutionRates = false;

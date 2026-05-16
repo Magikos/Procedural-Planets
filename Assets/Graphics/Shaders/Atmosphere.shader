@@ -11,6 +11,12 @@ SAMPLER(sampler_CameraDepthTexture);
 float4 _LightShaftParams;
 float4 _LightShaftParams2;
 int _LightShaftSamples;
+int _PrecipitationDebugMode;
+
+float LightShaftNoise(float2 pixel)
+{
+    return frac(52.9829189 * frac(dot(pixel, float2(0.06711056, 0.00583715))));
+}
 
 float CompositeDepthScaled(float2 uv, float viewLength)
 {
@@ -67,7 +73,7 @@ ENDHLSL
             {
                 int sampleCount = min(max(_LightShaftSamples, 0), 32);
                 float strength = _LightShaftParams.x;
-                if (strength <= 0.0 || sampleCount <= 0)
+                if (strength <= 0.0 || sampleCount <= 0 || _PrecipitationDebugMode > 0)
                     return float3(0.0, 0.0, 0.0);
 
                 float3 sunDir = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : float3(0.0, 1.0, 0.0);
@@ -88,7 +94,8 @@ ENDHLSL
                     return float3(0.0, 0.0, 0.0);
 
                 float2 delta = (uv - sunUv) * (_LightShaftParams.y / sampleCount);
-                float2 sampleUv = uv;
+                float rayJitter = LightShaftNoise(uv * _ScreenParams.xy) - 0.5;
+                float2 sampleUv = uv - delta * rayJitter;
                 float illuminationDecay = 1.0;
                 float3 light = 0.0;
 
@@ -105,8 +112,13 @@ ENDHLSL
                     float3 sampleColor = SAMPLE_TEXTURE2D(_Source, sampler_Source, sampleUv).rgb;
                     float luminance = dot(sampleColor, float3(0.2126, 0.7152, 0.0722));
                     float brightMask = smoothstep(_LightShaftParams2.y, _LightShaftParams2.y + _LightShaftParams2.z, luminance);
+                    float sunDistance = length(sampleUv - sunUv);
+                    float sunProximity = 1.0 - smoothstep(0.04, 0.72, sunDistance);
+                    float directSunMask = 1.0 - smoothstep(0.0, 0.22, sunDistance);
+                    float shaftMask = saturate(brightMask * sunProximity + directSunMask * 0.45);
 
-                    light += sampleColor * brightMask * skyMask * illuminationDecay * _LightShaftParams.w;
+                    float3 shaftColor = lerp(float3(0.78, 0.88, 1.0), float3(1.0, 0.88, 0.58), saturate(1.0 - sunDir.y));
+                    light += shaftColor * shaftMask * skyMask * illuminationDecay * _LightShaftParams.w;
                     illuminationDecay *= _LightShaftParams.z;
                 }
 
