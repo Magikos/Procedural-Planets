@@ -16,7 +16,7 @@ public class WeatherLightningController : MonoBehaviour
 
     [Header("Storm Selection")]
     [Range(0f, 1f)] public float MinimumPrecipitation = 0.35f;
-    [Range(0f, 1f)] public float MinimumStormIntensity = 0.45f;
+    [Range(0f, 1f)] public float MinimumStormIntensity = 0.6f;
     [Range(1f, 45f)] public float FlashAngularRadius = 6f;
     [Range(0f, 25f)] public float StrikeScatterAngle = 7f;
     [Range(1, 4)] public int PathCellCount = 3;
@@ -119,6 +119,16 @@ public class WeatherLightningController : MonoBehaviour
         _secondaryPower = Random.value <= SecondaryPulseChance
             ? _strikePower * Mathf.Lerp(0.25f, 0.55f, Random.value)
             : 0f;
+        float strikeRadius = (stormPosition - _planetCenter).magnitude;
+        Vector3 strikePosition = _planetCenter + _strikeDirection * strikeRadius;
+        EventBus<WeatherLightningEvent>.Raise(new WeatherLightningEvent(
+            strikePosition,
+            _strikeDirection,
+            _strikePower,
+            sample.StormIntensity,
+            sample.Precipitation,
+            _strikeDuration,
+            isGroundStrike: false));
         ScheduleNextStrike(_strikeDuration + MinDelay, _strikeDuration + Mathf.Max(MaxDelay, MinDelay));
     }
 

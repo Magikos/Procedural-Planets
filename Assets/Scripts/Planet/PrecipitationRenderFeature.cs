@@ -12,6 +12,7 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
     PrecipitationRenderPass _pass;
     Material _material;
     PrecipitationController _cachedController;
+    static readonly int _waterFocusModeId = Shader.PropertyToID("_WaterFocusMode");
 
     public override void Create()
     {
@@ -22,6 +23,9 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
     {
         var camType = renderingData.cameraData.camera.cameraType;
         if (camType == CameraType.Preview || camType == CameraType.Reflection)
+            return;
+
+        if (Shader.GetGlobalFloat(_waterFocusModeId) > 0.5f)
             return;
 
         if (_cachedController == null || !_cachedController.isActiveAndEnabled)

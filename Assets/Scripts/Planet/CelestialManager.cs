@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class CelestialManager : MonoBehaviour
+public class CelestialManager : MonoBehaviour, ICelestialTimeController
 {
     [Header("References")]
     public Light SunLight;
@@ -24,6 +24,8 @@ public class CelestialManager : MonoBehaviour
     [Header("State")]
     [Range(0f, 1f), Tooltip("Starting time of day: 0=midnight, 0.25=sunrise, 0.5=noon, 0.75=sunset")]
     public float StartTimeOfDay = 0.25f;
+    [Tooltip("Debug control used to inspect lighting and water reflections without the sun moving.")]
+    public bool FreezeTime;
 
     [Header("Ambient Light")]
     [Range(0f, 1f)] public float AmbientMaxIntensity = 0.15f;
@@ -38,6 +40,10 @@ public class CelestialManager : MonoBehaviour
     float _planetRadius;
     bool _wasDay = true;
     int _lastMoonPhaseIndex = -1;
+    Transform _cachedMoonRoot;
+    Renderer[] _moonRenderers;
+    bool[] _moonRendererDefaults;
+    Camera _cachedMainCamera;
 
     static readonly int _nightAmbientIntensityId = Shader.PropertyToID("_NightAmbientIntensity");
     static readonly int _starSeedId = Shader.PropertyToID("_StarSeed");
@@ -45,6 +51,7 @@ public class CelestialManager : MonoBehaviour
     static readonly int _starBrightnessId = Shader.PropertyToID("_StarBrightness");
 
     public float TimeOfDay => _timeOfDay;
+    public bool IsTimeFrozen => FreezeTime;
     public Vector3 SunDirection => SunLight != null ? -SunLight.transform.forward : Vector3.up;
 
     public bool IsDayAt(Vector3 worldPosition)
@@ -79,6 +86,9 @@ public class CelestialManager : MonoBehaviour
     void Start()
     {
         _timeOfDay = StartTimeOfDay;
+        UpdateSun(0f);
+        UpdateMoon(0f);
+        UpdateAmbient();
     }
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
@@ -107,13 +117,24 @@ public class CelestialManager : MonoBehaviour
 
     void Update()
     {
-        if (DayLengthSeconds <= 0f) return;
+        float dt = FreezeTime ? 0f : Time.deltaTime;
+        if (DayLengthSeconds > 0f)
+        {
+            UpdateSun(dt);
+            UpdateMoon(dt);
+        }
+        else
+        {
+            UpdateMoonVisibility();
+        }
 
-        float dt = Time.deltaTime;
-        UpdateSun(dt);
-        UpdateMoon(dt);
         UpdateAmbient();
         FireEvents();
+    }
+
+    public void ToggleTimeFrozen()
+    {
+        FreezeTime = !FreezeTime;
     }
 
     void UpdateSun(float dt)
@@ -139,7 +160,14 @@ public class CelestialManager : MonoBehaviour
 
     void UpdateMoon(float dt)
     {
-        if (MoonTransform == null || MoonOrbitRadius <= 0f) return;
+        if (MoonTransform == null)
+            return;
+
+        if (MoonOrbitRadius <= 0f)
+        {
+            SetMoonVisible(false);
+            return;
+        }
 
         float moonDayLength = DayLengthSeconds * MoonCycleDays;
         if (moonDayLength <= 0f) return;
@@ -161,6 +189,111 @@ public class CelestialManager : MonoBehaviour
 
         Vector3 toMoon = (MoonTransform.position - center).normalized;
         MoonPhase = Vector3.Dot(SunDirection, toMoon);
+        UpdateMoonVisibility();
+    }
+
+    void CacheMoonRenderers()
+    {
+        if (MoonTransform == null)
+        {
+            _cachedMoonRoot = null;
+            _moonRenderers = null;
+            _moonRendererDefaults = null;
+            return;
+        }
+
+        if (_cachedMoonRoot == MoonTransform && _moonRenderers != null)
+            return;
+
+        _cachedMoonRoot = MoonTransform;
+        _moonRenderers = MoonTransform.GetComponentsInChildren<Renderer>(true);
+        _moonRendererDefaults = new bool[_moonRenderers.Length];
+        for (int i = 0; i < _moonRenderers.Length; i++)
+            _moonRendererDefaults[i] = _moonRenderers[i] != null && _moonRenderers[i].enabled;
+    }
+
+    void SetMoonVisible(bool visible)
+    {
+        CacheMoonRenderers();
+        if (_moonRenderers == null)
+            return;
+
+        for (int i = 0; i < _moonRenderers.Length; i++)
+        {
+            if (_moonRenderers[i] != null)
+                _moonRenderers[i].enabled = visible && _moonRendererDefaults[i];
+        }
+    }
+
+    void UpdateMoonVisibility()
+    {
+        if (MoonTransform == null)
+            return;
+
+        Camera viewCamera = GetViewCamera();
+        if (viewCamera == null || PlanetCenter == null || _planetRadius <= 0f)
+        {
+            SetMoonVisible(MoonOrbitRadius > 0f);
+            return;
+        }
+
+        Vector3 center = PlanetCenter.position;
+        Vector3 cameraOffset = viewCamera.transform.position - center;
+        float cameraRadius = cameraOffset.magnitude;
+        if (cameraRadius <= 0.0001f)
+        {
+            SetMoonVisible(false);
+            return;
+        }
+
+        Vector3 toMoon = MoonTransform.position - viewCamera.transform.position;
+        float moonDistance = toMoon.magnitude;
+        if (moonDistance <= 0.0001f)
+        {
+            SetMoonVisible(false);
+            return;
+        }
+
+        Vector3 moonDir = toMoon / moonDistance;
+        bool visible;
+        if (cameraRadius <= _planetRadius * 1.15f)
+        {
+            Vector3 localUp = cameraOffset / cameraRadius;
+            visible = Vector3.Dot(localUp, moonDir) > -0.025f;
+        }
+        else
+        {
+            visible = !RayIntersectsPlanet(viewCamera.transform.position, moonDir, moonDistance);
+        }
+
+        SetMoonVisible(visible);
+    }
+
+    Camera GetViewCamera()
+    {
+        if (_cachedMainCamera != null && _cachedMainCamera.isActiveAndEnabled)
+            return _cachedMainCamera;
+
+        _cachedMainCamera = Camera.main;
+        return _cachedMainCamera;
+    }
+
+    bool RayIntersectsPlanet(Vector3 rayOrigin, Vector3 rayDirection, float maxDistance)
+    {
+        Vector3 oc = rayOrigin - PlanetCenter.position;
+        float radius = Mathf.Max(_planetRadius, 0f);
+        float b = Vector3.Dot(oc, rayDirection);
+        float c = Vector3.Dot(oc, oc) - radius * radius;
+        float discriminant = b * b - c;
+        if (discriminant <= 0f)
+            return false;
+
+        float root = Mathf.Sqrt(discriminant);
+        float nearHit = -b - root;
+        float farHit = -b + root;
+        const float epsilon = 0.05f;
+        return (nearHit > epsilon && nearHit < maxDistance)
+            || (farHit > epsilon && farHit < maxDistance);
     }
 
     void FireEvents()

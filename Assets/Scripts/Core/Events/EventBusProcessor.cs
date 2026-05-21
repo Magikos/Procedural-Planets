@@ -22,7 +22,16 @@ public class EventBusProcessor : MonoBehaviour
     void LateUpdate()
     {
         for (int i = 0; i < _processors.Count; i++)
-            _processors[i]?.Invoke();
+        {
+            try
+            {
+                _processors[i]?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+        }
     }
 
     public static void RegisterProcessor(Action processor)

@@ -16,6 +16,31 @@ public class TerrainFace
     int[] _pendingTriangles;
     Color[] _pendingColors;
 
+    public int Resolution => _resolution;
+    public Vector3[] UnitSpherePoints => _unitSpherePoints;
+    public float[] Elevations => _elevations;
+
+    public bool TryGetNearestSurfaceRadius(Vector3 unitDirection, out float radius, out float alignment)
+    {
+        radius = 0f;
+        alignment = -1f;
+
+        if (_unitSpherePoints == null || _pendingVertices == null)
+            return false;
+
+        for (int i = 0; i < _unitSpherePoints.Length; i++)
+        {
+            float dot = Vector3.Dot(unitDirection, _unitSpherePoints[i]);
+            if (dot <= alignment)
+                continue;
+
+            alignment = dot;
+            radius = _pendingVertices[i].magnitude;
+        }
+
+        return alignment > -0.5f && radius > 0f;
+    }
+
     public TerrainFace(ITerrainProvider terrainProvider, Mesh mesh, int resolution, Vector3 localUp)
     {
         _terrainProvider = terrainProvider;

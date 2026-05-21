@@ -16,23 +16,26 @@ MonoBehaviour:
   InitialCoverage: 0.48
   FrontScale: 4
   FrontSharpness: 18
-  StormThreshold: 0.78
+  StormThreshold: 0.86
   BiomeInfluence: 0.15
   FrontAdvectionDegreesPerSecond: 0.4
   EnableWeatherEvolution: 1
   EvolutionInterval: 0.1
   MoistureSourceStrength: 0.04
   DryAirEvaporationRate: 0.03
-  StormGrowthRate: 0.12
-  StormDecayRate: 0.08
-  StormMoistureBias: 0.35
-  RainFormationThreshold: 0.25
-  RainFormationSoftness: 0.35
-  PrecipitationBuildRate: 0.1
-  PrecipitationDecayRate: 0.06
-  RainOutRate: 0.05
-  HumidityRecoveryRate: 0.025
-  CondensationRainDrain: 0.22
+  StormGrowthRate: 0.075
+  StormDecayRate: 0.13
+  StormMoistureBias: 0.5
+  StormSourceThreshold: 0.76
+  StormSourceSoftness: 0.16
+  RainFormationThreshold: 0.58
+  RainFormationSoftness: 0.22
+  RainCloudThreshold: 0.78
+  PrecipitationBuildRate: 0.055
+  PrecipitationDecayRate: 0.14
+  RainOutRate: 0.09
+  HumidityRecoveryRate: 0.018
+  CondensationRainDrain: 0.32
   UseValidationEvolutionRates: 0
   ValidationEvolutionInterval: 0.1
   ValidationMoistureMultiplier: 8
@@ -69,9 +72,9 @@ MonoBehaviour:
   StormShadowBoost: 1.35
   ShadowHorizonFade: 0.18
   AnimationSpeed: 0.35
-  ViewSteps: 48
-  LightSteps: 6
-  RayOffsetStrength: 0.65
+  ViewSteps: 72
+  LightSteps: 8
+  RayOffsetStrength: 1.1
   ShapeNoiseResolution: 128
   DetailNoiseResolution: 32
   DebugMode: 0

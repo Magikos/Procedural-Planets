@@ -21,8 +21,8 @@ public class PrecipitationController : MonoBehaviour
     [Header("Rendering")]
     public bool RenderPrecipitation = true;
     [Range(0f, 2f)] public float Intensity = 1.15f;
-    [Range(0f, 1f)] public float StormThreshold = 0.35f;
-    [Range(0.01f, 1f)] public float StormSoftness = 0.25f;
+    [Range(0f, 1f)] public float StormThreshold = 0.55f;
+    [Range(0.01f, 1f)] public float StormSoftness = 0.2f;
     [Range(0f, 1f)] public float MaxOpacity = 0.38f;
     [Range(4, 48)] public int ViewSteps = 32;
     [Range(1000f, 50000f)] public float MaxDistance = 22000f;

@@ -23,8 +23,8 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
     [Header("Precipitation")]
     [Range(0f, 1f)] public float Precipitation = 1f;
     [Range(0f, 1f)] public float CloudyThreshold = 0.18f;
-    [Range(0f, 1f)] public float PrecipitationStormThreshold = 0.25f;
-    [Range(0.01f, 1f)] public float PrecipitationStormSoftness = 0.35f;
+    [Range(0f, 1f)] public float PrecipitationStormThreshold = 0.5f;
+    [Range(0.01f, 1f)] public float PrecipitationStormSoftness = 0.22f;
 
     [Header("Query Cache")]
     public bool EnableWeatherQueryCache = true;
@@ -51,12 +51,17 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
     float _weatherAverageCondensation;
     float _weatherAverageStorm;
     float _weatherAveragePrecipitation;
+    float _weatherAverageRainRate;
     float _weatherAverageMoistureSource;
     float _weatherAverageCondensationChange;
     float _weatherMaxCondensationChange;
+    float _weatherCloudyFraction;
+    float _weatherStormFraction;
+    float _weatherRainingFraction;
     float _weatherCondensingFraction;
     float _weatherDryingFraction;
     int _weatherDiagnosticsSamples;
+    float _nextWeatherAggregateStatsTime;
     int _weatherDiagnosticsNextFace;
     int _weatherDiagnosticsLastFace = -1;
     bool _weatherQueryCachePending;
@@ -110,6 +115,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         UpdateWeatherEvolution();
         UpdateWeatherQueryCache();
         UpdateWeatherDiagnostics();
+        UpdateWeatherAggregateDiagnostics();
         HandleWeatherDiagnosticsInput();
         Shader.SetGlobalVector(_windDirectionId, WindDirection);
         Shader.SetGlobalFloat(_windSpeedId, WindSpeed);
@@ -354,6 +360,29 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
             OnWeatherDiagnosticsReadback);
     }
 
+    void UpdateWeatherAggregateDiagnostics()
+    {
+        if (!ShowWeatherDiagnostics || _grid == null || Time.unscaledTime < _nextWeatherAggregateStatsTime)
+            return;
+
+        var precipitationController = FindAnyObjectByType<PrecipitationController>();
+        float rainThreshold = precipitationController != null
+            ? precipitationController.StormThreshold
+            : PrecipitationStormThreshold;
+        var stats = _grid.CalculateStats(CloudyThreshold, PrecipitationStormThreshold, rainThreshold);
+        float invCount = stats.CellCount > 0 ? 1f / stats.CellCount : 0f;
+
+        _weatherAverageCondensation = stats.AverageCondensation;
+        _weatherAverageStorm = stats.AverageStorm;
+        _weatherAverageMoistureSource = stats.AverageMoistureSource;
+        _weatherAverageRainRate = stats.AverageRainRate;
+        _weatherCloudyFraction = stats.CloudyCellCount * invCount;
+        _weatherStormFraction = stats.StormCellCount * invCount;
+        _weatherRainingFraction = stats.RainingCellCount * invCount;
+        _weatherDiagnosticsSamples = stats.CellCount;
+        _nextWeatherAggregateStatsTime = Time.unscaledTime + Mathf.Max(WeatherDiagnosticsInterval, 0.5f);
+    }
+
     void HandleWeatherDiagnosticsInput()
     {
         if (!EnableWeatherDiagnosticHotkey)
@@ -492,12 +521,17 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         _weatherAverageCondensation = 0f;
         _weatherAverageStorm = 0f;
         _weatherAveragePrecipitation = 0f;
+        _weatherAverageRainRate = 0f;
         _weatherAverageMoistureSource = 0f;
         _weatherAverageCondensationChange = 0f;
         _weatherMaxCondensationChange = 0f;
+        _weatherCloudyFraction = 0f;
+        _weatherStormFraction = 0f;
+        _weatherRainingFraction = 0f;
         _weatherCondensingFraction = 0f;
         _weatherDryingFraction = 0f;
         _weatherDiagnosticsSamples = 0;
+        _nextWeatherAggregateStatsTime = 0f;
         _weatherDiagnosticsNextFace = 0;
         _weatherDiagnosticsLastFace = -1;
         _weatherQueryCachePending = false;
@@ -539,7 +573,8 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         GUILayout.Label($"Evolution: {evolutionMode}, dispatches {_evolutionDispatchCount}, last dt {_lastEvolutionDelta:F2}s");
         GUILayout.Label($"Last update age: {lastUpdateAge}");
         GUILayout.Label($"Condensation avg: {_weatherAverageCondensation:F3}, storm avg: {_weatherAverageStorm:F3}");
-        GUILayout.Label($"Precipitation avg: {_weatherAveragePrecipitation:F3}");
+        GUILayout.Label($"Cloudy/storm/raining: {_weatherCloudyFraction:P1} / {_weatherStormFraction:P1} / {_weatherRainingFraction:P1}");
+        GUILayout.Label($"Rain rate avg: {_weatherAverageRainRate:F3}");
         GUILayout.Label($"Moisture source avg: {_weatherAverageMoistureSource:F3}");
         GUILayout.Label($"Delta avg/max: {_weatherAverageCondensationChange:+0.0000;-0.0000;0.0000} / {_weatherMaxCondensationChange:F4}");
         GUILayout.Label($"Condensing: {_weatherCondensingFraction * 100f:F1}%, drying: {_weatherDryingFraction * 100f:F1}%");

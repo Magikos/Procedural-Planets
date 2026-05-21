@@ -20,7 +20,7 @@ public class CloudSettings : ScriptableObject
     [Range(0f, 1f)] public float InitialCoverage = 0.48f;
     [Range(0.5f, 12f)] public float FrontScale = 4f;
     [Range(1f, 40f)] public float FrontSharpness = 18f;
-    [Range(0f, 1f)] public float StormThreshold = 0.78f;
+    [Range(0f, 1f)] public float StormThreshold = 0.86f;
     [Range(0f, 1f)] public float BiomeInfluence = 0.15f;
 
     [Header("Weather Motion")]
@@ -31,18 +31,21 @@ public class CloudSettings : ScriptableObject
     [Range(0.05f, 5f)] public float EvolutionInterval = 0.1f;
     [Range(0f, 0.2f)] public float MoistureSourceStrength = 0.04f;
     [Range(0f, 0.2f)] public float DryAirEvaporationRate = 0.03f;
-    [Range(0f, 0.5f)] public float StormGrowthRate = 0.12f;
-    [Range(0f, 0.5f)] public float StormDecayRate = 0.08f;
-    [Range(0f, 1f)] public float StormMoistureBias = 0.35f;
+    [Range(0f, 0.5f)] public float StormGrowthRate = 0.075f;
+    [Range(0f, 0.5f)] public float StormDecayRate = 0.13f;
+    [Range(0f, 1f)] public float StormMoistureBias = 0.5f;
+    [Range(0f, 1f)] public float StormSourceThreshold = 0.76f;
+    [Range(0.01f, 1f)] public float StormSourceSoftness = 0.16f;
 
     [Header("Precipitation Dynamics")]
-    [Range(0f, 1f)] public float RainFormationThreshold = 0.25f;
-    [Range(0.01f, 1f)] public float RainFormationSoftness = 0.35f;
-    [Range(0f, 0.5f)] public float PrecipitationBuildRate = 0.1f;
-    [Range(0f, 0.5f)] public float PrecipitationDecayRate = 0.06f;
-    [Range(0f, 0.5f)] public float RainOutRate = 0.05f;
-    [Range(0f, 0.5f)] public float HumidityRecoveryRate = 0.025f;
-    [Range(0f, 1f)] public float CondensationRainDrain = 0.22f;
+    [Range(0f, 1f)] public float RainFormationThreshold = 0.58f;
+    [Range(0.01f, 1f)] public float RainFormationSoftness = 0.22f;
+    [Range(0f, 1f)] public float RainCloudThreshold = 0.78f;
+    [Range(0f, 0.5f)] public float PrecipitationBuildRate = 0.055f;
+    [Range(0f, 0.5f)] public float PrecipitationDecayRate = 0.14f;
+    [Range(0f, 0.5f)] public float RainOutRate = 0.09f;
+    [Range(0f, 0.5f)] public float HumidityRecoveryRate = 0.018f;
+    [Range(0f, 1f)] public float CondensationRainDrain = 0.32f;
 
     [Header("Weather Validation")]
     public bool UseValidationEvolutionRates = false;
@@ -93,9 +96,9 @@ public class CloudSettings : ScriptableObject
     [Range(0f, 2f)] public float AnimationSpeed = 0.35f;
 
     [Header("Ray March")]
-    [Range(8, 96)] public int ViewSteps = 48;
-    [Range(2, 16)] public int LightSteps = 6;
-    [Range(0f, 2f)] public float RayOffsetStrength = 0.65f;
+    [Range(8, 96)] public int ViewSteps = 72;
+    [Range(2, 16)] public int LightSteps = 8;
+    [Range(0f, 2f)] public float RayOffsetStrength = 1.1f;
 
     [Header("Noise Textures")]
     [Range(32, 256)] public int ShapeNoiseResolution = 128;

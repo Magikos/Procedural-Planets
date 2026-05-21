@@ -16,8 +16,11 @@ float _DryAirEvaporationRate;
 float _StormGrowthRate;
 float _StormDecayRate;
 float _StormMoistureBias;
+float _StormSourceThreshold;
+float _StormSourceSoftness;
 float _RainFormationThreshold;
 float _RainFormationSoftness;
+float _RainCloudThreshold;
 float _PrecipitationBuildRate;
 float _PrecipitationDecayRate;
 float _RainOutRate;
@@ -124,14 +127,15 @@ void CSEvolveWeather(uint3 id : SV_DispatchThreadID)
     float nextCondensation = MoveTowards(condensation, targetCondensation, rate * _DeltaTime);
 
     float stormCondensation = smoothstep(_StormThreshold, 1.0, nextCondensation);
-    float stormSource = lerp(1.0 - _StormMoistureBias, 1.0, source);
+    float stormSource = smoothstep(_StormSourceThreshold, min(1.0, _StormSourceThreshold + max(_StormSourceSoftness, 0.0001)), source);
+    stormSource = lerp(1.0 - _StormMoistureBias, 1.0, stormSource) * stormSource;
     float stormTarget = stormCondensation * stormSource;
     float stormRate = stormTarget > storm ? _StormGrowthRate : _StormDecayRate;
     float nextStorm = MoveTowards(storm, stormTarget, stormRate * _DeltaTime);
 
     float rainSoftness = max(_RainFormationSoftness, 0.0001);
     float rainStorm = smoothstep(_RainFormationThreshold, min(1.0, _RainFormationThreshold + rainSoftness), nextStorm);
-    float rainCloudSupport = smoothstep(0.52, 0.92, nextCondensation);
+    float rainCloudSupport = smoothstep(_RainCloudThreshold, min(1.0, _RainCloudThreshold + 0.2), nextCondensation);
     float precipitationTarget = saturate(rainStorm * rainCloudSupport * humidity);
     float precipitationRate = precipitationTarget > precipitationWater ? _PrecipitationBuildRate : _PrecipitationDecayRate;
     float nextPrecipitationWater = MoveTowards(precipitationWater, precipitationTarget, precipitationRate * _DeltaTime);

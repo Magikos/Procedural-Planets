@@ -93,8 +93,11 @@ public sealed class SphericalWeatherGrid : IDisposable
     static readonly int _stormGrowthRateId = Shader.PropertyToID("_StormGrowthRate");
     static readonly int _stormDecayRateId = Shader.PropertyToID("_StormDecayRate");
     static readonly int _stormMoistureBiasId = Shader.PropertyToID("_StormMoistureBias");
+    static readonly int _stormSourceThresholdId = Shader.PropertyToID("_StormSourceThreshold");
+    static readonly int _stormSourceSoftnessId = Shader.PropertyToID("_StormSourceSoftness");
     static readonly int _rainFormationThresholdId = Shader.PropertyToID("_RainFormationThreshold");
     static readonly int _rainFormationSoftnessId = Shader.PropertyToID("_RainFormationSoftness");
+    static readonly int _rainCloudThresholdId = Shader.PropertyToID("_RainCloudThreshold");
     static readonly int _precipitationBuildRateId = Shader.PropertyToID("_PrecipitationBuildRate");
     static readonly int _precipitationDecayRateId = Shader.PropertyToID("_PrecipitationDecayRate");
     static readonly int _rainOutRateId = Shader.PropertyToID("_RainOutRate");
@@ -185,11 +188,19 @@ public sealed class SphericalWeatherGrid : IDisposable
                     cellCondensation = Mathf.Pow(cellCondensation, 1.08f);
                     float source = Mathf.Clamp01(cellCondensation * 0.92f + humidAir * 0.08f);
 
-                    float cellStorm = Mathf.SmoothStep(settings.StormThreshold, 1f, cellCondensation);
+                    float stormSource = Mathf.SmoothStep(
+                        settings.StormSourceThreshold,
+                        Mathf.Min(1f, settings.StormSourceThreshold + settings.StormSourceSoftness),
+                        source);
+                    stormSource = Mathf.Lerp(1f - settings.StormMoistureBias, 1f, stormSource) * stormSource;
+                    float cellStorm = Mathf.SmoothStep(settings.StormThreshold, 1f, cellCondensation) * stormSource;
                     float initialPrecipitation = Mathf.SmoothStep(
                         settings.RainFormationThreshold,
                         Mathf.Min(1f, settings.RainFormationThreshold + settings.RainFormationSoftness),
-                        cellStorm) * Mathf.SmoothStep(0.52f, 0.92f, cellCondensation) * humidAir * 0.35f;
+                        cellStorm) * Mathf.SmoothStep(
+                        settings.RainCloudThreshold,
+                        Mathf.Min(1f, settings.RainCloudThreshold + 0.2f),
+                        cellCondensation) * humidAir * 0.22f;
                     float initialRainRate = Mathf.Clamp01(initialPrecipitation * cellStorm);
                     int gridIndex = GetIndex(face, x, y, resolution);
                     condensation[gridIndex] = cellCondensation;
@@ -454,8 +465,11 @@ public sealed class SphericalWeatherGrid : IDisposable
         compute.SetFloat(_stormGrowthRateId, settings.ActiveStormGrowthRate);
         compute.SetFloat(_stormDecayRateId, settings.ActiveStormDecayRate);
         compute.SetFloat(_stormMoistureBiasId, settings.StormMoistureBias);
+        compute.SetFloat(_stormSourceThresholdId, settings.StormSourceThreshold);
+        compute.SetFloat(_stormSourceSoftnessId, settings.StormSourceSoftness);
         compute.SetFloat(_rainFormationThresholdId, settings.RainFormationThreshold);
         compute.SetFloat(_rainFormationSoftnessId, settings.RainFormationSoftness);
+        compute.SetFloat(_rainCloudThresholdId, settings.RainCloudThreshold);
         compute.SetFloat(_precipitationBuildRateId, settings.PrecipitationBuildRate);
         compute.SetFloat(_precipitationDecayRateId, settings.PrecipitationDecayRate);
         compute.SetFloat(_rainOutRateId, settings.RainOutRate);

@@ -1,22 +1,124 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using UnityEngine;
 
 public static class EventBus<TEvent> where TEvent : struct, IGameEvent
 {
     class Subscriber
     {
-        public WeakReference Target;
-        public Action<TEvent> Handler;
-        public Action<TEvent> OriginalHandler;
+        public WeakAction Handler;
+        public WeakFunc Filter;
         public bool OneTime;
         public bool Deferred;
 
         public bool IsDead =>
-            Target != null && (!Target.IsAlive || Target.Target == null);
+            Handler == null || Handler.IsDead || (Filter != null && Filter.IsDead);
+
+        public bool Matches(Action<TEvent> handler) =>
+            Handler != null && Handler.Matches(handler);
+
+        public bool TryInvoke(TEvent context)
+        {
+            if (IsDead)
+                return false;
+
+            if (Filter != null && !Filter.Invoke(context))
+                return true;
+
+            Handler.Invoke(context);
+            return true;
+        }
+    }
+
+    class WeakAction
+    {
+        readonly WeakReference _target;
+        readonly MethodInfo _method;
+        readonly Action<TEvent> _staticHandler;
+
+        public WeakAction(Action<TEvent> handler)
+        {
+            if (handler.Target == null)
+            {
+                _staticHandler = handler;
+                return;
+            }
+
+            _target = new WeakReference(handler.Target);
+            _method = handler.Method;
+        }
+
+        public bool IsDead => _target != null && IsDeadTarget(_target.Target);
+
+        public bool Matches(Action<TEvent> handler)
+        {
+            if (handler == null)
+                return false;
+
+            if (_staticHandler != null)
+                return handler.Target == null && _staticHandler.Method == handler.Method;
+
+            return ReferenceEquals(_target?.Target, handler.Target) && _method == handler.Method;
+        }
+
+        public void Invoke(TEvent context)
+        {
+            if (_staticHandler != null)
+            {
+                _staticHandler(context);
+                return;
+            }
+
+            object target = _target.Target;
+            if (IsDeadTarget(target))
+                return;
+
+            _method.Invoke(target, new object[] { context });
+        }
+    }
+
+    class WeakFunc
+    {
+        readonly WeakReference _target;
+        readonly MethodInfo _method;
+        readonly Func<TEvent, bool> _staticFilter;
+
+        public WeakFunc(Func<TEvent, bool> filter)
+        {
+            if (filter.Target == null)
+            {
+                _staticFilter = filter;
+                return;
+            }
+
+            _target = new WeakReference(filter.Target);
+            _method = filter.Method;
+        }
+
+        public bool IsDead => _target != null && IsDeadTarget(_target.Target);
+
+        public bool Invoke(TEvent context)
+        {
+            if (_staticFilter != null)
+                return _staticFilter(context);
+
+            object target = _target.Target;
+            if (IsDeadTarget(target))
+                return false;
+
+            return (bool)_method.Invoke(target, new object[] { context });
+        }
+    }
+
+    struct DeferredCall
+    {
+        public Subscriber Subscriber;
+        public TEvent Context;
     }
 
     static readonly List<Subscriber> _subscribers = new();
-    static readonly Queue<Action> _deferredQueue = new();
+    static readonly Queue<DeferredCall> _deferredQueue = new();
     static bool _registeredDeferredProcessor;
 
     public static void Raise(TEvent context)
@@ -31,12 +133,15 @@ public static class EventBus<TEvent> where TEvent : struct, IGameEvent
                 continue;
             }
 
-            void Invoke() => sub.Handler?.Invoke(context);
-
             if (sub.Deferred)
-                _deferredQueue.Enqueue(Invoke);
-            else
-                Invoke();
+            {
+                _deferredQueue.Enqueue(new DeferredCall { Subscriber = sub, Context = context });
+            }
+            else if (!InvokeSubscriber(sub, context))
+            {
+                _subscribers.RemoveAt(i);
+                continue;
+            }
 
             if (sub.OneTime)
                 _subscribers.RemoveAt(i);
@@ -52,34 +157,35 @@ public static class EventBus<TEvent> where TEvent : struct, IGameEvent
     public static void ListenOnce(Action<TEvent> handler, Func<TEvent, bool> filter = null)
         => AddSubscriber(handler, filter, oneTime: true, deferred: false);
 
+    public static void ListenOnceDeferred(Action<TEvent> handler, Func<TEvent, bool> filter = null)
+        => AddSubscriber(handler, filter, oneTime: true, deferred: true);
+
     public static void Unlisten(Action<TEvent> handler)
     {
+        if (handler == null) return;
+
         for (int i = _subscribers.Count - 1; i >= 0; i--)
         {
-            if (_subscribers[i].OriginalHandler == handler)
-            {
+            if (_subscribers[i].Matches(handler))
                 _subscribers.RemoveAt(i);
-                return;
-            }
         }
     }
 
-    public static void ClearAll() => _subscribers.Clear();
+    public static void ClearAll()
+    {
+        _subscribers.Clear();
+        _deferredQueue.Clear();
+    }
 
     static void AddSubscriber(Action<TEvent> handler, Func<TEvent, bool> filter, bool oneTime, bool deferred)
     {
-        Action<TEvent> wrapped = filter == null ? handler : (ctx =>
-        {
-            if (filter(ctx)) handler(ctx);
-        });
-
-        var target = handler.Target != null ? new WeakReference(handler.Target) : null;
+        if (handler == null)
+            throw new ArgumentNullException(nameof(handler));
 
         _subscribers.Add(new Subscriber
         {
-            Target = target,
-            Handler = wrapped,
-            OriginalHandler = handler,
+            Handler = new WeakAction(handler),
+            Filter = filter != null ? new WeakFunc(filter) : null,
             OneTime = oneTime,
             Deferred = deferred
         });
@@ -98,6 +204,53 @@ public static class EventBus<TEvent> where TEvent : struct, IGameEvent
     internal static void ProcessDeferred()
     {
         while (_deferredQueue.Count > 0)
-            _deferredQueue.Dequeue()?.Invoke();
+        {
+            DeferredCall call = _deferredQueue.Dequeue();
+            if (!call.Subscriber.IsDead)
+                InvokeSubscriber(call.Subscriber, call.Context);
+        }
+
+        PruneDeadSubscribers();
+    }
+
+    static bool InvokeSubscriber(Subscriber sub, TEvent context)
+    {
+        try
+        {
+            return sub.TryInvoke(context);
+        }
+        catch (Exception ex)
+        {
+            LogSubscriberException(ex);
+            return true;
+        }
+    }
+
+    static void PruneDeadSubscribers()
+    {
+        for (int i = _subscribers.Count - 1; i >= 0; i--)
+        {
+            if (_subscribers[i].IsDead)
+                _subscribers.RemoveAt(i);
+        }
+    }
+
+    static bool IsDeadTarget(object target)
+    {
+        if (target == null)
+            return true;
+
+        if (target is UnityEngine.Object unityObject && unityObject == null)
+            return true;
+
+        return false;
+    }
+
+    static void LogSubscriberException(Exception ex)
+    {
+        if (ex is TargetInvocationException invocationException && invocationException.InnerException != null)
+            ex = invocationException.InnerException;
+
+        Debug.LogException(ex);
     }
 }

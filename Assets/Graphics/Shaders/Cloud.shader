@@ -18,6 +18,7 @@ TEXTURE3D(_CloudDetailNoise);
 SAMPLER(sampler_CloudDetailNoise);
 
 float3 _CloudPlanetCenter;
+float _PlanetRadius;
 float _CloudInnerRadius;
 float _CloudOuterRadius;
 int _CloudWeatherResolution;
@@ -233,19 +234,29 @@ CloudSample SampleCloud(float3 worldPos)
     return sampleData;
 }
 
-float LightMarch(float3 pos, float lightStepSize)
+float LightMarch(float3 pos, float lightStepSize, float2 pixel, int viewStep)
 {
     float3 surfaceNormal = normalize(pos - _CloudPlanetCenter);
     float sunDot = dot(surfaceNormal, _SunParams.xyz);
     float sunVisibility = saturate((sunDot + 0.08) * 6.0);
 
     float totalDensity = 0;
-    float3 lightPos = pos;
+    float jitterStrength = saturate(_CloudRayOffsetStrength);
+    float viewStepF = (float)viewStep;
+    float lightStartJitter = (Hash12(pixel + float2(viewStepF * 37.17, 13.73)) - 0.5)
+        * lightStepSize
+        * jitterStrength;
+    float3 lightPos = pos + _SunParams.xyz * lightStartJitter;
 
     for (int i = 0; i < _CloudLightSteps; i++)
     {
+        float lightStepF = (float)i;
+        float perStepJitter = (Hash12(pixel + float2(viewStepF * 19.31 + lightStepF * 7.11, lightStepF * 43.17)) - 0.5)
+            * lightStepSize
+            * jitterStrength
+            * 0.35;
         lightPos += _SunParams.xyz * lightStepSize;
-        totalDensity += SampleCloud(lightPos).density * lightStepSize;
+        totalDensity += SampleCloud(lightPos + _SunParams.xyz * perStepJitter).density * lightStepSize;
     }
 
     float transmittance = exp(-totalDensity * _CloudLightAbsorption);
@@ -304,6 +315,12 @@ ENDHLSL
 
                 float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, i.uv).r;
                 float sceneDepth = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
+                if (_PlanetRadius > 0.0)
+                {
+                    float2 oceanHit = RaySphere(_CloudPlanetCenter, _PlanetRadius, rayOrigin, rayDir);
+                    if (oceanHit.y > 0.0)
+                        sceneDepth = min(sceneDepth, oceanHit.x);
+                }
 
                 float2 outerHit = RaySphere(_CloudPlanetCenter, _CloudOuterRadius, rayOrigin, rayDir);
                 if (outerHit.y <= 0)
@@ -324,12 +341,12 @@ ENDHLSL
 
                 int viewSteps = max(_CloudViewSteps, 1);
                 float stepSize = (endDistance - startDistance) / viewSteps;
-                float rayJitter = lerp(
+                float2 pixel = floor(i.uv * _ScreenParams.xy);
+                float pixelJitter = lerp(
                     InterleavedGradientNoise(i.uv * _ScreenParams.xy),
-                    Hash12(floor(i.uv * _ScreenParams.xy)),
+                    Hash12(pixel),
                     0.7);
-                float jitter = lerp(0.5, rayJitter, saturate(_CloudRayOffsetStrength));
-                float3 samplePos = rayOrigin + rayDir * (startDistance + stepSize * saturate(jitter));
+                float jitterStrength = saturate(_CloudRayOffsetStrength);
 
                 float cosAngle = dot(rayDir, _SunParams.xyz);
                 float phase = CloudPhase(cosAngle);
@@ -348,7 +365,12 @@ ENDHLSL
                 UNITY_LOOP
                 for (int s = 0; s < viewSteps; s++)
                 {
-                    CloudSample cloud = SampleCloud(samplePos);
+                    float stepF = (float)s;
+                    float stepNoise = Hash12(pixel + float2(stepF * 17.17 + pixelJitter, stepF * 61.31 + pixelJitter * 1.37));
+                    float withinStep = saturate(lerp(0.5, stepNoise, jitterStrength));
+                    float marchDistance = min(startDistance + stepSize * (stepF + withinStep), endDistance);
+                    float3 jitteredSamplePos = rayOrigin + rayDir * marchDistance;
+                    CloudSample cloud = SampleCloud(jitteredSamplePos);
                     debugWeather = max(debugWeather, cloud.condensation);
                     debugStorm = max(debugStorm, cloud.storm);
                     debugMoistureSource = max(debugMoistureSource, cloud.moistureSource);
@@ -361,8 +383,8 @@ ENDHLSL
 
                     if (cloud.density > 0.0001)
                     {
-                        float lightTransmittance = LightMarch(samplePos, lightStepSize);
-                        float3 surfaceNormal = normalize(samplePos - _CloudPlanetCenter);
+                        float lightTransmittance = LightMarch(jitteredSamplePos, lightStepSize, pixel, s);
+                        float3 surfaceNormal = normalize(jitteredSamplePos - _CloudPlanetCenter);
                         float localSun = saturate((dot(surfaceNormal, _SunParams.xyz) + 0.12) * 2.5);
                         float3 cloudAlbedo = lerp(_CloudColor.rgb, _CloudStormColor.rgb, cloud.storm);
                         float stormLight = lerp(1.0, 1.0 - _CloudStormDarkening, cloud.storm);
@@ -393,7 +415,6 @@ ENDHLSL
                             break;
                     }
 
-                    samplePos += rayDir * stepSize;
                 }
 
                 if (_CloudDebugMode > 0)

@@ -48,6 +48,21 @@ Shader "Planet/VertexColor"
             float _NightAmbientIntensity;
             float3 _SunParams;
             float3 _PlanetCenter;
+            int _OceanDebugMode;
+
+            float3 CubeFaceDebugColor(float3 directionWS)
+            {
+                float3 direction = normalize(directionWS);
+                float3 axis = abs(direction);
+
+                if (axis.x >= axis.y && axis.x >= axis.z)
+                    return direction.x >= 0.0 ? float3(1.0, 0.15, 0.08) : float3(0.52, 0.10, 1.0);
+
+                if (axis.y >= axis.z)
+                    return direction.y >= 0.0 ? float3(0.10, 0.95, 0.18) : float3(1.0, 0.82, 0.08);
+
+                return direction.z >= 0.0 ? float3(0.08, 0.45, 1.0) : float3(1.0, 0.18, 0.78);
+            }
 
             Varyings vert(Attributes input)
             {
@@ -65,6 +80,12 @@ Shader "Planet/VertexColor"
 
             half4 frag(Varyings input) : SV_Target
             {
+                if (_OceanDebugMode == 31)
+                    return half4(1.0, 0.0, 1.0, 1.0);
+
+                if (_OceanDebugMode == 34)
+                    return half4(CubeFaceDebugColor(input.positionWS - _PlanetCenter), 1.0);
+
                 InputData inputData = (InputData)0;
                 inputData.positionWS = input.positionWS;
                 inputData.normalWS = normalize(input.normalWS);

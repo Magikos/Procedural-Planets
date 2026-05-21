@@ -258,9 +258,17 @@ float SamplePrecipitationDensity(float3 worldPos)
     float large = ValueNoise(local / curtainScale);
     large = lerp(large, ValueNoise(local / (curtainScale * 0.43) + 19.7), 0.35);
     float curtain = smoothstep(0.22, 0.88, large);
+    float fineBreakup = ValueNoise(local / max(curtainScale * 0.18, 8.0) + float2(_Time.y * 0.21, -_Time.y * 0.13));
+    float heightBreakup = ValueNoise(float2(height01 * 43.0 + faceOffset * 0.007, dot(local, float2(0.013, 0.019))));
 
     float stormWeight = lerp(0.6, 1.15, saturate(storm));
-    return precipitation * bottomFade * topFade * lerp(0.36, 1.0, curtain) * stormWeight;
+    return precipitation
+        * bottomFade
+        * topFade
+        * lerp(0.36, 1.0, curtain)
+        * lerp(0.82, 1.08, fineBreakup)
+        * lerp(0.76, 1.06, heightBreakup)
+        * stormWeight;
 }
 
 ENDHLSL
@@ -340,7 +348,8 @@ ENDHLSL
 
                 int steps = min(max(_PrecipitationViewSteps, 4), 48);
                 float stepSize = (endDistance - startDistance) / steps;
-                float pixelJitter = Hash12(floor(i.uv * _ScreenParams.xy));
+                float2 pixel = floor(i.uv * _ScreenParams.xy);
+                float pixelJitter = Hash12(pixel);
                 float3 samplePos = rayOrigin + rayDir * (startDistance + stepSize * lerp(0.2, 0.8, pixelJitter));
 
                 float alpha = 0.0;
@@ -354,14 +363,16 @@ ENDHLSL
                     if (s >= steps)
                         break;
 
-                    float density = SamplePrecipitationDensity(samplePos);
+                    float stepJitter = (Hash12(pixel + float2(s * 19.19, s * 47.23)) - 0.5) * stepSize * 0.52;
+                    float3 jitteredSamplePos = samplePos + rayDir * stepJitter;
+                    float density = SamplePrecipitationDensity(jitteredSamplePos);
                     debugMask = max(debugMask, density);
                     if (density > 0.0001)
                     {
-                        float3 normal = normalize(samplePos - _PrecipitationPlanetCenter);
+                        float3 normal = normalize(jitteredSamplePos - _PrecipitationPlanetCenter);
                         float storm = SampleWeather(normal).g;
                         float lightning = WeatherLightning(normal, storm);
-                        float distanceFade = saturate(1.0 - (length(samplePos - rayOrigin) / max(_PrecipitationRadii.z, 1.0)) * 0.35);
+                        float distanceFade = saturate(1.0 - (length(jitteredSamplePos - rayOrigin) / max(_PrecipitationRadii.z, 1.0)) * 0.35);
                         float sampleAlpha = saturate(density * stepSize * 0.0048 * distanceFade);
                         sampleAlpha *= 1.0 - alpha;
                         alpha += sampleAlpha;

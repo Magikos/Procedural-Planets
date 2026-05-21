@@ -86,9 +86,13 @@ ENDHLSL
                 float screenFade = 1.0 - smoothstep(0.95, max(_LightShaftParams2.w, 0.96), screenDistance);
 
                 float atmosphereThickness = max(_AtmosphereRadius - _PlanetRadius, 1.0);
-                float cameraHeight01 = (length(_WorldSpaceCameraPos.xyz - _PlanetCenter) - _PlanetRadius) / atmosphereThickness;
+                float3 cameraFromCenter = _WorldSpaceCameraPos.xyz - _PlanetCenter;
+                float cameraRadius = length(cameraFromCenter);
+                float3 cameraNormal = cameraRadius > 0.0001 ? cameraFromCenter / cameraRadius : float3(0.0, 1.0, 0.0);
+                float cameraHeight01 = (cameraRadius - _PlanetRadius) / atmosphereThickness;
                 float altitudeFade = 1.0 - smoothstep(0.85, 1.25, cameraHeight01);
-                float visibility = sunFacing * screenFade * altitudeFade;
+                float localSunVisibility = smoothstep(-0.025, 0.065, dot(cameraNormal, sunDir));
+                float visibility = sunFacing * screenFade * altitudeFade * localSunVisibility;
 
                 if (visibility <= 0.0)
                     return float3(0.0, 0.0, 0.0);

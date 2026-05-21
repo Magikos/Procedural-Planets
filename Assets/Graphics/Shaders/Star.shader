@@ -88,6 +88,32 @@ float3 SunDisc(float3 dir)
     return sunColor / (1.0 + sunColor);
 }
 
+float PlanetSkyVisibility(float3 dir)
+{
+    if (_PlanetRadius <= 0.0)
+        return 1.0;
+
+    float3 offset = _WorldSpaceCameraPos.xyz - _PlanetCenter;
+    float cameraRadius = length(offset);
+    float3 rayDir = normalize(dir);
+
+    if (cameraRadius <= _PlanetRadius * 1.002)
+    {
+        float3 localNormal = cameraRadius > 0.0001 ? offset / cameraRadius : float3(0.0, 1.0, 0.0);
+        float horizonDot = dot(localNormal, rayDir);
+        return smoothstep(-0.018, 0.032, horizonDot);
+    }
+
+    float2 planetHit = RaySphere(_PlanetCenter, _PlanetRadius, _WorldSpaceCameraPos.xyz, rayDir);
+    float rayHitsPlanet = step(0.0001, planetHit.y) * step(0.0, planetHit.x);
+    float rayForward = dot(offset, rayDir);
+    float closestSq = max(dot(offset, offset) - rayForward * rayForward, 0.0);
+    float horizonClearance = sqrt(closestSq) - _PlanetRadius;
+    float horizonSoftness = max(_PlanetRadius * 0.00035, 0.35);
+    float horizonVisibility = smoothstep(-horizonSoftness, horizonSoftness, horizonClearance);
+    return lerp(1.0, horizonVisibility, rayHitsPlanet);
+}
+
 float StarVisibility(float3 dir)
 {
     float3 sunDir = dot(_SunParams.xyz, _SunParams.xyz) > 0.0001 ? normalize(_SunParams.xyz) : float3(0.0, 1.0, 0.0);
@@ -144,7 +170,8 @@ ENDHLSL
             float4 StarFragment(v2f i) : SV_Target
             {
                 float3 dir = normalize(i.viewVector);
-                float3 background = ProceduralStars(dir) * StarVisibility(dir) + SunDisc(dir);
+                float skyVisibility = PlanetSkyVisibility(dir);
+                float3 background = (ProceduralStars(dir) * StarVisibility(dir) + SunDisc(dir)) * skyVisibility;
                 return float4(background, 1);
             }
             ENDHLSL

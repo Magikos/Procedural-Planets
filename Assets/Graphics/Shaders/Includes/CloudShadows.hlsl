@@ -21,6 +21,7 @@ float4 _CloudShadowParams;
 float3 _WindDirection;
 float _WindSpeed;
 float _CloudAnimSpeed;
+float _WaterFocusMode;
 
 void CloudShadowCubeFaceUv(float3 direction, out int face, out float2 uv)
 {
@@ -93,6 +94,9 @@ float SampleCloudShadowDensity(float3 worldPos)
 
 float CloudShadowFactor(float3 worldPos, float3 sunDir, float localSun)
 {
+    if (_WaterFocusMode > 0.5)
+        return 1.0;
+
     if (_CloudWeatherResolution <= 0 || _CloudOuterRadius <= _CloudInnerRadius || _CloudShadowParams.x <= 0.0)
         return 1.0;
 
