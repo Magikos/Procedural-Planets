@@ -66,6 +66,17 @@ Shader "Hidden/WaterVolume"
         return frac((p3.x + p3.y) * p3.z);
     }
 
+    float3 ContributionHeat(float3 delta, float scale)
+    {
+        float intensity = saturate(dot(abs(delta), float3(0.2126, 0.7152, 0.0722)) * scale);
+        float lowToMid = smoothstep(0.02, 0.35, intensity);
+        float midToHigh = smoothstep(0.35, 0.90, intensity);
+        float3 color = lerp(float3(0.0, 0.0, 0.0), float3(0.0, 0.72, 1.0), lowToMid);
+        color = lerp(color, float3(1.0, 0.34, 0.0), midToHigh);
+        color += smoothstep(0.82, 1.0, intensity) * 0.25;
+        return saturate(color);
+    }
+
     float ValueNoise2(float2 p)
     {
         float2 i = floor(p);
@@ -275,9 +286,16 @@ Shader "Hidden/WaterVolume"
         float waterMask = max(max(centerWaterCoverage, dilationMask * 0.92), analyticSphereWater * 0.94);
         float rawScreenEdgeFade = WaterScreenEdgeFade(input.uv, centerWaterCoverage);
         float screenEdgeFade = max(max(centerWaterCoverage * lerp(0.72, 1.0, rawScreenEdgeFade), dilationMask * 0.82), analyticSphereWater * 0.86);
-        float volumeEdgeMask = smoothstep(0.010, 0.060, waterMaskBasis);
+        float coverageBasis = max(max(centerWaterCoverage, expandedWaterCoverage), analyticSphereWater);
+        float edgeBasis = max(waterMaskBasis, coverageBasis * 0.55);
+        float volumeEdgeMask = smoothstep(0.004, 0.050, edgeBasis);
         float volumeBodyMask = lerp(0.65, 1.0, smoothstep(0.10, 0.45, body01Raw));
         float volumeWaterMask = waterMask * volumeEdgeMask * volumeBodyMask * screenEdgeFade;
+        float openWaterRecovery = centerWaterCoverage
+            * smoothstep(0.14, 0.52, depth01Raw)
+            * smoothstep(0.18, 0.62, shore01Raw)
+            * lerp(0.55, 1.0, body01Raw);
+        volumeWaterMask = max(volumeWaterMask, openWaterRecovery * 0.84);
 
         float3 waterPositionWS = _WorldSpaceCameraPos.xyz + viewDir * max(waterForwardDepth * viewLength, 0.0);
         float3 waterNormalWS = WaterNormalizeSafe(lerp(cameraUp, waterPositionWS - _PlanetCenter, volumeWaterMask), cameraUp);
@@ -317,7 +335,32 @@ Shader "Hidden/WaterVolume"
             * smoothstep(0.22, 0.58, openWater01)
             * surfaceProximity01
             * aboveWaterOpenMask;
-        float abovePath = waterVisible * max(lerp(fallbackPath, aboveScenePath, sceneValid), lowAnglePath);
+
+        float curvedSeaRay = saturate((1.0 - underwater)
+            * surfaceProximity01
+            * sceneBehindSea
+            * smoothstep(0.30, 0.82, seaGrazing01)
+            * smoothstep(0.035, 0.24, seaPath01)
+            * smoothstep(0.08, 0.34, openWater01));
+        float shoreSeaPathCoverage = saturate((1.0 - underwater)
+            * surfaceProximity01
+            * sceneBehindSea
+            * volumeWaterMask
+            * smoothstep(max(_ShallowDepth * 0.30, 8.0), 0.0, aboveScenePath));
+        float curvedSeaOcclusion = saturate((1.0 - underwater)
+            * surfaceProximity01
+            * sceneBehindSea
+            * smoothstep(0.18, 0.68, seaGrazing01)
+            * smoothstep(0.025, 0.16, seaPath01));
+        float curvedSeaCoverage = max(
+            max(curvedSeaRay * max(volumeWaterMask, existingWaterCoverage * 0.72), shoreSeaPathCoverage),
+            curvedSeaOcclusion * 0.92);
+        float curvedSeaPath = seaPathMeters * curvedSeaCoverage;
+        waterVisible = max(waterVisible, curvedSeaCoverage * 0.86);
+
+        float abovePath = max(
+            waterVisible * max(lerp(fallbackPath, aboveScenePath, sceneValid), lowAnglePath),
+            curvedSeaPath);
 
         float insideSurfaceExit = SeaSphereExitDistance(_WorldSpaceCameraPos.xyz, viewDir);
         float insideScenePath = lerp(max(_DeepDepth * 1.55, 620.0), sceneRayDistance, sceneValid);
@@ -325,6 +368,23 @@ Shader "Hidden/WaterVolume"
 
         float pathMeters = max(abovePath, insidePath);
         float hasWater = saturate(waterVisible + underwater);
+
+        if (_OceanDebugMode == 35)
+            return float4(sceneBehindSea, seaPath01, seaGrazing01, 1.0);
+
+        if (_OceanDebugMode == 36)
+            return float4(volumeWaterMask, curvedSeaRay, curvedSeaCoverage, 1.0);
+
+        if (_OceanDebugMode == 37)
+        {
+            float pathDebugScale = max(_DeepDepth * 2.2, 720.0);
+            return float4(
+                saturate(aboveScenePath / pathDebugScale),
+                saturate(curvedSeaPath / pathDebugScale),
+                saturate(pathMeters / pathDebugScale),
+                1.0);
+        }
+
         if (hasWater <= 0.0)
         {
             if ((_OceanDebugMode >= 13 && _OceanDebugMode <= 17)
@@ -333,7 +393,9 @@ Shader "Hidden/WaterVolume"
                 || _OceanDebugMode == 27
                 || _OceanDebugMode == 28
                 || _OceanDebugMode == 30
-                || _OceanDebugMode == 33)
+                || _OceanDebugMode == 33
+                || _OceanDebugMode == 39
+                || _OceanDebugMode == 43)
                 return float4(0.0, 0.0, 0.0, 1.0);
 
             return SAMPLE_TEXTURE2D(_Source, sampler_Source, input.uv);
@@ -378,15 +440,16 @@ Shader "Hidden/WaterVolume"
         float depthGate = smoothstep(0.006, 0.14, depth01);
         float shoreGate = smoothstep(0.018, 0.30, shore01);
         float longViewGate = smoothstep(0.18, 0.72, viewPath01) * smoothstep(0.015, 0.20, shore01);
-        float opticalGate = max(depthGate, longViewGate);
+        float curvedSeaGate = curvedSeaCoverage * smoothstep(0.10, 0.40, viewPath01);
+        float opticalGate = max(max(depthGate, longViewGate), curvedSeaGate);
         float oceanGate = lerp(0.58, 1.08, body01);
         float underwaterPath = underwater * smoothstep(0.10, 0.70, viewPath01);
         float longSurfacePath = waterVisible * smoothstep(0.30, 0.88, viewPath01) * smoothstep(0.18, 0.68, openWater01);
-        float sourceWaterPath01 = saturate(1.0 - exp2(-aboveScenePath / max(_DeepDepth * 0.34, 46.0)));
+        float sourceWaterPath01 = saturate(1.0 - exp2(-max(aboveScenePath, curvedSeaPath) / max(_DeepDepth * 0.34, 46.0)));
         float sourcePathOcclusion = saturate((1.0 - underwater)
             * sceneValid
             * surfaceProximity01
-            * max(waterVisible, analyticSphereWater * 0.92)
+            * max(max(waterVisible, analyticSphereWater * 0.92), curvedSeaCoverage)
             * smoothstep(0.30, 0.82, grazing01)
             * smoothstep(0.04, 0.30, viewPath01)
             * smoothstep(0.04, 0.36, sourceWaterPath01));
@@ -396,17 +459,18 @@ Shader "Hidden/WaterVolume"
             * smoothstep(0.46, 0.88, grazing01)
             * smoothstep(0.18, 0.66, openWater01)
             * smoothstep(0.08, 0.46, viewPath01)
-            + edgeDilation * 0.70);
+            + edgeDilation * 0.70
+            + curvedSeaCoverage * 0.95);
         float sourceOcclusion = saturate((1.0 - underwater)
             * sceneValid
             * surfaceProximity01
-            * max(waterVisible, waterVisibleRaw * 0.55)
+            * max(max(waterVisible, waterVisibleRaw * 0.55), curvedSeaCoverage)
             * smoothstep(0.24, 0.82, grazing01)
-            * saturate(max(max(contactRisk, horizonOcclusion * 0.88), sourcePathOcclusion * 0.92) + edgeDilation * 0.55));
-        sourceOcclusion = max(sourceOcclusion, sourcePathOcclusion * 0.88);
+            * saturate(max(max(contactRisk, horizonOcclusion * 0.88), sourcePathOcclusion * 0.92) + edgeDilation * 0.55 + curvedSeaCoverage * 0.78));
+        sourceOcclusion = max(max(sourceOcclusion, sourcePathOcclusion * 0.88), curvedSeaCoverage * 0.82);
         float grazingBoost = lerp(1.0, 1.78, saturate(grazing01 * max(waterVisible, underwater * 0.82)));
         float densityScale = lerp(0.80, 2.15, saturate(max(depth01, viewPath01))) * lerp(0.72, 1.0, shoreGate) * oceanGate * grazingBoost;
-        densityScale *= lerp(1.0, 2.25, saturate(underwaterPath + longSurfacePath * 0.55 + horizonOcclusion * 0.82 + sourceOcclusion));
+        densityScale *= lerp(1.0, 2.25, saturate(underwaterPath + longSurfacePath * 0.55 + horizonOcclusion * 0.82 + sourceOcclusion + curvedSeaCoverage * 0.55));
         float optical = saturate((1.0 - exp2(-pathMeters / max(_DeepDepth * 0.15, 28.0))) * densityScale * opticalGate * _VolumeDensity);
 
         float contactRefractionFade = lerp(1.0, 0.10, saturate(contactRisk + horizonOcclusion * 0.85 + edgeDilation * 0.70));
@@ -415,12 +479,41 @@ Shader "Hidden/WaterVolume"
             * smoothstep(0.035, 0.50, viewPath01)
             * contactRefractionFade
             * debugRefractionEnabled;
+        float underwaterShoreRefractionFade = lerp(1.0,
+            smoothstep(0.22, 0.78, depth01Raw)
+            * smoothstep(0.30, 0.92, shore01Raw)
+            * (1.0 - saturate(contactRisk * 0.85 + edgeDilation * 0.70)),
+            underwater);
+        refractionMask *= underwaterShoreRefractionFade;
         float2 refractionDelta = RefractionOffset(input.uv, refractionMask, viewPath01);
         float2 refractedUv = saturate(input.uv + refractionDelta);
         float2 sourceUv = lerp(input.uv, refractedUv, saturate(refractionMask));
         float4 original = SAMPLE_TEXTURE2D(_Source, sampler_Source, sourceUv);
         float sourceLuma = dot(original.rgb, float3(0.2126, 0.7152, 0.0722));
         float brightSourceBleed = saturate(sourceOcclusion * smoothstep(0.52, 0.86, sourceLuma));
+        float horizonSilhouetteMatte = saturate((1.0 - underwater)
+            * surfaceProximity01
+            * sceneBehindSea
+            * smoothstep(0.36, 0.86, seaGrazing01)
+            * smoothstep(0.06, 0.32, seaPath01)
+            * smoothstep(0.12, 0.66, viewPath01)
+            * smoothstep(0.14, 0.56, openWater01));
+        float longSeaSourceMatte = saturate((1.0 - underwater)
+            * surfaceProximity01
+            * sceneBehindSea
+            * smoothstep(0.18, 0.58, seaGrazing01)
+            * smoothstep(0.12, 0.54, seaPath01)
+            * smoothstep(0.045, 0.24, max(curvedSeaCoverage, sourcePathOcclusion)));
+        float contactEdgeSignal = saturate(max(max(contactRisk, edgeDilation), dilationMask));
+        float horizonContactMatte = saturate((1.0 - underwater)
+            * surfaceProximity01
+            * sceneValid
+            * seaIntersects
+            * smoothstep(0.16, 0.52, seaGrazing01)
+            * smoothstep(0.055, 0.34, seaPath01)
+            * smoothstep(0.025, 0.18, contactEdgeSignal)
+            * smoothstep(0.36, 0.78, sourceLuma));
+        float seaSourceMatte = max(longSeaSourceMatte, horizonContactMatte * 0.88);
 
         float deepBlend = saturate(max(max(smoothstep(0.08, 0.52, depth01), smoothstep(0.12, 0.58, openWater01) * 0.74), optical * 0.88));
         float3 shallowColor = lerp(max(_ShallowColor.rgb, float3(0.10, 0.48, 0.50)), float3(0.04, 0.23, 0.28), smoothstep(0.45, 1.0, viewPath01) * 0.35);
@@ -428,19 +521,100 @@ Shader "Hidden/WaterVolume"
         float3 scatterColor = lerp(shallowColor, deepColor, saturate(max(deepBlend, viewPath01 * 0.72)));
         float3 sunDir = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : float3(0.0, 1.0, 0.0);
         float localSun = dot(waterNormalWS, sunDir);
-        float daylight = smoothstep(-0.08, 0.18, localSun);
-        float twilight = smoothstep(-0.20, 0.08, localSun);
+        float viewSun = saturate(dot(viewDir, sunDir));
+        float rawDaylight = smoothstep(-0.08, 0.18, localSun);
+        float rawTwilight = smoothstep(-0.20, 0.08, localSun);
+
+        // Automatically suppress day-driven volume lift when looking toward a low sun over the water horizon.
+        // This keeps the underwater and horizon views deterministic without a runtime debug toggle.
+        float sunsetBand = smoothstep(0.02, 0.40, rawDaylight) * (1.0 - smoothstep(0.54, 0.92, rawDaylight));
+        float forwardSun = smoothstep(0.18, 0.78, viewSun);
+        float brightBackground = smoothstep(0.28, 0.76, sourceLuma);
+        float horizonView = smoothstep(0.12, 0.56, max(seaGrazing01, grazing01));
+        float horizonRisk = saturate(max(horizonSilhouetteMatte, seaSourceMatte));
+        float autoDayFlatten = saturate((1.0 - underwater)
+            * surfaceProximity01
+            * sunsetBand
+            * max(horizonView * forwardSun * brightBackground, horizonRisk * 0.95));
+        float sunsetHorizonFloor = saturate((1.0 - underwater)
+            * surfaceProximity01
+            * smoothstep(-0.26, 0.16, localSun)
+            * horizonView
+            * max(forwardSun * 0.90, horizonRisk));
+        autoDayFlatten = max(autoDayFlatten, sunsetHorizonFloor);
+
+        // Non-sunset safety net: if horizon/source matte risk is high, flatten anyway.
+        float preSourceRisk = max(max(horizonRisk, sourceOcclusion), horizonSilhouetteMatte);
+        float nonSunsetRiskFloor = saturate((1.0 - underwater)
+            * surfaceProximity01
+            * smoothstep(0.20, 0.72, preSourceRisk)
+            * smoothstep(0.24, 0.72, max(horizonView, brightBackground)));
+        float underwaterRiskFloor = saturate(underwater
+            * smoothstep(0.06, 0.42, preSourceRisk)
+            * smoothstep(0.10, 0.54, viewPath01));
+        autoDayFlatten = max(autoDayFlatten, max(nonSunsetRiskFloor, underwaterRiskFloor));
+
+        // Push risky sunset/horizon cases closer to full flatten.
+        autoDayFlatten = max(autoDayFlatten, smoothstep(0.24, 0.62, autoDayFlatten));
+        float flattenRisk = max(max(sunsetHorizonFloor, nonSunsetRiskFloor), underwaterRiskFloor);
+        float flattenFloor = 0.92 * smoothstep(0.18, 0.52, flattenRisk);
+        float dayFlatten = max(autoDayFlatten, flattenFloor);
+
+        float daylight = rawDaylight;
+        float twilight = rawTwilight;
+        daylight = lerp(daylight, 0.0, dayFlatten);
+        twilight = lerp(twilight, 0.0, dayFlatten);
         float surfaceScatterLight = max(daylight, twilight * 0.18) + _NightAmbientIntensity * 0.035;
         float submergedScatterLight = daylight * 0.34 + twilight * 0.10 + _NightAmbientIntensity * 0.018;
         float scatterLight = saturate(lerp(surfaceScatterLight, submergedScatterLight, underwater));
         scatterLight *= lerp(1.0, 0.38, saturate(underwaterPath + longSurfacePath * 0.62 + horizonOcclusion));
 
+        // Surface reflection is handled in Ocean.shader; keep volume from lifting the background at sunset.
+        float forwardSunHorizon = dayFlatten;
+        float volumeBackgroundSuppress = lerp(1.0, 0.20, forwardSunHorizon);
+        scatterLight *= volumeBackgroundSuppress;
+
         float extinctionBoost = lerp(1.0, 1.46, saturate(underwaterPath + longSurfacePath + horizonOcclusion * 0.85));
         float3 absorptionMeters = float3(max(_DeepDepth * 0.42, 92.0), max(_DeepDepth * 0.26, 58.0), max(_DeepDepth * 0.16, 34.0)) / extinctionBoost;
         float3 transmittance = exp2(-(pathMeters * densityScale * _VolumeDensity) / absorptionMeters);
-        float sourceMatte = saturate(max(sourceOcclusion, brightSourceBleed));
-        transmittance = lerp(transmittance, min(transmittance, float3(0.055, 0.095, 0.135)), sourceMatte);
+        float sourceMatte = saturate(max(max(max(sourceOcclusion, brightSourceBleed), seaSourceMatte * 0.92), horizonSilhouetteMatte * 0.86));
+        float underwaterShoreBand = 1.0 - smoothstep(0.08, 0.42, shore01Raw);
+        float underwaterShallowBand = 1.0 - smoothstep(0.10, 0.46, depth01Raw);
+        float underwaterContactEdge = smoothstep(0.010, 0.16, contactEdgeSignal);
+        float sourceLumaEdge = smoothstep(0.018, 0.085, fwidth(sourceLuma));
+        float underwaterSourceEdgeMatte = saturate(underwater
+            * surfaceProximity01
+            * smoothstep(0.08, 0.46, viewPath01)
+            * smoothstep(0.18, 0.72, grazing01)
+            * smoothstep(0.34, 0.76, sourceLuma)
+            * sourceLumaEdge
+            * max(0.35, 1.0 - smoothstep(0.52, 0.90, openWater01)));
+        float underwaterShoreMatte = max(underwaterSourceEdgeMatte, saturate(underwater
+            * smoothstep(0.02, 0.20, contactEdgeSignal)
+            * max(underwaterShoreBand, underwaterShallowBand * underwaterContactEdge)
+            * smoothstep(0.34, 0.82, sourceLuma)));
+        sourceMatte = max(sourceMatte, underwaterShoreMatte * 0.95);
+
+        if (_OceanDebugMode == 38)
+        {
+            float seaMatte = smoothstep(0.025, 0.20, max(max(curvedSeaCoverage, sourcePathOcclusion), sourceMatte));
+            float3 diagnosticWater = min(deepColor, float3(0.006, 0.060, 0.110));
+            return float4(lerp(original.rgb, diagnosticWater, seaMatte), original.a);
+        }
+
+        if (_OceanDebugMode == 39)
+            return float4(longSeaSourceMatte, max(horizonContactMatte, underwaterSourceEdgeMatte), sourceMatte, original.a);
+
+        float seaMatteCombined = saturate(max(seaSourceMatte, horizonSilhouetteMatte));
+        float3 sourceTransmittanceFloor = lerp(float3(0.055, 0.095, 0.135), float3(0.012, 0.036, 0.064), seaMatteCombined);
+        transmittance = lerp(transmittance, min(transmittance, sourceTransmittanceFloor), sourceMatte);
+        transmittance *= lerp(1.0, 0.32, underwaterShoreMatte);
+        float horizonGlowBleed = saturate(horizonSilhouetteMatte * smoothstep(0.56, 0.88, sourceLuma));
+        horizonGlowBleed *= 1.0 - dayFlatten;
+        float horizonSourceSuppression = lerp(1.0, 0.10, max(horizonSilhouetteMatte, horizonGlowBleed * 0.9));
+        transmittance *= horizonSourceSuppression;
         float scatterStrength = lerp(0.38, 0.62, deepBlend) * lerp(1.0, 0.24, saturate(underwaterPath + longSurfacePath * 0.45 + horizonOcclusion * 0.85 + sourceMatte));
+        scatterStrength *= lerp(1.0, 0.58, forwardSunHorizon);
         float3 absorbed = original.rgb * transmittance + scatterColor * scatterLight * (1.0 - transmittance) * scatterStrength;
         float volumeBlend = saturate(max(max(max(max(optical * 0.90, viewPath01 * opticalGate * 0.66), lowAnglePath / max(skyFallbackPath, 1.0) * 0.38), horizonOcclusion * 0.72), sourceMatte) * hasWater);
         float3 color = lerp(original.rgb, absorbed, volumeBlend);
@@ -448,12 +622,23 @@ Shader "Hidden/WaterVolume"
         float3 underwaterBlue = lerp(float3(0.05, 0.30, 0.40), float3(0.015, 0.10, 0.19), smoothstep(0.45, 1.0, viewPath01));
         color = lerp(color, underwaterBlue, underwaterTint * lerp(0.34, 0.18, saturate(viewPath01)));
 
-        float deepExtinction = saturate(max(max(max(underwaterPath, longSurfacePath) * max(optical, viewPath01) * 0.86, horizonOcclusion * 0.58), sourceMatte * 0.86));
+        float deepExtinction = saturate(max(max(max(underwaterPath, longSurfacePath) * max(optical, viewPath01) * 0.86, max(horizonOcclusion, curvedSeaCoverage) * 0.58), max(sourceMatte * 0.86, seaSourceMatte * 0.94)));
+        deepExtinction = saturate(max(deepExtinction, max(horizonSilhouetteMatte * 0.82, horizonGlowBleed * 0.88)));
+        deepExtinction = saturate(max(deepExtinction, underwaterShoreMatte * 0.82));
+        deepExtinction *= lerp(1.0, 0.42, forwardSunHorizon);
         color = lerp(color, deepColor * lerp(0.18, 0.42, scatterLight), deepExtinction);
+        color = lerp(color, deepColor * lerp(0.20, 0.44, scatterLight), underwaterShoreMatte * 0.48);
+        color = lerp(color, deepColor * lerp(0.24, 0.48, scatterLight), seaSourceMatte * 0.78);
+        color = lerp(color, deepColor * lerp(0.28, 0.52, scatterLight), horizonContactMatte * 0.42);
+        color = lerp(color, deepColor * lerp(0.30, 0.54, scatterLight), horizonSilhouetteMatte * 0.52);
+        color = lerp(color, deepColor * lerp(0.34, 0.58, scatterLight), horizonGlowBleed * 0.58);
         color = lerp(color, deepColor * lerp(0.28, 0.48, scatterLight), brightSourceBleed * 0.42);
 
+        if (_OceanDebugMode == 43)
+            return float4(ContributionHeat(color - original.rgb, 9.0), 1.0);
+
         if (_OceanDebugMode == 30)
-            return float4(sourceOcclusion, volumeBlend, saturate(1.0 - dot(transmittance, float3(0.3333, 0.3333, 0.3333))), original.a);
+            return float4(max(sourceMatte, underwaterShoreMatte), volumeBlend, saturate(1.0 - dot(transmittance, float3(0.3333, 0.3333, 0.3333))), original.a);
 
         if (_OceanDebugMode == 12)
             return float4(waterMask, waterVisible, saturate(optical + underwater * 0.35), original.a);

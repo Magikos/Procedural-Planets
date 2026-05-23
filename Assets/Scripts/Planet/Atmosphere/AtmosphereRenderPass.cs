@@ -16,9 +16,11 @@ using UnityEngine.Rendering.RenderGraphModule;
 public class AtmosphereRenderPass : ScriptableRenderPass
 {
     static readonly int _sourceId = Shader.PropertyToID("_Source");
+    static readonly int _waterInterfaceTextureId = Shader.PropertyToID("_WaterInterfaceTexture");
     static MaterialPropertyBlock _propertyBlock;
 
     Material _material;
+    bool _useWaterInterface;
 
     public AtmosphereRenderPass()
     {
@@ -33,9 +35,10 @@ public class AtmosphereRenderPass : ScriptableRenderPass
     }
 
     /// <summary>Call from the render feature each frame before enqueueing the pass.</summary>
-    public void Setup(Material material)
+    public void Setup(Material material, bool useWaterInterface)
     {
         _material = material;
+        _useWaterInterface = useWaterInterface;
     }
 
     private class PassData
@@ -78,6 +81,8 @@ public class AtmosphereRenderPass : ScriptableRenderPass
             // Declare cameraDepthTexture (the copy) so RenderGraph orders us after CopyDepthPass.
             if (resourceData.cameraDepthTexture.IsValid())
                 builder.UseTexture(resourceData.cameraDepthTexture, AccessFlags.Read);
+            if (_useWaterInterface)
+                builder.UseGlobalTexture(_waterInterfaceTextureId);
 
             builder.AllowPassCulling(false);
 

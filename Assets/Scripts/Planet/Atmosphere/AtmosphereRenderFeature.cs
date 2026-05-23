@@ -9,6 +9,9 @@ using UnityEngine.Rendering.Universal;
 [DisallowMultipleRendererFeature("AtmosphereRenderFeature")]
 public class AtmosphereRenderFeature : ScriptableRendererFeature
 {
+    static readonly int _waterVolumeEnabledId = Shader.PropertyToID("_WaterVolumeEnabled");
+    static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
+
     AtmosphereRenderPass _pass;
     Material _material;
     AtmosphereController _cachedController;
@@ -37,7 +40,12 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
             _material.EnableKeyword("DIRECTIONAL_SUN");
         }
 
-        _pass.Setup(_material);
+        int oceanDebugMode = Shader.GetGlobalInt(_oceanDebugModeId);
+        bool useWaterInterface = Shader.GetGlobalFloat(_waterVolumeEnabledId) > 0.5f
+            && oceanDebugMode != 40
+            && oceanDebugMode != 41;
+
+        _pass.Setup(_material, useWaterInterface);
         renderer.EnqueuePass(_pass);
     }
 

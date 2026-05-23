@@ -14,12 +14,14 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
     static readonly int _deepDepthId = Shader.PropertyToID("_DeepDepth");
     static readonly int _shoreFoamSoftnessId = Shader.PropertyToID("_ShoreFoamSoftness");
     static readonly int _alphaId = Shader.PropertyToID("_Alpha");
+    static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
 
     WaterVolumeRenderPass _pass;
     Material _prepassMaterial;
     Material _volumeMaterial;
     MeshRenderer _cachedRenderer;
     MeshFilter _cachedFilter;
+    MeshFilter _cachedVolumeLipFilter;
 
     public override void Create()
     {
@@ -32,13 +34,14 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
         if (camera.cameraType == CameraType.Preview || camera.cameraType == CameraType.Reflection)
             return;
 
-        if (!TryFindWater(out MeshFilter meshFilter, out MeshRenderer meshRenderer))
+        if (!TryFindWater(out MeshFilter meshFilter, out MeshRenderer meshRenderer, out MeshFilter volumeLipFilter))
         {
             Shader.SetGlobalFloat(_waterVolumeEnabledId, 0f);
             return;
         }
 
         Mesh mesh = meshFilter.sharedMesh;
+        Mesh volumeLipMesh = volumeLipFilter != null ? volumeLipFilter.sharedMesh : null;
         if (mesh == null || mesh.vertexCount == 0)
         {
             Shader.SetGlobalFloat(_waterVolumeEnabledId, 0f);
@@ -54,7 +57,18 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
         CopyWaterMaterialSettings(meshRenderer.sharedMaterial, _volumeMaterial);
         Shader.SetGlobalFloat(_waterVolumeEnabledId, 1f);
 
-        _pass.Setup(_prepassMaterial, _volumeMaterial, mesh, meshFilter.transform.localToWorldMatrix);
+        Mesh renderableVolumeLipMesh = IsRenderableMesh(volumeLipMesh) ? volumeLipMesh : null;
+        bool drawRelaxedVolumeLip = renderableVolumeLipMesh != null && IsCameraInsideWaterMesh(camera, meshFilter, mesh);
+        bool compositeAfterAtmosphere = Shader.GetGlobalInt(_oceanDebugModeId) == 41;
+        _pass.Setup(
+            _prepassMaterial,
+            _volumeMaterial,
+            mesh,
+            meshFilter.transform.localToWorldMatrix,
+            renderableVolumeLipMesh,
+            volumeLipFilter != null ? volumeLipFilter.transform.localToWorldMatrix : Matrix4x4.identity,
+            drawRelaxedVolumeLip,
+            compositeAfterAtmosphere);
         renderer.EnqueuePass(_pass);
     }
 
@@ -90,12 +104,16 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
         return true;
     }
 
-    bool TryFindWater(out MeshFilter meshFilter, out MeshRenderer meshRenderer)
+    bool TryFindWater(out MeshFilter meshFilter, out MeshRenderer meshRenderer, out MeshFilter volumeLipFilter)
     {
         if (_cachedRenderer != null && IsRendererActive(_cachedRenderer) && _cachedFilter != null)
         {
+            if (_cachedVolumeLipFilter == null)
+                _cachedVolumeLipFilter = FindVolumeLipFilter(_cachedRenderer.transform);
+
             meshFilter = _cachedFilter;
             meshRenderer = _cachedRenderer;
+            volumeLipFilter = _cachedVolumeLipFilter;
             return true;
         }
 
@@ -104,19 +122,64 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
         {
             meshFilter = null;
             meshRenderer = null;
+            volumeLipFilter = null;
             return false;
         }
 
         _cachedFilter = water.GetComponent<MeshFilter>();
         _cachedRenderer = water.GetComponent<MeshRenderer>();
+        _cachedVolumeLipFilter = FindVolumeLipFilter(water.transform);
         meshFilter = _cachedFilter;
         meshRenderer = _cachedRenderer;
+        volumeLipFilter = _cachedVolumeLipFilter;
         return meshFilter != null && meshRenderer != null && IsRendererActive(meshRenderer);
+    }
+
+    static MeshFilter FindVolumeLipFilter(Transform waterTransform)
+    {
+        if (waterTransform == null)
+            return null;
+
+        Transform lip = waterTransform.Find("WaterVolumeLip");
+        return lip != null && lip.gameObject.activeInHierarchy ? lip.GetComponent<MeshFilter>() : null;
     }
 
     static bool IsRendererActive(Renderer renderer)
     {
         return renderer != null && renderer.enabled && renderer.gameObject.activeInHierarchy;
+    }
+
+    static bool IsRenderableMesh(Mesh mesh)
+    {
+        return mesh != null && mesh.vertexCount > 0 && mesh.subMeshCount > 0 && mesh.GetIndexCount(0) > 0;
+    }
+
+    static bool IsCameraInsideWaterMesh(Camera camera, MeshFilter waterFilter, Mesh waterMesh)
+    {
+        if (camera == null || waterFilter == null || waterMesh == null)
+            return false;
+
+        Bounds bounds = waterMesh.bounds;
+        float localRadius = EstimateLocalRadius(bounds);
+        if (localRadius <= 0f)
+            return false;
+
+        Vector3 scale = waterFilter.transform.lossyScale;
+        float worldScale = Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
+        if (worldScale <= 0f)
+            return false;
+
+        Vector3 center = waterFilter.transform.TransformPoint(Vector3.zero);
+        float cameraRadius = Vector3.Distance(camera.transform.position, center);
+        return cameraRadius <= localRadius * worldScale + 0.5f;
+    }
+
+    static float EstimateLocalRadius(Bounds bounds)
+    {
+        float x = Mathf.Max(Mathf.Abs(bounds.min.x), Mathf.Abs(bounds.max.x));
+        float y = Mathf.Max(Mathf.Abs(bounds.min.y), Mathf.Abs(bounds.max.y));
+        float z = Mathf.Max(Mathf.Abs(bounds.min.z), Mathf.Abs(bounds.max.z));
+        return Mathf.Max(x, Mathf.Max(y, z));
     }
 
     static void CopyWaterMaterialSettings(Material source, Material destination)
@@ -143,12 +206,18 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
 {
     static readonly int _sourceId = Shader.PropertyToID("_Source");
     static readonly int _waterVolumeDataId = Shader.PropertyToID("_WaterVolumeData");
+    static readonly int _waterInterfaceTextureId = Shader.PropertyToID("_WaterInterfaceTexture");
+    const int WaterPrepassPass = 0;
+    const int WaterVolumeLipPrepassPass = 1;
     static MaterialPropertyBlock _propertyBlock;
 
     Material _prepassMaterial;
     Material _volumeMaterial;
     Mesh _mesh;
     Matrix4x4 _localToWorld;
+    Mesh _volumeLipMesh;
+    Matrix4x4 _volumeLipLocalToWorld;
+    bool _drawRelaxedVolumeLip;
 
     public WaterVolumeRenderPass()
     {
@@ -158,12 +227,26 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
         _propertyBlock = new MaterialPropertyBlock();
     }
 
-    public void Setup(Material prepassMaterial, Material volumeMaterial, Mesh mesh, Matrix4x4 localToWorld)
+    public void Setup(
+        Material prepassMaterial,
+        Material volumeMaterial,
+        Mesh mesh,
+        Matrix4x4 localToWorld,
+        Mesh volumeLipMesh,
+        Matrix4x4 volumeLipLocalToWorld,
+        bool drawRelaxedVolumeLip,
+        bool compositeAfterAtmosphere)
     {
         _prepassMaterial = prepassMaterial;
         _volumeMaterial = volumeMaterial;
         _mesh = mesh;
         _localToWorld = localToWorld;
+        _volumeLipMesh = volumeLipMesh;
+        _volumeLipLocalToWorld = volumeLipLocalToWorld;
+        _drawRelaxedVolumeLip = drawRelaxedVolumeLip;
+        renderPassEvent = compositeAfterAtmosphere
+            ? RenderPassEvent.AfterRenderingPostProcessing
+            : RenderPassEvent.BeforeRenderingPostProcessing;
     }
 
     sealed class PrepassData
@@ -171,6 +254,9 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
         internal Material material;
         internal Mesh mesh;
         internal Matrix4x4 localToWorld;
+        internal Mesh volumeLipMesh;
+        internal Matrix4x4 volumeLipLocalToWorld;
+        internal bool drawRelaxedVolumeLip;
     }
 
     sealed class CompositeData
@@ -209,14 +295,21 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
             passData.material = _prepassMaterial;
             passData.mesh = _mesh;
             passData.localToWorld = _localToWorld;
+            passData.volumeLipMesh = _volumeLipMesh;
+            passData.volumeLipLocalToWorld = _volumeLipLocalToWorld;
+            passData.drawRelaxedVolumeLip = _drawRelaxedVolumeLip;
 
             builder.SetRenderAttachment(waterData, 0, AccessFlags.Write);
             builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
+            builder.SetGlobalTextureAfterPass(waterData, _waterInterfaceTextureId);
+            builder.AllowGlobalStateModification(true);
             builder.AllowPassCulling(false);
 
             builder.SetRenderFunc(static (PrepassData data, RasterGraphContext ctx) =>
             {
-                ctx.cmd.DrawMesh(data.mesh, data.localToWorld, data.material, 0, 0);
+                ctx.cmd.DrawMesh(data.mesh, data.localToWorld, data.material, 0, WaterPrepassPass);
+                if (data.drawRelaxedVolumeLip && data.volumeLipMesh != null)
+                    ctx.cmd.DrawMesh(data.volumeLipMesh, data.volumeLipLocalToWorld, data.material, 0, WaterVolumeLipPrepassPass);
             });
         }
 

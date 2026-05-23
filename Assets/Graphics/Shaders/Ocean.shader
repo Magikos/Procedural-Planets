@@ -738,7 +738,13 @@ Shader "Planet/Ocean"
                     || _OceanDebugMode == 30
                     || _OceanDebugMode == 31
                     || _OceanDebugMode == 33
-                    || _OceanDebugMode == 34)
+                    || _OceanDebugMode == 34
+                    || _OceanDebugMode == 35
+                    || _OceanDebugMode == 36
+                    || _OceanDebugMode == 37
+                    || _OceanDebugMode == 38
+                    || _OceanDebugMode == 39
+                    || _OceanDebugMode == 41)
                     return half4(0.0, 0.0, 0.0, 0.0);
 
                 if ((_OceanDebugMode == 0 || _OceanDebugMode == 25) && _OceanFocusMode >= 0.5)

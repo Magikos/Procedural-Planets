@@ -27,6 +27,7 @@ float4 _PrecipitationColor;
 float4 _PrecipitationStormColor;
 int _PrecipitationViewSteps;
 int _PrecipitationDebugMode;
+int _OceanDebugMode;
 float4 _PrecipitationDebugDotParams;
 float4 _PrecipitationLocalParams;
 float4 _PrecipitationLocalMotion;
@@ -41,6 +42,49 @@ float4 _WeatherLightningCell0;
 float4 _WeatherLightningCell1;
 float4 _WeatherLightningCell2;
 float4 _WeatherLightningCell3;
+
+float3 ContributionHeat(float3 delta, float scale)
+{
+    float intensity = saturate(dot(abs(delta), float3(0.2126, 0.7152, 0.0722)) * scale);
+    float lowToMid = smoothstep(0.02, 0.28, intensity);
+    float midToHigh = smoothstep(0.28, 0.84, intensity);
+    float3 color = lerp(float3(0.0, 0.0, 0.0), float3(0.55, 0.20, 1.0), lowToMid);
+    color = lerp(color, float3(1.0, 0.30, 0.55), midToHigh);
+    color += smoothstep(0.82, 1.0, intensity) * 0.25;
+    return saturate(color);
+}
+
+float SceneDepthScaled(float2 uv, float viewLength)
+{
+    float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r;
+    return LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
+}
+
+float SceneDepthLinear(float2 uv)
+{
+    float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r;
+    return LinearEyeDepth(rawDepth, _ZBufferParams);
+}
+
+float PrecipitationSeaRadius()
+{
+    return _PrecipitationRadii.w > 1.0
+        ? _PrecipitationRadii.w
+        : max(_PrecipitationRadii.x - 25.0, 1.0);
+}
+
+float PrecipitationCameraAboveSea()
+{
+    float seaRadius = PrecipitationSeaRadius();
+    float cameraRadius = length(_WorldSpaceCameraPos.xyz - _PrecipitationPlanetCenter);
+    // Keep precipitation completely off below the waterline, then fade it in above the surface.
+    return smoothstep(0.0, 12.0, cameraRadius - seaRadius);
+}
+
+float4 NoPrecipitationContribution(float4 sceneColor)
+{
+    return _OceanDebugMode == 45 ? float4(0.0, 0.0, 0.0, 1.0) : sceneColor;
+}
 
 float Hash12(float2 p)
 {
@@ -314,29 +358,40 @@ ENDHLSL
                 float4 sceneColor = SAMPLE_TEXTURE2D(_Source, sampler_Source, i.uv);
 
                 if (_PrecipitationEnabled == 0 || _CloudWeatherResolution <= 0)
-                    return sceneColor;
+                    return NoPrecipitationContribution(sceneColor);
+
+                float cameraAboveSea = PrecipitationCameraAboveSea();
+                if (cameraAboveSea <= 0.0001)
+                    return NoPrecipitationContribution(sceneColor);
 
                 float bottomRadius = _PrecipitationRadii.x;
                 float topRadius = _PrecipitationRadii.y;
                 if (topRadius <= bottomRadius)
-                    return sceneColor;
+                    return NoPrecipitationContribution(sceneColor);
 
                 float viewLength = length(i.viewVector);
                 float3 rayDir = i.viewVector / max(viewLength, 0.0001);
                 float3 rayOrigin = _WorldSpaceCameraPos.xyz;
 
-                float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, i.uv).r;
-                float sceneDepth = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
+                float sceneDepth = SceneDepthScaled(i.uv, viewLength);
                 sceneDepth = min(sceneDepth, _PrecipitationRadii.z);
 
                 float2 outerHit = RaySphere(_PrecipitationPlanetCenter, topRadius, rayOrigin, rayDir);
                 if (outerHit.y <= 0.0)
-                    return sceneColor;
+                    return NoPrecipitationContribution(sceneColor);
 
                 float startDistance = outerHit.x;
                 float endDistance = min(outerHit.x + outerHit.y, sceneDepth);
+
+                // Clip precipitation to the sea-horizon geometry so distant rain cannot render
+                // behind the curved water/planet silhouette when depth textures become ambiguous.
+                float seaRadius = PrecipitationSeaRadius();
+                float2 seaHit = RaySphere(_PrecipitationPlanetCenter, seaRadius, rayOrigin, rayDir);
+                if (seaHit.y > 0.0 && seaHit.x > 0.0)
+                    endDistance = min(endDistance, seaHit.x);
+
                 if (endDistance <= startDistance)
-                    return sceneColor;
+                    return NoPrecipitationContribution(sceneColor);
 
                 if (_PrecipitationDebugMode == 2 || _PrecipitationDebugMode == 3)
                 {
@@ -393,8 +448,9 @@ ENDHLSL
                 }
 
                 alpha = min(alpha, _PrecipitationParams.w);
+                alpha *= cameraAboveSea;
                 if (alpha <= 0.0001)
-                    return sceneColor;
+                    return NoPrecipitationContribution(sceneColor);
 
                 float averageStorm = weightedStorm / max(alpha, 0.0001);
                 float averageLightning = weightedLightning / max(alpha, 0.0001);
@@ -404,6 +460,10 @@ ENDHLSL
                 float light = _NightAmbientIntensity * 0.45 + localSun * 0.85 + 0.12 + rainLightning * 0.65;
                 float3 rainColor = lerp(_PrecipitationColor.rgb, _PrecipitationStormColor.rgb, saturate(averageStorm));
                 float3 result = lerp(sceneColor.rgb, rainColor * light + _WeatherLightningColor.rgb * rainLightning * 0.28, alpha);
+
+                if (_OceanDebugMode == 45)
+                    return float4(ContributionHeat(result - sceneColor.rgb, 10.0), 1.0);
+
                 return float4(result, sceneColor.a);
             }
             ENDHLSL
@@ -432,6 +492,8 @@ ENDHLSL
             RainVaryings vertRain(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
             {
                 RainVaryings output;
+
+                float cameraAboveSea = PrecipitationCameraAboveSea();
 
                 float3 cameraVector = _WorldSpaceCameraPos.xyz - _PrecipitationPlanetCenter;
                 float cameraRadius = length(cameraVector);
@@ -489,7 +551,7 @@ ENDHLSL
                 edgeFade = smoothstep(0.0, 0.18, edgeFade);
                 float randomOpacity = lerp(0.45, 1.0, Hash11(id + 109.0));
 
-                output.alpha = rainVisibility * recycleFade * edgeFade * randomOpacity * _PrecipitationLocalParams.z;
+                output.alpha = rainVisibility * recycleFade * edgeFade * randomOpacity * _PrecipitationLocalParams.z * cameraAboveSea;
                 output.storm = storm;
                 output.lightning = lightning;
                 output.pos = TransformWorldToHClip(worldPos);
@@ -507,8 +569,7 @@ ENDHLSL
                 if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
                     discard;
 
-                float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r;
-                float sceneDepth = LinearEyeDepth(rawDepth, _ZBufferParams);
+                float sceneDepth = SceneDepthLinear(uv);
                 if (input.viewDepth > sceneDepth + 2.0)
                     discard;
 

@@ -4,9 +4,13 @@ using UnityEngine.InputSystem.Controls;
 
 public enum OceanDebugCaptureSet
 {
-    CurrentModeOnly,
-    WaterArtifact,
-    FullLoop
+    CurrentModeOnly = 0,
+    WaterArtifact = 1,
+    AtmosphereWater = 3,
+    WaterInterface = 4,
+    Precipitation = 5,
+    WaterVolumeDeepDive = 6,
+    FullLoop = 2
 }
 
 public class FreeCameraController : MonoBehaviour
@@ -59,6 +63,8 @@ public class FreeCameraController : MonoBehaviour
     Light _cachedSunLight;
     ICelestialTimeController _cachedCelestialManager;
     IPlanetSurfaceSampler _cachedPlanet;
+    IPrecipitationDebugControl _cachedPrecipitationController;
+    MonoBehaviour _cachedPrecipitationBehaviour;
     Renderer _cachedWaterRenderer;
     Mesh _cachedWaterMesh;
     WaterDebugStats _waterDebugStats;
@@ -68,6 +74,9 @@ public class FreeCameraController : MonoBehaviour
     int _oceanDebugMode;
     bool _profilingFrameRateEnabled;
     bool _debugScreenshotCaptureRunning;
+    bool _precipitationToggleFlashActive;
+    float _precipitationToggleFlashUntil;
+    string _precipitationToggleFlashMessage;
 
     static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
     static readonly int _waterFocusModeId = Shader.PropertyToID("_WaterFocusMode");
@@ -118,10 +127,74 @@ public class FreeCameraController : MonoBehaviour
         "TerrainSourcePink",
         "FoamPink",
         "VolumeSphere",
-        "TerrainFaceId"
+        "TerrainFaceId",
+        "SeaRay",
+        "SeaVsMesh",
+        "SeaPath",
+        "SeaMatte",
+        "SeaSourceMatte",
+        "AtmosphereBypass",
+        "VolumeAfterAtmosphere",
+        "AtmosphereWaterCut",
+        "VolumeContribution",
+        "AtmosphereContribution",
+        "PrecipitationContribution"
     };
 
     static readonly int[] WaterArtifactDebugModes =
+    {
+        0,
+        24,
+        25,
+        26,
+        30,
+        31,
+        32,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45
+    };
+
+    static readonly int[] AtmosphereWaterDebugModes =
+    {
+        0,
+        24,
+        26,
+        40,
+        41,
+        42,
+        44
+    };
+
+    static readonly int[] WaterInterfaceDebugModes =
+    {
+        0,
+        11,
+        14,
+        15,
+        20,
+        27,
+        28,
+        33,
+        34,
+        35,
+        36,
+        37
+    };
+
+    static readonly int[] PrecipitationDebugModes =
+    {
+        0,
+        40,
+        42,
+        44,
+        45
+    };
+
+    static readonly int[] WaterVolumeDeepDiveDebugModes =
     {
         0,
         2,
@@ -146,7 +219,12 @@ public class FreeCameraController : MonoBehaviour
         31,
         32,
         33,
-        34
+        34,
+        35,
+        36,
+        37,
+        38,
+        39
     };
 
     struct WaterDebugStats
@@ -252,8 +330,44 @@ public class FreeCameraController : MonoBehaviour
         if (WasKeyPressed(_keyboard?.f11Key, KeyCode.F11))
             ToggleProfilingFrameRate();
 
+        if (WasKeyPressed(_keyboard?.f7Key, KeyCode.F7))
+            CycleF10CaptureSet();
+
+        if (WasKeyPressed(_keyboard?.pKey, KeyCode.P))
+            TogglePrecipitationRendering();
+
         if (WasKeyPressed(_keyboard?.f10Key, KeyCode.F10))
             TriggerOceanDebugCapture();
+    }
+
+    void TogglePrecipitationRendering()
+    {
+        IPrecipitationDebugControl controller = GetPrecipitationController();
+        if (controller == null)
+            return;
+
+        bool next = !controller.PrecipitationRenderingEnabled;
+        controller.PrecipitationRenderingEnabled = next;
+        _precipitationToggleFlashActive = true;
+        _precipitationToggleFlashUntil = Time.unscaledTime + 1.2f;
+        _precipitationToggleFlashMessage = $"Precipitation: {(next ? "ON" : "OFF")}";
+    }
+
+    void CycleF10CaptureSet()
+    {
+        OceanDebugCaptureSet[] sets =
+        {
+            OceanDebugCaptureSet.WaterArtifact,
+            OceanDebugCaptureSet.AtmosphereWater,
+            OceanDebugCaptureSet.WaterInterface,
+            OceanDebugCaptureSet.Precipitation,
+            OceanDebugCaptureSet.WaterVolumeDeepDive,
+            OceanDebugCaptureSet.CurrentModeOnly,
+            OceanDebugCaptureSet.FullLoop
+        };
+
+        int index = System.Array.IndexOf(sets, F10CaptureSet);
+        F10CaptureSet = sets[(index + 1 + sets.Length) % sets.Length];
     }
 
     void ToggleSunFreeze()
@@ -303,6 +417,9 @@ public class FreeCameraController : MonoBehaviour
 
     int[] GetDebugCaptureModes()
     {
+        if (F10CaptureSet == OceanDebugCaptureSet.CurrentModeOnly)
+            return new[] { _oceanDebugMode };
+
         if (F10CaptureSet == OceanDebugCaptureSet.FullLoop)
         {
             int[] modes = new int[OceanDebugModeNames.Length];
@@ -311,7 +428,19 @@ public class FreeCameraController : MonoBehaviour
             return modes;
         }
 
-        return WaterArtifactDebugModes;
+        switch (F10CaptureSet)
+        {
+            case OceanDebugCaptureSet.AtmosphereWater:
+                return AtmosphereWaterDebugModes;
+            case OceanDebugCaptureSet.WaterInterface:
+                return WaterInterfaceDebugModes;
+            case OceanDebugCaptureSet.Precipitation:
+                return PrecipitationDebugModes;
+            case OceanDebugCaptureSet.WaterVolumeDeepDive:
+                return WaterVolumeDeepDiveDebugModes;
+            default:
+                return WaterArtifactDebugModes;
+        }
     }
 
     void QueueDebugCaptureSet(int[] modes)
@@ -464,7 +593,7 @@ public class FreeCameraController : MonoBehaviour
     void PruneDebugScreenshots(string directory)
     {
         int modesPerRun = F10CaptureSet == OceanDebugCaptureSet.CurrentModeOnly
-            ? OceanDebugModeNames.Length
+            ? 1
             : GetDebugCaptureModes().Length;
         int keepFiles = Mathf.Max(1, DebugScreenshotMaxRuns) * Mathf.Max(1, modesPerRun) * 2;
         if (keepFiles <= 0 || string.IsNullOrWhiteSpace(directory) || !System.IO.Directory.Exists(directory))
@@ -561,6 +690,13 @@ public class FreeCameraController : MonoBehaviour
             float sunElevation = Vector3.Dot(sd, (transform.position - _lastPlanetCenter).normalized);
             sb.AppendLine($"SunElevationDeg: {Mathf.Asin(sunElevation) * Mathf.Rad2Deg:F2}");
         }
+        IPrecipitationDebugControl precipitation = GetPrecipitationController();
+        if (precipitation != null)
+        {
+            sb.AppendLine($"PrecipitationEnabled: {precipitation.PrecipitationRenderingEnabled}");
+            sb.AppendLine($"PrecipLocalParticlesEnabled: {precipitation.LocalPrecipitationParticlesEnabled}");
+            sb.AppendLine($"PrecipLocalParticlesForCamera: {precipitation.ShouldRenderLocalParticles(GetComponent<Camera>())}");
+        }
         sb.AppendLine();
 
         AppendWaterDebugMetadata(sb);
@@ -607,6 +743,20 @@ public class FreeCameraController : MonoBehaviour
 
         var s = _waterDebugStats;
         sb.AppendLine($"Mesh: verts={s.Vertices}, tris={s.Triangles}");
+        MeshFilter volumeLipFilter = GetWaterVolumeLipFilter(waterRenderer);
+        Mesh volumeLipMesh = volumeLipFilter != null ? volumeLipFilter.sharedMesh : null;
+        if (volumeLipMesh != null)
+        {
+            int volumeLipTriangles = volumeLipMesh.subMeshCount > 0
+                ? (int)(volumeLipMesh.GetIndexCount(0) / 3)
+                : 0;
+            sb.AppendLine($"VolumeLipMesh: active={volumeLipFilter.gameObject.activeInHierarchy}, verts={volumeLipMesh.vertexCount}, tris={volumeLipTriangles}");
+        }
+        else
+        {
+            sb.AppendLine("VolumeLipMesh: missing");
+        }
+
         sb.AppendLine($"DataRanges: depth={s.DepthMin:F3}-{s.DepthMax:F3} avg={s.DepthAvg:F3}, shore={s.ShoreMin:F3}-{s.ShoreMax:F3} avg={s.ShoreAvg:F3}, body={s.BodyMin:F3}-{s.BodyMax:F3} avg={s.BodyAvg:F3}");
         sb.AppendLine($"CameraSample: depth={s.SampleDepth:F3}, shore={s.SampleShore:F3}, body={s.SampleBody:F3}, motionMask={s.MotionMaskSample:F3}, normalMask={s.NormalMaskSample:F3}");
         sb.AppendLine($"MotionMask: avg={s.MotionMaskAvg:F3}, max={s.MotionMaskMax:F3}, eligible={s.MotionEligiblePercent:F1}%");
@@ -637,6 +787,15 @@ public class FreeCameraController : MonoBehaviour
         }
 
         return null;
+    }
+
+    MeshFilter GetWaterVolumeLipFilter(Renderer waterRenderer)
+    {
+        if (waterRenderer == null)
+            return null;
+
+        Transform lip = waterRenderer.transform.Find("WaterVolumeLip");
+        return lip != null ? lip.GetComponent<MeshFilter>() : null;
     }
 
     void RefreshWaterDebugStats(Renderer waterRenderer)
@@ -972,6 +1131,34 @@ public class FreeCameraController : MonoBehaviour
         return _cachedPlanet;
     }
 
+    IPrecipitationDebugControl GetPrecipitationController()
+    {
+        if (_cachedPrecipitationController != null
+            && _cachedPrecipitationBehaviour != null
+            && _cachedPrecipitationBehaviour.isActiveAndEnabled)
+            return _cachedPrecipitationController;
+
+        _cachedPrecipitationController = null;
+        _cachedPrecipitationBehaviour = null;
+
+        var behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Exclude);
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            var behaviour = behaviours[i];
+            if (behaviour == null)
+                continue;
+
+            if (behaviour is IPrecipitationDebugControl controller)
+            {
+                _cachedPrecipitationController = controller;
+                _cachedPrecipitationBehaviour = behaviour;
+                break;
+            }
+        }
+
+        return _cachedPrecipitationController;
+    }
+
     IPlanetSurfaceSampler FindPlanetSurfaceSampler()
     {
         if (TargetCenter != null)
@@ -1131,8 +1318,22 @@ public class FreeCameraController : MonoBehaviour
 
         GUILayout.Label("RMB=Look, WASD=Move, Shift=Fast, QE=Up/Down, ZC=Roll");
         GUILayout.Label("Space=Toggle Orbit/Surface, Backspace=Face Sun, R=Frame Storm");
-        GUILayout.Label("F8=Freeze Sun, F9=Water Stats, F11=Toggle FPS Cap");
-        GUILayout.Label($"F10={F10CaptureSet} capture ({OceanDebugModeNames[Mathf.Clamp(_oceanDebugMode, 0, OceanDebugModeNames.Length - 1)]})");
+        GUILayout.Label("F7=Cycle F10 Set, F8=Freeze Sun, F9=Water Stats, F11=Toggle FPS Cap, P=Toggle Precip");
+        GUILayout.Label($"F10={F10CaptureSet} capture ({GetDebugCaptureModes().Length} modes, current {OceanDebugModeNames[Mathf.Clamp(_oceanDebugMode, 0, OceanDebugModeNames.Length - 1)]})");
+        IPrecipitationDebugControl precipitation = GetPrecipitationController();
+        if (precipitation != null)
+        {
+            GUILayout.Label($"Precipitation render: {(precipitation.PrecipitationRenderingEnabled ? "ON" : "OFF")}");
+            GUILayout.Label($"Precip local particles: {(precipitation.ShouldRenderLocalParticles(GetComponent<Camera>()) ? "ON" : "OFF")}");
+        }
+
+        if (_precipitationToggleFlashActive)
+        {
+            if (Time.unscaledTime <= _precipitationToggleFlashUntil)
+                GUILayout.Label(_precipitationToggleFlashMessage);
+            else
+                _precipitationToggleFlashActive = false;
+        }
 
         GUILayout.Label($"Frame target: {Application.targetFrameRate}, vSync: {QualitySettings.vSyncCount}");
 
@@ -1204,6 +1405,6 @@ public class FreeCameraController : MonoBehaviour
         GUILayout.Label($"Camera sample: depth={s.SampleDepth:F2}, shore={s.SampleShore:F2}, body={s.SampleBody:F2}, motionMask={s.MotionMaskSample:F2}, normalMask={s.NormalMaskSample:F2}");
         GUILayout.Label($"Motion mask: avg={s.MotionMaskAvg:F2}, max={s.MotionMaskMax:F2}, eligible>{0.05f:F2}={s.MotionEligiblePercent:F1}%");
         GUILayout.Label($"Normal mask: avg={s.NormalMaskAvg:F2}, max={s.NormalMaskMax:F2}, eligible>{0.05f:F2}={s.NormalEligiblePercent:F1}%");
-        GUILayout.Label("F10 targeted set: Off, Shore, Foam, WaterData, Absorption, VolumeMask/Path, FoamParts, SurfaceAlpha, VolumeBoundary/Optical, SurfaceContact/Blend, VolumeOnly/SurfaceOnly/WaterOff, VolumeContact/Dilation/NoRefraction/Occlusion, TerrainSourcePink/FoamPink/VolumeSphere/TerrainFaceId");
+        GUILayout.Label("F10 sets: WaterArtifact is concise; use F7 for AtmosphereWater, WaterInterface, Precipitation, DeepDive, CurrentModeOnly, or FullLoop.");
     }
 }

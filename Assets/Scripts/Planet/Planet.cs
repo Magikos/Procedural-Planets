@@ -25,6 +25,7 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
     TerrainFace[] _terrainFaces;
     MeshFilter[] _meshFilters;
     GameObject _waterObject;
+    GameObject _waterVolumeLipObject;
 
     static readonly int _shallowColorId = Shader.PropertyToID("_ShallowColor");
     static readonly int _deepColorId = Shader.PropertyToID("_DeepColor");
@@ -95,6 +96,7 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
         _meshFilters = new MeshFilter[6];
         _terrainFaces = new TerrainFace[6];
         _waterObject = null;
+        _waterVolumeLipObject = null;
 
         var shapeSettings = _planetSettings.BuildShapeSettings();
         _shapeGenerator.Configure(shapeSettings);
@@ -244,6 +246,7 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
         if (!_planetSettings.HasOceans)
         {
             if (_waterObject != null) _waterObject.SetActive(false);
+            if (_waterVolumeLipObject != null) _waterVolumeLipObject.SetActive(false);
             return;
         }
 
@@ -258,16 +261,34 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
             _waterObject.AddComponent<MeshFilter>();
         }
 
+        if (_waterVolumeLipObject == null)
+        {
+            _waterVolumeLipObject = new GameObject("WaterVolumeLip");
+            _waterVolumeLipObject.transform.parent = _waterObject.transform;
+            _waterVolumeLipObject.transform.localPosition = Vector3.zero;
+            _waterVolumeLipObject.transform.localRotation = Quaternion.identity;
+            _waterVolumeLipObject.transform.localScale = Vector3.one;
+            _waterVolumeLipObject.AddComponent<MeshFilter>();
+        }
+
         _waterObject.SetActive(true);
+        _waterVolumeLipObject.SetActive(true);
         _waterObject.transform.localScale = Vector3.one;
         _waterObject.transform.localPosition = Vector3.zero;
+        _waterVolumeLipObject.transform.localScale = Vector3.one;
+        _waterVolumeLipObject.transform.localPosition = Vector3.zero;
+        _waterVolumeLipObject.transform.localRotation = Quaternion.identity;
 
         var meshFilter = _waterObject.GetComponent<MeshFilter>();
         if (meshFilter.sharedMesh == null)
             meshFilter.sharedMesh = new Mesh { name = "WaterBodies" };
 
+        var volumeLipFilter = _waterVolumeLipObject.GetComponent<MeshFilter>();
+        if (volumeLipFilter.sharedMesh == null)
+            volumeLipFilter.sharedMesh = new Mesh { name = "WaterVolumeLip" };
+
         float waterScale = GetWaterDistanceScale();
-        var waterStats = WaterMeshBuilder.Build(meshFilter.sharedMesh, _terrainFaces, new WaterMeshBuilder.Settings
+        var waterStats = WaterMeshBuilder.Build(meshFilter.sharedMesh, volumeLipFilter.sharedMesh, _terrainFaces, new WaterMeshBuilder.Settings
         {
             PlanetRadius = _planetSettings.PlanetRadius,
             OceanLevel = _planetSettings.OceanLevel,
@@ -280,11 +301,15 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
         if (waterStats.Triangles == 0)
         {
             _waterObject.SetActive(false);
+            _waterVolumeLipObject.SetActive(false);
             return;
         }
 
+        _waterVolumeLipObject.SetActive(waterStats.VolumeLipTriangles > 0);
+
         Logger.Log(LogLevel.Debug, "Water",
             $"Generated water mesh: {waterStats.MeshVertices} verts, {waterStats.Triangles} tris, " +
+            $"volume lip {waterStats.VolumeLipVertices} verts, {waterStats.VolumeLipTriangles} tris, " +
             $"wet terrain verts {waterStats.WetVertices}, ocean bodies {waterStats.OceanBodies}, " +
             $"small bodies {waterStats.SmallBodies}, max depth {waterStats.MaxDepth:F1}");
 

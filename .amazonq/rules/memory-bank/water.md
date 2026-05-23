@@ -147,7 +147,7 @@ Latest above-water shelf regression:
 - Bryan reported the edge may be fixed underwater, but above water got worse and reads like a surface sheet/shelf: the top of the water is colored but the water below it does not have enough body.
 - Diagnosis: the previous `volumeInteriorMask` was too strict for above-water low-angle shore views. It removed too much volume contribution near shore, which exposed the water surface as a thin sheet.
 - `WaterVolume.shader` now uses a less aggressive edge-only volume gate: `volumeEdgeMask = smoothstep(0.010, 0.060, waterMaskBasis)` and `volumeBodyMask = lerp(0.65, 1.0, smoothstep(0.10, 0.45, body01Raw))`; `volumeWaterMask = waterMask * volumeEdgeMask * volumeBodyMask`. F10 `VolumeMask` now shows RGB = raw water coverage, effective volume coverage, edge gate.
-- Bryan asked whether the water mesh should bleed into terrain slightly. Yes: a small overlap is reasonable because terrain depth should occlude the under-terrain water while the overlap hides raster/generation gaps. `WaterMeshBuilder` now pushes clipped shoreline vertices a small distance toward the dry endpoint (`shoreRange * 0.08`, clamped by planet scale) so the generated water mesh has a subtle under-terrain lip.
+- Bryan asked whether the water mesh should bleed into terrain slightly. Yes, but the current architecture keeps the visible water mesh conservative and uses a separate volume-only `WaterVolumeLip` mesh for the larger under-terrain coverage extension.
 
 Latest close-up artifact pass:
 - Bryan repeated the above/below F10 captures and also flew closer to the artifact. The close-up set around `20260521-002432` was useful: the visible bright edge tracks `FoamParts`/`SurfaceAlpha` at the exact shoreline, not only the volume modes. This means the above-water artifact is now mainly a hard shoreline foam/surface band.
@@ -255,6 +255,74 @@ Latest global water graph pass:
 - The generated water mesh now also shares original water vertices and clipped shoreline edge vertices by global direction/edge keys, so cube-face borders should not get independent water-data/mesh values.
 - This needs a fresh play session so the planet and water mesh regenerate. The next F10 should compare `Off`, `WaterOff`, `VolumeMask`, `VolumeBoundary`, and `TerrainFaceId` first. The previous mesh count was `219813` vertices and `419257` tris; a changed vertex count is a quick sign the global sharing path is active.
 
+Latest curved sea-ray diagnostic pass:
+- Bryan clarified the artifact is only visible from a low camera near the water surface while looking along the curve of the planet, where the far shoreline appears through the body of water. Treat this as a spherical water-volume/path-length problem first, not a foam problem.
+- The F10 set around `20260521-173527` confirmed the global water graph regenerated (`Mesh: verts=217960`, down from `219813`) but did not solve the line. This rules out cube-face water-data continuity as the primary remaining cause.
+- Removed the previous prepass shore-floor experiment and added a guarded analytic sea-level sphere contribution in `WaterVolume.shader`: `curvedSeaRay`, `curvedSeaCoverage`, and `curvedSeaPath`. This uses sea-sphere intersection, scene depth behind the sea entry, near-surface camera proximity, grazing angle, and existing water coverage to give low-angle far-shore pixels the long water path they physically have through the curved ocean.
+- New F10 modes:
+  - `SeaRay` (35): RGB = scene behind sea sphere, analytic sea path, sea grazing.
+  - `SeaVsMesh` (36): RGB = raster volume mask, curved sea ray, curved sea coverage.
+  - `SeaPath` (37): RGB = old above-scene path, curved sea path, final path.
+- Next F10 review should compare `Off`, `VolumeOnly`, `SeaRay`, `SeaVsMesh`, and `SeaPath` first from the same low near-surface angle. If `SeaRay` lights the line but `SeaVsMesh` does not, loosen the curved-path guard. If both light and `Off` improves, continue this fix direction. If `SeaRay` does not light the line, pivot away from the sea-level sphere/depth model.
+
+Latest shore sea-path override:
+- Bryan shared another agent's theory from the `20260521-174913` F10 set: `VolumeContact` shows waterVisible/contact at the bright shoreline line, but `VolumeOptical` remains weak because the path falls back to a short near-shore value and `opticalGate` does not open enough.
+- Current evaluation: the theory is directionally right, but the exact old snippet was not restored blindly. `SeaRay` proved the camera ray is physically behind the sea-level sphere at the problem band, while `SeaVsMesh` showed the analytic curved contribution was still too gated at the shoreline/contact contour.
+- `WaterVolume.shader` now adds `shoreSeaPathCoverage`: above water, near sea level, scene behind sea sphere, valid raster volume mask, and a very short `aboveScenePath`. `curvedSeaCoverage` is the max of the existing open-water curved ray and this shore/contact coverage.
+- The key fix detail is that `curvedSeaPath = seaPathMeters * curvedSeaCoverage` feeds `abovePath` outside the `waterVisible * ...` multiply. This should prevent the contour from collapsing to the shallow fallback path and should let `viewPath01`, `longViewGate`, source occlusion, and deep extinction engage.
+- Next F10 review should compare `Off`, `VolumeOnly`, `VolumeContact`, `VolumeOptical`, `SeaVsMesh`, and `SeaPath`. If this worked, `SeaVsMesh` should show blue/magenta curved coverage on the line and `SeaPath` should show stronger green/blue curved/final path there.
+
+Latest analytic sea occlusion gate:
+- Bryan's F10 set around `20260521-175701` still showed no observable change. `SeaPath` was active, but `VolumeOptical` and `VolumeOcclusion` still did not show enough final optical/source response on the bright line.
+- Diagnosis pivot: path length alone is not enough because the final optical/source terms are still gated by depth/shore/open-water values. For this low-camera grazing case, the analytic sea-sphere test must directly open optical/source occlusion when the scene source is behind sea-level water.
+- `WaterVolume.shader` now adds `curvedSeaOcclusion`, independent of raster water coverage and open-water shore gates. It uses above-water camera, near sea level, scene-behind-sea, sea grazing, and sea path length.
+- `curvedSeaCoverage` now takes the max of open-water curved ray, shore/contact coverage, and `curvedSeaOcclusion`. It feeds `abovePath`, opens a new `curvedSeaGate` inside `opticalGate`, and strengthens source/horizon occlusion.
+- Next F10 review should compare `Off`, `VolumeOnly`, `VolumeOptical`, `VolumeOcclusion`, `SeaVsMesh`, and `SeaPath`. If `SeaVsMesh` shows blue on the line but `VolumeOptical` still does not respond, inspect final color blend/transmittance instead of path/optical gate.
+
+Latest sea-matte diagnostic:
+- Bryan's F10 set around `20260521-180610` showed the shoreline line became darker after the analytic sea occlusion gate, but the line remained visible from the low above-water camera.
+- Current identification: the contour is terrain/source color from the far shoreline leaking through the full-screen `WaterVolume.shader` composite. `TerrainSourcePink` marks it, `FoamPink` does not, and `SeaVsMesh`/`SeaPath` show analytic sea coverage/path at the contour, so this is not foam, not the ocean surface pass, and not a missing-water early exit.
+- Added F10 mode `SeaMatte` (38). It makes `Ocean.shader` transparent and makes `WaterVolume.shader` hard-matte sea/source-occluded pixels toward dark deep-water color.
+- Next F10 review should inspect `SeaMatte` first. If the line disappears there, the production fix is final blend/transmittance/deep extinction strength. If the line survives there, suspect a later draw pass or an uncovered source pixel outside the analytic sea matte.
+
+Latest long sea-source matte:
+- Bryan's F10 sets around `20260521-181719` and `20260521-181754` included the new `SeaMatte` mode. The low horizon view mostly removed the thin far shoreline-through-water contour in `SeaMatte`, while the closer shoreline view still showed jagged contact-edge pixels.
+- Interpretation: the far grazing artifact is source terrain leaking through the volume composite and can be suppressed by a sea/source matte. The close shoreline rim is a separate contact coverage/classification edge that should not be solved by endlessly increasing long-path source opacity.
+- `WaterVolume.shader` now adds `seaSourceMatte`, guarded by above-water camera, near sea level, scene behind the sea sphere, sea grazing angle, sea path length, and curved/source path coverage. It strengthens `sourceMatte`, lowers source transmittance, and pushes deep extinction/deep-water color for long sea-occluded source pixels.
+- Next F10 review should compare `Off`, `VolumeOnly`, `VolumeOptical`, `VolumeOcclusion`, `SeaPath`, and `SeaMatte`. If the far horizon line is gone but the close shore rim remains, pivot to contact-edge coverage/shoreline overlap instead of more long-path source-matte tuning.
+
+Latest horizon contact matte:
+- Bryan's F10 set around `20260521-182729` still showed the far low-horizon shoreline contour in `Off` and `VolumeOnly`. `SeaMatte` showed the hard diagnostic matte can suppress the low-horizon source edge more strongly than production.
+- Interpretation: the long sea-source matte reduced the terrain/source bleed, but the remaining visible contour also behaves like a bright contact/classification edge. `VolumeContact`, `VolumeOcclusion`, `SeaVsMesh`, and `SeaPath` still light the contour, so the next pass should target the bright contact edge rather than only increasing long-path opacity.
+- `WaterVolume.shader` now separates `longSeaSourceMatte` from `horizonContactMatte`. `horizonContactMatte` is gated by above-water near-surface camera, valid source depth, sea-sphere intersection, grazing sea ray, sea path length, contact/edge dilation signal, and source luma.
+- Added F10 mode `SeaSourceMatte` (39): red = `longSeaSourceMatte`, green = `horizonContactMatte`, blue = final `sourceMatte`. `Ocean.shader` renders transparent in this mode and `FreeCameraController` includes it in the targeted WaterArtifact set.
+- Next F10 review should inspect `SeaSourceMatte` with `Off`, `VolumeOnly`, `VolumeOcclusion`, and `SeaMatte`. If the visible contour lights green/blue in `SeaSourceMatte`, production color application is targeting it. If `SeaSourceMatte` is dark at the line, pivot to prepass coverage or geometry overlap.
+
+Latest stop-matte-tuning pivot:
+- Bryan's F10 set around `20260521-183707` still showed the low-horizon shoreline contour in `Off` and `VolumeOnly` after adding `horizonContactMatte` and `SeaSourceMatte`.
+- `SeaSourceMatte` lit a broad magenta region over the contour, which means the shader can classify a candidate source/edge region, but production output still leaves the visible line. This is a stop signal for small opacity, luma, transmittance, or matte-threshold tweaks.
+- Recommendation: stop stacking production matte tweaks for this artifact. Keep F10 modes 35-39 as evidence, but pivot the next fix attempt to water-volume coverage/edge geometry: a screen-space horizon occluder with explicit feather, analytic sea-sphere coverage independent of the raster water mesh edge, or mesh/prepass shoreline overlap.
+- If continuing from here, consider backing out or isolating the last production matte changes while retaining the debug modes. The next diagnostic should prove whether a deliberately feathered water coverage band over the terrain contact edge removes the line without causing the earlier above-water sheet/shelf regression.
+
+Current validation and follow-up todo:
+- After the precipitation/debug cleanup pass on `2026-05-22`, Bryan reran Unity and saw no regression: no visible silhouette and no obvious water artifacts.
+- The underwater glow fix should now be treated as a precipitation ownership rule, not a manual `P`/`Y` workaround: precipitation fades off below sea level and local precipitation particles do not render below sea level.
+- Underwater shoreline bleed-through is now identified as a water-volume coverage edge, not a foam/atmosphere/precipitation issue. The latest underwater F10 showed `Off` and `VolumeOnly` effectively identical; `WaterOff`/`SurfaceOnly` exposed the raw terrain/shore shape; `FoamPink` did not mark it; `AtmosphereContribution` was black; precipitation local particles were off. Bryan's Scene view screenshot of the selected water mesh aligned with the same jagged shapes, confirming the water mesh/prepass boundary is being composited.
+- The next fix is coverage, not more color/matte tuning: `WaterMeshBuilder` now generates a separate `WaterVolumeLip` mesh for wet/dry shoreline edges. The visible `Water` mesh remains the rendered ocean surface; the `WaterVolumeLip` child has only a `MeshFilter` and is drawn by `WaterVolumePrepass` into `_WaterInterfaceTexture` so underwater volume coverage extends under terrain without rendering extra visible water.
+
+Light-shaft / water ownership todo:
+- `Atmosphere.shader`: current light shafts are a camera-visible atmosphere effect, not real light painted onto terrain or water. Screen-space light shafts now sample the dilated `_WaterInterfaceTexture` and stop or strongly fade when the camera ray hits water before sky/terrain.
+- `Ocean.shader`: water-surface response to low sun should be specular/glint/reflection on the surface, not atmosphere shafts composited through transparent water. Future surface work should turn strong low-sun shaft situations into controlled glint/shimmer highlights.
+- `WaterVolume.shader`: add a later underwater beauty pass for light entering water: attenuated underwater shafts, caustics, wave-distorted light on shallow ground, and depth/path/color absorption. This must be owned by water volume/refraction logic, not by the atmosphere post effect.
+- F10 validation: rerun `WaterArtifact` at low sun/horizon after the atmosphere light-shaft mask. Expected result: `AtmosphereContribution` is dark or much weaker over water while sky/cloud shafts remain, and `Off` no longer looks like atmospheric shafts are brightening terrain through water. Later underwater beauty work should get its own focused debug/capture set instead of expanding the default F10 bundle.
+
+Water-complete roadmap:
+- Validate and commit the current artifact fixes first: atmosphere water-aware light shafts, precipitation underwater suppression, F10 capture-set cleanup, and underwater shoreline source matte.
+- Surface finish in `Ocean.shader`: tune existing waves, glint/shimmer, reflection, normal detail, whitecaps, and shoreline/open-water foam as one visual layer. Preserve terrain-contact fades and avoid reintroducing clean shoreline edge lines.
+- Motion interaction: add wakes as a separate data path, not as hard-coded foam. Prefer a wake mask/velocity field or tracked disturbance texture so ships/objects can drive foam, normals, and roughness consistently.
+- Volume finish in `WaterVolume.shader`: underwater beauty pass with attenuated shafts, caustics, refraction/distortion, depth absorption, and wave-distorted light on shallow ground.
+- Debug workflow: add focused F10 capture sets for `SurfaceFinish`, `UnderwaterBeauty`, and `Wakes` only when those passes start; keep the default `WaterArtifact` set concise.
+
 ## Reference Material
 
 Useful local references:
@@ -303,3 +371,34 @@ After the full-bundle re-read mesh pass, `dotnet build ProceduralPlanets.Planet.
 After the square/face-boundary diagnostic pass, `dotnet build ProceduralPlanets.Planet.csproj` and serial `dotnet build ProceduralPlanets.Core.csproj` passed. A parallel Core/Planet build attempt hit the known shared intermediate DLL write collision, then passed when rerun serially. No trailing whitespace was found in `FreeCameraController.cs`, `PlanetVertexColor.shader`, `Ocean.shader`, `WaterVolume.shader`, or `WaterMeshBuilder.cs`.
 
 After the global water graph pass, `dotnet build ProceduralPlanets.Planet.csproj` and `dotnet build ProceduralPlanets.Core.csproj` passed. No trailing whitespace was found in `WaterMeshBuilder.cs`. Unity needs to recompile C# and regenerate the planet/water mesh before the F10 result can be judged.
+
+After the curved sea-ray diagnostic pass, `dotnet build ProceduralPlanets.Planet.csproj` and serial `dotnet build ProceduralPlanets.Core.csproj` passed. The first parallel Core build hit the known shared intermediate DLL lock. No trailing spaces/tabs were found in `Ocean.shader`, `WaterVolume.shader`, `WaterVolumePrepass.shader`, or `FreeCameraController.cs`.
+
+After the shore sea-path override, `dotnet build ProceduralPlanets.Planet.csproj` and `dotnet build ProceduralPlanets.Core.csproj` passed. No trailing spaces/tabs were found in the touched files. `WaterVolumePrepass.shader` has no content diff but may still show modified due line-ending churn.
+
+After the analytic sea occlusion gate, `dotnet build ProceduralPlanets.Planet.csproj` and `dotnet build ProceduralPlanets.Core.csproj` passed. No trailing spaces/tabs were found in the touched files.
+
+After the sea-matte diagnostic, `dotnet build ProceduralPlanets.Planet.csproj` and `dotnet build ProceduralPlanets.Core.csproj` passed. No trailing spaces/tabs were found in `WaterVolume.shader`, `Ocean.shader`, or `FreeCameraController.cs`.
+
+After the long sea-source matte pass, `dotnet build ProceduralPlanets.Planet.csproj` and `dotnet build ProceduralPlanets.Core.csproj` passed. Scoped `git diff --check` passed with only line-ending warnings.
+
+After the horizon contact matte pass, `dotnet build ProceduralPlanets.Core.csproj` passed. A parallel `ProceduralPlanets.Planet.csproj` build first hit the known shared intermediate DLL write collision, then passed when rerun serially. Scoped `git diff --check` passed with only line-ending warnings.
+
+After the precipitation/debug cleanup and atmosphere water-aware light-shaft mask on `2026-05-22`, `dotnet build ProceduralPlanets.Core.csproj` and serial `dotnet build ProceduralPlanets.Planet.csproj` passed. A parallel Core/Planet build attempt again hit the known shared intermediate DLL write collision. `git diff --check` passed with only line-ending warnings. Bryan reran the low-sun `WaterArtifact` F10 and reported the result looked good.
+
+After the underwater shoreline source-edge matte correction, `dotnet build ProceduralPlanets.Core.csproj` and `dotnet build ProceduralPlanets.Planet.csproj` passed. `git diff --check` passed with only line-ending warnings.
+
+After the separate `WaterVolumeLip` mesh pass, `dotnet build ProceduralPlanets.Planet.csproj` and `dotnet build ProceduralPlanets.Core.csproj` passed. `git diff --check` passed with only line-ending warnings. Unity needs to regenerate the planet/water meshes before judging this fix. The water log should now include `volume lip X verts, Y tris`; rerun the underwater `WaterArtifact` F10 and compare `Off`, `VolumeOnly`, `VolumeOcclusion`, `TerrainSourcePink`, and `FoamPink`, then check one above-water shore view for no visible shelf.
+
+Follow-up after Bryan's underwater F10 at `20260522-174458`: the gaps still followed `Off`/`VolumeOnly`/`VolumeOcclusion`, but the sidecar only reported the visible water mesh and the run only saved the first five WaterArtifact modes. `WaterVolumeRenderFeature` now refreshes the cached `WaterVolumeLip` child if the water renderer was cached before the lip existed, and F10 sidecars now print `VolumeLipMesh: active=..., verts=..., tris=...`. The next F10 must confirm this line is present and nonzero before judging the lip fix.
+
+Follow-up after Bryan's underwater F10 at `20260522-175229`: `VolumeLipMesh` was present and active (`33282` verts/tris), but the gaps still remained in `Off`/`VolumeOnly`/`VolumeOcclusion`. That means the lip exists but was not filling the volume data where terrain depth rejected it. `WaterVolumePrepass.shader` now has a second `WaterVolumeLipPrepass` pass using `ZTest Always`, and `WaterVolumeRenderFeature` draws only the lip mesh with that pass while the normal water mesh keeps the original depth-tested pass. Rerun underwater F10 after shader reimport; if gaps remain with nonzero `VolumeLipMesh`, inspect `VolumeMask`/`VolumeDilation` via `WaterVolumeDeepDive`.
+
+Follow-up after Bryan's three F10 sets at `20260522-181748`, `20260522-181812`, and `20260522-181843`: the relaxed lip pass fixed the depth rejection hypothesis too aggressively. Above-water captures showed the shoreline lip artifact visible through the planet because `WaterVolumeLipPrepass` used `ZTest Always` whenever the lip mesh existed. `WaterVolumeRenderFeature` now estimates the sea radius from the visible water mesh bounds and only draws the relaxed lip pass when the camera is inside that water mesh. Do not make the relaxed lip globally active again; if underwater gaps remain, the next fix should be tighter depth/manual rejection or lip coverage data, not an unconditional always-depth pass.
+
+Current handoff snapshot for context recovery:
+- Workspace is `C:\Users\Bryan\Source\Repos\Magikorp\ProceduralPlanets`; there are many uncommitted files from the water/atmosphere/precipitation cleanup, so do not revert unrelated edits.
+- Current water architecture: visible `Water` mesh stays conservative; separate child `WaterVolumeLip` has only a `MeshFilter` and is used by `WaterVolumeRenderFeature` to feed `_WaterInterfaceTexture` for underwater volume coverage.
+- The latest serious regression was not the original shoreline bleed. It was caused by drawing the lip mesh through all depth with `WaterVolumeLipPrepass`/`ZTest Always` for above-water cameras. The fix now gates that relaxed pass to cameras inside the water mesh radius.
+- Validation after the gated relaxed-lip change: `dotnet build ProceduralPlanets.Core.csproj`, `dotnet build ProceduralPlanets.Planet.csproj`, and `git diff --check` passed; `git diff --check` only reported existing CRLF warnings.
+- Next Unity validation should rerun the same three F10 viewpoints: through-planet artifact view, above-shore view, and underwater looking at shore. Expected: above-water through-planet artifact is gone. If underwater gaps remain, do not re-enable a global always-depth lip; instead inspect a tighter manual depth rejection path, lip coverage width/data, or a focused `WaterVolumeDeepDive`/`VolumeMask` diagnostic.

@@ -5,7 +5,7 @@ using UnityEngine.Serialization;
 /// Publishes render settings for distant precipitation shafts. The renderer samples
 /// the shared cloud weather map, so rain stays tied to storm cells.
 /// </summary>
-public class PrecipitationController : MonoBehaviour
+public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
 {
     public enum DebugView
     {
@@ -80,6 +80,14 @@ public class PrecipitationController : MonoBehaviour
     public bool IsRenderingEnabled =>
         _seaLevelRadius > 0f && (RenderPrecipitation && Intensity > 0f || DebugMode != DebugView.Off);
 
+    public bool PrecipitationRenderingEnabled
+    {
+        get => RenderPrecipitation;
+        set => RenderPrecipitation = value;
+    }
+
+    public bool LocalPrecipitationParticlesEnabled => RenderLocalParticles;
+
     public bool ShouldRenderLocalParticles(Camera camera)
     {
         if (!IsRenderingEnabled || !RenderPrecipitation || !RenderLocalParticles ||
@@ -87,7 +95,7 @@ public class PrecipitationController : MonoBehaviour
             return false;
 
         float cameraAltitude = Vector3.Distance(camera.transform.position, _planetCenter) - _seaLevelRadius;
-        return cameraAltitude >= -100f && cameraAltitude <= LocalMaxCameraAltitude;
+        return cameraAltitude >= 0f && cameraAltitude <= LocalMaxCameraAltitude;
     }
 
     void OnEnable()
@@ -137,7 +145,7 @@ public class PrecipitationController : MonoBehaviour
         float topRadius = _seaLevelRadius + Mathf.Max(BottomAltitude + 1f, cloudBaseAltitude + CloudBaseOverlap);
 
         Shader.SetGlobalVector(_precipitationPlanetCenterId, _planetCenter);
-        Shader.SetGlobalVector(_precipitationRadiiId, new Vector4(bottomRadius, topRadius, MaxDistance, 0f));
+        Shader.SetGlobalVector(_precipitationRadiiId, new Vector4(bottomRadius, topRadius, MaxDistance, _seaLevelRadius));
         Shader.SetGlobalVector(_precipitationParamsId, new Vector4(
             Intensity,
             StormThreshold,
