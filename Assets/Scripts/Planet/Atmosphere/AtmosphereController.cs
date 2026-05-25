@@ -18,7 +18,7 @@ public class AtmosphereController : MonoBehaviour
 
     static readonly int _sunParamsId = Shader.PropertyToID("_SunParams");
     static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
-    static readonly int _planetRadiusId = Shader.PropertyToID("_PlanetRadius");
+    static readonly int _planetRadiusId = Shader.PropertyToID("_SeaLevelRadius");
     static readonly int _densityOriginRadiusId = Shader.PropertyToID("_DensityOriginRadius");
     static readonly int _atmosphereRadiusId = Shader.PropertyToID("_AtmosphereRadius");
     static readonly int _viewStepsId = Shader.PropertyToID("_ViewSteps");
@@ -36,7 +36,6 @@ public class AtmosphereController : MonoBehaviour
     static readonly int _lightShaftSamplesId = Shader.PropertyToID("_LightShaftSamples");
     static readonly int _debugModeId = Shader.PropertyToID("_DebugMode");
     static readonly int _bakedOpticalDepthId = Shader.PropertyToID("_BakedOpticalDepth");
-
     void OnEnable() => EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
 
     void Start()
@@ -165,7 +164,7 @@ public class AtmosphereController : MonoBehaviour
         OpticalDepthCompute.SetTexture(kernel, "_Result", _bakedOpticalDepth);
         OpticalDepthCompute.SetInt("_TextureSize", size);
         OpticalDepthCompute.SetInt("_NumSteps", Settings.BakeSteps);
-        OpticalDepthCompute.SetFloat("_PlanetRadius", _seaLevelRadius);
+        OpticalDepthCompute.SetFloat("_SeaLevelRadius", _seaLevelRadius);
         OpticalDepthCompute.SetFloat("_AtmosphereRadius", atmosphereRadius);
         OpticalDepthCompute.SetFloat("_RayleighScaleHeight", Settings.RayleighScaleHeight * atmosphereThickness);
         OpticalDepthCompute.SetFloat("_MieScaleHeight", Settings.MieScaleHeight * atmosphereThickness);

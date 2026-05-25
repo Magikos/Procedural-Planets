@@ -149,7 +149,19 @@ public class CloudController : MonoBehaviour
             Settings.StormShadowBoost,
             Settings.ShadowHorizonFade));
         Shader.SetGlobalFloat(_cloudAnimSpeedId, Settings.AnimationSpeed);
-        Shader.SetGlobalInt(_cloudViewStepsId, Settings.ViewSteps);
+
+        int viewSteps = Settings.ViewSteps;
+        Camera mainCam = Camera.main;
+        if (mainCam != null && _seaLevelRadius > 0f)
+        {
+            float altitude = Vector3.Distance(mainCam.transform.position, _planetCenter) - _seaLevelRadius;
+            float t = Mathf.InverseLerp(Settings.StepScaleNearAltitude,
+                Mathf.Max(Settings.StepScaleFarAltitude, Settings.StepScaleNearAltitude + 1f), altitude);
+            viewSteps = Mathf.RoundToInt(Mathf.Lerp(Settings.ViewSteps, Settings.MinViewSteps, t));
+        }
+        viewSteps = Mathf.Max(Settings.MinViewSteps,
+            Mathf.RoundToInt(viewSteps * QualityController.CloudStepMultiplier));
+        Shader.SetGlobalInt(_cloudViewStepsId, viewSteps);
         Shader.SetGlobalInt(_cloudLightStepsId, Settings.LightSteps);
         Shader.SetGlobalFloat(_cloudRayOffsetStrengthId, Settings.RayOffsetStrength);
         Shader.SetGlobalInt(_cloudDebugModeId, (int)Settings.DebugMode);

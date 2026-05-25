@@ -29,6 +29,14 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     [Range(4, 48)] public int ViewSteps = 32;
     [Range(1000f, 50000f)] public float MaxDistance = 22000f;
 
+    [Header("LOD")]
+    [Tooltip("Minimum view steps used when the camera is very far from the planet.")]
+    [Range(2, 32)] public int MinViewSteps = 6;
+    [Tooltip("Camera altitude above sea level (meters) below which full ViewSteps are used.")]
+    [Range(0f, 500000f)] public float StepScaleNearAltitude = 3000f;
+    [Tooltip("Camera altitude above sea level (meters) above which MinViewSteps are used.")]
+    [Range(0f, 1000000f)] public float StepScaleFarAltitude = 25000f;
+
     [Header("Layer")]
     [Range(0f, 300f)] public float BottomAltitude = 25f;
     [FormerlySerializedAs("CloudBaseInset")]
@@ -182,7 +190,19 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
             FallSpeed));
         Shader.SetGlobalColor(_precipitationColorId, RainColor);
         Shader.SetGlobalColor(_precipitationStormColorId, StormRainColor);
-        Shader.SetGlobalInt(_precipitationViewStepsId, ViewSteps);
+
+        int viewSteps = ViewSteps;
+        Camera mainCam = Camera.main;
+        if (mainCam != null && _seaLevelRadius > 0f)
+        {
+            float altitude = Vector3.Distance(mainCam.transform.position, _planetCenter) - _seaLevelRadius;
+            float t = Mathf.InverseLerp(StepScaleNearAltitude,
+                Mathf.Max(StepScaleFarAltitude, StepScaleNearAltitude + 1f), altitude);
+            viewSteps = Mathf.RoundToInt(Mathf.Lerp(ViewSteps, MinViewSteps, t));
+        }
+        viewSteps = Mathf.Max(MinViewSteps,
+            Mathf.RoundToInt(viewSteps * QualityController.CloudStepMultiplier));
+        Shader.SetGlobalInt(_precipitationViewStepsId, viewSteps);
         Shader.SetGlobalInt(_precipitationDebugModeId, (int)DebugMode);
         Shader.SetGlobalVector(_precipitationDebugDotParamsId, new Vector4(
             DebugDotMinRadius,

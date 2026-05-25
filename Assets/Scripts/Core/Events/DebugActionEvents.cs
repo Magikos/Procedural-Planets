@@ -6,6 +6,8 @@ public readonly struct DebugPrecipitationToggleRequestedEvent : IGameEvent { }
 
 public readonly struct DebugSunFreezeToggleRequestedEvent : IGameEvent { }
 
+public readonly struct DebugOverlayToggleRequestedEvent : IGameEvent { }
+
 public readonly struct DebugWaterDebugDetailsToggleRequestedEvent : IGameEvent { }
 
 public readonly struct DebugProfilingToggleRequestedEvent : IGameEvent { }

@@ -24,6 +24,7 @@ Shader "Planet/VertexColor"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Includes/CloudShadows.hlsl"
+            #include "Includes/DebugModes.hlsl"
 
             struct Attributes
             {
@@ -80,10 +81,10 @@ Shader "Planet/VertexColor"
 
             half4 frag(Varyings input) : SV_Target
             {
-                if (_OceanDebugMode == 31)
+                if (_OceanDebugMode == DEBUG_TERRAIN_SOURCE_PINK)
                     return half4(1.0, 0.0, 1.0, 1.0);
 
-                if (_OceanDebugMode == 34)
+                if (_OceanDebugMode == DEBUG_TERRAIN_FACE_ID)
                     return half4(CubeFaceDebugColor(input.positionWS - _PlanetCenter), 1.0);
 
                 InputData inputData = (InputData)0;

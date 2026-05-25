@@ -15,6 +15,10 @@ public class CloudRenderFeature : ScriptableRendererFeature
     Material _material;
     CloudController _cachedController;
     static readonly int _waterFocusModeId = Shader.PropertyToID("_WaterFocusMode");
+    static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
+    static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
+    static readonly int _atmosphereRadiusId = Shader.PropertyToID("_AtmosphereRadius");
+    static readonly Plane[] _frustumPlanes = new Plane[6];
 
     public override void Create()
     {
@@ -30,6 +34,9 @@ public class CloudRenderFeature : ScriptableRendererFeature
         if (Shader.GetGlobalFloat(_waterFocusModeId) > 0.5f)
             return;
 
+        if (DebugModeConstants.SuppressesWeatherPasses(Shader.GetGlobalInt(_oceanDebugModeId)))
+            return;
+
         if (_cachedController == null || !_cachedController.isActiveAndEnabled)
             _cachedController = Object.FindAnyObjectByType<CloudController>();
         if (_cachedController == null)
@@ -42,6 +49,9 @@ public class CloudRenderFeature : ScriptableRendererFeature
             _material = CoreUtils.CreateEngineMaterial(shader);
         }
 
+        if (!IsPlanetInFrustum(renderingData.cameraData.camera))
+            return;
+
         _pass.Setup(_material);
         renderer.EnqueuePass(_pass);
     }
@@ -50,6 +60,15 @@ public class CloudRenderFeature : ScriptableRendererFeature
     {
         CoreUtils.Destroy(_material);
         _material = null;
+    }
+
+    static bool IsPlanetInFrustum(Camera camera)
+    {
+        float atmRadius = Shader.GetGlobalFloat(_atmosphereRadiusId);
+        if (atmRadius <= 0f) return true;
+        Vector3 center = Shader.GetGlobalVector(_planetCenterId);
+        GeometryUtility.CalculateFrustumPlanes(camera, _frustumPlanes);
+        return GeometryUtility.TestPlanesAABB(_frustumPlanes, new Bounds(center, Vector3.one * atmRadius * 2f));
     }
 }
 

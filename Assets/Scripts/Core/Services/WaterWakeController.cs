@@ -93,7 +93,9 @@ public sealed class WaterWakeController : MonoBehaviour
         source = default;
 
         int debugMode = Shader.GetGlobalInt(_oceanDebugModeId);
-        if (debugMode != 51 && debugMode != 52)
+        if (debugMode != DebugModeConstants.WakeMask
+            && debugMode != DebugModeConstants.SurfacePolish
+            && debugMode != DebugModeConstants.SurfaceFxProof)
             return false;
 
         if (!ServiceLocator.TryGet(out ICameraRigContext cameraContext)

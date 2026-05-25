@@ -14,9 +14,26 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
     static readonly int _deepDepthId = Shader.PropertyToID("_DeepDepth");
     static readonly int _shoreFoamSoftnessId = Shader.PropertyToID("_ShoreFoamSoftness");
     static readonly int _alphaId = Shader.PropertyToID("_Alpha");
+    static readonly int _refractionStrengthId = Shader.PropertyToID("_RefractionStrength");
     static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
+    static readonly int _causticIntensityId = Shader.PropertyToID("_CausticIntensity");
+    static readonly int _causticScaleId = Shader.PropertyToID("_CausticScale");
+    static readonly int _causticSpeedId = Shader.PropertyToID("_CausticSpeed");
+    static readonly int _causticDepthId = Shader.PropertyToID("_CausticDepth");
+    static readonly int _causticContrastId = Shader.PropertyToID("_CausticContrast");
+    static readonly int _causticPrismStrengthId = Shader.PropertyToID("_CausticPrismStrength");
+    static readonly int _causticPrismEdgeBoostId = Shader.PropertyToID("_CausticPrismEdgeBoost");
+    const float RefractionStrength = 0.30f;
+    const float CausticIntensity = 0.42f;
+    const float CausticScale = 0.052f;
+    const float CausticSpeed = 0.75f;
+    const float CausticDepth = 115f;
+    const float CausticContrast = 1.35f;
+    const float CausticPrismStrength = 0.46f;
+    const float CausticPrismEdgeBoost = 18f;
 
-    WaterVolumeRenderPass _pass;
+    WaterVolumePrepassRenderPass _prepassPass;
+    WaterVolumeCompositeRenderPass _compositePass;
     Material _prepassMaterial;
     Material _volumeMaterial;
     MeshRenderer _cachedRenderer;
@@ -25,7 +42,8 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
 
     public override void Create()
     {
-        _pass = new WaterVolumeRenderPass();
+        _prepassPass = new WaterVolumePrepassRenderPass();
+        _compositePass = new WaterVolumeCompositeRenderPass();
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
@@ -61,19 +79,22 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
         Mesh renderableVolumeLipMesh = IsRenderableMesh(volumeLipMesh) ? volumeLipMesh : null;
         bool drawRelaxedVolumeLip = renderableVolumeLipMesh != null && IsCameraInsideWaterMesh(camera, meshFilter, mesh);
         int oceanDebugMode = Shader.GetGlobalInt(_oceanDebugModeId);
-        bool drawVolumeLipSceneDebug = renderableVolumeLipMesh != null && oceanDebugMode == 50;
-        bool compositeAfterAtmosphere = oceanDebugMode == 41;
-        _pass.Setup(
+        bool drawVolumeLipSceneDebug = renderableVolumeLipMesh != null && oceanDebugMode == DebugModeConstants.VolumeLipScenePink;
+        _prepassPass.Setup(
             _prepassMaterial,
-            _volumeMaterial,
             mesh,
             meshFilter.transform.localToWorldMatrix,
             renderableVolumeLipMesh,
             volumeLipFilter != null ? volumeLipFilter.transform.localToWorldMatrix : Matrix4x4.identity,
-            drawRelaxedVolumeLip,
-            drawVolumeLipSceneDebug,
-            compositeAfterAtmosphere);
-        renderer.EnqueuePass(_pass);
+            drawRelaxedVolumeLip);
+        _compositePass.Setup(
+            _volumeMaterial,
+            _prepassMaterial,
+            renderableVolumeLipMesh,
+            volumeLipFilter != null ? volumeLipFilter.transform.localToWorldMatrix : Matrix4x4.identity,
+            drawVolumeLipSceneDebug);
+        renderer.EnqueuePass(_prepassPass);
+        renderer.EnqueuePass(_compositePass);
     }
 
     protected override void Dispose(bool disposing)
@@ -203,58 +224,59 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
             destination.SetFloat(_shoreFoamSoftnessId, source.GetFloat(_shoreFoamSoftnessId));
         if (source.HasProperty(_alphaId))
             destination.SetFloat(_alphaId, source.GetFloat(_alphaId));
+        if (destination.HasProperty(_refractionStrengthId))
+            destination.SetFloat(_refractionStrengthId, RefractionStrength);
+        if (destination.HasProperty(_causticIntensityId))
+            destination.SetFloat(_causticIntensityId, CausticIntensity);
+        if (destination.HasProperty(_causticScaleId))
+            destination.SetFloat(_causticScaleId, CausticScale);
+        if (destination.HasProperty(_causticSpeedId))
+            destination.SetFloat(_causticSpeedId, CausticSpeed);
+        if (destination.HasProperty(_causticDepthId))
+            destination.SetFloat(_causticDepthId, CausticDepth);
+        if (destination.HasProperty(_causticContrastId))
+            destination.SetFloat(_causticContrastId, CausticContrast);
+        if (destination.HasProperty(_causticPrismStrengthId))
+            destination.SetFloat(_causticPrismStrengthId, CausticPrismStrength);
+        if (destination.HasProperty(_causticPrismEdgeBoostId))
+            destination.SetFloat(_causticPrismEdgeBoostId, CausticPrismEdgeBoost);
     }
 }
 
-public sealed class WaterVolumeRenderPass : ScriptableRenderPass
+public sealed class WaterVolumePrepassRenderPass : ScriptableRenderPass
 {
-    static readonly int _sourceId = Shader.PropertyToID("_Source");
     static readonly int _waterVolumeDataId = Shader.PropertyToID("_WaterVolumeData");
     static readonly int _waterInterfaceTextureId = Shader.PropertyToID("_WaterInterfaceTexture");
     const int WaterPrepassPass = 0;
     const int WaterVolumeLipPrepassPass = 1;
-    const int WaterVolumeLipSceneDebugPass = 2;
-    static MaterialPropertyBlock _propertyBlock;
 
     Material _prepassMaterial;
-    Material _volumeMaterial;
     Mesh _mesh;
     Matrix4x4 _localToWorld;
     Mesh _volumeLipMesh;
     Matrix4x4 _volumeLipLocalToWorld;
     bool _drawRelaxedVolumeLip;
-    bool _drawVolumeLipSceneDebug;
 
-    public WaterVolumeRenderPass()
+    public WaterVolumePrepassRenderPass()
     {
-        renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+        renderPassEvent = RenderPassEvent.BeforeRenderingTransparents;
         ConfigureInput(ScriptableRenderPassInput.Depth);
-        requiresIntermediateTexture = true;
-        _propertyBlock = new MaterialPropertyBlock();
     }
 
     public void Setup(
         Material prepassMaterial,
-        Material volumeMaterial,
         Mesh mesh,
         Matrix4x4 localToWorld,
         Mesh volumeLipMesh,
         Matrix4x4 volumeLipLocalToWorld,
-        bool drawRelaxedVolumeLip,
-        bool drawVolumeLipSceneDebug,
-        bool compositeAfterAtmosphere)
+        bool drawRelaxedVolumeLip)
     {
         _prepassMaterial = prepassMaterial;
-        _volumeMaterial = volumeMaterial;
         _mesh = mesh;
         _localToWorld = localToWorld;
         _volumeLipMesh = volumeLipMesh;
         _volumeLipLocalToWorld = volumeLipLocalToWorld;
         _drawRelaxedVolumeLip = drawRelaxedVolumeLip;
-        _drawVolumeLipSceneDebug = drawVolumeLipSceneDebug;
-        renderPassEvent = compositeAfterAtmosphere
-            ? RenderPassEvent.AfterRenderingPostProcessing
-            : RenderPassEvent.BeforeRenderingPostProcessing;
     }
 
     sealed class PrepassData
@@ -267,23 +289,9 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
         internal bool drawRelaxedVolumeLip;
     }
 
-    sealed class CompositeData
-    {
-        internal Material material;
-        internal TextureHandle source;
-        internal TextureHandle waterData;
-    }
-
-    sealed class LipSceneDebugData
-    {
-        internal Material material;
-        internal Mesh volumeLipMesh;
-        internal Matrix4x4 volumeLipLocalToWorld;
-    }
-
     public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
     {
-        if (_prepassMaterial == null || _volumeMaterial == null || _mesh == null)
+        if (_prepassMaterial == null || _mesh == null)
             return;
 
         UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
@@ -318,6 +326,7 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
             builder.SetRenderAttachment(waterData, 0, AccessFlags.Write);
             builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
             builder.SetGlobalTextureAfterPass(waterData, _waterInterfaceTextureId);
+            builder.SetGlobalTextureAfterPass(waterData, _waterVolumeDataId);
             builder.AllowGlobalStateModification(true);
             builder.AllowPassCulling(false);
 
@@ -328,6 +337,73 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
                     ctx.cmd.DrawMesh(data.volumeLipMesh, data.volumeLipLocalToWorld, data.material, 0, WaterVolumeLipPrepassPass);
             });
         }
+    }
+}
+
+public sealed class WaterVolumeCompositeRenderPass : ScriptableRenderPass
+{
+    static readonly int _sourceId = Shader.PropertyToID("_Source");
+    static readonly int _waterVolumeDataId = Shader.PropertyToID("_WaterVolumeData");
+    const int WaterVolumeLipSceneDebugPass = 2;
+    static MaterialPropertyBlock _propertyBlock;
+
+    Material _volumeMaterial;
+    Material _prepassMaterial;
+    Mesh _volumeLipMesh;
+    Matrix4x4 _volumeLipLocalToWorld;
+    bool _drawVolumeLipSceneDebug;
+
+    public WaterVolumeCompositeRenderPass()
+    {
+        renderPassEvent = RenderPassEvent.BeforeRenderingTransparents;
+        ConfigureInput(ScriptableRenderPassInput.Depth);
+        requiresIntermediateTexture = true;
+        _propertyBlock = new MaterialPropertyBlock();
+    }
+
+    public void Setup(
+        Material volumeMaterial,
+        Material prepassMaterial,
+        Mesh volumeLipMesh,
+        Matrix4x4 volumeLipLocalToWorld,
+        bool drawVolumeLipSceneDebug)
+    {
+        _volumeMaterial = volumeMaterial;
+        _prepassMaterial = prepassMaterial;
+        _volumeLipMesh = volumeLipMesh;
+        _volumeLipLocalToWorld = volumeLipLocalToWorld;
+        _drawVolumeLipSceneDebug = drawVolumeLipSceneDebug;
+    }
+
+    sealed class CompositeData
+    {
+        internal Material material;
+        internal TextureHandle source;
+    }
+
+    sealed class LipSceneDebugData
+    {
+        internal Material material;
+        internal Mesh volumeLipMesh;
+        internal Matrix4x4 volumeLipLocalToWorld;
+    }
+
+    public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
+    {
+        if (_volumeMaterial == null)
+            return;
+
+        UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
+        UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
+
+        CameraType cameraType = cameraData.camera.cameraType;
+        if (cameraType == CameraType.Preview || cameraType == CameraType.Reflection)
+            return;
+
+        if (!resourceData.cameraDepthTexture.IsValid())
+            return;
+
+        TextureHandle source = resourceData.cameraColor;
 
         TextureDesc destinationDesc = renderGraph.GetTextureDesc(source);
         destinationDesc.name = "CameraColor-WaterVolume";
@@ -338,10 +414,9 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
         {
             passData.material = _volumeMaterial;
             passData.source = source;
-            passData.waterData = waterData;
 
             builder.UseTexture(source, AccessFlags.Read);
-            builder.UseTexture(waterData, AccessFlags.Read);
+            builder.UseGlobalTexture(_waterVolumeDataId);
             builder.UseTexture(resourceData.cameraDepthTexture, AccessFlags.Read);
             builder.SetRenderAttachment(destination, 0, AccessFlags.Write);
             builder.AllowPassCulling(false);
@@ -350,7 +425,6 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
             {
                 _propertyBlock.Clear();
                 _propertyBlock.SetTexture(_sourceId, (RTHandle)data.source);
-                _propertyBlock.SetTexture(_waterVolumeDataId, (RTHandle)data.waterData);
                 ctx.cmd.DrawProcedural(Matrix4x4.identity, data.material, 0,
                     MeshTopology.Triangles, 3, 1, _propertyBlock);
             });
@@ -365,7 +439,8 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
                 passData.volumeLipLocalToWorld = _volumeLipLocalToWorld;
 
                 builder.SetRenderAttachment(destination, 0, AccessFlags.Write);
-                builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
+                if (resourceData.activeDepthTexture.IsValid())
+                    builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
                 builder.AllowPassCulling(false);
 
                 builder.SetRenderFunc(static (LipSceneDebugData data, RasterGraphContext ctx) =>

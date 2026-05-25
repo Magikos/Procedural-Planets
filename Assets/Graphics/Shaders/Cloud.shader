@@ -4,25 +4,24 @@ HLSLINCLUDE
 
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Includes/Math.hlsl"
+#include "Includes/DebugModes.hlsl"
+#include "Includes/WeatherSampling.hlsl"
 
 TEXTURE2D(_CameraDepthTexture);
 SAMPLER(sampler_CameraDepthTexture);
 TEXTURE2D(_Source);
 SAMPLER(sampler_Source);
 
-TEXTURE2D_ARRAY(_CloudWeatherMap);
-SAMPLER(sampler_CloudWeatherMap);
 TEXTURE3D(_CloudShapeNoise);
 SAMPLER(sampler_CloudShapeNoise);
 TEXTURE3D(_CloudDetailNoise);
 SAMPLER(sampler_CloudDetailNoise);
 
 float3 _CloudPlanetCenter;
-float _PlanetRadius;
+float _SeaLevelRadius;
 float _CloudInnerRadius;
 float _CloudOuterRadius;
 int _CloudWeatherResolution;
-float4x4 _CloudWeatherRotation;
 
 // Shape
 float _CloudNoiseScale;
@@ -45,12 +44,7 @@ float4 _CloudStormColor;
 float _CloudAmbientStrength;
 float _CloudStormDarkening;
 float4 _CloudSilverLiningParams;
-float4 _WeatherLightningParams;
 float4 _WeatherLightningColor;
-float4 _WeatherLightningCell0;
-float4 _WeatherLightningCell1;
-float4 _WeatherLightningCell2;
-float4 _WeatherLightningCell3;
 
 // Animation
 float _CloudAnimSpeed;
@@ -61,6 +55,15 @@ int _CloudLightSteps;
 float _CloudRayOffsetStrength;
 int _CloudDebugMode;
 float4 _CloudDebugParams;
+
+// Platform quality - CLOUD_QUALITY_LOW keyword set by Shader.EnableKeyword on lower-tier hardware.
+#ifdef CLOUD_QUALITY_LOW
+    #define CLOUD_MAX_STEPS 8
+    #define CLOUD_LIGHT_STEPS_MAX 3
+#else
+    #define CLOUD_MAX_STEPS 96
+    #define CLOUD_LIGHT_STEPS_MAX 16
+#endif
 
 // Weather
 float3 _WindDirection;
@@ -97,80 +100,9 @@ float CloudPhase(float cosAngle)
     return _CloudPhaseParams.z + lerp(back, forward, 0.5) * _CloudPhaseParams.w;
 }
 
-float WeatherLightningCell(float4 cell, float3 normal, float storm)
-{
-    if (cell.w <= 0.0)
-        return 0.0;
-
-    float3 direction = dot(cell.xyz, cell.xyz) > 0.0001
-        ? normalize(cell.xyz)
-        : float3(0.0, 1.0, 0.0);
-    float stormMask = smoothstep(_WeatherLightningParams.z, 1.0, storm);
-    float locationMask = smoothstep(_WeatherLightningParams.y, _WeatherLightningParams.x, dot(normal, direction));
-    return cell.w * stormMask * pow(saturate(locationMask), 1.35);
-}
-
-float WeatherLightning(float3 normal, float storm)
-{
-    float lightning = WeatherLightningCell(_WeatherLightningCell0, normal, storm);
-    lightning = max(lightning, WeatherLightningCell(_WeatherLightningCell1, normal, storm));
-    lightning = max(lightning, WeatherLightningCell(_WeatherLightningCell2, normal, storm));
-    lightning = max(lightning, WeatherLightningCell(_WeatherLightningCell3, normal, storm));
-    return lightning;
-}
-
 float InterleavedGradientNoise(float2 pixel)
 {
     return frac(52.9829189 * frac(dot(pixel, float2(0.06711056, 0.00583715))));
-}
-
-float Hash12(float2 p)
-{
-    float3 p3 = frac(float3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return frac((p3.x + p3.y) * p3.z);
-}
-
-void CubeFaceUv(float3 direction, out int face, out float2 uv)
-{
-    float3 absDirection = abs(direction);
-    float u;
-    float v;
-
-    if (absDirection.y >= absDirection.x && absDirection.y >= absDirection.z)
-    {
-        face = direction.y > 0 ? 0 : 1;
-        float faceSign = direction.y > 0 ? 1.0 : -1.0;
-        u = direction.x / max(absDirection.y, 0.00001);
-        v = direction.z / max(absDirection.y, 0.00001) * faceSign;
-    }
-    else if (absDirection.x >= absDirection.y && absDirection.x >= absDirection.z)
-    {
-        face = direction.x > 0 ? 3 : 2;
-        float faceSign = direction.x > 0 ? 1.0 : -1.0;
-        u = direction.z / max(absDirection.x, 0.00001) * -faceSign;
-        v = direction.y / max(absDirection.x, 0.00001);
-    }
-    else
-    {
-        face = direction.z > 0 ? 4 : 5;
-        float faceSign = direction.z > 0 ? 1.0 : -1.0;
-        u = direction.x / max(absDirection.z, 0.00001) * faceSign;
-        v = direction.y / max(absDirection.z, 0.00001);
-    }
-
-    uv = saturate(float2(u, v) * 0.5 + 0.5);
-}
-
-float4 SampleWeather(float3 direction)
-{
-    float3 weatherDirection = mul((float3x3)_CloudWeatherRotation, direction);
-    direction = dot(weatherDirection, weatherDirection) > 0.0001 ? normalize(weatherDirection) : direction;
-
-    int face;
-    float2 uv;
-    CubeFaceUv(direction, face, uv);
-    return SAMPLE_TEXTURE2D_ARRAY_LOD(_CloudWeatherMap, sampler_CloudWeatherMap, uv, face, 0);
 }
 
 float WeightedNoise(float4 noise, float4 weights)
@@ -209,13 +141,16 @@ CloudSample SampleCloud(float3 worldPos)
         return sampleData;
 
     float3 windDir = dot(_WindDirection, _WindDirection) > 0.0001 ? normalize(_WindDirection) : float3(1.0, 0.0, 0.0);
-    float3 windOffset = windDir * (_WindSpeed * _CloudAnimSpeed * _Time.y);
+    float3 windOffset = windDir * (_WindSpeed * _CloudAnimSpeed * _GameTime);
     float3 shapePos = worldPos * _CloudNoiseScale + windOffset * 0.003;
-    float3 detailPos = worldPos * _CloudDetailNoiseScale + windOffset * 0.008;
-
     float shapeFBM = WeightedNoise(SAMPLE_TEXTURE3D_LOD(_CloudShapeNoise, sampler_CloudShapeNoise, shapePos, 0), _CloudShapeWeights);
+#ifdef CLOUD_QUALITY_LOW
+    float detailFBM = 0.5; // skip detail noise sample on low-quality path
+#else
+    float3 detailPos = worldPos * _CloudDetailNoiseScale + windOffset * 0.008;
     float detailFBM = dot(SAMPLE_TEXTURE3D_LOD(_CloudDetailNoise, sampler_CloudDetailNoise, detailPos, 0).rgb,
         float3(0.5, 0.35, 0.15));
+#endif
 
     float bottomFade = smoothstep(0.0, max(_CloudBottomFeather, 0.0001), height01);
     float topFade = 1.0 - smoothstep(1.0 - saturate(_CloudTopFeather), 1.0, height01);
@@ -248,7 +183,7 @@ float LightMarch(float3 pos, float lightStepSize, float2 pixel, int viewStep)
         * jitterStrength;
     float3 lightPos = pos + _SunParams.xyz * lightStartJitter;
 
-    for (int i = 0; i < _CloudLightSteps; i++)
+    for (int i = 0; i < min(_CloudLightSteps, CLOUD_LIGHT_STEPS_MAX); i++)
     {
         float lightStepF = (float)i;
         float perStepJitter = (Hash12(pixel + float2(viewStepF * 19.31 + lightStepF * 7.11, lightStepF * 43.17)) - 0.5)
@@ -278,6 +213,7 @@ ENDHLSL
             #pragma vertex vert
             #pragma fragment frag
             #pragma target 4.5
+            #pragma multi_compile _ CLOUD_QUALITY_LOW
 
             struct v2f
             {
@@ -315,9 +251,9 @@ ENDHLSL
 
                 float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, i.uv).r;
                 float sceneDepth = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
-                if (_PlanetRadius > 0.0)
+                if (_SeaLevelRadius > 0.0)
                 {
-                    float2 oceanHit = RaySphere(_CloudPlanetCenter, _PlanetRadius, rayOrigin, rayDir);
+                    float2 oceanHit = RaySphere(_CloudPlanetCenter, _SeaLevelRadius, rayOrigin, rayDir);
                     if (oceanHit.y > 0.0)
                         sceneDepth = min(sceneDepth, oceanHit.x);
                 }
@@ -339,7 +275,7 @@ ENDHLSL
                 if (endDistance <= startDistance)
                     return sceneColor;
 
-                int viewSteps = max(_CloudViewSteps, 1);
+                int viewSteps = min(max(_CloudViewSteps, 1), CLOUD_MAX_STEPS);
                 float stepSize = (endDistance - startDistance) / viewSteps;
                 float2 pixel = floor(i.uv * _ScreenParams.xy);
                 float pixelJitter = lerp(
@@ -350,7 +286,7 @@ ENDHLSL
 
                 float cosAngle = dot(rayDir, _SunParams.xyz);
                 float phase = CloudPhase(cosAngle);
-                float lightStepSize = max((_CloudOuterRadius - _CloudInnerRadius) / max(_CloudLightSteps, 1), 1.0);
+                float lightStepSize = max((_CloudOuterRadius - _CloudInnerRadius) / max(min(_CloudLightSteps, CLOUD_LIGHT_STEPS_MAX), 1), 1.0);
 
                 float transmittance = 1.0;
                 float3 lightEnergy = 0;

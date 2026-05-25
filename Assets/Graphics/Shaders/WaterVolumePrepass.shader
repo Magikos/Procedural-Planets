@@ -6,6 +6,7 @@ Shader "Hidden/WaterVolumePrepass"
 
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+        #include "Includes/DebugModes.hlsl"
 
         TEXTURE2D(_CameraDepthTexture);
         SAMPLER(sampler_CameraDepthTexture);
@@ -62,7 +63,7 @@ Shader "Hidden/WaterVolumePrepass"
 
         float4 FragRelaxedLip(Varyings input) : SV_Target
         {
-            if (_OceanDebugMode == 47)
+            if (_OceanDebugMode == DEBUG_VOLUME_LIP_RAW_PINK)
                 return float4(input.forwardDepth, 1.0, 0.0, -1.0);
 
             float2 uv = input.positionCS.xy / max(_ScaledScreenParams.xy, float2(1.0, 1.0));
@@ -79,7 +80,7 @@ Shader "Hidden/WaterVolumePrepass"
             float noOpaqueScene = 1.0 - sceneValid;
             float lipInFrontOfScene = step(input.forwardDepth, sceneForwardDepth + depthSlack);
 
-            if (_OceanDebugMode == 48)
+            if (_OceanDebugMode == DEBUG_VOLUME_LIP_DEPTH_GATE)
             {
                 float accepted = max(noOpaqueScene, lipInFrontOfScene);
                 return accepted > 0.5
@@ -89,7 +90,7 @@ Shader "Hidden/WaterVolumePrepass"
 
             clip(max(noOpaqueScene, lipInFrontOfScene) - 0.5);
 
-            if (_OceanDebugMode == 46)
+            if (_OceanDebugMode == DEBUG_VOLUME_LIP_PINK)
                 return float4(input.forwardDepth, 1.0, 0.0, -1.0);
 
             return EncodeWaterVolumeData(input);

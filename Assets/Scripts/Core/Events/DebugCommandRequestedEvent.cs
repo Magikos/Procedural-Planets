@@ -4,6 +4,7 @@ public enum DebugCommandType
     CycleCaptureSet,
     TriggerCapture,
     ToggleSunFreeze,
+    ToggleDebugOverlay,
     ToggleWaterDebugDetails,
     ToggleProfiling
 }

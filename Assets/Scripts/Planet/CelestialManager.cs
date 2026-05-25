@@ -49,6 +49,9 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController
     static readonly int _starSeedId = Shader.PropertyToID("_StarSeed");
     static readonly int _starDensityId = Shader.PropertyToID("_StarDensity");
     static readonly int _starBrightnessId = Shader.PropertyToID("_StarBrightness");
+    static readonly int _moonParamsId = Shader.PropertyToID("_MoonParams");
+    static readonly int _moonIntensityId = Shader.PropertyToID("_MoonIntensity");
+    const float MoonCausticMaxIntensity = 0.015f;
 
     public float TimeOfDay => _timeOfDay;
     public bool IsTimeFrozen => FreezeTime;
@@ -94,6 +97,7 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController
         UpdateSun(0f);
         UpdateMoon(0f);
         UpdateAmbient();
+        UpdateMoonShaderGlobals();
     }
 
     void OnDestroy()
@@ -139,6 +143,7 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController
         }
 
         UpdateAmbient();
+        UpdateMoonShaderGlobals();
         FireEvents();
     }
 
@@ -345,5 +350,26 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController
 
         Shader.SetGlobalFloat(_starDensityId, StarDensity);
         Shader.SetGlobalFloat(_starBrightnessId, StarBrightness);
+    }
+
+    void UpdateMoonShaderGlobals()
+    {
+        if (MoonTransform == null || PlanetCenter == null || MoonOrbitRadius <= 0f)
+        {
+            Shader.SetGlobalVector(_moonParamsId, Vector4.zero);
+            Shader.SetGlobalFloat(_moonIntensityId, 0f);
+            return;
+        }
+
+        Vector3 toMoon = MoonTransform.position - PlanetCenter.position;
+        if (toMoon.sqrMagnitude <= 0.0001f)
+        {
+            Shader.SetGlobalVector(_moonParamsId, Vector4.zero);
+            Shader.SetGlobalFloat(_moonIntensityId, 0f);
+            return;
+        }
+
+        Shader.SetGlobalVector(_moonParamsId, toMoon.normalized);
+        Shader.SetGlobalFloat(_moonIntensityId, Mathf.Clamp01(MoonFullness) * MoonCausticMaxIntensity);
     }
 }

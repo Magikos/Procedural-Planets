@@ -20,11 +20,10 @@ public class GameBootstrap : MonoBehaviour
         var debugCommandProvider = new DebugCommandProvider();
         ServiceLocator.Register<IDebugCommandProvider>(debugCommandProvider);
 
-        if (FindAnyObjectByType<DebugInputRelay>() == null)
-            gameObject.AddComponent<DebugInputRelay>();
-
-        if (FindAnyObjectByType<DebugCaptureController>() == null)
-            gameObject.AddComponent<DebugCaptureController>();
+        EnsureComponent<ShaderGlobalsController>();
+        EnsureComponent<QualityController>();
+        EnsureComponent<DebugInputRelay>();
+        EnsureComponent<DebugCaptureController>();
 
         AddOptionalComponent("WaterWakeController");
 
@@ -44,5 +43,11 @@ public class GameBootstrap : MonoBehaviour
 
         if (gameObject.GetComponent(componentType) == null)
             gameObject.AddComponent(componentType);
+    }
+
+    void EnsureComponent<T>() where T : Component
+    {
+        if (FindAnyObjectByType<T>() == null)
+            gameObject.AddComponent<T>();
     }
 }

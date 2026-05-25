@@ -21,6 +21,9 @@ public class DebugCommandProvider : IDebugCommandProvider
             case DebugCommandType.ToggleSunFreeze:
                 EventBus<DebugSunFreezeToggleRequestedEvent>.Raise(new DebugSunFreezeToggleRequestedEvent());
                 break;
+            case DebugCommandType.ToggleDebugOverlay:
+                EventBus<DebugOverlayToggleRequestedEvent>.Raise(new DebugOverlayToggleRequestedEvent());
+                break;
             case DebugCommandType.ToggleWaterDebugDetails:
                 EventBus<DebugWaterDebugDetailsToggleRequestedEvent>.Raise(new DebugWaterDebugDetailsToggleRequestedEvent());
                 break;

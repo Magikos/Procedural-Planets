@@ -4,18 +4,15 @@ HLSLINCLUDE
 
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Includes/Math.hlsl"
+#include "Includes/DebugModes.hlsl"
+#include "Includes/WeatherSampling.hlsl"
 
 TEXTURE2D(_CameraDepthTexture);
 SAMPLER(sampler_CameraDepthTexture);
 TEXTURE2D(_Source);
 SAMPLER(sampler_Source);
 
-TEXTURE2D_ARRAY(_CloudWeatherMap);
-SAMPLER(sampler_CloudWeatherMap);
-TEXTURE2D_ARRAY(_WeatherDynamicsMap);
-
 int _CloudWeatherResolution;
-float4x4 _CloudWeatherRotation;
 
 int _PrecipitationEnabled;
 float3 _PrecipitationPlanetCenter;
@@ -32,27 +29,19 @@ float4 _PrecipitationDebugDotParams;
 float4 _PrecipitationLocalParams;
 float4 _PrecipitationLocalMotion;
 
+// Platform quality - CLOUD_QUALITY_LOW keyword set by Shader.EnableKeyword on lower-tier hardware.
+#ifdef CLOUD_QUALITY_LOW
+    #define PRECIPITATION_MAX_STEPS 8
+#else
+    #define PRECIPITATION_MAX_STEPS 48
+#endif
+
 float3 _WindDirection;
 float _WindSpeed;
 float3 _SunParams;
 float _NightAmbientIntensity;
-float4 _WeatherLightningParams;
 float4 _WeatherLightningColor;
-float4 _WeatherLightningCell0;
-float4 _WeatherLightningCell1;
-float4 _WeatherLightningCell2;
-float4 _WeatherLightningCell3;
 
-float3 ContributionHeat(float3 delta, float scale)
-{
-    float intensity = saturate(dot(abs(delta), float3(0.2126, 0.7152, 0.0722)) * scale);
-    float lowToMid = smoothstep(0.02, 0.28, intensity);
-    float midToHigh = smoothstep(0.28, 0.84, intensity);
-    float3 color = lerp(float3(0.0, 0.0, 0.0), float3(0.55, 0.20, 1.0), lowToMid);
-    color = lerp(color, float3(1.0, 0.30, 0.55), midToHigh);
-    color += smoothstep(0.82, 1.0, intensity) * 0.25;
-    return saturate(color);
-}
 
 float SceneDepthScaled(float2 uv, float viewLength)
 {
@@ -83,14 +72,7 @@ float PrecipitationCameraAboveSea()
 
 float4 NoPrecipitationContribution(float4 sceneColor)
 {
-    return _OceanDebugMode == 45 ? float4(0.0, 0.0, 0.0, 1.0) : sceneColor;
-}
-
-float Hash12(float2 p)
-{
-    float3 p3 = frac(float3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return frac((p3.x + p3.y) * p3.z);
+    return _OceanDebugMode == DEBUG_PRECIPITATION_CONTRIBUTION ? float4(0.0, 0.0, 0.0, 1.0) : sceneColor;
 }
 
 float Hash11(float p)
@@ -112,92 +94,16 @@ float2 Hash22(float2 p)
         Hash12(p + float2(41.41, 11.71)));
 }
 
-float WeatherLightningCell(float4 cell, float3 normal, float storm)
-{
-    if (cell.w <= 0.0)
-        return 0.0;
-
-    float3 direction = dot(cell.xyz, cell.xyz) > 0.0001
-        ? normalize(cell.xyz)
-        : float3(0.0, 1.0, 0.0);
-    float stormMask = smoothstep(_WeatherLightningParams.z, 1.0, storm);
-    float locationMask = smoothstep(_WeatherLightningParams.y, _WeatherLightningParams.x, dot(normal, direction));
-    return cell.w * stormMask * pow(saturate(locationMask), 1.35);
-}
-
-float WeatherLightning(float3 normal, float storm)
-{
-    float lightning = WeatherLightningCell(_WeatherLightningCell0, normal, storm);
-    lightning = max(lightning, WeatherLightningCell(_WeatherLightningCell1, normal, storm));
-    lightning = max(lightning, WeatherLightningCell(_WeatherLightningCell2, normal, storm));
-    lightning = max(lightning, WeatherLightningCell(_WeatherLightningCell3, normal, storm));
-    return lightning;
-}
-
 float ValueNoise(float2 p)
 {
     float2 i = floor(p);
     float2 f = frac(p);
     float2 u = f * f * (3.0 - 2.0 * f);
-
     float a = Hash12(i);
     float b = Hash12(i + float2(1.0, 0.0));
     float c = Hash12(i + float2(0.0, 1.0));
     float d = Hash12(i + float2(1.0, 1.0));
     return lerp(lerp(a, b, u.x), lerp(c, d, u.x), u.y);
-}
-
-void CubeFaceUv(float3 direction, out int face, out float2 uv)
-{
-    float3 absDirection = abs(direction);
-    float u;
-    float v;
-
-    if (absDirection.y >= absDirection.x && absDirection.y >= absDirection.z)
-    {
-        face = direction.y > 0.0 ? 0 : 1;
-        float faceSign = direction.y > 0.0 ? 1.0 : -1.0;
-        u = direction.x / max(absDirection.y, 0.00001);
-        v = direction.z / max(absDirection.y, 0.00001) * faceSign;
-    }
-    else if (absDirection.x >= absDirection.y && absDirection.x >= absDirection.z)
-    {
-        face = direction.x > 0.0 ? 3 : 2;
-        float faceSign = direction.x > 0.0 ? 1.0 : -1.0;
-        u = direction.z / max(absDirection.x, 0.00001) * -faceSign;
-        v = direction.y / max(absDirection.x, 0.00001);
-    }
-    else
-    {
-        face = direction.z > 0.0 ? 4 : 5;
-        float faceSign = direction.z > 0.0 ? 1.0 : -1.0;
-        u = direction.x / max(absDirection.z, 0.00001) * faceSign;
-        v = direction.y / max(absDirection.z, 0.00001);
-    }
-
-    uv = saturate(float2(u, v) * 0.5 + 0.5);
-}
-
-float4 SampleWeather(float3 direction)
-{
-    float3 weatherDirection = mul((float3x3)_CloudWeatherRotation, direction);
-    direction = dot(weatherDirection, weatherDirection) > 0.0001 ? normalize(weatherDirection) : direction;
-
-    int face;
-    float2 uv;
-    CubeFaceUv(direction, face, uv);
-    return SAMPLE_TEXTURE2D_ARRAY_LOD(_CloudWeatherMap, sampler_CloudWeatherMap, uv, face, 0);
-}
-
-float4 SampleDynamics(float3 direction)
-{
-    float3 weatherDirection = mul((float3x3)_CloudWeatherRotation, direction);
-    direction = dot(weatherDirection, weatherDirection) > 0.0001 ? normalize(weatherDirection) : direction;
-
-    int face;
-    float2 uv;
-    CubeFaceUv(direction, face, uv);
-    return SAMPLE_TEXTURE2D_ARRAY_LOD(_WeatherDynamicsMap, sampler_CloudWeatherMap, uv, face, 0);
 }
 
 float3 DebugDotColor(float value)
@@ -220,7 +126,7 @@ float4 RenderCellDotDebug(float4 sceneColor, float3 normal, int mode)
     CubeFaceUv(weatherDirection, face, uv);
 
     float4 weather = SAMPLE_TEXTURE2D_ARRAY_LOD(_CloudWeatherMap, sampler_CloudWeatherMap, uv, face, 0);
-    float4 dynamics = SAMPLE_TEXTURE2D_ARRAY_LOD(_WeatherDynamicsMap, sampler_CloudWeatherMap, uv, face, 0);
+    float4 dynamics = SAMPLE_TEXTURE2D_ARRAY_LOD(_WeatherDynamicsMap, sampler_WeatherDynamicsMap, uv, face, 0);
     float value = mode == 2 ? dynamics.b : weather.g;
 
     float gridResolution = max((float)_CloudWeatherResolution, 1.0);
@@ -296,13 +202,13 @@ float SamplePrecipitationDensity(float3 worldPos)
     float faceOffset = (float)face * 613.17;
     float2 local = (faceUv - 0.5) * bottomRadius * 2.0 + faceOffset;
     local += windTangent * ((1.0 - height01) * _PrecipitationVisualParams.z * layerThickness);
-    local += windTangent * (_Time.y * _WindSpeed * _PrecipitationVisualParams.w * 8.0);
+    local += windTangent * (_GameTime * _WindSpeed * _PrecipitationVisualParams.w * 8.0);
 
     float curtainScale = max(_PrecipitationVisualParams.x, 1.0);
     float large = ValueNoise(local / curtainScale);
     large = lerp(large, ValueNoise(local / (curtainScale * 0.43) + 19.7), 0.35);
     float curtain = smoothstep(0.22, 0.88, large);
-    float fineBreakup = ValueNoise(local / max(curtainScale * 0.18, 8.0) + float2(_Time.y * 0.21, -_Time.y * 0.13));
+    float fineBreakup = ValueNoise(local / max(curtainScale * 0.18, 8.0) + float2(_GameTime * 0.21, -_GameTime * 0.13));
     float heightBreakup = ValueNoise(float2(height01 * 43.0 + faceOffset * 0.007, dot(local, float2(0.013, 0.019))));
 
     float stormWeight = lerp(0.6, 1.15, saturate(storm));
@@ -329,6 +235,7 @@ ENDHLSL
             #pragma vertex vert
             #pragma fragment frag
             #pragma target 4.5
+            #pragma multi_compile _ CLOUD_QUALITY_LOW
 
             struct v2f
             {
@@ -401,7 +308,7 @@ ENDHLSL
                     return RenderCellDotDebug(sceneColor, debugNormal, _PrecipitationDebugMode);
                 }
 
-                int steps = min(max(_PrecipitationViewSteps, 4), 48);
+                int steps = min(max(_PrecipitationViewSteps, 4), PRECIPITATION_MAX_STEPS);
                 float stepSize = (endDistance - startDistance) / steps;
                 float2 pixel = floor(i.uv * _ScreenParams.xy);
                 float pixelJitter = Hash12(pixel);
@@ -457,12 +364,13 @@ ENDHLSL
                 float rainLightning = averageLightning * _WeatherLightningColor.a;
                 float3 toCamera = normalize(rayOrigin - _PrecipitationPlanetCenter);
                 float localSun = saturate((dot(toCamera, _SunParams.xyz) + 0.1) * 3.0);
-                float light = _NightAmbientIntensity * 0.45 + localSun * 0.85 + 0.12 + rainLightning * 0.65;
+                float stormDim = lerp(1.0, 0.28, saturate(averageStorm));
+                float light = _NightAmbientIntensity * 0.45 + localSun * 0.85 * stormDim + 0.12 + rainLightning * 0.65;
                 float3 rainColor = lerp(_PrecipitationColor.rgb, _PrecipitationStormColor.rgb, saturate(averageStorm));
                 float3 result = lerp(sceneColor.rgb, rainColor * light + _WeatherLightningColor.rgb * rainLightning * 0.28, alpha);
 
-                if (_OceanDebugMode == 45)
-                    return float4(ContributionHeat(result - sceneColor.rgb, 10.0), 1.0);
+                if (_OceanDebugMode == DEBUG_PRECIPITATION_CONTRIBUTION)
+                    return float4(ContributionHeat(result - sceneColor.rgb, 10.0, float3(0.55, 0.20, 1.0), float3(1.0, 0.30, 0.55)), 1.0);
 
                 return float4(result, sceneColor.a);
             }
@@ -478,6 +386,7 @@ ENDHLSL
             #pragma vertex vertRain
             #pragma fragment fragRain
             #pragma target 4.5
+            #pragma multi_compile _ CLOUD_QUALITY_LOW
 
             struct RainVaryings
             {
@@ -526,7 +435,7 @@ ENDHLSL
                 float3 normal = normalize(float3(cosLat * cos(lon), sin(lat), cosLat * sin(lon)));
 
                 float speedJitter = lerp(0.72, 1.35, Hash11(id + 37.0));
-                float fall = frac(Hash11(id + 3.0) + _Time.y * max(_PrecipitationLocalMotion.x, 1.0) * speedJitter / layerThickness);
+                float fall = frac(Hash11(id + 3.0) + _GameTime * max(_PrecipitationLocalMotion.x, 1.0) * speedJitter / layerThickness);
 
                 float segmentLength = _PrecipitationLocalParams.y * lerp(0.65, 1.25, Hash11(id + 71.0));
                 float tipRadius = lerp(topRadius, bottomRadius - segmentLength, fall);

@@ -10,7 +10,7 @@ RWTexture2D<float4> _Result;
 int _TextureSize;
 int _NumSteps;
 
-float _PlanetRadius;
+float _SeaLevelRadius;
 float _AtmosphereRadius;
 float _RayleighScaleHeight;
 float _MieScaleHeight;
@@ -28,7 +28,7 @@ void Main(uint2 id : SV_DispatchThreadID)
     float2 dir = float2(sinAngle, cosAngle);
 
     // Start point at this height in the atmosphere
-    float startHeight = lerp(_PlanetRadius, _AtmosphereRadius, height01);
+    float startHeight = lerp(_SeaLevelRadius, _AtmosphereRadius, height01);
     float2 inPoint = float2(0, startHeight);
 
     // How far does this ray travel through the atmosphere?
@@ -47,7 +47,7 @@ void Main(uint2 id : SV_DispatchThreadID)
 
     for (int i = 0; i < _NumSteps; i++)
     {
-        float height = length(samplePos) - _PlanetRadius;
+        float height = length(samplePos) - _SeaLevelRadius;
 
         // If ray goes below planet surface, return large value (blocked)
         if (height < 0)

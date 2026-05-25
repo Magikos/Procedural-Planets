@@ -13,7 +13,7 @@ float _SunIntensity;
 float _SunDiscSize;
 float _SunDiscBlend;
 float3 _PlanetCenter;
-float _PlanetRadius;
+float _SeaLevelRadius;
 float _AtmosphereRadius;
 
 float Hash31(float3 p)
@@ -90,26 +90,26 @@ float3 SunDisc(float3 dir)
 
 float PlanetSkyVisibility(float3 dir)
 {
-    if (_PlanetRadius <= 0.0)
+    if (_SeaLevelRadius <= 0.0)
         return 1.0;
 
     float3 offset = _WorldSpaceCameraPos.xyz - _PlanetCenter;
     float cameraRadius = length(offset);
     float3 rayDir = normalize(dir);
 
-    if (cameraRadius <= _PlanetRadius * 1.002)
+    if (cameraRadius <= _SeaLevelRadius * 1.002)
     {
         float3 localNormal = cameraRadius > 0.0001 ? offset / cameraRadius : float3(0.0, 1.0, 0.0);
         float horizonDot = dot(localNormal, rayDir);
         return smoothstep(-0.018, 0.032, horizonDot);
     }
 
-    float2 planetHit = RaySphere(_PlanetCenter, _PlanetRadius, _WorldSpaceCameraPos.xyz, rayDir);
+    float2 planetHit = RaySphere(_PlanetCenter, _SeaLevelRadius, _WorldSpaceCameraPos.xyz, rayDir);
     float rayHitsPlanet = step(0.0001, planetHit.y) * step(0.0, planetHit.x);
     float rayForward = dot(offset, rayDir);
     float closestSq = max(dot(offset, offset) - rayForward * rayForward, 0.0);
-    float horizonClearance = sqrt(closestSq) - _PlanetRadius;
-    float horizonSoftness = max(_PlanetRadius * 0.00035, 0.35);
+    float horizonClearance = sqrt(closestSq) - _SeaLevelRadius;
+    float horizonSoftness = max(_SeaLevelRadius * 0.00035, 0.35);
     float horizonVisibility = smoothstep(-horizonSoftness, horizonSoftness, horizonClearance);
     return lerp(1.0, horizonVisibility, rayHitsPlanet);
 }
@@ -120,7 +120,7 @@ float StarVisibility(float3 dir)
     float3 fromCenter = _WorldSpaceCameraPos.xyz - _PlanetCenter;
     float cameraRadius = length(fromCenter);
 
-    if (_AtmosphereRadius <= _PlanetRadius || cameraRadius <= 0.0001)
+    if (_AtmosphereRadius <= _SeaLevelRadius || cameraRadius <= 0.0001)
         return 1.0;
 
     float insideAtmosphere = 1.0 - smoothstep(_AtmosphereRadius * 0.92, _AtmosphereRadius * 1.08, cameraRadius);

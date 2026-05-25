@@ -14,6 +14,9 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
     PrecipitationController _cachedController;
     static readonly int _waterFocusModeId = Shader.PropertyToID("_WaterFocusMode");
     static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
+    static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
+    static readonly int _atmosphereRadiusId = Shader.PropertyToID("_AtmosphereRadius");
+    static readonly Plane[] _frustumPlanes = new Plane[6];
 
     public override void Create()
     {
@@ -29,7 +32,10 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
         if (Shader.GetGlobalFloat(_waterFocusModeId) > 0.5f)
             return;
 
-        if (ShouldSkipForWaterSurfaceDebug(Shader.GetGlobalInt(_oceanDebugModeId)))
+        if (DebugModeConstants.SuppressesWeatherPasses(Shader.GetGlobalInt(_oceanDebugModeId)))
+            return;
+
+        if (!IsPlanetInFrustum(renderingData.cameraData.camera))
             return;
 
         if (_cachedController == null || !_cachedController.isActiveAndEnabled)
@@ -48,23 +54,19 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
         renderer.EnqueuePass(_pass);
     }
 
-    static bool ShouldSkipForWaterSurfaceDebug(int oceanDebugMode)
-    {
-        return (oceanDebugMode >= 1 && oceanDebugMode <= 12)
-            || oceanDebugMode == 18
-            || oceanDebugMode == 19
-            || oceanDebugMode == 22
-            || oceanDebugMode == 23
-            || oceanDebugMode == 25
-            || oceanDebugMode == 32
-            || oceanDebugMode == 49
-            || (oceanDebugMode >= 51 && oceanDebugMode <= 56);
-    }
-
     protected override void Dispose(bool disposing)
     {
         CoreUtils.Destroy(_material);
         _material = null;
+    }
+
+    static bool IsPlanetInFrustum(Camera camera)
+    {
+        float atmRadius = Shader.GetGlobalFloat(_atmosphereRadiusId);
+        if (atmRadius <= 0f) return true;
+        Vector3 center = Shader.GetGlobalVector(_planetCenterId);
+        GeometryUtility.CalculateFrustumPlanes(camera, _frustumPlanes);
+        return GeometryUtility.TestPlanesAABB(_frustumPlanes, new Bounds(center, Vector3.one * atmRadius * 2f));
     }
 }
 

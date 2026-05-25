@@ -1,13 +1,13 @@
 #pragma once
 
-// Atmosphere v3 — Rayleigh + Mie scattering with brute-force sun ray marching
+// Atmosphere v3 - Rayleigh + Mie scattering with brute-force sun ray marching
 // No LUT. Sea level as density origin.
 
 // --- Uniforms ---
 float3 _SunParams;          // Directional sun (normalized direction)
 float3 _PlanetCenter;
-float _PlanetRadius;        // Sea level — ray intersection floor
-float _DensityOriginRadius; // Same as _PlanetRadius — density height=0 at sea level
+float _SeaLevelRadius;        // Sea level - ray intersection floor
+float _DensityOriginRadius; // Same as _SeaLevelRadius - density height=0 at sea level
 float _AtmosphereRadius;
 
 int _ViewSteps;
@@ -64,8 +64,8 @@ SAMPLER(sampler_BakedOpticalDepth);
 
 float2 SunOpticalDepth(float3 pos, float3 dirToSun)
 {
-    float height = length(pos) - _PlanetRadius;
-    float height01 = saturate(height / (_AtmosphereRadius - _PlanetRadius));
+    float height = length(pos) - _SeaLevelRadius;
+    float height01 = saturate(height / (_AtmosphereRadius - _SeaLevelRadius));
 
     // Angle between ray direction and surface normal
     float3 normal = normalize(pos);
@@ -90,7 +90,7 @@ float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sc
     if (missedAtmo)
         return sceneColor;
 
-    float2 hitPlanet = RaySphere(0, _PlanetRadius, origin, dir);
+    float2 hitPlanet = RaySphere(0, _SeaLevelRadius, origin, dir);
 
     float dstToAtmo = hitAtmo.x;
     float dstThroughAtmo = hitAtmo.y;

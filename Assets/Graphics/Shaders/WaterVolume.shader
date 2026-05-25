@@ -10,32 +10,50 @@ Shader "Hidden/WaterVolume"
         _Alpha ("Alpha", Range(0, 1)) = 0.35
         _VolumeDensity ("Volume Density", Range(0.1, 4)) = 1.65
         _RefractionStrength ("Refraction Strength", Range(0, 1)) = 0.38
+        _CausticIntensity ("Caustic Intensity", Range(0, 8)) = 0.42
+        _CausticScale ("Caustic Scale", Float) = 0.052
+        _CausticSpeed ("Caustic Speed", Range(0, 4)) = 0.75
+        _CausticDepth ("Caustic Depth", Float) = 115
+        _CausticContrast ("Caustic Contrast", Range(0.25, 8)) = 1.35
+        _CausticPrismStrength ("Caustic Prism Strength", Range(0, 2)) = 0.46
+        _CausticPrismEdgeBoost ("Caustic Prism Edge Boost", Float) = 18
     }
 
     HLSLINCLUDE
     #include "Includes/Common.hlsl"
+    #include "Includes/Math.hlsl"
+    #include "Includes/DebugModes.hlsl"
+    #include "Includes/CloudShadows.hlsl"
 
-    TEXTURE2D(_CameraDepthTexture);
-    SAMPLER(sampler_CameraDepthTexture);
+    #define FORCE_WATER_LAYER_PROOF 0
+
     TEXTURE2D(_Source);
     SAMPLER(sampler_Source);
     TEXTURE2D(_WaterVolumeData);
     SAMPLER(sampler_WaterVolumeData);
+    TEXTURE2D(_CameraDepthTexture);
+    SAMPLER(sampler_CameraDepthTexture);
 
     float4 _ShallowColor;
     float4 _DeepColor;
-    float4 _Time;
     float _ShallowDepth;
     float _DeepDepth;
-    float _ShoreFoamSoftness;
     float _Alpha;
     float _VolumeDensity;
     float _RefractionStrength;
-
+    float _CausticIntensity;
+    float _CausticScale;
+    float _CausticSpeed;
+    float _CausticDepth;
+    float _CausticContrast;
+    float _CausticPrismStrength;
+    float _CausticPrismEdgeBoost;
     float3 _PlanetCenter;
-    float _PlanetRadius;
+    float _SeaLevelRadius;
     float3 _SunParams;
-    float _NightAmbientIntensity;
+    float _SunIntensity;
+    float3 _MoonParams;
+    float _MoonIntensity;
     int _OceanDebugMode;
 
     struct Attributes
@@ -47,8 +65,36 @@ Shader "Hidden/WaterVolume"
     {
         float4 positionCS : SV_POSITION;
         float2 uv : TEXCOORD0;
-        float3 viewVector : TEXCOORD1;
     };
+
+    struct CausticResult
+    {
+        float mask;
+        float pattern;
+        float depthFade;
+        float pathFade;
+        float sunLight;
+        float moonLight;
+        float light;
+        float waterDepth;
+        float waterPath;
+        float3 contribution;
+        float3 prismContribution;
+    };
+
+    struct BottomDistortionResult
+    {
+        float2 offsetUv;
+        float mask;
+        float valid;
+        float strengthPixels;
+        float3 color;
+    };
+
+    float WaterCoverageFromData(float4 waterData)
+    {
+        return smoothstep(0.0005, 0.018, max(saturate(waterData.g), saturate(waterData.b)));
+    }
 
     float SceneDepthValid(float rawDepth)
     {
@@ -59,649 +105,570 @@ Shader "Hidden/WaterVolume"
         #endif
     }
 
-    float Hash12(float2 p)
+    float3 ViewVectorFromUv(float2 uv)
     {
-        float3 p3 = frac(float3(p.xyx) * 0.1031);
-        p3 += dot(p3, p3.yzx + 33.33);
-        return frac((p3.x + p3.y) * p3.z);
+        float2 ndc = float2(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0);
+        float3 viewVector = mul(unity_CameraInvProjection, float4(ndc, 0.0, -1.0)).xyz;
+        return mul(unity_CameraToWorld, float4(viewVector, 0.0)).xyz;
     }
 
-    float3 ContributionHeat(float3 delta, float scale)
+    float3 SafeNormalize3(float3 value, float3 fallback)
     {
-        float intensity = saturate(dot(abs(delta), float3(0.2126, 0.7152, 0.0722)) * scale);
-        float lowToMid = smoothstep(0.02, 0.35, intensity);
-        float midToHigh = smoothstep(0.35, 0.90, intensity);
-        float3 color = lerp(float3(0.0, 0.0, 0.0), float3(0.0, 0.72, 1.0), lowToMid);
-        color = lerp(color, float3(1.0, 0.34, 0.0), midToHigh);
-        color += smoothstep(0.82, 1.0, intensity) * 0.25;
-        return saturate(color);
+        float lenSq = dot(value, value);
+        return lenSq > 0.0000001 ? value * rsqrt(lenSq) : fallback;
     }
 
-    float ValueNoise2(float2 p)
+    float CameraSeaOffset()
     {
-        float2 i = floor(p);
-        float2 f = frac(p);
-        float2 u = f * f * (3.0 - 2.0 * f);
-        float a = Hash12(i);
-        float b = Hash12(i + float2(1.0, 0.0));
-        float c = Hash12(i + float2(0.0, 1.0));
-        float d = Hash12(i + float2(1.0, 1.0));
-        return lerp(lerp(a, b, u.x), lerp(c, d, u.x), u.y);
+        return length(_WorldSpaceCameraPos.xyz - _PlanetCenter) - _SeaLevelRadius;
     }
 
-    float3 WaterNormalizeSafe(float3 value, float3 fallback)
+    float CameraUnderwater01()
     {
-        float lengthSq = dot(value, value);
-        if (lengthSq <= 0.00000001)
-            return fallback;
-
-        return value * rsqrt(lengthSq);
+        return 1.0 - smoothstep(-1.5, 2.0, CameraSeaOffset());
     }
 
-    float2 RefractionOffset(float2 uv, float strengthMask, float viewPath01)
+    float VolumeLayerVisibility()
     {
-        float2 pixel = uv * _ScreenParams.xy;
-        float t = _Time.y;
-
-        float wave0 = sin(dot(pixel, float2(0.042, 0.016)) + t * 0.82);
-        float wave1 = sin(dot(pixel, float2(-0.020, 0.052)) - t * 1.17);
-        float wave2 = sin(dot(pixel, float2(0.076, -0.031)) + t * 0.54);
-        float2 normalish = float2(wave0 + wave2 * 0.45, wave1 - wave2 * 0.35) * 0.5;
-
-        float strength = _RefractionStrength * 0.006 * smoothstep(0.035, 0.55, viewPath01) * strengthMask;
-        return normalish * strength;
+        float seaRadius = max(_SeaLevelRadius, 1.0);
+        float cameraAltitude = max(CameraSeaOffset(), 0.0);
+        float orbitalFade = 1.0 - smoothstep(seaRadius * 0.06, seaRadius * 0.42, cameraAltitude);
+        return CameraSeaOffset() < 0.0 ? 1.0 : saturate(orbitalFade);
     }
 
-    float WaterCoverageFromData(float4 waterData)
+    float3 UnderwaterNoDepthColor(float3 rayDir)
     {
-        return smoothstep(0.0005, 0.018, max(saturate(waterData.g), saturate(waterData.b)));
+        float3 cameraUp = SafeNormalize3(_WorldSpaceCameraPos.xyz - _PlanetCenter, float3(0.0, 1.0, 0.0));
+        float3 sunDir = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : cameraUp;
+        float localSun = smoothstep(-0.08, 0.20, dot(cameraUp, sunDir));
+        float viewUp = smoothstep(-0.35, 0.85, dot(rayDir, cameraUp));
+        float light = saturate(localSun * saturate(_SunIntensity / 17.0));
+        float3 deepWater = max(_DeepColor.rgb, float3(0.0, 0.024, 0.085));
+        float3 litWater = lerp(float3(0.015, 0.115, 0.18), float3(0.08, 0.34, 0.46), light);
+        return lerp(deepWater, litWater, viewUp * 0.65 + light * 0.25);
     }
 
-    float WaterCoverageAt(float2 uv)
+    float3 ReceiverNormalFromDepth(float3 receiverWS, float3 rayDir, float3 fallback)
     {
-        return WaterCoverageFromData(SAMPLE_TEXTURE2D(_WaterVolumeData, sampler_WaterVolumeData, uv));
+        float3 dx = ddx(receiverWS);
+        float3 dy = ddy(receiverWS);
+        float3 normalWS = SafeNormalize3(cross(dy, dx), fallback);
+        return dot(normalWS, -rayDir) < 0.0 ? -normalWS : normalWS;
     }
 
-    void AccumulateBestWaterData(float2 uv, inout float4 bestData, inout float bestCoverage)
+    float WaterPathToReceiver(float3 rayDir, float receiverDistance)
     {
-        float4 candidate = SAMPLE_TEXTURE2D(_WaterVolumeData, sampler_WaterVolumeData, uv);
-        float candidateCoverage = WaterCoverageFromData(candidate);
-        if (candidateCoverage > bestCoverage)
+        if (_SeaLevelRadius <= 0.0 || receiverDistance <= 0.0)
+            return 0.0;
+
+        float2 seaHit = RaySphere(_PlanetCenter, _SeaLevelRadius, _WorldSpaceCameraPos.xyz, rayDir);
+        if (seaHit.y <= 0.0 || seaHit.x >= MAX_FLOAT * 0.5)
+            return 0.0;
+
+        float pathStart = max(seaHit.x, 0.0);
+        float pathEnd = min(receiverDistance, seaHit.x + seaHit.y);
+        return max(pathEnd - pathStart, 0.0);
+    }
+
+    float FarTerrainWaterlineMask(float3 receiverWS, float3 rayDir, float receiverDistance, float screenWaterCoverage, out float seaPath)
+    {
+        seaPath = 0.0;
+
+        if (_SeaLevelRadius <= 0.0 || receiverDistance <= 0.0)
+            return 0.0;
+
+        float3 fromCenter = receiverWS - _PlanetCenter;
+        float receiverRadius = length(fromCenter);
+        if (receiverRadius <= 0.0001)
+            return 0.0;
+
+        float2 seaHit = RaySphere(_PlanetCenter, _SeaLevelRadius, _WorldSpaceCameraPos.xyz, rayDir);
+        if (seaHit.y <= 0.0 || seaHit.x >= MAX_FLOAT * 0.5)
+            return 0.0;
+
+        float seaStart = max(seaHit.x, 0.0);
+        float seaEnd = min(receiverDistance, seaHit.x + seaHit.y);
+        seaPath = max(seaEnd - seaStart, 0.0);
+        float seaBeforeTerrain = step(seaStart, receiverDistance - 0.25);
+        float pathBeforeTerrain = smoothstep(max(_ShallowDepth * 0.08, 1.0), max(_ShallowDepth * 1.5, 18.0), seaPath);
+
+        float3 planetUp = fromCenter / receiverRadius;
+        float grazingView = 1.0 - smoothstep(0.08, 0.55, abs(dot(rayDir, planetUp)));
+        float lineOfSightWater = max(saturate(screenWaterCoverage), pathBeforeTerrain);
+        return saturate(seaBeforeTerrain * pathBeforeTerrain * lineOfSightWater * lerp(0.40, 1.0, grazingView));
+    }
+
+    float3 FarTerrainWaterlineColor(float3 sourceColor, float seaPath, float mask, float volumeLight)
+    {
+        float pathTint = saturate(1.0 - exp(-seaPath / max(_DeepDepth * 0.30, 1.0)));
+        float extinction = saturate(1.0 - exp(-seaPath / max(_DeepDepth * 0.22, 1.0)));
+        float3 shallowTint = lerp(_ShallowColor.rgb, float3(0.16, 0.58, 0.68), 0.35);
+        float3 deepTint = max(_DeepColor.rgb, float3(0.0, 0.028, 0.105));
+        float3 waterTint = lerp(shallowTint, deepTint, pathTint);
+        float lightScale = lerp(0.34, 0.82, volumeLight);
+        float3 attenuatedSource = sourceColor * exp(-float3(3.80, 1.75, 0.58) * extinction);
+        float3 waterColor = lerp(attenuatedSource, waterTint * lightScale, saturate(extinction * 0.92));
+        return lerp(sourceColor, waterColor, saturate(mask));
+    }
+
+    float2 Hash22(float2 p)
+    {
+        return frac(sin(float2(
+            dot(p, float2(127.1, 311.7)),
+            dot(p, float2(269.5, 183.3)))) * 43758.5453);
+    }
+
+    float CausticVoronoi(float2 uv, float time)
+    {
+        float2 cell = floor(uv);
+        float2 local = frac(uv);
+        float nearest = 8.0;
+        float secondNearest = 8.0;
+
+        [unroll]
+        for (int y = -1; y <= 1; y++)
         {
-            bestData = candidate;
-            bestCoverage = candidateCoverage;
+            [unroll]
+            for (int x = -1; x <= 1; x++)
+            {
+                float2 offset = float2(x, y);
+                float2 hash = Hash22(cell + offset);
+                float phase = dot(cell + offset, float2(0.37, 0.51));
+                float2 animated = 0.5 + 0.38 * sin(hash * MATH_TAU + time * float2(0.83, 1.17) + phase);
+                float2 delta = offset + animated - local;
+                float distSq = dot(delta, delta);
+
+                if (distSq < nearest)
+                {
+                    secondNearest = nearest;
+                    nearest = distSq;
+                }
+                else if (distSq < secondNearest)
+                {
+                    secondNearest = distSq;
+                }
+            }
         }
+
+        float edgeDistance = sqrt(secondNearest) - sqrt(nearest);
+        float core = 1.0 - smoothstep(0.035, 0.13, edgeDistance);
+        float halo = 1.0 - smoothstep(0.10, 0.34, edgeDistance);
+        return saturate(core * 0.34 + halo * 0.22);
     }
 
-    float4 WaterExpandedData(float2 uv, out float centerCoverage, out float expandedCoverage)
+    float CausticPatternUv(float2 uv, float time)
     {
-        float4 centerData = SAMPLE_TEXTURE2D(_WaterVolumeData, sampler_WaterVolumeData, uv);
-        centerCoverage = WaterCoverageFromData(centerData);
-
-        float4 bestData = centerData;
-        float bestCoverage = centerCoverage;
-        float2 texel = 1.0 / max(_ScreenParams.xy, float2(1.0, 1.0));
-
-        AccumulateBestWaterData(uv + float2(texel.x, 0.0), bestData, bestCoverage);
-        AccumulateBestWaterData(uv - float2(texel.x, 0.0), bestData, bestCoverage);
-        AccumulateBestWaterData(uv + float2(0.0, texel.y), bestData, bestCoverage);
-        AccumulateBestWaterData(uv - float2(0.0, texel.y), bestData, bestCoverage);
-        AccumulateBestWaterData(uv + texel, bestData, bestCoverage);
-        AccumulateBestWaterData(uv - texel, bestData, bestCoverage);
-        AccumulateBestWaterData(uv + float2(texel.x, -texel.y), bestData, bestCoverage);
-        AccumulateBestWaterData(uv + float2(-texel.x, texel.y), bestData, bestCoverage);
-
-        expandedCoverage = bestCoverage;
-        return bestData;
+        float2 waveWarp = float2(
+            sin(dot(uv, float2(0.73, 1.27)) + time * 0.42),
+            sin(dot(uv, float2(-1.11, 0.91)) - time * 0.37)) * 0.18;
+        float2 warpedUv = uv + waveWarp;
+        float baseLayer = CausticVoronoi(warpedUv + float2(time * 0.17, -time * 0.09), time);
+        float detailLayer = CausticVoronoi(warpedUv * 1.63 + float2(-time * 0.11, time * 0.15), time * 1.27);
+        float caustic = saturate(baseLayer * 0.86 + detailLayer * 0.38 + baseLayer * detailLayer * 0.18);
+        caustic = smoothstep(0.10, 0.58, caustic);
+        return pow(caustic, max(_CausticContrast, 0.05));
     }
 
-    float WaterScreenEdgeFade(float2 uv, float centerCoverage)
+    float CausticPattern(float3 worldPos, float3 planetUp)
     {
-        float2 texel = 1.0 / max(_ScreenParams.xy, float2(1.0, 1.0));
-        float nearCoverage = centerCoverage;
-        nearCoverage = min(nearCoverage, WaterCoverageAt(uv + float2(texel.x, 0.0)));
-        nearCoverage = min(nearCoverage, WaterCoverageAt(uv - float2(texel.x, 0.0)));
-        nearCoverage = min(nearCoverage, WaterCoverageAt(uv + float2(0.0, texel.y)));
-        nearCoverage = min(nearCoverage, WaterCoverageAt(uv - float2(0.0, texel.y)));
+        float3 local = (worldPos - _PlanetCenter) * max(_CausticScale, 0.0001);
+        float3 weights = pow(abs(planetUp), 4.0);
+        weights /= max(weights.x + weights.y + weights.z, 0.0001);
 
-        float2 wideTexel = texel * 2.0;
-        float wideCoverage = centerCoverage;
-        wideCoverage = min(wideCoverage, WaterCoverageAt(uv + float2(wideTexel.x, 0.0)));
-        wideCoverage = min(wideCoverage, WaterCoverageAt(uv - float2(wideTexel.x, 0.0)));
-        wideCoverage = min(wideCoverage, WaterCoverageAt(uv + float2(0.0, wideTexel.y)));
-        wideCoverage = min(wideCoverage, WaterCoverageAt(uv - float2(0.0, wideTexel.y)));
-
-        float nearFade = smoothstep(0.10, 0.95, nearCoverage);
-        float wideFade = lerp(0.58, 1.0, smoothstep(0.10, 0.95, wideCoverage));
-        return saturate(nearFade * wideFade);
+        float time = _GameTime * _CausticSpeed;
+        float causticX = CausticPatternUv(local.yz + float2(11.37, -4.91), time);
+        float causticY = CausticPatternUv(local.zx + float2(-6.53, 8.24), time * 1.03);
+        float causticZ = CausticPatternUv(local.xy + float2(3.19, 13.72), time * 0.97);
+        return causticX * weights.x + causticY * weights.y + causticZ * weights.z;
     }
 
-    float SeaSphereIntersections(float3 originWS, float3 viewDir, out float entryDistance, out float exitDistance)
+    float3 CausticPrismColor(float pattern)
     {
-        entryDistance = 0.0;
-        exitDistance = 0.0;
-
-        float3 origin = originWS - _PlanetCenter;
-        float b = dot(origin, viewDir);
-        float c = dot(origin, origin) - _PlanetRadius * _PlanetRadius;
-        float h = b * b - c;
-        if (h <= 0.0)
+        if (_CausticPrismStrength <= 0.0)
             return 0.0;
 
-        float root = sqrt(h);
-        float nearHit = -b - root;
-        float farHit = -b + root;
-        if (farHit <= 0.0)
-            return 0.0;
+        float2 gradient = float2(ddx(pattern), ddy(pattern));
+        float gradientLength = length(gradient);
+        float edge = saturate(gradientLength * max(_CausticPrismEdgeBoost, 0.0));
+        float2 gradientDir = gradient * rsqrt(max(dot(gradient, gradient), 0.000001));
+        float ridgeMask = smoothstep(0.03, 0.42, pattern);
+        float side = dot(gradientDir, float2(0.7415, -0.6709));
+        float redSide = smoothstep(-0.12, 0.92, side);
+        float blueSide = smoothstep(-0.12, 0.92, -side);
+        float greenCenter = saturate(1.0 - abs(side) * 1.18);
 
-        entryDistance = max(nearHit, 0.0);
-        exitDistance = max(farHit, 0.0);
-        return 1.0;
+        float3 redFringe = float3(1.00, 0.22, 0.06) * redSide;
+        float3 greenFringe = float3(0.08, 0.95, 0.20) * greenCenter * 0.70;
+        float3 blueFringe = float3(0.16, 0.36, 1.00) * blueSide;
+        return (redFringe + greenFringe + blueFringe) * edge * ridgeMask;
     }
 
-    float SeaSphereExitDistance(float3 originWS, float3 viewDir)
+    float2 BottomDistortionField(float3 worldPos)
     {
-        float entryDistance;
-        float exitDistance;
-        float hit = SeaSphereIntersections(originWS, viewDir, entryDistance, exitDistance);
-        return hit > 0.0 ? exitDistance : 0.0;
+        float3 local = (worldPos - _PlanetCenter) * 0.0125;
+        float time = _GameTime * 0.42;
+        float wave0 = sin(dot(local.xy, float2(1.37, 0.61)) + time * 1.18);
+        float wave1 = sin(dot(local.yz, float2(-0.74, 1.52)) - time * 0.91);
+        float wave2 = sin(dot(local.zx, float2(1.91, -0.83)) + time * 0.67);
+        float wave3 = sin(dot(local.xy + local.zz, float2(-1.12, 1.76)) - time * 1.31);
+        return float2(wave0 + wave2 * 0.55, wave1 - wave3 * 0.45) * 0.46;
+    }
+
+    float VolumeOpticalDepth(CausticResult caustics)
+    {
+        float depthRange = max(_DeepDepth - _ShallowDepth, 1.0);
+        float depth01 = saturate((caustics.waterDepth - _ShallowDepth * 0.35) / depthRange);
+        float path01 = saturate(caustics.waterPath / max(_DeepDepth * 0.55, 1.0));
+        float density = max(_VolumeDensity, 0.001);
+        float shallowRelease = smoothstep(0.015, 0.12, caustics.waterPath);
+        float opticalDepth = depth01 * 0.85 + path01 * 1.95 + depth01 * path01 * 1.40;
+        return opticalDepth * density * shallowRelease;
+    }
+
+    float3 VolumeBodyTransmittance(CausticResult caustics)
+    {
+        float opticalDepth = VolumeOpticalDepth(caustics);
+        float3 absorption = float3(4.85, 2.05, 0.72);
+        return exp(-absorption * opticalDepth);
+    }
+
+    float3 VolumeBodyTint(CausticResult caustics)
+    {
+        float opticalDepth = VolumeOpticalDepth(caustics);
+        float deepMix = saturate(1.0 - exp(-opticalDepth * 1.08));
+        float3 shallowTint = lerp(_ShallowColor.rgb, float3(0.22, 0.76, 0.82), 0.35);
+        float3 deepTint = max(_DeepColor.rgb, float3(0.0, 0.028, 0.105));
+        return lerp(shallowTint, deepTint, deepMix);
+    }
+
+    float VolumeBodyOpacity(CausticResult caustics)
+    {
+        float opticalDepth = VolumeOpticalDepth(caustics);
+        float opticalOpacity = saturate(1.0 - exp(-opticalDepth * 1.72));
+        float pathGate = smoothstep(0.02, 0.70, caustics.waterPath);
+        return saturate(opticalOpacity * max(_Alpha, 0.65) * caustics.mask * pathGate);
+    }
+
+    float VolumeDepthFog(CausticResult caustics)
+    {
+        float pathFog = 1.0 - exp(-caustics.waterPath / max(_DeepDepth * 0.26, 1.0));
+        float depthFog = 1.0 - exp(-caustics.waterDepth / max(_DeepDepth * 0.44, 1.0));
+        return saturate(max(pathFog * 0.78, depthFog * 0.48) * caustics.mask);
+    }
+
+    float VolumeBodyLight(CausticResult caustics)
+    {
+        // Absorption can happen in darkness, but blue volume scatter needs light.
+        return saturate(caustics.light * 1.28 + 0.012);
+    }
+
+    BottomDistortionResult EmptyBottomDistortionResult(float3 sourceColor)
+    {
+        BottomDistortionResult result;
+        result.offsetUv = 0.0;
+        result.mask = 0.0;
+        result.valid = 0.0;
+        result.strengthPixels = 0.0;
+        result.color = sourceColor;
+        return result;
+    }
+
+    BottomDistortionResult ComputeBottomDistortion(float2 uv, float3 sourceColor, float3 receiverWS, CausticResult caustics, float debugScale)
+    {
+        BottomDistortionResult result = EmptyBottomDistortionResult(sourceColor);
+        if (_RefractionStrength <= 0.0 || caustics.mask <= 0.0)
+            return result;
+
+        float pathRamp = smoothstep(0.08, 0.85, caustics.waterPath);
+        float baseMask = caustics.mask * caustics.depthFade * pathRamp;
+        if (baseMask <= 0.0)
+            return result;
+
+        float2 field = BottomDistortionField(receiverWS);
+        float shallowStrength = lerp(1.0, 0.45, saturate(caustics.waterDepth / max(_CausticDepth, 1.0)));
+        float pixelStrength = _RefractionStrength * lerp(2.0, 7.0, pathRamp) * shallowStrength * baseMask * debugScale;
+        float2 offsetUv = field * pixelStrength / max(_ScreenParams.xy, float2(1.0, 1.0));
+        float2 refractedUv = clamp(uv + offsetUv, float2(0.001, 0.001), float2(0.999, 0.999));
+
+        float rawRefractedDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, refractedUv).r;
+        float depthValid = SceneDepthValid(rawRefractedDepth);
+        float3 refractedViewVector = ViewVectorFromUv(refractedUv);
+        float refractedViewLength = max(length(refractedViewVector), 0.0001);
+        float3 refractedRayDir = refractedViewVector / refractedViewLength;
+        float refractedDistance = LinearEyeDepth(rawRefractedDepth, _ZBufferParams) * refractedViewLength;
+        float3 refractedReceiverWS = _WorldSpaceCameraPos.xyz + refractedRayDir * refractedDistance;
+
+        float refractedRadius = length(refractedReceiverWS - _PlanetCenter);
+        float refractedWaterDepth = _SeaLevelRadius - refractedRadius;
+        float refractedUnderwater = smoothstep(0.05, 1.25, refractedWaterDepth);
+        float refractedWaterPath = WaterPathToReceiver(refractedRayDir, refractedDistance);
+        float refractedPathMask = smoothstep(0.02, 0.75, refractedWaterPath);
+        float sampleValid = depthValid * refractedUnderwater * refractedPathMask;
+
+        result.offsetUv = offsetUv * sampleValid;
+        result.mask = baseMask * sampleValid;
+        result.valid = sampleValid;
+        result.strengthPixels = length(result.offsetUv * _ScreenParams.xy);
+        result.color = lerp(sourceColor, SAMPLE_TEXTURE2D(_Source, sampler_Source, refractedUv).rgb, sampleValid);
+        return result;
+    }
+
+    CausticResult EmptyCausticResult()
+    {
+        CausticResult result;
+        result.mask = 0.0;
+        result.pattern = 0.0;
+        result.depthFade = 0.0;
+        result.pathFade = 0.0;
+        result.sunLight = 0.0;
+        result.moonLight = 0.0;
+        result.light = 0.0;
+        result.waterDepth = 0.0;
+        result.waterPath = 0.0;
+        result.contribution = 0.0;
+        result.prismContribution = 0.0;
+        return result;
+    }
+
+    CausticResult ComputeReceiverCaustics(float3 receiverWS, float3 rayDir, float receiverDistance, float screenWaterCoverage)
+    {
+        CausticResult result = EmptyCausticResult();
+        if (_SeaLevelRadius <= 0.0)
+            return result;
+
+        float3 fromCenter = receiverWS - _PlanetCenter;
+        float receiverRadius = length(fromCenter);
+        if (receiverRadius <= 0.0001)
+            return result;
+
+        float waterDepth = _SeaLevelRadius - receiverRadius;
+        float receiverUnderwater = smoothstep(0.05, 1.25, waterDepth);
+        if (receiverUnderwater <= 0.0)
+            return result;
+
+        float waterPath = WaterPathToReceiver(rayDir, receiverDistance);
+        float pathMask = smoothstep(0.02, 0.75, waterPath);
+        float coverage = max(saturate(screenWaterCoverage), pathMask);
+        float mask = receiverUnderwater * coverage;
+        if (mask <= 0.0)
+            return result;
+
+        float3 planetUp = fromCenter / receiverRadius;
+        float3 receiverNormal = ReceiverNormalFromDepth(receiverWS, rayDir, planetUp);
+        float depthFade = exp(-waterDepth / max(_CausticDepth, 1.0));
+        float pathFade = exp(-waterPath / max(_DeepDepth * 0.85, 1.0));
+
+        float3 sunDir = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : float3(0.0, 1.0, 0.0);
+        float localSun = smoothstep(0.025, 0.22, dot(planetUp, sunDir));
+        float sunFacing = smoothstep(0.04, 0.55, dot(receiverNormal, sunDir));
+        float sunShadow = CloudShadowFactor(receiverWS, sunDir, localSun);
+        float sunIntensity01 = saturate(_SunIntensity / 17.0);
+        float sunLight = localSun * sunFacing * sunShadow * sunIntensity01;
+
+        float3 moonDir = dot(_MoonParams, _MoonParams) > 0.0001 ? normalize(_MoonParams) : float3(0.0, -1.0, 0.0);
+        float localMoon = smoothstep(0.08, 0.34, dot(planetUp, moonDir));
+        float moonFacing = smoothstep(0.10, 0.62, dot(receiverNormal, moonDir));
+        float moonShadow = CloudShadowFactor(receiverWS, moonDir, localMoon);
+        float moonLight = localMoon * moonFacing * moonShadow * saturate(_MoonIntensity);
+
+        float light = saturate(sunLight + moonLight);
+        if (light <= 0.0001)
+        {
+            result.mask = mask;
+            result.depthFade = depthFade;
+            result.pathFade = pathFade;
+            result.waterDepth = waterDepth;
+            result.waterPath = waterPath;
+            return result;
+        }
+
+        float pattern = CausticPattern(receiverWS, planetUp);
+        float shallow01 = saturate(waterDepth / max(_CausticDepth, 1.0));
+        float3 causticColor = lerp(float3(1.0, 0.93, 0.72), float3(0.42, 0.80, 0.95), shallow01);
+        float prismMask = saturate(mask * depthFade * pathFade * light);
+        float3 prismColor = CausticPrismColor(pattern);
+        float prismPresence = saturate(max(prismColor.r, max(prismColor.g, prismColor.b)) * _CausticPrismStrength);
+        float whitePattern = pattern * (1.0 - prismPresence * 0.42);
+        float intensity = whitePattern * _CausticIntensity * mask * depthFade * pathFade * light;
+        float3 prismContribution = prismColor * _CausticPrismStrength * prismMask * (0.55 + pattern * 0.75);
+
+        result.mask = mask;
+        result.pattern = pattern;
+        result.depthFade = depthFade;
+        result.pathFade = pathFade;
+        result.sunLight = sunLight;
+        result.moonLight = moonLight;
+        result.light = light;
+        result.waterDepth = waterDepth;
+        result.waterPath = waterPath;
+        result.contribution = causticColor * intensity;
+        result.prismContribution = prismContribution;
+        return result;
     }
 
     Varyings Vert(Attributes input)
     {
         Varyings output;
         output.positionCS = GetFullScreenTriangleVertexPosition(input.vertexID);
-        float2 uv = GetFullScreenTriangleTexCoord(input.vertexID);
-        output.uv = uv;
-
-        #if UNITY_UV_STARTS_AT_TOP
-            float2 ndcForView = float2(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0);
-        #else
-            float2 ndcForView = float2(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
-        #endif
-
-        float3 viewVector = mul(unity_CameraInvProjection, float4(ndcForView, 0, -1)).xyz;
-        output.viewVector = mul(unity_CameraToWorld, float4(viewVector, 0)).xyz;
+        output.uv = GetFullScreenTriangleTexCoord(input.vertexID);
         return output;
     }
 
     float4 Frag(Varyings input) : SV_Target
     {
-        if ((_OceanDebugMode > 0 && _OceanDebugMode <= 11)
-            || _OceanDebugMode == 18
-            || _OceanDebugMode == 19
-            || _OceanDebugMode == 22
-            || _OceanDebugMode == 23
-            || _OceanDebugMode == 25
-            || _OceanDebugMode == 26
-            || _OceanDebugMode == 32
-            || _OceanDebugMode == 34
-            || _OceanDebugMode == 49
-            || _OceanDebugMode == 51
-            || _OceanDebugMode == 52
-            || _OceanDebugMode == 53
-            || _OceanDebugMode == 54
-            || _OceanDebugMode == 55)
-            return SAMPLE_TEXTURE2D(_Source, sampler_Source, input.uv);
+        float4 source = SAMPLE_TEXTURE2D(_Source, sampler_Source, input.uv);
 
-        float centerWaterCoverage;
-        float expandedWaterCoverage;
-        float4 centerWaterData = SAMPLE_TEXTURE2D(_WaterVolumeData, sampler_WaterVolumeData, input.uv);
-        if (_OceanDebugMode == 46 || _OceanDebugMode == 47 || _OceanDebugMode == 48)
+        if (_OceanDebugMode == DEBUG_WATER_OFF || _OceanDebugMode == DEBUG_SURFACE_ONLY)
+            return source;
+
+        #if FORCE_WATER_LAYER_PROOF
         {
-            float lipMarker = -centerWaterData.a;
-            float rejectedLipMask = step(1.5, lipMarker);
-            float acceptedLipMask = step(0.5, lipMarker) * (1.0 - rejectedLipMask);
-            float lipMask = saturate(acceptedLipMask + rejectedLipMask);
-            float mainWaterMask = WaterCoverageFromData(centerWaterData) * (1.0 - lipMask);
-            float4 originalDebug = SAMPLE_TEXTURE2D(_Source, sampler_Source, input.uv);
-            float3 debugColor = originalDebug.rgb * 0.18;
-            debugColor = lerp(debugColor, float3(0.0, 0.42, 1.0), saturate(mainWaterMask * 0.70));
-            debugColor = lerp(debugColor, float3(1.0, 0.72, 0.0), rejectedLipMask);
-            debugColor = lerp(debugColor, float3(1.0, 0.0, 1.0), acceptedLipMask);
-            return float4(debugColor, originalDebug.a);
+            float rawDepthProof = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, input.uv).r;
+            float4 waterDataProof = SAMPLE_TEXTURE2D(_WaterVolumeData, sampler_WaterVolumeData, input.uv);
+            float waterMaskProof = WaterCoverageFromData(waterDataProof);
+
+            if (SceneDepthValid(rawDepthProof) > 0.0)
+            {
+                float3 viewVectorProof = ViewVectorFromUv(input.uv);
+                float viewLengthProof = max(length(viewVectorProof), 0.0001);
+                float3 rayDirProof = viewVectorProof / viewLengthProof;
+                float receiverDistanceProof = LinearEyeDepth(rawDepthProof, _ZBufferParams) * viewLengthProof;
+                float3 receiverWSProof = _WorldSpaceCameraPos.xyz + rayDirProof * receiverDistanceProof;
+                CausticResult causticsProof = ComputeReceiverCaustics(receiverWSProof, rayDirProof, receiverDistanceProof, waterMaskProof);
+                waterMaskProof = max(waterMaskProof, causticsProof.mask);
+            }
+
+            float waterMask = step(0.001, waterMaskProof);
+            float3 outsideColor = _OceanDebugMode == DEBUG_OFF ? source.rgb : float3(0.0, 0.0, 0.0);
+            return float4(lerp(outsideColor, float3(0.0, 0.0, 1.0), waterMask), 1.0);
+        }
+        #endif
+
+        float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, input.uv).r;
+        bool causticDebug = _OceanDebugMode == DEBUG_CAUSTICS_MASK
+            || _OceanDebugMode == DEBUG_CAUSTICS_ONLY
+            || _OceanDebugMode == DEBUG_CAUSTICS_LIGHT
+            || _OceanDebugMode == DEBUG_CAUSTICS_PRISM;
+        bool bottomDistortionDebug = _OceanDebugMode == DEBUG_BOTTOM_DISTORTION_ONLY
+            || _OceanDebugMode == DEBUG_BOTTOM_DISTORTION_VECTOR
+            || _OceanDebugMode == DEBUG_VOLUME_REFRACTION;
+        bool volumeBodyDebug = _OceanDebugMode == DEBUG_VOLUME_ONLY
+            || _OceanDebugMode == DEBUG_VOLUME_CONTRIBUTION;
+
+        float3 viewVector = ViewVectorFromUv(input.uv);
+        float viewLength = max(length(viewVector), 0.0001);
+        float3 rayDir = viewVector / viewLength;
+
+        if (SceneDepthValid(rawDepth) <= 0.0)
+        {
+            if (CameraUnderwater01() > 0.01 && (_OceanDebugMode == DEBUG_OFF || volumeBodyDebug))
+                return float4(UnderwaterNoDepthColor(rayDir), 1.0);
+
+            return (causticDebug || bottomDistortionDebug || volumeBodyDebug) ? float4(0.0, 0.0, 0.0, 1.0) : source;
         }
 
-        float4 waterData = WaterExpandedData(input.uv, centerWaterCoverage, expandedWaterCoverage);
-        float rawSceneDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, input.uv).r;
-        float sceneValid = SceneDepthValid(rawSceneDepth);
-        float sceneForwardDepth = LinearEyeDepth(rawSceneDepth, _ZBufferParams);
-        float viewLength = max(length(input.viewVector), 0.0001);
-        float sceneRayDistance = sceneForwardDepth * viewLength;
-        float3 viewDir = WaterNormalizeSafe(input.viewVector, float3(0.0, 0.0, 1.0));
-        float cameraRadius = length(_WorldSpaceCameraPos.xyz - _PlanetCenter);
-        float3 cameraUp = WaterNormalizeSafe(_WorldSpaceCameraPos.xyz - _PlanetCenter, float3(0.0, 1.0, 0.0));
-        float cameraSeaOffset = cameraRadius - _PlanetRadius;
-        float underwater = 1.0 - smoothstep(-0.25, 1.50, cameraSeaOffset);
-        float nearSurfaceBand = max(_PlanetRadius * 0.022, 120.0);
-        float orbitFadeBand = max(_PlanetRadius * 0.24, 1200.0);
-        float surfaceProximity01 = 1.0 - smoothstep(nearSurfaceBand, orbitFadeBand, abs(cameraSeaOffset));
-        float seaEntryDistance;
-        float seaExitDistance;
-        float seaIntersects = SeaSphereIntersections(_WorldSpaceCameraPos.xyz, viewDir, seaEntryDistance, seaExitDistance);
-        float seaEntryForwardDepth = seaEntryDistance / viewLength;
-        float sceneBehindSea = seaIntersects * sceneValid * step(seaEntryForwardDepth + 0.01, sceneForwardDepth);
-        float seaEndDistance = lerp(seaExitDistance, min(sceneRayDistance, seaExitDistance), sceneValid);
-        float seaPathMeters = max(seaEndDistance - seaEntryDistance, 0.0);
-        float seaPath01 = saturate(1.0 - exp2(-seaPathMeters / max(_DeepDepth * 0.70, 120.0)));
-        float3 seaEntryWS = _WorldSpaceCameraPos.xyz + viewDir * max(seaEntryDistance, 0.0);
-        float3 seaNormalWS = WaterNormalizeSafe(seaEntryWS - _PlanetCenter, cameraUp);
-        float seaGrazing01 = saturate(1.0 - abs(dot(viewDir, seaNormalWS)));
+        float4 waterData = SAMPLE_TEXTURE2D(_WaterVolumeData, sampler_WaterVolumeData, input.uv);
+        float screenWaterCoverage = WaterCoverageFromData(waterData);
+        float receiverDistance = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
+        float3 receiverWS = _WorldSpaceCameraPos.xyz + rayDir * receiverDistance;
 
-        float depth01Raw = saturate(waterData.g);
-        float shore01Raw = saturate(waterData.b);
-        float body01Raw = saturate(waterData.a);
-        float waterForwardDepth = waterData.r;
-        float existingWaterCoverage = max(centerWaterCoverage, expandedWaterCoverage);
-        float analyticSphereWater = saturate((1.0 - underwater)
-            * surfaceProximity01
-            * sceneBehindSea
-            * smoothstep(0.28, 0.78, seaGrazing01)
-            * smoothstep(0.05, 0.28, seaPath01)
-            * (1.0 - smoothstep(0.16, 0.86, existingWaterCoverage)));
-        waterForwardDepth = lerp(waterForwardDepth, seaEntryForwardDepth, analyticSphereWater);
-        depth01Raw = max(depth01Raw, analyticSphereWater * lerp(0.16, 0.58, seaPath01));
-        shore01Raw = max(shore01Raw, analyticSphereWater * 0.62);
-        body01Raw = max(body01Raw, analyticSphereWater);
-        float waterMaskBasis = max(depth01Raw, shore01Raw);
-        float dilationMask = saturate(expandedWaterCoverage * (1.0 - centerWaterCoverage));
-        float waterMask = max(max(centerWaterCoverage, dilationMask * 0.92), analyticSphereWater * 0.94);
-        float rawScreenEdgeFade = WaterScreenEdgeFade(input.uv, centerWaterCoverage);
-        float screenEdgeFade = max(max(centerWaterCoverage * lerp(0.72, 1.0, rawScreenEdgeFade), dilationMask * 0.82), analyticSphereWater * 0.86);
-        float coverageBasis = max(max(centerWaterCoverage, expandedWaterCoverage), analyticSphereWater);
-        float edgeBasis = max(waterMaskBasis, coverageBasis * 0.55);
-        float volumeEdgeMask = smoothstep(0.004, 0.050, edgeBasis);
-        float volumeBodyMask = lerp(0.65, 1.0, smoothstep(0.10, 0.45, body01Raw));
-        float volumeWaterMask = waterMask * volumeEdgeMask * volumeBodyMask * screenEdgeFade;
-        float openWaterRecovery = centerWaterCoverage
-            * smoothstep(0.14, 0.52, depth01Raw)
-            * smoothstep(0.18, 0.62, shore01Raw)
-            * lerp(0.55, 1.0, body01Raw);
-        volumeWaterMask = max(volumeWaterMask, openWaterRecovery * 0.84);
+        CausticResult caustics = ComputeReceiverCaustics(receiverWS, rayDir, receiverDistance, screenWaterCoverage);
+        float layerVisibility = VolumeLayerVisibility();
+        caustics.mask *= layerVisibility;
+        caustics.contribution *= layerVisibility;
+        caustics.prismContribution *= layerVisibility;
+        float farTerrainWaterlinePath;
+        float farTerrainWaterlineMask = FarTerrainWaterlineMask(receiverWS, rayDir, receiverDistance, screenWaterCoverage, farTerrainWaterlinePath) * layerVisibility;
+        farTerrainWaterlinePath *= layerVisibility;
+        float distortionDebugScale = bottomDistortionDebug ? 3.0 : 1.0;
+        BottomDistortionResult bottomDistortion = ComputeBottomDistortion(
+            input.uv,
+            source.rgb,
+            receiverWS,
+            caustics,
+            distortionDebugScale);
 
-        float3 waterPositionWS = _WorldSpaceCameraPos.xyz + viewDir * max(waterForwardDepth * viewLength, 0.0);
-        float3 waterNormalWS = WaterNormalizeSafe(lerp(cameraUp, waterPositionWS - _PlanetCenter, volumeWaterMask), cameraUp);
-        float grazing01 = saturate(1.0 - abs(dot(viewDir, waterNormalWS)));
+        if (_OceanDebugMode == DEBUG_VOLUME_MASK || _OceanDebugMode == DEBUG_VOLUME_OCCLUSION)
+            return float4(caustics.mask, screenWaterCoverage, saturate(caustics.waterPath / max(_DeepDepth, 1.0)), 1.0);
 
-        float waterVisibleRaw = volumeWaterMask * lerp(1.0, step(waterForwardDepth + 0.01, sceneForwardDepth), sceneValid);
-        float skyFallbackPath = max(_DeepDepth * lerp(1.05, 2.10, grazing01), 420.0);
-        float waterDepthFallback = lerp(max(_ShallowDepth * 0.65, 14.0), max(_DeepDepth * 0.92, 80.0), saturate(max(depth01Raw, body01Raw * depth01Raw)));
-        float fallbackPath = waterDepthFallback;
-        float aboveScenePath = max(sceneForwardDepth - waterForwardDepth, 0.0) * viewLength;
-        float shoreContact = (1.0 - underwater)
-            * waterVisibleRaw
-            * sceneValid
-            * (1.0 - smoothstep(0.10, 0.52, shore01Raw));
-        float grazingSceneContact = (1.0 - underwater)
-            * waterVisibleRaw
-            * sceneValid
-            * surfaceProximity01
-            * smoothstep(0.36, 0.82, grazing01)
-            * (1.0 - smoothstep(max(_ShallowDepth * 0.24, 8.0), max(_DeepDepth * 0.52, 120.0), aboveScenePath));
-        float contactRisk = saturate(max(shoreContact, grazingSceneContact));
-        float terrainClearance = smoothstep(max(_ShallowDepth * 0.12, 4.0), max(_ShallowDepth * 1.45, 46.0), aboveScenePath);
-        float contactVisibilityFloor = lerp(0.62, 1.0, terrainClearance);
-        float waterVisible = waterVisibleRaw * lerp(1.0, contactVisibilityFloor, contactRisk);
-        float edgeDilation = dilationMask
-            * surfaceProximity01
-            * smoothstep(0.24, 0.76, grazing01);
-        waterVisible = max(waterVisible, edgeDilation * 0.70);
-        float openWater01 = saturate(max(depth01Raw, shore01Raw) * lerp(0.55, 1.0, body01Raw));
-        float aboveWaterOpenMask = (1.0 - underwater)
-            * waterVisible
-            * body01Raw
-            * smoothstep(0.10, 0.36, depth01Raw)
-            * smoothstep(0.26, 0.66, shore01Raw);
-        float lowAnglePath = skyFallbackPath
-            * smoothstep(0.42, 0.90, grazing01)
-            * smoothstep(0.22, 0.58, openWater01)
-            * surfaceProximity01
-            * aboveWaterOpenMask;
-
-        float curvedSeaRay = saturate((1.0 - underwater)
-            * surfaceProximity01
-            * sceneBehindSea
-            * smoothstep(0.30, 0.82, seaGrazing01)
-            * smoothstep(0.035, 0.24, seaPath01)
-            * smoothstep(0.08, 0.34, openWater01));
-        float shoreSeaPathCoverage = saturate((1.0 - underwater)
-            * surfaceProximity01
-            * sceneBehindSea
-            * volumeWaterMask
-            * smoothstep(max(_ShallowDepth * 0.30, 8.0), 0.0, aboveScenePath));
-        float curvedSeaOcclusion = saturate((1.0 - underwater)
-            * surfaceProximity01
-            * sceneBehindSea
-            * smoothstep(0.18, 0.68, seaGrazing01)
-            * smoothstep(0.025, 0.16, seaPath01));
-        float curvedSeaCoverage = max(
-            max(curvedSeaRay * max(volumeWaterMask, existingWaterCoverage * 0.72), shoreSeaPathCoverage),
-            curvedSeaOcclusion * 0.92);
-        float curvedSeaPath = seaPathMeters * curvedSeaCoverage;
-        waterVisible = max(waterVisible, curvedSeaCoverage * 0.86);
-
-        float abovePath = max(
-            waterVisible * max(lerp(fallbackPath, aboveScenePath, sceneValid), lowAnglePath),
-            curvedSeaPath);
-
-        float insideSurfaceExit = SeaSphereExitDistance(_WorldSpaceCameraPos.xyz, viewDir);
-        float insideScenePath = lerp(max(_DeepDepth * 1.55, 620.0), sceneRayDistance, sceneValid);
-        float insidePath = underwater * min(insideScenePath, max(insideSurfaceExit, _ShallowDepth * 0.25));
-
-        float pathMeters = max(abovePath, insidePath);
-        float hasWater = saturate(waterVisible + underwater);
-
-        if (_OceanDebugMode == 35)
-            return float4(sceneBehindSea, seaPath01, seaGrazing01, 1.0);
-
-        if (_OceanDebugMode == 36)
-            return float4(volumeWaterMask, curvedSeaRay, curvedSeaCoverage, 1.0);
-
-        if (_OceanDebugMode == 37)
-        {
-            float pathDebugScale = max(_DeepDepth * 2.2, 720.0);
+        if (_OceanDebugMode == DEBUG_VOLUME_PATH)
             return float4(
-                saturate(aboveScenePath / pathDebugScale),
-                saturate(curvedSeaPath / pathDebugScale),
-                saturate(pathMeters / pathDebugScale),
+                saturate(caustics.waterDepth / max(_CausticDepth, 1.0)),
+                saturate(caustics.waterPath / max(_DeepDepth, 1.0)),
+                caustics.mask,
                 1.0);
-        }
 
-        if (hasWater <= 0.0)
+        if (_OceanDebugMode == DEBUG_VOLUME_LIGHT)
+            return float4(caustics.sunLight, caustics.moonLight, caustics.light, 1.0);
+
+        if (_OceanDebugMode == DEBUG_BOTTOM_DISTORTION_VECTOR || _OceanDebugMode == DEBUG_VOLUME_REFRACTION)
         {
-            if ((_OceanDebugMode >= 13 && _OceanDebugMode <= 17)
-                || _OceanDebugMode == 20
-                || _OceanDebugMode == 21
-                || _OceanDebugMode == 27
-                || _OceanDebugMode == 28
-                || _OceanDebugMode == 30
-                || _OceanDebugMode == 33
-                || _OceanDebugMode == 39
-                || _OceanDebugMode == 43)
-                return float4(0.0, 0.0, 0.0, 1.0);
-
-            return SAMPLE_TEXTURE2D(_Source, sampler_Source, input.uv);
+            float2 pixelOffset = bottomDistortion.offsetUv * _ScreenParams.xy;
+            float3 vectorColor = float3(saturate(pixelOffset * 0.15 + 0.5), bottomDistortion.mask);
+            return float4(lerp(float3(0.0, 0.0, 0.0), vectorColor, saturate(bottomDistortion.mask * 2.0)), 1.0);
         }
 
-        if (_OceanDebugMode == 13)
-            return float4(depth01Raw, shore01Raw, body01Raw, 1.0);
-
-        if (_OceanDebugMode == 14)
-            return float4(waterMask, volumeWaterMask, screenEdgeFade, 1.0);
-
-        if (_OceanDebugMode == 15)
+        if (_OceanDebugMode == DEBUG_BOTTOM_DISTORTION_ONLY)
         {
-            float pathDebugScale = max(_DeepDepth * 2.2, 720.0);
-            return float4(
-                saturate(abovePath / pathDebugScale),
-                saturate(insidePath / pathDebugScale),
-                saturate(lowAnglePath / max(skyFallbackPath, 1.0)),
-                1.0);
+            float distortionHeat = saturate(bottomDistortion.strengthPixels / 6.0);
+            float3 proofColor = lerp(bottomDistortion.color, float3(0.25, 0.72, 1.0), distortionHeat * 0.22);
+            return float4(lerp(float3(0.0, 0.0, 0.0), proofColor, saturate(bottomDistortion.mask * 1.45)), 1.0);
         }
 
-        if (_OceanDebugMode == 20)
+        if (_OceanDebugMode == DEBUG_CAUSTICS_MASK)
+            return float4(caustics.mask, caustics.depthFade, caustics.pathFade, 1.0);
+
+        if (_OceanDebugMode == DEBUG_CAUSTICS_LIGHT)
+            return float4(caustics.sunLight, caustics.moonLight, caustics.light, 1.0);
+
+        if (_OceanDebugMode == DEBUG_CAUSTICS_ONLY)
         {
-            float sceneBehindWater = saturate((sceneForwardDepth - waterForwardDepth) / max(_DeepDepth, 1.0));
-            return float4(waterVisible, sceneValid, sceneBehindWater * volumeWaterMask, 1.0);
+            float proof = caustics.pattern * caustics.mask * max(caustics.light, 0.15);
+            return float4(saturate(proof * float3(0.90, 1.00, 0.86) * 2.0), 1.0);
         }
 
-        if (_OceanDebugMode == 27)
-            return float4(contactRisk, terrainClearance, waterVisible, 1.0);
-
-        if (_OceanDebugMode == 28)
-            return float4(centerWaterCoverage, expandedWaterCoverage, dilationMask, 1.0);
-
-        if (_OceanDebugMode == 33)
-            return float4(analyticSphereWater, sceneBehindSea, seaPath01, 1.0);
-
-        float depth01 = lerp(0.60, depth01Raw, volumeWaterMask);
-        float shore01 = lerp(0.78, shore01Raw, volumeWaterMask);
-        float body01 = lerp(0.72, body01Raw, volumeWaterMask);
-
-        float viewPath01 = saturate(1.0 - exp2(-pathMeters / max(_DeepDepth * 0.26, 34.0)));
-        float depthGate = smoothstep(0.006, 0.14, depth01);
-        float shoreGate = smoothstep(0.018, 0.30, shore01);
-        float longViewGate = smoothstep(0.18, 0.72, viewPath01) * smoothstep(0.015, 0.20, shore01);
-        float curvedSeaGate = curvedSeaCoverage * smoothstep(0.10, 0.40, viewPath01);
-        float opticalGate = max(max(depthGate, longViewGate), curvedSeaGate);
-        float oceanGate = lerp(0.58, 1.08, body01);
-        float underwaterPath = underwater * smoothstep(0.10, 0.70, viewPath01);
-        float longSurfacePath = waterVisible * smoothstep(0.30, 0.88, viewPath01) * smoothstep(0.18, 0.68, openWater01);
-        float sourceWaterPath01 = saturate(1.0 - exp2(-max(aboveScenePath, curvedSeaPath) / max(_DeepDepth * 0.34, 46.0)));
-        float sourcePathOcclusion = saturate((1.0 - underwater)
-            * sceneValid
-            * surfaceProximity01
-            * max(max(waterVisible, analyticSphereWater * 0.92), curvedSeaCoverage)
-            * smoothstep(0.30, 0.82, grazing01)
-            * smoothstep(0.04, 0.30, viewPath01)
-            * smoothstep(0.04, 0.36, sourceWaterPath01));
-        float horizonOcclusion = saturate((1.0 - underwater)
-            * surfaceProximity01
-            * waterVisible
-            * smoothstep(0.46, 0.88, grazing01)
-            * smoothstep(0.18, 0.66, openWater01)
-            * smoothstep(0.08, 0.46, viewPath01)
-            + edgeDilation * 0.70
-            + curvedSeaCoverage * 0.95);
-        float sourceOcclusion = saturate((1.0 - underwater)
-            * sceneValid
-            * surfaceProximity01
-            * max(max(waterVisible, waterVisibleRaw * 0.55), curvedSeaCoverage)
-            * smoothstep(0.24, 0.82, grazing01)
-            * saturate(max(max(contactRisk, horizonOcclusion * 0.88), sourcePathOcclusion * 0.92) + edgeDilation * 0.55 + curvedSeaCoverage * 0.78));
-        sourceOcclusion = max(max(sourceOcclusion, sourcePathOcclusion * 0.88), curvedSeaCoverage * 0.82);
-        float grazingBoost = lerp(1.0, 1.78, saturate(grazing01 * max(waterVisible, underwater * 0.82)));
-        float densityScale = lerp(0.80, 2.15, saturate(max(depth01, viewPath01))) * lerp(0.72, 1.0, shoreGate) * oceanGate * grazingBoost;
-        densityScale *= lerp(1.0, 2.25, saturate(underwaterPath + longSurfacePath * 0.55 + horizonOcclusion * 0.82 + sourceOcclusion + curvedSeaCoverage * 0.55));
-        float optical = saturate((1.0 - exp2(-pathMeters / max(_DeepDepth * 0.15, 28.0))) * densityScale * opticalGate * _VolumeDensity);
-
-        float contactRefractionFade = lerp(1.0, 0.10, saturate(contactRisk + horizonOcclusion * 0.85 + edgeDilation * 0.70));
-        float debugRefractionEnabled = _OceanDebugMode == 29 ? 0.0 : 1.0;
-        float refractionMask = saturate(waterVisible * surfaceProximity01 + underwater * 0.85)
-            * smoothstep(0.035, 0.50, viewPath01)
-            * contactRefractionFade
-            * debugRefractionEnabled;
-        float underwaterShoreRefractionFade = lerp(1.0,
-            smoothstep(0.22, 0.78, depth01Raw)
-            * smoothstep(0.30, 0.92, shore01Raw)
-            * (1.0 - saturate(contactRisk * 0.85 + edgeDilation * 0.70)),
-            underwater);
-        refractionMask *= underwaterShoreRefractionFade;
-        float2 refractionDelta = RefractionOffset(input.uv, refractionMask, viewPath01);
-        float2 refractedUv = saturate(input.uv + refractionDelta);
-        float2 sourceUv = lerp(input.uv, refractedUv, saturate(refractionMask));
-        float4 original = SAMPLE_TEXTURE2D(_Source, sampler_Source, sourceUv);
-        float sourceLuma = dot(original.rgb, float3(0.2126, 0.7152, 0.0722));
-        float brightSourceBleed = saturate(sourceOcclusion * smoothstep(0.52, 0.86, sourceLuma));
-        float horizonSilhouetteMatte = saturate((1.0 - underwater)
-            * surfaceProximity01
-            * sceneBehindSea
-            * smoothstep(0.36, 0.86, seaGrazing01)
-            * smoothstep(0.06, 0.32, seaPath01)
-            * smoothstep(0.12, 0.66, viewPath01)
-            * smoothstep(0.14, 0.56, openWater01));
-        float longSeaSourceMatte = saturate((1.0 - underwater)
-            * surfaceProximity01
-            * sceneBehindSea
-            * smoothstep(0.18, 0.58, seaGrazing01)
-            * smoothstep(0.12, 0.54, seaPath01)
-            * smoothstep(0.045, 0.24, max(curvedSeaCoverage, sourcePathOcclusion)));
-        float contactEdgeSignal = saturate(max(max(contactRisk, edgeDilation), dilationMask));
-        float horizonContactMatte = saturate((1.0 - underwater)
-            * surfaceProximity01
-            * sceneValid
-            * seaIntersects
-            * smoothstep(0.16, 0.52, seaGrazing01)
-            * smoothstep(0.055, 0.34, seaPath01)
-            * smoothstep(0.025, 0.18, contactEdgeSignal)
-            * smoothstep(0.36, 0.78, sourceLuma));
-        float seaSourceMatte = max(longSeaSourceMatte, horizonContactMatte * 0.88);
-
-        float deepBlend = saturate(max(max(smoothstep(0.08, 0.52, depth01), smoothstep(0.12, 0.58, openWater01) * 0.74), optical * 0.88));
-        float3 shallowColor = lerp(max(_ShallowColor.rgb, float3(0.10, 0.48, 0.50)), float3(0.04, 0.23, 0.28), smoothstep(0.45, 1.0, viewPath01) * 0.35);
-        float3 deepColor = min(_DeepColor.rgb, float3(0.012, 0.095, 0.18));
-        float3 scatterColor = lerp(shallowColor, deepColor, saturate(max(deepBlend, viewPath01 * 0.72)));
-        float3 sunDir = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : float3(0.0, 1.0, 0.0);
-        float localSun = dot(waterNormalWS, sunDir);
-        float viewSun = saturate(dot(viewDir, sunDir));
-        float rawDaylight = smoothstep(-0.08, 0.18, localSun);
-        float rawTwilight = smoothstep(-0.20, 0.08, localSun);
-
-        // Automatically suppress day-driven volume lift when looking toward a low sun over the water horizon.
-        // This keeps the underwater and horizon views deterministic without a runtime debug toggle.
-        float sunsetBand = smoothstep(0.02, 0.40, rawDaylight) * (1.0 - smoothstep(0.54, 0.92, rawDaylight));
-        float forwardSun = smoothstep(0.18, 0.78, viewSun);
-        float brightBackground = smoothstep(0.28, 0.76, sourceLuma);
-        float horizonView = smoothstep(0.12, 0.56, max(seaGrazing01, grazing01));
-        float horizonRisk = saturate(max(horizonSilhouetteMatte, seaSourceMatte));
-        float autoDayFlatten = saturate((1.0 - underwater)
-            * surfaceProximity01
-            * sunsetBand
-            * max(horizonView * forwardSun * brightBackground, horizonRisk * 0.95));
-        float sunsetHorizonFloor = saturate((1.0 - underwater)
-            * surfaceProximity01
-            * smoothstep(-0.26, 0.16, localSun)
-            * horizonView
-            * max(forwardSun * 0.90, horizonRisk));
-        autoDayFlatten = max(autoDayFlatten, sunsetHorizonFloor);
-
-        // Non-sunset safety net: if horizon/source matte risk is high, flatten anyway.
-        float preSourceRisk = max(max(horizonRisk, sourceOcclusion), horizonSilhouetteMatte);
-        float nonSunsetRiskFloor = saturate((1.0 - underwater)
-            * surfaceProximity01
-            * smoothstep(0.20, 0.72, preSourceRisk)
-            * smoothstep(0.24, 0.72, max(horizonView, brightBackground)));
-        float underwaterRiskFloor = saturate(underwater
-            * smoothstep(0.06, 0.42, preSourceRisk)
-            * smoothstep(0.10, 0.54, viewPath01));
-        autoDayFlatten = max(autoDayFlatten, max(nonSunsetRiskFloor, underwaterRiskFloor));
-
-        // Push risky sunset/horizon cases closer to full flatten.
-        autoDayFlatten = max(autoDayFlatten, smoothstep(0.24, 0.62, autoDayFlatten));
-        float flattenRisk = max(max(sunsetHorizonFloor, nonSunsetRiskFloor), underwaterRiskFloor);
-        float flattenFloor = 0.92 * smoothstep(0.18, 0.52, flattenRisk);
-        float dayFlatten = max(autoDayFlatten, flattenFloor);
-
-        float daylight = rawDaylight;
-        float twilight = rawTwilight;
-        daylight = lerp(daylight, 0.0, dayFlatten);
-        twilight = lerp(twilight, 0.0, dayFlatten);
-        float surfaceScatterLight = max(daylight, twilight * 0.18) + _NightAmbientIntensity * 0.035;
-        float submergedScatterLight = daylight * 0.34 + twilight * 0.10 + _NightAmbientIntensity * 0.018;
-        float scatterLight = saturate(lerp(surfaceScatterLight, submergedScatterLight, underwater));
-        scatterLight *= lerp(1.0, 0.38, saturate(underwaterPath + longSurfacePath * 0.62 + horizonOcclusion));
-
-        // Surface reflection is handled in Ocean.shader; keep volume from lifting the background at sunset.
-        float forwardSunHorizon = dayFlatten;
-        float volumeBackgroundSuppress = lerp(1.0, 0.20, forwardSunHorizon);
-        scatterLight *= volumeBackgroundSuppress;
-
-        float extinctionBoost = lerp(1.0, 1.46, saturate(underwaterPath + longSurfacePath + horizonOcclusion * 0.85));
-        float3 absorptionMeters = float3(max(_DeepDepth * 0.42, 92.0), max(_DeepDepth * 0.26, 58.0), max(_DeepDepth * 0.16, 34.0)) / extinctionBoost;
-        float3 transmittance = exp2(-(pathMeters * densityScale * _VolumeDensity) / absorptionMeters);
-        float sourceMatte = saturate(max(max(max(sourceOcclusion, brightSourceBleed), seaSourceMatte * 0.92), horizonSilhouetteMatte * 0.86));
-        float underwaterShoreBand = 1.0 - smoothstep(0.08, 0.42, shore01Raw);
-        float underwaterShallowBand = 1.0 - smoothstep(0.10, 0.46, depth01Raw);
-        float underwaterContactEdge = smoothstep(0.010, 0.16, contactEdgeSignal);
-        float sourceLumaEdge = smoothstep(0.018, 0.085, fwidth(sourceLuma));
-        float underwaterSourceEdgeMatte = saturate(underwater
-            * surfaceProximity01
-            * smoothstep(0.08, 0.46, viewPath01)
-            * smoothstep(0.18, 0.72, grazing01)
-            * smoothstep(0.34, 0.76, sourceLuma)
-            * sourceLumaEdge
-            * max(0.35, 1.0 - smoothstep(0.52, 0.90, openWater01)));
-        float underwaterShoreMatte = max(underwaterSourceEdgeMatte, saturate(underwater
-            * smoothstep(0.02, 0.20, contactEdgeSignal)
-            * max(underwaterShoreBand, underwaterShallowBand * underwaterContactEdge)
-            * smoothstep(0.34, 0.82, sourceLuma)));
-        sourceMatte = max(sourceMatte, underwaterShoreMatte * 0.95);
-
-        if (_OceanDebugMode == 38)
+        if (_OceanDebugMode == DEBUG_CAUSTICS_PRISM)
         {
-            float seaMatte = smoothstep(0.025, 0.20, max(max(curvedSeaCoverage, sourcePathOcclusion), sourceMatte));
-            float3 diagnosticWater = min(deepColor, float3(0.006, 0.060, 0.110));
-            return float4(lerp(original.rgb, diagnosticWater, seaMatte), original.a);
+            float3 prismProof = caustics.prismContribution * 8.0;
+            return float4(saturate(prismProof), 1.0);
         }
 
-        if (_OceanDebugMode == 39)
-            return float4(longSeaSourceMatte, max(horizonContactMatte, underwaterSourceEdgeMatte), sourceMatte, original.a);
+        float causticMask = caustics.mask * caustics.depthFade * caustics.pathFade * caustics.light;
+        float troughShadow = saturate((1.0 - caustics.pattern) * causticMask * 0.025);
+        float bottomDistortionBlend = _OceanDebugMode == DEBUG_VOLUME_NO_REFRACTION
+            ? 0.0
+            : saturate(bottomDistortion.mask * 0.58);
+        float3 baseColor = lerp(source.rgb, bottomDistortion.color, bottomDistortionBlend);
+        float volumeOpacity = VolumeBodyOpacity(caustics);
+        float3 volumeTint = VolumeBodyTint(caustics);
+        float3 volumeTransmittance = VolumeBodyTransmittance(caustics);
+        float volumeLight = VolumeBodyLight(caustics);
 
-        float seaMatteCombined = saturate(max(seaSourceMatte, horizonSilhouetteMatte));
-        float3 sourceTransmittanceFloor = lerp(float3(0.055, 0.095, 0.135), float3(0.012, 0.036, 0.064), seaMatteCombined);
-        transmittance = lerp(transmittance, min(transmittance, sourceTransmittanceFloor), sourceMatte);
-        transmittance *= lerp(1.0, 0.32, underwaterShoreMatte);
-        float horizonGlowBleed = saturate(horizonSilhouetteMatte * smoothstep(0.56, 0.88, sourceLuma));
-        horizonGlowBleed *= 1.0 - dayFlatten;
-        float horizonSourceSuppression = lerp(1.0, 0.10, max(horizonSilhouetteMatte, horizonGlowBleed * 0.9));
-        transmittance *= horizonSourceSuppression;
-        float scatterStrength = lerp(0.38, 0.62, deepBlend) * lerp(1.0, 0.24, saturate(underwaterPath + longSurfacePath * 0.45 + horizonOcclusion * 0.85 + sourceMatte));
-        scatterStrength *= lerp(1.0, 0.58, forwardSunHorizon);
-        float3 absorbed = original.rgb * transmittance + scatterColor * scatterLight * (1.0 - transmittance) * scatterStrength;
-        float volumeBlend = saturate(max(max(max(max(optical * 0.90, viewPath01 * opticalGate * 0.66), lowAnglePath / max(skyFallbackPath, 1.0) * 0.38), horizonOcclusion * 0.72), sourceMatte) * hasWater);
-        float3 color = lerp(original.rgb, absorbed, volumeBlend);
-        float surfaceWaterPreserve = saturate((1.0 - underwater)
-            * surfaceProximity01
-            * centerWaterCoverage
-            * waterVisible
-            * (1.0 - smoothstep(0.42, 0.92, sourceMatte)));
-        float openSurfacePreserve = smoothstep(0.06, 0.42, openWater01);
-        float highlightPreserve = smoothstep(0.50, 0.88, sourceLuma);
-        float surfaceDetailPreserve = surfaceWaterPreserve * lerp(0.24, 0.56, openSurfacePreserve);
-        float surfaceHighlightPreserve = surfaceWaterPreserve * lerp(0.34, 0.88, highlightPreserve);
-        float underwaterTint = underwater * lerp(0.16, 1.0, smoothstep(0.015, 0.22, viewPath01));
-        float3 underwaterBlue = lerp(float3(0.05, 0.30, 0.40), float3(0.015, 0.10, 0.19), smoothstep(0.45, 1.0, viewPath01));
-        color = lerp(color, underwaterBlue, underwaterTint * lerp(0.34, 0.18, saturate(viewPath01)));
-
-        float deepExtinction = saturate(max(max(max(underwaterPath, longSurfacePath) * max(optical, viewPath01) * 0.86, max(horizonOcclusion, curvedSeaCoverage) * 0.58), max(sourceMatte * 0.86, seaSourceMatte * 0.94)));
-        deepExtinction = saturate(max(deepExtinction, max(horizonSilhouetteMatte * 0.82, horizonGlowBleed * 0.88)));
-        deepExtinction = saturate(max(deepExtinction, underwaterShoreMatte * 0.82));
-        deepExtinction *= lerp(1.0, 0.42, forwardSunHorizon);
-        color = lerp(color, deepColor * lerp(0.18, 0.42, scatterLight), deepExtinction);
-        color = lerp(color, deepColor * lerp(0.20, 0.44, scatterLight), underwaterShoreMatte * 0.48);
-        color = lerp(color, deepColor * lerp(0.24, 0.48, scatterLight), seaSourceMatte * 0.78);
-        color = lerp(color, deepColor * lerp(0.28, 0.52, scatterLight), horizonContactMatte * 0.42);
-        color = lerp(color, deepColor * lerp(0.30, 0.54, scatterLight), horizonSilhouetteMatte * 0.52);
-        color = lerp(color, deepColor * lerp(0.34, 0.58, scatterLight), horizonGlowBleed * 0.58);
-        color = lerp(color, deepColor * lerp(0.28, 0.48, scatterLight), brightSourceBleed * 0.42);
-        color = lerp(color, original.rgb, surfaceDetailPreserve);
-        color = lerp(color, max(color, original.rgb), surfaceHighlightPreserve);
-
-        if (_OceanDebugMode == 43)
-            return float4(ContributionHeat(color - original.rgb, 9.0), 1.0);
-
-        if (_OceanDebugMode == 30)
-            return float4(max(sourceMatte, underwaterShoreMatte), volumeBlend, saturate(1.0 - dot(transmittance, float3(0.3333, 0.3333, 0.3333))), original.a);
-
-        if (_OceanDebugMode == 12)
-            return float4(waterMask, waterVisible, saturate(optical + underwater * 0.35), original.a);
-
-        if (_OceanDebugMode == 16)
-            return float4(scatterLight, saturate(extinctionBoost - 1.0), volumeBlend, original.a);
-
-        if (_OceanDebugMode == 17)
+        if (_OceanDebugMode == DEBUG_VOLUME_ONLY || _OceanDebugMode == DEBUG_VOLUME_CONTRIBUTION)
         {
-            float2 appliedDelta = (sourceUv - input.uv) * _ScreenParams.xy;
-            return float4(
-                saturate(abs(appliedDelta.x) / 12.0),
-                saturate(abs(appliedDelta.y) / 12.0),
-                saturate(length(appliedDelta) / 12.0),
-                original.a);
+            float3 volumeOnlyColor = saturate(volumeTint * (0.18 + volumeOpacity * 1.55) * volumeLight * caustics.mask);
+            float3 waterlineOnlyColor = FarTerrainWaterlineColor(source.rgb, farTerrainWaterlinePath, farTerrainWaterlineMask, volumeLight);
+            volumeOnlyColor = lerp(volumeOnlyColor, waterlineOnlyColor, smoothstep(0.02, 0.28, farTerrainWaterlineMask));
+            return float4(volumeOnlyColor, 1.0);
         }
 
-        if (_OceanDebugMode == 21)
-            return float4(optical, volumeBlend, deepExtinction, original.a);
-
-        return float4(color, original.a);
+        float3 transmittedScene = baseColor * lerp(float3(1.0, 1.0, 1.0), volumeTransmittance, caustics.mask);
+        float lostLight = saturate(1.0 - dot(volumeTransmittance, float3(0.2126, 0.7152, 0.0722)));
+        float scatterAmount = saturate(volumeOpacity * lostLight * 0.82 * volumeLight);
+        float3 waterBody = transmittedScene + volumeTint * scatterAmount;
+        float depthFog = VolumeDepthFog(caustics);
+        float3 fogColor = volumeTint * lerp(0.14, 0.62, volumeLight);
+        waterBody = lerp(waterBody, fogColor, depthFog * 0.58);
+        float3 color = waterBody * (1.0 - troughShadow) + caustics.contribution * 0.48 + caustics.prismContribution * 1.28;
+        color = FarTerrainWaterlineColor(color, farTerrainWaterlinePath, farTerrainWaterlineMask, volumeLight);
+        return float4(saturate(color), source.a);
     }
     ENDHLSL
 
     SubShader
     {
-        Tags { "RenderPipeline" = "UniversalPipeline" "RenderType" = "Opaque" }
-        Cull Off
-        ZWrite Off
-        ZTest Always
+        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" }
+        ZWrite Off ZTest Always Blend Off Cull Off
 
         Pass
         {

@@ -12,6 +12,9 @@ public class DebugInputRelay : MonoBehaviour
     {
         RefreshInputDevices();
 
+        if (WasKeyPressed(_keyboard?.f6Key, KeyCode.F6))
+            EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.ToggleDebugOverlay));
+
         if (WasKeyPressed(_keyboard?.f7Key, KeyCode.F7))
             EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.CycleCaptureSet));
 

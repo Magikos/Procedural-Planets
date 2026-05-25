@@ -11,6 +11,9 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
 {
     static readonly int _waterVolumeEnabledId = Shader.PropertyToID("_WaterVolumeEnabled");
     static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
+    static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
+    static readonly int _atmosphereRadiusId = Shader.PropertyToID("_AtmosphereRadius");
+    static readonly Plane[] _frustumPlanes = new Plane[6];
 
     AtmosphereRenderPass _pass;
     Material _material;
@@ -42,8 +45,11 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
 
         int oceanDebugMode = Shader.GetGlobalInt(_oceanDebugModeId);
         bool useWaterInterface = Shader.GetGlobalFloat(_waterVolumeEnabledId) > 0.5f
-            && oceanDebugMode != 40
-            && oceanDebugMode != 41;
+            && oceanDebugMode != DebugModeConstants.AtmosphereBypass
+            && oceanDebugMode != DebugModeConstants.VolumeAfterAtmosphere;
+
+        if (!IsPlanetInFrustum(renderingData.cameraData.camera))
+            return;
 
         _pass.Setup(_material, useWaterInterface);
         renderer.EnqueuePass(_pass);
@@ -53,5 +59,14 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
     {
         CoreUtils.Destroy(_material);
         _material = null;
+    }
+
+    static bool IsPlanetInFrustum(Camera camera)
+    {
+        float atmRadius = Shader.GetGlobalFloat(_atmosphereRadiusId);
+        if (atmRadius <= 0f) return true;
+        Vector3 center = Shader.GetGlobalVector(_planetCenterId);
+        GeometryUtility.CalculateFrustumPlanes(camera, _frustumPlanes);
+        return GeometryUtility.TestPlanesAABB(_frustumPlanes, new Bounds(center, Vector3.one * atmRadius * 2f));
     }
 }

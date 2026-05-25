@@ -74,6 +74,40 @@ float2 RaySphere(float3 sphereCentre, float sphereRadius, float3 rayOrigin, floa
 	return intersection;
 }
 
+// Hash functions (float2 -> float, float3 -> float)
+float Hash12(float2 p)
+{
+    float3 p3 = frac(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return frac((p3.x + p3.y) * p3.z);
+}
+
+float Hash13(float3 p)
+{
+    p = frac(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return frac((p.x + p.y) * p.z);
+}
+
+// Debug contribution heatmap. Encodes the luminance of delta relative to scale as a
+// colour gradient from black -> lowColor -> highColor -> white bloom.
+// Breakpoints are canonical (0.02 / 0.30 / 0.88) so intensity is comparable across passes.
+// Pass per-pass palette colours so each shader is visually distinct in the debug view.
+float3 ContributionHeat(float3 delta, float scale, float3 lowColor, float3 highColor)
+{
+    float intensity = saturate(dot(abs(delta), float3(0.2126, 0.7152, 0.0722)) * scale);
+    float lowToMid  = smoothstep(0.02, 0.30, intensity);
+    float midToHigh = smoothstep(0.30, 0.88, intensity);
+    float3 color = lerp(float3(0.0, 0.0, 0.0), lowColor, lowToMid);
+    color = lerp(color, highColor, midToHigh);
+    color += smoothstep(0.82, 1.0, intensity) * 0.25;
+    return saturate(color);
+}
+
+// Precision-safe game time. Set from CPU: Time.time % 3600f.
+// Use this instead of _Time.y to avoid float32 precision loss after long sessions.
+float _GameTime;
+
 #endif
 
 

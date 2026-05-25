@@ -11,6 +11,7 @@ public static class WaterDebugIds
     public static readonly DebugCaptureSetId Precipitation = new DebugCaptureSetId(Module, "precipitation");
     public static readonly DebugCaptureSetId SurfaceFinish = new DebugCaptureSetId(Module, "surface-finish");
     public static readonly DebugCaptureSetId SurfaceIsolation = new DebugCaptureSetId(Module, "surface-isolation");
+    public static readonly DebugCaptureSetId Caustics = new DebugCaptureSetId(Module, "caustics");
     public static readonly DebugCaptureSetId Wakes = new DebugCaptureSetId(Module, "wakes");
     public static readonly DebugCaptureSetId VolumeDeepDive = new DebugCaptureSetId(Module, "volume-deep-dive");
 
@@ -90,7 +91,7 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
 
     public void ClearDebugMode()
     {
-        Shader.SetGlobalInt(_oceanDebugModeId, 0);
+        Shader.SetGlobalInt(_oceanDebugModeId, DebugModeConstants.Off);
     }
 
     public void AppendMetadata(DebugCaptureContext context, StringBuilder sb)
@@ -108,83 +109,148 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
 
     static void RegisterModes(DebugRegistry registry)
     {
-        RegisterMode(registry, 0, "Off", "Water");
-        RegisterMode(registry, 1, "Depth", "Water Surface");
-        RegisterMode(registry, 2, "Shore", "Water Surface");
-        RegisterMode(registry, 3, "Body", "Water Surface");
-        RegisterMode(registry, 4, "Lighting", "Water Surface");
-        RegisterMode(registry, 5, "Glint", "Water Surface");
-        RegisterMode(registry, 6, "Normals", "Water Surface");
-        RegisterMode(registry, 7, "Foam", "Water Surface");
-        RegisterMode(registry, 8, "MotionMask", "Water Surface");
-        RegisterMode(registry, 9, "WaveHeight", "Water Surface");
-        RegisterMode(registry, 10, "WaveSlope", "Water Surface");
-        RegisterMode(registry, 11, "WaterData", "Water Surface");
-        RegisterMode(registry, 12, "Absorption", "Water Surface");
-        RegisterMode(registry, 13, "VolumeData", "Water Volume");
-        RegisterMode(registry, 14, "VolumeMask", "Water Volume");
-        RegisterMode(registry, 15, "VolumePath", "Water Volume");
-        RegisterMode(registry, 16, "VolumeLight", "Water Volume");
-        RegisterMode(registry, 17, "VolumeRefraction", "Water Volume");
-        RegisterMode(registry, 18, "FoamParts", "Water Surface");
-        RegisterMode(registry, 19, "SurfaceAlpha", "Water Surface");
-        RegisterMode(registry, 20, "VolumeBoundary", "Water Volume");
-        RegisterMode(registry, 21, "VolumeOptical", "Water Volume");
-        RegisterMode(registry, 22, "SurfaceContact", "Water Surface");
-        RegisterMode(registry, 23, "SurfaceBlend", "Water Surface");
-        RegisterMode(registry, 24, "VolumeOnly", "Water Split");
-        RegisterMode(registry, 25, "SurfaceOnly", "Water Split");
-        RegisterMode(registry, 26, "WaterOff", "Water Split");
-        RegisterMode(registry, 27, "VolumeContact", "Water Volume");
-        RegisterMode(registry, 28, "VolumeDilation", "Water Volume");
-        RegisterMode(registry, 29, "VolumeNoRefraction", "Water Volume");
-        RegisterMode(registry, 30, "VolumeOcclusion", "Water Volume");
-        RegisterMode(registry, 31, "TerrainSourcePink", "Water Source");
-        RegisterMode(registry, 32, "FoamPink", "Water Source");
-        RegisterMode(registry, 33, "VolumeSphere", "Water Volume");
-        RegisterMode(registry, 34, "TerrainFaceId", "Terrain");
-        RegisterMode(registry, 35, "SeaRay", "Water Volume");
-        RegisterMode(registry, 36, "SeaVsMesh", "Water Volume");
-        RegisterMode(registry, 37, "SeaPath", "Water Volume");
-        RegisterMode(registry, 38, "SeaMatte", "Water Volume");
-        RegisterMode(registry, 39, "SeaSourceMatte", "Water Volume");
-        RegisterMode(registry, 40, "AtmosphereBypass", "Atmosphere");
-        RegisterMode(registry, 41, "VolumeAfterAtmosphere", "Water Atmosphere");
-        RegisterMode(registry, 42, "AtmosphereWaterCut", "Atmosphere");
-        RegisterMode(registry, 43, "VolumeContribution", "Water Volume");
-        RegisterMode(registry, 44, "AtmosphereContribution", "Atmosphere");
-        RegisterMode(registry, 45, "PrecipitationContribution", "Precipitation");
-        RegisterMode(registry, 46, "VolumeLipPink", "Water Volume");
-        RegisterMode(registry, 47, "VolumeLipRawPink", "Water Volume");
-        RegisterMode(registry, 48, "VolumeLipDepthGate", "Water Volume");
-        RegisterMode(registry, 49, "SurfaceBackfacePink", "Water Surface");
-        RegisterMode(registry, 50, "VolumeLipScenePink", "Water Volume");
-        RegisterMode(registry, 51, "WakeMask", "Water Surface");
-        RegisterMode(registry, 52, "SurfacePolish", "Water Surface");
-        RegisterMode(registry, 53, "SurfaceRawOpaque", "Water Surface Isolation");
-        RegisterMode(registry, 54, "SurfaceFxContrib", "Water Surface Isolation");
-        RegisterMode(registry, 55, "SurfaceAlphaParts", "Water Surface Isolation");
-        RegisterMode(registry, 56, "WaterNoPost", "Water Split");
+        RegisterMode(registry, DebugModeConstants.Off, "Off", "Water");
+        RegisterMode(registry, DebugModeConstants.WaterDepth, "Depth", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.WaterShore, "Shore", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.WaterBody, "Body", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.WaterLighting, "Lighting", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.WaterGlint, "Glint", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.WaterNormals, "Normals", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.WaterFoam, "Foam", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.WaterMotionMask, "MotionMask", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.WaterWaveHeight, "WaveHeight", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.WaterWaveSlope, "WaveSlope", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.WaterData, "WaterData", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.WaterAbsorption, "Absorption", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.VolumeData, "VolumeData", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.VolumeMask, "VolumeMask", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.VolumePath, "VolumePath", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.VolumeLight, "VolumeLight", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.VolumeRefraction, "VolumeRefraction", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.FoamParts, "FoamParts", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.SurfaceAlpha, "SurfaceAlpha", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.VolumeBoundary, "VolumeBoundary", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.VolumeOptical, "VolumeOptical", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.SurfaceContact, "SurfaceContact", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.SurfaceBlend, "SurfaceBlend", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.VolumeOnly, "VolumeOnly", "Water Split");
+        RegisterMode(registry, DebugModeConstants.SurfaceOnly, "SurfaceOnly", "Water Split");
+        RegisterMode(registry, DebugModeConstants.WaterOff, "WaterOff", "Water Split");
+        RegisterMode(registry, DebugModeConstants.VolumeContact, "VolumeContact", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.VolumeDilation, "VolumeDilation", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.VolumeNoRefraction, "VolumeNoRefraction", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.VolumeOcclusion, "VolumeOcclusion", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.TerrainSourcePink, "TerrainSourcePink", "Water Source");
+        RegisterMode(registry, DebugModeConstants.FoamPink, "FoamPink", "Water Source");
+        RegisterMode(registry, DebugModeConstants.VolumeSphere, "VolumeSphere", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.TerrainFaceId, "TerrainFaceId", "Terrain");
+        RegisterMode(registry, DebugModeConstants.SeaRay, "SeaRay", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.SeaVsMesh, "SeaVsMesh", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.SeaPath, "SeaPath", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.SeaMatte, "SeaMatte", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.SeaSourceMatte, "SeaSourceMatte", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.AtmosphereBypass, "AtmosphereBypass", "Atmosphere");
+        RegisterMode(registry, DebugModeConstants.VolumeAfterAtmosphere, "VolumeAfterAtmosphere", "Water Atmosphere");
+        RegisterMode(registry, DebugModeConstants.AtmosphereWaterCut, "AtmosphereWaterCut", "Atmosphere");
+        RegisterMode(registry, DebugModeConstants.VolumeContribution, "VolumeContribution", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.AtmosphereContribution, "AtmosphereContribution", "Atmosphere");
+        RegisterMode(registry, DebugModeConstants.PrecipitationContribution, "PrecipitationContribution", "Precipitation");
+        RegisterMode(registry, DebugModeConstants.VolumeLipPink, "VolumeLipPink", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.VolumeLipRawPink, "VolumeLipRawPink", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.VolumeLipDepthGate, "VolumeLipDepthGate", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.SurfaceBackfacePink, "SurfaceBackfacePink", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.VolumeLipScenePink, "VolumeLipScenePink", "Water Volume");
+        RegisterMode(registry, DebugModeConstants.WakeMask, "WakeMask", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.SurfacePolish, "SurfacePolish", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.SurfaceRawOpaque, "SurfaceRawOpaque", "Water Surface Isolation");
+        RegisterMode(registry, DebugModeConstants.SurfaceFxContrib, "SurfaceFxContrib", "Water Surface Isolation");
+        RegisterMode(registry, DebugModeConstants.SurfaceAlphaParts, "SurfaceAlphaParts", "Water Surface Isolation");
+        RegisterMode(registry, DebugModeConstants.WaterNoPost, "WaterNoPost", "Water Split");
+        RegisterMode(registry, DebugModeConstants.SurfaceFxProof, "SurfaceFxProof", "Water Surface Isolation");
+        RegisterMode(registry, DebugModeConstants.CausticsOnly, "CausticsOnly", "Water Caustics");
+        RegisterMode(registry, DebugModeConstants.CausticsMask, "CausticsMask", "Water Caustics");
+        RegisterMode(registry, DebugModeConstants.CausticsLight, "CausticsLight", "Water Caustics");
+        RegisterMode(registry, DebugModeConstants.BottomDistortionOnly, "BottomDistortionOnly", "Water Foundation");
+        RegisterMode(registry, DebugModeConstants.BottomDistortionVector, "BottomDistortionVector", "Water Foundation");
+        RegisterMode(registry, DebugModeConstants.CausticsPrism, "CausticsPrism", "Water Caustics");
     }
 
     static void RegisterCaptureSets(DebugRegistry registry)
     {
         registry.RegisterCaptureSet(WaterDebugIds.Artifact, "Water Artifact",
-            Modes(0, 24, 25, 26, 30, 46, 47, 48, 49, 50, 31, 32, 40, 41, 42, 43, 44, 45));
+            Modes(DebugModeConstants.Off, DebugModeConstants.VolumeOnly, DebugModeConstants.SurfaceOnly,
+                DebugModeConstants.WaterOff, DebugModeConstants.VolumeOcclusion, DebugModeConstants.VolumeLipPink,
+                DebugModeConstants.VolumeLipRawPink, DebugModeConstants.VolumeLipDepthGate,
+                DebugModeConstants.SurfaceBackfacePink, DebugModeConstants.VolumeLipScenePink,
+                DebugModeConstants.TerrainSourcePink, DebugModeConstants.FoamPink,
+                DebugModeConstants.AtmosphereBypass, DebugModeConstants.VolumeAfterAtmosphere,
+                DebugModeConstants.AtmosphereWaterCut, DebugModeConstants.VolumeContribution,
+                DebugModeConstants.AtmosphereContribution, DebugModeConstants.PrecipitationContribution));
         registry.RegisterCaptureSet(WaterDebugIds.Atmosphere, "Water/Atmosphere",
-            Modes(0, 24, 26, 40, 41, 42, 44));
+            Modes(DebugModeConstants.Off, DebugModeConstants.VolumeOnly, DebugModeConstants.WaterOff,
+                DebugModeConstants.AtmosphereBypass, DebugModeConstants.VolumeAfterAtmosphere,
+                DebugModeConstants.AtmosphereWaterCut, DebugModeConstants.AtmosphereContribution));
         registry.RegisterCaptureSet(WaterDebugIds.Interface, "Water Interface",
-            Modes(0, 11, 14, 15, 20, 27, 28, 33, 34, 35, 36, 37, 46, 47, 48, 49, 50));
+            Modes(DebugModeConstants.Off, DebugModeConstants.WaterData, DebugModeConstants.VolumeMask,
+                DebugModeConstants.VolumePath, DebugModeConstants.VolumeBoundary,
+                DebugModeConstants.VolumeContact, DebugModeConstants.VolumeDilation,
+                DebugModeConstants.VolumeSphere, DebugModeConstants.TerrainFaceId,
+                DebugModeConstants.SeaRay, DebugModeConstants.SeaVsMesh, DebugModeConstants.SeaPath,
+                DebugModeConstants.VolumeLipPink, DebugModeConstants.VolumeLipRawPink,
+                DebugModeConstants.VolumeLipDepthGate, DebugModeConstants.SurfaceBackfacePink,
+                DebugModeConstants.VolumeLipScenePink));
         registry.RegisterCaptureSet(WaterDebugIds.Precipitation, "Water Precipitation",
-            Modes(0, 40, 42, 44, 45));
-        registry.RegisterDefaultCaptureSet(WaterDebugIds.SurfaceFinish, "Water Surface Finish",
-            Modes(0, 40, 56, 25, 1, 4, 5, 6, 7, 9, 10, 18, 19, 22, 23, 51, 52, 53, 54, 55));
+            Modes(DebugModeConstants.Off, DebugModeConstants.AtmosphereBypass,
+                DebugModeConstants.AtmosphereWaterCut, DebugModeConstants.AtmosphereContribution,
+                DebugModeConstants.PrecipitationContribution));
+        registry.RegisterDefaultCaptureSet(WaterDebugIds.Caustics, "Water Foundation",
+            Modes(DebugModeConstants.Off, DebugModeConstants.VolumeOnly, DebugModeConstants.SurfaceOnly,
+                DebugModeConstants.BottomDistortionOnly, DebugModeConstants.BottomDistortionVector, DebugModeConstants.CausticsOnly,
+                DebugModeConstants.CausticsPrism, DebugModeConstants.CausticsMask,
+                DebugModeConstants.CausticsLight, DebugModeConstants.VolumeMask,
+                DebugModeConstants.WaterOff));
+        registry.RegisterCaptureSet(WaterDebugIds.SurfaceFinish, "Water Surface Finish",
+            Modes(DebugModeConstants.Off, DebugModeConstants.AtmosphereBypass, DebugModeConstants.WaterNoPost,
+                DebugModeConstants.SurfaceOnly, DebugModeConstants.WaterDepth, DebugModeConstants.WaterLighting,
+                DebugModeConstants.WaterGlint, DebugModeConstants.WaterNormals, DebugModeConstants.WaterFoam,
+                DebugModeConstants.WaterWaveHeight, DebugModeConstants.WaterWaveSlope,
+                DebugModeConstants.FoamParts, DebugModeConstants.SurfaceAlpha,
+                DebugModeConstants.SurfaceContact, DebugModeConstants.SurfaceBlend,
+                DebugModeConstants.WakeMask, DebugModeConstants.SurfacePolish,
+                DebugModeConstants.SurfaceRawOpaque, DebugModeConstants.SurfaceFxContrib,
+                DebugModeConstants.SurfaceAlphaParts, DebugModeConstants.SurfaceFxProof));
         registry.RegisterCaptureSet(WaterDebugIds.SurfaceIsolation, "Water Surface Isolation",
-            Modes(0, 40, 56, 24, 25, 53, 54, 55, 19, 23, 52));
+            Modes(DebugModeConstants.Off, DebugModeConstants.AtmosphereBypass, DebugModeConstants.WaterNoPost,
+                DebugModeConstants.VolumeOnly, DebugModeConstants.SurfaceOnly,
+                DebugModeConstants.SurfaceRawOpaque, DebugModeConstants.SurfaceFxContrib,
+                DebugModeConstants.SurfaceAlphaParts, DebugModeConstants.SurfaceAlpha,
+                DebugModeConstants.SurfaceBlend, DebugModeConstants.SurfacePolish,
+                DebugModeConstants.SurfaceFxProof));
         registry.RegisterCaptureSet(WaterDebugIds.Wakes, "Water Wakes",
-            Modes(0, 51, 7, 18, 6, 9, 10, 52));
+            Modes(DebugModeConstants.Off, DebugModeConstants.WakeMask, DebugModeConstants.WaterFoam,
+                DebugModeConstants.FoamParts, DebugModeConstants.WaterNormals,
+                DebugModeConstants.WaterWaveHeight, DebugModeConstants.WaterWaveSlope,
+                DebugModeConstants.SurfacePolish, DebugModeConstants.SurfaceFxProof));
         registry.RegisterCaptureSet(WaterDebugIds.VolumeDeepDive, "Water Volume Deep Dive",
-            Modes(0, 2, 7, 11, 12, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 46, 47, 48, 49, 50, 31, 32, 33, 34, 35, 36, 37, 38, 39));
+            Modes(DebugModeConstants.Off, DebugModeConstants.WaterShore, DebugModeConstants.WaterFoam,
+                DebugModeConstants.WaterData, DebugModeConstants.WaterAbsorption,
+                DebugModeConstants.VolumeMask, DebugModeConstants.VolumePath,
+                DebugModeConstants.FoamParts, DebugModeConstants.SurfaceAlpha,
+                DebugModeConstants.VolumeBoundary, DebugModeConstants.VolumeOptical,
+                DebugModeConstants.SurfaceContact, DebugModeConstants.SurfaceBlend,
+                DebugModeConstants.VolumeOnly, DebugModeConstants.SurfaceOnly, DebugModeConstants.WaterOff,
+                DebugModeConstants.VolumeContact, DebugModeConstants.VolumeDilation,
+                DebugModeConstants.VolumeNoRefraction, DebugModeConstants.VolumeOcclusion,
+                DebugModeConstants.VolumeLipPink, DebugModeConstants.VolumeLipRawPink,
+                DebugModeConstants.VolumeLipDepthGate, DebugModeConstants.SurfaceBackfacePink,
+                DebugModeConstants.VolumeLipScenePink, DebugModeConstants.TerrainSourcePink,
+                DebugModeConstants.FoamPink, DebugModeConstants.VolumeSphere,
+                DebugModeConstants.TerrainFaceId, DebugModeConstants.SeaRay,
+                DebugModeConstants.SeaVsMesh, DebugModeConstants.SeaPath,
+                DebugModeConstants.SeaMatte, DebugModeConstants.SeaSourceMatte,
+                DebugModeConstants.CausticsOnly, DebugModeConstants.CausticsMask,
+                DebugModeConstants.CausticsLight, DebugModeConstants.BottomDistortionOnly,
+                DebugModeConstants.BottomDistortionVector, DebugModeConstants.CausticsPrism));
     }
 
     static void RegisterMode(DebugRegistry registry, int localId, string name, string category)

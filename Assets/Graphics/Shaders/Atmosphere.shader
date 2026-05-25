@@ -4,6 +4,7 @@ HLSLINCLUDE
 
 #include "Includes/Common.hlsl"
 #include "Includes/Math.hlsl"
+#include "Includes/DebugModes.hlsl"
 
 TEXTURE2D(_CameraDepthTexture);
 SAMPLER(sampler_CameraDepthTexture);
@@ -52,7 +53,7 @@ float4 SampleWaterInterfaceDilated(float2 uv, out float waterCoverage)
 
 float WaterInterfaceFrontMask(float2 uv)
 {
-    if (_WaterVolumeEnabled <= 0.5 || _OceanDebugMode == 40 || _OceanDebugMode == 41)
+    if (_WaterVolumeEnabled <= 0.5 || _OceanDebugMode == DEBUG_ATMOSPHERE_BYPASS || _OceanDebugMode == DEBUG_VOLUME_AFTER_ATMOSPHERE)
         return 0.0;
 
     float waterCoverage;
@@ -65,36 +66,27 @@ float WaterInterfaceFrontMask(float2 uv)
     return saturate(waterCoverage * waterValid);
 }
 
-float3 ContributionHeat(float3 delta, float scale)
-{
-    float intensity = saturate(dot(abs(delta), float3(0.2126, 0.7152, 0.0722)) * scale);
-    float lowToMid = smoothstep(0.02, 0.30, intensity);
-    float midToHigh = smoothstep(0.30, 0.88, intensity);
-    float3 color = lerp(float3(0.0, 0.0, 0.0), float3(0.18, 0.48, 1.0), lowToMid);
-    color = lerp(color, float3(1.0, 0.95, 0.22), midToHigh);
-    color += smoothstep(0.82, 1.0, intensity) * 0.25;
-    return saturate(color);
-}
 
 bool ShouldBypassAtmosphereForWaterDebug()
 {
-    return _OceanDebugMode == 40
-        || (_OceanDebugMode >= 1 && _OceanDebugMode <= 12)
-        || _OceanDebugMode == 18
-        || _OceanDebugMode == 19
-        || _OceanDebugMode == 22
-        || _OceanDebugMode == 23
-        || _OceanDebugMode == 25
-        || _OceanDebugMode == 32
-        || _OceanDebugMode == 49
-        || (_OceanDebugMode >= 51 && _OceanDebugMode <= 56);
+    return _OceanDebugMode == DEBUG_ATMOSPHERE_BYPASS
+        || (_OceanDebugMode >= DEBUG_WATER_DEPTH && _OceanDebugMode <= DEBUG_WATER_ABSORPTION)  // surface isolations 1-12
+        || _OceanDebugMode == DEBUG_FOAM_PARTS
+        || _OceanDebugMode == DEBUG_SURFACE_ALPHA
+        || _OceanDebugMode == DEBUG_SURFACE_CONTACT
+        || _OceanDebugMode == DEBUG_SURFACE_BLEND
+        || _OceanDebugMode == DEBUG_SURFACE_ONLY
+        || _OceanDebugMode == DEBUG_FOAM_PINK
+        || _OceanDebugMode == DEBUG_SURFACE_BACKFACE_PINK
+        || (_OceanDebugMode >= DEBUG_WAKE_MASK && _OceanDebugMode <= DEBUG_SURFACE_FX_PROOF)  // surface isolation 51-57
+        || (_OceanDebugMode >= DEBUG_CAUSTICS_ONLY && _OceanDebugMode <= DEBUG_CAUSTICS_PRISM);
 }
 
 float CompositeDepthScaled(float2 uv, float viewLength)
 {
     float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r;
     float sceneDepth = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
-    if (_WaterVolumeEnabled <= 0.5 || _OceanDebugMode == 40 || _OceanDebugMode == 41)
+    if (_WaterVolumeEnabled <= 0.5 || _OceanDebugMode == DEBUG_ATMOSPHERE_BYPASS || _OceanDebugMode == DEBUG_VOLUME_AFTER_ATMOSPHERE)
         return sceneDepth;
 
     float waterCoverage;
@@ -172,11 +164,11 @@ ENDHLSL
                 float screenDistance = max(abs(sunNdc.x), abs(sunNdc.y));
                 float screenFade = 1.0 - smoothstep(0.95, max(_LightShaftParams2.w, 0.96), screenDistance);
 
-                float atmosphereThickness = max(_AtmosphereRadius - _PlanetRadius, 1.0);
+                float atmosphereThickness = max(_AtmosphereRadius - _SeaLevelRadius, 1.0);
                 float3 cameraFromCenter = _WorldSpaceCameraPos.xyz - _PlanetCenter;
                 float cameraRadius = length(cameraFromCenter);
                 float3 cameraNormal = cameraRadius > 0.0001 ? cameraFromCenter / cameraRadius : float3(0.0, 1.0, 0.0);
-                float cameraHeight01 = (cameraRadius - _PlanetRadius) / atmosphereThickness;
+                float cameraHeight01 = (cameraRadius - _SeaLevelRadius) / atmosphereThickness;
                 float altitudeFade = 1.0 - smoothstep(0.85, 1.25, cameraHeight01);
                 float localSunVisibility = smoothstep(-0.025, 0.065, dot(cameraNormal, sunDir));
                 float visibility = sunFacing * screenFade * altitudeFade * localSunVisibility;
@@ -217,6 +209,23 @@ ENDHLSL
                 return light * _LightShaftParams2.x * strength * visibility * SkyDepthMask(uv) * targetVisibility;
             }
 
+            float CameraUnderwater01()
+            {
+                float seaOffset = length(_WorldSpaceCameraPos.xyz - _PlanetCenter) - _SeaLevelRadius;
+                return 1.0 - smoothstep(-1.5, 2.0, seaOffset);
+            }
+
+            float3 UnderwaterSkyColor(float3 viewDir)
+            {
+                float3 cameraUp = normalize(_WorldSpaceCameraPos.xyz - _PlanetCenter);
+                float3 sunDir = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : cameraUp;
+                float daylight = smoothstep(-0.08, 0.20, dot(cameraUp, sunDir));
+                float viewUp = smoothstep(-0.35, 0.85, dot(viewDir, cameraUp));
+                float3 deepWater = float3(0.0, 0.020, 0.070);
+                float3 litWater = lerp(float3(0.012, 0.105, 0.165), float3(0.065, 0.300, 0.420), daylight);
+                return lerp(deepWater, litWater, viewUp * 0.62 + daylight * 0.24);
+            }
+
             v2f AtmosphereVertex(Attributes v)
             {
                 v2f output;
@@ -240,20 +249,33 @@ ENDHLSL
                     return originalCol;
 
                 float viewLength = length(i.viewVector);
+                float3 viewDir = i.viewVector / max(viewLength, 0.0001);
 
-                if (_OceanDebugMode == 42 && _WaterVolumeEnabled > 0.5)
+                if (_WaterVolumeEnabled > 0.5 && CameraUnderwater01() > 0.01 && SkyDepthMask(i.uv) > 0.5)
+                    return float4(UnderwaterSkyColor(viewDir), originalCol.w);
+
+                if (_OceanDebugMode == DEBUG_ATMOSPHERE_WATER_CUT && _WaterVolumeEnabled > 0.5)
                 {
                     if (WaterInterfaceFrontMask(i.uv) > 0.01)
                         return originalCol;
                 }
 
                 float sceneDepth = CompositeDepthScaled(i.uv, viewLength);
-                float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, i.viewVector / viewLength,
+                float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, viewDir,
                     sceneDepth, originalCol.xyz);
                 color += CalculateLightShafts(i.uv);
 
-                if (_OceanDebugMode == 44)
-                    return float4(ContributionHeat(color - originalCol.xyz, 8.0), 1.0);
+                // Water owns near-surface waves, foam, wakes, and glints. Atmosphere
+                // should haze those pixels, but not replace all of their local detail.
+                float waterSurfaceMask = smoothstep(0.02, 0.30, WaterInterfaceFrontMask(i.uv));
+                float sourceLuma = dot(originalCol.rgb, float3(0.2126, 0.7152, 0.0722));
+                float detailPreserve = waterSurfaceMask * 0.38;
+                float highlightPreserve = waterSurfaceMask * smoothstep(0.32, 0.82, sourceLuma) * 0.24;
+                color = lerp(color, originalCol.rgb, detailPreserve);
+                color = lerp(color, max(color, originalCol.rgb), highlightPreserve);
+
+                if (_OceanDebugMode == DEBUG_ATMOSPHERE_CONTRIBUTION)
+                    return float4(ContributionHeat(color - originalCol.xyz, 8.0, float3(0.18, 0.48, 1.0), float3(1.0, 0.95, 0.22)), 1.0);
 
                 return float4(color, originalCol.w);
             }

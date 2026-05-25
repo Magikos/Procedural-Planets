@@ -67,7 +67,7 @@ public class AtmosphereDiagnostics : MonoBehaviour
 
         // Read shader globals directly
         sb.AppendLine("--- Shader Globals ---");
-        sb.AppendLine($"_PlanetRadius: {Shader.GetGlobalFloat("_PlanetRadius"):F1}");
+        sb.AppendLine($"_SeaLevelRadius: {Shader.GetGlobalFloat("_SeaLevelRadius"):F1}");
         sb.AppendLine($"_DensityOriginRadius: {Shader.GetGlobalFloat("_DensityOriginRadius"):F1}");
         sb.AppendLine($"_AtmosphereRadius: {Shader.GetGlobalFloat("_AtmosphereRadius"):F1}");
         Vector4 rc = Shader.GetGlobalVector("_RayleighScattering");
@@ -91,7 +91,7 @@ public class AtmosphereDiagnostics : MonoBehaviour
             float sunAngle = Vector3.Angle(cam.transform.forward, new Vector3(sunDir.x, sunDir.y, sunDir.z));
             sb.AppendLine($"Angle camera->sun: {sunAngle:F1}° (0=looking at sun, 90=perpendicular, 180=away)");
             float camDist = Vector3.Distance(cam.transform.position, Vector3.zero);
-            sb.AppendLine($"Camera distance from origin: {camDist:F1} (planetRadius={Shader.GetGlobalFloat("_PlanetRadius"):F1})");
+            sb.AppendLine($"Camera distance from origin: {camDist:F1} (seaLevelRadius={Shader.GetGlobalFloat("_SeaLevelRadius"):F1})");
         }
         sb.AppendLine();
 

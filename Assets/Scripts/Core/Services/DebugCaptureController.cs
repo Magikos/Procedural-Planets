@@ -3,12 +3,15 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class DebugCaptureController : MonoBehaviour
 {
+    static readonly Color DebugOverlayBackgroundColor = new(0f, 0f, 0f, 0.55f);
+
     [Header("Debug Runtime")]
     public int CappedFrameRate = 60;
     public int ProfilingFrameRate = 1000;
 
     [Header("Debug Info")]
-    public bool ShowDebugOverlay = true;
+    [System.NonSerialized]
+    public bool ShowDebugOverlay;
     public bool ShowWaterDebugDetails;
     public bool IncludeMeshIntegrityInDebugCaptures;
 
@@ -33,6 +36,8 @@ public class DebugCaptureController : MonoBehaviour
     bool _precipitationToggleFlashActive;
     float _precipitationToggleFlashUntil;
     string _precipitationToggleFlashMessage;
+    GUIStyle _debugOverlayPanelStyle;
+    Texture2D _debugOverlayPanelTexture;
 
     void Awake()
     {
@@ -46,6 +51,7 @@ public class DebugCaptureController : MonoBehaviour
         EventBus<DebugCaptureSetCycleRequestedEvent>.Listen(OnDebugCaptureSetCycleRequested);
         EventBus<DebugCaptureRequestedEvent>.Listen(OnDebugCaptureRequested);
         EventBus<DebugSunFreezeToggleRequestedEvent>.Listen(OnDebugSunFreezeToggleRequested);
+        EventBus<DebugOverlayToggleRequestedEvent>.Listen(OnDebugOverlayToggleRequested);
         EventBus<DebugWaterDebugDetailsToggleRequestedEvent>.Listen(OnDebugWaterDebugDetailsToggleRequested);
         EventBus<DebugProfilingToggleRequestedEvent>.Listen(OnDebugProfilingToggleRequested);
     }
@@ -84,9 +90,19 @@ public class DebugCaptureController : MonoBehaviour
         EventBus<DebugCaptureSetCycleRequestedEvent>.Unlisten(OnDebugCaptureSetCycleRequested);
         EventBus<DebugCaptureRequestedEvent>.Unlisten(OnDebugCaptureRequested);
         EventBus<DebugSunFreezeToggleRequestedEvent>.Unlisten(OnDebugSunFreezeToggleRequested);
+        EventBus<DebugOverlayToggleRequestedEvent>.Unlisten(OnDebugOverlayToggleRequested);
         EventBus<DebugWaterDebugDetailsToggleRequestedEvent>.Unlisten(OnDebugWaterDebugDetailsToggleRequested);
         EventBus<DebugProfilingToggleRequestedEvent>.Unlisten(OnDebugProfilingToggleRequested);
         _debugRegistry?.ClearModes();
+    }
+
+    void OnDestroy()
+    {
+        if (_debugOverlayPanelTexture != null)
+        {
+            Destroy(_debugOverlayPanelTexture);
+            _debugOverlayPanelTexture = null;
+        }
     }
 
     void OnDebugPrecipitationToggleRequested(DebugPrecipitationToggleRequestedEvent _)
@@ -107,6 +123,11 @@ public class DebugCaptureController : MonoBehaviour
     void OnDebugSunFreezeToggleRequested(DebugSunFreezeToggleRequestedEvent _)
     {
         ToggleSunFreeze();
+    }
+
+    void OnDebugOverlayToggleRequested(DebugOverlayToggleRequestedEvent _)
+    {
+        ShowDebugOverlay = !ShowDebugOverlay;
     }
 
     void OnDebugWaterDebugDetailsToggleRequested(DebugWaterDebugDetailsToggleRequestedEvent _)
@@ -449,6 +470,13 @@ public class DebugCaptureController : MonoBehaviour
         sb.AppendLine($"FPS: {(Time.unscaledDeltaTime > 0f ? 1f / Time.unscaledDeltaTime : 0f):F1}");
         sb.AppendLine($"FrameTarget: {Application.targetFrameRate}");
         sb.AppendLine($"VSync: {QualitySettings.vSyncCount}");
+        int qualityLevel = QualitySettings.GetQualityLevel();
+        string[] qualityNames = QualitySettings.names;
+        string qualityName = qualityLevel >= 0 && qualityLevel < qualityNames.Length
+            ? qualityNames[qualityLevel]
+            : "Unknown";
+        sb.AppendLine($"QualityLevel: {qualityLevel} ({qualityName})");
+        sb.AppendLine($"CloudQuality: tier={QualityController.AppliedQualityTier}, low={QualityController.IsCloudLowQualityEnabled}, stepMultiplier={QualityController.CloudStepMultiplier:F2}");
         ICelestialTimeController celestial = _cachedCelestialManager;
         if (celestial != null)
             sb.AppendLine($"SunFrozen: {celestial.IsTimeFrozen}");
@@ -544,13 +572,16 @@ public class DebugCaptureController : MonoBehaviour
     void OnGUI()
     {
         if (!ShowDebugOverlay)
+        {
+            DrawDebugOverlayHint();
             return;
+        }
 
         ICameraRigContext cameraContext = _cachedCameraContext;
         if (cameraContext == null)
             return;
 
-        GUILayout.BeginArea(new Rect(10, 10, 520, ShowWaterDebugDetails ? 520 : 260));
+        GUILayout.BeginArea(GetDebugOverlayRect(), GetDebugOverlayPanelStyle());
         GUILayout.Label("Debug Camera");
         GUILayout.Label($"Position: {cameraContext.CameraTransform.position.x:F1}, {cameraContext.CameraTransform.position.y:F1}, {cameraContext.CameraTransform.position.z:F1}");
         GUILayout.Label($"FPS: {1f / Time.unscaledDeltaTime:F0}");
@@ -566,7 +597,7 @@ public class DebugCaptureController : MonoBehaviour
 
         GUILayout.Label("RMB=Look, WASD=Move, Shift=Fast, QE=Up/Down, ZC=Roll");
         GUILayout.Label("Space=Toggle Orbit/Surface, Backspace=Face Sun, R=Frame Storm");
-        GUILayout.Label("F7=Cycle F10 Set, F8=Freeze Sun, F9=Water Stats, F11=Toggle FPS Cap, P=Toggle Precip");
+        GUILayout.Label("F6=Debug UI, F7=Cycle F10 Set, F8=Freeze Sun, F9=Water Stats, F11=FPS Cap, P=Precip");
         DebugCaptureSetDefinition captureSet = GetCurrentCaptureSet();
         GUILayout.Label($"F10={captureSet.Name} capture ({GetDebugCaptureModes().Length} modes, current {_debugRegistry.GetModeName(_currentDebugModeId)})");
         IPrecipitationDebugControl precipitation = _cachedPrecipitationController;
@@ -604,5 +635,45 @@ public class DebugCaptureController : MonoBehaviour
             _debugRegistry.OverlayContributors[i].DrawOverlay(runtimeState);
 
         GUILayout.EndArea();
+    }
+
+    void DrawDebugOverlayHint()
+    {
+        GUILayout.BeginArea(new Rect(10f, 10f, 132f, 30f), GetDebugOverlayPanelStyle());
+        GUILayout.Label("F6: debug data");
+        GUILayout.EndArea();
+    }
+
+    Rect GetDebugOverlayRect()
+    {
+        float width = Mathf.Min(820f, Mathf.Max(320f, Screen.width - 20f));
+        float targetHeight = ShowWaterDebugDetails ? Screen.height - 20f : 360f;
+        float height = Mathf.Min(targetHeight, Mathf.Max(160f, Screen.height - 20f));
+        return new Rect(10f, 10f, width, height);
+    }
+
+    GUIStyle GetDebugOverlayPanelStyle()
+    {
+        if (_debugOverlayPanelStyle != null)
+            return _debugOverlayPanelStyle;
+
+        _debugOverlayPanelTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false)
+        {
+            hideFlags = HideFlags.HideAndDontSave
+        };
+        _debugOverlayPanelTexture.SetPixel(0, 0, DebugOverlayBackgroundColor);
+        _debugOverlayPanelTexture.Apply();
+
+        _debugOverlayPanelStyle = new GUIStyle(GUI.skin.box)
+        {
+            normal =
+            {
+                background = _debugOverlayPanelTexture
+            },
+            padding = new RectOffset(10, 10, 8, 8),
+            border = new RectOffset(4, 4, 4, 4)
+        };
+
+        return _debugOverlayPanelStyle;
     }
 }
