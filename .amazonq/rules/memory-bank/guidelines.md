@@ -38,10 +38,10 @@ public class ClassName : MonoBehaviour  // No namespace for project code
 }
 ```
 
-### No Namespaces in Project Code (5/5 project files)
-- Project scripts do NOT use namespaces — all classes are in the global namespace
-- Only plugin/reference code uses namespaces (`Shapes`, `Seb.GPUSorting`)
-- This is intentional for simplicity in a Unity project of this scope
+### Namespaces in Project Code
+- Project scripts mostly live in the global namespace today; treat this as current legacy state, not a permanent architecture rule
+- Only plugin/reference code consistently uses namespaces today (`Shapes`, `Seb.GPUSorting`)
+- If project namespaces are introduced, do it deliberately by subsystem and update assembly/rule guidance at the same time
 
 ### ScriptableObject Settings Pattern (2/2 settings files)
 Settings are defined as ScriptableObjects with `CreateAssetMenu`:

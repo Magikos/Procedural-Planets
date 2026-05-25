@@ -251,6 +251,6 @@ public static class EventBus<TEvent> where TEvent : struct, IGameEvent
         if (ex is TargetInvocationException invocationException && invocationException.InnerException != null)
             ex = invocationException.InnerException;
 
-        Debug.LogException(ex);
+        LoggerProvider.LogException("EventBus", ex);
     }
 }

@@ -121,6 +121,8 @@ public static class WaterMeshBuilder
         var edgeVertexCache = new Dictionary<ulong, int>();
         var volumeLipInnerVertexCache = new Dictionary<ulong, int>();
         var volumeLipOuterVertexCache = new Dictionary<ulong, int>();
+        var volumeLipInnerBottomVertexCache = new Dictionary<ulong, int>();
+        var volumeLipOuterBottomVertexCache = new Dictionary<ulong, int>();
 
         for (int faceIndex = 0; faceIndex < faces.Length; faceIndex++)
         {
@@ -140,6 +142,8 @@ public static class WaterMeshBuilder
                 edgeVertexCache,
                 volumeLipInnerVertexCache,
                 volumeLipOuterVertexCache,
+                volumeLipInnerBottomVertexCache,
+                volumeLipOuterBottomVertexCache,
                 vertices,
                 normals,
                 colors,
@@ -185,6 +189,8 @@ public static class WaterMeshBuilder
         Dictionary<ulong, int> edgeVertexCache,
         Dictionary<ulong, int> volumeLipInnerVertexCache,
         Dictionary<ulong, int> volumeLipOuterVertexCache,
+        Dictionary<ulong, int> volumeLipInnerBottomVertexCache,
+        Dictionary<ulong, int> volumeLipOuterBottomVertexCache,
         List<Vector3> vertices,
         List<Vector3> normals,
         List<Color> colors,
@@ -210,9 +216,15 @@ public static class WaterMeshBuilder
         var clipped = new WaterPoint[4];
         float cellWorldSize = settings.PlanetRadius * Mathf.PI * 0.5f / Mathf.Max(resolution - 1, 1);
         float shorelineOverlapMeters = Mathf.Clamp(shoreRange * 0.22f, settings.PlanetRadius * 0.0012f, settings.PlanetRadius * 0.0075f);
-        float volumeLipMeters = Mathf.Clamp(shoreRange * 0.55f, shorelineOverlapMeters * 1.65f, settings.PlanetRadius * 0.012f);
+        float volumeLipMeters = Mathf.Clamp(shoreRange * 1.10f, shorelineOverlapMeters * 2.35f, settings.PlanetRadius * 0.025f);
         float shorelineEdgeDepth = Mathf.Clamp(shorelineOverlapMeters * 0.30f, settings.PlanetRadius * 0.00015f, deepDepth * 0.06f);
-        float volumeLipDepth = Mathf.Clamp(volumeLipMeters * 0.24f, shorelineEdgeDepth, deepDepth * 0.08f);
+        float volumeLipDepth = Mathf.Clamp(volumeLipMeters * 0.30f, shorelineEdgeDepth, deepDepth * 0.16f);
+        float volumeLipDropMeters = Mathf.Clamp(Mathf.Max(shoreRange * 0.85f, volumeLipMeters * 0.80f), settings.PlanetRadius * 0.0025f, deepDepth * 0.45f);
+        float volumeLipBottomDepth = Mathf.Clamp(volumeLipDepth + volumeLipDropMeters, volumeLipDepth, deepDepth * 0.65f);
+        float volumeLipSurfaceRiseMeters = Mathf.Clamp(
+            Mathf.Max(settings.SurfaceOffset * 6f, shoreRange * 0.055f),
+            settings.PlanetRadius * 0.00045f,
+            deepDepth * 0.045f);
         float shorelineEdgeShore = Mathf.Clamp01(shorelineOverlapMeters * 0.45f / shoreRange);
         int addedMeshVertices = 0;
         int addedTriangles = 0;
@@ -371,34 +383,51 @@ public static class WaterMeshBuilder
             if (firstEdgePoint < 0 || secondEdgePoint < 0)
                 return;
 
-            int innerA = GetOrAddVolumeLipPoint(points[firstEdgePoint], false);
-            int outerA = GetOrAddVolumeLipPoint(points[firstEdgePoint], true);
-            int innerB = GetOrAddVolumeLipPoint(points[secondEdgePoint], false);
-            int outerB = GetOrAddVolumeLipPoint(points[secondEdgePoint], true);
+            int innerTopA = GetOrAddVolumeLipPoint(points[firstEdgePoint], false, false);
+            int outerTopA = GetOrAddVolumeLipPoint(points[firstEdgePoint], true, false);
+            int innerTopB = GetOrAddVolumeLipPoint(points[secondEdgePoint], false, false);
+            int outerTopB = GetOrAddVolumeLipPoint(points[secondEdgePoint], true, false);
+            int innerBottomA = GetOrAddVolumeLipPoint(points[firstEdgePoint], false, true);
+            int outerBottomA = GetOrAddVolumeLipPoint(points[firstEdgePoint], true, true);
+            int innerBottomB = GetOrAddVolumeLipPoint(points[secondEdgePoint], false, true);
+            int outerBottomB = GetOrAddVolumeLipPoint(points[secondEdgePoint], true, true);
 
-            if (innerA < 0 || outerA < 0 || innerB < 0 || outerB < 0)
+            if (innerTopA < 0 || outerTopA < 0 || innerTopB < 0 || outerTopB < 0
+                || innerBottomA < 0 || outerBottomA < 0 || innerBottomB < 0 || outerBottomB < 0)
                 return;
 
-            volumeLipTriangles.Add(innerA);
-            volumeLipTriangles.Add(outerA);
-            volumeLipTriangles.Add(outerB);
-            volumeLipTriangles.Add(innerA);
-            volumeLipTriangles.Add(outerB);
-            volumeLipTriangles.Add(innerB);
+            AddVolumeLipQuad(innerTopA, outerTopA, outerTopB, innerTopB);
+            AddVolumeLipQuad(innerTopB, innerBottomB, innerBottomA, innerTopA);
+            AddVolumeLipQuad(outerTopA, outerBottomA, outerBottomB, outerTopB);
+            AddVolumeLipQuad(innerBottomA, innerBottomB, outerBottomB, outerBottomA);
+        }
+
+        void AddVolumeLipQuad(int a, int b, int c, int d)
+        {
+            volumeLipTriangles.Add(a);
+            volumeLipTriangles.Add(b);
+            volumeLipTriangles.Add(c);
+            volumeLipTriangles.Add(a);
+            volumeLipTriangles.Add(c);
+            volumeLipTriangles.Add(d);
             addedVolumeLipTriangles += 2;
         }
 
-        int GetOrAddVolumeLipPoint(WaterPoint point, bool outer)
+        int GetOrAddVolumeLipPoint(WaterPoint point, bool outer, bool bottom)
         {
             int globalA = globalIndices[point.EdgeA];
             int globalB = globalIndices[point.EdgeB];
             ulong edgeKey = MakeEdgeKey(globalA, globalB);
-            Dictionary<ulong, int> cache = outer ? volumeLipOuterVertexCache : volumeLipInnerVertexCache;
+            Dictionary<ulong, int> cache = bottom
+                ? (outer ? volumeLipOuterBottomVertexCache : volumeLipInnerBottomVertexCache)
+                : (outer ? volumeLipOuterVertexCache : volumeLipInnerVertexCache);
             if (cache.TryGetValue(edgeKey, out int cached))
                 return cached;
 
             Vector3 direction = outer ? point.VolumeLipDirection : point.Direction;
-            int vertexIndex = AddVolumeLipVertex(direction, volumeLipDepth, shorelineEdgeShore, point.BodyFactor);
+            float radius = bottom ? waterRadius - volumeLipDropMeters : waterRadius + volumeLipSurfaceRiseMeters;
+            float depth = bottom ? volumeLipBottomDepth : volumeLipDepth;
+            int vertexIndex = AddVolumeLipVertex(direction, radius, depth, shorelineEdgeShore, point.BodyFactor);
             cache.Add(edgeKey, vertexIndex);
             return vertexIndex;
         }
@@ -417,13 +446,13 @@ public static class WaterMeshBuilder
             return vertexIndex;
         }
 
-        int AddVolumeLipVertex(Vector3 direction, float depth, float shore, float oceanFactor)
+        int AddVolumeLipVertex(Vector3 direction, float radius, float depth, float shore, float oceanFactor)
         {
             if (volumeLipVertices == null)
                 return -1;
 
             int vertexIndex = volumeLipVertices.Count;
-            volumeLipVertices.Add(direction * waterRadius);
+            volumeLipVertices.Add(direction * radius);
             volumeLipNormals.Add(direction);
             volumeLipColors.Add(new Color(
                 Mathf.Clamp01(depth / deepDepth),

@@ -85,7 +85,7 @@ public static class EventBusAutoBinder
                 var parameters = method.GetParameters();
                 if (parameters.Length != 1 || parameters[0].ParameterType != eventType)
                 {
-                    Debug.LogError($"[EventBusAutoBinder] Method '{method.Name}' must take exactly one parameter of type '{eventType.Name}'");
+                    LoggerProvider.Log(LogLevel.Error, "EventBusAutoBinder", $"Method '{method.Name}' must take exactly one parameter of type '{eventType.Name}'");
                     continue;
                 }
 
@@ -102,14 +102,14 @@ public static class EventBusAutoBinder
                     MethodInfo listenMethod = FindBusMethod(busType, methodName, delegateType, parameterCount: 2);
                     if (listenMethod == null)
                     {
-                        Debug.LogError($"[EventBusAutoBinder] Could not find {busType.Name}.{methodName} for {eventType.Name}");
+                        LoggerProvider.Log(LogLevel.Error, "EventBusAutoBinder", $"Could not find {busType.Name}.{methodName} for {eventType.Name}");
                         continue;
                     }
 
                     listenMethod.Invoke(null, new object[] { handler, null });
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    Debug.Log($"[EventBusAutoBinder] Bound {type.Name}.{method.Name} to {busType.Name}.{methodName}()");
+                    LoggerProvider.Log(LogLevel.Debug, "EventBusAutoBinder", $"Bound {type.Name}.{method.Name} to {busType.Name}.{methodName}()");
 #endif
                 }
                 else
@@ -117,14 +117,14 @@ public static class EventBusAutoBinder
                     MethodInfo unlistenMethod = FindBusMethod(busType, "Unlisten", delegateType, parameterCount: 1);
                     if (unlistenMethod == null)
                     {
-                        Debug.LogError($"[EventBusAutoBinder] Could not find {busType.Name}.Unlisten for {eventType.Name}");
+                        LoggerProvider.Log(LogLevel.Error, "EventBusAutoBinder", $"Could not find {busType.Name}.Unlisten for {eventType.Name}");
                         continue;
                     }
 
                     unlistenMethod.Invoke(null, new object[] { handler });
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    Debug.Log($"[EventBusAutoBinder] Unbound {type.Name}.{method.Name} from {busType.Name}.Unlisten()");
+                    LoggerProvider.Log(LogLevel.Debug, "EventBusAutoBinder", $"Unbound {type.Name}.{method.Name} from {busType.Name}.Unlisten()");
 #endif
                 }
             }
@@ -135,13 +135,13 @@ public static class EventBusAutoBinder
     {
         if (eventType == null)
         {
-            Debug.LogError($"[EventBusAutoBinder] {targetType.Name}.{method.Name} has a null event type.");
+            LoggerProvider.Log(LogLevel.Error, "EventBusAutoBinder", $"{targetType.Name}.{method.Name} has a null event type.");
             return false;
         }
 
         if (!eventType.IsValueType || !typeof(IGameEvent).IsAssignableFrom(eventType))
         {
-            Debug.LogError($"[EventBusAutoBinder] {eventType.Name} must be a struct implementing IGameEvent.");
+            LoggerProvider.Log(LogLevel.Error, "EventBusAutoBinder", $"{eventType.Name} must be a struct implementing IGameEvent.");
             return false;
         }
 

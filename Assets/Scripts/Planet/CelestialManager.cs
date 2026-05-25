@@ -73,6 +73,11 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController
     /// <summary>0-1 progress through the current season cycle.</summary>
     public float SeasonProgress => 0f;
 
+    void Awake()
+    {
+        ServiceLocator.Register<ICelestialTimeController>(this);
+    }
+
     void OnEnable()
     {
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
@@ -91,17 +96,22 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController
         UpdateAmbient();
     }
 
-    void OnPlanetGenerated(PlanetGeneratedEvent evt)
+    void OnDestroy()
     {
-        InitFromPlanet();
+        ServiceLocator.Unregister<ICelestialTimeController>(this);
     }
 
-    void InitFromPlanet()
+    void OnPlanetGenerated(PlanetGeneratedEvent evt)
+    {
+        Initialize();
+    }
+
+    void Initialize()
     {
         if (PlanetCenter == null)
         {
-            var planet = FindAnyObjectByType<Planet>();
-            if (planet != null) PlanetCenter = planet.transform;
+            Planet planetService = ServiceLocator.Get<Planet>();
+            PlanetCenter = planetService.transform;
         }
 
         if (PlanetCenter == null) return;

@@ -18,6 +18,8 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     [Header("References")]
     public CloudSettings CloudSettings;
 
+    CloudController _cloudController;
+
     [Header("Rendering")]
     public bool RenderPrecipitation = true;
     [Range(0f, 2f)] public float Intensity = 1.15f;
@@ -98,10 +100,14 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         return cameraAltitude >= 0f && cameraAltitude <= LocalMaxCameraAltitude;
     }
 
+    void Awake()
+    {
+        ServiceLocator.Register<IPrecipitationDebugControl>(this);
+    }
+
     void OnEnable()
     {
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
-        TryResolveSettings();
         UploadGlobals();
     }
 
@@ -111,9 +117,19 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         Shader.SetGlobalInt(_precipitationEnabledId, 0);
     }
 
+    void Start()
+    {
+        Initialize();
+        UploadGlobals();
+    }
+
+    void OnDestroy()
+    {
+        ServiceLocator.Unregister<IPrecipitationDebugControl>(this);
+    }
+
     void Update()
     {
-        TryResolveSettings();
         UploadGlobals();
     }
 
@@ -124,14 +140,17 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         UploadGlobals();
     }
 
-    void TryResolveSettings()
+    void Initialize()
     {
         if (CloudSettings != null)
             return;
 
-        var cloudController = FindAnyObjectByType<CloudController>();
-        if (cloudController != null)
-            CloudSettings = cloudController.Settings;
+        _cloudController = ServiceLocator.Get<CloudController>();
+        CloudSettings = _cloudController.Settings;
+
+        if (CloudSettings == null)
+            throw new System.InvalidOperationException(
+                "CloudController settings are missing. Assign CloudSettings or initialize CloudController before precipitation initialization.");
     }
 
     void UploadGlobals()

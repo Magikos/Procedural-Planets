@@ -36,3 +36,27 @@ public class UnityLogger : ILogger
         UnityEngine.Debug.LogError($"[{system}] Exception: {ex.Message}\n{ex.StackTrace}");
     }
 }
+
+public static class LoggerProvider
+{
+    static ILogger _fallbackLogger;
+
+    public static ILogger Get()
+    {
+        if (ServiceLocator.TryGet(out ILogger logger))
+            return logger;
+
+        _fallbackLogger ??= new UnityLogger();
+        return _fallbackLogger;
+    }
+
+    public static void Log(LogLevel level, string system, string message)
+    {
+        Get().Log(level, system, message);
+    }
+
+    public static void LogException(string system, Exception ex)
+    {
+        Get().LogException(system, ex);
+    }
+}

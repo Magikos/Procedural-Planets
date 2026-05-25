@@ -16,6 +16,10 @@ Shader "Planet/Ocean"
         _WaterMotionStrength ("Water Motion Strength", Range(0, 1)) = 0.24
         _SunGlitterIntensity ("Sun Glitter Intensity", Range(0, 4)) = 0.75
         _SunGlitterPower ("Sun Glitter Power", Range(64, 4096)) = 1400
+        _ShoreFoamIntensity ("Shore Foam Intensity", Range(0, 3)) = 1
+        _WhitecapIntensity ("Whitecap Intensity", Range(0, 3)) = 1
+        _WakeFoamIntensity ("Wake Foam Intensity", Range(0, 4)) = 1
+        _WakeNormalStrength ("Wake Normal Strength", Range(0, 4)) = 1
         _OceanFocusMode ("Ocean Focus Mode", Range(0, 1)) = 1
         _Alpha ("Alpha", Range(0, 1)) = 0.9
     }
@@ -38,7 +42,7 @@ Shader "Planet/Ocean"
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
             ZTest LEqual
-            Cull Back
+            Cull Off
 
             HLSLPROGRAM
             #pragma target 4.0
@@ -83,16 +87,25 @@ Shader "Planet/Ocean"
                 float _WaterMotionStrength;
                 float _SunGlitterIntensity;
                 float _SunGlitterPower;
+                float _ShoreFoamIntensity;
+                float _WhitecapIntensity;
+                float _WakeFoamIntensity;
+                float _WakeNormalStrength;
                 float _OceanFocusMode;
                 float _Alpha;
             CBUFFER_END
 
             float3 _PlanetCenter;
+            float _PlanetRadius;
             float _AtmosphereRadius;
             float3 _SunParams;
             float _NightAmbientIntensity;
             int _OceanDebugMode;
             float _WaterVolumeEnabled;
+            int _WaterWakeCount;
+            float4 _WaterWakePositions[8];
+            float4 _WaterWakeDirections[8];
+            float4 _WaterWakeParams[8];
 
             float Hash13(float3 p)
             {
@@ -474,6 +487,116 @@ Shader "Planet/Ocean"
                     * lerp(0.82, 1.38, seaState);
             }
 
+            float ComputeSurfaceGlint(
+                float3 positionWS,
+                float3 normalWS,
+                float3 sunDir,
+                float3 viewDir,
+                float depth01,
+                float shore01,
+                float oceanFactor,
+                float daylight,
+                float surfaceEdgeVisibility,
+                float wakeMask,
+                out float glintCore,
+                out float sparkle,
+                out float glintEnvelope)
+            {
+                glintCore = 0.0;
+                sparkle = 0.0;
+                glintEnvelope = 0.0;
+
+                if (_SunGlitterIntensity <= 0.0)
+                    return 0.0;
+
+                float compactPower = max(_SunGlitterPower, 64.0);
+                float3 reflectedSun = reflect(-sunDir, normalWS);
+                float align = saturate(dot(reflectedSun, viewDir));
+                glintCore = pow(align, compactPower);
+                glintEnvelope = pow(align, max(compactPower * 0.15, 80.0));
+                sparkle = pow(align, max(compactPower * lerp(0.40, 0.68, saturate(wakeMask)), 96.0)) * glintEnvelope;
+
+                float3 local = positionWS - _PlanetCenter;
+                float sparkleNoise = lerp(0.42, 1.45, ValueNoise3(local * 0.058 + float3(_Time.y * 0.08, 0.0, -_Time.y * 0.045)));
+                float microBands = smoothstep(0.36, 0.96, sin(dot(local, normalize(float3(0.61, 0.22, 0.76))) * 0.052 + _Time.y * 1.15) * 0.5 + 0.5);
+                float waterMask = oceanFactor
+                    * smoothstep(0.08, 0.32, depth01)
+                    * smoothstep(0.08, 0.26, shore01)
+                    * surfaceEdgeVisibility;
+
+                return (glintCore * 1.24 + sparkle * sparkleNoise * lerp(0.10, 0.22, saturate(wakeMask)) + microBands * sparkle * 0.045)
+                    * _SunGlitterIntensity
+                    * daylight
+                    * waterMask;
+            }
+
+            void SampleWakeField(
+                float3 positionWS,
+                float3 normalWS,
+                out float wakeMask,
+                out float wakeFoam,
+                out float3 wakeGradientWS)
+            {
+                wakeMask = 0.0;
+                wakeFoam = 0.0;
+                wakeGradientWS = float3(0.0, 0.0, 0.0);
+
+                int wakeCount = min(_WaterWakeCount, 8);
+                [unroll]
+                for (int i = 0; i < 8; i++)
+                {
+                    if (i >= wakeCount)
+                        break;
+
+                    float4 positionRadius = _WaterWakePositions[i];
+                    float4 directionSpeed = _WaterWakeDirections[i];
+                    float4 wakeParams = _WaterWakeParams[i];
+                    float radius = max(positionRadius.w, 0.25);
+                    float lengthMeters = max(wakeParams.z, radius * 2.0);
+                    float strength = saturate(wakeParams.x) * saturate(directionSpeed.w);
+                    float foamStrength = saturate(wakeParams.y);
+
+                    if (strength <= 0.0)
+                        continue;
+
+                    float3 originNormal = SafeNormalize(positionRadius.xyz - _PlanetCenter, normalWS);
+                    float3 fallbackForward = SafeNormalize(cross(originNormal, abs(originNormal.y) > 0.82 ? float3(1.0, 0.0, 0.0) : float3(0.0, 1.0, 0.0)), float3(1.0, 0.0, 0.0));
+                    float3 forward = SafeNormalize(directionSpeed.xyz - originNormal * dot(directionSpeed.xyz, originNormal), fallbackForward);
+                    float3 delta = positionWS - positionRadius.xyz;
+                    float3 tangentDelta = delta - originNormal * dot(delta, originNormal);
+                    float along = dot(tangentDelta, forward);
+                    float3 sideVector = tangentDelta - forward * along;
+                    float side = length(sideVector);
+                    float3 sideDir = SafeNormalize(sideVector, fallbackForward);
+
+                    float trailDistance = max(-along, 0.0);
+                    float withinTrail = step(along, radius * 0.80) * (1.0 - smoothstep(lengthMeters * 0.86, lengthMeters, trailDistance));
+                    float trail01 = saturate(trailDistance / lengthMeters);
+                    float centerWidth = lerp(radius * 0.22, radius * 0.62, trail01);
+                    float centerTrail = withinTrail
+                        * (1.0 - smoothstep(centerWidth, centerWidth * 2.35, side))
+                        * smoothstep(0.0, radius * 0.85, trailDistance + radius * 0.28);
+
+                    float armCenter = trailDistance * 0.34;
+                    float armWidth = radius * lerp(0.24, 0.72, trail01);
+                    float kelvinArm = withinTrail
+                        * (1.0 - smoothstep(armWidth, armWidth * 2.05, abs(side - armCenter)))
+                        * smoothstep(radius * 0.35, radius * 1.75, trailDistance)
+                        * (1.0 - smoothstep(0.62, 1.0, trail01));
+
+                    float band = sin(trailDistance * 0.105 - side * 0.045 - _Time.y * 3.2) * 0.5 + 0.5;
+                    band = smoothstep(0.34, 0.88, band);
+                    float breakup = lerp(0.55, 1.18, ValueNoise3(positionWS * 0.035 + float3(_Time.y * 0.05, 0.0, -_Time.y * 0.04)));
+                    float sourceMask = saturate((centerTrail * 0.88 + kelvinArm * (0.48 + band * 0.52)) * breakup * strength);
+                    float sourceFoam = saturate((centerTrail * 0.46 + kelvinArm * band * 0.82) * foamStrength * strength);
+
+                    wakeMask = saturate(wakeMask + sourceMask);
+                    wakeFoam = saturate(wakeFoam + sourceFoam);
+                    wakeGradientWS += (sideDir * kelvinArm + forward * centerTrail * 0.42)
+                        * ((band * 2.0 - 1.0) * strength / max(radius * 0.16, 1.0));
+                }
+            }
+
             float FoamLine(float value, float width)
             {
                 float centered = abs(frac(value) - 0.5);
@@ -582,7 +705,7 @@ Shader "Planet/Ocean"
 
             half4 RenderWaterFocus(float3 positionWS, float4 positionCS, float3 planetNormalWS, float depth01, float shore01, float oceanFactor)
             {
-                float foam = ComputeShoreFoam(positionWS, shore01);
+                float shoreFoam = ComputeShoreFoam(positionWS, shore01) * _ShoreFoamIntensity;
 
                 float waterDepth = depth01 * max(_DeepDepth, 0.001);
                 float metricDepthBlend = smoothstep(_ShallowDepth * 0.35, max(_DeepDepth * 0.38, _ShallowDepth + 1.0), waterDepth);
@@ -590,6 +713,8 @@ Shader "Planet/Ocean"
                 float depthBlend = pow(saturate(max(metricDepthBlend, encodedDepthBlend)), 0.62);
 
                 float shoreWidth01 = saturate(_ShoreFoamDepth / max(_ShoreFoamSoftness, 0.001));
+                float shoreBand = 1.0 - smoothstep(shoreWidth01 * 0.35, shoreWidth01, shore01);
+                float runupBand = 1.0 - smoothstep(shoreWidth01, shoreWidth01 * 4.2, shore01);
                 float shallowShelf = 1.0 - smoothstep(shoreWidth01 * 0.35, shoreWidth01 * 2.4, shore01);
                 float3 shallowColor = lerp(_ShallowColor.rgb, float3(0.36, 0.86, 0.82), shallowShelf * 0.34);
                 float3 baseColor = lerp(shallowColor, _DeepColor.rgb, depthBlend);
@@ -603,10 +728,16 @@ Shader "Planet/Ocean"
                 float waveCrest;
                 float waveHeight = EvaluateOceanWaves(positionWS, planetNormalWS, depth01, oceanFactor, waveGradient, waveCrest);
                 float3 rippleGradient = EvaluateRippleGradient(positionWS, planetNormalWS, depth01, oceanFactor);
+                float wakeMask;
+                float wakeFoam;
+                float3 wakeGradient;
+                SampleWakeField(positionWS, planetNormalWS, wakeMask, wakeFoam, wakeGradient);
                 waveGradient += rippleGradient;
+                waveGradient += wakeGradient * _WakeNormalStrength;
 
                 float normalDetailMask = FocusNormalMask(depth01, shore01, oceanFactor);
-                float3 waveNormalWS = normalize(planetNormalWS - waveGradient * (_WaveNormalStrength * 0.26 * lerp(0.86, 1.55, seaState) * normalDetailMask));
+                float wakeNormalBoost = lerp(1.0, 1.42, saturate(wakeMask));
+                float3 waveNormalWS = normalize(planetNormalWS - waveGradient * (_WaveNormalStrength * 0.26 * lerp(0.86, 1.55, seaState) * normalDetailMask * wakeNormalBoost));
                 float3 viewDir = GetWorldSpaceNormalizeViewDir(positionWS);
                 float sceneDepthValid;
                 float sceneGapMeters = WaterSceneGapMeters(positionCS, positionWS, sceneDepthValid);
@@ -628,7 +759,7 @@ Shader "Planet/Ocean"
                 float normalizedWaveHeight = waveHeight / max(_WaveAmplitude, 0.001);
                 float crestLift = saturate(normalizedWaveHeight * 1.15);
                 float troughShade = saturate(-normalizedWaveHeight * 1.10);
-                float rippleDetail = saturate(length(rippleGradient) * _WaveNormalStrength * 1.45);
+                float rippleDetail = saturate(length(rippleGradient + wakeGradient * _WakeNormalStrength) * _WaveNormalStrength * 1.45 + wakeMask * 0.28);
                 float directionalWaveLight = waveSun - saturate(localSun);
                 float movingRows = MovingWaveRows(positionWS, planetNormalWS, depth01, oceanFactor);
                 float movingCrests = smoothstep(0.25, 0.82, movingRows);
@@ -645,7 +776,8 @@ Shader "Planet/Ocean"
                 float whitecapSeed = waveCrest * 0.58 + movingCrests * 0.26 + rippleDetail * 0.12 + whitecapNoise * 0.16;
                 float whitecaps = smoothstep(0.64, 0.95, whitecapSeed)
                     * openWaveMask
-                    * smoothstep(0.14, 0.74, foamState);
+                    * smoothstep(0.14, 0.74, foamState)
+                    * _WhitecapIntensity;
                 float3 halfVector = SafeNormalize(sunDir + viewDir, waveNormalWS);
                 float waveSpec = pow(saturate(dot(waveNormalWS, halfVector)), lerp(120.0, 42.0, seaState))
                     * openWaveMask
@@ -661,29 +793,128 @@ Shader "Planet/Ocean"
                     + viewRipple
                     + waveCrest * lerp(0.08, 0.18, seaState)) * daylight * normalDetailMask;
 
-                float shoreFoamBlend = smoothstep(0.05, 0.72, foam) * _FoamColor.a * lerp(0.18, 1.08, daylight);
+                float shoreFoamBlend = smoothstep(0.05, 0.72, shoreFoam) * _FoamColor.a * lerp(0.18, 1.08, daylight);
                 float openFoamBlend = whitecaps * _FoamColor.a * lerp(0.24, 0.90, daylight);
+                float wakeFoamBlend = wakeFoam * _WakeFoamIntensity * _FoamColor.a * lerp(0.32, 1.02, daylight);
                 float shoreContactVisibility = ShoreContactVisibility(shoreTerrainClearance, sceneDepthValid, shore01);
                 shoreFoamBlend *= UnderwaterShoreEdgeVisibility(positionWS, shore01) * shoreContactVisibility;
-                float foamBlend = saturate(shoreFoamBlend + openFoamBlend);
+                float surfaceEdgeVisibility = UnderwaterShoreEdgeVisibility(positionWS, shore01) * shoreContactVisibility;
+                wakeFoamBlend *= surfaceEdgeVisibility;
+                float foamBlend = saturate(shoreFoamBlend + openFoamBlend + wakeFoamBlend);
                 float3 litWater = baseColor * saturate(waterLight + waveShade);
                 litWater -= float3(0.038, 0.052, 0.060) * troughShade * daylight * normalDetailMask;
                 litWater += float3(0.050, 0.078, 0.076) * crestLift * daylight * normalDetailMask;
                 litWater += float3(0.026, 0.045, 0.048) * rippleDetail * daylight * normalDetailMask;
-                litWater += float3(0.030, 0.056, 0.058) * movingCrests * daylight * normalDetailMask * lerp(0.85, 1.55, seaState);
-                litWater -= float3(0.030, 0.040, 0.046) * movingTroughs * daylight * normalDetailMask * lerp(0.85, 1.65, seaState);
+                litWater += float3(0.052, 0.086, 0.088) * movingCrests * daylight * normalDetailMask * lerp(0.85, 1.55, seaState);
+                litWater -= float3(0.038, 0.052, 0.058) * movingTroughs * daylight * normalDetailMask * lerp(0.85, 1.65, seaState);
                 litWater *= WaterPathDarkening(absorption);
                 litWater = lerp(litWater, litWater * float3(0.92, 0.96, 0.98), oceanStorm * 0.04 * daylight);
                 litWater += waveSpec * float3(0.72, 0.92, 1.0);
                 litWater += whitecaps * daylight * float3(0.10, 0.16, 0.17);
                 float sunsetShimmer = SunsetShimmer(positionWS, positionCS, planetNormalWS, waveNormalWS, sunDir, viewDir, depth01, shore01, oceanFactor);
+                float glintCore;
+                float sparkle;
+                float glintEnvelope;
+                float surfaceGlint = ComputeSurfaceGlint(positionWS, waveNormalWS, sunDir, viewDir, depth01, shore01, oceanFactor, daylight, surfaceEdgeVisibility, wakeMask, glintCore, sparkle, glintEnvelope);
+                litWater += surfaceGlint * float3(1.0, 0.86, 0.54);
                 litWater += sunsetShimmer * float3(1.0, 0.48, 0.16);
                 float3 litFoam = _FoamColor.rgb * foamLight;
                 float3 color = lerp(litWater, litFoam, foamBlend);
                 color += litFoam * foamBlend * (0.10 * daylight);
-                float surfaceEdgeVisibility = UnderwaterShoreEdgeVisibility(positionWS, shore01) * shoreContactVisibility;
-                float alpha = saturate(WaterFinalAlpha(opticalAlpha, absorption) * surfaceEdgeVisibility + foamBlend * 0.10 + sunsetShimmer * 0.08 * surfaceEdgeVisibility);
-                return half4(color, alpha);
+                float surfaceBaseAlpha = WaterFinalAlpha(opticalAlpha, absorption) * surfaceEdgeVisibility;
+                float rawWaveDetailAlpha = saturate(
+                    (abs(movingRows) * 0.030 + rippleDetail * 0.026 + max(crestLift, troughShade) * 0.018)
+                    * daylight
+                    * normalDetailMask
+                    * openWaveMask
+                    * surfaceEdgeVisibility);
+                // Water volume owns bulk opacity, but surface effects need their own layer
+                // or transparent blending erases every visible wave/glint/foam contribution.
+                float surfaceDetailSignal = saturate(
+                    movingCrests * 0.44
+                    + movingTroughs * 0.30
+                    + rippleDetail * 0.62
+                    + max(crestLift, troughShade) * 0.36);
+                float volumeSurfaceFeatureCoverage = oceanFactor
+                    * normalDetailMask
+                    * surfaceEdgeVisibility;
+                float volumeSurfaceFeatureAlpha = saturate(_WaterVolumeEnabled)
+                    * saturate(0.10 + surfaceDetailSignal * 0.14)
+                    * daylight
+                    * volumeSurfaceFeatureCoverage;
+                float waveDetailAlpha = max(rawWaveDetailAlpha, volumeSurfaceFeatureAlpha);
+                float foamAlpha = foamBlend * lerp(0.42, 0.72, daylight);
+                float glintAlpha = saturate((sunsetShimmer * 0.22 + surfaceGlint * 0.38) * surfaceEdgeVisibility);
+                float alphaPreview = saturate(surfaceBaseAlpha + waveDetailAlpha + foamAlpha + glintAlpha);
+
+                if (_OceanDebugMode == 1)
+                    return half4(lerp(float3(0.55, 1.0, 0.92), float3(0.0, 0.025, 0.16), depthBlend), 1.0);
+                if (_OceanDebugMode == 2)
+                    return half4(lerp(float3(0.02, 0.02, 0.025), float3(1.0, 0.92, 0.16), saturate(shoreBand + runupBand * 0.35)), 1.0);
+                if (_OceanDebugMode == 3)
+                    return half4(lerp(float3(0.86, 0.22, 0.70), float3(0.05, 0.85, 1.0), oceanFactor), 1.0);
+                if (_OceanDebugMode == 4)
+                    return half4(float3(daylight, waveSun, waterLight), 1.0);
+                if (_OceanDebugMode == 5)
+                    return half4(float3(saturate(glintCore * 80.0), saturate(sparkle * 12.0 + surfaceGlint * 0.16), saturate(glintEnvelope)), 1.0);
+                if (_OceanDebugMode == 6)
+                    return half4(waveNormalWS * 0.5 + 0.5, 1.0);
+                if (_OceanDebugMode == 7)
+                    return half4(lerp(float3(0.02, 0.035, 0.05), _FoamColor.rgb, saturate(shoreFoam + whitecaps + wakeFoam)), 1.0);
+                if (_OceanDebugMode == 8)
+                {
+                    float focusMotionMask = FocusMotionMask(depth01, shore01, oceanFactor);
+                    return half4(lerp(float3(0.04, 0.02, 0.10), float3(1.0, 0.34, 0.05), focusMotionMask), 1.0);
+                }
+                if (_OceanDebugMode == 9)
+                {
+                    float signedWave = clamp(waveHeight / max(_WaveAmplitude * 0.55, 0.001), -1.0, 1.0);
+                    float3 troughColor = float3(0.02, 0.06, 0.30);
+                    float3 neutralColor = float3(0.45, 0.56, 0.62);
+                    float3 crestColor = float3(1.0, 0.96, 0.74);
+                    float3 debugColor = signedWave < 0.0
+                        ? lerp(neutralColor, troughColor, -signedWave)
+                        : lerp(neutralColor, crestColor, signedWave);
+                    return half4(debugColor, 1.0);
+                }
+                if (_OceanDebugMode == 10)
+                {
+                    float slope = saturate(length(waveGradient) * _WaveNormalStrength * 3.0);
+                    return half4(lerp(float3(0.02, 0.04, 0.06), float3(0.1, 1.0, 0.45), slope), 1.0);
+                }
+                if (_OceanDebugMode == 11)
+                    return half4(depth01, shore01, oceanFactor, 1.0);
+                if (_OceanDebugMode == 12)
+                    return half4(lerp(float3(0.03, 0.05, 0.07), float3(0.02, 0.32, 1.0), absorption), 1.0);
+                if (_OceanDebugMode == 18)
+                    return half4(shoreFoam, whitecaps, wakeFoam, 1.0);
+                if (_OceanDebugMode == 19)
+                    return half4(alphaPreview, opticalAlpha, scenePath, 1.0);
+                if (_OceanDebugMode == 22)
+                {
+                    float shoreContact = (1.0 - smoothstep(0.10, 0.52, shore01)) * sceneDepthValid;
+                    float gapDebug = saturate(sceneGapMeters / max(_ShallowDepth * 0.75, 16.0));
+                    return half4(shoreContact, shoreTerrainClearance, gapDebug, 1.0);
+                }
+                if (_OceanDebugMode == 23)
+                {
+                    float polishAlpha = saturate(alphaPreview - surfaceBaseAlpha);
+                    return half4(alphaPreview, surfaceBaseAlpha, saturate(polishAlpha * 8.0), 1.0);
+                }
+                if (_OceanDebugMode == 32)
+                    return half4(1.0, 0.0, 1.0, saturate((shoreFoam + whitecaps + wakeFoam) * _FoamColor.a));
+                if (_OceanDebugMode == 51)
+                    return half4(wakeMask, wakeFoam, saturate(length(wakeGradient) * _WakeNormalStrength * 22.0), 1.0);
+                if (_OceanDebugMode == 52)
+                    return half4(saturate(surfaceGlint * 0.22 + sunsetShimmer * 0.20), foamBlend, saturate(length(waveGradient) * _WaveNormalStrength * 2.4), 1.0);
+                if (_OceanDebugMode == 53)
+                    return half4(color, 1.0);
+                if (_OceanDebugMode == 54)
+                    return half4(foamBlend, saturate((surfaceGlint + sunsetShimmer) * 0.25), saturate(waveDetailAlpha * 8.0), 1.0);
+                if (_OceanDebugMode == 55)
+                    return half4(surfaceBaseAlpha, foamAlpha, saturate(glintAlpha + waveDetailAlpha), 1.0);
+
+                return half4(color, alphaPreview);
             }
 
             Varyings vert(Attributes input)
@@ -723,12 +954,25 @@ Shader "Planet/Ocean"
                 return output;
             }
 
-            half4 frag(Varyings input) : SV_Target
+            half4 frag(Varyings input, FRONT_FACE_TYPE frontFace : FRONT_FACE_SEMANTIC) : SV_Target
             {
                 float depth01 = saturate(input.waterData.r);
                 float shore01 = saturate(input.waterData.g);
                 float oceanFactor = saturate(input.waterData.b);
                 float waterDepth = depth01 * max(_DeepDepth, 0.001);
+                float frontFace01 = IS_FRONT_VFACE(frontFace, 1.0, 0.0);
+                float backFace01 = 1.0 - frontFace01;
+                float cameraRadius = length(_WorldSpaceCameraPos.xyz - _PlanetCenter);
+                float underwaterCamera = step(cameraRadius, _PlanetRadius + 0.25);
+
+                if (_OceanDebugMode == 49)
+                {
+                    clip(min(backFace01, underwaterCamera) - 0.5);
+                    return half4(1.0, 0.0, 1.0, 0.86);
+                }
+
+                if (backFace01 > 0.5 && underwaterCamera <= 0.0)
+                    clip(-1.0);
 
                 if (_OceanDebugMode == 24
                     || _OceanDebugMode == 26
@@ -747,7 +991,20 @@ Shader "Planet/Ocean"
                     || _OceanDebugMode == 41)
                     return half4(0.0, 0.0, 0.0, 0.0);
 
-                if ((_OceanDebugMode == 0 || _OceanDebugMode == 25) && _OceanFocusMode >= 0.5)
+                bool focusSurfaceDebug = (_OceanDebugMode >= 1 && _OceanDebugMode <= 12)
+                    || _OceanDebugMode == 18
+                    || _OceanDebugMode == 19
+                    || _OceanDebugMode == 22
+                    || _OceanDebugMode == 23
+                    || _OceanDebugMode == 40
+                    || _OceanDebugMode == 32
+                    || _OceanDebugMode == 51
+                    || _OceanDebugMode == 52
+                    || _OceanDebugMode == 53
+                    || _OceanDebugMode == 54
+                    || _OceanDebugMode == 55
+                    || _OceanDebugMode == 56;
+                if ((_OceanDebugMode == 0 || _OceanDebugMode == 25 || focusSurfaceDebug) && _OceanFocusMode >= 0.5)
                     return RenderWaterFocus(input.positionWS, input.positionCS, input.planetNormalWS, depth01, shore01, oceanFactor);
 
                 float3 waveGradient;
@@ -810,7 +1067,7 @@ Shader "Planet/Ocean"
                 float shoreWidth01 = saturate(_ShoreFoamDepth / max(_ShoreFoamSoftness, 0.001));
                 float shoreBand = 1.0 - smoothstep(shoreWidth01 * 0.35, shoreWidth01, shore01);
                 float runupBand = 1.0 - smoothstep(shoreWidth01, shoreWidth01 * 4.2, shore01);
-                float shoreFoam = ComputeShoreFoam(input.positionWS, shore01);
+                float shoreFoam = ComputeShoreFoam(input.positionWS, shore01) * _ShoreFoamIntensity;
                 float runupFoam = runupBand * shoreFoam * 0.28;
                 float movingRows = MovingWaveRows(input.positionWS, input.planetNormalWS, depth01, oceanFactor);
                 float movingCrests = smoothstep(0.25, 0.82, movingRows);
@@ -819,7 +1076,8 @@ Shader "Planet/Ocean"
                 float crestFoam = smoothstep(0.64, 0.95, waveCrest * 0.58 + movingCrests * 0.26 + whitecapNoise * 0.16)
                     * openWaveMask
                     * smoothstep(0.14, 0.74, foamState)
-                    * 0.58;
+                    * 0.58
+                    * _WhitecapIntensity;
                 float foam = saturate(shoreFoam + runupFoam + crestFoam);
                 if (_OceanDebugMode == 32)
                     return half4(1.0, 0.0, 1.0, saturate(foam * _FoamColor.a));

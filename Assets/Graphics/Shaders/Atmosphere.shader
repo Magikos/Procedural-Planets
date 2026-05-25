@@ -76,6 +76,20 @@ float3 ContributionHeat(float3 delta, float scale)
     return saturate(color);
 }
 
+bool ShouldBypassAtmosphereForWaterDebug()
+{
+    return _OceanDebugMode == 40
+        || (_OceanDebugMode >= 1 && _OceanDebugMode <= 12)
+        || _OceanDebugMode == 18
+        || _OceanDebugMode == 19
+        || _OceanDebugMode == 22
+        || _OceanDebugMode == 23
+        || _OceanDebugMode == 25
+        || _OceanDebugMode == 32
+        || _OceanDebugMode == 49
+        || (_OceanDebugMode >= 51 && _OceanDebugMode <= 56);
+}
+
 float CompositeDepthScaled(float2 uv, float viewLength)
 {
     float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r;
@@ -222,7 +236,7 @@ ENDHLSL
             float4 AtmosphereFragment(v2f i) : SV_Target
             {
                 float4 originalCol = SAMPLE_TEXTURE2D(_Source, sampler_Source, i.uv);
-                if (_OceanDebugMode == 40)
+                if (ShouldBypassAtmosphereForWaterDebug())
                     return originalCol;
 
                 float viewLength = length(i.viewVector);

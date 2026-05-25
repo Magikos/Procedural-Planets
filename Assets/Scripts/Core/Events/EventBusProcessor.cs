@@ -29,7 +29,7 @@ public class EventBusProcessor : MonoBehaviour
             }
             catch (Exception ex)
             {
-                Debug.LogException(ex);
+                LoggerProvider.LogException("EventBus", ex);
             }
         }
     }

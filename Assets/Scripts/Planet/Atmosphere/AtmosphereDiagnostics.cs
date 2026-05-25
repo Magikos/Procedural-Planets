@@ -20,7 +20,7 @@ public class AtmosphereDiagnostics : MonoBehaviour
     {
         if (_keyboard != null && _keyboard.f12Key.wasPressedThisFrame)
         {
-            Debug.Log("[AtmosphereDiagnostics] F12 pressed, capturing...");
+            LoggerProvider.Log(LogLevel.Debug, "AtmosphereDiagnostics", "F12 pressed, capturing...");
             _captureRequested = true;
         }
     }
@@ -30,16 +30,23 @@ public class AtmosphereDiagnostics : MonoBehaviour
         if (_captureRequested)
         {
             _captureRequested = false;
-            StartCoroutine(CaptureCoroutine());
+            _ = CaptureAsync();
         }
     }
 
-    System.Collections.IEnumerator CaptureCoroutine()
+    async Awaitable CaptureAsync()
     {
-        yield return new WaitForEndOfFrame();
+        await Awaitable.EndOfFrameAsync();
         var tex = ScreenCapture.CaptureScreenshotAsTexture();
-        DumpDiagnostics(tex);
-        Destroy(tex);
+        try
+        {
+            DumpDiagnostics(tex);
+        }
+        finally
+        {
+            if (tex != null)
+                Destroy(tex);
+        }
     }
 
     void DumpDiagnostics(Texture2D tex)
@@ -133,11 +140,11 @@ public class AtmosphereDiagnostics : MonoBehaviour
             sb.AppendLine($"NEUTRAL — R={center.r:F3} G={center.g:F3} B={center.b:F3}");
 
         string output = sb.ToString();
-        Debug.Log(output);
+        LoggerProvider.Log(LogLevel.Info, "AtmosphereDiagnostics", output);
 
         string path = System.IO.Path.Combine(Application.dataPath, "..", "atmosphere_diagnostics.txt");
         System.IO.File.WriteAllText(path, output);
-        Debug.Log($"[AtmosphereDiagnostics] Saved to: {path}");
+        LoggerProvider.Log(LogLevel.Info, "AtmosphereDiagnostics", $"Saved to: {path}");
     }
 
     void SamplePixel(System.Text.StringBuilder sb, string label, Texture2D tex, int x, int y)

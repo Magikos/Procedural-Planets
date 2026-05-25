@@ -14,6 +14,7 @@ public class AtmosphereController : MonoBehaviour
     RenderTexture _bakedOpticalDepth;
     float _lastBakedScaleR, _lastBakedScaleM, _lastBakedAtmoScale;
     int _lastBakedSize, _lastBakedSteps;
+    Planet _planet;
 
     static readonly int _sunParamsId = Shader.PropertyToID("_SunParams");
     static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
@@ -37,6 +38,12 @@ public class AtmosphereController : MonoBehaviour
     static readonly int _bakedOpticalDepthId = Shader.PropertyToID("_BakedOpticalDepth");
 
     void OnEnable() => EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+
+    void Start()
+    {
+        InitializeDependencies();
+    }
+
     void OnDisable()
     {
         EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
@@ -60,10 +67,21 @@ public class AtmosphereController : MonoBehaviour
         _planetRadius = evt.PlanetRadius;
         _seaLevelRadius = evt.SeaLevelRadius > 0f ? evt.SeaLevelRadius : _planetRadius * 0.95f;
 
-        var planet = FindAnyObjectByType<Planet>();
-        _planetCenter = planet != null ? planet.transform.position : Vector3.zero;
-        _planetSeed = planet != null ? planet.Seed : 12345;
+        InitializeDependencies();
+        _planetCenter = _planet.transform.position;
+        _planetSeed = _planet.Seed;
 
+        Initialize();
+    }
+
+    void InitializeDependencies()
+    {
+        if (_planet == null)
+            _planet = ServiceLocator.Get<Planet>();
+    }
+
+    void Initialize()
+    {
         BakeOpticalDepth();
         SetGlobalProperties();
     }

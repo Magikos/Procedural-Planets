@@ -51,9 +51,22 @@ public class CloudController : MonoBehaviour
     static readonly int _cloudShapeNoiseId = Shader.PropertyToID("_CloudShapeNoise");
     static readonly int _cloudDetailNoiseId = Shader.PropertyToID("_CloudDetailNoise");
 
-    void OnEnable() => EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+    void Awake()
+    {
+        ServiceLocator.Register<CloudController>(this);
+    }
+
+    void OnEnable()
+    {
+        EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+    }
 
     void OnDisable() => EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
+
+    void Start()
+    {
+        Initialize();
+    }
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
@@ -61,7 +74,7 @@ public class CloudController : MonoBehaviour
         _seaLevelRadius = evt.SeaLevelRadius > 0f ? evt.SeaLevelRadius : evt.PlanetRadius;
         _planetCenter = evt.PlanetCenter;
 
-        EnsureWeatherManager();
+        Initialize();
         GenerateNoiseTextures();
         SetGlobalProperties();
     }
@@ -74,15 +87,12 @@ public class CloudController : MonoBehaviour
             return;
         }
 
-        EnsureWeatherManager();
         SetGlobalProperties();
     }
 
-    void EnsureWeatherManager()
+    void Initialize()
     {
-        if (_weather == null)
-            _weather = FindAnyObjectByType<WeatherManager>();
-
+        _weather = ServiceLocator.Get<WeatherManager>();
         if (_weather != null && _weather.Settings != Settings)
             _weather.Configure(Settings);
     }
@@ -92,8 +102,8 @@ public class CloudController : MonoBehaviour
         if (NoiseCompute == null || Settings == null) return;
 
         int seed = 12345;
-        if (ServiceLocator.TryGet<ISeedProvider>(out var seedProvider))
-            seed = seedProvider.GetSeedForSystem("CloudNoise");
+        ISeedProvider seedProvider = ServiceLocator.Get<ISeedProvider>();
+        seed = seedProvider.GetSeedForSystem("CloudNoise");
 
         ReleaseTextures();
         _shapeNoise = CloudNoiseGenerator.GenerateShapeNoise(NoiseCompute, Settings.ShapeNoiseResolution, seed);
@@ -184,6 +194,7 @@ public class CloudController : MonoBehaviour
 
     void OnDestroy()
     {
+        ServiceLocator.Unregister<CloudController>(this);
         ReleaseTextures();
     }
 }

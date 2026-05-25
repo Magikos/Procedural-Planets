@@ -235,11 +235,33 @@ Shader "Hidden/WaterVolume"
             || _OceanDebugMode == 25
             || _OceanDebugMode == 26
             || _OceanDebugMode == 32
-            || _OceanDebugMode == 34)
+            || _OceanDebugMode == 34
+            || _OceanDebugMode == 49
+            || _OceanDebugMode == 51
+            || _OceanDebugMode == 52
+            || _OceanDebugMode == 53
+            || _OceanDebugMode == 54
+            || _OceanDebugMode == 55)
             return SAMPLE_TEXTURE2D(_Source, sampler_Source, input.uv);
 
         float centerWaterCoverage;
         float expandedWaterCoverage;
+        float4 centerWaterData = SAMPLE_TEXTURE2D(_WaterVolumeData, sampler_WaterVolumeData, input.uv);
+        if (_OceanDebugMode == 46 || _OceanDebugMode == 47 || _OceanDebugMode == 48)
+        {
+            float lipMarker = -centerWaterData.a;
+            float rejectedLipMask = step(1.5, lipMarker);
+            float acceptedLipMask = step(0.5, lipMarker) * (1.0 - rejectedLipMask);
+            float lipMask = saturate(acceptedLipMask + rejectedLipMask);
+            float mainWaterMask = WaterCoverageFromData(centerWaterData) * (1.0 - lipMask);
+            float4 originalDebug = SAMPLE_TEXTURE2D(_Source, sampler_Source, input.uv);
+            float3 debugColor = originalDebug.rgb * 0.18;
+            debugColor = lerp(debugColor, float3(0.0, 0.42, 1.0), saturate(mainWaterMask * 0.70));
+            debugColor = lerp(debugColor, float3(1.0, 0.72, 0.0), rejectedLipMask);
+            debugColor = lerp(debugColor, float3(1.0, 0.0, 1.0), acceptedLipMask);
+            return float4(debugColor, originalDebug.a);
+        }
+
         float4 waterData = WaterExpandedData(input.uv, centerWaterCoverage, expandedWaterCoverage);
         float rawSceneDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, input.uv).r;
         float sceneValid = SceneDepthValid(rawSceneDepth);
@@ -618,6 +640,15 @@ Shader "Hidden/WaterVolume"
         float3 absorbed = original.rgb * transmittance + scatterColor * scatterLight * (1.0 - transmittance) * scatterStrength;
         float volumeBlend = saturate(max(max(max(max(optical * 0.90, viewPath01 * opticalGate * 0.66), lowAnglePath / max(skyFallbackPath, 1.0) * 0.38), horizonOcclusion * 0.72), sourceMatte) * hasWater);
         float3 color = lerp(original.rgb, absorbed, volumeBlend);
+        float surfaceWaterPreserve = saturate((1.0 - underwater)
+            * surfaceProximity01
+            * centerWaterCoverage
+            * waterVisible
+            * (1.0 - smoothstep(0.42, 0.92, sourceMatte)));
+        float openSurfacePreserve = smoothstep(0.06, 0.42, openWater01);
+        float highlightPreserve = smoothstep(0.50, 0.88, sourceLuma);
+        float surfaceDetailPreserve = surfaceWaterPreserve * lerp(0.24, 0.56, openSurfacePreserve);
+        float surfaceHighlightPreserve = surfaceWaterPreserve * lerp(0.34, 0.88, highlightPreserve);
         float underwaterTint = underwater * lerp(0.16, 1.0, smoothstep(0.015, 0.22, viewPath01));
         float3 underwaterBlue = lerp(float3(0.05, 0.30, 0.40), float3(0.015, 0.10, 0.19), smoothstep(0.45, 1.0, viewPath01));
         color = lerp(color, underwaterBlue, underwaterTint * lerp(0.34, 0.18, saturate(viewPath01)));
@@ -633,6 +664,8 @@ Shader "Hidden/WaterVolume"
         color = lerp(color, deepColor * lerp(0.30, 0.54, scatterLight), horizonSilhouetteMatte * 0.52);
         color = lerp(color, deepColor * lerp(0.34, 0.58, scatterLight), horizonGlowBleed * 0.58);
         color = lerp(color, deepColor * lerp(0.28, 0.48, scatterLight), brightSourceBleed * 0.42);
+        color = lerp(color, original.rgb, surfaceDetailPreserve);
+        color = lerp(color, max(color, original.rgb), surfaceHighlightPreserve);
 
         if (_OceanDebugMode == 43)
             return float4(ContributionHeat(color - original.rgb, 9.0), 1.0);

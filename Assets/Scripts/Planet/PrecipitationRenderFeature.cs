@@ -13,6 +13,7 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
     Material _material;
     PrecipitationController _cachedController;
     static readonly int _waterFocusModeId = Shader.PropertyToID("_WaterFocusMode");
+    static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
 
     public override void Create()
     {
@@ -26,6 +27,9 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
             return;
 
         if (Shader.GetGlobalFloat(_waterFocusModeId) > 0.5f)
+            return;
+
+        if (ShouldSkipForWaterSurfaceDebug(Shader.GetGlobalInt(_oceanDebugModeId)))
             return;
 
         if (_cachedController == null || !_cachedController.isActiveAndEnabled)
@@ -42,6 +46,19 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
 
         _pass.Setup(_material, _cachedController, renderingData.cameraData.camera);
         renderer.EnqueuePass(_pass);
+    }
+
+    static bool ShouldSkipForWaterSurfaceDebug(int oceanDebugMode)
+    {
+        return (oceanDebugMode >= 1 && oceanDebugMode <= 12)
+            || oceanDebugMode == 18
+            || oceanDebugMode == 19
+            || oceanDebugMode == 22
+            || oceanDebugMode == 23
+            || oceanDebugMode == 25
+            || oceanDebugMode == 32
+            || oceanDebugMode == 49
+            || (oceanDebugMode >= 51 && oceanDebugMode <= 56);
     }
 
     protected override void Dispose(bool disposing)

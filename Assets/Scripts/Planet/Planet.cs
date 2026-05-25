@@ -41,6 +41,10 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
     static readonly int _waterMotionStrengthId = Shader.PropertyToID("_WaterMotionStrength");
     static readonly int _sunGlitterIntensityId = Shader.PropertyToID("_SunGlitterIntensity");
     static readonly int _sunGlitterPowerId = Shader.PropertyToID("_SunGlitterPower");
+    static readonly int _shoreFoamIntensityId = Shader.PropertyToID("_ShoreFoamIntensity");
+    static readonly int _whitecapIntensityId = Shader.PropertyToID("_WhitecapIntensity");
+    static readonly int _wakeFoamIntensityId = Shader.PropertyToID("_WakeFoamIntensity");
+    static readonly int _wakeNormalStrengthId = Shader.PropertyToID("_WakeNormalStrength");
     static readonly int _oceanFocusModeId = Shader.PropertyToID("_OceanFocusMode");
     static readonly int _waterFocusModeId = Shader.PropertyToID("_WaterFocusMode");
     static readonly int _alphaId = Shader.PropertyToID("_Alpha");
@@ -62,16 +66,12 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
     public float LastSeaLevelRadius => _lastSeaLevelRadius;
     public int Seed { get; private set; }
 
-    ILogger _logger;
+    ILogger Logger => LoggerProvider.Get();
 
-    ILogger Logger
+    void Awake()
     {
-        get
-        {
-            if (_logger == null && !ServiceLocator.TryGet(out _logger))
-                _logger = new UnityLogger();
-            return _logger;
-        }
+        ServiceLocator.Register<Planet>(this);
+        ServiceLocator.Register<IPlanetSurfaceSampler>(this);
     }
 
     void Start()
@@ -81,6 +81,8 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
 
     void OnDestroy()
     {
+        ServiceLocator.Unregister<Planet>(this);
+        ServiceLocator.Unregister<IPlanetSurfaceSampler>(this);
         _cts?.Cancel();
         _cts?.Dispose();
     }
@@ -89,9 +91,8 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
     {
         DestroyChildrenImmediate();
 
-        Seed = ServiceLocator.TryGet<ISeedProvider>(out var seedProvider)
-            ? seedProvider.GetSeedForSystem("Planet")
-            : 12345;
+        ISeedProvider seedProvider = ServiceLocator.Get<ISeedProvider>();
+        Seed = seedProvider.GetSeedForSystem("Planet");
 
         _meshFilters = new MeshFilter[6];
         _terrainFaces = new TerrainFace[6];
@@ -356,6 +357,10 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
             mat.SetFloat(_waterMotionStrengthId, 0.24f);
             mat.SetFloat(_sunGlitterIntensityId, 1.45f);
             mat.SetFloat(_sunGlitterPowerId, 1400f);
+            mat.SetFloat(_shoreFoamIntensityId, 1.0f);
+            mat.SetFloat(_whitecapIntensityId, 1.08f);
+            mat.SetFloat(_wakeFoamIntensityId, 1.0f);
+            mat.SetFloat(_wakeNormalStrengthId, 1.0f);
             mat.SetFloat(_oceanFocusModeId, 1f);
             Shader.SetGlobalFloat(_waterFocusModeId, 0f);
             mat.SetFloat(_alphaId, 0.36f);

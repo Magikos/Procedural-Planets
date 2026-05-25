@@ -70,8 +70,6 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
     int _weatherQueryCacheNextFace;
     int _weatherQueryCacheLastFace = -1;
     int _weatherQueryCacheFaceMask;
-    ILogger _logger;
-
     static readonly int _windDirectionId = Shader.PropertyToID("_WindDirection");
     static readonly int _windSpeedId = Shader.PropertyToID("_WindSpeed");
     static readonly int _cloudWeatherRotationId = Shader.PropertyToID("_CloudWeatherRotation");
@@ -83,19 +81,12 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
     public int WeatherResolution => _grid != null ? _grid.Resolution : 0;
     public bool HasWeatherGrid => _grid != null;
 
-    ILogger Logger
-    {
-        get
-        {
-            if (_logger == null && !ServiceLocator.TryGet(out _logger))
-                _logger = new UnityLogger();
-            return _logger;
-        }
-    }
+    ILogger Logger => LoggerProvider.Get();
 
     void Awake()
     {
         ServiceLocator.Register<IWeatherProvider>(this);
+        ServiceLocator.Register<WeatherManager>(this);
         Shader.SetGlobalMatrix(_cloudWeatherRotationId, Matrix4x4.identity);
     }
 
@@ -105,6 +96,8 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
 
     void OnDestroy()
     {
+        ServiceLocator.Unregister<IWeatherProvider>(this);
+        ServiceLocator.Unregister<WeatherManager>(this);
         _grid?.Dispose();
         _grid = null;
     }
@@ -203,7 +196,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         if (_grid == null)
         {
             const string noGrid = "[WeatherDiagnostics] No weather grid generated.";
-            Debug.Log(noGrid);
+            Logger.Log(LogLevel.Info, "Weather", noGrid);
             return noGrid;
         }
 
@@ -240,7 +233,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         if (!string.IsNullOrEmpty(path))
             summary += $", file={path}";
 
-        Debug.Log(summary);
+        Logger.Log(LogLevel.Info, "Weather", summary);
         return report;
     }
 
@@ -258,8 +251,8 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         if (Settings == null) return;
 
         int seed = 12345;
-        if (ServiceLocator.TryGet<ISeedProvider>(out var seedProvider))
-            seed = seedProvider.GetSeedForSystem("Weather");
+        ISeedProvider seedProvider = ServiceLocator.Get<ISeedProvider>();
+        seed = seedProvider.GetSeedForSystem("Weather");
 
         _grid?.Dispose();
         _grid = SphericalWeatherGrid.Generate(Settings, seed);

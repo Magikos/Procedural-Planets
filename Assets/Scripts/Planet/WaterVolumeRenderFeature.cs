@@ -54,12 +54,15 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
             return;
         }
 
+        CopyWaterMaterialSettings(meshRenderer.sharedMaterial, _prepassMaterial);
         CopyWaterMaterialSettings(meshRenderer.sharedMaterial, _volumeMaterial);
         Shader.SetGlobalFloat(_waterVolumeEnabledId, 1f);
 
         Mesh renderableVolumeLipMesh = IsRenderableMesh(volumeLipMesh) ? volumeLipMesh : null;
         bool drawRelaxedVolumeLip = renderableVolumeLipMesh != null && IsCameraInsideWaterMesh(camera, meshFilter, mesh);
-        bool compositeAfterAtmosphere = Shader.GetGlobalInt(_oceanDebugModeId) == 41;
+        int oceanDebugMode = Shader.GetGlobalInt(_oceanDebugModeId);
+        bool drawVolumeLipSceneDebug = renderableVolumeLipMesh != null && oceanDebugMode == 50;
+        bool compositeAfterAtmosphere = oceanDebugMode == 41;
         _pass.Setup(
             _prepassMaterial,
             _volumeMaterial,
@@ -68,6 +71,7 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
             renderableVolumeLipMesh,
             volumeLipFilter != null ? volumeLipFilter.transform.localToWorldMatrix : Matrix4x4.identity,
             drawRelaxedVolumeLip,
+            drawVolumeLipSceneDebug,
             compositeAfterAtmosphere);
         renderer.EnqueuePass(_pass);
     }
@@ -209,6 +213,7 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
     static readonly int _waterInterfaceTextureId = Shader.PropertyToID("_WaterInterfaceTexture");
     const int WaterPrepassPass = 0;
     const int WaterVolumeLipPrepassPass = 1;
+    const int WaterVolumeLipSceneDebugPass = 2;
     static MaterialPropertyBlock _propertyBlock;
 
     Material _prepassMaterial;
@@ -218,6 +223,7 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
     Mesh _volumeLipMesh;
     Matrix4x4 _volumeLipLocalToWorld;
     bool _drawRelaxedVolumeLip;
+    bool _drawVolumeLipSceneDebug;
 
     public WaterVolumeRenderPass()
     {
@@ -235,6 +241,7 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
         Mesh volumeLipMesh,
         Matrix4x4 volumeLipLocalToWorld,
         bool drawRelaxedVolumeLip,
+        bool drawVolumeLipSceneDebug,
         bool compositeAfterAtmosphere)
     {
         _prepassMaterial = prepassMaterial;
@@ -244,6 +251,7 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
         _volumeLipMesh = volumeLipMesh;
         _volumeLipLocalToWorld = volumeLipLocalToWorld;
         _drawRelaxedVolumeLip = drawRelaxedVolumeLip;
+        _drawVolumeLipSceneDebug = drawVolumeLipSceneDebug;
         renderPassEvent = compositeAfterAtmosphere
             ? RenderPassEvent.AfterRenderingPostProcessing
             : RenderPassEvent.BeforeRenderingPostProcessing;
@@ -264,6 +272,13 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
         internal Material material;
         internal TextureHandle source;
         internal TextureHandle waterData;
+    }
+
+    sealed class LipSceneDebugData
+    {
+        internal Material material;
+        internal Mesh volumeLipMesh;
+        internal Matrix4x4 volumeLipLocalToWorld;
     }
 
     public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
@@ -299,6 +314,7 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
             passData.volumeLipLocalToWorld = _volumeLipLocalToWorld;
             passData.drawRelaxedVolumeLip = _drawRelaxedVolumeLip;
 
+            builder.UseTexture(resourceData.cameraDepthTexture, AccessFlags.Read);
             builder.SetRenderAttachment(waterData, 0, AccessFlags.Write);
             builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
             builder.SetGlobalTextureAfterPass(waterData, _waterInterfaceTextureId);
@@ -338,6 +354,25 @@ public sealed class WaterVolumeRenderPass : ScriptableRenderPass
                 ctx.cmd.DrawProcedural(Matrix4x4.identity, data.material, 0,
                     MeshTopology.Triangles, 3, 1, _propertyBlock);
             });
+        }
+
+        if (_drawVolumeLipSceneDebug && _volumeLipMesh != null)
+        {
+            using (var builder = renderGraph.AddRasterRenderPass<LipSceneDebugData>("WaterVolumeLipSceneDebug", out var passData))
+            {
+                passData.material = _prepassMaterial;
+                passData.volumeLipMesh = _volumeLipMesh;
+                passData.volumeLipLocalToWorld = _volumeLipLocalToWorld;
+
+                builder.SetRenderAttachment(destination, 0, AccessFlags.Write);
+                builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
+                builder.AllowPassCulling(false);
+
+                builder.SetRenderFunc(static (LipSceneDebugData data, RasterGraphContext ctx) =>
+                {
+                    ctx.cmd.DrawMesh(data.volumeLipMesh, data.volumeLipLocalToWorld, data.material, 0, WaterVolumeLipSceneDebugPass);
+                });
+            }
         }
 
         resourceData.cameraColor = destination;

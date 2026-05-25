@@ -174,6 +174,7 @@ All listeners receive PlanetGeneratedEvent:
 
 ### Key Patterns
 - **EventBus**: Subscribe in OnEnable, unsubscribe in OnDisable. Initialization in Start.
+- **ServiceLocator lifecycle**: Components that provide required services register themselves in Awake and unregister in OnDestroy. OnEnable/OnDisable are for event wiring only. Start resolves required dependencies with ServiceLocator.Get so missing required services fail loudly after registration should exist.
 - **Planet owns startup**: Raises event if data exists, otherwise auto-generates.
 - **No OnValidate**: Generation only via button press or Start.
 - **No serialized meshes**: All meshes generated at runtime.
