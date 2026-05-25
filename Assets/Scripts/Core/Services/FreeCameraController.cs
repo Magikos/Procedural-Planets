@@ -111,8 +111,8 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
 
     void Initialize()
     {
-        _cachedWeatherProvider = ServiceLocator.Get<IWeatherProvider>();
-        _cachedPlanet = ServiceLocator.Get<IPlanetSurfaceSampler>();
+        ServiceLocator.TryGet(out _cachedWeatherProvider);
+        ServiceLocator.TryGet(out _cachedPlanet);
     }
 
     IInputMapService GetInput()
@@ -138,7 +138,7 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
         _lastElevationMin = evt.ElevationMin;
         _lastElevationMax = evt.ElevationMax;
         if (_cachedPlanet == null)
-            _cachedPlanet = ServiceLocator.Get<IPlanetSurfaceSampler>();
+            ServiceLocator.TryGet(out _cachedPlanet);
         UpdateSunOrbitAxis();
 
         if (AutoPositionOnGenerate)

@@ -71,10 +71,10 @@ public class DebugCaptureController : MonoBehaviour
     void Initialize()
     {
         InitializeRegistry();
-        _cachedCameraContext = ServiceLocator.Get<ICameraRigContext>();
-        _cachedCelestialManager = ServiceLocator.Get<ICelestialTimeController>();
-        _cachedPrecipitationController = ServiceLocator.Get<IPrecipitationDebugControl>();
-        _cachedWeatherProvider = ServiceLocator.Get<IWeatherProvider>();
+        ServiceLocator.TryGet(out _cachedCameraContext);
+        ServiceLocator.TryGet(out _cachedCelestialManager);
+        ServiceLocator.TryGet(out _cachedPrecipitationController);
+        ServiceLocator.TryGet(out _cachedWeatherProvider);
     }
 
     void InitializeRegistry()
