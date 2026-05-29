@@ -4,18 +4,20 @@ using UnityEngine;
 /// Uploads planet-scale cloud data and render settings to the cloud shader.
 /// Weather state lives in WeatherManager; this component owns render-only noise textures.
 /// </summary>
-public class CloudController : MonoBehaviour
+public class CloudController : MonoBehaviour, ICloudController
 {
     [Header("References")]
     public CloudSettings Settings;
     public ComputeShader NoiseCompute;
+
+    CloudSettings ICloudController.Settings => Settings;
 
     float _planetRadius;
     float _seaLevelRadius;
     Vector3 _planetCenter;
     RenderTexture _shapeNoise;
     RenderTexture _detailNoise;
-    WeatherManager _weather;
+    IWeatherConfigurator _weather;
 
     static readonly int _cloudPlanetCenterId = Shader.PropertyToID("_CloudPlanetCenter");
     static readonly int _cloudInnerRadiusId = Shader.PropertyToID("_CloudInnerRadius");
@@ -53,7 +55,7 @@ public class CloudController : MonoBehaviour
 
     void Awake()
     {
-        ServiceLocator.Register<CloudController>(this);
+        ServiceLocator.Register<ICloudController>(this);
     }
 
     void OnEnable()
@@ -92,7 +94,7 @@ public class CloudController : MonoBehaviour
 
     void Initialize()
     {
-        _weather = ServiceLocator.Get<WeatherManager>();
+        _weather = ServiceLocator.Get<IWeatherConfigurator>();
         if (_weather != null && _weather.Settings != Settings)
             _weather.Configure(Settings);
     }
@@ -101,9 +103,7 @@ public class CloudController : MonoBehaviour
     {
         if (NoiseCompute == null || Settings == null) return;
 
-        int seed = 12345;
-        ISeedProvider seedProvider = ServiceLocator.Get<ISeedProvider>();
-        seed = seedProvider.GetSeedForSystem("CloudNoise");
+        int seed = ServiceLocator.Get<ISeedProvider>().GetSeedForSystem("CloudNoise");
 
         ReleaseTextures();
         _shapeNoise = CloudNoiseGenerator.GenerateShapeNoise(NoiseCompute, Settings.ShapeNoiseResolution, seed);
@@ -206,7 +206,7 @@ public class CloudController : MonoBehaviour
 
     void OnDestroy()
     {
-        ServiceLocator.Unregister<CloudController>(this);
+        ServiceLocator.Unregister<ICloudController>(this);
         ReleaseTextures();
     }
 }

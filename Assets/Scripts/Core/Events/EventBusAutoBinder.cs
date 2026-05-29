@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
@@ -53,6 +54,21 @@ public static class EventBusExtensions
 
 public static class EventBusAutoBinder
 {
+    readonly struct Binding
+    {
+        public readonly MethodInfo Method;
+        public readonly HandleEventBusAttribute Attribute;
+
+        public Binding(MethodInfo method, HandleEventBusAttribute attribute)
+        {
+            Method = method;
+            Attribute = attribute;
+        }
+    }
+
+    // Reflection scan + validation is done once per type and reused for every bind/unbind cycle.
+    static readonly Dictionary<Type, Binding[]> _bindingCache = new();
+
     public static void Bind(object target)
     {
         BindOrUnbind(target, bind: true);
@@ -63,70 +79,89 @@ public static class EventBusAutoBinder
         BindOrUnbind(target, bind: false);
     }
 
+    static Binding[] GetBindings(Type type)
+    {
+        if (_bindingCache.TryGetValue(type, out var cached))
+            return cached;
+
+        var bindings = new List<Binding>();
+        var methods = type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+
+        foreach (var method in methods)
+        {
+            foreach (var attr in method.GetCustomAttributes(inherit: true))
+            {
+                if (attr is not HandleEventBusAttribute eventAttribute)
+                    continue;
+
+                if (!IsValidEventType(eventAttribute.EventType, type, method))
+                    continue;
+
+                var parameters = method.GetParameters();
+                if (parameters.Length != 1 || parameters[0].ParameterType != eventAttribute.EventType)
+                {
+                    LoggerProvider.Log(LogLevel.Error, "EventBusAutoBinder", $"Method '{method.Name}' must take exactly one parameter of type '{eventAttribute.EventType.Name}'");
+                    continue;
+                }
+
+                bindings.Add(new Binding(method, eventAttribute));
+            }
+        }
+
+        var result = bindings.ToArray();
+        _bindingCache[type] = result;
+        return result;
+    }
+
     static void BindOrUnbind(object target, bool bind)
     {
         if (target == null) return;
 
         var type = target.GetType();
-        var methods = type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
 
-        foreach (var method in methods)
+        foreach (var binding in GetBindings(type))
         {
-            var attributes = method.GetCustomAttributes(inherit: true);
-            foreach (var attr in attributes)
+            var method = binding.Method;
+            var eventAttribute = binding.Attribute;
+            var eventType = eventAttribute.EventType;
+
+            var delegateType = typeof(Action<>).MakeGenericType(eventType);
+            var handler = Delegate.CreateDelegate(delegateType, target, method);
+            var busType = typeof(EventBus<>).MakeGenericType(eventType);
+
+            if (bind)
             {
-                if (!(attr is HandleEventBusAttribute eventAttribute))
-                    continue;
+                string methodName = eventAttribute.OneTime
+                    ? (eventAttribute.Deferred ? "ListenOnceDeferred" : "ListenOnce")
+                    : (eventAttribute.Deferred ? "ListenDeferred" : "Listen");
 
-                var eventType = eventAttribute.EventType;
-                if (!IsValidEventType(eventType, type, method))
-                    continue;
-
-                var parameters = method.GetParameters();
-                if (parameters.Length != 1 || parameters[0].ParameterType != eventType)
+                MethodInfo listenMethod = FindBusMethod(busType, methodName, delegateType, parameterCount: 2);
+                if (listenMethod == null)
                 {
-                    LoggerProvider.Log(LogLevel.Error, "EventBusAutoBinder", $"Method '{method.Name}' must take exactly one parameter of type '{eventType.Name}'");
+                    LoggerProvider.Log(LogLevel.Error, "EventBusAutoBinder", $"Could not find {busType.Name}.{methodName} for {eventType.Name}");
                     continue;
                 }
 
-                var delegateType = typeof(Action<>).MakeGenericType(eventType);
-                var handler = Delegate.CreateDelegate(delegateType, target, method);
-                var busType = typeof(EventBus<>).MakeGenericType(eventType);
-
-                if (bind)
-                {
-                    string methodName = eventAttribute.OneTime
-                        ? (eventAttribute.Deferred ? "ListenOnceDeferred" : "ListenOnce")
-                        : (eventAttribute.Deferred ? "ListenDeferred" : "Listen");
-
-                    MethodInfo listenMethod = FindBusMethod(busType, methodName, delegateType, parameterCount: 2);
-                    if (listenMethod == null)
-                    {
-                        LoggerProvider.Log(LogLevel.Error, "EventBusAutoBinder", $"Could not find {busType.Name}.{methodName} for {eventType.Name}");
-                        continue;
-                    }
-
-                    listenMethod.Invoke(null, new object[] { handler, null });
+                listenMethod.Invoke(null, new object[] { handler, null });
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    LoggerProvider.Log(LogLevel.Debug, "EventBusAutoBinder", $"Bound {type.Name}.{method.Name} to {busType.Name}.{methodName}()");
+                LoggerProvider.Log(LogLevel.Debug, "EventBusAutoBinder", $"Bound {type.Name}.{method.Name} to {busType.Name}.{methodName}()");
 #endif
-                }
-                else
+            }
+            else
+            {
+                MethodInfo unlistenMethod = FindBusMethod(busType, "Unlisten", delegateType, parameterCount: 1);
+                if (unlistenMethod == null)
                 {
-                    MethodInfo unlistenMethod = FindBusMethod(busType, "Unlisten", delegateType, parameterCount: 1);
-                    if (unlistenMethod == null)
-                    {
-                        LoggerProvider.Log(LogLevel.Error, "EventBusAutoBinder", $"Could not find {busType.Name}.Unlisten for {eventType.Name}");
-                        continue;
-                    }
+                    LoggerProvider.Log(LogLevel.Error, "EventBusAutoBinder", $"Could not find {busType.Name}.Unlisten for {eventType.Name}");
+                    continue;
+                }
 
-                    unlistenMethod.Invoke(null, new object[] { handler });
+                unlistenMethod.Invoke(null, new object[] { handler });
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    LoggerProvider.Log(LogLevel.Debug, "EventBusAutoBinder", $"Unbound {type.Name}.{method.Name} from {busType.Name}.Unlisten()");
+                LoggerProvider.Log(LogLevel.Debug, "EventBusAutoBinder", $"Unbound {type.Name}.{method.Name} from {busType.Name}.Unlisten()");
 #endif
-                }
             }
         }
     }

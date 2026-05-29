@@ -10,11 +10,10 @@ public class AtmosphereController : MonoBehaviour
     float _planetRadius;
     float _seaLevelRadius;
     Vector3 _planetCenter;
-    int _planetSeed = 12345;
     RenderTexture _bakedOpticalDepth;
     float _lastBakedScaleR, _lastBakedScaleM, _lastBakedAtmoScale;
     int _lastBakedSize, _lastBakedSteps;
-    Planet _planet;
+    IPlanet _planet;
 
     static readonly int _sunParamsId = Shader.PropertyToID("_SunParams");
     static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
@@ -67,8 +66,7 @@ public class AtmosphereController : MonoBehaviour
         _seaLevelRadius = evt.SeaLevelRadius > 0f ? evt.SeaLevelRadius : _planetRadius * 0.95f;
 
         InitializeDependencies();
-        _planetCenter = _planet.transform.position;
-        _planetSeed = _planet.Seed;
+        _planetCenter = _planet.Transform.position;
 
         Initialize();
     }
@@ -76,7 +74,7 @@ public class AtmosphereController : MonoBehaviour
     void InitializeDependencies()
     {
         if (_planet == null)
-            _planet = ServiceLocator.Get<Planet>();
+            _planet = ServiceLocator.Get<IPlanet>();
     }
 
     void Initialize()

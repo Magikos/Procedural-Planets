@@ -100,16 +100,26 @@ public class TerrainFace
         _mesh.RecalculateBounds();
     }
 
-    public void UpdateColors(IBiomeProvider biomeProvider)
+    /// <summary>Computes vertex colors from biome data. Safe to call from a background thread.</summary>
+    public void CalculateColors(IBiomeProvider biomeProvider)
     {
         if (_unitSpherePoints == null || _elevations == null) return;
 
         _pendingColors = new Color[_unitSpherePoints.Length];
         for (int i = 0; i < _unitSpherePoints.Length; i++)
-        {
             _pendingColors[i] = biomeProvider.GetBiomeColor(_unitSpherePoints[i], _elevations[i]);
-        }
+    }
 
-        _mesh.colors = _pendingColors;
+    /// <summary>Uploads previously computed colors to the mesh. Must be called on the main thread.</summary>
+    public void ApplyColors()
+    {
+        if (_pendingColors != null)
+            _mesh.colors = _pendingColors;
+    }
+
+    public void UpdateColors(IBiomeProvider biomeProvider)
+    {
+        CalculateColors(biomeProvider);
+        ApplyColors();
     }
 }

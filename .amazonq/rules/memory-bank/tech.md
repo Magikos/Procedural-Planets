@@ -25,14 +25,27 @@
 - **ShapesRuntime / ShapesEditor / ShapesSamples** — Shapes plugin assemblies
 
 ## Shader Stack
-- **PlanetVertexColor.shader** — URP HLSL vertex color as albedo, PBR lighting. Has DepthOnly/DepthNormals passes.
-- **Atmosphere.shader** — Post-process fullscreen pass structure
-  - **Atmosphere.hlsl** — v3: brute-force Rayleigh+Mie ray marching (16 view steps × 8 sun steps)
-  - Sea level as density origin, scaled coefficients for planet size
-  - Reinhard tone mapping on scatter only (preserves terrain color)
-  - Sun disc rendered even outside atmosphere
-- **OpticalDepth.compute** — UNUSED in v3 (kept for future LUT optimization)
-- **Planet.shadergraph** — OLD shader graph (unused, kept for reference)
+- **PlanetVertexColor.shader** — URP HLSL vertex color as albedo, PBR lighting. Has DepthOnly/DepthNormals passes; supports debug terrain tints (face id, source-color isolation).
+- **Ocean.shader** — Transparent ocean surface: depth color, shoreline foam, waves (triplanar phase), glint/whitecaps, terrain-contact fades. Many F10 debug modes.
+- **WaterVolume.shader** / **WaterVolumePrepass.shader** — Full-screen underwater/long-path volume composite + the prepass that writes water interface coverage.
+- **Atmosphere.shader** + **Includes/Atmosphere.hlsl** — Post-process Rayleigh+Mie ray marching; sea level as density origin, Reinhard on scatter only, light shafts, sun disc.
+- **Cloud.shader** + **CloudNoise.compute** — Volumetric clouds driven by the weather grid; stratified per-pixel sampling.
+- **Precipitation.shader** — Rain/storm curtains with jittered raymarch.
+- **Star.shader** — Background stars + sun disc, clipped against the sea-level planet sphere.
+- **SDFText.shader** — Signed-distance-field text (loading overlay, debug labels).
+- **LoadingOverlay.shader** — Fullscreen loading overlay + progress bar.
+- **WeatherEvolution.compute** — GPU ping-pong evolution of the cube-sphere weather grid.
+- **Includes/** — `Common.hlsl`, `Math.hlsl`, `CloudShadows.hlsl`, `WeatherSampling.hlsl`, `DebugModes.hlsl`.
+- **OpticalDepth.compute** — Sun-ray optical-depth LUT bake used by the atmosphere controller.
+- **Planet.shadergraph** — OLD shader graph (unused, kept for reference).
+
+## Runtime Systems & Bootstrap
+- **LoadingManager** (`[RuntimeInitializeOnLoadMethod]`, DontDestroyOnLoad) — drives startup: collects MonoBehaviours, runs `IEarlyInitialize` (desc priority) then `ILateInitialize` (desc priority), shows a loading overlay with `ProgressTracker`/`IProgressReporter` progress.
+- **GameBootstrap** (`IEarlyInitialize`, priority 100) — registers `ISeedProvider`, `IWorldActionManager`, `IDebugCommandProvider`; ensures `ShaderGlobalsController`, `QualityController`, `DebugInputRelay`, `DebugCaptureController`, `WaterWakeController`.
+- **ServiceLocator** — interface-keyed service registry (no concrete-type registrations).
+- **EventBus&lt;T&gt;** — weak-reference static event bus; compiled open-delegate dispatch (no per-event reflection); auto-registers into `EventBusRegistry` for one-call teardown.
+- **URP ScriptableRendererFeatures** — Atmosphere, Cloud, Precipitation, WaterVolume, Star (registered on the PC renderer asset).
+- **SDF Text** (`Core/Text/`) — runtime SDF font asset + mesh builder + renderer for overlay/debug text.
 
 ## Rendering Configuration
 - PC and Mobile URP renderer assets (PC_RPAsset, Mobile_RPAsset)

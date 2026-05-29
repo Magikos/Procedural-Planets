@@ -2,7 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
-public class Planet : MonoBehaviour, IPlanetSurfaceSampler
+public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitialize, IProgressReporter
 {
     public enum FaceRenderMask { All, Top, Bottom, Left, Right, Front, Back }
 
@@ -14,7 +14,7 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
 
     public PlanetSettings PlanetSettingsAsset => _planetSettings;
 
-    [SerializeField, HideInInspector] public bool SettingsFoldout = true;
+    [SerializeField, HideInInspector] bool _settingsFoldout = true;
     [SerializeField, HideInInspector] float _lastGeneratedRadius;
     [SerializeField, HideInInspector] float _lastSeaLevelRadius;
     [SerializeField, HideInInspector] float _lastElevationMin;
@@ -25,7 +25,7 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
     TerrainFace[] _terrainFaces;
     MeshFilter[] _meshFilters;
     GameObject _waterObject;
-    GameObject _waterVolumeLipObject;
+    Material _waterMaterial;
 
     static readonly int _shallowColorId = Shader.PropertyToID("_ShallowColor");
     static readonly int _deepColorId = Shader.PropertyToID("_DeepColor");
@@ -49,6 +49,15 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
     static readonly int _waterFocusModeId = Shader.PropertyToID("_WaterFocusMode");
     static readonly int _alphaId = Shader.PropertyToID("_Alpha");
 
+    static Shader _vcShader;
+    static Shader _oceanShader;
+    static Shader _urpLitShader;
+    static Shader _standardShader;
+
+    static readonly Color _waterShallowBaseColor = new Color(0.20f, 0.76f, 0.82f, 1f);
+    static readonly Color _waterDeepBaseColor = new Color(0.00f, 0.018f, 0.065f, 1f);
+    static readonly Color _waterFoamColor = new Color(0.88f, 0.98f, 0.94f, 0.9f);
+
     const float WaterReferenceRadius = 5000f;
     const float WaterShallowDepth = 28f;
     const float WaterDeepDepth = 360f;
@@ -56,40 +65,67 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
     const float WaterShoreRange = 125f;
     const float WaterWaveAmplitude = 3.4f;
     const float WaterWaveScale = 480f;
+    const float WaterWaveSpeed = 0.58f;
+    const float WaterWaveNormalStrength = 4.5f;
+    const float WaterMotionStrength = 0.24f;
+    const float WaterSunGlitterIntensity = 1.45f;
+    const float WaterSunGlitterPower = 1400f;
+    const float WaterShoreFoamIntensity = 1.0f;
+    const float WaterWhitecapIntensity = 1.08f;
+    const float WaterWakeFoamIntensity = 1.0f;
+    const float WaterWakeNormalStrength = 1.0f;
+    const float WaterAlpha = 0.36f;
+    const float WaterShallowColorBlend = 0.68f;
+    const float WaterDeepColorBlend = 0.88f;
+    const float WaterShallowAlphaFactor = 0.14f;
+    const float WaterShallowAlphaMin = 0.10f;
+    const float WaterDeepAlphaMin = 0.96f;
 
     CancellationTokenSource _cts;
     bool _isGenerating;
+    readonly ProgressHandle _progressHandle = new ProgressHandle();
 
     public bool IsGenerating => _isGenerating;
     public ShapeGenerator ShapeGenerator => _shapeGenerator;
     public float LastGeneratedRadius => _lastGeneratedRadius;
     public float LastSeaLevelRadius => _lastSeaLevelRadius;
     public int Seed { get; private set; }
+    public Transform Transform => transform;
+    public string ReporterName => "Planet";
+    public int StepCount => 5;
+    public IProgressHandle ProgressHandle => _progressHandle;
 
     ILogger Logger => LoggerProvider.Get();
 
+    public int LatePriority => 0;
+
     void Awake()
     {
-        ServiceLocator.Register<Planet>(this);
-        ServiceLocator.Register<IPlanetSurfaceSampler>(this);
-    }
+        if (_vcShader == null) _vcShader = Shader.Find("Planet/VertexColor");
+        if (_oceanShader == null) _oceanShader = Shader.Find("Planet/Ocean");
+        if (_urpLitShader == null) _urpLitShader = Shader.Find("Universal Render Pipeline/Lit");
+        if (_standardShader == null) _standardShader = Shader.Find("Standard");
 
-    void Start()
-    {
-        GeneratePlanetAsync();
+        ServiceLocator.Register<IPlanet>(this);
+        ServiceLocator.Register<IPlanetSurfaceSampler>(this);
     }
 
     void OnDestroy()
     {
-        ServiceLocator.Unregister<Planet>(this);
+        ServiceLocator.Unregister<IPlanet>(this);
         ServiceLocator.Unregister<IPlanetSurfaceSampler>(this);
         _cts?.Cancel();
         _cts?.Dispose();
+        if (_waterMaterial != null)
+        {
+            Destroy(_waterMaterial);
+            _waterMaterial = null;
+        }
     }
 
     void Initialize()
     {
-        DestroyChildrenImmediate();
+        DestroyChildren();
 
         ISeedProvider seedProvider = ServiceLocator.Get<ISeedProvider>();
         Seed = seedProvider.GetSeedForSystem("Planet");
@@ -97,7 +133,6 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
         _meshFilters = new MeshFilter[6];
         _terrainFaces = new TerrainFace[6];
         _waterObject = null;
-        _waterVolumeLipObject = null;
 
         var shapeSettings = _planetSettings.BuildShapeSettings();
         _shapeGenerator.Configure(shapeSettings);
@@ -124,25 +159,38 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
         }
     }
 
-    void DestroyChildrenImmediate()
+    void DestroyChildren()
     {
         for (int i = transform.childCount - 1; i >= 0; i--)
-            DestroyImmediate(transform.GetChild(i).gameObject);
+            Destroy(transform.GetChild(i).gameObject);
     }
 
 
     void ConfigureMaterial()
     {
         var mat = _planetSettings.PlanetMaterial;
+        if (mat == null)
+        {
+            Logger.Log(LogLevel.Warning, "Planet", "PlanetMaterial is not assigned in PlanetSettings.");
+            return;
+        }
         if (mat.shader.name != "Planet/VertexColor")
         {
-            var vcShader = Shader.Find("Planet/VertexColor");
-            if (vcShader != null) mat.shader = vcShader;
+            if (_vcShader != null) mat.shader = _vcShader;
         }
         mat.SetFloat("_Smoothness", 0f);
     }
 
-    public async void GeneratePlanetAsync()
+    public async Awaitable LateInitialize(CancellationToken cancellationToken)
+    {
+        await GeneratePlanetAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Generates the planet mesh, colors, and water. Safe to call directly for editor/runtime
+    /// regeneration; LoadingManager calls this via <see cref="LateInitialize"/>.
+    /// </summary>
+    public async Awaitable GeneratePlanetAsync(CancellationToken externalToken = default)
     {
         if (_planetSettings == null)
         {
@@ -156,14 +204,28 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
 
+        CancellationTokenSource linkedCts = null;
+        CancellationToken ct = _cts.Token;
+        if (externalToken.CanBeCanceled)
+        {
+            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(externalToken, _cts.Token);
+            ct = linkedCts.Token;
+        }
+
         try
         {
             _isGenerating = true;
+            _progressHandle.Report(0f, "Initializing planet...");
             Initialize();
-            await GenerateMeshAsync(_cts.Token);
+            _progressHandle.Report(0.1f, "Generating terrain...");
+            await GenerateMeshAsync(ct);
             if (this == null) return;
-            GenerateColors();
-            GenerateWater();
+            _shapeGenerator.CommitElevationRange();
+            _progressHandle.Report(0.8f, "Applying colors...");
+            await GenerateColorsAsync(ct);
+            if (this == null) return;
+            _progressHandle.Report(0.9f, "Generating water...");
+            await GenerateWaterAsync(ct);
             // Atmosphere is rendered by AtmosphereController + AtmosphereRenderFeature (post-process).
 
             float scaledRadius = _planetSettings.PlanetRadius * (1 + _shapeGenerator.ElevationMax);
@@ -172,6 +234,8 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
             _lastSeaLevelRadius = seaLevelRadius;
             _lastElevationMin = _shapeGenerator.ElevationMin;
             _lastElevationMax = _shapeGenerator.ElevationMax;
+            _progressHandle.Report(1f, "Planet ready");
+            await Awaitable.NextFrameAsync(ct);
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _lastElevationMin, _lastElevationMax));
             Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, resolution {Resolution}, radius {scaledRadius:F1}");
         }
@@ -183,6 +247,7 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
         finally
         {
             _isGenerating = false;
+            linkedCts?.Dispose();
         }
     }
 
@@ -206,6 +271,20 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
     {
         foreach (var face in _terrainFaces)
             face.UpdateColors(_colorGenerator);
+    }
+
+    async Awaitable GenerateColorsAsync(CancellationToken ct)
+    {
+        var faces = _terrainFaces;
+        var colorGen = _colorGenerator;
+        await Awaitable.BackgroundThreadAsync();
+        ct.ThrowIfCancellationRequested();
+        System.Threading.Tasks.Parallel.For(0, faces.Length, i => faces[i].CalculateColors(colorGen));
+        ct.ThrowIfCancellationRequested();
+        await Awaitable.MainThreadAsync();
+        if (this == null) return;
+        foreach (var face in faces)
+            face.ApplyColors();
     }
 
     public bool TryGetSurfaceRadius(Vector3 worldUnitDirection, out float surfaceRadius)
@@ -242,12 +321,11 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
         return true;
     }
 
-    void GenerateWater()
+    async Awaitable GenerateWaterAsync(CancellationToken ct)
     {
         if (!_planetSettings.HasOceans)
         {
             if (_waterObject != null) _waterObject.SetActive(false);
-            if (_waterVolumeLipObject != null) _waterVolumeLipObject.SetActive(false);
             return;
         }
 
@@ -262,34 +340,16 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
             _waterObject.AddComponent<MeshFilter>();
         }
 
-        if (_waterVolumeLipObject == null)
-        {
-            _waterVolumeLipObject = new GameObject("WaterVolumeLip");
-            _waterVolumeLipObject.transform.parent = _waterObject.transform;
-            _waterVolumeLipObject.transform.localPosition = Vector3.zero;
-            _waterVolumeLipObject.transform.localRotation = Quaternion.identity;
-            _waterVolumeLipObject.transform.localScale = Vector3.one;
-            _waterVolumeLipObject.AddComponent<MeshFilter>();
-        }
-
         _waterObject.SetActive(true);
-        _waterVolumeLipObject.SetActive(true);
         _waterObject.transform.localScale = Vector3.one;
         _waterObject.transform.localPosition = Vector3.zero;
-        _waterVolumeLipObject.transform.localScale = Vector3.one;
-        _waterVolumeLipObject.transform.localPosition = Vector3.zero;
-        _waterVolumeLipObject.transform.localRotation = Quaternion.identity;
 
         var meshFilter = _waterObject.GetComponent<MeshFilter>();
         if (meshFilter.sharedMesh == null)
             meshFilter.sharedMesh = new Mesh { name = "WaterBodies" };
 
-        var volumeLipFilter = _waterVolumeLipObject.GetComponent<MeshFilter>();
-        if (volumeLipFilter.sharedMesh == null)
-            volumeLipFilter.sharedMesh = new Mesh { name = "WaterVolumeLip" };
-
         float waterScale = GetWaterDistanceScale();
-        var waterStats = WaterMeshBuilder.Build(meshFilter.sharedMesh, volumeLipFilter.sharedMesh, _terrainFaces, new WaterMeshBuilder.Settings
+        var buildSettings = new WaterMeshBuilder.Settings
         {
             PlanetRadius = _planetSettings.PlanetRadius,
             OceanLevel = _planetSettings.OceanLevel,
@@ -297,37 +357,56 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
             ShoreRange = WaterShoreRange * waterScale,
             SurfaceOffset = Mathf.Max(_planetSettings.PlanetRadius * 0.00003f, 0.02f),
             OceanBodyVertexThreshold = Mathf.Max(48, Resolution * Resolution / 28)
-        });
+        };
+        var terrainFaces = _terrainFaces;
+        var waterMesh = meshFilter.sharedMesh;
 
-        if (waterStats.Triangles == 0)
+        // Run the (pure-CPU) water build on a worker and poll its progress each frame on the main
+        // thread so the loading bar advances through the heavy global-graph + per-face phases.
+        _progressHandle.Report(0.90f, "Building water bodies...");
+        float buildProgress = 0f;
+        var computeTask = Task.Run(
+            () => WaterMeshBuilder.Compute(terrainFaces, buildSettings,
+                p => System.Threading.Volatile.Write(ref buildProgress, p)), ct);
+        while (!computeTask.IsCompleted)
+        {
+            _progressHandle.Report(0.90f + 0.06f * System.Threading.Volatile.Read(ref buildProgress), "Building water bodies...");
+            await Awaitable.NextFrameAsync(ct);
+        }
+        var waterMeshData = await computeTask;
+        if (this == null) return;
+        _progressHandle.Report(0.97f, "Uploading water mesh...");
+
+        if (waterMeshData.Stats.Triangles == 0)
         {
             _waterObject.SetActive(false);
-            _waterVolumeLipObject.SetActive(false);
             return;
         }
 
-        _waterVolumeLipObject.SetActive(waterStats.VolumeLipTriangles > 0);
+        WaterMeshBuilder.Apply(waterMesh, null, waterMeshData);
 
         Logger.Log(LogLevel.Debug, "Water",
-            $"Generated water mesh: {waterStats.MeshVertices} verts, {waterStats.Triangles} tris, " +
-            $"volume lip {waterStats.VolumeLipVertices} verts, {waterStats.VolumeLipTriangles} tris, " +
-            $"wet terrain verts {waterStats.WetVertices}, ocean bodies {waterStats.OceanBodies}, " +
-            $"small bodies {waterStats.SmallBodies}, max depth {waterStats.MaxDepth:F1}");
+            $"Generated water mesh: {waterMeshData.Stats.MeshVertices} verts, {waterMeshData.Stats.Triangles} tris, " +
+            $"wet terrain verts {waterMeshData.Stats.WetVertices}, ocean bodies {waterMeshData.Stats.OceanBodies}, " +
+            $"small bodies {waterMeshData.Stats.SmallBodies}, max depth {waterMeshData.Stats.MaxDepth:F1}");
 
         var renderer = _waterObject.GetComponent<Renderer>();
-        var oceanShader = Shader.Find("Planet/Ocean");
-        if (renderer.sharedMaterial == null ||
-            renderer.sharedMaterial.name == "Default-Material" ||
-            (oceanShader != null && renderer.sharedMaterial.shader != oceanShader))
-            renderer.sharedMaterial = CreateWaterMaterial();
-        UpdateWaterMaterial(renderer.sharedMaterial);
+        if (_waterMaterial == null ||
+            _waterMaterial.name == "Default-Material" ||
+            (_oceanShader != null && _waterMaterial.shader != _oceanShader))
+        {
+            if (_waterMaterial != null) Destroy(_waterMaterial);
+            _waterMaterial = CreateWaterMaterial();
+        }
+        renderer.sharedMaterial = _waterMaterial;
+        UpdateWaterMaterial(_waterMaterial);
     }
 
     Material CreateWaterMaterial()
     {
-        var shader = Shader.Find("Planet/Ocean");
-        if (shader == null) shader = Shader.Find("Universal Render Pipeline/Lit");
-        if (shader == null) shader = Shader.Find("Standard");
+        var shader = _oceanShader != null ? _oceanShader
+                   : _urpLitShader != null ? _urpLitShader
+                   : _standardShader;
         var mat = new Material(shader) { name = "Water" };
         return mat;
     }
@@ -338,32 +417,32 @@ public class Planet : MonoBehaviour, IPlanetSurfaceSampler
         float waterScale = GetWaterDistanceScale();
         if (mat.HasProperty(_shallowColorId))
         {
-            Color shallow = Color.Lerp(color, new Color(0.20f, 0.76f, 0.82f, color.a), 0.68f);
-            shallow.a = Mathf.Clamp01(Mathf.Max(color.a * 0.14f, 0.10f));
-            Color deep = Color.Lerp(color, new Color(0.0f, 0.018f, 0.065f, 1f), 0.88f);
-            deep.a = Mathf.Clamp01(Mathf.Max(color.a, 0.96f));
+            Color shallow = Color.Lerp(color, _waterShallowBaseColor, WaterShallowColorBlend);
+            shallow.a = Mathf.Clamp01(Mathf.Max(color.a * WaterShallowAlphaFactor, WaterShallowAlphaMin));
+            Color deep = Color.Lerp(color, _waterDeepBaseColor, WaterDeepColorBlend);
+            deep.a = Mathf.Clamp01(Mathf.Max(color.a, WaterDeepAlphaMin));
 
             mat.SetColor(_shallowColorId, shallow);
             mat.SetColor(_deepColorId, deep);
-            mat.SetColor(_foamColorId, new Color(0.88f, 0.98f, 0.94f, 0.9f));
+            mat.SetColor(_foamColorId, _waterFoamColor);
             mat.SetFloat(_shallowDepthId, WaterShallowDepth * waterScale);
             mat.SetFloat(_deepDepthId, WaterDeepDepth * waterScale);
             mat.SetFloat(_shoreFoamDepthId, WaterShoreFoamDepth * waterScale);
             mat.SetFloat(_shoreFoamSoftnessId, WaterShoreRange * waterScale);
             mat.SetFloat(_waveAmplitudeId, WaterWaveAmplitude * waterScale);
             mat.SetFloat(_waveScaleId, WaterWaveScale * waterScale);
-            mat.SetFloat(_waveSpeedId, 0.58f);
-            mat.SetFloat(_waveNormalStrengthId, 4.5f);
-            mat.SetFloat(_waterMotionStrengthId, 0.24f);
-            mat.SetFloat(_sunGlitterIntensityId, 1.45f);
-            mat.SetFloat(_sunGlitterPowerId, 1400f);
-            mat.SetFloat(_shoreFoamIntensityId, 1.0f);
-            mat.SetFloat(_whitecapIntensityId, 1.08f);
-            mat.SetFloat(_wakeFoamIntensityId, 1.0f);
-            mat.SetFloat(_wakeNormalStrengthId, 1.0f);
+            mat.SetFloat(_waveSpeedId, WaterWaveSpeed);
+            mat.SetFloat(_waveNormalStrengthId, WaterWaveNormalStrength);
+            mat.SetFloat(_waterMotionStrengthId, WaterMotionStrength);
+            mat.SetFloat(_sunGlitterIntensityId, WaterSunGlitterIntensity);
+            mat.SetFloat(_sunGlitterPowerId, WaterSunGlitterPower);
+            mat.SetFloat(_shoreFoamIntensityId, WaterShoreFoamIntensity);
+            mat.SetFloat(_whitecapIntensityId, WaterWhitecapIntensity);
+            mat.SetFloat(_wakeFoamIntensityId, WaterWakeFoamIntensity);
+            mat.SetFloat(_wakeNormalStrengthId, WaterWakeNormalStrength);
             mat.SetFloat(_oceanFocusModeId, 1f);
             Shader.SetGlobalFloat(_waterFocusModeId, 0f);
-            mat.SetFloat(_alphaId, 0.36f);
+            mat.SetFloat(_alphaId, WaterAlpha);
             mat.renderQueue = 3000;
             mat.SetOverrideTag("RenderType", "Transparent");
             Logger.Log(LogLevel.Debug, "Water", "Applied integrated ocean mode: clouds, rain, and terrain cloud shadows enabled; focused water rendering retained.");

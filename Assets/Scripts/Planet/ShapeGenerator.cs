@@ -6,20 +6,27 @@ public class ShapeGenerator : ITerrainProvider
     INoiseFilter[] _noiseFilters;
     int _seed;
 
-    public float ElevationMin => _elevationMinMax.Min;
-    public float ElevationMax => _elevationMinMax.Max;
+    // Accumulated during (possibly multi-threaded) evaluation; only published to the public
+    // ElevationMin/Max via CommitElevationRange() once a full generation pass has completed,
+    // so consumers never observe a partial range.
+    readonly MinMax _workingMinMax = new MinMax();
+    float _committedMin;
+    float _committedMax;
 
-    MinMax _elevationMinMax = new MinMax();
+    public float ElevationMin => _committedMin;
+    public float ElevationMax => _committedMax;
 
     public void Configure(ShapeSettings settings)
     {
-        _shapeSettings = settings;
+        _shapeSettings = settings ?? throw new System.ArgumentNullException(nameof(settings));
     }
 
     public void Initialize(int seed)
     {
+        if (_shapeSettings == null)
+            throw new System.InvalidOperationException("ShapeGenerator.Configure() must be called before Initialize().");
         _seed = seed;
-        _elevationMinMax = new MinMax();
+        _workingMinMax.Reset();
         _noiseFilters = new INoiseFilter[_shapeSettings.NoiseLayers.Length];
         for (int i = 0; i < _noiseFilters.Length; i++)
         {
@@ -46,8 +53,16 @@ public class ShapeGenerator : ITerrainProvider
             elevation += _noiseFilters[i].Evaluate(pointOnUnitSphere) * mask;
         }
 
-        _elevationMinMax.AddValue(elevation);
+        _workingMinMax.AddValue(elevation);
         return elevation;
+    }
+
+    // Publishes the accumulated elevation range. Call on the main thread after all evaluation
+    // (e.g. the parallel mesh pass) has completed.
+    public void CommitElevationRange()
+    {
+        _committedMin = _workingMinMax.Min;
+        _committedMax = _workingMinMax.Max;
     }
 
     public float GetScaledElevation(float unscaledElevation)

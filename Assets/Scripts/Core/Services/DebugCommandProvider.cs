@@ -1,8 +1,13 @@
-public class DebugCommandProvider : IDebugCommandProvider
+public class DebugCommandProvider : IDebugCommandProvider, System.IDisposable
 {
     public DebugCommandProvider()
     {
         EventBus<DebugCommandRequestedEvent>.Listen(OnDebugCommandRequested);
+    }
+
+    public void Dispose()
+    {
+        EventBus<DebugCommandRequestedEvent>.Unlisten(OnDebugCommandRequested);
     }
 
     public void HandleCommand(DebugCommandType command)
@@ -29,6 +34,9 @@ public class DebugCommandProvider : IDebugCommandProvider
                 break;
             case DebugCommandType.ToggleProfiling:
                 EventBus<DebugProfilingToggleRequestedEvent>.Raise(new DebugProfilingToggleRequestedEvent());
+                break;
+            case DebugCommandType.DumpWeatherDiagnostics:
+                EventBus<DebugWeatherDiagnosticsRequestedEvent>.Raise(new DebugWeatherDiagnosticsRequestedEvent());
                 break;
         }
     }

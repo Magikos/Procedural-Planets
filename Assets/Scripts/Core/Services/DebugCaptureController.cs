@@ -16,12 +16,12 @@ public class DebugCaptureController : MonoBehaviour
     public bool IncludeMeshIntegrityInDebugCaptures;
 
     [Header("Debug Capture")]
-    static readonly bool SaveF10DebugScreenshots = true;
-    static readonly int DebugScreenshotMaxWidth = 960;
-    static readonly int DebugScreenshotMaxRuns = 6;
-    static readonly float DebugCaptureModeDelaySeconds = 0.12f;
-    static readonly bool RestoreDebugOffAfterCaptureSet = true;
-    static readonly string DebugScreenshotFolder = "local-only/debug-screenshots";
+    const bool SaveF10DebugScreenshots = true;
+    const int DebugScreenshotMaxWidth = 960;
+    const int DebugScreenshotMaxRuns = 6;
+    const float DebugCaptureModeDelaySeconds = 0.12f;
+    const bool RestoreDebugOffAfterCaptureSet = true;
+    const string DebugScreenshotFolder = "local-only/debug-screenshots";
 
     Light _cachedSunLight;
     ICameraRigContext _cachedCameraContext;

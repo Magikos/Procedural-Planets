@@ -30,9 +30,9 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
         if (camType == CameraType.Preview || camType == CameraType.Reflection)
             return;
 
-        if (_cachedController == null || !_cachedController.isActiveAndEnabled)
-            _cachedController = Object.FindAnyObjectByType<AtmosphereController>();
         if (_cachedController == null)
+            _cachedController = Object.FindAnyObjectByType<AtmosphereController>();
+        if (_cachedController == null || !_cachedController.isActiveAndEnabled)
             return;
 
         if (_material == null)

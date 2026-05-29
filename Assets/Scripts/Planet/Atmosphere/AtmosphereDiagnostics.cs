@@ -9,16 +9,29 @@ using UnityEngine.InputSystem;
 public class AtmosphereDiagnostics : MonoBehaviour
 {
     bool _captureRequested;
-    Keyboard _keyboard;
 
-    void Start()
-    {
-        _keyboard = Keyboard.current;
-    }
+    static readonly int _seaLevelRadiusId = Shader.PropertyToID("_SeaLevelRadius");
+    static readonly int _densityOriginRadiusId = Shader.PropertyToID("_DensityOriginRadius");
+    static readonly int _atmosphereRadiusId = Shader.PropertyToID("_AtmosphereRadius");
+    static readonly int _rayleighScatteringId = Shader.PropertyToID("_RayleighScattering");
+    static readonly int _rayleighScaleHeightId = Shader.PropertyToID("_RayleighScaleHeight");
+    static readonly int _mieScatteringCoeffId = Shader.PropertyToID("_MieScatteringCoeff");
+    static readonly int _mieScaleHeightId = Shader.PropertyToID("_MieScaleHeight");
+    static readonly int _mieAnisotropyId = Shader.PropertyToID("_MieAnisotropy");
+    static readonly int _sunIntensityId = Shader.PropertyToID("_SunIntensity");
+    static readonly int _viewStepsId = Shader.PropertyToID("_ViewSteps");
+    static readonly int _sunStepsId = Shader.PropertyToID("_SunSteps");
+    static readonly int _debugModeId = Shader.PropertyToID("_DebugMode");
+    static readonly int _starSeedId = Shader.PropertyToID("_StarSeed");
+    static readonly int _starDensityId = Shader.PropertyToID("_StarDensity");
+    static readonly int _starBrightnessId = Shader.PropertyToID("_StarBrightness");
+    static readonly int _nightAmbientIntensityId = Shader.PropertyToID("_NightAmbientIntensity");
+    static readonly int _sunParamsId = Shader.PropertyToID("_SunParams");
 
     void Update()
     {
-        if (_keyboard != null && _keyboard.f12Key.wasPressedThisFrame)
+        var keyboard = Keyboard.current;
+        if (keyboard != null && keyboard.f12Key.wasPressedThisFrame)
         {
             LoggerProvider.Log(LogLevel.Debug, "AtmosphereDiagnostics", "F12 pressed, capturing...");
             _captureRequested = true;
@@ -67,31 +80,31 @@ public class AtmosphereDiagnostics : MonoBehaviour
 
         // Read shader globals directly
         sb.AppendLine("--- Shader Globals ---");
-        sb.AppendLine($"_SeaLevelRadius: {Shader.GetGlobalFloat("_SeaLevelRadius"):F1}");
-        sb.AppendLine($"_DensityOriginRadius: {Shader.GetGlobalFloat("_DensityOriginRadius"):F1}");
-        sb.AppendLine($"_AtmosphereRadius: {Shader.GetGlobalFloat("_AtmosphereRadius"):F1}");
-        Vector4 rc = Shader.GetGlobalVector("_RayleighScattering");
+        sb.AppendLine($"_SeaLevelRadius: {Shader.GetGlobalFloat(_seaLevelRadiusId):F1}");
+        sb.AppendLine($"_DensityOriginRadius: {Shader.GetGlobalFloat(_densityOriginRadiusId):F1}");
+        sb.AppendLine($"_AtmosphereRadius: {Shader.GetGlobalFloat(_atmosphereRadiusId):F1}");
+        Vector4 rc = Shader.GetGlobalVector(_rayleighScatteringId);
         sb.AppendLine($"_RayleighScattering: ({rc.x:E3}, {rc.y:E3}, {rc.z:E3})");
-        sb.AppendLine($"_RayleighScaleHeight: {Shader.GetGlobalFloat("_RayleighScaleHeight"):F2}");
-        sb.AppendLine($"_MieScatteringCoeff: {Shader.GetGlobalFloat("_MieScatteringCoeff"):E3}");
-        sb.AppendLine($"_MieScaleHeight: {Shader.GetGlobalFloat("_MieScaleHeight"):F2}");
-        sb.AppendLine($"_MieAnisotropy: {Shader.GetGlobalFloat("_MieAnisotropy"):F3}");
-        sb.AppendLine($"_SunIntensity: {Shader.GetGlobalFloat("_SunIntensity"):F2}");
-        sb.AppendLine($"_ViewSteps: {Shader.GetGlobalFloat("_ViewSteps"):F0}");
-        sb.AppendLine($"_SunSteps: {Shader.GetGlobalFloat("_SunSteps"):F0}");
-        sb.AppendLine($"_DebugMode: {Shader.GetGlobalFloat("_DebugMode"):F0}");
-        sb.AppendLine($"_StarSeed: {Shader.GetGlobalFloat("_StarSeed"):F2}");
-        sb.AppendLine($"_StarDensity: {Shader.GetGlobalFloat("_StarDensity"):F0}");
-        sb.AppendLine($"_StarBrightness: {Shader.GetGlobalFloat("_StarBrightness"):F2}");
-        sb.AppendLine($"_NightAmbientIntensity: {Shader.GetGlobalFloat("_NightAmbientIntensity"):F3}");
-        Vector4 sunDir = Shader.GetGlobalVector("_SunParams");
+        sb.AppendLine($"_RayleighScaleHeight: {Shader.GetGlobalFloat(_rayleighScaleHeightId):F2}");
+        sb.AppendLine($"_MieScatteringCoeff: {Shader.GetGlobalFloat(_mieScatteringCoeffId):E3}");
+        sb.AppendLine($"_MieScaleHeight: {Shader.GetGlobalFloat(_mieScaleHeightId):F2}");
+        sb.AppendLine($"_MieAnisotropy: {Shader.GetGlobalFloat(_mieAnisotropyId):F3}");
+        sb.AppendLine($"_SunIntensity: {Shader.GetGlobalFloat(_sunIntensityId):F2}");
+        sb.AppendLine($"_ViewSteps: {Shader.GetGlobalFloat(_viewStepsId):F0}");
+        sb.AppendLine($"_SunSteps: {Shader.GetGlobalFloat(_sunStepsId):F0}");
+        sb.AppendLine($"_DebugMode: {Shader.GetGlobalFloat(_debugModeId):F0}");
+        sb.AppendLine($"_StarSeed: {Shader.GetGlobalFloat(_starSeedId):F2}");
+        sb.AppendLine($"_StarDensity: {Shader.GetGlobalFloat(_starDensityId):F0}");
+        sb.AppendLine($"_StarBrightness: {Shader.GetGlobalFloat(_starBrightnessId):F2}");
+        sb.AppendLine($"_NightAmbientIntensity: {Shader.GetGlobalFloat(_nightAmbientIntensityId):F3}");
+        Vector4 sunDir = Shader.GetGlobalVector(_sunParamsId);
         sb.AppendLine($"_SunParams: ({sunDir.x:F3}, {sunDir.y:F3}, {sunDir.z:F3})");
         if (cam != null)
         {
             float sunAngle = Vector3.Angle(cam.transform.forward, new Vector3(sunDir.x, sunDir.y, sunDir.z));
             sb.AppendLine($"Angle camera->sun: {sunAngle:F1}° (0=looking at sun, 90=perpendicular, 180=away)");
             float camDist = Vector3.Distance(cam.transform.position, Vector3.zero);
-            sb.AppendLine($"Camera distance from origin: {camDist:F1} (seaLevelRadius={Shader.GetGlobalFloat("_SeaLevelRadius"):F1})");
+            sb.AppendLine($"Camera distance from origin: {camDist:F1} (seaLevelRadius={Shader.GetGlobalFloat(_seaLevelRadiusId):F1})");
         }
         sb.AppendLine();
 

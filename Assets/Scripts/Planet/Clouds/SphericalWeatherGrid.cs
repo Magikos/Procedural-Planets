@@ -132,33 +132,36 @@ public sealed class SphericalWeatherGrid : IDisposable
         _rainRate = rainRate;
     }
 
-    public static SphericalWeatherGrid Generate(CloudSettings settings, int seed)
+    // Holds the CPU-side computation result before any Unity texture API is called.
+    // All fields are plain C# arrays — safe to produce on a background thread.
+    struct GridComputeData
+    {
+        public int Resolution;
+        public float[] Condensation, Storm, MoistureSource, Humidity, PrecipitationWater, RainRate;
+        public Color[][] PixelsByFace;
+        public Color[][] DynamicsPixelsByFace;
+    }
+
+    /// <summary>
+    /// Pure C# computation of weather grid cell values. No Unity API calls.
+    /// Safe to call from a background thread.
+    /// </summary>
+    static GridComputeData ComputeGridData(CloudSettings settings, int seed)
     {
         int resolution = Mathf.ClosestPowerOfTwo(Mathf.Clamp(settings.WeatherResolution, 32, 512));
-        int cellCount = resolution * resolution * 6;
+        int facePixelCount = resolution * resolution;
+        int cellCount = facePixelCount * 6;
+
         var condensation = new float[cellCount];
         var storm = new float[cellCount];
         var moistureSource = new float[cellCount];
         var humidity = new float[cellCount];
         var precipitationWater = new float[cellCount];
         var rainRate = new float[cellCount];
-        var stagingTexture = new Texture2DArray(resolution, resolution, 6, TextureFormat.RGBAHalf, false, true)
-        {
-            name = $"CloudWeather_{resolution}_{seed}",
-            filterMode = FilterMode.Bilinear,
-            wrapMode = TextureWrapMode.Clamp,
-            anisoLevel = 1
-        };
-        var dynamicsStagingTexture = new Texture2DArray(resolution, resolution, 6, TextureFormat.RGBAHalf, false, true)
-        {
-            name = $"WeatherDynamics_{resolution}_{seed}",
-            filterMode = FilterMode.Bilinear,
-            wrapMode = TextureWrapMode.Clamp,
-            anisoLevel = 1
-        };
 
-        var pixels = new Color[resolution * resolution];
-        var dynamicsPixels = new Color[resolution * resolution];
+        var pixelsByFace = new Color[6][];
+        var dynamicsPixelsByFace = new Color[6][];
+
         var frontNoise = new Noise(seed);
         var detailNoise = new Noise(seed + 7919);
         var climateNoise = new Noise(seed + 104729);
@@ -167,6 +170,9 @@ public sealed class SphericalWeatherGrid : IDisposable
 
         for (int face = 0; face < 6; face++)
         {
+            pixelsByFace[face] = new Color[facePixelCount];
+            dynamicsPixelsByFace[face] = new Color[facePixelCount];
+
             for (int y = 0; y < resolution; y++)
             {
                 for (int x = 0; x < resolution; x++)
@@ -202,6 +208,7 @@ public sealed class SphericalWeatherGrid : IDisposable
                         Mathf.Min(1f, settings.RainCloudThreshold + 0.2f),
                         cellCondensation) * humidAir * 0.22f;
                     float initialRainRate = Mathf.Clamp01(initialPrecipitation * cellStorm);
+
                     int gridIndex = GetIndex(face, x, y, resolution);
                     condensation[gridIndex] = cellCondensation;
                     storm[gridIndex] = cellStorm;
@@ -209,13 +216,53 @@ public sealed class SphericalWeatherGrid : IDisposable
                     humidity[gridIndex] = humidAir;
                     precipitationWater[gridIndex] = initialPrecipitation;
                     rainRate[gridIndex] = initialRainRate;
-                    pixels[pixelIndex] = new Color(cellCondensation, cellStorm, source, 0.5f);
-                    dynamicsPixels[pixelIndex] = new Color(humidAir, initialPrecipitation, initialRainRate, humidAir);
+                    pixelsByFace[face][pixelIndex] = new Color(cellCondensation, cellStorm, source, 0.5f);
+                    dynamicsPixelsByFace[face][pixelIndex] = new Color(humidAir, initialPrecipitation, initialRainRate, humidAir);
                 }
             }
+        }
 
-            stagingTexture.SetPixels(pixels, face);
-            dynamicsStagingTexture.SetPixels(dynamicsPixels, face);
+        return new GridComputeData
+        {
+            Resolution = resolution,
+            Condensation = condensation,
+            Storm = storm,
+            MoistureSource = moistureSource,
+            Humidity = humidity,
+            PrecipitationWater = precipitationWater,
+            RainRate = rainRate,
+            PixelsByFace = pixelsByFace,
+            DynamicsPixelsByFace = dynamicsPixelsByFace
+        };
+    }
+
+    /// <summary>
+    /// Creates Unity textures from pre-computed grid data and constructs the grid object.
+    /// Must be called on the main thread.
+    /// </summary>
+    static SphericalWeatherGrid UploadGridData(GridComputeData data, int seed)
+    {
+        int resolution = data.Resolution;
+
+        var stagingTexture = new Texture2DArray(resolution, resolution, 6, TextureFormat.RGBAHalf, false, true)
+        {
+            name = $"CloudWeather_{resolution}_{seed}",
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp,
+            anisoLevel = 1
+        };
+        var dynamicsStagingTexture = new Texture2DArray(resolution, resolution, 6, TextureFormat.RGBAHalf, false, true)
+        {
+            name = $"WeatherDynamics_{resolution}_{seed}",
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp,
+            anisoLevel = 1
+        };
+
+        for (int face = 0; face < 6; face++)
+        {
+            stagingTexture.SetPixels(data.PixelsByFace[face], face);
+            dynamicsStagingTexture.SetPixels(data.DynamicsPixelsByFace[face], face);
         }
 
         stagingTexture.Apply(false, false);
@@ -247,12 +294,33 @@ public sealed class SphericalWeatherGrid : IDisposable
             scratchTexture,
             dynamicsActiveTexture,
             dynamicsScratchTexture,
-            condensation,
-            storm,
-            moistureSource,
-            humidity,
-            precipitationWater,
-            rainRate);
+            data.Condensation,
+            data.Storm,
+            data.MoistureSource,
+            data.Humidity,
+            data.PrecipitationWater,
+            data.RainRate);
+    }
+
+    /// <summary>
+    /// Generates a weather grid asynchronously, computing cell values on a background thread
+    /// and uploading textures on the main thread.
+    /// </summary>
+    public static async Awaitable<SphericalWeatherGrid> GenerateAsync(
+        CloudSettings settings, int seed, System.Threading.CancellationToken ct = default)
+    {
+        await Awaitable.BackgroundThreadAsync();
+        ct.ThrowIfCancellationRequested();
+        var data = ComputeGridData(settings, seed);
+        ct.ThrowIfCancellationRequested();
+        await Awaitable.MainThreadAsync();
+        return UploadGridData(data, seed);
+    }
+
+    public static SphericalWeatherGrid Generate(CloudSettings settings, int seed)
+    {
+        var data = ComputeGridData(settings, seed);
+        return UploadGridData(data, seed);
     }
 
     public float GetCondensation(Vector3 worldPosition, Vector3 planetCenter, Quaternion sampleRotation)

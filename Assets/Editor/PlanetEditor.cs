@@ -28,10 +28,10 @@ public class PlanetEditor : Editor
             Repaint();
         }
 
-        DrawSettingsEditor(_planet.PlanetSettingsAsset, ref _planet.SettingsFoldout, ref _settingsEditor);
+        DrawSettingsEditor(_planet.PlanetSettingsAsset, serializedObject.FindProperty("_settingsFoldout"), ref _settingsEditor);
     }
 
-    void DrawSettingsEditor(Object settings, ref bool foldout, ref Editor editor)
+    void DrawSettingsEditor(Object settings, SerializedProperty foldoutProp, ref Editor editor)
     {
         if (settings == null)
         {
@@ -39,8 +39,9 @@ public class PlanetEditor : Editor
             return;
         }
 
-        foldout = EditorGUILayout.InspectorTitlebar(foldout, settings);
-        if (!foldout) return;
+        foldoutProp.boolValue = EditorGUILayout.InspectorTitlebar(foldoutProp.boolValue, settings);
+        serializedObject.ApplyModifiedPropertiesWithoutUndo();
+        if (!foldoutProp.boolValue) return;
 
         CreateCachedEditor(settings, null, ref editor);
         editor.OnInspectorGUI();

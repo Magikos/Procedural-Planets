@@ -2,19 +2,21 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Threading;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
 /// <summary>
 /// Owns planet-scale weather state. The CPU seeds the initial cube-sphere weather
 /// grid, then runtime evolution is dispatched to a GPU ping-pong texture.
 /// </summary>
-public class WeatherManager : MonoBehaviour, IWeatherProvider
+public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigurator, ILateInitialize, IProgressReporter
 {
     [Header("References")]
     public CloudSettings Settings;
     public ComputeShader WeatherCompute;
+
+    CloudSettings IWeatherConfigurator.Settings => Settings;
 
     [Header("Wind")]
     public Vector3 WindDir = new Vector3(1f, 0f, 0.3f);
@@ -74,6 +76,16 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
     static readonly int _windSpeedId = Shader.PropertyToID("_WindSpeed");
     static readonly int _cloudWeatherRotationId = Shader.PropertyToID("_CloudWeatherRotation");
 
+    CancellationTokenSource _generateCts;
+    bool _lateInitialized;
+    PrecipitationController _precipitationController;
+
+    // Resolved once and reused; the Unity null check re-acquires it if the previous one was destroyed.
+    PrecipitationController PrecipitationController =>
+        _precipitationController != null
+            ? _precipitationController
+            : _precipitationController = FindAnyObjectByType<PrecipitationController>();
+
     public Vector3 WindDirection => WindDir.sqrMagnitude > 0.0001f ? WindDir.normalized : Vector3.right;
     public float WindSpeed => Speed;
     public Texture WeatherTexture => _grid != null ? _grid.Texture : null;
@@ -81,23 +93,54 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
     public int WeatherResolution => _grid != null ? _grid.Resolution : 0;
     public bool HasWeatherGrid => _grid != null;
 
+    // IProgressReporter
+    readonly ProgressHandle _progressHandle = new ProgressHandle();
+    public string ReporterName => "WeatherManager";
+    public IProgressHandle ProgressHandle => _progressHandle;
+
+    // ILateInitialize — runs after Planet (priority 0).  OnPlanetGenerated has already fired
+    // (synchronously during Planet.LateInitialize), so _seaLevelRadius is populated.
+    // We generate the grid here directly rather than fire-and-forget so the overlay stays up
+    // until clouds are ready.
+    public int LatePriority => -10;
+    public async Awaitable LateInitialize(CancellationToken cancellationToken)
+    {
+        if (_seaLevelRadius <= 0f) return;   // no planet in this scene
+
+        _progressHandle.Report(0f, "Generating clouds...");
+        await GenerateWeatherGridAsync(cancellationToken);
+        _progressHandle.Report(1f, "Clouds ready");
+        _lateInitialized = true;
+    }
+
     ILogger Logger => LoggerProvider.Get();
 
     void Awake()
     {
         ServiceLocator.Register<IWeatherProvider>(this);
-        ServiceLocator.Register<WeatherManager>(this);
+        ServiceLocator.Register<IWeatherConfigurator>(this);
         Shader.SetGlobalMatrix(_cloudWeatherRotationId, Matrix4x4.identity);
     }
 
-    void OnEnable() => EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+    void OnEnable()
+    {
+        EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+        EventBus<DebugWeatherDiagnosticsRequestedEvent>.Listen(OnWeatherDiagnosticsRequested);
+    }
 
-    void OnDisable() => EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
+    void OnDisable()
+    {
+        EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
+        EventBus<DebugWeatherDiagnosticsRequestedEvent>.Unlisten(OnWeatherDiagnosticsRequested);
+    }
 
     void OnDestroy()
     {
         ServiceLocator.Unregister<IWeatherProvider>(this);
-        ServiceLocator.Unregister<WeatherManager>(this);
+        ServiceLocator.Unregister<IWeatherConfigurator>(this);
+        _generateCts?.Cancel();
+        _generateCts?.Dispose();
+        _generateCts = null;
         _grid?.Dispose();
         _grid = null;
     }
@@ -109,7 +152,6 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         UpdateWeatherQueryCache();
         UpdateWeatherDiagnostics();
         UpdateWeatherAggregateDiagnostics();
-        HandleWeatherDiagnosticsInput();
         Shader.SetGlobalVector(_windDirectionId, WindDirection);
         Shader.SetGlobalFloat(_windSpeedId, WindSpeed);
     }
@@ -200,7 +242,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
             return noGrid;
         }
 
-        var precipitationController = FindAnyObjectByType<PrecipitationController>();
+        var precipitationController = PrecipitationController;
         float rainThreshold = precipitationController != null
             ? precipitationController.StormThreshold
             : PrecipitationStormThreshold;
@@ -242,17 +284,54 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         _planetCenter = evt.PlanetCenter;
         _seaLevelRadius = evt.SeaLevelRadius > 0f ? evt.SeaLevelRadius : evt.PlanetRadius;
 
-        if (Settings != null)
-            GenerateWeatherGrid();
+        // During startup, LateInitialize handles generation.  At runtime (after init), re-generate
+        // whenever the planet changes.
+        if (_lateInitialized && Settings != null)
+            _ = GenerateWeatherGridAsync();
+    }
+
+    async Awaitable GenerateWeatherGridAsync(CancellationToken externalToken = default)
+    {
+        if (Settings == null) return;
+
+        // Cancel any in-flight generation before starting a new one.
+        _generateCts?.Cancel();
+        _generateCts?.Dispose();
+        _generateCts = new CancellationTokenSource();
+
+        using var linked = externalToken.CanBeCanceled
+            ? CancellationTokenSource.CreateLinkedTokenSource(externalToken, _generateCts.Token, destroyCancellationToken)
+            : CancellationTokenSource.CreateLinkedTokenSource(_generateCts.Token, destroyCancellationToken);
+
+        try
+        {
+            int seed = ServiceLocator.Get<ISeedProvider>().GetSeedForSystem("Weather");
+            var settings = Settings;
+
+            _progressHandle.Report(0.15f, "Seeding weather grid...");
+
+            // Compute cell data on background thread, upload textures on main thread.
+            var newGrid = await SphericalWeatherGrid.GenerateAsync(settings, seed, linked.Token);
+
+            if (this == null) return;
+            _progressHandle.Report(0.85f, "Uploading weather...");
+            _grid?.Dispose();
+            _grid = newGrid;
+            _weatherVisualRotation = Quaternion.identity;
+            _evolutionAccumulator = 0f;
+            ResetWeatherDiagnostics();
+            UploadWeatherAdvection();
+            Logger.Log(LogLevel.Debug, "Weather", $"Generated {WeatherResolution}x{WeatherResolution}x6 condensation grid.");
+        }
+        catch (System.OperationCanceledException) { }
+        catch (System.Exception ex) { Logger.LogException("Weather", ex); }
     }
 
     void GenerateWeatherGrid()
     {
         if (Settings == null) return;
 
-        int seed = 12345;
-        ISeedProvider seedProvider = ServiceLocator.Get<ISeedProvider>();
-        seed = seedProvider.GetSeedForSystem("Weather");
+        int seed = ServiceLocator.Get<ISeedProvider>().GetSeedForSystem("Weather");
 
         _grid?.Dispose();
         _grid = SphericalWeatherGrid.Generate(Settings, seed);
@@ -358,7 +437,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         if (!ShowWeatherDiagnostics || _grid == null || Time.unscaledTime < _nextWeatherAggregateStatsTime)
             return;
 
-        var precipitationController = FindAnyObjectByType<PrecipitationController>();
+        var precipitationController = PrecipitationController;
         float rainThreshold = precipitationController != null
             ? precipitationController.StormThreshold
             : PrecipitationStormThreshold;
@@ -376,13 +455,12 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider
         _nextWeatherAggregateStatsTime = Time.unscaledTime + Mathf.Max(WeatherDiagnosticsInterval, 0.5f);
     }
 
-    void HandleWeatherDiagnosticsInput()
+    void OnWeatherDiagnosticsRequested(DebugWeatherDiagnosticsRequestedEvent evt)
     {
         if (!EnableWeatherDiagnosticHotkey)
             return;
 
-        if (Keyboard.current?.f9Key.wasPressedThisFrame == true)
-            DumpWeatherDiagnostics("F9");
+        DumpWeatherDiagnostics("F9");
     }
 
     void UpdateWeatherQueryCache()

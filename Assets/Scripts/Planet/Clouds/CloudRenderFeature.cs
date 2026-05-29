@@ -37,9 +37,9 @@ public class CloudRenderFeature : ScriptableRendererFeature
         if (DebugModeConstants.SuppressesWeatherPasses(Shader.GetGlobalInt(_oceanDebugModeId)))
             return;
 
-        if (_cachedController == null || !_cachedController.isActiveAndEnabled)
-            _cachedController = Object.FindAnyObjectByType<CloudController>();
         if (_cachedController == null)
+            _cachedController = Object.FindAnyObjectByType<CloudController>();
+        if (_cachedController == null || !_cachedController.isActiveAndEnabled)
             return;
 
         if (_material == null)

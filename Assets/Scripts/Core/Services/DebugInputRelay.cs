@@ -22,7 +22,10 @@ public class DebugInputRelay : MonoBehaviour
             EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.ToggleSunFreeze));
 
         if (WasKeyPressed(_keyboard?.f9Key, KeyCode.F9))
+        {
             EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.ToggleWaterDebugDetails));
+            EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.DumpWeatherDiagnostics));
+        }
 
         if (WasKeyPressed(_keyboard?.pKey, KeyCode.P))
             EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.TogglePrecipitation));

@@ -40,9 +40,13 @@ public class EventBusProcessor : MonoBehaviour
             _processors.Add(processor);
     }
 
+    public static void ClearProcessors() => _processors.Clear();
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void Init()
     {
+        if (FindAnyObjectByType<EventBusProcessor>() != null) return;
+
         var go = new GameObject("[EventBusProcessor]");
         go.AddComponent<EventBusProcessor>();
     }

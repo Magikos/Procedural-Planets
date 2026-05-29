@@ -26,6 +26,20 @@ public static class WaterMeshBuilder
         public float MaxDepth;
     }
 
+    /// <summary>Pre-computed water mesh data. Safe to produce on a background thread via <see cref="Compute"/>.</summary>
+    public struct MeshData
+    {
+        public List<Vector3> Vertices;
+        public List<Vector3> Normals;
+        public List<Color> Colors;
+        public List<int> Triangles;
+        public List<Vector3> LipVertices;
+        public List<Vector3> LipNormals;
+        public List<Color> LipColors;
+        public List<int> LipTriangles;
+        public BuildStats Stats;
+    }
+
     struct WaterPoint
     {
         public bool IsOriginal;
@@ -89,92 +103,124 @@ public static class WaterMeshBuilder
         }
     }
 
-    public static BuildStats Build(Mesh mesh, TerrainFace[] faces, Settings settings)
-    {
-        return Build(mesh, null, faces, settings);
-    }
-
-    public static BuildStats Build(Mesh mesh, Mesh volumeLipMesh, TerrainFace[] faces, Settings settings)
+    /// <summary>
+    /// Computes water mesh data without touching any Unity Mesh API.
+    /// Safe to call from a background thread. Pass the result to <see cref="Apply"/>.
+    /// </summary>
+    public static MeshData Compute(TerrainFace[] faces, Settings settings, System.Action<float> onProgress = null)
     {
         var vertices = new List<Vector3>();
         var normals = new List<Vector3>();
         var colors = new List<Color>();
         var triangles = new List<int>();
-        var volumeLipVertices = volumeLipMesh != null ? new List<Vector3>() : null;
-        var volumeLipNormals = volumeLipMesh != null ? new List<Vector3>() : null;
-        var volumeLipColors = volumeLipMesh != null ? new List<Color>() : null;
-        var volumeLipTriangles = volumeLipMesh != null ? new List<int>() : null;
+        var lipVertices = new List<Vector3>();
+        var lipNormals = new List<Vector3>();
+        var lipColors = new List<Color>();
+        var lipTriangles = new List<int>();
         BuildStats stats = default;
 
-        if (mesh == null || faces == null || faces.Length == 0)
+        if (faces != null && faces.Length > 0)
         {
-            mesh?.Clear();
-            volumeLipMesh?.Clear();
-            return stats;
+            float waterRadius = settings.PlanetRadius * (1f + settings.OceanLevel) + settings.SurfaceOffset;
+            float deepDepth = Mathf.Max(settings.DeepDepth, 0.001f);
+            float shoreRange = Mathf.Max(settings.ShoreRange, 0.001f);
+            GlobalWaterData waterData = BuildGlobalWaterData(faces, settings, ref stats);
+            onProgress?.Invoke(0.45f); // global water graph + classification done — the heaviest phase
+            var originalVertexCache = new Dictionary<int, int>();
+            var edgeVertexCache = new Dictionary<ulong, int>();
+            var lipInnerCache = new Dictionary<ulong, int>();
+            var lipOuterCache = new Dictionary<ulong, int>();
+            var lipInnerBottomCache = new Dictionary<ulong, int>();
+            var lipOuterBottomCache = new Dictionary<ulong, int>();
+
+            for (int faceIndex = 0; faceIndex < faces.Length; faceIndex++)
+            {
+                TerrainFace face = faces[faceIndex];
+                if (face?.UnitSpherePoints == null || face.Elevations == null)
+                    continue;
+
+                ProcessFace(
+                    face,
+                    waterData.Faces[faceIndex],
+                    waterData.DepthMeters,
+                    settings,
+                    waterRadius,
+                    deepDepth,
+                    shoreRange,
+                    originalVertexCache,
+                    edgeVertexCache,
+                    lipInnerCache,
+                    lipOuterCache,
+                    lipInnerBottomCache,
+                    lipOuterBottomCache,
+                    vertices,
+                    normals,
+                    colors,
+                    triangles,
+                    lipVertices,
+                    lipNormals,
+                    lipColors,
+                    lipTriangles,
+                    ref stats);
+
+                onProgress?.Invoke(0.45f + 0.55f * (faceIndex + 1) / faces.Length);
+            }
         }
 
-        float waterRadius = settings.PlanetRadius * (1f + settings.OceanLevel) + settings.SurfaceOffset;
-        float deepDepth = Mathf.Max(settings.DeepDepth, 0.001f);
-        float shoreRange = Mathf.Max(settings.ShoreRange, 0.001f);
-        GlobalWaterData waterData = BuildGlobalWaterData(faces, settings, ref stats);
-        var originalVertexCache = new Dictionary<int, int>();
-        var edgeVertexCache = new Dictionary<ulong, int>();
-        var volumeLipInnerVertexCache = new Dictionary<ulong, int>();
-        var volumeLipOuterVertexCache = new Dictionary<ulong, int>();
-        var volumeLipInnerBottomVertexCache = new Dictionary<ulong, int>();
-        var volumeLipOuterBottomVertexCache = new Dictionary<ulong, int>();
-
-        for (int faceIndex = 0; faceIndex < faces.Length; faceIndex++)
+        onProgress?.Invoke(1f);
+        return new MeshData
         {
-            TerrainFace face = faces[faceIndex];
-            if (face?.UnitSpherePoints == null || face.Elevations == null)
-                continue;
+            Vertices = vertices,
+            Normals = normals,
+            Colors = colors,
+            Triangles = triangles,
+            LipVertices = lipVertices,
+            LipNormals = lipNormals,
+            LipColors = lipColors,
+            LipTriangles = lipTriangles,
+            Stats = stats
+        };
+    }
 
-            ProcessFace(
-                face,
-                waterData.Faces[faceIndex],
-                waterData.DepthMeters,
-                settings,
-                waterRadius,
-                deepDepth,
-                shoreRange,
-                originalVertexCache,
-                edgeVertexCache,
-                volumeLipInnerVertexCache,
-                volumeLipOuterVertexCache,
-                volumeLipInnerBottomVertexCache,
-                volumeLipOuterBottomVertexCache,
-                vertices,
-                normals,
-                colors,
-                triangles,
-                volumeLipVertices,
-                volumeLipNormals,
-                volumeLipColors,
-                volumeLipTriangles,
-                ref stats);
-        }
+    /// <summary>
+    /// Applies pre-computed mesh data to Unity Mesh objects. Must be called on the main thread.
+    /// </summary>
+    public static void Apply(Mesh mesh, Mesh volumeLipMesh, MeshData data)
+    {
+        if (mesh == null) return;
 
         mesh.Clear();
-        mesh.indexFormat = vertices.Count > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
-        mesh.SetVertices(vertices);
-        mesh.SetNormals(normals);
-        mesh.SetColors(colors);
-        mesh.SetTriangles(triangles, 0, true);
+        mesh.indexFormat = data.Vertices.Count > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
+        mesh.SetVertices(data.Vertices);
+        mesh.SetNormals(data.Normals);
+        mesh.SetColors(data.Colors);
+        mesh.SetTriangles(data.Triangles, 0, true);
         mesh.RecalculateBounds();
 
-        if (volumeLipMesh != null)
+        if (volumeLipMesh != null && data.LipVertices?.Count > 0)
         {
             volumeLipMesh.Clear();
-            volumeLipMesh.indexFormat = volumeLipVertices.Count > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
-            volumeLipMesh.SetVertices(volumeLipVertices);
-            volumeLipMesh.SetNormals(volumeLipNormals);
-            volumeLipMesh.SetColors(volumeLipColors);
-            volumeLipMesh.SetTriangles(volumeLipTriangles, 0, true);
+            volumeLipMesh.indexFormat = data.LipVertices.Count > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
+            volumeLipMesh.SetVertices(data.LipVertices);
+            volumeLipMesh.SetNormals(data.LipNormals);
+            volumeLipMesh.SetColors(data.LipColors);
+            volumeLipMesh.SetTriangles(data.LipTriangles, 0, true);
             volumeLipMesh.RecalculateBounds();
         }
+    }
 
-        return stats;
+    public static BuildStats Build(Mesh mesh, TerrainFace[] faces, Settings settings)
+    {
+        var data = Compute(faces, settings);
+        Apply(mesh, null, data);
+        return data.Stats;
+    }
+
+    public static BuildStats Build(Mesh mesh, Mesh volumeLipMesh, TerrainFace[] faces, Settings settings)
+    {
+        var data = Compute(faces, settings);
+        Apply(mesh, volumeLipMesh, data);
+        return data.Stats;
     }
 
     static void ProcessFace(

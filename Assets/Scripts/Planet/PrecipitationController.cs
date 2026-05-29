@@ -18,7 +18,7 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     [Header("References")]
     public CloudSettings CloudSettings;
 
-    CloudController _cloudController;
+    ICloudController _cloudController;
 
     [Header("Rendering")]
     public bool RenderPrecipitation = true;
@@ -153,7 +153,7 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         if (CloudSettings != null)
             return;
 
-        _cloudController = ServiceLocator.Get<CloudController>();
+        _cloudController = ServiceLocator.Get<ICloudController>();
         CloudSettings = _cloudController.Settings;
 
         if (CloudSettings == null)

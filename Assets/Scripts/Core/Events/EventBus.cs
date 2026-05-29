@@ -1,10 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Reflection;
 using UnityEngine;
 
 public static class EventBus<TEvent> where TEvent : struct, IGameEvent
 {
+    static EventBus()
+    {
+        EventBusRegistry.Register(ClearAll);
+    }
+
     class Subscriber
     {
         public WeakAction Handler;
@@ -35,6 +41,7 @@ public static class EventBus<TEvent> where TEvent : struct, IGameEvent
     {
         readonly WeakReference _target;
         readonly MethodInfo _method;
+        readonly Action<object, TEvent> _invoker;
         readonly Action<TEvent> _staticHandler;
 
         public WeakAction(Action<TEvent> handler)
@@ -47,6 +54,7 @@ public static class EventBus<TEvent> where TEvent : struct, IGameEvent
 
             _target = new WeakReference(handler.Target);
             _method = handler.Method;
+            _invoker = GetInvoker(_method);
         }
 
         public bool IsDead => _target != null && IsDeadTarget(_target.Target);
@@ -74,7 +82,7 @@ public static class EventBus<TEvent> where TEvent : struct, IGameEvent
             if (IsDeadTarget(target))
                 return;
 
-            _method.Invoke(target, new object[] { context });
+            _invoker(target, context);
         }
     }
 
@@ -119,7 +127,27 @@ public static class EventBus<TEvent> where TEvent : struct, IGameEvent
 
     static readonly List<Subscriber> _subscribers = new();
     static readonly Queue<DeferredCall> _deferredQueue = new();
+    static readonly Dictionary<MethodInfo, Action<object, TEvent>> _invokerCache = new();
     static bool _registeredDeferredProcessor;
+
+    // Builds (and caches) a compiled open-instance invoker for a handler method so dispatch
+    // is a direct typed call — no per-event MethodInfo.Invoke reflection, object[] alloc, or struct boxing.
+    static Action<object, TEvent> GetInvoker(MethodInfo method)
+    {
+        if (_invokerCache.TryGetValue(method, out var invoker))
+            return invoker;
+
+        var targetParam = Expression.Parameter(typeof(object), "target");
+        var contextParam = Expression.Parameter(typeof(TEvent), "context");
+        var call = Expression.Call(
+            Expression.Convert(targetParam, method.DeclaringType),
+            method,
+            contextParam);
+        invoker = Expression.Lambda<Action<object, TEvent>>(call, targetParam, contextParam).Compile();
+
+        _invokerCache[method] = invoker;
+        return invoker;
+    }
 
     public static void Raise(TEvent context)
     {
@@ -175,6 +203,7 @@ public static class EventBus<TEvent> where TEvent : struct, IGameEvent
     {
         _subscribers.Clear();
         _deferredQueue.Clear();
+        _registeredDeferredProcessor = false;
     }
 
     static void AddSubscriber(Action<TEvent> handler, Func<TEvent, bool> filter, bool oneTime, bool deferred)

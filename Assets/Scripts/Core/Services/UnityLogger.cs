@@ -43,11 +43,13 @@ public static class LoggerProvider
 
     public static ILogger Get()
     {
-        if (ServiceLocator.TryGet(out ILogger logger))
-            return logger;
+        if (_fallbackLogger != null)
+            return _fallbackLogger;
 
-        _fallbackLogger ??= new UnityLogger();
-        return _fallbackLogger;
+        if (ServiceLocator.TryGet(out _fallbackLogger))
+            return _fallbackLogger;
+
+        return _fallbackLogger = ServiceLocator.Register<ILogger>(new UnityLogger());
     }
 
     public static void Log(LogLevel level, string system, string message)

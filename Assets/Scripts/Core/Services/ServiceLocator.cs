@@ -6,7 +6,7 @@ public static class ServiceLocator
 {
     static readonly Dictionary<Type, object> _services = new();
 
-    public static void Register<T>(T service) where T : class
+    public static T Register<T>(T service) where T : class
     {
         if (service == null)
             throw new ArgumentNullException(nameof(service));
@@ -17,6 +17,7 @@ public static class ServiceLocator
                 $"Service {type.Name} already registered by {Describe(existing)}; cannot register {Describe(service)}.");
 
         _services[type] = service;
+        return service;
     }
 
     public static T Get<T>() where T : class
@@ -57,7 +58,15 @@ public static class ServiceLocator
             _services.Remove(type);
     }
 
-    public static void Clear() => _services.Clear();
+    public static void Clear()
+    {
+        foreach (var service in _services.Values)
+        {
+            if (service is IDisposable disposable)
+                disposable.Dispose();
+        }
+        _services.Clear();
+    }
 
     static bool IsAlive(object service)
     {

@@ -24,6 +24,8 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController
     [Header("State")]
     [Range(0f, 1f), Tooltip("Starting time of day: 0=midnight, 0.25=sunrise, 0.5=noon, 0.75=sunset")]
     public float StartTimeOfDay = 0.25f;
+
+    [Header("Debug")]
     [Tooltip("Debug control used to inspect lighting and water reflections without the sun moving.")]
     public bool FreezeTime;
 
@@ -114,19 +116,19 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController
     {
         if (PlanetCenter == null)
         {
-            Planet planetService = ServiceLocator.Get<Planet>();
-            PlanetCenter = planetService.transform;
+            IPlanet planetService = ServiceLocator.Get<IPlanet>();
+            PlanetCenter = planetService.Transform;
         }
 
         if (PlanetCenter == null) return;
 
-        var p = PlanetCenter.GetComponent<Planet>();
-        if (p == null || p.LastGeneratedRadius <= 0f) return;
+        IPlanet planet = ServiceLocator.Get<IPlanet>();
+        if (planet == null || planet.LastGeneratedRadius <= 0f) return;
 
-        _planetRadius = p.LastGeneratedRadius;
+        _planetRadius = planet.LastGeneratedRadius;
         MoonOrbitRadius = _planetRadius * 3f;
 
-        Shader.SetGlobalFloat(_starSeedId, p.Seed * 0.01f);
+        Shader.SetGlobalFloat(_starSeedId, planet.Seed * 0.01f);
     }
 
     void Update()

@@ -38,9 +38,9 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
         if (!IsPlanetInFrustum(renderingData.cameraData.camera))
             return;
 
-        if (_cachedController == null || !_cachedController.isActiveAndEnabled)
+        if (_cachedController == null)
             _cachedController = Object.FindAnyObjectByType<PrecipitationController>();
-        if (_cachedController == null || !_cachedController.IsRenderingEnabled)
+        if (_cachedController == null || !_cachedController.isActiveAndEnabled || !_cachedController.IsRenderingEnabled)
             return;
 
         if (_material == null)

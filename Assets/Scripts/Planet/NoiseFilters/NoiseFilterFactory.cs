@@ -2,14 +2,11 @@ public static class NoiseFilterFactory
 {
     public static INoiseFilter CreateNoiseFilter(NoiseSettings settings, int seed = 0)
     {
-        switch (settings.Filter)
+        return settings.Filter switch
         {
-            case NoiseSettings.FilterType.Simple:
-                return new SimpleNoiseFilter(settings, seed);
-            case NoiseSettings.FilterType.Rigid:
-                return new RigidNoiseFilter(settings, seed);
-            default:
-                throw new System.ArgumentException("Unknown filter type: " + settings.Filter);
-        }
+            NoiseSettings.FilterType.Simple => new SimpleNoiseFilter(settings, seed),
+            NoiseSettings.FilterType.Rigid => new RigidNoiseFilter(settings, seed),
+            _ => throw new System.ArgumentException($"Unknown filter type: {settings.Filter}")
+        };
     }
 }

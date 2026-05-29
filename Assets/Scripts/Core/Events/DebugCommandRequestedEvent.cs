@@ -6,7 +6,8 @@ public enum DebugCommandType
     ToggleSunFreeze,
     ToggleDebugOverlay,
     ToggleWaterDebugDetails,
-    ToggleProfiling
+    ToggleProfiling,
+    DumpWeatherDiagnostics
 }
 
 public readonly struct DebugCommandRequestedEvent : IGameEvent

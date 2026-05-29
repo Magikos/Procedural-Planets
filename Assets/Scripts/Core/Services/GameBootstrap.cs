@@ -1,51 +1,60 @@
+using System.Threading;
 using UnityEngine;
 
-public class GameBootstrap : MonoBehaviour
+public class GameBootstrap : MonoBehaviour, IEarlyInitialize
 {
     [Header("Settings")]
     public int WorldSeed = 12345;
-    public LogLevel MinLogLevel = LogLevel.Debug;
+
+    ISeedProvider _seedProvider;
+    IWorldActionManager _worldActionManager;
+    IDebugCommandProvider _debugCommandProvider;
+
+    public int EarlyPriority => 100;
 
     void Awake()
     {
-        var logger = new UnityLogger(MinLogLevel);
-        ServiceLocator.Register<ILogger>(logger);
+        DontDestroyOnLoad(gameObject);
+    }
 
-        var seedProvider = new SeedProvider(WorldSeed);
-        ServiceLocator.Register<ISeedProvider>(seedProvider);
+    void OnDestroy()
+    {
+        if (_seedProvider != null) ServiceLocator.Unregister<ISeedProvider>(_seedProvider);
+        if (_worldActionManager != null) ServiceLocator.Unregister<IWorldActionManager>(_worldActionManager);
+        if (_debugCommandProvider != null)
+        {
+            (_debugCommandProvider as System.IDisposable)?.Dispose();
+            ServiceLocator.Unregister<IDebugCommandProvider>(_debugCommandProvider);
+        }
 
-        var actionManager = new WorldActionManager(logger);
-        ServiceLocator.Register<WorldActionManager>(actionManager);
+        EventBusRegistry.ClearAll();
+        EventBusProcessor.ClearProcessors();
+    }
 
-        var debugCommandProvider = new DebugCommandProvider();
-        ServiceLocator.Register<IDebugCommandProvider>(debugCommandProvider);
+    public async Awaitable EarlyInitialize(CancellationToken cancellationToken)
+    {
+        var logger = ServiceLocator.Get<ILogger>();
+
+        _seedProvider = new SeedProvider(WorldSeed);
+        _worldActionManager = new WorldActionManager(logger);
+        _debugCommandProvider = new DebugCommandProvider();
+
+        ServiceLocator.Register<ISeedProvider>(_seedProvider);
+        ServiceLocator.Register<IWorldActionManager>(_worldActionManager);
+        ServiceLocator.Register<IDebugCommandProvider>(_debugCommandProvider);
 
         EnsureComponent<ShaderGlobalsController>();
         EnsureComponent<QualityController>();
         EnsureComponent<DebugInputRelay>();
         EnsureComponent<DebugCaptureController>();
-
-        AddOptionalComponent("WaterWakeController");
+        EnsureComponent<WaterWakeController>();
 
         logger.Log(LogLevel.Info, "Bootstrap", $"Services initialized. World seed: {WorldSeed}");
+
+        await Awaitable.NextFrameAsync(cancellationToken);
     }
 
-    void OnDestroy()
-    {
-        ServiceLocator.Clear();
-    }
-
-    void AddOptionalComponent(string typeName)
-    {
-        System.Type componentType = System.Type.GetType(typeName);
-        if (componentType == null || !typeof(Component).IsAssignableFrom(componentType))
-            return;
-
-        if (gameObject.GetComponent(componentType) == null)
-            gameObject.AddComponent(componentType);
-    }
-
-    void EnsureComponent<T>() where T : Component
+    private void EnsureComponent<T>() where T : Component
     {
         if (FindAnyObjectByType<T>() == null)
             gameObject.AddComponent<T>();

@@ -5,179 +5,140 @@
 ProceduralPlanets/
 ├── Assets/
 │   ├── Editor/
-│   │   ├── PlanetEditor.cs              # Custom inspector for Planet component
-│   │   └── BiomeRegistryEditor.cs       # Custom grid inspector for BiomeRegistry
+│   │   ├── PlanetEditor.cs              # Custom inspector for Planet (inline settings, regenerate)
+│   │   ├── BiomeRegistryEditor.cs       # Grid inspector for BiomeRegistry
+│   │   └── SDFFontAssetImporter.cs      # Builds SDF font assets
 │   ├── Graphics/
 │   │   ├── Materials/
-│   │   │   └── Planet.mat               # Planet material (URP, vertex color)
+│   │   ├── Fonts/                       # SDF font asset(s) (DefaultFont)
 │   │   └── Shaders/
-│   │       ├── PlanetVertexColor.shader # URP HLSL: vertex color as albedo, PBR lighting
-│   │       ├── Atmosphere.shader        # Post-process: fullscreen scattering pass
-│   │       ├── OpticalDepth.compute     # Compute shader: UNUSED in v3 (kept for future LUT optimization)
-│   │       ├── BlueNoise.png            # Dither texture (future use)
-│   │       ├── Planet.shadergraph       # OLD shader graph (unused, kept for reference)
-│   │       └── Includes/
-│   │           ├── Atmosphere.hlsl      # v3: brute-force Rayleigh+Mie scattering
-│   │           ├── Common.hlsl          # Unity shader variable declarations
-│   │           └── Math.hlsl            # Ray-sphere intersection, utility functions
+│   │       ├── PlanetVertexColor.shader # Vertex-color terrain, PBR, depth passes, debug tints
+│   │       ├── Ocean.shader             # Transparent ocean surface (foam/waves/glint/depth)
+│   │       ├── WaterVolume.shader        # Full-screen underwater/long-path volume composite
+│   │       ├── WaterVolumePrepass.shader # Writes water interface coverage texture
+│   │       ├── Atmosphere.shader        # Post-process Rayleigh+Mie scattering
+│   │       ├── Cloud.shader             # Volumetric clouds (weather-driven)
+│   │       ├── Precipitation.shader     # Rain/storm curtains
+│   │       ├── Star.shader              # Stars + sun disc, horizon-clipped
+│   │       ├── SDFText.shader           # SDF text (overlay/debug)
+│   │       ├── LoadingOverlay.shader    # Loading overlay + progress bar
+│   │       ├── *.compute                # OpticalDepth, CloudNoise, WeatherEvolution
+│   │       └── Includes/                # Atmosphere, Common, Math, CloudShadows, WeatherSampling, DebugModes (.hlsl)
+│   ├── Resources/
+│   │   └── DefaultFont (SDF font asset, loaded by LoadingManager)
 │   ├── Scenes/
 │   │   ├── Planet.unity                 # Main planet scene
-│   │   └── Placement.unity              # Object placement test scene
+│   │   └── Placement.unity              # Object placement test scene (hosts Test.cs)
 │   ├── Scripts/
 │   │   ├── Core/
-│   │   │   ├── Data/
-│   │   │   │   ├── BiomeTypes.cs        # BiomeType enum + BiomeResult struct
-│   │   │   │   └── ChunkCoord.cs        # Chunk coordinate struct
-│   │   │   ├── Events/
-│   │   │   │   ├── EventBus.cs          # Generic static event bus
-│   │   │   │   ├── EventBusProcessor.cs # Deferred event processing
-│   │   │   │   ├── IGameEvent.cs        # Marker interface for events
-│   │   │   │   ├── IProgressEvent.cs    # Progress reporting interface
-│   │   │   │   ├── PlanetGeneratedEvent.cs # Includes SeaLevelRadius, ElevationMin/Max
-│   │   │   │   └── CelestialEvents.cs   # DayNightChangedEvent, MoonPhaseChangedEvent
-│   │   │   ├── Interfaces/
-│   │   │   │   ├── IBiomeProvider.cs    # Biome evaluation interface
-│   │   │   │   ├── IBiomeRegistry.cs    # Temperature × moisture → biome lookup
-│   │   │   │   ├── ILogger.cs           # Logging interface
-│   │   │   │   ├── IMoistureProvider.cs # Moisture evaluation interface
-│   │   │   │   ├── ISeedProvider.cs     # Deterministic seed interface
-│   │   │   │   ├── ITemperatureProvider.cs # Temperature evaluation interface
-│   │   │   │   ├── ITerrainProvider.cs  # Elevation evaluation interface
-│   │   │   │   └── IWorldAction.cs      # Command pattern interface
-│   │   │   ├── Services/
-│   │   │   │   ├── FreeCameraController.cs # WASD+mouse camera, Shift+A/D=roll, Ctrl+Space=surface
-│   │   │   │   ├── GameBootstrap.cs
-│   │   │   │   ├── SeedProvider.cs
-│   │   │   │   ├── ServiceLocator.cs
-│   │   │   │   ├── UnityLogger.cs
-│   │   │   │   └── WorldActionManager.cs
-│   │   │   ├── Utilities/
-│   │   │   │   ├── CoordinateConverter.cs
-│   │   │   │   ├── CubeSphereMeshBuilder.cs # Shared cube-sphere mesh generation
-│   │   │   │   └── ObjectPool.cs
-│   │   │   └── ProceduralPlanets.Core.asmdef
+│   │   │   ├── Data/                     # BiomeTypes, ChunkCoord
+│   │   │   ├── Events/                   # EventBus, EventBusRegistry, EventBusAutoBinder, EventBusProcessor,
+│   │   │   │                             #   IGameEvent, PlanetGeneratedEvent, CelestialEvents, WeatherEvents,
+│   │   │   │                             #   ProgressEvent, DebugActionEvents, DebugCommandRequestedEvent
+│   │   │   ├── Interfaces/               # IPlanet, IPlanetSurfaceSampler, ITerrainProvider, IBiomeProvider,
+│   │   │   │                             #   IBiomeRegistry, ITemperatureProvider, IMoistureProvider, ISeedProvider,
+│   │   │   │                             #   ICelestialTimeController, IWeatherProvider, IPrecipitationDebugControl,
+│   │   │   │                             #   ILoadingManager, IWorldAction(Manager), ILogger,
+│   │   │   │                             #   IEarlyInitialize, ILateInitialize, IProgressReporter/Handle
+│   │   │   ├── Services/                 # ServiceLocator, GameBootstrap, LoadingManager, SeedProvider, UnityLogger,
+│   │   │   │                             #   WorldActionManager, ProgressTracker, ProgressHandle,
+│   │   │   │                             #   FreeCameraController, ShaderGlobalsController,
+│   │   │   │                             #   DebugInputRelay, DebugCommandProvider, DebugCaptureController,
+│   │   │   │                             #   DebugRegistry, DebugModeConstants, WaterDebugModule,
+│   │   │   │                             #   WaterWakeController, WaterWakeEmitter
+│   │   │   ├── Text/                      # SDFFontAsset, SDFGlyph, SDFTextMeshBuilder, SDFTextRenderer
+│   │   │   ├── Utilities/                 # CoordinateConverter, CubeSphereMeshBuilder, ObjectPool
+│   │   │   ├── QualityController.cs
+│   │   │   └── ProceduralPlanets.Core.asmdef   (refs: Unity.InputSystem)
 │   │   ├── Planet/
-│   │   │   ├── Atmosphere/
-│   │   │   │   ├── AtmosphereController.cs    # Sets shader globals, uses sea level radius
-│   │   │   │   ├── AtmosphereRenderFeature.cs # URP ScriptableRendererFeature
-│   │   │   │   ├── AtmosphereRenderPass.cs    # RenderGraph pass: fullscreen scattering
-│   │   │   │   ├── AtmosphereSettings.cs      # ScriptableObject: all tunable parameters
-│   │   │   │   └── AtmosphereDiagnostics.cs   # F12 screen capture + shader global dump
-│   │   │   ├── Biomes/
-│   │   │   │   ├── BiomeDefinition.cs
-│   │   │   │   ├── BiomeRegistry.cs
-│   │   │   │   ├── BiomeSettings.cs
-│   │   │   │   ├── TemperatureProvider.cs
-│   │   │   │   └── MoistureProvider.cs
-│   │   │   ├── NoiseFilters/
-│   │   │   │   ├── INoiseFilter.cs
-│   │   │   │   ├── NoiseFilterFactory.cs
-│   │   │   │   ├── SimpleNoiseFilter.cs
-│   │   │   │   └── RigidNoiseFilter.cs
-│   │   │   ├── Planet.cs                # Main orchestrator (terrain, water, events)
-│   │   │   ├── PlanetSettings.cs        # ScriptableObject: user-friendly generation params
-│   │   │   ├── ShapeGenerator.cs        # Evaluates noise layers → elevation
-│   │   │   ├── TerrainFace.cs           # Generates mesh for one cube face
-│   │   │   ├── ColorGenerator.cs        # Biome colors via temp/moisture/registry
-│   │   │   ├── CelestialManager.cs      # Sun/moon orbits, day/night, moon phases
-│   │   │   ├── Noise.cs                 # Simplex noise (seed-based)
-│   │   │   ├── MinMax.cs                # Thread-safe min/max tracking
-│   │   │   ├── ShapeSettings.cs         # Runtime noise layer config (built by PlanetSettings)
-│   │   │   ├── NoiseSettings.cs         # Serializable noise parameters
-│   │   │   └── ProceduralPlanets.Planet.asmdef
-│   │   ├── PoissonDiscSampling.cs
-│   │   ├── PoissonDiscSphereSampling.cs
-│   │   ├── Test.cs
-│   │   ├── TestPoissonDiscSphereDraw.cs
-│   │   └── ProceduralPlanets.Sampling.asmdef
-│   └── Settings/
-│       ├── Planet Settings/
-│       │   ├── Planet.asset             # PlanetSettings instance
-│       │   ├── Atmosphere Settings.asset # AtmosphereSettings instance (YAML, editable)
-│       │   └── Biomes/                  # BiomeRegistry, BiomeSettings, 15 BiomeDefinitions
-│       ├── PC_RPAsset.asset             # URP pipeline asset (has AtmosphereRenderFeature)
-│       └── PC_Renderer.asset            # URP renderer asset
-├── local-only/                          # Reference projects (not in main build)
+│   │   │   ├── Atmosphere/                # AtmosphereController, AtmosphereDiagnostics, AtmosphereSettings,
+│   │   │   │                             #   AtmosphereRenderFeature, AtmosphereRenderPass, StarRenderFeature
+│   │   │   ├── Biomes/                    # BiomeDefinition, BiomeRegistry, BiomeSettings, Temperature/MoistureProvider
+│   │   │   ├── Clouds/                    # CloudController, CloudSettings, CloudRenderFeature,
+│   │   │   │                             #   CloudNoiseGenerator, SphericalWeatherGrid
+│   │   │   ├── NoiseFilters/              # INoiseFilter, NoiseFilterFactory, Simple/RigidNoiseFilter
+│   │   │   ├── Planet.cs                  # Orchestrator (ILateInitialize, IProgressReporter, IPlanet)
+│   │   │   ├── PlanetSettings.cs / ShapeSettings.cs / NoiseSettings.cs
+│   │   │   ├── ShapeGenerator.cs / Noise.cs / MinMax.cs / ColorGenerator.cs / TerrainFace.cs
+│   │   │   ├── CelestialManager.cs        # Sun/moon orbits, day/night, phases
+│   │   │   ├── WeatherManager.cs          # Cube-sphere weather grid (GPU evolution), wind
+│   │   │   ├── WaterMeshBuilder.cs        # Builds clipped ocean mesh (+ volume lip)
+│   │   │   ├── WaterVolumeRenderFeature.cs
+│   │   │   ├── PrecipitationController.cs / PrecipitationRenderFeature.cs / WeatherLightningController.cs
+│   │   │   ├── ICloudController.cs / IWeatherConfigurator.cs
+│   │   │   └── ProceduralPlanets.Planet.asmdef (refs: Core, URP, InputSystem)
+│   │   ├── PoissonDiscSampling.cs / PoissonDiscSphereSampling.cs
+│   │   ├── Test.cs                        # Editor-only Gizmo fixture (in Placement.unity)
+│   │   └── ProceduralPlanets.Sampling.asmdef (refs: Core, Planet)
+│   └── Settings/                          # PlanetSettings, AtmosphereSettings, CloudSettings, Biomes/, URP assets
+├── local-only/                            # Reference projects & papers (not in build) — see reference_local_only memory
+├── docs/                                  # PROJECT_PLAN, phases/, audit/
 └── ProceduralPlanets.sln
 ```
+
+## Assembly Boundaries (important)
+- **Core** (`ProceduralPlanets.Core`) references only Unity.InputSystem. It holds interfaces, events, services, utilities. It **cannot** reference Planet types.
+- **Planet** (`ProceduralPlanets.Planet`) references Core + URP. Holds generation, water, atmosphere, weather, clouds, celestial.
+- **Sampling** references Core + Planet.
+- Consequence: `ITerrainProvider`/`IBiomeProvider` in Core are pure **evaluation** contracts — setup (`Configure`/`Initialize`) lives on the concrete classes in Planet because the settings types (ShapeSettings/BiomeSettings) are not visible to Core.
 
 ## Core Architecture
 
 ### Generation Pipeline
 ```
-Planet (MonoBehaviour — orchestrator)
+Planet (MonoBehaviour, ILateInitialize, IProgressReporter, IPlanet)
   ├── PlanetSettings (user-friendly ScriptableObject)
-  │   └── BuildShapeSettings() → ShapeSettings (noise layers from friendly params)
-  ├── ShapeGenerator : ITerrainProvider (elevation calculation, no clamp)
+  │   └── BuildShapeSettings() → ShapeSettings
+  ├── ShapeGenerator : ITerrainProvider (elevation; range published via CommitElevationRange after parallel pass)
   │   ├── NoiseFilterFactory → INoiseFilter[]
-  │   └── Noise (simplex noise, seed-based permutation)
-  ├── TerrainFace[6] (one per cube face → mesh)
-  ├── ColorGenerator : IBiomeProvider (vertex colors from biome system)
-  │   ├── TemperatureProvider : ITemperatureProvider
-  │   ├── MoistureProvider : IMoistureProvider
-  │   └── BiomeRegistry : IBiomeRegistry
-  ├── Water Mesh (CubeSphereMeshBuilder, transparent URP Lit material)
-  └── PlanetGeneratedEvent → triggers all dependent systems
+  │   └── Noise (simplex, seed-based)
+  ├── TerrainFace[6] (one per cube face → mesh, async via Parallel.For)
+  ├── ColorGenerator : IBiomeProvider (Temperature × Moisture → BiomeRegistry)
+  ├── WaterMeshBuilder (global cube-face seam sharing → ocean mesh + volume lip)
+  └── PlanetGeneratedEvent → celestial, atmosphere, weather, camera
+```
+
+### Startup Flow (LoadingManager-driven)
+```
+[RuntimeInitializeOnLoadMethod] creates LoadingManager + EventBusProcessor (DontDestroyOnLoad)
+  ↓
+LoadingManager.Start() → InitializeAsync(activeScene):
+  ├── Collect all MonoBehaviours (incl. DontDestroyOnLoad GameBootstrap)
+  ├── Register IProgressReporter into ProgressTracker
+  ├── Run IEarlyInitialize ordered by descending EarlyPriority
+  │     └── GameBootstrap (priority 100): registers ISeedProvider, IWorldActionManager,
+  │         IDebugCommandProvider; ensures ShaderGlobals/Quality/DebugInputRelay/DebugCapture/WaterWake
+  ├── Run ILateInitialize ordered by descending LatePriority
+  │     ├── Planet (priority 0): GeneratePlanetAsync → raises PlanetGeneratedEvent
+  │     └── WeatherManager (priority -10): generates weather grid (planet already generated)
+  └── Fade out loading overlay (SDF text progress)
 ```
 
 ### Celestial System
 ```
-CelestialManager (MonoBehaviour)
-  ├── Sun orbit (directional light, tilted plane, configurable day length)
+CelestialManager (ICelestialTimeController)
+  ├── Sun orbit (directional light, configurable day length)
   ├── Moon orbit (separate speed/inclination, phase tracking)
-  ├── IsDayAt(worldPosition) — position-based day/night check
-  ├── MoonPhase / MoonFullness / MoonPhaseIndex
+  ├── IsDayAt(worldPosition), MoonPhase/Fullness/Index
   └── Events: DayNightChangedEvent, MoonPhaseChangedEvent
 ```
 
 ### Atmosphere System v3 (Post-Process)
-```
-AtmosphereController (MonoBehaviour)
-  ├── Receives PlanetGeneratedEvent → gets maxRadius + seaLevelRadius
-  ├── Sets shader globals every frame (sun direction, all parameters)
-  ├── Three key radii:
-  │   ├── _PlanetRadius = seaLevelRadius (ocean sphere, ray intersection floor)
-  │   ├── _DensityOriginRadius = seaLevelRadius (density height=0 at ocean)
-  │   └── _AtmosphereRadius = maxRadius * AtmosphereScale (outer edge)
-  └── Scale heights converted: fraction * atmosphereThickness → world units
+See `atmosphere-reference.md` for full detail. Brute-force Rayleigh+Mie ray marching as a URP
+fullscreen post-process. Three radii (`_SeaLevelRadius` = ocean sphere, `_DensityOriginRadius` =
+same, `_AtmosphereRadius` = maxRadius × scale) set by AtmosphereController from PlanetGeneratedEvent.
 
-AtmosphereRenderFeature → AtmosphereRenderPass
-  ├── URP ScriptableRendererFeature + RenderGraph pass
-  ├── Fullscreen triangle via SV_VertexID (DrawProcedural)
-  ├── DIRECTIONAL_SUN keyword always enabled
-  └── Works from both space and surface views
+### Water System
+See `water.md` (authoritative, kept current). Ocean surface (`Ocean.shader`) + full-screen volume
+(`WaterVolume.shader`) + prepass coverage. Vertex colors encode depth/shore/body. F10 capture sets
+drive artifact debugging.
 
-Atmosphere.hlsl (brute-force ray marching)
-  ├── View ray: 16 steps through atmosphere
-  ├── Sun ray: 8 steps per view sample (128 total per pixel)
-  ├── Rayleigh phase: (3/16π)(1+cos²θ)
-  ├── Mie phase: HG with anisotropy g=0.76
-  ├── Density: exp(-height / scaleHeight) from DensityOriginRadius
-  ├── Tone mapping: Reinhard on scatter only (preserves terrain color)
-  ├── Sun disc: rendered even outside atmosphere, attenuated through it
-  └── Debug modes: 0=final, 1=height, 2=Rayleigh, 3=Mie, 4=sunT, 5=mask
-```
-
-### Startup Flow
-```
-OnEnable (all listeners subscribe to EventBus)
-  ↓
-Planet.Start()
-  ├── Has _lastGeneratedRadius? → Raise PlanetGeneratedEvent (with cached seaLevel/elevation)
-  └── No data? → GeneratePlanetAsync() → Raise event when done
-  ↓
-All listeners receive PlanetGeneratedEvent:
-  ├── FreeCameraController → reposition camera
-  ├── CelestialManager → set planet radius, moon orbit
-  └── AtmosphereController → set shader globals
-```
-
-### Key Patterns
-- **EventBus**: Subscribe in OnEnable, unsubscribe in OnDisable. Initialization in Start.
-- **ServiceLocator lifecycle**: Components that provide required services register themselves in Awake and unregister in OnDestroy. OnEnable/OnDisable are for event wiring only. Start resolves required dependencies with ServiceLocator.Get so missing required services fail loudly after registration should exist.
-- **Planet owns startup**: Raises event if data exists, otherwise auto-generates.
-- **No OnValidate**: Generation only via button press or Start.
-- **No serialized meshes**: All meshes generated at runtime.
-- **Global shader properties**: Atmosphere uses Shader.SetGlobal* for all parameters.
-- **Assembly separation**: Core (no Planet dependency) ← Planet (references Core + URP).
-- **Settings as YAML**: AtmosphereSettings.asset is plain YAML, editable from code.
+## Key Patterns
+- **ServiceLocator**: interface-keyed only (no concrete-type registrations). Providers register in Awake, unregister in OnDestroy.
+- **EventBus**: Subscribe in OnEnable, unsubscribe in OnDisable. Weak references; compiled open-delegate dispatch (no per-event reflection). Each bus auto-registers into `EventBusRegistry`, so `EventBusRegistry.ClearAll()` in `GameBootstrap.OnDestroy` clears every event type in one call.
+- **Async**: `async Awaitable` everywhere (no coroutines, no `async void`). Background work via `Awaitable.BackgroundThreadAsync` / `MainThreadAsync`, cancellation via linked `CancellationToken`.
+- **Init ordering**: `IEarlyInitialize`/`ILateInitialize` priorities drive deterministic startup through LoadingManager (not Awake/Start races).
+- **Debug input**: hotkeys polled only in `DebugInputRelay` → `DebugCommandRequestedEvent` → `DebugCommandProvider` → typed debug events. Simulation classes listen for events; they do not poll input.
+- **No serialized meshes**: all meshes generated at runtime.
+- **Global shader properties**: atmosphere/water/weather set `Shader.SetGlobal*`; IDs cached via `Shader.PropertyToID`.
+- **Settings as ScriptableObjects / YAML**: AtmosphereSettings.asset is plain YAML, editable from code.

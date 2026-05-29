@@ -1,0 +1,971 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a57e291ba05df54faada8474a50ab53, type: 3}
+  m_Name: DefaultFont
+  m_EditorClassIdentifier: ProceduralPlanets.Core::SDFFontAsset
+  Atlas: {fileID: 2800000, guid: 8837f6d824e1d9947a4f902fbd6d4d5f, type: 3}
+  FontSize: 48
+  PixelRange: 4
+  LineHeight: 1.521
+  Ascender: 1.133
+  Descender: -0.388
+  Glyphs:
+  - Unicode: 32
+    Advance: 0.22
+    PlaneX: 0
+    PlaneY: 0
+    PlaneW: 0
+    PlaneH: 0
+    AtlasX: 0
+    AtlasY: 0
+    AtlasW: 0
+    AtlasH: 0
+  - Unicode: 33
+    Advance: 0.247
+    PlaneX: 0.040666666
+    PlaneY: -0.052083332
+    PlaneW: 0.16666666
+    PlaneH: 0.7916666
+    AtlasX: 0.46217105
+    AtlasY: 0.5707237
+    AtlasW: 0.02631579
+    AtlasH: 0.125
+  - Unicode: 34
+    Advance: 0.373
+    PlaneX: 0.019833334
+    PlaneY: 0.42708334
+    PlaneW: 0.33333334
+    PlaneH: 0.31249997
+    AtlasX: 0.17598684
+    AtlasY: 0.034539472
+    AtlasW: 0.05263158
+    AtlasH: 0.049342107
+  - Unicode: 35
+    Advance: 0.56
+    PlaneX: -0.022083333
+    PlaneY: -0.052083332
+    PlaneW: 0.6041667
+    PlaneH: 0.7708333
+    AtlasX: 0.4194079
+    AtlasY: 0.31414473
+    AtlasW: 0.09539474
+    AtlasH: 0.121710524
+  - Unicode: 36
+    Advance: 0.56
+    PlaneX: 0.021083333
+    PlaneY: -0.17708333
+    PlaneW: 0.5208333
+    PlaneH: 1.0208334
+    AtlasX: 0.23848684
+    AtlasY: 0.8371711
+    AtlasW: 0.08223684
+    AtlasH: 0.1611842
+  - Unicode: 37
+    Advance: 0.56
+    PlaneX: -0.022083333
+    PlaneY: -0.072916664
+    PlaneW: 0.6041667
+    PlaneH: 0.8125
+    AtlasX: 0.39967105
+    AtlasY: 0.70230263
+    AtlasW: 0.09539474
+    AtlasH: 0.12828948
+  - Unicode: 38
+    Advance: 0.688
+    PlaneX: -0.009083333
+    PlaneY: -0.052083332
+    PlaneW: 0.7291667
+    PlaneH: 0.8125
+    AtlasX: 0.61019737
+    AtlasY: 0.70230263
+    AtlasW: 0.11513158
+    AtlasH: 0.12828948
+  - Unicode: 39
+    Advance: 0.208
+    PlaneX: 0.021166667
+    PlaneY: 0.42708334
+    PlaneW: 0.16666667
+    PlaneH: 0.31249997
+    AtlasX: 0.95888156
+    AtlasY: 0.8930921
+    AtlasW: 0.02631579
+    AtlasH: 0.049342107
+  - Unicode: 40
+    Advance: 0.264
+    PlaneX: 0.0035833332
+    PlaneY: -0.17708333
+    PlaneW: 0.2708333
+    PlaneH: 0.9791666
+    AtlasX: 0.38651314
+    AtlasY: 0.84375
+    AtlasW: 0.04276316
+    AtlasH: 0.15460527
+  - Unicode: 41
+    Advance: 0.264
+    PlaneX: -0.010416667
+    PlaneY: -0.17708333
+    PlaneW: 0.2708333
+    PlaneH: 0.9791666
+    AtlasX: 0.43256578
+    AtlasY: 0.84375
+    AtlasW: 0.04276316
+    AtlasH: 0.15460527
+  - Unicode: 42
+    Advance: 0.42
+    PlaneX: 0.0051666666
+    PlaneY: 0.32291666
+    PlaneW: 0.41666666
+    PlaneH: 0.43750003
+    AtlasX: 0.9292763
+    AtlasY: 0.11348684
+    AtlasW: 0.065789476
+    AtlasH: 0.069078945
+  - Unicode: 43
+    Advance: 0.56
+    PlaneX: 0.009166666
+    PlaneY: -0.03125
+    PlaneW: 0.5416667
+    PlaneH: 0.5625
+    AtlasX: 0.84046054
+    AtlasY: 0.09375
+    AtlasW: 0.08552632
+    AtlasH: 0.088815786
+  - Unicode: 44
+    Advance: 0.223
+    PlaneX: -0.016083334
+    PlaneY: -0.17708333
+    PlaneW: 0.22916666
+    PlaneH: 0.3333333
+    AtlasX: 0.95888156
+    AtlasY: 0.9457237
+    AtlasW: 0.03618421
+    AtlasH: 0.05263158
+  - Unicode: 45
+    Advance: 0.438
+    PlaneX: 0.021583334
+    PlaneY: 0.19791667
+    PlaneW: 0.3958333
+    PlaneH: 0.16666667
+    AtlasX: 0.48848686
+    AtlasY: 0.05756579
+    AtlasW: 0.0625
+    AtlasH: 0.02631579
+  - Unicode: 46
+    Advance: 0.216
+    PlaneX: 0.024666667
+    PlaneY: -0.052083332
+    PlaneW: 0.16666667
+    PlaneH: 0.20833333
+    AtlasX: 0.37335527
+    AtlasY: 0.05098684
+    AtlasW: 0.02631579
+    AtlasH: 0.032894738
+  - Unicode: 47
+    Advance: 0.412
+    PlaneX: -0.01225
+    PlaneY: -0.072916664
+    PlaneW: 0.4375
+    PlaneH: 0.8333334
+    AtlasX: 0.8865132
+    AtlasY: 0.8667763
+    AtlasW: 0.069078945
+    AtlasH: 0.13157895
+  - Unicode: 48
+    Advance: 0.56
+    PlaneX: -0.012166667
+    PlaneY: -0.052083332
+    PlaneW: 0.5833334
+    PlaneH: 0.7708333
+    AtlasX: 0.5180921
+    AtlasY: 0.31414473
+    AtlasW: 0.09210526
+    AtlasH: 0.121710524
+  - Unicode: 49
+    Advance: 0.56
+    PlaneX: 0.0605
+    PlaneY: -0.052083332
+    PlaneW: 0.375
+    PlaneH: 0.7708333
+    AtlasX: 0.6134868
+    AtlasY: 0.31414473
+    AtlasW: 0.059210528
+    AtlasH: 0.121710524
+  - Unicode: 50
+    Advance: 0.56
+    PlaneX: 0.019583333
+    PlaneY: -0.052083332
+    PlaneW: 0.5208333
+    PlaneH: 0.7708333
+    AtlasX: 0.6759868
+    AtlasY: 0.31414473
+    AtlasW: 0.08223684
+    AtlasH: 0.121710524
+  - Unicode: 51
+    Advance: 0.56
+    PlaneX: 0.017083334
+    PlaneY: -0.052083332
+    PlaneW: 0.5208333
+    PlaneH: 0.7708333
+    AtlasX: 0.82730263
+    AtlasY: 0.31414473
+    AtlasW: 0.08223684
+    AtlasH: 0.121710524
+  - Unicode: 52
+    Advance: 0.56
+    PlaneX: -0.011166667
+    PlaneY: -0.052083332
+    PlaneW: 0.5833334
+    PlaneH: 0.7708333
+    AtlasX: 0.0016447369
+    AtlasY: 0.18585527
+    AtlasW: 0.09210526
+    AtlasH: 0.121710524
+  - Unicode: 53
+    Advance: 0.56
+    PlaneX: 0.012166667
+    PlaneY: -0.052083332
+    PlaneW: 0.5416666
+    PlaneH: 0.7708333
+    AtlasX: 0.9128289
+    AtlasY: 0.31414473
+    AtlasW: 0.08552632
+    AtlasH: 0.121710524
+  - Unicode: 54
+    Advance: 0.56
+    PlaneX: 0.00225
+    PlaneY: -0.052083332
+    PlaneW: 0.5625
+    PlaneH: 0.7708333
+    AtlasX: 0.097039476
+    AtlasY: 0.18585527
+    AtlasW: 0.088815786
+    AtlasH: 0.121710524
+  - Unicode: 55
+    Advance: 0.56
+    PlaneX: 0.032
+    PlaneY: -0.052083332
+    PlaneW: 0.5
+    PlaneH: 0.7708333
+    AtlasX: 0.18914473
+    AtlasY: 0.18585527
+    AtlasW: 0.078947365
+    AtlasH: 0.121710524
+  - Unicode: 56
+    Advance: 0.56
+    PlaneX: -0.012166667
+    PlaneY: -0.052083332
+    PlaneW: 0.5833334
+    PlaneH: 0.7708333
+    AtlasX: 0.2713816
+    AtlasY: 0.18585527
+    AtlasW: 0.09210526
+    AtlasH: 0.121710524
+  - Unicode: 57
+    Advance: 0.56
+    PlaneX: -0.00625
+    PlaneY: -0.052083332
+    PlaneW: 0.5625
+    PlaneH: 0.7708333
+    AtlasX: 0.36677632
+    AtlasY: 0.18585527
+    AtlasW: 0.088815786
+    AtlasH: 0.121710524
+  - Unicode: 58
+    Advance: 0.217
+    PlaneX: 0.024666667
+    PlaneY: -0.052083332
+    PlaneW: 0.16666667
+    PlaneH: 0.5416667
+    AtlasX: 0.95230263
+    AtlasY: 0.22203948
+    AtlasW: 0.02631579
+    AtlasH: 0.08552632
+  - Unicode: 59
+    Advance: 0.248
+    PlaneX: -0.0020833334
+    PlaneY: -0.17708333
+    PlaneW: 0.22916667
+    PlaneH: 0.6666667
+    AtlasX: 0.4588816
+    AtlasY: 0.20230263
+    AtlasW: 0.03618421
+    AtlasH: 0.10526316
+  - Unicode: 60
+    Advance: 0.56
+    PlaneX: 0.019
+    PlaneY: -0.03125
+    PlaneW: 0.5
+    PlaneH: 0.5625
+    AtlasX: 0.6759868
+    AtlasY: 0.09375
+    AtlasW: 0.078947365
+    AtlasH: 0.088815786
+  - Unicode: 61
+    Advance: 0.56
+    PlaneX: 0.019583333
+    PlaneY: 0.072916664
+    PlaneW: 0.5208333
+    PlaneH: 0.3541667
+    AtlasX: 0.090460524
+    AtlasY: 0.027960526
+    AtlasW: 0.08223684
+    AtlasH: 0.05592105
+  - Unicode: 62
+    Advance: 0.56
+    PlaneX: 0.04
+    PlaneY: -0.03125
+    PlaneW: 0.5
+    PlaneH: 0.5625
+    AtlasX: 0.7582237
+    AtlasY: 0.09375
+    AtlasW: 0.078947365
+    AtlasH: 0.088815786
+  - Unicode: 63
+    Advance: 0.447
+    PlaneX: -0.0076666665
+    PlaneY: -0.052083332
+    PlaneW: 0.45833334
+    PlaneH: 0.8125
+    AtlasX: 0.8075658
+    AtlasY: 0.70230263
+    AtlasW: 0.07236842
+    AtlasH: 0.12828948
+  - Unicode: 64
+    Advance: 0.977
+    PlaneX: 0.0024166666
+    PlaneY: -0.26041666
+    PlaneW: 0.9791667
+    PlaneH: 1.0416666
+    AtlasX: 0.0016447369
+    AtlasY: 0.83388156
+    AtlasW: 0.15460527
+    AtlasH: 0.16447368
+  - Unicode: 65
+    Advance: 0.596
+    PlaneX: -0.024916667
+    PlaneY: -0.052083332
+    PlaneW: 0.6458333
+    PlaneH: 0.7916666
+    AtlasX: 0.49177632
+    AtlasY: 0.5707237
+    AtlasW: 0.10197368
+    AtlasH: 0.125
+  - Unicode: 66
+    Advance: 0.616
+    PlaneX: 0.04275
+    PlaneY: -0.052083332
+    PlaneW: 0.5625
+    PlaneH: 0.7916666
+    AtlasX: 0.59703946
+    AtlasY: 0.5707237
+    AtlasW: 0.088815786
+    AtlasH: 0.125
+  - Unicode: 67
+    Advance: 0.544
+    PlaneX: 0.0101666665
+    PlaneY: -0.052083332
+    PlaneW: 0.5416667
+    PlaneH: 0.8125
+    AtlasX: 0.0016447369
+    AtlasY: 0.5674342
+    AtlasW: 0.08552632
+    AtlasH: 0.12828948
+  - Unicode: 68
+    Advance: 0.645
+    PlaneX: 0.034416668
+    PlaneY: -0.052083332
+    PlaneW: 0.6041667
+    PlaneH: 0.7916666
+    AtlasX: 0.3963816
+    AtlasY: 0.43914473
+    AtlasW: 0.09539474
+    AtlasH: 0.125
+  - Unicode: 69
+    Advance: 0.553
+    PlaneX: 0.035083335
+    PlaneY: -0.052083332
+    PlaneW: 0.5208333
+    PlaneH: 0.7916666
+    AtlasX: 0.59046054
+    AtlasY: 0.43914473
+    AtlasW: 0.08223684
+    AtlasH: 0.125
+  - Unicode: 70
+    Advance: 0.526
+    PlaneX: 0.042
+    PlaneY: -0.052083332
+    PlaneW: 0.5
+    PlaneH: 0.7916666
+    AtlasX: 0.7680921
+    AtlasY: 0.43914473
+    AtlasW: 0.078947365
+    AtlasH: 0.125
+  - Unicode: 71
+    Advance: 0.616
+    PlaneX: 0.011833333
+    PlaneY: -0.052083332
+    PlaneW: 0.5833334
+    PlaneH: 0.8125
+    AtlasX: 0.090460524
+    AtlasY: 0.5674342
+    AtlasW: 0.09210526
+    AtlasH: 0.12828948
+  - Unicode: 72
+    Advance: 0.675
+    PlaneX: 0.035416666
+    PlaneY: -0.052083332
+    PlaneW: 0.6041667
+    PlaneH: 0.7916666
+    AtlasX: 0.24177632
+    AtlasY: 0.31085527
+    AtlasW: 0.09539474
+    AtlasH: 0.125
+  - Unicode: 73
+    Advance: 0.246
+    PlaneX: 0.040166665
+    PlaneY: -0.052083332
+    PlaneW: 0.16666667
+    PlaneH: 0.7916666
+    AtlasX: 0.9490132
+    AtlasY: 0.43914473
+    AtlasW: 0.02631579
+    AtlasH: 0.125
+  - Unicode: 74
+    Advance: 0.289
+    PlaneX: -0.032833334
+    PlaneY: -0.114583336
+    PlaneW: 0.29166666
+    PlaneH: 0.8541666
+    AtlasX: 0.75164473
+    AtlasY: 0.8634868
+    AtlasW: 0.04605263
+    AtlasH: 0.13486843
+  - Unicode: 75
+    Advance: 0.569
+    PlaneX: 0.03725
+    PlaneY: -0.052083332
+    PlaneW: 0.5625
+    PlaneH: 0.7916666
+    AtlasX: 0.14967105
+    AtlasY: 0.31085527
+    AtlasW: 0.088815786
+    AtlasH: 0.125
+  - Unicode: 76
+    Advance: 0.479
+    PlaneX: 0.035916667
+    PlaneY: -0.052083332
+    PlaneW: 0.47916666
+    PlaneH: 0.7916666
+    AtlasX: 0.34046054
+    AtlasY: 0.31085527
+    AtlasW: 0.0756579
+    AtlasH: 0.125
+  - Unicode: 77
+    Advance: 0.84
+    PlaneX: 0.034583334
+    PlaneY: -0.052083332
+    PlaneW: 0.7708333
+    PlaneH: 0.7916666
+    AtlasX: 0.87664473
+    AtlasY: 0.5707237
+    AtlasW: 0.121710524
+    AtlasH: 0.125
+  - Unicode: 78
+    Advance: 0.676
+    PlaneX: 0.035916667
+    PlaneY: -0.052083332
+    PlaneW: 0.6041666
+    PlaneH: 0.7916666
+    AtlasX: 0.8503289
+    AtlasY: 0.43914473
+    AtlasW: 0.09539474
+    AtlasH: 0.125
+  - Unicode: 79
+    Advance: 0.66
+    PlaneX: 0.007583333
+    PlaneY: -0.052083332
+    PlaneW: 0.6458334
+    PlaneH: 0.8125
+    AtlasX: 0.18585527
+    AtlasY: 0.5674342
+    AtlasW: 0.10197368
+    AtlasH: 0.12828948
+  - Unicode: 80
+    Advance: 0.593
+    PlaneX: 0.04075
+    PlaneY: -0.052083332
+    PlaneW: 0.5625
+    PlaneH: 0.7916666
+    AtlasX: 0.6759868
+    AtlasY: 0.43914473
+    AtlasW: 0.088815786
+    AtlasH: 0.125
+  - Unicode: 81
+    Advance: 0.66
+    PlaneX: 0.007583333
+    PlaneY: -0.19791667
+    PlaneW: 0.6458334
+    PlaneH: 0.9583334
+    AtlasX: 0.64638156
+    AtlasY: 0.84703946
+    AtlasW: 0.10197368
+    AtlasH: 0.1513158
+  - Unicode: 82
+    Advance: 0.616
+    PlaneX: 0.034833334
+    PlaneY: -0.052083332
+    PlaneW: 0.5833334
+    PlaneH: 0.7916666
+    AtlasX: 0.49506578
+    AtlasY: 0.43914473
+    AtlasW: 0.09210526
+    AtlasH: 0.125
+  - Unicode: 83
+    Advance: 0.542
+    PlaneX: 0.00016666666
+    PlaneY: -0.052083332
+    PlaneW: 0.5416667
+    PlaneH: 0.8125
+    AtlasX: 0.2911184
+    AtlasY: 0.5674342
+    AtlasW: 0.08552632
+    AtlasH: 0.12828948
+  - Unicode: 84
+    Advance: 0.526
+    PlaneX: -0.028666666
+    PlaneY: -0.052083332
+    PlaneW: 0.5833333
+    PlaneH: 0.7916666
+    AtlasX: 0.30098686
+    AtlasY: 0.43914473
+    AtlasW: 0.09210526
+    AtlasH: 0.125
+  - Unicode: 85
+    Advance: 0.644
+    PlaneX: 0.030333333
+    PlaneY: -0.052083332
+    PlaneW: 0.5833333
+    PlaneH: 0.7916666
+    AtlasX: 0.20559211
+    AtlasY: 0.43914473
+    AtlasW: 0.09210526
+    AtlasH: 0.125
+  - Unicode: 86
+    Advance: 0.582
+    PlaneX: -0.0215
+    PlaneY: -0.052083332
+    PlaneW: 0.625
+    PlaneH: 0.7916666
+    AtlasX: 0.10361842
+    AtlasY: 0.43914473
+    AtlasW: 0.098684214
+    AtlasH: 0.125
+  - Unicode: 87
+    Advance: 0.886
+    PlaneX: -0.015833333
+    PlaneY: -0.052083332
+    PlaneW: 0.9166666
+    PlaneH: 0.7916666
+    AtlasX: 0.0016447369
+    AtlasY: 0.31085527
+    AtlasW: 0.14473684
+    AtlasH: 0.125
+  - Unicode: 88
+    Advance: 0.558
+    PlaneX: -0.033
+    PlaneY: -0.052083332
+    PlaneW: 0.625
+    PlaneH: 0.7916666
+    AtlasX: 0.0016447369
+    AtlasY: 0.43914473
+    AtlasW: 0.098684214
+    AtlasH: 0.125
+  - Unicode: 89
+    Advance: 0.538
+    PlaneX: -0.033083335
+    PlaneY: -0.052083332
+    PlaneW: 0.6041666
+    PlaneH: 0.7916666
+    AtlasX: 0.77796054
+    AtlasY: 0.5707237
+    AtlasW: 0.09539474
+    AtlasH: 0.125
+  - Unicode: 90
+    Advance: 0.536
+    PlaneX: -0.0028333333
+    PlaneY: -0.052083332
+    PlaneW: 0.5416666
+    PlaneH: 0.7916666
+    AtlasX: 0.68914473
+    AtlasY: 0.5707237
+    AtlasW: 0.08552632
+    AtlasH: 0.125
+  - Unicode: 91
+    Advance: 0.329
+    PlaneX: 0.02775
+    PlaneY: -0.17708333
+    PlaneW: 0.3125
+    PlaneH: 0.9791666
+    AtlasX: 0.4786184
+    AtlasY: 0.84375
+    AtlasW: 0.049342107
+    AtlasH: 0.15460527
+  - Unicode: 92
+    Advance: 0.436
+    PlaneX: -0.022083333
+    PlaneY: -0.072916664
+    PlaneW: 0.4791667
+    PlaneH: 0.8333334
+    AtlasX: 0.16611843
+    AtlasY: 0.6990132
+    AtlasW: 0.0756579
+    AtlasH: 0.13157895
+  - Unicode: 93
+    Advance: 0.329
+    PlaneX: -0.01125
+    PlaneY: -0.17708333
+    PlaneW: 0.3125
+    PlaneH: 0.9791666
+    AtlasX: 0.53125
+    AtlasY: 0.84375
+    AtlasW: 0.049342107
+    AtlasH: 0.15460527
+  - Unicode: 94
+    Advance: 0.56
+    PlaneX: 0.008666666
+    PlaneY: 0.26041666
+    PlaneW: 0.5416666
+    PlaneH: 0.45833334
+    AtlasX: 0.0016447369
+    AtlasY: 0.011513158
+    AtlasW: 0.08552632
+    AtlasH: 0.07236842
+  - Unicode: 95
+    Advance: 0.632
+    PlaneX: 0.05558333
+    PlaneY: -0.21875
+    PlaneW: 0.5208333
+    PlaneH: 0.1875
+    AtlasX: 0.40296054
+    AtlasY: 0.054276317
+    AtlasW: 0.08223684
+    AtlasH: 0.029605264
+  - Unicode: 96
+    Advance: 0.236
+    PlaneX: -0.046666667
+    PlaneY: 0.53125
+    PlaneW: 0.3333333
+    PlaneH: 0.2708333
+    AtlasX: 0.23190789
+    AtlasY: 0.04111842
+    AtlasW: 0.05263158
+    AtlasH: 0.04276316
+  - Unicode: 97
+    Advance: 0.501
+    PlaneX: -0.009333333
+    PlaneY: -0.052083332
+    PlaneW: 0.5416666
+    PlaneH: 0.6041666
+    AtlasX: 0.21546052
+    AtlasY: 0.087171055
+    AtlasW: 0.08552632
+    AtlasH: 0.09539474
+  - Unicode: 98
+    Advance: 0.526
+    PlaneX: 0.0235
+    PlaneY: -0.052083332
+    PlaneW: 0.5
+    PlaneH: 0.8125
+    AtlasX: 0.37993422
+    AtlasY: 0.5674342
+    AtlasW: 0.078947365
+    AtlasH: 0.12828948
+  - Unicode: 99
+    Advance: 0.436
+    PlaneX: 0.00475
+    PlaneY: -0.052083332
+    PlaneW: 0.4375
+    PlaneH: 0.6041666
+    AtlasX: 0.8799342
+    AtlasY: 0.21217105
+    AtlasW: 0.069078945
+    AtlasH: 0.09539474
+  - Unicode: 100
+    Advance: 0.529
+    PlaneX: 0.003
+    PlaneY: -0.052083332
+    PlaneW: 0.5
+    PlaneH: 0.8125
+    AtlasX: 0.8832237
+    AtlasY: 0.70230263
+    AtlasW: 0.078947365
+    AtlasH: 0.12828948
+  - Unicode: 101
+    Advance: 0.505
+    PlaneX: 0.005
+    PlaneY: -0.052083332
+    PlaneW: 0.5
+    PlaneH: 0.6041666
+    AtlasX: 0.79769737
+    AtlasY: 0.21217105
+    AtlasW: 0.078947365
+    AtlasH: 0.09539474
+  - Unicode: 102
+    Advance: 0.331
+    PlaneX: -0.018416667
+    PlaneY: -0.052083332
+    PlaneW: 0.39583334
+    PlaneH: 0.8333333
+    AtlasX: 0.2450658
+    AtlasY: 0.6990132
+    AtlasW: 0.0625
+    AtlasH: 0.13157895
+  - Unicode: 103
+    Advance: 0.514
+    PlaneX: 0.0016666667
+    PlaneY: -0.28125
+    PlaneW: 0.5416667
+    PlaneH: 0.8333333
+    AtlasX: 0.31085527
+    AtlasY: 0.6990132
+    AtlasW: 0.08552632
+    AtlasH: 0.13157895
+  - Unicode: 104
+    Advance: 0.537
+    PlaneX: 0.021
+    PlaneY: -0.052083332
+    PlaneW: 0.5
+    PlaneH: 0.8125
+    AtlasX: 0.52796054
+    AtlasY: 0.70230263
+    AtlasW: 0.078947365
+    AtlasH: 0.12828948
+  - Unicode: 105
+    Advance: 0.219
+    PlaneX: 0.026166666
+    PlaneY: -0.052083332
+    PlaneW: 0.16666667
+    PlaneH: 0.8125
+    AtlasX: 0.49835527
+    AtlasY: 0.70230263
+    AtlasW: 0.02631579
+    AtlasH: 0.12828948
+  - Unicode: 106
+    Advance: 0.219
+    PlaneX: -0.09683333
+    PlaneY: -0.28125
+    PlaneW: 0.2916667
+    PlaneH: 1.0416667
+    AtlasX: 0.15953948
+    AtlasY: 0.83388156
+    AtlasW: 0.04605263
+    AtlasH: 0.16447368
+  - Unicode: 107
+    Advance: 0.479
+    PlaneX: 0.026416667
+    PlaneY: -0.052083332
+    PlaneW: 0.4791667
+    PlaneH: 0.8125
+    AtlasX: 0.72861844
+    AtlasY: 0.70230263
+    AtlasW: 0.0756579
+    AtlasH: 0.12828948
+  - Unicode: 108
+    Advance: 0.231
+    PlaneX: 0.032166667
+    PlaneY: -0.052083332
+    PlaneW: 0.16666666
+    PlaneH: 0.8125
+    AtlasX: 0.96546054
+    AtlasY: 0.70230263
+    AtlasW: 0.02631579
+    AtlasH: 0.12828948
+  - Unicode: 109
+    Advance: 0.836
+    PlaneX: 0.024666667
+    PlaneY: -0.052083332
+    PlaneW: 0.7916667
+    PlaneH: 0.6041666
+    AtlasX: 0.46546054
+    AtlasY: 0.087171055
+    AtlasW: 0.125
+    AtlasH: 0.09539474
+  - Unicode: 110
+    Advance: 0.537
+    PlaneX: 0.021
+    PlaneY: -0.052083332
+    PlaneW: 0.5
+    PlaneH: 0.6041666
+    AtlasX: 0.59375
+    AtlasY: 0.087171055
+    AtlasW: 0.078947365
+    AtlasH: 0.09539474
+  - Unicode: 111
+    Advance: 0.528
+    PlaneX: 0.0035833332
+    PlaneY: -0.052083332
+    PlaneW: 0.5208334
+    PlaneH: 0.6041666
+    AtlasX: 0.1299342
+    AtlasY: 0.087171055
+    AtlasW: 0.08223684
+    AtlasH: 0.09539474
+  - Unicode: 112
+    Advance: 0.527
+    PlaneX: 0.0245
+    PlaneY: -0.28125
+    PlaneW: 0.5
+    PlaneH: 0.8333333
+    AtlasX: 0.0016447369
+    AtlasY: 0.6990132
+    AtlasW: 0.078947365
+    AtlasH: 0.13157895
+  - Unicode: 113
+    Advance: 0.526
+    PlaneX: 0.0015
+    PlaneY: -0.28125
+    PlaneW: 0.5
+    PlaneH: 0.8333333
+    AtlasX: 0.08388158
+    AtlasY: 0.6990132
+    AtlasW: 0.078947365
+    AtlasH: 0.13157895
+  - Unicode: 114
+    Advance: 0.346
+    PlaneX: 0.023416666
+    PlaneY: -0.052083332
+    PlaneW: 0.35416666
+    PlaneH: 0.625
+    AtlasX: 0.49835527
+    AtlasY: 0.20888157
+    AtlasW: 0.05592105
+    AtlasH: 0.098684214
+  - Unicode: 115
+    Advance: 0.465
+    PlaneX: -0.0060833334
+    PlaneY: -0.052083332
+    PlaneW: 0.4791667
+    PlaneH: 0.6041666
+    AtlasX: 0.38651314
+    AtlasY: 0.087171055
+    AtlasW: 0.0756579
+    AtlasH: 0.09539474
+  - Unicode: 116
+    Advance: 0.351
+    PlaneX: -0.015416667
+    PlaneY: -0.072916664
+    PlaneW: 0.3958333
+    PlaneH: 0.7708334
+    AtlasX: 0.7615132
+    AtlasY: 0.31414473
+    AtlasW: 0.0625
+    AtlasH: 0.121710524
+  - Unicode: 117
+    Advance: 0.531
+    PlaneX: 0.023416666
+    PlaneY: -0.052083332
+    PlaneW: 0.47916666
+    PlaneH: 0.6041666
+    AtlasX: 0.71875
+    AtlasY: 0.21217105
+    AtlasW: 0.0756579
+    AtlasH: 0.09539474
+  - Unicode: 118
+    Advance: 0.481
+    PlaneX: -0.019416668
+    PlaneY: -0.052083332
+    PlaneW: 0.5208334
+    PlaneH: 0.6041666
+    AtlasX: 0.5575658
+    AtlasY: 0.21217105
+    AtlasW: 0.08223684
+    AtlasH: 0.09539474
+  - Unicode: 119
+    Advance: 0.762
+    PlaneX: -0.014833333
+    PlaneY: -0.052083332
+    PlaneW: 0.7916667
+    PlaneH: 0.6041666
+    AtlasX: 0.0016447369
+    AtlasY: 0.087171055
+    AtlasW: 0.125
+    AtlasH: 0.09539474
+  - Unicode: 120
+    Advance: 0.452
+    PlaneX: -0.024
+    PlaneY: -0.052083332
+    PlaneW: 0.5
+    PlaneH: 0.6041666
+    AtlasX: 0.30427632
+    AtlasY: 0.087171055
+    AtlasW: 0.078947365
+    AtlasH: 0.09539474
+  - Unicode: 121
+    Advance: 0.483
+    PlaneX: -0.018416667
+    PlaneY: -0.28125
+    PlaneW: 0.5208333
+    PlaneH: 0.8333333
+    AtlasX: 0.8009868
+    AtlasY: 0.8667763
+    AtlasW: 0.08223684
+    AtlasH: 0.13157895
+  - Unicode: 122
+    Advance: 0.455
+    PlaneX: -0.0016666667
+    PlaneY: -0.052083332
+    PlaneW: 0.45833334
+    PlaneH: 0.6041666
+    AtlasX: 0.6430921
+    AtlasY: 0.21217105
+    AtlasW: 0.07236842
+    AtlasH: 0.09539474
+  - Unicode: 123
+    Advance: 0.352
+    PlaneX: -0.0195
+    PlaneY: -0.17708333
+    PlaneW: 0.375
+    PlaneH: 0.9791666
+    AtlasX: 0.32401314
+    AtlasY: 0.84375
+    AtlasW: 0.059210528
+    AtlasH: 0.15460527
+  - Unicode: 124
+    Advance: 0.23
+    PlaneX: 0.031666666
+    PlaneY: -0.28125
+    PlaneW: 0.16666667
+    PlaneH: 1.0416667
+    AtlasX: 0.20888157
+    AtlasY: 0.83388156
+    AtlasW: 0.02631579
+    AtlasH: 0.16447368
+  - Unicode: 125
+    Advance: 0.352
+    PlaneX: -0.0035
+    PlaneY: -0.17708333
+    PlaneW: 0.375
+    PlaneH: 0.9791666
+    AtlasX: 0.58388156
+    AtlasY: 0.84375
+    AtlasW: 0.059210528
+    AtlasH: 0.15460527
+  - Unicode: 126
+    Advance: 0.56
+    PlaneX: 0.020583333
+    PlaneY: 0.13541667
+    PlaneW: 0.5208333
+    PlaneH: 0.24999999
+    AtlasX: 0.28782895
+    AtlasY: 0.044407893
+    AtlasW: 0.08223684
+    AtlasH: 0.039473683
