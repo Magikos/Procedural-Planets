@@ -270,7 +270,24 @@ ENDHLSL
                 // should haze those pixels, but not replace all of their local detail.
                 float waterSurfaceMask = smoothstep(0.02, 0.30, WaterInterfaceFrontMask(i.uv));
                 float sourceLuma = dot(originalCol.rgb, float3(0.2126, 0.7152, 0.0722));
-                float detailPreserve = waterSurfaceMask * 0.38;
+
+                // Sun-elevation-dependent detail preserve. At sunset the scattered atmosphere
+                // colour is intensely orange/red; previously 62% of that bled through on water,
+                // creating the "water glows under the sun" effect at low sun angles. When the
+                // sun is at/below the horizon, preserve more of the original (dark) water; at
+                // higher sun angles use the original 0.38 preserve so daytime is unchanged.
+                float3 fromCenter = _WorldSpaceCameraPos.xyz - _PlanetCenter;
+                float fromCenterLenSq = dot(fromCenter, fromCenter);
+                float3 planetUpCam = fromCenterLenSq > 0.0001 ? fromCenter * rsqrt(fromCenterLenSq) : float3(0.0, 1.0, 0.0);
+                float3 sunDirNorm = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : float3(0.0, 1.0, 0.0);
+                float sunElevation = dot(planetUpCam, sunDirNorm); // -1 below horizon, +1 zenith
+                float lowSun01 = 1.0 - smoothstep(-0.05, 0.30, sunElevation); // 1 at horizon, 0 above ~17 deg
+                // Was lerp(0.38, 0.75) which made sunset water too dark - lost the warm orange glow
+                // user wanted to keep. Reduced sunset cap so ~45% of the warm atmosphere still
+                // contributes (vs 25% with the harder fix, vs 62% with no fix at all).
+                float detailPreserveFraction = lerp(0.38, 0.55, lowSun01);
+
+                float detailPreserve = waterSurfaceMask * detailPreserveFraction;
                 float highlightPreserve = waterSurfaceMask * smoothstep(0.32, 0.82, sourceLuma) * 0.24;
                 color = lerp(color, originalCol.rgb, detailPreserve);
                 color = lerp(color, max(color, originalCol.rgb), highlightPreserve);

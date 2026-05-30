@@ -5,7 +5,10 @@
         "ProceduralPlanets.Core",
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Core.Runtime",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.Burst",
+        "Unity.Mathematics",
+        "Unity.Collections"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

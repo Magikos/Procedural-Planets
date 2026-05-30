@@ -19,6 +19,17 @@ public class CloudController : MonoBehaviour, ICloudController
     RenderTexture _detailNoise;
     IWeatherConfigurator _weather;
 
+    // Per-frame upload elides the ~30 static SetGlobal* calls unless something invalidated them.
+    // Settings is treated as immutable at runtime (inspector edits are not supported); the dirty
+    // flag is raised by OnPlanetGenerated when planet position / radius change, and by a Settings
+    // reference swap (e.g. asset reload).
+    bool _staticPropertiesDirty = true;
+    CloudSettings _lastStaticSettings;
+    Texture _lastWeatherTexture;
+    Texture _lastDynamicsTexture;
+    int _lastWeatherResolution = -1;
+    int _lastUploadedViewSteps = int.MinValue;
+
     static readonly int _cloudPlanetCenterId = Shader.PropertyToID("_CloudPlanetCenter");
     static readonly int _cloudInnerRadiusId = Shader.PropertyToID("_CloudInnerRadius");
     static readonly int _cloudOuterRadiusId = Shader.PropertyToID("_CloudOuterRadius");
@@ -75,21 +86,28 @@ public class CloudController : MonoBehaviour, ICloudController
         _planetRadius = evt.PlanetRadius;
         _seaLevelRadius = evt.SeaLevelRadius > 0f ? evt.SeaLevelRadius : evt.PlanetRadius;
         _planetCenter = evt.PlanetCenter;
+        _staticPropertiesDirty = true;
 
         Initialize();
         GenerateNoiseTextures();
-        SetGlobalProperties();
+        EnsureStaticPropertiesUploaded();
+        UpdatePerFrameProperties();
     }
 
     void Update()
     {
         if (Settings == null || _planetRadius <= 0f)
         {
-            Shader.SetGlobalInt(_cloudWeatherResolutionId, 0);
+            if (_lastWeatherResolution != 0)
+            {
+                Shader.SetGlobalInt(_cloudWeatherResolutionId, 0);
+                _lastWeatherResolution = 0;
+            }
             return;
         }
 
-        SetGlobalProperties();
+        EnsureStaticPropertiesUploaded();
+        UpdatePerFrameProperties();
     }
 
     void Initialize()
@@ -108,11 +126,17 @@ public class CloudController : MonoBehaviour, ICloudController
         ReleaseTextures();
         _shapeNoise = CloudNoiseGenerator.GenerateShapeNoise(NoiseCompute, Settings.ShapeNoiseResolution, seed);
         _detailNoise = CloudNoiseGenerator.GenerateDetailNoise(NoiseCompute, Settings.DetailNoiseResolution, seed);
+        // Force the noise-texture globals to re-bind on the next static upload.
+        _staticPropertiesDirty = true;
     }
 
-    void SetGlobalProperties()
+    // Uploads all settings that are constant for a given (Settings, planet) pair. Skipped after
+    // the first upload unless the planet is regenerated or Settings reference changes.
+    void EnsureStaticPropertiesUploaded()
     {
-        if (Settings == null) return;
+        if (!_staticPropertiesDirty && _lastStaticSettings == Settings) return;
+        _staticPropertiesDirty = false;
+        _lastStaticSettings = Settings;
 
         float innerRadius = _seaLevelRadius + Settings.BaseAltitude;
         float outerRadius = innerRadius + Settings.LayerThickness;
@@ -149,19 +173,6 @@ public class CloudController : MonoBehaviour, ICloudController
             Settings.StormShadowBoost,
             Settings.ShadowHorizonFade));
         Shader.SetGlobalFloat(_cloudAnimSpeedId, Settings.AnimationSpeed);
-
-        int viewSteps = Settings.ViewSteps;
-        Camera mainCam = Camera.main;
-        if (mainCam != null && _seaLevelRadius > 0f)
-        {
-            float altitude = Vector3.Distance(mainCam.transform.position, _planetCenter) - _seaLevelRadius;
-            float t = Mathf.InverseLerp(Settings.StepScaleNearAltitude,
-                Mathf.Max(Settings.StepScaleFarAltitude, Settings.StepScaleNearAltitude + 1f), altitude);
-            viewSteps = Mathf.RoundToInt(Mathf.Lerp(Settings.ViewSteps, Settings.MinViewSteps, t));
-        }
-        viewSteps = Mathf.Max(Settings.MinViewSteps,
-            Mathf.RoundToInt(viewSteps * QualityController.CloudStepMultiplier));
-        Shader.SetGlobalInt(_cloudViewStepsId, viewSteps);
         Shader.SetGlobalInt(_cloudLightStepsId, Settings.LightSteps);
         Shader.SetGlobalFloat(_cloudRayOffsetStrengthId, Settings.RayOffsetStrength);
         Shader.SetGlobalInt(_cloudDebugModeId, (int)Settings.DebugMode);
@@ -176,16 +187,61 @@ public class CloudController : MonoBehaviour, ICloudController
         if (_detailNoise != null)
             Shader.SetGlobalTexture(_cloudDetailNoiseId, _detailNoise);
 
+        // Reset the per-frame texture cache so weather bindings re-publish against the fresh
+        // state. Cheap; ensures consistency if a planet regen changed which weather grid is live.
+        _lastWeatherTexture = null;
+        _lastDynamicsTexture = null;
+        _lastWeatherResolution = -1;
+        _lastUploadedViewSteps = int.MinValue;
+    }
+
+    // Per-frame work: re-evaluate camera-distance-dependent ViewSteps, and re-bind weather
+    // textures when WeatherManager has swapped them. Every other shader property is static.
+    void UpdatePerFrameProperties()
+    {
+        int viewSteps = Settings.ViewSteps;
+        Camera mainCam = Camera.main;
+        if (mainCam != null && _seaLevelRadius > 0f)
+        {
+            float altitude = Vector3.Distance(mainCam.transform.position, _planetCenter) - _seaLevelRadius;
+            float t = Mathf.InverseLerp(Settings.StepScaleNearAltitude,
+                Mathf.Max(Settings.StepScaleFarAltitude, Settings.StepScaleNearAltitude + 1f), altitude);
+            viewSteps = Mathf.RoundToInt(Mathf.Lerp(Settings.ViewSteps, Settings.MinViewSteps, t));
+        }
+        viewSteps = Mathf.Max(Settings.MinViewSteps,
+            Mathf.RoundToInt(viewSteps * QualityController.CloudStepMultiplier));
+        if (viewSteps != _lastUploadedViewSteps)
+        {
+            Shader.SetGlobalInt(_cloudViewStepsId, viewSteps);
+            _lastUploadedViewSteps = viewSteps;
+        }
+
         if (_weather != null && _weather.WeatherTexture != null)
         {
-            Shader.SetGlobalTexture(_cloudWeatherMapId, _weather.WeatherTexture);
-            if (_weather.WeatherDynamicsTexture != null)
-                Shader.SetGlobalTexture(_weatherDynamicsMapId, _weather.WeatherDynamicsTexture);
-            Shader.SetGlobalInt(_cloudWeatherResolutionId, _weather.WeatherResolution);
+            var weatherTex = _weather.WeatherTexture;
+            var dynamicsTex = _weather.WeatherDynamicsTexture;
+            int weatherRes = _weather.WeatherResolution;
+
+            if (_lastWeatherTexture != weatherTex)
+            {
+                Shader.SetGlobalTexture(_cloudWeatherMapId, weatherTex);
+                _lastWeatherTexture = weatherTex;
+            }
+            if (dynamicsTex != null && _lastDynamicsTexture != dynamicsTex)
+            {
+                Shader.SetGlobalTexture(_weatherDynamicsMapId, dynamicsTex);
+                _lastDynamicsTexture = dynamicsTex;
+            }
+            if (_lastWeatherResolution != weatherRes)
+            {
+                Shader.SetGlobalInt(_cloudWeatherResolutionId, weatherRes);
+                _lastWeatherResolution = weatherRes;
+            }
         }
-        else
+        else if (_lastWeatherResolution != 0)
         {
             Shader.SetGlobalInt(_cloudWeatherResolutionId, 0);
+            _lastWeatherResolution = 0;
         }
     }
 

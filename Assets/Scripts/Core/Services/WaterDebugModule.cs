@@ -34,6 +34,9 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     Mesh _cachedWaterMesh;
     WaterDebugStats _waterDebugStats;
     float _nextWaterDebugRefreshTime;
+    // Mesh-static histogram (depth/shore/body min/max/avg + mask aggregates) is recomputed only
+    // when the underlying mesh changes; per-refresh work shrinks to the camera-sample search.
+    WaterMeshStatsCache _meshStatsCache;
 
     static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
     static readonly int _waterFocusModeId = Shader.PropertyToID("_WaterFocusMode");
@@ -579,51 +582,22 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         if (count <= 0)
             return;
 
-        WaterDebugStats stats = new WaterDebugStats
-        {
-            Valid = true,
-            Vertices = mesh.vertexCount,
-            Triangles = mesh.subMeshCount > 0 ? (int)(mesh.GetIndexCount(0) / 3) : 0,
-            DepthMin = 1f,
-            ShoreMin = 1f,
-            BodyMin = 1f
-        };
+        // The mesh-static aggregates (min/max/avg/percent) only change when the underlying mesh
+        // does, so recompute them lazily and reuse for all subsequent refreshes.
+        if (_meshStatsCache.Source != mesh)
+            _meshStatsCache = RecomputeMeshStats(mesh, colors, count);
 
+        // Camera-direction-best vertex stays per-refresh; it's now a single dot product per
+        // vertex instead of the full histogram pass.
         Vector3 localCamera = cameraContext != null ? waterRenderer.transform.InverseTransformPoint(cameraContext.CameraTransform.position) : Vector3.zero;
         Vector3 localCameraDir = localCamera.sqrMagnitude > 0.0001f ? localCamera.normalized : Vector3.up;
         int sampleIndex = 0;
         float bestAlignment = -2f;
-        int motionEligible = 0;
-        int normalEligible = 0;
-
-        for (int i = 0; i < count; i++)
+        if (vertices != null)
         {
-            Color c = colors[i];
-            float depth = Mathf.Clamp01(c.r);
-            float shore = Mathf.Clamp01(c.g);
-            float body = Mathf.Clamp01(c.b);
-            float motionMask = FocusMotionMask(depth, shore, body);
-            float normalMask = FocusNormalMask(depth, shore, body);
-
-            stats.DepthMin = Mathf.Min(stats.DepthMin, depth);
-            stats.DepthMax = Mathf.Max(stats.DepthMax, depth);
-            stats.DepthAvg += depth;
-            stats.ShoreMin = Mathf.Min(stats.ShoreMin, shore);
-            stats.ShoreMax = Mathf.Max(stats.ShoreMax, shore);
-            stats.ShoreAvg += shore;
-            stats.BodyMin = Mathf.Min(stats.BodyMin, body);
-            stats.BodyMax = Mathf.Max(stats.BodyMax, body);
-            stats.BodyAvg += body;
-            stats.MotionMaskAvg += motionMask;
-            stats.MotionMaskMax = Mathf.Max(stats.MotionMaskMax, motionMask);
-            stats.NormalMaskAvg += normalMask;
-            stats.NormalMaskMax = Mathf.Max(stats.NormalMaskMax, normalMask);
-
-            if (motionMask > 0.05f) motionEligible++;
-            if (normalMask > 0.05f) normalEligible++;
-
-            if (vertices != null && i < vertices.Length && vertices[i].sqrMagnitude > 0.0001f)
+            for (int i = 0; i < count; i++)
             {
+                if (vertices[i].sqrMagnitude <= 0.0001f) continue;
                 float alignment = Vector3.Dot(vertices[i].normalized, localCameraDir);
                 if (alignment > bestAlignment)
                 {
@@ -633,14 +607,27 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
             }
         }
 
-        float invCount = 1f / count;
-        stats.DepthAvg *= invCount;
-        stats.ShoreAvg *= invCount;
-        stats.BodyAvg *= invCount;
-        stats.MotionMaskAvg *= invCount;
-        stats.NormalMaskAvg *= invCount;
-        stats.MotionEligiblePercent = motionEligible * 100f * invCount;
-        stats.NormalEligiblePercent = normalEligible * 100f * invCount;
+        var stats = new WaterDebugStats
+        {
+            Valid = true,
+            Vertices = _meshStatsCache.Vertices,
+            Triangles = _meshStatsCache.Triangles,
+            DepthMin = _meshStatsCache.DepthMin,
+            DepthMax = _meshStatsCache.DepthMax,
+            DepthAvg = _meshStatsCache.DepthAvg,
+            ShoreMin = _meshStatsCache.ShoreMin,
+            ShoreMax = _meshStatsCache.ShoreMax,
+            ShoreAvg = _meshStatsCache.ShoreAvg,
+            BodyMin = _meshStatsCache.BodyMin,
+            BodyMax = _meshStatsCache.BodyMax,
+            BodyAvg = _meshStatsCache.BodyAvg,
+            MotionMaskAvg = _meshStatsCache.MotionMaskAvg,
+            MotionMaskMax = _meshStatsCache.MotionMaskMax,
+            NormalMaskAvg = _meshStatsCache.NormalMaskAvg,
+            NormalMaskMax = _meshStatsCache.NormalMaskMax,
+            MotionEligiblePercent = _meshStatsCache.MotionEligiblePercent,
+            NormalEligiblePercent = _meshStatsCache.NormalEligiblePercent,
+        };
 
         Color sample = colors[Mathf.Clamp(sampleIndex, 0, colors.Length - 1)];
         stats.SampleDepth = Mathf.Clamp01(sample.r);
@@ -651,6 +638,73 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
 
         _cachedWaterMesh = mesh;
         _waterDebugStats = stats;
+    }
+
+    static WaterMeshStatsCache RecomputeMeshStats(Mesh mesh, Color[] colors, int count)
+    {
+        var cache = new WaterMeshStatsCache
+        {
+            Source = mesh,
+            Vertices = mesh.vertexCount,
+            Triangles = mesh.subMeshCount > 0 ? (int)(mesh.GetIndexCount(0) / 3) : 0,
+            DepthMin = 1f,
+            ShoreMin = 1f,
+            BodyMin = 1f,
+        };
+
+        int motionEligible = 0;
+        int normalEligible = 0;
+        for (int i = 0; i < count; i++)
+        {
+            Color c = colors[i];
+            float depth = Mathf.Clamp01(c.r);
+            float shore = Mathf.Clamp01(c.g);
+            float body = Mathf.Clamp01(c.b);
+            float motionMask = FocusMotionMask(depth, shore, body);
+            float normalMask = FocusNormalMask(depth, shore, body);
+
+            cache.DepthMin = Mathf.Min(cache.DepthMin, depth);
+            cache.DepthMax = Mathf.Max(cache.DepthMax, depth);
+            cache.DepthAvg += depth;
+            cache.ShoreMin = Mathf.Min(cache.ShoreMin, shore);
+            cache.ShoreMax = Mathf.Max(cache.ShoreMax, shore);
+            cache.ShoreAvg += shore;
+            cache.BodyMin = Mathf.Min(cache.BodyMin, body);
+            cache.BodyMax = Mathf.Max(cache.BodyMax, body);
+            cache.BodyAvg += body;
+            cache.MotionMaskAvg += motionMask;
+            cache.MotionMaskMax = Mathf.Max(cache.MotionMaskMax, motionMask);
+            cache.NormalMaskAvg += normalMask;
+            cache.NormalMaskMax = Mathf.Max(cache.NormalMaskMax, normalMask);
+
+            if (motionMask > 0.05f) motionEligible++;
+            if (normalMask > 0.05f) normalEligible++;
+        }
+
+        float invCount = 1f / count;
+        cache.DepthAvg *= invCount;
+        cache.ShoreAvg *= invCount;
+        cache.BodyAvg *= invCount;
+        cache.MotionMaskAvg *= invCount;
+        cache.NormalMaskAvg *= invCount;
+        cache.MotionEligiblePercent = motionEligible * 100f * invCount;
+        cache.NormalEligiblePercent = normalEligible * 100f * invCount;
+
+        return cache;
+    }
+
+    struct WaterMeshStatsCache
+    {
+        public Mesh Source;
+        public int Vertices;
+        public int Triangles;
+        public float DepthMin, DepthMax, DepthAvg;
+        public float ShoreMin, ShoreMax, ShoreAvg;
+        public float BodyMin, BodyMax, BodyAvg;
+        public float MotionMaskAvg, MotionMaskMax;
+        public float NormalMaskAvg, NormalMaskMax;
+        public float MotionEligiblePercent;
+        public float NormalEligiblePercent;
     }
 
     static float FocusMotionMask(float depth, float shore, float body)

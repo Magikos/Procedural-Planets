@@ -1,5 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
+using Unity.Collections;
+using Unity.Jobs;
 using UnityEngine;
 
 public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitialize, IProgressReporter
@@ -255,13 +257,56 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
     {
         var faces = _terrainFaces;
 
-        await Awaitable.BackgroundThreadAsync();
-        ct.ThrowIfCancellationRequested();
+        // Job scheduling and the eventual texture/mesh upload must happen on the main thread.
+        var filters = _shapeGenerator.BuildNoiseFilterData(Allocator.Persistent);
+        var faceStates = new TerrainFaceJobState[faces.Length];
+        var handles = new NativeArray<JobHandle>(faces.Length, Allocator.Temp);
+        JobHandle combined;
+        try
+        {
+            for (int i = 0; i < faces.Length; i++)
+            {
+                faceStates[i] = faces[i].ScheduleMeshDataJob(filters, _shapeGenerator.Settings.PlanetRadius);
+                handles[i] = faceStates[i].Handle;
+            }
+            combined = JobHandle.CombineDependencies(handles);
+            handles.Dispose();
+            JobHandle.ScheduleBatchedJobs();
 
-        Parallel.For(0, faces.Length, i => { faces[i].CalculateMeshData(); });
+            while (!combined.IsCompleted)
+            {
+                if (ct.IsCancellationRequested)
+                {
+                    combined.Complete();
+                    for (int i = 0; i < faceStates.Length; i++) faceStates[i].Dispose();
+                    filters.Dispose();
+                    ct.ThrowIfCancellationRequested();
+                }
+                await Awaitable.NextFrameAsync();
+            }
+            combined.Complete();
+        }
+        catch
+        {
+            if (handles.IsCreated) handles.Dispose();
+            for (int i = 0; i < faceStates.Length; i++) faceStates[i].Dispose();
+            filters.Dispose();
+            throw;
+        }
 
-        ct.ThrowIfCancellationRequested();
-        await Awaitable.MainThreadAsync();
+        for (int i = 0; i < faces.Length; i++)
+            faces[i].CompleteMeshDataJob(faceStates[i]);
+        filters.Dispose();
+
+        // EvaluateElevation isn't called per vertex anymore (Burst job bypasses it), so feed
+        // the per-face elevation samples into ShapeGenerator's min/max envelope manually.
+        for (int i = 0; i < faces.Length; i++)
+        {
+            var elevations = faces[i].Elevations;
+            if (elevations == null) continue;
+            for (int v = 0; v < elevations.Length; v++)
+                _shapeGenerator.RecordElevationSample(elevations[v]);
+        }
 
         for (int i = 0; i < faces.Length; i++)
             faces[i].ApplyMeshData();
@@ -295,29 +340,18 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
             return false;
 
         Vector3 localDirection = transform.InverseTransformDirection(worldUnitDirection).normalized;
-        float bestAlignment = -1f;
-        float bestRadius = 0f;
 
-        for (int i = 0; i < _terrainFaces.Length; i++)
-        {
-            if (_terrainFaces[i] == null)
-                continue;
-
-            if (!_terrainFaces[i].TryGetNearestSurfaceRadius(localDirection, out float candidateRadius, out float alignment))
-                continue;
-
-            if (alignment <= bestAlignment)
-                continue;
-
-            bestAlignment = alignment;
-            bestRadius = candidateRadius;
-        }
-
-        if (bestRadius <= 0f)
+        // Map direction → owning cube face + face-UV, then bilinear sample that face's radius
+        // grid. Constant-time vs. the prior 589K-vertex linear search (interim — will be replaced
+        // by an SDF query when the terrain SDF/quadtree work lands).
+        var (face, uv) = CoordinateConverter.UnitSphereToCubeFace(localDirection);
+        if (face < 0 || face >= _terrainFaces.Length || _terrainFaces[face] == null)
+            return false;
+        if (!_terrainFaces[face].TrySampleSurfaceRadius(uv, out float localRadius) || localRadius <= 0f)
             return false;
 
         float scale = Mathf.Max(transform.lossyScale.x, Mathf.Max(transform.lossyScale.y, transform.lossyScale.z));
-        surfaceRadius = bestRadius * Mathf.Max(scale, 0.0001f);
+        surfaceRadius = localRadius * Mathf.Max(scale, 0.0001f);
         return true;
     }
 

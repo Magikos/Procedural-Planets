@@ -398,7 +398,24 @@ Shader "Hidden/WaterVolume"
         float density = max(_VolumeDensity, 0.001);
         float shallowRelease = smoothstep(0.015, 0.12, caustics.waterPath);
         float opticalDepth = depth01 * 0.85 + path01 * 1.95 + depth01 * path01 * 1.40;
-        return opticalDepth * density * shallowRelease;
+
+        // Backlit-water fix: when sun is at/below the horizon AND the view ray traverses a long
+        // path through water (looking across a body), boost optical depth so the backlit far
+        // terrain isn't visible through the volume as a silhouette. Gated on path01 so shallow
+        // water and caustics are unaffected.
+        float3 cameraFromCenter = _WorldSpaceCameraPos.xyz - _PlanetCenter;
+        float fromCenterLenSq = dot(cameraFromCenter, cameraFromCenter);
+        float3 cameraUp = fromCenterLenSq > 0.0001 ? cameraFromCenter * rsqrt(fromCenterLenSq) : float3(0.0, 1.0, 0.0);
+        float3 sunDirNorm = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : cameraUp;
+        float sunElev = dot(cameraUp, sunDirNorm);
+        float lowSun01 = 1.0 - smoothstep(-0.05, 0.30, sunElev); // 1 at horizon, 0 above ~17 deg
+        // Threshold lowered (0.25 -> 0.10) so moderate paths get the boost too, and boost magnitude
+        // bumped (1.5 -> 4.0) - first pass wasn't aggressive enough; far-terrain silhouettes were
+        // still readable through the water at the horizon view angle.
+        float pathFactor = smoothstep(0.10, 0.50, path01);       // 0 short path, 1 long path
+        float backlitBoost = 1.0 + lowSun01 * pathFactor * 4.0;  // up to 5x at sunset + long path
+
+        return opticalDepth * density * shallowRelease * backlitBoost;
     }
 
     float3 VolumeBodyTransmittance(CausticResult caustics)

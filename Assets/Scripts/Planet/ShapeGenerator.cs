@@ -1,3 +1,4 @@
+using Unity.Collections;
 using UnityEngine;
 
 public class ShapeGenerator : ITerrainProvider
@@ -5,6 +6,9 @@ public class ShapeGenerator : ITerrainProvider
     ShapeSettings _shapeSettings;
     INoiseFilter[] _noiseFilters;
     int _seed;
+
+    public ShapeSettings Settings => _shapeSettings;
+    public int LayerCount => _shapeSettings?.NoiseLayers?.Length ?? 0;
 
     // Accumulated during (possibly multi-threaded) evaluation; only published to the public
     // ElevationMin/Max via CommitElevationRange() once a full generation pass has completed,
@@ -68,5 +72,32 @@ public class ShapeGenerator : ITerrainProvider
     public float GetScaledElevation(float unscaledElevation)
     {
         return _shapeSettings.PlanetRadius * (1 + unscaledElevation);
+    }
+
+    // Builds a blittable per-layer noise data array for Burst jobs. The caller owns the
+    // returned NativeArray and must Dispose() it. Layers are produced in the same order as
+    // ShapeSettings.NoiseLayers so that downstream job code can index them identically.
+    public NativeArray<NoiseFilterData> BuildNoiseFilterData(Allocator allocator)
+    {
+        if (_shapeSettings == null)
+            throw new System.InvalidOperationException("ShapeGenerator.Configure() must be called before BuildNoiseFilterData().");
+
+        var layers = _shapeSettings.NoiseLayers;
+        int count = layers?.Length ?? 0;
+        var data = new NativeArray<NoiseFilterData>(count, allocator, NativeArrayOptions.UninitializedMemory);
+        for (int i = 0; i < count; i++)
+        {
+            var layer = layers[i];
+            data[i] = NoiseFilterData.Create(layer.NoiseSettings, _seed + i, layer.Enabled, layer.UseFirstLayerAsMask);
+        }
+        return data;
+    }
+
+    // Pushes a per-vertex elevation value into the working min/max range. Used after a Burst
+    // mesh-job completes so the rendered elevation envelope still matches what biome colouring
+    // expects, even though EvaluateElevation isn't called per vertex anymore.
+    public void RecordElevationSample(float elevation)
+    {
+        _workingMinMax.AddValue(elevation);
     }
 }

@@ -1,3 +1,7 @@
+using Unity.Burst;
+using Unity.Collections;
+using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 
 public class TerrainFace
@@ -15,31 +19,13 @@ public class TerrainFace
     Vector3[] _pendingVertices;
     int[] _pendingTriangles;
     Color[] _pendingColors;
+    // Per-vertex magnitude cache for O(1) bilinear surface-radius lookups (camera clamping).
+    // Built once in CompleteMeshDataJob; replaces the prior 98K-vertex linear search per query.
+    float[] _vertexRadii;
 
     public int Resolution => _resolution;
     public Vector3[] UnitSpherePoints => _unitSpherePoints;
     public float[] Elevations => _elevations;
-
-    public bool TryGetNearestSurfaceRadius(Vector3 unitDirection, out float radius, out float alignment)
-    {
-        radius = 0f;
-        alignment = -1f;
-
-        if (_unitSpherePoints == null || _pendingVertices == null)
-            return false;
-
-        for (int i = 0; i < _unitSpherePoints.Length; i++)
-        {
-            float dot = Vector3.Dot(unitDirection, _unitSpherePoints[i]);
-            if (dot <= alignment)
-                continue;
-
-            alignment = dot;
-            radius = _pendingVertices[i].magnitude;
-        }
-
-        return alignment > -0.5f && radius > 0f;
-    }
 
     public TerrainFace(ITerrainProvider terrainProvider, Mesh mesh, int resolution, Vector3 localUp)
     {
@@ -52,43 +38,90 @@ public class TerrainFace
         _axisB = Vector3.Cross(_localUp, _axisA);
     }
 
-    public void CalculateMeshData()
+    // Schedules the Burst mesh-generation job for this face. The returned state owns the
+    // NativeArrays the job writes into; call CompleteMeshDataJob() to wait, copy out, and
+    // dispose. The caller-owned `filters` NativeArray is shared (read-only) across all faces.
+    public TerrainFaceJobState ScheduleMeshDataJob(NativeArray<NoiseFilterData> filters, float planetRadius)
     {
         int vertexCount = _resolution * _resolution;
+        int triangleCount = (_resolution - 1) * (_resolution - 1) * 6;
+
+        var state = new TerrainFaceJobState
+        {
+            Resolution = _resolution,
+            Vertices = new NativeArray<float3>(vertexCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory),
+            UnitSpherePoints = new NativeArray<float3>(vertexCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory),
+            Elevations = new NativeArray<float>(vertexCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory),
+            Triangles = new NativeArray<int>(triangleCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory),
+        };
+
+        var job = new TerrainFaceMeshJob
+        {
+            Resolution = _resolution,
+            LocalUp = new float3(_localUp.x, _localUp.y, _localUp.z),
+            AxisA = new float3(_axisA.x, _axisA.y, _axisA.z),
+            AxisB = new float3(_axisB.x, _axisB.y, _axisB.z),
+            PlanetRadius = planetRadius,
+            Filters = filters,
+            Vertices = state.Vertices,
+            UnitSpherePoints = state.UnitSpherePoints,
+            Elevations = state.Elevations,
+            Triangles = state.Triangles,
+        };
+
+        state.Handle = job.Schedule(vertexCount, 256);
+        return state;
+    }
+
+    // Completes the scheduled job, copies its output into the managed mesh arrays expected by
+    // ApplyMeshData/CalculateColors, and disposes the job state.
+    public void CompleteMeshDataJob(TerrainFaceJobState state)
+    {
+        state.Handle.Complete();
+
+        int vertexCount = state.Vertices.Length;
         _pendingVertices = new Vector3[vertexCount];
-        _pendingTriangles = new int[(_resolution - 1) * (_resolution - 1) * 6];
         _unitSpherePoints = new Vector3[vertexCount];
         _elevations = new float[vertexCount];
-        int triIndex = 0;
+        _pendingTriangles = new int[state.Triangles.Length];
 
-        for (int y = 0; y < _resolution; y++)
-        {
-            for (int x = 0; x < _resolution; x++)
-            {
-                int i = x + y * _resolution;
-                Vector2 percent = new Vector2(x, y) / (_resolution - 1);
-                Vector3 pointOnUnitCube = _localUp + (percent.x - 0.5f) * 2 * _axisA + (percent.y - 0.5f) * 2 * _axisB;
-                Vector3 pointOnUnitSphere = pointOnUnitCube.normalized;
-                _unitSpherePoints[i] = pointOnUnitSphere;
+        // float3 / Vector3 share the same 12-byte layout; Reinterpret avoids per-element conversion.
+        var vertsAsVec3 = state.Vertices.Reinterpret<Vector3>(sizeof(float) * 3);
+        var spheresAsVec3 = state.UnitSpherePoints.Reinterpret<Vector3>(sizeof(float) * 3);
+        NativeArray<Vector3>.Copy(vertsAsVec3, _pendingVertices, vertexCount);
+        NativeArray<Vector3>.Copy(spheresAsVec3, _unitSpherePoints, vertexCount);
+        NativeArray<float>.Copy(state.Elevations, _elevations, vertexCount);
+        NativeArray<int>.Copy(state.Triangles, _pendingTriangles, state.Triangles.Length);
 
-                float unscaledElevation = _terrainProvider.EvaluateElevation(pointOnUnitSphere);
-                _elevations[i] = unscaledElevation;
-                _pendingVertices[i] = pointOnUnitSphere * _terrainProvider.GetScaledElevation(unscaledElevation);
+        _vertexRadii = new float[vertexCount];
+        for (int i = 0; i < vertexCount; i++)
+            _vertexRadii[i] = _pendingVertices[i].magnitude;
 
-                if (x < _resolution - 1 && y < _resolution - 1)
-                {
-                    _pendingTriangles[triIndex] = i;
-                    _pendingTriangles[triIndex + 1] = i + _resolution + 1;
-                    _pendingTriangles[triIndex + 2] = i + _resolution;
+        state.Dispose();
+    }
 
-                    _pendingTriangles[triIndex + 3] = i;
-                    _pendingTriangles[triIndex + 4] = i + 1;
-                    _pendingTriangles[triIndex + 5] = i + _resolution + 1;
+    // Bilinear sample of the per-vertex radius at face-UV (u, v in [0, 1]). Callers map a
+    // world direction to (face, uv) via CoordinateConverter and dispatch to the matching face.
+    public bool TrySampleSurfaceRadius(Vector2 uv, out float radius)
+    {
+        radius = 0f;
+        if (_vertexRadii == null || _vertexRadii.Length == 0) return false;
 
-                    triIndex += 6;
-                }
-            }
-        }
+        float gx = Mathf.Clamp01(uv.x) * (_resolution - 1);
+        float gy = Mathf.Clamp01(uv.y) * (_resolution - 1);
+        int x0 = Mathf.FloorToInt(gx);
+        int y0 = Mathf.FloorToInt(gy);
+        int x1 = Mathf.Min(x0 + 1, _resolution - 1);
+        int y1 = Mathf.Min(y0 + 1, _resolution - 1);
+        float fx = gx - x0;
+        float fy = gy - y0;
+
+        float r00 = _vertexRadii[x0 + y0 * _resolution];
+        float r10 = _vertexRadii[x1 + y0 * _resolution];
+        float r01 = _vertexRadii[x0 + y1 * _resolution];
+        float r11 = _vertexRadii[x1 + y1 * _resolution];
+        radius = Mathf.Lerp(Mathf.Lerp(r00, r10, fx), Mathf.Lerp(r01, r11, fx), fy);
+        return radius > 0f;
     }
 
     public void ApplyMeshData()
@@ -121,5 +154,92 @@ public class TerrainFace
     {
         CalculateColors(biomeProvider);
         ApplyColors();
+    }
+}
+
+public struct TerrainFaceJobState
+{
+    public int Resolution;
+    public JobHandle Handle;
+    public NativeArray<float3> Vertices;
+    public NativeArray<float3> UnitSpherePoints;
+    public NativeArray<float> Elevations;
+    public NativeArray<int> Triangles;
+
+    public void Dispose()
+    {
+        if (Vertices.IsCreated) Vertices.Dispose();
+        if (UnitSpherePoints.IsCreated) UnitSpherePoints.Dispose();
+        if (Elevations.IsCreated) Elevations.Dispose();
+        if (Triangles.IsCreated) Triangles.Dispose();
+    }
+}
+
+[BurstCompile]
+public struct TerrainFaceMeshJob : IJobParallelFor
+{
+    public int Resolution;
+    public float3 LocalUp;
+    public float3 AxisA;
+    public float3 AxisB;
+    public float PlanetRadius;
+
+    [ReadOnly] public NativeArray<NoiseFilterData> Filters;
+
+    [WriteOnly] public NativeArray<float3> Vertices;
+    [WriteOnly] public NativeArray<float3> UnitSpherePoints;
+    [WriteOnly] public NativeArray<float> Elevations;
+
+    // Triangles are written in 6-int strides at indices computed from (x, y); writes from
+    // different vertices never overlap, but the index isn't the iteration index, so we relax
+    // the parallel-for restriction. Safety holds via the strict (x, y) → triangle-stride map.
+    [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<int> Triangles;
+
+    public void Execute(int index)
+    {
+        int x = index % Resolution;
+        int y = index / Resolution;
+
+        float invRm1 = 1f / (Resolution - 1);
+        float2 percent = new float2(x * invRm1, y * invRm1);
+        float3 pointOnUnitCube = LocalUp + (percent.x - 0.5f) * 2f * AxisA + (percent.y - 0.5f) * 2f * AxisB;
+        float3 pointOnUnitSphere = math.normalize(pointOnUnitCube);
+
+        float elevation = EvaluateElevation(pointOnUnitSphere);
+
+        UnitSpherePoints[index] = pointOnUnitSphere;
+        Elevations[index] = elevation;
+        Vertices[index] = pointOnUnitSphere * (PlanetRadius * (1f + elevation));
+
+        if (x < Resolution - 1 && y < Resolution - 1)
+        {
+            int triIdx = (x + y * (Resolution - 1)) * 6;
+            Triangles[triIdx]     = index;
+            Triangles[triIdx + 1] = index + Resolution + 1;
+            Triangles[triIdx + 2] = index + Resolution;
+            Triangles[triIdx + 3] = index;
+            Triangles[triIdx + 4] = index + 1;
+            Triangles[triIdx + 5] = index + Resolution + 1;
+        }
+    }
+
+    float EvaluateElevation(float3 point)
+    {
+        int count = Filters.Length;
+        if (count == 0) return 0f;
+
+        var first = Filters[0];
+        float firstLayerValue = NoiseFilterEvaluator.Evaluate(ref first, point);
+        float elevation = first.Enabled != 0 ? firstLayerValue : 0f;
+
+        for (int i = 1; i < count; i++)
+        {
+            var f = Filters[i];
+            if (f.Enabled == 0) continue;
+            float mask = f.UseFirstLayerAsMask != 0 ? firstLayerValue : 1f;
+            elevation += NoiseFilterEvaluator.Evaluate(ref f, point) * mask;
+        }
+
+        return elevation;
     }
 }
