@@ -18,6 +18,7 @@ public static class WaterDebugIds
     public static readonly DebugCaptureSetId Waves = new DebugCaptureSetId(Module, "waves");
     public static readonly DebugCaptureSetId Foam = new DebugCaptureSetId(Module, "foam");
     public static readonly DebugCaptureSetId Glint = new DebugCaptureSetId(Module, "glint");
+    public static readonly DebugCaptureSetId Biome = new DebugCaptureSetId(Module, "biome");
 
     public static DebugModeId Mode(int localId)
     {
@@ -189,6 +190,11 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         RegisterMode(registry, DebugModeConstants.FoamOnSwell, "FoamOnSwell", "Water Foam");
         RegisterMode(registry, DebugModeConstants.FoamLocator, "FoamLocator", "Water Foam");
         RegisterMode(registry, DebugModeConstants.GlintLocator, "GlintLocator", "Water Glint");
+        RegisterMode(registry, DebugModeConstants.BiomePrimaryId, "BiomePrimaryId", "Biome");
+        RegisterMode(registry, DebugModeConstants.BiomeTemperature, "BiomeTemperature", "Biome");
+        RegisterMode(registry, DebugModeConstants.BiomeMoisture, "BiomeMoisture", "Biome");
+        RegisterMode(registry, DebugModeConstants.BiomeLatitude, "BiomeLatitude", "Biome");
+        RegisterMode(registry, DebugModeConstants.BiomeElevationBand, "BiomeElevationBand", "Biome");
     }
 
     static void RegisterCaptureSets(DebugRegistry registry)
@@ -224,6 +230,15 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
                 DebugModeConstants.GlintLocator, DebugModeConstants.WaterGlint,
                 DebugModeConstants.WaterLighting, DebugModeConstants.WaterWaveSlope,
                 DebugModeConstants.WaterNormals));
+        // Biome set becomes the default for the current biome diagnostic phase. Atmosphere and
+        // clouds are bypassed for these modes (DebugModeConstants.SuppressesWeatherPasses +
+        // Atmosphere.shader ShouldBypassAtmosphereForWaterDebug), so unlike orbit captures of
+        // Off/AtmosphereBypass the planet surface is never obscured by weather.
+        registry.RegisterDefaultCaptureSet(WaterDebugIds.Biome, "Biome",
+            Modes(DebugModeConstants.Off, DebugModeConstants.AtmosphereBypass,
+                DebugModeConstants.BiomePrimaryId, DebugModeConstants.BiomeTemperature,
+                DebugModeConstants.BiomeMoisture, DebugModeConstants.BiomeLatitude,
+                DebugModeConstants.BiomeElevationBand, DebugModeConstants.TerrainFaceId));
         registry.RegisterCaptureSet(WaterDebugIds.Caustics, "Water Caustics",
             Modes(DebugModeConstants.Off, DebugModeConstants.VolumeOnly,
                 DebugModeConstants.CausticsOnly, DebugModeConstants.CausticsPrism,

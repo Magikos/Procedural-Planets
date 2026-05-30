@@ -123,7 +123,17 @@
 // --- Water Surface: glint discovery ---
 #define DEBUG_WATER_GLINT_LOCATOR         72
 
+// --- Biome diagnostics (73-77) ---
+// Each mode reads per-vertex biome data (TEXCOORD2 = float4(temperature, moisture,
+// primaryBiomeId/biomeCount, latitude01)) baked by ColorGenerator + TerrainFace, and
+// returns a flat unlit visualization. Atmosphere + clouds are bypassed for these.
+#define DEBUG_BIOME_PRIMARY_ID            73
+#define DEBUG_BIOME_TEMPERATURE           74
+#define DEBUG_BIOME_MOISTURE              75
+#define DEBUG_BIOME_LATITUDE              76
+#define DEBUG_BIOME_ELEVATION_BAND        77
+
 // Convenience: last defined mode. Update when adding new modes.
-#define DEBUG_MODE_MAX                    72
+#define DEBUG_MODE_MAX                    77
 
 #endif

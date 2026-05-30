@@ -43,22 +43,52 @@ public class ColorGenerator : IBiomeProvider
 
     public Color GetBiomeColor(Vector3 pointOnUnitSphere, float elevation)
     {
+        return EvaluateBiomeColor(pointOnUnitSphere, elevation, out _, out _, out _);
+    }
+
+    public Color GetBiomeColorAndData(Vector3 pointOnUnitSphere, float elevation, out Vector4 biomeData)
+    {
+        Color color = EvaluateBiomeColor(pointOnUnitSphere, elevation, out float temperature, out float moisture, out int primaryBiomeIndex);
+        float latitude01 = Mathf.Abs(pointOnUnitSphere.y);
+        float biomeCount = _biomeColors != null && _biomeColors.Length > 0 ? _biomeColors.Length : 1f;
+        biomeData = new Vector4(temperature, moisture, primaryBiomeIndex / biomeCount, latitude01);
+        return color;
+    }
+
+    // Shared color-resolution path. Returns the final blended color and writes back the raw
+    // signals (temperature, moisture, primary biome index) used by the diagnostic surface.
+    Color EvaluateBiomeColor(Vector3 pointOnUnitSphere, float elevation,
+        out float temperature, out float moisture, out int primaryBiomeIndex)
+    {
+        temperature = 0f;
+        moisture = 0f;
+        primaryBiomeIndex = 0;
+
         if (_biomeRegistry == null || _temperatureProvider == null || _moistureProvider == null)
             return Color.magenta;
 
         var registry = _biomeSettings.Registry;
 
         if (elevation < registry.OceanThreshold)
+        {
+            primaryBiomeIndex = 0;
             return _biomeColors[0];
+        }
 
-        float temperature = _temperatureProvider.Evaluate(pointOnUnitSphere);
-        float moisture = _moistureProvider.Evaluate(pointOnUnitSphere);
+        temperature = _temperatureProvider.Evaluate(pointOnUnitSphere);
+        moisture = _moistureProvider.Evaluate(pointOnUnitSphere);
 
         if (elevation > registry.MountainThreshold)
-            return temperature < 0.4f ? _biomeColors[_biomeColors.Length - 1] : _biomeColors[_biomeColors.Length - 2];
+        {
+            primaryBiomeIndex = temperature < 0.4f ? _biomeColors.Length - 1 : _biomeColors.Length - 2;
+            return _biomeColors[primaryBiomeIndex];
+        }
 
         if (elevation < registry.OceanThreshold + registry.BeachWidth)
+        {
+            primaryBiomeIndex = 1;
             return _biomeColors[1];
+        }
 
         float tempCont = Mathf.Clamp01(temperature) * (registry.TemperatureSteps - 1);
         float moistCont = Mathf.Clamp01(moisture) * (registry.MoistureSteps - 1);
@@ -69,7 +99,8 @@ public class ColorGenerator : IBiomeProvider
         float moistFrac = moistCont - moistIdx;
 
         int primaryIdx = tempIdx * registry.MoistureSteps + moistIdx + 2;
-        Color primary = _biomeColors[Mathf.Clamp(primaryIdx, 0, _biomeColors.Length - 1)];
+        primaryBiomeIndex = Mathf.Clamp(primaryIdx, 0, _biomeColors.Length - 1);
+        Color primary = _biomeColors[primaryBiomeIndex];
 
         float tempDist = Mathf.Abs(tempFrac - 0.5f);
         float moistDist = Mathf.Abs(moistFrac - 0.5f);

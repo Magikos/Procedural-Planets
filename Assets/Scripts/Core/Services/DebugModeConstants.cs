@@ -117,8 +117,16 @@ public static class DebugModeConstants
     // Water Surface: glint discovery
     public const int GlintLocator = 72;
 
+    // Biome diagnostics — bypass clouds + atmosphere so the unlit biome visualization is
+    // never obscured. See PlanetVertexColor.shader for the per-mode display logic.
+    public const int BiomePrimaryId = 73;
+    public const int BiomeTemperature = 74;
+    public const int BiomeMoisture = 75;
+    public const int BiomeLatitude = 76;
+    public const int BiomeElevationBand = 77;
+
     /// <summary>Highest defined mode value. Update when adding new modes.</summary>
-    public const int Max = 72;
+    public const int Max = 77;
 
     public static bool SuppressesWeatherPasses(int mode)
     {
@@ -140,6 +148,7 @@ public static class DebugModeConstants
             || mode == WaveGrid
             || mode == FoamOnSwell
             || mode == FoamLocator
-            || mode == GlintLocator;
+            || mode == GlintLocator
+            || (mode >= BiomePrimaryId && mode <= BiomeElevationBand);
     }
 }

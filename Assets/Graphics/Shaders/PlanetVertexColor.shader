@@ -31,6 +31,10 @@ Shader "Planet/VertexColor"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float4 color : COLOR;
+                // UV2: per-vertex biome diagnostics baked by ColorGenerator + TerrainFace.
+                // x = temperature (0..1), y = moisture (0..1),
+                // z = primaryBiomeId normalized to biome count, w = |latitude| (0=equator, 1=pole).
+                float4 biomeData : TEXCOORD2;
             };
 
             struct Varyings
@@ -40,6 +44,7 @@ Shader "Planet/VertexColor"
                 float3 positionWS : TEXCOORD1;
                 float4 color : COLOR;
                 float fogFactor : TEXCOORD2;
+                float4 biomeData : TEXCOORD3;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -49,6 +54,7 @@ Shader "Planet/VertexColor"
             float _NightAmbientIntensity;
             float3 _SunParams;
             float3 _PlanetCenter;
+            float _SeaLevelRadius;
             int _OceanDebugMode;
 
             float3 CubeFaceDebugColor(float3 directionWS)
@@ -76,7 +82,46 @@ Shader "Planet/VertexColor"
                 output.normalWS = normInputs.normalWS;
                 output.color = input.color;
                 output.fogFactor = ComputeFogFactor(posInputs.positionCS.z);
+                output.biomeData = input.biomeData;
                 return output;
+            }
+
+            // Maps a normalized [0..1] biome id to a distinct hue. HSV->RGB so adjacent
+            // ids land far apart in colour space and each biome reads as its own flat patch.
+            float3 BiomeIdColor(float idNorm)
+            {
+                float h = frac(idNorm * 7.0 + 0.13) * 6.0;
+                float3 rgb = saturate(float3(
+                    abs(h - 3.0) - 1.0,
+                    2.0 - abs(h - 2.0),
+                    2.0 - abs(h - 4.0)));
+                return rgb;
+            }
+
+            float3 HeatmapBlueRed(float t)
+            {
+                t = saturate(t);
+                return float3(t, 1.0 - abs(t * 2.0 - 1.0), 1.0 - t);
+            }
+
+            float3 HeatmapYellowBlue(float t)
+            {
+                t = saturate(t);
+                return lerp(float3(0.95, 0.78, 0.10), float3(0.10, 0.32, 0.95), t);
+            }
+
+            float3 ElevationBandColor(float elevationOverSea, float planetRadius)
+            {
+                // 7 bands keyed to fractions of planet radius — quick read of altitude profile.
+                float rel = elevationOverSea / max(planetRadius, 1.0);
+                if (rel < -0.020) return float3(0.04, 0.12, 0.40); // deep ocean
+                if (rel < -0.005) return float3(0.18, 0.45, 0.75); // shallow ocean
+                if (rel <  0.001) return float3(0.92, 0.84, 0.55); // beach / sea level
+                if (rel <  0.010) return float3(0.45, 0.70, 0.32); // lowland
+                if (rel <  0.030) return float3(0.30, 0.55, 0.22); // upland
+                if (rel <  0.060) return float3(0.55, 0.48, 0.32); // hill
+                if (rel <  0.100) return float3(0.70, 0.65, 0.55); // mountain
+                return float3(1.00, 1.00, 1.00);                   // peak
             }
 
             half4 frag(Varyings input) : SV_Target
@@ -86,6 +131,27 @@ Shader "Planet/VertexColor"
 
                 if (_OceanDebugMode == DEBUG_TERRAIN_FACE_ID)
                     return half4(CubeFaceDebugColor(input.positionWS - _PlanetCenter), 1.0);
+
+                if (_OceanDebugMode == DEBUG_BIOME_PRIMARY_ID)
+                    return half4(BiomeIdColor(input.biomeData.z), 1.0);
+
+                if (_OceanDebugMode == DEBUG_BIOME_TEMPERATURE)
+                    return half4(HeatmapBlueRed(input.biomeData.x), 1.0);
+
+                if (_OceanDebugMode == DEBUG_BIOME_MOISTURE)
+                    return half4(HeatmapYellowBlue(input.biomeData.y), 1.0);
+
+                if (_OceanDebugMode == DEBUG_BIOME_LATITUDE)
+                {
+                    float lat = saturate(input.biomeData.w);
+                    return half4(lat, 1.0 - lat, lat * 0.5, 1.0);
+                }
+
+                if (_OceanDebugMode == DEBUG_BIOME_ELEVATION_BAND)
+                {
+                    float elevationOverSea = length(input.positionWS - _PlanetCenter) - _SeaLevelRadius;
+                    return half4(ElevationBandColor(elevationOverSea, _SeaLevelRadius), 1.0);
+                }
 
                 InputData inputData = (InputData)0;
                 inputData.positionWS = input.positionWS;

@@ -19,6 +19,10 @@ public class TerrainFace
     Vector3[] _pendingVertices;
     int[] _pendingTriangles;
     Color[] _pendingColors;
+    // Per-vertex raw biome diagnostics (temp, moisture, primaryBiomeIdNormalized, latitude01).
+    // Built alongside _pendingColors and uploaded to mesh UV channel 2 so the planet shader
+    // can drive biome debug visualizations without re-evaluating noise.
+    Vector4[] _pendingBiomeData;
     // Per-vertex magnitude cache for O(1) bilinear surface-radius lookups (camera clamping).
     // Built once in CompleteMeshDataJob; replaces the prior 98K-vertex linear search per query.
     float[] _vertexRadii;
@@ -138,9 +142,11 @@ public class TerrainFace
     {
         if (_unitSpherePoints == null || _elevations == null) return;
 
-        _pendingColors = new Color[_unitSpherePoints.Length];
-        for (int i = 0; i < _unitSpherePoints.Length; i++)
-            _pendingColors[i] = biomeProvider.GetBiomeColor(_unitSpherePoints[i], _elevations[i]);
+        int count = _unitSpherePoints.Length;
+        _pendingColors = new Color[count];
+        _pendingBiomeData = new Vector4[count];
+        for (int i = 0; i < count; i++)
+            _pendingColors[i] = biomeProvider.GetBiomeColorAndData(_unitSpherePoints[i], _elevations[i], out _pendingBiomeData[i]);
     }
 
     /// <summary>Uploads previously computed colors to the mesh. Must be called on the main thread.</summary>
@@ -148,6 +154,9 @@ public class TerrainFace
     {
         if (_pendingColors != null)
             _mesh.colors = _pendingColors;
+        // UV channel 2 carries raw biome diagnostics — see PlanetVertexColor.shader debug branches.
+        if (_pendingBiomeData != null)
+            _mesh.SetUVs(2, _pendingBiomeData);
     }
 
     public void UpdateColors(IBiomeProvider biomeProvider)
