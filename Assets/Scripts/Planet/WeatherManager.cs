@@ -78,13 +78,14 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     CancellationTokenSource _generateCts;
     bool _lateInitialized;
-    PrecipitationController _precipitationController;
+    // Last wind values pushed to shader globals; sentinel values force the first upload.
+    Vector3 _lastUploadedWindDirection = new Vector3(float.NaN, float.NaN, float.NaN);
+    float _lastUploadedWindSpeed = float.NaN;
 
-    // Resolved once and reused; the Unity null check re-acquires it if the previous one was destroyed.
-    PrecipitationController PrecipitationController =>
-        _precipitationController != null
-            ? _precipitationController
-            : _precipitationController = FindAnyObjectByType<PrecipitationController>();
+    // Resolved through ServiceLocator (PrecipitationController self-registers in Awake/OnEnable).
+    // Returns null if no precipitation system is wired up.
+    IPrecipitationDebugControl PrecipitationDebugControl =>
+        ServiceLocator.Get<IPrecipitationDebugControl>();
 
     public Vector3 WindDirection => WindDir.sqrMagnitude > 0.0001f ? WindDir.normalized : Vector3.right;
     public float WindSpeed => Speed;
@@ -152,8 +153,19 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         UpdateWeatherQueryCache();
         UpdateWeatherDiagnostics();
         UpdateWeatherAggregateDiagnostics();
-        Shader.SetGlobalVector(_windDirectionId, WindDirection);
-        Shader.SetGlobalFloat(_windSpeedId, WindSpeed);
+
+        Vector3 windDir = WindDirection;
+        float windSpeed = WindSpeed;
+        if (windDir != _lastUploadedWindDirection)
+        {
+            Shader.SetGlobalVector(_windDirectionId, windDir);
+            _lastUploadedWindDirection = windDir;
+        }
+        if (windSpeed != _lastUploadedWindSpeed)
+        {
+            Shader.SetGlobalFloat(_windSpeedId, windSpeed);
+            _lastUploadedWindSpeed = windSpeed;
+        }
     }
 
     public void Configure(CloudSettings settings)
@@ -242,7 +254,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             return noGrid;
         }
 
-        var precipitationController = PrecipitationController;
+        var precipitationController = PrecipitationDebugControl;
         float rainThreshold = precipitationController != null
             ? precipitationController.StormThreshold
             : PrecipitationStormThreshold;
@@ -250,7 +262,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         TryFindStrongestPrecipitation(out Vector3 strongestPosition, out WeatherSample strongestSample);
 
         bool precipitationRenderEnabled = precipitationController != null
-            && precipitationController.RenderPrecipitation
+            && precipitationController.PrecipitationRenderingEnabled
             && precipitationController.IsRenderingEnabled;
         string report = BuildWeatherDiagnosticsJson(reason, stats, strongestPosition, strongestSample, precipitationController);
         string path = string.Empty;
@@ -437,7 +449,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         if (!ShowWeatherDiagnostics || _grid == null || Time.unscaledTime < _nextWeatherAggregateStatsTime)
             return;
 
-        var precipitationController = PrecipitationController;
+        var precipitationController = PrecipitationDebugControl;
         float rainThreshold = precipitationController != null
             ? precipitationController.StormThreshold
             : PrecipitationStormThreshold;
@@ -684,7 +696,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         WeatherGridStats stats,
         Vector3 strongestPosition,
         WeatherSample strongestSample,
-        PrecipitationController precipitationController)
+        IPrecipitationDebugControl precipitationController)
     {
         var culture = CultureInfo.InvariantCulture;
         var sb = new StringBuilder(2048);
@@ -699,7 +711,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         AppendJsonNumber(sb, "lastEvolutionDelta", _lastEvolutionDelta, 1, true);
         AppendJsonBool(sb, "validationEvolutionRates", Settings != null && Settings.UseValidationEvolutionRates, 1, true);
         AppendJsonBool(sb, "precipitationRenderEnabled",
-            precipitationController != null && precipitationController.RenderPrecipitation && precipitationController.IsRenderingEnabled,
+            precipitationController != null && precipitationController.PrecipitationRenderingEnabled && precipitationController.IsRenderingEnabled,
             1, true);
         AppendJsonNumber(sb, "precipitationStormThreshold", precipitationController != null ? precipitationController.StormThreshold : PrecipitationStormThreshold, 1, true);
 

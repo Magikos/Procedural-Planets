@@ -98,6 +98,9 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
 
     public bool LocalPrecipitationParticlesEnabled => RenderLocalParticles;
 
+    // Explicit forward so the interface property is satisfied by the serialized field.
+    float IPrecipitationDebugControl.StormThreshold => StormThreshold;
+
     public bool ShouldRenderLocalParticles(Camera camera)
     {
         if (!IsRenderingEnabled || !RenderPrecipitation || !RenderLocalParticles ||

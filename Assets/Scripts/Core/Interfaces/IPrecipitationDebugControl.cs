@@ -5,4 +5,9 @@ public interface IPrecipitationDebugControl
     bool PrecipitationRenderingEnabled { get; set; }
     bool LocalPrecipitationParticlesEnabled { get; }
     bool ShouldRenderLocalParticles(Camera camera);
+
+    // Diagnostic surface so WeatherManager can publish precipitation state through
+    // the registered service instead of FindAnyObjectByType<PrecipitationController>.
+    bool IsRenderingEnabled { get; }
+    float StormThreshold { get; }
 }

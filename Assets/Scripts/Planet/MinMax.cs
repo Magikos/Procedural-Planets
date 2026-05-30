@@ -1,5 +1,3 @@
-using System.Threading;
-
 public class MinMax
 {
     float _min;
@@ -19,31 +17,12 @@ public class MinMax
         _max = float.MinValue;
     }
 
+    // Not thread-safe — single-writer expected. Post-PERF-02 the elevation sweep that feeds this
+    // is sequential on the main thread (after Burst mesh jobs complete). If a future caller wants
+    // to feed it from multiple threads, restore Interlocked CAS on _min / _max.
     public void AddValue(float value)
     {
-        InterlockedMin(ref _min, value);
-        InterlockedMax(ref _max, value);
-    }
-
-    static void InterlockedMin(ref float target, float value)
-    {
-        float current = target;
-        while (value < current)
-        {
-            float previous = Interlocked.CompareExchange(ref target, value, current);
-            if (previous == current) break;
-            current = previous;
-        }
-    }
-
-    static void InterlockedMax(ref float target, float value)
-    {
-        float current = target;
-        while (value > current)
-        {
-            float previous = Interlocked.CompareExchange(ref target, value, current);
-            if (previous == current) break;
-            current = previous;
-        }
+        if (value < _min) _min = value;
+        if (value > _max) _max = value;
     }
 }

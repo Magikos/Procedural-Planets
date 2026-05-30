@@ -12,6 +12,9 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
     PrecipitationRenderPass _pass;
     Material _material;
     PrecipitationController _cachedController;
+    // Throttle re-scans to 1 Hz when controller is absent (URP render features outlive scenes,
+    // so a permanent null-cache would break scene reloads).
+    float _nextControllerScanTime;
     static readonly int _waterFocusModeId = Shader.PropertyToID("_WaterFocusMode");
     static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
     static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
@@ -38,8 +41,12 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
         if (!IsPlanetInFrustum(renderingData.cameraData.camera))
             return;
 
-        if (_cachedController == null)
+        if (_cachedController == null && Time.unscaledTime >= _nextControllerScanTime)
+        {
             _cachedController = Object.FindAnyObjectByType<PrecipitationController>();
+            if (_cachedController == null)
+                _nextControllerScanTime = Time.unscaledTime + 1f;
+        }
         if (_cachedController == null || !_cachedController.isActiveAndEnabled || !_cachedController.IsRenderingEnabled)
             return;
 

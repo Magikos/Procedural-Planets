@@ -14,6 +14,11 @@ public class AtmosphereController : MonoBehaviour
     float _lastBakedScaleR, _lastBakedScaleM, _lastBakedAtmoScale;
     int _lastBakedSize, _lastBakedSteps;
     IPlanet _planet;
+    // Per-frame Update() previously re-pushed ~20 SetGlobal* calls every tick. Only _SunParams
+    // genuinely changes per frame; the rest are bound to (Settings, planet) and only need a
+    // re-upload when the planet regenerates or the Settings reference swaps.
+    bool _staticPropertiesDirty = true;
+    AtmosphereSettings _lastStaticSettings;
 
     static readonly int _sunParamsId = Shader.PropertyToID("_SunParams");
     static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
@@ -57,7 +62,7 @@ public class AtmosphereController : MonoBehaviour
 
         if (Settings == null || _planetRadius <= 0f) return;
 
-        SetGlobalProperties();
+        EnsureStaticPropertiesUploaded();
     }
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
@@ -67,6 +72,7 @@ public class AtmosphereController : MonoBehaviour
 
         InitializeDependencies();
         _planetCenter = _planet.Transform.position;
+        _staticPropertiesDirty = true;
 
         Initialize();
     }
@@ -80,11 +86,18 @@ public class AtmosphereController : MonoBehaviour
     void Initialize()
     {
         BakeOpticalDepth();
-        SetGlobalProperties();
+        EnsureStaticPropertiesUploaded();
     }
 
-    void SetGlobalProperties()
+    // Uploads (planet, Settings)-bound shader globals. Skipped after the first upload unless the
+    // planet regenerates or the Settings reference swaps; _SunParams (which actually changes per
+    // frame) is handled directly in Update().
+    void EnsureStaticPropertiesUploaded()
     {
+        if (!_staticPropertiesDirty && _lastStaticSettings == Settings) return;
+        _staticPropertiesDirty = false;
+        _lastStaticSettings = Settings;
+
         float atmosphereRadius = _planetRadius * Settings.AtmosphereScale;
         float atmosphereThickness = atmosphereRadius - _seaLevelRadius;
 
