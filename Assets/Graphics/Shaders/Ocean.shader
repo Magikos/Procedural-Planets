@@ -13,6 +13,8 @@ Shader "Planet/Ocean"
         _WaveScale ("Wave Scale", Range(50, 2000)) = 480
         _WaveSpeed ("Wave Speed", Range(0, 4)) = 0.58
         _WaveNormalStrength ("Wave Normal Strength", Range(0, 16)) = 4.5
+        _SwellAmplitude ("Swell Amplitude (vertex, m)", Range(0, 20)) = 5.0
+        _SwellWavelength ("Swell Wavelength (vertex, m)", Range(40, 600)) = 90
         _WaterMotionStrength ("Water Motion Strength", Range(0, 1)) = 0.24
         _SunGlitterIntensity ("Sun Glitter Intensity", Range(0, 4)) = 0.75
         _SunGlitterPower ("Sun Glitter Power", Range(64, 4096)) = 1400
@@ -72,6 +74,7 @@ Shader "Planet/Ocean"
                 float3 positionWS : TEXCOORD0;
                 float3 normalWS : TEXCOORD1;
                 float3 waterData : TEXCOORD2;
+                float swellHeight : TEXCOORD3; // vertex-evaluated swell, surfaced for WaveSwell debug
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -86,6 +89,8 @@ Shader "Planet/Ocean"
                 float _WaveScale;
                 float _WaveSpeed;
                 float _WaveNormalStrength;
+                float _SwellAmplitude;
+                float _SwellWavelength;
                 float _WaterMotionStrength;
                 float _SunGlitterIntensity;
                 float _SunGlitterPower;
@@ -125,6 +130,9 @@ Shader "Planet/Ocean"
                 float foam;
                 float shoreFoam;
                 float crestFoam;
+                float3 nearColor;
+                float3 farColor;
+                float pathBlend;
             };
 
             float3 SafeNormalize(float3 value, float3 fallback)
@@ -137,6 +145,28 @@ Shader "Planet/Ocean"
             {
                 float lenSq = dot(value, value);
                 return lenSq > 0.000001 ? value * rsqrt(lenSq) : fallback;
+            }
+
+            float Luminance3(float3 color)
+            {
+                return dot(color, float3(0.2126, 0.7152, 0.0722));
+            }
+
+            // False-color brightness ramp for the LumaHeat debug view:
+            // black -> blue -> cyan -> green -> yellow -> red -> white as input rises.
+            // Lets the user describe surface brightness with a consistent vocabulary
+            // ("the dark-side ocean is green here") instead of guessing RGB values.
+            float3 LumaHeatRamp(float value)
+            {
+                float t = saturate(value) * 6.0;
+                float3 color = float3(0.0, 0.0, 0.0);
+                color = lerp(color, float3(0.0, 0.0, 1.0), saturate(t - 0.0));
+                color = lerp(color, float3(0.0, 1.0, 1.0), saturate(t - 1.0));
+                color = lerp(color, float3(0.0, 1.0, 0.0), saturate(t - 2.0));
+                color = lerp(color, float3(1.0, 1.0, 0.0), saturate(t - 3.0));
+                color = lerp(color, float3(1.0, 0.0, 0.0), saturate(t - 4.0));
+                color = lerp(color, float3(1.0, 1.0, 1.0), saturate(t - 5.0));
+                return color;
             }
 
             void BuildSurfaceBasis(float3 normalWS, out float3 tangentA, out float3 tangentB)
@@ -155,6 +185,19 @@ Shader "Planet/Ocean"
 
                 axisA = windWS;
                 axisB = SafeNormalize(cross(referenceAxis, axisA), float3(0.0, 0.0, 1.0));
+            }
+
+            // Single source of truth for the swell-energy gating components.
+            // Used by ComputeOceanSwell AND the WaveEnergy debug view; they MUST stay in sync.
+            // openWater01: 0 in ponds, 1 in open ocean (gates pond-vs-ocean amplitude).
+            // deepWater01: 0 in shore shallows, 1 in deeper water (gates how far swell reaches in).
+            // shoreFade  : 0 right at the coastline, 1 outside a thin calm band.
+            void EvaluateSwellGating(float depth01, float shore01, float body01,
+                out float openWater01, out float deepWater01, out float shoreFade)
+            {
+                openWater01 = smoothstep(0.30, 0.85, body01);
+                deepWater01 = smoothstep(0.003, 0.035, depth01); // was 0.015..0.16 - killed visible swell in shore-adjacent water
+                shoreFade   = smoothstep(0.005, 0.040, shore01); // was 0.015..0.16 - narrowed coastal calm band
             }
 
             float SampleOceanStorm(float3 normalWS, float3 tangentA, float3 tangentB)
@@ -376,17 +419,23 @@ Shader "Planet/Ocean"
                 float breakupStrength = lerp(0.045, 0.18, saturate(chaos01 + openWater01 * 0.35));
                 surfaceGradientTS = surfaceGradientTS * lerp(0.72, 1.30, breakupNoise) + breakupVector * breakupStrength;
                 float cellPattern = SurfaceCellPattern(positionWS, normalWS, scale, waveTime, chaos01);
-                surfaceGradientTS *= lerp(0.70, 1.38, cellPattern);
+                // Was lerp(0.70, 1.38) - a 2x ratio between cell centres and edges that stamped the
+                // voronoi grid directly into wave normals as a visible honeycomb. Tightened to a 1.17x
+                // ratio so cellPattern adds subtle variation without showing through as a stamped grid.
+                surfaceGradientTS *= lerp(0.92, 1.08, cellPattern);
 
-                float depthMask = smoothstep(0.010, 0.095, depth01);
-                float shoreMask = smoothstep(0.008, 0.070, shore01);
+                // Was smoothstep(0.010, 0.095) and (0.008, 0.070) - killed all fragment-detail
+                // waves (and therefore crest foam) in shore-adjacent shallow water. Lowered to
+                // match the EvaluateSwellGating thresholds so the fragment system tracks the swell.
+                float depthMask = smoothstep(0.003, 0.035, depth01);
+                float shoreMask = smoothstep(0.005, 0.040, shore01);
                 float surfaceMask = depthMask * shoreMask * waveEnergy;
                 float normalStrength = _WaveNormalStrength * 0.78 * lerp(0.42, 1.28, weatherEnergy) * surfaceMask;
                 float2 normalGradient = surfaceGradientTS * normalStrength;
 
                 rippleNormalWS = SafeNormalize(normalWS - tangentA * normalGradient.x - tangentB * normalGradient.y, normalWS);
                 signedWaveHeight = clamp(height / max(amplitude * 0.62, 0.001), -1.0, 1.0) * surfaceMask;
-                waveSlope = saturate(length(normalGradient) + cellPattern * surfaceMask * 0.045);
+                waveSlope = saturate(length(normalGradient) + cellPattern * surfaceMask * 0.015);
                 rippleSignal = lerp(0.5, saturate(max(0.5 + detailHeight / max(amplitude * 0.12, 0.001), cellPattern)), surfaceMask);
 
                 float2 proofDirectionA = SafeNormalize2(windTS * 0.64 + crossTS * 0.76, windTS);
@@ -411,7 +460,13 @@ Shader "Planet/Ocean"
                 crossedProof += proofA * proofB * lerp(0.18, 0.42, proofCrossNoise);
                 waveProof = saturate(max(cellPattern, crossedProof * 0.45) * lerp(0.42, 1.0, waveEnergy));
 
-                float shoreBand = (1.0 - smoothstep(0.020, 0.19, shore01)) * smoothstep(0.004, 0.080, depth01);
+                // Smooth shoreFoam saturation (halftoning happens later, in the composite).
+                // shore01 ramp does ALL the gating: full intensity at the actual shoreline,
+                // fades to zero by shore01 = 0.19 (~24 m from shore).
+                // The previous depth gate (smoothstep(0.002, 0.025, depth01)) was offsetting foam
+                // 1-9 m off-shore into triangle-shaped pockets where water happened to deepen,
+                // creating the "sparse pink clumps that don't follow the shoreline" symptom.
+                float shoreBand = 1.0 - smoothstep(0.020, 0.19, shore01);
                 float shorePulse = 0.66 + 0.34 * sin(dot(detailPos, windTS) / max(scale * 0.072, 1.0) - waveTime * 0.95);
                 shoreFoam = saturate(shoreBand * shorePulse * _ShoreFoamIntensity * lerp(0.72, 1.06, wind01));
 
@@ -420,11 +475,24 @@ Shader "Planet/Ocean"
                 float crestWeather = smoothstep(0.10, 0.62, crestEnergy);
                 crestFoam = smoothstep(0.36, 0.76, crestDriver) * crestWeather * _WhitecapIntensity * lerp(0.45, 1.0, openWater01);
 
+                // HALFTONE BUBBLE FOAM (Yingst/Alford/Parberry 2011, see local-only/ocean_wave_foam_halftoning_unity_guide.md).
+                // Smooth saturation -> per-pixel mask threshold -> crisp bubble-popping look.
+                // Why this beats my earlier noise-warp attempt: the foam shape is no longer driven
+                // by the interpolated shore01 contour (which always snapped to triangle edges).
+                // Now the boundary between "foam" and "no foam" is per-pixel, defined by the noise
+                // texture, completely independent of the underlying mesh triangulation.
+                //
+                // Mask scale tuned to ~5 m features (positionTS * 0.18) — well below the ~30-80 m
+                // mesh vertex spacing, so the threshold pattern actually breaks up triangle artifacts.
+                // Two scrolling UVs sum so the bubble pattern animates organically rather than sliding.
                 float foamSaturation = saturate(shoreFoam + crestFoam);
-                float2 foamCoord = detailPos / max(scale * 0.050, 1.0) + windTS * (waveTime * 0.18);
-                float foamThreshold = FoamThresholdMask(foamCoord);
-                float foamPresence = smoothstep(foamThreshold - 0.22, foamThreshold + 0.10, foamSaturation);
-                foamAmount = saturate(foamSaturation * lerp(0.50, 1.0, foamPresence));
+                float2 halftoneUV = positionTS * 0.18
+                                  + windTS * (waveTime * 0.32)
+                                  + float2(waveTime * 0.21, -waveTime * 0.17);
+                float halftoneMask = FoamThresholdMask(halftoneUV);
+                // Fade-before-pop: sharp ramp around the threshold, not a binary step.
+                // Sharpness 5.5 = crisp clumps; lower would smear, higher would binary-pop.
+                foamAmount = saturate((foamSaturation - halftoneMask) * 5.5);
             }
 
             float SurfaceDepthBlend(float depth01)
@@ -508,9 +576,18 @@ Shader "Planet/Ocean"
                 litColor *= 1.0 + waveShade * daylight * lerp(0.50, 1.0, body01);
                 float3 baseSurfaceColor = lerp(litColor, skyReflection, reflectionBlend);
                 float3 farWaterColor = max(deepColor, float3(0.0, 0.060, 0.20));
-                float3 farSurfaceColor = lerp(farWaterColor * lerp(0.48, 0.76, daylight), skyReflection * 0.10 + farWaterColor * 0.90, fresnel * 0.55);
+                // Distant-water term must collapse to the same night floor as the near path.
+                // Previously it kept a fixed 0.48-0.90 of farWaterColor regardless of sun, so the
+                // open ocean (where surfacePathBlend ~ 1) stayed ~half-lit at night = the dark-side glow.
+                float farLight = lerp(nightLight, 0.76, daylight);
+                float3 farBase = farWaterColor * farLight;
+                float3 farGraze = skyReflection * 0.10 + farWaterColor * lerp(nightLight, 0.90, daylight);
+                float3 farSurfaceColor = lerp(farBase, farGraze, fresnel * 0.55);
                 float surfacePathBlend = smoothstep(0.10, 0.76, viewPath) * lerp(0.62, 0.98, body01);
                 layer.color = lerp(baseSurfaceColor, farSurfaceColor, surfacePathBlend);
+                layer.nearColor = baseSurfaceColor;
+                layer.farColor = farSurfaceColor;
+                layer.pathBlend = surfacePathBlend;
                 float retainedSurfaceDetail = waveShade * daylight * shadow * lerp(0.60, 1.0, body01) * lerp(1.0, 0.42, surfacePathBlend);
                 layer.color *= 1.0 + retainedSurfaceDetail;
 
@@ -556,6 +633,53 @@ Shader "Planet/Ocean"
                 return layer;
             }
 
+            // Large-swell vertex displacement: pushes the existing ocean mesh out along the planet
+            // normal by a summed-wave height (Lague-style radial displacement), so the WHOLE ocean has
+            // real 3D waves — world-fixed, not a camera patch. Reuses EvaluateSurfaceWave so the
+            // displaced geometry stays coherent with the fragment detail. Calms near shore and scales
+            // with body size: small ponds get short, low ripples; open ocean gets large swell.
+            // (This is the geometric layer of the GPU Gems two-layer model; fragment normals add detail.)
+            void ComputeOceanSwell(float3 positionWS, float3 planetNormal, float depth01, float shore01, float body01,
+                out float swellHeight, out float3 swellNormal)
+            {
+                swellHeight = 0.0;
+                swellNormal = planetNormal;
+
+                float openWater01, deepWater01, shoreFade;
+                EvaluateSwellGating(depth01, shore01, body01, openWater01, deepWater01, shoreFade);
+                float wind01 = saturate(_WindSpeed / 5.0);
+                float energy = saturate(0.5 + wind01 * 0.5) * deepWater01 * shoreFade;
+                if (energy <= 0.001)
+                    return;
+
+                float3 localPosition = positionWS - _PlanetCenter;
+                float3 waveAxisA;
+                float3 waveAxisB;
+                BuildPlanetWaveAxes(waveAxisA, waveAxisB);
+                float2 positionTS = float2(dot(localPosition, waveAxisA), dot(localPosition, waveAxisB));
+
+                float2 windTS = float2(1.0, 0.0);
+                float2 crossTS = float2(0.0, 1.0);
+                float wavelength = max(_SwellWavelength, 24.0) * lerp(0.42, 1.0, openWater01);
+                // Pond floor 0.10 (was 0.18): ponds get visibly smaller waves than open ocean.
+                float amplitude = max(_SwellAmplitude, 0.0) * lerp(0.10, 1.0, openWater01) * energy;
+                float timeScale = max(_WaveSpeed, 0.001);
+
+                float2 gradientTS = float2(0.0, 0.0);
+                float2 g;
+                float height = 0.0;
+                height += EvaluateSurfaceWave(positionTS, windTS, wavelength, timeScale * 0.5, amplitude * 0.58, 0.00, g); gradientTS += g;
+                height += EvaluateSurfaceWave(positionTS, SafeNormalize2(windTS * 0.78 + crossTS * 0.45, windTS), wavelength * 0.68, timeScale * -0.62, amplitude * 0.30, 1.70, g); gradientTS += g;
+                height += EvaluateSurfaceWave(positionTS, SafeNormalize2(windTS * 0.40 - crossTS * 0.74, windTS), wavelength * 0.46, timeScale * 0.78, amplitude * 0.16, 3.10, g); gradientTS += g;
+
+                swellHeight = height;
+
+                // Surface normal from the height gradient, projected into the local tangent plane.
+                float3 slopeWS = waveAxisA * gradientTS.x + waveAxisB * gradientTS.y;
+                slopeWS = slopeWS - planetNormal * dot(slopeWS, planetNormal);
+                swellNormal = SafeNormalize(planetNormal - slopeWS, planetNormal);
+            }
+
             Varyings vert(Attributes input)
             {
                 Varyings output;
@@ -563,10 +687,17 @@ Shader "Planet/Ocean"
                 float3 objectNormalWS = TransformObjectToWorldNormal(input.normalOS);
                 float3 planetNormalWS = SafeNormalize(positionWS - _PlanetCenter, objectNormalWS);
 
+                float3 waterData = saturate(input.color.rgb);
+                float swellHeight;
+                float3 swellNormal;
+                ComputeOceanSwell(positionWS, planetNormalWS, waterData.r, waterData.g, waterData.b, swellHeight, swellNormal);
+                positionWS += planetNormalWS * swellHeight; // radial displacement → real 3D waves on the mesh
+
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.positionWS = positionWS;
-                output.normalWS = planetNormalWS;
-                output.waterData = saturate(input.color.rgb);
+                output.normalWS = swellNormal; // swell-following normal; fragment perturbs it with fine detail
+                output.waterData = waterData;
+                output.swellHeight = swellHeight;
                 return output;
             }
 
@@ -640,6 +771,134 @@ Shader "Planet/Ocean"
                     return half4(layer.alpha, layer.viewPath, layer.fresnel, 1.0);
                 if (_OceanDebugMode == DEBUG_FOAM_PINK)
                     return half4(1.0, 0.0, 1.0, 0.0);
+                if (_OceanDebugMode == DEBUG_WATER_WAVE_SWELL)
+                {
+                    // Vertex-displaced swell height (the geometry that makes 3D waves).
+                    // Map +/- (_SwellAmplitude * 0.5) to color: blue trough -> black calm -> yellow crest.
+                    // Half-amplitude divisor so realistic peaks (~0.7-1.4 m) hit full saturation.
+                    float swellRange = max(_SwellAmplitude * 0.5, 0.001);
+                    float h = clamp(input.swellHeight / swellRange, -1.0, 1.0);
+                    float3 troughColor = float3(0.05, 0.35, 1.0);
+                    float3 calmColor = float3(0.02, 0.02, 0.04);
+                    float3 crestColor = float3(1.0, 0.85, 0.18);
+                    float3 swellColor = h < 0.0
+                        ? lerp(calmColor, troughColor, -h)
+                        : lerp(calmColor, crestColor, h);
+                    return half4(swellColor, 1.0);
+                }
+                if (_OceanDebugMode == DEBUG_WATER_WAVE_ENERGY)
+                {
+                    // R = openWater01 (large body -> deep ocean), G = deepWater01 (away from terrain),
+                    // B = shoreFade (1 in open water, 0 at coastline). Source of truth = EvaluateSwellGating,
+                    // so the view always matches what the swell actually uses.
+                    float openWater01, deepWater01, shoreFade;
+                    EvaluateSwellGating(depth01, shore01, body01, openWater01, deepWater01, shoreFade);
+                    return half4(openWater01, deepWater01, shoreFade, 1.0);
+                }
+                if (_OceanDebugMode == DEBUG_WATER_WAVE_PHASE)
+                {
+                    // World-lock test. Bright magenta DOTS at fixed world positions on a regular grid,
+                    // on a deep-purple background. TIME-FROZEN. Pan the camera: if the dots stay glued
+                    // to the ocean = world-locked (correct). If they slide with the camera = bug.
+                    // Sharp dots (vs. sin-sum) so the landmarks are unmistakable in motion.
+                    float3 axisA, axisB;
+                    BuildPlanetWaveAxes(axisA, axisB);
+                    float3 localPos = input.positionWS - _PlanetCenter;
+                    float2 posTS = float2(dot(localPos, axisA), dot(localPos, axisB));
+                    float spacing = max(_SwellWavelength, 24.0);
+                    float2 cellPos = float2(frac(posTS.x / spacing), frac(posTS.y / spacing)) - 0.5;
+                    float dist = length(cellPos);
+                    float dotWidth = max(fwidth(posTS.x / spacing), fwidth(posTS.y / spacing)) * 2.0;
+                    float dotMask = 1.0 - smoothstep(0.10, 0.10 + dotWidth, dist); // 10% of cell radius
+                    float3 bgColor = float3(0.25, 0.0, 0.50);
+                    float3 dotColor = float3(1.0, 0.20, 0.95);
+                    return half4(lerp(bgColor, dotColor, dotMask), 1.0);
+                }
+                if (_OceanDebugMode == DEBUG_WATER_GLINT_LOCATOR)
+                {
+                    // UNMISTAKABLE glint-presence test. Renders the normal water composite, then
+                    // PAINTS BRIGHT PINK wherever glint contributes to the final pixel.
+                    // The key diagnostic question: does pink appear as a CONSTELLATION OF SMALL
+                    // SPARKLES (correct - bumpy waves giving many facets at the right angle) or
+                    // as ONE LARGE DISC (broken - a flat surface with a broad specular lobe)?
+                    float glintFlag = smoothstep(0.001, 0.05, layer.glint);
+                    float3 pink = float3(1.0, 0.0, 1.0);
+                    return half4(lerp(layer.color, pink, glintFlag), 1.0);
+                }
+                if (_OceanDebugMode == DEBUG_WATER_FOAM_LOCATOR)
+                {
+                    // UNMISTAKABLE foam-presence test. Renders the normal water composite, then
+                    // PAINTS BRIGHT PINK at full opacity anywhere foam is computed (foamAmount > tiny).
+                    // Stop guessing whether foam is invisible because it's missing vs because it's
+                    // composited too weakly: any visible pink = foam IS there in the final image;
+                    // no pink = foam is genuinely not being produced where you expect.
+                    float foamFlag = smoothstep(0.001, 0.05, layer.foam);
+                    float3 pink = float3(1.0, 0.0, 1.0);
+                    return half4(lerp(layer.color, pink, foamFlag), 1.0);
+                }
+                if (_OceanDebugMode == DEBUG_WATER_FOAM_ON_SWELL)
+                {
+                    // Foam validation: pure white foam pixels painted on top of WaveSwell color
+                    // (blue trough / black calm / yellow crest). Answers "are whitecaps on the crests?"
+                    // at a glance — yellow + white = correct; blue + white = foam in a trough (bug);
+                    // black + white near shoreline = shore foam (correct).
+                    float swellRange = max(_SwellAmplitude * 0.5, 0.001);
+                    float h = clamp(input.swellHeight / swellRange, -1.0, 1.0);
+                    float3 calmColor = float3(0.02, 0.02, 0.04);
+                    float3 troughColor = float3(0.05, 0.35, 1.0);
+                    float3 crestColor = float3(1.0, 0.85, 0.18);
+                    float3 swellBg = h < 0.0
+                        ? lerp(calmColor, troughColor, -h)
+                        : lerp(calmColor, crestColor, h);
+                    float foamMask = saturate(layer.foam * _FoamColor.a);
+                    return half4(lerp(swellBg, float3(1.0, 1.0, 1.0), foamMask), 1.0);
+                }
+                if (_OceanDebugMode == DEBUG_WATER_WAVE_GRID)
+                {
+                    // Wireframe of the displaced surface. A 10 m world-space grid is drawn along the
+                    // wave-tangent axes; because the vertices are radially displaced before the
+                    // fragment runs, the grid lines visibly undulate with the swell — you see the
+                    // actual wave geometry. Lines also color by swellHeight (yellow at crest, blue
+                    // at trough), so wave amplitude is readable at a glance.
+                    float3 axisA, axisB;
+                    BuildPlanetWaveAxes(axisA, axisB);
+                    float3 localPos = input.positionWS - _PlanetCenter;
+                    float u = dot(localPos, axisA);
+                    float v = dot(localPos, axisB);
+                    float gridSpacing = 10.0;
+                    float fu = frac(u / gridSpacing);
+                    float fv = frac(v / gridSpacing);
+                    float distU = min(fu, 1.0 - fu);
+                    float distV = min(fv, 1.0 - fv);
+                    float widthU = fwidth(u / gridSpacing) * 1.5;
+                    float widthV = fwidth(v / gridSpacing) * 1.5;
+                    float lineU = 1.0 - smoothstep(0.0, max(widthU, 0.005), distU);
+                    float lineV = 1.0 - smoothstep(0.0, max(widthV, 0.005), distV);
+                    float wire = saturate(lineU + lineV);
+
+                    float swellRange = max(_SwellAmplitude * 0.5, 0.001);
+                    float h = clamp(input.swellHeight / swellRange, -1.0, 1.0);
+                    float3 calmColor = float3(0.55, 0.75, 0.95);
+                    float3 troughColor = float3(0.05, 0.30, 1.0);
+                    float3 crestColor = float3(1.0, 0.90, 0.20);
+                    float3 lineColor = h < 0.0
+                        ? lerp(calmColor, troughColor, -h)
+                        : lerp(calmColor, crestColor, h);
+
+                    float3 bgColor = float3(0.02, 0.05, 0.12);
+                    return half4(lerp(bgColor, lineColor, wire), 1.0);
+                }
+                if (_OceanDebugMode == DEBUG_SURFACE_NIGHT_TERMS)
+                {
+                    // R = near-water lit term, G = distant-water lit term, B = how far-weighted this pixel is.
+                    // On the dark side: a bright GREEN ocean means the far term is the one staying lit.
+                    // (x4 gain so the small night values are visible.)
+                    return half4(saturate(Luminance3(layer.nearColor) * 4.0),
+                                 saturate(Luminance3(layer.farColor) * 4.0),
+                                 layer.pathBlend, 1.0);
+                }
+                if (_OceanDebugMode == DEBUG_SURFACE_LUMA_HEAT)
+                    return half4(LumaHeatRamp(Luminance3(layer.color) * 4.0), 1.0); // x4 gain: night brightness lands mid-ramp
 
                 return half4(layer.color, layer.alpha);
             }

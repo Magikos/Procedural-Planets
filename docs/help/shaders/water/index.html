@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Water &amp; Ocean System — How It Works</title>
+<style>
+  :root {
+    --bg: #0f1419; --panel: #161c24; --ink: #d7e0ea; --muted: #93a1b0;
+    --accent: #4fb6e0; --accent2: #6fd08c; --warn: #e0b24f; --line: #283541;
+    --code-bg: #0b0f14; --pink: #e06fb0;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { display: flex; max-width: 1280px; margin: 0 auto; }
+  nav { position: sticky; top: 0; align-self: flex-start; width: 270px; height: 100vh;
+    overflow-y: auto; padding: 22px 14px 60px; border-right: 1px solid var(--line); font-size: 13px; }
+  nav h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 18px 0 6px; }
+  nav a { display: block; color: var(--ink); text-decoration: none; padding: 3px 8px; border-radius: 5px; }
+  nav a:hover { background: var(--panel); color: var(--accent); }
+  main { flex: 1; min-width: 0; padding: 28px 40px 120px; }
+  h1 { font-size: 30px; margin: 0 0 4px; }
+  h1 + .sub { color: var(--muted); margin: 0 0 28px; font-size: 15px; }
+  h2 { font-size: 23px; margin: 44px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  h3 { font-size: 18px; margin: 28px 0 8px; color: var(--accent); }
+  h4 { font-size: 15px; margin: 20px 0 6px; color: var(--accent2); }
+  p, li { color: var(--ink); }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace; font-size: 13px; color: #cfe6f5; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; }
+  pre code { background: none; padding: 0; color: #cfe6f5; font-size: 12.5px; line-height: 1.55; }
+  .file { color: var(--accent2); font-family: monospace; font-size: 12.5px; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--panel); color: var(--accent); }
+  .box { background: var(--panel); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 16px 0; }
+  .box.warn { border-left-color: var(--warn); }
+  .box.tip { border-left-color: var(--accent2); }
+  .box h4 { margin-top: 0; }
+  .flow { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 16px; overflow-x: auto; font-family: monospace; font-size: 12.5px; line-height: 1.5; white-space: pre; color: #b9c9d6; }
+  .pill { display: inline-block; background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 1px 10px; font-size: 12px; color: var(--muted); }
+  .rgb r { color: #e06f6f; } .rgb g { color: #6fd08c; } .rgb b { color: #6f9fe0; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 40px 0; }
+  .muted { color: var(--muted); }
+  a.anchor { color: var(--accent); }
+  ul.tight li { margin: 2px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <strong>Water System</strong>
+  <h2>Start here</h2>
+  <a href="#mental-model">1. Mental model</a>
+  <a href="#layers">2. The three layers</a>
+  <a href="#frame">3. Per-frame render order</a>
+  <h2>Data &amp; generation</h2>
+  <a href="#generation">4. Generation pipeline</a>
+  <a href="#contract">5. The vertex-color contract</a>
+  <a href="#meshbuilder">6. WaterMeshBuilder</a>
+  <h2>Rendering</h2>
+  <a href="#surface">7. Ocean surface shader</a>
+  <a href="#swell">8. The swell (waves)</a>
+  <a href="#volume">9. Water volume</a>
+  <a href="#prepass">10. Prepass &amp; render feature</a>
+  <h2>Coupling</h2>
+  <a href="#weather">11. Weather &amp; wind</a>
+  <a href="#night">12. Day / night</a>
+  <a href="#caustics">13. Caustics</a>
+  <h2>Working with it</h2>
+  <a href="#debug">14. Debug (F10) workflow</a>
+  <a href="#tuning">15. Tuning guide</a>
+  <a href="#files">16. File reference</a>
+  <a href="#glossary">17. Glossary</a>
+</nav>
+<main>
+
+<h1>Water &amp; Ocean System</h1>
+<p class="sub">How every moving part fits together — generation, rendering, and the code that drives it. Written so you can read it top-to-bottom and understand the system well enough to give precise feedback.</p>
+
+<div class="box">
+<h4>The one-paragraph version</h4>
+A planet's water is <strong>one runtime-generated mesh</strong> sitting at sea level, clipped to the basins where terrain dips below sea level. Each water vertex carries three numbers baked into its color — <span class="rgb"><r>depth</r></span>, <span class="rgb"><g>distance from shore</g></span>, <span class="rgb"><b>body size</b></span> — and almost every visual decision (wave size, foam, transparency, caustics) is driven by those three numbers. Rendering happens in <strong>three layers</strong>: a full-screen <em>underwater volume</em> drawn before transparents, the <em>transparent surface</em> (color + waves + foam + glint), and the <em>atmosphere</em> post-process on top. The surface mesh is displaced by <em>Gerstner-style swell</em> in its vertex shader for real 3-D waves.
+</div>
+
+<h2 id="mental-model">1. Mental model</h2>
+<p>Hold these four ideas and the rest follows:</p>
+<ol>
+  <li><strong>One ocean mesh, clipped to basins.</strong> There is no separate lake/ocean object and no camera-following patch. <span class="file">WaterMeshBuilder</span> builds a single mesh covering every place the terrain is below sea level. Ponds, lakes, and oceans are all the same mesh — they differ only by the per-vertex <em>body size</em> value.</li>
+  <li><strong>Vertex colors are the data bus.</strong> The mesh's vertex colors are not colors — they're a packed data channel (<span class="rgb"><r>depth</r></span>, <span class="rgb"><g>shore distance</g></span>, <span class="rgb"><b>body factor</b></span>). The surface shader, the volume shader, and the prepass all read the same three numbers. When you wonder "how does the shader know X?", the answer is usually "from a vertex color channel."</li>
+  <li><strong>Three render layers, drawn in a fixed order.</strong> Underwater <em>volume</em> (full-screen, before transparents) → <em>surface</em> (transparent queue) → <em>atmosphere</em> (post-process). Each owns a different visual job and they hand off via depth + a shared "water interface" texture.</li>
+  <li><strong>Everything is global-shader-driven and event-driven.</strong> The planet raises one <code>PlanetGeneratedEvent</code> when generation finishes; weather/celestial systems push <code>Shader.SetGlobal*</code> values (wind, sun, sea radius, time) every frame. The water shaders read those globals — they're not wired with direct references.</li>
+</ol>
+
+<h2 id="layers">2. The three rendering layers</h2>
+<table>
+  <tr><th>Layer</th><th>What it draws</th><th>Shader</th><th>When</th></tr>
+  <tr><td><strong>Volume</strong> (underwater body)</td><td>Depth fog, caustics on the seabed, refraction/distortion of the bottom, the "looking through deep water" tint</td><td><span class="file">WaterVolume.shader</span> (full-screen)</td><td>Before transparents</td></tr>
+  <tr><td><strong>Surface</strong> (the water sheet)</td><td>Water color by depth, waves (vertex swell + detail normals), foam, sun glint, fresnel sky reflection</td><td><span class="file">Ocean.shader</span> (on the mesh)</td><td>Transparent queue</td></tr>
+  <tr><td><strong>Atmosphere</strong></td><td>Scattering/haze over distant water, sky color, light shafts — fades water into the horizon</td><td><span class="file">Atmosphere.shader</span> (full-screen)</td><td>Post-process</td></tr>
+</table>
+<div class="box tip"><h4>Why split it this way?</h4>Transparent surfaces can't easily read "what's behind me through the water." So the <strong>volume</strong> layer runs first and bakes the underwater look into the color buffer; the transparent <strong>surface</strong> then blends on top. A shared <code>_WaterInterfaceTexture</code> (written by the prepass) lets later passes — including the atmosphere — know where water is on screen so they can behave correctly at the waterline.</div>
+
+<h2 id="frame">3. Per-frame render order</h2>
+<div class="flow">┌─ Opaque pass ──────────────────────────────────────────────┐
+│  Terrain (PlanetVertexColor.shader) writes color + DEPTH.   │
+│  Stars (Star.shader) drawn as background before opaques.    │
+└─────────────────────────────────────────────────────────────┘
+            │  depth buffer now holds the seabed / terrain
+            ▼
+┌─ BeforeRenderingTransparents ──────────────────────────────┐
+│  (A) WaterVolumePrepass                                     │
+│      draws the water mesh into _WaterVolumeData =           │
+│        (forwardDepth, depth01, shore01, body01)             │
+│      → published as _WaterInterfaceTexture (global)         │
+│  (B) WaterVolumeComposite (full-screen)                     │
+│      reads cameraColor + _WaterVolumeData + sceneDepth      │
+│      writes underwater fog / caustics / refraction          │
+│      → REPLACES cameraColor                                 │
+└─────────────────────────────────────────────────────────────┘
+            ▼
+┌─ Transparent queue ────────────────────────────────────────┐
+│  Ocean.shader on the water mesh:                            │
+│    vertex: displace mesh by swell (real 3-D waves)          │
+│    fragment: depth color, detail normals, foam, glint,      │
+│              fresnel — blended over the volume result       │
+└─────────────────────────────────────────────────────────────┘
+            ▼
+        Clouds (Cloud.shader) · Precipitation (Precipitation.shader)
+            ▼
+┌─ Post-process ─────────────────────────────────────────────┐
+│  Atmosphere.shader: scattering, light shafts.               │
+│  Reads _WaterInterfaceTexture so shafts/haze respect water. │
+└─────────────────────────────────────────────────────────────┘</div>
+<p class="muted">The two water-volume passes are <code>ScriptableRenderPass</code>es enqueued by <span class="file">WaterVolumeRenderFeature</span>, both at <code>RenderPassEvent.BeforeRenderingTransparents</code>. The surface is a normal transparent material, so URP draws it after them automatically. The atmosphere is its own <code>ScriptableRendererFeature</code> running as a post-process.</p>
+
+<h2 id="generation">4. Generation pipeline (when does water get built?)</h2>
+<p>Startup is orchestrated by <span class="file">LoadingManager</span>, which runs <code>IEarlyInitialize</code> then <code>ILateInitialize</code> components in priority order. <span class="file">Planet</span> is an <code>ILateInitialize</code>; water is built inside its generation.</p>
+<div class="flow">LoadingManager.InitializeAsync
+  └─ Planet.LateInitialize → GeneratePlanetAsync()
+        1. Initialize()              build shape/color generators, 6 terrain faces
+        2. GenerateMeshAsync()       terrain meshes (parallel, background thread)
+        3. CommitElevationRange()    publish final elevation min/max
+        4. GenerateColorsAsync()     biome vertex colors on the terrain
+        5. GenerateWaterAsync()  ◄── builds the water mesh + material
+        6. raise PlanetGeneratedEvent(center, radius, seaLevelRadius, ...)
+              → CelestialManager, AtmosphereController, WeatherManager, camera react</div>
+
+<h3>Inside <code>Planet.GenerateWaterAsync()</code></h3>
+<p><span class="file">Assets/Scripts/Planet/Planet.cs</span></p>
+<pre><code>// 1. Skip entirely if this planet has no oceans.
+if (!_planetSettings.HasOceans) { _waterObject?.SetActive(false); return; }
+
+// 2. Make/reuse the "Water" child GameObject (MeshFilter + MeshRenderer, shadows off).
+// 3. Describe the build: radius, ocean level, depth ranges, body threshold — scaled to planet size.
+var buildSettings = new WaterMeshBuilder.Settings { PlanetRadius = ..., OceanLevel = ..., ... };
+
+// 4. Build the mesh on a worker thread, polling progress each frame so the loading bar moves.
+var computeTask = Task.Run(() =>
+    WaterMeshBuilder.Compute(terrainFaces, buildSettings, p => Volatile.Write(ref buildProgress, p)));
+while (!computeTask.IsCompleted) { _progressHandle.Report(0.90f + 0.06f*buildProgress, "Building water bodies..."); await NextFrame; }
+var waterMeshData = await computeTask;
+
+// 5. Upload the mesh, create/assign the Ocean material, push tunables into it.
+WaterMeshBuilder.Apply(waterMesh, null, waterMeshData);
+UpdateWaterMaterial(_waterMaterial);</code></pre>
+<div class="box"><h4>Who owns what here</h4>
+<ul class="tight">
+<li><strong>Planet.cs</strong> — orchestrates: makes the GameObject, calls the builder, creates the material, sets material constants (colors, depths, wave/foam/glint amounts). It does <em>not</em> know how waves or fog look.</li>
+<li><strong>WaterMeshBuilder.cs</strong> — pure data: turns the 6 terrain faces into a clipped water mesh with the vertex-color contract. No Unity rendering, runs on a worker thread.</li>
+<li><strong>The shaders</strong> — own the look, reading material constants + vertex colors + global state.</li>
+</ul></div>
+
+<h2 id="contract">5. The vertex-color data contract <span class="pill">most important section</span></h2>
+<p>Every water vertex's color encodes three normalized values. <strong>This is the single most load-bearing idea in the whole system</strong> — learn it and the shaders become readable.</p>
+<table>
+  <tr><th>Channel</th><th>Meaning</th><th>Range</th><th>Drives</th></tr>
+  <tr><td><span class="rgb"><r>color.r</r></span></td><td><strong>depth01</strong> — normalized water depth (how far the seabed is below sea level)</td><td>0 = at surface, 1 = max depth</td><td>water color (shallow→deep), swell strength, absorption/opacity, caustic fade</td></tr>
+  <tr><td><span class="rgb"><g>color.g</g></span></td><td><strong>shore01</strong> — normalized distance from the shoreline</td><td>0 = right at shore, 1 = far from shore</td><td>shoreline foam, wave calming near shore, terrain-contact fades</td></tr>
+  <tr><td><span class="rgb"><b>color.b</b></span></td><td><strong>body01</strong> — "large body" factor (is this a pond or an ocean?)</td><td>0 = tiny pond, 1 = large ocean</td><td>swell wavelength/amplitude (ponds stay calm), whitecaps, open-water effects</td></tr>
+</table>
+<div class="box tip"><h4>This is how ponds differ from oceans</h4>A small pond's vertices have <span class="rgb"><b>body01 ≈ 0</b></span> and are mostly shallow + near-shore, so the swell code multiplies its amplitude/wavelength down to almost nothing — calm water. An open ocean has <span class="rgb"><b>body01 ≈ 1</b></span>, deep <span class="rgb"><r>depth01</r></span>, and high <span class="rgb"><g>shore01</g></span>, so it gets the full long swell. <em>Same shader, same mesh — different vertex data.</em></div>
+<p>In every shader you'll see this destructure at the top of the fragment (or vertex) stage:</p>
+<pre><code>float depth01 = saturate(input.waterData.r);
+float shore01 = saturate(input.waterData.g);
+float body01  = saturate(input.waterData.b);</code></pre>
+
+<h2 id="meshbuilder">6. WaterMeshBuilder — how the mesh and the contract are produced</h2>
+<p><span class="file">Assets/Scripts/Planet/WaterMeshBuilder.cs</span> · entry point <code>Compute(faces, settings, onProgress)</code></p>
+<div class="flow">Compute()
+  1. BuildGlobalWaterData(faces)         ◄── the heavy phase (~45% of build)
+       • walk all 6 cube-sphere faces as ONE graph (shared seam vertices,
+         keyed by quantized direction, so faces don't get independent data)
+       • mark every vertex wet/dry (terrain elevation vs sea level)
+       • ClassifyWaterBodies():  flood-fill connected wet regions →
+         small regions = ponds (low body01), big regions = oceans (high body01)
+       • shore-distance BFS:  distance from each wet vertex to the nearest
+         dry vertex  →  shore01
+  2. for each of the 6 faces: ProcessFace(...)
+       • emit water surface triangles only where wet
+       • clip the shoreline edge slightly UNDER the terrain (avoids a hard seam)
+       • write vertex color = (depth01, shore01, body01)
+       • also emit a "WaterVolumeLip" mesh: an extended skirt under the terrain
+         used only by the volume prepass for coverage (never rendered visibly)
+  3. return MeshData (vertices, normals, colors, triangles, + lip mesh + stats)</code></pre>
+<div class="box warn"><h4>Why a global graph (not per-face)?</h4>The planet is a cube-sphere: 6 separate face meshes. If each face computed body/shore data independently, you'd see straight seams along cube edges (a square-ish shoreline). <code>BuildGlobalWaterData</code> stitches the faces by direction so flood-fill and shore-distance cross face boundaries seamlessly. If you ever see a suspiciously straight water edge, this is the suspect.</div>
+
+<h2 id="surface">7. The ocean surface shader (Ocean.shader)</h2>
+<p><span class="file">Assets/Graphics/Shaders/Ocean.shader</span> — one transparent pass: <code>Blend SrcAlpha OneMinusSrcAlpha, ZWrite Off, ZTest LEqual</code>. <code>ZTest LEqual</code> at sea level is what clips the surface to basins for free (dry land is nearer in depth and occludes it).</p>
+
+<h3>Vertex stage — geometry + base normal</h3>
+<pre><code>Varyings vert(Attributes input)
+{
+    float3 positionWS   = TransformObjectToWorld(input.positionOS.xyz);
+    float3 planetNormal = normalize(positionWS - _PlanetCenter);
+    float3 waterData    = saturate(input.color.rgb);   // depth, shore, body
+
+    // NEW: real wave geometry — push the vertex out along the planet normal.
+    float swellHeight; float3 swellNormal;
+    ComputeOceanSwell(positionWS, planetNormal, waterData.r, waterData.g, waterData.b, swellHeight, swellNormal);
+    positionWS += planetNormal * swellHeight;
+
+    output.positionWS = positionWS;
+    output.normalWS   = swellNormal;   // fragment perturbs this with fine detail
+    output.waterData  = waterData;
+    output.positionCS = TransformWorldToHClip(positionWS);
+}</code></pre>
+
+<h3>Fragment stage — the look, computed in layers</h3>
+<p>The fragment calls <code>ComputeSurfaceLayer()</code>, which fills a <code>SurfaceLayer</code> struct and is then either returned as final color or surfaced as a debug view. The layers, in order:</p>
+<table>
+  <tr><th>Step</th><th>Function / code</th><th>Reads</th></tr>
+  <tr><td>Detail waves &amp; foam</td><td><code>ComputeSurfaceWaves()</code> → ripple normal, wave height/slope, shore foam, crest (whitecap) foam</td><td>position, base normal, depth/shore/body, wind, storm</td></tr>
+  <tr><td>Depth color</td><td><code>SurfaceDepthBlend()</code> lerps <code>_ShallowColor → _DeepColor</code></td><td><span class="rgb"><r>depth01</r></span></td></tr>
+  <tr><td>Lighting</td><td>day/night from <code>dot(planetNormal, sunDir)</code>; cloud shadow from <code>CloudShadowFactor()</code></td><td><code>_SunParams</code>, <code>_NightAmbientIntensity</code>, weather</td></tr>
+  <tr><td>Reflection</td><td>fresnel blend toward a sky color at grazing angles</td><td>view dir, ripple normal, daylight</td></tr>
+  <tr><td>Sun glint</td><td><code>pow(nDotH, glintPower)</code> on the ripple normal, masked by slope + daylight</td><td>sun, ripple normal, <code>_SunGlitterIntensity</code></td></tr>
+  <tr><td>Foam</td><td>blend toward <code>_FoamColor</code> by shore + crest foam (night-gated so it doesn't glow)</td><td>foam amounts, daylight, shadow</td></tr>
+  <tr><td>Alpha</td><td>opacity from depth, shore visibility, body, fresnel, view path</td><td>all of the above</td></tr>
+</table>
+<div class="box"><h4>Two-layer waves</h4>The surface has <strong>two</strong> wave systems working together (the classic GPU Gems model):
+<ul class="tight">
+<li><strong>Geometric swell</strong> — <code>ComputeOceanSwell</code> in the <em>vertex</em> shader. Moves actual geometry → silhouette, parallax, big rolling waves. Limited to long wavelengths the mesh can represent (≳70 m). See §8.</li>
+<li><strong>Detail normals</strong> — <code>ComputeSurfaceWaves</code> in the <em>fragment</em> shader. No geometry, just normal perturbation → small ripples, glint sparkle, surface texture. Can be arbitrarily fine.</li>
+</ul></div>
+
+<h2 id="swell">8. The swell — real waves on the mesh</h2>
+<p>This is the layer that makes the ocean read as 3-D water rather than a flat sheet. It lives in <code>ComputeOceanSwell()</code> in <span class="file">Ocean.shader</span> and follows Sebastian Lague's planetary approach (radial vertex displacement).</p>
+<pre><code>void ComputeOceanSwell(positionWS, planetNormal, depth01, shore01, body01,
+                       out swellHeight, out swellNormal)
+{
+    // 1. ENERGY: where are waves allowed? Calm near shore + in shallow + in small bodies.
+    float openWater01 = smoothstep(0.30, 0.85, body01);   // pond → ocean
+    float deepWater01 = smoothstep(0.015, 0.16, depth01);  // shallow → deep
+    float shoreFade   = smoothstep(0.015, 0.16, shore01);  // shoreline → open
+    float energy = saturate(0.5 + wind01*0.5) * deepWater01 * shoreFade;
+
+    // 2. SCALE by body size: ponds get short, low ripples; oceans get long, tall swell.
+    float wavelength = _SwellWavelength * lerp(0.42, 1.0, openWater01);
+    float amplitude  = _SwellAmplitude  * lerp(0.18, 1.0, openWater01) * energy;
+
+    // 3. SUM 3 waves (reusing EvaluateSurfaceWave) → height + gradient,
+    //    projected onto a world-stable tangent frame (BuildPlanetWaveAxes).
+    //    ...accumulates `height` and `gradientTS`...
+
+    // 4. Displace radially; derive the normal from the height gradient.
+    swellHeight = height;
+    swellNormal = normalize(planetNormal - tangentialSlope);
+}</code></pre>
+<p>And in the vertex shader: <code>positionWS += planetNormal * swellHeight;</code> — that single line is what turns the flat sheet into rolling water across the <em>entire</em> ocean. Because it operates on the world-fixed mesh, the waves stay attached to the water (they don't slide when the camera moves).</p>
+<div class="box warn"><h4>The mesh-resolution ceiling</h4>The water mesh has ~21 m between vertices. A wave can only be represented if its wavelength is well above ~2× that (≳70 m). So the swell does <strong>big rolling waves</strong>; small choppy detail must come from the fragment normals (§7). If you crank <code>_SwellWavelength</code> below ~70 the crests turn jagged — that's the mesh under-sampling the wave, not a bug. Fix: raise the wavelength, or (future) tessellate / add a denser near-camera ring.</div>
+<div class="box tip"><h4>Why Gerstner-style (and why it matters for boats later)</h4>The swell is a closed-form <code>height(position, time)</code> function. That means the same math can be evaluated on the CPU to float boats and swimmers on the waves — no GPU readback. (An FFT ocean looks great but its height lives in a texture that's painful to query per-point on the CPU.) When boats arrive, <code>ComputeOceanSwell</code> gets a C# twin.</div>
+
+<h2 id="volume">9. The water volume (underwater body)</h2>
+<p><span class="file">Assets/Graphics/Shaders/WaterVolume.shader</span> — a full-screen pass composited <em>before</em> the surface. It answers "what does it look like to peer into / through the water?"</p>
+<h4>What it produces (per screen pixel that's behind water):</h4>
+<ul class="tight">
+<li><strong>Depth fog &amp; absorption</strong> — the further light travels through water, the more it's tinted toward deep blue and dimmed. Computed from an optical-depth estimate (<code>VolumeOpticalDepth</code>) using the seabed distance and the camera ray's path length through the sea sphere.</li>
+<li><strong>Caustics</strong> — animated bright light patterns on the seabed (<code>ComputeReceiverCaustics</code>). See §13.</li>
+<li><strong>Refraction / bottom distortion</strong> — wobbles the seabed image by sampling the color buffer at an offset (<code>ComputeBottomDistortion</code>).</li>
+<li><strong>Far-shore waterline</strong> — distant coastlines seen across the curve of the ocean get tinted by the long water path so they don't read as a hard bright line.</li>
+</ul>
+<p>It reconstructs the seabed world position from the camera depth texture, checks it's below sea level, and only then applies the underwater look:</p>
+<pre><code>float receiverDistance = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
+float3 receiverWS = _WorldSpaceCameraPos + rayDir * receiverDistance;  // seabed point
+float waterDepth = _SeaLevelRadius - length(receiverWS - _PlanetCenter); // how deep?
+if (waterDepth <= 0) ...skip...   // above sea level → not underwater</code></pre>
+
+<h2 id="prepass">10. The prepass &amp; render feature (the plumbing)</h2>
+<p><span class="file">Assets/Scripts/Planet/WaterVolumeRenderFeature.cs</span> finds the <code>Water</code> object, copies material settings into the prepass + volume materials, and enqueues two passes:</p>
+<table>
+  <tr><th>Pass</th><th>Job</th><th>Output</th></tr>
+  <tr><td><strong>WaterVolumePrepass</strong></td><td>Draw the water mesh (and the under-terrain "lip" skirt) recording where water is and its data</td><td><code>_WaterInterfaceTexture</code> / <code>_WaterVolumeData</code> = <code>(forwardDepth, depth01, shore01, body01)</code>, set as global textures</td></tr>
+  <tr><td><strong>WaterVolumeComposite</strong></td><td>Full-screen: read color + that texture + scene depth, run <span class="file">WaterVolume.shader</span></td><td>replaces <code>cameraColor</code> with the underwater-composited image</td></tr>
+</table>
+<p>The prepass writes its data into an off-screen <code>R16G16B16A16</code> texture and publishes it globally with <code>SetGlobalTextureAfterPass</code>. Both the volume composite <em>and</em> the atmosphere read it — that's how the atmosphere knows to stop light shafts at the water surface.</p>
+<div class="box"><h4>The "lip" mesh</h4><code>WaterMeshBuilder</code> emits a second, invisible mesh (<code>WaterVolumeLip</code>) that extends slightly under the dry terrain. It's drawn only into the prepass coverage texture so the underwater volume reaches all the way to the true waterline without the visible surface poking through the beach. You'll see it referenced in the prepass passes and in several F10 debug modes.</p></div>
+<div class="box warn"><h4>Global switch: <code>_WaterVolumeEnabled</code></h4>If no water object is found, the feature sets <code>_WaterVolumeEnabled = 0</code> and other shaders (atmosphere) skip their water-aware branches. When water exists it's <code>1</code>. Handy to know when debugging "why is the atmosphere ignoring the water."</div>
+
+<h2 id="weather">11. Weather &amp; wind coupling</h2>
+<p>Wind and storms are global shader values pushed every frame by <span class="file">WeatherManager</span>:</p>
+<pre><code>Shader.SetGlobalVector(_windDirectionId, WindDirection);
+Shader.SetGlobalFloat(_windSpeedId, WindSpeed);</code></pre>
+<ul class="tight">
+<li><code>_WindDirection</code> orients the wave axes (<code>BuildPlanetWaveAxes</code>) so swell and ripples travel <em>with</em> the wind.</li>
+<li><code>_WindSpeed</code> (normalized as <code>wind01 = _WindSpeed/5</code>) scales wave energy, chop, and whitecaps. Low wind → glassy; high wind → choppy with whitecaps.</li>
+<li><strong>Storms</strong> are sampled from the cloud weather map via <code>SampleCloudShadowWeather(normal).g</code> in <span class="file">CloudShadows.hlsl</span>. The surface uses the storm value <em>only for foam/whitecaps</em> — deliberately <strong>not</strong> for wave height, because feeding local storm cells into displacement stamped visible cyclone/ring shapes into the water.</li>
+</ul>
+
+<h2 id="night">12. Day / night coupling</h2>
+<p>The sun direction is the global <code>_SunParams</code> (set by <span class="file">AtmosphereController</span> from <span class="file">CelestialManager</span>). Local day/night at a water point is <code>daylight = smoothstep(-0.08, 0.18, dot(planetNormal, sunDir))</code>.</p>
+<ul class="tight">
+<li>Water color, glint, and foam all multiply down toward near-zero at night (foam is gated to ~5% so it doesn't glow on the dark side).</li>
+<li><code>_NightAmbientIntensity</code> (a global, also used by terrain) provides a faint night floor.</li>
+<li>The moon contributes to underwater caustic light via <code>_MoonParams</code>/<code>_MoonIntensity</code> in the volume shader.</li>
+</ul>
+
+<h2 id="caustics">13. Caustics (the seabed light patterns)</h2>
+<p>Computed in <span class="file">WaterVolume.shader</span> · <code>ComputeReceiverCaustics()</code>. Caustics only appear on submerged surfaces that are lit and not too deep.</p>
+<div class="flow">ComputeReceiverCaustics(seabedPoint, ray, ...)
+  • gate: must be underwater, lit (sun/moon facing + not cloud-shadowed), shallow enough
+  • CausticPattern(): triplanar animated Voronoi, dual-layer interference (c1*c2)
+       → bright branching cells, warped over time
+  • CausticPrismColor(): RGB fringing along the caustic ridges (chromatic dispersion)
+  • output: causticColor * intensity, faded by depth and water path</div>
+<ul class="tight">
+<li><strong>Pattern</strong> — <code>CausticVoronoi</code> + domain warp gives the organic branching look; contrast via <code>pow(caustic, _CausticContrast)</code>.</li>
+<li><strong>Chromatic</strong> — <code>CausticPrismColor</code> splits the ridge edges into red/green/blue fringes for the "whimsical" prism look you asked about. <span class="muted">(Roadmap: push this further by sampling the pattern per-channel with a small phase offset so the cells themselves — not just edges — are RGB-split.)</span></li>
+<li><strong>Fades</strong> — <code>depthFade = exp(-waterDepth / _CausticDepth)</code> (gone in deep water) and a path fade (gone at grazing distance).</li>
+</ul>
+
+<h2 id="debug">14. Debug workflow (F10) <span class="pill">how to give good feedback</span></h2>
+<p>The fastest way to tell <em>which</em> layer is responsible for something is the F10 capture system. Pressing <strong>F10</strong> writes a set of PNGs + <code>.txt</code> sidecars to <span class="file">local-only/debug-screenshots/</span>. The sidecar logs camera position, sun state, sea radius, and the live water material values — read it first.</p>
+<p>The mode is the global int <code>_OceanDebugMode</code>; names/constants live in <span class="file">DebugModeConstants.cs</span> (C#) mirrored by <span class="file">Includes/DebugModes.hlsl</span> (shader), and are registered in <span class="file">WaterDebugModule.cs</span>.</p>
+<h4>The modes you'll use most</h4>
+<table>
+  <tr><th>Mode</th><th>Shows</th><th>Use when</th></tr>
+  <tr><td><code>Off</code> (0)</td><td>the real, final look</td><td>always start here</td></tr>
+  <tr><td><code>WaterData</code> (11)</td><td>RGB = the vertex contract (<span class="rgb"><r>depth</r></span>,<span class="rgb"><g>shore</g></span>,<span class="rgb"><b>body</b></span>)</td><td>"is the mesh data right?" — pond should be dark-blue/low</td></tr>
+  <tr><td><code>WaveHeight</code> (9) / <code>WaveSlope</code> (10) / <code>Normals</code> (6)</td><td>the detail-wave field</td><td>"are ripples being computed here?"</td></tr>
+  <tr><td><code>Foam</code> (7) / <code>FoamParts</code> (18)</td><td>foam amount / shore vs crest vs combined</td><td>foam glowing or missing</td></tr>
+  <tr><td><code>Glint</code> (5)</td><td>just the sun glint term</td><td>reflection looks wrong</td></tr>
+  <tr><td><code>SurfaceOnly</code> (25) / <code>VolumeOnly</code> (24) / <code>WaterOff</code> (26)</td><td>isolate surface vs volume vs neither</td><td><strong>"is this artifact the surface or the volume?"</strong> — the key binary test</td></tr>
+  <tr><td><code>Caustics*</code> (58–63)</td><td>caustic mask / light / pattern / prism</td><td>tuning the seabed light</td></tr>
+</table>
+<div class="box tip"><h4>How to report a water issue efficiently</h4>
+<ol class="tight">
+<li>Note the <strong>camera situation</strong> (on shore / underwater / high up; day or night).</li>
+<li>Run F10 and check <code>SurfaceOnly</code> vs <code>VolumeOnly</code> vs <code>WaterOff</code> — that localizes the layer.</li>
+<li>If it's the surface, check <code>WaveHeight</code>/<code>Foam</code>/<code>Glint</code>; if the volume, check <code>VolumeMask</code>/<code>VolumeOptical</code>/<code>Caustics*</code>.</li>
+<li>Tell me the mode where the artifact appears and the mode where it vanishes. That pair almost always pinpoints the code.</li>
+</ol></div>
+
+<h2 id="tuning">15. Tuning guide (which knob does what)</h2>
+<p>Most of these are set in <code>Planet.UpdateWaterMaterial()</code> as constants, or are material properties on the Ocean material. The two-layer split matters: <strong>swell</strong> knobs change geometry; <strong>wave</strong> knobs change fragment detail.</p>
+<table>
+  <tr><th>Property</th><th>Controls</th><th>Notes</th></tr>
+  <tr><td><code>_SwellAmplitude</code></td><td>height of the real geometric waves (m)</td><td>raise to make waves obvious; ~2.5 default</td></tr>
+  <tr><td><code>_SwellWavelength</code></td><td>size/spacing of the geometric waves (m)</td><td>keep ≳70 or crests go jagged (mesh limit)</td></tr>
+  <tr><td><code>_WaveAmplitude</code> / <code>_WaveScale</code></td><td>fragment <em>detail</em> normal strength &amp; size</td><td>surface texture/sparkle, not geometry</td></tr>
+  <tr><td><code>_WaveSpeed</code></td><td>animation speed for both layers</td><td></td></tr>
+  <tr><td><code>_ShallowColor</code> / <code>_DeepColor</code></td><td>water color by depth</td><td>blended by <span class="rgb"><r>depth01</r></span></td></tr>
+  <tr><td><code>_ShallowDepth</code> / <code>_DeepDepth</code></td><td>where the shallow→deep color transition sits (m)</td><td></td></tr>
+  <tr><td><code>_ShoreFoamDepth</code> / <code>_ShoreFoamIntensity</code></td><td>shoreline foam band width &amp; strength</td><td></td></tr>
+  <tr><td><code>_WhitecapIntensity</code></td><td>crest foam in open/windy water</td><td>driven by wind + body</td></tr>
+  <tr><td><code>_SunGlitterIntensity</code> / <code>_SunGlitterPower</code></td><td>sun glint strength / tightness</td><td>high power = tighter sparkle</td></tr>
+  <tr><td><code>_CausticIntensity</code> / <code>_CausticContrast</code> / <code>_CausticPrismStrength</code></td><td>seabed caustics (set in the render feature)</td><td>volume layer</td></tr>
+  <tr><td><code>_RefractionStrength</code></td><td>seabed wobble through the water</td><td>volume layer</td></tr>
+</table>
+
+<h2 id="files">16. File reference</h2>
+<table>
+  <tr><th>File</th><th>Role</th></tr>
+  <tr><td><span class="file">Planet/Planet.cs</span></td><td>Orchestrates water build; creates the GameObject + material; sets material constants; reports progress.</td></tr>
+  <tr><td><span class="file">Planet/WaterMeshBuilder.cs</span></td><td>Builds the clipped water mesh + the vertex-color contract + the volume "lip" mesh. Pure data, worker-thread.</td></tr>
+  <tr><td><span class="file">Shaders/Ocean.shader</span></td><td>The visible surface: vertex swell (<code>ComputeOceanSwell</code>) + fragment color/foam/glint/fresnel + all surface debug modes.</td></tr>
+  <tr><td><span class="file">Shaders/WaterVolume.shader</span></td><td>Full-screen underwater body: fog, caustics, refraction, far-shore waterline.</td></tr>
+  <tr><td><span class="file">Shaders/WaterVolumePrepass.shader</span></td><td>Writes the <code>_WaterInterfaceTexture</code> coverage/data from the water + lip meshes.</td></tr>
+  <tr><td><span class="file">Planet/WaterVolumeRenderFeature.cs</span></td><td>URP feature: finds the water, copies settings, enqueues the prepass + composite passes.</td></tr>
+  <tr><td><span class="file">Shaders/Includes/CloudShadows.hlsl</span></td><td>Provides <code>SampleCloudShadowWeather</code> (storm/foam input) + <code>CloudShadowFactor</code> (shadows on water) + wind globals.</td></tr>
+  <tr><td><span class="file">Planet/WeatherManager.cs</span></td><td>Pushes <code>_WindDirection</code>/<code>_WindSpeed</code>; owns the weather grid that drives storms.</td></tr>
+  <tr><td><span class="file">Core/Services/DebugModeConstants.cs</span> · <span class="file">Shaders/Includes/DebugModes.hlsl</span></td><td>The <code>_OceanDebugMode</code> enum, mirrored C#↔shader.</td></tr>
+  <tr><td><span class="file">Core/Services/WaterDebugModule.cs</span></td><td>Registers F10 modes + names; drives the capture sidecar contents.</td></tr>
+  <tr><td><span class="file">.amazonq/rules/memory-bank/water.md</span></td><td>The running design log — <em>why</em> things are the way they are, and what was tried and rejected. Read it for history.</td></tr>
+</table>
+
+<h2 id="glossary">17. Glossary</h2>
+<table>
+  <tr><td><strong>depth01 / shore01 / body01</strong></td><td>The three vertex-color channels (§5). The data bus of the whole system.</td></tr>
+  <tr><td><strong>Sea level radius</strong> (<code>_SeaLevelRadius</code>)</td><td>Distance from planet center to the ocean surface. The water mesh sits here; the volume uses it to test "underwater."</td></tr>
+  <tr><td><strong>Swell</strong></td><td>Large geometric waves displacing the mesh (vertex shader).</td></tr>
+  <tr><td><strong>Detail normals</strong></td><td>Small fragment-shader ripples — no geometry, just shading.</td></tr>
+  <tr><td><strong>Volume / surface / atmosphere</strong></td><td>The three render layers, drawn in that order (§2–3).</td></tr>
+  <tr><td><strong>Lip mesh</strong></td><td>Invisible under-terrain skirt used only for volume coverage at the waterline.</td></tr>
+  <tr><td><strong>Water interface texture</strong></td><td>Screen-space record of where water is + its data, written by the prepass, read by the volume &amp; atmosphere.</td></tr>
+  <tr><td><strong>Triplanar / tangent frame</strong></td><td>Techniques for evaluating waves on a sphere without pole distortion (world position projected onto wind-aligned axes).</td></tr>
+</table>
+
+<hr>
+<p class="muted">Generated 2026-05-28. This describes the system as it stands after the swell-displacement rewrite (waves moved from a camera patch to vertex displacement on the existing ocean mesh). If the code and this doc disagree, the code wins — and please tell me so I can update this.</p>
+
+</main>
+</div>
+</body>
+</html>

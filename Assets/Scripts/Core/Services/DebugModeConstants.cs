@@ -100,8 +100,25 @@ public static class DebugModeConstants
     public const int BottomDistortionVector = 62;
     public const int CausticsPrism = 63;
 
+    // Water Surface: night-lighting discovery
+    public const int SurfaceNightTerms = 64;
+    public const int SurfaceLumaHeat = 65;
+
+    // Water Surface: wave / swell discovery
+    public const int WaveSwell = 66;
+    public const int WaveEnergy = 67;
+    public const int WavePhase = 68;
+    public const int WaveGrid = 69;
+
+    // Water Surface: foam discovery
+    public const int FoamOnSwell = 70;
+    public const int FoamLocator = 71;
+
+    // Water Surface: glint discovery
+    public const int GlintLocator = 72;
+
     /// <summary>Highest defined mode value. Update when adding new modes.</summary>
-    public const int Max = 63;
+    public const int Max = 72;
 
     public static bool SuppressesWeatherPasses(int mode)
     {
@@ -114,6 +131,15 @@ public static class DebugModeConstants
             || mode == FoamPink
             || mode == SurfaceBackfacePink
             || (mode >= WakeMask && mode <= SurfaceFxProof)
-            || (mode >= CausticsOnly && mode <= CausticsPrism);
+            || (mode >= CausticsOnly && mode <= CausticsPrism)
+            || mode == SurfaceNightTerms
+            || mode == SurfaceLumaHeat
+            || mode == WaveSwell
+            || mode == WaveEnergy
+            || mode == WavePhase
+            || mode == WaveGrid
+            || mode == FoamOnSwell
+            || mode == FoamLocator
+            || mode == GlintLocator;
     }
 }

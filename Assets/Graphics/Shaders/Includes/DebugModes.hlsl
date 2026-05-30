@@ -106,7 +106,24 @@
 #define DEBUG_BOTTOM_DISTORTION_VECTOR    62
 #define DEBUG_CAUSTICS_PRISM              63
 
+// --- Water Surface: night-lighting discovery ---
+#define DEBUG_SURFACE_NIGHT_TERMS         64
+#define DEBUG_SURFACE_LUMA_HEAT           65
+
+// --- Water Surface: wave / swell discovery ---
+#define DEBUG_WATER_WAVE_SWELL            66
+#define DEBUG_WATER_WAVE_ENERGY           67
+#define DEBUG_WATER_WAVE_PHASE            68
+#define DEBUG_WATER_WAVE_GRID             69
+
+// --- Water Surface: foam discovery ---
+#define DEBUG_WATER_FOAM_ON_SWELL         70
+#define DEBUG_WATER_FOAM_LOCATOR          71
+
+// --- Water Surface: glint discovery ---
+#define DEBUG_WATER_GLINT_LOCATOR         72
+
 // Convenience: last defined mode. Update when adding new modes.
-#define DEBUG_MODE_MAX                    63
+#define DEBUG_MODE_MAX                    72
 
 #endif

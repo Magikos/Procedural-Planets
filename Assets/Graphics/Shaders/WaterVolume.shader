@@ -11,12 +11,9 @@ Shader "Hidden/WaterVolume"
         _VolumeDensity ("Volume Density", Range(0.1, 4)) = 1.65
         _RefractionStrength ("Refraction Strength", Range(0, 1)) = 0.38
         _CausticIntensity ("Caustic Intensity", Range(0, 8)) = 0.42
-        _CausticScale ("Caustic Scale", Float) = 0.052
-        _CausticSpeed ("Caustic Speed", Range(0, 4)) = 0.75
         _CausticDepth ("Caustic Depth", Float) = 115
         _CausticContrast ("Caustic Contrast", Range(0.25, 8)) = 1.35
         _CausticPrismStrength ("Caustic Prism Strength", Range(0, 2)) = 0.46
-        _CausticPrismEdgeBoost ("Caustic Prism Edge Boost", Float) = 18
     }
 
     HLSLINCLUDE
@@ -42,12 +39,13 @@ Shader "Hidden/WaterVolume"
     float _VolumeDensity;
     float _RefractionStrength;
     float _CausticIntensity;
-    float _CausticScale;
-    float _CausticSpeed;
     float _CausticDepth;
     float _CausticContrast;
     float _CausticPrismStrength;
-    float _CausticPrismEdgeBoost;
+
+    // Non-serialized caustic constants - tuned values, not material parameters.
+    static const float CAUSTIC_SCALE = 0.075;
+    static const float CAUSTIC_SPEED = 1.05;
     float3 _PlanetCenter;
     float _SeaLevelRadius;
     float3 _SunParams;
@@ -256,51 +254,129 @@ Shader "Hidden/WaterVolume"
         return saturate(core * 0.34 + halo * 0.22);
     }
 
+    // Organic streaky shapes that FLOW directionally (was: huge in-place warping that morphed
+    // rather than translated, making the pattern feel like it was being kneaded in place).
+    //
+    // - Each of the three voronoi layers gets its own DIRECTIONAL FLOW VECTOR multiplied by time,
+    //   so the cells visibly scroll across the bottom like wave-cast light moving past.
+    // - Warping is now subtle (0.30 / 0.15 magnitude vs old 1.15 / 0.40) so the shapes maintain
+    //   identity as they travel instead of being smashed into morphing blobs.
+    // - Multiplicative combinations (a*b, b*c) keep the streaky branching shapes from the previous
+    //   rework - that part was working.
+    // - Time is linear at three different rates - non-linear sin wobble was creating a robotic
+    //   "rhythm" instead of natural flow.
     float CausticPatternUv(float2 uv, float time)
     {
-        float2 waveWarp = float2(
-            sin(dot(uv, float2(0.73, 1.27)) + time * 0.42),
-            sin(dot(uv, float2(-1.11, 0.91)) - time * 0.37)) * 0.18;
-        float2 warpedUv = uv + waveWarp;
-        float baseLayer = CausticVoronoi(warpedUv + float2(time * 0.17, -time * 0.09), time);
-        float detailLayer = CausticVoronoi(warpedUv * 1.63 + float2(-time * 0.11, time * 0.15), time * 1.27);
-        float caustic = saturate(baseLayer * 0.86 + detailLayer * 0.38 + baseLayer * detailLayer * 0.18);
-        caustic = smoothstep(0.10, 0.58, caustic);
+        // Two time signals per layer:
+        //   flow*  - monotonic, drives translation (cells visibly travel forward, no jitter)
+        //   anim*  - flow + a slow sin wobble, drives voronoi phase + warp phase (cells morph
+        //            at organic non-uniform rate without affecting spatial position)
+        // Three different wobble periods so layers don't synchronize into a single breathing.
+        float flowSlow = time * 0.42;
+        float flowMid  = time * 0.75;
+        float flowFast = time * 1.20;
+
+        float animSlow = flowSlow + sin(time * 0.09) * 0.70;
+        float animMid  = flowMid  + sin(time * 0.15) * 0.50;
+        float animFast = flowFast + sin(time * 0.23) * 0.30;
+
+        // Subtle two-stage warp - wobbling time so the warp shape evolves organically
+        float2 macroWarp = float2(
+            sin(dot(uv * 0.28, float2(0.55, -0.79)) + animSlow * 0.55),
+            cos(dot(uv * 0.28, float2(0.83, 0.41)) - animSlow * 0.48)) * 0.30;
+        float2 microWarp = float2(
+            sin(dot(uv + macroWarp, float2(0.73, 1.27)) + animFast * 0.80),
+            cos(dot(uv + macroWarp, float2(-1.11, 0.91)) - animFast * 0.72)) * 0.15;
+        float2 warpedUv = uv + macroWarp + microWarp;
+
+        // Per-layer flow vectors - cells visibly TRANSLATE in different directions.
+        // Translation uses flow* (monotonic), cell evolution uses anim* (wobbling).
+        float2 flow1 = float2( 0.55,  0.32);
+        float2 flow2 = float2(-0.42,  0.61);
+        float2 flow3 = float2( 0.28, -0.47);
+
+        float layer1 = CausticVoronoi(warpedUv          + flow1 * flowSlow, animSlow);
+        float layer2 = CausticVoronoi(warpedUv * 1.82   + flow2 * flowMid , animMid  * 0.7);
+        float layer3 = CausticVoronoi(warpedUv * 3.16   + flow3 * flowFast, animFast * 1.45);
+
+        // Multiplicative streak combination kept from previous rework (worked well)
+        float caustic = saturate(layer1 * 0.62
+                               + layer1 * layer2 * 0.55
+                               + layer2 * layer3 * 0.35
+                               + layer3 * 0.14);
+        caustic = smoothstep(0.08, 0.55, caustic);
         return pow(caustic, max(_CausticContrast, 0.05));
     }
 
     float CausticPattern(float3 worldPos, float3 planetUp)
     {
-        float3 local = (worldPos - _PlanetCenter) * max(_CausticScale, 0.0001);
+        float3 local = (worldPos - _PlanetCenter) * CAUSTIC_SCALE;
         float3 weights = pow(abs(planetUp), 4.0);
         weights /= max(weights.x + weights.y + weights.z, 0.0001);
 
-        float time = _GameTime * _CausticSpeed;
+        float time = _GameTime * CAUSTIC_SPEED;
         float causticX = CausticPatternUv(local.yz + float2(11.37, -4.91), time);
         float causticY = CausticPatternUv(local.zx + float2(-6.53, 8.24), time * 1.03);
         float causticZ = CausticPatternUv(local.xy + float2(3.19, 13.72), time * 0.97);
         return causticX * weights.x + causticY * weights.y + causticZ * weights.z;
     }
 
-    float3 CausticPrismColor(float pattern)
+    // Chromatic aberration done correctly: ONE pattern, sampled three times at the SAME TIME
+    // but at slightly offset SPATIAL positions per R/G/B channel.
+    //
+    // This models how chromatic aberration actually works in nature: a single light pattern
+    // refracts through water, but different wavelengths bend at slightly different angles, so
+    // each colour lands at a slightly shifted position on the bottom. The pattern itself is
+    // one shape; we just sample it three times in slightly different places.
+    //
+    // Result: where all three samples land on the same bright streak -> RGB add to white (or
+    // white * tint). Where the offset crosses a gradient (edge of a streak), R/G/B see slightly
+    // different brightness levels -> visible rainbow rim at that edge.
+    //
+    // CRITICAL: identical TIME across channels so the three sampled copies move as ONE shape
+    // (previously had timeShift, which made R animate ahead of G ahead of B and looked like
+    // three separate animated bands rather than one chromatic pattern).
+    float3 CausticChromaticPattern(float3 worldPos, float3 planetUp)
     {
-        if (_CausticPrismStrength <= 0.0)
-            return 0.0;
+        float3 local = (worldPos - _PlanetCenter) * CAUSTIC_SCALE;
+        float3 weights = pow(abs(planetUp), 4.0);
+        weights /= max(weights.x + weights.y + weights.z, 0.0001);
 
-        float2 gradient = float2(ddx(pattern), ddy(pattern));
-        float gradientLength = length(gradient);
-        float edge = saturate(gradientLength * max(_CausticPrismEdgeBoost, 0.0));
-        float2 gradientDir = gradient * rsqrt(max(dot(gradient, gradient), 0.000001));
-        float ridgeMask = smoothstep(0.03, 0.42, pattern);
-        float side = dot(gradientDir, float2(0.7415, -0.6709));
-        float redSide = smoothstep(-0.12, 0.92, side);
-        float blueSide = smoothstep(-0.12, 0.92, -side);
-        float greenCenter = saturate(1.0 - abs(side) * 1.18);
+        float baseTime = _GameTime * CAUSTIC_SPEED;
+        float prismMag = max(_CausticPrismStrength, 0.0);
 
-        float3 redFringe = float3(1.00, 0.22, 0.06) * redSide;
-        float3 greenFringe = float3(0.08, 0.95, 0.20) * greenCenter * 0.70;
-        float3 blueFringe = float3(0.16, 0.36, 1.00) * blueSide;
-        return (redFringe + greenFringe + blueFringe) * edge * ridgeMask;
+        // Spatial offset only. Magnitude ~3.4% of a voronoi cell at full strength - small enough
+        // that interiors of bright streaks see all three channels at peak (= white) but big
+        // enough that streak edges show visible rainbow rims as one channel finishes its ridge
+        // before the next channel does.
+        float chromaShift = prismMag * 0.034;
+        float2 offsetR = float2( chromaShift,  chromaShift * 0.55);
+        float2 offsetB = float2(-chromaShift, -chromaShift * 0.55);
+
+        float2 uvX = local.yz + float2(11.37, -4.91);
+        float2 uvY = local.zx + float2(-6.53, 8.24);
+        float2 uvZ = local.xy + float2(3.19, 13.72);
+
+        // Per-axis time multipliers stay to break up triplanar tiling, but ALL THREE channels
+        // of a given axis share that axis's time exactly -> they move as one shape.
+        float tX = baseTime;
+        float tY = baseTime * 1.03;
+        float tZ = baseTime * 0.97;
+
+        float3 patternX = float3(
+            CausticPatternUv(uvX + offsetR, tX),
+            CausticPatternUv(uvX,           tX),
+            CausticPatternUv(uvX + offsetB, tX));
+        float3 patternY = float3(
+            CausticPatternUv(uvY + offsetR, tY),
+            CausticPatternUv(uvY,           tY),
+            CausticPatternUv(uvY + offsetB, tY));
+        float3 patternZ = float3(
+            CausticPatternUv(uvZ + offsetR, tZ),
+            CausticPatternUv(uvZ,           tZ),
+            CausticPatternUv(uvZ + offsetB, tZ));
+
+        return patternX * weights.x + patternY * weights.y + patternZ * weights.z;
     }
 
     float2 BottomDistortionField(float3 worldPos)
@@ -482,15 +558,22 @@ Shader "Hidden/WaterVolume"
             return result;
         }
 
-        float pattern = CausticPattern(receiverWS, planetUp);
+        // Chromatic pattern: per-channel time/scale-shifted samples of the reworked organic pattern.
+        // Replaces the old (single-channel pattern + gradient-direction prism color) approach.
+        // chromaticPattern.rgb each carry their own version of the caustic - aligned where waves
+        // focus uniformly, diverged where waves focus per-wavelength-of-light slightly differently.
+        float3 chromaticPattern = CausticChromaticPattern(receiverWS, planetUp);
+        float pattern = (chromaticPattern.r + chromaticPattern.g + chromaticPattern.b) * (1.0 / 3.0);
         float shallow01 = saturate(waterDepth / max(_CausticDepth, 1.0));
-        float3 causticColor = lerp(float3(1.0, 0.93, 0.72), float3(0.42, 0.80, 0.95), shallow01);
-        float prismMask = saturate(mask * depthFade * pathFade * light);
-        float3 prismColor = CausticPrismColor(pattern);
-        float prismPresence = saturate(max(prismColor.r, max(prismColor.g, prismColor.b)) * _CausticPrismStrength);
-        float whitePattern = pattern * (1.0 - prismPresence * 0.42);
-        float intensity = whitePattern * _CausticIntensity * mask * depthFade * pathFade * light;
-        float3 prismContribution = prismColor * _CausticPrismStrength * prismMask * (0.55 + pattern * 0.75);
+
+        // Base tint shifts shallow=warm-yellow to deep=cool-blue (kept from old). Chromatic
+        // separation rides ON TOP of this tint - so e.g. in shallow yellow water you still see
+        // R/G/B fringes as warm-shifted versions of the channels rather than pure rainbow.
+        float3 shallowTint = float3(1.05, 0.95, 0.72);
+        float3 deepTint = float3(0.45, 0.85, 1.05);
+        float3 baseTint = lerp(shallowTint, deepTint, shallow01);
+
+        float intensity = _CausticIntensity * mask * depthFade * pathFade * light;
 
         result.mask = mask;
         result.pattern = pattern;
@@ -501,8 +584,8 @@ Shader "Hidden/WaterVolume"
         result.light = light;
         result.waterDepth = waterDepth;
         result.waterPath = waterPath;
-        result.contribution = causticColor * intensity;
-        result.prismContribution = prismContribution;
+        result.contribution = chromaticPattern * baseTint * intensity;
+        result.prismContribution = 0.0; // Chromatic is built into contribution now; prism color is retired.
         return result;
     }
 
@@ -629,8 +712,15 @@ Shader "Hidden/WaterVolume"
 
         if (_OceanDebugMode == DEBUG_CAUSTICS_PRISM)
         {
-            float3 prismProof = caustics.prismContribution * 8.0;
-            return float4(saturate(prismProof), 1.0);
+            // Shows the chromatic separation directly. caustics.contribution now carries the
+            // RGB-shifted pattern * baseTint. Subtracting the luminance leaves only the
+            // *deviation* of each channel from the average - i.e., the chromatic fringes -
+            // amplified for visibility. Where R/G/B align the result is black; where they
+            // diverge slightly the corresponding channel pops.
+            float3 c = caustics.contribution * 8.0;
+            float luma = (c.r + c.g + c.b) * (1.0 / 3.0);
+            float3 chromaticDeviation = (c - luma) * 4.0 + 0.5; // amplify deviation, recentre at grey
+            return float4(saturate(chromaticDeviation), 1.0);
         }
 
         float causticMask = caustics.mask * caustics.depthFade * caustics.pathFade * caustics.light;

@@ -79,7 +79,8 @@ bool ShouldBypassAtmosphereForWaterDebug()
         || _OceanDebugMode == DEBUG_FOAM_PINK
         || _OceanDebugMode == DEBUG_SURFACE_BACKFACE_PINK
         || (_OceanDebugMode >= DEBUG_WAKE_MASK && _OceanDebugMode <= DEBUG_SURFACE_FX_PROOF)  // surface isolation 51-57
-        || (_OceanDebugMode >= DEBUG_CAUSTICS_ONLY && _OceanDebugMode <= DEBUG_CAUSTICS_PRISM);
+        || (_OceanDebugMode >= DEBUG_CAUSTICS_ONLY && _OceanDebugMode <= DEBUG_CAUSTICS_PRISM)
+        || (_OceanDebugMode >= DEBUG_SURFACE_NIGHT_TERMS && _OceanDebugMode <= DEBUG_WATER_GLINT_LOCATOR); // night + wave + foam + glint discovery 64-72
 }
 
 float CompositeDepthScaled(float2 uv, float viewLength)

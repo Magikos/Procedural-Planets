@@ -17,20 +17,14 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
     static readonly int _refractionStrengthId = Shader.PropertyToID("_RefractionStrength");
     static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
     static readonly int _causticIntensityId = Shader.PropertyToID("_CausticIntensity");
-    static readonly int _causticScaleId = Shader.PropertyToID("_CausticScale");
-    static readonly int _causticSpeedId = Shader.PropertyToID("_CausticSpeed");
     static readonly int _causticDepthId = Shader.PropertyToID("_CausticDepth");
     static readonly int _causticContrastId = Shader.PropertyToID("_CausticContrast");
     static readonly int _causticPrismStrengthId = Shader.PropertyToID("_CausticPrismStrength");
-    static readonly int _causticPrismEdgeBoostId = Shader.PropertyToID("_CausticPrismEdgeBoost");
     const float RefractionStrength = 0.30f;
     const float CausticIntensity = 0.42f;
-    const float CausticScale = 0.052f;
-    const float CausticSpeed = 0.75f;
     const float CausticDepth = 115f;
     const float CausticContrast = 1.35f;
     const float CausticPrismStrength = 0.46f;
-    const float CausticPrismEdgeBoost = 18f;
 
     WaterVolumePrepassRenderPass _prepassPass;
     WaterVolumeCompositeRenderPass _compositePass;
@@ -228,18 +222,12 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
             destination.SetFloat(_refractionStrengthId, RefractionStrength);
         if (destination.HasProperty(_causticIntensityId))
             destination.SetFloat(_causticIntensityId, CausticIntensity);
-        if (destination.HasProperty(_causticScaleId))
-            destination.SetFloat(_causticScaleId, CausticScale);
-        if (destination.HasProperty(_causticSpeedId))
-            destination.SetFloat(_causticSpeedId, CausticSpeed);
         if (destination.HasProperty(_causticDepthId))
             destination.SetFloat(_causticDepthId, CausticDepth);
         if (destination.HasProperty(_causticContrastId))
             destination.SetFloat(_causticContrastId, CausticContrast);
         if (destination.HasProperty(_causticPrismStrengthId))
             destination.SetFloat(_causticPrismStrengthId, CausticPrismStrength);
-        if (destination.HasProperty(_causticPrismEdgeBoostId))
-            destination.SetFloat(_causticPrismEdgeBoostId, CausticPrismEdgeBoost);
     }
 }
 

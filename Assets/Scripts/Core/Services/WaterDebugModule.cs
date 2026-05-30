@@ -14,6 +14,10 @@ public static class WaterDebugIds
     public static readonly DebugCaptureSetId Caustics = new DebugCaptureSetId(Module, "caustics");
     public static readonly DebugCaptureSetId Wakes = new DebugCaptureSetId(Module, "wakes");
     public static readonly DebugCaptureSetId VolumeDeepDive = new DebugCaptureSetId(Module, "volume-deep-dive");
+    public static readonly DebugCaptureSetId Night = new DebugCaptureSetId(Module, "night");
+    public static readonly DebugCaptureSetId Waves = new DebugCaptureSetId(Module, "waves");
+    public static readonly DebugCaptureSetId Foam = new DebugCaptureSetId(Module, "foam");
+    public static readonly DebugCaptureSetId Glint = new DebugCaptureSetId(Module, "glint");
 
     public static DebugModeId Mode(int localId)
     {
@@ -173,6 +177,15 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         RegisterMode(registry, DebugModeConstants.BottomDistortionOnly, "BottomDistortionOnly", "Water Foundation");
         RegisterMode(registry, DebugModeConstants.BottomDistortionVector, "BottomDistortionVector", "Water Foundation");
         RegisterMode(registry, DebugModeConstants.CausticsPrism, "CausticsPrism", "Water Caustics");
+        RegisterMode(registry, DebugModeConstants.SurfaceNightTerms, "NightTerms", "Water Night");
+        RegisterMode(registry, DebugModeConstants.SurfaceLumaHeat, "LumaHeat", "Water Night");
+        RegisterMode(registry, DebugModeConstants.WaveSwell, "WaveSwell", "Water Waves");
+        RegisterMode(registry, DebugModeConstants.WaveEnergy, "WaveEnergy", "Water Waves");
+        RegisterMode(registry, DebugModeConstants.WavePhase, "WavePhase", "Water Waves");
+        RegisterMode(registry, DebugModeConstants.WaveGrid, "WaveGrid", "Water Waves");
+        RegisterMode(registry, DebugModeConstants.FoamOnSwell, "FoamOnSwell", "Water Foam");
+        RegisterMode(registry, DebugModeConstants.FoamLocator, "FoamLocator", "Water Foam");
+        RegisterMode(registry, DebugModeConstants.GlintLocator, "GlintLocator", "Water Glint");
     }
 
     static void RegisterCaptureSets(DebugRegistry registry)
@@ -203,13 +216,28 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
             Modes(DebugModeConstants.Off, DebugModeConstants.AtmosphereBypass,
                 DebugModeConstants.AtmosphereWaterCut, DebugModeConstants.AtmosphereContribution,
                 DebugModeConstants.PrecipitationContribution));
-        registry.RegisterCaptureSet(WaterDebugIds.Caustics, "Water Foundation",
-            Modes(DebugModeConstants.Off, DebugModeConstants.VolumeOnly, DebugModeConstants.SurfaceOnly,
-                DebugModeConstants.BottomDistortionOnly, DebugModeConstants.BottomDistortionVector, DebugModeConstants.CausticsOnly,
-                DebugModeConstants.CausticsPrism, DebugModeConstants.CausticsMask,
-                DebugModeConstants.CausticsLight, DebugModeConstants.VolumeMask,
-                DebugModeConstants.WaterOff));
-        registry.RegisterDefaultCaptureSet(WaterDebugIds.SurfaceFinish, "Water Surface Finish",
+        registry.RegisterDefaultCaptureSet(WaterDebugIds.Glint, "Water Glint",
+            Modes(DebugModeConstants.Off, DebugModeConstants.SurfaceOnly,
+                DebugModeConstants.GlintLocator, DebugModeConstants.WaterGlint,
+                DebugModeConstants.WaterLighting, DebugModeConstants.WaterWaveSlope,
+                DebugModeConstants.WaterNormals));
+        registry.RegisterCaptureSet(WaterDebugIds.Caustics, "Water Caustics",
+            Modes(DebugModeConstants.Off, DebugModeConstants.VolumeOnly,
+                DebugModeConstants.CausticsOnly, DebugModeConstants.CausticsPrism,
+                DebugModeConstants.CausticsMask, DebugModeConstants.CausticsLight,
+                DebugModeConstants.BottomDistortionOnly));
+        registry.RegisterCaptureSet(WaterDebugIds.Foam, "Water Foam",
+            Modes(DebugModeConstants.Off, DebugModeConstants.SurfaceOnly,
+                DebugModeConstants.FoamLocator, DebugModeConstants.WaterFoam,
+                DebugModeConstants.FoamParts, DebugModeConstants.FoamOnSwell,
+                DebugModeConstants.WaveSwell, DebugModeConstants.WaterWaveSlope));
+        registry.RegisterCaptureSet(WaterDebugIds.Waves, "Water Waves",
+            Modes(DebugModeConstants.Off, DebugModeConstants.SurfaceOnly,
+                DebugModeConstants.WaveGrid, DebugModeConstants.WaveSwell,
+                DebugModeConstants.WavePhase, DebugModeConstants.WaveEnergy,
+                DebugModeConstants.WaterWaveHeight, DebugModeConstants.WaterWaveSlope,
+                DebugModeConstants.WaterNormals));
+        registry.RegisterCaptureSet(WaterDebugIds.SurfaceFinish, "Water Surface Finish",
             Modes(DebugModeConstants.Off, DebugModeConstants.AtmosphereBypass, DebugModeConstants.WaterNoPost,
                 DebugModeConstants.SurfaceOnly, DebugModeConstants.WaterDepth, DebugModeConstants.WaterData, DebugModeConstants.WaterLighting,
                 DebugModeConstants.WaterGlint, DebugModeConstants.WaterNormals, DebugModeConstants.WaterFoam,
@@ -226,6 +254,10 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
                 DebugModeConstants.SurfaceAlphaParts, DebugModeConstants.SurfaceAlpha,
                 DebugModeConstants.SurfaceBlend, DebugModeConstants.SurfacePolish,
                 DebugModeConstants.SurfaceFxProof));
+        registry.RegisterCaptureSet(WaterDebugIds.Night, "Water Night",
+            Modes(DebugModeConstants.Off, DebugModeConstants.SurfaceOnly, DebugModeConstants.VolumeOnly,
+                DebugModeConstants.WaterOff, DebugModeConstants.WaterLighting,
+                DebugModeConstants.SurfaceLumaHeat, DebugModeConstants.SurfaceNightTerms));
         registry.RegisterCaptureSet(WaterDebugIds.Wakes, "Water Wakes",
             Modes(DebugModeConstants.Off, DebugModeConstants.WakeMask, DebugModeConstants.WaterFoam,
                 DebugModeConstants.FoamParts, DebugModeConstants.WaterNormals,
