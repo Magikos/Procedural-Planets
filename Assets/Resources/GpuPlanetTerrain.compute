@@ -1,0 +1,278 @@
+// Generates root planet patch vertices and normals into GPU buffers.
+//
+// This mirrors the CPU ShapeGenerator layer model closely enough for the GPU surface proof:
+// same layer ordering, mask rules, filter types, and seeded simplex permutation pattern.
+
+#pragma kernel CSGenerateTerrain
+
+struct GpuNoiseLayer
+{
+    int Enabled;
+    int FilterType;
+    int UseFirstLayerAsMask;
+    int Layers;
+    int Seed;
+    float Strength;
+    float BaseRoughness;
+    float Roughness;
+    float Persistence;
+    float3 Center;
+    float MinValue;
+};
+
+StructuredBuffer<GpuNoiseLayer> _NoiseLayers;
+RWStructuredBuffer<float4> _Vertices;
+RWStructuredBuffer<float4> _NormalsAndElevation;
+
+int _Resolution;
+int _FaceIndex;
+int _NoiseLayerCount;
+int _UseNoise;
+float _PlanetRadius;
+
+static const int Source[256] =
+{
+    151,160,137,91,90,15,131,13,201,95,96,53,194,233,7,225,
+    140,36,103,30,69,142,8,99,37,240,21,10,23,190,6,148,
+    247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,
+    57,177,33,88,237,149,56,87,174,20,125,136,171,168,68,175,
+    74,165,71,134,139,48,27,166,77,146,158,231,83,111,229,122,
+    60,211,133,230,220,105,92,41,55,46,245,40,244,102,143,54,
+    65,25,63,161,1,216,80,73,209,76,132,187,208,89,18,169,
+    200,196,135,130,116,188,159,86,164,100,109,198,173,186,3,64,
+    52,217,226,250,124,123,5,202,38,147,118,126,255,82,85,212,
+    207,206,59,227,47,16,58,17,182,189,28,42,223,183,170,213,
+    119,248,152,2,44,154,163,70,221,153,101,155,167,43,172,9,
+    129,22,39,253,19,98,108,110,79,113,224,232,178,185,112,104,
+    218,246,97,228,251,34,242,193,238,210,144,12,191,179,162,241,
+    81,51,145,235,249,14,239,107,49,192,214,31,181,199,106,157,
+    184,84,204,176,115,121,50,45,127,4,150,254,138,236,205,93,
+    222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180
+};
+
+int Perm(int index, int noiseSeed)
+{
+    int v = Source[index & 255];
+    v ^= noiseSeed & 255;
+    v ^= (noiseSeed >> 8) & 255;
+    v ^= (noiseSeed >> 16) & 255;
+    v ^= (noiseSeed >> 24) & 255;
+    return v & 255;
+}
+
+float Grad3Dot(int hash, float x, float y, float z)
+{
+    if (hash == 0) return x + y;
+    if (hash == 1) return -x + y;
+    if (hash == 2) return x - y;
+    if (hash == 3) return -x - y;
+    if (hash == 4) return x + z;
+    if (hash == 5) return -x + z;
+    if (hash == 6) return x - z;
+    if (hash == 7) return -x - z;
+    if (hash == 8) return y + z;
+    if (hash == 9) return -y + z;
+    if (hash == 10) return y - z;
+    if (hash == 11) return -y - z;
+    return 0.0;
+}
+
+float Simplex(float3 samplePoint, int noiseSeed)
+{
+    const float F3 = 1.0 / 3.0;
+    const float G3 = 1.0 / 6.0;
+
+    float x = samplePoint.x;
+    float y = samplePoint.y;
+    float z = samplePoint.z;
+    float n0 = 0.0;
+    float n1 = 0.0;
+    float n2 = 0.0;
+    float n3 = 0.0;
+
+    float s = (x + y + z) * F3;
+    int i = (int)floor(x + s);
+    int j = (int)floor(y + s);
+    int k = (int)floor(z + s);
+
+    float t = (i + j + k) * G3;
+    float x0 = x - (i - t);
+    float y0 = y - (j - t);
+    float z0 = z - (k - t);
+
+    int i1, j1, k1, i2, j2, k2;
+    if (x0 >= y0)
+    {
+        if (y0 >= z0)      { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
+        else if (x0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 0; k2 = 1; }
+        else               { i1 = 0; j1 = 0; k1 = 1; i2 = 1; j2 = 0; k2 = 1; }
+    }
+    else
+    {
+        if (y0 < z0)       { i1 = 0; j1 = 0; k1 = 1; i2 = 0; j2 = 1; k2 = 1; }
+        else if (x0 < z0)  { i1 = 0; j1 = 1; k1 = 0; i2 = 0; j2 = 1; k2 = 1; }
+        else               { i1 = 0; j1 = 1; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
+    }
+
+    float x1 = x0 - i1 + G3;
+    float y1 = y0 - j1 + G3;
+    float z1 = z0 - k1 + G3;
+    float x2 = x0 - i2 + F3;
+    float y2 = y0 - j2 + F3;
+    float z2 = z0 - k2 + F3;
+    float x3 = x0 - 0.5;
+    float y3 = y0 - 0.5;
+    float z3 = z0 - 0.5;
+
+    int ii = i & 255;
+    int jj = j & 255;
+    int kk = k & 255;
+
+    float q0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
+    if (q0 > 0.0)
+    {
+        q0 *= q0;
+        int gi0 = Perm(ii + Perm(jj + Perm(kk, noiseSeed), noiseSeed), noiseSeed) % 12;
+        n0 = q0 * q0 * Grad3Dot(gi0, x0, y0, z0);
+    }
+
+    float q1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
+    if (q1 > 0.0)
+    {
+        q1 *= q1;
+        int gi1 = Perm(ii + i1 + Perm(jj + j1 + Perm(kk + k1, noiseSeed), noiseSeed), noiseSeed) % 12;
+        n1 = q1 * q1 * Grad3Dot(gi1, x1, y1, z1);
+    }
+
+    float q2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
+    if (q2 > 0.0)
+    {
+        q2 *= q2;
+        int gi2 = Perm(ii + i2 + Perm(jj + j2 + Perm(kk + k2, noiseSeed), noiseSeed), noiseSeed) % 12;
+        n2 = q2 * q2 * Grad3Dot(gi2, x2, y2, z2);
+    }
+
+    float q3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3;
+    if (q3 > 0.0)
+    {
+        q3 *= q3;
+        int gi3 = Perm(ii + 1 + Perm(jj + 1 + Perm(kk + 1, noiseSeed), noiseSeed), noiseSeed) % 12;
+        n3 = q3 * q3 * Grad3Dot(gi3, x3, y3, z3);
+    }
+
+    return (n0 + n1 + n2 + n3) * 32.0;
+}
+
+float EvaluateSimple(GpuNoiseLayer layer, float3 samplePoint)
+{
+    float noiseValue = 0.0;
+    float frequency = layer.BaseRoughness;
+    float amplitude = 1.0;
+    for (int i = 0; i < layer.Layers; i++)
+    {
+        float v = Simplex(samplePoint * frequency + layer.Center, layer.Seed);
+        noiseValue += (v + 1.0) * 0.5 * amplitude;
+        frequency *= layer.Roughness;
+        amplitude *= layer.Persistence;
+    }
+    noiseValue -= layer.MinValue;
+    return noiseValue * layer.Strength;
+}
+
+float EvaluateRigid(GpuNoiseLayer layer, float3 samplePoint)
+{
+    float noiseValue = 0.0;
+    float frequency = layer.BaseRoughness;
+    float amplitude = 1.0;
+    float weight = 1.0;
+    for (int i = 0; i < layer.Layers; i++)
+    {
+        float v = 1.0 - abs(Simplex(samplePoint * frequency + layer.Center, layer.Seed));
+        v *= v;
+        v *= weight;
+        weight = v;
+        noiseValue += v * amplitude;
+        frequency *= layer.Roughness;
+        amplitude *= layer.Persistence;
+    }
+    noiseValue -= layer.MinValue;
+    return noiseValue * layer.Strength;
+}
+
+float EvaluateLayer(GpuNoiseLayer layer, float3 samplePoint)
+{
+    return layer.FilterType == 1 ? EvaluateRigid(layer, samplePoint) : EvaluateSimple(layer, samplePoint);
+}
+
+float EvaluateElevation(float3 samplePoint)
+{
+    if (_UseNoise == 0)
+    {
+        float continental = sin(samplePoint.x * 7.0 + samplePoint.z * 3.5) * cos(samplePoint.y * 5.0);
+        float detail = sin(dot(samplePoint, float3(17.0, 11.0, 13.0)));
+        return continental * 0.018 + detail * 0.004 - 0.004;
+    }
+
+    if (_NoiseLayerCount <= 0) return 0.0;
+
+    GpuNoiseLayer first = _NoiseLayers[0];
+    float firstLayerValue = EvaluateLayer(first, samplePoint);
+    float elevation = first.Enabled != 0 ? firstLayerValue : 0.0;
+
+    for (int i = 1; i < _NoiseLayerCount; i++)
+    {
+        GpuNoiseLayer layer = _NoiseLayers[i];
+        if (layer.Enabled == 0) continue;
+
+        float mask = layer.UseFirstLayerAsMask != 0 ? firstLayerValue : 1.0;
+        elevation += EvaluateLayer(layer, samplePoint) * mask;
+    }
+
+    return elevation;
+}
+
+float3 FaceLocalUp(int face)
+{
+    if (face == 1) return float3(0.0, -1.0, 0.0);
+    if (face == 2) return float3(-1.0, 0.0, 0.0);
+    if (face == 3) return float3(1.0, 0.0, 0.0);
+    if (face == 4) return float3(0.0, 0.0, 1.0);
+    if (face == 5) return float3(0.0, 0.0, -1.0);
+    return float3(0.0, 1.0, 0.0);
+}
+
+float3 CubeFaceToUnitSphere(int face, float2 uv)
+{
+    float u = uv.x * 2.0 - 1.0;
+    float v = uv.y * 2.0 - 1.0;
+    float3 localUp = FaceLocalUp(face);
+    float3 axisA = float3(localUp.y, localUp.z, localUp.x);
+    float3 axisB = cross(localUp, axisA);
+    return normalize(localUp + u * axisA + v * axisB);
+}
+
+float3 PositionAtUv(float2 uv, out float elevation, out float3 direction)
+{
+    direction = CubeFaceToUnitSphere(_FaceIndex, saturate(uv));
+    elevation = EvaluateElevation(direction);
+    return direction * (_PlanetRadius * (1.0 + elevation));
+}
+
+[numthreads(8, 8, 1)]
+void CSGenerateTerrain(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_Resolution || id.y >= (uint)_Resolution) return;
+
+    int index = (int)(id.x + id.y * _Resolution);
+    float inv = 1.0 / max(_Resolution - 1, 1);
+    float2 uv = float2(id.x, id.y) * inv;
+
+    float elevation;
+    float3 direction;
+    float3 position = PositionAtUv(uv, elevation, direction);
+
+    float3 normal = direction;
+
+    _Vertices[index] = float4(position, 1.0);
+    _NormalsAndElevation[index] = float4(normal, elevation);
+}

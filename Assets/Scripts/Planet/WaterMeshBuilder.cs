@@ -107,7 +107,7 @@ public static class WaterMeshBuilder
     /// Computes water mesh data without touching any Unity Mesh API.
     /// Safe to call from a background thread. Pass the result to <see cref="Apply"/>.
     /// </summary>
-    public static MeshData Compute(TerrainFace[] faces, Settings settings, System.Action<float> onProgress = null)
+    public static MeshData Compute(IFaceMeshSampler[] faces, Settings settings, System.Action<float> onProgress = null)
     {
         var vertices = new List<Vector3>();
         var normals = new List<Vector3>();
@@ -135,7 +135,7 @@ public static class WaterMeshBuilder
 
             for (int faceIndex = 0; faceIndex < faces.Length; faceIndex++)
             {
-                TerrainFace face = faces[faceIndex];
+                IFaceMeshSampler face = faces[faceIndex];
                 if (face?.UnitSpherePoints == null || face.Elevations == null)
                     continue;
 
@@ -209,14 +209,14 @@ public static class WaterMeshBuilder
         }
     }
 
-    public static BuildStats Build(Mesh mesh, TerrainFace[] faces, Settings settings)
+    public static BuildStats Build(Mesh mesh, IFaceMeshSampler[] faces, Settings settings)
     {
         var data = Compute(faces, settings);
         Apply(mesh, null, data);
         return data.Stats;
     }
 
-    public static BuildStats Build(Mesh mesh, Mesh volumeLipMesh, TerrainFace[] faces, Settings settings)
+    public static BuildStats Build(Mesh mesh, Mesh volumeLipMesh, IFaceMeshSampler[] faces, Settings settings)
     {
         var data = Compute(faces, settings);
         Apply(mesh, volumeLipMesh, data);
@@ -224,7 +224,7 @@ public static class WaterMeshBuilder
     }
 
     static void ProcessFace(
-        TerrainFace face,
+        IFaceMeshSampler face,
         FaceWaterData faceData,
         float[] globalDepthMeters,
         Settings settings,
@@ -510,7 +510,7 @@ public static class WaterMeshBuilder
         }
     }
 
-    static GlobalWaterData BuildGlobalWaterData(TerrainFace[] faces, Settings settings, ref BuildStats stats)
+    static GlobalWaterData BuildGlobalWaterData(IFaceMeshSampler[] faces, Settings settings, ref BuildStats stats)
     {
         var result = new GlobalWaterData { Faces = new FaceWaterData[faces.Length] };
         var globalIndicesByDirection = new Dictionary<DirectionKey, int>();
@@ -519,7 +519,7 @@ public static class WaterMeshBuilder
 
         for (int faceIndex = 0; faceIndex < faces.Length; faceIndex++)
         {
-            TerrainFace face = faces[faceIndex];
+            IFaceMeshSampler face = faces[faceIndex];
             if (face?.UnitSpherePoints == null || face.Elevations == null)
                 continue;
 
@@ -594,13 +594,13 @@ public static class WaterMeshBuilder
         return result;
     }
 
-    static List<int>[] BuildGlobalAdjacency(TerrainFace[] faces, FaceWaterData[] faceData, int globalVertexCount)
+    static List<int>[] BuildGlobalAdjacency(IFaceMeshSampler[] faces, FaceWaterData[] faceData, int globalVertexCount)
     {
         var adjacency = new List<int>[globalVertexCount];
 
         for (int faceIndex = 0; faceIndex < faces.Length; faceIndex++)
         {
-            TerrainFace face = faces[faceIndex];
+            IFaceMeshSampler face = faces[faceIndex];
             int[] globalIndices = faceData[faceIndex].GlobalIndices;
             if (face == null || globalIndices == null)
                 continue;

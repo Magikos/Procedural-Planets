@@ -1,15 +1,15 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Unity.Collections;
-using Unity.Jobs;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitialize, IProgressReporter
 {
     public enum FaceRenderMask { All, Top, Bottom, Left, Right, Front, Back }
 
-    [Range(2, 256)]
-    public int Resolution = 10;
+    [Range(2, 256), FormerlySerializedAs("Resolution"),
+     Tooltip("Per-face vertex resolution when PlanetSettings.Resolution == Low.")]
+    public int PerFaceResolution = 10;
     public FaceRenderMask RenderMask = FaceRenderMask.All;
 
     [SerializeField] PlanetSettings _planetSettings;
@@ -24,8 +24,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
 
     ShapeGenerator _shapeGenerator = new ShapeGenerator();
     ColorGenerator _colorGenerator = new ColorGenerator();
-    TerrainFace[] _terrainFaces;
-    MeshFilter[] _meshFilters;
+    IPlanetSurfaceProvider _surfaceProvider;
+    // Typed reference to the Low-mode provider for legacy color iteration over TerrainFaces.
+    // Null when running under chunked or GPU surface providers.
+    PerFaceSurfaceProvider _perFaceProvider;
     GameObject _waterObject;
     Material _waterMaterial;
 
@@ -118,11 +120,26 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
         ServiceLocator.Unregister<IPlanetSurfaceSampler>(this);
         _cts?.Cancel();
         _cts?.Dispose();
+        _surfaceProvider?.Dispose();
+        _surfaceProvider = null;
+        _perFaceProvider = null;
         if (_waterMaterial != null)
         {
             Destroy(_waterMaterial);
             _waterMaterial = null;
         }
+    }
+
+    // Camera reference cached so we don't pay Camera.main's GameObject.FindWithTag every frame.
+    Camera _observerCamera;
+
+    void Update()
+    {
+        if (_surfaceProvider == null || _isGenerating) return;
+        if (_observerCamera == null || !_observerCamera.isActiveAndEnabled)
+            _observerCamera = Camera.main;
+        if (_observerCamera == null) return;
+        _surfaceProvider.Tick(_observerCamera.transform.position, _observerCamera);
     }
 
     void Initialize()
@@ -132,8 +149,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
         ISeedProvider seedProvider = ServiceLocator.Get<ISeedProvider>();
         Seed = seedProvider.GetSeedForSystem("Planet");
 
-        _meshFilters = new MeshFilter[6];
-        _terrainFaces = new TerrainFace[6];
+        _surfaceProvider?.Dispose();
+        _surfaceProvider = null;
+        _perFaceProvider = null;
         _waterObject = null;
 
         var shapeSettings = _planetSettings.BuildShapeSettings();
@@ -144,20 +162,23 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
 
         ConfigureMaterial();
 
-        Vector3[] directions = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
-        for (int i = 0; i < 6; i++)
+        switch (_planetSettings.Resolution)
         {
-            GameObject meshObject = new GameObject("mesh");
-            meshObject.transform.parent = transform;
-
-            meshObject.AddComponent<MeshRenderer>().sharedMaterial = _planetSettings.PlanetMaterial;
-            _meshFilters[i] = meshObject.AddComponent<MeshFilter>();
-            _meshFilters[i].sharedMesh = new Mesh();
-
-            _terrainFaces[i] = new TerrainFace(_shapeGenerator, _meshFilters[i].sharedMesh, Resolution, directions[i]);
-
-            bool renderFace = RenderMask == FaceRenderMask.All || (int)RenderMask - 1 == i;
-            _meshFilters[i].gameObject.SetActive(renderFace);
+            case PlanetResolution.Low:
+                _perFaceProvider = new PerFaceSurfaceProvider(
+                    transform, _shapeGenerator, PerFaceResolution, _planetSettings.PlanetMaterial, RenderMask);
+                _surfaceProvider = _perFaceProvider;
+                break;
+            case PlanetResolution.High:
+                _surfaceProvider = new ChunkedSurfaceProvider(
+                    transform, _shapeGenerator, _planetSettings.PlanetMaterial, RenderMask,
+                    _planetSettings.MaxChunkDepth);
+                // Pre-cache mode: all chunks at all depths <= MaxChunkDepth are generated up
+                // front during the loading bar. Runtime Tick is a cheap visibility filter; no
+                // mesh jobs run at runtime. Per-vertex colors stay disabled until Phase B.
+                break;
+            default:
+                throw new System.ArgumentOutOfRangeException();
         }
     }
 
@@ -239,7 +260,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
             _progressHandle.Report(1f, "Planet ready");
             await Awaitable.NextFrameAsync(ct);
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _lastElevationMin, _lastElevationMax));
-            Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, resolution {Resolution}, radius {scaledRadius:F1}");
+            Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, mode {_planetSettings.Resolution}, perFaceResolution {PerFaceResolution}, radius {scaledRadius:F1}");
         }
         catch (System.OperationCanceledException) { }
         catch (System.Exception ex)
@@ -255,99 +276,33 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
 
     async Awaitable GenerateMeshAsync(CancellationToken ct)
     {
-        var faces = _terrainFaces;
-
-        // Job scheduling and the eventual texture/mesh upload must happen on the main thread.
-        var filters = _shapeGenerator.BuildNoiseFilterData(Allocator.Persistent);
-        var faceStates = new TerrainFaceJobState[faces.Length];
-        var handles = new NativeArray<JobHandle>(faces.Length, Allocator.Temp);
-        JobHandle combined;
-        try
-        {
-            for (int i = 0; i < faces.Length; i++)
-            {
-                faceStates[i] = faces[i].ScheduleMeshDataJob(filters, _shapeGenerator.Settings.PlanetRadius);
-                handles[i] = faceStates[i].Handle;
-            }
-            combined = JobHandle.CombineDependencies(handles);
-            handles.Dispose();
-            JobHandle.ScheduleBatchedJobs();
-
-            while (!combined.IsCompleted)
-            {
-                if (ct.IsCancellationRequested)
-                {
-                    combined.Complete();
-                    for (int i = 0; i < faceStates.Length; i++) faceStates[i].Dispose();
-                    filters.Dispose();
-                    ct.ThrowIfCancellationRequested();
-                }
-                await Awaitable.NextFrameAsync();
-            }
-            combined.Complete();
-        }
-        catch
-        {
-            if (handles.IsCreated) handles.Dispose();
-            for (int i = 0; i < faceStates.Length; i++) faceStates[i].Dispose();
-            filters.Dispose();
-            throw;
-        }
-
-        for (int i = 0; i < faces.Length; i++)
-            faces[i].CompleteMeshDataJob(faceStates[i]);
-        filters.Dispose();
-
-        // EvaluateElevation isn't called per vertex anymore (Burst job bypasses it), so feed
-        // the per-face elevation samples into ShapeGenerator's min/max envelope manually.
-        for (int i = 0; i < faces.Length; i++)
-        {
-            var elevations = faces[i].Elevations;
-            if (elevations == null) continue;
-            for (int v = 0; v < elevations.Length; v++)
-                _shapeGenerator.RecordElevationSample(elevations[v]);
-        }
-
-        for (int i = 0; i < faces.Length; i++)
-            faces[i].ApplyMeshData();
+        await _surfaceProvider.GenerateAsync(_progressHandle, ct);
     }
 
     void GenerateColors()
     {
-        foreach (var face in _terrainFaces)
+        if (_perFaceProvider == null) return;
+        foreach (var face in _perFaceProvider.TerrainFaces)
             face.UpdateColors(_colorGenerator);
     }
 
     async Awaitable GenerateColorsAsync(CancellationToken ct)
     {
-        var faces = _terrainFaces;
-        var colorGen = _colorGenerator;
-        await Awaitable.BackgroundThreadAsync();
-        ct.ThrowIfCancellationRequested();
-        System.Threading.Tasks.Parallel.For(0, faces.Length, i => faces[i].CalculateColors(colorGen));
-        ct.ThrowIfCancellationRequested();
-        await Awaitable.MainThreadAsync();
-        if (this == null) return;
-        foreach (var face in faces)
-            face.ApplyColors();
+        if (_surfaceProvider == null) return;
+        await _surfaceProvider.GenerateColorsAsync(_colorGenerator, _progressHandle, ct);
     }
 
     public bool TryGetSurfaceRadius(Vector3 worldUnitDirection, out float surfaceRadius)
     {
         surfaceRadius = 0f;
 
-        if (_terrainFaces == null || worldUnitDirection.sqrMagnitude < 0.0001f)
+        if (_surfaceProvider == null || worldUnitDirection.sqrMagnitude < 0.0001f)
             return false;
 
+        // Provider operates in planet-local space; Planet wraps with transform math so the
+        // provider stays Unity-transform-agnostic.
         Vector3 localDirection = transform.InverseTransformDirection(worldUnitDirection).normalized;
-
-        // Map direction → owning cube face + face-UV, then bilinear sample that face's radius
-        // grid. Constant-time vs. the prior 589K-vertex linear search (interim — will be replaced
-        // by an SDF query when the terrain SDF/quadtree work lands).
-        var (face, uv) = CoordinateConverter.UnitSphereToCubeFace(localDirection);
-        if (face < 0 || face >= _terrainFaces.Length || _terrainFaces[face] == null)
-            return false;
-        if (!_terrainFaces[face].TrySampleSurfaceRadius(uv, out float localRadius) || localRadius <= 0f)
+        if (!_surfaceProvider.TryGetLocalSurfaceRadius(localDirection, out float localRadius))
             return false;
 
         float scale = Mathf.Max(transform.lossyScale.x, Mathf.Max(transform.lossyScale.y, transform.lossyScale.z));
@@ -390,9 +345,18 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
             DeepDepth = WaterDeepDepth * waterScale,
             ShoreRange = WaterShoreRange * waterScale,
             SurfaceOffset = Mathf.Max(_planetSettings.PlanetRadius * 0.00003f, 0.02f),
-            OceanBodyVertexThreshold = Mathf.Max(48, Resolution * Resolution / 28)
+            OceanBodyVertexThreshold = Mathf.Max(48, PerFaceResolution * PerFaceResolution / 28)
         };
-        var terrainFaces = _terrainFaces;
+        // Water builder reads per-face vertex/elevation grids via IFaceMeshSampler. Both
+        // resolution modes (Low/High) supply this view; chunked path wraps each root chunk.
+        var faceSamplers = _surfaceProvider?.GetFaceMeshSamplers();
+        if (faceSamplers == null || faceSamplers.Count == 0)
+        {
+            if (_waterObject != null) _waterObject.SetActive(false);
+            return;
+        }
+        var terrainFaces = new IFaceMeshSampler[faceSamplers.Count];
+        for (int i = 0; i < faceSamplers.Count; i++) terrainFaces[i] = faceSamplers[i];
         var waterMesh = meshFilter.sharedMesh;
 
         // Run the (pure-CPU) water build on a worker and poll its progress each frame on the main

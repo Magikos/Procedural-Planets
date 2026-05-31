@@ -4,7 +4,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
-public class TerrainFace
+public class TerrainFace : IFaceMeshSampler
 {
     Mesh _mesh;
     int _resolution;

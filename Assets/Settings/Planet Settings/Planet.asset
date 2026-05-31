@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: Planet
   m_EditorClassIdentifier: 
   PlanetRadius: 5000
+  Resolution: 1
+  MaxChunkDepth: 4
   ContinentSize: 0.5
   OceanDepth: 0.3
   MountainHeight: 0.5

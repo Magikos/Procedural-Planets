@@ -6,6 +6,14 @@ public class PlanetSettings : ScriptableObject
     [Header("General")]
     [Range(1, 5000)] public float PlanetRadius = 50f;
 
+    [Tooltip("Surface generator. Low = one mesh per cube face. High = CPU chunked quadtree. Defaults to Low for safety.")]
+    public PlanetResolution Resolution = PlanetResolution.Low;
+
+    [Range(0, 7), Tooltip("Chunked-mode only: max LOD depth pre-cached at load time. " +
+             "Higher = finer detail but quadratically more memory (depth 4 approx. 300 MB, depth 5 approx. 1.2 GB). " +
+             "Default 4 is a good balance for explorable planets; use 2-3 for distant decorative bodies.")]
+    public int MaxChunkDepth = 4;
+
     [Header("Terrain")]
     [Range(0.1f, 1f), Tooltip("Size of continents. Low = small islands, High = large landmasses")]
     public float ContinentSize = 0.5f;
