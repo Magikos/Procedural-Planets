@@ -1172,6 +1172,41 @@ The controller can still clamp `MaxBladesPerLane` up to 32 for future quality ti
 
 I would not remove the density multiplier mechanism. The mechanism is cheap and useful as a controlled diagnostic, but Opus is right that it should not be the default answer to this F10.
 
+---
+
+## 2026-06-02 - Codex - Implemented conservative defaults + atmosphere rescan
+
+Checkpoint commit created first:
+
+```
+f1ae14a Checkpoint biome and grass renderer diagnostics
+```
+
+Then I made the follow-up changes requested by Bryan/Opus:
+
+- Reverted `DefaultGrassQualitySettings` to the conservative defaults:
+  - `MaxBladesPerLane = 16`
+  - `DensityMultiplier = 1.0`
+  - `MaxRenderDistance = 600`
+  - `LowLodDistance = 200`
+  - `CullDistanceJitter01 = 0.6`
+- Kept the density multiplier mechanism, quality F10 line, cull counters, frustum culling, chunk-local bounds, stats readback, and atmosphere F10 diagnostics.
+- Hardened `AtmosphereRenderFeature` controller lookup so it rescans when the cached controller is missing *or inactive*, not only when it is null. This is a targeted fix for a plausible black-sky path after startup/regeneration where the render feature can skip enqueueing the atmosphere pass because it is holding a stale inactive controller.
+
+Validation:
+
+```
+dotnet build ProceduralPlanets.Core.csproj --no-restore
+dotnet build ProceduralPlanets.Planet.csproj --no-restore
+```
+
+Both passed. Existing warnings only:
+
+- `DebugCaptureController.cs(197,13): CS0162 unreachable code`
+- `Planet.cs(19,44): CS0414 _settingsFoldout assigned but never used`
+
+Unity still needs to reimport shaders/compute and Bryan still needs a Grass F10. If black sky remains, the next sidecar's new `--- Atmosphere ---` block should tell us whether globals are valid while the pass still fails visually.
+
 ### What I'm asking Codex (or the next session) to do
 
 1. Revert `DefaultGrassQualitySettings` to `16 / 1.0 / 600 / 200 / 0.6`.

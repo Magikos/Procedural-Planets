@@ -13,14 +13,13 @@ public interface IGrassQualitySettings
 
 public sealed class DefaultGrassQualitySettings : IGrassQualitySettings
 {
-    // Phase-C density iteration: the last F10 showed only 24k emitted blades, with most
-    // lanes lost to distance and mixed-biome density. These defaults intentionally push
-    // the PC tier into a dense visual proof before we add representation/quality tiers.
-    public int MaxBladesPerLane => 32;
-    public float DensityMultiplier => 2.5f;
-    public float MaxRenderDistance => 900f;
-    public float LowLodDistance => 650f;
-    public float CullDistanceJitter01 => 0.25f;
+    // Conservative default profile. The diagnostic density multiplier stays available,
+    // but defaults to authored biome density until F10 counters justify a stronger tier.
+    public int MaxBladesPerLane => 16;
+    public float DensityMultiplier => 1.0f;
+    public float MaxRenderDistance => 600f;
+    public float LowLodDistance => 200f;
+    public float CullDistanceJitter01 => 0.6f;
     public int MaxCoarseLodOffsetForBlades => 0;
     public bool EnableScreenSpaceShadows => true;
 }
