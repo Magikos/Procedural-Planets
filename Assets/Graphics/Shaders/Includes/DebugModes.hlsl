@@ -123,17 +123,26 @@
 // --- Water Surface: glint discovery ---
 #define DEBUG_WATER_GLINT_LOCATOR         72
 
-// --- Biome diagnostics (73-77) ---
-// Each mode reads per-vertex biome data (TEXCOORD2 = float4(temperature, moisture,
-// primaryBiomeId/biomeCount, latitude01)) baked by ColorGenerator + TerrainFace, and
-// returns a flat unlit visualization. Atmosphere + clouds are bypassed for these.
+// --- Biome diagnostics (73-82) ---
+// Modes 73-77 read per-vertex biome data. Modes 78-80 read the per-chunk
+// biome map used by the texture-mode production terrain path. Modes 81-82
+// verify the production terrain albedo and lighting inputs.
 #define DEBUG_BIOME_PRIMARY_ID            73
 #define DEBUG_BIOME_TEMPERATURE           74
 #define DEBUG_BIOME_MOISTURE              75
 #define DEBUG_BIOME_LATITUDE              76
 #define DEBUG_BIOME_ELEVATION_BAND        77
+#define DEBUG_BIOME_MAP_PRIMARY_ID        78
+#define DEBUG_BIOME_MAP_BLEND             79
+#define DEBUG_BIOME_MAP_FLAT_COLOR        80
+#define DEBUG_TERRAIN_SELECTED_ALBEDO     81
+#define DEBUG_TERRAIN_SUN_LIGHTING        82
+// Phase B step 8: triplanar PBR signal visualization.
+#define DEBUG_TERRAIN_SURFACE_NORMAL      83
+#define DEBUG_TERRAIN_SURFACE_AO          84
+#define DEBUG_TERRAIN_SURFACE_ROUGHNESS   85
 
 // Convenience: last defined mode. Update when adding new modes.
-#define DEBUG_MODE_MAX                    77
+#define DEBUG_MODE_MAX                    85
 
 #endif

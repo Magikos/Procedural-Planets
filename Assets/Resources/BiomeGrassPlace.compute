@@ -1,0 +1,343 @@
+#pragma kernel PlaceAndCull
+
+struct BiomeGrassParams
+{
+    float4 Shape;     // x density, y height, z width, w clump strength
+    float4 Placement; // x maxSlopeDeg, y slopeFadeDeg, z waterClearance, w blendPower
+    float4 Tint;
+};
+
+struct GrassBladeInstance
+{
+    float4 RootHeight;
+    float4 UpWidth;
+    float4 Color;
+};
+
+Texture2D<float4> _BiomeIds;
+Texture2D<float4> _BiomeWeights;
+Texture2D<float4> _SurfaceStateMask;
+Texture2D<float> _GrassSurfaceRadius;
+Texture2D<float4> _GrassSurfaceNormal;
+
+StructuredBuffer<BiomeGrassParams> _BiomeGrassParams;
+RWStructuredBuffer<GrassBladeInstance> _GrassBladeInstances;
+RWStructuredBuffer<uint> _GrassDrawArgs;
+RWStructuredBuffer<uint> _GrassStats;
+
+#define STAT_CANDIDATE_LANES 0
+#define STAT_DENSITY_REJECTED_LANES 1
+#define STAT_SHAPE_REJECTED_LANES 2
+#define STAT_STATE_REJECTED_LANES 3
+#define STAT_WATER_REJECTED_LANES 4
+#define STAT_SLOPE_REJECTED_LANES 5
+#define STAT_DISTANCE_REJECTED_LANES 6
+#define STAT_DISTANCE_FADE_REJECTED_LANES 7
+#define STAT_FRUSTUM_REJECTED_LANES 8
+#define STAT_VISIBLE_LANES 9
+#define STAT_CANDIDATE_BLADES 10
+#define STAT_DENSITY_REJECTED_BLADES 11
+#define STAT_SLOPE_REJECTED_BLADES 12
+#define STAT_EMITTED_BLADES 13
+#define STAT_OVERFLOW_REJECTED_BLADES 14
+
+int _BiomeGrassParamCount;
+int _BiomeAtlasResolution;
+int _GrassSurfaceAtlasResolution;
+int _LaneResolution;
+int _MaxBladeInstances;
+int _MaxBladesPerLane;
+int _FaceIndex;
+int _ChunkHash;
+int _Seed;
+float4 _ChunkUvScaleOffset;
+float4x4 _PlanetLocalToWorld;
+float _PlanetWorldScale;
+float _WaterRadius;
+float3 _CameraPositionWs;
+float _MaxRenderDistance;
+float _DistanceFadeStart;
+float _CullDistanceJitter01;
+float _GrassDensityMultiplier;
+float _LaneJitterMagnitude;
+int _FrustumCullEnabled;
+float4 _CameraFrustumPlanes[6];
+
+void AddStat(uint index, uint value)
+{
+    InterlockedAdd(_GrassStats[index], value);
+}
+
+uint HashUint(uint x)
+{
+    x ^= x >> 16;
+    x *= 0x7feb352du;
+    x ^= x >> 15;
+    x *= 0x846ca68bu;
+    x ^= x >> 16;
+    return x;
+}
+
+float Hash01(uint seed)
+{
+    return (HashUint(seed) & 0x00ffffffu) / 16777216.0;
+}
+
+float3 CubeFaceToUnitSphere(int face, float2 uv)
+{
+    float u = uv.x * 2.0 - 1.0;
+    float v = uv.y * 2.0 - 1.0;
+    float3 p = float3(0.0, 1.0, 0.0);
+
+    if (face == 0) p = float3(u, 1.0, -v);
+    else if (face == 1) p = float3(-u, -1.0, -v);
+    else if (face == 2) p = float3(-1.0, -v, -u);
+    else if (face == 3) p = float3(1.0, -v, u);
+    else if (face == 4) p = float3(-v, u, 1.0);
+    else if (face == 5) p = float3(-v, -u, -1.0);
+
+    return normalize(p);
+}
+
+float4 LoadAtlas4(Texture2D<float4> tex, float2 uv, int resolution)
+{
+    float2 p = saturate(uv) * max(resolution - 1, 1);
+    int2 ip = int2(round(p));
+    ip = clamp(ip, int2(0, 0), int2(resolution - 1, resolution - 1));
+    return tex.Load(int3(ip, 0));
+}
+
+float LoadRadius(float2 uv)
+{
+    int resolution = max(_GrassSurfaceAtlasResolution, 1);
+    float2 p = saturate(uv) * max(resolution - 1, 1);
+    int2 p0 = int2(floor(p));
+    int2 p1 = min(p0 + 1, int2(resolution - 1, resolution - 1));
+    float2 f = p - p0;
+
+    float r00 = _GrassSurfaceRadius.Load(int3(p0, 0));
+    float r10 = _GrassSurfaceRadius.Load(int3(p1.x, p0.y, 0));
+    float r01 = _GrassSurfaceRadius.Load(int3(p0.x, p1.y, 0));
+    float r11 = _GrassSurfaceRadius.Load(int3(p1, 0));
+    return lerp(lerp(r00, r10, f.x), lerp(r01, r11, f.x), f.y);
+}
+
+float3 LoadNormal(float2 uv)
+{
+    int resolution = max(_GrassSurfaceAtlasResolution, 1);
+    float2 p = saturate(uv) * max(resolution - 1, 1);
+    int2 ip = int2(round(p));
+    ip = clamp(ip, int2(0, 0), int2(resolution - 1, resolution - 1));
+    return normalize(_GrassSurfaceNormal.Load(int3(ip, 0)).xyz * 2.0 - 1.0);
+}
+
+BiomeGrassParams GetGrassParams(uint id)
+{
+    BiomeGrassParams p;
+    p.Shape = 0.0;
+    p.Placement = 0.0;
+    p.Tint = 0.0;
+    if (id < (uint)_BiomeGrassParamCount)
+        p = _BiomeGrassParams[id];
+    return p;
+}
+
+float WeightedDensity(float4 idsPacked, float4 weightsPacked)
+{
+    float density = 0.0;
+
+    [unroll]
+    for (uint i = 0u; i < 4u; i++)
+    {
+        uint biomeId = (uint)round(idsPacked[i] * 255.0);
+        float weight = saturate(weightsPacked[i]);
+        BiomeGrassParams p = GetGrassParams(biomeId);
+        float blendPower = max(p.Placement.w, 0.001);
+        density += saturate(p.Shape.x) * pow(weight, blendPower);
+    }
+
+    return saturate(density);
+}
+
+bool PassesFrustum(float3 centerWs, float radius)
+{
+    if (_FrustumCullEnabled == 0)
+        return true;
+
+    [unroll]
+    for (int i = 0; i < 6; i++)
+    {
+        float4 plane = _CameraFrustumPlanes[i];
+        if (dot(plane.xyz, centerWs) + plane.w < -radius)
+            return false;
+    }
+
+    return true;
+}
+
+// One thread per lane. Inner loop emits up to _MaxBladesPerLane blades per lane with
+// sub-lane jittered positions - gives real grass-field density without exploding the
+// thread group count. Density gate, slope-fade, water/state masks are evaluated once per
+// lane (cheap); per-blade hashes vary the placement and variation.
+[numthreads(8, 8, 1)]
+void PlaceAndCull(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_LaneResolution || id.y >= (uint)_LaneResolution)
+        return;
+
+    uint lane = id.y * (uint)_LaneResolution + id.x;
+    AddStat(STAT_CANDIDATE_LANES, 1u);
+
+    uint laneHash = (uint)_Seed
+        ^ ((uint)_ChunkHash * 747796405u)
+        ^ (lane * 2891336453u)
+        ^ ((uint)_FaceIndex * 198491317u);
+
+    // Center-of-lane UV in face space for biome / surface sampling. We deliberately sample
+    // ONCE per lane (not per blade) - biomes/slope/water don't vary at sub-lane scale, and
+    // collapsing the gate halves the texture-read cost vs per-blade sampling.
+    float2 laneCenterChunkUv = (float2(id.xy) + 0.5) / max((float)_LaneResolution, 1.0);
+    float2 laneCenterFaceUv = _ChunkUvScaleOffset.zw + laneCenterChunkUv * _ChunkUvScaleOffset.xy;
+
+    float4 ids4 = LoadAtlas4(_BiomeIds, laneCenterFaceUv, _BiomeAtlasResolution);
+    float4 weights4 = LoadAtlas4(_BiomeWeights, laneCenterFaceUv, _BiomeAtlasResolution);
+    float density = saturate(WeightedDensity(ids4, weights4) * max(_GrassDensityMultiplier, 0.0));
+    if (density <= 0.0001)
+    {
+        AddStat(STAT_DENSITY_REJECTED_LANES, 1u);
+        return;
+    }
+
+    uint dominantBiome = (uint)round(ids4.x * 255.0);
+    BiomeGrassParams biome = GetGrassParams(dominantBiome);
+    if (biome.Shape.y <= 0.0 || biome.Shape.z <= 0.0)
+    {
+        AddStat(STAT_SHAPE_REJECTED_LANES, 1u);
+        return;
+    }
+
+    float4 state = LoadAtlas4(_SurfaceStateMask, laneCenterChunkUv, _LaneResolution);
+    if (state.r > 0.5 || state.g > 0.5)
+    {
+        AddStat(STAT_STATE_REJECTED_LANES, 1u);
+        return;
+    }
+
+    float laneRadius = LoadRadius(laneCenterFaceUv);
+    if (_WaterRadius > 0.0 && laneRadius <= _WaterRadius + max(biome.Placement.z, 0.0))
+    {
+        AddStat(STAT_WATER_REJECTED_LANES, 1u);
+        return;
+    }
+
+    float3 laneSphereNormal = CubeFaceToUnitSphere(_FaceIndex, laneCenterFaceUv);
+    float3 laneNormalLocal = LoadNormal(laneCenterFaceUv);
+    if (dot(laneNormalLocal, laneSphereNormal) < 0.0)
+        laneNormalLocal = -laneNormalLocal;
+
+    float slopeDeg = acos(saturate(dot(laneNormalLocal, laneSphereNormal))) * 57.2957795;
+    float maxSlope = saturate(biome.Placement.x / 90.0) * 90.0;
+    float fade = max(biome.Placement.y, 0.001);
+    float slopeKeep = 1.0 - smoothstep(maxSlope - fade, maxSlope + fade, slopeDeg);
+    if (slopeKeep <= 0.001)
+    {
+        AddStat(STAT_SLOPE_REJECTED_LANES, 1u);
+        return;
+    }
+
+    // Distance LOD: skip hard beyond MaxRenderDistance, then stochastically thin lanes
+    // between DistanceFadeStart and MaxRenderDistance so near grass gets more budget.
+    float3 laneRootWsApprox = mul(_PlanetLocalToWorld, float4(laneSphereNormal * laneRadius, 1.0)).xyz;
+    if (_MaxRenderDistance > 0.0)
+    {
+        float3 toCamera = laneRootWsApprox - _CameraPositionWs;
+        float distanceSq = dot(toCamera, toCamera);
+        if (distanceSq > _MaxRenderDistance * _MaxRenderDistance)
+        {
+            AddStat(STAT_DISTANCE_REJECTED_LANES, 1u);
+            return;
+        }
+
+        float distance = sqrt(max(distanceSq, 0.0));
+        float fadeStart = clamp(_DistanceFadeStart, 0.0, _MaxRenderDistance);
+        if (_CullDistanceJitter01 > 0.0001 && fadeStart < _MaxRenderDistance)
+        {
+            float fadeT = saturate((distance - fadeStart) / max(_MaxRenderDistance - fadeStart, 0.0001));
+            float keep = lerp(1.0, 1.0 - smoothstep(0.0, 1.0, fadeT), saturate(_CullDistanceJitter01));
+            if (Hash01(laneHash ^ 0x1f83d9abu) > keep)
+            {
+                AddStat(STAT_DISTANCE_FADE_REJECTED_LANES, 1u);
+                return;
+            }
+        }
+    }
+
+    uint perLane = max((uint)_MaxBladesPerLane, 1u);
+    float laneBoundsRadius = max(biome.Shape.y * max(_PlanetWorldScale, 0.0001) * 1.25, 1.0);
+    if (!PassesFrustum(laneRootWsApprox, laneBoundsRadius))
+    {
+        AddStat(STAT_FRUSTUM_REJECTED_LANES, 1u);
+        return;
+    }
+
+    AddStat(STAT_VISIBLE_LANES, 1u);
+    AddStat(STAT_CANDIDATE_BLADES, perLane);
+
+    for (uint subIdx = 0u; subIdx < perLane; subIdx++)
+    {
+        // 0x9e3779b9 = 2^32 * (golden ratio - 1); good 32-bit hash mixer constant.
+        uint subHash = HashUint(laneHash ^ ((subIdx + 1u) * 0x9e3779b9u));
+
+        // Per-blade density gate so partial-density biomes get probabilistic blades, not
+        // all-or-nothing across the multi-blade group.
+        if (Hash01(subHash ^ 0x3c6ef372u) > density)
+        {
+            AddStat(STAT_DENSITY_REJECTED_BLADES, 1u);
+            continue;
+        }
+        if (Hash01(subHash ^ 0xa54ff53au) > slopeKeep)
+        {
+            AddStat(STAT_SLOPE_REJECTED_BLADES, 1u);
+            continue;
+        }
+
+        // Sub-lane jitter spreads blades across the lane's footprint instead of stacking
+        // them at lane centers. Magnitude > 0.5 lets blades cross lane edges (intended for
+        // visual density - adjacent lanes' blades will overlap and look continuous).
+        float2 subJitter = float2(
+            Hash01(subHash ^ 0x6a09e667u) - 0.5,
+            Hash01(subHash ^ 0xbb67ae85u) - 0.5) * _LaneJitterMagnitude;
+        float2 chunkUv = (float2(id.xy) + 0.5 + subJitter) / max((float)_LaneResolution, 1.0);
+        float2 faceUv = _ChunkUvScaleOffset.zw + chunkUv * _ChunkUvScaleOffset.xy;
+
+        float radius = LoadRadius(faceUv);
+        float3 sphereNormal = CubeFaceToUnitSphere(_FaceIndex, faceUv);
+        float3 normalLocal = LoadNormal(faceUv);
+        if (dot(normalLocal, sphereNormal) < 0.0)
+            normalLocal = -normalLocal;
+
+        uint slot;
+        InterlockedAdd(_GrassDrawArgs[1], 1u, slot);
+        if (slot >= (uint)_MaxBladeInstances)
+        {
+            AddStat(STAT_OVERFLOW_REJECTED_BLADES, 1u);
+            return; // buffer full - quit the whole lane
+        }
+
+        float heightVariation = lerp(0.75, 1.25, Hash01(subHash ^ 0x510e527fu));
+        float widthVariation = lerp(0.80, 1.15, Hash01(subHash ^ 0x9b05688cu));
+        float height = biome.Shape.y * max(_PlanetWorldScale, 0.0001) * heightVariation;
+        float width = biome.Shape.z * max(_PlanetWorldScale, 0.0001) * widthVariation;
+
+        float3 localRoot = sphereNormal * radius;
+        float3 rootWs = mul(_PlanetLocalToWorld, float4(localRoot, 1.0)).xyz;
+        float3 upWs = normalize(mul((float3x3)_PlanetLocalToWorld, normalLocal));
+
+        GrassBladeInstance blade;
+        blade.RootHeight = float4(rootWs, height);
+        blade.UpWidth = float4(upWs, width);
+        blade.Color = float4(saturate(biome.Tint.rgb), 1.0);
+        _GrassBladeInstances[slot] = blade;
+        AddStat(STAT_EMITTED_BLADES, 1u);
+    }
+}

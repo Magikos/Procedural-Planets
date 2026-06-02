@@ -32,4 +32,15 @@ public interface IPlanetSurfaceProvider : IDisposable
     // data is available yet. Currently used by WaterMeshBuilder to build the water mesh; both
     // providers return their face roots' per-vertex unit-sphere + elevation grids.
     IReadOnlyList<IFaceMeshSampler> GetFaceMeshSamplers();
+
+    // Phase B step 9: re-bake the biome map textures for chunks intersecting the given
+    // world-space unit direction. The hook is the entry point Phase E (paving / scorching /
+    // erosion) will use to publish a "biome assignment changed at this location" event after
+    // a world action permanently shifts the biome at some spot.
+    //
+    // PerFaceSurfaceProvider's implementation is a no-op (returns 0) — biome map textures
+    // are a chunked-path feature. ChunkedSurfaceProvider walks the active chunks that contain
+    // the direction, re-runs the bake + GPU upload for each, and returns the count rebaked.
+    // Returns 0 when called before initial GenerateColorsAsync completes (no LUT yet).
+    int RebakeBiomeMapsAt(Vector3 localUnitDirection);
 }

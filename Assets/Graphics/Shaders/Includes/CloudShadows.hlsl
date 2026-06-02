@@ -23,34 +23,39 @@ float _WindSpeed;
 float _CloudAnimSpeed;
 float _WaterFocusMode;
 
+float3 CloudShadowCubeFaceLocalUp(int face)
+{
+    if (face == 0) return float3(0.0, 1.0, 0.0);
+    if (face == 1) return float3(0.0, -1.0, 0.0);
+    if (face == 2) return float3(-1.0, 0.0, 0.0);
+    if (face == 3) return float3(1.0, 0.0, 0.0);
+    if (face == 4) return float3(0.0, 0.0, 1.0);
+    return float3(0.0, 0.0, -1.0);
+}
+
 void CloudShadowCubeFaceUv(float3 direction, out int face, out float2 uv)
 {
     float3 absDirection = abs(direction);
-    float u;
-    float v;
 
     if (absDirection.y >= absDirection.x && absDirection.y >= absDirection.z)
     {
         face = direction.y > 0 ? 0 : 1;
-        float faceSign = direction.y > 0 ? 1.0 : -1.0;
-        u = direction.x / max(absDirection.y, 0.00001);
-        v = direction.z / max(absDirection.y, 0.00001) * faceSign;
     }
     else if (absDirection.x >= absDirection.y && absDirection.x >= absDirection.z)
     {
         face = direction.x > 0 ? 3 : 2;
-        float faceSign = direction.x > 0 ? 1.0 : -1.0;
-        u = direction.z / max(absDirection.x, 0.00001) * -faceSign;
-        v = direction.y / max(absDirection.x, 0.00001);
     }
     else
     {
         face = direction.z > 0 ? 4 : 5;
-        float faceSign = direction.z > 0 ? 1.0 : -1.0;
-        u = direction.x / max(absDirection.z, 0.00001) * faceSign;
-        v = direction.y / max(absDirection.z, 0.00001);
     }
 
+    float3 localUp = CloudShadowCubeFaceLocalUp(face);
+    float3 axisA = float3(localUp.y, localUp.z, localUp.x);
+    float3 axisB = cross(localUp, axisA);
+    float major = max(abs(dot(direction, localUp)), 0.00001);
+    float u = dot(direction, axisA) / major;
+    float v = dot(direction, axisB) / major;
     uv = saturate(float2(u, v) * 0.5 + 0.5);
 }
 

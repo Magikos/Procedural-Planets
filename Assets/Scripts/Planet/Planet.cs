@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitialize, IProgressReporter
+public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurfaceRaycaster, ILateInitialize, IProgressReporter
 {
     public enum FaceRenderMask { All, Top, Bottom, Left, Right, Front, Back }
 
@@ -28,6 +28,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
     // Typed reference to the Low-mode provider for legacy color iteration over TerrainFaces.
     // Null when running under chunked or GPU surface providers.
     PerFaceSurfaceProvider _perFaceProvider;
+    GrassPlacementController _grassController;
     GameObject _waterObject;
     Material _waterMaterial;
 
@@ -112,17 +113,22 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
 
         ServiceLocator.Register<IPlanet>(this);
         ServiceLocator.Register<IPlanetSurfaceSampler>(this);
+        ServiceLocator.Register<IPlanetSurfaceRaycaster>(this);
     }
 
     void OnDestroy()
     {
         ServiceLocator.Unregister<IPlanet>(this);
         ServiceLocator.Unregister<IPlanetSurfaceSampler>(this);
+        ServiceLocator.Unregister<IPlanetSurfaceRaycaster>(this);
         _cts?.Cancel();
         _cts?.Dispose();
+        _grassController?.Dispose();
+        _grassController = null;
         _surfaceProvider?.Dispose();
         _surfaceProvider = null;
         _perFaceProvider = null;
+        _colorGenerator?.Dispose();
         if (_waterMaterial != null)
         {
             Destroy(_waterMaterial);
@@ -140,10 +146,13 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
             _observerCamera = Camera.main;
         if (_observerCamera == null) return;
         _surfaceProvider.Tick(_observerCamera.transform.position, _observerCamera);
+        _grassController?.Tick(_observerCamera);
     }
 
     void Initialize()
     {
+        _grassController?.Dispose();
+        _grassController = null;
         DestroyChildren();
 
         ISeedProvider seedProvider = ServiceLocator.Get<ISeedProvider>();
@@ -241,15 +250,16 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
             _progressHandle.Report(0f, "Initializing planet...");
             Initialize();
             _progressHandle.Report(0.1f, "Generating terrain...");
-            await GenerateMeshAsync(ct);
+            await GenerateMeshAsync(new ProgressRangeHandle(_progressHandle, 0.1f, 0.7f), ct);
             if (this == null) return;
             _shapeGenerator.CommitElevationRange();
             _progressHandle.Report(0.8f, "Applying colors...");
-            await GenerateColorsAsync(ct);
+            await GenerateColorsAsync(new ProgressRangeHandle(_progressHandle, 0.8f, 0.1f), ct);
             if (this == null) return;
-            _progressHandle.Report(0.9f, "Generating water...");
-            await GenerateWaterAsync(ct);
-            // Atmosphere is rendered by AtmosphereController + AtmosphereRenderFeature (post-process).
+        _progressHandle.Report(0.9f, "Generating water...");
+        await GenerateWaterAsync(new ProgressRangeHandle(_progressHandle, 0.9f, 0.1f), ct);
+        ConfigureGrassController();
+        // Atmosphere is rendered by AtmosphereController + AtmosphereRenderFeature (post-process).
 
             float scaledRadius = _planetSettings.PlanetRadius * (1 + _shapeGenerator.ElevationMax);
             float seaLevelRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel);
@@ -274,9 +284,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
         }
     }
 
-    async Awaitable GenerateMeshAsync(CancellationToken ct)
+    async Awaitable GenerateMeshAsync(IProgressHandle progress, CancellationToken ct)
     {
-        await _surfaceProvider.GenerateAsync(_progressHandle, ct);
+        await _surfaceProvider.GenerateAsync(progress, ct);
     }
 
     void GenerateColors()
@@ -286,10 +296,26 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
             face.UpdateColors(_colorGenerator);
     }
 
-    async Awaitable GenerateColorsAsync(CancellationToken ct)
+    async Awaitable GenerateColorsAsync(IProgressHandle progress, CancellationToken ct)
     {
         if (_surfaceProvider == null) return;
-        await _surfaceProvider.GenerateColorsAsync(_colorGenerator, _progressHandle, ct);
+        await _surfaceProvider.GenerateColorsAsync(_colorGenerator, progress, ct);
+    }
+
+    void ConfigureGrassController()
+    {
+        _grassController?.Dispose();
+        _grassController = null;
+
+        if (_surfaceProvider is not ChunkedSurfaceProvider chunkedProvider)
+            return;
+
+        float waterRadius = _planetSettings.HasOceans
+            ? _planetSettings.PlanetRadius * (1f + _planetSettings.OceanLevel)
+            : -1f;
+        _grassController = new GrassPlacementController(transform, chunkedProvider,
+            _colorGenerator.SurfaceArrays.GrassParamsBuffer, _colorGenerator.SurfaceArrays.SliceCount,
+            waterRadius, Seed, Logger);
     }
 
     public bool TryGetSurfaceRadius(Vector3 worldUnitDirection, out float surfaceRadius)
@@ -310,11 +336,49 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
         return true;
     }
 
-    async Awaitable GenerateWaterAsync(CancellationToken ct)
+    public bool TryRaycastSurface(Ray worldRay, float maxDistance, out PlanetSurfaceRaycastHit hit)
+    {
+        hit = default;
+        if (_surfaceProvider is not ChunkedSurfaceProvider chunkedProvider)
+            return false;
+
+        float scale = Mathf.Max(transform.lossyScale.x, Mathf.Max(transform.lossyScale.y, transform.lossyScale.z));
+        scale = Mathf.Max(scale, 0.0001f);
+        Vector3 localOrigin = transform.InverseTransformPoint(worldRay.origin);
+        Vector3 localDirection = transform.InverseTransformDirection(worldRay.direction).normalized;
+        if (localDirection.sqrMagnitude < 0.0001f)
+            return false;
+
+        float localMaxDistance = Mathf.Max(0f, maxDistance) / scale;
+        if (!chunkedProvider.TryRaycastVisibleSurface(new Ray(localOrigin, localDirection), localMaxDistance,
+                out Vector3 localPoint, out Vector3 localNormal, out _))
+            return false;
+
+        Vector3 worldPoint = transform.TransformPoint(localPoint);
+        float worldDistance = Vector3.Distance(worldRay.origin, worldPoint);
+        if (maxDistance > 0f && worldDistance > maxDistance)
+            return false;
+
+        Vector3 worldNormal = transform.TransformDirection(localNormal).normalized;
+        if (worldNormal.sqrMagnitude < 0.0001f)
+            worldNormal = (worldPoint - transform.position).normalized;
+
+        hit = new PlanetSurfaceRaycastHit
+        {
+            Point = worldPoint,
+            Normal = worldNormal,
+            Distance = worldDistance,
+            SurfaceRadius = Vector3.Distance(worldPoint, transform.position),
+        };
+        return true;
+    }
+
+    async Awaitable GenerateWaterAsync(IProgressHandle progress, CancellationToken ct)
     {
         if (!_planetSettings.HasOceans)
         {
             if (_waterObject != null) _waterObject.SetActive(false);
+            progress?.Report(1f, "Water skipped.");
             return;
         }
 
@@ -353,6 +417,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
         if (faceSamplers == null || faceSamplers.Count == 0)
         {
             if (_waterObject != null) _waterObject.SetActive(false);
+            progress?.Report(1f, "Water skipped.");
             return;
         }
         var terrainFaces = new IFaceMeshSampler[faceSamplers.Count];
@@ -361,27 +426,29 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
 
         // Run the (pure-CPU) water build on a worker and poll its progress each frame on the main
         // thread so the loading bar advances through the heavy global-graph + per-face phases.
-        _progressHandle.Report(0.90f, "Building water bodies...");
+        progress?.Report(0f, "Building water bodies...");
         float buildProgress = 0f;
         var computeTask = Task.Run(
             () => WaterMeshBuilder.Compute(terrainFaces, buildSettings,
                 p => System.Threading.Volatile.Write(ref buildProgress, p)), ct);
         while (!computeTask.IsCompleted)
         {
-            _progressHandle.Report(0.90f + 0.06f * System.Threading.Volatile.Read(ref buildProgress), "Building water bodies...");
+            progress?.Report(0.6f * System.Threading.Volatile.Read(ref buildProgress), "Building water bodies...");
             await Awaitable.NextFrameAsync(ct);
         }
         var waterMeshData = await computeTask;
         if (this == null) return;
-        _progressHandle.Report(0.97f, "Uploading water mesh...");
+        progress?.Report(0.7f, "Uploading water mesh...");
 
         if (waterMeshData.Stats.Triangles == 0)
         {
             _waterObject.SetActive(false);
+            progress?.Report(1f, "Water skipped.");
             return;
         }
 
         WaterMeshBuilder.Apply(waterMesh, null, waterMeshData);
+        progress?.Report(0.9f, "Configuring water...");
 
         Logger.Log(LogLevel.Debug, "Water",
             $"Generated water mesh: {waterMeshData.Stats.MeshVertices} verts, {waterMeshData.Stats.Triangles} tris, " +
@@ -398,6 +465,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
         }
         renderer.sharedMaterial = _waterMaterial;
         UpdateWaterMaterial(_waterMaterial);
+        progress?.Report(1f, "Water ready.");
     }
 
     Material CreateWaterMaterial()
@@ -466,6 +534,30 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, ILateInitia
             return 1f;
 
         return Mathf.Max(_planetSettings.PlanetRadius / WaterReferenceRadius, 0.0001f);
+    }
+
+    sealed class ProgressRangeHandle : IProgressHandle
+    {
+        readonly IProgressHandle _inner;
+        readonly float _start;
+        readonly float _length;
+
+        public float CurrentProgress { get; private set; }
+        public string CurrentMessage { get; private set; } = string.Empty;
+
+        public ProgressRangeHandle(IProgressHandle inner, float start, float length)
+        {
+            _inner = inner;
+            _start = start;
+            _length = length;
+        }
+
+        public void Report(float progress, string message = "")
+        {
+            CurrentProgress = _start + Mathf.Clamp01(progress) * _length;
+            CurrentMessage = message ?? string.Empty;
+            _inner?.Report(CurrentProgress, CurrentMessage);
+        }
     }
 
 }

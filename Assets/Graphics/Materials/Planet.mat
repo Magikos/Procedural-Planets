@@ -89,6 +89,13 @@ Material:
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
     - _AlphaToMask: 0
+    - _BiomeMacroVariationScale: 0.012
+    - _BiomeMacroVariationStrength: 0.14
+    - _BiomeNormalReliefShadow: 0.55
+    - _BiomeNormalStrength: 2
+    - _BiomeSecondaryBlend: 0.16
+    - _BiomeSecondaryTilingScale: 0.42
+    - _BiomeTriplanarTiling: 0.1
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BumpScale: 1

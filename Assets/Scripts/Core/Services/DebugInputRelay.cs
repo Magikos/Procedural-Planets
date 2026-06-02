@@ -35,6 +35,17 @@ public class DebugInputRelay : MonoBehaviour
 
         if (WasKeyPressed(_keyboard?.f11Key, KeyCode.F11))
             EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.ToggleProfiling));
+
+        // Scale reference markers — measurement aid for Phase C grass density tuning.
+        // M = drop at camera look-target. Shift+M = clear. T = teleport to markers.
+        if (WasKeyPressed(_keyboard?.mKey, KeyCode.M))
+        {
+            bool shift = (_keyboard?.shiftKey.isPressed ?? false) || Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(
+                shift ? DebugCommandType.ClearScaleMarkers : DebugCommandType.DropScaleMarkers));
+        }
+        if (WasKeyPressed(_keyboard?.tKey, KeyCode.T))
+            EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.TeleportToScaleMarkers));
     }
 
     void RefreshInputDevices()

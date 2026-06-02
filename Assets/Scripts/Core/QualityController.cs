@@ -1,5 +1,30 @@
 using UnityEngine;
 
+public interface IGrassQualitySettings
+{
+    int MaxBladesPerLane { get; }
+    float DensityMultiplier { get; }
+    float MaxRenderDistance { get; }
+    float LowLodDistance { get; }
+    float CullDistanceJitter01 { get; }
+    int MaxCoarseLodOffsetForBlades { get; }
+    bool EnableScreenSpaceShadows { get; }
+}
+
+public sealed class DefaultGrassQualitySettings : IGrassQualitySettings
+{
+    // Phase-C density iteration: the last F10 showed only 24k emitted blades, with most
+    // lanes lost to distance and mixed-biome density. These defaults intentionally push
+    // the PC tier into a dense visual proof before we add representation/quality tiers.
+    public int MaxBladesPerLane => 32;
+    public float DensityMultiplier => 2.5f;
+    public float MaxRenderDistance => 900f;
+    public float LowLodDistance => 650f;
+    public float CullDistanceJitter01 => 0.25f;
+    public int MaxCoarseLodOffsetForBlades => 0;
+    public bool EnableScreenSpaceShadows => true;
+}
+
 /// <summary>
 /// Applies Unity Quality Settings to the planet rendering system.
 ///

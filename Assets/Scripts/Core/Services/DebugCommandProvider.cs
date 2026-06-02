@@ -38,6 +38,15 @@ public class DebugCommandProvider : IDebugCommandProvider, System.IDisposable
             case DebugCommandType.DumpWeatherDiagnostics:
                 EventBus<DebugWeatherDiagnosticsRequestedEvent>.Raise(new DebugWeatherDiagnosticsRequestedEvent());
                 break;
+            case DebugCommandType.DropScaleMarkers:
+                EventBus<DebugDropScaleMarkersRequestedEvent>.Raise(new DebugDropScaleMarkersRequestedEvent());
+                break;
+            case DebugCommandType.ClearScaleMarkers:
+                EventBus<DebugClearScaleMarkersRequestedEvent>.Raise(new DebugClearScaleMarkersRequestedEvent());
+                break;
+            case DebugCommandType.TeleportToScaleMarkers:
+                EventBus<DebugTeleportToScaleMarkersRequestedEvent>.Raise(new DebugTeleportToScaleMarkersRequestedEvent());
+                break;
         }
     }
 

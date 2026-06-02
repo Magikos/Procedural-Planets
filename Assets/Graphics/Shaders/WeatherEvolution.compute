@@ -29,18 +29,22 @@ float _CondensationRainDrain;
 float _DeltaVisualizationScale;
 float4x4 _WeatherVisualRotation;
 
+float3 CubeFaceLocalUp(int face)
+{
+    if (face == 0) return float3(0.0, 1.0, 0.0);
+    if (face == 1) return float3(0.0, -1.0, 0.0);
+    if (face == 2) return float3(-1.0, 0.0, 0.0);
+    if (face == 3) return float3(1.0, 0.0, 0.0);
+    if (face == 4) return float3(0.0, 0.0, 1.0);
+    return float3(0.0, 0.0, -1.0);
+}
+
 float3 CubeFaceToUnitSphere(int face, float2 uv)
 {
     float u = uv.x * 2.0 - 1.0;
     float v = uv.y * 2.0 - 1.0;
 
-    float3 localUp = float3(0.0, 1.0, 0.0);
-    if (face == 1) localUp = float3(0.0, -1.0, 0.0);
-    else if (face == 2) localUp = float3(-1.0, 0.0, 0.0);
-    else if (face == 3) localUp = float3(1.0, 0.0, 0.0);
-    else if (face == 4) localUp = float3(0.0, 0.0, 1.0);
-    else if (face == 5) localUp = float3(0.0, 0.0, -1.0);
-
+    float3 localUp = CubeFaceLocalUp(face);
     float3 axisA = float3(localUp.y, localUp.z, localUp.x);
     float3 axisB = cross(localUp, axisA);
     return normalize(localUp + u * axisA + v * axisB);
@@ -49,31 +53,26 @@ float3 CubeFaceToUnitSphere(int face, float2 uv)
 void CubeFaceUv(float3 direction, out int face, out float2 uv)
 {
     float3 absDirection = abs(direction);
-    float u;
-    float v;
 
     if (absDirection.y >= absDirection.x && absDirection.y >= absDirection.z)
     {
         face = direction.y > 0.0 ? 0 : 1;
-        float faceSign = direction.y > 0.0 ? 1.0 : -1.0;
-        u = direction.x / max(absDirection.y, 0.00001);
-        v = direction.z / max(absDirection.y, 0.00001) * faceSign;
     }
     else if (absDirection.x >= absDirection.y && absDirection.x >= absDirection.z)
     {
         face = direction.x > 0.0 ? 3 : 2;
-        float faceSign = direction.x > 0.0 ? 1.0 : -1.0;
-        u = direction.z / max(absDirection.x, 0.00001) * -faceSign;
-        v = direction.y / max(absDirection.x, 0.00001);
     }
     else
     {
         face = direction.z > 0.0 ? 4 : 5;
-        float faceSign = direction.z > 0.0 ? 1.0 : -1.0;
-        u = direction.x / max(absDirection.z, 0.00001) * faceSign;
-        v = direction.y / max(absDirection.z, 0.00001);
     }
 
+    float3 localUp = CubeFaceLocalUp(face);
+    float3 axisA = float3(localUp.y, localUp.z, localUp.x);
+    float3 axisB = cross(localUp, axisA);
+    float major = max(abs(dot(direction, localUp)), 0.00001);
+    float u = dot(direction, axisA) / major;
+    float v = dot(direction, axisB) / major;
     uv = saturate(float2(u, v) * 0.5 + 0.5);
 }
 
@@ -85,6 +84,13 @@ float SampleMoistureSource(float3 direction)
 
     int2 pixel = clamp(int2(floor(uv * _Resolution)), int2(0, 0), int2(_Resolution - 1, _Resolution - 1));
     return _WeatherRead.Load(int4(pixel, face, 0)).b;
+}
+
+float EdgeSnappedUv(uint idx, int resolution)
+{
+    if (idx == 0u) return 0.0;
+    if (idx == (uint)(resolution - 1)) return 1.0;
+    return ((float)idx + 0.5) / max((float)resolution, 1.0);
 }
 
 float MoveTowards(float current, float target, float maxDelta)
@@ -105,7 +111,9 @@ void CSEvolveWeather(uint3 id : SV_DispatchThreadID)
     float4 current = _WeatherRead.Load(int4(pixel, 0));
     float4 dynamics = _DynamicsRead.Load(int4(pixel, 0));
 
-    float2 uv = (float2(id.xy) + 0.5) / _Resolution;
+    // Match SphericalWeatherGrid generation: border texels sample the exact cube edge so
+    // adjacent faces evolve from the same spherical direction instead of drifting apart.
+    float2 uv = float2(EdgeSnappedUv(id.x, _Resolution), EdgeSnappedUv(id.y, _Resolution));
     float3 direction = CubeFaceToUnitSphere((int)id.z, uv);
     float3 sourceDirection = mul((float3x3)_WeatherVisualRotation, direction);
     float source = SampleMoistureSource(sourceDirection);

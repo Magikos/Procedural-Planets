@@ -6,6 +6,13 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Profiling;
 
+public interface IChunkVisibilitySource
+{
+    IReadOnlyList<PlanetChunk> GetVisibleChunksSnapshot();
+    event System.Action<PlanetChunk> ChunkShown;
+    event System.Action<PlanetChunk> ChunkHidden;
+}
+
 // Phase A "High" resolution provider — pre-cache + visibility filter.
 //
 // At Planet.GenerateAsync time, the provider builds 6 quadtrees to a fixed MaxChunkDepth and
@@ -17,7 +24,7 @@ using UnityEngine.Profiling;
 //
 // Pivoted to this design 2026-05-30 after step-7 perf testing showed dynamic subdivision
 // hitched too hard during fly-through. See docs/design/2026-05-30-chunk-skeleton.md.
-public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider
+public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisibilitySource
 {
     // Per-chunk vertex grid resolution. 97 = 9,409 vertices and 18,432 triangles per chunk
     // (vs 65 = 4,225 verts / 8,192 tris). The bump improves biome-color sharpness and terrain
@@ -48,7 +55,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider
 #if PLANET_CHUNK_DIAGNOSTICS
     const bool EnableChunkDiagnosticsLog = true;
 #else
-    const bool EnableChunkDiagnosticsLog = false;
+    static readonly bool EnableChunkDiagnosticsLog = false;
 #endif
 
     readonly Transform _planetTransform;
@@ -61,6 +68,10 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider
     TerrainQuadtree[] _quadtrees;
     bool[] _faceVisible;
     IFaceMeshSampler[] _rootSamplers;
+    Texture2D[] _faceBiomeBlendedAtlases;
+    Texture2D[] _faceBiomeIdAtlases;
+    Texture2D[] _faceBiomeWeightAtlases;
+    GrassSurfaceAtlasGpuData _grassSurfaceAtlases;
 
     // Per-face visible-leaf snapshot — compared each Tick to detect changes.
     readonly List<PlanetChunk>[] _visibleLeavesPerFace = new List<PlanetChunk>[6];
@@ -68,6 +79,10 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider
     readonly HashSet<PlanetChunk> _tmpVisibleSet = new();
     readonly List<PlanetChunk> _allChunks = new();
     readonly Dictionary<PlanetChunk, ChunkRenderHandle> _chunkRenderers = new();
+    // Step 5b: per-bake thread-local scratch buffer used by BiomeMapBaker for the high-res
+    // biome id grid (HighResolutionSize²). Reused across all chunks on a thread to keep the
+    // bake GC-free. Sized lazily on first use.
+    [System.ThreadStatic] static byte[] _tlsBakeHighResBuffer;
 
     readonly Plane[] _lodFrustumPlanes = new Plane[6];
     Camera _lodCamera;
@@ -83,6 +98,11 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider
 
     static readonly string ProfTick = "ChunkedSurfaceProvider.Tick";
     static readonly string ProfVisibility = "ChunkedSurfaceProvider.UpdateVisibility";
+
+    public event System.Action<PlanetChunk> ChunkShown;
+    public event System.Action<PlanetChunk> ChunkHidden;
+    public GrassSurfaceAtlasGpuData GrassSurfaceAtlases => _grassSurfaceAtlases;
+    public int MaxChunkDepth => _maxChunkDepth;
 
     public ChunkedSurfaceProvider(
         Transform planetTransform,
@@ -104,6 +124,10 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider
 
         progress?.Report(0f, "Building chunk quadtrees...");
 
+        // Keep texture-mode terrain disabled until GenerateColorsAsync has baked and bound
+        // real biome maps. Otherwise newly visible chunks sample blank startup textures.
+        if (_faceMaterial != null) _faceMaterial.DisableKeyword(BiomeTextureModeKeyword);
+
         if (_filters.IsCreated) _filters.Dispose();
         _filters = _shapeGenerator.BuildNoiseFilterData(Allocator.Persistent);
 
@@ -118,6 +142,12 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider
         for (int f = 0; f < 6; f++) CollectAllChunks(_quadtrees[f].Root, allChunks);
         _allChunks.Clear();
         _allChunks.AddRange(allChunks);
+
+        // Phase B step 3: allocate per-chunk biome map + surface state textures up front.
+        // Bake population happens in step 4; for now they're cleared to zero so the lifecycle
+        // path is exercised regardless of whether the bake exists.
+        for (int i = 0; i < _allChunks.Count; i++)
+            PlanetChunkTextures.Allocate(_allChunks[i]);
 
         int total = allChunks.Count;
         progress?.Report(0.05f, $"Generating {total} chunks...");
@@ -188,7 +218,12 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider
             }
         }
 
-        // 6) Initial visibility. Camera.main is available by load time; if not, default to
+        // 6) Build face-space radius + normal atlases for Phase C grass placement. The
+        // renderer is added later; this data must exist before grass compute can place roots.
+        progress?.Report(0.92f, "Building grass surface atlases...");
+        BuildGrassSurfaceAtlases();
+
+        // 7) Initial visibility. Camera.main is available by load time; if not, default to
         //    "render coarsest" (root chunks visible everywhere) and Tick fixes it next frame.
         progress?.Report(0.94f, "Initial visibility...");
         var cam = Camera.main;
@@ -226,6 +261,27 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider
         Profiler.EndSample();
     }
 
+    public IReadOnlyList<PlanetChunk> GetVisibleChunksSnapshot()
+    {
+        var snapshot = new List<PlanetChunk>(128);
+        if (_visibleLeavesPerFace == null) return snapshot;
+
+        for (int f = 0; f < _visibleLeavesPerFace.Length; f++)
+        {
+            var leaves = _visibleLeavesPerFace[f];
+            if (leaves == null) continue;
+
+            for (int i = 0; i < leaves.Count; i++)
+            {
+                PlanetChunk chunk = leaves[i];
+                if (chunk != null && IsChunkActuallyVisible(chunk))
+                    snapshot.Add(chunk);
+            }
+        }
+
+        return snapshot;
+    }
+
     public bool TryGetLocalSurfaceRadius(Vector3 localUnitDirection, out float localRadius)
     {
         localRadius = 0f;
@@ -246,38 +302,636 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider
         return leaf.TrySampleRadius(chunkLocalUv, out localRadius) && localRadius > 0f;
     }
 
+    public bool TryRaycastVisibleSurface(Ray localRay, float maxDistance,
+        out Vector3 localPoint, out Vector3 localNormal, out float localDistance)
+    {
+        localPoint = default;
+        localNormal = default;
+        localDistance = 0f;
+
+        if (_visibleLeavesPerFace == null || localRay.direction.sqrMagnitude < 0.0001f)
+            return false;
+
+        localRay.direction = localRay.direction.normalized;
+        float bestDistance = maxDistance > 0f ? maxDistance : float.PositiveInfinity;
+        bool hit = false;
+        int[] triangles = ChunkTriangleTemplate.Get(ChunkResolution);
+
+        for (int face = 0; face < _visibleLeavesPerFace.Length; face++)
+        {
+            List<PlanetChunk> leaves = _visibleLeavesPerFace[face];
+            if (leaves == null) continue;
+
+            for (int i = 0; i < leaves.Count; i++)
+            {
+                PlanetChunk chunk = leaves[i];
+                if (!IsChunkActuallyVisible(chunk) || chunk.CpuVertices == null)
+                    continue;
+                if (!chunk.CpuLocalBounds.IntersectRay(localRay, out float boundsDistance))
+                    continue;
+                if (boundsDistance > bestDistance)
+                    continue;
+
+                if (RaycastChunkTriangles(localRay, chunk, triangles, bestDistance,
+                        out float chunkDistance, out Vector3 chunkPoint, out Vector3 chunkNormal)
+                    && chunkDistance < bestDistance)
+                {
+                    bestDistance = chunkDistance;
+                    localPoint = chunkPoint;
+                    localNormal = chunkNormal;
+                    hit = true;
+                }
+            }
+        }
+
+        if (!hit)
+            return false;
+
+        localDistance = bestDistance;
+        if (localNormal.sqrMagnitude < 0.0001f)
+            localNormal = localPoint.sqrMagnitude > 0.0001f ? localPoint.normalized : Vector3.up;
+        localNormal.Normalize();
+        if (Vector3.Dot(localNormal, localPoint) < 0f)
+            localNormal = -localNormal;
+        return true;
+    }
+
+    // Phase B step 9: cached biome provider so RebakeBiomeMapsAt (Phase E entry point) can
+    // re-run the bake without the caller plumbing the provider through again. Set on each
+    // GenerateColorsAsync call.
+    IBiomeProvider _cachedBiomeProvider;
+
     public async Awaitable GenerateColorsAsync(IBiomeProvider biomeProvider, IProgressHandle progress, CancellationToken ct)
     {
         if (biomeProvider == null || _allChunks.Count == 0) return;
+        _cachedBiomeProvider = biomeProvider;
 
-        const int colorBatchSize = 96;
-        int total = _allChunks.Count;
-        for (int batchStart = 0; batchStart < total; batchStart += colorBatchSize)
+        progress?.Report(0f, "Applying biome colors...");
+
+        // Build the Burst-compatible biome lookup snapshot + flat color LUT once for the
+        // whole bake pass. ColorGenerator is the only IBiomeProvider that owns a registry +
+        // color table; other providers fall through with bakeLookupBuilt=false so the chunk
+        // biome textures stay at their step-3 zero-init state.
+        BiomeLookupData lookup = default;
+        Color[] lutColors = null;
+        bool bakeLookupBuilt = false;
+        if (biomeProvider is ColorGenerator cg && cg.Registry != null && cg.BiomeColors != null)
         {
-            int batchEnd = Mathf.Min(batchStart + colorBatchSize, total);
+            lookup = cg.Registry.BuildLookupData(Allocator.Persistent);
+            lutColors = cg.BiomeColors;
+            bakeLookupBuilt = true;
+        }
 
-            await Awaitable.BackgroundThreadAsync();
-            ct.ThrowIfCancellationRequested();
-            System.Threading.Tasks.Parallel.For(batchStart, batchEnd, i => CalculateChunkColors(_allChunks[i], biomeProvider));
-            ct.ThrowIfCancellationRequested();
+        try
+        {
+            const int colorBatchSize = 96;
+            int total = _allChunks.Count;
+            for (int batchStart = 0; batchStart < total; batchStart += colorBatchSize)
+            {
+                int batchEnd = Mathf.Min(batchStart + colorBatchSize, total);
 
-            await Awaitable.MainThreadAsync();
-            for (int i = batchStart; i < batchEnd; i++)
-                ApplyChunkColors(_allChunks[i]);
+                await Awaitable.BackgroundThreadAsync();
+                ct.ThrowIfCancellationRequested();
+                BiomeLookupData lookupCopy = lookup; // captured by closure
+                Color[] lutCopy = lutColors;
+                bool bakeEnabled = bakeLookupBuilt;
+                System.Threading.Tasks.Parallel.For(batchStart, batchEnd, i =>
+                {
+                    var chunk = _allChunks[i];
+                    CalculateChunkColors(chunk, biomeProvider);
+                    if (bakeEnabled) BakeChunkBiomeMap(chunk, lookupCopy, lutCopy);
+                });
+                ct.ThrowIfCancellationRequested();
 
-            float pct = (float)batchEnd / total;
-            progress?.Report(0.80f + 0.10f * pct, $"Applied biome colors {batchEnd}/{total}");
-            await Awaitable.NextFrameAsync(ct);
+                await Awaitable.MainThreadAsync();
+                for (int i = batchStart; i < batchEnd; i++)
+                {
+                    var chunk = _allChunks[i];
+                    ApplyChunkColors(chunk);
+                    if (bakeEnabled) UploadChunkBiomeMap(chunk, releasePendingPixels: !chunk.IsLeaf);
+                }
+
+                float pct = (float)batchEnd / total;
+                progress?.Report(pct, $"Applied biome colors {batchEnd}/{total}");
+                await Awaitable.NextFrameAsync(ct);
+            }
+
+            if (bakeLookupBuilt)
+            {
+                BuildFaceBiomeAtlases();
+                RebindAllChunkBiomeProperties();
+                if (_faceMaterial != null) _faceMaterial.EnableKeyword(BiomeTextureModeKeyword);
+            }
+        }
+        finally
+        {
+            if (bakeLookupBuilt)
+            {
+                LogBiomeMapBakeSummary(biomeProvider);
+                ReleasePendingBiomeMapPixels();
+                lookup.Dispose();
+            }
+        }
+    }
+
+    // One-shot diagnostic: scan all chunks, pick the leaf with the most distinct biomes (more
+    // informative than the polar/corner default), and report its texel histogram. Also reports
+    // any chunks where the biome map is uniformly zero (which would render as Ocean).
+    void LogBiomeMapBakeSummary(IBiomeProvider biomeProvider)
+    {
+        var registry = (biomeProvider as ColorGenerator)?.Registry;
+
+        PlanetChunk best = null;
+        int bestUnique = 0;
+        int allZeroCount = 0;
+        int totalLeafCount = 0;
+
+        // BiomeIdsTexture has 4 ids per texel in RGBA channels — top-K by weight, R is the
+        // dominant biome. GetPixels32 round-trips through the GPU readback (textures stay
+        // CPU-readable: makeNoLongerReadable was false on Apply).
+        for (int i = 0; i < _allChunks.Count; i++)
+        {
+            var c = _allChunks[i];
+            if (c == null || !c.IsLeaf || c.BiomeIdsTexture == null) continue;
+            totalLeafCount++;
+            var pixels = c.BiomeIdsTexture.GetPixels32();
+            var seen = new System.Collections.Generic.HashSet<byte>();
+            for (int j = 0; j < pixels.Length; j++) seen.Add(pixels[j].r);
+            if (seen.Count == 1 && pixels[0].r == 0) allZeroCount++;
+            if (seen.Count > bestUnique) { best = c; bestUnique = seen.Count; }
+        }
+
+        if (best == null)
+        {
+            LoggerProvider.Log(LogLevel.Warning, "PhaseB", "Bake: no leaf chunks have populated BiomeIdsTexture.");
+            return;
+        }
+
+        var counts = new int[256];
+        var bestPixels = best.BiomeIdsTexture.GetPixels32();
+        for (int i = 0; i < bestPixels.Length; i++) counts[bestPixels[i].r]++;
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"Bake: {_allChunks.Count} chunks ({allZeroCount}/{totalLeafCount} leaves are uniformly Ocean). Most-diverse chunk F{best.FaceIndex} D{best.DetailLevel} H{best.HashValue} dominant-id distribution: ");
+        bool first = true;
+        for (int id = 0; id < counts.Length; id++)
+        {
+            if (counts[id] == 0) continue;
+            if (!first) sb.Append(", ");
+            string biomeName = registry?.GetDefinitionByIndex(id)?.Type.ToString() ?? "?";
+            sb.Append($"{biomeName}({id})={counts[id]}");
+            first = false;
+        }
+        LoggerProvider.Log(LogLevel.Debug, "PhaseB", sb.ToString());
+    }
+
+    // Step 5b: bake top-K biome textures for one chunk on a worker thread. Allocates the
+    // pending Color32 buffers lazily (per chunk, GC'd after upload) and reuses a thread-local
+    // scratch buffer for the high-res biome id grid (no per-chunk GC pressure for that).
+    static void BakeChunkBiomeMap(PlanetChunk chunk, in BiomeLookupData lookup, Color[] lutColors)
+    {
+        if (chunk?.BiomeBlendedColorTexture == null) return;
+        int texelCount = PlanetChunkTextures.BiomeMapResolution * PlanetChunkTextures.BiomeMapResolution;
+        int hrCount = BiomeMapBaker.HighResolutionSize * BiomeMapBaker.HighResolutionSize;
+
+        if (chunk.PendingBiomeBlendedColorPixels == null || chunk.PendingBiomeBlendedColorPixels.Length != texelCount)
+            chunk.PendingBiomeBlendedColorPixels = new Color32[texelCount];
+        if (chunk.PendingBiomeIdsPixels == null || chunk.PendingBiomeIdsPixels.Length != texelCount)
+            chunk.PendingBiomeIdsPixels = new Color32[texelCount];
+        if (chunk.PendingBiomeWeightsPixels == null || chunk.PendingBiomeWeightsPixels.Length != texelCount)
+            chunk.PendingBiomeWeightsPixels = new Color32[texelCount];
+        if (_tlsBakeHighResBuffer == null || _tlsBakeHighResBuffer.Length != hrCount)
+            _tlsBakeHighResBuffer = new byte[hrCount];
+
+        BiomeMapBaker.Bake(chunk, lookup, lutColors,
+            chunk.PendingBiomeBlendedColorPixels,
+            chunk.PendingBiomeIdsPixels,
+            chunk.PendingBiomeWeightsPixels,
+            _tlsBakeHighResBuffer);
+    }
+
+    // Step 5b: upload the 3 baked Color32 buffers to their GPU textures. Leaf pending arrays
+    // stay alive until the face-space biome atlases are stitched, then ReleasePendingBiomeMapPixels
+    // drops them all at once.
+    static void UploadChunkBiomeMap(PlanetChunk chunk, bool releasePendingPixels)
+    {
+        if (chunk == null) return;
+        if (chunk.BiomeBlendedColorTexture != null && chunk.PendingBiomeBlendedColorPixels != null)
+        {
+            chunk.BiomeBlendedColorTexture.SetPixels32(chunk.PendingBiomeBlendedColorPixels);
+            chunk.BiomeBlendedColorTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+        }
+        if (chunk.BiomeIdsTexture != null && chunk.PendingBiomeIdsPixels != null)
+        {
+            chunk.BiomeIdsTexture.SetPixels32(chunk.PendingBiomeIdsPixels);
+            chunk.BiomeIdsTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+        }
+        if (chunk.BiomeWeightsTexture != null && chunk.PendingBiomeWeightsPixels != null)
+        {
+            chunk.BiomeWeightsTexture.SetPixels32(chunk.PendingBiomeWeightsPixels);
+            chunk.BiomeWeightsTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+        }
+        if (releasePendingPixels)
+        {
+            chunk.PendingBiomeBlendedColorPixels = null;
+            chunk.PendingBiomeIdsPixels = null;
+            chunk.PendingBiomeWeightsPixels = null;
+        }
+    }
+
+    void BuildFaceBiomeAtlases()
+    {
+        DisposeFaceBiomeAtlases();
+
+        if (_maxChunkDepth <= 0) return;
+
+        int leafsPerAxis = 1 << _maxChunkDepth;
+        int leafStride = PlanetChunkTextures.BiomeMapResolution - 1;
+        int atlasResolution = leafsPerAxis * leafStride + 1;
+        if (atlasResolution <= 1 || atlasResolution > SystemInfo.maxTextureSize)
+        {
+            LoggerProvider.Log(LogLevel.Warning, "PhaseB",
+                $"Biome atlas skipped: requested {atlasResolution}x{atlasResolution}, max texture size is {SystemInfo.maxTextureSize}.");
+            return;
+        }
+
+        _faceBiomeBlendedAtlases = new Texture2D[6];
+        _faceBiomeIdAtlases = new Texture2D[6];
+        _faceBiomeWeightAtlases = new Texture2D[6];
+
+        int expectedLeafCount = leafsPerAxis * leafsPerAxis;
+        for (int face = 0; face < 6; face++)
+        {
+            var blendedPixels = new Color32[atlasResolution * atlasResolution];
+            var idPixels = new Color32[blendedPixels.Length];
+            var weightPixels = new Color32[blendedPixels.Length];
+            int copiedLeaves = 0;
+
+            for (int i = 0; i < _allChunks.Count; i++)
+            {
+                PlanetChunk chunk = _allChunks[i];
+                if (chunk == null || !chunk.IsLeaf || chunk.FaceIndex != face) continue;
+                if (chunk.PendingBiomeBlendedColorPixels == null
+                    || chunk.PendingBiomeIdsPixels == null
+                    || chunk.PendingBiomeWeightsPixels == null)
+                {
+                    continue;
+                }
+
+                CopyLeafBiomeMapIntoAtlas(chunk, chunk.PendingBiomeBlendedColorPixels,
+                    blendedPixels, atlasResolution, leafsPerAxis, leafStride);
+                CopyLeafBiomeMapIntoAtlas(chunk, chunk.PendingBiomeIdsPixels,
+                    idPixels, atlasResolution, leafsPerAxis, leafStride);
+                CopyLeafBiomeMapIntoAtlas(chunk, chunk.PendingBiomeWeightsPixels,
+                    weightPixels, atlasResolution, leafsPerAxis, leafStride);
+                copiedLeaves++;
+            }
+
+            if (copiedLeaves <= 0)
+            {
+                LoggerProvider.Log(LogLevel.Warning, "PhaseB", $"Biome atlas face {face}: no leaf maps available.");
+                continue;
+            }
+
+            _faceBiomeBlendedAtlases[face] = CreateBiomeAtlasTexture(
+                $"BiomeBlendedAtlas_F{face}", atlasResolution, blendedPixels, FilterMode.Bilinear, linear: false);
+            _faceBiomeIdAtlases[face] = CreateBiomeAtlasTexture(
+                $"BiomeIdsAtlas_F{face}", atlasResolution, idPixels, FilterMode.Point, linear: true);
+            _faceBiomeWeightAtlases[face] = CreateBiomeAtlasTexture(
+                $"BiomeWeightsAtlas_F{face}", atlasResolution, weightPixels, FilterMode.Point, linear: true);
+
+            LoggerProvider.Log(LogLevel.Debug, "PhaseB",
+                $"Biome atlas face {face}: {atlasResolution}x{atlasResolution}, copied {copiedLeaves}/{expectedLeafCount} max-depth leaves.");
+        }
+    }
+
+    static Texture2D CreateBiomeAtlasTexture(string name, int resolution, Color32[] pixels, FilterMode filterMode, bool linear)
+    {
+        var tex = new Texture2D(resolution, resolution, TextureFormat.RGBA32, mipChain: false, linear: linear)
+        {
+            name = name,
+            filterMode = filterMode,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+        tex.SetPixels32(pixels);
+        tex.Apply(updateMipmaps: false, makeNoLongerReadable: true);
+        return tex;
+    }
+
+    static void CopyLeafBiomeMapIntoAtlas(PlanetChunk chunk, Color32[] source,
+        Color32[] atlas, int atlasResolution, int leafsPerAxis, int leafStride)
+    {
+        int mapResolution = PlanetChunkTextures.BiomeMapResolution;
+        if (source == null || source.Length != mapResolution * mapResolution) return;
+
+        float minU = chunk.UvCenter.x - chunk.UvHalfExtent;
+        float minV = chunk.UvCenter.y - chunk.UvHalfExtent;
+        int leafX = Mathf.Clamp(Mathf.RoundToInt(minU * leafsPerAxis), 0, leafsPerAxis - 1);
+        int leafY = Mathf.Clamp(Mathf.RoundToInt(minV * leafsPerAxis), 0, leafsPerAxis - 1);
+        int dstX0 = leafX * leafStride;
+        int dstY0 = leafY * leafStride;
+
+        for (int y = 0; y < mapResolution; y++)
+        {
+            int srcRow = y * mapResolution;
+            int dstRow = (dstY0 + y) * atlasResolution + dstX0;
+            System.Array.Copy(source, srcRow, atlas, dstRow, mapResolution);
+        }
+    }
+
+    void BuildGrassSurfaceAtlases()
+    {
+        DisposeGrassSurfaceAtlases();
+
+        int leafsPerAxis = 1 << Mathf.Max(_maxChunkDepth, 0);
+        int leafStride = PlanetChunkTextures.BiomeMapResolution - 1;
+        int atlasResolution = leafsPerAxis * leafStride + 1;
+        if (atlasResolution <= 1 || atlasResolution > SystemInfo.maxTextureSize)
+        {
+            LoggerProvider.Log(LogLevel.Warning, "PhaseC",
+                $"Grass surface atlas skipped: requested {atlasResolution}x{atlasResolution}, max texture size is {SystemInfo.maxTextureSize}.");
+            return;
+        }
+
+        var radiusPixelsByFace = new float[6][];
+        var radiusTextures = new Texture2D[6];
+        var normalTextures = new Texture2D[6];
+        int expectedLeafCount = leafsPerAxis * leafsPerAxis;
+
+        for (int face = 0; face < 6; face++)
+        {
+            var radiusPixels = new float[atlasResolution * atlasResolution];
+            int copiedLeaves = 0;
+
+            for (int i = 0; i < _allChunks.Count; i++)
+            {
+                PlanetChunk chunk = _allChunks[i];
+                if (chunk == null || !chunk.IsLeaf || chunk.FaceIndex != face) continue;
+                if (CopyLeafSurfaceRadiusIntoAtlas(chunk, radiusPixels, atlasResolution, leafsPerAxis, leafStride))
+                    copiedLeaves++;
+            }
+
+            if (copiedLeaves <= 0)
+            {
+                LoggerProvider.Log(LogLevel.Warning, "PhaseC", $"Grass surface atlas face {face}: no leaf surface data available.");
+                continue;
+            }
+
+            radiusPixelsByFace[face] = radiusPixels;
+            LoggerProvider.Log(LogLevel.Debug, "PhaseC",
+                $"Grass surface radius face {face}: {atlasResolution}x{atlasResolution}, copied {copiedLeaves}/{expectedLeafCount} max-depth leaves.");
+        }
+
+        for (int face = 0; face < 6; face++)
+        {
+            float[] radiusPixels = radiusPixelsByFace[face];
+            if (radiusPixels == null) continue;
+
+            var normalPixels = BuildGrassSurfaceNormalPixels(face, radiusPixelsByFace, atlasResolution);
+            radiusTextures[face] = CreateGrassRadiusTexture($"GrassSurfaceRadius_F{face}", atlasResolution, radiusPixels);
+            normalTextures[face] = CreateGrassNormalTexture($"GrassSurfaceNormal_F{face}", atlasResolution, normalPixels);
+        }
+
+        _grassSurfaceAtlases = new GrassSurfaceAtlasGpuData(radiusTextures, normalTextures, atlasResolution);
+    }
+
+    static bool CopyLeafSurfaceRadiusIntoAtlas(PlanetChunk chunk, float[] atlas, int atlasResolution, int leafsPerAxis, int leafStride)
+    {
+        int mapResolution = PlanetChunkTextures.BiomeMapResolution;
+        if (chunk == null || atlas == null || chunk.CpuVertexRadii == null) return false;
+        int sourceResolution = (int)Mathf.Sqrt(chunk.CpuVertexRadii.Length);
+        if (sourceResolution * sourceResolution != chunk.CpuVertexRadii.Length || sourceResolution <= 1) return false;
+
+        float minU = chunk.UvCenter.x - chunk.UvHalfExtent;
+        float minV = chunk.UvCenter.y - chunk.UvHalfExtent;
+        int leafX = Mathf.Clamp(Mathf.RoundToInt(minU * leafsPerAxis), 0, leafsPerAxis - 1);
+        int leafY = Mathf.Clamp(Mathf.RoundToInt(minV * leafsPerAxis), 0, leafsPerAxis - 1);
+        int dstX0 = leafX * leafStride;
+        int dstY0 = leafY * leafStride;
+        float invMapMax = 1f / (mapResolution - 1);
+
+        for (int y = 0; y < mapResolution; y++)
+        {
+            float v = y * invMapMax;
+            int dstRow = (dstY0 + y) * atlasResolution + dstX0;
+            for (int x = 0; x < mapResolution; x++)
+            {
+                float u = x * invMapMax;
+                atlas[dstRow + x] = SampleFloatGrid(chunk.CpuVertexRadii, sourceResolution, u, v);
+            }
+        }
+
+        return true;
+    }
+
+    static Color32[] BuildGrassSurfaceNormalPixels(int face, float[][] radiusPixelsByFace, int atlasResolution)
+    {
+        var normalPixels = new Color32[atlasResolution * atlasResolution];
+        float invMax = 1f / (atlasResolution - 1);
+
+        for (int y = 0; y < atlasResolution; y++)
+        {
+            float v = y * invMax;
+            int row = y * atlasResolution;
+            for (int x = 0; x < atlasResolution; x++)
+            {
+                float u = x * invMax;
+                Vector2 uv = new(u, v);
+                Vector3 pWest = SampleGrassSurfacePoint(radiusPixelsByFace, face, new Vector2(u - invMax, v), atlasResolution);
+                Vector3 pEast = SampleGrassSurfacePoint(radiusPixelsByFace, face, new Vector2(u + invMax, v), atlasResolution);
+                Vector3 pNorth = SampleGrassSurfacePoint(radiusPixelsByFace, face, new Vector2(u, v - invMax), atlasResolution);
+                Vector3 pSouth = SampleGrassSurfacePoint(radiusPixelsByFace, face, new Vector2(u, v + invMax), atlasResolution);
+
+                Vector3 du = pEast - pWest;
+                Vector3 dv = pSouth - pNorth;
+                Vector3 normal = Vector3.Cross(du, dv);
+                Vector3 sphereNormal = CoordinateConverter.CubeFaceToUnitSphere(face, uv);
+                if (normal.sqrMagnitude < 1e-10f)
+                    normal = sphereNormal;
+                else
+                    normal.Normalize();
+                if (Vector3.Dot(normal, sphereNormal) < 0f)
+                    normal = -normal;
+
+                normalPixels[row + x] = PackNormalToColor32(normal);
+            }
+        }
+
+        return normalPixels;
+    }
+
+    static Vector3 SampleGrassSurfacePoint(float[][] radiusPixelsByFace, int face, Vector2 uv, int atlasResolution)
+    {
+        RemapFaceUvForAtlasSample(face, uv, out int sampleFace, out Vector2 sampleUv);
+        float radius = SampleGrassRadiusAtlas(radiusPixelsByFace, sampleFace, sampleUv, atlasResolution);
+        return CoordinateConverter.CubeFaceToUnitSphere(sampleFace, sampleUv) * radius;
+    }
+
+    static float SampleGrassRadiusAtlas(float[][] radiusPixelsByFace, int face, Vector2 uv, int atlasResolution)
+    {
+        if (radiusPixelsByFace == null || face < 0 || face >= radiusPixelsByFace.Length)
+            return 0f;
+        float[] pixels = radiusPixelsByFace[face];
+        if (pixels == null || pixels.Length != atlasResolution * atlasResolution)
+            return 0f;
+
+        float gx = Mathf.Clamp01(uv.x) * (atlasResolution - 1);
+        float gy = Mathf.Clamp01(uv.y) * (atlasResolution - 1);
+        int x0 = Mathf.FloorToInt(gx);
+        int y0 = Mathf.FloorToInt(gy);
+        int x1 = Mathf.Min(x0 + 1, atlasResolution - 1);
+        int y1 = Mathf.Min(y0 + 1, atlasResolution - 1);
+        float fx = gx - x0;
+        float fy = gy - y0;
+
+        float r00 = pixels[x0 + y0 * atlasResolution];
+        float r10 = pixels[x1 + y0 * atlasResolution];
+        float r01 = pixels[x0 + y1 * atlasResolution];
+        float r11 = pixels[x1 + y1 * atlasResolution];
+        return Mathf.Lerp(Mathf.Lerp(r00, r10, fx), Mathf.Lerp(r01, r11, fx), fy);
+    }
+
+    static void RemapFaceUvForAtlasSample(int face, Vector2 uv, out int sampleFace, out Vector2 sampleUv)
+    {
+        sampleFace = face;
+        sampleUv = uv;
+
+        if (uv.x < 0f) { RemapOutsideFaceUv(face, CubeEdge.West, uv.y, -uv.x, out sampleFace, out sampleUv); return; }
+        if (uv.x > 1f) { RemapOutsideFaceUv(face, CubeEdge.East, uv.y, uv.x - 1f, out sampleFace, out sampleUv); return; }
+        if (uv.y < 0f) { RemapOutsideFaceUv(face, CubeEdge.North, uv.x, -uv.y, out sampleFace, out sampleUv); return; }
+        if (uv.y > 1f) { RemapOutsideFaceUv(face, CubeEdge.South, uv.x, uv.y - 1f, out sampleFace, out sampleUv); return; }
+    }
+
+    static void RemapOutsideFaceUv(int face, CubeEdge edge, float edgeParam, float neighborDepth,
+        out int sampleFace, out Vector2 sampleUv)
+    {
+        CubeFaceEdgeNeighbor neighbor = CubeFaceTopology.GetNeighbor(face, edge);
+        sampleFace = neighbor.NeighborFace;
+
+        float s = neighbor.EdgeParamReversed ? 1f - edgeParam : edgeParam;
+        float d = Mathf.Clamp01(neighborDepth);
+        sampleUv = neighbor.NeighborEdge switch
+        {
+            CubeEdge.East => new Vector2(1f - d, s),
+            CubeEdge.West => new Vector2(d, s),
+            CubeEdge.North => new Vector2(s, d),
+            CubeEdge.South => new Vector2(s, 1f - d),
+            _ => new Vector2(Mathf.Clamp01(s), Mathf.Clamp01(d)),
+        };
+    }
+
+    static float SampleFloatGrid(float[] values, int resolution, float u, float v)
+    {
+        float gx = Mathf.Clamp01(u) * (resolution - 1);
+        float gy = Mathf.Clamp01(v) * (resolution - 1);
+        int x0 = Mathf.FloorToInt(gx);
+        int y0 = Mathf.FloorToInt(gy);
+        int x1 = Mathf.Min(x0 + 1, resolution - 1);
+        int y1 = Mathf.Min(y0 + 1, resolution - 1);
+        float fx = gx - x0;
+        float fy = gy - y0;
+
+        float v00 = values[x0 + y0 * resolution];
+        float v10 = values[x1 + y0 * resolution];
+        float v01 = values[x0 + y1 * resolution];
+        float v11 = values[x1 + y1 * resolution];
+        return Mathf.Lerp(Mathf.Lerp(v00, v10, fx), Mathf.Lerp(v01, v11, fx), fy);
+    }
+
+    static Color32 PackNormalToColor32(Vector3 normal)
+    {
+        normal.Normalize();
+        return new Color32(
+            (byte)Mathf.Clamp(Mathf.RoundToInt((normal.x * 0.5f + 0.5f) * 255f), 0, 255),
+            (byte)Mathf.Clamp(Mathf.RoundToInt((normal.y * 0.5f + 0.5f) * 255f), 0, 255),
+            (byte)Mathf.Clamp(Mathf.RoundToInt((normal.z * 0.5f + 0.5f) * 255f), 0, 255),
+            255);
+    }
+
+    static Texture2D CreateGrassRadiusTexture(string name, int resolution, float[] pixels)
+    {
+        var tex = new Texture2D(resolution, resolution, TextureFormat.RFloat, mipChain: false, linear: true)
+        {
+            name = name,
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+        tex.SetPixelData(pixels, 0);
+        tex.Apply(updateMipmaps: false, makeNoLongerReadable: true);
+        return tex;
+    }
+
+    static Texture2D CreateGrassNormalTexture(string name, int resolution, Color32[] pixels)
+    {
+        var tex = new Texture2D(resolution, resolution, TextureFormat.RGBA32, mipChain: false, linear: true)
+        {
+            name = name,
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+        tex.SetPixels32(pixels);
+        tex.Apply(updateMipmaps: false, makeNoLongerReadable: true);
+        return tex;
+    }
+
+    void ReleasePendingBiomeMapPixels()
+    {
+        for (int i = 0; i < _allChunks.Count; i++)
+        {
+            PlanetChunk chunk = _allChunks[i];
+            if (chunk == null) continue;
+            chunk.PendingBiomeBlendedColorPixels = null;
+            chunk.PendingBiomeIdsPixels = null;
+            chunk.PendingBiomeWeightsPixels = null;
         }
     }
 
     public IReadOnlyList<IFaceMeshSampler> GetFaceMeshSamplers()
         => _rootSamplers ?? (IReadOnlyList<IFaceMeshSampler>)System.Array.Empty<IFaceMeshSampler>();
 
+    // Phase B step 9: Phase E entry point. Walks the chunk tree on the face containing the
+    // direction, finds the leaf, re-runs the bake + GPU upload for that single chunk.
+    // Returns the count rebaked (0 if pre-init, no registry available, etc.). Phase E callers
+    // will typically expand this to a radius — for now single-chunk is sufficient plumbing.
+    public int RebakeBiomeMapsAt(Vector3 localUnitDirection)
+    {
+        if (_cachedBiomeProvider is not ColorGenerator cg || cg.Registry == null || cg.BiomeColors == null)
+            return 0;
+        if (_quadtrees == null || _quadtrees.Length != 6) return 0;
+        if (localUnitDirection.sqrMagnitude < 0.0001f) return 0;
+
+        var (face, faceUv) = CoordinateConverter.UnitSphereToCubeFace(localUnitDirection.normalized);
+        if (face < 0 || face >= _quadtrees.Length || _quadtrees[face] == null) return 0;
+
+        PlanetChunk leaf = _quadtrees[face].FindLeafContaining(faceUv);
+        if (leaf == null) return 0;
+
+        BiomeLookupData lookup = cg.Registry.BuildLookupData(Allocator.TempJob);
+        try
+        {
+            BakeChunkBiomeMap(leaf, lookup, cg.BiomeColors);
+            UploadChunkBiomeMap(leaf, releasePendingPixels: true);
+            // Re-bind in case the renderer was created before the bake finished (paranoid —
+            // BiomeBlendedColorTexture itself is the same Texture2D, just with new content).
+            if (_chunkRenderers.TryGetValue(leaf, out var handle))
+                BindChunkBiomeProperties(handle, leaf);
+        }
+        finally
+        {
+            lookup.Dispose();
+        }
+        return 1;
+    }
+
+    const string BiomeTextureModeKeyword = "_BIOME_COLOR_MODE_TEXTURE";
+
     public void Dispose()
     {
         DisposeAllPendingJobs();
         if (_filters.IsCreated) _filters.Dispose();
+        DisposeFaceBiomeAtlases();
+        DisposeGrassSurfaceAtlases();
+        if (_faceMaterial != null) _faceMaterial.DisableKeyword(BiomeTextureModeKeyword);
         foreach (var pair in _chunkRenderers)
         {
             var handle = pair.Value;
@@ -285,6 +939,16 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider
             if (handle.Mesh != null) Object.Destroy(handle.Mesh);
         }
         _chunkRenderers.Clear();
+
+        // Phase B step 3: dispose per-chunk biome + surface-state textures so we don't leak
+        // GPU memory across planet regen.
+        int chunkTexturesBefore = PlanetChunkTextures.LiveTextureSets;
+        int chunkCount = _allChunks.Count;
+        for (int i = 0; i < _allChunks.Count; i++)
+            PlanetChunkTextures.Dispose(_allChunks[i]);
+        _allChunks.Clear();
+        LoggerProvider.Log(LogLevel.Debug, "ChunkLOD",
+            $"Dispose: disposed {chunkCount} chunk texture sets. LiveTextureSets {chunkTexturesBefore} -> {PlanetChunkTextures.LiveTextureSets}");
     }
 
     // ---- Initial gen helpers ----------------------------------------------------------------
@@ -378,6 +1042,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider
             mesh.SetNormals(chunk.CpuNormals);
         else if (chunk.CpuUnitSpherePoints != null && chunk.CpuUnitSpherePoints.Length == chunk.CpuVertices.Length)
             mesh.SetNormals(chunk.CpuUnitSpherePoints);
+        mesh.SetUVs(0, ChunkUvTemplate.Get(ChunkResolution));
         mesh.SetTriangles(ChunkTriangleTemplate.Get(ChunkResolution), 0, false);
         mesh.bounds = chunk.CpuLocalBounds;
         filter.sharedMesh = mesh;
@@ -392,7 +1057,115 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider
             Mesh = mesh,
         };
         _chunkRenderers.Add(chunk, handle);
+
+        // Phase B step 5: bind the per-chunk biome map as a MaterialPropertyBlock so the
+        // shared planet material can sample it without a per-chunk material instance. The
+        // map texture itself was allocated in step 3 and populated by the step 4 bake.
+        BindChunkBiomeProperties(handle, chunk);
         return handle;
+    }
+
+    // Step 5b: per-chunk shader-property ids. Three textures replace the single _BiomeMap
+    // of step 5: _BiomeBlendedColor (bilinear, the cheap shader path), _BiomeIds (point,
+    // used by step 6+ texture array path and Phase C grass), _BiomeWeights (bilinear).
+    // Step 9: _SurfaceStateMask bound here for Phase E (currently bound but unread by shader).
+    static readonly int BiomeBlendedColorShaderId = Shader.PropertyToID("_BiomeBlendedColor");
+    static readonly int BiomeIdsShaderId = Shader.PropertyToID("_BiomeIds");
+    static readonly int BiomeWeightsShaderId = Shader.PropertyToID("_BiomeWeights");
+    static readonly int SurfaceStateMaskShaderId = Shader.PropertyToID("_SurfaceStateMask");
+    static readonly int BiomeMapTexelSizeShaderId = Shader.PropertyToID("_BiomeMap_TexelSize");
+    static readonly int BiomeMapUvScaleShaderId = Shader.PropertyToID("_BiomeMapUvScale");
+    MaterialPropertyBlock _chunkPropertyBlock;
+
+    void BindChunkBiomeProperties(ChunkRenderHandle handle, PlanetChunk chunk)
+    {
+        if (handle?.Renderer == null || chunk == null) return;
+        bool usingAtlas = TryGetFaceBiomeAtlases(chunk.FaceIndex,
+            out Texture2D blendedTexture, out Texture2D idsTexture, out Texture2D weightsTexture);
+        if (!usingAtlas)
+        {
+            blendedTexture = chunk.BiomeBlendedColorTexture;
+            idsTexture = chunk.BiomeIdsTexture;
+            weightsTexture = chunk.BiomeWeightsTexture;
+        }
+        if (blendedTexture == null) return;
+
+        _chunkPropertyBlock ??= new MaterialPropertyBlock();
+        handle.Renderer.GetPropertyBlock(_chunkPropertyBlock);
+        _chunkPropertyBlock.SetTexture(BiomeBlendedColorShaderId, blendedTexture);
+        if (idsTexture != null)
+            _chunkPropertyBlock.SetTexture(BiomeIdsShaderId, idsTexture);
+        if (weightsTexture != null)
+            _chunkPropertyBlock.SetTexture(BiomeWeightsShaderId, weightsTexture);
+        // Phase B step 9: per-chunk surface-state mask bound here. Always chunk-local
+        // (no atlas) because Phase E mutations are per-chunk. Shader sampling is deferred
+        // to Phase E — for now the binding just exercises the upload path.
+        if (chunk.SurfaceStateTexture != null)
+            _chunkPropertyBlock.SetTexture(SurfaceStateMaskShaderId, chunk.SurfaceStateTexture);
+        // _TexelSize is (1/w, 1/h, w, h) — matches Unity's built-in texture layout so the
+        // shader can do neighbor-texel lookups without external math.
+        int res = Mathf.Max(blendedTexture.width, 1);
+        _chunkPropertyBlock.SetVector(BiomeMapTexelSizeShaderId,
+            new Vector4(1f / res, 1f / res, res, res));
+        // Chunk-local UV maps either into the face atlas or into the chunk-local fallback map.
+        _chunkPropertyBlock.SetVector(BiomeMapUvScaleShaderId,
+            usingAtlas ? GetFaceAtlasUvScale(chunk) : new Vector4(1f, 1f, 0f, 0f));
+        handle.Renderer.SetPropertyBlock(_chunkPropertyBlock);
+    }
+
+    public bool TryGetFaceBiomeAtlases(int face, out Texture2D blended, out Texture2D ids, out Texture2D weights)
+    {
+        blended = null;
+        ids = null;
+        weights = null;
+        if (face < 0 || face >= 6) return false;
+        if (_faceBiomeBlendedAtlases == null || _faceBiomeIdAtlases == null || _faceBiomeWeightAtlases == null)
+            return false;
+
+        blended = _faceBiomeBlendedAtlases[face];
+        ids = _faceBiomeIdAtlases[face];
+        weights = _faceBiomeWeightAtlases[face];
+        return blended != null && ids != null && weights != null;
+    }
+
+    static Vector4 GetFaceAtlasUvScale(PlanetChunk chunk)
+    {
+        float size = chunk.UvHalfExtent * 2f;
+        return new Vector4(size, size,
+            chunk.UvCenter.x - chunk.UvHalfExtent,
+            chunk.UvCenter.y - chunk.UvHalfExtent);
+    }
+
+    void RebindAllChunkBiomeProperties()
+    {
+        foreach (var pair in _chunkRenderers)
+            BindChunkBiomeProperties(pair.Value, pair.Key);
+    }
+
+    void DisposeFaceBiomeAtlases()
+    {
+        DestroyTextureArray(ref _faceBiomeBlendedAtlases);
+        DestroyTextureArray(ref _faceBiomeIdAtlases);
+        DestroyTextureArray(ref _faceBiomeWeightAtlases);
+    }
+
+    void DisposeGrassSurfaceAtlases()
+    {
+        _grassSurfaceAtlases?.Dispose();
+        _grassSurfaceAtlases = null;
+    }
+
+    static void DestroyTextureArray(ref Texture2D[] textures)
+    {
+        if (textures == null) return;
+        for (int i = 0; i < textures.Length; i++)
+        {
+            if (textures[i] == null) continue;
+            if (Application.isPlaying) Object.Destroy(textures[i]);
+            else Object.DestroyImmediate(textures[i]);
+            textures[i] = null;
+        }
+        textures = null;
     }
 
     void SetChunkVisible(PlanetChunk chunk, bool visible)
@@ -405,6 +1178,113 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider
 
         handle.Visible = active;
         handle.GameObject.SetActive(active);
+        if (active)
+            ChunkShown?.Invoke(chunk);
+        else
+            ChunkHidden?.Invoke(chunk);
+    }
+
+    bool IsChunkActuallyVisible(PlanetChunk chunk)
+    {
+        return chunk != null
+            && _chunkRenderers.TryGetValue(chunk, out var handle)
+            && handle != null
+            && handle.Visible;
+    }
+
+    static bool RaycastChunkTriangles(Ray ray, PlanetChunk chunk, int[] triangles, float maxDistance,
+        out float hitDistance, out Vector3 hitPoint, out Vector3 hitNormal)
+    {
+        hitDistance = 0f;
+        hitPoint = default;
+        hitNormal = default;
+
+        Vector3[] vertices = chunk?.CpuVertices;
+        if (vertices == null || vertices.Length == 0 || triangles == null || triangles.Length < 3)
+            return false;
+
+        Vector3[] normals = chunk.CpuNormals;
+        bool hasNormals = normals != null && normals.Length == vertices.Length;
+        float bestDistance = maxDistance;
+        float bestU = 0f;
+        float bestV = 0f;
+        int bestA = -1;
+        int bestB = -1;
+        int bestC = -1;
+
+        for (int i = 0; i + 2 < triangles.Length; i += 3)
+        {
+            int ia = triangles[i];
+            int ib = triangles[i + 1];
+            int ic = triangles[i + 2];
+            if ((uint)ia >= (uint)vertices.Length || (uint)ib >= (uint)vertices.Length || (uint)ic >= (uint)vertices.Length)
+                continue;
+
+            if (!RaycastTriangle(ray, vertices[ia], vertices[ib], vertices[ic], bestDistance,
+                    out float distance, out float u, out float v))
+                continue;
+
+            bestDistance = distance;
+            bestU = u;
+            bestV = v;
+            bestA = ia;
+            bestB = ib;
+            bestC = ic;
+        }
+
+        if (bestA < 0)
+            return false;
+
+        hitDistance = bestDistance;
+        hitPoint = ray.origin + ray.direction * bestDistance;
+        float w = 1f - bestU - bestV;
+        if (hasNormals)
+        {
+            hitNormal = (normals[bestA] * w + normals[bestB] * bestU + normals[bestC] * bestV).normalized;
+        }
+        else
+        {
+            Vector3 a = vertices[bestA];
+            Vector3 b = vertices[bestB];
+            Vector3 c = vertices[bestC];
+            hitNormal = Vector3.Cross(b - a, c - a).normalized;
+        }
+
+        if (hitNormal.sqrMagnitude < 0.0001f && hitPoint.sqrMagnitude > 0.0001f)
+            hitNormal = hitPoint.normalized;
+        if (Vector3.Dot(hitNormal, hitPoint) < 0f)
+            hitNormal = -hitNormal;
+        return true;
+    }
+
+    static bool RaycastTriangle(Ray ray, Vector3 a, Vector3 b, Vector3 c, float maxDistance,
+        out float distance, out float u, out float v)
+    {
+        const float epsilon = 1e-6f;
+        distance = 0f;
+        u = 0f;
+        v = 0f;
+
+        Vector3 edge1 = b - a;
+        Vector3 edge2 = c - a;
+        Vector3 pvec = Vector3.Cross(ray.direction, edge2);
+        float det = Vector3.Dot(edge1, pvec);
+        if (Mathf.Abs(det) < epsilon)
+            return false;
+
+        float invDet = 1f / det;
+        Vector3 tvec = ray.origin - a;
+        u = Vector3.Dot(tvec, pvec) * invDet;
+        if (u < 0f || u > 1f)
+            return false;
+
+        Vector3 qvec = Vector3.Cross(tvec, edge1);
+        v = Vector3.Dot(ray.direction, qvec) * invDet;
+        if (v < 0f || u + v > 1f)
+            return false;
+
+        distance = Vector3.Dot(edge2, qvec) * invDet;
+        return distance > epsilon && distance <= maxDistance;
     }
 
     static void CalculateChunkColors(PlanetChunk chunk, IBiomeProvider biomeProvider)

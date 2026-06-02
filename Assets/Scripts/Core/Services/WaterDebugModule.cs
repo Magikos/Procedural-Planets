@@ -195,6 +195,14 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         RegisterMode(registry, DebugModeConstants.BiomeMoisture, "BiomeMoisture", "Biome");
         RegisterMode(registry, DebugModeConstants.BiomeLatitude, "BiomeLatitude", "Biome");
         RegisterMode(registry, DebugModeConstants.BiomeElevationBand, "BiomeElevationBand", "Biome");
+        RegisterMode(registry, DebugModeConstants.BiomeMapPrimaryId, "BiomeMapPrimaryId", "Biome");
+        RegisterMode(registry, DebugModeConstants.BiomeMapBlend, "BiomeMapBlend", "Biome");
+        RegisterMode(registry, DebugModeConstants.BiomeMapFlatColor, "BiomeMapFlatColor", "Biome");
+        RegisterMode(registry, DebugModeConstants.TerrainSelectedAlbedo, "TerrainSelectedAlbedo", "Biome");
+        RegisterMode(registry, DebugModeConstants.TerrainSunLighting, "TerrainSunLighting", "Biome");
+        RegisterMode(registry, DebugModeConstants.TerrainSurfaceNormal, "TerrainSurfaceNormal", "Biome");
+        RegisterMode(registry, DebugModeConstants.TerrainSurfaceAo, "TerrainSurfaceAO", "Biome");
+        RegisterMode(registry, DebugModeConstants.TerrainSurfaceRoughness, "TerrainSurfaceRoughness", "Biome");
     }
 
     static void RegisterCaptureSets(DebugRegistry registry)
@@ -236,9 +244,15 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         // Off/AtmosphereBypass the planet surface is never obscured by weather.
         registry.RegisterDefaultCaptureSet(WaterDebugIds.Biome, "Biome",
             Modes(DebugModeConstants.Off, DebugModeConstants.AtmosphereBypass,
+                DebugModeConstants.WaterOff,
                 DebugModeConstants.BiomePrimaryId, DebugModeConstants.BiomeTemperature,
                 DebugModeConstants.BiomeMoisture, DebugModeConstants.BiomeLatitude,
-                DebugModeConstants.BiomeElevationBand, DebugModeConstants.TerrainFaceId));
+                DebugModeConstants.BiomeElevationBand, DebugModeConstants.BiomeMapPrimaryId,
+                DebugModeConstants.BiomeMapBlend, DebugModeConstants.BiomeMapFlatColor,
+                DebugModeConstants.TerrainSelectedAlbedo, DebugModeConstants.TerrainSunLighting,
+                DebugModeConstants.TerrainSurfaceNormal, DebugModeConstants.TerrainSurfaceAo,
+                DebugModeConstants.TerrainSurfaceRoughness,
+                DebugModeConstants.TerrainFaceId));
         registry.RegisterCaptureSet(WaterDebugIds.Caustics, "Water Caustics",
             Modes(DebugModeConstants.Off, DebugModeConstants.VolumeOnly,
                 DebugModeConstants.CausticsOnly, DebugModeConstants.CausticsPrism,

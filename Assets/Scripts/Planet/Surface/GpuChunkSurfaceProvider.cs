@@ -112,6 +112,7 @@ public sealed class GpuChunkSurfaceProvider : IPlanetSurfaceProvider
 
     public Awaitable GenerateColorsAsync(IBiomeProvider biomeProvider, IProgressHandle progress, CancellationToken ct)
     {
+        progress?.Report(1f, "GPU terrain colors skipped.");
         return Awaitable.NextFrameAsync(ct);
     }
 
@@ -122,6 +123,8 @@ public sealed class GpuChunkSurfaceProvider : IPlanetSurfaceProvider
     }
 
     public IReadOnlyList<IFaceMeshSampler> GetFaceMeshSamplers() => _samplerView;
+
+    public int RebakeBiomeMapsAt(Vector3 localUnitDirection) => 0;
 
     public void Dispose()
     {

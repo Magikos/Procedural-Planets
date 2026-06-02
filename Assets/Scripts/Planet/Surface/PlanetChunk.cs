@@ -46,6 +46,29 @@ public sealed class PlanetChunk
     // proper lighting on terrain elevation features rather than smooth-sphere shading.
     public Vector3[] CpuNormals;
 
+    // ---- Phase B step 5b: per-chunk top-K biome blending ------------------------------------
+    // Pre-blended albedo per texel (RGBA8, bilinear filter). Cheap-path shader input: one
+    // SAMPLE_TEXTURE2D gives the correct multi-biome blended color. Computed at bake time
+    // from BiomeIdsTexture + BiomeWeightsTexture via the per-planet flat-color LUT. Bilinear
+    // is correct here because color values interpolate meaningfully across texels.
+    public Texture2D BiomeBlendedColorTexture;
+    // Top-K (= 4) biome slice ids per texel (RGBA8, POINT filter — ids are categorical and
+    // do not interpolate). Channels R,G,B,A = ids[0..3]. Consumed by Phase B step 6 (texture
+    // array surface sampling) and Phase C grass (density / clump base color per blade).
+    public Texture2D BiomeIdsTexture;
+    // Top-K weights matching BiomeIdsTexture slot-for-slot (RGBA8, POINT filter). Weights
+    // sum to 255 per texel. Filter is Point because the step 6 shader does its own manual
+    // 4-corner bilinear (slot weights cannot interpolate across texels with different ids).
+    public Texture2D BiomeWeightsTexture;
+    // Surface state mask (RGBA8). Channels reserved for Phase E (paving/scorching/snow/wetness).
+    // Allocated empty in Phase B step 3 just to prove the lifecycle path; bound but unread.
+    public Texture2D SurfaceStateTexture;
+    // Transient per-bake pixel buffers — written on the background bake thread, uploaded +
+    // nulled on the main thread. Re-allocated by the bake on each planet regen.
+    [System.NonSerialized] public Color32[] PendingBiomeBlendedColorPixels;
+    [System.NonSerialized] public Color32[] PendingBiomeIdsPixels;
+    [System.NonSerialized] public Color32[] PendingBiomeWeightsPixels;
+
     // The edge-fan mask used by the most recently scheduled mesh job. Stored so we can
     // detect "mask changed → re-mesh" cases when a neighbor's LOD shifts.
     public byte EdgeFanMaskAtSchedule;
@@ -138,4 +161,110 @@ public enum ChunkLifecycle
     Subdividing,         // children Generating; this chunk's mesh still shown
     Merging,             // children being released; this chunk re-shown
     Unloading            // mesh disposed, chunk releasable
+}
+
+// Lifecycle helpers for the Phase B per-chunk biome map + surface state textures owned by
+// PlanetChunk. Kept in this file because the current Unity-generated project explicitly
+// includes source files; colocating it with PlanetChunk keeps local builds in sync.
+public static class PlanetChunkTextures
+{
+    public const int BiomeMapResolution = 64;
+    const int TexelCount = BiomeMapResolution * BiomeMapResolution;
+
+    public static int LiveTextureSets { get; private set; }
+
+    // Top-K width: 4 biomes per texel, matching RGBA8 channel count. Pick any other K and
+    // the textures change format / the shader's weighted sum loop has to change.
+    public const int TopK = 4;
+
+    public static void Allocate(PlanetChunk chunk)
+    {
+        if (chunk == null) return;
+        Dispose(chunk);
+        LiveTextureSets++;
+        MemoryDebugCounters.ReportLiveChunkTextureSets(LiveTextureSets);
+
+        string suffix = $"F{chunk.FaceIndex}_D{chunk.DetailLevel}_H{chunk.HashValue}";
+
+        // Pre-blended color: bilinear so neighbor-texel color values interpolate smoothly
+        // across the grid (this is the cheap-path used by step 5).
+        chunk.BiomeBlendedColorTexture = new Texture2D(BiomeMapResolution, BiomeMapResolution,
+            TextureFormat.RGBA32, mipChain: false, linear: false)
+        {
+            name = $"BiomeBlendedColor_{suffix}",
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+
+        // Top-K biome ids: POINT filter — interpolating categorical ids would produce
+        // nonsense. The shader does manual bilinear over 4 corner texels for ID-aware
+        // sampling (step 6+).
+        chunk.BiomeIdsTexture = new Texture2D(BiomeMapResolution, BiomeMapResolution,
+            TextureFormat.RGBA32, mipChain: false, linear: true)
+        {
+            name = $"BiomeIds_{suffix}",
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+
+        // Top-K weights: POINT filter. The step 6 shader samples weights at 4 corner texels
+        // explicitly and combines them with manual bilinear corner weights — letting Unity's
+        // bilinear sampler interpolate weights here would mix slot weights across texels
+        // that have DIFFERENT ids in those slots (nonsense). Point gives raw texel weights;
+        // the shader does the smoothing correctly.
+        chunk.BiomeWeightsTexture = new Texture2D(BiomeMapResolution, BiomeMapResolution,
+            TextureFormat.RGBA32, mipChain: false, linear: true)
+        {
+            name = $"BiomeWeights_{suffix}",
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+
+        chunk.SurfaceStateTexture = new Texture2D(BiomeMapResolution, BiomeMapResolution,
+            TextureFormat.RGBA32, mipChain: false, linear: true)
+        {
+            name = $"SurfaceState_{suffix}",
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+
+        var blank = new Color32[TexelCount];
+        chunk.BiomeBlendedColorTexture.SetPixels32(blank);
+        chunk.BiomeBlendedColorTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+        chunk.BiomeIdsTexture.SetPixels32(blank);
+        chunk.BiomeIdsTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+        chunk.BiomeWeightsTexture.SetPixels32(blank);
+        chunk.BiomeWeightsTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+        chunk.SurfaceStateTexture.SetPixels32(blank);
+        chunk.SurfaceStateTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+    }
+
+    public static void Dispose(PlanetChunk chunk)
+    {
+        if (chunk == null) return;
+        bool hadTextures = chunk.BiomeBlendedColorTexture != null
+            || chunk.BiomeIdsTexture != null
+            || chunk.BiomeWeightsTexture != null
+            || chunk.SurfaceStateTexture != null;
+        DestroyTexture(ref chunk.BiomeBlendedColorTexture);
+        DestroyTexture(ref chunk.BiomeIdsTexture);
+        DestroyTexture(ref chunk.BiomeWeightsTexture);
+        DestroyTexture(ref chunk.SurfaceStateTexture);
+        chunk.PendingBiomeBlendedColorPixels = null;
+        chunk.PendingBiomeIdsPixels = null;
+        chunk.PendingBiomeWeightsPixels = null;
+        if (hadTextures && LiveTextureSets > 0)
+        {
+            LiveTextureSets--;
+            MemoryDebugCounters.ReportLiveChunkTextureSets(LiveTextureSets);
+        }
+    }
+
+    static void DestroyTexture(ref Texture2D tex)
+    {
+        if (tex == null) return;
+        if (Application.isPlaying) Object.Destroy(tex);
+        else Object.DestroyImmediate(tex);
+        tex = null;
+    }
 }

@@ -779,10 +779,43 @@ public sealed class SphericalWeatherGrid : IDisposable
         Vector3 fromCenter = worldPosition - planetCenter;
         Vector3 direction = fromCenter.sqrMagnitude > 0.000001f ? fromCenter.normalized : Vector3.up;
         direction = sampleRotation * direction;
-        var faceUv = CoordinateConverter.UnitSphereToCubeFace(direction);
+        var faceUv = UnitSphereToWeatherCubeFace(direction);
         face = faceUv.face;
         x = Mathf.Clamp(Mathf.FloorToInt(faceUv.uv.x * Resolution), 0, Resolution - 1);
         y = Mathf.Clamp(Mathf.FloorToInt(faceUv.uv.y * Resolution), 0, Resolution - 1);
+    }
+
+    // Inverse of CubeFaceToUnitSphere above. Do not use CoordinateConverter.UnitSphereToCubeFace
+    // here: its UV orientation is not the inverse of this weather grid's face axes.
+    static (int face, Vector2 uv) UnitSphereToWeatherCubeFace(Vector3 direction)
+    {
+        float absX = Mathf.Abs(direction.x);
+        float absY = Mathf.Abs(direction.y);
+        float absZ = Mathf.Abs(direction.z);
+
+        int face;
+        if (absY >= absX && absY >= absZ)
+            face = direction.y > 0f ? 0 : 1;
+        else if (absX >= absY && absX >= absZ)
+            face = direction.x > 0f ? 3 : 2;
+        else
+            face = direction.z > 0f ? 4 : 5;
+
+        Vector3 localUp = face switch
+        {
+            0 => Vector3.up,
+            1 => Vector3.down,
+            2 => Vector3.left,
+            3 => Vector3.right,
+            4 => Vector3.forward,
+            _ => Vector3.back,
+        };
+        Vector3 axisA = new(localUp.y, localUp.z, localUp.x);
+        Vector3 axisB = Vector3.Cross(localUp, axisA);
+        float major = Mathf.Max(Mathf.Abs(Vector3.Dot(direction, localUp)), 0.00001f);
+        float u = Vector3.Dot(direction, axisA) / major;
+        float v = Vector3.Dot(direction, axisB) / major;
+        return (face, new Vector2(Mathf.Clamp01(u * 0.5f + 0.5f), Mathf.Clamp01(v * 0.5f + 0.5f)));
     }
 
     static int GetIndex(int face, int x, int y, int resolution)

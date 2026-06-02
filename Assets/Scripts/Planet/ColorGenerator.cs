@@ -1,12 +1,30 @@
 using UnityEngine;
 
-public class ColorGenerator : IBiomeProvider
+public class ColorGenerator : IBiomeProvider, System.IDisposable
 {
     BiomeSettings _biomeSettings;
     ITemperatureProvider _temperatureProvider;
     IMoistureProvider _moistureProvider;
     IBiomeRegistry _biomeRegistry;
     Color[] _biomeColors;
+
+    // Per-planet Texture2DArrays bound globally as _BiomeAlbedoArray / _BiomeNormalArray /
+    // _BiomeArmArray. Rebuilt on every Configure(); the build call disposes its previous
+    // arrays before allocating new ones, so calling Configure repeatedly does not leak.
+    readonly BiomeSurfaceTextureArrays _surfaceArrays = new BiomeSurfaceTextureArrays();
+    public BiomeSurfaceTextureArrays SurfaceArrays => _surfaceArrays;
+
+    // Exposed for the Phase B chunk biome-map bake (ChunkedSurfaceProvider casts the
+    // IBiomeProvider it gets to ColorGenerator and reads this to build a BiomeLookupData
+    // snapshot). IBiomeProvider stays a pure evaluation interface — Core doesn't see the
+    // BiomeRegistry concrete type.
+    public BiomeRegistry Registry => _biomeSettings?.Registry;
+
+    // Per-biome flat color, indexed by GetDefinitionByIndex slot id. Phase B step 5b bake
+    // reads this to compute its pre-blended color texture. Mirrors what
+    // BiomeSurfaceTextureArrays.BuildFlatColorLut uses for the GPU LUT — keeping both paths
+    // in sync via a single source would be cleaner long-term.
+    public Color[] BiomeColors => _biomeColors;
 
     public void Configure(BiomeSettings settings)
     {
@@ -19,9 +37,19 @@ public class ColorGenerator : IBiomeProvider
                 _biomeSettings.TemperatureNoise,
                 _biomeSettings.TemperatureNoiseStrength);
             _moistureProvider = new MoistureProvider(_biomeSettings.MoistureNoise);
+            _surfaceArrays.Build(_biomeSettings.Registry);
+        }
+        else
+        {
+            _surfaceArrays.Dispose();
         }
 
         BuildBiomeColorLookup();
+    }
+
+    public void Dispose()
+    {
+        _surfaceArrays.Dispose();
     }
 
     public void Initialize(int seed)
@@ -67,81 +95,16 @@ public class ColorGenerator : IBiomeProvider
         if (_biomeRegistry == null || _temperatureProvider == null || _moistureProvider == null)
             return Color.magenta;
 
-        var registry = _biomeSettings.Registry;
-
-        if (elevation < registry.OceanThreshold)
-        {
-            primaryBiomeIndex = 0;
-            return _biomeColors[0];
-        }
-
         temperature = _temperatureProvider.Evaluate(pointOnUnitSphere);
         moisture = _moistureProvider.Evaluate(pointOnUnitSphere);
 
-        if (elevation > registry.MountainThreshold)
-        {
-            primaryBiomeIndex = temperature < 0.4f ? _biomeColors.Length - 1 : _biomeColors.Length - 2;
-            return _biomeColors[primaryBiomeIndex];
-        }
+        var result = _biomeSettings.Registry.Resolve(temperature, moisture, elevation);
+        primaryBiomeIndex = Mathf.Clamp(_biomeSettings.Registry.GetSliceIdForBiomeType(result.PrimaryBiome), 0, _biomeColors.Length - 1);
+        int secondaryBiomeIndex = Mathf.Clamp(_biomeSettings.Registry.GetSliceIdForBiomeType(result.SecondaryBiome), 0, _biomeColors.Length - 1);
 
-        if (elevation < registry.OceanThreshold + registry.BeachWidth)
-        {
-            primaryBiomeIndex = 1;
-            return _biomeColors[1];
-        }
-
-        float tempCont = Mathf.Clamp01(temperature) * (registry.TemperatureSteps - 1);
-        float moistCont = Mathf.Clamp01(moisture) * (registry.MoistureSteps - 1);
-
-        int tempIdx = Mathf.Clamp(Mathf.FloorToInt(tempCont), 0, registry.TemperatureSteps - 1);
-        int moistIdx = Mathf.Clamp(Mathf.FloorToInt(moistCont), 0, registry.MoistureSteps - 1);
-        float tempFrac = tempCont - tempIdx;
-        float moistFrac = moistCont - moistIdx;
-
-        int primaryIdx = tempIdx * registry.MoistureSteps + moistIdx + 2;
-        primaryBiomeIndex = Mathf.Clamp(primaryIdx, 0, _biomeColors.Length - 1);
         Color primary = _biomeColors[primaryBiomeIndex];
-
-        float tempDist = Mathf.Abs(tempFrac - 0.5f);
-        float moistDist = Mathf.Abs(moistFrac - 0.5f);
-
-        int neighborIdx = primaryIdx;
-        float frac = 0f;
-
-        if (tempDist < moistDist)
-        {
-            if (moistFrac > 0.5f && moistIdx < registry.MoistureSteps - 1)
-            {
-                neighborIdx = primaryIdx + 1;
-                frac = (moistFrac - 0.5f) * 2f;
-            }
-            else if (moistFrac < 0.5f && moistIdx > 0)
-            {
-                neighborIdx = primaryIdx - 1;
-                frac = (0.5f - moistFrac) * 2f;
-            }
-        }
-        else
-        {
-            if (tempFrac > 0.5f && tempIdx < registry.TemperatureSteps - 1)
-            {
-                neighborIdx = primaryIdx + registry.MoistureSteps;
-                frac = (tempFrac - 0.5f) * 2f;
-            }
-            else if (tempFrac < 0.5f && tempIdx > 0)
-            {
-                neighborIdx = primaryIdx - registry.MoistureSteps;
-                frac = (0.5f - tempFrac) * 2f;
-            }
-        }
-
-        if (neighborIdx != primaryIdx)
-        {
-            Color neighbor = _biomeColors[Mathf.Clamp(neighborIdx, 0, _biomeColors.Length - 1)];
-            return Color.Lerp(primary, neighbor, frac * 0.5f);
-        }
-
-        return primary;
+        Color secondary = _biomeColors[secondaryBiomeIndex];
+        return Color.Lerp(primary, secondary, Mathf.Clamp01(result.BlendWeight));
     }
 
     void BuildBiomeColorLookup()

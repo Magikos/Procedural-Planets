@@ -124,9 +124,19 @@ public static class DebugModeConstants
     public const int BiomeMoisture = 75;
     public const int BiomeLatitude = 76;
     public const int BiomeElevationBand = 77;
+    public const int BiomeMapPrimaryId = 78;
+    public const int BiomeMapBlend = 79;
+    public const int BiomeMapFlatColor = 80;
+    public const int TerrainSelectedAlbedo = 81;
+    public const int TerrainSunLighting = 82;
+    // Phase B step 8: visualize the triplanar-perturbed surface signals so it's obvious
+    // whether normal/AO/roughness sampling is actually contributing.
+    public const int TerrainSurfaceNormal = 83;
+    public const int TerrainSurfaceAo = 84;
+    public const int TerrainSurfaceRoughness = 85;
 
     /// <summary>Highest defined mode value. Update when adding new modes.</summary>
-    public const int Max = 77;
+    public const int Max = 85;
 
     public static bool SuppressesWeatherPasses(int mode)
     {
@@ -136,6 +146,7 @@ public static class DebugModeConstants
             || mode == SurfaceContact
             || mode == SurfaceBlend
             || mode == SurfaceOnly
+            || mode == WaterOff
             || mode == FoamPink
             || mode == SurfaceBackfacePink
             || (mode >= WakeMask && mode <= SurfaceFxProof)
@@ -149,6 +160,6 @@ public static class DebugModeConstants
             || mode == FoamOnSwell
             || mode == FoamLocator
             || mode == GlintLocator
-            || (mode >= BiomePrimaryId && mode <= BiomeElevationBand);
+            || (mode >= BiomePrimaryId && mode <= TerrainSurfaceRoughness);
     }
 }

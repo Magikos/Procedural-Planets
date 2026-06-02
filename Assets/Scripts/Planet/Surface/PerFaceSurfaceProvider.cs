@@ -116,6 +116,8 @@ public sealed class PerFaceSurfaceProvider : IPlanetSurfaceProvider
     {
         if (_terrainFaces == null || biomeProvider == null) return;
 
+        progress?.Report(0f, "Calculating biome colors...");
+
         await Awaitable.BackgroundThreadAsync();
         ct.ThrowIfCancellationRequested();
         System.Threading.Tasks.Parallel.For(0, _terrainFaces.Length, i => _terrainFaces[i].CalculateColors(biomeProvider));
@@ -124,11 +126,17 @@ public sealed class PerFaceSurfaceProvider : IPlanetSurfaceProvider
         await Awaitable.MainThreadAsync();
         for (int i = 0; i < _terrainFaces.Length; i++)
             _terrainFaces[i].ApplyColors();
+
+        progress?.Report(1f, "Biome colors ready.");
     }
 
     public void Tick(Vector3 observerWorldPosition, Camera observerCamera) { }
 
     public IReadOnlyList<IFaceMeshSampler> GetFaceMeshSamplers() => _terrainFaces ?? System.Array.Empty<IFaceMeshSampler>();
+
+    // Phase B step 9: per-face path has no per-chunk biome textures, so there's nothing to
+    // rebake. Returns 0. Phase E will only invoke this for High-resolution planets anyway.
+    public int RebakeBiomeMapsAt(Vector3 localUnitDirection) => 0;
 
     public void Dispose()
     {

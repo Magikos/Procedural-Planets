@@ -45,3 +45,16 @@ MonoBehaviour:
     m_NumAlphaKeys: 2
   TintColor: {r: 1, g: 1, b: 1, a: 1}
   TintPercent: 0
+  SurfaceAlbedo: {fileID: 2800000, guid: ceea943282692884f98fa4636f9c6988, type: 3}
+  SurfaceNormal: {fileID: 2800000, guid: 7cdccc77605d4ba42a2a5072a4dd7cf7, type: 3}
+  SurfaceARM: {fileID: 2800000, guid: 4d3c8682d8650f54e9923e89c5c0d5e4, type: 3}
+  SurfaceTiling: 1
+  GrassDensity: 0
+  GrassTintBase: {r: 0.6, g: 0.8, b: 0.7, a: 1}
+  GrassHeight: 1.5
+  GrassWidth: 0.08
+  GrassClumpStrength: 0.55
+  GrassMaxSlopeDegrees: 35
+  GrassSlopeFadeDegrees: 5
+  GrassMinWaterClearance: 0.2
+  GrassBiomeBlendPower: 1

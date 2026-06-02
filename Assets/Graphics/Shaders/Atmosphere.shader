@@ -76,12 +76,13 @@ bool ShouldBypassAtmosphereForWaterDebug()
         || _OceanDebugMode == DEBUG_SURFACE_CONTACT
         || _OceanDebugMode == DEBUG_SURFACE_BLEND
         || _OceanDebugMode == DEBUG_SURFACE_ONLY
+        || _OceanDebugMode == DEBUG_WATER_OFF
         || _OceanDebugMode == DEBUG_FOAM_PINK
         || _OceanDebugMode == DEBUG_SURFACE_BACKFACE_PINK
         || (_OceanDebugMode >= DEBUG_WAKE_MASK && _OceanDebugMode <= DEBUG_SURFACE_FX_PROOF)  // surface isolation 51-57
         || (_OceanDebugMode >= DEBUG_CAUSTICS_ONLY && _OceanDebugMode <= DEBUG_CAUSTICS_PRISM)
         || (_OceanDebugMode >= DEBUG_SURFACE_NIGHT_TERMS && _OceanDebugMode <= DEBUG_WATER_GLINT_LOCATOR) // night + wave + foam + glint discovery 64-72
-        || (_OceanDebugMode >= DEBUG_BIOME_PRIMARY_ID && _OceanDebugMode <= DEBUG_BIOME_ELEVATION_BAND); // biome diagnostics 73-77
+        || (_OceanDebugMode >= DEBUG_BIOME_PRIMARY_ID && _OceanDebugMode <= DEBUG_TERRAIN_SURFACE_ROUGHNESS); // biome/terrain diagnostics 73-85
 }
 
 float CompositeDepthScaled(float2 uv, float viewLength)
@@ -267,8 +268,8 @@ ENDHLSL
                     sceneDepth, originalCol.xyz);
                 color += CalculateLightShafts(i.uv);
 
-                // Water owns near-surface waves, foam, wakes, and glints. Atmosphere
-                // should haze those pixels, but not replace all of their local detail.
+                // Water and near terrain own high-frequency local detail. Atmosphere should
+                // haze those pixels, but not replace all of their surface variation.
                 float waterSurfaceMask = smoothstep(0.02, 0.30, WaterInterfaceFrontMask(i.uv));
                 float sourceLuma = dot(originalCol.rgb, float3(0.2126, 0.7152, 0.0722));
 
@@ -292,6 +293,13 @@ ENDHLSL
                 float highlightPreserve = waterSurfaceMask * smoothstep(0.32, 0.82, sourceLuma) * 0.24;
                 color = lerp(color, originalCol.rgb, detailPreserve);
                 color = lerp(color, max(color, originalCol.rgb), highlightPreserve);
+
+                float sceneMask = 1.0 - SkyDepthMask(i.uv);
+                float nonWaterSceneMask = sceneMask * (1.0 - waterSurfaceMask);
+                float atmosphereThickness = max(_AtmosphereRadius - _SeaLevelRadius, 1.0);
+                float terrainNearMask = 1.0 - smoothstep(atmosphereThickness * 1.5, atmosphereThickness * 7.0, sceneDepth);
+                float terrainDetailPreserve = nonWaterSceneMask * terrainNearMask * lerp(0.24, 0.42, lowSun01);
+                color = lerp(color, originalCol.rgb, terrainDetailPreserve);
 
                 if (_OceanDebugMode == DEBUG_ATMOSPHERE_CONTRIBUTION)
                     return float4(ContributionHeat(color - originalCol.xyz, 8.0, float3(0.18, 0.48, 1.0), float3(1.0, 0.95, 0.22)), 1.0);
