@@ -203,6 +203,7 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         RegisterMode(registry, DebugModeConstants.TerrainSurfaceNormal, "TerrainSurfaceNormal", "Biome");
         RegisterMode(registry, DebugModeConstants.TerrainSurfaceAo, "TerrainSurfaceAO", "Biome");
         RegisterMode(registry, DebugModeConstants.TerrainSurfaceRoughness, "TerrainSurfaceRoughness", "Biome");
+        RegisterMode(registry, DebugModeConstants.GrassLodCoverage, "GrassLodCoverage", "Biome");
     }
 
     static void RegisterCaptureSets(DebugRegistry registry)
@@ -251,7 +252,7 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
                 DebugModeConstants.BiomeMapBlend, DebugModeConstants.BiomeMapFlatColor,
                 DebugModeConstants.TerrainSelectedAlbedo, DebugModeConstants.TerrainSunLighting,
                 DebugModeConstants.TerrainSurfaceNormal, DebugModeConstants.TerrainSurfaceAo,
-                DebugModeConstants.TerrainSurfaceRoughness,
+                DebugModeConstants.TerrainSurfaceRoughness, DebugModeConstants.GrassLodCoverage,
                 DebugModeConstants.TerrainFaceId));
         registry.RegisterCaptureSet(WaterDebugIds.Caustics, "Water Caustics",
             Modes(DebugModeConstants.Off, DebugModeConstants.VolumeOnly,

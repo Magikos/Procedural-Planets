@@ -142,21 +142,99 @@ BiomeGrassParams GetGrassParams(uint id)
     return p;
 }
 
-float WeightedDensity(float4 idsPacked, float4 weightsPacked)
+BiomeGrassParams BlendGrassParams(float4 idsPacked, float4 weightsPacked, out float density)
 {
-    float density = 0.0;
+    BiomeGrassParams blended;
+    blended.Shape = 0.0;
+    blended.Placement = 0.0;
+    blended.Tint = 0.0;
+
+    density = 0.0;
+    float totalParamWeight = 0.0;
 
     [unroll]
     for (uint i = 0u; i < 4u; i++)
     {
         uint biomeId = (uint)round(idsPacked[i] * 255.0);
         float weight = saturate(weightsPacked[i]);
+        if (weight <= 0.0001)
+            continue;
+
         BiomeGrassParams p = GetGrassParams(biomeId);
+        float grassDensity = saturate(p.Shape.x);
         float blendPower = max(p.Placement.w, 0.001);
-        density += saturate(p.Shape.x) * pow(weight, blendPower);
+        density += grassDensity * pow(weight, blendPower);
+
+        // Density uses each biome's response curve, but physical grass properties should
+        // interpolate across the same top-K biome weights. Using only ids.x here made
+        // tint/height/width snap at primary-biome boundaries even when density blended.
+        float paramWeight = weight * grassDensity;
+        if (paramWeight <= 0.0001)
+            continue;
+
+        blended.Shape.y += p.Shape.y * paramWeight;
+        blended.Shape.z += p.Shape.z * paramWeight;
+        blended.Shape.w += p.Shape.w * paramWeight;
+        blended.Placement += p.Placement * paramWeight;
+        blended.Tint.rgb += p.Tint.rgb * paramWeight;
+        totalParamWeight += paramWeight;
     }
 
-    return saturate(density);
+    density = saturate(density);
+    blended.Shape.x = density;
+    blended.Tint.a = 1.0;
+
+    if (totalParamWeight > 0.0001)
+    {
+        float inv = rcp(totalParamWeight);
+        blended.Shape.y *= inv;
+        blended.Shape.z *= inv;
+        blended.Shape.w *= inv;
+        blended.Placement *= inv;
+        blended.Tint.rgb *= inv;
+    }
+
+    return blended;
+}
+
+BiomeGrassParams LerpGrassParams(BiomeGrassParams a, BiomeGrassParams b, float t)
+{
+    BiomeGrassParams result;
+    result.Shape = lerp(a.Shape, b.Shape, t);
+    result.Placement = lerp(a.Placement, b.Placement, t);
+    result.Tint = lerp(a.Tint, b.Tint, t);
+    return result;
+}
+
+BiomeGrassParams SampleGrassParamsBilinear(float2 uv, out float density)
+{
+    int resolution = max(_BiomeAtlasResolution, 1);
+    int maxTexel = max(resolution - 1, 0);
+    int2 maxTexel2 = int2(maxTexel, maxTexel);
+
+    // Same categorical-id fix used by the terrain shader and near-field grass:
+    // evaluate each corner texel's top-K biome blend, then bilinear the result.
+    float2 texelCoord = saturate(uv) * (float)resolution - 0.5;
+    int2 baseTexel = (int2)floor(texelCoord);
+    float2 f = saturate(texelCoord - baseTexel);
+
+    int2 t00 = clamp(baseTexel, int2(0, 0), maxTexel2);
+    int2 t10 = clamp(baseTexel + int2(1, 0), int2(0, 0), maxTexel2);
+    int2 t01 = clamp(baseTexel + int2(0, 1), int2(0, 0), maxTexel2);
+    int2 t11 = clamp(baseTexel + int2(1, 1), int2(0, 0), maxTexel2);
+
+    float d00, d10, d01, d11;
+    BiomeGrassParams p00 = BlendGrassParams(_BiomeIds.Load(int3(t00, 0)), _BiomeWeights.Load(int3(t00, 0)), d00);
+    BiomeGrassParams p10 = BlendGrassParams(_BiomeIds.Load(int3(t10, 0)), _BiomeWeights.Load(int3(t10, 0)), d10);
+    BiomeGrassParams p01 = BlendGrassParams(_BiomeIds.Load(int3(t01, 0)), _BiomeWeights.Load(int3(t01, 0)), d01);
+    BiomeGrassParams p11 = BlendGrassParams(_BiomeIds.Load(int3(t11, 0)), _BiomeWeights.Load(int3(t11, 0)), d11);
+
+    BiomeGrassParams px0 = LerpGrassParams(p00, p10, f.x);
+    BiomeGrassParams px1 = LerpGrassParams(p01, p11, f.x);
+    BiomeGrassParams result = LerpGrassParams(px0, px1, f.y);
+    density = saturate(result.Shape.x);
+    result.Shape.x = density;
+    return result;
 }
 
 bool PassesFrustum(float3 centerWs, float radius)
@@ -199,17 +277,15 @@ void PlaceAndCull(uint3 id : SV_DispatchThreadID)
     float2 laneCenterChunkUv = (float2(id.xy) + 0.5) / max((float)_LaneResolution, 1.0);
     float2 laneCenterFaceUv = _ChunkUvScaleOffset.zw + laneCenterChunkUv * _ChunkUvScaleOffset.xy;
 
-    float4 ids4 = LoadAtlas4(_BiomeIds, laneCenterFaceUv, _BiomeAtlasResolution);
-    float4 weights4 = LoadAtlas4(_BiomeWeights, laneCenterFaceUv, _BiomeAtlasResolution);
-    float density = saturate(WeightedDensity(ids4, weights4) * max(_GrassDensityMultiplier, 0.0));
+    float baseDensity;
+    BiomeGrassParams biome = SampleGrassParamsBilinear(laneCenterFaceUv, baseDensity);
+    float density = saturate(baseDensity * max(_GrassDensityMultiplier, 0.0));
     if (density <= 0.0001)
     {
         AddStat(STAT_DENSITY_REJECTED_LANES, 1u);
         return;
     }
 
-    uint dominantBiome = (uint)round(ids4.x * 255.0);
-    BiomeGrassParams biome = GetGrassParams(dominantBiome);
     if (biome.Shape.y <= 0.0 || biome.Shape.z <= 0.0)
     {
         AddStat(STAT_SHAPE_REJECTED_LANES, 1u);

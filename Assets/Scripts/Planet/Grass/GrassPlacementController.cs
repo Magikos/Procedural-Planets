@@ -4,7 +4,9 @@ using UnityEngine.Rendering;
 
 sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProvider
 {
-    const int BladeVertexCount = 18;
+    const int VerticesPerVisualBlade = 18;
+    const int VisualBladesPerInstance = 3;
+    const int BladeVertexCount = VerticesPerVisualBlade * VisualBladesPerInstance;
     const int LaneResolution = PlanetChunkTextures.BiomeMapResolution;
     const int ThreadGroupSize = 8;
     const float LaneJitterMagnitude = 1.1f; // > 1 = blades from adjacent lanes overlap visually
@@ -108,6 +110,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     long _lastEmittedBlades;
     long _lastOverflowRejectedBlades;
     long _lastBufferBytes;
+    int _lastOldChunkSuppressedCount;
     bool _disposed;
 
     public GrassPlacementController(Transform planetTransform, ChunkedSurfaceProvider surfaceProvider,
@@ -231,14 +234,48 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         _lastEmittedBlades = 0;
         _lastOverflowRejectedBlades = 0;
         _lastBufferBytes = 0L;
+        _lastOldChunkSuppressedCount = 0;
         int chunksWithInstanceReadback = 0;
         int chunkInstanceMin = int.MaxValue;
+
+        // Cache near-field suppression radius once per tick. Inside that radius the
+        // near-field renderer is producing dense carpet grass, so the chunk path's
+        // sparser blades would double-up wastefully. Compute (placement) still runs so
+        // when the player moves past the suppression boundary, mid-field grass is warm.
+        float suppressionRadiusSq = 0f;
+        if (ServiceLocator.TryGet(out IGrassNearFieldStatsProvider nfProvider))
+        {
+            GrassNearFieldStats nfStats = nfProvider.GetGrassNearFieldStats();
+            if (nfStats.ControllerActive && nfStats.ShaderAvailable && nfStats.SuppressionRadius > 0f)
+                suppressionRadiusSq = nfStats.SuppressionRadius * nfStats.SuppressionRadius;
+        }
+        Vector3 cameraPos = camera.transform.position;
+
         foreach (var pair in _chunks)
         {
+            PlanetChunk chunk = pair.Key;
             GrassChunkRuntime runtime = pair.Value;
             if (runtime == null || !runtime.IsValid) continue;
-            runtime.Render(_material, camera, _planetTransform.gameObject.layer);
-            _lastDrawCalls++;
+
+            bool suppress = false;
+            if (suppressionRadiusSq > 0f && chunk != null
+                && chunk.CpuVertices != null && chunk.CpuVertices.Length > 0)
+            {
+                Vector3 chunkCenterWs = _planetTransform.TransformPoint(chunk.CpuLocalBounds.center);
+                if ((chunkCenterWs - cameraPos).sqrMagnitude < suppressionRadiusSq)
+                    suppress = true;
+            }
+
+            if (suppress)
+            {
+                _lastOldChunkSuppressedCount++;
+            }
+            else
+            {
+                runtime.Render(_material, camera, _planetTransform.gameObject.layer);
+                _lastDrawCalls++;
+            }
+
             int instanceCount = runtime.ReportedInstanceCount;
             _lastBladeInstances += instanceCount;
             if (instanceCount > 0)
@@ -406,6 +443,8 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             MinChunkDepthForBlades = _minChunkDepthForBlades,
             MaxCoarseLodOffsetForBlades = _maxCoarseLodOffsetForBlades,
             MaxBladesPerLane = _maxBladesPerLane,
+            VisualBladesPerInstance = VisualBladesPerInstance,
+            BladeVertexCount = BladeVertexCount,
             DensityMultiplier = _grassDensityMultiplier,
             MaxRenderDistance = _maxRenderDistance,
             DistanceFadeStart = _distanceFadeStart,
@@ -433,6 +472,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             SlopeRejectedBlades = _lastSlopeRejectedBlades,
             EmittedBlades = _lastEmittedBlades,
             OverflowRejectedBlades = _lastOverflowRejectedBlades,
+            OldChunkSuppressedCount = _lastOldChunkSuppressedCount,
         };
     }
 
@@ -616,7 +656,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
                 matProps = _props,
                 worldBounds = _worldBounds,
                 shadowCastingMode = ShadowCastingMode.Off,
-                receiveShadows = false,
+                receiveShadows = true,
             };
             Graphics.RenderPrimitivesIndirect(renderParams, MeshTopology.Triangles, _argsBuffer, 1, 0);
         }

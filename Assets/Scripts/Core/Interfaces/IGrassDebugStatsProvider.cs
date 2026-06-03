@@ -11,6 +11,8 @@ public struct GrassDebugStats
     public int MinChunkDepthForBlades;
     public int MaxCoarseLodOffsetForBlades;
     public int MaxBladesPerLane;
+    public int VisualBladesPerInstance;
+    public int BladeVertexCount;
     public float DensityMultiplier;
     public float MaxRenderDistance;
     public float DistanceFadeStart;
@@ -38,6 +40,7 @@ public struct GrassDebugStats
     public long SlopeRejectedBlades;
     public long EmittedBlades;
     public long OverflowRejectedBlades;
+    public int OldChunkSuppressedCount;
 }
 
 public interface IGrassDebugStatsProvider

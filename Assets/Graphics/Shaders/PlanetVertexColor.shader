@@ -15,6 +15,16 @@ Shader "Planet/VertexColor"
         // 1.0 = unmodified ground PBR (subtle), 3-5 = punchy "obviously bumpy" look.
         _BiomeNormalStrength ("Biome Normal Strength", Range(0.0, 8.0)) = 2.0
         _BiomeNormalReliefShadow ("Biome Normal Relief Shadow", Range(0.0, 1.0)) = 0.55
+        _GrassFarOverlayStrength ("Grass Far Overlay Strength", Range(0.0, 1.0)) = 1.0
+        _GrassFarOverlayStart ("Grass Far Overlay Start", Float) = 35.0
+        _GrassFarOverlayEnd ("Grass Far Overlay End", Float) = 260.0
+        _GrassFarOverlayNoiseScale ("Grass Far Overlay Noise Scale", Range(0.001, 0.5)) = 0.055
+        _GrassFarOverlayOrbitStrength ("Grass Far Overlay Orbit Strength", Range(0.0, 1.0)) = 0.42
+        _GrassFarOverlayAltitudeStart ("Grass Far Overlay Altitude Start", Float) = 750.0
+        _GrassFarOverlayAltitudeEnd ("Grass Far Overlay Altitude End", Float) = 2600.0
+        _GrassFarOverlayFiberStrength ("Grass Far Overlay Fiber Strength", Range(0.0, 1.0)) = 0.65
+        _GrassFarOverlayColorBlend ("Grass Far Overlay Color Blend", Range(0.0, 1.0)) = 0.98
+        _GrassMidOverlayTerrainStrength ("Grass Mid Overlay Terrain Strength", Range(0.0, 1.0)) = 0.92
     }
     SubShader
     {
@@ -32,6 +42,7 @@ Shader "Planet/VertexColor"
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
             #pragma multi_compile _ _ADDITIONAL_LIGHTS
             #pragma multi_compile_fog
+            #pragma target 4.5
             // Phase B step 5: per-pixel biome sampling. Off = legacy vertex-color path
             // (the PerFaceSurfaceProvider stays on this so its meshes keep rendering).
             #pragma multi_compile _ _BIOME_COLOR_MODE_TEXTURE
@@ -40,6 +51,7 @@ Shader "Planet/VertexColor"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Includes/CloudShadows.hlsl"
             #include "Includes/DebugModes.hlsl"
+            #include "Includes/PlanetSunLighting.hlsl"
 
             struct Attributes
             {
@@ -76,6 +88,16 @@ Shader "Planet/VertexColor"
                 float _BiomeMacroVariationStrength;
                 float _BiomeNormalStrength;
                 float _BiomeNormalReliefShadow;
+                float _GrassFarOverlayStrength;
+                float _GrassFarOverlayStart;
+                float _GrassFarOverlayEnd;
+                float _GrassFarOverlayNoiseScale;
+                float _GrassFarOverlayOrbitStrength;
+                float _GrassFarOverlayAltitudeStart;
+                float _GrassFarOverlayAltitudeEnd;
+                float _GrassFarOverlayFiberStrength;
+                float _GrassFarOverlayColorBlend;
+                float _GrassMidOverlayTerrainStrength;
             CBUFFER_END
 
             float _NightAmbientIntensity;
@@ -111,6 +133,37 @@ Shader "Planet/VertexColor"
             // Bound but unsampled in Phase B. Phase E shader work will multiply / blend the
             // PBR signals (especially albedo + roughness) by these.
             TEXTURE2D(_SurfaceStateMask); SAMPLER(sampler_SurfaceStateMask);
+
+            struct BiomeGrassParams
+            {
+                float4 Shape;     // x density, y height, z width, w clump strength
+                float4 Placement; // x maxSlopeDeg, y slopeFadeDeg, z waterClearance, w blendPower
+                float4 Tint;
+            };
+
+            struct GrassOverlayParams
+            {
+                float density;
+                float3 tint;
+                float maxSlopeDeg;
+                float slopeFadeDeg;
+                float waterClearance;
+            };
+
+            struct GrassOverlayEval
+            {
+                float farWeight;
+                float midWeight;
+                float nearWeight;
+                float envCoverage;
+                float approachWeight;
+                float3 tint;
+                float3 relPos;
+                float3 planetNormal;
+            };
+
+            StructuredBuffer<BiomeGrassParams> _BiomeGrassParams;
+            int _BiomeGrassParamCount;
 
             // _BiomeTriplanarTiling lives in UnityPerMaterial above so SRP batcher works.
 
@@ -439,6 +492,208 @@ Shader "Planet/VertexColor"
                 return a;
             }
 
+            BiomeGrassParams GetGrassParams(uint id)
+            {
+                BiomeGrassParams p;
+                p.Shape = 0.0;
+                p.Placement = 0.0;
+                p.Tint = 0.0;
+                if (id < (uint)_BiomeGrassParamCount)
+                    p = _BiomeGrassParams[id];
+                return p;
+            }
+
+            GrassOverlayParams EmptyGrassOverlayParams()
+            {
+                GrassOverlayParams p;
+                p.density = 0.0;
+                p.tint = 0.0;
+                p.maxSlopeDeg = 0.0;
+                p.slopeFadeDeg = 0.0;
+                p.waterClearance = 0.0;
+                return p;
+            }
+
+            void AccumulateGrassOverlaySlot(float idPacked, float weight, inout GrassOverlayParams overlay, inout float totalParamWeight)
+            {
+                weight = saturate(weight);
+                if (weight <= 0.0001)
+                    return;
+
+                BiomeGrassParams p = GetGrassParams((uint)round(idPacked * 255.0));
+                float grassDensity = saturate(p.Shape.x);
+                float blendPower = max(p.Placement.w, 0.001);
+                overlay.density += grassDensity * pow(weight, blendPower);
+
+                float paramWeight = weight * grassDensity;
+                if (paramWeight <= 0.0001)
+                    return;
+
+                overlay.tint += p.Tint.rgb * paramWeight;
+                overlay.maxSlopeDeg += p.Placement.x * paramWeight;
+                overlay.slopeFadeDeg += p.Placement.y * paramWeight;
+                overlay.waterClearance += p.Placement.z * paramWeight;
+                totalParamWeight += paramWeight;
+            }
+
+            GrassOverlayParams NormalizeGrassOverlayParams(GrassOverlayParams overlay, float totalParamWeight)
+            {
+                overlay.density = saturate(overlay.density);
+                if (totalParamWeight > 0.0001)
+                {
+                    float inv = rcp(totalParamWeight);
+                    overlay.tint *= inv;
+                    overlay.maxSlopeDeg *= inv;
+                    overlay.slopeFadeDeg *= inv;
+                    overlay.waterClearance *= inv;
+                }
+                return overlay;
+            }
+
+            GrassOverlayParams CornerGrassOverlayParams(int2 texel)
+            {
+                float2 uv = (texel + 0.5) * _BiomeMap_TexelSize.xy;
+                float4 ids = SAMPLE_TEXTURE2D(_BiomeIds, sampler_BiomeIds, uv);
+                float4 weights = SAMPLE_TEXTURE2D(_BiomeWeights, sampler_BiomeWeights, uv);
+
+                GrassOverlayParams overlay = EmptyGrassOverlayParams();
+                float totalParamWeight = 0.0;
+                AccumulateGrassOverlaySlot(ids.x, weights.x, overlay, totalParamWeight);
+                AccumulateGrassOverlaySlot(ids.y, weights.y, overlay, totalParamWeight);
+                AccumulateGrassOverlaySlot(ids.z, weights.z, overlay, totalParamWeight);
+                AccumulateGrassOverlaySlot(ids.w, weights.w, overlay, totalParamWeight);
+                return NormalizeGrassOverlayParams(overlay, totalParamWeight);
+            }
+
+            GrassOverlayParams LerpGrassOverlayParams(GrassOverlayParams a, GrassOverlayParams b, float t)
+            {
+                GrassOverlayParams o;
+                o.density = lerp(a.density, b.density, t);
+                o.tint = lerp(a.tint, b.tint, t);
+                o.maxSlopeDeg = lerp(a.maxSlopeDeg, b.maxSlopeDeg, t);
+                o.slopeFadeDeg = lerp(a.slopeFadeDeg, b.slopeFadeDeg, t);
+                o.waterClearance = lerp(a.waterClearance, b.waterClearance, t);
+                return o;
+            }
+
+            GrassOverlayParams SampleGrassOverlayParams(float2 chunkUv)
+            {
+                float2 uv = BiomeMapUv(chunkUv);
+                float2 res = max(_BiomeMap_TexelSize.zw, float2(1.0, 1.0));
+                float2 maxTexel = max(res - float2(1.0, 1.0), float2(0.0, 0.0));
+
+                float2 texelCoord = uv * res - 0.5;
+                int2 base_ = (int2)floor(texelCoord);
+                float2 f = saturate(texelCoord - base_);
+
+                int2 t00 = clamp(base_,               int2(0,0), int2(maxTexel));
+                int2 t10 = clamp(base_ + int2(1, 0),  int2(0,0), int2(maxTexel));
+                int2 t01 = clamp(base_ + int2(0, 1),  int2(0,0), int2(maxTexel));
+                int2 t11 = clamp(base_ + int2(1, 1),  int2(0,0), int2(maxTexel));
+
+                GrassOverlayParams p00 = CornerGrassOverlayParams(t00);
+                GrassOverlayParams p10 = CornerGrassOverlayParams(t10);
+                GrassOverlayParams p01 = CornerGrassOverlayParams(t01);
+                GrassOverlayParams p11 = CornerGrassOverlayParams(t11);
+
+                GrassOverlayParams px0 = LerpGrassOverlayParams(p00, p10, f.x);
+                GrassOverlayParams px1 = LerpGrassOverlayParams(p01, p11, f.x);
+                return LerpGrassOverlayParams(px0, px1, f.y);
+            }
+
+            GrassOverlayEval EmptyGrassOverlayEval()
+            {
+                GrassOverlayEval e;
+                e.farWeight = 0.0;
+                e.midWeight = 0.0;
+                e.nearWeight = 0.0;
+                e.envCoverage = 0.0;
+                e.approachWeight = 0.0;
+                e.tint = 0.0;
+                e.relPos = 0.0;
+                e.planetNormal = 0.0;
+                return e;
+            }
+
+            GrassOverlayEval EvaluateGrassOverlay(float2 chunkUv, float3 positionWS, float3 geometricNormalWS)
+            {
+                GrassOverlayEval eval = EmptyGrassOverlayEval();
+                if (_GrassFarOverlayStrength <= 0.0001 || _BiomeGrassParamCount <= 0)
+                    return eval;
+
+                GrassOverlayParams grass = SampleGrassOverlayParams(chunkUv);
+                if (grass.density <= 0.001)
+                    return eval;
+
+                float3 relPos = positionWS - _PlanetCenter;
+                float3 planetNormal = PlanetSafeNormalize(relPos, normalize(geometricNormalWS));
+                float slopeDeg = acos(saturate(dot(normalize(geometricNormalWS), planetNormal))) * 57.2957795;
+                float slopeFade = max(grass.slopeFadeDeg, 0.001);
+                float slopeKeep = 1.0 - smoothstep(grass.maxSlopeDeg - slopeFade, grass.maxSlopeDeg + slopeFade, slopeDeg);
+
+                float altitude = length(relPos) - _SeaLevelRadius;
+                float waterKeep = smoothstep(max(grass.waterClearance, 0.0), max(grass.waterClearance, 0.0) + 4.0, altitude);
+
+                float viewDistance = length(positionWS - _WorldSpaceCameraPos);
+                float farMask = smoothstep(_GrassFarOverlayStart, max(_GrassFarOverlayEnd, _GrassFarOverlayStart + 1.0), viewDistance);
+                float cameraAltitude = max(0.0, length(_WorldSpaceCameraPos - _PlanetCenter) - _SeaLevelRadius);
+                float nearSurface = 1.0 - smoothstep(_GrassFarOverlayAltitudeStart,
+                    max(_GrassFarOverlayAltitudeEnd, _GrassFarOverlayAltitudeStart + 1.0), cameraAltitude);
+                float approachWeight = lerp(saturate(_GrassFarOverlayOrbitStrength), 1.0, nearSurface);
+
+                float envCoverage = pow(saturate(grass.density * slopeKeep * waterKeep), 0.62);
+                float nearWeight = 1.0 - smoothstep(85.0, 150.0, viewDistance);
+                float midWeight = smoothstep(55.0, 170.0, viewDistance)
+                    * (1.0 - smoothstep(260.0, 560.0, viewDistance));
+
+                eval.farWeight = saturate(envCoverage * farMask * approachWeight * _GrassFarOverlayStrength);
+                eval.midWeight = saturate(envCoverage * midWeight);
+                eval.nearWeight = saturate(envCoverage * nearWeight);
+                eval.envCoverage = envCoverage;
+                eval.approachWeight = approachWeight;
+                eval.tint = saturate(grass.tint);
+                eval.relPos = relPos;
+                eval.planetNormal = planetNormal;
+                return eval;
+            }
+
+            float3 ApplyFarGrassOverlay(float2 chunkUv, float3 positionWS, float3 geometricNormalWS, float3 albedo)
+            {
+                GrassOverlayEval eval = EvaluateGrassOverlay(chunkUv, positionWS, geometricNormalWS);
+                // The production terrain blanket should not reveal LOD ownership bands while
+                // the camera moves. Use stable grass suitability for coverage, and leave the
+                // near/mid/far weights as diagnostics for draw-layer planning.
+                float terrainWeight = saturate(eval.envCoverage
+                    * eval.approachWeight
+                    * _GrassFarOverlayStrength);
+                if (terrainWeight <= 0.001)
+                    return albedo;
+
+                float3 axis = abs(eval.planetNormal.y) < 0.92 ? float3(0.0, 1.0, 0.0) : float3(1.0, 0.0, 0.0);
+                float3 tangentA = normalize(cross(axis, eval.planetNormal));
+                float3 tangentB = normalize(cross(eval.planetNormal, tangentA));
+                float2 fiberUv = float2(dot(eval.relPos, tangentA), dot(eval.relPos, tangentB));
+                float noiseScale = max(_GrassFarOverlayNoiseScale, 0.0001);
+                float macro = ValueNoise3D(eval.relPos * noiseScale + eval.tint * 37.0);
+                float detail = ValueNoise3D(eval.relPos * (noiseScale * 3.0) + 19.0);
+                float fiber = ValueNoise3D(float3(
+                    fiberUv.x * noiseScale * 0.42,
+                    fiberUv.y * noiseScale * 2.35,
+                    11.0 + eval.tint.g * 23.0));
+                float breakup = lerp(macro * 0.65 + detail * 0.35, fiber, saturate(_GrassFarOverlayFiberStrength));
+                float brightness = lerp(0.52, 1.16, breakup);
+                float saturation = lerp(0.90, 1.58, eval.approachWeight);
+                float luma = dot(eval.tint, float3(0.299, 0.587, 0.114));
+                float3 grassTint = lerp(float3(luma, luma, luma), eval.tint, saturation);
+                grassTint *= float3(0.88, 1.08, 0.82);
+                float3 grassColor = saturate(grassTint * brightness);
+                float partialCoverage = smoothstep(0.08, 0.92, terrainWeight);
+                float colorBlend = saturate(_GrassFarOverlayColorBlend * lerp(0.72, 1.0, partialCoverage));
+                float3 coverageColor = lerp(albedo, grassColor, colorBlend);
+
+                return lerp(albedo, coverageColor, terrainWeight);
+            }
+
             // Maps a normalized [0..1] biome id to a distinct hue. HSV->RGB so adjacent
             // ids land far apart in colour space and each biome reads as its own flat patch.
             float3 BiomeIdColor(float idNorm)
@@ -525,6 +780,13 @@ Shader "Planet/VertexColor"
                 if (_OceanDebugMode == DEBUG_BIOME_MAP_FLAT_COLOR)
                     return half4(SampleBiomeFlatColor(input.chunkUv), 1.0);
 
+                if (_OceanDebugMode == DEBUG_GRASS_LOD_COVERAGE)
+                {
+                    GrassOverlayEval grassEval = EvaluateGrassOverlay(input.chunkUv,
+                        input.positionWS, normalize(input.normalWS));
+                    return half4(grassEval.farWeight, grassEval.midWeight, grassEval.nearWeight, 1.0);
+                }
+
                 // Phase B step 6+8: keyword-on path samples per-biome triplanar PBR (albedo,
                 // normal, ARM). Keyword-off keeps the legacy vertex-color path with neutral
                 // surface props for back-compat with the PerFaceSurfaceProvider.
@@ -539,6 +801,8 @@ Shader "Planet/VertexColor"
                     // blend. Normalize and gently mix with the geometric normal so detail bumps
                     // perturb lighting without ever flipping past the surface tangent plane.
                     surfaceNormalWS = normalize(surfaceNormalWS);
+                    surfaceAlbedo = ApplyFarGrassOverlay(input.chunkUv,
+                        input.positionWS, normalize(input.normalWS), surfaceAlbedo);
                 #else
                     surfaceAlbedo = input.color.rgb;
                     surfaceNormalWS = normalize(input.normalWS);
@@ -552,10 +816,10 @@ Shader "Planet/VertexColor"
                 {
                     // Uses the triplanar-perturbed normal so the visualization matches the
                     // real terrain shading path.
-                    float3 planetNormal = normalize(input.positionWS - _PlanetCenter);
-                    float3 sunDir = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : float3(0.0, 1.0, 0.0);
+                    float3 planetNormal = PlanetSafeNormalize(input.positionWS - _PlanetCenter, normalize(input.normalWS));
+                    float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
                     float localSun = dot(planetNormal, sunDir);
-                    float daylight = smoothstep(-0.08, 0.18, localSun);
+                    float daylight = PlanetDaylightFromLocalSun(localSun);
                     float cloudShadow = CloudShadowFactor(input.positionWS, sunDir, localSun);
                     float terrainDiffuse = saturate(dot(surfaceNormalWS, sunDir));
                     return half4(daylight, cloudShadow, terrainDiffuse, 1.0);
@@ -587,10 +851,10 @@ Shader "Planet/VertexColor"
                     return half4(r, r, r, 1.0);
                 }
 
-                float3 planetNormal = normalize(input.positionWS - _PlanetCenter);
-                float3 sunDir = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : float3(0.0, 1.0, 0.0);
+                float3 planetNormal = PlanetSafeNormalize(input.positionWS - _PlanetCenter, normalize(input.normalWS));
+                float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
                 float localSun = dot(planetNormal, sunDir);
-                float daylight = smoothstep(-0.08, 0.18, localSun);
+                float daylight = PlanetDaylightFromLocalSun(localSun);
                 float nightSide = 1.0 - daylight;
 
                 // Phase B step 8: lighting uses the triplanar-perturbed surface normal so
@@ -626,7 +890,7 @@ Shader "Planet/VertexColor"
                 dayColor += specular;
 
                 float3 coolNightAlbedo = lerp(surfaceAlbedo, float3(0.12, 0.16, 0.22), 0.65);
-                float nightAmbient = max(_NightAmbientIntensity, 0.035);
+                float nightAmbient = PlanetNightAmbient(_NightAmbientIntensity);
                 float3 nightColor = coolNightAlbedo * nightAmbient * 0.65 * lerp(0.55, 1.0, ao);
 
                 half4 color = half4(lerp(dayColor, nightColor, nightSide), 1.0);

@@ -29,6 +29,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     // Null when running under chunked or GPU surface providers.
     PerFaceSurfaceProvider _perFaceProvider;
     GrassPlacementController _grassController;
+    GrassNearFieldController _grassNearFieldController;
     GameObject _waterObject;
     Material _waterMaterial;
 
@@ -53,6 +54,16 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     static readonly int _oceanFocusModeId = Shader.PropertyToID("_OceanFocusMode");
     static readonly int _waterFocusModeId = Shader.PropertyToID("_WaterFocusMode");
     static readonly int _alphaId = Shader.PropertyToID("_Alpha");
+    static readonly int _grassFarOverlayStrengthId = Shader.PropertyToID("_GrassFarOverlayStrength");
+    static readonly int _grassFarOverlayStartId = Shader.PropertyToID("_GrassFarOverlayStart");
+    static readonly int _grassFarOverlayEndId = Shader.PropertyToID("_GrassFarOverlayEnd");
+    static readonly int _grassFarOverlayNoiseScaleId = Shader.PropertyToID("_GrassFarOverlayNoiseScale");
+    static readonly int _grassFarOverlayOrbitStrengthId = Shader.PropertyToID("_GrassFarOverlayOrbitStrength");
+    static readonly int _grassFarOverlayAltitudeStartId = Shader.PropertyToID("_GrassFarOverlayAltitudeStart");
+    static readonly int _grassFarOverlayAltitudeEndId = Shader.PropertyToID("_GrassFarOverlayAltitudeEnd");
+    static readonly int _grassFarOverlayFiberStrengthId = Shader.PropertyToID("_GrassFarOverlayFiberStrength");
+    static readonly int _grassFarOverlayColorBlendId = Shader.PropertyToID("_GrassFarOverlayColorBlend");
+    static readonly int _grassMidOverlayTerrainStrengthId = Shader.PropertyToID("_GrassMidOverlayTerrainStrength");
 
     static Shader _vcShader;
     static Shader _oceanShader;
@@ -85,6 +96,16 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     const float WaterShallowAlphaFactor = 0.14f;
     const float WaterShallowAlphaMin = 0.10f;
     const float WaterDeepAlphaMin = 0.96f;
+    const float GrassFarOverlayStrength = 1.0f;
+    const float GrassFarOverlayStart = 35f;
+    const float GrassFarOverlayEnd = 260f;
+    const float GrassFarOverlayNoiseScale = 0.055f;
+    const float GrassFarOverlayOrbitStrength = 0.42f;
+    const float GrassFarOverlayAltitudeStart = 750f;
+    const float GrassFarOverlayAltitudeEnd = 2600f;
+    const float GrassFarOverlayFiberStrength = 0.65f;
+    const float GrassFarOverlayColorBlend = 0.98f;
+    const float GrassMidOverlayTerrainStrength = 0.92f;
 
     CancellationTokenSource _cts;
     bool _isGenerating;
@@ -123,6 +144,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         ServiceLocator.Unregister<IPlanetSurfaceRaycaster>(this);
         _cts?.Cancel();
         _cts?.Dispose();
+        _grassNearFieldController?.Dispose();
+        _grassNearFieldController = null;
         _grassController?.Dispose();
         _grassController = null;
         _surfaceProvider?.Dispose();
@@ -147,10 +170,13 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         if (_observerCamera == null) return;
         _surfaceProvider.Tick(_observerCamera.transform.position, _observerCamera);
         _grassController?.Tick(_observerCamera);
+        _grassNearFieldController?.Tick(_observerCamera);
     }
 
     void Initialize()
     {
+        _grassNearFieldController?.Dispose();
+        _grassNearFieldController = null;
         _grassController?.Dispose();
         _grassController = null;
         DestroyChildren();
@@ -211,6 +237,22 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             if (_vcShader != null) mat.shader = _vcShader;
         }
         mat.SetFloat("_Smoothness", 0f);
+        SetMaterialFloatIfPresent(mat, _grassFarOverlayStrengthId, GrassFarOverlayStrength);
+        SetMaterialFloatIfPresent(mat, _grassFarOverlayStartId, GrassFarOverlayStart);
+        SetMaterialFloatIfPresent(mat, _grassFarOverlayEndId, GrassFarOverlayEnd);
+        SetMaterialFloatIfPresent(mat, _grassFarOverlayNoiseScaleId, GrassFarOverlayNoiseScale);
+        SetMaterialFloatIfPresent(mat, _grassFarOverlayOrbitStrengthId, GrassFarOverlayOrbitStrength);
+        SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeStartId, GrassFarOverlayAltitudeStart);
+        SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeEndId, GrassFarOverlayAltitudeEnd);
+        SetMaterialFloatIfPresent(mat, _grassFarOverlayFiberStrengthId, GrassFarOverlayFiberStrength);
+        SetMaterialFloatIfPresent(mat, _grassFarOverlayColorBlendId, GrassFarOverlayColorBlend);
+        SetMaterialFloatIfPresent(mat, _grassMidOverlayTerrainStrengthId, GrassMidOverlayTerrainStrength);
+    }
+
+    static void SetMaterialFloatIfPresent(Material mat, int propertyId, float value)
+    {
+        if (!mat.HasProperty(propertyId)) return;
+        mat.SetFloat(propertyId, value);
     }
 
     public async Awaitable LateInitialize(CancellationToken cancellationToken)
@@ -304,6 +346,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     void ConfigureGrassController()
     {
+        _grassNearFieldController?.Dispose();
+        _grassNearFieldController = null;
         _grassController?.Dispose();
         _grassController = null;
 
@@ -316,6 +360,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _grassController = new GrassPlacementController(transform, chunkedProvider,
             _colorGenerator.SurfaceArrays.GrassParamsBuffer, _colorGenerator.SurfaceArrays.SliceCount,
             waterRadius, Seed, Logger);
+        _grassNearFieldController = new GrassNearFieldController(transform, chunkedProvider,
+            _colorGenerator.SurfaceArrays.GrassParamsBuffer, _colorGenerator.SurfaceArrays.SliceCount,
+            waterRadius, _planetSettings.PlanetRadius, Seed, Logger);
     }
 
     public bool TryGetSurfaceRadius(Vector3 worldUnitDirection, out float surfaceRadius)

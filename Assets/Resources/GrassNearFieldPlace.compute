@@ -1,0 +1,474 @@
+#pragma kernel PlaceAndCullNearField
+
+// Dense camera-centered near-field grass placement, slice 2: face-space stable cells.
+// Pairs with [Assets/Scripts/Planet/Grass/GrassNearFieldController.cs].
+//
+// SLICE 2 CHANGES vs slice 1:
+//  - Cells are anchored in stable (face, cellU, cellV) coordinates, NOT camera-relative
+//    tangent-plane indices. Same world cell -> same hash -> same blade properties across
+//    frames. Camera motion only changes WHICH cells dispatch, not where they live.
+//  - Explicit overflow accounting: InterlockedAdd(_NearFieldDrawArgs[1], 1, slot) drives
+//    the indirect draw count directly. AppendStructuredBuffer dropped.
+//  - Per-root distance fade packed into BladeInstance.Color.a. The shader does a dithered
+//    clip; chunk path writes alpha=1.0 and is unaffected.
+//
+// KNOWN LIMITATION: single-face dispatch. When the disc straddles a cube-face seam,
+// the neighbor face's cells are missing. SeamRisk flag in F10 stats surfaces this.
+
+struct BiomeGrassParams
+{
+    float4 Shape;     // x density, y height, z width, w clump strength
+    float4 Placement; // x maxSlopeDeg, y slopeFadeDeg, z waterClearance, w blendPower
+    float4 Tint;
+};
+
+struct GrassBladeInstance
+{
+    float4 RootHeight;
+    float4 UpWidth;
+    float4 Color;
+};
+
+Texture2D<float4> _NearFieldBiomeIds_F0;
+Texture2D<float4> _NearFieldBiomeIds_F1;
+Texture2D<float4> _NearFieldBiomeIds_F2;
+Texture2D<float4> _NearFieldBiomeIds_F3;
+Texture2D<float4> _NearFieldBiomeIds_F4;
+Texture2D<float4> _NearFieldBiomeIds_F5;
+Texture2D<float4> _NearFieldBiomeWeights_F0;
+Texture2D<float4> _NearFieldBiomeWeights_F1;
+Texture2D<float4> _NearFieldBiomeWeights_F2;
+Texture2D<float4> _NearFieldBiomeWeights_F3;
+Texture2D<float4> _NearFieldBiomeWeights_F4;
+Texture2D<float4> _NearFieldBiomeWeights_F5;
+Texture2D<float> _NearFieldSurfaceRadius_F0;
+Texture2D<float> _NearFieldSurfaceRadius_F1;
+Texture2D<float> _NearFieldSurfaceRadius_F2;
+Texture2D<float> _NearFieldSurfaceRadius_F3;
+Texture2D<float> _NearFieldSurfaceRadius_F4;
+Texture2D<float> _NearFieldSurfaceRadius_F5;
+Texture2D<float4> _NearFieldSurfaceNormal_F0;
+Texture2D<float4> _NearFieldSurfaceNormal_F1;
+Texture2D<float4> _NearFieldSurfaceNormal_F2;
+Texture2D<float4> _NearFieldSurfaceNormal_F3;
+Texture2D<float4> _NearFieldSurfaceNormal_F4;
+Texture2D<float4> _NearFieldSurfaceNormal_F5;
+
+StructuredBuffer<BiomeGrassParams> _NearFieldBiomeGrassParams;
+RWStructuredBuffer<GrassBladeInstance> _NearFieldGrassInstances;
+RWStructuredBuffer<uint> _NearFieldDrawArgs;
+RWStructuredBuffer<uint> _NearFieldStats;
+
+#define NF_STAT_CANDIDATE_CELLS 0
+#define NF_STAT_DENSITY_REJECTED 1
+#define NF_STAT_WATER_REJECTED 2
+#define NF_STAT_SLOPE_REJECTED 3
+#define NF_STAT_DISTANCE_REJECTED 4
+#define NF_STAT_DISTANCE_FADE_REJECTED 5
+#define NF_STAT_FRUSTUM_REJECTED 6
+#define NF_STAT_EMITTED 7
+#define NF_STAT_FACE_AREA_REJECTED 8
+#define NF_STAT_OVERFLOW 9
+
+int _NearFieldBiomeAtlasResolution;
+int _NearFieldSurfaceAtlasResolution;
+int _NearFieldBiomeParamCount;
+int _NearFieldCapacity;
+int _NearFieldSeed;
+int _NearFieldFaceIndex;
+int2 _NearFieldGridStartCellUV;
+int2 _NearFieldGridSize;
+float _NearFieldCellUvWidth;
+float _NearFieldSpacing;            // for hash variation and width/height world scale
+float _NearFieldFullDensityDistance;
+float _NearFieldDrawDistance;
+float _NearFieldFadeBand;
+float _NearFieldWaterRadius;
+float _NearFieldPlanetRadius;
+float _NearFieldPlanetWorldScale;
+float4x4 _NearFieldPlanetLocalToWorld;
+float3 _NearFieldPlanetCenterWs;
+float3 _NearFieldCameraPositionWs;
+
+void AddStat(uint index, uint value)
+{
+    InterlockedAdd(_NearFieldStats[index], value);
+}
+
+uint HashUint(uint x)
+{
+    x ^= x >> 16;
+    x *= 0x7feb352du;
+    x ^= x >> 15;
+    x *= 0x846ca68bu;
+    x ^= x >> 16;
+    return x;
+}
+
+float Hash01(uint seed)
+{
+    return (HashUint(seed) & 0x00ffffffu) / 16777216.0;
+}
+
+// Cube face UV -> unit sphere direction. Matches BiomeGrassPlace.compute:86-100.
+float3 CubeFaceToUnitSphere(int face, float2 uv)
+{
+    float u = uv.x * 2.0 - 1.0;
+    float v = uv.y * 2.0 - 1.0;
+    float3 p = float3(0.0, 1.0, 0.0);
+
+    if (face == 0) p = float3(u, 1.0, -v);
+    else if (face == 1) p = float3(-u, -1.0, -v);
+    else if (face == 2) p = float3(-1.0, -v, -u);
+    else if (face == 3) p = float3(1.0, -v, u);
+    else if (face == 4) p = float3(-v, u, 1.0);
+    else if (face == 5) p = float3(-v, -u, -1.0);
+
+    return normalize(p);
+}
+
+float CubeFaceAreaKeep(float2 uv)
+{
+    // Fixed-size face-UV cells cover less world-space area near cube-face edges.
+    // Keep probability matches the cube-to-sphere area ratio relative to face center.
+    float2 signedUv = uv * 2.0 - 1.0;
+    float denom = max(1.0 + dot(signedUv, signedUv), 1e-6);
+    return saturate(rsqrt(denom * denom * denom));
+}
+
+float4 LoadBiomeIdsTexel(int face, int2 ip)
+{
+    if (face == 0) return _NearFieldBiomeIds_F0.Load(int3(ip, 0));
+    if (face == 1) return _NearFieldBiomeIds_F1.Load(int3(ip, 0));
+    if (face == 2) return _NearFieldBiomeIds_F2.Load(int3(ip, 0));
+    if (face == 3) return _NearFieldBiomeIds_F3.Load(int3(ip, 0));
+    if (face == 4) return _NearFieldBiomeIds_F4.Load(int3(ip, 0));
+    return _NearFieldBiomeIds_F5.Load(int3(ip, 0));
+}
+
+float4 LoadBiomeWeightsTexel(int face, int2 ip)
+{
+    if (face == 0) return _NearFieldBiomeWeights_F0.Load(int3(ip, 0));
+    if (face == 1) return _NearFieldBiomeWeights_F1.Load(int3(ip, 0));
+    if (face == 2) return _NearFieldBiomeWeights_F2.Load(int3(ip, 0));
+    if (face == 3) return _NearFieldBiomeWeights_F3.Load(int3(ip, 0));
+    if (face == 4) return _NearFieldBiomeWeights_F4.Load(int3(ip, 0));
+    return _NearFieldBiomeWeights_F5.Load(int3(ip, 0));
+}
+
+float SampleSurfaceRadius(int face, float2 uv)
+{
+    int resolution = max(_NearFieldSurfaceAtlasResolution, 1);
+    float2 p = saturate(uv) * max(resolution - 1, 1);
+    int2 p0 = int2(floor(p));
+    int2 p1 = min(p0 + 1, int2(resolution - 1, resolution - 1));
+    float2 f = p - p0;
+    float r00, r10, r01, r11;
+    if (face == 0)
+    {
+        r00 = _NearFieldSurfaceRadius_F0.Load(int3(p0, 0));
+        r10 = _NearFieldSurfaceRadius_F0.Load(int3(p1.x, p0.y, 0));
+        r01 = _NearFieldSurfaceRadius_F0.Load(int3(p0.x, p1.y, 0));
+        r11 = _NearFieldSurfaceRadius_F0.Load(int3(p1, 0));
+    }
+    else if (face == 1)
+    {
+        r00 = _NearFieldSurfaceRadius_F1.Load(int3(p0, 0));
+        r10 = _NearFieldSurfaceRadius_F1.Load(int3(p1.x, p0.y, 0));
+        r01 = _NearFieldSurfaceRadius_F1.Load(int3(p0.x, p1.y, 0));
+        r11 = _NearFieldSurfaceRadius_F1.Load(int3(p1, 0));
+    }
+    else if (face == 2)
+    {
+        r00 = _NearFieldSurfaceRadius_F2.Load(int3(p0, 0));
+        r10 = _NearFieldSurfaceRadius_F2.Load(int3(p1.x, p0.y, 0));
+        r01 = _NearFieldSurfaceRadius_F2.Load(int3(p0.x, p1.y, 0));
+        r11 = _NearFieldSurfaceRadius_F2.Load(int3(p1, 0));
+    }
+    else if (face == 3)
+    {
+        r00 = _NearFieldSurfaceRadius_F3.Load(int3(p0, 0));
+        r10 = _NearFieldSurfaceRadius_F3.Load(int3(p1.x, p0.y, 0));
+        r01 = _NearFieldSurfaceRadius_F3.Load(int3(p0.x, p1.y, 0));
+        r11 = _NearFieldSurfaceRadius_F3.Load(int3(p1, 0));
+    }
+    else if (face == 4)
+    {
+        r00 = _NearFieldSurfaceRadius_F4.Load(int3(p0, 0));
+        r10 = _NearFieldSurfaceRadius_F4.Load(int3(p1.x, p0.y, 0));
+        r01 = _NearFieldSurfaceRadius_F4.Load(int3(p0.x, p1.y, 0));
+        r11 = _NearFieldSurfaceRadius_F4.Load(int3(p1, 0));
+    }
+    else
+    {
+        r00 = _NearFieldSurfaceRadius_F5.Load(int3(p0, 0));
+        r10 = _NearFieldSurfaceRadius_F5.Load(int3(p1.x, p0.y, 0));
+        r01 = _NearFieldSurfaceRadius_F5.Load(int3(p0.x, p1.y, 0));
+        r11 = _NearFieldSurfaceRadius_F5.Load(int3(p1, 0));
+    }
+    return lerp(lerp(r00, r10, f.x), lerp(r01, r11, f.x), f.y);
+}
+
+float3 SampleSurfaceNormal(int face, float2 uv)
+{
+    int resolution = max(_NearFieldSurfaceAtlasResolution, 1);
+    float2 p = saturate(uv) * max(resolution - 1, 1);
+    int2 ip = clamp(int2(round(p)), int2(0, 0), int2(resolution - 1, resolution - 1));
+    float4 packed;
+    if (face == 0) packed = _NearFieldSurfaceNormal_F0.Load(int3(ip, 0));
+    else if (face == 1) packed = _NearFieldSurfaceNormal_F1.Load(int3(ip, 0));
+    else if (face == 2) packed = _NearFieldSurfaceNormal_F2.Load(int3(ip, 0));
+    else if (face == 3) packed = _NearFieldSurfaceNormal_F3.Load(int3(ip, 0));
+    else if (face == 4) packed = _NearFieldSurfaceNormal_F4.Load(int3(ip, 0));
+    else packed = _NearFieldSurfaceNormal_F5.Load(int3(ip, 0));
+    return normalize(packed.xyz * 2.0 - 1.0);
+}
+
+BiomeGrassParams GetGrassParams(uint id)
+{
+    BiomeGrassParams p;
+    p.Shape = 0.0;
+    p.Placement = 0.0;
+    p.Tint = 0.0;
+    if (id < (uint)_NearFieldBiomeParamCount)
+        p = _NearFieldBiomeGrassParams[id];
+    return p;
+}
+
+BiomeGrassParams BlendGrassParams(float4 idsPacked, float4 weightsPacked, out float density)
+{
+    BiomeGrassParams blended;
+    blended.Shape = 0.0;
+    blended.Placement = 0.0;
+    blended.Tint = 0.0;
+
+    density = 0.0;
+    float totalParamWeight = 0.0;
+
+    [unroll]
+    for (uint i = 0u; i < 4u; i++)
+    {
+        uint biomeId = (uint)round(idsPacked[i] * 255.0);
+        float weight = saturate(weightsPacked[i]);
+        if (weight <= 0.0001)
+            continue;
+
+        BiomeGrassParams p = GetGrassParams(biomeId);
+        float grassDensity = saturate(p.Shape.x);
+        float blendPower = max(p.Placement.w, 0.001);
+        density += grassDensity * pow(weight, blendPower);
+
+        // Keep physical grass properties on the same blended biome field as density.
+        // Picking one dominant biome made color/shape transitions look like painted lines.
+        float paramWeight = weight * grassDensity;
+        if (paramWeight <= 0.0001)
+            continue;
+
+        blended.Shape.y += p.Shape.y * paramWeight;
+        blended.Shape.z += p.Shape.z * paramWeight;
+        blended.Shape.w += p.Shape.w * paramWeight;
+        blended.Placement += p.Placement * paramWeight;
+        blended.Tint.rgb += p.Tint.rgb * paramWeight;
+        totalParamWeight += paramWeight;
+    }
+
+    density = saturate(density);
+    blended.Shape.x = density;
+    blended.Tint.a = 1.0;
+
+    if (totalParamWeight > 0.0001)
+    {
+        float inv = rcp(totalParamWeight);
+        blended.Shape.y *= inv;
+        blended.Shape.z *= inv;
+        blended.Shape.w *= inv;
+        blended.Placement *= inv;
+        blended.Tint.rgb *= inv;
+    }
+
+    return blended;
+}
+
+BiomeGrassParams LerpGrassParams(BiomeGrassParams a, BiomeGrassParams b, float t)
+{
+    BiomeGrassParams result;
+    result.Shape = lerp(a.Shape, b.Shape, t);
+    result.Placement = lerp(a.Placement, b.Placement, t);
+    result.Tint = lerp(a.Tint, b.Tint, t);
+    return result;
+}
+
+BiomeGrassParams SampleGrassParamsBilinear(int face, float2 uv, out float density)
+{
+    int resolution = max(_NearFieldBiomeAtlasResolution, 1);
+    int maxTexel = max(resolution - 1, 0);
+    int2 maxTexel2 = int2(maxTexel, maxTexel);
+
+    // Match the terrain shader's manual 4-corner biome blend. The ids texture is
+    // categorical, so sampling one rounded texel still snaps grass color/shape at texel
+    // boundaries even when each texel's top-K weights are blended.
+    float2 texelCoord = saturate(uv) * (float)resolution - 0.5;
+    int2 baseTexel = (int2)floor(texelCoord);
+    float2 f = saturate(texelCoord - baseTexel);
+
+    int2 t00 = clamp(baseTexel, int2(0, 0), maxTexel2);
+    int2 t10 = clamp(baseTexel + int2(1, 0), int2(0, 0), maxTexel2);
+    int2 t01 = clamp(baseTexel + int2(0, 1), int2(0, 0), maxTexel2);
+    int2 t11 = clamp(baseTexel + int2(1, 1), int2(0, 0), maxTexel2);
+
+    float d00, d10, d01, d11;
+    BiomeGrassParams p00 = BlendGrassParams(LoadBiomeIdsTexel(face, t00), LoadBiomeWeightsTexel(face, t00), d00);
+    BiomeGrassParams p10 = BlendGrassParams(LoadBiomeIdsTexel(face, t10), LoadBiomeWeightsTexel(face, t10), d10);
+    BiomeGrassParams p01 = BlendGrassParams(LoadBiomeIdsTexel(face, t01), LoadBiomeWeightsTexel(face, t01), d01);
+    BiomeGrassParams p11 = BlendGrassParams(LoadBiomeIdsTexel(face, t11), LoadBiomeWeightsTexel(face, t11), d11);
+
+    BiomeGrassParams px0 = LerpGrassParams(p00, p10, f.x);
+    BiomeGrassParams px1 = LerpGrassParams(p01, p11, f.x);
+    BiomeGrassParams result = LerpGrassParams(px0, px1, f.y);
+    density = saturate(result.Shape.x);
+    result.Shape.x = density;
+    return result;
+}
+
+[numthreads(8, 8, 1)]
+void PlaceAndCullNearField(uint3 id : SV_DispatchThreadID)
+{
+    if ((int)id.x >= _NearFieldGridSize.x || (int)id.y >= _NearFieldGridSize.y)
+        return;
+
+    AddStat(NF_STAT_CANDIDATE_CELLS, 1u);
+
+    // Stable face-space cell. Hash binds (face, cellU, cellV) to a deterministic seed,
+    // so the same world position yields the same blade properties across frames. THIS is
+    // what makes the grass attached to the planet instead of swimming with the camera.
+    int2 cellIndex = _NearFieldGridStartCellUV + int2(id.xy);
+    uint cellHash = HashUint((uint)_NearFieldSeed
+        ^ ((uint)_NearFieldFaceIndex * 0x9e3779b9u)
+        ^ ((uint)cellIndex.x * 73856093u)
+        ^ ((uint)cellIndex.y * 19349663u));
+
+    // Sub-cell jitter using the stable cell hash so the position inside each face cell
+    // is also stable across frames.
+    float2 jitter = float2(Hash01(cellHash ^ 0xa341316cu) - 0.5,
+                           Hash01(cellHash ^ 0x6a09e667u) - 0.5);
+    float2 faceUv = (float2(cellIndex) + 0.5 + jitter) * _NearFieldCellUvWidth;
+    if (faceUv.x < 0.0 || faceUv.x > 1.0 || faceUv.y < 0.0 || faceUv.y > 1.0)
+    {
+        // Cell projects outside the face UV square - drop. Seam handling is the
+        // controller's job (deferred to slice 3).
+        AddStat(NF_STAT_DISTANCE_REJECTED, 1u);
+        return;
+    }
+
+    float areaKeep = CubeFaceAreaKeep(faceUv);
+    if (Hash01(cellHash ^ 0x2c1b3c6du) > areaKeep)
+    {
+        AddStat(NF_STAT_FACE_AREA_REJECTED, 1u);
+        return;
+    }
+
+    float3 dirWs = CubeFaceToUnitSphere(_NearFieldFaceIndex, faceUv);
+
+    // Sample surface radius to get the exact root position on the sphere.
+    float surfaceRadius = SampleSurfaceRadius(_NearFieldFaceIndex, faceUv);
+    float3 localRoot = dirWs * surfaceRadius;
+    float3 rootWs = mul(_NearFieldPlanetLocalToWorld, float4(localRoot, 1.0)).xyz;
+
+    // Distance gate + smooth stochastic thinning. Earlier power-of-two bands
+    // (1, 1/2, 1/4, 1/8) made visible concentric rings at 30m intervals.
+    float distanceFromCamera = length(rootWs - _NearFieldCameraPositionWs);
+    if (distanceFromCamera > _NearFieldDrawDistance)
+    {
+        AddStat(NF_STAT_DISTANCE_REJECTED, 1u);
+        return;
+    }
+    float distanceThinT = saturate((distanceFromCamera - _NearFieldFullDensityDistance)
+        / max(_NearFieldDrawDistance - _NearFieldFullDensityDistance, 0.001));
+    float distanceKeep = lerp(1.0, 0.45, smoothstep(0.0, 1.0, distanceThinT));
+    if (Hash01(cellHash ^ 0x1f83d9abu) > distanceKeep)
+    {
+        AddStat(NF_STAT_DISTANCE_FADE_REJECTED, 1u);
+        return;
+    }
+
+    // Biome density gate.
+    float density;
+    BiomeGrassParams biome = SampleGrassParamsBilinear(_NearFieldFaceIndex, faceUv, density);
+    if (density <= 0.001)
+    {
+        AddStat(NF_STAT_DENSITY_REJECTED, 1u);
+        return;
+    }
+    if (biome.Shape.y <= 0.0 || biome.Shape.z <= 0.0)
+    {
+        AddStat(NF_STAT_DENSITY_REJECTED, 1u);
+        return;
+    }
+
+    // Water clearance.
+    if (_NearFieldWaterRadius > 0.0
+        && surfaceRadius <= _NearFieldWaterRadius + max(biome.Placement.z, 0.0))
+    {
+        AddStat(NF_STAT_WATER_REJECTED, 1u);
+        return;
+    }
+
+    // Slope.
+    float3 normalLocal = SampleSurfaceNormal(_NearFieldFaceIndex, faceUv);
+    if (dot(normalLocal, dirWs) < 0.0)
+        normalLocal = -normalLocal;
+    float slopeDeg = acos(saturate(dot(normalLocal, dirWs))) * 57.2957795;
+    float maxSlope = saturate(biome.Placement.x / 90.0) * 90.0;
+    float fade = max(biome.Placement.y, 0.001);
+    float slopeKeep = 1.0 - smoothstep(maxSlope - fade, maxSlope + fade, slopeDeg);
+    if (Hash01(cellHash ^ 0xa54ff53au) > slopeKeep)
+    {
+        AddStat(NF_STAT_SLOPE_REJECTED, 1u);
+        return;
+    }
+
+    // Per-blade density roll (partial-density biomes thin probabilistically).
+    if (Hash01(cellHash ^ 0x3c6ef372u) > density)
+    {
+        AddStat(NF_STAT_DENSITY_REJECTED, 1u);
+        return;
+    }
+
+    // Explicit slot allocation drives the indirect draw count directly. No CopyCount.
+    // Matches the chunk-kernel pattern in BiomeGrassPlace.compute:319-325.
+    uint slot;
+    InterlockedAdd(_NearFieldDrawArgs[1], 1u, slot);
+    if (slot >= (uint)_NearFieldCapacity)
+    {
+        AddStat(NF_STAT_OVERFLOW, 1u);
+        // Roll back so the indirect args count stays accurate (capacity-clamped).
+        InterlockedAdd(_NearFieldDrawArgs[1], 0xFFFFFFFFu);
+        return;
+    }
+
+    float3 upWs = normalize(mul((float3x3)_NearFieldPlanetLocalToWorld, normalLocal));
+
+    float heightVariation = lerp(0.75, 1.25, Hash01(cellHash ^ 0x510e527fu));
+    float widthVariation = lerp(0.80, 1.15, Hash01(cellHash ^ 0x9b05688cu));
+    float height = biome.Shape.y * max(_NearFieldPlanetWorldScale, 0.0001) * heightVariation;
+    float width = biome.Shape.z * max(_NearFieldPlanetWorldScale, 0.0001) * widthVariation;
+
+    // Per-root distance fade in [0,1]. Inside the (drawDistance - fadeBand) inner disc:
+    // alpha = 1 (full opacity). Outside drawDistance: clipped before reaching here. In
+    // the fade band: smoothly ramps down. The shader does dithered clip on this alpha.
+    float fadeAlpha = 1.0;
+    if (_NearFieldFadeBand > 0.001 && _NearFieldDrawDistance > _NearFieldFadeBand)
+    {
+        float fadeStart = _NearFieldDrawDistance - _NearFieldFadeBand;
+        float fadeT = saturate((distanceFromCamera - fadeStart) / _NearFieldFadeBand);
+        fadeAlpha = 1.0 - smoothstep(0.0, 1.0, fadeT);
+        fadeAlpha = lerp(fadeAlpha, 1.0, step(distanceFromCamera, fadeStart));
+    }
+
+    GrassBladeInstance blade;
+    blade.RootHeight = float4(rootWs, height);
+    blade.UpWidth = float4(upWs, width);
+    blade.Color = float4(saturate(biome.Tint.rgb), fadeAlpha);
+    _NearFieldGrassInstances[slot] = blade;
+    AddStat(NF_STAT_EMITTED, 1u);
+}

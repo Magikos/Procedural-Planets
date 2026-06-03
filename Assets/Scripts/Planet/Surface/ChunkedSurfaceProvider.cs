@@ -223,13 +223,12 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         progress?.Report(0.92f, "Building grass surface atlases...");
         BuildGrassSurfaceAtlases();
 
-        // 7) Initial visibility. Camera.main is available by load time; if not, default to
-        //    "render coarsest" (root chunks visible everywhere) and Tick fixes it next frame.
-        progress?.Report(0.94f, "Initial visibility...");
-        var cam = Camera.main;
-        Vector3 observerPos = cam != null ? cam.transform.position : _planetTransform.position;
-        PrepareLodContext(cam);
-        for (int f = 0; f < 6; f++) UpdateVisibleLeavesForFace(f, observerPos);
+        // 7) Defer initial visibility until Planet finishes color/water generation.
+        // The biome textures exist here but are still blank; showing chunks now can render a
+        // cyan/teal placeholder surface if the player jumps to ground during loading.
+        progress?.Report(0.94f, "Preparing visibility...");
+        for (int f = 0; f < 6; f++)
+            _visibleLeavesPerFace[f]?.Clear();
 
         _initialized = true;
         LogChunkDiagnostics("initial");
