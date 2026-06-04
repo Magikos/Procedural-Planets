@@ -10,6 +10,7 @@ public class GameBootstrap : MonoBehaviour, IEarlyInitialize
     IWorldActionManager _worldActionManager;
     IDebugCommandProvider _debugCommandProvider;
     IGrassQualitySettings _grassQualitySettings;
+    IInputMapService _inputMapService;
     bool _ownsGrassQualitySettings;
 
     public int EarlyPriority => 100;
@@ -30,6 +31,11 @@ public class GameBootstrap : MonoBehaviour, IEarlyInitialize
             (_debugCommandProvider as System.IDisposable)?.Dispose();
             ServiceLocator.Unregister<IDebugCommandProvider>(_debugCommandProvider);
         }
+        if (_inputMapService != null)
+        {
+            (_inputMapService as System.IDisposable)?.Dispose();
+            ServiceLocator.Unregister<IInputMapService>(_inputMapService);
+        }
 
         EventBusRegistry.ClearAll();
         EventBusProcessor.ClearProcessors();
@@ -42,10 +48,12 @@ public class GameBootstrap : MonoBehaviour, IEarlyInitialize
         _seedProvider = new SeedProvider(WorldSeed);
         _worldActionManager = new WorldActionManager(logger);
         _debugCommandProvider = new DebugCommandProvider();
+        _inputMapService = new InputMapService();
 
         ServiceLocator.Register<ISeedProvider>(_seedProvider);
         ServiceLocator.Register<IWorldActionManager>(_worldActionManager);
         ServiceLocator.Register<IDebugCommandProvider>(_debugCommandProvider);
+        ServiceLocator.Register<IInputMapService>(_inputMapService);
         if (!ServiceLocator.TryGet(out _grassQualitySettings))
         {
             _grassQualitySettings = new DefaultGrassQualitySettings();
@@ -59,6 +67,8 @@ public class GameBootstrap : MonoBehaviour, IEarlyInitialize
         EnsureComponent<DebugCaptureController>();
         EnsureComponent<WaterWakeController>();
         EnsureComponent<ScaleReferenceMarkers>();
+
+        DebugConsoleBootstrap.Initialize();
 
         logger.Log(LogLevel.Info, "Bootstrap", $"Services initialized. World seed: {WorldSeed}");
 

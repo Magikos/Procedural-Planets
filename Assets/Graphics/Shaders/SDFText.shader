@@ -23,6 +23,9 @@ Shader "Hidden/SDFText"
         _OutlineWidth ("Outline Width [0..0.5]",          Range(0, 0.5)) = 0.0
         // Must match the -pxrange value used when generating the atlas.
         _PxRange      ("SDF Pixel Range",                 Float)         = 4.0
+        // Clip rect in normalised screen space (xMin, yMin, xMax, yMax). Default = no clip.
+        // Console sets this to the backdrop bounds so output text doesn't bleed past the panel.
+        _ClipRect     ("Clip Rect (normalised screen)",   Vector)        = (-100, -100, 100, 100)
     }
 
     SubShader
@@ -59,6 +62,7 @@ Shader "Hidden/SDFText"
             float4 _OutlineColor;
             float  _OutlineWidth;
             float  _PxRange;
+            float4 _ClipRect;
 
             // ---------------------------------------------------------------
             // Structs
@@ -76,6 +80,7 @@ Shader "Hidden/SDFText"
                 float4 positionCS : SV_POSITION;
                 float2 uv         : TEXCOORD0;
                 float4 color      : COLOR;
+                float2 screenPos  : TEXCOORD1;
             };
 
             // ---------------------------------------------------------------
@@ -102,8 +107,9 @@ Shader "Hidden/SDFText"
                 o.positionCS = float4(i.positionOS.x * 2.0 - 1.0,
                                       i.positionOS.y * 2.0 - 1.0,
                                       0.0, 1.0);
-                o.uv    = i.uv;
-                o.color = i.color;
+                o.uv        = i.uv;
+                o.color     = i.color;
+                o.screenPos = i.positionOS.xy;
                 return o;
             }
 
@@ -113,6 +119,11 @@ Shader "Hidden/SDFText"
 
             half4 Frag(Varyings i) : SV_Target
             {
+                // --- 0. Discard fragments outside the clip rect (per-instance bound). ---
+                if (i.screenPos.x < _ClipRect.x || i.screenPos.x > _ClipRect.z ||
+                    i.screenPos.y < _ClipRect.y || i.screenPos.y > _ClipRect.w)
+                    discard;
+
                 // --- 1. Sample the MSDF atlas and recover the distance value ---
 
                 float3 msd  = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv).rgb;

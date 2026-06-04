@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -116,6 +117,28 @@ public sealed class SDFTextRenderer
     }
 
     /// <summary>
+    /// Updates the rendered string from a list of colour spans (multi-colour text).
+    /// Uses <see cref="TextAnchor.UpperLeft"/> layout only.
+    /// The mesh is rebuilt on every call; call only when suggestions change.
+    /// </summary>
+    public void SetSpans(
+        IList<TextSpan> spans,
+        float screenX,
+        float screenY,
+        float emSize)
+    {
+        if (_font == null || _material == null) return;
+
+        if (_mesh != null) { Object.Destroy(_mesh); _mesh = null; }
+
+        if (spans != null && spans.Count > 0)
+            _mesh = SDFTextMeshBuilder.BuildScreenSpans(spans, _font, screenX, screenY, emSize);
+
+        // Invalidate the SetText dirty-tracking cache so a subsequent SetText call rebuilds.
+        _lastText = null;
+    }
+
+    /// <summary>
     /// Sets the face colour alpha on the material.  Use this for fading without
     /// rebuilding the mesh (e.g. during the loading screen fade-in / fade-out).
     /// </summary>
@@ -133,6 +156,16 @@ public sealed class SDFTextRenderer
     public void SetColor(Color color)
     {
         _material?.SetColor("_FaceColor", color);
+    }
+
+    /// <summary>
+    /// Sets a screen-space clip rectangle on the material. Fragments outside the rect are discarded.
+    /// Coordinates are in normalised screen space (0=bottom-left, 1=top-right).
+    /// Default (no clip) is roughly (-100, -100, 100, 100).
+    /// </summary>
+    public void SetClipRect(Vector4 rect)
+    {
+        _material?.SetVector("_ClipRect", rect);
     }
 
     /// <summary>

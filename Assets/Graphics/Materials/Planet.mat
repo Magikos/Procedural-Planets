@@ -111,6 +111,16 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
+    - _GrassFarOverlayAltitudeEnd: 2600
+    - _GrassFarOverlayAltitudeStart: 750
+    - _GrassFarOverlayColorBlend: 0.98
+    - _GrassFarOverlayEnd: 260
+    - _GrassFarOverlayFiberStrength: 0.65
+    - _GrassFarOverlayNoiseScale: 0.055
+    - _GrassFarOverlayOrbitStrength: 0.42
+    - _GrassFarOverlayStart: 35
+    - _GrassFarOverlayStrength: 1
+    - _GrassMidOverlayTerrainStrength: 0.92
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005

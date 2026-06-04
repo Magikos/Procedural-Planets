@@ -100,6 +100,87 @@ public static class SDFTextMeshBuilder
     }
 
     // -------------------------------------------------------------------------
+    // Screen-space span build (multi-colour)
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Builds a screen-space text mesh from a list of colour-tagged spans.
+    /// Each <see cref="TextSpan"/> contributes its characters in its own colour.
+    /// Newlines within any span advance the cursor to the next line.
+    /// Only <see cref="TextAnchor.UpperLeft"/> layout is used — no per-line width
+    /// measurement or alignment is performed.
+    /// </summary>
+    public static Mesh BuildScreenSpans(
+        IList<TextSpan> spans,
+        SDFFontAsset font,
+        float originX,
+        float originY,
+        float emSize)
+    {
+        if (spans == null || spans.Count == 0 || font?.Glyphs == null) return null;
+
+        float aspect = Screen.height > 0 ? (float)Screen.width / Screen.height : 1f;
+        float emSizeX = emSize / aspect;
+        float emSizeY = emSize;
+
+        var verts = new List<Vector3>(64);
+        var uvs = new List<Vector2>(64);
+        var cols = new List<Color>(64);
+        var tris = new List<int>(96);
+
+        float cx = originX;
+        float cy = originY;
+
+        foreach (TextSpan span in spans)
+        {
+            foreach (char c in span.Text)
+            {
+                if (c == '\n')
+                {
+                    cx = originX;
+                    cy -= font.LineHeight * emSizeY;
+                    continue;
+                }
+
+                if (!font.TryGetGlyph(c, out SDFGlyph g))
+                {
+                    cx += 0.5f * emSizeX;
+                    continue;
+                }
+
+                if (g.PlaneW > 0.0001f && g.PlaneH > 0.0001f)
+                {
+                    float x0 = cx + g.PlaneX * emSizeX;
+                    float y0 = cy + g.PlaneY * emSizeY;
+                    float x1 = cx + (g.PlaneX + g.PlaneW) * emSizeX;
+                    float y1 = cy + (g.PlaneY + g.PlaneH) * emSizeY;
+
+                    int b = verts.Count;
+                    verts.Add(new Vector3(x0, y0, 0)); uvs.Add(new Vector2(g.AtlasX, g.AtlasY)); cols.Add(span.Color);
+                    verts.Add(new Vector3(x1, y0, 0)); uvs.Add(new Vector2(g.AtlasX + g.AtlasW, g.AtlasY)); cols.Add(span.Color);
+                    verts.Add(new Vector3(x1, y1, 0)); uvs.Add(new Vector2(g.AtlasX + g.AtlasW, g.AtlasY + g.AtlasH)); cols.Add(span.Color);
+                    verts.Add(new Vector3(x0, y1, 0)); uvs.Add(new Vector2(g.AtlasX, g.AtlasY + g.AtlasH)); cols.Add(span.Color);
+
+                    tris.Add(b + 0); tris.Add(b + 2); tris.Add(b + 1);
+                    tris.Add(b + 0); tris.Add(b + 3); tris.Add(b + 2);
+                }
+
+                cx += g.Advance * emSizeX;
+            }
+        }
+
+        if (verts.Count == 0) return null;
+
+        var mesh = new Mesh { name = "SDFTextSpans", hideFlags = HideFlags.HideAndDontSave };
+        mesh.SetVertices(verts);
+        mesh.SetUVs(0, uvs);
+        mesh.SetColors(cols);
+        mesh.SetTriangles(tris, 0);
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    // -------------------------------------------------------------------------
     // Width measurement
     // -------------------------------------------------------------------------
 

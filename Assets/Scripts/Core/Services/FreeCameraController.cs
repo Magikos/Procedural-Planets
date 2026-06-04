@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Controls;
 
 public class FreeCameraController : MonoBehaviour, ICameraRigContext
 {
@@ -27,8 +26,7 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext
     float _lastElevationMax;
     Vector3 _lastPlanetCenter;
 
-    Mouse _mouse;
-    Keyboard _keyboard;
+    IInputMapService _input;
     bool _looking;
     bool _skipNextDelta;
     bool _surfaceView;
@@ -57,7 +55,6 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext
 
     void OnEnable()
     {
-        RefreshInputDevices();
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
     }
 
@@ -74,7 +71,6 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext
 
     void Start()
     {
-        RefreshInputDevices();
         ConfigureCamera();
         Initialize();
     }
@@ -85,11 +81,18 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext
         _cachedPlanet = ServiceLocator.Get<IPlanetSurfaceSampler>();
     }
 
+    IInputMapService GetInput()
+    {
+        if (_input != null)
+            return _input;
+
+        ServiceLocator.TryGet(out _input);
+        return _input;
+    }
+
     void OnApplicationFocus(bool hasFocus)
     {
-        if (hasFocus)
-            RefreshInputDevices();
-        else
+        if (!hasFocus)
             StopLooking();
     }
 
@@ -110,12 +113,15 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext
 
     void Update()
     {
-        RefreshInputDevices();
         UpdateSunOrbitAxis();
 
-        HandleLook();
-        HandleMovement();
-        HandleShortcuts();
+        var input = GetInput();
+        if (input == null)
+            return;
+
+        HandleLook(input);
+        HandleMovement(input);
+        HandleShortcuts(input);
     }
 
     void ConfigureCamera()
@@ -128,21 +134,15 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext
         CameraComponent.farClipPlane = 100000f;
     }
 
-    void RefreshInputDevices()
+    void HandleShortcuts(IInputMapService input)
     {
-        _mouse = Mouse.current;
-        _keyboard = Keyboard.current;
-    }
-
-    void HandleShortcuts()
-    {
-        if (WasKeyPressed(_keyboard?.spaceKey, KeyCode.Space) && _lastPlanetRadius > 0f)
+        if (input.ToggleOrbit.WasPerformedThisFrame() && _lastPlanetRadius > 0f)
             ToggleOrbitSurfaceView();
 
-        if (WasKeyPressed(_keyboard?.backspaceKey, KeyCode.Backspace))
+        if (input.FaceSun.WasPerformedThisFrame())
             FaceSun();
 
-        if (WasKeyPressed(_keyboard?.rKey, KeyCode.R))
+        if (input.FrameStorm.WasPerformedThisFrame())
             FrameStrongestStorm();
     }
 
@@ -197,9 +197,9 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext
         return up.sqrMagnitude > 0.0001f ? up.normalized : Vector3.up;
     }
 
-    void HandleLook()
+    void HandleLook(IInputMapService input)
     {
-        bool rightMousePressed = IsRightMousePressed();
+        bool rightMousePressed = input.LookHold.IsPressed();
         if (rightMousePressed && !_looking)
             StartLooking();
         else if (!rightMousePressed && _looking)
@@ -211,11 +211,11 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext
         if (_skipNextDelta)
         {
             _skipNextDelta = false;
-            ReadMouseDelta();
+            input.Look.ReadValue<Vector2>();
             return;
         }
 
-        Vector2 delta = ReadMouseDelta();
+        Vector2 delta = input.Look.ReadValue<Vector2>();
         if (delta.sqrMagnitude < 0.001f)
             return;
 
@@ -241,30 +241,27 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext
         Cursor.visible = true;
     }
 
-    void HandleMovement()
+    void HandleMovement(IInputMapService input)
     {
         float speed = MoveSpeed;
-        if (IsFastPressed())
+        if (input.Sprint.IsPressed())
             speed *= FastMultiplier;
 
-        Vector3 move = Vector3.zero;
-        if (IsKeyPressed(_keyboard?.wKey, KeyCode.W)) move += transform.forward;
-        if (IsKeyPressed(_keyboard?.sKey, KeyCode.S)) move -= transform.forward;
-        if (IsKeyPressed(_keyboard?.aKey, KeyCode.A)) move -= transform.right;
-        if (IsKeyPressed(_keyboard?.dKey, KeyCode.D)) move += transform.right;
-        if (IsKeyPressed(_keyboard?.eKey, KeyCode.E)) move += transform.up;
-        if (IsKeyPressed(_keyboard?.qKey, KeyCode.Q)) move -= transform.up;
+        Vector2 moveAxis = input.Move.ReadValue<Vector2>();
+        float verticalAxis = input.VerticalMove.ReadValue<float>();
+
+        Vector3 move = transform.forward * moveAxis.y
+                     + transform.right * moveAxis.x
+                     + transform.up * verticalAxis;
 
         if (move.sqrMagnitude > 0.0001f)
             transform.position += move.normalized * speed * Time.deltaTime;
 
-        float rollSpeed = 60f;
-        if (IsKeyPressed(_keyboard?.zKey, KeyCode.Z))
-            transform.Rotate(Vector3.forward, rollSpeed * Time.deltaTime, Space.Self);
-        if (IsKeyPressed(_keyboard?.cKey, KeyCode.C))
-            transform.Rotate(Vector3.forward, -rollSpeed * Time.deltaTime, Space.Self);
+        float rollAxis = input.Roll.ReadValue<float>();
+        if (Mathf.Abs(rollAxis) > 0.0001f)
+            transform.Rotate(Vector3.forward, 60f * rollAxis * Time.deltaTime, Space.Self);
 
-        float scroll = ReadScroll();
+        float scroll = input.Scroll.ReadValue<Vector2>().y;
         if (Mathf.Abs(scroll) > 0.001f)
             transform.position += transform.forward * scroll * ScrollSpeed * Time.deltaTime;
     }
@@ -392,71 +389,5 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext
     float GetSurfaceClearance(float radius)
     {
         return Mathf.Max(SurfaceHeight, Mathf.Max(4f, radius * 0.0012f));
-    }
-
-    bool IsFastPressed()
-    {
-        return IsKeyPressed(_keyboard?.leftShiftKey, KeyCode.LeftShift)
-            || IsKeyPressed(_keyboard?.rightShiftKey, KeyCode.RightShift);
-    }
-
-    bool IsRightMousePressed()
-    {
-        if (_mouse != null && _mouse.rightButton.isPressed)
-            return true;
-
-#if ENABLE_LEGACY_INPUT_MANAGER
-        return Input.GetMouseButton(1);
-#else
-        return false;
-#endif
-    }
-
-    Vector2 ReadMouseDelta()
-    {
-        if (_mouse != null)
-            return _mouse.delta.ReadValue();
-
-#if ENABLE_LEGACY_INPUT_MANAGER
-        return new Vector2(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")) * 20f;
-#else
-        return Vector2.zero;
-#endif
-    }
-
-    float ReadScroll()
-    {
-        if (_mouse != null)
-            return _mouse.scroll.ReadValue().y;
-
-#if ENABLE_LEGACY_INPUT_MANAGER
-        return Input.mouseScrollDelta.y * 120f;
-#else
-        return 0f;
-#endif
-    }
-
-    static bool IsKeyPressed(KeyControl key, KeyCode legacyKey)
-    {
-        if (key != null && key.isPressed)
-            return true;
-
-#if ENABLE_LEGACY_INPUT_MANAGER
-        return Input.GetKey(legacyKey);
-#else
-        return false;
-#endif
-    }
-
-    static bool WasKeyPressed(ButtonControl key, KeyCode legacyKey)
-    {
-        if (key != null && key.wasPressedThisFrame)
-            return true;
-
-#if ENABLE_LEGACY_INPUT_MANAGER
-        return Input.GetKeyDown(legacyKey);
-#else
-        return false;
-#endif
     }
 }

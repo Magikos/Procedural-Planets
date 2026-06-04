@@ -37,6 +37,12 @@ Shader "Planet/Grass"
             };
 
             StructuredBuffer<BladeInstance> _GrassBladeInstances;
+
+            // Slice 5a: wind. Global uniforms come from WeatherManager (also consumed by
+            // clouds, ocean, precipitation). _WindDirection is a normalized world vector;
+            // _WindSpeed is a scalar (units roughly = wave cycles per second).
+            float3 _WindDirection;
+            float _WindSpeed;
             float3 _SunParams;
             float _NightAmbientIntensity;
             float3 _PlanetCenter;
@@ -100,6 +106,46 @@ Shader "Planet/Grass"
                 return lenSq > 1e-8 ? value * rsqrt(lenSq) : fallback;
             }
 
+            // Slice 5a wind: tip-only bend in the wind direction projected onto the local
+            // tangent plane. Uses three phase sources for richness:
+            //   1. clump phase (SmoothPatchNoise) so whole patches sway together — large gust waves
+            //   2. world-position phase along wind direction so the gust visibly travels
+            //   3. per-blade hash for tiny individual variation so blades aren't lockstep
+            // Magnitude scales with _WindSpeed and blade height; t*t scaling means roots stay put.
+            float3 ComputeWindOffset(float3 rootWs, float3 upWs, float height, float t, uint seed)
+            {
+                float3 windDir = SafeNormalize(_WindDirection, float3(1.0, 0.0, 0.0));
+                // Project wind onto tangent plane so blades sway parallel to the surface.
+                float3 windTangent = windDir - upWs * dot(windDir, upWs);
+                float tangentLenSq = dot(windTangent, windTangent);
+                if (tangentLenSq < 1e-6)
+                    return float3(0.0, 0.0, 0.0); // wind perpendicular to surface; no bend
+                windTangent *= rsqrt(tangentLenSq);
+
+                float3 relRoot = rootWs - _PlanetCenter;
+                float waveFreq = max(_WindSpeed, 0.05) * 1.4; // baseline cadence even with low wind
+
+                // Directional traveling wave is the primary signal — sin phases along the
+                // wind direction so you see gust fronts visibly travel across the field.
+                // Wave velocity ≈ waveFreq / 0.18 m/s along windTangent.
+                float travelWave = sin(_Time.y * waveFreq + dot(rootWs, windTangent) * 0.18);
+                // Patch-level gust envelope: amplitude modulation only, not phase. Some
+                // patches catch a strong gust while neighbors stay calm, but the wave
+                // direction remains coherent across patches.
+                float gustEnvelope = lerp(0.6, 1.0, SmoothPatchNoise(relRoot, 8.0, 0.0));
+                // Per-blade jitter at higher frequency adds fine-grained life without
+                // breaking the traveling wave (small amplitude, additive, not phase mix).
+                float bladeJitter = sin(_Time.y * waveFreq * 2.5 + Hash01(seed ^ 0x44444444u) * 6.2831853) * 0.12;
+                float wave = travelWave * gustEnvelope + bladeJitter;
+
+                // Tip displacement in meters, scales with speed and blade height. Cap at 35% of
+                // height so even violent wind doesn't fold the blade past horizontal.
+                float displacement = wave * max(_WindSpeed, 0.0) * 0.4 * height;
+                displacement = clamp(displacement, -height * 0.35, height * 0.35);
+
+                return windTangent * displacement * (t * t);
+            }
+
             Varyings GrassVertex(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
             {
                 BladeInstance blade = _GrassBladeInstances[instanceID];
@@ -149,7 +195,10 @@ Shader "Planet/Grass"
                 // SampleGrassInteractorBend returns 0 today; when slice 6 ships, it returns a
                 // world-space bend vector that we scale by t*t so only the tip bends.
                 float3 interactorBend = SampleGrassInteractorBend(tuftRootWS) * (t * t);
-                float3 spineWS = tuftRootWS + upWS * (height * t) + leanWS * bend + sideWS * lateralCurl + interactorBend;
+                // Slice 5a: tip-only wind bend in the tangent plane. Clump-based phase so
+                // patches sway together; gust travels along _WindDirection.
+                float3 windOffset = ComputeWindOffset(tuftRootWS, upWS, height, t, seed);
+                float3 spineWS = tuftRootWS + upWS * (height * t) + leanWS * bend + sideWS * lateralCurl + interactorBend + windOffset;
                 float3 positionWS = spineWS + sideWS * (side * widthAtT);
 
                 float brightness = lerp(0.72, 1.16, Hash01(seed ^ 0x5be0cd19u));

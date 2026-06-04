@@ -784,7 +784,18 @@ Shader "Planet/VertexColor"
                 {
                     GrassOverlayEval grassEval = EvaluateGrassOverlay(input.chunkUv,
                         input.positionWS, normalize(input.normalWS));
-                    return half4(grassEval.farWeight, grassEval.midWeight, grassEval.nearWeight, 1.0);
+                    // Diagnostic LOD bands — overlapping ramps designed to show a clean
+                    // blue → cyan → green → yellow → orange → red sweep so transitions
+                    // between near/mid/far ownership are visible. These bands are SEPARATE
+                    // from production rendering (which uses envCoverage * approachWeight),
+                    // so retuning here doesn't move blades on the ground.
+                    float viewDistance = length(input.positionWS - _WorldSpaceCameraPos);
+                    float coverage = grassEval.envCoverage;
+                    float nearBand = 1.0 - smoothstep(110.0, 200.0, viewDistance);
+                    float midBand  = smoothstep(60.0, 180.0, viewDistance)
+                                   * (1.0 - smoothstep(320.0, 550.0, viewDistance));
+                    float farBand  = smoothstep(200.0, 380.0, viewDistance);
+                    return half4(farBand * coverage, midBand * coverage, nearBand * coverage, 1.0);
                 }
 
                 // Phase B step 6+8: keyword-on path samples per-biome triplanar PBR (albedo,
