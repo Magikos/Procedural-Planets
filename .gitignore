@@ -103,3 +103,5 @@ local-only
 # Local AI/editor tool artifacts
 .clinerules-*
 *.lscache
+
+Extras
