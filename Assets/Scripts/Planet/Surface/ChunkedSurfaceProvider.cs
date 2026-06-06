@@ -373,11 +373,13 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         // biome textures stay at their step-3 zero-init state.
         BiomeLookupData lookup = default;
         Color[] lutColors = null;
+        VoronoiBiomeField voronoiField = null;
         bool bakeLookupBuilt = false;
         if (biomeProvider is ColorGenerator cg && cg.Registry != null && cg.BiomeColors != null)
         {
             lookup = cg.Registry.BuildLookupData(Allocator.Persistent);
             lutColors = cg.BiomeColors;
+            voronoiField = cg.VoronoiBiomeField;
             bakeLookupBuilt = true;
         }
 
@@ -393,12 +395,14 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                 ct.ThrowIfCancellationRequested();
                 BiomeLookupData lookupCopy = lookup; // captured by closure
                 Color[] lutCopy = lutColors;
+                VoronoiBiomeField voronoiCopy = voronoiField;
                 bool bakeEnabled = bakeLookupBuilt;
                 System.Threading.Tasks.Parallel.For(batchStart, batchEnd, i =>
                 {
                     var chunk = _allChunks[i];
                     CalculateChunkColors(chunk, biomeProvider);
-                    if (bakeEnabled) BakeChunkBiomeMap(chunk, lookupCopy, lutCopy);
+                    if (bakeEnabled)
+                        BakeChunkBiomeMap(chunk, lookupCopy, voronoiCopy, lutCopy);
                 });
                 ct.ThrowIfCancellationRequested();
 
@@ -487,7 +491,11 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     // Step 5b: bake top-K biome textures for one chunk on a worker thread. Allocates the
     // pending Color32 buffers lazily (per chunk, GC'd after upload) and reuses a thread-local
     // scratch buffer for the high-res biome id grid (no per-chunk GC pressure for that).
-    static void BakeChunkBiomeMap(PlanetChunk chunk, in BiomeLookupData lookup, Color[] lutColors)
+    static void BakeChunkBiomeMap(
+        PlanetChunk chunk,
+        in BiomeLookupData lookup,
+        VoronoiBiomeField voronoiField,
+        Color[] lutColors)
     {
         if (chunk?.BiomeBlendedColorTexture == null) return;
         int texelCount = PlanetChunkTextures.BiomeMapResolution * PlanetChunkTextures.BiomeMapResolution;
@@ -502,7 +510,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         if (_tlsBakeHighResBuffer == null || _tlsBakeHighResBuffer.Length != hrCount)
             _tlsBakeHighResBuffer = new byte[hrCount];
 
-        BiomeMapBaker.Bake(chunk, lookup, lutColors,
+        BiomeMapBaker.Bake(chunk, lookup, voronoiField, lutColors,
             chunk.PendingBiomeBlendedColorPixels,
             chunk.PendingBiomeIdsPixels,
             chunk.PendingBiomeWeightsPixels,
@@ -908,7 +916,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         BiomeLookupData lookup = cg.Registry.BuildLookupData(Allocator.TempJob);
         try
         {
-            BakeChunkBiomeMap(leaf, lookup, cg.BiomeColors);
+            BakeChunkBiomeMap(leaf, lookup, cg.VoronoiBiomeField, cg.BiomeColors);
             UploadChunkBiomeMap(leaf, releasePendingPixels: true);
             // Re-bind in case the renderer was created before the bake finished (paranoid —
             // BiomeBlendedColorTexture itself is the same Texture2D, just with new content).

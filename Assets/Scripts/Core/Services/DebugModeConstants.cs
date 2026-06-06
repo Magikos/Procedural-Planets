@@ -135,9 +135,10 @@ public static class DebugModeConstants
     public const int TerrainSurfaceAo = 84;
     public const int TerrainSurfaceRoughness = 85;
     public const int GrassLodCoverage = 86;
+    public const int BiomeAltitudeCooling = 87;
 
     /// <summary>Highest defined mode value. Update when adding new modes.</summary>
-    public const int Max = 86;
+    public const int Max = 87;
 
     public static bool SuppressesWeatherPasses(int mode)
     {
@@ -161,6 +162,6 @@ public static class DebugModeConstants
             || mode == FoamOnSwell
             || mode == FoamLocator
             || mode == GlintLocator
-            || (mode >= BiomePrimaryId && mode <= GrassLodCoverage);
+            || (mode >= BiomePrimaryId && mode <= BiomeAltitudeCooling);
     }
 }

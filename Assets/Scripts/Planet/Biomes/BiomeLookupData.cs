@@ -52,7 +52,29 @@ public static class BiomeLookupEvaluator
         out byte primaryId, out byte secondaryId, out float blendWeight)
     {
         ResolveGrid(lookup, temperature, moisture, out byte gridPrimaryId, out byte gridSecondaryId, out float gridBlendWeight);
+        ResolveFromLandBiomes(
+            lookup,
+            temperature,
+            elevation,
+            gridPrimaryId,
+            gridSecondaryId,
+            gridBlendWeight,
+            out primaryId,
+            out secondaryId,
+            out blendWeight);
+    }
 
+    public static void ResolveFromLandBiomes(
+        in BiomeLookupData lookup,
+        float temperature,
+        float elevation,
+        byte landPrimaryId,
+        byte landSecondaryId,
+        float landBlendWeight,
+        out byte primaryId,
+        out byte secondaryId,
+        out float blendWeight)
+    {
         float beachWidth = lookup.BeachWidth > 0f ? lookup.BeachWidth : 0f;
         float beachTop = lookup.OceanThreshold + beachWidth;
         float elevationBlendWidth = lookup.ElevationBlendWidth > 0f ? lookup.ElevationBlendWidth : 0f;
@@ -80,7 +102,7 @@ public static class BiomeLookupEvaluator
             }
             else
             {
-                SetBlendedResult(lookup.BeachBiomeId, gridPrimaryId,
+                SetBlendedResult(lookup.BeachBiomeId, landPrimaryId,
                     BoundaryBlendWeight(distanceToLand, beachInnerBlendWidth),
                     out primaryId, out secondaryId, out blendWeight);
             }
@@ -90,15 +112,15 @@ public static class BiomeLookupEvaluator
         if (elevation > lookup.MountainThreshold)
         {
             byte mountainId = temperature < 0.4f ? lookup.SnowyMountainBiomeId : lookup.MountainBiomeId;
-            SetBlendedResult(mountainId, gridPrimaryId,
+            SetBlendedResult(mountainId, landPrimaryId,
                 BoundaryBlendWeight(elevation - lookup.MountainThreshold, elevationBlendWidth),
                 out primaryId, out secondaryId, out blendWeight);
             return;
         }
 
-        primaryId = gridPrimaryId;
-        secondaryId = gridSecondaryId;
-        blendWeight = gridBlendWeight;
+        primaryId = landPrimaryId;
+        secondaryId = landSecondaryId;
+        blendWeight = landBlendWeight;
 
         float shoreBlend = BoundaryBlendWeight(elevation - beachTop, elevationBlendWidth);
         ApplyBoundaryBlend(primaryId, lookup.BeachBiomeId, shoreBlend, ref secondaryId, ref blendWeight);

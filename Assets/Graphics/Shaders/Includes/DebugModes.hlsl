@@ -123,8 +123,8 @@
 // --- Water Surface: glint discovery ---
 #define DEBUG_WATER_GLINT_LOCATOR         72
 
-// --- Biome diagnostics (73-86) ---
-// Modes 73-77 read per-vertex biome data. Modes 78-80 read the per-chunk
+// --- Biome diagnostics (73-87) ---
+// Modes 73-77 and 87 read per-vertex biome data. Modes 78-80 read the per-chunk
 // biome map used by the texture-mode production terrain path. Modes 81-82
 // verify the production terrain albedo and lighting inputs.
 #define DEBUG_BIOME_PRIMARY_ID            73
@@ -142,8 +142,9 @@
 #define DEBUG_TERRAIN_SURFACE_AO          84
 #define DEBUG_TERRAIN_SURFACE_ROUGHNESS   85
 #define DEBUG_GRASS_LOD_COVERAGE          86
+#define DEBUG_BIOME_ALTITUDE_COOLING      87
 
 // Convenience: last defined mode. Update when adding new modes.
-#define DEBUG_MODE_MAX                    86
+#define DEBUG_MODE_MAX                    87
 
 #endif

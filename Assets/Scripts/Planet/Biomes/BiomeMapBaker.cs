@@ -27,13 +27,18 @@ public static class BiomeMapBaker
     const int HighResolution = MapResolution * 2;       // 128 at MapResolution=64
     const int KernelRadius = 6;                          // window = (2*r + 1)^2 = 13x13 = 169 samples
     const int KernelSamples = (KernelRadius * 2 + 1) * (KernelRadius * 2 + 1);
+    const int PaddedResolution = HighResolution + KernelRadius * 2;
     const int TexelCount = MapResolution * MapResolution;
-    const int HighResCount = HighResolution * HighResolution;
+    const int HighResCount = PaddedResolution * PaddedResolution;
 
     // Bake top-K biome maps for one chunk. All three output buffers must be Color32[TexelCount].
     // lutColors must be at least (max biome id + 1) entries. tempHighRes is a scratch byte buffer
     // of length HighResCount; caller can pool one per worker thread to eliminate GC pressure.
-    public static void Bake(PlanetChunk chunk, in BiomeLookupData lookup, Color[] lutColors,
+    internal static void Bake(
+        PlanetChunk chunk,
+        in BiomeLookupData lookup,
+        VoronoiBiomeField voronoiField,
+        Color[] lutColors,
         Color32[] blendedColors, Color32[] ids, Color32[] weights, byte[] tempHighRes)
     {
         if (chunk == null || chunk.CpuBiomeData == null || chunk.CpuElevations == null) return;
@@ -48,25 +53,58 @@ public static class BiomeMapBaker
         int vertRes = (int)Mathf.Sqrt(vertCount);
         if (vertRes * vertRes != vertCount) return;
 
-        BuildHighResIdGrid(chunk, lookup, vertRes, tempHighRes);
+        BuildHighResIdGrid(chunk, lookup, voronoiField, vertRes, tempHighRes);
         SampleTopKPerTexel(tempHighRes, lutColors, blendedColors, ids, weights);
     }
 
-    // Pass 1: fill the HighResolution² id grid by sampling temperature/moisture/elevation at
-    // each high-res cell center and running the lookup. ~16K samples per chunk.
-    static void BuildHighResIdGrid(PlanetChunk chunk, in BiomeLookupData lookup, int vertRes, byte[] outIds)
+    // Pass 1: fill the padded high-resolution id grid. Padding samples beyond this chunk's
+    // face-space bounds, giving both sides of a chunk boundary the same neighborhood.
+    static void BuildHighResIdGrid(
+        PlanetChunk chunk,
+        in BiomeLookupData lookup,
+        VoronoiBiomeField voronoiField,
+        int vertRes,
+        byte[] outIds)
     {
-        for (int hy = 0; hy < HighResolution; hy++)
+        for (int py = 0; py < PaddedResolution; py++)
         {
-            float v = HighResolution > 1 ? (float)hy / (HighResolution - 1) : 0.5f;
-            for (int hx = 0; hx < HighResolution; hx++)
+            float localV = (float)(py - KernelRadius) / (HighResolution - 1);
+            for (int px = 0; px < PaddedResolution; px++)
             {
-                float u = HighResolution > 1 ? (float)hx / (HighResolution - 1) : 0.5f;
-                Vector2 tm = BilinearSampleXY(chunk.CpuBiomeData, vertRes, u, v);
-                float elev = BilinearSample(chunk.CpuElevations, vertRes, u, v);
-                BiomeLookupEvaluator.Resolve(lookup, tm.x, tm.y, elev,
-                    out byte primary, out _, out _);
-                outIds[hy * HighResolution + hx] = primary;
+                float localU = (float)(px - KernelRadius) / (HighResolution - 1);
+                Vector2 tm = BilinearSampleXY(
+                    chunk.CpuBiomeData, vertRes, localU, localV);
+                float elevation = BilinearSample(
+                    chunk.CpuElevations, vertRes, localU, localV);
+
+                byte primary;
+                if (voronoiField != null)
+                {
+                    Vector2 faceUv = chunk.UvCenter + new Vector2(
+                        (localU - 0.5f) * chunk.UvHalfExtent * 2f,
+                        (localV - 0.5f) * chunk.UvHalfExtent * 2f);
+                    Vector3 direction = CoordinateConverter.CubeFaceToUnitSphere(
+                        chunk.FaceIndex, faceUv);
+                    byte landPrimary = voronoiField.EvaluatePrimaryId(direction);
+                    BiomeLookupEvaluator.ResolveFromLandBiomes(
+                        lookup,
+                        tm.x,
+                        elevation,
+                        landPrimary,
+                        landPrimary,
+                        0f,
+                        out primary,
+                        out _,
+                        out _);
+                }
+                else
+                {
+                    BiomeLookupEvaluator.Resolve(
+                        lookup, tm.x, tm.y, elevation,
+                        out primary, out _, out _);
+                }
+
+                outIds[py * PaddedResolution + px] = primary;
             }
         }
     }
@@ -84,32 +122,26 @@ public static class BiomeMapBaker
         for (int ty = 0; ty < MapResolution; ty++)
         {
             // Map output texel (ty) to high-res center: each output texel covers 2 hr cells.
-            int hrCenterY = ty * (HighResolution / MapResolution) + (HighResolution / MapResolution) / 2;
+            int hrCenterY = KernelRadius
+                + ty * (HighResolution / MapResolution)
+                + (HighResolution / MapResolution) / 2;
             for (int tx = 0; tx < MapResolution; tx++)
             {
-                int hrCenterX = tx * (HighResolution / MapResolution) + (HighResolution / MapResolution) / 2;
+                int hrCenterX = KernelRadius
+                    + tx * (HighResolution / MapResolution)
+                    + (HighResolution / MapResolution) / 2;
 
                 System.Array.Clear(counts, 0, counts.Length);
 
-                // Kernel scan: every texel gets exactly (2r+1)² samples. Out-of-range cells
-                // are clamped to the nearest valid coord (texture-style edge replication)
-                // rather than cropped. Cropping biased edge texels to whatever's inside the
-                // chunk only — across chunk boundaries each side biased to its own interior,
-                // producing visible seams. Edge replication keeps the sample count stable so
-                // the bias is at least uniform on both sides of a shared boundary. (True
-                // seamless blending requires the bake to sample outside the chunk's UV
-                // bounds — direct noise eval or parent-chunk fallback — both deferred.)
+                // Every texel scans exactly (2r+1)^2 samples from the padded grid. The grid
+                // already contains samples outside this chunk, so no edge clamping is needed.
                 for (int dy = -KernelRadius; dy <= KernelRadius; dy++)
                 {
                     int hy = hrCenterY + dy;
-                    if (hy < 0) hy = 0;
-                    else if (hy > HighResolution - 1) hy = HighResolution - 1;
-                    int rowBase = hy * HighResolution;
+                    int rowBase = hy * PaddedResolution;
                     for (int dx = -KernelRadius; dx <= KernelRadius; dx++)
                     {
                         int hx = hrCenterX + dx;
-                        if (hx < 0) hx = 0;
-                        else if (hx > HighResolution - 1) hx = HighResolution - 1;
                         counts[hrIds[rowBase + hx]]++;
                     }
                 }
@@ -175,7 +207,7 @@ public static class BiomeMapBaker
         }
     }
 
-    public static int HighResolutionSize => HighResolution;
+    public static int HighResolutionSize => PaddedResolution;
 
     static float BilinearSample(float[] grid, int res, float u, float v)
     {

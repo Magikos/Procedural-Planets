@@ -94,8 +94,4 @@ The revised design keeps temperature/moisture normalized in `[0,1]`, defers phys
 
 ## What's next (slice 1b)
 
-1. Capture a baseline Biome F10.
-2. Add `TemperatureLatitudeCurve`, `MoistureLatitudeCurve`, and a normalized `AltitudeTemperatureDrop` to `BiomeSettings`, with defaults that preserve current output.
-3. Bake both curves to LUTs for generation-time use.
-4. Add isolated temperature, moisture, and altitude-contribution debug modes.
-5. Validate the signals before implementing Voronoi/domain-warp assignment.
+Slice 1b is implemented in [`2026-06-06-biome-1b-climate-latitude.md`](2026-06-06-biome-1b-climate-latitude.md). Unity/F10 validation is the remaining gate before Voronoi/domain-warp assignment.

@@ -64,7 +64,8 @@ Shader "Planet/VertexColor"
                 float2 chunkUv : TEXCOORD0;
                 // UV2: per-vertex biome diagnostics baked by ColorGenerator + TerrainFace.
                 // x = temperature (0..1), y = moisture (0..1),
-                // z = primaryBiomeId normalized to biome count, w = |latitude| (0=equator, 1=pole).
+                // z = primaryBiomeId normalized to biome count,
+                // w = normalized temperature removed by altitude lapse.
                 float4 biomeData : TEXCOORD2;
             };
 
@@ -751,9 +752,13 @@ Shader "Planet/VertexColor"
 
                 if (_OceanDebugMode == DEBUG_BIOME_LATITUDE)
                 {
-                    float lat = saturate(input.biomeData.w);
+                    float3 radial = normalize(input.positionWS - _PlanetCenter);
+                    float lat = abs(asin(clamp(radial.y, -1.0, 1.0))) / 1.57079632679;
                     return half4(lat, 1.0 - lat, lat * 0.5, 1.0);
                 }
+
+                if (_OceanDebugMode == DEBUG_BIOME_ALTITUDE_COOLING)
+                    return half4(HeatmapBlueRed(saturate(input.biomeData.w)), 1.0);
 
                 if (_OceanDebugMode == DEBUG_BIOME_ELEVATION_BAND)
                 {

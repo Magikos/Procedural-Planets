@@ -422,19 +422,29 @@ Step 1a — #1 (BiomeOffset) — ~30 min, free field add. No consumers yet, but 
    │
 Step 1b — Climate model overhaul (§3.4.1)
    ├─ IClimateProvider/ClimateSample contract (landed 2026-06-06)
-   ├─ TemperatureProvider: add altitude lapse + authored latitude curve
-   ├─ MoistureProvider: switch to latitude (Hadley/Westerlies bands) + noise
-   ├─ Bake curves to LUTs for job-safe generation
-   ├─ Console commands to tune the curves live
+   ├─ TemperatureProvider: altitude lapse + authored latitude curve (implemented 2026-06-06)
+   ├─ MoistureProvider: latitude bands + noise with legacy compatibility blend (implemented 2026-06-06)
+   ├─ Curves baked to immutable LUTs before worker generation (implemented 2026-06-06)
+   ├─ Console tuning commands and presets (implemented 2026-06-06)
+   ├─ StrongBands + Earthlike F10 climate signal validation passed 2026-06-06
    └─ Foundation for #4 (Voronoi assignment uses these inputs)
    │
 Step 1c — #4 (Voronoi assignment + domain warp + 5-iter cleanup)
-   ├─ Fibonacci spiral seed scatter (~2000 seeds), deterministic + jittered
-   ├─ Per-seed (T, P) lookup → nearest biome ClimateTargets match
-   ├─ 5-iteration majority-of-neighbors cleanup (§0.2 — thin-stripe fix)
-   ├─ Domain warp at runtime lookup
-   ├─ Land behind a feature flag for visual A/B vs current IBiomeProvider
-   └─ Drop the flag once validated; remove old direct-lookup path
+   ├─ Fibonacci spiral seed scatter (~2000 seeds), deterministic + jittered (implemented 2026-06-06)
+   ├─ Per-seed (T, P) lookup → nearest registry-grid climate target (implemented 2026-06-06)
+   ├─ 5-iteration majority-of-neighbors cleanup (§0.2 — thin-stripe fix) (implemented 2026-06-06)
+   ├─ Tangent-projected spherical domain warp + exact KD-tree lookup (implemented 2026-06-06)
+   ├─ Fast 512x512x6 map-bake atlas with matching inverse face coordinates and edge-snapped seams (implemented 2026-06-06)
+   ├─ Land behind a feature flag for visual A/B vs current IBiomeProvider (implemented 2026-06-06)
+   ├─ Orbit + surface Unity/F10 validation passed 2026-06-06
+   └─ Voronoi promoted to default 2026-06-06; direct lookup retained temporarily for regression A/B
+   │
+Step 1d — Climate-aware frozen water
+   ├─ Sample trusted slice 1b temperature across connected water components
+   ├─ Freeze inland lakes coherently; retain local polar control for large oceans
+   ├─ Store static freeze factor in water vertex-color alpha
+   ├─ Suppress liquid motion/foam/wakes and blend to an authored ice response
+   └─ Add water-temperature/freeze diagnostics and F10 validation
    │
 Step 3 (texture/look work — from Bryan's 2026-06-06 plan)
    ├─ Multi-variant Synty texture blend per biome
@@ -494,3 +504,4 @@ Step 2 (grass on/off toggle) and Step 4 (grass tuning) from Bryan's 5-step plan 
 - Current biome system: [`Assets/Scripts/Planet/Biomes/`](../../Assets/Scripts/Planet/Biomes/), [`Assets/Scripts/Planet/ColorGenerator.cs`](../../Assets/Scripts/Planet/ColorGenerator.cs), [`Assets/Scripts/Core/Data/BiomeTypes.cs`](../../Assets/Scripts/Core/Data/BiomeTypes.cs)
 - Phase B substrate: [`docs/design/2026-05-31-biome-textures.md`](2026-05-31-biome-textures.md)
 - Chunk-seam motivation for #4: [`memory/project_chunk_biome_seam.md`](../../)
+- Frozen-water follow-up: [`2026-06-06-climate-frozen-water.md`](2026-06-06-climate-frozen-water.md)

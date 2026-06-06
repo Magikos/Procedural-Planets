@@ -197,7 +197,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _shapeGenerator.Configure(shapeSettings);
         _shapeGenerator.Initialize(Seed);
         _colorGenerator.Configure(_planetSettings.BiomeSettings);
-        _colorGenerator.Initialize(Seed);
+        _colorGenerator.Initialize(
+            Seed,
+            seedProvider.GetSeedForSystem("BiomeVoronoi"));
 
         ConfigureMaterial();
 

@@ -57,6 +57,12 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     static readonly int _deepDepthId = Shader.PropertyToID("_DeepDepth");
     static readonly int _shoreFoamDepthId = Shader.PropertyToID("_ShoreFoamDepth");
     static readonly int _shoreFoamSoftnessId = Shader.PropertyToID("_ShoreFoamSoftness");
+    static readonly int _biomeAssignmentModeId = Shader.PropertyToID("_BiomeAssignmentMode");
+    static readonly int _biomeVoronoiSeedCountId = Shader.PropertyToID("_BiomeVoronoiSeedCount");
+    static readonly int _biomeVoronoiCleanupChangesId = Shader.PropertyToID("_BiomeVoronoiCleanupChanges");
+    static readonly int _biomeVoronoiDistinctBiomesId = Shader.PropertyToID("_BiomeVoronoiDistinctBiomes");
+    static readonly int _biomeVoronoiBuildMsId = Shader.PropertyToID("_BiomeVoronoiBuildMs");
+    static readonly int _biomeVoronoiAtlasResolutionId = Shader.PropertyToID("_BiomeVoronoiAtlasResolution");
 
     struct WaterDebugStats
     {
@@ -105,6 +111,25 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     public void AppendMetadata(DebugCaptureContext context, StringBuilder sb)
     {
         AppendWaterDebugMetadata(sb, context.Runtime);
+        AppendBiomeAssignmentMetadata(sb);
+    }
+
+    static void AppendBiomeAssignmentMetadata(StringBuilder sb)
+    {
+        int mode = Shader.GetGlobalInt(_biomeAssignmentModeId);
+        int atlasResolution = Shader.GetGlobalInt(_biomeVoronoiAtlasResolutionId);
+        sb.AppendLine();
+        sb.AppendLine("--- Biome Assignment ---");
+        sb.AppendLine($"Mode: {(mode == 1 ? "Voronoi" : "DirectClimateGrid")}");
+        if (mode != 1)
+            return;
+
+        sb.AppendLine(
+            $"Voronoi: seeds={Shader.GetGlobalInt(_biomeVoronoiSeedCountId)}, " +
+            $"distinct={Shader.GetGlobalInt(_biomeVoronoiDistinctBiomesId)}, " +
+            $"cleanupChanges={Shader.GetGlobalInt(_biomeVoronoiCleanupChangesId)}, " +
+            $"atlas={atlasResolution}x{atlasResolution}x6, " +
+            $"buildMs={Shader.GetGlobalInt(_biomeVoronoiBuildMsId)}");
     }
 
     public void DrawOverlay(DebugRuntimeState state)
@@ -195,6 +220,7 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         RegisterMode(registry, DebugModeConstants.BiomeMoisture, "BiomeMoisture", "Biome");
         RegisterMode(registry, DebugModeConstants.BiomeLatitude, "BiomeLatitude", "Biome");
         RegisterMode(registry, DebugModeConstants.BiomeElevationBand, "BiomeElevationBand", "Biome");
+        RegisterMode(registry, DebugModeConstants.BiomeAltitudeCooling, "BiomeAltitudeCooling", "Biome");
         RegisterMode(registry, DebugModeConstants.BiomeMapPrimaryId, "BiomeMapPrimaryId", "Biome");
         RegisterMode(registry, DebugModeConstants.BiomeMapBlend, "BiomeMapBlend", "Biome");
         RegisterMode(registry, DebugModeConstants.BiomeMapFlatColor, "BiomeMapFlatColor", "Biome");
@@ -248,7 +274,8 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
                 DebugModeConstants.WaterOff,
                 DebugModeConstants.BiomePrimaryId, DebugModeConstants.BiomeTemperature,
                 DebugModeConstants.BiomeMoisture, DebugModeConstants.BiomeLatitude,
-                DebugModeConstants.BiomeElevationBand, DebugModeConstants.BiomeMapPrimaryId,
+                DebugModeConstants.BiomeElevationBand, DebugModeConstants.BiomeAltitudeCooling,
+                DebugModeConstants.BiomeMapPrimaryId,
                 DebugModeConstants.BiomeMapBlend, DebugModeConstants.BiomeMapFlatColor,
                 DebugModeConstants.TerrainSelectedAlbedo, DebugModeConstants.TerrainSunLighting,
                 DebugModeConstants.TerrainSurfaceNormal, DebugModeConstants.TerrainSurfaceAo,

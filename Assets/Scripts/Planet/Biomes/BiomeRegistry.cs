@@ -32,6 +32,31 @@ public class BiomeRegistry : ScriptableObject, IBiomeRegistry
     public BiomeResult Resolve(float temperature, float moisture, float elevation)
     {
         BiomeResult gridResult = ResolveGrid(temperature, moisture);
+        return ResolveElevationOverrides(gridResult, temperature, moisture, elevation);
+    }
+
+    public BiomeResult ResolveWithLandBiomes(
+        BiomeType primary,
+        BiomeType secondary,
+        float blendWeight,
+        float temperature,
+        float moisture,
+        float elevation)
+    {
+        var landResult = new BiomeResult(primary, temperature, moisture)
+        {
+            SecondaryBiome = secondary,
+            BlendWeight = secondary != primary ? Mathf.Clamp01(blendWeight) : 0f,
+        };
+        return ResolveElevationOverrides(landResult, temperature, moisture, elevation);
+    }
+
+    BiomeResult ResolveElevationOverrides(
+        BiomeResult gridResult,
+        float temperature,
+        float moisture,
+        float elevation)
+    {
         float beachWidth = Mathf.Max(BeachWidth, 0f);
         float beachTop = OceanThreshold + beachWidth;
         float elevationBlendWidth = Mathf.Max(ElevationBlendWidth, 0f);

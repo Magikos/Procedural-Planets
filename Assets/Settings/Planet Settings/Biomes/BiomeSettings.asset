@@ -13,6 +13,85 @@ MonoBehaviour:
   m_Name: BiomeSettings
   m_EditorClassIdentifier: 
   Registry: {fileID: 11400000, guid: 5c8993c0922932b488d904678a4e85bb, type: 2}
+  TemperatureLatitudeCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: -1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: -1
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  MoistureLatitudeCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0.9
+      inSlope: 0
+      outSlope: -3.3333333
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.18
+      value: 0.3
+      inSlope: -3.3333333
+      outSlope: 1.5833334
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.42
+      value: 0.68
+      inSlope: 1.5833334
+      outSlope: -0.9285714
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.7
+      value: 0.42
+      inSlope: -0.9285714
+      outSlope: -0.8
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0.18
+      inSlope: -0.8
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  MoistureLatitudeInfluence: 0
+  MoistureNoiseStrength: 0.35
+  AltitudeTemperatureDrop: 0
+  ClimateLutResolution: 256
   TemperatureNoise:
     Filter: 0
     Strength: 1
@@ -32,3 +111,13 @@ MonoBehaviour:
     Persistence: 0.5
     Center: {x: 0, y: 0, z: 200}
     MinValue: 0
+  AssignmentMode: 1
+  VoronoiSeedCount: 2048
+  VoronoiSeedJitter: 0.55
+  VoronoiTemperatureWeight: 4.26
+  VoronoiDomainWarpStrength: 0.08
+  VoronoiDomainWarpScale: 2.5
+  VoronoiDomainWarpOctaves: 4
+  VoronoiDomainWarpPersistence: 0.418
+  VoronoiDomainWarpLacunarity: 2.73
+  VoronoiCleanupIterations: 5

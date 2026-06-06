@@ -11,7 +11,8 @@ public interface IBiomeProvider
     // Returns the final blended color (same as GetBiomeColor) and writes the per-vertex
     // diagnostic data needed by the biome debug shaders:
     //   x = temperature (0..1), y = moisture (0..1),
-    //   z = primary biome id normalized to BiomeCount, w = |latitude| (0=equator, 1=pole).
+    //   z = primary biome id normalized to BiomeCount,
+    //   w = normalized temperature removed by altitude lapse.
     // Computed in a single pass to avoid re-evaluating noise twice per vertex.
     Color GetBiomeColorAndData(Vector3 pointOnUnitSphere, float elevation, out Vector4 biomeData);
 }
