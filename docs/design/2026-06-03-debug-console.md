@@ -1,5 +1,11 @@
 # 2026-06-03 — Debug Console Design
 
+> **HISTORICAL — superseded by [`2026-06-04-debug-console-as-shipped.md`](2026-06-04-debug-console-as-shipped.md).**
+>
+> This document captures the original design proposal. Reality diverged across 22 implementation slices + 3 cleanup slices. The as-shipped doc describes the actual current implementation; this one is kept for design-history reference (helpful for understanding *why* certain decisions were made or revisited).
+>
+> Specific divergences from this proposal are catalogued as D1-D11 in [`docs/agent-conversation/2026-06-04-console-slice6-audit.md`](../agent-conversation/2026-06-04-console-slice6-audit.md).
+
 **Status:** Design proposal awaiting approval. Author: Claude Code (Opus 4.7). Reviewer: Codex + Bryan.
 
 **Discussion thread:** Brainstorming happened in chat 2026-06-03. Key decisions:

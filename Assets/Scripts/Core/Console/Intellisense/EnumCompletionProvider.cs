@@ -1,27 +1,22 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 /// <summary>
-/// Default completion provider for enum-typed parameters.
-/// Automatically used by <see cref="IntellisenseEngine"/> when a parameter is an enum
-/// and no explicit <see cref="CompletionSourceAttribute"/> is present on that parameter.
+/// Default completion provider for enum-typed parameters. Auto-attached by
+/// <see cref="IntellisenseEngine"/> for any enum parameter without an explicit
+/// <see cref="CompletionSourceAttribute"/>.
 /// </summary>
 public sealed class EnumCompletionProvider : IConsoleCompletionProvider
 {
-    readonly Type _enumType;
+    readonly string[] _names;
 
     public EnumCompletionProvider(Type enumType)
     {
         if (enumType == null) throw new ArgumentNullException(nameof(enumType));
         if (!enumType.IsEnum) throw new ArgumentException($"{enumType.Name} is not an enum.", nameof(enumType));
-        _enumType = enumType;
+        _names = Enum.GetNames(enumType);
     }
 
     public IEnumerable<string> GetCompletions(string partialValue)
-    {
-        StringComparison cmp = StringComparison.OrdinalIgnoreCase;
-        return Enum.GetNames(_enumType)
-            .Where(n => string.IsNullOrEmpty(partialValue) || n.StartsWith(partialValue, cmp));
-    }
+        => CompletionRanker.Rank(_names, partialValue);
 }

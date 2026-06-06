@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Serialization;
 
+[CommandPrefix("planet")]
 public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurfaceRaycaster, ILateInitialize, IProgressReporter
 {
     public enum FaceRenderMask { All, Top, Bottom, Left, Right, Front, Back }
@@ -16,7 +17,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     public PlanetSettings PlanetSettingsAsset => _planetSettings;
 
+    // Read reflectively by PlanetEditor through SerializedObject.FindProperty.
+#pragma warning disable CS0414
     [SerializeField, HideInInspector] bool _settingsFoldout = true;
+#pragma warning restore CS0414
     [SerializeField, HideInInspector] float _lastGeneratedRadius;
     [SerializeField, HideInInspector] float _lastSeaLevelRadius;
     [SerializeField, HideInInspector] float _lastElevationMin;
@@ -298,10 +302,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             _progressHandle.Report(0.8f, "Applying colors...");
             await GenerateColorsAsync(new ProgressRangeHandle(_progressHandle, 0.8f, 0.1f), ct);
             if (this == null) return;
-        _progressHandle.Report(0.9f, "Generating water...");
-        await GenerateWaterAsync(new ProgressRangeHandle(_progressHandle, 0.9f, 0.1f), ct);
-        ConfigureGrassController();
-        // Atmosphere is rendered by AtmosphereController + AtmosphereRenderFeature (post-process).
+            _progressHandle.Report(0.9f, "Generating water...");
+            await GenerateWaterAsync(new ProgressRangeHandle(_progressHandle, 0.9f, 0.1f), ct);
+            ConfigureGrassController();
+            // Atmosphere is rendered by AtmosphereController + AtmosphereRenderFeature (post-process).
 
             float scaledRadius = _planetSettings.PlanetRadius * (1 + _shapeGenerator.ElevationMax);
             float seaLevelRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel);
@@ -314,10 +318,14 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _lastElevationMin, _lastElevationMax));
             Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, mode {_planetSettings.Resolution}, perFaceResolution {PerFaceResolution}, radius {scaledRadius:F1}");
         }
-        catch (System.OperationCanceledException) { }
+        catch (System.OperationCanceledException)
+        {
+            throw;
+        }
         catch (System.Exception ex)
         {
             Logger.LogException("Planet", ex);
+            throw;
         }
         finally
         {
@@ -607,4 +615,36 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         }
     }
 
+    // --- Console commands -------------------------------------------------
+
+    [ConsoleCommand("seed", "Get the current world seed, or set a new one. Does NOT auto-regenerate — run 'planet.generate' to apply.", MonoTargetType.Single)]
+    string SeedCmd(int? newSeed = null)
+    {
+        if (newSeed == null) return $"current planet seed: {Seed} (world seed: {ServiceLocator.Get<ISeedProvider>().WorldSeed})";
+        ServiceLocator.Get<ISeedProvider>().SetWorldSeed(newSeed.Value);
+        return $"world seed set to {newSeed.Value}. Run 'planet.generate' to apply.";
+    }
+
+    [ConsoleCommand("resolution", "Get or set per-face vertex resolution (range 2-256, low-mode only). Does NOT auto-regenerate — run 'planet.generate' to apply.", MonoTargetType.Single)]
+    string ResolutionCmd(int? value = null)
+    {
+        if (value == null) return $"per-face resolution: {PerFaceResolution}";
+        PerFaceResolution = Mathf.Clamp(value.Value, 2, 256);
+        return $"per-face resolution: {PerFaceResolution}. Run 'planet.generate' to apply.";
+    }
+
+    [ConsoleCommand("generate", "Regenerate the planet (async, cancellable). Optionally set seed and/or radius first.", MonoTargetType.Single)]
+    async Awaitable GenerateCmd(int? seed = null, float? radius = null, CancellationToken ct = default)
+    {
+        if (IsGenerating)
+            throw new System.InvalidOperationException("planet generation already in progress");
+
+        if (seed.HasValue)
+            ServiceLocator.Get<ISeedProvider>().SetWorldSeed(seed.Value);
+
+        if (radius.HasValue && _planetSettings != null)
+            _planetSettings.PlanetRadius = Mathf.Max(100f, radius.Value);
+
+        await GeneratePlanetAsync(ct);
+    }
 }

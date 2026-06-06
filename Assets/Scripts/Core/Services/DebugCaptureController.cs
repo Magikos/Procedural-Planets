@@ -1,6 +1,8 @@
+using System.Threading;
 using UnityEngine;
 
 [DisallowMultipleComponent]
+[CommandPrefix("debug")]
 public class DebugCaptureController : MonoBehaviour
 {
     static readonly Color DebugOverlayBackgroundColor = new(0f, 0f, 0f, 0.55f);
@@ -16,7 +18,7 @@ public class DebugCaptureController : MonoBehaviour
     public bool IncludeMeshIntegrityInDebugCaptures;
 
     [Header("Debug Capture")]
-    const bool SaveF10DebugScreenshots = true;
+    static readonly bool SaveF10DebugScreenshots = true;
     const int DebugScreenshotMaxWidth = 960;
     const int DebugScreenshotMaxRuns = 6;
     const float DebugCaptureModeDelaySeconds = 0.12f;
@@ -42,6 +44,10 @@ public class DebugCaptureController : MonoBehaviour
     void Awake()
     {
         InitializeRegistry();
+        // Register the registry with the service locator so console completion providers
+        // (DebugModeNamesProvider, DebugCaptureSetNamesProvider) can enumerate modes/sets.
+        if (_debugRegistry != null)
+            ServiceLocator.Register<DebugRegistry>(_debugRegistry);
     }
 
     void OnEnable()
@@ -80,6 +86,7 @@ public class DebugCaptureController : MonoBehaviour
         _debugRegistry.RegisterModule(new GrassDebugModule());
         _debugRegistry.RegisterModule(new CloudDebugModule());
         _debugRegistry.RegisterModule(new MemoryDebugModule());
+        _debugRegistry.RegisterModule(new ConsoleDebugModule());
         _debugRegistry.RegisterCoreCaptureSets();
 
         if (!_currentDebugModeId.IsValid)
@@ -106,6 +113,8 @@ public class DebugCaptureController : MonoBehaviour
             Destroy(_debugOverlayPanelTexture);
             _debugOverlayPanelTexture = null;
         }
+        if (_debugRegistry != null)
+            ServiceLocator.Unregister<DebugRegistry>(_debugRegistry);
     }
 
     void OnDebugPrecipitationToggleRequested(DebugPrecipitationToggleRequestedEvent _)
@@ -223,10 +232,13 @@ public class DebugCaptureController : MonoBehaviour
         if (_debugScreenshotCaptureRunning || !gameObject.activeInHierarchy || modes == null || modes.Length == 0)
             return;
 
-        _ = CaptureDebugSequenceAsync(modes, captureScreenshots);
+        _ = CaptureDebugSequenceAsync(modes, captureScreenshots, CancellationToken.None);
     }
 
-    async Awaitable CaptureDebugSequenceAsync(DebugModeId[] modes, bool captureScreenshots)
+    async Awaitable CaptureDebugSequenceAsync(
+        DebugModeId[] modes,
+        bool captureScreenshots,
+        CancellationToken ct)
     {
         _debugScreenshotCaptureRunning = true;
         DebugModeId restoreMode = RestoreDebugOffAfterCaptureSet ? _debugRegistry.DefaultModeId : _currentDebugModeId;
@@ -236,15 +248,17 @@ public class DebugCaptureController : MonoBehaviour
         {
             for (int i = 0; i < modes.Length; i++)
             {
+                ct.ThrowIfCancellationRequested();
                 DebugModeDefinition mode = _debugRegistry.GetMode(modes[i]);
                 string modeName = mode.Name;
                 ApplyDebugMode(mode.Id);
                 LoggerProvider.Log(LogLevel.Debug, "DebugCapture", $"F10 step {i + 1}/{modes.Length}: mode {mode.Id}:{modeName}");
 
-                await WaitForDebugModeRenderAsync();
+                await WaitForDebugModeRenderAsync(ct);
 
                 if (captureScreenshots)
                 {
+                    ct.ThrowIfCancellationRequested();
                     try
                     {
                         SaveDebugScreenshot(mode.Id, modeName);
@@ -270,17 +284,25 @@ public class DebugCaptureController : MonoBehaviour
             return;
 
         string modeName = _debugRegistry.GetModeName(_currentDebugModeId);
-        _ = CaptureDebugScreenshotAsync(_currentDebugModeId, modeName);
+        _ = CaptureDebugScreenshotAsync(_currentDebugModeId, modeName, CancellationToken.None);
     }
 
-    async Awaitable CaptureDebugScreenshotAsync(DebugModeId modeId, string modeName)
+    async Awaitable CaptureDebugScreenshotAsync(
+        DebugModeId modeId,
+        string modeName,
+        CancellationToken ct)
     {
         _debugScreenshotCaptureRunning = true;
 
         try
         {
-            await WaitForDebugModeRenderAsync();
+            await WaitForDebugModeRenderAsync(ct);
+            ct.ThrowIfCancellationRequested();
             SaveDebugScreenshot(modeId, modeName);
+        }
+        catch (System.OperationCanceledException)
+        {
+            throw;
         }
         catch (System.Exception ex)
         {
@@ -292,15 +314,23 @@ public class DebugCaptureController : MonoBehaviour
         }
     }
 
-    async Awaitable WaitForDebugModeRenderAsync()
+    async Awaitable WaitForDebugModeRenderAsync(CancellationToken ct)
     {
-        await Awaitable.NextFrameAsync();
+        await Awaitable.NextFrameAsync(ct);
 
         if (DebugCaptureModeDelaySeconds > 0f)
-            await Awaitable.WaitForSecondsAsync(DebugCaptureModeDelaySeconds);
+            await WaitUnscaledAsync(DebugCaptureModeDelaySeconds, ct);
 
-        await Awaitable.NextFrameAsync();
+        await Awaitable.NextFrameAsync(ct);
         await Awaitable.EndOfFrameAsync();
+        ct.ThrowIfCancellationRequested();
+    }
+
+    static async Awaitable WaitUnscaledAsync(float seconds, CancellationToken ct)
+    {
+        float endTime = Time.unscaledTime + Mathf.Max(0f, seconds);
+        while (Time.unscaledTime < endTime)
+            await Awaitable.NextFrameAsync(ct);
     }
 
     void SaveDebugScreenshot(DebugModeId modeId, string modeName)
@@ -654,6 +684,131 @@ public class DebugCaptureController : MonoBehaviour
         float targetHeight = ShowWaterDebugDetails ? Screen.height - 20f : 360f;
         float height = Mathf.Min(targetHeight, Mathf.Max(160f, Screen.height - 20f));
         return new Rect(10f, 10f, width, height);
+    }
+
+    // --- Console commands -------------------------------------------------
+
+    [ConsoleCommand("overlay", "Get or set the F6 debug HUD overlay state.", MonoTargetType.Single)]
+    string OverlayCmd(bool? on = null)
+    {
+        if (on == null) return $"debug overlay: {ShowDebugOverlay}";
+        ShowDebugOverlay = on.Value;
+        return $"debug overlay: {ShowDebugOverlay}";
+    }
+
+    [ConsoleCommand("water-details", "Get or set the expanded water debug HUD section.", MonoTargetType.Single)]
+    string WaterDetailsCmd(bool? on = null)
+    {
+        if (on == null) return $"water details: {ShowWaterDebugDetails}";
+        ShowWaterDebugDetails = on.Value;
+        return $"water details: {ShowWaterDebugDetails}";
+    }
+
+    [ConsoleCommand("profiling", "Toggle the high-FPS profiling target (F11 equivalent).", MonoTargetType.Single)]
+    string ProfilingCmd()
+    {
+        ToggleProfilingFrameRate();
+        return $"profiling mode: {(Application.targetFrameRate >= ProfilingFrameRate ? "ON" : "OFF")} (target={Application.targetFrameRate})";
+    }
+
+    [ConsoleCommand("precipitation", "Toggle precipitation rendering (P key equivalent).", MonoTargetType.Single)]
+    string PrecipitationCmd()
+    {
+        TogglePrecipitationRendering();
+        IPrecipitationDebugControl c = GetPrecipitationController();
+        return c != null ? $"precipitation render: {(c.PrecipitationRenderingEnabled ? "ON" : "OFF")}" : "no precipitation controller";
+    }
+
+    [ConsoleCommand("cycle-capture-set", "Advance to the next F10 capture set.", MonoTargetType.Single)]
+    string CycleCaptureSetCmd()
+    {
+        CycleF10CaptureSet();
+        return $"capture set: {GetCurrentCaptureSet().Name}";
+    }
+
+    [ConsoleCommand("mode", "Get or set active debug visualization mode by name.", MonoTargetType.Single)]
+    string ModeCmd([CompletionSource(typeof(DebugModeNamesProvider))] string name = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            string current = _debugRegistry?.GetModeName(_currentDebugModeId) ?? "(none)";
+            return $"debug mode: {current} ({_currentDebugModeId})";
+        }
+        if (_debugRegistry == null) return "debug registry not initialised";
+        if (!_debugRegistry.TryFindModeByName(name, out var def))
+            return $"unknown debug mode: '{name}'";
+        ApplyDebugMode(def.Id);
+        return $"debug mode: {def.Name} ({def.Id})";
+    }
+
+    [ConsoleCommand("capture-set", "Get or set active F10 capture set by name.", MonoTargetType.Single)]
+    string CaptureSetCmd([CompletionSource(typeof(DebugCaptureSetNamesProvider))] string name = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return $"capture set: {GetCurrentCaptureSet().Name}";
+        if (_debugRegistry == null) return "debug registry not initialised";
+        if (!_debugRegistry.TryFindCaptureSetByName(name, out var set, out int index))
+            return $"unknown capture set: '{name}'";
+        _f10CaptureSetIndex = index;
+        return $"capture set: {set.Name}";
+    }
+
+    [ConsoleCommand("capture", "Trigger F10 capture using current set. Closes console during capture so it stays out of screenshots, then reopens.", MonoTargetType.Single)]
+    async Awaitable CaptureCmd(System.Threading.CancellationToken ct)
+    {
+        bool reopenConsole = false;
+        ServiceLocator.TryGet<IConsoleService>(out var console);
+
+        try
+        {
+            if (console != null && console.IsOpen)
+            {
+                reopenConsole = true;
+                console.Close();
+                // Let the console fade-out finish before grabbing the screenshot so we don't
+                // catch it mid-alpha. FadeDuration is 0.12s; round up to be safe.
+                await WaitUnscaledAsync(0.2f, ct);
+            }
+
+            await CaptureCurrentSetAsync(ct);
+        }
+        finally
+        {
+            if (reopenConsole && console != null) console.Open();
+        }
+    }
+
+    /// <summary>
+    /// Public async entry point for triggering the current F10 capture set. Equivalent to the
+    /// F10 keypath but awaitable so callers (the console <c>debug.capture</c> command) can wrap
+    /// it with close/reopen logic.
+    /// </summary>
+    public async Awaitable CaptureCurrentSetAsync(System.Threading.CancellationToken ct)
+    {
+        if (_debugRegistry == null) return;
+        if (_debugScreenshotCaptureRunning)
+            throw new System.InvalidOperationException("A debug capture is already running.");
+
+        ct.ThrowIfCancellationRequested();
+        DebugCaptureSetDefinition captureSet = GetCurrentCaptureSet();
+
+        if (captureSet.Behavior == DebugCaptureSetBehavior.CurrentModeOnly)
+        {
+            CycleDebugMode();
+            await CaptureDebugScreenshotAsync(
+                _currentDebugModeId,
+                _debugRegistry.GetModeName(_currentDebugModeId),
+                ct);
+            return;
+        }
+
+        if (!SaveF10DebugScreenshots)
+        {
+            CycleDebugMode();
+            return;
+        }
+
+        await CaptureDebugSequenceAsync(GetDebugCaptureModes(), captureScreenshots: true, ct);
     }
 
     GUIStyle GetDebugOverlayPanelStyle()

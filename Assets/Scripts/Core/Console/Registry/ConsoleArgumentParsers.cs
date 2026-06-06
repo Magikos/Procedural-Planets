@@ -20,6 +20,10 @@ public static class ConsoleArgumentParsers
     public static bool TryParse(IReadOnlyList<string> tokens, int startIndex, Type type,
         out object value, out int consumed, out string error)
     {
+        // Nullable<T>: unwrap to T and parse. Boxed value satisfies a Nullable<T> parameter.
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            type = type.GetGenericArguments()[0];
+
         foreach (var parser in _parsers)
         {
             if (!parser.CanParse(type)) continue;
@@ -55,9 +59,19 @@ public static class ConsoleArgumentParsers
         {
             v = null;
             if (!Single(tokens, start, out string tok, out consumed, out error)) return false;
-            if (int.TryParse(tok, NumberStyles.Integer, CultureInfo.InvariantCulture, out int n)) { v = n; return true; }
-            error = $"expected integer, got '{tok}'";
-            return false;
+            if (!ExpressionEvaluator.TryEvaluate(tok, out double d, out string exprError))
+            {
+                error = $"expected integer (or expression), got '{tok}': {exprError}";
+                return false;
+            }
+            double rounded = System.Math.Round(d);
+            if (System.Math.Abs(d - rounded) > 0.0000001)
+            {
+                error = $"expected integer, expression evaluates to {d}";
+                return false;
+            }
+            v = (int)rounded;
+            return true;
         }
     }
 
@@ -68,9 +82,13 @@ public static class ConsoleArgumentParsers
         {
             v = null;
             if (!Single(tokens, start, out string tok, out consumed, out error)) return false;
-            if (float.TryParse(tok, NumberStyles.Float, CultureInfo.InvariantCulture, out float n)) { v = n; return true; }
-            error = $"expected float, got '{tok}'";
-            return false;
+            if (!ExpressionEvaluator.TryEvaluate(tok, out double d, out string exprError))
+            {
+                error = $"expected float (or expression), got '{tok}': {exprError}";
+                return false;
+            }
+            v = (float)d;
+            return true;
         }
     }
 
@@ -186,17 +204,10 @@ public static class ConsoleArgumentParsers
                 return false;
             }
 
-            switch (tok.ToLowerInvariant())
+            if (ConsoleColors.Named.TryGetValue(tok, out Color named))
             {
-                case "red": v = Color.red; return true;
-                case "green": v = Color.green; return true;
-                case "blue": v = Color.blue; return true;
-                case "yellow": v = Color.yellow; return true;
-                case "cyan": v = Color.cyan; return true;
-                case "magenta": v = Color.magenta; return true;
-                case "white": v = Color.white; return true;
-                case "black": v = Color.black; return true;
-                case "grey": case "gray": v = Color.grey; return true;
+                v = named;
+                return true;
             }
 
             error = $"unknown color '{tok}' (use a name or #rrggbb)";

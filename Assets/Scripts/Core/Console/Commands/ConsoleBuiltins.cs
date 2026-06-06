@@ -1,5 +1,5 @@
 using System.Linq;
-using System.Text;
+using UnityEngine;
 
 public static class ConsoleBuiltins
 {
@@ -17,6 +17,53 @@ public static class ConsoleBuiltins
             console.Clear();
     }
 
+    [ConsoleCommand("console.abandon", "Stop tracking the pending async command. Background work continues silently.")]
+    public static void Abandon()
+    {
+        if (ServiceLocator.TryGet<IConsoleService>(out var console))
+            console.AbandonPending();
+    }
+
+    [ConsoleCommand("console.cancel", "Cancel the pending async command (with Y/N confirmation). Requires a CancellationToken-aware command.")]
+    public static void Cancel()
+    {
+        if (ServiceLocator.TryGet<IConsoleService>(out var console))
+            console.RequestCancelPending();
+    }
+
+    [ConsoleCommand("quit", "Quit the application (with Y/N confirmation).")]
+    public static void Quit()
+    {
+        if (!ServiceLocator.TryGet<IConsoleService>(out var console)) return;
+        console.Confirm("Quit the application?", () =>
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        });
+    }
+
+    [ConsoleCommand("console.anchor", "Get or set the console anchor (Top/Bottom/Left/Right).")]
+    public static string Anchor(ConsoleAnchor? anchor = null)
+    {
+        if (!ServiceLocator.TryGet<IConsoleService>(out var console)) return "";
+        if (anchor == null) return $"current anchor: {console.Anchor}";
+        console.Anchor = anchor.Value;
+        return $"anchor set to {anchor.Value}";
+    }
+
+    [ConsoleCommand("console.scrollback-size", "Get or set scrollback capacity (lines).")]
+    public static string ScrollbackSize(int? size = null)
+    {
+        if (!ServiceLocator.TryGet<IConsoleService>(out var console)) return "";
+        if (size == null) return $"current scrollback capacity: {console.ScrollbackCapacity} lines";
+        if (size.Value < 1) return "scrollback capacity must be ≥ 1";
+        console.ScrollbackCapacity = size.Value;
+        return $"scrollback capacity set to {size.Value} lines";
+    }
+
     [ConsoleCommand("help", "List all commands, or describe one by name.")]
     public static void Help(
         [ParamDescription("optional command name to describe")]
@@ -27,19 +74,38 @@ public static class ConsoleBuiltins
 
         if (!string.IsNullOrEmpty(name))
         {
-            if (!ConsoleRegistry.TryGet(name, out CommandData cmd))
+            if (ConsoleRegistry.TryGet(name, out CommandData cmd))
+            {
+                console.PrintLine(ParameterData.FormatCommandSignature(cmd, includeDefaults: true));
+                if (!string.IsNullOrEmpty(cmd.Description))
+                    console.PrintLine($"  {cmd.Description}");
+                foreach (var p in cmd.Parameters)
+                {
+                    if (!string.IsNullOrEmpty(p.Description))
+                        console.PrintLine($"  {p.Name}: {p.Description}");
+                }
+                return;
+            }
+
+            // No exact match — try prefix-match (e.g. "help test" lists all test.*).
+            string prefix = name.EndsWith(".") ? name : name + ".";
+            var prefixed = ConsoleRegistry.Commands.Keys
+                .Where(a => a.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase))
+                .OrderBy(a => a)
+                .ToArray();
+
+            if (prefixed.Length == 0)
             {
                 console.PrintError($"unknown command: '{name}'");
                 return;
             }
 
-            console.PrintLine(FormatSignature(cmd));
-            if (!string.IsNullOrEmpty(cmd.Description))
-                console.PrintLine($"  {cmd.Description}");
-            foreach (var p in cmd.Parameters)
+            console.PrintLine($"{prefixed.Length} commands matching '{prefix}':");
+            foreach (string alias in prefixed)
             {
-                if (!string.IsNullOrEmpty(p.Description))
-                    console.PrintLine($"  {p.Name}: {p.Description}");
+                ConsoleRegistry.TryGet(alias, out CommandData c);
+                string desc = string.IsNullOrEmpty(c.Description) ? "" : $" — {c.Description}";
+                console.PrintLine($"  {alias}{desc}");
             }
             return;
         }
@@ -54,17 +120,4 @@ public static class ConsoleBuiltins
         }
     }
 
-    static string FormatSignature(CommandData cmd)
-    {
-        if (cmd.Parameters.Length == 0) return cmd.Alias;
-
-        var sb = new StringBuilder(cmd.Alias);
-        foreach (var p in cmd.Parameters)
-        {
-            sb.Append(p.HasDefault
-                ? $" [{p.Name}:{p.Type.Name}={p.DefaultValue}]"
-                : $" <{p.Name}:{p.Type.Name}>");
-        }
-        return sb.ToString();
-    }
 }

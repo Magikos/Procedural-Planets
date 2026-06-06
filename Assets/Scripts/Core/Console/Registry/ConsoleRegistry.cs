@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using UnityEngine;
 
 public static class ConsoleRegistry
 {
@@ -82,7 +81,10 @@ public static class ConsoleRegistry
                 CommandData data = Build(alias, attr, method, type);
                 if (_commands.ContainsKey(alias))
                 {
-                    Debug.LogWarning($"[ConsoleRegistry] duplicate command alias '{alias}' — keeping first registration; ignoring {type.FullName}.{method.Name}");
+                    LoggerProvider.Get().Log(
+                        LogLevel.Warning,
+                        "ConsoleRegistry",
+                        $"Duplicate command alias '{alias}'; keeping first registration and ignoring {type.FullName}.{method.Name}.");
                     continue;
                 }
                 _commands[alias] = data;
@@ -96,8 +98,15 @@ public static class ConsoleRegistry
     static CommandData Build(string alias, ConsoleCommandAttribute attr, MethodInfo method, Type declaringType)
     {
         ParameterInfo[] paramInfos = method.GetParameters();
-        var paramData = new ParameterData[paramInfos.Length];
-        for (int i = 0; i < paramInfos.Length; i++)
+
+        // Detect trailing CancellationToken parameter — hidden from user-typed params,
+        // injected by CommandExecutor at invocation time.
+        bool hasCt = paramInfos.Length > 0
+            && paramInfos[paramInfos.Length - 1].ParameterType == typeof(System.Threading.CancellationToken);
+        int visibleCount = hasCt ? paramInfos.Length - 1 : paramInfos.Length;
+
+        var paramData = new ParameterData[visibleCount];
+        for (int i = 0; i < visibleCount; i++)
         {
             ParameterInfo p = paramInfos[i];
             paramData[i] = new ParameterData
@@ -125,6 +134,7 @@ public static class ConsoleRegistry
             Parameters = paramData,
             ReturnType = returnType,
             IsAsync = isAsync,
+            HasCancellationToken = hasCt,
         };
     }
 }

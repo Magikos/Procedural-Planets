@@ -5,6 +5,7 @@ using UnityEngine.Serialization;
 /// Publishes render settings for distant precipitation shafts. The renderer samples
 /// the shared cloud weather map, so rain stays tied to storm cells.
 /// </summary>
+[CommandPrefix("precipitation")]
 public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
 {
     public enum DebugView
@@ -222,5 +223,23 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
             LocalRainThreshold,
             LocalMaxCameraAltitude,
             Mathf.Max(1, LocalParticleCount)));
+    }
+
+    // --- Console commands -------------------------------------------------
+
+    [ConsoleCommand("intensity", "Get or set precipitation intensity multiplier (range 0-2).", MonoTargetType.Single)]
+    string IntensityCmd(float? value = null)
+    {
+        if (value == null) return $"precipitation intensity: {Intensity:F2}";
+        Intensity = Mathf.Clamp(value.Value, 0f, 2f);
+        return $"precipitation intensity: {Intensity:F2}";
+    }
+
+    [ConsoleCommand("debug-mode", "Get or set precipitation debug visualization mode.", MonoTargetType.Single)]
+    string DebugModeCmd(DebugView? mode = null)
+    {
+        if (mode == null) return $"precipitation debug mode: {DebugMode}";
+        DebugMode = mode.Value;
+        return $"precipitation debug mode: {DebugMode}";
     }
 }

@@ -4,6 +4,7 @@ using UnityEngine;
 /// Drives short lightning pulses in active storm cells. Rendering stays in the
 /// cloud and precipitation shaders through global lightning parameters.
 /// </summary>
+[CommandPrefix("lightning")]
 public class WeatherLightningController : MonoBehaviour
 {
     [Header("Timing")]
@@ -244,5 +245,39 @@ public class WeatherLightningController : MonoBehaviour
         Color lightningColor = LightningColor;
         lightningColor.a = Mathf.Max(RainFlashIntensity, 0f);
         Shader.SetGlobalColor(_weatherLightningColorId, lightningColor);
+    }
+
+    // --- Console commands -------------------------------------------------
+
+    [ConsoleCommand("enable", "Get or enable/disable lightning generation.", MonoTargetType.Single)]
+    string EnableCmd(bool? on = null)
+    {
+        if (on == null) return $"lightning enabled: {EnableLightning}";
+        EnableLightning = on.Value;
+        return $"lightning enabled: {EnableLightning}";
+    }
+
+    [ConsoleCommand("delay", "Get or set min/max delay between strikes (seconds). Pass both values to set.", MonoTargetType.Single)]
+    string DelayCmd(float? min = null, float? max = null)
+    {
+        if (min == null && max == null)
+            return $"lightning delay: {MinDelay:F1}-{MaxDelay:F1}s";
+        if (min == null || max == null)
+            return "lightning.delay needs BOTH min and max values to set";
+        MinDelay = Mathf.Max(0.5f, min.Value);
+        MaxDelay = Mathf.Max(MinDelay, max.Value);
+        return $"lightning delay: {MinDelay:F1}-{MaxDelay:F1}s";
+    }
+
+    [ConsoleCommand("intensity", "Get or set cloud-flash and rain-flash intensities. Pass both values to set.", MonoTargetType.Single)]
+    string IntensityCmd(float? cloud = null, float? rain = null)
+    {
+        if (cloud == null && rain == null)
+            return $"lightning intensity: cloud={CloudFlashIntensity:F2}, rain={RainFlashIntensity:F2}";
+        if (cloud == null || rain == null)
+            return "lightning.intensity needs BOTH cloud and rain values to set";
+        CloudFlashIntensity = Mathf.Clamp(cloud.Value, 0f, 8f);
+        RainFlashIntensity = Mathf.Clamp(rain.Value, 0f, 2f);
+        return $"lightning intensity: cloud={CloudFlashIntensity:F2}, rain={RainFlashIntensity:F2}";
     }
 }

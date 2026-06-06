@@ -31,6 +31,7 @@ public sealed class DefaultGrassQualitySettings : IGrassQualitySettings
 /// screen can call SetQualityLevel when the player changes quality at runtime.
 /// </summary>
 [DisallowMultipleComponent]
+[CommandPrefix("quality")]
 public class QualityController : MonoBehaviour
 {
     const string KeywordCloudQualityLow = "CLOUD_QUALITY_LOW";
@@ -143,4 +144,44 @@ public class QualityController : MonoBehaviour
             Refresh();
     }
 #endif
+
+    // --- Console commands -------------------------------------------------
+
+    [ConsoleCommand("get", "Print current quality tier, level, name, and cloud multiplier.", MonoTargetType.Single)]
+    string GetCmd()
+    {
+        return $"tier={AppliedQualityTier}, level={AppliedQualityLevel} ({AppliedQualityName}), cloudStepMult={CloudStepMultiplier:F2}";
+    }
+
+    [ConsoleCommand("list", "Enumerate available quality tiers (* = current).", MonoTargetType.Single)]
+    string ListCmd()
+    {
+        var sb = new System.Text.StringBuilder();
+        string[] names = QualitySettings.names;
+        int current = AppliedQualityLevel;
+        for (int i = 0; i < names.Length; i++)
+        {
+            if (i > 0) sb.Append('\n');
+            sb.Append(i == current ? "  * " : "    ");
+            sb.Append(i);
+            sb.Append(": ");
+            sb.Append(names[i]);
+        }
+        return sb.ToString();
+    }
+
+    [ConsoleCommand("set", "Set quality level by index (see quality.list).", MonoTargetType.Single)]
+    string SetCmd(int level)
+    {
+        SetQualityLevel(level);
+        return $"quality set to {AppliedQualityLevel} ({AppliedQualityName})";
+    }
+
+    [ConsoleCommand("cloud-steps", "Get or set cloud raymarch step multiplier (range 0.33-1). Reset by quality.set.", MonoTargetType.Single)]
+    string CloudStepsCmd(float? value = null)
+    {
+        if (value == null) return $"cloud step multiplier: {CloudStepMultiplier:F2}";
+        CloudStepMultiplier = Mathf.Clamp(value.Value, 0.33f, 1f);
+        return $"cloud step multiplier: {CloudStepMultiplier:F2}";
+    }
 }

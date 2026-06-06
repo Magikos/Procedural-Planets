@@ -283,6 +283,49 @@ public sealed class DebugRegistry
     public IReadOnlyList<IDebugDiagnosticProvider> Diagnostics => _diagnostics;
     public DebugModeId DefaultModeId => _modeOrder.Count > 0 ? _modeOrder[0] : default;
 
+    /// <summary>Registration-order list of all known debug mode ids (used by completion providers).</summary>
+    public IReadOnlyList<DebugModeId> ModeIds => _modeOrder;
+
+    /// <summary>Number of registered capture sets (used by completion providers).</summary>
+    public int CaptureSetCount => _captureSetOrder.Count;
+
+    /// <summary>Direct lookup of a mode definition by id (returns default-mode fallback if not found).</summary>
+    public DebugModeDefinition GetModeById(DebugModeId id) => GetMode(id);
+
+    /// <summary>Find a mode by case-insensitive name match. Returns the first hit across all modules.</summary>
+    public bool TryFindModeByName(string name, out DebugModeDefinition mode)
+    {
+        for (int i = 0; i < _modeOrder.Count; i++)
+        {
+            DebugModeDefinition m = _modes[_modeOrder[i]];
+            if (string.Equals(m.Name, name, System.StringComparison.OrdinalIgnoreCase))
+            {
+                mode = m;
+                return true;
+            }
+        }
+        mode = default;
+        return false;
+    }
+
+    /// <summary>Find a capture set by case-insensitive name match. Returns the first hit.</summary>
+    public bool TryFindCaptureSetByName(string name, out DebugCaptureSetDefinition set, out int index)
+    {
+        for (int i = 0; i < _captureSetOrder.Count; i++)
+        {
+            DebugCaptureSetDefinition s = _captureSets[_captureSetOrder[i]];
+            if (string.Equals(s.Name, name, System.StringComparison.OrdinalIgnoreCase))
+            {
+                set = s;
+                index = i;
+                return true;
+            }
+        }
+        set = default;
+        index = -1;
+        return false;
+    }
+
     public void RegisterModule(IDebugModule module)
     {
         if (module == null)

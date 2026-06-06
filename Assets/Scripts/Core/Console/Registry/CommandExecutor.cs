@@ -6,9 +6,10 @@ public static class CommandExecutor
 {
     /// <summary>
     /// Execute a raw command line. Routes output through <paramref name="console"/> for
-    /// scrollback display (and errors as `<color=red>` for slice 3 color tags — currently raw text).
+    /// scrollback display. Async-returning commands are handed off to
+    /// <see cref="IConsoleService.BeginAsync"/> for in-place spinner UX.
     /// </summary>
-    public static void Execute(string commandLine, IConsoleService console)
+    public static void Execute(string commandLine, IConsoleService console, System.Threading.CancellationToken cancellation = default)
     {
         if (string.IsNullOrWhiteSpace(commandLine)) return;
 
@@ -50,7 +51,14 @@ public static class CommandExecutor
         object result;
         try
         {
-            result = cmd.Method.Invoke(target, args);
+            object[] finalArgs = args;
+            if (cmd.HasCancellationToken)
+            {
+                finalArgs = new object[args.Length + 1];
+                System.Array.Copy(args, finalArgs, args.Length);
+                finalArgs[args.Length] = cancellation;
+            }
+            result = cmd.Method.Invoke(target, finalArgs);
         }
         catch (TargetInvocationException tex)
         {
@@ -63,10 +71,9 @@ public static class CommandExecutor
             return;
         }
 
-        // Async commands ship in CONSOLE-4; for slice 2 we print a note that the awaitable was issued.
         if (cmd.IsAsync && result != null)
         {
-            console.PrintLine($"{alias}: async command issued (await handling lands in CONSOLE-4)");
+            console.BeginAsync(alias, result, cmd.HasCancellationToken);
             return;
         }
 
@@ -95,18 +102,5 @@ public static class CommandExecutor
         }
     }
 
-    static string FormatSignature(CommandData cmd)
-    {
-        if (cmd.Parameters.Length == 0) return cmd.Alias;
-
-        var parts = new string[cmd.Parameters.Length];
-        for (int i = 0; i < cmd.Parameters.Length; i++)
-        {
-            ParameterData p = cmd.Parameters[i];
-            parts[i] = p.HasDefault
-                ? $"[{p.Name}:{p.Type.Name}={p.DefaultValue}]"
-                : $"<{p.Name}:{p.Type.Name}>";
-        }
-        return $"{cmd.Alias} {string.Join(" ", parts)}";
-    }
+    static string FormatSignature(CommandData cmd) => ParameterData.FormatCommandSignature(cmd, includeDefaults: true);
 }

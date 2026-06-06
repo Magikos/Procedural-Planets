@@ -21,7 +21,9 @@ using UnityEngine;
 /// </summary>
 public sealed class IntellisenseEngine
 {
-    const int MaxSuggestions = 8;
+    // Pagination lives in the renderer / controller — engine returns the full ranked list.
+    // Caps are wide so even large enums or command registries fit without truncation in practice.
+    const int MaxSuggestions = 200;
     static readonly StringComparison Cmp = StringComparison.OrdinalIgnoreCase;
 
     readonly Dictionary<Type, IConsoleCompletionProvider> _providerCache = new();
@@ -147,20 +149,7 @@ public sealed class IntellisenseEngine
         }
     }
 
-    static string FormatSignatureDisplay(CommandData cmd)
-    {
-        if (cmd.Parameters.Length == 0)
-            return cmd.Alias;
-
-        var sb = new StringBuilder(cmd.Alias);
-        foreach (ParameterData p in cmd.Parameters)
-        {
-            sb.Append(p.HasDefault
-                ? $" [{p.Name}:{p.Type.Name}]"
-                : $" <{p.Name}:{p.Type.Name}>");
-        }
-        return sb.ToString();
-    }
+    static string FormatSignatureDisplay(CommandData cmd) => ParameterData.FormatCommandSignature(cmd, includeDefaults: false);
 
     // -------------------------------------------------------------------------
     // Completion provider resolution
@@ -179,7 +168,10 @@ public sealed class IntellisenseEngine
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"[IntellisenseEngine] Could not instantiate {param.CompletionProvider.Name}: {ex.Message}");
+                    LoggerProvider.Get().Log(
+                        LogLevel.Warning,
+                        "IntellisenseEngine",
+                        $"Could not instantiate {param.CompletionProvider.Name}: {ex.Message}");
                     provider = null;
                 }
                 _providerCache[param.CompletionProvider] = provider;
@@ -187,13 +179,28 @@ public sealed class IntellisenseEngine
             return provider;
         }
 
-        // Auto-synthesize a provider for enum-typed parameters.
-        if (param.Type.IsEnum)
+        // Auto-synthesize providers for enum-typed and bool-typed parameters
+        // (including Nullable<EnumT> and bool?).
+        Type t = param.Type;
+        if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Nullable<>))
+            t = t.GetGenericArguments()[0];
+
+        if (t.IsEnum)
         {
-            if (!_providerCache.TryGetValue(param.Type, out IConsoleCompletionProvider provider))
+            if (!_providerCache.TryGetValue(t, out IConsoleCompletionProvider provider))
             {
-                provider = new EnumCompletionProvider(param.Type);
-                _providerCache[param.Type] = provider;
+                provider = new EnumCompletionProvider(t);
+                _providerCache[t] = provider;
+            }
+            return provider;
+        }
+
+        if (t == typeof(bool))
+        {
+            if (!_providerCache.TryGetValue(t, out IConsoleCompletionProvider provider))
+            {
+                provider = new BoolCompletionProvider();
+                _providerCache[t] = provider;
             }
             return provider;
         }

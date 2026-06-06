@@ -17,8 +17,14 @@ public class WorldActionManager : IWorldActionManager
         _logger = logger;
     }
 
+    public IReadOnlyList<IWorldAction> History => _history;
+    public int HistoryIndex => _historyIndex;
+
     public async Awaitable ExecuteAsync(IWorldAction action, CancellationToken ct)
     {
+        if (action == null)
+            throw new ArgumentNullException(nameof(action));
+
         try
         {
             await action.ExecuteAsync(ct);
@@ -31,10 +37,14 @@ public class WorldActionManager : IWorldActionManager
 
             _logger.Log(LogLevel.Debug, "WorldAction", $"Executed {action.ActionType}");
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogException("WorldAction", ex);
+            throw;
         }
     }
 
@@ -49,10 +59,14 @@ public class WorldActionManager : IWorldActionManager
             _historyIndex--;
             _logger.Log(LogLevel.Debug, "WorldAction", $"Undone {action.ActionType}");
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogException("WorldAction", ex);
+            throw;
         }
     }
 
@@ -62,15 +76,20 @@ public class WorldActionManager : IWorldActionManager
 
         try
         {
-            _historyIndex++;
-            var action = _history[_historyIndex];
+            int nextIndex = _historyIndex + 1;
+            var action = _history[nextIndex];
             await action.ExecuteAsync(ct);
+            _historyIndex = nextIndex;
             _logger.Log(LogLevel.Debug, "WorldAction", $"Redone {action.ActionType}");
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogException("WorldAction", ex);
+            throw;
         }
     }
 

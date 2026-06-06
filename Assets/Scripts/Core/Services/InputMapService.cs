@@ -43,6 +43,12 @@ public sealed class InputMapService : IInputMapService, IDisposable
     public InputAction ConsolePageUp { get; }
     public InputAction ConsolePageDown { get; }
 
+    public InputAction ConsoleCursorLeft { get; }
+    public InputAction ConsoleCursorRight { get; }
+    public InputAction ConsoleCursorHome { get; }
+    public InputAction ConsoleCursorEnd { get; }
+    public InputAction ConsoleDelete { get; }
+
     public InputMapService()
     {
         _asset = ScriptableObject.CreateInstance<InputActionAsset>();
@@ -127,6 +133,21 @@ public sealed class InputMapService : IInputMapService, IDisposable
 
         ConsolePageDown = ConsoleMap.AddAction("ConsolePageDown", InputActionType.Button);
         ConsolePageDown.AddBinding("<Keyboard>/pageDown");
+
+        ConsoleCursorLeft = ConsoleMap.AddAction("ConsoleCursorLeft", InputActionType.Button);
+        ConsoleCursorLeft.AddBinding("<Keyboard>/leftArrow");
+
+        ConsoleCursorRight = ConsoleMap.AddAction("ConsoleCursorRight", InputActionType.Button);
+        ConsoleCursorRight.AddBinding("<Keyboard>/rightArrow");
+
+        ConsoleCursorHome = ConsoleMap.AddAction("ConsoleCursorHome", InputActionType.Button);
+        ConsoleCursorHome.AddBinding("<Keyboard>/home");
+
+        ConsoleCursorEnd = ConsoleMap.AddAction("ConsoleCursorEnd", InputActionType.Button);
+        ConsoleCursorEnd.AddBinding("<Keyboard>/end");
+
+        ConsoleDelete = ConsoleMap.AddAction("ConsoleDelete", InputActionType.Button);
+        ConsoleDelete.AddBinding("<Keyboard>/delete");
 
         GameplayMap.Enable();
     }

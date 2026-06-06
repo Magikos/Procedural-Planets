@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[CommandPrefix("atmosphere")]
 public class AtmosphereController : MonoBehaviour
 {
     [Header("References")]
@@ -190,5 +191,51 @@ public class AtmosphereController : MonoBehaviour
         _lastBakedAtmoScale = Settings.AtmosphereScale;
         _lastBakedSize = Settings.BakeTextureSize;
         _lastBakedSteps = Settings.BakeSteps;
+    }
+
+    // --- Console commands -------------------------------------------------
+
+    [ConsoleCommand("sun-intensity", "Get or set scattering sun intensity (range 1-100).", MonoTargetType.Single)]
+    string SunIntensityCmd(float? value = null)
+    {
+        if (Settings == null) return "no AtmosphereSettings bound";
+        if (value == null) return $"sun intensity: {Settings.SunIntensity:F2}";
+        Settings.SunIntensity = Mathf.Clamp(value.Value, 1f, 100f);
+        _staticPropertiesDirty = true;
+        return $"sun intensity: {Settings.SunIntensity:F2}";
+    }
+
+    [ConsoleCommand("rayleigh", "Get or set Rayleigh scattering vector (sky color).", MonoTargetType.Single)]
+    string RayleighCmd(Vector3? value = null)
+    {
+        if (Settings == null) return "no AtmosphereSettings bound";
+        if (value == null)
+        {
+            Vector3 r = Settings.RayleighScattering;
+            return $"rayleigh scattering: ({r.x:E3}, {r.y:E3}, {r.z:E3})";
+        }
+        Settings.RayleighScattering = value.Value;
+        _staticPropertiesDirty = true;
+        return $"rayleigh scattering: ({value.Value.x:E3}, {value.Value.y:E3}, {value.Value.z:E3})";
+    }
+
+    [ConsoleCommand("mie", "Get or set Mie scattering coefficient (haze; range 0-0.1).", MonoTargetType.Single)]
+    string MieCmd(float? value = null)
+    {
+        if (Settings == null) return "no AtmosphereSettings bound";
+        if (value == null) return $"mie scattering: {Settings.MieScattering:E3}";
+        Settings.MieScattering = Mathf.Clamp(value.Value, 0f, 0.1f);
+        _staticPropertiesDirty = true;
+        return $"mie scattering: {Settings.MieScattering:E3}";
+    }
+
+    [ConsoleCommand("scale", "Get or set atmosphere thickness scale (range 1.01-1.5).", MonoTargetType.Single)]
+    string ScaleCmd(float? value = null)
+    {
+        if (Settings == null) return "no AtmosphereSettings bound";
+        if (value == null) return $"atmosphere scale: {Settings.AtmosphereScale:F3}";
+        Settings.AtmosphereScale = Mathf.Clamp(value.Value, 1.01f, 1.5f);
+        _staticPropertiesDirty = true;
+        return $"atmosphere scale: {Settings.AtmosphereScale:F3}";
     }
 }

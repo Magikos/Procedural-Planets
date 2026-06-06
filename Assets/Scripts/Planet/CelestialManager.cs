@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[CommandPrefix("time")]
 public class CelestialManager : MonoBehaviour, ICelestialTimeController
 {
     [Header("References")]
@@ -152,6 +153,63 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController
     public void ToggleTimeFrozen()
     {
         FreezeTime = !FreezeTime;
+    }
+
+    // --- Console commands -------------------------------------------------
+
+    [ConsoleCommand("freeze", "Get or set sun freeze state. No-arg reads, true/false sets.", MonoTargetType.Single)]
+    string FreezeCmd(bool? frozen = null)
+    {
+        if (frozen == null) return $"sun frozen: {FreezeTime}";
+        FreezeTime = frozen.Value;
+        return $"sun frozen: {FreezeTime}";
+    }
+
+    [ConsoleCommand("speed", "Get or set day length in real seconds.", MonoTargetType.Single)]
+    string SpeedCmd(float? value = null)
+    {
+        if (value == null) return $"day length: {DayLengthSeconds:F1}s";
+        DayLengthSeconds = Mathf.Max(0.1f, value.Value);
+        return $"day length: {DayLengthSeconds:F1}s";
+    }
+
+    [ConsoleCommand("set-local", "Set time of day relative to the camera position (0=midnight, 0.25=sunrise, 0.5=noon, 0.75=sunset).", MonoTargetType.Single)]
+    string SetLocalCmd(float fraction)
+    {
+        if (PlanetCenter == null) return "no planet center set";
+        Camera cam = GetViewCamera();
+        if (cam == null) return "no camera available";
+
+        Vector3 camDir = (cam.transform.position - PlanetCenter.position).normalized;
+        if (camDir.sqrMagnitude < 0.0001f) return "camera at planet center — local time undefined";
+
+        // Un-tilt: the sun orbits in the world XY plane in the un-tilted frame.
+        Quaternion tilt = Quaternion.Euler(AxialTilt, 0f, 0f);
+        Vector3 untilted = Quaternion.Inverse(tilt) * camDir;
+
+        // Project onto the sun's orbital plane (XY). At the poles, no projection exists → local time undefined.
+        Vector3 inPlane = new Vector3(untilted.x, untilted.y, 0f);
+        if (inPlane.sqrMagnitude < 0.0001f) return "camera is at a celestial pole — local time undefined";
+        inPlane.Normalize();
+
+        // Inverse of UpdateSun(): sunDir = (sin(2πT), -cos(2πT), 0); sun overhead when sunDir == camDir.
+        float tNoon = Mathf.Atan2(inPlane.x, -inPlane.y) / (2f * Mathf.PI);
+        if (tNoon < 0f) tNoon += 1f;
+
+        fraction = ((fraction % 1f) + 1f) % 1f;
+        _timeOfDay = (tNoon + (fraction - 0.5f) + 1f) % 1f;
+        UpdateSun(0f);
+        return $"local time at camera: {fraction:F2} (global time-of-day = {_timeOfDay:F2})";
+    }
+
+    [ConsoleCommand("moon-phase", "Get or set discrete moon phase index (0-7). Wraps modulo 8.", MonoTargetType.Single)]
+    string MoonPhaseCmd(int? index = null)
+    {
+        if (index == null) return $"moon phase: {MoonPhaseIndex} (cycle progress {_moonCycleProgress:F2})";
+        int i = ((index.Value % 8) + 8) % 8;
+        _moonCycleProgress = (i + 0.5f) / 8f;  // place in middle of phase bucket
+        UpdateMoon(0f);
+        return $"moon phase: {MoonPhaseIndex}";
     }
 
     void UpdateSun(float dt)

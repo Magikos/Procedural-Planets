@@ -3,12 +3,14 @@ public class SeedProvider : ISeedProvider
     const uint FnvOffset = 2166136261u;
     const uint FnvPrime = 16777619u;
 
-    public int WorldSeed { get; }
+    public int WorldSeed { get; private set; }
 
     public SeedProvider(int worldSeed)
     {
         WorldSeed = worldSeed;
     }
+
+    public void SetWorldSeed(int seed) => WorldSeed = seed;
 
     public int GetSeedForSystem(string systemName)
     {

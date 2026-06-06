@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+[CommandPrefix("camera")]
 public class FreeCameraController : MonoBehaviour, ICameraRigContext
 {
     [Header("Movement")]
@@ -389,5 +390,47 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext
     float GetSurfaceClearance(float radius)
     {
         return Mathf.Max(SurfaceHeight, Mathf.Max(4f, radius * 0.0012f));
+    }
+
+    // --- Console commands -------------------------------------------------
+
+    [ConsoleCommand("speed", "Get or set camera movement speed.", MonoTargetType.Single)]
+    string SpeedCmd(float? value = null)
+    {
+        if (value == null) return $"camera speed: {MoveSpeed:F2}";
+        MoveSpeed = Mathf.Max(0f, value.Value);
+        return $"camera speed: {MoveSpeed:F2}";
+    }
+
+    [ConsoleCommand("sensitivity", "Get or set camera look sensitivity.", MonoTargetType.Single)]
+    string SensitivityCmd(float? value = null)
+    {
+        if (value == null) return $"camera sensitivity: {LookSensitivity:F2}";
+        LookSensitivity = Mathf.Max(0f, value.Value);
+        return $"camera sensitivity: {LookSensitivity:F2}";
+    }
+
+    [ConsoleCommand("fast-multiplier", "Get or set the Shift-sprint speed multiplier.", MonoTargetType.Single)]
+    string FastMultCmd(float? value = null)
+    {
+        if (value == null) return $"camera fast multiplier: {FastMultiplier:F2}";
+        FastMultiplier = Mathf.Max(1f, value.Value);
+        return $"camera fast multiplier: {FastMultiplier:F2}";
+    }
+
+    [ConsoleCommand("position", "Print the camera's current world position.", MonoTargetType.Single)]
+    string PositionCmd()
+    {
+        Vector3 p = transform.position;
+        return $"camera position: ({p.x:F2}, {p.y:F2}, {p.z:F2})";
+    }
+
+    [ConsoleCommand("surface-view", "Get or toggle surface-following view (vs orbit view).", MonoTargetType.Single)]
+    string SurfaceViewCmd(bool? on = null)
+    {
+        if (on == null) return $"surface view: {SurfaceView}";
+        if (on.Value != SurfaceView && _lastPlanetRadius > 0f)
+            ToggleOrbitSurfaceView();
+        return $"surface view: {SurfaceView}";
     }
 }

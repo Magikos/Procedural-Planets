@@ -11,4 +11,8 @@ public sealed class CommandData
     public ParameterData[] Parameters;
     public Type ReturnType;
     public bool IsAsync;
+    /// <summary>True if the method's last parameter is <see cref="System.Threading.CancellationToken"/>.
+    /// That parameter is hidden from <see cref="Parameters"/> and injected at invocation time
+    /// by <see cref="CommandExecutor"/>.</summary>
+    public bool HasCancellationToken;
 }

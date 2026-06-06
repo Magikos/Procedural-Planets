@@ -43,4 +43,10 @@ public interface IInputMapService
     InputAction ConsoleEscape { get; }
     InputAction ConsolePageUp { get; }
     InputAction ConsolePageDown { get; }
+
+    InputAction ConsoleCursorLeft { get; }
+    InputAction ConsoleCursorRight { get; }
+    InputAction ConsoleCursorHome { get; }
+    InputAction ConsoleCursorEnd { get; }
+    InputAction ConsoleDelete { get; }
 }

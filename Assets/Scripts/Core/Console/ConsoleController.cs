@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -7,40 +10,107 @@ using UnityEngine.Rendering;
 public sealed class ConsoleController : MonoBehaviour, IConsoleService
 {
     const float FadeDuration = 0.12f;
-    const float BackspaceInitialDelay = 0.40f;  // seconds before key-repeat starts
-    const float BackspaceRepeatInterval = 0.05f;  // seconds between repeats
+    const float RepeatInitialDelay = 0.40f;
+    const float RepeatInterval = 0.05f;
+    const float SpinnerUpdateInterval = 0.2f;
+    const float SpinnerDotPeriod = 0.5f;
+    const int PopupVisibleCount = 8;
 
-    // Syntax-highlight colours for the input line.
-    static readonly Color PromptColor = new Color(0.38f, 0.38f, 0.40f, 1f);
-    static readonly Color CmdColor = new Color(0.35f, 0.80f, 0.88f, 1f);
-    static readonly Color ValColor = new Color(0.85f, 0.78f, 0.62f, 1f);
-    static readonly Color StrColor = new Color(0.58f, 0.85f, 0.48f, 1f);
-    static readonly Color GhostColor = new Color(0.30f, 0.30f, 0.32f, 0.85f);
-    static readonly Color HintReqdColor = new Color(0.58f, 0.43f, 0.24f, 0.72f);
-    static readonly Color HintOptColor = new Color(0.35f, 0.42f, 0.52f, 0.65f);
+    // Input-line syntax-highlight colors live on ConsoleTheme (Resources/ConsoleTheme.asset).
+    // Accessed via _renderer.Theme.InputXyz at use sites.
+
+    enum InputMode { Normal, Confirm }
+
+    struct PendingAsync
+    {
+        public string Alias;
+        public object Awaitable;
+        public float StartTime;
+        public long LineId;
+        public bool IsCancellable;
+    }
+
+    sealed class ConfirmContext
+    {
+        public string Question;
+        public Action OnYes;
+        public Action OnNo;
+        public bool ActiveIsYes;
+    }
+
+    /// <summary>Tracks initial-delay-then-repeat firing for held keys (Backspace, Delete, arrows).</summary>
+    sealed class KeyRepeat
+    {
+        float _heldTime;
+        float _nextRepeat;
+
+        public int Update(bool pressed, bool held)
+        {
+            if (pressed)
+            {
+                _heldTime = 0f;
+                _nextRepeat = RepeatInitialDelay;
+                return 1;
+            }
+            if (!held)
+            {
+                _heldTime = 0f;
+                _nextRepeat = 0f;
+                return 0;
+            }
+            _heldTime += Time.unscaledDeltaTime;
+            int count = 0;
+            while (_heldTime >= _nextRepeat)
+            {
+                count++;
+                _nextRepeat += RepeatInterval;
+            }
+            return count;
+        }
+    }
 
     IInputMapService _input;
     ConsoleRenderer _renderer;
     readonly ConsoleScrollback _scrollback = new();
     readonly ConsoleInputBuffer _inputBuffer = new();
     readonly IntellisenseEngine _intellisense = new();
+    readonly ConsoleHistory _history = new();
     IReadOnlyList<Suggestion> _suggestions = System.Array.Empty<Suggestion>();
     readonly List<TextSpan> _inputSpans = new();
+    readonly List<TextSpan> _typedSpans = new();
     int _activeSuggestionIdx;
+    int _popupScrollOffset;
     bool _suggestionsFrozen;
     bool _suggestionsSuppressed;
-    float _backspaceHeldTime;
-    float _backspaceNextRepeat;
-    int _scrollOffset;           // lines from bottom (0 = live tail)
+    readonly KeyRepeat _bsRepeat = new();
+    readonly KeyRepeat _delRepeat = new();
+    readonly KeyRepeat _leftRepeat = new();
+    readonly KeyRepeat _rightRepeat = new();
+    readonly KeyRepeat _upRepeat = new();
+    readonly KeyRepeat _downRepeat = new();
+    int _scrollOffset;
+    int _tailScrollbackVersion;  // scrollback.Version last seen while _scrollOffset == 0
+    string _draftBeforeHistory;
+    PendingAsync? _pending;
+    CancellationTokenSource _pendingCts;
+    float _spinnerLastUpdate;
+    InputMode _mode = InputMode.Normal;
+    ConfirmContext _confirm;
     float _currentAlpha;
     float _targetAlpha;
     bool _isOpen;
+    bool _historyLoaded;
     bool _warnedNoInput;
     bool _textInputHooked;
 
     public bool IsOpen => _isOpen;
     public ConsoleAnchor Anchor { get; set; } = ConsoleAnchor.Top;
     public ConsoleScrollback Scrollback => _scrollback;
+    public int ScrollbackCapacity
+    {
+        get => _scrollback.Capacity;
+        set => _scrollback.Capacity = value;
+    }
 
     void Awake()
     {
@@ -62,6 +132,19 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
 
     void OnDestroy()
     {
+        // Null out _pending before anything else so any in-flight ObservePending sees
+        // 'abandoned == true' and skips writing to dead scrollback state.
+        _pending = null;
+        _pendingCts?.Cancel();
+        _pendingCts?.Dispose();
+        _pendingCts = null;
+        if (_isOpen && _input != null)
+        {
+            _input.DisableConsole();
+            _input.EnableGameplay();
+        }
+        UnhookTextInput();
+        if (_historyLoaded) _history.Save();
         _renderer?.Dispose();
         _renderer = null;
         ServiceLocator.Unregister<IConsoleService>(this);
@@ -76,81 +159,172 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
             if (_input.OpenConsole.WasPerformedThisFrame() && !_isOpen)
                 Open();
             if (_input.CloseConsole.WasPerformedThisFrame() && _isOpen)
+            {
+                if (_mode == InputMode.Confirm) DismissConfirm(invokeNo: true);
                 Close();
+            }
 
             if (_isOpen)
             {
-                if (_input.ConsoleEscape.WasPerformedThisFrame())
-                {
-                    if (PopupVisible)
-                        DismissSuggestions();
-                    else if (_inputBuffer.Length > 0)
-                    {
-                        _inputBuffer.Clear();
-                        ResetSuggestions();
-                    }
-                    else
-                        Close();
-                }
-                if (_input.ConsoleSubmit.WasPerformedThisFrame())
-                {
-                    if (PopupVisible)
-                        AcceptSuggestion();
-                    else
-                        SubmitInputLine();
-                }
-                bool bsPressed = _input.ConsoleBackspace.WasPerformedThisFrame();
-                bool bsHeld = _input.ConsoleBackspace.IsPressed();
-                if (bsPressed)
-                {
-                    _inputBuffer.Backspace();
-                    ResetSuggestions();
-                    _backspaceHeldTime = 0f;
-                    _backspaceNextRepeat = BackspaceInitialDelay;
-                }
-                else if (bsHeld)
-                {
-                    _backspaceHeldTime += Time.unscaledDeltaTime;
-                    while (_backspaceHeldTime >= _backspaceNextRepeat)
-                    {
-                        _inputBuffer.Backspace();
-                        ResetSuggestions();
-                        _backspaceNextRepeat += BackspaceRepeatInterval;
-                    }
-                }
+                if (_mode == InputMode.Confirm)
+                    UpdateConfirmMode();
                 else
-                {
-                    _backspaceHeldTime = 0f;
-                    _backspaceNextRepeat = 0f;
-                }
-                if (_input.ConsoleTab.WasPerformedThisFrame())
-                {
-                    bool shift = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
-                    if (shift) HandleShiftTab(); else HandleTab();
-                }
-                if (_input.ConsoleSuggestionNext.WasPerformedThisFrame() && _suggestions.Count > 0)
-                {
-                    _suggestionsFrozen = true;
-                    _activeSuggestionIdx = (_activeSuggestionIdx + 1) % _suggestions.Count;
-                }
-                if (_input.ConsoleSuggestionPrev.WasPerformedThisFrame() && _suggestions.Count > 0)
-                {
-                    _suggestionsFrozen = true;
-                    _activeSuggestionIdx = (_activeSuggestionIdx - 1 + _suggestions.Count) % _suggestions.Count;
-                }
-
-                if (_input.ConsolePageUp.WasPerformedThisFrame())
-                    _scrollOffset = Mathf.Min(_scrollOffset + 5, Mathf.Max(0, _scrollback.Count - 1));
-                if (_input.ConsolePageDown.WasPerformedThisFrame())
-                    _scrollOffset = Mathf.Max(0, _scrollOffset - 5);
-
-                if (!_suggestionsFrozen && !_suggestionsSuppressed)
-                    _suggestions = _intellisense.Update(_inputBuffer.Text);
+                    UpdateNormalMode();
             }
         }
 
+        if (_pending.HasValue)
+            UpdatePendingLine();
+
         float step = Time.unscaledDeltaTime / FadeDuration;
         _currentAlpha = Mathf.MoveTowards(_currentAlpha, _targetAlpha, step);
+    }
+
+    void UpdateConfirmMode()
+    {
+        if (_input.ConsoleEscape.WasPerformedThisFrame())
+        {
+            DismissConfirm(invokeNo: true);
+            return;
+        }
+        if (_input.ConsoleSubmit.WasPerformedThisFrame())
+        {
+            if (_confirm == null) { _mode = InputMode.Normal; return; }
+            if (_confirm.ActiveIsYes) _confirm.OnYes?.Invoke();
+            else _confirm.OnNo?.Invoke();
+            DismissConfirm(invokeNo: false);
+            return;
+        }
+        if (_input.ConsoleTab.WasPerformedThisFrame()
+            || _input.ConsoleCursorLeft.WasPerformedThisFrame()
+            || _input.ConsoleCursorRight.WasPerformedThisFrame())
+        {
+            if (_confirm != null) _confirm.ActiveIsYes = !_confirm.ActiveIsYes;
+        }
+    }
+
+    void UpdateNormalMode()
+    {
+        if (_input.ConsoleEscape.WasPerformedThisFrame())
+        {
+            if (PopupVisible)
+                DismissSuggestions();
+            else if (_inputBuffer.Length > 0)
+            {
+                _inputBuffer.Clear();
+                ResetSuggestions();
+                _history.ResetCursor();
+                _draftBeforeHistory = null;
+            }
+            else
+                Close();
+        }
+
+        if (_input.ConsoleSubmit.WasPerformedThisFrame())
+            HandleSubmitKey();
+
+        int bsTicks = _bsRepeat.Update(
+            _input.ConsoleBackspace.WasPerformedThisFrame(),
+            _input.ConsoleBackspace.IsPressed());
+        for (int i = 0; i < bsTicks; i++) { _inputBuffer.Backspace(); OnInputMutated(); }
+
+        int delTicks = _delRepeat.Update(
+            _input.ConsoleDelete.WasPerformedThisFrame(),
+            _input.ConsoleDelete.IsPressed());
+        for (int i = 0; i < delTicks; i++) { _inputBuffer.Delete(); OnInputMutated(); }
+
+        int leftTicks = _leftRepeat.Update(
+            _input.ConsoleCursorLeft.WasPerformedThisFrame(),
+            _input.ConsoleCursorLeft.IsPressed());
+        for (int i = 0; i < leftTicks; i++) { _inputBuffer.MoveLeft(); _suggestionsSuppressed = true; }
+
+        int rightTicks = _rightRepeat.Update(
+            _input.ConsoleCursorRight.WasPerformedThisFrame(),
+            _input.ConsoleCursorRight.IsPressed());
+        for (int i = 0; i < rightTicks; i++) { _inputBuffer.MoveRight(); _suggestionsSuppressed = true; }
+
+        if (_input.ConsoleCursorHome.WasPerformedThisFrame())
+        {
+            _inputBuffer.MoveHome();
+            _suggestionsSuppressed = true;
+        }
+        if (_input.ConsoleCursorEnd.WasPerformedThisFrame())
+        {
+            _inputBuffer.MoveEnd();
+            _suggestionsSuppressed = true;
+        }
+
+        if (_input.ConsoleTab.WasPerformedThisFrame())
+        {
+            bool shift = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
+            if (shift) HandleShiftTab(); else AcceptSuggestion();
+        }
+
+        // Ctrl+V — paste clipboard into input buffer at cursor. Strips control chars so
+        // multi-line / tab content collapses to printable text only.
+        if (Keyboard.current != null
+            && Keyboard.current.vKey.wasPressedThisFrame
+            && Keyboard.current.ctrlKey.isPressed)
+        {
+            PasteClipboard();
+        }
+
+        int downTicks = _downRepeat.Update(
+            _input.ConsoleSuggestionNext.WasPerformedThisFrame(),
+            _input.ConsoleSuggestionNext.IsPressed());
+        for (int i = 0; i < downTicks; i++)
+        {
+            if (PopupVisible && _suggestions.Count > 0)
+            {
+                _suggestionsFrozen = true;
+                _activeSuggestionIdx = (_activeSuggestionIdx + 1) % _suggestions.Count;
+                UpdatePopupScroll();
+            }
+            else HistoryNext();
+        }
+
+        int upTicks = _upRepeat.Update(
+            _input.ConsoleSuggestionPrev.WasPerformedThisFrame(),
+            _input.ConsoleSuggestionPrev.IsPressed());
+        for (int i = 0; i < upTicks; i++)
+        {
+            if (PopupVisible && _suggestions.Count > 0)
+            {
+                _suggestionsFrozen = true;
+                _activeSuggestionIdx = (_activeSuggestionIdx - 1 + _suggestions.Count) % _suggestions.Count;
+                UpdatePopupScroll();
+            }
+            else HistoryPrevious();
+        }
+
+        if (_input.ConsolePageUp.WasPerformedThisFrame())
+            _scrollOffset = Mathf.Min(_scrollOffset + 5, Mathf.Max(0, _scrollback.Count - 1));
+        if (_input.ConsolePageDown.WasPerformedThisFrame())
+            _scrollOffset = Mathf.Max(0, _scrollOffset - 5);
+
+        if (!_suggestionsFrozen && !_suggestionsSuppressed)
+        {
+            _suggestions = _intellisense.Update(_inputBuffer.Text);
+            UpdatePopupScroll();
+        }
+    }
+
+    void UpdatePopupScroll()
+    {
+        if (_suggestions == null || _suggestions.Count <= PopupVisibleCount)
+        {
+            _popupScrollOffset = 0;
+            return;
+        }
+        const int halfWindow = PopupVisibleCount / 2;
+        int total = _suggestions.Count;
+        int active = Mathf.Clamp(_activeSuggestionIdx, 0, total - 1);
+        if (active < halfWindow)
+            _popupScrollOffset = 0;
+        else if (active >= total - (PopupVisibleCount - halfWindow))
+            _popupScrollOffset = total - PopupVisibleCount;
+        else
+            _popupScrollOffset = active - halfWindow;
     }
 
     void EnsureInput()
@@ -171,11 +345,8 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
         if (_isOpen) return;
         _isOpen = true;
         _targetAlpha = 1f;
-        if (_input != null)
-        {
-            _input.DisableGameplay();
-            _input.EnableConsole();
-        }
+        if (!_historyLoaded) { _history.Load(); _historyLoaded = true; }
+        if (_input != null) { _input.DisableGameplay(); _input.EnableConsole(); }
         HookTextInput();
         EventBus<ConsoleOpenedEvent>.Raise(new ConsoleOpenedEvent());
     }
@@ -185,32 +356,47 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
         if (!_isOpen) return;
         _isOpen = false;
         _targetAlpha = 0f;
-        if (_input != null)
-        {
-            _input.DisableConsole();
-            _input.EnableGameplay();
-        }
+        if (_input != null) { _input.DisableConsole(); _input.EnableGameplay(); }
         UnhookTextInput();
+        if (_historyLoaded) _history.Save();
         EventBus<ConsoleClosedEvent>.Raise(new ConsoleClosedEvent());
     }
 
-    public void Toggle()
-    {
-        if (_isOpen) Close(); else Open();
-    }
+    public void Toggle() { if (_isOpen) Close(); else Open(); }
 
-    // Popup is visible when there are multiple options, or exactly one frozen via arrow-key nav.
-    bool PopupVisible => _suggestions.Count > 1 || (_suggestions.Count == 1 && _suggestionsFrozen);
+    // Popup is visible whenever the renderer would draw it — which is whenever there are
+    // suggestions AND ghost completion is NOT taking over the visual. Keeping this in lock-step
+    // with ShouldShowGhost avoids the "Enter submits raw text instead of accepting the popup"
+    // bug for single-substring-match cases like 'sun' → 'atmosphere.sun-intensity'.
+    bool PopupVisible => _suggestions.Count > 0 && !ShouldShowGhost(_inputBuffer.Text);
 
-    void HandleTab()
+    /// <summary>
+    /// Enter behavior: if there's an active suggestion that differs from what's typed, accept it
+    /// (popup OR ghost — same rule). If the active suggestion exactly matches typed text, submit
+    /// (already complete, no work to do). If there are no suggestions, submit raw (which will
+    /// produce "unknown command" if it's not a valid alias). Bryan's mental model:
+    /// "if it's not in the list, it's not a valid command" — so submitting raw is only meaningful
+    /// when intellisense couldn't find ANY match.
+    /// </summary>
+    void HandleSubmitKey()
     {
-        if (_suggestions.Count == 0) return;
-        _inputBuffer.Clear();
-        _inputBuffer.Append(_suggestions[_activeSuggestionIdx].CompletionText);
-        _suggestionsFrozen = false;
-        _activeSuggestionIdx = 0;
-        _suggestionsSuppressed = true;
-        _suggestions = System.Array.Empty<Suggestion>();
+        if (_suggestions.Count == 0)
+        {
+            SubmitInputLine();
+            return;
+        }
+
+        int idx = Mathf.Clamp(_activeSuggestionIdx, 0, _suggestions.Count - 1);
+        string completion = _suggestions[idx].CompletionText;
+        if (completion.Equals(_inputBuffer.Text, System.StringComparison.OrdinalIgnoreCase))
+        {
+            // Typed text already equals the suggestion — Enter submits, no accept dance needed.
+            SubmitInputLine();
+        }
+        else
+        {
+            AcceptSuggestion();
+        }
     }
 
     void HandleShiftTab()
@@ -220,16 +406,19 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
         _activeSuggestionIdx = (_activeSuggestionIdx - 1 + _suggestions.Count) % _suggestions.Count;
     }
 
-    // Accepts the active suggestion into the input buffer (same as Tab) — does not submit.
     void AcceptSuggestion()
     {
         if (_suggestions.Count == 0) return;
-        _inputBuffer.Clear();
-        _inputBuffer.Append(_suggestions[_activeSuggestionIdx].CompletionText);
+        // Auto-append a space so the next keystroke starts an argument naturally.
+        // Trailing whitespace is harmless on submit (string.IsNullOrWhiteSpace check) and
+        // the tokenizer ignores it, so this is safe even for zero-arg commands.
+        _inputBuffer.Set(_suggestions[_activeSuggestionIdx].CompletionText + " ");
         _suggestionsFrozen = false;
         _activeSuggestionIdx = 0;
         _suggestionsSuppressed = true;
         _suggestions = System.Array.Empty<Suggestion>();
+        _history.ResetCursor();
+        _draftBeforeHistory = null;
     }
 
     void DismissSuggestions()
@@ -240,12 +429,62 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
         _suggestions = System.Array.Empty<Suggestion>();
     }
 
-    // Called when user modifies input text — re-enables suggestion engine.
     void ResetSuggestions()
     {
         _suggestionsFrozen = false;
         _activeSuggestionIdx = 0;
         _suggestionsSuppressed = false;
+    }
+
+    void OnInputMutated()
+    {
+        ResetSuggestions();
+        _history.ResetCursor();
+        _draftBeforeHistory = null;
+    }
+
+    void HistoryPrevious()
+    {
+        if (_history.Count == 0) return;
+        if (!_history.IsNavigating) _draftBeforeHistory = _inputBuffer.Text;
+        string entry = _history.Previous();
+        if (entry == null) return;
+        _inputBuffer.Set(entry);
+        _suggestionsSuppressed = true;
+        _suggestions = System.Array.Empty<Suggestion>();
+    }
+
+    void HistoryNext()
+    {
+        if (!_history.IsNavigating) return;
+        string entry = _history.Next();
+        if (string.IsNullOrEmpty(entry))
+        {
+            _inputBuffer.Set(_draftBeforeHistory ?? "");
+            _draftBeforeHistory = null;
+        }
+        else
+        {
+            _inputBuffer.Set(entry);
+        }
+        _suggestionsSuppressed = true;
+        _suggestions = System.Array.Empty<Suggestion>();
+    }
+
+    void PasteClipboard()
+    {
+        string clipboard = GUIUtility.systemCopyBuffer;
+        if (string.IsNullOrEmpty(clipboard)) return;
+
+        var sb = new System.Text.StringBuilder(clipboard.Length);
+        foreach (char c in clipboard)
+        {
+            if (c >= 0x20 && c != 0x7F) sb.Append(c);
+        }
+        if (sb.Length == 0) return;
+
+        _inputBuffer.Insert(sb.ToString());
+        OnInputMutated();
     }
 
     void HookTextInput()
@@ -267,32 +506,107 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
     void OnTextInput(char c)
     {
         if (!_isOpen) return;
-        // Filter the toggle keys (backtick / tilde) so the open-keystroke doesn't leak into the line.
+        if (_mode == InputMode.Confirm) return;
         if (c == '`' || c == '~') return;
-        // Filter control characters; Enter / Backspace are wired via Input Actions instead.
         if (c < 0x20 || c == 0x7F) return;
-        _inputBuffer.Append(c);
-        ResetSuggestions();
+        _inputBuffer.Insert(c);
+        OnInputMutated();
     }
 
     void SubmitInputLine()
     {
         string line = _inputBuffer.Text;
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            _inputBuffer.Clear();
+            ResetSuggestions();
+            _suggestions = System.Array.Empty<Suggestion>();
+            return;
+        }
+
+        bool isBypass = _pending.HasValue && IsBypassPendingCommand(line);
+
+        // While async is pending, only `console.abandon` and `console.cancel` get through.
+        // Everything else is rejected with a hint so the user knows what their options are.
+        if (_pending.HasValue && !isBypass)
+        {
+            float elapsed = Time.unscaledTime - _pending.Value.StartTime;
+            _scrollback.Append(
+                $"'{_pending.Value.Alias}' running ({elapsed:F1}s) — wait, or run 'console.abandon' / 'console.cancel'",
+                ConsoleMessageType.Warning);
+            return;
+        }
+
         _inputBuffer.Clear();
         ResetSuggestions();
         _suggestions = System.Array.Empty<Suggestion>();
-        _scrollOffset = 0;   // jump to tail on submit
-        if (string.IsNullOrWhiteSpace(line)) return;
+        _scrollOffset = 0;
 
         _scrollback.Append($"> {line}", ConsoleMessageType.Input);
-        CommandExecutor.Execute(line, this);
+        _history.Add(line);
+        _draftBeforeHistory = null;
+
+        if (isBypass)
+        {
+            // Preserve _pendingCts — it belongs to the async being abandoned/cancelled.
+            // Bypass commands are sync and don't take a CancellationToken.
+            CommandExecutor.Execute(line, this, CancellationToken.None);
+            return;
+        }
+
+        ExecuteWithOwnedCancellation(line);
+    }
+
+    void ExecuteWithOwnedCancellation(string commandLine)
+    {
+        var cts = new CancellationTokenSource();
+        _pendingCts = cts;
+        try
+        {
+            CommandExecutor.Execute(commandLine, this, cts.Token);
+        }
+        finally
+        {
+            if (!_pending.HasValue)
+            {
+                _pendingCts = null;
+                cts.Dispose();
+            }
+            // else: cts was passed to ObservePending as a parameter; it owns disposal.
+        }
+    }
+
+    static bool IsBypassPendingCommand(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line)) return false;
+        var tokens = CommandParser.Tokenize(line);
+        if (tokens.Count == 0) return false;
+        return tokens[0].Equals("console.abandon", StringComparison.OrdinalIgnoreCase)
+            || tokens[0].Equals("console.cancel", StringComparison.OrdinalIgnoreCase);
     }
 
     public void RunCommand(string commandLine)
     {
         if (string.IsNullOrWhiteSpace(commandLine)) return;
+
+        bool isBypass = _pending.HasValue && IsBypassPendingCommand(commandLine);
+        if (_pending.HasValue && !isBypass)
+        {
+            float elapsed = Time.unscaledTime - _pending.Value.StartTime;
+            _scrollback.Append(
+                $"'{_pending.Value.Alias}' running ({elapsed:F1}s) - reject '{commandLine}'",
+                ConsoleMessageType.Warning);
+            return;
+        }
+
         _scrollback.Append($"> {commandLine}", ConsoleMessageType.Input);
-        CommandExecutor.Execute(commandLine, this);
+        if (isBypass)
+        {
+            CommandExecutor.Execute(commandLine, this, CancellationToken.None);
+            return;
+        }
+
+        ExecuteWithOwnedCancellation(commandLine);
     }
 
     public void Print(string text)
@@ -300,22 +614,243 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
         if (text == null) return;
         _scrollback.Append(text, ConsoleMessageType.Output);
     }
-
     public void PrintLine(string text) => Print(text);
-
     public void PrintWarning(string text)
     {
         if (text == null) return;
         _scrollback.Append(text, ConsoleMessageType.Warning);
     }
-
     public void PrintError(string text)
     {
         if (text == null) return;
         _scrollback.Append(text, ConsoleMessageType.Error);
     }
-
     public void Clear() => _scrollback.Clear();
+
+    // --- Async pending tracking --------------------------------------------
+
+    public void BeginAsync(string alias, object awaitable, bool isCancellable)
+    {
+        if (awaitable == null) return;
+        if (_pending.HasValue)
+        {
+            float elapsed = Time.unscaledTime - _pending.Value.StartTime;
+            _scrollback.Append(
+                $"'{_pending.Value.Alias}' running ({elapsed:F1}s) — reject '{alias}'",
+                ConsoleMessageType.Warning);
+            return;
+        }
+
+        long id = _scrollback.Append($"running {alias} ... (0.0s)", ConsoleMessageType.Log);
+        _pending = new PendingAsync
+        {
+            Alias = alias,
+            Awaitable = awaitable,
+            StartTime = Time.unscaledTime,
+            LineId = id,
+            IsCancellable = isCancellable,
+        };
+        _spinnerLastUpdate = Time.unscaledTime;
+        var cts = _pendingCts;  // captured by ObservePending
+        _ = ObservePending(_pending.Value, cts);
+    }
+
+    public void AbandonPending()
+    {
+        if (!_pending.HasValue)
+        {
+            _scrollback.Append("nothing to abandon", ConsoleMessageType.Warning);
+            return;
+        }
+        var p = _pending.Value;
+        float elapsed = Time.unscaledTime - p.StartTime;
+        _scrollback.Replace(p.LineId, $"{p.Alias} abandoned ({elapsed:F2}s)", ConsoleMessageType.Warning);
+        _pending = null;
+        // Detach our reference; the observer still holds the CTS via its closure and
+        // will dispose it when the underlying awaitable eventually finishes.
+        _pendingCts = null;
+    }
+
+    public void RequestCancelPending()
+    {
+        if (!_pending.HasValue)
+        {
+            _scrollback.Append("nothing to cancel", ConsoleMessageType.Warning);
+            return;
+        }
+        var p = _pending.Value;
+        if (!p.IsCancellable)
+        {
+            _scrollback.Append(
+                $"'{p.Alias}' does not support cancellation (no CancellationToken parameter) — use 'console.abandon' instead",
+                ConsoleMessageType.Warning);
+            return;
+        }
+        ShowConfirm(
+            $"Cancel '{p.Alias}'?",
+            onYes: () =>
+            {
+                if (_pendingCts != null && !_pendingCts.IsCancellationRequested)
+                    _pendingCts.Cancel();
+                else
+                    _scrollback.Append("cancellation already requested", ConsoleMessageType.Warning);
+            });
+    }
+
+    /// <inheritdoc/>
+    public void Confirm(string question, Action onYes, Action onNo = null)
+        => ShowConfirm(question, onYes, onNo);
+
+    /// <inheritdoc/>
+    public ConsoleDiagnostics GetDiagnostics()
+    {
+        string pendingAlias = _pending?.Alias;
+        float elapsed = _pending.HasValue ? Time.unscaledTime - _pending.Value.StartTime : 0f;
+        bool cancellable = _pending?.IsCancellable ?? false;
+        return new ConsoleDiagnostics(
+            _isOpen,
+            Anchor,
+            _scrollback.Count,
+            _scrollback.Capacity,
+            _history.Count,
+            ConsoleRegistry.Commands.Count,
+            pendingAlias,
+            elapsed,
+            cancellable);
+    }
+
+    void ShowConfirm(string question, Action onYes, Action onNo = null)
+    {
+        _confirm = new ConfirmContext
+        {
+            Question = question,
+            OnYes = onYes,
+            OnNo = onNo,
+            ActiveIsYes = false,   // safe default — Enter without toggle = No
+        };
+        _mode = InputMode.Confirm;
+    }
+
+    void DismissConfirm(bool invokeNo)
+    {
+        if (_confirm == null) { _mode = InputMode.Normal; return; }
+        if (invokeNo) _confirm.OnNo?.Invoke();
+        _confirm = null;
+        _mode = InputMode.Normal;
+    }
+
+    void UpdatePendingLine()
+    {
+        if (!_pending.HasValue) return;
+        if (Time.unscaledTime - _spinnerLastUpdate < SpinnerUpdateInterval) return;
+        _spinnerLastUpdate = Time.unscaledTime;
+
+        var p = _pending.Value;
+        float elapsed = Time.unscaledTime - p.StartTime;
+        string dots = CurrentDotPhase();
+        _scrollback.Replace(p.LineId, $"running {p.Alias} {dots} ({elapsed:F1}s)", ConsoleMessageType.Log);
+    }
+
+    static string CurrentDotPhase()
+    {
+        int phase = Mathf.FloorToInt(Time.unscaledTime / (SpinnerDotPeriod / 4f)) % 4;
+        return phase switch
+        {
+            0 => "   ",
+            1 => ".  ",
+            2 => ".. ",
+            _ => "...",
+        };
+    }
+
+    async Awaitable ObservePending(PendingAsync p, CancellationTokenSource cts)
+    {
+        object result = null;
+        string error = null;
+        bool cancelled = false;
+
+        try
+        {
+            result = await AwaitGeneric(p.Awaitable);
+        }
+        catch (OperationCanceledException)
+        {
+            cancelled = true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message ?? ex.GetType().Name;
+        }
+
+        bool abandoned = !_pending.HasValue || _pending.Value.LineId != p.LineId;
+
+        // this != null: Unity null check guards against MonoBehaviour destruction.
+        // abandoned: true if _pending was cleared (OnDestroy, user abandon, etc.).
+        if (this != null && !abandoned)
+        {
+            float elapsed = Time.unscaledTime - p.StartTime;
+            if (cancelled)
+            {
+                _scrollback.Replace(p.LineId, $"{p.Alias} cancelled ({elapsed:F2}s)", ConsoleMessageType.Warning);
+            }
+            else if (error != null)
+            {
+                _scrollback.Replace(p.LineId, $"{p.Alias}: {error} ({elapsed:F2}s)", ConsoleMessageType.Error);
+            }
+            else
+            {
+                _scrollback.Replace(p.LineId, $"{p.Alias} completed in {elapsed:F2}s", ConsoleMessageType.Output);
+                if (result != null) _scrollback.Append(result.ToString(), ConsoleMessageType.Output);
+            }
+            _pending = null;
+            _pendingCts = null;
+        }
+
+        cts?.Dispose();
+    }
+
+    static async Awaitable<object> AwaitGeneric(object awaitableObj)
+    {
+        if (awaitableObj is Awaitable nonGeneric)
+        {
+            await nonGeneric;
+            return null;
+        }
+
+        // Registers a continuation via UnsafeOnCompleted so the Awaitable<T>'s internal
+        // scheduler drives completion — no per-frame reflection polling.
+        // Polling IsCompleted via reflection without a registered continuation may never
+        // see it become true, because Unity's Awaitable<T> only updates that state after
+        // a continuation is attached.
+        var type = awaitableObj.GetType();
+        var getAwaiter = type.GetMethod("GetAwaiter", BindingFlags.Public | BindingFlags.Instance);
+        if (getAwaiter == null) throw new InvalidOperationException($"{type.Name} has no GetAwaiter()");
+        object awaiter = getAwaiter.Invoke(awaitableObj, null);
+        var awaiterType = awaiter.GetType();
+        var getResult = awaiterType.GetMethod("GetResult");
+        var unsafeOnCompleted = awaiterType.GetMethod("UnsafeOnCompleted")
+                             ?? awaiterType.GetMethod("OnCompleted");
+        if (getResult == null || unsafeOnCompleted == null)
+            throw new InvalidOperationException($"{awaiterType.Name} is not a valid awaiter");
+
+        bool done = false;
+        object result = null;
+        Exception caught = null;
+        Action continuation = () =>
+        {
+            try { result = getResult.Invoke(awaiter, null); }
+            catch (TargetInvocationException tex) { caught = tex.InnerException ?? tex; }
+            catch (Exception ex) { caught = ex; }
+            done = true;
+        };
+        unsafeOnCompleted.Invoke(awaiter, new object[] { continuation });
+
+        while (!done)
+            await Awaitable.NextFrameAsync();
+
+        if (caught != null) throw caught;
+        return result;
+    }
 
     void OnLogMessageReceived(string condition, string stackTrace, LogType type)
     {
@@ -330,6 +865,7 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
         _scrollback.Append(condition ?? "", msgType);
     }
 
+    // --- Rendering ---------------------------------------------------------
 
     void OnEndCameraRendering(ScriptableRenderContext ctx, Camera cam)
     {
@@ -339,20 +875,55 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
 
         bool cursorOn = (Mathf.FloorToInt(Time.unscaledTime * 2f) & 1) == 0;
         string typed = _inputBuffer.Text;
+        int cursorPos = _inputBuffer.CursorPos;
 
-        // Single live suggestion suppresses popup and becomes ghost completion.
+        // Track whether new messages have arrived while the user is scrolled back.
+        // _tailScrollbackVersion is refreshed every frame at offset 0, so the first
+        // frame after scrolling uses the version that was current just before scrolling.
+        bool hasNewMessages;
+        if (_scrollOffset == 0)
+        {
+            _tailScrollbackVersion = _scrollback.Version;
+            hasNewMessages = false;
+        }
+        else
+        {
+            hasNewMessages = _scrollback.Version > _tailScrollbackVersion;
+        }
+
         IReadOnlyList<Suggestion> popupSuggestions =
-            (_suggestions.Count == 1 && !_suggestionsFrozen && !_suggestionsSuppressed)
-            ? System.Array.Empty<Suggestion>()
-            : _suggestions;
+            (_mode == InputMode.Confirm || ShouldShowGhost(typed))
+                ? System.Array.Empty<Suggestion>()
+                : _suggestions;
 
-        BuildInputSpans(typed, cursorOn);
+        BuildInputSpans(typed, cursorPos, cursorOn);
 
         var cmd = new CommandBuffer { name = "ConsoleOverlay" };
         try
         {
-            _renderer.Render(cmd, _currentAlpha, Anchor, _inputSpans,
-                _scrollback, _scrollOffset, popupSuggestions, _activeSuggestionIdx);
+            ConsoleRenderer.ConfirmRenderData? confirmData = null;
+            if (_mode == InputMode.Confirm && _confirm != null)
+                confirmData = new ConsoleRenderer.ConfirmRenderData
+                {
+                    Question = _confirm.Question,
+                    ActiveIsYes = _confirm.ActiveIsYes,
+                };
+
+            var state = new ConsoleRenderer.ConsoleRenderState
+            {
+                Alpha = _currentAlpha,
+                Anchor = Anchor,
+                InputSpans = _inputSpans,
+                Scrollback = _scrollback,
+                ScrollOffset = _scrollOffset,
+                Suggestions = popupSuggestions,
+                ActiveSuggestion = _activeSuggestionIdx,
+                PopupScrollOffset = _popupScrollOffset,
+                PopupVisibleCount = PopupVisibleCount,
+                Confirm = confirmData,
+                HasNewMessages = hasNewMessages,
+            };
+            _renderer.Render(cmd, state);
             ctx.ExecuteCommandBuffer(cmd);
             ctx.Submit();
         }
@@ -362,59 +933,134 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
         }
     }
 
-    void BuildInputSpans(string typed, bool cursorOn)
+    /// <summary>
+    /// Ghost completion fires only when there's a single suggestion that is a true PREFIX
+    /// of what's typed. Substring-only matches (e.g. "enum" → "test.console.enum") flow
+    /// to the popup instead so the user can see the system is suggesting something distant.
+    /// </summary>
+    bool ShouldShowGhost(string typed)
+    {
+        if (_suggestions.Count != 1) return false;
+        if (_suggestionsFrozen || _suggestionsSuppressed) return false;
+        string completion = _suggestions[0].CompletionText;
+        return completion.Length > typed.Length
+            && completion.StartsWith(typed, StringComparison.OrdinalIgnoreCase);
+    }
+
+    void BuildInputSpans(string typed, int cursorPos, bool cursorOn)
     {
         _inputSpans.Clear();
-        _inputSpans.Add(new TextSpan(PromptColor, "> "));
+        var theme = _renderer.Theme;
 
-        if (typed.Length > 0)
+        // Animated async indicator before the prompt.
+        if (_pending.HasValue)
         {
-            int spaceIdx = typed.IndexOf(' ');
-            if (spaceIdx < 0)
-            {
-                _inputSpans.Add(new TextSpan(CmdColor, typed));
-            }
-            else
-            {
-                _inputSpans.Add(new TextSpan(CmdColor, typed.Substring(0, spaceIdx)));
-                AppendSyntaxSpans(_inputSpans, typed.Substring(spaceIdx));
-            }
+            string dots = CurrentDotPhase();
+            _inputSpans.Add(new TextSpan(theme.InputGhost, dots + " "));
         }
+        _inputSpans.Add(new TextSpan(theme.InputPrompt, "> "));
 
-        _inputSpans.Add(new TextSpan(cursorOn ? Color.white : Color.clear, "|"));
+        // Build typed-text spans into a temp list so we can inject the cursor at the right offset.
+        _typedSpans.Clear();
+        AppendTypedSpans(_typedSpans, typed);
+        InsertCursorIntoSpans(_typedSpans, cursorPos, cursorOn ? Color.white : Color.clear);
+        _inputSpans.AddRange(_typedSpans);
 
-        // Ghost completion: single live suggestion whose text starts with what's typed.
-        bool hintAdded = false;
-        if (_suggestions.Count == 1 && !_suggestionsFrozen && !_suggestionsSuppressed)
+        // Ghost completion and parameter hint only when the cursor is at the end of the line
+        // (mid-line editing makes inline hints visually confusing).
+        bool atEnd = cursorPos == typed.Length;
+        if (!atEnd) return;
+
+        if (ShouldShowGhost(typed))
         {
             string completion = _suggestions[0].CompletionText;
-            if (completion.Length > typed.Length &&
-                completion.StartsWith(typed, System.StringComparison.OrdinalIgnoreCase))
-            {
-                _inputSpans.Add(new TextSpan(GhostColor, completion.Substring(typed.Length)));
-                hintAdded = true;
-            }
+            _inputSpans.Add(new TextSpan(theme.InputGhost, completion.Substring(typed.Length)));
+            return;
         }
 
-        // Param hint: only when the input is exactly a command name with no space typed yet.
-        if (!hintAdded)
+        if (typed.Length == 0 || _pending.HasValue) return;
+
+        // Param-slot ghost: show <type: name> for every remaining slot.
+        // The current in-progress slot (or the next slot to start) is omitted from the ghost —
+        // we don't redundantly hint at what the user is already typing.
+        var tokens = CommandParser.Tokenize(typed);
+        if (tokens.Count == 0) return;
+        if (!ConsoleRegistry.TryGet(tokens[0], out var hintCmd)) return;
+        if (hintCmd.Parameters.Length == 0) return;
+
+        bool trailingSpace = char.IsWhiteSpace(typed[typed.Length - 1]);
+        // showFrom = first param slot to display as ghost.
+        //   "alias" / "alias " (alias-only)            → 0   (show every slot)
+        //   "alias 5" (mid-typing slot 0)              → 1   (slot 0 in-progress, show slot 1 onwards)
+        //   "alias 5 " (slot 0 done, starting slot 1)  → 1   (slot 1 about to start, show it + rest)
+        // Unified: showFrom = max(0, tokens.Count - 1).
+        int showFrom = tokens.Count - 1;
+        if (showFrom < 0) showFrom = 0;
+        if (showFrom >= hintCmd.Parameters.Length) return;
+
+        bool first = true;
+        for (int i = showFrom; i < hintCmd.Parameters.Length; i++)
         {
-            if (typed.Length > 0 && typed.IndexOf(' ') < 0 &&
-                ConsoleRegistry.TryGet(typed, out var hintCmd) && hintCmd.Parameters.Length > 0)
-            {
-                foreach (ParameterData p in hintCmd.Parameters)
-                {
-                    if (p.HasDefault)
-                        _inputSpans.Add(new TextSpan(HintOptColor, $" [{p.Name}]"));
-                    else
-                        _inputSpans.Add(new TextSpan(HintReqdColor, $" <{p.Name}>"));
-                }
-            }
+            ParameterData p = hintCmd.Parameters[i];
+            bool needsLeadingSpace = !first || !trailingSpace;
+            string body = p.HasDefault
+                ? $"[{p.DisplayTypeName}: {p.Name}]"
+                : $"<{p.DisplayTypeName}: {p.Name}>";
+            Color color = p.HasDefault ? theme.InputHintOptional : theme.InputHintRequired;
+            _inputSpans.Add(new TextSpan(color, (needsLeadingSpace ? " " : "") + body));
+            first = false;
         }
     }
 
-    static void AppendSyntaxSpans(List<TextSpan> spans, string text)
+    void AppendTypedSpans(List<TextSpan> spans, string typed)
     {
+        if (typed.Length == 0) return;
+        var theme = _renderer.Theme;
+        int spaceIdx = typed.IndexOf(' ');
+        if (spaceIdx < 0)
+        {
+            spans.Add(new TextSpan(theme.InputCommand, typed));
+        }
+        else
+        {
+            spans.Add(new TextSpan(theme.InputCommand, typed.Substring(0, spaceIdx)));
+            AppendSyntaxSpans(spans, typed.Substring(spaceIdx));
+        }
+    }
+
+    static void InsertCursorIntoSpans(List<TextSpan> spans, int cursorPos, Color cursorColor)
+    {
+        int running = 0;
+        for (int i = 0; i < spans.Count; i++)
+        {
+            int spanLen = spans[i].Text.Length;
+            if (running + spanLen >= cursorPos)
+            {
+                int splitPos = cursorPos - running;
+                if (splitPos == 0)
+                {
+                    spans.Insert(i, new TextSpan(cursorColor, "|"));
+                    return;
+                }
+                if (splitPos == spanLen)
+                {
+                    spans.Insert(i + 1, new TextSpan(cursorColor, "|"));
+                    return;
+                }
+                TextSpan original = spans[i];
+                spans[i] = new TextSpan(original.Color, original.Text.Substring(0, splitPos));
+                spans.Insert(i + 1, new TextSpan(cursorColor, "|"));
+                spans.Insert(i + 2, new TextSpan(original.Color, original.Text.Substring(splitPos)));
+                return;
+            }
+            running += spanLen;
+        }
+        spans.Add(new TextSpan(cursorColor, "|"));
+    }
+
+    void AppendSyntaxSpans(List<TextSpan> spans, string text)
+    {
+        var theme = _renderer.Theme;
         int i = 0;
         while (i < text.Length)
         {
@@ -422,7 +1068,7 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
             {
                 int end = text.IndexOf('"', i + 1);
                 int len = (end < 0 ? text.Length : end + 1) - i;
-                spans.Add(new TextSpan(StrColor, text.Substring(i, len)));
+                spans.Add(new TextSpan(theme.InputString, text.Substring(i, len)));
                 i = end < 0 ? text.Length : end + 1;
             }
             else
@@ -430,7 +1076,7 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
                 int start = i;
                 while (i < text.Length && text[i] != '"') i++;
                 if (i > start)
-                    spans.Add(new TextSpan(ValColor, text.Substring(start, i - start)));
+                    spans.Add(new TextSpan(theme.InputValue, text.Substring(start, i - start)));
             }
         }
     }

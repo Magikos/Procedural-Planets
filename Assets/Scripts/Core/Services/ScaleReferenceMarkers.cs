@@ -31,8 +31,21 @@ public interface IScaleReferenceDebugStatsProvider
 /// sampled terrain surface the gameplay camera uses instead of a broad planet sphere.
 /// </summary>
 [DisallowMultipleComponent]
+[CommandPrefix("scale")]
 public sealed class ScaleReferenceMarkers : MonoBehaviour, IScaleReferenceDebugStatsProvider
 {
+    [ConsoleCommand("drop", "Drop scale reference markers (1m / 1.8m human / 3m / 10m / 30m) at the camera look target.")]
+    static void DropCmd()
+        => EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.DropScaleMarkers));
+
+    [ConsoleCommand("clear", "Clear all scale reference markers.")]
+    static void ClearCmd()
+        => EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.ClearScaleMarkers));
+
+    [ConsoleCommand("teleport", "Teleport the camera to the last marker chain.")]
+    static void TeleportCmd()
+        => EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.TeleportToScaleMarkers));
+
     static readonly MarkerSpec[] Specs = new[]
     {
         new MarkerSpec("ScaleRef_1m_cube", PrimitiveType.Cube, new Vector3(1f, 1f, 1f), new Color(0.92f, 0.18f, 0.18f)),

@@ -10,8 +10,29 @@ using UnityEngine.Rendering;
 /// Owns planet-scale weather state. The CPU seeds the initial cube-sphere weather
 /// grid, then runtime evolution is dispatched to a GPU ping-pong texture.
 /// </summary>
+[CommandPrefix("weather")]
 public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigurator, ILateInitialize, IProgressReporter
 {
+    [ConsoleCommand("diagnostics", "Write weather diagnostics file (F9 equivalent).")]
+    static void DiagnosticsCmd()
+        => EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.DumpWeatherDiagnostics));
+
+    [ConsoleCommand("wind-speed", "Get or set the global wind speed.", MonoTargetType.Single)]
+    string WindSpeedCmd(float? value = null)
+    {
+        if (value == null) return $"wind speed: {Speed:F2}";
+        Speed = Mathf.Max(0f, value.Value);
+        return $"wind speed: {Speed:F2}";
+    }
+
+    [ConsoleCommand("wind-direction", "Get or set the global wind direction vector.", MonoTargetType.Single)]
+    string WindDirectionCmd(Vector3? value = null)
+    {
+        if (value == null) return $"wind direction: ({WindDir.x:F2}, {WindDir.y:F2}, {WindDir.z:F2})";
+        WindDir = value.Value;
+        return $"wind direction: ({WindDir.x:F2}, {WindDir.y:F2}, {WindDir.z:F2})";
+    }
+
     [Header("References")]
     public CloudSettings Settings;
     public ComputeShader WeatherCompute;
@@ -19,6 +40,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     CloudSettings IWeatherConfigurator.Settings => Settings;
 
     [Header("Wind")]
+    [Tooltip("World-space direction the wind and weather features move toward.")]
     public Vector3 WindDir = new Vector3(1f, 0f, 0.3f);
     [Range(0f, 5f)] public float Speed = 0.5f;
 

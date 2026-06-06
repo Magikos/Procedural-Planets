@@ -14,15 +14,17 @@ public enum ConsoleMessageType
 
 public readonly struct ConsoleMessage
 {
+    public readonly long Id;
     public readonly string Text;
     public readonly ConsoleMessageType Type;
-    public ConsoleMessage(string text, ConsoleMessageType type) { Text = text; Type = type; }
+    public ConsoleMessage(long id, string text, ConsoleMessageType type) { Id = id; Text = text; Type = type; }
 }
 
 public sealed class ConsoleScrollback
 {
     readonly List<ConsoleMessage> _lines = new();
     int _capacity = 1000;
+    long _nextId = 1;
 
     /// <summary>Incremented on every mutation. Renderer caches this to skip rebuilds when unchanged.</summary>
     public int Version { get; private set; }
@@ -42,11 +44,34 @@ public sealed class ConsoleScrollback
 
     public IReadOnlyList<ConsoleMessage> Lines => _lines;
 
-    public void Append(string line, ConsoleMessageType type = ConsoleMessageType.Normal)
+    /// <summary>Append a line and return its stable id (used later by <see cref="Replace"/>).</summary>
+    public long Append(string line, ConsoleMessageType type = ConsoleMessageType.Normal)
     {
-        _lines.Add(new ConsoleMessage(line ?? "", type));
+        long id = _nextId++;
+        _lines.Add(new ConsoleMessage(id, line ?? "", type));
         TrimToCapacity();
         Version++;
+        return id;
+    }
+
+    /// <summary>
+    /// Replace the text/type of a previously appended line, identified by its id.
+    /// Silent no-op if the id is no longer present (e.g. trimmed by the ring buffer).
+    /// </summary>
+    public void Replace(long id, string text, ConsoleMessageType type = ConsoleMessageType.Normal)
+    {
+        // Search from the tail — Replace is almost always called on recently-appended lines
+        // (the async spinner). O(1) for the common case; degrades to O(n) only if the target
+        // has been pushed far back by high-volume output.
+        for (int i = _lines.Count - 1; i >= 0; i--)
+        {
+            if (_lines[i].Id == id)
+            {
+                _lines[i] = new ConsoleMessage(id, text ?? "", type);
+                Version++;
+                return;
+            }
+        }
     }
 
     public void Clear()

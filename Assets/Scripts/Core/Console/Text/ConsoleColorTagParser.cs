@@ -9,21 +9,6 @@ using UnityEngine;
 /// </summary>
 public static class ConsoleColorTagParser
 {
-    static readonly Dictionary<string, Color> NamedColors = new(System.StringComparer.OrdinalIgnoreCase)
-    {
-        { "red",     Color.red },
-        { "green",   Color.green },
-        { "blue",    Color.blue },
-        { "yellow",  Color.yellow },
-        { "cyan",    Color.cyan },
-        { "magenta", Color.magenta },
-        { "white",   Color.white },
-        { "black",   Color.black },
-        { "grey",    Color.grey },
-        { "gray",    Color.grey },
-        { "orange",  new Color(1f, 0.6f, 0.1f, 1f) },
-    };
-
     public static void Parse(string text, Color defaultColor, List<TextSpan> result)
     {
         result.Clear();
@@ -105,6 +90,6 @@ public static class ConsoleColorTagParser
         if (value.StartsWith("#"))
             return ColorUtility.TryParseHtmlString(value, out color);
 
-        return NamedColors.TryGetValue(value, out color);
+        return ConsoleColors.Named.TryGetValue(value, out color);
     }
 }

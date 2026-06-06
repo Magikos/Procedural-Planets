@@ -4,6 +4,7 @@ using UnityEngine;
 /// Uploads planet-scale cloud data and render settings to the cloud shader.
 /// Weather state lives in WeatherManager; this component owns render-only noise textures.
 /// </summary>
+[CommandPrefix("cloud")]
 public class CloudController : MonoBehaviour, ICloudController
 {
     [Header("References")]
@@ -264,5 +265,37 @@ public class CloudController : MonoBehaviour, ICloudController
     {
         ServiceLocator.Unregister<ICloudController>(this);
         ReleaseTextures();
+    }
+
+    // --- Console commands -------------------------------------------------
+
+    [ConsoleCommand("density", "Get or set cloud density multiplier (range 0-0.08).", MonoTargetType.Single)]
+    string DensityCmd(float? value = null)
+    {
+        if (Settings == null) return "no CloudSettings bound";
+        if (value == null) return $"cloud density: {Settings.DensityMultiplier:F4}";
+        Settings.DensityMultiplier = Mathf.Clamp(value.Value, 0f, 0.08f);
+        _staticPropertiesDirty = true;
+        return $"cloud density: {Settings.DensityMultiplier:F4}";
+    }
+
+    [ConsoleCommand("altitude", "Get or set cloud base altitude in meters (range 20-1000).", MonoTargetType.Single)]
+    string AltitudeCmd(float? value = null)
+    {
+        if (Settings == null) return "no CloudSettings bound";
+        if (value == null) return $"cloud base altitude: {Settings.BaseAltitude:F0}m";
+        Settings.BaseAltitude = Mathf.Clamp(value.Value, 20f, 1000f);
+        _staticPropertiesDirty = true;
+        return $"cloud base altitude: {Settings.BaseAltitude:F0}m";
+    }
+
+    [ConsoleCommand("thickness", "Get or set cloud layer thickness in meters (range 50-1000).", MonoTargetType.Single)]
+    string ThicknessCmd(float? value = null)
+    {
+        if (Settings == null) return "no CloudSettings bound";
+        if (value == null) return $"cloud layer thickness: {Settings.LayerThickness:F0}m";
+        Settings.LayerThickness = Mathf.Clamp(value.Value, 50f, 1000f);
+        _staticPropertiesDirty = true;
+        return $"cloud layer thickness: {Settings.LayerThickness:F0}m";
     }
 }

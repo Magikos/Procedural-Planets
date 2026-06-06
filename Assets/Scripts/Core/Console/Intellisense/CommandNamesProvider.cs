@@ -1,19 +1,12 @@
 using System.Collections.Generic;
 
 /// <summary>
-/// Completion provider that returns all registered command aliases.
-/// Used by the <c>help</c> command's first parameter so that
-/// <c>help [space]</c> opens an intellisense popup listing every command.
+/// Completion provider that returns all registered command aliases. Used by the
+/// <c>help</c> command's first parameter so <c>help [space]</c> lists every command
+/// and <c>help &lt;partial&gt;</c> filters by substring (prefix matches ranked first).
 /// </summary>
 public sealed class CommandNamesProvider : IConsoleCompletionProvider
 {
     public IEnumerable<string> GetCompletions(string partialValue)
-    {
-        foreach (string alias in ConsoleRegistry.Commands.Keys)
-        {
-            if (string.IsNullOrEmpty(partialValue) ||
-                alias.StartsWith(partialValue, System.StringComparison.OrdinalIgnoreCase))
-                yield return alias;
-        }
-    }
+        => CompletionRanker.Rank(ConsoleRegistry.Commands.Keys, partialValue);
 }
