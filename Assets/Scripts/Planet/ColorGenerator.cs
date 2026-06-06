@@ -3,8 +3,7 @@ using UnityEngine;
 public class ColorGenerator : IBiomeProvider, System.IDisposable
 {
     BiomeSettings _biomeSettings;
-    ITemperatureProvider _temperatureProvider;
-    IMoistureProvider _moistureProvider;
+    IClimateProvider _climateProvider;
     IBiomeRegistry _biomeRegistry;
     Color[] _biomeColors;
 
@@ -29,14 +28,17 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
     public void Configure(BiomeSettings settings)
     {
         _biomeSettings = settings;
+        _biomeRegistry = null;
+        _climateProvider = null;
+        _biomeColors = null;
 
         if (_biomeSettings != null && _biomeSettings.Registry != null)
         {
             _biomeRegistry = _biomeSettings.Registry;
-            _temperatureProvider = new TemperatureProvider(
+            _climateProvider = new ClimateProvider(
                 _biomeSettings.TemperatureNoise,
-                _biomeSettings.TemperatureNoiseStrength);
-            _moistureProvider = new MoistureProvider(_biomeSettings.MoistureNoise);
+                _biomeSettings.TemperatureNoiseStrength,
+                _biomeSettings.MoistureNoise);
             _surfaceArrays.Build(_biomeSettings.Registry);
         }
         else
@@ -54,19 +56,20 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
 
     public void Initialize(int seed)
     {
-        _temperatureProvider?.Initialize(seed);
-        _moistureProvider?.Initialize(seed + 100);
+        _climateProvider?.Initialize(seed);
     }
 
     public BiomeResult EvaluateBiome(Vector3 pointOnUnitSphere, float elevation)
     {
-        if (_biomeRegistry == null || _temperatureProvider == null || _moistureProvider == null)
+        if (_biomeRegistry == null || _climateProvider == null)
             return new BiomeResult(BiomeType.Grassland, 0.5f, 0.5f);
 
-        float temperature = _temperatureProvider.Evaluate(pointOnUnitSphere);
-        float moisture = _moistureProvider.Evaluate(pointOnUnitSphere);
+        ClimateSample climate = _climateProvider.Evaluate(pointOnUnitSphere, elevation);
 
-        return _biomeRegistry.Resolve(temperature, moisture, elevation);
+        return _biomeRegistry.Resolve(
+            climate.Temperature01,
+            climate.Moisture01,
+            climate.Elevation);
     }
 
     public Color GetBiomeColor(Vector3 pointOnUnitSphere, float elevation)
@@ -92,13 +95,17 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
         moisture = 0f;
         primaryBiomeIndex = 0;
 
-        if (_biomeRegistry == null || _temperatureProvider == null || _moistureProvider == null)
+        if (_biomeRegistry == null || _climateProvider == null)
             return Color.magenta;
 
-        temperature = _temperatureProvider.Evaluate(pointOnUnitSphere);
-        moisture = _moistureProvider.Evaluate(pointOnUnitSphere);
+        ClimateSample climate = _climateProvider.Evaluate(pointOnUnitSphere, elevation);
+        temperature = climate.Temperature01;
+        moisture = climate.Moisture01;
 
-        var result = _biomeSettings.Registry.Resolve(temperature, moisture, elevation);
+        var result = _biomeSettings.Registry.Resolve(
+            climate.Temperature01,
+            climate.Moisture01,
+            climate.Elevation);
         primaryBiomeIndex = Mathf.Clamp(_biomeSettings.Registry.GetSliceIdForBiomeType(result.PrimaryBiome), 0, _biomeColors.Length - 1);
         int secondaryBiomeIndex = Mathf.Clamp(_biomeSettings.Registry.GetSliceIdForBiomeType(result.SecondaryBiome), 0, _biomeColors.Length - 1);
 

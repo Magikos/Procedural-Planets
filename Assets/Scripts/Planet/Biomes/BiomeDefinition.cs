@@ -8,6 +8,13 @@ public class BiomeDefinition : ScriptableObject
     public Color TintColor = Color.white;
     [Range(0, 1)] public float TintPercent;
 
+    [Header("Placement noise")]
+    [Tooltip("Per-biome 3D offset in noise-coordinate units, added after world-position scaling "
+        + "when sampling placement noise (vegetation, props, detail). "
+        + "Decorrelates patterns across biome boundaries so the same noise field produces different "
+        + "placement textures per biome. Values in the ~1000-10000 range work well; differences matter more than absolute scale.")]
+    public Vector3 BiomeOffset = Vector3.zero;
+
     [Header("Phase B: Surface textures (required for texture-mode terrain rendering)")]
     [Tooltip("Albedo / base color. All biomes in a registry must share dimensions + format.")]
     public Texture2D SurfaceAlbedo;

@@ -45,6 +45,7 @@ MonoBehaviour:
     m_NumAlphaKeys: 2
   TintColor: {r: 1, g: 1, b: 1, a: 1}
   TintPercent: 0
+  BiomeOffset: {x: 8147, y: 3528, z: 7619}
   SurfaceAlbedo: {fileID: 2800000, guid: ef7d5130ddd34d2488e713d9e6f23bd8, type: 3}
   SurfaceNormal: {fileID: 2800000, guid: f32146f0e688ae54bb14a4c0411b2ca9, type: 3}
   SurfaceARM: {fileID: 2800000, guid: 58c7b1429b634b14e83e3d3b7b65b19e, type: 3}

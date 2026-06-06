@@ -1,7 +1,9 @@
 # Biome textures + surface state — Phase B
 
+> **Updated 2026-06-06:** This doc is a **historical draft**. The actual shipped Phase B implementation went further than this draft proposed — it shipped at **K=4** (not K=2), with three separate per-chunk textures (`BiomeBlendedColorTexture`, `BiomeIdsTexture`, `BiomeWeightsTexture`) instead of the single primary+secondary+blend RGBA8 map drafted below. Per-biome `Texture2DArray` triplanar sampling for albedo/normal/ARM is also live. See [biome-climate-overhaul §0.1](2026-06-05-biome-climate-overhaul.md#01-top-k--4-already-shipped--confirmed-k4-not-k2-as-the-phase-b-draft-suggested) for the as-shipped reality.
+
 **Date:** 2026-05-31
-**Status:** Draft for review
+**Status:** Historical draft. Code shipped past this; biome-climate-overhaul doc captures the as-built state.
 **Source-of-truth this implements:** [docs/research/2026-05-30-grass-and-chunks.md](../research/2026-05-30-grass-and-chunks.md) — Phase B row of "Phase plan (recap, decisions in bold)" + "Locked-in additions" notes.
 **Predecessor:** [docs/design/2026-05-30-chunk-skeleton.md](2026-05-30-chunk-skeleton.md) — Phase A chunk system, now live.
 

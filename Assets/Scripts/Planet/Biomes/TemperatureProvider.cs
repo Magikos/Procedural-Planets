@@ -41,3 +41,34 @@ public class TemperatureProvider : ITemperatureProvider
         return Mathf.Clamp01(baseTemp + noise);
     }
 }
+
+public sealed class ClimateProvider : IClimateProvider
+{
+    readonly ITemperatureProvider _temperatureProvider;
+    readonly IMoistureProvider _moistureProvider;
+
+    public ClimateProvider(
+        NoiseSettings temperatureNoise,
+        float temperatureNoiseStrength,
+        NoiseSettings moistureNoise)
+    {
+        _temperatureProvider = new TemperatureProvider(
+            temperatureNoise,
+            temperatureNoiseStrength);
+        _moistureProvider = new MoistureProvider(moistureNoise);
+    }
+
+    public void Initialize(int seed)
+    {
+        _temperatureProvider.Initialize(seed);
+        _moistureProvider.Initialize(seed + 100);
+    }
+
+    public ClimateSample Evaluate(Vector3 pointOnUnitSphere, float elevation)
+    {
+        return new ClimateSample(
+            _temperatureProvider.Evaluate(pointOnUnitSphere),
+            _moistureProvider.Evaluate(pointOnUnitSphere),
+            elevation);
+    }
+}
