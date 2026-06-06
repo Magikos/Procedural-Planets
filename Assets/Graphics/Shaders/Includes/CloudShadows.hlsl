@@ -88,7 +88,8 @@ float SampleCloudShadowDensity(float3 worldPos)
 
     float3 windDir = dot(_WindDirection, _WindDirection) > 0.0001 ? normalize(_WindDirection) : float3(1.0, 0.0, 0.0);
     float3 windOffset = windDir * (_WindSpeed * _CloudAnimSpeed * _GameTime);
-    float3 shapePos = worldPos * _CloudNoiseScale + windOffset * 0.003;
+    // Match Cloud.shader: x - vt moves the procedural field toward +windDir.
+    float3 shapePos = worldPos * _CloudNoiseScale - windOffset * 0.003;
     float shapeFBM = WeightedCloudShadowNoise(SAMPLE_TEXTURE3D_LOD(_CloudShapeNoise, sampler_CloudShapeNoise, shapePos, 0), _CloudShapeWeights);
 
     float cloudShape = shapeFBM * condensation;

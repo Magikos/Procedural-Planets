@@ -40,6 +40,7 @@ public readonly struct WeatherSample
 /// </summary>
 public interface IWeatherProvider
 {
+    // Normalized world-space direction the wind moves toward.
     Vector3 WindDirection { get; }
     float WindSpeed { get; }
 

@@ -127,8 +127,9 @@ Shader "Planet/Grass"
 
                 // Directional traveling wave is the primary signal — sin phases along the
                 // wind direction so you see gust fronts visibly travel across the field.
-                // Wave velocity ≈ waveFreq / 0.18 m/s along windTangent.
-                float travelWave = sin(_Time.y * waveFreq + dot(rootWs, windTangent) * 0.18);
+                // Wave velocity ≈ waveFreq / 0.18 m/s along +windTangent (matches cloud
+                // advection direction). sin(ωt - kx) propagates in +x.
+                float travelWave = sin(_Time.y * waveFreq - dot(rootWs, windTangent) * 0.18);
                 // Patch-level gust envelope: amplitude modulation only, not phase. Some
                 // patches catch a strong gust while neighbors stay calm, but the wave
                 // direction remains coherent across patches.

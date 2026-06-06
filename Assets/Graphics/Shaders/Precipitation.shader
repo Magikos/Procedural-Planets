@@ -202,7 +202,8 @@ float SamplePrecipitationDensity(float3 worldPos)
     float faceOffset = (float)face * 613.17;
     float2 local = (faceUv - 0.5) * bottomRadius * 2.0 + faceOffset;
     local += windTangent * ((1.0 - height01) * _PrecipitationVisualParams.z * layerThickness);
-    local += windTangent * (_GameTime * _WindSpeed * _PrecipitationVisualParams.w * 8.0);
+    // Noise coordinates move opposite feature motion, so subtract to advect toward +wind.
+    local -= windTangent * (_GameTime * _WindSpeed * _PrecipitationVisualParams.w * 8.0);
 
     float curtainScale = max(_PrecipitationVisualParams.x, 1.0);
     float large = ValueNoise(local / curtainScale);

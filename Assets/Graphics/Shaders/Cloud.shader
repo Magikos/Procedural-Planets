@@ -142,12 +142,13 @@ CloudSample SampleCloud(float3 worldPos)
 
     float3 windDir = dot(_WindDirection, _WindDirection) > 0.0001 ? normalize(_WindDirection) : float3(1.0, 0.0, 0.0);
     float3 windOffset = windDir * (_WindSpeed * _CloudAnimSpeed * _GameTime);
-    float3 shapePos = worldPos * _CloudNoiseScale + windOffset * 0.003;
+    // Sampling at x - vt moves the procedural field toward +windDir.
+    float3 shapePos = worldPos * _CloudNoiseScale - windOffset * 0.003;
     float shapeFBM = WeightedNoise(SAMPLE_TEXTURE3D_LOD(_CloudShapeNoise, sampler_CloudShapeNoise, shapePos, 0), _CloudShapeWeights);
 #ifdef CLOUD_QUALITY_LOW
     float detailFBM = 0.5; // skip detail noise sample on low-quality path
 #else
-    float3 detailPos = worldPos * _CloudDetailNoiseScale + windOffset * 0.008;
+    float3 detailPos = worldPos * _CloudDetailNoiseScale - windOffset * 0.008;
     float detailFBM = dot(SAMPLE_TEXTURE3D_LOD(_CloudDetailNoise, sampler_CloudDetailNoise, detailPos, 0).rgb,
         float3(0.5, 0.35, 0.15));
 #endif
