@@ -975,8 +975,6 @@ Shader "Planet/VertexColor"
                     // blend. Normalize and gently mix with the geometric normal so detail bumps
                     // perturb lighting without ever flipping past the surface tangent plane.
                     surfaceNormalWS = normalize(surfaceNormalWS);
-                    surfaceAlbedo = ApplyFarGrassOverlay(input.chunkUv,
-                        input.positionWS, geometricNormalWS, surfaceAlbedo);
                 #else
                     surfaceAlbedo = input.color.rgb;
                     surfaceNormalWS = geometricNormalWS;
@@ -985,6 +983,14 @@ Shader "Planet/VertexColor"
 
                 ApplyTerrainOverrides(terrainOverrides, input.positionWS, geometricNormalWS,
                     surfaceAlbedo, surfaceNormalWS, surfaceArm);
+                // Grass geometry is gated by biome density, slope, and water clearance, but
+                // it is not repainted by the terrain coast/slope/snow material overrides.
+                // Apply the matching distant blanket after those overrides so the terrain
+                // does not turn pale underneath otherwise-valid grass as distance increases.
+                #ifdef _BIOME_COLOR_MODE_TEXTURE
+                    surfaceAlbedo = ApplyFarGrassOverlay(input.chunkUv,
+                        input.positionWS, geometricNormalWS, surfaceAlbedo);
+                #endif
 
                 if (_OceanDebugMode == DEBUG_TERRAIN_SELECTED_ALBEDO)
                     return half4(surfaceAlbedo, 1.0);

@@ -35,26 +35,42 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
 
     public void AppendMetadata(DebugCaptureContext context, StringBuilder sb)
     {
+        AppendRuntimeStateMetadata(sb);
         sb.AppendLine("--- Grass ---");
         if (!ServiceLocator.TryGet(out IGrassDebugStatsProvider provider))
         {
             sb.AppendLine("Controller: missing");
-            return;
         }
-
-        GrassDebugStats stats = provider.GetGrassDebugStats();
-        sb.AppendLine($"Controller: active={stats.ControllerActive}, shader={stats.ShaderAvailable}, smoke={stats.SmokeRenderer}");
-        sb.AppendLine($"Chunks: visible={stats.VisibleChunks}, tracked={stats.TrackedChunks}, maxDepth={stats.MaxChunkDepth}, minBladeDepth={stats.MinChunkDepthForBlades}, coarseOffset={stats.MaxCoarseLodOffsetForBlades}");
-        sb.AppendLine($"Quality: maxBladesPerLane={stats.MaxBladesPerLane}, visualBladesPerInstance={stats.VisualBladesPerInstance}, vertexCount={stats.BladeVertexCount}, densityMultiplier={stats.DensityMultiplier:F2}, maxDistance={stats.MaxRenderDistance:F1}, fadeStart={stats.DistanceFadeStart:F1}, distanceJitter={stats.CullDistanceJitter01:F2}");
-        sb.AppendLine($"Draw: calls={stats.DrawCalls}, chunksWithInstances={stats.ChunksWithInstances}, instances={stats.BladeInstances}, visualBlades={(long)stats.BladeInstances * Mathf.Max(stats.VisualBladesPerInstance, 1)}, buffer={stats.BufferMegabytes:F3} MB");
-        sb.AppendLine($"Dispatch: placement={stats.PlacementDispatches}, chunksWithStats={stats.ChunksWithStats}, chunkInstances={stats.ChunkInstanceMin}/{stats.ChunkInstanceAverage:F1}/{stats.ChunkInstanceMax} min/avg/max");
-        sb.AppendLine($"CullLanes: candidates={stats.CandidateLanes}, visible={stats.VisibleLanes}, density={stats.DensityRejectedLanes}, shape={stats.ShapeRejectedLanes}, state={stats.StateRejectedLanes}, water={stats.WaterRejectedLanes}, slope={stats.SlopeRejectedLanes}, distance={stats.DistanceRejectedLanes}, distanceFade={stats.DistanceFadeRejectedLanes}, frustum={stats.FrustumRejectedLanes}");
-        sb.AppendLine($"CullBlades: candidates={stats.CandidateBlades}, emitted={stats.EmittedBlades}, densityRoll={stats.DensityRejectedBlades}, slopeRoll={stats.SlopeRejectedBlades}, overflow={stats.OverflowRejectedBlades}");
-        sb.AppendLine($"Suppression: oldChunkSuppressed={stats.OldChunkSuppressedCount}/{stats.DrawCalls + stats.OldChunkSuppressedCount}");
-        sb.AppendLine($"SurfaceAtlas: resolution={stats.SurfaceAtlasResolution}");
+        else
+        {
+            GrassDebugStats stats = provider.GetGrassDebugStats();
+            sb.AppendLine($"Controller: active={stats.ControllerActive}, shader={stats.ShaderAvailable}, smoke={stats.SmokeRenderer}");
+            sb.AppendLine($"Chunks: visible={stats.VisibleChunks}, tracked={stats.TrackedChunks}, maxDepth={stats.MaxChunkDepth}, minBladeDepth={stats.MinChunkDepthForBlades}, coarseOffset={stats.MaxCoarseLodOffsetForBlades}");
+            sb.AppendLine($"Quality: maxBladesPerLane={stats.MaxBladesPerLane}, visualBladesPerInstance={stats.VisualBladesPerInstance}, vertexCount={stats.BladeVertexCount}, densityMultiplier={stats.DensityMultiplier:F2}, maxDistance={stats.MaxRenderDistance:F1}, fadeStart={stats.DistanceFadeStart:F1}, distanceJitter={stats.CullDistanceJitter01:F2}");
+            sb.AppendLine($"Draw: calls={stats.DrawCalls}, chunksWithInstances={stats.ChunksWithInstances}, instances={stats.BladeInstances}, visualBlades={(long)stats.BladeInstances * Mathf.Max(stats.VisualBladesPerInstance, 1)}, buffer={stats.BufferMegabytes:F3} MB");
+            sb.AppendLine($"Dispatch: placement={stats.PlacementDispatches}, chunksWithStats={stats.ChunksWithStats}, chunkInstances={stats.ChunkInstanceMin}/{stats.ChunkInstanceAverage:F1}/{stats.ChunkInstanceMax} min/avg/max");
+            sb.AppendLine($"CullLanes: candidates={stats.CandidateLanes}, visible={stats.VisibleLanes}, density={stats.DensityRejectedLanes}, shape={stats.ShapeRejectedLanes}, state={stats.StateRejectedLanes}, water={stats.WaterRejectedLanes}, slope={stats.SlopeRejectedLanes}, distance={stats.DistanceRejectedLanes}, distanceFade={stats.DistanceFadeRejectedLanes}, frustum={stats.FrustumRejectedLanes}");
+            sb.AppendLine($"CullBlades: candidates={stats.CandidateBlades}, emitted={stats.EmittedBlades}, densityRoll={stats.DensityRejectedBlades}, slopeRoll={stats.SlopeRejectedBlades}, overflow={stats.OverflowRejectedBlades}");
+            sb.AppendLine($"Suppression: oldChunkSuppressed={stats.OldChunkSuppressedCount}/{stats.DrawCalls + stats.OldChunkSuppressedCount}");
+            sb.AppendLine($"SurfaceAtlas: resolution={stats.SurfaceAtlasResolution}");
+        }
         AppendNearFieldMetadata(sb);
         AppendAtmosphereMetadata(sb);
         AppendScaleReferenceMetadata(sb);
+    }
+
+    static void AppendRuntimeStateMetadata(StringBuilder sb)
+    {
+        sb.AppendLine("--- GrassRuntime ---");
+        if (!ServiceLocator.TryGet(out IGrassRuntimeControl control))
+        {
+            sb.AppendLine("Control: missing");
+            return;
+        }
+
+        GrassRuntimeState state = control.GetGrassRuntimeState();
+        sb.AppendLine($"Master: enabled={state.MasterEnabled}");
+        sb.AppendLine($"Layers: near={state.NearFieldRequested}/{state.NearFieldActive} requested/active, chunk={state.ChunkPathRequested}/{state.ChunkPathActive}, blanket={state.BlanketRequested}/{state.BlanketActive}");
     }
 
     static void AppendNearFieldMetadata(StringBuilder sb)
@@ -79,16 +95,27 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
     {
         if (!state.ShowDetailedDebug)
             return;
-        if (!ServiceLocator.TryGet(out IGrassDebugStatsProvider provider))
-            return;
 
-        GrassDebugStats stats = provider.GetGrassDebugStats();
         GUILayout.Space(6);
         GUILayout.Label("Grass Debug");
-        GUILayout.Label($"Chunks: visible={stats.VisibleChunks}, tracked={stats.TrackedChunks}");
-        GUILayout.Label($"Draw: calls={stats.DrawCalls}, roots={stats.BladeInstances}, visualBlades={(long)stats.BladeInstances * Mathf.Max(stats.VisualBladesPerInstance, 1)}, activeChunks={stats.ChunksWithInstances}");
-        GUILayout.Label($"Lanes: visible={stats.VisibleLanes}/{stats.CandidateLanes}");
-        GUILayout.Label($"Atlas: {stats.SurfaceAtlasResolution}");
+        if (ServiceLocator.TryGet(out IGrassRuntimeControl runtimeControl))
+        {
+            GrassRuntimeState runtime = runtimeControl.GetGrassRuntimeState();
+            GUILayout.Label($"Layers: master={runtime.MasterEnabled}, near={runtime.NearFieldRequested}/{runtime.NearFieldActive}, chunk={runtime.ChunkPathRequested}/{runtime.ChunkPathActive}, blanket={runtime.BlanketRequested}/{runtime.BlanketActive}");
+        }
+
+        if (ServiceLocator.TryGet(out IGrassDebugStatsProvider provider))
+        {
+            GrassDebugStats stats = provider.GetGrassDebugStats();
+            GUILayout.Label($"Chunk: visible={stats.VisibleChunks}, tracked={stats.TrackedChunks}, calls={stats.DrawCalls}, buffer={stats.BufferMegabytes:F1} MB");
+            GUILayout.Label($"Chunk roots: {stats.BladeInstances}, lanes={stats.VisibleLanes}/{stats.CandidateLanes}");
+        }
+
+        if (ServiceLocator.TryGet(out IGrassNearFieldStatsProvider nearProvider))
+        {
+            GrassNearFieldStats near = nearProvider.GetGrassNearFieldStats();
+            GUILayout.Label($"Near: emitted={near.EmittedInstances}, grid={near.GridWidth}x{near.GridHeight}, buffer={near.BufferMegabytes:F1} MB");
+        }
     }
 
     static void AppendAtmosphereMetadata(StringBuilder sb)
@@ -116,5 +143,52 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
         sb.AppendLine($"Target: anchor={stats.LastAnchor:F1}, up={stats.LastWorldUp:F3}, forward={stats.LastTangentForward:F3}");
         sb.AppendLine($"Ray: distance={stats.LastRayDistance:F2}m, cameraToAnchor={stats.LastCameraToAnchorDistance:F2}m, cameraRadius={stats.LastCameraDistance:F2}m");
         sb.AppendLine($"Surface: radius={stats.LastSurfaceRadius:F2}m, sea={stats.LastSeaLevelRadius:F2}m, altitude={stats.LastAltitudeAboveSurface:F2}m");
+    }
+}
+
+[CommandPrefix("grass")]
+public static class GrassCommands
+{
+    [ConsoleCommand("status", "Show master and per-layer grass runtime state.")]
+    public static string Status()
+    {
+        return TryGetControl(out IGrassRuntimeControl control)
+            ? FormatState(control.GetGrassRuntimeState())
+            : "grass runtime control is unavailable";
+    }
+
+    [ConsoleCommand("enabled", "Get or set the grass master switch.")]
+    public static string Enabled(bool? value = null)
+    {
+        if (!TryGetControl(out IGrassRuntimeControl control))
+            return "grass runtime control is unavailable";
+
+        if (value.HasValue)
+            control.SetGrassEnabled(value.Value);
+        return FormatState(control.GetGrassRuntimeState());
+    }
+
+    [ConsoleCommand("layer", "Get or set a grass layer: Near, Chunk, or Blanket.")]
+    public static string Layer(GrassRenderLayer layer, bool? enabled = null)
+    {
+        if (!TryGetControl(out IGrassRuntimeControl control))
+            return "grass runtime control is unavailable";
+
+        if (enabled.HasValue)
+            control.SetGrassLayerEnabled(layer, enabled.Value);
+        return FormatState(control.GetGrassRuntimeState());
+    }
+
+    static bool TryGetControl(out IGrassRuntimeControl control)
+    {
+        return ServiceLocator.TryGet(out control);
+    }
+
+    static string FormatState(GrassRuntimeState state)
+    {
+        return $"master={state.MasterEnabled}, "
+            + $"near={state.NearFieldRequested} (active={state.NearFieldActive}), "
+            + $"chunk={state.ChunkPathRequested} (active={state.ChunkPathActive}), "
+            + $"blanket={state.BlanketRequested} (active={state.BlanketActive})";
     }
 }

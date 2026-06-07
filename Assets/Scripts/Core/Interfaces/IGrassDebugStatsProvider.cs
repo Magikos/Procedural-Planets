@@ -47,3 +47,28 @@ public interface IGrassDebugStatsProvider
 {
     GrassDebugStats GetGrassDebugStats();
 }
+
+public enum GrassRenderLayer
+{
+    Near,
+    Chunk,
+    Blanket,
+}
+
+public struct GrassRuntimeState
+{
+    public bool MasterEnabled;
+    public bool NearFieldRequested;
+    public bool NearFieldActive;
+    public bool ChunkPathRequested;
+    public bool ChunkPathActive;
+    public bool BlanketRequested;
+    public bool BlanketActive;
+}
+
+public interface IGrassRuntimeControl
+{
+    GrassRuntimeState GetGrassRuntimeState();
+    void SetGrassEnabled(bool enabled);
+    void SetGrassLayerEnabled(GrassRenderLayer layer, bool enabled);
+}

@@ -11,6 +11,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     const int ThreadGroupSize = 8;
     const float LaneJitterMagnitude = 1.1f; // > 1 = blades from adjacent lanes overlap visually
     const float GrassBoundsPaddingMeters = 8f;
+    const float AllocationReleasePaddingMeters = 50f;
     const string PlacementComputeResource = "BiomeGrassPlace";
     const string CameraFrustumPlanesName = "_CameraFrustumPlanes";
     const int GrassStatsCount = 15;
@@ -74,6 +75,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     readonly bool _placementAvailable;
     readonly Dictionary<PlanetChunk, GrassChunkRuntime> _chunks = new();
     readonly HashSet<PlanetChunk> _visibleChunks = new();
+    readonly List<PlanetChunk> _chunksToRelease = new();
     readonly int _minChunkDepthForBlades;
     readonly int _maxChunkDepth;
     readonly int _maxCoarseLodOffsetForBlades;
@@ -202,6 +204,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     {
         if (_disposed || _material == null || camera == null) return;
         _lastTickCamera = camera;
+        ReconcileRuntimeAllocations(camera.transform.position);
 
         // Re-dispatch placement on any chunk whose distance-LOD result may have changed
         // because the camera moved enough to materially shift which chunks are in range.
@@ -343,12 +346,6 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     {
         if (_disposed || chunk == null) return;
         _visibleChunks.Add(chunk);
-        if (_material == null || !_placementAvailable || _chunks.ContainsKey(chunk)) return;
-        if (chunk.DetailLevel < _minChunkDepthForBlades) return;
-
-        GrassChunkRuntime runtime = CreateRuntime(chunk);
-        if (runtime == null) return;
-        _chunks.Add(chunk, runtime);
     }
 
     void HandleChunkHidden(PlanetChunk chunk)
@@ -358,6 +355,51 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         if (!_chunks.TryGetValue(chunk, out GrassChunkRuntime runtime)) return;
         runtime.Dispose();
         _chunks.Remove(chunk);
+    }
+
+    void ReconcileRuntimeAllocations(Vector3 cameraPosition)
+    {
+        if (_material == null || !_placementAvailable)
+            return;
+
+        float allocationDistanceSq = _maxRenderDistance * _maxRenderDistance;
+        float releaseDistance = _maxRenderDistance + AllocationReleasePaddingMeters;
+        float releaseDistanceSq = releaseDistance * releaseDistance;
+        foreach (PlanetChunk chunk in _visibleChunks)
+        {
+            if (chunk == null || chunk.DetailLevel < _minChunkDepthForBlades)
+                continue;
+
+            Bounds bounds = EstimateGrassWorldBounds(chunk);
+            float distanceSq = bounds.SqrDistance(cameraPosition);
+            if (_chunks.ContainsKey(chunk))
+            {
+                if (distanceSq > releaseDistanceSq)
+                    _chunksToRelease.Add(chunk);
+            }
+            else if (distanceSq <= allocationDistanceSq)
+            {
+                GrassChunkRuntime runtime = CreateRuntime(chunk);
+                if (runtime != null)
+                    _chunks.Add(chunk, runtime);
+            }
+        }
+
+        foreach (var pair in _chunks)
+        {
+            if (!_visibleChunks.Contains(pair.Key))
+                _chunksToRelease.Add(pair.Key);
+        }
+
+        for (int i = 0; i < _chunksToRelease.Count; i++)
+        {
+            PlanetChunk chunk = _chunksToRelease[i];
+            if (!_chunks.TryGetValue(chunk, out GrassChunkRuntime runtime))
+                continue;
+            runtime.Dispose();
+            _chunks.Remove(chunk);
+        }
+        _chunksToRelease.Clear();
     }
 
     GrassChunkRuntime CreateRuntime(PlanetChunk chunk)

@@ -4,7 +4,8 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 [CommandPrefix("planet")]
-public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurfaceRaycaster, ILateInitialize, IProgressReporter
+public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurfaceRaycaster,
+    IGrassRuntimeControl, ILateInitialize, IProgressReporter
 {
     public enum FaceRenderMask { All, Top, Bottom, Left, Right, Front, Back }
 
@@ -34,6 +35,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     PerFaceSurfaceProvider _perFaceProvider;
     GrassPlacementController _grassController;
     GrassNearFieldController _grassNearFieldController;
+    bool _grassEnabled = true;
+    bool _nearFieldGrassEnabled = true;
+    bool _chunkGrassEnabled = true;
+    bool _grassBlanketEnabled = true;
     GameObject _waterObject;
     Material _waterMaterial;
 
@@ -137,6 +142,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     const float GrassFarOverlayFiberStrength = 0.65f;
     const float GrassFarOverlayColorBlend = 0.98f;
     const float GrassMidOverlayTerrainStrength = 0.92f;
+    const float NearFieldGrassActivationAltitude = 350f;
+    const float NearFieldGrassDeactivationAltitude = 500f;
 
     CancellationTokenSource _cts;
     bool _isGenerating;
@@ -166,6 +173,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         ServiceLocator.Register<IPlanet>(this);
         ServiceLocator.Register<IPlanetSurfaceSampler>(this);
         ServiceLocator.Register<IPlanetSurfaceRaycaster>(this);
+        ServiceLocator.Register<IGrassRuntimeControl>(this);
     }
 
     void OnDestroy()
@@ -173,6 +181,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         ServiceLocator.Unregister<IPlanet>(this);
         ServiceLocator.Unregister<IPlanetSurfaceSampler>(this);
         ServiceLocator.Unregister<IPlanetSurfaceRaycaster>(this);
+        ServiceLocator.Unregister<IGrassRuntimeControl>(this);
         _cts?.Cancel();
         _cts?.Dispose();
         _grassNearFieldController?.Dispose();
@@ -200,6 +209,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             _observerCamera = Camera.main;
         if (_observerCamera == null) return;
         _surfaceProvider.Tick(_observerCamera.transform.position, _observerCamera);
+        UpdateGrassControllerActivation(_observerCamera);
         _grassController?.Tick(_observerCamera);
         _grassNearFieldController?.Tick(_observerCamera);
     }
@@ -270,7 +280,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             if (_vcShader != null) mat.shader = _vcShader;
         }
         mat.SetFloat("_Smoothness", 0f);
-        SetMaterialFloatIfPresent(mat, _grassFarOverlayStrengthId, GrassFarOverlayStrength);
+        ApplyGrassBlanketState(mat);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayStartId, GrassFarOverlayStart);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayEndId, GrassFarOverlayEnd);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayNoiseScaleId, GrassFarOverlayNoiseScale);
@@ -445,12 +455,146 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         float waterRadius = _planetSettings.HasOceans
             ? _planetSettings.PlanetRadius * (1f + _planetSettings.OceanLevel)
             : -1f;
+        if (_grassEnabled && _chunkGrassEnabled)
+            CreateChunkGrassController(chunkedProvider, waterRadius);
+
+        if (_grassEnabled && _nearFieldGrassEnabled
+            && _observerCamera != null
+            && ShouldActivateNearFieldGrass(_observerCamera.transform.position, false))
+        {
+            CreateNearFieldGrassController(chunkedProvider, waterRadius);
+        }
+
+        ApplyGrassBlanketState(_planetSettings.PlanetMaterial);
+    }
+
+    void UpdateGrassControllerActivation(Camera camera)
+    {
+        if (_surfaceProvider is not ChunkedSurfaceProvider chunkedProvider || camera == null)
+            return;
+
+        float waterRadius = _planetSettings.HasOceans
+            ? _planetSettings.PlanetRadius * (1f + _planetSettings.OceanLevel)
+            : -1f;
+
+        if (_grassEnabled && _chunkGrassEnabled)
+        {
+            if (_grassController == null)
+                CreateChunkGrassController(chunkedProvider, waterRadius);
+        }
+        else if (_grassController != null)
+        {
+            _grassController.Dispose();
+            _grassController = null;
+        }
+
+        bool nearFieldShouldBeActive = _grassEnabled
+            && _nearFieldGrassEnabled
+            && ShouldActivateNearFieldGrass(camera.transform.position, _grassNearFieldController != null);
+        if (nearFieldShouldBeActive)
+        {
+            if (_grassNearFieldController == null)
+                CreateNearFieldGrassController(chunkedProvider, waterRadius);
+        }
+        else if (_grassNearFieldController != null)
+        {
+            _grassNearFieldController.Dispose();
+            _grassNearFieldController = null;
+        }
+    }
+
+    bool ShouldActivateNearFieldGrass(Vector3 cameraPosition, bool currentlyActive)
+    {
+        Vector3 fromCenter = cameraPosition - transform.position;
+        if (fromCenter.sqrMagnitude < 0.0001f)
+            return true;
+
+        if (!TryGetSurfaceRadius(fromCenter.normalized, out float surfaceRadius))
+            return currentlyActive;
+
+        float altitude = Mathf.Max(0f, fromCenter.magnitude - surfaceRadius);
+        float threshold = currentlyActive
+            ? NearFieldGrassDeactivationAltitude
+            : NearFieldGrassActivationAltitude;
+        return altitude <= threshold;
+    }
+
+    void CreateChunkGrassController(ChunkedSurfaceProvider chunkedProvider, float waterRadius)
+    {
         _grassController = new GrassPlacementController(transform, chunkedProvider,
             _colorGenerator.SurfaceArrays.GrassParamsBuffer, _colorGenerator.SurfaceArrays.SliceCount,
             waterRadius, Seed, Logger);
+    }
+
+    void CreateNearFieldGrassController(ChunkedSurfaceProvider chunkedProvider, float waterRadius)
+    {
         _grassNearFieldController = new GrassNearFieldController(transform, chunkedProvider,
             _colorGenerator.SurfaceArrays.GrassParamsBuffer, _colorGenerator.SurfaceArrays.SliceCount,
             waterRadius, _planetSettings.PlanetRadius, Seed, Logger);
+    }
+
+    void ApplyGrassBlanketState(Material mat)
+    {
+        if (mat == null)
+            return;
+        float strength = _grassEnabled && _grassBlanketEnabled ? GrassFarOverlayStrength : 0f;
+        SetMaterialFloatIfPresent(mat, _grassFarOverlayStrengthId, strength);
+    }
+
+    public GrassRuntimeState GetGrassRuntimeState()
+    {
+        return new GrassRuntimeState
+        {
+            MasterEnabled = _grassEnabled,
+            NearFieldRequested = _nearFieldGrassEnabled,
+            NearFieldActive = _grassNearFieldController != null,
+            ChunkPathRequested = _chunkGrassEnabled,
+            ChunkPathActive = _grassController != null,
+            BlanketRequested = _grassBlanketEnabled,
+            BlanketActive = _grassEnabled && _grassBlanketEnabled,
+        };
+    }
+
+    public void SetGrassEnabled(bool enabled)
+    {
+        _grassEnabled = enabled;
+        ApplyGrassBlanketState(_planetSettings != null ? _planetSettings.PlanetMaterial : null);
+        if (!enabled)
+        {
+            _grassNearFieldController?.Dispose();
+            _grassNearFieldController = null;
+            _grassController?.Dispose();
+            _grassController = null;
+        }
+    }
+
+    public void SetGrassLayerEnabled(GrassRenderLayer layer, bool enabled)
+    {
+        switch (layer)
+        {
+            case GrassRenderLayer.Near:
+                _nearFieldGrassEnabled = enabled;
+                if (!enabled)
+                {
+                    _grassNearFieldController?.Dispose();
+                    _grassNearFieldController = null;
+                }
+                break;
+            case GrassRenderLayer.Chunk:
+                _chunkGrassEnabled = enabled;
+                if (!enabled)
+                {
+                    _grassController?.Dispose();
+                    _grassController = null;
+                }
+                break;
+            case GrassRenderLayer.Blanket:
+                _grassBlanketEnabled = enabled;
+                ApplyGrassBlanketState(_planetSettings != null ? _planetSettings.PlanetMaterial : null);
+                break;
+            default:
+                throw new System.ArgumentOutOfRangeException(nameof(layer), layer, null);
+        }
     }
 
     public bool TryGetSurfaceRadius(Vector3 worldUnitDirection, out float surfaceRadius)
