@@ -96,7 +96,7 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
 
     static void AppendMidFieldMetadata(StringBuilder sb)
     {
-        sb.AppendLine("--- GrassMidField ---");
+        sb.AppendLine("--- GrassMidField (deprecated experiment) ---");
         if (!ServiceLocator.TryGet(out IGrassMidFieldStatsProvider provider))
         {
             sb.AppendLine("Controller: missing");
@@ -141,7 +141,7 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
         if (ServiceLocator.TryGet(out IGrassMidFieldStatsProvider midProvider))
         {
             GrassMidFieldStats mid = midProvider.GetGrassMidFieldStats();
-            GUILayout.Label($"Mid: emitted={mid.EmittedInstances}, faces={mid.FacesActive}, grid={mid.GridWidth}x{mid.GridHeight}, buffer={mid.BufferMegabytes:F1} MB");
+            GUILayout.Label($"Mid (deprecated): emitted={mid.EmittedInstances}, faces={mid.FacesActive}, grid={mid.GridWidth}x{mid.GridHeight}, buffer={mid.BufferMegabytes:F1} MB");
         }
     }
 
@@ -197,7 +197,7 @@ public static class GrassCommands
         return FormatState(control.GetGrassRuntimeState());
     }
 
-    [ConsoleCommand("layer", "Get or set a grass layer: Near, Mid, Chunk, or Blanket.")]
+    [ConsoleCommand("layer", "Get or set Near, Chunk, or Blanket. Mid is a deprecated A/B experiment.")]
     public static string Layer(GrassRenderLayer layer, bool? enabled = null)
     {
         if (!TryGetControl(out IGrassRuntimeControl control))

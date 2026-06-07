@@ -33,10 +33,13 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     // Typed reference to the Low-mode provider for legacy color iteration over TerrainFaces.
     // Null when running under chunked or GPU surface providers.
     PerFaceSurfaceProvider _perFaceProvider;
-    // Validated fallback while the camera-centered mid-field representation is
-    // redesigned. Keep this path for production coverage and regression A/B.
+    // Supported medium-distance grass layer. It follows visible terrain chunks
+    // and bridges the camera-centered near field to the far terrain blanket.
     GrassPlacementController _grassController;
     GrassNearFieldController _grassNearFieldController;
+    // Deprecated card experiment retained only for short-term regression A/B.
+    // It is disabled by default and should be removed after its diagnostics are
+    // no longer needed; do not extend it as the production medium LOD.
     GrassMidFieldController _grassMidFieldController;
     bool _grassEnabled = true;
     bool _nearFieldGrassEnabled = true;

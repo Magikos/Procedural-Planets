@@ -1,5 +1,9 @@
 # 2026-06-03 — Grass Slice 5: Visual Polish (Wind / Per-Clump / Biome / Counters)
 
+> **Architecture update (2026-06-07):** Mid-field cards were subsequently
+> implemented and rejected by F10 visual validation. Current production uses
+> near grass -> chunk grass -> far terrain blanket.
+
 **Status:** Slice 5a (wind) shipped. Awaiting Bryan F10 validation before proceeding to 5b.
 
 **Context:** Slice 4 arc concluded (regression fix in [2026-06-03-grass-slice4b-regression.md](2026-06-03-grass-slice4b-regression.md)). Codex proposed slice 5 = visual polish, Bryan approved order: wind → per-clump variation → softer biome transitions → per-layer perf counters.

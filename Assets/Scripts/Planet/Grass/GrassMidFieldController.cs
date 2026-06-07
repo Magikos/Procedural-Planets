@@ -1,8 +1,10 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// Camera-centered, face-space-stable impostor cards bridging near blades and the
-// terrain blanket. One shared allocation covers every active cube face.
+// Deprecated camera-centered card experiment. F10 validation showed that its
+// billboard representation creates splotches and a visible near/mid handoff.
+// Production uses near grass -> chunk grass -> terrain blanket. Retain this
+// controller only for short-term regression A/B, then remove it.
 sealed class GrassMidFieldController : System.IDisposable, IGrassMidFieldStatsProvider
 {
     const string ComputeResource = "GrassMidFieldPlace";

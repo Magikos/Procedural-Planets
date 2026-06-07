@@ -1,6 +1,12 @@
 # 2026-06-06 - Grass Runtime Control and Allocation
 
-**Status:** Implemented and Unity/F10 validated.
+**Status:** Implemented and Unity/F10 validated. Final architecture amended
+2026-06-07: chunk grass is the supported medium layer; mid cards are rejected.
+
+> **Current decision:** The supported stack is near grass -> chunk grass -> far
+> terrain blanket. Earlier entries below calling chunk grass "legacy" or
+> proposing that mid cards replace it are historical experiment notes and no
+> longer describe the intended architecture.
 
 ## Why this slice exists
 
@@ -283,14 +289,14 @@ therefore:
 
 - near field enabled;
 - mid field disabled;
-- validated chunk fallback enabled;
+- validated chunk medium layer enabled;
 - far terrain blanket unchanged.
 
 The mid controller, compute kernel, shader, commands, and F10 diagnostics remain
-available behind `grass.layer Mid true` for future redesign work. That redesign
-should begin with representation experiments such as textured or cross-card
-clusters, terrain-conforming shells, or a coverage-derived mesh treatment. It
-should not resume by tuning the existing billboard constants.
+available behind `grass.layer Mid true` only for short-term regression A/B.
+They are scheduled for removal. Medium-distance work now belongs to the chunk
+path: allocation, batching, LOD continuity, shared coverage, and a softer
+chunk-to-blanket handoff.
 
 The terrain-only atmosphere clarity change is retained. Its F10s showed clearer
 near terrain without changing the sky, water, horizon, or distant atmospheric

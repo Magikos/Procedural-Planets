@@ -1,10 +1,41 @@
-# 2026-06-02 — Grass Mid-Field Layer + Three-Layer LOD Stack (Slice 4 Design)
+# 2026-06-02 — Grass Mid-Field Card Experiment (Rejected)
 
-**Status:** Deferred after visual validation. The single-card impostor implementation remains available for diagnostics, but production defaults use the validated chunk fallback. Author: Claude Code (Opus 4.7). Reviewer: Codex + Bryan.
+**Status:** Rejected and superseded on 2026-06-07. The card implementation remains temporarily available for diagnostics, but it is not part of the production architecture and is scheduled for removal. Author: Claude Code (Opus 4.7). Reviewer: Codex + Bryan.
 
 **Discussion thread:** [docs/agent-conversation/2026-06-02-grass-lighting-midfield-feedback.md](../agent-conversation/2026-06-02-grass-lighting-midfield-feedback.md)
 
-## Goals
+## Superseding decision — 2026-06-07
+
+F10 comparison showed that chunk grass already provides the successful
+medium-distance representation:
+
+- chunk grass uses the same shaped three-blade tuft geometry as the established
+  grass shader;
+- it follows visible terrain chunks and detailed surface data;
+- it reaches 600 m with stochastic fading after 200 m;
+- it transitions more naturally from near grass than the independent 2 m card
+  grid.
+
+The mid-card path used broad camera-facing billboards with an unrelated
+placement grid and visibly produced repeated splotches and a hard
+representation change. More card width, tint, density, lighting, or fade tuning
+is not planned.
+
+The supported grass LOD stack is:
+
+```text
+near camera-centered grass -> medium chunk grass -> far terrain blanket
+```
+
+Future grass work should improve chunk allocation, batching, LOD continuity,
+shared coverage signals, and the chunk-to-blanket handoff. It should not extend
+`GrassMidFieldController`, `GrassMidFieldPlace.compute`, or
+`GrassMidField.shader`. Those files remain only for short-term A/B diagnostics
+and should be deleted once no longer needed.
+
+Everything below records the rejected experiment and its original reasoning.
+
+## Historical goals
 
 Land the missing "geometric distant grass" band between near-field blades (currently 0-120m) and the painted terrain blanket overlay (currently 65-160m). Distant grassy hills currently read as flat tint until the camera gets close enough that near-field blades pop in. Bridge that with **camera-facing impostor cards** at coarser spacing, faded against both neighbors.
 
@@ -22,7 +53,7 @@ Three concrete goals:
 - Tree/foliage rendering (out of scope; separate system).
 - Performance below console-tier GPUs (PC default tier first; quality knobs later).
 
-## Architecture: Three Rendering Paths
+## Rejected experimental architecture
 
 ```text
 viewDistance →
@@ -38,10 +69,10 @@ viewDistance →
   └──────────────────────────────────────────────────────────────────┘
 ```
 
-Note: the chunk-grass path (`GrassPlacementController` + `BiomeGrassPlace.compute`)
-remains the validated production fallback. The mid-field experiment did not
-replace it visually and is disabled by default pending a representation
-redesign.
+Note: the chunk-grass path (`GrassPlacementController` +
+`BiomeGrassPlace.compute`) is the supported production medium layer. The
+mid-field card experiment is disabled by default and is not awaiting another
+tuning or redesign pass.
 
 ## Shared Concepts
 

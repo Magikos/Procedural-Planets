@@ -1,7 +1,7 @@
 # Grass renderer — Phase C
 
 **Date:** 2026-05-31
-**Status:** Draft, revised after code review
+**Status:** Implemented and evolving; LOD architecture amended 2026-06-07
 **Source of truth this implements:** [docs/research/2026-05-30-grass-and-chunks.md](../research/2026-05-30-grass-and-chunks.md) — "Grass renderer" + "Grass renderer — locked-in additions" sections.
 **Predecessors:** Phase A chunk skeleton ([docs/design/2026-05-30-chunk-skeleton.md](2026-05-30-chunk-skeleton.md)), Phase B biome textures ([docs/design/2026-05-31-biome-textures.md](2026-05-31-biome-textures.md)).
 
@@ -10,6 +10,20 @@
 ## 1. Purpose and scope
 
 Ship the **compute-driven grass renderer** as a clean addition to the chunked planet, consuming the top-K biome data Phase B publishes through face-space atlases and per-chunk maps. Per-frame compute regenerates blades from lane-IDs (no persistent per-blade buffer), and indirect draw emits the visible subset.
+
+### Current LOD architecture — amended 2026-06-07
+
+The supported production stack is:
+
+1. camera-centered near grass for dense local coverage;
+2. chunk grass from `GrassPlacementController` for medium-distance geometry;
+3. the terrain grass blanket for far and orbital coverage.
+
+The separate `GrassMidFieldController` billboard-card experiment failed visual
+validation and is disabled by default. It remains temporarily for A/B
+diagnostics but is scheduled for removal. Medium-distance improvements belong
+in the chunk path; do not create another independent placement field unless new
+evidence invalidates this decision.
 
 **In scope (this phase):**
 
@@ -543,3 +557,9 @@ Phase E (modification):
 - Reads `.g` (scorched) and renders blade with scorch tint or skips entirely.
 - Reads `.b` (snow depth) and skips blades buried deeper than `GrassHeight × 0.7`.
 - Reads `.a` (wetness) → darkens blade color + droops `v2` toward ground.
+
+The current state ownership is superseded and expanded by
+[2026-06-07-surface-interaction-state.md](2026-06-07-surface-interaction-state.md):
+immediate interactor volumes, recoverable force state, persistent surface
+modifications with authoritative footprint ownership, and separate
+environmental state.

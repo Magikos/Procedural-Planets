@@ -1,5 +1,10 @@
 # 2026-06-02 - Grass Lighting, Edge, and Art Direction Feedback
 
+> **Superseded architecture note (2026-06-07):** The proposed dedicated
+> mid-field billboard layer failed visual validation. Chunk grass is the
+> supported medium-distance layer; references below to deprecating chunk grass
+> or making mid cards mandatory are retained only as experiment history.
+
 Context: Bryan tested after the stable face-space near-field fixes. The result is much better and density is now in the workable range, but two presentation problems remain:
 
 1. At night the grass stays visibly lit.

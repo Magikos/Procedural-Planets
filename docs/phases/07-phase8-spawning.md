@@ -15,6 +15,18 @@
 - [ ] Loot probability rolls use deterministic seed (chunk seed + entity index) for multiplayer agreement
 
 ## 8.2 — Procedural Grass (GPU Compute)
+
+**Current rendering decision (2026-06-07):** use near camera-centered grass,
+medium-distance chunk grass, and the far terrain blanket. The independent
+mid-field billboard-card experiment failed visual validation and is scheduled
+for removal. Optimize the chunk path rather than extending the card path.
+
+**Interaction-state decision (2026-06-07):** immediate interactors, recoverable
+force state, and persistent surface modifications are separate data layers.
+Paths and foundations write shared surface state rather than editing grass
+buffers. See
+[surface-interaction-state](../design/2026-06-07-surface-interaction-state.md).
+
 - [ ] Compute shader generates blade positions from chunk terrain data
 - [ ] Simple triangle geometry per blade (3–5 vertices)
 - [ ] Render via `DrawProceduralIndirect` — target millions of blades

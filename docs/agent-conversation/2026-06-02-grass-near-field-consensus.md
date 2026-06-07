@@ -1,5 +1,10 @@
 # 2026-06-02 - Grass Near-Field Consensus
 
+> **Superseded architecture note (2026-06-07):** Historical discussion below
+> considered replacing chunk grass with a dedicated mid-card layer. F10
+> validation rejected that approach. The supported stack is now near grass ->
+> chunk grass -> far terrain blanket.
+
 Purpose: get agent consensus before implementing the next grass renderer pass. Bryan is not asking for another small density tune. The current visible grass primitives are still far too sparse near the player/human marker, and the next implementation should be a deliberate architecture correction.
 
 ## Current Evidence

@@ -242,9 +242,9 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         int chunkInstanceMin = int.MaxValue;
 
         // Cache near-field suppression radius once per tick. Inside that radius the
-        // near-field renderer is producing dense carpet grass, so the chunk path's
-        // sparser blades would double-up wastefully. Compute (placement) still runs so
-        // when the player moves past the suppression boundary, mid-field grass is warm.
+        // near-field renderer produces dense carpet grass, so the medium-distance
+        // chunk blades would double up wastefully. Placement remains warm so chunk
+        // grass is ready as soon as the camera crosses the handoff boundary.
         float suppressionRadiusSq = 0f;
         if (ServiceLocator.TryGet(out IGrassNearFieldStatsProvider nfProvider))
         {

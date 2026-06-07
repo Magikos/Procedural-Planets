@@ -1,5 +1,8 @@
 Shader "Planet/GrassMidField"
 {
+    // Deprecated A/B experiment. Production uses near grass, chunk grass, and
+    // the far terrain blanket. Keep only until the mid-field diagnostics are
+    // no longer needed.
     SubShader
     {
         Tags
