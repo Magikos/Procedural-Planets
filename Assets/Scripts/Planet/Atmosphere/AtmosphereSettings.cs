@@ -25,6 +25,12 @@ public class AtmosphereSettings : ScriptableObject
     public float MieScaleHeight = 0.02f;
     [Range(0f, 0.99f)] public float MieAnisotropy = 0.76f;
 
+    [Header("Terrain Aerial Perspective")]
+    [Min(0f), Tooltip("Non-water terrain closer than this remains fully clear. Sky and water are unaffected.")]
+    public float TerrainClarityDistance = 175f;
+    [Min(1f), Tooltip("Existing atmospheric scattering is fully restored by this terrain distance.")]
+    public float TerrainAtmosphereDistance = 1600f;
+
     [Header("Sun Disc")]
     [Range(0.99f, 0.9999f)] public float SunDiscSize = 0.9995f;
     [Range(0.0001f, 0.01f)] public float SunDiscBlend = 0.002f;

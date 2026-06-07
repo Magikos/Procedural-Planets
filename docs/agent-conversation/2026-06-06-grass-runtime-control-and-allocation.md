@@ -197,3 +197,101 @@ The production capture is hazier than `AtmosphereBypass`, proving the wash is
 owned by atmospheric aerial perspective rather than the grass layers. No
 atmosphere values were changed because the atmosphere remains visually correct
 in the broader scene and this grass slice should not retune it.
+
+## Follow-up: terrain-only near clarity experiment
+
+The grass A/B also showed that production atmosphere removes substantial local
+terrain contrast compared with `AtmosphereBypass`. This is being addressed at
+composition time rather than by changing Rayleigh, Mie, atmosphere thickness,
+optical-depth LUTs, the sky, or horizon scattering.
+
+New `AtmosphereSettings` controls:
+
+- `TerrainClarityDistance = 175 m`: non-water terrain inside this distance uses
+  its original rendered color with no atmospheric wash.
+- `TerrainAtmosphereDistance = 1600 m`: a broad smooth transition restores the
+  existing atmosphere by this distance.
+
+The shader applies the mask only to finite-depth, non-water scene pixels.
+Sky pixels and water retain their established atmosphere paths. Grass F10
+metadata reports:
+
+```text
+TerrainClarity: fullTo=175.0m, atmosphereBy=1600.0m
+```
+
+Validation should use the same surface viewpoint and compare `Off` with
+`AtmosphereBypass`. Acceptance requires:
+
+- clear nearby terrain and grass in `Off`;
+- no visible distance ring during camera movement;
+- distant hills still gain aerial perspective;
+- sky, clouds, horizon, water, and sunset behavior remain unchanged.
+
+The per-chunk grass controller remains available for regression A/B and
+chunk-local surface-state validation.
+
+### Mid-card lighting follow-up
+
+The first terrain-clarity F10 pair showed the mid-field cards as a bright,
+repeated band in both production `Off` and `AtmosphereBypass`. Because the
+artifact survives atmosphere bypass, the atmosphere clarity mask is not its
+owner.
+
+The mid shader was lighting each cylindrical billboard with a normal derived
+from its camera-facing direction. Thousands of cards therefore rotated their
+lighting toward the viewer together and received a coherent bright diffuse
+term. The correction keeps card geometry camera-facing but derives lighting
+from a seed-stable terrain-oriented normal. A modest clump self-shadow factor
+also accounts for each card representing many unresolved overlapping blades.
+No density, placement, fade, atmosphere, or near-grass values changed.
+
+The next F10 showed that correction was worse. The stable normal was still
+face-forwarded toward the camera; on sloped terrain this could flip it below the
+surface and turn cards into dark marks. The cards were also structurally too
+wide: the 2 m placement spacing forced a minimum 2.6 m billboard width.
+
+The follow-up uses the sampled terrain normal directly without face-forwarding
+and narrows the card minimum to 1.1 m. Near-field configuration remains
+unchanged at 0.25 m spacing, 120 m draw distance, and a 45 m outer fade. Its
+apparently shorter reach was the broad depth-writing mid cards covering the
+near/mid overlap, not a near-distance change.
+
+The narrower-card F10 still showed sparse rectangular splotches and a visible
+near/mid transition. Reviewing the complete capture history showed that this
+pattern existed in the first mid-field implementation; atmospheric haze merely
+hid it. The mismatch is representation scale: one card per 2 m cell cannot
+bridge near grass that renders three blades per accepted 0.25 m cell.
+
+Each mid instance now expands into a stable three-card clump in the vertex
+shader. The cards use per-card height, width, and tangent-plane root offsets
+without increasing placement-buffer memory or compute candidate count. The
+indirect draw changes from 6 to 18 vertices per instance, and F10 reports both
+emitted cluster instances and total visual cards.
+
+### Final mid-field verdict
+
+The three-card F10s still show the same structural problems: broad splotchy
+cards, repeated clump-scale marks, and a visible near-to-mid handoff. The
+terrain-only atmosphere clarity change made those artifacts easier to see, but
+`AtmosphereBypass` confirms that atmosphere does not create them.
+
+Further width, tint, density, or fade tuning is deferred. The current
+camera-facing card representation does not preserve the visual frequency of
+the near grass well enough to serve as its next LOD. Production defaults are
+therefore:
+
+- near field enabled;
+- mid field disabled;
+- validated chunk fallback enabled;
+- far terrain blanket unchanged.
+
+The mid controller, compute kernel, shader, commands, and F10 diagnostics remain
+available behind `grass.layer Mid true` for future redesign work. That redesign
+should begin with representation experiments such as textured or cross-card
+clusters, terrain-conforming shells, or a coverage-derived mesh treatment. It
+should not resume by tuning the existing billboard constants.
+
+The terrain-only atmosphere clarity change is retained. Its F10s showed clearer
+near terrain without changing the sky, water, horizon, or distant atmospheric
+composition.

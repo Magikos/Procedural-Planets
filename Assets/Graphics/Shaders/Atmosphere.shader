@@ -13,6 +13,7 @@ SAMPLER(sampler_WaterInterfaceTexture);
 
 float4 _LightShaftParams;
 float4 _LightShaftParams2;
+float2 _TerrainAerialPerspectiveDistances;
 int _LightShaftSamples;
 int _PrecipitationDebugMode;
 int _OceanDebugMode;
@@ -298,10 +299,16 @@ ENDHLSL
 
                 float sceneMask = 1.0 - SkyDepthMask(i.uv);
                 float nonWaterSceneMask = sceneMask * (1.0 - waterSurfaceMask);
-                float atmosphereThickness = max(_AtmosphereRadius - _SeaLevelRadius, 1.0);
-                float terrainNearMask = 1.0 - smoothstep(atmosphereThickness * 1.5, atmosphereThickness * 7.0, sceneDepth);
-                float terrainDetailPreserve = nonWaterSceneMask * terrainNearMask * lerp(0.24, 0.42, lowSun01);
-                color = lerp(color, originalCol.rgb, terrainDetailPreserve);
+                float terrainClarityEnd = max(_TerrainAerialPerspectiveDistances.x, 0.0);
+                float terrainAtmosphereStart = max(
+                    _TerrainAerialPerspectiveDistances.y, terrainClarityEnd + 1.0);
+
+                // Preserve local terrain exactly, then return smoothly to the existing
+                // scattering before the horizon. The scene masks keep this branch off sky
+                // pixels and water, so their established atmosphere remains unchanged.
+                float terrainClarity = 1.0 - smoothstep(
+                    terrainClarityEnd, terrainAtmosphereStart, sceneDepth);
+                color = lerp(color, originalCol.rgb, nonWaterSceneMask * terrainClarity);
 
                 if (_OceanDebugMode == DEBUG_ATMOSPHERE_CONTRIBUTION)
                     return float4(ContributionHeat(color - originalCol.xyz, 8.0, float3(0.18, 0.48, 1.0), float3(1.0, 0.95, 0.22)), 1.0);

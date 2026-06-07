@@ -17,6 +17,8 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
     static readonly int ViewStepsId = Shader.PropertyToID("_ViewSteps");
     static readonly int SunStepsId = Shader.PropertyToID("_SunSteps");
     static readonly int WaterVolumeEnabledId = Shader.PropertyToID("_WaterVolumeEnabled");
+    static readonly int TerrainAerialPerspectiveDistancesId =
+        Shader.PropertyToID("_TerrainAerialPerspectiveDistances");
 
     public void Register(DebugRegistry registry)
     {
@@ -148,6 +150,8 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
         sb.AppendLine("--- Atmosphere ---");
         sb.AppendLine($"Globals: oceanDebug={Shader.GetGlobalInt(OceanDebugModeId)}, radius={Shader.GetGlobalFloat(AtmosphereRadiusId):F2}, sea={Shader.GetGlobalFloat(SeaLevelRadiusId):F2}, densityOrigin={Shader.GetGlobalFloat(DensityOriginRadiusId):F2}");
         sb.AppendLine($"PassInputs: waterVolume={Shader.GetGlobalFloat(WaterVolumeEnabledId):F2}, viewSteps={Shader.GetGlobalInt(ViewStepsId)}, sunSteps={Shader.GetGlobalInt(SunStepsId)}");
+        Vector4 terrainDistances = Shader.GetGlobalVector(TerrainAerialPerspectiveDistancesId);
+        sb.AppendLine($"TerrainClarity: fullTo={terrainDistances.x:F1}m, atmosphereBy={terrainDistances.y:F1}m");
     }
 
     static void AppendScaleReferenceMetadata(StringBuilder sb)

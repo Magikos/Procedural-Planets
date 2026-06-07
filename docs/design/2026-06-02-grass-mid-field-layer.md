@@ -1,6 +1,6 @@
 # 2026-06-02 — Grass Mid-Field Layer + Three-Layer LOD Stack (Slice 4 Design)
 
-**Status:** First isolated implementation complete and F10 validated. Author: Claude Code (Opus 4.7). Reviewer: Codex + Bryan.
+**Status:** Deferred after visual validation. The single-card impostor implementation remains available for diagnostics, but production defaults use the validated chunk fallback. Author: Claude Code (Opus 4.7). Reviewer: Codex + Bryan.
 
 **Discussion thread:** [docs/agent-conversation/2026-06-02-grass-lighting-midfield-feedback.md](../agent-conversation/2026-06-02-grass-lighting-midfield-feedback.md)
 
@@ -38,7 +38,10 @@ viewDistance →
   └──────────────────────────────────────────────────────────────────┘
 ```
 
-Note: the old chunk-grass path (`GrassPlacementController` + `BiomeGrassPlace.compute`) stays alive behind a toggle until F10 validates that mid + near + blanket replace it visually. **Cleanup deferred to post-slice-4.**
+Note: the chunk-grass path (`GrassPlacementController` + `BiomeGrassPlace.compute`)
+remains the validated production fallback. The mid-field experiment did not
+replace it visually and is disabled by default pending a representation
+redesign.
 
 ## Shared Concepts
 

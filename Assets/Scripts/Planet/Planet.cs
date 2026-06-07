@@ -33,13 +33,15 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     // Typed reference to the Low-mode provider for legacy color iteration over TerrainFaces.
     // Null when running under chunked or GPU surface providers.
     PerFaceSurfaceProvider _perFaceProvider;
+    // Validated fallback while the camera-centered mid-field representation is
+    // redesigned. Keep this path for production coverage and regression A/B.
     GrassPlacementController _grassController;
     GrassNearFieldController _grassNearFieldController;
     GrassMidFieldController _grassMidFieldController;
     bool _grassEnabled = true;
     bool _nearFieldGrassEnabled = true;
-    bool _midFieldGrassEnabled = true;
-    bool _chunkGrassEnabled;
+    bool _midFieldGrassEnabled;
+    bool _chunkGrassEnabled = true;
     bool _grassBlanketEnabled = true;
     GameObject _waterObject;
     Material _waterMaterial;

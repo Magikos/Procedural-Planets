@@ -33,6 +33,8 @@ public class AtmosphereController : MonoBehaviour
     static readonly int _mieScatteringId = Shader.PropertyToID("_MieScatteringCoeff");
     static readonly int _mieScaleHeightId = Shader.PropertyToID("_MieScaleHeight");
     static readonly int _mieAnisotropyId = Shader.PropertyToID("_MieAnisotropy");
+    static readonly int _terrainAerialPerspectiveDistancesId =
+        Shader.PropertyToID("_TerrainAerialPerspectiveDistances");
     static readonly int _sunIntensityId = Shader.PropertyToID("_SunIntensity");
     static readonly int _sunDiscSizeId = Shader.PropertyToID("_SunDiscSize");
     static readonly int _sunDiscBlendId = Shader.PropertyToID("_SunDiscBlend");
@@ -119,6 +121,11 @@ public class AtmosphereController : MonoBehaviour
         Shader.SetGlobalFloat(_mieScatteringId, Settings.MieScattering);
         Shader.SetGlobalFloat(_mieScaleHeightId, Settings.MieScaleHeight * atmosphereThickness);
         Shader.SetGlobalFloat(_mieAnisotropyId, Settings.MieAnisotropy);
+        float terrainClarityDistance = Mathf.Max(0f, Settings.TerrainClarityDistance);
+        float terrainAtmosphereDistance = Mathf.Max(
+            terrainClarityDistance + 1f, Settings.TerrainAtmosphereDistance);
+        Shader.SetGlobalVector(_terrainAerialPerspectiveDistancesId,
+            new Vector4(terrainClarityDistance, terrainAtmosphereDistance, 0f, 0f));
 
         Shader.SetGlobalFloat(_sunIntensityId, Settings.SunIntensity);
         Shader.SetGlobalFloat(_sunDiscSizeId, Settings.SunDiscSize);

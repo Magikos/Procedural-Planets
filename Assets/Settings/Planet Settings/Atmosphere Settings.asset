@@ -21,6 +21,8 @@ MonoBehaviour:
   MieScattering: 0.002
   MieScaleHeight: 0.02
   MieAnisotropy: 0.76
+  TerrainClarityDistance: 175
+  TerrainAtmosphereDistance: 1600
   SunDiscSize: 0.9995
   SunDiscBlend: 0.002
   EnableLightShafts: 1
