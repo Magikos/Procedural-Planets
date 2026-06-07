@@ -326,12 +326,16 @@ Shader "Planet/VertexColor"
                 return cX * bw.x + cY * bw.y + cZ * bw.z;
             }
 
-            // World-space sampling keeps tile alignment independent of mesh UV. A small
-            // second scale plus broad per-biome variation breaks repeated stamps without
-            // changing normals or material response.
+            // Albedo bank zero stores the primary biome material and bank one stores an
+            // optional authored secondary material. This replaces the old same-texture
+            // resample without adding fragment texture taps. Normal and ARM stay
+            // primary-only until profiling proves a second complete PBR sample is viable.
             float3 TriplanarSampleAlbedo(float3 worldPos, float3 bw, float slice)
             {
                 float3 baseColor = TriplanarSampleAlbedoAtTiling(worldPos, bw, slice, _BiomeTriplanarTiling);
+                if (_OceanDebugMode == DEBUG_TERRAIN_PRIMARY_ALBEDO)
+                    return baseColor;
+
                 float secondaryBlend = saturate(_BiomeSecondaryBlend);
                 float variationStrength = saturate(_BiomeMacroVariationStrength);
                 if (secondaryBlend <= 0.0001 && variationStrength <= 0.0001)
@@ -345,7 +349,9 @@ Shader "Planet/VertexColor"
                 if (secondaryBlend > 0.0001)
                 {
                     float secondaryTiling = _BiomeTriplanarTiling * max(_BiomeSecondaryTilingScale, 0.001);
-                    float3 secondary = TriplanarSampleAlbedoAtTiling(worldPos + offset, bw, slice, secondaryTiling);
+                    float secondarySlice = slice + max((float)_BiomeCount, 1.0);
+                    float3 secondary = TriplanarSampleAlbedoAtTiling(
+                        worldPos + offset, bw, secondarySlice, secondaryTiling);
                     varied = lerp(varied, secondary, secondaryBlend * smoothstep(0.15, 0.85, macro));
                 }
 
@@ -980,6 +986,12 @@ Shader "Planet/VertexColor"
                     surfaceNormalWS = geometricNormalWS;
                     surfaceArm = float3(1.0, 1.0, 0.0); // neutral: AO=1, roughness=1, metallic=0
                 #endif
+
+                if (_OceanDebugMode == DEBUG_TERRAIN_PRIMARY_ALBEDO
+                    || _OceanDebugMode == DEBUG_TERRAIN_MIXED_ALBEDO)
+                {
+                    return half4(surfaceAlbedo, 1.0);
+                }
 
                 ApplyTerrainOverrides(terrainOverrides, input.positionWS, geometricNormalWS,
                     surfaceAlbedo, surfaceNormalWS, surfaceArm);

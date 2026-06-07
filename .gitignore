@@ -105,3 +105,4 @@ local-only
 *.lscache
 
 Extras
+docs/agent*

@@ -154,8 +154,10 @@
 #define DEBUG_TERRAIN_SLOPE_MASK           92
 #define DEBUG_TERRAIN_SNOW_MASK            93
 #define DEBUG_TERRAIN_OVERRIDE_COMPOSITE   94
+#define DEBUG_TERRAIN_PRIMARY_ALBEDO       95
+#define DEBUG_TERRAIN_MIXED_ALBEDO         96
 
 // Convenience: last defined mode. Update when adding new modes.
-#define DEBUG_MODE_MAX                    94
+#define DEBUG_MODE_MAX                    96
 
 #endif

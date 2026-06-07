@@ -612,18 +612,18 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
     public void Print(string text)
     {
         if (text == null) return;
-        _scrollback.Append(text, ConsoleMessageType.Output);
+        _scrollback.AppendText(text, ConsoleMessageType.Output);
     }
     public void PrintLine(string text) => Print(text);
     public void PrintWarning(string text)
     {
         if (text == null) return;
-        _scrollback.Append(text, ConsoleMessageType.Warning);
+        _scrollback.AppendText(text, ConsoleMessageType.Warning);
     }
     public void PrintError(string text)
     {
         if (text == null) return;
-        _scrollback.Append(text, ConsoleMessageType.Error);
+        _scrollback.AppendText(text, ConsoleMessageType.Error);
     }
     public void Clear() => _scrollback.Clear();
 
@@ -800,7 +800,7 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
             else
             {
                 _scrollback.Replace(p.LineId, $"{p.Alias} completed in {elapsed:F2}s", ConsoleMessageType.Output);
-                if (result != null) _scrollback.Append(result.ToString(), ConsoleMessageType.Output);
+                if (result != null) _scrollback.AppendText(result.ToString(), ConsoleMessageType.Output);
             }
             _pending = null;
             _pendingCts = null;
@@ -862,7 +862,7 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
             LogType.Assert => ConsoleMessageType.Error,
             _ => ConsoleMessageType.Log,
         };
-        _scrollback.Append(condition ?? "", msgType);
+        _scrollback.AppendText(condition ?? "", msgType);
     }
 
     // --- Rendering ---------------------------------------------------------

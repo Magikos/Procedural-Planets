@@ -18,6 +18,10 @@ public class BiomeDefinition : ScriptableObject
     [Header("Phase B: Surface textures (required for texture-mode terrain rendering)")]
     [Tooltip("Albedo / base color. All biomes in a registry must share dimensions + format.")]
     public Texture2D SurfaceAlbedo;
+    [Tooltip("Optional broad-scale albedo variation mixed into the primary material. "
+        + "Leave empty to reuse SurfaceAlbedo. This is intentionally albedo-only until "
+        + "profiling proves that secondary normal and ARM samples fit the terrain budget.")]
+    public Texture2D SurfaceSecondaryAlbedo;
     [Tooltip("Tangent-space normal map. BC5 or RG-channel format recommended.")]
     public Texture2D SurfaceNormal;
     [Tooltip("R=AO, G=Roughness, B=Metallic. Linear color space.")]

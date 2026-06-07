@@ -241,6 +241,7 @@ public class DebugCaptureController : MonoBehaviour
         CancellationToken ct)
     {
         _debugScreenshotCaptureRunning = true;
+        RecordLastDebugCaptureCamera();
         DebugModeId restoreMode = RestoreDebugOffAfterCaptureSet ? _debugRegistry.DefaultModeId : _currentDebugModeId;
         LoggerProvider.Log(LogLevel.Debug, "DebugCapture", $"F10 start. Modes={modes.Length}, CaptureScreenshots={captureScreenshots}");
 
@@ -293,6 +294,7 @@ public class DebugCaptureController : MonoBehaviour
         CancellationToken ct)
     {
         _debugScreenshotCaptureRunning = true;
+        RecordLastDebugCaptureCamera();
 
         try
         {
@@ -600,6 +602,12 @@ public class DebugCaptureController : MonoBehaviour
     ICameraRigContext GetCameraContext()
     {
         return _cachedCameraContext;
+    }
+
+    static void RecordLastDebugCaptureCamera()
+    {
+        if (ServiceLocator.TryGet<ICameraTeleportRegistry>(out var teleports))
+            teleports.RecordLastDebugCapture();
     }
 
     void OnGUI()

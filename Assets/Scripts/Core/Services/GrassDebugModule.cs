@@ -91,7 +91,7 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
         sb.AppendLine($"Page: cellSize={nf.PageCellSize}, face={nf.FaceIndex}, facesActive={nf.FacesActive}, multiFace={nf.MultiFaceDispatchEnabled}, originCellUV=({nf.PageOriginCellU},{nf.PageOriginCellV}), seamRisk={nf.SeamRisk}");
         sb.AppendLine($"Grid: {nf.GridWidth}x{nf.GridHeight}, reason={nf.LastDispatchReason}, dispatchedThisFrame={nf.DispatchedThisFrame}, dispatchesTotal={nf.DispatchesTotal}");
         sb.AppendLine($"Draw: emitted={nf.EmittedInstances}, visualBlades={(long)nf.EmittedInstances * 3}, capacity={nf.CapacityInstances}, buffer={nf.BufferMegabytes:F1} MB");
-        sb.AppendLine($"Cull: candidates={nf.CandidateCells}, density={nf.DensityRejectedCells}, water={nf.WaterRejectedCells}, slope={nf.SlopeRejectedCells}, distance={nf.DistanceRejectedCells}, distanceFade={nf.DistanceFadeRejectedCells}, frustum={nf.FrustumRejectedCells}, faceArea={nf.FaceAreaRejectedCells}, overflow={nf.OverflowDropped}");
+        sb.AppendLine($"Cull: candidates={nf.CandidateCells}, density={nf.DensityRejectedCells}, water={nf.WaterRejectedCells}, slope={nf.SlopeRejectedCells}, distance={nf.DistanceRejectedCells}, distanceFade={nf.DistanceFadeRejectedCells}, frustum={nf.FrustumRejectedCells}, faceArea={nf.FaceAreaRejectedCells}, rangeBudget={nf.RangeBudgetRejectedCells}, overflow={nf.OverflowDropped}");
     }
 
     static void AppendMidFieldMetadata(StringBuilder sb)

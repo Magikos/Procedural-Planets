@@ -301,3 +301,79 @@ chunk-to-blanket handoff.
 The terrain-only atmosphere clarity change is retained. Its F10s showed clearer
 near terrain without changing the sky, water, horizon, or distant atmospheric
 composition.
+
+## 2026-06-07: Near-field cube seam and camera-dependent lighting
+
+Three `Terrain Textures` captures exposed a grass issue unrelated to terrain
+material mixing. Two nearby surface views moved only tens of meters, but the
+near-field sidecar changed from cube face 1 to face 3. Both reported:
+
+```text
+facesActive=1
+multiFace=False
+seamRisk=True
+```
+
+This proves the sharp grass boundary is the known single-face near-field gap:
+the camera disc crosses a cube-face edge, but only the primary face renders.
+
+The apparent left/right lighting flip had a separate cause in `Grass.shader`.
+The double-sided ribbon normal was flipped toward the camera before diffuse
+lighting. Crossing a blade plane therefore changed the normal sign used for
+sunlight even though neither the sun nor the blade moved.
+
+Corrections:
+
+- Near field now dispatches every range produced by
+  `FaceSpaceCellRangeBuilder`.
+- Each active face receives a proportional quota in the existing shared
+  one-million-instance buffer.
+- Per-face quotas sum exactly to total capacity, preventing the prior
+  first-face buffer starvation regression.
+- F10 reports `rangeBudget` rejects separately from true `overflow`.
+- Double-sided blade diffuse uses the absolute sun-normal dot product and no
+  longer flips the normal toward the camera.
+
+Validation gate:
+
+- At the same location, `facesActive` should be at least 2,
+  `multiFace=True`, and `seamRisk=False` unless the disc reaches an uncovered
+  cube corner.
+- `overflow=0`.
+- `rangeBudget=0` is expected at the current observed emission counts. A
+  non-zero value means the face quotas need a second-stage compaction design,
+  not a capacity increase.
+- Moving left and right must not change grass brightness abruptly.
+
+### Camera location replay
+
+The console now supports persistent named camera views:
+
+```text
+camera.teleport <saved name>
+camera.save-teleport <new or existing name>
+camera.remove-teleport <saved name>
+camera.teleports
+```
+
+F10 records the starting pose as `LastDebugCapture`; `LastDebugPrint` resolves
+to the same entry. Both aliases and all named views appear in the teleport
+completion popup. The first run after this feature can import the newest
+existing F10 sidecar, so `camera.teleport LastDebugCapture` can return to the
+2026-06-07 seam capture without first creating another F10.
+
+`camera.save-teleport` overwrites a matching saved name. The completion list is
+also seeded with `Grass Face Seam A`, `Grass Face Seam B`, and
+`Terrain Texture Oblique` from recent F10 captures. A saved location shadows a
+built-in site with the same name; removing that saved override reveals the
+built-in site again.
+
+### 2026-06-07 validation
+
+- The grass lighting flip no longer reproduces at the saved seam viewpoints.
+- `camera.save-teleport CurrentTest` correctly saves, overwrites, and recalls
+  the latest pose.
+- `camera.teleports` found all five entries, but initially displayed only the
+  first because multiline command output occupied one scrollback record.
+- Console output now splits multiline text into physical scrollback rows, so
+  list commands render and scroll correctly.

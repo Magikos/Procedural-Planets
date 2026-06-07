@@ -15,14 +15,12 @@ using UnityEngine.Rendering;
 //    overflow accounting; no CopyCount needed.
 //  - Per-root distance fade packed into BladeInstance.Color.a so the shader can dither-clip
 //    the fade band instead of producing a hard edge at drawDistance.
-//
-// KNOWN LIMITATION: single-face dispatch. When the visible disc straddles a cube-face
-// seam, the neighbor face's cells are missing (visible bare arc). Surfaced via SeamRisk
-// flag in F10 stats. Multi-face dispatch deferred to slice 3.
+//  - Multi-face dispatch with proportional range quotas. Neighbor-face strips are rendered
+//    at cube seams without allowing the primary face to consume the shared output buffer.
 sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStatsProvider
 {
     const string ComputeResource = "GrassNearFieldPlace";
-    const int StatsCount = 10;
+    const int StatsCount = 11;
     const int StatCandidateCells = 0;
     const int StatDensityRejected = 1;
     const int StatWaterRejected = 2;
@@ -33,6 +31,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     const int StatEmitted = 7;
     const int StatFaceAreaRejected = 8;
     const int StatOverflow = 9;
+    const int StatRangeBudgetRejected = 10;
     const int ThreadGroupSize = 8;
     const int BladeStride = sizeof(float) * 12;
     const int VerticesPerVisualBlade = 18;
@@ -46,7 +45,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     const float DefaultPageSizeMeters = 4f;     // re-dispatch only when page origin moves
     const float SuppressionRadiusFraction = 0.65f; // chunk path overlaps the near-field fade band
     const int DefaultCapacityInstances = 1_000_000; // ~48 MB at 48 bytes per blade
-    const bool EnableMultiFaceDispatch = false; // Keep slice 4b infra disabled until budget math is validated.
+    const bool EnableMultiFaceDispatch = true;
 
     static readonly int[] BiomeIdsIds = new int[6];
     static readonly int[] BiomeWeightsIds = new int[6];
@@ -57,12 +56,15 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     static readonly int InstancesId = Shader.PropertyToID("_NearFieldGrassInstances");
     static readonly int DrawArgsId = Shader.PropertyToID("_NearFieldDrawArgs");
     static readonly int StatsId = Shader.PropertyToID("_NearFieldStats");
+    static readonly int RangeCountsId = Shader.PropertyToID("_NearFieldRangeCounts");
     static readonly int BiomeAtlasResolutionId = Shader.PropertyToID("_NearFieldBiomeAtlasResolution");
     static readonly int SurfaceAtlasResolutionId = Shader.PropertyToID("_NearFieldSurfaceAtlasResolution");
     static readonly int BiomeParamCountId = Shader.PropertyToID("_NearFieldBiomeParamCount");
     static readonly int CapacityId = Shader.PropertyToID("_NearFieldCapacity");
     static readonly int SeedId = Shader.PropertyToID("_NearFieldSeed");
     static readonly int FaceIndexId = Shader.PropertyToID("_NearFieldFaceIndex");
+    static readonly int RangeIndexId = Shader.PropertyToID("_NearFieldRangeIndex");
+    static readonly int RangeBudgetId = Shader.PropertyToID("_NearFieldRangeBudget");
     static readonly int GridStartCellUVId = Shader.PropertyToID("_NearFieldGridStartCellUV");
     static readonly int GridSizeId = Shader.PropertyToID("_NearFieldGridSize");
     static readonly int CellUvWidthId = Shader.PropertyToID("_NearFieldCellUvWidth");
@@ -111,10 +113,13 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     readonly GraphicsBuffer _instancesBuffer;
     readonly GraphicsBuffer _argsBuffer;
     readonly GraphicsBuffer _statsBuffer;
+    readonly GraphicsBuffer _rangeCountsBuffer;
     readonly MaterialPropertyBlock _props;
     readonly uint[] _argsScratch = new uint[4];
     readonly uint[] _statsScratch = new uint[StatsCount];
     readonly uint[] _statsReadback = new uint[StatsCount];
+    readonly uint[] _rangeCountsScratch = new uint[FaceSpaceCellRangeBuilder.MaxRanges];
+    readonly int[] _rangeBudgets = new int[FaceSpaceCellRangeBuilder.MaxRanges];
     readonly long _bufferBytes;
     bool _disposed;
 
@@ -202,11 +207,13 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             GraphicsBuffer.Target.IndirectArguments | GraphicsBuffer.Target.Structured,
             4, sizeof(uint));
         _statsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, StatsCount, sizeof(uint));
+        _rangeCountsBuffer = new GraphicsBuffer(
+            GraphicsBuffer.Target.Structured, FaceSpaceCellRangeBuilder.MaxRanges, sizeof(uint));
         _props = new MaterialPropertyBlock();
         _props.SetBuffer(BladeInstancesShaderId, _instancesBuffer);
         _bufferBytes = (long)_capacity * BladeStride
             + GraphicsBuffer.IndirectDrawArgs.size
-            + (long)StatsCount * sizeof(uint);
+            + (long)(StatsCount + FaceSpaceCellRangeBuilder.MaxRanges) * sizeof(uint);
         _available = true;
         ServiceLocator.Register<IGrassNearFieldStatsProvider>(this);
 
@@ -214,8 +221,8 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             $"Initialized: capacity={_capacity}, spacing={_spacing}, cellUvWidth={_cellUvWidth:E3}, fullDensity={_fullDensityDistance}, draw={_drawDistance}, fadeBand={_fadeBand}, pageCellSize={_pageCellSize}, buffer={_bufferBytes / (1024f * 1024f):F1} MB");
     }
 
-    // Slice 4b built multi-face ranges, but near-field keeps dispatching only the
-    // primary face until the shared buffer budget is proven under face-edge views.
+    // Slice 4b range construction is shared with the deprecated mid-field experiment.
+    // Near field now dispatches every valid range into one quota-protected output buffer.
     readonly FaceSpaceCell[] _rangeScratch = new FaceSpaceCell[FaceSpaceCellRangeBuilder.MaxRanges];
     readonly FaceSpaceCell[] _lastRanges = new FaceSpaceCell[FaceSpaceCellRangeBuilder.MaxRanges];
     int _lastRangeCount;
@@ -289,12 +296,13 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     {
         ResetArgsAndStats();
         BindGlobalTextures();
+        BuildRangeBudgets(ranges, count);
 
         for (int i = 0; i < count; i++)
         {
             FaceSpaceCell range = ranges[i];
             if (range.GridSize.x <= 0 || range.GridSize.y <= 0) continue;
-            DispatchOneFaceRange(camera, planetCenter, range);
+            DispatchOneFaceRange(camera, planetCenter, range, i, _rangeBudgets[i]);
         }
 
         RequestReadbacks();
@@ -327,6 +335,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         _compute.SetBuffer(_kernel, InstancesId, _instancesBuffer);
         _compute.SetBuffer(_kernel, DrawArgsId, _argsBuffer);
         _compute.SetBuffer(_kernel, StatsId, _statsBuffer);
+        _compute.SetBuffer(_kernel, RangeCountsId, _rangeCountsBuffer);
         _compute.SetInt(BiomeAtlasResolutionId, Mathf.Max(biomeAtlasResolution, 1));
         _compute.SetInt(SurfaceAtlasResolutionId, Mathf.Max(surfaceAtlasResolution, 1));
         _compute.SetInt(BiomeParamCountId, _grassParamCount);
@@ -342,9 +351,16 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         _compute.SetMatrix(PlanetLocalToWorldId, _planetTransform.localToWorldMatrix);
     }
 
-    void DispatchOneFaceRange(Camera camera, Vector3 planetCenter, FaceSpaceCell range)
+    void DispatchOneFaceRange(
+        Camera camera,
+        Vector3 planetCenter,
+        FaceSpaceCell range,
+        int rangeIndex,
+        int rangeBudget)
     {
         _compute.SetInt(FaceIndexId, range.FaceIndex);
+        _compute.SetInt(RangeIndexId, rangeIndex);
+        _compute.SetInt(RangeBudgetId, rangeBudget);
         _compute.SetInts(GridStartCellUVId, range.PageOriginCellUV.x, range.PageOriginCellUV.y);
         _compute.SetInts(GridSizeId, range.GridSize.x, range.GridSize.y);
         _compute.SetFloat(CellUvWidthId, range.CellUvWidth);
@@ -354,6 +370,44 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         int groupsX = Mathf.CeilToInt(range.GridSize.x / (float)ThreadGroupSize);
         int groupsY = Mathf.CeilToInt(range.GridSize.y / (float)ThreadGroupSize);
         _compute.Dispatch(_kernel, groupsX, groupsY, 1);
+    }
+
+    void BuildRangeBudgets(FaceSpaceCell[] ranges, int count)
+    {
+        long totalCells = 0;
+        for (int i = 0; i < count; i++)
+        {
+            Vector2Int size = ranges[i].GridSize;
+            totalCells += System.Math.Max(0L, (long)size.x * size.y);
+            _rangeBudgets[i] = 0;
+        }
+
+        if (count <= 0 || totalCells <= 0)
+            return;
+
+        // Give every active face one guaranteed slot, then divide the rest by candidate
+        // area. Quotas sum exactly to capacity, so the global append cannot overflow.
+        int reserved = Mathf.Min(count, _capacity);
+        int distributable = _capacity - reserved;
+        int allocated = 0;
+        for (int i = 0; i < count; i++)
+        {
+            int budget;
+            if (i == count - 1)
+            {
+                budget = _capacity - allocated;
+            }
+            else
+            {
+                Vector2Int size = ranges[i].GridSize;
+                long cells = System.Math.Max(0L, (long)size.x * size.y);
+                budget = 1 + (int)((long)distributable * cells / totalCells);
+                budget = Mathf.Min(budget, _capacity - allocated);
+            }
+
+            _rangeBudgets[i] = Mathf.Max(0, budget);
+            allocated += _rangeBudgets[i];
+        }
     }
 
     void ResetArgsAndStats()
@@ -367,6 +421,8 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         _argsBuffer.SetData(_argsScratch);
         for (int i = 0; i < StatsCount; i++) _statsScratch[i] = 0u;
         _statsBuffer.SetData(_statsScratch);
+        for (int i = 0; i < _rangeCountsScratch.Length; i++) _rangeCountsScratch[i] = 0u;
+        _rangeCountsBuffer.SetData(_rangeCountsScratch);
         _hasStats = false;
     }
 
@@ -440,6 +496,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             DistanceFadeRejectedCells = _hasStats ? _statsReadback[StatDistanceFadeRejected] : 0L,
             FrustumRejectedCells = _hasStats ? _statsReadback[StatFrustumRejected] : 0L,
             FaceAreaRejectedCells = _hasStats ? _statsReadback[StatFaceAreaRejected] : 0L,
+            RangeBudgetRejectedCells = _hasStats ? _statsReadback[StatRangeBudgetRejected] : 0L,
             OverflowDropped = _hasStats ? _statsReadback[StatOverflow] : 0L,
             CapacityInstances = _capacity,
             BufferMegabytes = _bufferBytes / (1024f * 1024f),
@@ -461,6 +518,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         _instancesBuffer?.Dispose();
         _argsBuffer?.Dispose();
         _statsBuffer?.Dispose();
+        _rangeCountsBuffer?.Dispose();
 
         if (_material != null)
         {

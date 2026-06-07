@@ -1,8 +1,8 @@
 using UnityEngine;
 
-// Per-planet Texture2DArrays bound globally for the terrain shader: one slice per biome,
-// indexed by GetDefinitionByIndex slot id (matches the BiomeLookupData ids the bake job
-// writes into chunk biome maps). Three arrays: albedo (sRGB), normal (linear), ARM (linear).
+// Per-planet Texture2DArrays bound globally for the terrain shader, indexed by
+// GetDefinitionByIndex slot id. Normal and ARM contain one slice per biome. Albedo contains
+// primary slices followed by a second bank of optional broad-scale material variants.
 //
 // Format/dimensions are taken from the first non-null SurfaceAlbedo found in the registry.
 // All biome textures in the registry must share dimensions + format; mismatched biomes get
@@ -55,7 +55,8 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
 
         _albedoArray = BuildArray(registry, sampleAlbedo, def => def?.SurfaceAlbedo,
             placeholderColor: new Color32(255, 0, 255, 255), // magenta — author missing
-            defaultFormat: TextureFormat.RGBA32, isLinear: false, "BiomeAlbedoArray");
+            defaultFormat: TextureFormat.RGBA32, isLinear: false, "BiomeAlbedoArray",
+            secondarySelector: def => def?.SurfaceSecondaryAlbedo);
 
         _normalArray = BuildArray(registry, sampleNormal, def => def?.SurfaceNormal,
             // Flat tangent-space normal (0,0,1) packed: (128,128,255,255)
@@ -184,17 +185,20 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
 
     Texture2DArray BuildArray(BiomeRegistry registry, Texture2D sample,
         System.Func<BiomeDefinition, Texture2D> selector,
-        Color32 placeholderColor, TextureFormat defaultFormat, bool isLinear, string name)
+        Color32 placeholderColor, TextureFormat defaultFormat, bool isLinear, string name,
+        System.Func<BiomeDefinition, Texture2D> secondarySelector = null)
     {
         int width = sample != null ? sample.width : FallbackSliceSize;
         int height = sample != null ? sample.height : FallbackSliceSize;
         TextureFormat format = sample != null ? sample.format : defaultFormat;
         int mipCount = sample != null ? sample.mipmapCount : 1;
+        int bankCount = secondarySelector != null ? 2 : 1;
+        int arrayDepth = SliceCount * bankCount;
 
         Texture2DArray array;
         try
         {
-            array = new Texture2DArray(width, height, SliceCount, format, mipCount > 1, isLinear)
+            array = new Texture2DArray(width, height, arrayDepth, format, mipCount > 1, isLinear)
             {
                 name = name,
                 filterMode = FilterMode.Bilinear,
@@ -208,7 +212,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
             Debug.LogWarning($"[BiomeSurfaceTextureArrays] {name} format {format} unsupported as array ({ex.Message}); falling back to RGBA32.");
             format = TextureFormat.RGBA32;
             mipCount = 1;
-            array = new Texture2DArray(width, height, SliceCount, format, false, isLinear)
+            array = new Texture2DArray(width, height, arrayDepth, format, false, isLinear)
             {
                 name = name,
                 filterMode = FilterMode.Bilinear,
@@ -221,25 +225,30 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         int placeholderUsed = 0;
         try
         {
-            for (int slot = 0; slot < SliceCount; slot++)
+            for (int bank = 0; bank < bankCount; bank++)
             {
-                BiomeDefinition def = registry.GetDefinitionByIndex(slot);
-                Texture2D src = selector(def);
+                for (int slot = 0; slot < SliceCount; slot++)
+                {
+                    BiomeDefinition def = registry.GetDefinitionByIndex(slot);
+                    Texture2D primary = selector(def);
+                    Texture2D src = bank == 0 ? primary : secondarySelector(def) ?? primary;
+                    int arraySlice = slot + bank * SliceCount;
 
-                if (src != null && src.width == width && src.height == height && src.format == format)
-                {
-                    for (int mip = 0; mip < mipCount; mip++)
-                        Graphics.CopyTexture(src, 0, mip, array, slot, mip);
-                    matched++;
-                }
-                else
-                {
-                    if (src != null)
+                    if (src != null && src.width == width && src.height == height && src.format == format)
                     {
-                        Debug.LogWarning($"[BiomeSurfaceTextureArrays] {name} slot {slot} ({def?.Type}) texture '{src.name}' is {src.width}x{src.height} {src.format}, expected {width}x{height} {format}. Using placeholder.");
+                        for (int mip = 0; mip < mipCount; mip++)
+                            Graphics.CopyTexture(src, 0, mip, array, arraySlice, mip);
+                        matched++;
                     }
-                    Graphics.CopyTexture(placeholder, 0, 0, array, slot, 0);
-                    placeholderUsed++;
+                    else
+                    {
+                        if (src != null)
+                        {
+                            Debug.LogWarning($"[BiomeSurfaceTextureArrays] {name} bank {bank} slot {slot} ({def?.Type}) texture '{src.name}' is {src.width}x{src.height} {src.format}, expected {width}x{height} {format}. Using placeholder.");
+                        }
+                        Graphics.CopyTexture(placeholder, 0, 0, array, arraySlice, 0);
+                        placeholderUsed++;
+                    }
                 }
             }
         }
@@ -248,7 +257,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
             Object.DestroyImmediate(placeholder);
         }
 
-        Debug.Log($"[BiomeSurfaceTextureArrays] {name}: {width}x{height} {format}, {matched}/{SliceCount} slots from source, {placeholderUsed} placeholder. Reference texture: {(sample != null ? sample.name : "<none>")}.");
+        Debug.Log($"[BiomeSurfaceTextureArrays] {name}: {width}x{height} {format}, {matched}/{arrayDepth} slices from source, {placeholderUsed} placeholder, {bankCount} bank(s). Reference texture: {(sample != null ? sample.name : "<none>")}.");
 
         array.Apply(updateMipmaps: false, makeNoLongerReadable: true);
         return array;

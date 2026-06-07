@@ -53,7 +53,7 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
 
         int oceanDebugMode = Shader.GetGlobalInt(_oceanDebugModeId);
         if (oceanDebugMode >= DebugModeConstants.TerrainCoastMask
-            && oceanDebugMode <= DebugModeConstants.TerrainOverrideComposite)
+            && oceanDebugMode <= DebugModeConstants.TerrainMixedAlbedo)
         {
             Shader.SetGlobalFloat(_waterVolumeEnabledId, 0f);
             return;

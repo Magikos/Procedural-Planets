@@ -18,3 +18,17 @@ public sealed class DebugCaptureSetNamesProvider : IConsoleCompletionProvider
         return CompletionRanker.Rank(names, partialValue);
     }
 }
+
+/// <summary>
+/// Completion provider for saved camera locations and the reserved last-capture entry.
+/// </summary>
+public sealed class CameraTeleportNamesProvider : IConsoleCompletionProvider
+{
+    public IEnumerable<string> GetCompletions(string partialValue)
+    {
+        if (!ServiceLocator.TryGet<ICameraTeleportRegistry>(out var registry))
+            return System.Array.Empty<string>();
+
+        return CompletionRanker.Rank(new List<string>(registry.GetTeleportNames()), partialValue);
+    }
+}

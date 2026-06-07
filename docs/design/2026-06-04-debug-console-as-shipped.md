@@ -164,7 +164,7 @@ public class WeatherManager : MonoBehaviour
 
 | Prefix | Commands | Source |
 | ------ | -------- | ------ |
-| `camera` | speed, sensitivity, fast-multiplier, position, surface-view | `FreeCameraController.cs` |
+| `camera` | speed, sensitivity, fast-multiplier, position, surface-view, teleport, save-teleport, remove-teleport, teleports | `FreeCameraController.cs` |
 | `time` | freeze, speed, set-local, moon-phase | `CelestialManager.cs` |
 | `quality` | get, list, set, cloud-steps | `QualityController.cs` |
 | `scale` | drop, clear, teleport | `ScaleReferenceMarkers.cs` |
@@ -216,6 +216,40 @@ When user is scrolled back and new messages arrive, the border pulses amber. (Or
 ### Math expressions in numeric args
 
 `int` and `float` args route through `ExpressionEvaluator` — supports `+ - * /`, parens, unary. Lets you write `time.speed 60*60` to set 1 hr/s, or `planet.generate 42 5000+1000` for radius 6000. Vector parsers do NOT (yet) route through expressions.
+
+### Reproducible camera locations
+
+Camera viewpoints used for visual debugging can be saved and restored:
+
+```text
+camera.save-teleport Grass Face Seam
+camera.teleport Grass Face Seam
+camera.remove-teleport Grass Face Seam
+camera.teleports
+```
+
+The final string parameter consumes the remaining command text, so quotes are
+optional when typing multi-word names. The completion popup inserts quotes when
+needed.
+
+`LastDebugCapture` is a reserved location updated once when an F10 capture
+starts. `LastDebugPrint` is an alias for the same location. User locations and
+the last capture persist through `PlayerPrefs`. When no persisted last capture
+exists yet, the editor imports the newest F10 sidecar from
+`local-only/debug-screenshots` as `LastDebugCapture`.
+
+`camera.save-teleport` overwrites an existing name. The built-in debug sites
+`Grass Face Seam A`, `Grass Face Seam B`, and `Terrain Texture Oblique` come
+from representative F10 captures. Saving one of those names creates a user
+override; removing that override reveals the built-in site again.
+
+Locations store camera position relative to the planet transform when one is
+available, exact camera rotation, and surface/orbit mode. This keeps a saved
+view valid if the planet object moves while preserving the original framing.
+
+Multiline command results are split into physical scrollback rows before
+rendering. This keeps list commands aligned with the renderer's row budget and
+makes every returned item visible and independently scrollable.
 
 ### Color tag markup in printed output
 

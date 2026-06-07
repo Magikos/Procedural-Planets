@@ -21,6 +21,7 @@ public static class WaterDebugIds
     public static readonly DebugCaptureSetId Biome = new DebugCaptureSetId(Module, "biome");
     public static readonly DebugCaptureSetId Frozen = new DebugCaptureSetId(Module, "frozen");
     public static readonly DebugCaptureSetId TerrainGeography = new DebugCaptureSetId(Module, "terrain-geography");
+    public static readonly DebugCaptureSetId TerrainTextures = new DebugCaptureSetId(Module, "terrain-textures");
 
     public static DebugModeId Mode(int localId)
     {
@@ -284,6 +285,8 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         RegisterMode(registry, DebugModeConstants.TerrainSlopeMask, "TerrainSlopeMask", "Terrain Geography");
         RegisterMode(registry, DebugModeConstants.TerrainSnowMask, "TerrainSnowMask", "Terrain Geography");
         RegisterMode(registry, DebugModeConstants.TerrainOverrideComposite, "TerrainOverrideComposite", "Terrain Geography");
+        RegisterMode(registry, DebugModeConstants.TerrainPrimaryAlbedo, "TerrainPrimaryAlbedo", "Terrain Textures");
+        RegisterMode(registry, DebugModeConstants.TerrainMixedAlbedo, "TerrainMixedAlbedo", "Terrain Textures");
     }
 
     static void RegisterCaptureSets(DebugRegistry registry)
@@ -348,6 +351,13 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
                 DebugModeConstants.TerrainSnowMask, DebugModeConstants.TerrainOverrideComposite,
                 DebugModeConstants.TerrainSelectedAlbedo, DebugModeConstants.TerrainSurfaceNormal,
                 DebugModeConstants.TerrainSurfaceRoughness));
+        registry.RegisterCaptureSet(WaterDebugIds.TerrainTextures, "Terrain Textures",
+            Modes(DebugModeConstants.Off, DebugModeConstants.AtmosphereBypass,
+                DebugModeConstants.WaterOff, DebugModeConstants.BiomeMapBlend,
+                DebugModeConstants.TerrainPrimaryAlbedo, DebugModeConstants.TerrainMixedAlbedo,
+                DebugModeConstants.TerrainSelectedAlbedo, DebugModeConstants.TerrainSurfaceNormal,
+                DebugModeConstants.TerrainSurfaceAo, DebugModeConstants.TerrainSurfaceRoughness,
+                DebugModeConstants.TerrainFaceId));
         registry.RegisterCaptureSet(WaterDebugIds.Caustics, "Water Caustics",
             Modes(DebugModeConstants.Off, DebugModeConstants.VolumeOnly,
                 DebugModeConstants.CausticsOnly, DebugModeConstants.CausticsPrism,

@@ -12,8 +12,8 @@
 //  - Per-root distance fade packed into BladeInstance.Color.a. The shader does a dithered
 //    clip; chunk path writes alpha=1.0 and is unaffected.
 //
-// KNOWN LIMITATION: single-face dispatch. When the disc straddles a cube-face seam,
-// the neighbor face's cells are missing. SeamRisk flag in F10 stats surfaces this.
+// Multi-face ranges share one instance buffer. Each range receives a proportional
+// emission quota so an expensive primary face cannot starve a narrow neighbor strip.
 
 struct BiomeGrassParams
 {
@@ -58,6 +58,7 @@ StructuredBuffer<BiomeGrassParams> _NearFieldBiomeGrassParams;
 RWStructuredBuffer<GrassBladeInstance> _NearFieldGrassInstances;
 RWStructuredBuffer<uint> _NearFieldDrawArgs;
 RWStructuredBuffer<uint> _NearFieldStats;
+RWStructuredBuffer<uint> _NearFieldRangeCounts;
 
 #define NF_STAT_CANDIDATE_CELLS 0
 #define NF_STAT_DENSITY_REJECTED 1
@@ -69,6 +70,7 @@ RWStructuredBuffer<uint> _NearFieldStats;
 #define NF_STAT_EMITTED 7
 #define NF_STAT_FACE_AREA_REJECTED 8
 #define NF_STAT_OVERFLOW 9
+#define NF_STAT_RANGE_BUDGET_REJECTED 10
 
 int _NearFieldBiomeAtlasResolution;
 int _NearFieldSurfaceAtlasResolution;
@@ -76,6 +78,8 @@ int _NearFieldBiomeParamCount;
 int _NearFieldCapacity;
 int _NearFieldSeed;
 int _NearFieldFaceIndex;
+int _NearFieldRangeIndex;
+int _NearFieldRangeBudget;
 int2 _NearFieldGridStartCellUV;
 int2 _NearFieldGridSize;
 float _NearFieldCellUvWidth;
@@ -434,8 +438,18 @@ void PlaceAndCullNearField(uint3 id : SV_DispatchThreadID)
         return;
     }
 
+    // Reserve a proportional part of the shared output buffer for each active face.
+    // This keeps a large primary-face dispatch from consuming every slot before a
+    // narrow seam-neighbor range runs.
+    uint rangeSlot;
+    InterlockedAdd(_NearFieldRangeCounts[_NearFieldRangeIndex], 1u, rangeSlot);
+    if (rangeSlot >= (uint)max(_NearFieldRangeBudget, 0))
+    {
+        AddStat(NF_STAT_RANGE_BUDGET_REJECTED, 1u);
+        return;
+    }
+
     // Explicit slot allocation drives the indirect draw count directly. No CopyCount.
-    // Matches the chunk-kernel pattern in BiomeGrassPlace.compute:319-325.
     uint slot;
     InterlockedAdd(_NearFieldDrawArgs[1], 1u, slot);
     if (slot >= (uint)_NearFieldCapacity)

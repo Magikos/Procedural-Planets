@@ -37,6 +37,7 @@ public struct GrassNearFieldStats
     public long DistanceFadeRejectedCells;
     public long FrustumRejectedCells;
     public long FaceAreaRejectedCells;
+    public long RangeBudgetRejectedCells;
     public long OverflowDropped;
     public int CapacityInstances;
     public float BufferMegabytes;

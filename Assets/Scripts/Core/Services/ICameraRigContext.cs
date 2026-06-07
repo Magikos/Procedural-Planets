@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public interface ICameraRigContext
 {
@@ -11,4 +12,10 @@ public interface ICameraRigContext
     float SeaLevelRadius { get; }
     float ElevationMin { get; }
     float ElevationMax { get; }
+}
+
+public interface ICameraTeleportRegistry
+{
+    IReadOnlyList<string> GetTeleportNames();
+    void RecordLastDebugCapture();
 }

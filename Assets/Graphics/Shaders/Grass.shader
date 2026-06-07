@@ -237,7 +237,6 @@ Shader "Planet/Grass"
 
                 float3 viewDir = GetWorldSpaceNormalizeViewDir(input.positionWS);
                 float3 normalWS = SafeNormalize(input.normalWS, float3(0.0, 1.0, 0.0));
-                normalWS = dot(normalWS, viewDir) < 0.0 ? -normalWS : normalWS;
 
                 float3 albedo = saturate(input.color.rgb);
                 float3 planetNormal = PlanetSafeNormalize(input.positionWS - _PlanetCenter, normalWS);
@@ -247,7 +246,11 @@ Shader "Planet/Grass"
                 float daylight = PlanetDaylightFromLocalSun(localSun);
                 float surfaceDirect = PlanetSurfaceDirect(rootUpWS, sunDir);
 
-                float bladeDiffuse = saturate(dot(normalWS, sunDir));
+                // Grass ribbons are intentionally double-sided. Using a camera-facing
+                // normal makes their diffuse term flip when the camera crosses a ribbon
+                // plane. Light both sides symmetrically so movement cannot change which
+                // normal sign receives sunlight.
+                float bladeDiffuse = saturate(abs(dot(normalWS, sunDir)));
                 float wrapDiffuse = saturate(bladeDiffuse * 0.72 + 0.28);
                 float3 dayColor = albedo * (0.16 + wrapDiffuse * surfaceDirect * 0.96);
 

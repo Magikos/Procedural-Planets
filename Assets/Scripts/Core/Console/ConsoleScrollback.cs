@@ -55,6 +55,29 @@ public sealed class ConsoleScrollback
     }
 
     /// <summary>
+    /// Append text as physical scrollback rows. The renderer budgets vertical space per
+    /// message, so embedded newlines must not remain inside a single message.
+    /// </summary>
+    public void AppendText(string text, ConsoleMessageType type = ConsoleMessageType.Normal)
+    {
+        text ??= "";
+        int lineStart = 0;
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+            if (c != '\r' && c != '\n')
+                continue;
+
+            Append(text.Substring(lineStart, i - lineStart), type);
+            if (c == '\r' && i + 1 < text.Length && text[i + 1] == '\n')
+                i++;
+            lineStart = i + 1;
+        }
+
+        Append(text.Substring(lineStart), type);
+    }
+
+    /// <summary>
     /// Replace the text/type of a previously appended line, identified by its id.
     /// Silent no-op if the id is no longer present (e.g. trimmed by the ring buffer).
     /// </summary>

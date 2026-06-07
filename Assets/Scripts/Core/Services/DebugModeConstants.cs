@@ -147,9 +147,11 @@ public static class DebugModeConstants
     public const int TerrainSlopeMask = 92;
     public const int TerrainSnowMask = 93;
     public const int TerrainOverrideComposite = 94;
+    public const int TerrainPrimaryAlbedo = 95;
+    public const int TerrainMixedAlbedo = 96;
 
     /// <summary>Highest defined mode value. Update when adding new modes.</summary>
-    public const int Max = 94;
+    public const int Max = 96;
 
     public static bool SuppressesWeatherPasses(int mode)
     {
@@ -175,6 +177,6 @@ public static class DebugModeConstants
             || mode == GlintLocator
             || (mode >= BiomePrimaryId && mode <= BiomeAltitudeCooling)
             || (mode >= WaterTemperature && mode <= WaterIceContribution)
-            || (mode >= TerrainCoastMask && mode <= TerrainOverrideComposite);
+            || (mode >= TerrainCoastMask && mode <= TerrainMixedAlbedo);
     }
 }
