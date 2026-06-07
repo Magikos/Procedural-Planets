@@ -95,6 +95,15 @@ public static class CommandParser
                 return false;
             }
 
+            // A final string parameter is naturally command-tail text. Accept the remaining
+            // tokens as one value so both quoted and unquoted multi-word names/messages work.
+            if (p.Type == typeof(string) && i == parameters.Length - 1)
+            {
+                bound[i] = string.Join(" ", System.Linq.Enumerable.Skip(argTokens, tokenIndex));
+                tokenIndex = argTokens.Count;
+                continue;
+            }
+
             if (!ConsoleArgumentParsers.TryParse(argTokens, tokenIndex, p.Type, out object value, out int consumed, out string parseError))
             {
                 error = $"argument '{p.Name}': {parseError}";

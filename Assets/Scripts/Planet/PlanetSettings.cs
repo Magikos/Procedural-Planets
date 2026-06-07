@@ -3,6 +3,23 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Planet/Settings/Planet Settings")]
 public class PlanetSettings : ScriptableObject
 {
+    [System.Serializable]
+    public sealed class FrozenWaterSettings
+    {
+        public bool Enabled = true;
+
+        [Range(0f, 1f)] public float LakeFreezeStartTemperature01 = 0.36f;
+        [Range(0f, 1f)] public float LakeFreezeCompleteTemperature01 = 0.26f;
+        [Range(0f, 1f)] public float OceanFreezeStartTemperature01 = 0.20f;
+        [Range(0f, 1f)] public float OceanFreezeCompleteTemperature01 = 0.10f;
+
+        public Color IceTint = new Color(0.62f, 0.82f, 0.88f, 1f);
+        [Range(0f, 1f)] public float IceOpacity = 0.88f;
+        [Range(0f, 1f)] public float IceRoughness = 0.72f;
+        [Range(0f, 2f)] public float IceNormalStrength = 0.35f;
+        [Min(1f)] public float IceBreakupScale = 95f;
+    }
+
     [Header("General")]
     [Range(1, 5000)] public float PlanetRadius = 50f;
 
@@ -34,6 +51,7 @@ public class PlanetSettings : ScriptableObject
     public bool HasOceans = true;
     [Range(-0.05f, 0.05f)] public float OceanLevel = 0f;
     public Color WaterColor = new Color(0.07f, 0.35f, 0.63f, 0.7f);
+    public FrozenWaterSettings FrozenWater = new FrozenWaterSettings();
 
     [Header("Biomes")]
     public BiomeSettings BiomeSettings;

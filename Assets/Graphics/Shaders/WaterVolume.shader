@@ -669,6 +669,7 @@ Shader "Hidden/WaterVolume"
 
         float4 waterData = SAMPLE_TEXTURE2D(_WaterVolumeData, sampler_WaterVolumeData, input.uv);
         float screenWaterCoverage = WaterCoverageFromData(waterData);
+        float liquidContribution = 1.0 - saturate(waterData.a);
         float receiverDistance = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
         float3 receiverWS = _WorldSpaceCameraPos.xyz + rayDir * receiverDistance;
 
@@ -677,6 +678,8 @@ Shader "Hidden/WaterVolume"
         caustics.mask *= layerVisibility;
         caustics.contribution *= layerVisibility;
         caustics.prismContribution *= layerVisibility;
+        caustics.contribution *= liquidContribution;
+        caustics.prismContribution *= liquidContribution;
         float farTerrainWaterlinePath;
         float farTerrainWaterlineMask = FarTerrainWaterlineMask(receiverWS, rayDir, receiverDistance, screenWaterCoverage, farTerrainWaterlinePath) * layerVisibility;
         farTerrainWaterlinePath *= layerVisibility;
@@ -687,6 +690,9 @@ Shader "Hidden/WaterVolume"
             receiverWS,
             caustics,
             distortionDebugScale);
+        bottomDistortion.mask *= liquidContribution;
+        bottomDistortion.offsetUv *= liquidContribution;
+        bottomDistortion.strengthPixels *= liquidContribution;
 
         if (_OceanDebugMode == DEBUG_VOLUME_MASK || _OceanDebugMode == DEBUG_VOLUME_OCCLUSION)
             return float4(caustics.mask, screenWaterCoverage, saturate(caustics.waterPath / max(_DeepDepth, 1.0)), 1.0);
@@ -741,7 +747,7 @@ Shader "Hidden/WaterVolume"
         }
 
         float causticMask = caustics.mask * caustics.depthFade * caustics.pathFade * caustics.light;
-        float troughShadow = saturate((1.0 - caustics.pattern) * causticMask * 0.025);
+        float troughShadow = saturate((1.0 - caustics.pattern) * causticMask * 0.025 * liquidContribution);
         float bottomDistortionBlend = _OceanDebugMode == DEBUG_VOLUME_NO_REFRACTION
             ? 0.0
             : saturate(bottomDistortion.mask * 0.58);

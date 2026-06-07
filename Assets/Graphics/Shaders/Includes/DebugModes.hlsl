@@ -144,7 +144,12 @@
 #define DEBUG_GRASS_LOD_COVERAGE          86
 #define DEBUG_BIOME_ALTITUDE_COOLING      87
 
+// --- Frozen water diagnostics (88-90) ---
+#define DEBUG_WATER_TEMPERATURE           88
+#define DEBUG_WATER_FREEZE                89
+#define DEBUG_WATER_ICE_CONTRIBUTION      90
+
 // Convenience: last defined mode. Update when adding new modes.
-#define DEBUG_MODE_MAX                    87
+#define DEBUG_MODE_MAX                    90
 
 #endif

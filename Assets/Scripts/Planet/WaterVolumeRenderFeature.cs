@@ -14,6 +14,11 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
     static readonly int _deepDepthId = Shader.PropertyToID("_DeepDepth");
     static readonly int _shoreFoamSoftnessId = Shader.PropertyToID("_ShoreFoamSoftness");
     static readonly int _alphaId = Shader.PropertyToID("_Alpha");
+    static readonly int _freezingEnabledId = Shader.PropertyToID("_FreezingEnabled");
+    static readonly int _lakeFreezeStartId = Shader.PropertyToID("_LakeFreezeStart");
+    static readonly int _lakeFreezeCompleteId = Shader.PropertyToID("_LakeFreezeComplete");
+    static readonly int _oceanFreezeStartId = Shader.PropertyToID("_OceanFreezeStart");
+    static readonly int _oceanFreezeCompleteId = Shader.PropertyToID("_OceanFreezeComplete");
     static readonly int _refractionStrengthId = Shader.PropertyToID("_RefractionStrength");
     static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
     static readonly int _causticIntensityId = Shader.PropertyToID("_CausticIntensity");
@@ -218,6 +223,11 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
             destination.SetFloat(_shoreFoamSoftnessId, source.GetFloat(_shoreFoamSoftnessId));
         if (source.HasProperty(_alphaId))
             destination.SetFloat(_alphaId, source.GetFloat(_alphaId));
+        CopyFloatIfPresent(source, destination, _freezingEnabledId);
+        CopyFloatIfPresent(source, destination, _lakeFreezeStartId);
+        CopyFloatIfPresent(source, destination, _lakeFreezeCompleteId);
+        CopyFloatIfPresent(source, destination, _oceanFreezeStartId);
+        CopyFloatIfPresent(source, destination, _oceanFreezeCompleteId);
         if (destination.HasProperty(_refractionStrengthId))
             destination.SetFloat(_refractionStrengthId, RefractionStrength);
         if (destination.HasProperty(_causticIntensityId))
@@ -228,6 +238,12 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
             destination.SetFloat(_causticContrastId, CausticContrast);
         if (destination.HasProperty(_causticPrismStrengthId))
             destination.SetFloat(_causticPrismStrengthId, CausticPrismStrength);
+    }
+
+    static void CopyFloatIfPresent(Material source, Material destination, int propertyId)
+    {
+        if (source.HasProperty(propertyId) && destination.HasProperty(propertyId))
+            destination.SetFloat(propertyId, source.GetFloat(propertyId));
     }
 }
 

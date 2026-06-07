@@ -24,6 +24,16 @@ Shader "Planet/Ocean"
         _WakeNormalStrength ("Wake Normal Strength", Range(0, 4)) = 1
         _OceanFocusMode ("Ocean Focus Mode", Range(0, 1)) = 1
         _Alpha ("Alpha", Range(0, 1)) = 0.9
+        _FreezingEnabled ("Freezing Enabled", Range(0, 1)) = 1
+        _LakeFreezeStart ("Lake Freeze Start", Range(0, 1)) = 0.36
+        _LakeFreezeComplete ("Lake Freeze Complete", Range(0, 1)) = 0.26
+        _OceanFreezeStart ("Ocean Freeze Start", Range(0, 1)) = 0.20
+        _OceanFreezeComplete ("Ocean Freeze Complete", Range(0, 1)) = 0.10
+        _IceTint ("Ice Tint", Color) = (0.62, 0.82, 0.88, 1)
+        _IceOpacity ("Ice Opacity", Range(0, 1)) = 0.88
+        _IceRoughness ("Ice Roughness", Range(0, 1)) = 0.72
+        _IceNormalStrength ("Ice Normal Strength", Range(0, 2)) = 0.35
+        _IceBreakupScale ("Ice Breakup Scale", Range(1, 1000)) = 95
     }
 
     SubShader
@@ -73,7 +83,7 @@ Shader "Planet/Ocean"
                 float4 positionCS : SV_POSITION;
                 float3 positionWS : TEXCOORD0;
                 float3 normalWS : TEXCOORD1;
-                float3 waterData : TEXCOORD2;
+                float4 waterData : TEXCOORD2;
                 float swellHeight : TEXCOORD3; // vertex-evaluated swell, surfaced for WaveSwell debug
             };
 
@@ -100,6 +110,16 @@ Shader "Planet/Ocean"
                 float _WakeNormalStrength;
                 float _OceanFocusMode;
                 float _Alpha;
+                float _FreezingEnabled;
+                float _LakeFreezeStart;
+                float _LakeFreezeComplete;
+                float _OceanFreezeStart;
+                float _OceanFreezeComplete;
+                float4 _IceTint;
+                float _IceOpacity;
+                float _IceRoughness;
+                float _IceNormalStrength;
+                float _IceBreakupScale;
             CBUFFER_END
 
             float3 _PlanetCenter;
@@ -133,6 +153,9 @@ Shader "Planet/Ocean"
                 float3 nearColor;
                 float3 farColor;
                 float pathBlend;
+                float waterTemperature;
+                float freezeFactor;
+                float iceContribution;
             };
 
             float3 SafeNormalize(float3 value, float3 fallback)
@@ -260,6 +283,47 @@ Shader "Planet/Ocean"
                 float coarse = ValueNoise(value * 0.19);
                 float fine = ValueNoise(value * 0.73 + coarse * 3.1);
                 return saturate(lerp(fine, coarse, 0.42));
+            }
+
+            float EvaluateFreezeFactor(float temperature01, float body01)
+            {
+                float start = lerp(_LakeFreezeStart, _OceanFreezeStart, body01);
+                float complete = lerp(_LakeFreezeComplete, _OceanFreezeComplete, body01);
+                float cold = min(start, complete);
+                float warm = max(start, complete);
+                float freeze = 1.0 - smoothstep(cold, max(warm, cold + 0.0001), temperature01);
+                return saturate(freeze * _FreezingEnabled);
+            }
+
+            float EvaluateIceContribution(float3 positionWS, float3 normalWS, float freezeFactor)
+            {
+                float3 tangentA;
+                float3 tangentB;
+                BuildSurfaceBasis(normalWS, tangentA, tangentB);
+                float3 localPosition = positionWS - _PlanetCenter;
+                float scale = max(_IceBreakupScale, 1.0);
+                float2 uv = float2(dot(localPosition, tangentA), dot(localPosition, tangentB)) / scale;
+                float breakup = ValueNoise(uv) * 0.68 + ValueNoise(uv * 2.37 + 9.13) * 0.32;
+                float transitionWeight = 1.0 - abs(freezeFactor * 2.0 - 1.0);
+                float irregularFreeze = saturate(freezeFactor + (breakup - 0.5) * 0.30 * transitionWeight);
+                return smoothstep(0.06, 0.94, irregularFreeze);
+            }
+
+            float3 ComputeIceNormal(float3 positionWS, float3 normalWS)
+            {
+                float3 tangentA;
+                float3 tangentB;
+                BuildSurfaceBasis(normalWS, tangentA, tangentB);
+                float3 localPosition = positionWS - _PlanetCenter;
+                float scale = max(_IceBreakupScale * 0.32, 1.0);
+                float2 uv = float2(dot(localPosition, tangentA), dot(localPosition, tangentB)) / scale;
+                float center = ValueNoise(uv);
+                float gradientX = ValueNoise(uv + float2(0.08, 0.0)) - center;
+                float gradientY = ValueNoise(uv + float2(0.0, 0.08)) - center;
+                float normalStrength = _IceNormalStrength * 2.4;
+                return SafeNormalize(
+                    normalWS - tangentA * gradientX * normalStrength - tangentB * gradientY * normalStrength,
+                    normalWS);
             }
 
             float SurfaceVoronoi(float2 uv, float time)
@@ -518,7 +582,13 @@ Shader "Planet/Ocean"
                     || (_OceanDebugMode >= DEBUG_CAUSTICS_ONLY && _OceanDebugMode <= DEBUG_CAUSTICS_PRISM);
             }
 
-            SurfaceLayer ComputeSurfaceLayer(float3 positionWS, float3 normalWS, float depth01, float shore01, float body01)
+            SurfaceLayer ComputeSurfaceLayer(
+                float3 positionWS,
+                float3 normalWS,
+                float depth01,
+                float shore01,
+                float body01,
+                float waterTemperature01)
             {
                 SurfaceLayer layer;
 
@@ -539,6 +609,20 @@ Shader "Planet/Ocean"
                 float shoreFoam;
                 float crestFoam;
                 ComputeSurfaceWaves(positionWS, normalWS, depth01, shore01, body01, rippleNormalWS, signedWaveHeight, waveSlope, rippleSignal, waveProof, waveEnergy, storm01, foamAmount, shoreFoam, crestFoam);
+                float freezeFactor = EvaluateFreezeFactor(waterTemperature01, body01);
+                float iceContribution = EvaluateIceContribution(positionWS, normalWS, freezeFactor);
+                float liquidContribution = 1.0 - iceContribution;
+                float3 iceNormalWS = ComputeIceNormal(positionWS, normalWS);
+                rippleNormalWS = SafeNormalize(lerp(iceNormalWS, rippleNormalWS, liquidContribution), normalWS);
+                signedWaveHeight *= liquidContribution;
+                waveSlope *= liquidContribution;
+                rippleSignal = lerp(0.5, rippleSignal, liquidContribution);
+                waveProof *= liquidContribution;
+                waveEnergy *= liquidContribution;
+                storm01 *= liquidContribution;
+                foamAmount *= liquidContribution;
+                shoreFoam *= liquidContribution;
+                crestFoam *= liquidContribution;
                 float3 viewDir = SafeNormalize(_WorldSpaceCameraPos.xyz - positionWS, normalWS);
                 float signedViewFacing = dot(viewDir, normalWS);
                 float viewFacing = saturate(abs(dot(viewDir, rippleNormalWS)));
@@ -588,7 +672,7 @@ Shader "Planet/Ocean"
                 layer.nearColor = baseSurfaceColor;
                 layer.farColor = farSurfaceColor;
                 layer.pathBlend = surfacePathBlend;
-                float retainedSurfaceDetail = waveShade * daylight * shadow * lerp(0.60, 1.0, body01) * lerp(1.0, 0.42, surfacePathBlend);
+                float retainedSurfaceDetail = waveShade * daylight * shadow * lerp(0.60, 1.0, body01) * lerp(1.0, 0.42, surfacePathBlend) * liquidContribution;
                 layer.color *= 1.0 + retainedSurfaceDetail;
 
                 float3 halfDir = SafeNormalize(sunDir + viewDir, sunDir);
@@ -599,10 +683,25 @@ Shader "Planet/Ocean"
                 float glintSlopeMask = smoothstep(0.012, 0.11, waveSlope);
                 float glintSunMask = daylight * shadow * smoothstep(0.02, 0.24, localSun);
                 float glintViewMask = lerp(0.28, 1.0, saturate(fresnel * 1.4 + viewPath * 0.35));
-                float glint = (broadGlint + sharpGlint) * glintSlopeMask * glintSunMask * glintViewMask * _SunGlitterIntensity * dataContinuity;
+                float glint = (broadGlint + sharpGlint) * glintSlopeMask * glintSunMask * glintViewMask * _SunGlitterIntensity * dataContinuity * liquidContribution;
                 layer.color = saturate(layer.color + glint * float3(1.0, 0.92, 0.72));
                 float3 foamLitColor = _FoamColor.rgb * lerp(0.05, 1.0, daylight) * lerp(0.70, 1.0, shadow);
                 layer.color = lerp(layer.color, foamLitColor, saturate(foamAmount * _FoamColor.a));
+
+                float iceSun = saturate(dot(iceNormalWS, sunDir));
+                float iceLight = lerp(nightLight, 0.34 + iceSun * 0.66, daylight);
+                iceLight *= lerp(1.0, shadow, daylight * 0.78);
+                float3 localIcePosition = positionWS - _PlanetCenter;
+                float iceNoise = ValueNoise(
+                    float2(dot(localIcePosition, iceNormalWS.yzx),
+                           dot(localIcePosition, iceNormalWS.zxy))
+                    / max(_IceBreakupScale * 0.48, 1.0));
+                float3 iceColor = _IceTint.rgb * iceLight * lerp(0.82, 1.12, iceNoise);
+                float iceSpecPower = lerp(180.0, 18.0, _IceRoughness);
+                float iceSpecular = pow(saturate(dot(iceNormalWS, halfDir)), iceSpecPower)
+                    * daylight * shadow * lerp(0.34, 0.08, _IceRoughness);
+                iceColor += iceSpecular * float3(0.86, 0.94, 1.0);
+                layer.color = lerp(layer.color, saturate(iceColor), iceContribution);
 
                 float depthAlpha = lerp(0.09, 0.34, depthBlend);
                 float shoreAlpha = lerp(0.42, 1.0, shoreVisibility);
@@ -610,7 +709,7 @@ Shader "Planet/Ocean"
                 float farOpacityCeiling = lerp(0.72, 0.98, saturate(max(depthBlend, fresnel)));
                 float farAlpha = farOpacityCeiling * lerp(0.74, 1.0, body01);
                 float pathAlpha = saturate(smoothstep(0.08, 0.68, viewPath) * lerp(0.82, 1.0, fresnel));
-                layer.alpha = saturate(lerp(nearAlpha, farAlpha, pathAlpha));
+                layer.alpha = saturate(lerp(lerp(nearAlpha, farAlpha, pathAlpha), _IceOpacity, iceContribution));
                 layer.depthBlend = depthBlend;
                 layer.shoreVisibility = shoreVisibility;
                 layer.fresnel = fresnel;
@@ -630,6 +729,9 @@ Shader "Planet/Ocean"
                 layer.foam = foamAmount;
                 layer.shoreFoam = shoreFoam;
                 layer.crestFoam = crestFoam;
+                layer.waterTemperature = waterTemperature01;
+                layer.freezeFactor = freezeFactor;
+                layer.iceContribution = iceContribution;
                 return layer;
             }
 
@@ -687,10 +789,14 @@ Shader "Planet/Ocean"
                 float3 objectNormalWS = TransformObjectToWorldNormal(input.normalOS);
                 float3 planetNormalWS = SafeNormalize(positionWS - _PlanetCenter, objectNormalWS);
 
-                float3 waterData = saturate(input.color.rgb);
+                float4 waterData = saturate(input.color);
+                float freezeFactor = EvaluateFreezeFactor(waterData.a, waterData.b);
                 float swellHeight;
                 float3 swellNormal;
                 ComputeOceanSwell(positionWS, planetNormalWS, waterData.r, waterData.g, waterData.b, swellHeight, swellNormal);
+                float liquidContribution = 1.0 - freezeFactor;
+                swellHeight *= liquidContribution;
+                swellNormal = SafeNormalize(lerp(planetNormalWS, swellNormal, liquidContribution), planetNormalWS);
                 positionWS += planetNormalWS * swellHeight; // radial displacement → real 3D waves on the mesh
 
                 output.positionCS = TransformWorldToHClip(positionWS);
@@ -716,7 +822,14 @@ Shader "Planet/Ocean"
                 float depth01 = saturate(input.waterData.r);
                 float shore01 = saturate(input.waterData.g);
                 float body01 = saturate(input.waterData.b);
-                SurfaceLayer layer = ComputeSurfaceLayer(input.positionWS, input.normalWS, depth01, shore01, body01);
+                float waterTemperature01 = saturate(input.waterData.a);
+                SurfaceLayer layer = ComputeSurfaceLayer(
+                    input.positionWS,
+                    input.normalWS,
+                    depth01,
+                    shore01,
+                    body01,
+                    waterTemperature01);
 
                 if (_OceanDebugMode == DEBUG_WATER_DEPTH)
                     return half4(lerp(float3(0.55, 1.0, 0.92), float3(0.0, 0.025, 0.16), layer.depthBlend), 1.0);
@@ -724,6 +837,12 @@ Shader "Planet/Ocean"
                     return half4(lerp(float3(0.02, 0.02, 0.025), float3(1.0, 0.92, 0.16), shore01), 1.0);
                 if (_OceanDebugMode == DEBUG_WATER_BODY)
                     return half4(lerp(float3(0.86, 0.22, 0.70), float3(0.05, 0.85, 1.0), body01), 1.0);
+                if (_OceanDebugMode == DEBUG_WATER_TEMPERATURE)
+                    return half4(lerp(float3(0.05, 0.25, 1.0), float3(1.0, 0.12, 0.02), layer.waterTemperature), 1.0);
+                if (_OceanDebugMode == DEBUG_WATER_FREEZE)
+                    return half4(lerp(float3(0.02, 0.02, 0.03), float3(0.45, 0.92, 1.0), layer.freezeFactor), 1.0);
+                if (_OceanDebugMode == DEBUG_WATER_ICE_CONTRIBUTION)
+                    return half4(lerp(float3(0.02, 0.02, 0.03), float3(1.0, 0.0, 1.0), layer.iceContribution), 1.0);
                 if (_OceanDebugMode == DEBUG_WATER_LIGHTING)
                     return half4(layer.daylight, layer.shadow, layer.fresnel, 1.0);
                 if (_OceanDebugMode == DEBUG_WATER_GLINT)

@@ -58,6 +58,19 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     static readonly int _oceanFocusModeId = Shader.PropertyToID("_OceanFocusMode");
     static readonly int _waterFocusModeId = Shader.PropertyToID("_WaterFocusMode");
     static readonly int _alphaId = Shader.PropertyToID("_Alpha");
+    static readonly int _freezingEnabledId = Shader.PropertyToID("_FreezingEnabled");
+    static readonly int _lakeFreezeStartId = Shader.PropertyToID("_LakeFreezeStart");
+    static readonly int _lakeFreezeCompleteId = Shader.PropertyToID("_LakeFreezeComplete");
+    static readonly int _oceanFreezeStartId = Shader.PropertyToID("_OceanFreezeStart");
+    static readonly int _oceanFreezeCompleteId = Shader.PropertyToID("_OceanFreezeComplete");
+    static readonly int _iceTintId = Shader.PropertyToID("_IceTint");
+    static readonly int _iceOpacityId = Shader.PropertyToID("_IceOpacity");
+    static readonly int _iceRoughnessId = Shader.PropertyToID("_IceRoughness");
+    static readonly int _iceNormalStrengthId = Shader.PropertyToID("_IceNormalStrength");
+    static readonly int _iceBreakupScaleId = Shader.PropertyToID("_IceBreakupScale");
+    static readonly int _frozenWaterBodiesId = Shader.PropertyToID("_FrozenWaterBodies");
+    static readonly int _partiallyFrozenWaterBodiesId = Shader.PropertyToID("_PartiallyFrozenWaterBodies");
+    static readonly int _liquidWaterBodiesId = Shader.PropertyToID("_LiquidWaterBodies");
     static readonly int _grassFarOverlayStrengthId = Shader.PropertyToID("_GrassFarOverlayStrength");
     static readonly int _grassFarOverlayStartId = Shader.PropertyToID("_GrassFarOverlayStart");
     static readonly int _grassFarOverlayEndId = Shader.PropertyToID("_GrassFarOverlayEnd");
@@ -432,6 +445,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     async Awaitable GenerateWaterAsync(IProgressHandle progress, CancellationToken ct)
     {
+        Shader.SetGlobalInt(_frozenWaterBodiesId, 0);
+        Shader.SetGlobalInt(_partiallyFrozenWaterBodiesId, 0);
+        Shader.SetGlobalInt(_liquidWaterBodiesId, 0);
+
         if (!_planetSettings.HasOceans)
         {
             if (_waterObject != null) _waterObject.SetActive(false);
@@ -459,6 +476,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             meshFilter.sharedMesh = new Mesh { name = "WaterBodies" };
 
         float waterScale = GetWaterDistanceScale();
+        PlanetSettings.FrozenWaterSettings frozenWater = _planetSettings.FrozenWater
+            ?? new PlanetSettings.FrozenWaterSettings();
         var buildSettings = new WaterMeshBuilder.Settings
         {
             PlanetRadius = _planetSettings.PlanetRadius,
@@ -466,7 +485,13 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             DeepDepth = WaterDeepDepth * waterScale,
             ShoreRange = WaterShoreRange * waterScale,
             SurfaceOffset = Mathf.Max(_planetSettings.PlanetRadius * 0.00003f, 0.02f),
-            OceanBodyVertexThreshold = Mathf.Max(48, PerFaceResolution * PerFaceResolution / 28)
+            OceanBodyVertexThreshold = Mathf.Max(48, PerFaceResolution * PerFaceResolution / 28),
+            ClimateProvider = _colorGenerator.ClimateProvider,
+            EnableFreezing = frozenWater.Enabled,
+            LakeFreezeStartTemperature01 = frozenWater.LakeFreezeStartTemperature01,
+            LakeFreezeCompleteTemperature01 = frozenWater.LakeFreezeCompleteTemperature01,
+            OceanFreezeStartTemperature01 = frozenWater.OceanFreezeStartTemperature01,
+            OceanFreezeCompleteTemperature01 = frozenWater.OceanFreezeCompleteTemperature01
         };
         // Water builder reads per-face vertex/elevation grids via IFaceMeshSampler. Both
         // resolution modes (Low/High) supply this view; chunked path wraps each root chunk.
@@ -505,12 +530,18 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         }
 
         WaterMeshBuilder.Apply(waterMesh, null, waterMeshData);
+        Shader.SetGlobalInt(_frozenWaterBodiesId, waterMeshData.Stats.FrozenBodies);
+        Shader.SetGlobalInt(_partiallyFrozenWaterBodiesId, waterMeshData.Stats.PartiallyFrozenBodies);
+        Shader.SetGlobalInt(_liquidWaterBodiesId, waterMeshData.Stats.LiquidBodies);
         progress?.Report(0.9f, "Configuring water...");
 
         Logger.Log(LogLevel.Debug, "Water",
             $"Generated water mesh: {waterMeshData.Stats.MeshVertices} verts, {waterMeshData.Stats.Triangles} tris, " +
             $"wet terrain verts {waterMeshData.Stats.WetVertices}, ocean bodies {waterMeshData.Stats.OceanBodies}, " +
-            $"small bodies {waterMeshData.Stats.SmallBodies}, max depth {waterMeshData.Stats.MaxDepth:F1}");
+            $"small bodies {waterMeshData.Stats.SmallBodies}, frozen/partial/liquid " +
+            $"{waterMeshData.Stats.FrozenBodies}/{waterMeshData.Stats.PartiallyFrozenBodies}/{waterMeshData.Stats.LiquidBodies}, " +
+            $"water temp {waterMeshData.Stats.MinWaterTemperature01:F3}-{waterMeshData.Stats.MaxWaterTemperature01:F3} " +
+            $"avg {waterMeshData.Stats.AverageWaterTemperature01:F3}, max depth {waterMeshData.Stats.MaxDepth:F1}");
 
         var renderer = _waterObject.GetComponent<Renderer>();
         if (_waterMaterial == null ||
@@ -566,6 +597,18 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             mat.SetFloat(_oceanFocusModeId, 1f);
             Shader.SetGlobalFloat(_waterFocusModeId, 0f);
             mat.SetFloat(_alphaId, WaterAlpha);
+            PlanetSettings.FrozenWaterSettings frozenWater = _planetSettings.FrozenWater
+                ?? new PlanetSettings.FrozenWaterSettings();
+            mat.SetFloat(_freezingEnabledId, frozenWater.Enabled ? 1f : 0f);
+            mat.SetFloat(_lakeFreezeStartId, frozenWater.LakeFreezeStartTemperature01);
+            mat.SetFloat(_lakeFreezeCompleteId, frozenWater.LakeFreezeCompleteTemperature01);
+            mat.SetFloat(_oceanFreezeStartId, frozenWater.OceanFreezeStartTemperature01);
+            mat.SetFloat(_oceanFreezeCompleteId, frozenWater.OceanFreezeCompleteTemperature01);
+            mat.SetColor(_iceTintId, frozenWater.IceTint);
+            mat.SetFloat(_iceOpacityId, frozenWater.IceOpacity);
+            mat.SetFloat(_iceRoughnessId, frozenWater.IceRoughness);
+            mat.SetFloat(_iceNormalStrengthId, frozenWater.IceNormalStrength);
+            mat.SetFloat(_iceBreakupScaleId, frozenWater.IceBreakupScale * waterScale);
             mat.renderQueue = 3000;
             mat.SetOverrideTag("RenderType", "Transparent");
             Logger.Log(LogLevel.Debug, "Water", "Applied integrated ocean mode: clouds, rain, and terrain cloud shadows enabled; focused water rendering retained.");

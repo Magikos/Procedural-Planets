@@ -19,6 +19,7 @@ public static class WaterDebugIds
     public static readonly DebugCaptureSetId Foam = new DebugCaptureSetId(Module, "foam");
     public static readonly DebugCaptureSetId Glint = new DebugCaptureSetId(Module, "glint");
     public static readonly DebugCaptureSetId Biome = new DebugCaptureSetId(Module, "biome");
+    public static readonly DebugCaptureSetId Frozen = new DebugCaptureSetId(Module, "frozen");
 
     public static DebugModeId Mode(int localId)
     {
@@ -63,6 +64,14 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     static readonly int _biomeVoronoiDistinctBiomesId = Shader.PropertyToID("_BiomeVoronoiDistinctBiomes");
     static readonly int _biomeVoronoiBuildMsId = Shader.PropertyToID("_BiomeVoronoiBuildMs");
     static readonly int _biomeVoronoiAtlasResolutionId = Shader.PropertyToID("_BiomeVoronoiAtlasResolution");
+    static readonly int _freezingEnabledId = Shader.PropertyToID("_FreezingEnabled");
+    static readonly int _lakeFreezeStartId = Shader.PropertyToID("_LakeFreezeStart");
+    static readonly int _lakeFreezeCompleteId = Shader.PropertyToID("_LakeFreezeComplete");
+    static readonly int _oceanFreezeStartId = Shader.PropertyToID("_OceanFreezeStart");
+    static readonly int _oceanFreezeCompleteId = Shader.PropertyToID("_OceanFreezeComplete");
+    static readonly int _frozenWaterBodiesId = Shader.PropertyToID("_FrozenWaterBodies");
+    static readonly int _partiallyFrozenWaterBodiesId = Shader.PropertyToID("_PartiallyFrozenWaterBodies");
+    static readonly int _liquidWaterBodiesId = Shader.PropertyToID("_LiquidWaterBodies");
 
     struct WaterDebugStats
     {
@@ -72,9 +81,11 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         public float DepthMin, DepthMax, DepthAvg;
         public float ShoreMin, ShoreMax, ShoreAvg;
         public float BodyMin, BodyMax, BodyAvg;
+        public float TemperatureMin, TemperatureMax, TemperatureAvg;
         public float MotionMaskAvg, MotionMaskMax, MotionMaskSample;
         public float NormalMaskAvg, NormalMaskMax, NormalMaskSample;
         public float SampleDepth, SampleShore, SampleBody;
+        public float SampleTemperature;
         public float MotionEligiblePercent;
         public float NormalEligiblePercent;
     }
@@ -230,6 +241,9 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         RegisterMode(registry, DebugModeConstants.TerrainSurfaceAo, "TerrainSurfaceAO", "Biome");
         RegisterMode(registry, DebugModeConstants.TerrainSurfaceRoughness, "TerrainSurfaceRoughness", "Biome");
         RegisterMode(registry, DebugModeConstants.GrassLodCoverage, "GrassLodCoverage", "Biome");
+        RegisterMode(registry, DebugModeConstants.WaterTemperature, "WaterTemperature", "Frozen Water");
+        RegisterMode(registry, DebugModeConstants.WaterFreeze, "WaterFreeze", "Frozen Water");
+        RegisterMode(registry, DebugModeConstants.WaterIceContribution, "WaterIceContribution", "Frozen Water");
     }
 
     static void RegisterCaptureSets(DebugRegistry registry)
@@ -281,6 +295,12 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
                 DebugModeConstants.TerrainSurfaceNormal, DebugModeConstants.TerrainSurfaceAo,
                 DebugModeConstants.TerrainSurfaceRoughness, DebugModeConstants.GrassLodCoverage,
                 DebugModeConstants.TerrainFaceId));
+        registry.RegisterCaptureSet(WaterDebugIds.Frozen, "Frozen Water",
+            Modes(DebugModeConstants.Off, DebugModeConstants.SurfaceOnly,
+                DebugModeConstants.WaterBody, DebugModeConstants.WaterTemperature,
+                DebugModeConstants.WaterFreeze, DebugModeConstants.WaterIceContribution,
+                DebugModeConstants.WaterMotionMask, DebugModeConstants.WaterNormals,
+                DebugModeConstants.WaterFoam));
         registry.RegisterCaptureSet(WaterDebugIds.Caustics, "Water Caustics",
             Modes(DebugModeConstants.Off, DebugModeConstants.VolumeOnly,
                 DebugModeConstants.CausticsOnly, DebugModeConstants.CausticsPrism,
@@ -376,6 +396,12 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         sb.AppendLine($"Wave: amp={GetMaterialFloat(mat, _waveAmplitudeId):F2}, scale={GetMaterialFloat(mat, _waveScaleId):F2}, speed={GetMaterialFloat(mat, _waveSpeedId):F2}, normal={GetMaterialFloat(mat, _waveNormalStrengthId):F2}, motion={GetMaterialFloat(mat, _waterMotionStrengthId):F2}, shimmer={GetMaterialFloat(mat, _sunGlitterIntensityId):F2}");
         sb.AppendLine($"SurfaceFx: shoreFoam={GetMaterialFloat(mat, _shoreFoamIntensityId):F2}, whitecaps={GetMaterialFloat(mat, _whitecapIntensityId):F2}, wakeFoam={GetMaterialFloat(mat, _wakeFoamIntensityId):F2}, wakeNormal={GetMaterialFloat(mat, _wakeNormalStrengthId):F2}, wakeSources={Shader.GetGlobalInt(_waterWakeCountId)}");
         sb.AppendLine($"DepthFoam: shallow={GetMaterialFloat(mat, _shallowDepthId):F2}, deep={GetMaterialFloat(mat, _deepDepthId):F2}, foamWidth={GetMaterialFloat(mat, _shoreFoamDepthId):F2}, shoreRange={GetMaterialFloat(mat, _shoreFoamSoftnessId):F2}");
+        sb.AppendLine(
+            $"FrozenWater: enabled={GetMaterialFloat(mat, _freezingEnabledId) > 0.5f}, " +
+            $"lake={GetMaterialFloat(mat, _lakeFreezeCompleteId):F3}-{GetMaterialFloat(mat, _lakeFreezeStartId):F3}, " +
+            $"ocean={GetMaterialFloat(mat, _oceanFreezeCompleteId):F3}-{GetMaterialFloat(mat, _oceanFreezeStartId):F3}, " +
+            $"bodies frozen/partial/liquid={Shader.GetGlobalInt(_frozenWaterBodiesId)}/" +
+            $"{Shader.GetGlobalInt(_partiallyFrozenWaterBodiesId)}/{Shader.GetGlobalInt(_liquidWaterBodiesId)}");
 
         if (state.WeatherProvider != null && cameraContext != null)
             AppendWeatherMetadata(sb, state.WeatherProvider, cameraContext);
@@ -413,8 +439,8 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
             sb.AppendLine("VolumeLipMesh: missing");
         }
 
-        sb.AppendLine($"DataRanges: depth={s.DepthMin:F3}-{s.DepthMax:F3} avg={s.DepthAvg:F3}, shore={s.ShoreMin:F3}-{s.ShoreMax:F3} avg={s.ShoreAvg:F3}, body={s.BodyMin:F3}-{s.BodyMax:F3} avg={s.BodyAvg:F3}");
-        sb.AppendLine($"CameraSample: depth={s.SampleDepth:F3}, shore={s.SampleShore:F3}, body={s.SampleBody:F3}, motionMask={s.MotionMaskSample:F3}, normalMask={s.NormalMaskSample:F3}");
+        sb.AppendLine($"DataRanges: depth={s.DepthMin:F3}-{s.DepthMax:F3} avg={s.DepthAvg:F3}, shore={s.ShoreMin:F3}-{s.ShoreMax:F3} avg={s.ShoreAvg:F3}, body={s.BodyMin:F3}-{s.BodyMax:F3} avg={s.BodyAvg:F3}, temp={s.TemperatureMin:F3}-{s.TemperatureMax:F3} avg={s.TemperatureAvg:F3}");
+        sb.AppendLine($"CameraSample: depth={s.SampleDepth:F3}, shore={s.SampleShore:F3}, body={s.SampleBody:F3}, temp={s.SampleTemperature:F3}, motionMask={s.MotionMaskSample:F3}, normalMask={s.NormalMaskSample:F3}");
         sb.AppendLine($"MotionMask: avg={s.MotionMaskAvg:F3}, max={s.MotionMaskMax:F3}, eligible={s.MotionEligiblePercent:F1}%");
         sb.AppendLine($"NormalMask: avg={s.NormalMaskAvg:F3}, max={s.NormalMaskMax:F3}, eligible={s.NormalEligiblePercent:F1}%");
     }
@@ -678,6 +704,9 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
             BodyMin = _meshStatsCache.BodyMin,
             BodyMax = _meshStatsCache.BodyMax,
             BodyAvg = _meshStatsCache.BodyAvg,
+            TemperatureMin = _meshStatsCache.TemperatureMin,
+            TemperatureMax = _meshStatsCache.TemperatureMax,
+            TemperatureAvg = _meshStatsCache.TemperatureAvg,
             MotionMaskAvg = _meshStatsCache.MotionMaskAvg,
             MotionMaskMax = _meshStatsCache.MotionMaskMax,
             NormalMaskAvg = _meshStatsCache.NormalMaskAvg,
@@ -690,6 +719,7 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         stats.SampleDepth = Mathf.Clamp01(sample.r);
         stats.SampleShore = Mathf.Clamp01(sample.g);
         stats.SampleBody = Mathf.Clamp01(sample.b);
+        stats.SampleTemperature = Mathf.Clamp01(sample.a);
         stats.MotionMaskSample = FocusMotionMask(stats.SampleDepth, stats.SampleShore, stats.SampleBody);
         stats.NormalMaskSample = FocusNormalMask(stats.SampleDepth, stats.SampleShore, stats.SampleBody);
 
@@ -707,6 +737,7 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
             DepthMin = 1f,
             ShoreMin = 1f,
             BodyMin = 1f,
+            TemperatureMin = 1f,
         };
 
         int motionEligible = 0;
@@ -717,6 +748,7 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
             float depth = Mathf.Clamp01(c.r);
             float shore = Mathf.Clamp01(c.g);
             float body = Mathf.Clamp01(c.b);
+            float temperature = Mathf.Clamp01(c.a);
             float motionMask = FocusMotionMask(depth, shore, body);
             float normalMask = FocusNormalMask(depth, shore, body);
 
@@ -729,6 +761,9 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
             cache.BodyMin = Mathf.Min(cache.BodyMin, body);
             cache.BodyMax = Mathf.Max(cache.BodyMax, body);
             cache.BodyAvg += body;
+            cache.TemperatureMin = Mathf.Min(cache.TemperatureMin, temperature);
+            cache.TemperatureMax = Mathf.Max(cache.TemperatureMax, temperature);
+            cache.TemperatureAvg += temperature;
             cache.MotionMaskAvg += motionMask;
             cache.MotionMaskMax = Mathf.Max(cache.MotionMaskMax, motionMask);
             cache.NormalMaskAvg += normalMask;
@@ -742,6 +777,7 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         cache.DepthAvg *= invCount;
         cache.ShoreAvg *= invCount;
         cache.BodyAvg *= invCount;
+        cache.TemperatureAvg *= invCount;
         cache.MotionMaskAvg *= invCount;
         cache.NormalMaskAvg *= invCount;
         cache.MotionEligiblePercent = motionEligible * 100f * invCount;
@@ -758,6 +794,7 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         public float DepthMin, DepthMax, DepthAvg;
         public float ShoreMin, ShoreMax, ShoreAvg;
         public float BodyMin, BodyMax, BodyAvg;
+        public float TemperatureMin, TemperatureMax, TemperatureAvg;
         public float MotionMaskAvg, MotionMaskMax;
         public float NormalMaskAvg, NormalMaskMax;
         public float MotionEligiblePercent;

@@ -137,8 +137,13 @@ public static class DebugModeConstants
     public const int GrassLodCoverage = 86;
     public const int BiomeAltitudeCooling = 87;
 
+    // Frozen water diagnostics
+    public const int WaterTemperature = 88;
+    public const int WaterFreeze = 89;
+    public const int WaterIceContribution = 90;
+
     /// <summary>Highest defined mode value. Update when adding new modes.</summary>
-    public const int Max = 87;
+    public const int Max = 90;
 
     public static bool SuppressesWeatherPasses(int mode)
     {
@@ -162,6 +167,7 @@ public static class DebugModeConstants
             || mode == FoamOnSwell
             || mode == FoamLocator
             || mode == GlintLocator
-            || (mode >= BiomePrimaryId && mode <= BiomeAltitudeCooling);
+            || (mode >= BiomePrimaryId && mode <= BiomeAltitudeCooling)
+            || (mode >= WaterTemperature && mode <= WaterIceContribution);
     }
 }

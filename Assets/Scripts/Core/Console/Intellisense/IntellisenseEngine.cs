@@ -105,13 +105,32 @@ public sealed class IntellisenseEngine
             _results.Add(new Suggestion(
                 cmd,
                 completion,
-                prefix + " " + completion,
+                prefix + " " + FormatCompletionValue(completion, param),
                 matchStart < 0 ? 0 : matchStart,
                 partial.Length,
                 param));
         }
 
         return _results;
+    }
+
+    static string FormatCompletionValue(string completion, ParameterData parameter)
+    {
+        if (parameter?.Type != typeof(string) || string.IsNullOrEmpty(completion))
+            return completion;
+
+        bool needsQuotes = completion.Any(char.IsWhiteSpace);
+        if (!needsQuotes)
+            return completion;
+
+        if (!completion.Contains('"'))
+            return $"\"{completion}\"";
+        if (!completion.Contains('\''))
+            return $"'{completion}'";
+
+        // The tokenizer intentionally has no escape syntax. This fallback remains executable
+        // because final string parameters consume the remaining command tail.
+        return completion;
     }
 
     // -------------------------------------------------------------------------

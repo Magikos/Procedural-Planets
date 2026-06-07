@@ -27,6 +27,7 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
     // BiomeRegistry concrete type.
     public BiomeRegistry Registry => _biomeSettings?.Registry;
     internal VoronoiBiomeField VoronoiBiomeField => _voronoiBiomeField;
+    internal IClimateProvider ClimateProvider => _climateProvider;
 
     // Per-biome flat color, indexed by GetDefinitionByIndex slot id. Phase B step 5b bake
     // reads this to compute its pre-blended color texture. Mirrors what

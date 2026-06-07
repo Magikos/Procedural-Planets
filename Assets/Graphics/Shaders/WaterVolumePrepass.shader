@@ -1,5 +1,14 @@
 Shader "Hidden/WaterVolumePrepass"
 {
+    Properties
+    {
+        _FreezingEnabled ("Freezing Enabled", Range(0, 1)) = 1
+        _LakeFreezeStart ("Lake Freeze Start", Range(0, 1)) = 0.36
+        _LakeFreezeComplete ("Lake Freeze Complete", Range(0, 1)) = 0.26
+        _OceanFreezeStart ("Ocean Freeze Start", Range(0, 1)) = 0.20
+        _OceanFreezeComplete ("Ocean Freeze Complete", Range(0, 1)) = 0.10
+    }
+
     SubShader
     {
         Tags { "RenderPipeline" = "UniversalPipeline" "RenderType" = "Opaque" }
@@ -13,6 +22,11 @@ Shader "Hidden/WaterVolumePrepass"
 
         float _ShoreFoamSoftness;
         float _DeepDepth;
+        float _FreezingEnabled;
+        float _LakeFreezeStart;
+        float _LakeFreezeComplete;
+        float _OceanFreezeStart;
+        float _OceanFreezeComplete;
         int _OceanDebugMode;
 
         struct Attributes
@@ -24,7 +38,7 @@ Shader "Hidden/WaterVolumePrepass"
         struct Varyings
         {
             float4 positionCS : SV_POSITION;
-            float3 waterData : TEXCOORD0;
+            float4 waterData : TEXCOORD0;
             float forwardDepth : TEXCOORD1;
         };
 
@@ -43,9 +57,18 @@ Shader "Hidden/WaterVolumePrepass"
             float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
             float3 positionVS = TransformWorldToView(positionWS);
             output.positionCS = TransformWorldToHClip(positionWS);
-            output.waterData = saturate(input.color.rgb);
+            output.waterData = saturate(input.color);
             output.forwardDepth = max(-positionVS.z, 0.0);
             return output;
+        }
+
+        float EvaluateFreezeFactor(float temperature01, float body01)
+        {
+            float start = lerp(_LakeFreezeStart, _OceanFreezeStart, body01);
+            float complete = lerp(_LakeFreezeComplete, _OceanFreezeComplete, body01);
+            float cold = min(start, complete);
+            float warm = max(start, complete);
+            return saturate((1.0 - smoothstep(cold, max(warm, cold + 0.0001), temperature01)) * _FreezingEnabled);
         }
 
         float4 EncodeWaterVolumeData(Varyings input)
@@ -53,7 +76,8 @@ Shader "Hidden/WaterVolumePrepass"
             float depth01 = input.waterData.r;
             float shore01 = input.waterData.g;
             float body01 = input.waterData.b;
-            return float4(input.forwardDepth, depth01, shore01, body01);
+            float freezeFactor = EvaluateFreezeFactor(input.waterData.a, body01);
+            return float4(input.forwardDepth, depth01, shore01, freezeFactor);
         }
 
         float4 Frag(Varyings input) : SV_Target

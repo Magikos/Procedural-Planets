@@ -1,6 +1,7 @@
 # Climate-aware frozen water
 
-**Status:** Planned as biome/climate slice 1d.
+**Status:** Static slice 1d visually validated by Frozen Water F10
+`20260606-184523` through `20260606-184527`.
 **Trigger:** Surface F10 `20260606-164137` shows an unfrozen inland lake inside
 a polar snow region near 73 degrees south.
 
@@ -25,8 +26,10 @@ Biome assignment supplies climate context but is not the final gate.
 - `Ocean.shader` already uses body factor to distinguish lake motion from ocean
   motion.
 
-The alpha channel can carry a generated freeze factor without adding another
-water mesh stream.
+The alpha channel carries effective water temperature without adding another
+water mesh stream. The shader derives freeze factor from that temperature,
+body factor, and the serialized lake/ocean thresholds. This preserves both
+temperature and freeze as independently inspectable diagnostics.
 
 ## Static v1 behavior
 
@@ -36,14 +39,16 @@ water mesh stream.
    factor so a lake freezes coherently instead of forming triangle patches.
 4. For large ocean bodies, allow local temperature to control polar sea ice.
 5. Blend between the component and local results using the existing body factor.
-6. Store freeze factor in water vertex-color alpha.
-7. In `Ocean.shader`, freeze factor must:
+6. Store effective water temperature in water vertex-color alpha.
+7. Derive freeze factor in `Ocean.shader` from temperature, body factor, and
+   the lake/ocean threshold pairs.
+8. In `Ocean.shader`, freeze factor must:
    - suppress vertex swell and fragment wave displacement/normals;
    - suppress shore foam, whitecaps, wakes, and liquid shimmer;
    - reduce liquid refraction/distortion;
    - blend toward an authored ice surface response with higher opacity,
      configurable roughness, tint, thickness/depth influence, and breakup.
-8. Keep the water volume beneath the ice so underwater rendering still has a
+9. Keep the water volume beneath the ice so underwater rendering still has a
    defined owner.
 
 ## Settings
@@ -71,7 +76,7 @@ large ocean ice.
 
 ## Diagnostics
 
-Add a targeted frozen-water capture set or modes for:
+The `Frozen Water` capture set includes:
 
 - water body factor;
 - sampled water temperature;
@@ -80,6 +85,22 @@ Add a targeted frozen-water capture set or modes for:
 
 F10 metadata should include the thresholds and counts of fully frozen,
 partially frozen, and liquid connected bodies.
+
+Use `debug.capture-set "Frozen Water"` and then press F10, or run
+`debug.capture-set "Frozen Water"` followed by `debug.capture`.
+
+## Implemented defaults
+
+- Lake freeze range: complete at `0.26`, begins thawing through `0.36`.
+- Ocean freeze range: complete at `0.10`, begins thawing through `0.20`.
+- Lake vertices use a connected-component average temperature.
+- Ocean vertices use local climate temperature.
+- Intermediate bodies blend component and local temperature using body factor.
+- Ice appearance defaults: opacity `0.88`, roughness `0.72`, normal strength
+  `0.35`, breakup scale `95 m`.
+
+These values are initial semantic defaults, not a visual tuning conclusion.
+The diagnostic capture determines whether threshold adjustment is warranted.
 
 ## Validation gates
 
@@ -102,4 +123,3 @@ ice collision belong to a later environment/state phase. That version should
 update a runtime water-state atlas and notify physics/gameplay systems.
 
 Static v1 should not add a collider or imply that ice is walkable.
-

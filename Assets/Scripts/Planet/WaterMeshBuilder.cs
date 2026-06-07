@@ -12,6 +12,12 @@ public static class WaterMeshBuilder
         public float ShoreRange;
         public float SurfaceOffset;
         public int OceanBodyVertexThreshold;
+        public IClimateProvider ClimateProvider;
+        public bool EnableFreezing;
+        public float LakeFreezeStartTemperature01;
+        public float LakeFreezeCompleteTemperature01;
+        public float OceanFreezeStartTemperature01;
+        public float OceanFreezeCompleteTemperature01;
     }
 
     public struct BuildStats
@@ -23,7 +29,13 @@ public static class WaterMeshBuilder
         public int VolumeLipTriangles;
         public int OceanBodies;
         public int SmallBodies;
+        public int FrozenBodies;
+        public int PartiallyFrozenBodies;
+        public int LiquidBodies;
         public float MaxDepth;
+        public float MinWaterTemperature01;
+        public float MaxWaterTemperature01;
+        public float AverageWaterTemperature01;
     }
 
     /// <summary>Pre-computed water mesh data. Safe to produce on a background thread via <see cref="Compute"/>.</summary>
@@ -49,6 +61,7 @@ public static class WaterMeshBuilder
         public Vector3 Direction;
         public Vector3 VolumeLipDirection;
         public float BodyFactor;
+        public float Temperature01;
     }
 
     struct FaceWaterData
@@ -56,6 +69,7 @@ public static class WaterMeshBuilder
         public bool[] Wet;
         public int[] ShoreDistanceCells;
         public float[] BodyFactor;
+        public float[] Temperature01;
         public int[] GlobalIndices;
     }
 
@@ -255,8 +269,9 @@ public static class WaterMeshBuilder
         bool[] wet = faceData.Wet;
         int[] shoreDistanceCells = faceData.ShoreDistanceCells;
         float[] bodyFactor = faceData.BodyFactor;
+        float[] temperature01 = faceData.Temperature01;
         int[] globalIndices = faceData.GlobalIndices;
-        if (wet == null || shoreDistanceCells == null || bodyFactor == null || globalIndices == null)
+        if (wet == null || shoreDistanceCells == null || bodyFactor == null || temperature01 == null || globalIndices == null)
             return;
 
         var clipped = new WaterPoint[4];
@@ -343,7 +358,8 @@ public static class WaterMeshBuilder
                 IsOriginal = true,
                 OriginalIndex = index,
                 Direction = directions[index],
-                BodyFactor = bodyFactor[index]
+                BodyFactor = bodyFactor[index],
+                Temperature01 = temperature01[index]
             };
         }
 
@@ -373,7 +389,8 @@ public static class WaterMeshBuilder
                 EdgeB = b,
                 Direction = direction,
                 VolumeLipDirection = volumeLipDirection,
-                BodyFactor = Mathf.Max(bodyFactor[a], bodyFactor[b])
+                BodyFactor = Mathf.Max(bodyFactor[a], bodyFactor[b]),
+                Temperature01 = aWet ? temperature01[a] : temperature01[b]
             };
         }
 
@@ -392,7 +409,7 @@ public static class WaterMeshBuilder
                     ? 1f
                     : Mathf.Clamp01(shoreDistanceCells[point.OriginalIndex] * cellWorldSize / shoreRange);
 
-                int vertexIndex = AddVertex(point.Direction, depth, shore, point.BodyFactor);
+                int vertexIndex = AddVertex(point.Direction, depth, shore, point.BodyFactor, point.Temperature01);
                 originalVertexCache.Add(globalIndex, vertexIndex);
                 return vertexIndex;
             }
@@ -403,7 +420,7 @@ public static class WaterMeshBuilder
             if (edgeVertexCache.TryGetValue(edgeKey, out int edgeVertex))
                 return edgeVertex;
 
-            edgeVertex = AddVertex(point.Direction, shorelineEdgeDepth, shorelineEdgeShore, point.BodyFactor);
+            edgeVertex = AddVertex(point.Direction, shorelineEdgeDepth, shorelineEdgeShore, point.BodyFactor, point.Temperature01);
             edgeVertexCache.Add(edgeKey, edgeVertex);
             return edgeVertex;
         }
@@ -473,12 +490,12 @@ public static class WaterMeshBuilder
             Vector3 direction = outer ? point.VolumeLipDirection : point.Direction;
             float radius = bottom ? waterRadius - volumeLipDropMeters : waterRadius + volumeLipSurfaceRiseMeters;
             float depth = bottom ? volumeLipBottomDepth : volumeLipDepth;
-            int vertexIndex = AddVolumeLipVertex(direction, radius, depth, shorelineEdgeShore, point.BodyFactor);
+            int vertexIndex = AddVolumeLipVertex(direction, radius, depth, shorelineEdgeShore, point.BodyFactor, point.Temperature01);
             cache.Add(edgeKey, vertexIndex);
             return vertexIndex;
         }
 
-        int AddVertex(Vector3 direction, float depth, float shore, float oceanFactor)
+        int AddVertex(Vector3 direction, float depth, float shore, float oceanFactor, float waterTemperature01)
         {
             int vertexIndex = vertices.Count;
             vertices.Add(direction * waterRadius);
@@ -487,12 +504,12 @@ public static class WaterMeshBuilder
                 Mathf.Clamp01(depth / deepDepth),
                 shore,
                 Mathf.Clamp01(oceanFactor),
-                1f));
+                Mathf.Clamp01(waterTemperature01)));
             addedMeshVertices++;
             return vertexIndex;
         }
 
-        int AddVolumeLipVertex(Vector3 direction, float radius, float depth, float shore, float oceanFactor)
+        int AddVolumeLipVertex(Vector3 direction, float radius, float depth, float shore, float oceanFactor, float waterTemperature01)
         {
             if (volumeLipVertices == null)
                 return -1;
@@ -504,7 +521,7 @@ public static class WaterMeshBuilder
                 Mathf.Clamp01(depth / deepDepth),
                 shore,
                 Mathf.Clamp01(oceanFactor),
-                1f));
+                Mathf.Clamp01(waterTemperature01)));
             addedVolumeLipVertices++;
             return vertexIndex;
         }
@@ -516,6 +533,9 @@ public static class WaterMeshBuilder
         var globalIndicesByDirection = new Dictionary<DirectionKey, int>();
         var globalWet = new List<bool>();
         var globalDepthMeters = new List<float>();
+        var globalDirections = new List<Vector3>();
+        var globalTemperature01 = new List<float>();
+        var globalTemperatureSampled = new List<bool>();
 
         for (int faceIndex = 0; faceIndex < faces.Length; faceIndex++)
         {
@@ -531,6 +551,7 @@ public static class WaterMeshBuilder
                 Wet = new bool[vertexCount],
                 ShoreDistanceCells = new int[vertexCount],
                 BodyFactor = new float[vertexCount],
+                Temperature01 = new float[vertexCount],
                 GlobalIndices = new int[vertexCount]
             };
 
@@ -543,6 +564,9 @@ public static class WaterMeshBuilder
                     globalIndicesByDirection.Add(key, globalIndex);
                     globalWet.Add(false);
                     globalDepthMeters.Add(0f);
+                    globalDirections.Add(directions[i]);
+                    globalTemperature01.Add(0.5f);
+                    globalTemperatureSampled.Add(false);
                 }
 
                 bool isWet = elevations[i] < settings.OceanLevel;
@@ -559,6 +583,13 @@ public static class WaterMeshBuilder
                 globalWet[globalIndex] = true;
                 if (depth > globalDepthMeters[globalIndex])
                     globalDepthMeters[globalIndex] = depth;
+                if (!globalTemperatureSampled[globalIndex] && settings.ClimateProvider != null)
+                {
+                    globalTemperature01[globalIndex] = settings.ClimateProvider
+                        .Evaluate(globalDirections[globalIndex], settings.OceanLevel)
+                        .Temperature01;
+                    globalTemperatureSampled[globalIndex] = true;
+                }
             }
 
             result.Faces[faceIndex] = faceData;
@@ -567,11 +598,18 @@ public static class WaterMeshBuilder
         bool[] wet = globalWet.ToArray();
         var adjacency = BuildGlobalAdjacency(faces, result.Faces, wet.Length);
         var globalBodyFactor = new float[wet.Length];
+        var globalEffectiveTemperature01 = globalTemperature01.ToArray();
         var globalShoreDistance = new int[wet.Length];
         for (int i = 0; i < globalShoreDistance.Length; i++)
             globalShoreDistance[i] = int.MaxValue;
 
-        ClassifyWaterBodies(wet, adjacency, settings.OceanBodyVertexThreshold, globalBodyFactor, ref stats);
+        ClassifyWaterBodies(
+            wet,
+            adjacency,
+            settings,
+            globalBodyFactor,
+            globalEffectiveTemperature01,
+            ref stats);
         ComputeShoreDistance(wet, adjacency, globalShoreDistance);
 
         for (int faceIndex = 0; faceIndex < result.Faces.Length; faceIndex++)
@@ -584,6 +622,7 @@ public static class WaterMeshBuilder
             {
                 int globalIndex = faceData.GlobalIndices[i];
                 faceData.BodyFactor[i] = globalBodyFactor[globalIndex];
+                faceData.Temperature01[i] = globalEffectiveTemperature01[globalIndex];
                 faceData.ShoreDistanceCells[i] = globalShoreDistance[globalIndex];
             }
 
@@ -648,13 +687,22 @@ public static class WaterMeshBuilder
         return ((ulong)min << 32) | max;
     }
 
-    static void ClassifyWaterBodies(bool[] wet, List<int>[] adjacency, int oceanBodyVertexThreshold, float[] bodyFactor, ref BuildStats stats)
+    static void ClassifyWaterBodies(
+        bool[] wet,
+        List<int>[] adjacency,
+        Settings settings,
+        float[] bodyFactor,
+        float[] temperature01,
+        ref BuildStats stats)
     {
         int count = wet.Length;
         var visited = new bool[count];
         var queue = new int[count];
         var component = new List<int>(count);
-        int largeBodyThreshold = Mathf.Max(24, oceanBodyVertexThreshold);
+        int largeBodyThreshold = Mathf.Max(24, settings.OceanBodyVertexThreshold);
+        float temperatureSum = 0f;
+        int temperatureCount = 0;
+        stats.MinWaterTemperature01 = 1f;
 
         for (int i = 0; i < count; i++)
         {
@@ -685,8 +733,32 @@ public static class WaterMeshBuilder
             else
                 stats.SmallBodies++;
 
+            float componentTemperature = 0f;
             for (int c = 0; c < component.Count; c++)
-                bodyFactor[component[c]] = factor;
+                componentTemperature += temperature01[component[c]];
+            componentTemperature /= Mathf.Max(component.Count, 1);
+
+            float componentFreezeSum = 0f;
+            for (int c = 0; c < component.Count; c++)
+            {
+                int vertex = component[c];
+                float effectiveTemperature = Mathf.Lerp(componentTemperature, temperature01[vertex], factor);
+                bodyFactor[vertex] = factor;
+                temperature01[vertex] = effectiveTemperature;
+                temperatureSum += effectiveTemperature;
+                temperatureCount++;
+                stats.MinWaterTemperature01 = Mathf.Min(stats.MinWaterTemperature01, effectiveTemperature);
+                stats.MaxWaterTemperature01 = Mathf.Max(stats.MaxWaterTemperature01, effectiveTemperature);
+                componentFreezeSum += EvaluateFreezeFactor(effectiveTemperature, factor, settings);
+            }
+
+            float averageFreeze = componentFreezeSum / Mathf.Max(component.Count, 1);
+            if (averageFreeze >= 0.95f)
+                stats.FrozenBodies++;
+            else if (averageFreeze > 0.05f)
+                stats.PartiallyFrozenBodies++;
+            else
+                stats.LiquidBodies++;
 
             void EnqueueWetNeighbor(int neighbor)
             {
@@ -697,6 +769,29 @@ public static class WaterMeshBuilder
                 queue[tail++] = neighbor;
             }
         }
+
+        if (temperatureCount > 0)
+            stats.AverageWaterTemperature01 = temperatureSum / temperatureCount;
+        else
+            stats.MinWaterTemperature01 = 0f;
+    }
+
+    static float EvaluateFreezeFactor(float temperature01, float bodyFactor, Settings settings)
+    {
+        if (!settings.EnableFreezing)
+            return 0f;
+
+        float start = Mathf.Lerp(
+            settings.LakeFreezeStartTemperature01,
+            settings.OceanFreezeStartTemperature01,
+            bodyFactor);
+        float complete = Mathf.Lerp(
+            settings.LakeFreezeCompleteTemperature01,
+            settings.OceanFreezeCompleteTemperature01,
+            bodyFactor);
+        float cold = Mathf.Min(start, complete);
+        float warm = Mathf.Max(start, complete);
+        return 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(cold, warm, temperature01));
     }
 
     static void ComputeShoreDistance(bool[] wet, List<int>[] adjacency, int[] distance)
