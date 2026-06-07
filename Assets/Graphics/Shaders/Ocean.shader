@@ -579,7 +579,8 @@ Shader "Planet/Ocean"
                     || (_OceanDebugMode >= DEBUG_VOLUME_CONTRIBUTION && _OceanDebugMode <= DEBUG_PRECIPITATION_CONTRIBUTION)
                     || (_OceanDebugMode >= DEBUG_VOLUME_LIP_PINK && _OceanDebugMode <= DEBUG_VOLUME_LIP_DEPTH_GATE)
                     || _OceanDebugMode == DEBUG_VOLUME_LIP_SCENE_PINK
-                    || (_OceanDebugMode >= DEBUG_CAUSTICS_ONLY && _OceanDebugMode <= DEBUG_CAUSTICS_PRISM);
+                    || (_OceanDebugMode >= DEBUG_CAUSTICS_ONLY && _OceanDebugMode <= DEBUG_CAUSTICS_PRISM)
+                    || (_OceanDebugMode >= DEBUG_TERRAIN_COAST_MASK && _OceanDebugMode <= DEBUG_TERRAIN_OVERRIDE_COMPOSITE);
             }
 
             SurfaceLayer ComputeSurfaceLayer(

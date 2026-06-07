@@ -83,7 +83,8 @@ bool ShouldBypassAtmosphereForWaterDebug()
         || (_OceanDebugMode >= DEBUG_CAUSTICS_ONLY && _OceanDebugMode <= DEBUG_CAUSTICS_PRISM)
         || (_OceanDebugMode >= DEBUG_SURFACE_NIGHT_TERMS && _OceanDebugMode <= DEBUG_WATER_GLINT_LOCATOR) // night + wave + foam + glint discovery 64-72
         || (_OceanDebugMode >= DEBUG_BIOME_PRIMARY_ID && _OceanDebugMode <= DEBUG_BIOME_ALTITUDE_COOLING)
-        || (_OceanDebugMode >= DEBUG_WATER_TEMPERATURE && _OceanDebugMode <= DEBUG_WATER_ICE_CONTRIBUTION);
+        || (_OceanDebugMode >= DEBUG_WATER_TEMPERATURE && _OceanDebugMode <= DEBUG_WATER_ICE_CONTRIBUTION)
+        || (_OceanDebugMode >= DEBUG_TERRAIN_COAST_MASK && _OceanDebugMode <= DEBUG_TERRAIN_OVERRIDE_COMPOSITE);
 }
 
 float CompositeDepthScaled(float2 uv, float viewLength)

@@ -149,7 +149,13 @@
 #define DEBUG_WATER_FREEZE                89
 #define DEBUG_WATER_ICE_CONTRIBUTION      90
 
+// --- Terrain geography overrides (91-94) ---
+#define DEBUG_TERRAIN_COAST_MASK           91
+#define DEBUG_TERRAIN_SLOPE_MASK           92
+#define DEBUG_TERRAIN_SNOW_MASK            93
+#define DEBUG_TERRAIN_OVERRIDE_COMPOSITE   94
+
 // Convenience: last defined mode. Update when adding new modes.
-#define DEBUG_MODE_MAX                    90
+#define DEBUG_MODE_MAX                    94
 
 #endif

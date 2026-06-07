@@ -444,7 +444,14 @@ Step 1d — Climate-aware frozen water
    ├─ Freeze inland lakes coherently; retain local polar control for large oceans
    ├─ Store static freeze factor in water vertex-color alpha
    ├─ Suppress liquid motion/foam/wakes and blend to an authored ice response
-   └─ Add water-temperature/freeze diagnostics and F10 validation
+   └─ Add water-temperature/freeze diagnostics and F10 validation (validated and committed 2026-06-06)
+   │
+Step 1e — Terrain geography overrides
+   ├─ Coast mask from sea-relative height
+   ├─ Exposed-rock mask from geometric slope
+   ├─ Snow mask from final altitude-cooled climate temperature
+   ├─ Reuse existing Beach, Mountain, and Snow texture-array slices
+   └─ Independent masks plus Terrain Geography F10 gate passed 2026-06-06
    │
 Step 3 (texture/look work — from Bryan's 2026-06-06 plan)
    ├─ Multi-variant Synty texture blend per biome

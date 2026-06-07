@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented by Codex and awaiting the first Unity capture.
+Implemented, visually validated, and committed as `d2b28d6`.
 
 Checkpoint before this slice:
 

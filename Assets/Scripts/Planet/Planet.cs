@@ -81,6 +81,20 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     static readonly int _grassFarOverlayFiberStrengthId = Shader.PropertyToID("_GrassFarOverlayFiberStrength");
     static readonly int _grassFarOverlayColorBlendId = Shader.PropertyToID("_GrassFarOverlayColorBlend");
     static readonly int _grassMidOverlayTerrainStrengthId = Shader.PropertyToID("_GrassMidOverlayTerrainStrength");
+    static readonly int _terrainOverrideEnabledId = Shader.PropertyToID("_TerrainOverrideEnabled");
+    static readonly int _coastSliceId = Shader.PropertyToID("_CoastSlice");
+    static readonly int _coastBelowSeaDepthId = Shader.PropertyToID("_CoastBelowSeaDepth");
+    static readonly int _coastStartHeightId = Shader.PropertyToID("_CoastStartHeight");
+    static readonly int _coastEndHeightId = Shader.PropertyToID("_CoastEndHeight");
+    static readonly int _coastTilingId = Shader.PropertyToID("_CoastTiling");
+    static readonly int _slopeSliceId = Shader.PropertyToID("_SlopeSlice");
+    static readonly int _slopeStartDegreesId = Shader.PropertyToID("_SlopeStartDegrees");
+    static readonly int _slopeFullDegreesId = Shader.PropertyToID("_SlopeFullDegrees");
+    static readonly int _slopeTilingId = Shader.PropertyToID("_SlopeTiling");
+    static readonly int _snowSliceId = Shader.PropertyToID("_SnowSlice");
+    static readonly int _snowFullTemperatureId = Shader.PropertyToID("_SnowFullTemperature");
+    static readonly int _snowFadeEndTemperatureId = Shader.PropertyToID("_SnowFadeEndTemperature");
+    static readonly int _snowTilingId = Shader.PropertyToID("_SnowTiling");
 
     static Shader _vcShader;
     static Shader _oceanShader;
@@ -266,12 +280,63 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         SetMaterialFloatIfPresent(mat, _grassFarOverlayFiberStrengthId, GrassFarOverlayFiberStrength);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayColorBlendId, GrassFarOverlayColorBlend);
         SetMaterialFloatIfPresent(mat, _grassMidOverlayTerrainStrengthId, GrassMidOverlayTerrainStrength);
+        ConfigureTerrainSurfaceOverrides(mat);
+    }
+
+    void ConfigureTerrainSurfaceOverrides(Material mat)
+    {
+        PlanetSettings.TerrainSurfaceOverrideSettings settings = _planetSettings.SurfaceOverrides;
+        BiomeRegistry registry = _planetSettings.BiomeSettings != null
+            ? _planetSettings.BiomeSettings.Registry
+            : null;
+
+        SetMaterialAndGlobalFloat(mat, _terrainOverrideEnabledId,
+            settings != null && settings.Enabled && registry != null ? 1f : 0f);
+        if (settings == null || registry == null)
+            return;
+
+        SetMaterialAndGlobalInt(mat, _coastSliceId, registry.GetSliceIdForBiomeType(BiomeType.Beach));
+        SetMaterialAndGlobalFloat(mat, _coastBelowSeaDepthId, Mathf.Max(0f, settings.CoastBelowSeaDepth));
+        SetMaterialAndGlobalFloat(mat, _coastStartHeightId, Mathf.Max(0f, settings.CoastStartHeight));
+        SetMaterialAndGlobalFloat(mat, _coastEndHeightId,
+            Mathf.Max(settings.CoastEndHeight, settings.CoastStartHeight + 0.01f));
+        SetMaterialAndGlobalFloat(mat, _coastTilingId, Mathf.Max(0.001f, settings.CoastTiling));
+
+        SetMaterialAndGlobalInt(mat, _slopeSliceId, registry.GetSliceIdForBiomeType(BiomeType.Mountain));
+        float slopeStart = Mathf.Clamp(settings.SlopeStartDegrees, 0f, 89.99f);
+        SetMaterialAndGlobalFloat(mat, _slopeStartDegreesId,
+            slopeStart);
+        SetMaterialAndGlobalFloat(mat, _slopeFullDegreesId,
+            Mathf.Clamp(Mathf.Max(settings.SlopeFullDegrees, slopeStart + 0.01f), slopeStart + 0.01f, 90f));
+        SetMaterialAndGlobalFloat(mat, _slopeTilingId, Mathf.Max(0.001f, settings.SlopeTiling));
+
+        SetMaterialAndGlobalInt(mat, _snowSliceId, registry.GetSliceIdForBiomeType(BiomeType.Snow));
+        float snowFull = Mathf.Clamp(settings.SnowFullTemperature01, 0f, 0.999f);
+        SetMaterialAndGlobalFloat(mat, _snowFullTemperatureId,
+            snowFull);
+        SetMaterialAndGlobalFloat(mat, _snowFadeEndTemperatureId,
+            Mathf.Clamp01(Mathf.Max(settings.SnowFadeEndTemperature01,
+                snowFull + 0.001f)));
+        SetMaterialAndGlobalFloat(mat, _snowTilingId, Mathf.Max(0.001f, settings.SnowTiling));
     }
 
     static void SetMaterialFloatIfPresent(Material mat, int propertyId, float value)
     {
         if (!mat.HasProperty(propertyId)) return;
         mat.SetFloat(propertyId, value);
+    }
+
+    static void SetMaterialAndGlobalFloat(Material mat, int propertyId, float value)
+    {
+        SetMaterialFloatIfPresent(mat, propertyId, value);
+        Shader.SetGlobalFloat(propertyId, value);
+    }
+
+    static void SetMaterialAndGlobalInt(Material mat, int propertyId, int value)
+    {
+        if (mat.HasProperty(propertyId))
+            mat.SetInt(propertyId, value);
+        Shader.SetGlobalInt(propertyId, value);
     }
 
     public async Awaitable LateInitialize(CancellationToken cancellationToken)

@@ -20,6 +20,28 @@ public class PlanetSettings : ScriptableObject
         [Min(1f)] public float IceBreakupScale = 95f;
     }
 
+    [System.Serializable]
+    public sealed class TerrainSurfaceOverrideSettings
+    {
+        public bool Enabled = true;
+
+        [Header("Coast")]
+        [Min(0f)] public float CoastBelowSeaDepth = 8f;
+        [Min(0f)] public float CoastStartHeight = 2f;
+        [Min(0.01f)] public float CoastEndHeight = 20f;
+        [Range(0.001f, 1f)] public float CoastTiling = 0.08f;
+
+        [Header("Exposed rock")]
+        [Range(0f, 90f)] public float SlopeStartDegrees = 28f;
+        [Range(0f, 90f)] public float SlopeFullDegrees = 48f;
+        [Range(0.001f, 1f)] public float SlopeTiling = 0.075f;
+
+        [Header("Climate snow")]
+        [Range(0f, 1f)] public float SnowFullTemperature01 = 0.28f;
+        [Range(0f, 1f)] public float SnowFadeEndTemperature01 = 0.42f;
+        [Range(0.001f, 1f)] public float SnowTiling = 0.09f;
+    }
+
     [Header("General")]
     [Range(1, 5000)] public float PlanetRadius = 50f;
 
@@ -46,6 +68,7 @@ public class PlanetSettings : ScriptableObject
 
     [Range(0f, 1f), Tooltip("Surface roughness / detail level")]
     public float TerrainRoughness = 0.5f;
+    public TerrainSurfaceOverrideSettings SurfaceOverrides = new TerrainSurfaceOverrideSettings();
 
     [Header("Water")]
     public bool HasOceans = true;

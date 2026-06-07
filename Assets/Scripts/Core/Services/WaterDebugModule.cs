@@ -20,6 +20,7 @@ public static class WaterDebugIds
     public static readonly DebugCaptureSetId Glint = new DebugCaptureSetId(Module, "glint");
     public static readonly DebugCaptureSetId Biome = new DebugCaptureSetId(Module, "biome");
     public static readonly DebugCaptureSetId Frozen = new DebugCaptureSetId(Module, "frozen");
+    public static readonly DebugCaptureSetId TerrainGeography = new DebugCaptureSetId(Module, "terrain-geography");
 
     public static DebugModeId Mode(int localId)
     {
@@ -72,6 +73,20 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     static readonly int _frozenWaterBodiesId = Shader.PropertyToID("_FrozenWaterBodies");
     static readonly int _partiallyFrozenWaterBodiesId = Shader.PropertyToID("_PartiallyFrozenWaterBodies");
     static readonly int _liquidWaterBodiesId = Shader.PropertyToID("_LiquidWaterBodies");
+    static readonly int _terrainOverrideEnabledId = Shader.PropertyToID("_TerrainOverrideEnabled");
+    static readonly int _coastSliceId = Shader.PropertyToID("_CoastSlice");
+    static readonly int _coastBelowSeaDepthId = Shader.PropertyToID("_CoastBelowSeaDepth");
+    static readonly int _coastStartHeightId = Shader.PropertyToID("_CoastStartHeight");
+    static readonly int _coastEndHeightId = Shader.PropertyToID("_CoastEndHeight");
+    static readonly int _coastTilingId = Shader.PropertyToID("_CoastTiling");
+    static readonly int _slopeSliceId = Shader.PropertyToID("_SlopeSlice");
+    static readonly int _slopeStartDegreesId = Shader.PropertyToID("_SlopeStartDegrees");
+    static readonly int _slopeFullDegreesId = Shader.PropertyToID("_SlopeFullDegrees");
+    static readonly int _slopeTilingId = Shader.PropertyToID("_SlopeTiling");
+    static readonly int _snowSliceId = Shader.PropertyToID("_SnowSlice");
+    static readonly int _snowFullTemperatureId = Shader.PropertyToID("_SnowFullTemperature");
+    static readonly int _snowFadeEndTemperatureId = Shader.PropertyToID("_SnowFadeEndTemperature");
+    static readonly int _snowTilingId = Shader.PropertyToID("_SnowTiling");
 
     struct WaterDebugStats
     {
@@ -123,6 +138,7 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     {
         AppendWaterDebugMetadata(sb, context.Runtime);
         AppendBiomeAssignmentMetadata(sb);
+        AppendTerrainGeographyMetadata(sb);
     }
 
     static void AppendBiomeAssignmentMetadata(StringBuilder sb)
@@ -141,6 +157,26 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
             $"cleanupChanges={Shader.GetGlobalInt(_biomeVoronoiCleanupChangesId)}, " +
             $"atlas={atlasResolution}x{atlasResolution}x6, " +
             $"buildMs={Shader.GetGlobalInt(_biomeVoronoiBuildMsId)}");
+    }
+
+    static void AppendTerrainGeographyMetadata(StringBuilder sb)
+    {
+        sb.AppendLine();
+        sb.AppendLine("--- Terrain Geography ---");
+        sb.AppendLine($"Enabled: {Shader.GetGlobalFloat(_terrainOverrideEnabledId) > 0.5f}");
+        sb.AppendLine(
+            $"Coast: slice={Shader.GetGlobalInt(_coastSliceId)}, " +
+            $"belowSea={Shader.GetGlobalFloat(_coastBelowSeaDepthId):F2}m, " +
+            $"height={Shader.GetGlobalFloat(_coastStartHeightId):F2}-{Shader.GetGlobalFloat(_coastEndHeightId):F2}m, " +
+            $"tiling={Shader.GetGlobalFloat(_coastTilingId):F3}");
+        sb.AppendLine(
+            $"Slope: slice={Shader.GetGlobalInt(_slopeSliceId)}, " +
+            $"degrees={Shader.GetGlobalFloat(_slopeStartDegreesId):F1}-{Shader.GetGlobalFloat(_slopeFullDegreesId):F1}, " +
+            $"tiling={Shader.GetGlobalFloat(_slopeTilingId):F3}");
+        sb.AppendLine(
+            $"Snow: slice={Shader.GetGlobalInt(_snowSliceId)}, " +
+            $"temperature={Shader.GetGlobalFloat(_snowFullTemperatureId):F3}-{Shader.GetGlobalFloat(_snowFadeEndTemperatureId):F3}, " +
+            $"tiling={Shader.GetGlobalFloat(_snowTilingId):F3}");
     }
 
     public void DrawOverlay(DebugRuntimeState state)
@@ -244,6 +280,10 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         RegisterMode(registry, DebugModeConstants.WaterTemperature, "WaterTemperature", "Frozen Water");
         RegisterMode(registry, DebugModeConstants.WaterFreeze, "WaterFreeze", "Frozen Water");
         RegisterMode(registry, DebugModeConstants.WaterIceContribution, "WaterIceContribution", "Frozen Water");
+        RegisterMode(registry, DebugModeConstants.TerrainCoastMask, "TerrainCoastMask", "Terrain Geography");
+        RegisterMode(registry, DebugModeConstants.TerrainSlopeMask, "TerrainSlopeMask", "Terrain Geography");
+        RegisterMode(registry, DebugModeConstants.TerrainSnowMask, "TerrainSnowMask", "Terrain Geography");
+        RegisterMode(registry, DebugModeConstants.TerrainOverrideComposite, "TerrainOverrideComposite", "Terrain Geography");
     }
 
     static void RegisterCaptureSets(DebugRegistry registry)
@@ -301,6 +341,13 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
                 DebugModeConstants.WaterFreeze, DebugModeConstants.WaterIceContribution,
                 DebugModeConstants.WaterMotionMask, DebugModeConstants.WaterNormals,
                 DebugModeConstants.WaterFoam));
+        registry.RegisterCaptureSet(WaterDebugIds.TerrainGeography, "Terrain Geography",
+            Modes(DebugModeConstants.Off, DebugModeConstants.WaterOff,
+                DebugModeConstants.BiomeTemperature, DebugModeConstants.BiomeElevationBand,
+                DebugModeConstants.TerrainCoastMask, DebugModeConstants.TerrainSlopeMask,
+                DebugModeConstants.TerrainSnowMask, DebugModeConstants.TerrainOverrideComposite,
+                DebugModeConstants.TerrainSelectedAlbedo, DebugModeConstants.TerrainSurfaceNormal,
+                DebugModeConstants.TerrainSurfaceRoughness));
         registry.RegisterCaptureSet(WaterDebugIds.Caustics, "Water Caustics",
             Modes(DebugModeConstants.Off, DebugModeConstants.VolumeOnly,
                 DebugModeConstants.CausticsOnly, DebugModeConstants.CausticsPrism,

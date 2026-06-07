@@ -20,6 +20,18 @@ MonoBehaviour:
   MountainHeight: 0.5
   MountainDensity: 0.3
   TerrainRoughness: 0.5
+  SurfaceOverrides:
+    Enabled: 1
+    CoastBelowSeaDepth: 8
+    CoastStartHeight: 2
+    CoastEndHeight: 20
+    CoastTiling: 0.08
+    SlopeStartDegrees: 28
+    SlopeFullDegrees: 48
+    SlopeTiling: 0.075
+    SnowFullTemperature01: 0.28
+    SnowFadeEndTemperature01: 0.42
+    SnowTiling: 0.09
   HasOceans: 1
   OceanLevel: 0
   WaterColor: {r: 0.07, g: 0.35, b: 0.63, a: 0.92156863}

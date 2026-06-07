@@ -51,6 +51,14 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
         if (camera.cameraType == CameraType.Preview || camera.cameraType == CameraType.Reflection)
             return;
 
+        int oceanDebugMode = Shader.GetGlobalInt(_oceanDebugModeId);
+        if (oceanDebugMode >= DebugModeConstants.TerrainCoastMask
+            && oceanDebugMode <= DebugModeConstants.TerrainOverrideComposite)
+        {
+            Shader.SetGlobalFloat(_waterVolumeEnabledId, 0f);
+            return;
+        }
+
         if (!TryFindWater(out MeshFilter meshFilter, out MeshRenderer meshRenderer, out MeshFilter volumeLipFilter))
         {
             Shader.SetGlobalFloat(_waterVolumeEnabledId, 0f);
@@ -77,7 +85,6 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
 
         Mesh renderableVolumeLipMesh = IsRenderableMesh(volumeLipMesh) ? volumeLipMesh : null;
         bool drawRelaxedVolumeLip = renderableVolumeLipMesh != null && IsCameraInsideWaterMesh(camera, meshFilter, mesh);
-        int oceanDebugMode = Shader.GetGlobalInt(_oceanDebugModeId);
         bool drawVolumeLipSceneDebug = renderableVolumeLipMesh != null && oceanDebugMode == DebugModeConstants.VolumeLipScenePink;
         _prepassPass.Setup(
             _prepassMaterial,

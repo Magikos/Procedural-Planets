@@ -15,6 +15,20 @@ Shader "Planet/VertexColor"
         // 1.0 = unmodified ground PBR (subtle), 3-5 = punchy "obviously bumpy" look.
         _BiomeNormalStrength ("Biome Normal Strength", Range(0.0, 8.0)) = 2.0
         _BiomeNormalReliefShadow ("Biome Normal Relief Shadow", Range(0.0, 1.0)) = 0.55
+        _TerrainOverrideEnabled ("Terrain Geography Overrides", Float) = 1.0
+        [HideInInspector] _CoastSlice ("Coast Biome Slice", Float) = 1.0
+        _CoastBelowSeaDepth ("Coast Below-Sea Depth", Float) = 8.0
+        _CoastStartHeight ("Coast Start Height", Float) = 2.0
+        _CoastEndHeight ("Coast End Height", Float) = 20.0
+        _CoastTiling ("Coast Tiling", Range(0.001, 1.0)) = 0.08
+        [HideInInspector] _SlopeSlice ("Slope Biome Slice", Float) = 0.0
+        _SlopeStartDegrees ("Slope Start Degrees", Range(0.0, 90.0)) = 28.0
+        _SlopeFullDegrees ("Slope Full Degrees", Range(0.0, 90.0)) = 48.0
+        _SlopeTiling ("Slope Tiling", Range(0.001, 1.0)) = 0.075
+        [HideInInspector] _SnowSlice ("Snow Biome Slice", Float) = 0.0
+        _SnowFullTemperature ("Snow Full Temperature", Range(0.0, 1.0)) = 0.28
+        _SnowFadeEndTemperature ("Snow Fade End Temperature", Range(0.0, 1.0)) = 0.42
+        _SnowTiling ("Snow Tiling", Range(0.001, 1.0)) = 0.09
         _GrassFarOverlayStrength ("Grass Far Overlay Strength", Range(0.0, 1.0)) = 1.0
         _GrassFarOverlayStart ("Grass Far Overlay Start", Float) = 35.0
         _GrassFarOverlayEnd ("Grass Far Overlay End", Float) = 260.0
@@ -89,6 +103,20 @@ Shader "Planet/VertexColor"
                 float _BiomeMacroVariationStrength;
                 float _BiomeNormalStrength;
                 float _BiomeNormalReliefShadow;
+                float _TerrainOverrideEnabled;
+                float _CoastSlice;
+                float _CoastBelowSeaDepth;
+                float _CoastStartHeight;
+                float _CoastEndHeight;
+                float _CoastTiling;
+                float _SlopeSlice;
+                float _SlopeStartDegrees;
+                float _SlopeFullDegrees;
+                float _SlopeTiling;
+                float _SnowSlice;
+                float _SnowFullTemperature;
+                float _SnowFadeEndTemperature;
+                float _SnowTiling;
                 float _GrassFarOverlayStrength;
                 float _GrassFarOverlayStart;
                 float _GrassFarOverlayEnd;
@@ -346,11 +374,16 @@ Shader "Planet/VertexColor"
                 return baseNormal * dot(baseNormal, detailNormal) / max(baseNormal.z, 1e-5) - detailNormal;
             }
 
-            float3 TriplanarSampleNormal(float3 worldPos, float3 worldNormal, float3 bw, float slice)
+            float3 TriplanarSampleNormalAtTiling(
+                float3 worldPos,
+                float3 worldNormal,
+                float3 bw,
+                float slice,
+                float tiling)
             {
-                float2 uvX = worldPos.yz * _BiomeTriplanarTiling;
-                float2 uvY = worldPos.xz * _BiomeTriplanarTiling;
-                float2 uvZ = worldPos.xy * _BiomeTriplanarTiling;
+                float2 uvX = worldPos.yz * tiling;
+                float2 uvY = worldPos.xz * tiling;
+                float2 uvZ = worldPos.xy * tiling;
 
                 float3 tnX = ScaleTangentNormal(UnpackNormal(SAMPLE_TEXTURE2D_ARRAY(_BiomeNormalArray, sampler_BiomeNormalArray, uvX, slice)), _BiomeNormalStrength);
                 float3 tnY = ScaleTangentNormal(UnpackNormal(SAMPLE_TEXTURE2D_ARRAY(_BiomeNormalArray, sampler_BiomeNormalArray, uvY, slice)), _BiomeNormalStrength);
@@ -371,17 +404,29 @@ Shader "Planet/VertexColor"
 
             // Phase B step 8: triplanar ARM sample (AO/Roughness/Metallic). Linear blend across
             // axes — these are scalar material properties, not directional, so no swizzling.
-            float3 TriplanarSampleArm(float3 worldPos, float3 bw, float slice)
+            float3 TriplanarSampleNormal(float3 worldPos, float3 worldNormal, float3 bw, float slice)
             {
-                float2 uvX = worldPos.yz * _BiomeTriplanarTiling;
-                float2 uvY = worldPos.xz * _BiomeTriplanarTiling;
-                float2 uvZ = worldPos.xy * _BiomeTriplanarTiling;
+                return TriplanarSampleNormalAtTiling(
+                    worldPos, worldNormal, bw, slice, _BiomeTriplanarTiling);
+            }
+
+            // ARM channels are scalar material properties, so linear triplanar blending is valid.
+            float3 TriplanarSampleArmAtTiling(float3 worldPos, float3 bw, float slice, float tiling)
+            {
+                float2 uvX = worldPos.yz * tiling;
+                float2 uvY = worldPos.xz * tiling;
+                float2 uvZ = worldPos.xy * tiling;
 
                 float3 cX = SAMPLE_TEXTURE2D_ARRAY(_BiomeArmArray, sampler_BiomeArmArray, uvX, slice).rgb;
                 float3 cY = SAMPLE_TEXTURE2D_ARRAY(_BiomeArmArray, sampler_BiomeArmArray, uvY, slice).rgb;
                 float3 cZ = SAMPLE_TEXTURE2D_ARRAY(_BiomeArmArray, sampler_BiomeArmArray, uvZ, slice).rgb;
 
                 return cX * bw.x + cY * bw.y + cZ * bw.z;
+            }
+
+            float3 TriplanarSampleArm(float3 worldPos, float3 bw, float slice)
+            {
+                return TriplanarSampleArmAtTiling(worldPos, bw, slice, _BiomeTriplanarTiling);
             }
 
             // Phase B step 6: weighted top-K triplanar albedo with MANUAL 4-corner bilinear.
@@ -695,6 +740,99 @@ Shader "Planet/VertexColor"
                 return lerp(albedo, coverageColor, terrainWeight);
             }
 
+            struct TerrainOverrideMasks
+            {
+                float coast;
+                float slope;
+                float snow;
+            };
+
+            TerrainOverrideMasks EvaluateTerrainOverrideMasks(
+                float3 positionWS,
+                float3 geometricNormalWS,
+                float temperature01)
+            {
+                TerrainOverrideMasks masks;
+                float enabled = saturate(_TerrainOverrideEnabled);
+                float3 relPos = positionWS - _PlanetCenter;
+                float3 radialNormal = PlanetSafeNormalize(relPos, normalize(geometricNormalWS));
+                float heightAboveSea = length(relPos) - _SeaLevelRadius;
+
+                float belowSeaDepth = max(_CoastBelowSeaDepth, 0.01);
+                float coastBelow = smoothstep(-belowSeaDepth, 0.0, heightAboveSea);
+                float coastAbove = 1.0 - smoothstep(
+                    max(_CoastStartHeight, 0.0),
+                    max(_CoastEndHeight, _CoastStartHeight + 0.01),
+                    heightAboveSea);
+                masks.coast = saturate(coastBelow * coastAbove) * enabled;
+
+                float slopeDegrees = acos(saturate(dot(normalize(geometricNormalWS), radialNormal)))
+                    * 57.2957795;
+                float slopeStart = clamp(_SlopeStartDegrees, 0.0, 89.99);
+                float slopeEnd = clamp(
+                    max(_SlopeFullDegrees, slopeStart + 0.01),
+                    slopeStart + 0.01,
+                    90.0);
+                masks.slope = smoothstep(slopeStart, slopeEnd, slopeDegrees) * enabled;
+
+                masks.snow = (1.0 - smoothstep(
+                    saturate(_SnowFullTemperature),
+                    max(saturate(_SnowFadeEndTemperature), saturate(_SnowFullTemperature) + 0.001),
+                    saturate(temperature01))) * enabled;
+                return masks;
+            }
+
+            void ApplyTerrainOverrideLayer(
+                float mask,
+                float slice,
+                float tiling,
+                float3 localPosition,
+                float3 geometricNormalWS,
+                float3 triplanarWeights,
+                inout float3 albedo,
+                inout float3 normalWS,
+                inout float3 arm)
+            {
+                if (mask <= 0.001)
+                    return;
+
+                float safeSlice = clamp(round(slice), 0.0, max((float)_BiomeCount - 1.0, 0.0));
+                float safeTiling = max(tiling, 0.001);
+                float3 layerAlbedo = TriplanarSampleAlbedoAtTiling(
+                    localPosition, triplanarWeights, safeSlice, safeTiling);
+                float3 layerNormal = TriplanarSampleNormalAtTiling(
+                    localPosition, geometricNormalWS, triplanarWeights, safeSlice, safeTiling);
+                float3 layerArm = TriplanarSampleArmAtTiling(
+                    localPosition, triplanarWeights, safeSlice, safeTiling);
+
+                albedo = lerp(albedo, layerAlbedo, mask);
+                normalWS = normalize(lerp(normalWS, layerNormal, mask));
+                arm = lerp(arm, layerArm, mask);
+            }
+
+            void ApplyTerrainOverrides(
+                TerrainOverrideMasks masks,
+                float3 positionWS,
+                float3 geometricNormalWS,
+                inout float3 albedo,
+                inout float3 normalWS,
+                inout float3 arm)
+            {
+                if (_TerrainOverrideEnabled <= 0.001)
+                    return;
+
+                float3 localPosition = positionWS - _PlanetCenter;
+                float3 triplanarWeights;
+                ComputeTriplanarBlendWeights(geometricNormalWS, triplanarWeights);
+
+                ApplyTerrainOverrideLayer(masks.coast, _CoastSlice, _CoastTiling,
+                    localPosition, geometricNormalWS, triplanarWeights, albedo, normalWS, arm);
+                ApplyTerrainOverrideLayer(masks.slope, _SlopeSlice, _SlopeTiling,
+                    localPosition, geometricNormalWS, triplanarWeights, albedo, normalWS, arm);
+                ApplyTerrainOverrideLayer(masks.snow, _SnowSlice, _SnowTiling,
+                    localPosition, geometricNormalWS, triplanarWeights, albedo, normalWS, arm);
+            }
+
             // Maps a normalized [0..1] biome id to a distinct hue. HSV->RGB so adjacent
             // ids land far apart in colour space and each biome reads as its own flat patch.
             float3 BiomeIdColor(float idNorm)
@@ -803,6 +941,26 @@ Shader "Planet/VertexColor"
                     return half4(farBand * coverage, midBand * coverage, nearBand * coverage, 1.0);
                 }
 
+                float3 geometricNormalWS = normalize(input.normalWS);
+                TerrainOverrideMasks terrainOverrides = EvaluateTerrainOverrideMasks(
+                    input.positionWS, geometricNormalWS, input.biomeData.x);
+
+                if (_OceanDebugMode == DEBUG_TERRAIN_COAST_MASK)
+                    return half4(float3(terrainOverrides.coast, terrainOverrides.coast, terrainOverrides.coast), 1.0);
+
+                if (_OceanDebugMode == DEBUG_TERRAIN_SLOPE_MASK)
+                    return half4(float3(terrainOverrides.slope, terrainOverrides.slope, terrainOverrides.slope), 1.0);
+
+                if (_OceanDebugMode == DEBUG_TERRAIN_SNOW_MASK)
+                    return half4(float3(terrainOverrides.snow, terrainOverrides.snow, terrainOverrides.snow), 1.0);
+
+                if (_OceanDebugMode == DEBUG_TERRAIN_OVERRIDE_COMPOSITE)
+                    return half4(
+                        terrainOverrides.coast,
+                        terrainOverrides.slope,
+                        terrainOverrides.snow,
+                        1.0);
+
                 // Phase B step 6+8: keyword-on path samples per-biome triplanar PBR (albedo,
                 // normal, ARM). Keyword-off keeps the legacy vertex-color path with neutral
                 // surface props for back-compat with the PerFaceSurfaceProvider.
@@ -811,19 +969,22 @@ Shader "Planet/VertexColor"
                 float3 surfaceArm; // R=AO, G=Roughness, B=Metallic (B = 0 for all our biomes)
                 #ifdef _BIOME_COLOR_MODE_TEXTURE
                     SampleBiomeTriplanarPbr(input.chunkUv,
-                        input.positionWS - _PlanetCenter, normalize(input.normalWS),
+                        input.positionWS - _PlanetCenter, geometricNormalWS,
                         surfaceAlbedo, surfaceNormalWS, surfaceArm);
                     // Triplanar normal is in world space, not yet normalized after the weighted
                     // blend. Normalize and gently mix with the geometric normal so detail bumps
                     // perturb lighting without ever flipping past the surface tangent plane.
                     surfaceNormalWS = normalize(surfaceNormalWS);
                     surfaceAlbedo = ApplyFarGrassOverlay(input.chunkUv,
-                        input.positionWS, normalize(input.normalWS), surfaceAlbedo);
+                        input.positionWS, geometricNormalWS, surfaceAlbedo);
                 #else
                     surfaceAlbedo = input.color.rgb;
-                    surfaceNormalWS = normalize(input.normalWS);
+                    surfaceNormalWS = geometricNormalWS;
                     surfaceArm = float3(1.0, 1.0, 0.0); // neutral: AO=1, roughness=1, metallic=0
                 #endif
+
+                ApplyTerrainOverrides(terrainOverrides, input.positionWS, geometricNormalWS,
+                    surfaceAlbedo, surfaceNormalWS, surfaceArm);
 
                 if (_OceanDebugMode == DEBUG_TERRAIN_SELECTED_ALBEDO)
                     return half4(surfaceAlbedo, 1.0);

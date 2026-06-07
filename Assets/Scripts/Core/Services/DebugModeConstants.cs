@@ -142,8 +142,14 @@ public static class DebugModeConstants
     public const int WaterFreeze = 89;
     public const int WaterIceContribution = 90;
 
+    // Terrain geography overrides
+    public const int TerrainCoastMask = 91;
+    public const int TerrainSlopeMask = 92;
+    public const int TerrainSnowMask = 93;
+    public const int TerrainOverrideComposite = 94;
+
     /// <summary>Highest defined mode value. Update when adding new modes.</summary>
-    public const int Max = 90;
+    public const int Max = 94;
 
     public static bool SuppressesWeatherPasses(int mode)
     {
@@ -168,6 +174,7 @@ public static class DebugModeConstants
             || mode == FoamLocator
             || mode == GlintLocator
             || (mode >= BiomePrimaryId && mode <= BiomeAltitudeCooling)
-            || (mode >= WaterTemperature && mode <= WaterIceContribution);
+            || (mode >= WaterTemperature && mode <= WaterIceContribution)
+            || (mode >= TerrainCoastMask && mode <= TerrainOverrideComposite);
     }
 }
