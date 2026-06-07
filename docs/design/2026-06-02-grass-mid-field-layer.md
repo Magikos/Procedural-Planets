@@ -1,6 +1,6 @@
 # 2026-06-02 — Grass Mid-Field Layer + Three-Layer LOD Stack (Slice 4 Design)
 
-**Status:** Design proposal awaiting approval. Author: Claude Code (Opus 4.7). Reviewer: Codex + Bryan.
+**Status:** First isolated implementation complete and F10 validated. Author: Claude Code (Opus 4.7). Reviewer: Codex + Bryan.
 
 **Discussion thread:** [docs/agent-conversation/2026-06-02-grass-lighting-midfield-feedback.md](../agent-conversation/2026-06-02-grass-lighting-midfield-feedback.md)
 

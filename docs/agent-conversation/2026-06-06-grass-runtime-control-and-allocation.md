@@ -114,3 +114,86 @@ coverage strengths and biome grass authoring values were not tuned.
 - `dotnet build ProceduralPlanets.Planet.csproj` - passed
 
 Unity shader import and F10 visual/runtime validation are still required.
+
+## Follow-up: dedicated mid-field card layer
+
+Commit `f04972d` preserves the validated runtime-allocation checkpoint. The next
+working-tree slice adds a dedicated GPU mid-field path without removing or
+suppressing the legacy chunk path.
+
+Implemented architecture:
+
+- `GrassMidFieldController` owns one shared 200,000-instance card buffer
+  (approximately 9.2 MB), one indirect-argument buffer, and one stats buffer.
+- The controller is camera-centered and uses stable face-space cells at 2 m
+  spacing. It dispatches every cube-face range returned by
+  `FaceSpaceCellRangeBuilder`, rather than only the primary face.
+- The intended band is 75-450 m: cards fade in over 75-125 m, remain dense
+  through 260 m, and fade into the terrain blanket over the final 100 m.
+- `GrassMidFieldPlace.compute` samples the same face biome, radius, and normal
+  atlases as the near-field path. Placement remains seed-stable and applies
+  biome density, water, slope, distance, and cube-face area gates.
+- `GrassMidField.shader` draws one cylindrical camera-facing procedural clump
+  card per accepted cell. It uses shared grass dither, planet day/night
+  lighting, fog, wind globals, and the reserved interactor hook.
+- Mid-field allocation activates below 650 m terrain altitude and releases
+  above 850 m. Orbit should therefore report the mid controller as requested
+  but inactive with no mid buffer.
+- The current surface-state mask is still chunk-local. Mid-field path/scorch
+  rejection is intentionally deferred until a face-space state atlas exists;
+  the implementation does not pretend that data is available.
+
+Runtime control now includes:
+
+```text
+grass.layer Mid [true|false]
+```
+
+The Grass F10 sidecar now includes `--- GrassMidField ---` with quality, face
+range, dispatch, draw, buffer, rejection, and overflow counters.
+
+### First Unity test
+
+1. Let Unity finish importing and confirm there are no
+   `GrassMidField.shader` or `GrassMidFieldPlace.compute` errors.
+2. Go to a grassy surface view with a visible hill beyond the near blades.
+3. Run `grass.layer Chunk false` so near + mid + blanket are isolated.
+4. Take a Grass F10 while looking across the hill.
+5. Run `grass.layer Mid false` from the same camera position and take another
+   Grass F10.
+6. Restore `grass.layer Mid true` and `grass.layer Chunk true`.
+
+The first acceptance gate is structural, not art tuning:
+
+- Mid cards remain fixed to the terrain while moving.
+- `facesActive` rises above one near cube-face edges without a bare seam.
+- `emitted` is non-zero, `overflow=0`, and buffer is about 9.2 MB.
+- The 120-450 m hillside has visible geometric coverage when chunk grass is
+  disabled.
+- No hard empty band appears at either the near/mid or mid/blanket handoff.
+
+Managed build verification passed for Core and Planet. Unity shader import and
+the F10 A/B remain required.
+
+### F10 result
+
+The 2026-06-06 22:41 A/B validated the isolated mid-field layer:
+
+- Mid on: 51,006 emitted cards from a 200,000-card capacity.
+- Buffer: 9.2 MB.
+- Overflow: 0.
+- Candidate cells: 360,000.
+- The `GrassLodCoverage` pair clearly shows the added mid band between the near
+  geometry and the red far-only region.
+- The production `Off` pair shows additional geometric hillside texture with
+  mid enabled and no hard empty ring at either handoff.
+- The legacy chunk path was disabled in both captures, so the result belongs to
+  near + mid + blanket rather than hidden chunk fallback.
+
+This is sufficient to make the legacy chunk layer disabled by default. It
+remains available through `grass.layer Chunk true` for regression comparison.
+
+The production capture is hazier than `AtmosphereBypass`, proving the wash is
+owned by atmospheric aerial perspective rather than the grass layers. No
+atmosphere values were changed because the atmosphere remains visually correct
+in the broader scene and this grass slice should not retune it.

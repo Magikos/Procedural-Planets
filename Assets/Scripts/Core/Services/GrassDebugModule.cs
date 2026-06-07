@@ -55,6 +55,7 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
             sb.AppendLine($"SurfaceAtlas: resolution={stats.SurfaceAtlasResolution}");
         }
         AppendNearFieldMetadata(sb);
+        AppendMidFieldMetadata(sb);
         AppendAtmosphereMetadata(sb);
         AppendScaleReferenceMetadata(sb);
     }
@@ -70,7 +71,7 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
 
         GrassRuntimeState state = control.GetGrassRuntimeState();
         sb.AppendLine($"Master: enabled={state.MasterEnabled}");
-        sb.AppendLine($"Layers: near={state.NearFieldRequested}/{state.NearFieldActive} requested/active, chunk={state.ChunkPathRequested}/{state.ChunkPathActive}, blanket={state.BlanketRequested}/{state.BlanketActive}");
+        sb.AppendLine($"Layers: near={state.NearFieldRequested}/{state.NearFieldActive} requested/active, mid={state.MidFieldRequested}/{state.MidFieldActive}, chunk={state.ChunkPathRequested}/{state.ChunkPathActive}, blanket={state.BlanketRequested}/{state.BlanketActive}");
     }
 
     static void AppendNearFieldMetadata(StringBuilder sb)
@@ -91,6 +92,24 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
         sb.AppendLine($"Cull: candidates={nf.CandidateCells}, density={nf.DensityRejectedCells}, water={nf.WaterRejectedCells}, slope={nf.SlopeRejectedCells}, distance={nf.DistanceRejectedCells}, distanceFade={nf.DistanceFadeRejectedCells}, frustum={nf.FrustumRejectedCells}, faceArea={nf.FaceAreaRejectedCells}, overflow={nf.OverflowDropped}");
     }
 
+    static void AppendMidFieldMetadata(StringBuilder sb)
+    {
+        sb.AppendLine("--- GrassMidField ---");
+        if (!ServiceLocator.TryGet(out IGrassMidFieldStatsProvider provider))
+        {
+            sb.AppendLine("Controller: missing");
+            return;
+        }
+
+        GrassMidFieldStats mid = provider.GetGrassMidFieldStats();
+        sb.AppendLine($"Controller: active={mid.ControllerActive}, shader={mid.ShaderAvailable}");
+        sb.AppendLine($"Quality: spacing={mid.Spacing:F2}, fullDensity={mid.FullDensityDistance:F1}, draw={mid.DrawDistance:F1}, innerFade={mid.InnerFadeStart:F1}-{mid.InnerFadeEnd:F1}, outerFadeBand={mid.OuterFadeBand:F1}");
+        sb.AppendLine($"Page: cellSize={mid.PageCellSize}, face={mid.FaceIndex}, facesActive={mid.FacesActive}, originCellUV=({mid.PageOriginCellU},{mid.PageOriginCellV}), seamRisk={mid.SeamRisk}");
+        sb.AppendLine($"Grid: {mid.GridWidth}x{mid.GridHeight}, reason={mid.LastDispatchReason}, dispatchedThisFrame={mid.DispatchedThisFrame}, dispatchesTotal={mid.DispatchesTotal}");
+        sb.AppendLine($"Draw: emitted={mid.EmittedInstances}, capacity={mid.CapacityInstances}, buffer={mid.BufferMegabytes:F1} MB");
+        sb.AppendLine($"Cull: candidates={mid.CandidateCells}, density={mid.DensityRejectedCells}, water={mid.WaterRejectedCells}, slope={mid.SlopeRejectedCells}, distance={mid.DistanceRejectedCells}, distanceFade={mid.DistanceFadeRejectedCells}, faceArea={mid.FaceAreaRejectedCells}, overflow={mid.OverflowDropped}");
+    }
+
     public void DrawOverlay(DebugRuntimeState state)
     {
         if (!state.ShowDetailedDebug)
@@ -101,7 +120,7 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
         if (ServiceLocator.TryGet(out IGrassRuntimeControl runtimeControl))
         {
             GrassRuntimeState runtime = runtimeControl.GetGrassRuntimeState();
-            GUILayout.Label($"Layers: master={runtime.MasterEnabled}, near={runtime.NearFieldRequested}/{runtime.NearFieldActive}, chunk={runtime.ChunkPathRequested}/{runtime.ChunkPathActive}, blanket={runtime.BlanketRequested}/{runtime.BlanketActive}");
+            GUILayout.Label($"Layers: master={runtime.MasterEnabled}, near={runtime.NearFieldRequested}/{runtime.NearFieldActive}, mid={runtime.MidFieldRequested}/{runtime.MidFieldActive}, chunk={runtime.ChunkPathRequested}/{runtime.ChunkPathActive}, blanket={runtime.BlanketRequested}/{runtime.BlanketActive}");
         }
 
         if (ServiceLocator.TryGet(out IGrassDebugStatsProvider provider))
@@ -115,6 +134,12 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
         {
             GrassNearFieldStats near = nearProvider.GetGrassNearFieldStats();
             GUILayout.Label($"Near: emitted={near.EmittedInstances}, grid={near.GridWidth}x{near.GridHeight}, buffer={near.BufferMegabytes:F1} MB");
+        }
+
+        if (ServiceLocator.TryGet(out IGrassMidFieldStatsProvider midProvider))
+        {
+            GrassMidFieldStats mid = midProvider.GetGrassMidFieldStats();
+            GUILayout.Label($"Mid: emitted={mid.EmittedInstances}, faces={mid.FacesActive}, grid={mid.GridWidth}x{mid.GridHeight}, buffer={mid.BufferMegabytes:F1} MB");
         }
     }
 
@@ -168,7 +193,7 @@ public static class GrassCommands
         return FormatState(control.GetGrassRuntimeState());
     }
 
-    [ConsoleCommand("layer", "Get or set a grass layer: Near, Chunk, or Blanket.")]
+    [ConsoleCommand("layer", "Get or set a grass layer: Near, Mid, Chunk, or Blanket.")]
     public static string Layer(GrassRenderLayer layer, bool? enabled = null)
     {
         if (!TryGetControl(out IGrassRuntimeControl control))
@@ -188,6 +213,7 @@ public static class GrassCommands
     {
         return $"master={state.MasterEnabled}, "
             + $"near={state.NearFieldRequested} (active={state.NearFieldActive}), "
+            + $"mid={state.MidFieldRequested} (active={state.MidFieldActive}), "
             + $"chunk={state.ChunkPathRequested} (active={state.ChunkPathActive}), "
             + $"blanket={state.BlanketRequested} (active={state.BlanketActive})";
     }

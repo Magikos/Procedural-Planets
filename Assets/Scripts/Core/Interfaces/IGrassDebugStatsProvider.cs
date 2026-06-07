@@ -51,6 +51,7 @@ public interface IGrassDebugStatsProvider
 public enum GrassRenderLayer
 {
     Near,
+    Mid,
     Chunk,
     Blanket,
 }
@@ -60,6 +61,8 @@ public struct GrassRuntimeState
     public bool MasterEnabled;
     public bool NearFieldRequested;
     public bool NearFieldActive;
+    public bool MidFieldRequested;
+    public bool MidFieldActive;
     public bool ChunkPathRequested;
     public bool ChunkPathActive;
     public bool BlanketRequested;
