@@ -1,20 +1,6 @@
-using System;
+﻿using System;
 using System.Text;
-using System.Threading;
 using UnityEngine;
-
-public enum ClimateLatitudePreset
-{
-    Legacy,
-    Earthlike,
-    StrongBands,
-}
-
-public enum BiomeAssignmentMode
-{
-    DirectClimateGrid,
-    Voronoi,
-}
 
 [CreateAssetMenu(menuName = "Planet/Settings/Biome Settings")]
 public class BiomeSettings : ScriptableObject
@@ -38,7 +24,7 @@ public class BiomeSettings : ScriptableObject
     [Range(0f, 1f), Tooltip("0 preserves the legacy noise-only moisture field; 1 uses latitude bands plus centered noise.")]
     public float MoistureLatitudeInfluence;
 
-    [Range(0f, 1f), Tooltip("Maximum centered noise contribution used by the latitude-band moisture model.")]
+    [Range(0f, 1f), Tooltip("Maximum centered noise contribution used by the latitude-band moisture model. Has no effect while MoistureLatitudeInfluence is 0 (the legacy noise-only path bypasses this).")]
     public float MoistureNoiseStrength = 0.35f;
 
     [Range(0f, 10f), Tooltip("Normalized temperature removed per unit of land elevation above the biome registry ocean threshold.")]
@@ -55,9 +41,6 @@ public class BiomeSettings : ScriptableObject
     public NoiseSettings MoistureNoise;
 
     [Header("Voronoi Assignment")]
-    [Tooltip("Voronoi is the validated default. DirectClimateGrid preserves the legacy resolver for regression comparisons.")]
-    public BiomeAssignmentMode AssignmentMode = BiomeAssignmentMode.Voronoi;
-
     [Range(128, 8192)]
     public int VoronoiSeedCount = 2048;
 
@@ -185,8 +168,7 @@ public class BiomeSettings : ScriptableObject
         sb.AppendLine();
         sb.Append("moistureCurve=").Append(DescribeCurve(MoistureLatitudeCurve));
         sb.AppendLine();
-        sb.Append("assignment=").Append(AssignmentMode);
-        sb.Append(", seeds=").Append(VoronoiSeedCount);
+        sb.Append("seeds=").Append(VoronoiSeedCount);
         sb.Append(", jitter=").Append(VoronoiSeedJitter.ToString("F2"));
         sb.Append(", tempWeight=").Append(VoronoiTemperatureWeight.ToString("F2"));
         sb.Append(", warp=").Append(VoronoiDomainWarpStrength.ToString("F3"));
@@ -276,155 +258,5 @@ public class BiomeSettings : ScriptableObject
                 .Append(')');
         }
         return sb.ToString();
-    }
-}
-
-[CommandPrefix("climate")]
-public static class ClimateCommands
-{
-    [ConsoleCommand("status", "Show active latitude curves and climate contribution settings.")]
-    public static string Status()
-    {
-        return GetSettings(out _).Describe();
-    }
-
-    [ConsoleCommand("preset", "Apply a climate latitude preset. Run 'climate.apply' to regenerate.")]
-    public static string Preset(ClimateLatitudePreset preset)
-    {
-        BiomeSettings settings = GetEditableSettings(out _);
-        settings.ApplyPreset(preset);
-        return $"climate preset {preset} applied. Run 'climate.apply' to regenerate.";
-    }
-
-    [ConsoleCommand("altitude-lapse", "Get or set normalized altitude temperature drop. Run 'climate.apply' after setting.")]
-    public static string AltitudeLapse(float? value = null)
-    {
-        BiomeSettings settings = value.HasValue ? GetEditableSettings(out _) : GetSettings(out _);
-        if (value.HasValue)
-            settings.AltitudeTemperatureDrop = Mathf.Clamp(value.Value, 0f, 10f);
-        return $"altitude temperature drop: {settings.AltitudeTemperatureDrop:F3}";
-    }
-
-    [ConsoleCommand("moisture-bands", "Get or set latitude-band influence from 0 to 1. Run 'climate.apply' after setting.")]
-    public static string MoistureBands(float? value = null)
-    {
-        BiomeSettings settings = value.HasValue ? GetEditableSettings(out _) : GetSettings(out _);
-        if (value.HasValue)
-            settings.MoistureLatitudeInfluence = Mathf.Clamp01(value.Value);
-        return $"moisture latitude influence: {settings.MoistureLatitudeInfluence:F3}";
-    }
-
-    [ConsoleCommand("moisture-noise", "Get or set latitude-band moisture noise strength from 0 to 1. Run 'climate.apply' after setting.")]
-    public static string MoistureNoise(float? value = null)
-    {
-        BiomeSettings settings = value.HasValue ? GetEditableSettings(out _) : GetSettings(out _);
-        if (value.HasValue)
-            settings.MoistureNoiseStrength = Mathf.Clamp01(value.Value);
-        return $"moisture band noise strength: {settings.MoistureNoiseStrength:F3}";
-    }
-
-    [ConsoleCommand("temperature-noise", "Get or set centered temperature noise strength from 0 to 0.5. Run 'climate.apply' after setting.")]
-    public static string TemperatureNoise(float? value = null)
-    {
-        BiomeSettings settings = value.HasValue ? GetEditableSettings(out _) : GetSettings(out _);
-        if (value.HasValue)
-            settings.TemperatureNoiseStrength = Mathf.Clamp(value.Value, 0f, 0.5f);
-        return $"temperature noise strength: {settings.TemperatureNoiseStrength:F3}";
-    }
-
-    [ConsoleCommand("lut-resolution", "Get or set climate curve LUT resolution from 16 to 512. Run 'climate.apply' after setting.")]
-    public static string LutResolution(int? value = null)
-    {
-        BiomeSettings settings = value.HasValue ? GetEditableSettings(out _) : GetSettings(out _);
-        if (value.HasValue)
-            settings.ClimateLutResolution = Mathf.Clamp(value.Value, 16, 512);
-        return $"climate LUT resolution: {settings.ClimateLutResolution}";
-    }
-
-    [ConsoleCommand("assignment", "Get or set biome assignment mode. Run 'climate.apply' after setting.")]
-    public static string Assignment(BiomeAssignmentMode? mode = null)
-    {
-        BiomeSettings settings = mode.HasValue ? GetEditableSettings(out _) : GetSettings(out _);
-        if (mode.HasValue)
-            settings.AssignmentMode = mode.Value;
-        return $"biome assignment: {settings.AssignmentMode}";
-    }
-
-    [ConsoleCommand("voronoi-seeds", "Get or set global Voronoi seed count from 128 to 8192. Run 'climate.apply' after setting.")]
-    public static string VoronoiSeeds(int? value = null)
-    {
-        BiomeSettings settings = value.HasValue ? GetEditableSettings(out _) : GetSettings(out _);
-        if (value.HasValue)
-            settings.VoronoiSeedCount = Mathf.Clamp(value.Value, 128, 8192);
-        return $"Voronoi seeds: {settings.VoronoiSeedCount}";
-    }
-
-    [ConsoleCommand("voronoi-warp", "Get or set unit-sphere domain-warp strength from 0 to 0.25. Run 'climate.apply' after setting.")]
-    public static string VoronoiWarp(float? value = null)
-    {
-        BiomeSettings settings = value.HasValue ? GetEditableSettings(out _) : GetSettings(out _);
-        if (value.HasValue)
-            settings.VoronoiDomainWarpStrength = Mathf.Clamp(value.Value, 0f, 0.25f);
-        return $"Voronoi warp strength: {settings.VoronoiDomainWarpStrength:F3}";
-    }
-
-    [ConsoleCommand("voronoi-jitter", "Get or set Fibonacci seed jitter from 0 to 1. Run 'climate.apply' after setting.")]
-    public static string VoronoiJitter(float? value = null)
-    {
-        BiomeSettings settings = value.HasValue ? GetEditableSettings(out _) : GetSettings(out _);
-        if (value.HasValue)
-            settings.VoronoiSeedJitter = Mathf.Clamp01(value.Value);
-        return $"Voronoi seed jitter: {settings.VoronoiSeedJitter:F3}";
-    }
-
-    [ConsoleCommand("temperature-point", "Set a normalized temperature curve point: latitude value. Run 'climate.apply' after setting.")]
-    public static string TemperaturePoint(float latitude01, float value01)
-    {
-        BiomeSettings settings = GetEditableSettings(out _);
-        settings.SetTemperatureLatitudePoint(latitude01, value01);
-        return $"temperature curve point set at {Mathf.Clamp01(latitude01):F2}. Run 'climate.apply' to regenerate.";
-    }
-
-    [ConsoleCommand("moisture-point", "Set a normalized moisture curve point: latitude value. Run 'climate.apply' after setting.")]
-    public static string MoisturePoint(float latitude01, float value01)
-    {
-        BiomeSettings settings = GetEditableSettings(out _);
-        settings.SetMoistureLatitudePoint(latitude01, value01);
-        return $"moisture curve point set at {Mathf.Clamp01(latitude01):F2}. Run 'climate.apply' to regenerate.";
-    }
-
-    [ConsoleCommand("apply", "Regenerate the planet with the current climate settings (async, cancellable).")]
-    public static async Awaitable Apply(CancellationToken ct = default)
-    {
-        Planet planet = GetPlanet();
-        if (planet.IsGenerating)
-            throw new InvalidOperationException("planet generation already in progress");
-        await planet.GeneratePlanetAsync(ct);
-    }
-
-    static BiomeSettings GetEditableSettings(out Planet planet)
-    {
-        BiomeSettings settings = GetSettings(out planet);
-        if (planet.IsGenerating)
-            throw new InvalidOperationException("climate settings cannot change while planet generation is in progress");
-        return settings;
-    }
-
-    static BiomeSettings GetSettings(out Planet planet)
-    {
-        planet = GetPlanet();
-        BiomeSettings settings = planet.PlanetSettingsAsset?.BiomeSettings;
-        if (settings == null)
-            throw new InvalidOperationException("active planet has no BiomeSettings assigned");
-        settings.EnsureClimateCurves();
-        return settings;
-    }
-
-    static Planet GetPlanet()
-    {
-        Planet planet = UnityEngine.Object.FindAnyObjectByType<Planet>(FindObjectsInactive.Exclude);
-        if (planet == null)
-            throw new InvalidOperationException("no active Planet was found");
-        return planet;
     }
 }

@@ -1,4 +1,4 @@
-%YAML 1.1
+﻿%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3f3cce766668c55488263da2289e7329, type: 3}
-  m_Name: Scrub
+  m_Name: Desert
   m_EditorClassIdentifier: 
-  Type: 5
+  Type: 2
   ColorGradient:
     serializedVersion: 2
-    key0: {r: 0.75, g: 0.65, b: 0.2, a: 1}
-    key1: {r: 0.75, g: 0.65, b: 0.2, a: 1}
+    key0: {r: 0.95, g: 0.85, b: 0.4, a: 1}
+    key1: {r: 0.95, g: 0.85, b: 0.4, a: 1}
     key2: {r: 0, g: 0, b: 0, a: 0}
     key3: {r: 0, g: 0, b: 0, a: 0}
     key4: {r: 0, g: 0, b: 0, a: 0}
@@ -45,15 +45,17 @@ MonoBehaviour:
     m_NumAlphaKeys: 2
   TintColor: {r: 1, g: 1, b: 1, a: 1}
   TintPercent: 0
-  BiomeOffset: {x: 2614, y: 8395, z: 6182}
-  SurfaceAlbedo: {fileID: 2800000, guid: 356b4cff6c4f68e4eb954c39fed259f0, type: 3}
-  SurfaceSecondaryAlbedo: {fileID: 2800000, guid: 7552020b9011c7543aef82c047f78924, type: 3}
-  SurfaceNormal: {fileID: 2800000, guid: f2169f19557c1b04ead0cc90e016643c, type: 3}
-  SurfaceARM: {fileID: 2800000, guid: 2f73059f78b285742a9bb55515a3c8b8, type: 3}
+  BiomeOffset: {x: 9472, y: 1638, z: 4805}
+  SurfaceAlbedo: {fileID: 2800000, guid: f7e8c43b231626247adf9b2786062677, type: 3}
+  SurfaceSecondaryAlbedo: {fileID: 2800000, guid: ab3373da8fd6721498c79219afe301c4, type: 3}
+  SurfaceNormal: {fileID: 2800000, guid: a8ed613a1cdf97b499c2274eed90dfd9, type: 3}
+  SurfaceARM: {fileID: 2800000, guid: d86806d6c1989994fba93e08a833f077, type: 3}
   SurfaceTiling: 1
-  GrassDensity: 0.2
-  GrassTintBase: {r: 0.55, g: 0.55, b: 0.3, a: 1}
-  GrassHeight: 0.5
+  GrassDensity: 0
+  GrassTintBase: {r: 1, g: 1, b: 1, a: 1}
+  GrassTintDryShift: {r: 1, g: 1, b: 1, a: 1}
+  GrassTintLushShift: {r: 1, g: 1, b: 1, a: 1}
+  GrassHeight: 1.5
   GrassWidth: 0.08
   GrassClumpStrength: 0.55
   GrassMaxSlopeDegrees: 35

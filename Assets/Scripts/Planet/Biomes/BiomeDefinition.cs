@@ -34,6 +34,10 @@ public class BiomeDefinition : ScriptableObject
     [Range(0f, 1f)] public float GrassDensity = 0f;
     [Tooltip("Base grass tint used by clumps before per-clump variation.")]
     public Color GrassTintBase = Color.white;
+    [Tooltip("Multiplier applied to GrassTintBase as local moisture approaches 0 (dry). Default Color.white = no shift. Push toward warmer/yellower for biomes whose dry patches should read parched.")]
+    public Color GrassTintDryShift = Color.white;
+    [Tooltip("Multiplier applied to GrassTintBase as local moisture approaches 1 (lush). Default Color.white = no shift. Push toward cooler/greener for biomes whose lush patches should read saturated.")]
+    public Color GrassTintLushShift = Color.white;
     [Tooltip("Maximum blade height in world units. Default 1.5m reads as visible from low-altitude flight; bump higher for tall-grass biomes.")]
     public float GrassHeight = 1.5f;
     [Tooltip("Base blade half-width in world units.")]

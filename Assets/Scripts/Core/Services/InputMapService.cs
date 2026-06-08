@@ -31,6 +31,7 @@ public sealed class InputMapService : IInputMapService, IDisposable
     public InputAction ToggleProfiling { get; }
     public InputAction DropScaleMarker { get; }
     public InputAction TeleportToMarkers { get; }
+    public InputAction GrassInteractorDistance { get; }
 
     public InputAction OpenConsole { get; }
     public InputAction CloseConsole { get; }
@@ -103,6 +104,11 @@ public sealed class InputMapService : IInputMapService, IDisposable
         ToggleProfiling = AddButton("ToggleProfiling", "<Keyboard>/f11");
         DropScaleMarker = AddButton("DropScaleMarker", "<Keyboard>/m");
         TeleportToMarkers = AddButton("TeleportToMarkers", "<Keyboard>/t");
+        GrassInteractorDistance = GameplayMap.AddAction(
+            "GrassInteractorDistance", InputActionType.Value, expectedControlLayout: "Axis");
+        GrassInteractorDistance.AddCompositeBinding("1DAxis")
+            .With("Positive", "<Keyboard>/rightBracket")
+            .With("Negative", "<Keyboard>/leftBracket");
 
         OpenConsole = AddButton("OpenConsole", "<Keyboard>/backquote");
 

@@ -98,11 +98,11 @@ InitTestScene*.unity*
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 
-local-only
 
 # Local AI/editor tool artifacts
 .clinerules-*
 *.lscache
 
 Extras
-docs/agent*
+local-only
+docs/agent-conversation

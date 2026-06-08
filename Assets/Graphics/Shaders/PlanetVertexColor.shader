@@ -4,11 +4,11 @@ Shader "Planet/VertexColor"
     {
         _Smoothness ("Smoothness", Range(0,1)) = 0.0
         // Phase B step 6: world-space tiling factor for triplanar biome textures.
-        // 0.065 = one tile per ~15 world units. Lower = larger tiles; higher = more
+        // 0.055 = one tile per ~18 world units. Lower = larger tiles; higher = more
         // close-range detail but more visible repetition at altitude.
-        _BiomeTriplanarTiling ("Biome Triplanar Tiling", Range(0.001, 1.0)) = 0.065
-        _BiomeSecondaryTilingScale ("Biome Secondary Tiling Scale", Range(0.1, 4.0)) = 0.42
-        _BiomeSecondaryBlend ("Biome Secondary Blend", Range(0.0, 0.5)) = 0.16
+        _BiomeTriplanarTiling ("Biome Triplanar Tiling", Range(0.001, 1.0)) = 0.055
+        _BiomeSecondaryTilingScale ("Biome Secondary Tiling Scale", Range(0.1, 4.0)) = 0.32
+        _BiomeSecondaryBlend ("Biome Secondary Blend", Range(0.0, 0.5)) = 0.28
         _BiomeMacroVariationScale ("Biome Macro Variation Scale", Range(0.0001, 0.1)) = 0.012
         _BiomeMacroVariationStrength ("Biome Macro Variation Strength", Range(0.0, 0.6)) = 0.14
         // Phase B step 8: scales the tangent-space normal-map perturbation before swizzle.
@@ -352,7 +352,8 @@ Shader "Planet/VertexColor"
                     float secondarySlice = slice + max((float)_BiomeCount, 1.0);
                     float3 secondary = TriplanarSampleAlbedoAtTiling(
                         worldPos + offset, bw, secondarySlice, secondaryTiling);
-                    varied = lerp(varied, secondary, secondaryBlend * smoothstep(0.15, 0.85, macro));
+                    float secondaryMask = lerp(0.35, 1.0, smoothstep(0.12, 0.88, macro));
+                    varied = lerp(varied, secondary, secondaryBlend * secondaryMask);
                 }
 
                 float brightness = lerp(1.0 - variationStrength, 1.0 + variationStrength, macro);
@@ -694,9 +695,9 @@ Shader "Planet/VertexColor"
                 float approachWeight = lerp(saturate(_GrassFarOverlayOrbitStrength), 1.0, nearSurface);
 
                 float envCoverage = pow(saturate(grass.density * slopeKeep * waterKeep), 0.62);
-                float nearWeight = 1.0 - smoothstep(85.0, 150.0, viewDistance);
-                float midWeight = smoothstep(55.0, 170.0, viewDistance)
-                    * (1.0 - smoothstep(260.0, 560.0, viewDistance));
+                float nearWeight = 1.0 - smoothstep(144.0, 160.0, viewDistance);
+                float midWeight = smoothstep(144.0, 160.0, viewDistance)
+                    * (1.0 - smoothstep(200.0, 600.0, viewDistance));
 
                 eval.farWeight = saturate(envCoverage * farMask * approachWeight * _GrassFarOverlayStrength);
                 eval.midWeight = saturate(envCoverage * midWeight);
@@ -733,11 +734,11 @@ Shader "Planet/VertexColor"
                     fiberUv.y * noiseScale * 2.35,
                     11.0 + eval.tint.g * 23.0));
                 float breakup = lerp(macro * 0.65 + detail * 0.35, fiber, saturate(_GrassFarOverlayFiberStrength));
-                float brightness = lerp(0.52, 1.16, breakup);
-                float saturation = lerp(0.90, 1.58, eval.approachWeight);
+                float brightness = lerp(0.48, 0.96, breakup);
+                float saturation = lerp(0.82, 1.20, eval.approachWeight);
                 float luma = dot(eval.tint, float3(0.299, 0.587, 0.114));
                 float3 grassTint = lerp(float3(luma, luma, luma), eval.tint, saturation);
-                grassTint *= float3(0.88, 1.08, 0.82);
+                grassTint *= float3(0.90, 1.00, 0.80);
                 float3 grassColor = saturate(grassTint * brightness);
                 float partialCoverage = smoothstep(0.08, 0.92, terrainWeight);
                 float colorBlend = saturate(_GrassFarOverlayColorBlend * lerp(0.72, 1.0, partialCoverage));
@@ -933,18 +934,9 @@ Shader "Planet/VertexColor"
                 {
                     GrassOverlayEval grassEval = EvaluateGrassOverlay(input.chunkUv,
                         input.positionWS, normalize(input.normalWS));
-                    // Diagnostic LOD bands — overlapping ramps designed to show a clean
-                    // blue → cyan → green → yellow → orange → red sweep so transitions
-                    // between near/mid/far ownership are visible. These bands are SEPARATE
-                    // from production rendering (which uses envCoverage * approachWeight),
-                    // so retuning here doesn't move blades on the ground.
-                    float viewDistance = length(input.positionWS - _WorldSpaceCameraPos);
-                    float coverage = grassEval.envCoverage;
-                    float nearBand = 1.0 - smoothstep(110.0, 200.0, viewDistance);
-                    float midBand  = smoothstep(60.0, 180.0, viewDistance)
-                                   * (1.0 - smoothstep(320.0, 550.0, viewDistance));
-                    float farBand  = smoothstep(200.0, 380.0, viewDistance);
-                    return half4(farBand * coverage, midBand * coverage, nearBand * coverage, 1.0);
+                    // Diagnostic contribution weights follow the active handoff ranges.
+                    // Current output is R/G/B = far/chunk/near contribution weights.
+                    return half4(grassEval.farWeight, grassEval.midWeight, grassEval.nearWeight, 1.0);
                 }
 
                 float3 geometricNormalWS = normalize(input.normalWS);

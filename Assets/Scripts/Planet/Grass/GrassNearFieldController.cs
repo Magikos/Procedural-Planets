@@ -13,8 +13,8 @@ using UnityEngine.Rendering;
 //    not every sub-cell camera motion. Should drop dispatchesTotal from ~843 to ~5-20.
 //  - Explicit slot allocation via InterlockedAdd on the indirect args buffer. Real
 //    overflow accounting; no CopyCount needed.
-//  - Per-root distance fade packed into BladeInstance.Color.a so the shader can dither-clip
-//    the fade band instead of producing a hard edge at drawDistance.
+//  - Stable per-root distance thinning crossfades the dense near path into chunk grass
+//    without a camera-centered opacity ring at drawDistance.
 //  - Multi-face dispatch with proportional range quotas. Neighbor-face strips are rendered
 //    at cube seams without allowing the primary face to consume the shared output buffer.
 sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStatsProvider
@@ -38,12 +38,16 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     const int VisualBladesPerInstance = 3;
     const int BladeVertexCount = VerticesPerVisualBlade * VisualBladesPerInstance;
 
-    const float DefaultSpacing = 0.25f;
-    const float DefaultFullDensityDistance = 30f;
-    const float DefaultDrawDistance = 120f;
-    const float DefaultFadeBand = 45f;          // last 45m of drawDistance dithered
+    // Near grass now owns a larger footprint. Wider root spacing offsets the area increase
+    // so the 160m disc remains within the existing one-million-instance capacity.
+    const float DefaultSpacing = 0.35f;
+    const float DefaultDrawDistance = 160f;
+    const float DefaultFadeBand = DefaultDrawDistance * 0.10f;
+    const float DefaultFullDensityDistance = DefaultDrawDistance - DefaultFadeBand;
     const float DefaultPageSizeMeters = 4f;     // re-dispatch only when page origin moves
-    const float SuppressionRadiusFraction = 0.65f; // chunk path overlaps the near-field fade band
+    // Chunk-center suppression creates coarse ownership shapes. Keep chunk grass under
+    // the near path and let stable per-root thinning perform the visual crossfade.
+    const float SuppressionRadiusFraction = 0f;
     const int DefaultCapacityInstances = 1_000_000; // ~48 MB at 48 bytes per blade
     const bool EnableMultiFaceDispatch = true;
 

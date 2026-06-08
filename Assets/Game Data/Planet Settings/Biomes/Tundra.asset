@@ -1,4 +1,4 @@
-%YAML 1.1
+﻿%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3f3cce766668c55488263da2289e7329, type: 3}
-  m_Name: Snow
+  m_Name: Tundra
   m_EditorClassIdentifier: 
-  Type: 12
+  Type: 11
   ColorGradient:
     serializedVersion: 2
-    key0: {r: 0.95, g: 0.95, b: 1.0, a: 1}
-    key1: {r: 0.95, g: 0.95, b: 1.0, a: 1}
+    key0: {r: 0.72, g: 0.65, b: 0.55, a: 1}
+    key1: {r: 0.72, g: 0.65, b: 0.55, a: 1}
     key2: {r: 0, g: 0, b: 0, a: 0}
     key3: {r: 0, g: 0, b: 0, a: 0}
     key4: {r: 0, g: 0, b: 0, a: 0}
@@ -45,14 +45,16 @@ MonoBehaviour:
     m_NumAlphaKeys: 2
   TintColor: {r: 1, g: 1, b: 1, a: 1}
   TintPercent: 0
-  BiomeOffset: {x: 5273, y: 4581, z: 6928}
-  SurfaceAlbedo: {fileID: 2800000, guid: 683dd7ac1baa8e048a5dec3bcbe15371, type: 3}
+  BiomeOffset: {x: 3925, y: 8160, z: 1247}
+  SurfaceAlbedo: {fileID: 2800000, guid: 7552020b9011c7543aef82c047f78924, type: 3}
   SurfaceSecondaryAlbedo: {fileID: 2800000, guid: 79772047a8b5b7e4fbbc11b8decd5f03, type: 3}
-  SurfaceNormal: {fileID: 2800000, guid: bfb849311a9506e4d901e79e7400a350, type: 3}
-  SurfaceARM: {fileID: 2800000, guid: 005dbea86f646594bb7ad2bafb8a29e9, type: 3}
+  SurfaceNormal: {fileID: 2800000, guid: 145748d186fb63e449fcf4ec46edb161, type: 3}
+  SurfaceARM: {fileID: 2800000, guid: 3636f2c6c284d714bb24c0d0199347c6, type: 3}
   SurfaceTiling: 1
   GrassDensity: 0
   GrassTintBase: {r: 1, g: 1, b: 1, a: 1}
+  GrassTintDryShift: {r: 1, g: 1, b: 1, a: 1}
+  GrassTintLushShift: {r: 1, g: 1, b: 1, a: 1}
   GrassHeight: 1.5
   GrassWidth: 0.08
   GrassClumpStrength: 0.55

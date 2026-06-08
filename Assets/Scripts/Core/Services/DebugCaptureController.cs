@@ -487,6 +487,22 @@ public class DebugCaptureController : MonoBehaviour
         {
             sb.AppendLine($"Position: {cameraContext.CameraTransform.position.x:F2}, {cameraContext.CameraTransform.position.y:F2}, {cameraContext.CameraTransform.position.z:F2}");
             sb.AppendLine($"Forward: {cameraContext.CameraTransform.forward.x:F4}, {cameraContext.CameraTransform.forward.y:F4}, {cameraContext.CameraTransform.forward.z:F4}");
+            sb.AppendLine($"Up: {cameraContext.CameraTransform.up.x:F4}, {cameraContext.CameraTransform.up.y:F4}, {cameraContext.CameraTransform.up.z:F4}");
+            sb.AppendLine($"Right: {cameraContext.CameraTransform.right.x:F4}, {cameraContext.CameraTransform.right.y:F4}, {cameraContext.CameraTransform.right.z:F4}");
+            Camera captureCamera = cameraContext.CameraComponent;
+            if (captureCamera != null)
+            {
+                sb.AppendLine($"Projection: orthographic={captureCamera.orthographic}, fov={captureCamera.fieldOfView:F2}, aspect={captureCamera.aspect:F4}, near={captureCamera.nearClipPlane:F3}, far={captureCamera.farClipPlane:F1}");
+                Plane[] frustumPlanes = GeometryUtility.CalculateFrustumPlanes(captureCamera);
+                string[] planeNames = { "Left", "Right", "Bottom", "Top", "Near", "Far" };
+                for (int i = 0; i < frustumPlanes.Length; i++)
+                {
+                    Plane plane = frustumPlanes[i];
+                    Vector3 normal = plane.normal;
+                    string planeName = i < planeNames.Length ? planeNames[i] : i.ToString();
+                    sb.AppendLine($"FrustumPlane.{planeName}: normal=({normal.x:F5},{normal.y:F5},{normal.z:F5}), distance={plane.distance:F3}");
+                }
+            }
             sb.AppendLine($"Surface view: {cameraContext.SurfaceView}");
             if (cameraContext.TargetCenter != null)
             {
@@ -521,6 +537,8 @@ public class DebugCaptureController : MonoBehaviour
         if (_cachedSunLight != null && cameraContext != null && cameraContext.PlanetRadius > 0f)
         {
             Vector3 sd = -_cachedSunLight.transform.forward;
+            sb.AppendLine($"SunDirection: {sd.x:F4}, {sd.y:F4}, {sd.z:F4}");
+            sb.AppendLine($"SunLight: intensity={_cachedSunLight.intensity:F3}, color=({_cachedSunLight.color.r:F3},{_cachedSunLight.color.g:F3},{_cachedSunLight.color.b:F3})");
             float sunElevation = Vector3.Dot(sd, (cameraContext.CameraTransform.position - cameraContext.PlanetCenter).normalized);
             sb.AppendLine($"SunElevationDeg: {Mathf.Asin(sunElevation) * Mathf.Rad2Deg:F2}");
         }

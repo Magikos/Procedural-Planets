@@ -13,8 +13,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     const float GrassBoundsPaddingMeters = 8f;
     const float AllocationReleasePaddingMeters = 50f;
     const string PlacementComputeResource = "BiomeGrassPlace";
-    const string CameraFrustumPlanesName = "_CameraFrustumPlanes";
-    const int GrassStatsCount = 15;
+    const int GrassStatsCount = 16;
     const int StatCandidateLanes = 0;
     const int StatDensityRejectedLanes = 1;
     const int StatShapeRejectedLanes = 2;
@@ -30,6 +29,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     const int StatSlopeRejectedBlades = 12;
     const int StatEmittedBlades = 13;
     const int StatOverflowRejectedBlades = 14;
+    const int StatInnerFadeRejectedBlades = 15;
 
     static readonly int BladeInstancesId = Shader.PropertyToID("_GrassBladeInstances");
     static readonly int GrassDrawArgsId = Shader.PropertyToID("_GrassDrawArgs");
@@ -58,11 +58,10 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     static readonly int DistanceFadeStartId = Shader.PropertyToID("_DistanceFadeStart");
     static readonly int CullDistanceJitter01Id = Shader.PropertyToID("_CullDistanceJitter01");
     static readonly int LaneJitterMagnitudeId = Shader.PropertyToID("_LaneJitterMagnitude");
+    static readonly int ChunkInnerFadeStartId = Shader.PropertyToID("_ChunkInnerFadeStart");
+    static readonly int ChunkInnerFadeEndId = Shader.PropertyToID("_ChunkInnerFadeEnd");
     static readonly int FrustumCullEnabledId = Shader.PropertyToID("_FrustumCullEnabled");
     static readonly int GrassStatsId = Shader.PropertyToID("_GrassStats");
-    static readonly Plane[] FrustumPlanes = new Plane[6];
-    static readonly Vector4[] FrustumPlaneVectors = new Vector4[6];
-
     readonly Transform _planetTransform;
     readonly ChunkedSurfaceProvider _surfaceProvider;
     readonly IChunkVisibilitySource _visibilitySource;
@@ -109,6 +108,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     long _lastCandidateBlades;
     long _lastDensityRejectedBlades;
     long _lastSlopeRejectedBlades;
+    long _lastInnerFadeRejectedBlades;
     long _lastEmittedBlades;
     long _lastOverflowRejectedBlades;
     long _lastBufferBytes;
@@ -198,6 +198,8 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
 
     Camera _lastTickCamera;
     Vector3 _lastDispatchCameraPosition;
+    float _chunkInnerFadeStart;
+    float _chunkInnerFadeEnd;
     const float CameraRedispatchDistance = 25f; // re-place when camera moves > 25m
 
     public void Tick(Camera camera)
@@ -206,10 +208,18 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         _lastTickCamera = camera;
         ReconcileRuntimeAllocations(camera.transform.position);
 
+        ResolveChunkInnerFade(out float innerFadeStart, out float innerFadeEnd);
+        bool transitionChanged = !Mathf.Approximately(_chunkInnerFadeStart, innerFadeStart)
+            || !Mathf.Approximately(_chunkInnerFadeEnd, innerFadeEnd);
+        _chunkInnerFadeStart = innerFadeStart;
+        _chunkInnerFadeEnd = innerFadeEnd;
+
         // Re-dispatch placement on any chunk whose distance-LOD result may have changed
         // because the camera moved enough to materially shift which chunks are in range.
         // Cheap heuristic: if camera moved >25m, re-run placement on all tracked chunks.
-        if ((camera.transform.position - _lastDispatchCameraPosition).sqrMagnitude > CameraRedispatchDistance * CameraRedispatchDistance)
+        if (transitionChanged
+            || (camera.transform.position - _lastDispatchCameraPosition).sqrMagnitude
+                > CameraRedispatchDistance * CameraRedispatchDistance)
         {
             _lastDispatchCameraPosition = camera.transform.position;
             RedispatchAllPlacements();
@@ -234,6 +244,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         _lastCandidateBlades = 0;
         _lastDensityRejectedBlades = 0;
         _lastSlopeRejectedBlades = 0;
+        _lastInnerFadeRejectedBlades = 0;
         _lastEmittedBlades = 0;
         _lastOverflowRejectedBlades = 0;
         _lastBufferBytes = 0L;
@@ -464,7 +475,12 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         _placementCompute.SetFloat(DistanceFadeStartId, _distanceFadeStart);
         _placementCompute.SetFloat(CullDistanceJitter01Id, _cullDistanceJitter01);
         _placementCompute.SetFloat(LaneJitterMagnitudeId, LaneJitterMagnitude);
-        SetFrustumCullInputs(_lastTickCamera);
+        _placementCompute.SetFloat(ChunkInnerFadeStartId, _chunkInnerFadeStart);
+        _placementCompute.SetFloat(ChunkInnerFadeEndId, _chunkInnerFadeEnd);
+        // Placement buffers persist while the camera turns, so baking the current
+        // view frustum into them leaves square holes until the next movement-driven
+        // redispatch. Rendering still culls each chunk by its world bounds.
+        _placementCompute.SetInt(FrustumCullEnabledId, 0);
 
         int groups = Mathf.CeilToInt(LaneResolution / (float)ThreadGroupSize);
         _placementCompute.Dispatch(_placeKernel, groups, groups, 1);
@@ -491,6 +507,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             MaxRenderDistance = _maxRenderDistance,
             DistanceFadeStart = _distanceFadeStart,
             CullDistanceJitter01 = _cullDistanceJitter01,
+            PlacementFrustumCullEnabled = false,
             SurfaceAtlasResolution = _surfaceAtlasResolution,
             BufferMegabytes = _lastBufferBytes / (1024f * 1024f),
             PlacementDispatches = _lastPlacementDispatches,
@@ -512,9 +529,15 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             CandidateBlades = _lastCandidateBlades,
             DensityRejectedBlades = _lastDensityRejectedBlades,
             SlopeRejectedBlades = _lastSlopeRejectedBlades,
+            InnerFadeRejectedBlades = _lastInnerFadeRejectedBlades,
             EmittedBlades = _lastEmittedBlades,
             OverflowRejectedBlades = _lastOverflowRejectedBlades,
             OldChunkSuppressedCount = _lastOldChunkSuppressedCount,
+            RegisteredInteractors = GrassInteractorRegistry.RegisteredCount,
+            UploadedInteractors = GrassInteractorRegistry.LastActiveCount,
+            ActiveInteractorSources = GrassInteractorRegistry.LastActiveSourceCount,
+            UploadedReleaseSamples = GrassInteractorRegistry.LastReleaseSampleCount,
+            RetainedReleaseSamples = GrassInteractorRegistry.RetainedReleaseSampleCount,
         };
     }
 
@@ -537,28 +560,27 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         _lastCandidateBlades += runtime.GetStat(StatCandidateBlades);
         _lastDensityRejectedBlades += runtime.GetStat(StatDensityRejectedBlades);
         _lastSlopeRejectedBlades += runtime.GetStat(StatSlopeRejectedBlades);
+        _lastInnerFadeRejectedBlades += runtime.GetStat(StatInnerFadeRejectedBlades);
         _lastEmittedBlades += runtime.GetStat(StatEmittedBlades);
         _lastOverflowRejectedBlades += runtime.GetStat(StatOverflowRejectedBlades);
     }
 
-    void SetFrustumCullInputs(Camera camera)
+    static void ResolveChunkInnerFade(out float start, out float end)
     {
-        if (camera == null)
-        {
-            _placementCompute.SetInt(FrustumCullEnabledId, 0);
+        start = 0f;
+        end = 0f;
+        if (!ServiceLocator.TryGet(out IGrassNearFieldStatsProvider provider))
             return;
-        }
 
-        GeometryUtility.CalculateFrustumPlanes(camera, FrustumPlanes);
-        for (int i = 0; i < FrustumPlanes.Length; i++)
-        {
-            Plane plane = FrustumPlanes[i];
-            Vector3 normal = plane.normal;
-            FrustumPlaneVectors[i] = new Vector4(normal.x, normal.y, normal.z, plane.distance);
-        }
+        GrassNearFieldStats near = provider.GetGrassNearFieldStats();
+        if (!near.ControllerActive || !near.ShaderAvailable || near.DrawDistance <= 0f)
+            return;
 
-        _placementCompute.SetInt(FrustumCullEnabledId, 1);
-        _placementCompute.SetVectorArray(CameraFrustumPlanesName, FrustumPlaneVectors);
+        end = near.DrawDistance;
+        start = Mathf.Clamp(
+            Mathf.Max(near.FullDensityDistance, end - near.FadeBand),
+            0f,
+            end);
     }
 
     Bounds EstimateGrassWorldBounds(PlanetChunk chunk)

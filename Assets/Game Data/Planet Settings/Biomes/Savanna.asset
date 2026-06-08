@@ -1,4 +1,4 @@
-%YAML 1.1
+﻿%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3f3cce766668c55488263da2289e7329, type: 3}
-  m_Name: Steppe
+  m_Name: Savanna
   m_EditorClassIdentifier: 
-  Type: 8
+  Type: 3
   ColorGradient:
     serializedVersion: 2
-    key0: {r: 0.65, g: 0.55, b: 0.3, a: 1}
-    key1: {r: 0.65, g: 0.55, b: 0.3, a: 1}
+    key0: {r: 0.82, g: 0.72, b: 0.22, a: 1}
+    key1: {r: 0.82, g: 0.72, b: 0.22, a: 1}
     key2: {r: 0, g: 0, b: 0, a: 0}
     key3: {r: 0, g: 0, b: 0, a: 0}
     key4: {r: 0, g: 0, b: 0, a: 0}
@@ -45,15 +45,17 @@ MonoBehaviour:
     m_NumAlphaKeys: 2
   TintColor: {r: 1, g: 1, b: 1, a: 1}
   TintPercent: 0
-  BiomeOffset: {x: 6291, y: 1748, z: 5036}
+  BiomeOffset: {x: 3061, y: 7924, z: 1357}
   SurfaceAlbedo: {fileID: 2800000, guid: ab3373da8fd6721498c79219afe301c4, type: 3}
-  SurfaceSecondaryAlbedo: {fileID: 2800000, guid: 7552020b9011c7543aef82c047f78924, type: 3}
+  SurfaceSecondaryAlbedo: {fileID: 2800000, guid: ef7d5130ddd34d2488e713d9e6f23bd8, type: 3}
   SurfaceNormal: {fileID: 2800000, guid: 53b21d5eb8e74684da5123a7fa273842, type: 3}
   SurfaceARM: {fileID: 2800000, guid: 69d483f26a196694c9525755681afdc1, type: 3}
   SurfaceTiling: 1
-  GrassDensity: 0.55
-  GrassTintBase: {r: 0.55, g: 0.62, b: 0.3, a: 1}
-  GrassHeight: 0.8
+  GrassDensity: 0.65
+  GrassTintBase: {r: 0.65, g: 0.72, b: 0.3, a: 1}
+  GrassTintDryShift: {r: 1, g: 1, b: 1, a: 1}
+  GrassTintLushShift: {r: 1, g: 1, b: 1, a: 1}
+  GrassHeight: 1.2
   GrassWidth: 0.08
   GrassClumpStrength: 0.55
   GrassMaxSlopeDegrees: 35

@@ -82,7 +82,8 @@ Shader "Planet/GrassMidField"
                     - dot(rootWS, wind) * 0.12
                     + Hash01(seed) * 1.7;
                 float displacement = sin(phase) * min(height * 0.16, max(_WindSpeed, 0.0) * height * 0.22);
-                return wind * displacement * top + SampleGrassInteractorBend(rootWS) * top;
+                return wind * displacement * top
+                    + SampleGrassInteractorBend(rootWS, upWS, height * 0.70) * top;
             }
 
             Varyings MidFieldVertex(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)

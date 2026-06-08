@@ -9,8 +9,8 @@
 //    frames. Camera motion only changes WHICH cells dispatch, not where they live.
 //  - Explicit overflow accounting: InterlockedAdd(_NearFieldDrawArgs[1], 1, slot) drives
 //    the indirect draw count directly. AppendStructuredBuffer dropped.
-//  - Per-root distance fade packed into BladeInstance.Color.a. The shader does a dithered
-//    clip; chunk path writes alpha=1.0 and is unaffected.
+//  - Stable per-root distance thinning crossfades near grass into the chunk path. The
+//    same world-space root always receives the same keep/reject result at a distance.
 //
 // Multi-face ranges share one instance buffer. Each range receives a proportional
 // emission quota so an expensive primary face cannot starve a narrow neighbor strip.
@@ -378,17 +378,20 @@ void PlaceAndCullNearField(uint3 id : SV_DispatchThreadID)
     float3 localRoot = dirWs * surfaceRadius;
     float3 rootWs = mul(_NearFieldPlanetLocalToWorld, float4(localRoot, 1.0)).xyz;
 
-    // Distance gate + smooth stochastic thinning. Earlier power-of-two bands
-    // (1, 1/2, 1/4, 1/8) made visible concentric rings at 30m intervals.
+    // Distance gate + smooth stochastic thinning. Fade all the way to zero before the
+    // draw boundary so the camera-centered near path cannot end as a visible circle.
     float distanceFromCamera = length(rootWs - _NearFieldCameraPositionWs);
     if (distanceFromCamera > _NearFieldDrawDistance)
     {
         AddStat(NF_STAT_DISTANCE_REJECTED, 1u);
         return;
     }
-    float distanceThinT = saturate((distanceFromCamera - _NearFieldFullDensityDistance)
-        / max(_NearFieldDrawDistance - _NearFieldFullDensityDistance, 0.001));
-    float distanceKeep = lerp(1.0, 0.45, smoothstep(0.0, 1.0, distanceThinT));
+    float fadeStart = max(
+        _NearFieldFullDensityDistance,
+        _NearFieldDrawDistance - max(_NearFieldFadeBand, 0.0));
+    float distanceThinT = saturate((distanceFromCamera - fadeStart)
+        / max(_NearFieldDrawDistance - fadeStart, 0.001));
+    float distanceKeep = 1.0 - smoothstep(0.0, 1.0, distanceThinT);
     if (Hash01(cellHash ^ 0x1f83d9abu) > distanceKeep)
     {
         AddStat(NF_STAT_DISTANCE_FADE_REJECTED, 1u);
@@ -467,22 +470,10 @@ void PlaceAndCullNearField(uint3 id : SV_DispatchThreadID)
     float height = biome.Shape.y * max(_NearFieldPlanetWorldScale, 0.0001) * heightVariation;
     float width = biome.Shape.z * max(_NearFieldPlanetWorldScale, 0.0001) * widthVariation;
 
-    // Per-root distance fade in [0,1]. Inside the (drawDistance - fadeBand) inner disc:
-    // alpha = 1 (full opacity). Outside drawDistance: clipped before reaching here. In
-    // the fade band: smoothly ramps down. The shader does dithered clip on this alpha.
-    float fadeAlpha = 1.0;
-    if (_NearFieldFadeBand > 0.001 && _NearFieldDrawDistance > _NearFieldFadeBand)
-    {
-        float fadeStart = _NearFieldDrawDistance - _NearFieldFadeBand;
-        float fadeT = saturate((distanceFromCamera - fadeStart) / _NearFieldFadeBand);
-        fadeAlpha = 1.0 - smoothstep(0.0, 1.0, fadeT);
-        fadeAlpha = lerp(fadeAlpha, 1.0, step(distanceFromCamera, fadeStart));
-    }
-
     GrassBladeInstance blade;
     blade.RootHeight = float4(rootWs, height);
     blade.UpWidth = float4(upWs, width);
-    blade.Color = float4(saturate(biome.Tint.rgb), fadeAlpha);
+    blade.Color = float4(saturate(biome.Tint.rgb), 1.0);
     _NearFieldGrassInstances[slot] = blade;
     AddStat(NF_STAT_EMITTED, 1u);
 }

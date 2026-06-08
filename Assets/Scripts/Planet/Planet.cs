@@ -5,7 +5,7 @@ using UnityEngine.Serialization;
 
 [CommandPrefix("planet")]
 public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurfaceRaycaster,
-    IGrassRuntimeControl, ILateInitialize, IProgressReporter
+    IGrassRuntimeControl, IEarlyInitialize, ILateInitialize, IProgressReporter
 {
     public enum FaceRenderMask { All, Top, Bottom, Left, Right, Front, Back }
 
@@ -170,6 +170,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     ILogger Logger => LoggerProvider.Get();
 
+    public int EarlyPriority => 50;
     public int LatePriority => 0;
 
     void Awake()
@@ -183,6 +184,18 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         ServiceLocator.Register<IPlanetSurfaceSampler>(this);
         ServiceLocator.Register<IPlanetSurfaceRaycaster>(this);
         ServiceLocator.Register<IGrassRuntimeControl>(this);
+    }
+
+    public async Awaitable EarlyInitialize(CancellationToken cancellationToken)
+    {
+        // Force-init grass interactor shader globals before any grass shader runs.
+        // Without this, _GrassInteractorCount is uninitialized and
+        // SampleGrassInteractorBend reads garbage from an unbound StructuredBuffer,
+        // displacing every blade by a random amount (visible as a smudgy green wash
+        // with no per-blade detail). Foundational, fast, no dependencies — fits the
+        // Early phase, separate from LateInitialize's planet generation.
+        GrassInteractorRegistry.Initialize();
+        await Awaitable.NextFrameAsync(cancellationToken);
     }
 
     void OnDestroy()
@@ -208,6 +221,14 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             Destroy(_waterMaterial);
             _waterMaterial = null;
         }
+        GrassInteractorRegistry.DisposeBuffer();
+    }
+
+    void LateUpdate()
+    {
+        // Pack any registered IGrassInteractor instances into the shader globals.
+        // Cheap when idle (no interactors → just sets count = 0).
+        GrassInteractorRegistry.UploadPerFrame();
     }
 
     // Camera reference cached so we don't pay Camera.main's GameObject.FindWithTag every frame.

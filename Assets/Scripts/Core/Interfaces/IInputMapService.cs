@@ -32,6 +32,7 @@ public interface IInputMapService
     InputAction ToggleProfiling { get; }
     InputAction DropScaleMarker { get; }
     InputAction TeleportToMarkers { get; }
+    InputAction GrassInteractorDistance { get; }
 
     InputAction OpenConsole { get; }
     InputAction CloseConsole { get; }

@@ -1,4 +1,4 @@
-%YAML 1.1
+﻿%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3f3cce766668c55488263da2289e7329, type: 3}
-  m_Name: Tropical
+  m_Name: Swamp
   m_EditorClassIdentifier: 
-  Type: 4
+  Type: 10
   ColorGradient:
     serializedVersion: 2
-    key0: {r: 0.0, g: 0.62, b: 0.15, a: 1}
-    key1: {r: 0.0, g: 0.62, b: 0.15, a: 1}
+    key0: {r: 0.22, g: 0.3, b: 0.12, a: 1}
+    key1: {r: 0.22, g: 0.3, b: 0.12, a: 1}
     key2: {r: 0, g: 0, b: 0, a: 0}
     key3: {r: 0, g: 0, b: 0, a: 0}
     key4: {r: 0, g: 0, b: 0, a: 0}
@@ -45,15 +45,17 @@ MonoBehaviour:
     m_NumAlphaKeys: 2
   TintColor: {r: 1, g: 1, b: 1, a: 1}
   TintPercent: 0
-  BiomeOffset: {x: 5829, y: 4106, z: 9743}
-  SurfaceAlbedo: {fileID: 2800000, guid: ef7d5130ddd34d2488e713d9e6f23bd8, type: 3}
-  SurfaceSecondaryAlbedo: {fileID: 2800000, guid: ccff32160f2e0674c8030da6f9288cd5, type: 3}
-  SurfaceNormal: {fileID: 2800000, guid: f32146f0e688ae54bb14a4c0411b2ca9, type: 3}
-  SurfaceARM: {fileID: 2800000, guid: 58c7b1429b634b14e83e3d3b7b65b19e, type: 3}
+  BiomeOffset: {x: 7384, y: 5102, z: 3964}
+  SurfaceAlbedo: {fileID: 2800000, guid: ccff32160f2e0674c8030da6f9288cd5, type: 3}
+  SurfaceSecondaryAlbedo: {fileID: 2800000, guid: ef7d5130ddd34d2488e713d9e6f23bd8, type: 3}
+  SurfaceNormal: {fileID: 2800000, guid: c60716c65ddc3d6408ec501cdb314c97, type: 3}
+  SurfaceARM: {fileID: 2800000, guid: 85c6334c10b1f044aa36482840cf99cd, type: 3}
   SurfaceTiling: 1
-  GrassDensity: 0.85
-  GrassTintBase: {r: 0.3, g: 0.78, b: 0.3, a: 1}
-  GrassHeight: 1
+  GrassDensity: 0.55
+  GrassTintBase: {r: 0.3, g: 0.5, b: 0.25, a: 1}
+  GrassTintDryShift: {r: 1, g: 1, b: 1, a: 1}
+  GrassTintLushShift: {r: 1, g: 1, b: 1, a: 1}
+  GrassHeight: 0.8
   GrassWidth: 0.08
   GrassClumpStrength: 0.55
   GrassMaxSlopeDegrees: 35

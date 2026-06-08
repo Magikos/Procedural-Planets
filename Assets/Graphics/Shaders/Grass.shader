@@ -26,7 +26,7 @@ Shader "Planet/Grass"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Includes/PlanetSunLighting.hlsl"
-            #include "Includes/GrassDither.hlsl"
+            #include "Includes/CloudShadows.hlsl"
             #include "Includes/GrassInteractors.hlsl"
 
             struct BladeInstance
@@ -38,11 +38,7 @@ Shader "Planet/Grass"
 
             StructuredBuffer<BladeInstance> _GrassBladeInstances;
 
-            // Slice 5a: wind. Global uniforms come from WeatherManager (also consumed by
-            // clouds, ocean, precipitation). _WindDirection is a normalized world vector;
-            // _WindSpeed is a scalar (units roughly = wave cycles per second).
-            float3 _WindDirection;
-            float _WindSpeed;
+            // Wind globals are declared by CloudShadows.hlsl and populated by WeatherManager.
             float3 _SunParams;
             float _NightAmbientIntensity;
             float3 _PlanetCenter;
@@ -192,29 +188,25 @@ Shader "Planet/Grass"
                 float bend = t * t * height * lerp(0.16, 0.34, Hash01(seed ^ 0x9b05688cu));
                 float lateralCurl = (Hash01(seed ^ 0x1f83d9abu) - 0.5) * width * t * (1.0 - t) * 0.8;
                 float widthAtT = width * pow(saturate(1.0 - t), 1.15);
-                // Slice 4a hook: forward-compat for slice 6 (character / entity grass bend).
-                // SampleGrassInteractorBend returns 0 today; when slice 6 ships, it returns a
-                // world-space bend vector that we scale by t*t so only the tip bends.
-                float3 interactorBend = SampleGrassInteractorBend(tuftRootWS) * (t * t);
+                // Tangent-plane bend from dynamic interactors (debug sphere today;
+                // player character / projectiles / animals / magic AOEs later).
+                // SampleGrassInteractorBend returns 0 when no interactors are active.
+                // Scaled by t*t so blade roots stay put and only tips bend.
+                float3 interactorBend = SampleGrassInteractorBend(tuftRootWS, upWS, height * 0.85) * (t * t);
                 // Slice 5a: tip-only wind bend in the tangent plane. Clump-based phase so
                 // patches sway together; gust travels along _WindDirection.
                 float3 windOffset = ComputeWindOffset(tuftRootWS, upWS, height, t, seed);
                 float3 spineWS = tuftRootWS + upWS * (height * t) + leanWS * bend + sideWS * lateralCurl + interactorBend + windOffset;
                 float3 positionWS = spineWS + sideWS * (side * widthAtT);
 
-                float brightness = lerp(0.72, 1.16, Hash01(seed ^ 0x5be0cd19u));
+                float brightness = lerp(0.64, 0.98, Hash01(seed ^ 0x5be0cd19u));
                 float tintHash = saturate(lerp(Hash01(seed ^ 0xc2b2ae35u), patchTintNoise, 0.18));
-                float patchTint = lerp(0.94, 1.04, patchTintNoise);
+                float patchTint = lerp(0.90, 1.02, patchTintNoise);
                 float colorJitter = Hash01(seed ^ 0x27d4eb2fu);
-                float3 baseTint = lerp(float3(0.78, 0.96, 0.72), float3(1.04, 1.03, 0.86), tintHash);
-                float3 bladeTintJitter = lerp(float3(0.92, 1.03, 0.94), float3(1.06, 0.99, 0.90), colorJitter);
+                float3 baseTint = lerp(float3(0.76, 0.91, 0.70), float3(0.98, 0.94, 0.76), tintHash);
+                float3 bladeTintJitter = lerp(float3(0.88, 1.00, 0.90), float3(1.00, 0.94, 0.82), colorJitter);
                 float3 tint = baseTint * bladeTintJitter * patchTint;
-                float heightShade = lerp(0.48, 1.06, smoothstep(0.0, 1.0, t));
-
-                // blade.Color.a carries the per-root distance fade in [0,1] from the
-                // near-field compute kernel (1.0 = fully opaque, lower = closer to fade
-                // cutoff). The chunk-path compute writes 1.0 so it's unaffected.
-                float fadeAlpha = blade.Color.a;
+                float heightShade = lerp(0.42, 0.94, smoothstep(0.0, 1.0, t));
 
                 Varyings output;
                 output.positionCS = TransformWorldToHClip(positionWS);
@@ -222,19 +214,12 @@ Shader "Planet/Grass"
                 output.normalWS = normalize(leanWS * 0.72 + upWS * 0.24 + sideWS * side * 0.18);
                 output.fogFactor = ComputeFogFactor(output.positionCS.z);
                 output.rootUpWS = upWS;
-                output.color = float4(saturate(blade.Color.rgb * tint * brightness) * heightShade, fadeAlpha);
+                output.color = float4(saturate(blade.Color.rgb * tint * brightness) * heightShade, 1.0);
                 return output;
             }
 
             half4 GrassFragment(Varyings input) : SV_Target
             {
-                // Per-fragment dithered clip on the per-root fade alpha. fadeAlpha == 1 (chunk
-                // path or near-field's full-density disc) always passes since dither in [0,1)
-                // means 1 - dither > 0. fadeAlpha == 0 always clips. Intermediate values
-                // produce a stippled fade that reads cleaner than a hard edge. Mid-field
-                // (slice 4c) calls SampleGrassDither so its fade band stipple matches.
-                clip(input.color.a - SampleGrassDither(input.positionCS.xy));
-
                 float3 viewDir = GetWorldSpaceNormalizeViewDir(input.positionWS);
                 float3 normalWS = SafeNormalize(input.normalWS, float3(0.0, 1.0, 0.0));
 
@@ -245,6 +230,7 @@ Shader "Planet/Grass"
                 float localSun = dot(planetNormal, sunDir);
                 float daylight = PlanetDaylightFromLocalSun(localSun);
                 float surfaceDirect = PlanetSurfaceDirect(rootUpWS, sunDir);
+                float cloudShadow = CloudShadowFactor(input.positionWS, sunDir, localSun);
 
                 // Grass ribbons are intentionally double-sided. Using a camera-facing
                 // normal makes their diffuse term flip when the camera crosses a ribbon
@@ -252,11 +238,12 @@ Shader "Planet/Grass"
                 // normal sign receives sunlight.
                 float bladeDiffuse = saturate(abs(dot(normalWS, sunDir)));
                 float wrapDiffuse = saturate(bladeDiffuse * 0.72 + 0.28);
-                float3 dayColor = albedo * (0.16 + wrapDiffuse * surfaceDirect * 0.96);
+                float3 dayColor = albedo * (0.12 + wrapDiffuse * surfaceDirect * 0.82);
+                dayColor *= lerp(1.0, cloudShadow, daylight);
 
                 float horizonFactor = saturate(1.0 - abs(localSun) * 3.0);
                 float backlit = pow(saturate(dot(viewDir, -sunDir)), 3.0) * daylight * horizonFactor * surfaceDirect;
-                dayColor += albedo * backlit * 0.32;
+                dayColor += albedo * backlit * cloudShadow * 0.16;
 
                 float3 nightAlbedo = lerp(albedo, float3(0.10, 0.14, 0.20), 0.68);
                 float nightAmbient = PlanetNightAmbient(_NightAmbientIntensity);

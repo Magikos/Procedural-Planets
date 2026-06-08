@@ -17,6 +17,7 @@ public struct GrassDebugStats
     public float MaxRenderDistance;
     public float DistanceFadeStart;
     public float CullDistanceJitter01;
+    public bool PlacementFrustumCullEnabled;
     public int SurfaceAtlasResolution;
     public float BufferMegabytes;
     public int PlacementDispatches;
@@ -38,9 +39,15 @@ public struct GrassDebugStats
     public long CandidateBlades;
     public long DensityRejectedBlades;
     public long SlopeRejectedBlades;
+    public long InnerFadeRejectedBlades;
     public long EmittedBlades;
     public long OverflowRejectedBlades;
     public int OldChunkSuppressedCount;
+    public int RegisteredInteractors;
+    public int UploadedInteractors;
+    public int ActiveInteractorSources;
+    public int UploadedReleaseSamples;
+    public int RetainedReleaseSamples;
 }
 
 public interface IGrassDebugStatsProvider

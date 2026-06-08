@@ -15,7 +15,7 @@ public sealed class DefaultGrassQualitySettings : IGrassQualitySettings
 {
     // Conservative default profile. The diagnostic density multiplier stays available,
     // but defaults to authored biome density until F10 counters justify a stronger tier.
-    public int MaxBladesPerLane => 16;
+    public int MaxBladesPerLane => 24;
     public float DensityMultiplier => 1.0f;
     public float MaxRenderDistance => 600f;
     public float LowLodDistance => 200f;

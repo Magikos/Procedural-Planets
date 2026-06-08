@@ -40,6 +40,7 @@ RWStructuredBuffer<uint> _GrassStats;
 #define STAT_SLOPE_REJECTED_BLADES 12
 #define STAT_EMITTED_BLADES 13
 #define STAT_OVERFLOW_REJECTED_BLADES 14
+#define STAT_INNER_FADE_REJECTED_BLADES 15
 
 int _BiomeGrassParamCount;
 int _BiomeAtlasResolution;
@@ -60,6 +61,8 @@ float _DistanceFadeStart;
 float _CullDistanceJitter01;
 float _GrassDensityMultiplier;
 float _LaneJitterMagnitude;
+float _ChunkInnerFadeStart;
+float _ChunkInnerFadeEnd;
 int _FrustumCullEnabled;
 float4 _CameraFrustumPlanes[6];
 
@@ -324,17 +327,17 @@ void PlaceAndCull(uint3 id : SV_DispatchThreadID)
     // Distance LOD: skip hard beyond MaxRenderDistance, then stochastically thin lanes
     // between DistanceFadeStart and MaxRenderDistance so near grass gets more budget.
     float3 laneRootWsApprox = mul(_PlanetLocalToWorld, float4(laneSphereNormal * laneRadius, 1.0)).xyz;
+    float3 toCamera = laneRootWsApprox - _CameraPositionWs;
+    float distanceSq = dot(toCamera, toCamera);
+    float distance = sqrt(max(distanceSq, 0.0));
     if (_MaxRenderDistance > 0.0)
     {
-        float3 toCamera = laneRootWsApprox - _CameraPositionWs;
-        float distanceSq = dot(toCamera, toCamera);
         if (distanceSq > _MaxRenderDistance * _MaxRenderDistance)
         {
             AddStat(STAT_DISTANCE_REJECTED_LANES, 1u);
             return;
         }
 
-        float distance = sqrt(max(distanceSq, 0.0));
         float fadeStart = clamp(_DistanceFadeStart, 0.0, _MaxRenderDistance);
         if (_CullDistanceJitter01 > 0.0001 && fadeStart < _MaxRenderDistance)
         {
@@ -370,6 +373,15 @@ void PlaceAndCull(uint3 id : SV_DispatchThreadID)
         {
             AddStat(STAT_DENSITY_REJECTED_BLADES, 1u);
             continue;
+        }
+        if (_ChunkInnerFadeEnd > _ChunkInnerFadeStart)
+        {
+            float innerKeep = smoothstep(_ChunkInnerFadeStart, _ChunkInnerFadeEnd, distance);
+            if (Hash01(subHash ^ 0x4cf5ad43u) > innerKeep)
+            {
+                AddStat(STAT_INNER_FADE_REJECTED_BLADES, 1u);
+                continue;
+            }
         }
         if (Hash01(subHash ^ 0xa54ff53au) > slopeKeep)
         {

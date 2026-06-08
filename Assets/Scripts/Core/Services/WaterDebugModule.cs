@@ -60,7 +60,6 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     static readonly int _deepDepthId = Shader.PropertyToID("_DeepDepth");
     static readonly int _shoreFoamDepthId = Shader.PropertyToID("_ShoreFoamDepth");
     static readonly int _shoreFoamSoftnessId = Shader.PropertyToID("_ShoreFoamSoftness");
-    static readonly int _biomeAssignmentModeId = Shader.PropertyToID("_BiomeAssignmentMode");
     static readonly int _biomeVoronoiSeedCountId = Shader.PropertyToID("_BiomeVoronoiSeedCount");
     static readonly int _biomeVoronoiCleanupChangesId = Shader.PropertyToID("_BiomeVoronoiCleanupChanges");
     static readonly int _biomeVoronoiDistinctBiomesId = Shader.PropertyToID("_BiomeVoronoiDistinctBiomes");
@@ -144,14 +143,9 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
 
     static void AppendBiomeAssignmentMetadata(StringBuilder sb)
     {
-        int mode = Shader.GetGlobalInt(_biomeAssignmentModeId);
         int atlasResolution = Shader.GetGlobalInt(_biomeVoronoiAtlasResolutionId);
         sb.AppendLine();
         sb.AppendLine("--- Biome Assignment ---");
-        sb.AppendLine($"Mode: {(mode == 1 ? "Voronoi" : "DirectClimateGrid")}");
-        if (mode != 1)
-            return;
-
         sb.AppendLine(
             $"Voronoi: seeds={Shader.GetGlobalInt(_biomeVoronoiSeedCountId)}, " +
             $"distinct={Shader.GetGlobalInt(_biomeVoronoiDistinctBiomesId)}, " +

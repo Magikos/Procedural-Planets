@@ -1,4 +1,4 @@
-%YAML 1.1
+﻿%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3f3cce766668c55488263da2289e7329, type: 3}
-  m_Name: Beach
+  m_Name: Forest
   m_EditorClassIdentifier: 
-  Type: 1
+  Type: 7
   ColorGradient:
     serializedVersion: 2
-    key0: {r: 0.93, g: 0.87, b: 0.51, a: 1}
-    key1: {r: 0.93, g: 0.87, b: 0.51, a: 1}
+    key0: {r: 0.08, g: 0.45, b: 0.08, a: 1}
+    key1: {r: 0.08, g: 0.45, b: 0.08, a: 1}
     key2: {r: 0, g: 0, b: 0, a: 0}
     key3: {r: 0, g: 0, b: 0, a: 0}
     key4: {r: 0, g: 0, b: 0, a: 0}
@@ -45,15 +45,17 @@ MonoBehaviour:
     m_NumAlphaKeys: 2
   TintColor: {r: 1, g: 1, b: 1, a: 1}
   TintPercent: 0
-  BiomeOffset: {x: 7416, y: 2530, z: 8169}
-  SurfaceAlbedo: {fileID: 2800000, guid: f7e8c43b231626247adf9b2786062677, type: 3}
-  SurfaceSecondaryAlbedo: {fileID: 2800000, guid: ceea943282692884f98fa4636f9c6988, type: 3}
-  SurfaceNormal: {fileID: 2800000, guid: a8ed613a1cdf97b499c2274eed90dfd9, type: 3}
-  SurfaceARM: {fileID: 2800000, guid: d86806d6c1989994fba93e08a833f077, type: 3}
+  BiomeOffset: {x: 4836, y: 9265, z: 2473}
+  SurfaceAlbedo: {fileID: 2800000, guid: ef7d5130ddd34d2488e713d9e6f23bd8, type: 3}
+  SurfaceSecondaryAlbedo: {fileID: 2800000, guid: 7552020b9011c7543aef82c047f78924, type: 3}
+  SurfaceNormal: {fileID: 2800000, guid: f32146f0e688ae54bb14a4c0411b2ca9, type: 3}
+  SurfaceARM: {fileID: 2800000, guid: 58c7b1429b634b14e83e3d3b7b65b19e, type: 3}
   SurfaceTiling: 1
-  GrassDensity: 0
-  GrassTintBase: {r: 1, g: 1, b: 1, a: 1}
-  GrassHeight: 1.5
+  GrassDensity: 0.7
+  GrassTintBase: {r: 0.25, g: 0.55, b: 0.18, a: 1}
+  GrassTintDryShift: {r: 1, g: 1, b: 1, a: 1}
+  GrassTintLushShift: {r: 1, g: 1, b: 1, a: 1}
+  GrassHeight: 0.6
   GrassWidth: 0.08
   GrassClumpStrength: 0.55
   GrassMaxSlopeDegrees: 35

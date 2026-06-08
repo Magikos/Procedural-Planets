@@ -8,7 +8,6 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
     VoronoiBiomeField _voronoiBiomeField;
     Color[] _biomeColors;
 
-    static readonly int _biomeAssignmentModeId = Shader.PropertyToID("_BiomeAssignmentMode");
     static readonly int _biomeVoronoiSeedCountId = Shader.PropertyToID("_BiomeVoronoiSeedCount");
     static readonly int _biomeVoronoiCleanupChangesId = Shader.PropertyToID("_BiomeVoronoiCleanupChanges");
     static readonly int _biomeVoronoiDistinctBiomesId = Shader.PropertyToID("_BiomeVoronoiDistinctBiomes");
@@ -67,10 +66,7 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
         _climateProvider?.Initialize(seed);
         _voronoiBiomeField = null;
 
-        if (_biomeSettings != null &&
-            _biomeSettings.AssignmentMode == BiomeAssignmentMode.Voronoi &&
-            _biomeSettings.Registry != null &&
-            _climateProvider != null)
+        if (_biomeSettings != null && _biomeSettings.Registry != null && _climateProvider != null)
         {
             _voronoiBiomeField = VoronoiBiomeField.Build(
                 _biomeSettings,
@@ -87,7 +83,6 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
                 $"build={_voronoiBiomeField.BuildMilliseconds}ms");
         }
 
-        Shader.SetGlobalInt(_biomeAssignmentModeId, _voronoiBiomeField != null ? 1 : 0);
         Shader.SetGlobalInt(_biomeVoronoiSeedCountId, _voronoiBiomeField?.SeedCount ?? 0);
         Shader.SetGlobalInt(_biomeVoronoiCleanupChangesId, _voronoiBiomeField?.CleanupChanges ?? 0);
         Shader.SetGlobalInt(_biomeVoronoiDistinctBiomesId, _voronoiBiomeField?.DistinctBiomeCount ?? 0);
