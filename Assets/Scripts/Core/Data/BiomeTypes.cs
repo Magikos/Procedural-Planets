@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public enum BiomeType
 {
     Ocean,
@@ -17,6 +19,43 @@ public enum BiomeType
     Mountain,
     Cave,
     Underwater
+}
+
+public enum TemperatureUnit
+{
+    Celsius,
+    Fahrenheit,
+}
+
+public static class TemperatureUnits
+{
+    public const float DefaultMinimumCelsius = -40f;
+    public const float DefaultMaximumCelsius = 40f;
+
+    public static float NormalizedToCelsius(
+        float temperature01,
+        float minimumCelsius = DefaultMinimumCelsius,
+        float maximumCelsius = DefaultMaximumCelsius)
+    {
+        return Mathf.Lerp(minimumCelsius, maximumCelsius, Mathf.Clamp01(temperature01));
+    }
+
+    public static float CelsiusToFahrenheit(float celsius)
+    {
+        return celsius * 1.8f + 32f;
+    }
+
+    public static float FahrenheitToCelsius(float fahrenheit)
+    {
+        return (fahrenheit - 32f) / 1.8f;
+    }
+
+    public static float FromCelsius(float celsius, TemperatureUnit unit)
+    {
+        return unit == TemperatureUnit.Fahrenheit
+            ? CelsiusToFahrenheit(celsius)
+            : celsius;
+    }
 }
 
 public struct BiomeResult
@@ -40,6 +79,7 @@ public struct BiomeResult
 public readonly struct ClimateSample
 {
     public readonly float Temperature01;
+    public readonly float TemperatureCelsius;
     public readonly float Moisture01;
     public readonly float Elevation;
     public readonly float Latitude01;
@@ -53,6 +93,7 @@ public readonly struct ClimateSample
     public ClimateSample(float temperature01, float moisture01, float elevation)
         : this(
             temperature01,
+            TemperatureUnits.NormalizedToCelsius(temperature01),
             moisture01,
             elevation,
             0f,
@@ -67,6 +108,7 @@ public readonly struct ClimateSample
 
     public ClimateSample(
         float temperature01,
+        float temperatureCelsius,
         float moisture01,
         float elevation,
         float latitude01,
@@ -78,6 +120,7 @@ public readonly struct ClimateSample
         float legacyMoisture01)
     {
         Temperature01 = temperature01;
+        TemperatureCelsius = temperatureCelsius;
         Moisture01 = moisture01;
         Elevation = elevation;
         Latitude01 = latitude01;

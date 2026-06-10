@@ -8,6 +8,7 @@ public interface IGrassQualitySettings
     float LowLodDistance { get; }
     float CullDistanceJitter01 { get; }
     int MaxCoarseLodOffsetForBlades { get; }
+    float ResidencyFrustumPaddingDegrees { get; }
     bool EnableScreenSpaceShadows { get; }
 }
 
@@ -20,7 +21,10 @@ public sealed class DefaultGrassQualitySettings : IGrassQualitySettings
     public float MaxRenderDistance => 600f;
     public float LowLodDistance => 200f;
     public float CullDistanceJitter01 => 0.6f;
-    public int MaxCoarseLodOffsetForBlades => 0;
+    // Keep physical coverage across the first terrain LOD transition. Farther
+    // terrain remains represented by the blanket rather than per-chunk buffers.
+    public int MaxCoarseLodOffsetForBlades => 1;
+    public float ResidencyFrustumPaddingDegrees => 25f;
     public bool EnableScreenSpaceShadows => true;
 }
 

@@ -18,7 +18,7 @@ MonoBehaviour:
   FrontSharpness: 18
   StormThreshold: 0.86
   BiomeInfluence: 0.15
-  FrontAdvectionDegreesPerSecond: 0.4
+  FrontAdvectionSpeedMultiplier: 1
   EnableWeatherEvolution: 1
   EvolutionInterval: 0.1
   MoistureSourceStrength: 0.04

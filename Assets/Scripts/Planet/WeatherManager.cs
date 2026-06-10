@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Owns planet-scale weather state. The CPU seeds the initial cube-sphere weather
@@ -17,12 +18,19 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     static void DiagnosticsCmd()
         => EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.DumpWeatherDiagnostics));
 
-    [ConsoleCommand("wind-speed", "Get or set the global wind speed.", MonoTargetType.Single)]
+    [ConsoleCommand("wind-speed", "Get or set global wind speed in meters per second.", MonoTargetType.Single)]
     string WindSpeedCmd(float? value = null)
     {
-        if (value == null) return $"wind speed: {Speed:F2}";
-        Speed = Mathf.Max(0f, value.Value);
-        return $"wind speed: {Speed:F2}";
+        if (value == null) return $"wind speed: {WindSpeedMetersPerSecond:F2} m/s";
+        WindSpeedMetersPerSecond = Mathf.Max(0f, value.Value);
+        return $"wind speed: {WindSpeedMetersPerSecond:F2} m/s";
+    }
+
+    [ConsoleCommand("wind-preset", "Apply a physical wind-speed preset.", MonoTargetType.Single)]
+    string WindPresetCmd(WindPreset preset)
+    {
+        WindSpeedMetersPerSecond = WeatherUnits.WindSpeedForPreset(preset);
+        return $"wind preset {preset}: {WindSpeedMetersPerSecond:F2} m/s";
     }
 
     [ConsoleCommand("wind-direction", "Get or set the global wind direction vector.", MonoTargetType.Single)]
@@ -42,7 +50,11 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     [Header("Wind")]
     [Tooltip("World-space direction the wind and weather features move toward.")]
     public Vector3 WindDir = new Vector3(1f, 0f, 0.3f);
-    [Range(0f, 5f)] public float Speed = 0.5f;
+    [FormerlySerializedAs("Speed")]
+    [Range(0f, 40f), Tooltip("Physical wind speed in meters per second.")]
+    public float WindSpeedMetersPerSecond = 2.5f;
+    const int CurrentWindUnitsVersion = 1;
+    [SerializeField, HideInInspector] int _windUnitsVersion;
 
     [Header("Precipitation")]
     [Range(0f, 1f)] public float Precipitation = 1f;
@@ -95,14 +107,17 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     int _weatherQueryCacheLastFace = -1;
     int _weatherQueryCacheFaceMask;
     static readonly int _windDirectionId = Shader.PropertyToID("_WindDirection");
-    static readonly int _windSpeedId = Shader.PropertyToID("_WindSpeed");
+    static readonly int _windSpeedMetersPerSecondId = Shader.PropertyToID("_WindSpeedMps");
+    static readonly int _windStrengthId = Shader.PropertyToID("_WindStrength01");
     static readonly int _cloudWeatherRotationId = Shader.PropertyToID("_CloudWeatherRotation");
 
     CancellationTokenSource _generateCts;
     bool _lateInitialized;
     // Last wind values pushed to shader globals; sentinel values force the first upload.
     Vector3 _lastUploadedWindDirection = new Vector3(float.NaN, float.NaN, float.NaN);
-    float _lastUploadedWindSpeed = float.NaN;
+    float _lastUploadedWindSpeedMetersPerSecond = float.NaN;
+    float _lastUploadedWindStrength = float.NaN;
+    IClimateSampler _climateSampler;
 
     // Resolved through ServiceLocator (PrecipitationController self-registers in Awake/OnEnable).
     // Returns null if no precipitation system is wired up.
@@ -110,7 +125,8 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         ServiceLocator.Get<IPrecipitationDebugControl>();
 
     public Vector3 WindDirection => WindDir.sqrMagnitude > 0.0001f ? WindDir.normalized : Vector3.right;
-    public float WindSpeed => Speed;
+    float IWeatherProvider.WindSpeedMetersPerSecond => WindSpeedMetersPerSecond;
+    public float WindStrength01 => WeatherUnits.WindStrength01(WindSpeedMetersPerSecond);
     public Texture WeatherTexture => _grid != null ? _grid.Texture : null;
     public Texture WeatherDynamicsTexture => _grid != null ? _grid.DynamicsTexture : null;
     public int WeatherResolution => _grid != null ? _grid.Resolution : 0;
@@ -140,9 +156,16 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     void Awake()
     {
+        MigrateWindUnits();
         ServiceLocator.Register<IWeatherProvider>(this);
         ServiceLocator.Register<IWeatherConfigurator>(this);
         Shader.SetGlobalMatrix(_cloudWeatherRotationId, Matrix4x4.identity);
+    }
+
+    void OnValidate()
+    {
+        MigrateWindUnits();
+        WindSpeedMetersPerSecond = Mathf.Clamp(WindSpeedMetersPerSecond, 0f, 40f);
     }
 
     void OnEnable()
@@ -177,16 +200,22 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         UpdateWeatherAggregateDiagnostics();
 
         Vector3 windDir = WindDirection;
-        float windSpeed = WindSpeed;
+        float windSpeed = WindSpeedMetersPerSecond;
+        float windStrength = WindStrength01;
         if (windDir != _lastUploadedWindDirection)
         {
             Shader.SetGlobalVector(_windDirectionId, windDir);
             _lastUploadedWindDirection = windDir;
         }
-        if (windSpeed != _lastUploadedWindSpeed)
+        if (windSpeed != _lastUploadedWindSpeedMetersPerSecond)
         {
-            Shader.SetGlobalFloat(_windSpeedId, windSpeed);
-            _lastUploadedWindSpeed = windSpeed;
+            Shader.SetGlobalFloat(_windSpeedMetersPerSecondId, windSpeed);
+            _lastUploadedWindSpeedMetersPerSecond = windSpeed;
+        }
+        if (windStrength != _lastUploadedWindStrength)
+        {
+            Shader.SetGlobalFloat(_windStrengthId, windStrength);
+            _lastUploadedWindStrength = windStrength;
         }
     }
 
@@ -208,7 +237,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         if (_grid == null)
         {
             float fallbackCoverage = Settings != null ? Settings.InitialCoverage : 0f;
-            return new WeatherSample(fallbackCoverage, 0f, 0f, 0.5f, 0f,
+            return new WeatherSample(fallbackCoverage, 0f, 0f, GetTemperature(worldPosition), 0f,
                 fallbackCoverage >= CloudyThreshold ? WeatherCellState.Cloudy : WeatherCellState.Clear);
         }
 
@@ -239,7 +268,30 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         return SampleWeather(worldPosition).StormIntensity;
     }
 
-    public float GetTemperature(Vector3 worldPosition) => 0.5f;
+    public float GetTemperature(Vector3 worldPosition)
+    {
+        if (_climateSampler == null)
+            ServiceLocator.TryGet(out _climateSampler);
+
+        return _climateSampler != null &&
+               _climateSampler.TrySampleClimate(worldPosition, out ClimateSample climate)
+            ? climate.TemperatureCelsius
+            : 0f;
+    }
+
+    void MigrateWindUnits()
+    {
+        if (_windUnitsVersion >= CurrentWindUnitsVersion)
+            return;
+
+        // Legacy scenes stored an abstract 0-5 value. One legacy unit represented
+        // approximately 5 m/s in every visual consumer.
+        WindSpeedMetersPerSecond = Mathf.Clamp(
+            WindSpeedMetersPerSecond * 5f,
+            0f,
+            40f);
+        _windUnitsVersion = CurrentWindUnitsVersion;
+    }
 
     public bool TryFindStrongestPrecipitation(out Vector3 worldPosition, out WeatherSample sample)
     {
@@ -263,7 +315,13 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             ? WeatherCellState.Storm
             : cloudCoverage >= CloudyThreshold ? WeatherCellState.Cloudy : WeatherCellState.Clear;
 
-        sample = new WeatherSample(cloudCoverage, stormIntensity, precipitation, 0.5f, moistureSource, state);
+        sample = new WeatherSample(
+            cloudCoverage,
+            stormIntensity,
+            precipitation,
+            GetTemperature(worldPosition),
+            moistureSource,
+            state);
         return true;
     }
 
@@ -386,7 +444,9 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             return;
         }
 
-        float degrees = Settings.FrontAdvectionDegreesPerSecond * WindSpeed * Time.deltaTime;
+        float angularSpeedRadians = WindSpeedMetersPerSecond / Mathf.Max(_seaLevelRadius, 1f);
+        float degrees = angularSpeedRadians * Mathf.Rad2Deg *
+            Settings.FrontAdvectionSpeedMultiplier * Time.deltaTime;
         if (degrees > 0f)
         {
             Vector3 axis = GetAdvectionAxis(WindDirection);

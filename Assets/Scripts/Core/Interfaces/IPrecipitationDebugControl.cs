@@ -10,4 +10,10 @@ public interface IPrecipitationDebugControl
     // the registered service instead of FindAnyObjectByType<PrecipitationController>.
     bool IsRenderingEnabled { get; }
     float StormThreshold { get; }
+    float LocalParticleRadius { get; }
+    int DustParticleCount { get; }
+    int RainParticleCount { get; }
+    int SnowParticleCount { get; }
+    int WeatherParticleProofMode { get; }
+    string WeatherParticleSettingsSummary { get; }
 }

@@ -1,0 +1,180 @@
+#pragma kernel RainUpdate
+
+// Per-particle persistent state. The buffer survives across frames; this kernel
+// advances each particle by one timestep and handles respawn when a drop lands
+// at the surface (recycle from top) or drifts out of the camera's visible
+// region (respawn at random altitude so newly-visible regions look like rain
+// has been established, not just started).
+struct Raindrop
+{
+    float3 Position;
+    float3 Velocity;
+    float  Life01;       // 0 = uninitialized; >0 = active. Decreases as drop ages
+                         // through its fall, but the only HARD threshold is the
+                         // altitude check below.
+    float  Pad;          // 32-byte alignment for the GPU.
+};
+
+RWStructuredBuffer<Raindrop> _RainParticles;
+
+float3  _PlanetCenter;
+float   _SeaRadius;
+float   _CloudBottomRadius;    // top of rain column (where new drops form)
+float   _CloudTopRadius;       // unused for now but reserved for vertical jitter
+float3  _CameraPosition;
+float3  _CameraForward;
+float   _CameraNearRadius;     // particles beyond this from camera get respawned
+                               // with a random altitude (looks like established rain
+                               // newly entering the visible region).
+float   _ForwardConeBias;      // 0..1, how strongly respawn prefers in-front-of-camera
+                               // directions. 0 = full sphere around camera, 1 = tight forward cone.
+float3  _WindDirection;
+float   _WindSpeedMps;
+float   _WindCoupling;         // 0..1, fraction of wind speed added as horizontal drift.
+float   _FallSpeedMps;         // constant downward speed (no gravity ramp).
+float   _DeltaTime;
+uint    _FrameSeed;            // perturbed per frame so respawn locations vary over time.
+
+uint HashUint(uint x)
+{
+    x ^= x >> 16;
+    x *= 0x7feb352du;
+    x ^= x >> 15;
+    x *= 0x846ca68bu;
+    x ^= x >> 16;
+    return x;
+}
+
+float Hash01(uint seed)
+{
+    return (HashUint(seed) & 0x00ffffffu) / 16777216.0;
+}
+
+// Random unit vector. For respawn, we bias toward the camera-forward hemisphere
+// so most particles spawn where the camera can see them — wasted simulation on
+// invisible particles is avoided.
+float3 RandomDirection(uint seed, float3 cameraNormal, float3 cameraForward, float forwardBias)
+{
+    float u = Hash01(seed * 0x9e3779b9u);
+    float v = Hash01(seed * 0x85ebca6bu);
+
+    // Sample a point on a sphere; the forwardBias controls the cone width.
+    // forwardBias = 0 → full sphere. forwardBias = 1 → cone hugging forward.
+    float minCos = lerp(-1.0, 0.6, forwardBias);
+    float cosTheta = lerp(minCos, 1.0, u);
+    float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
+    float phi = v * 6.2831853;
+
+    // Build a tangent basis around camera forward, but the forward axis here is
+    // a horizontal-plane forward (perpendicular to cameraNormal). That keeps
+    // respawn distribution from biasing toward "looking up" or "looking down."
+    float3 horizForward = cameraForward - cameraNormal * dot(cameraForward, cameraNormal);
+    float horizLen = length(horizForward);
+    horizForward = horizLen > 0.001 ? horizForward / horizLen : float3(1.0, 0.0, 0.0);
+    float3 right = normalize(cross(horizForward, cameraNormal));
+
+    return horizForward * cosTheta + right * sinTheta * cos(phi) + cameraNormal * sinTheta * sin(phi);
+}
+
+// Place a particle at the given spawn radius along a random direction relative
+// to camera. `randomAltitude` true: pick a random radius in the fall column
+// (used when respawning into a freshly-visible region — established rain).
+// `randomAltitude` false: spawn at cloud top (used when a drop has landed and
+// a new drop forms at the cloud).
+// Drops spawn already at FULL FALL SPEED in the local-down direction — no
+// "ramp up from zero" period. This makes newly-spawned drops visually
+// consistent with established ones.
+void Respawn(inout Raindrop r, uint id, bool randomAltitude)
+{
+    uint seed = id ^ _FrameSeed;
+    float3 cameraNormal = normalize(_CameraPosition - _PlanetCenter);
+    float3 direction = RandomDirection(seed, cameraNormal, _CameraForward, _ForwardConeBias);
+
+    // randomAltitude: anywhere in the column (used for "newly visible region").
+    // !randomAltitude ("new drop forming"): near the top of the column with a
+    // small random offset so drops don't all spawn at exactly the same height —
+    // otherwise the buffer ends up synchronized into visible horizontal bands.
+    float spawnAltitudeT = randomAltitude
+        ? Hash01(seed * 0xc2b2ae35u)
+        : (0.88 + Hash01(seed * 0xface5u) * 0.12);
+    float spawnRadius = lerp(_SeaRadius, _CloudBottomRadius, spawnAltitudeT);
+
+    // Offset the spawn position toward the camera. We want the particle within
+    // the camera's near radius. Pick a horizontal distance proportional to the
+    // near radius so the spawn distribution covers the visible disc.
+    float spawnHorizDist = Hash01(seed * 0xdeadbeefu) * _CameraNearRadius;
+    float angularOffset = spawnHorizDist / max(_SeaRadius, 1.0);
+    float3 cameraDir = normalize(_CameraPosition - _PlanetCenter);
+    float3 offsetDir = normalize(direction - cameraDir * dot(direction, cameraDir));
+    float3 spawnNormal = normalize(cameraDir * cos(angularOffset) + offsetDir * sin(angularOffset));
+
+    r.Position = _PlanetCenter + spawnNormal * spawnRadius;
+
+    // Initial velocity already at full fall speed in the down direction. The
+    // per-particle speed jitter is applied in the main update path so the
+    // exact speed evolves with the particle's slot id consistently.
+    float3 downAtSpawn = normalize(_PlanetCenter - r.Position);
+    float speedJitter = lerp(0.80, 1.20, Hash01(id * 0xfeedbeefu));
+    r.Velocity = downAtSpawn * _FallSpeedMps * speedJitter;
+    r.Life01 = 1.0;
+}
+
+[numthreads(64, 1, 1)]
+void RainUpdate(uint3 id : SV_DispatchThreadID)
+{
+    Raindrop r = _RainParticles[id.x];
+
+    bool needsInitialSpawn = r.Life01 <= 0.0001;
+    if (needsInitialSpawn)
+    {
+        // First-time spawn: random altitude so the system looks already-running.
+        Respawn(r, id.x, true);
+        _RainParticles[id.x] = r;
+        return;
+    }
+
+    // Constant-velocity fall — no gravity ramp. Each frame we SET the velocity
+    // to (down * fall speed) + (horizontal wind), then translate by velocity.
+    // Drops never speed up or slow down — they fall at the visual rate the
+    // designer picked.
+    float3 toCenter = _PlanetCenter - r.Position;
+    float dist = length(toCenter);
+    float3 downDir = (dist > 0.0001) ? (toCenter / dist) : float3(0.0, -1.0, 0.0);
+
+    // Project wind onto the tangent plane (perpendicular to local up) so wind
+    // can't accelerate the fall speed or push particles upward.
+    float3 windHorizontal = _WindDirection - downDir * dot(_WindDirection, downDir);
+
+    // Per-particle speed jitter — each slot keeps a stable 0.8x..1.2x multiplier
+    // for the entire run. Without this, all drops fall in lockstep and the
+    // buffer synchronizes into visible horizontal "bands" over time.
+    float speedJitter = lerp(0.80, 1.20, Hash01(id.x * 0xfeedbeefu));
+    float dropFallSpeed = _FallSpeedMps * speedJitter;
+
+    r.Velocity = downDir * dropFallSpeed
+               + windHorizontal * _WindSpeedMps * _WindCoupling;
+
+    r.Position += r.Velocity * _DeltaTime;
+
+    // Respawn checks.
+    float currentDist = length(r.Position - _PlanetCenter);
+    float distFromCamera = length(r.Position - _CameraPosition);
+
+    bool hitGround = currentDist < _SeaRadius;
+    bool driftedAway = distFromCamera > (_CameraNearRadius * 1.4);
+
+    if (hitGround)
+    {
+        // Drop landed; new drop forms at the cloud top.
+        Respawn(r, id.x, false);
+    }
+    else if (driftedAway)
+    {
+        // Camera has moved; this particle is no longer relevant. Bring it back
+        // into the visible region with a random altitude (so the freshly-visible
+        // area looks like it has rain already in progress, not just starting).
+        Respawn(r, id.x, true);
+    }
+
+    _RainParticles[id.x] = r;
+}

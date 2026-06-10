@@ -354,10 +354,6 @@ MonoBehaviour:
   SurfaceHeight: 2
   SurfaceSunriseOffsetDegrees: 8
   AutoPositionOnGenerate: 1
-  CappedFrameRate: 60
-  ProfilingFrameRate: 1000
-  ShowDebugOverlay: 1
-  ShowWaterDebugDetails: 0
   TargetCenter: {fileID: 300000001}
 --- !u!114 &200000004
 MonoBehaviour:
@@ -460,10 +456,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 38500361620ef5249bbfa75d58c6c9b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Resolution: 256
+  PerFaceResolution: 256
   RenderMask: 0
   _planetSettings: {fileID: 11400000, guid: bc899ec661438814291d1c98085f7ef5, type: 2}
-  SettingsFoldout: 1
+  _settingsFoldout: 1
   _lastGeneratedRadius: 5257.269
   _lastSeaLevelRadius: 5000
   _lastElevationMin: -0.055924337
@@ -528,7 +524,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   WorldSeed: 12345
-  MinLogLevel: 0
 --- !u!1 &540153373
 GameObject:
   m_ObjectHideFlags: 0
@@ -542,6 +537,7 @@ GameObject:
   - component: {fileID: 540153374}
   - component: {fileID: 540153377}
   - component: {fileID: 540153378}
+  - component: {fileID: 540153379}
   m_Layer: 0
   m_Name: Weather
   m_TagString: Untagged
@@ -578,7 +574,8 @@ MonoBehaviour:
   Settings: {fileID: 11400000, guid: 56063495781899a48b6950662b793742, type: 2}
   WeatherCompute: {fileID: 7200000, guid: dad0bca9e4f640bb929c0eb4dcae406b, type: 3}
   WindDir: {x: 1, y: 0, z: 0.3}
-  Speed: 0.5
+  WindSpeedMetersPerSecond: 2.5
+  _windUnitsVersion: 1
   Precipitation: 1
   CloudyThreshold: 0.18
   PrecipitationStormThreshold: 0.5
@@ -624,6 +621,9 @@ MonoBehaviour:
   MaxOpacity: 0.38
   ViewSteps: 32
   MaxDistance: 22000
+  MinViewSteps: 6
+  StepScaleNearAltitude: 3000
+  StepScaleFarAltitude: 25000
   BottomAltitude: 25
   CloudBaseOverlap: 45
   BottomFeather: 0.08
@@ -632,14 +632,40 @@ MonoBehaviour:
   WindSlant: 0.35
   FallSpeed: 16
   RenderLocalParticles: 1
-  LocalParticleCount: 2600
-  LocalParticleRadius: 900
-  LocalStreakLength: 95
-  LocalParticleOpacity: 0.45
-  LocalFallSpeed: 520
-  LocalWindDrift: 125
-  LocalRainThreshold: 0.16
+  LocalParticleRadius: 120
+  LocalParticleVerticalRange: 18
   LocalMaxCameraAltitude: 1600
+  ParticleProof: 0
+  DustParticleCount: 1600
+  DustBaseDensity: 0.18
+  DustStormDensity: 0.65
+  DustOpacity: 0.45
+  DustSize: 0.025
+  DustStreakLength: 0.65
+  DustTurbulence: 0.28
+  DustColor: {r: 0.72, g: 0.64, b: 0.48, a: 1}
+  RainParticleCount: 12000
+  RainParticleRadius: 600
+  RainStreakLength: 2
+  RainParticleOpacity: 0.65
+  RainFallSpeed: 25
+  RainThreshold: 0.05
+  RainWidth: 0.05
+  DistantRainParticleCount: 10000
+  DistantRainParticleRadius: 3000
+  DistantRainStreakLength: 60
+  DistantRainOpacity: 0.55
+  DistantRainThreshold: 0.03
+  DistantRainWidth: 0.4
+  SnowParticleCount: 1800
+  SnowParticleOpacity: 0.72
+  SnowFallSpeed: 1.6
+  SnowThreshold: 0.12
+  SnowSize: 0.12
+  SnowTemperatureCelsius: 1
+  SnowTemperatureBlendCelsius: 2
+  SnowColor: {r: 0.88, g: 0.92, b: 0.96, a: 1}
+  _localWeatherParticleSettingsVersion: 1
   RainColor: {r: 0.36, g: 0.44, b: 0.5, a: 1}
   StormRainColor: {r: 0.24, g: 0.28, b: 0.32, a: 1}
   DebugMode: 0
@@ -674,6 +700,28 @@ MonoBehaviour:
   CloudFlashIntensity: 2.8
   RainFlashIntensity: 0.55
   LightningColor: {r: 0.72, g: 0.84, b: 1, a: 1}
+--- !u!114 &540153379
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 540153373}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2448cfb51b7b5a42a81e0a390796538, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::RainParticleController
+  ParticleCountSetting: 30000
+  CameraNearRadius: 300
+  ForwardConeBias: 0.35
+  FallSpeedMps: 200
+  WindCoupling: 0.2
+  StreakWidth: 0.012
+  StreakLength: 0.4
+  VisibilityThreshold: 0.05
+  DensityScale: 2.5
+  RainColor: {r: 0.92, g: 0.95, b: 1, a: 0.95}
 --- !u!1 &1819645268
 GameObject:
   m_ObjectHideFlags: 0

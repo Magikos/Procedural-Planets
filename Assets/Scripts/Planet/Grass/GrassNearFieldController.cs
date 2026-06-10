@@ -35,15 +35,17 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     const int ThreadGroupSize = 8;
     const int BladeStride = sizeof(float) * 12;
     const int VerticesPerVisualBlade = 18;
-    const int VisualBladesPerInstance = 3;
-    const int BladeVertexCount = VerticesPerVisualBlade * VisualBladesPerInstance;
+    const int ClusterCardsPerInstance = 3;
+    const int VisualBladesPerCard = 5;
+    const int VisualBladesPerInstance = ClusterCardsPerInstance * VisualBladesPerCard;
+    const int BladeVertexCount = VerticesPerVisualBlade * ClusterCardsPerInstance;
 
-    // Near grass now owns a larger footprint. Wider root spacing offsets the area increase
-    // so the 160m disc remains within the existing one-million-instance capacity.
+    // Keep the dense field fully populated through 144m, then use a broad stochastic
+    // overlap with chunk grass. The previous 16m handoff exposed a visible density ring.
     const float DefaultSpacing = 0.35f;
-    const float DefaultDrawDistance = 160f;
-    const float DefaultFadeBand = DefaultDrawDistance * 0.10f;
-    const float DefaultFullDensityDistance = DefaultDrawDistance - DefaultFadeBand;
+    const float DefaultFullDensityDistance = 144f;
+    const float DefaultDrawDistance = 200f;
+    const float DefaultFadeBand = DefaultDrawDistance - DefaultFullDensityDistance;
     const float DefaultPageSizeMeters = 4f;     // re-dispatch only when page origin moves
     // Chunk-center suppression creates coarse ownership shapes. Keep chunk grass under
     // the near path and let stable per-root thinning perform the visual crossfade.
@@ -492,6 +494,8 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             DispatchedThisFrame = _dispatchedThisFrame,
             DispatchesTotal = _dispatchesTotal,
             EmittedInstances = _lastEmittedInstances,
+            VisualBladesPerInstance = VisualBladesPerInstance,
+            BladeVertexCount = BladeVertexCount,
             CandidateCells = _hasStats ? _statsReadback[StatCandidateCells] : 0L,
             DensityRejectedCells = _hasStats ? _statsReadback[StatDensityRejected] : 0L,
             WaterRejectedCells = _hasStats ? _statsReadback[StatWaterRejected] : 0L,

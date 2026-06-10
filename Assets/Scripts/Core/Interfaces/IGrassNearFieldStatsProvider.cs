@@ -29,6 +29,8 @@ public struct GrassNearFieldStats
     public bool DispatchedThisFrame;
     public int DispatchesTotal;
     public int EmittedInstances;
+    public int VisualBladesPerInstance;
+    public int BladeVertexCount;
     public long CandidateCells;
     public long DensityRejectedCells;
     public long WaterRejectedCells;

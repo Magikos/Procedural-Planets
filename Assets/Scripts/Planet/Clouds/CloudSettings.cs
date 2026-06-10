@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(menuName = "Planet/Settings/Cloud Settings")]
 public class CloudSettings : ScriptableObject
@@ -24,7 +25,9 @@ public class CloudSettings : ScriptableObject
     [Range(0f, 1f)] public float BiomeInfluence = 0.15f;
 
     [Header("Weather Motion")]
-    [Range(0f, 5f)] public float FrontAdvectionDegreesPerSecond = 0.4f;
+    [FormerlySerializedAs("FrontAdvectionDegreesPerSecond")]
+    [Range(0f, 10f), Tooltip("Multiplier applied to physical wind travel over the planet surface.")]
+    public float FrontAdvectionSpeedMultiplier = 1f;
 
     [Header("Weather Evolution")]
     public bool EnableWeatherEvolution = true;

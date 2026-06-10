@@ -9,6 +9,35 @@ public enum ClimateLatitudePreset
     StrongBands,
 }
 
+public static class TemperatureUnitPreferences
+{
+    const string PlayerPrefsKey = "TemperatureUnit.v1";
+
+    public static TemperatureUnit PreferredUnit
+    {
+        get
+        {
+            int stored = PlayerPrefs.GetInt(PlayerPrefsKey, (int)TemperatureUnit.Celsius);
+            return Enum.IsDefined(typeof(TemperatureUnit), stored)
+                ? (TemperatureUnit)stored
+                : TemperatureUnit.Celsius;
+        }
+    }
+
+    public static void SetPreferredUnit(TemperatureUnit unit)
+    {
+        PlayerPrefs.SetInt(PlayerPrefsKey, (int)unit);
+        PlayerPrefs.Save();
+    }
+
+    public static string Format(float celsius, string format = "F1")
+    {
+        TemperatureUnit unit = PreferredUnit;
+        float value = TemperatureUnits.FromCelsius(celsius, unit);
+        return $"{value.ToString(format)} {(unit == TemperatureUnit.Celsius ? "C" : "F")}";
+    }
+}
+
 [CommandPrefix("climate")]
 public static class ClimateCommands
 {
@@ -69,6 +98,43 @@ public static class ClimateCommands
         if (value.HasValue)
             settings.ClimateLutResolution = Mathf.Clamp(value.Value, 16, 512);
         return $"climate LUT resolution: {settings.ClimateLutResolution}";
+    }
+
+    [ConsoleCommand("map-resolution", "Get or set GPU climate map resolution per cube face from 32 to 512. Run 'climate.apply' after setting.")]
+    public static string MapResolution(int? value = null)
+    {
+        BiomeSettings settings = value.HasValue ? GetEditableSettings() : GetSettings();
+        if (value.HasValue)
+            settings.ClimateMapResolution = Mathf.Clamp(value.Value, 32, 512);
+        return $"climate map resolution: {settings.ClimateMapResolution} per face";
+    }
+
+    [ConsoleCommand("temperature-range", "Get or set the normalized climate range in Celsius: minimum maximum. Run 'climate.apply' after setting.")]
+    public static string TemperatureRange(float? minimumCelsius = null, float? maximumCelsius = null)
+    {
+        BiomeSettings settings = minimumCelsius.HasValue || maximumCelsius.HasValue
+            ? GetEditableSettings()
+            : GetSettings();
+        if (minimumCelsius.HasValue)
+            settings.MinimumTemperatureCelsius = Mathf.Clamp(minimumCelsius.Value, -100f, 50f);
+        if (maximumCelsius.HasValue)
+        {
+            settings.MaximumTemperatureCelsius = Mathf.Clamp(
+                maximumCelsius.Value,
+                settings.MinimumTemperatureCelsius + 1f,
+                100f);
+        }
+        settings.EnsureClimateCurves();
+        return $"temperature range: {settings.MinimumTemperatureCelsius:F1} C to " +
+               $"{settings.MaximumTemperatureCelsius:F1} C";
+    }
+
+    [ConsoleCommand("temperature-unit", "Get or set player temperature display units.")]
+    public static string TemperatureUnit(TemperatureUnit? unit = null)
+    {
+        if (unit.HasValue)
+            TemperatureUnitPreferences.SetPreferredUnit(unit.Value);
+        return $"temperature display unit: {TemperatureUnitPreferences.PreferredUnit}";
     }
 
     [ConsoleCommand("voronoi-seeds", "Get or set global Voronoi seed count from 128 to 8192. Run 'climate.apply' after setting.")]

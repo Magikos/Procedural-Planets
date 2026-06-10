@@ -138,6 +138,39 @@ public sealed class PlanetChunk
         return radius > 0f;
     }
 
+    public void ReleaseCpuDataAfterColorUpload(
+        bool retainSurfaceSamplingAndRebakeData,
+        bool retainUnitSphereForWaterSampler)
+    {
+        CpuColors = null;
+
+        if (!retainUnitSphereForWaterSampler)
+            CpuUnitSpherePoints = null;
+
+        if (retainSurfaceSamplingAndRebakeData)
+            return;
+
+        CpuElevations = null;
+        CpuVertexRadii = null;
+        CpuBiomeData = null;
+    }
+
+    public long GetRetainedCpuDataBytes()
+    {
+        long bytes = 0;
+        bytes += ArrayBytes(CpuVertices, sizeof(float) * 3);
+        bytes += ArrayBytes(CpuUnitSpherePoints, sizeof(float) * 3);
+        bytes += ArrayBytes(CpuElevations, sizeof(float));
+        bytes += ArrayBytes(CpuVertexRadii, sizeof(float));
+        bytes += ArrayBytes(CpuColors, sizeof(float) * 4);
+        bytes += ArrayBytes(CpuBiomeData, sizeof(float) * 4);
+        bytes += ArrayBytes(CpuNormals, sizeof(float) * 3);
+        return bytes;
+    }
+
+    static long ArrayBytes(System.Array array, int elementBytes)
+        => array == null ? 0L : (long)array.Length * elementBytes;
+
     // ---- Hash helpers ---------------------------------------------------------------------
 
     public static uint ChildHash(uint parentHash, byte quadrant) => (parentHash << 2) | quadrant;
@@ -170,8 +203,12 @@ public static class PlanetChunkTextures
 {
     public const int BiomeMapResolution = 64;
     const int TexelCount = BiomeMapResolution * BiomeMapResolution;
+    const int BytesPerRgba32Texel = 4;
+    const int BiomeTexturesPerSet = 3;
 
     public static int LiveTextureSets { get; private set; }
+    public static int LiveBiomeTextureSets { get; private set; }
+    public static int LiveSurfaceStateTextures { get; private set; }
 
     // Top-K width: 4 biomes per texel, matching RGBA8 channel count. Pick any other K and
     // the textures change format / the shader's weighted sum loop has to change.
@@ -181,8 +218,6 @@ public static class PlanetChunkTextures
     {
         if (chunk == null) return;
         Dispose(chunk);
-        LiveTextureSets++;
-        MemoryDebugCounters.ReportLiveChunkTextureSets(LiveTextureSets);
 
         string suffix = $"F{chunk.FaceIndex}_D{chunk.DetailLevel}_H{chunk.HashValue}";
 
@@ -237,6 +272,31 @@ public static class PlanetChunkTextures
         chunk.BiomeWeightsTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
         chunk.SurfaceStateTexture.SetPixels32(blank);
         chunk.SurfaceStateTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+
+        LiveTextureSets++;
+        LiveBiomeTextureSets++;
+        LiveSurfaceStateTextures++;
+        ReportCounters();
+    }
+
+    public static bool ReleaseBiomeTextures(PlanetChunk chunk)
+    {
+        if (chunk == null) return false;
+        bool hadBiomeTextures = chunk.BiomeBlendedColorTexture != null
+            || chunk.BiomeIdsTexture != null
+            || chunk.BiomeWeightsTexture != null;
+        DestroyTexture(ref chunk.BiomeBlendedColorTexture);
+        DestroyTexture(ref chunk.BiomeIdsTexture);
+        DestroyTexture(ref chunk.BiomeWeightsTexture);
+        chunk.PendingBiomeBlendedColorPixels = null;
+        chunk.PendingBiomeIdsPixels = null;
+        chunk.PendingBiomeWeightsPixels = null;
+        if (hadBiomeTextures && LiveBiomeTextureSets > 0)
+        {
+            LiveBiomeTextureSets--;
+            ReportCounters();
+        }
+        return hadBiomeTextures;
     }
 
     public static void Dispose(PlanetChunk chunk)
@@ -246,18 +306,26 @@ public static class PlanetChunkTextures
             || chunk.BiomeIdsTexture != null
             || chunk.BiomeWeightsTexture != null
             || chunk.SurfaceStateTexture != null;
-        DestroyTexture(ref chunk.BiomeBlendedColorTexture);
-        DestroyTexture(ref chunk.BiomeIdsTexture);
-        DestroyTexture(ref chunk.BiomeWeightsTexture);
+        ReleaseBiomeTextures(chunk);
+        bool hadSurfaceState = chunk.SurfaceStateTexture != null;
         DestroyTexture(ref chunk.SurfaceStateTexture);
-        chunk.PendingBiomeBlendedColorPixels = null;
-        chunk.PendingBiomeIdsPixels = null;
-        chunk.PendingBiomeWeightsPixels = null;
+        if (hadSurfaceState && LiveSurfaceStateTextures > 0)
+            LiveSurfaceStateTextures--;
         if (hadTextures && LiveTextureSets > 0)
-        {
             LiveTextureSets--;
-            MemoryDebugCounters.ReportLiveChunkTextureSets(LiveTextureSets);
-        }
+        ReportCounters();
+    }
+
+    static void ReportCounters()
+    {
+        long bytesPerTexture = (long)TexelCount * BytesPerRgba32Texel;
+        MemoryDebugCounters.ReportLiveChunkTextureSets(LiveTextureSets);
+        MemoryDebugCounters.ReportChunkBiomeTextures(
+            LiveBiomeTextureSets,
+            LiveBiomeTextureSets * BiomeTexturesPerSet * bytesPerTexture);
+        MemoryDebugCounters.ReportChunkSurfaceStateTextures(
+            LiveSurfaceStateTextures,
+            LiveSurfaceStateTextures * bytesPerTexture);
     }
 
     static void DestroyTexture(ref Texture2D tex)

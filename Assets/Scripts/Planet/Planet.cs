@@ -5,7 +5,7 @@ using UnityEngine.Serialization;
 
 [CommandPrefix("planet")]
 public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurfaceRaycaster,
-    IGrassRuntimeControl, IEarlyInitialize, ILateInitialize, IProgressReporter
+    IClimateSampler, IGrassRuntimeControl, IEarlyInitialize, ILateInitialize, IProgressReporter
 {
     public enum FaceRenderMask { All, Top, Bottom, Left, Right, Front, Back }
 
@@ -29,6 +29,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     ShapeGenerator _shapeGenerator = new ShapeGenerator();
     ColorGenerator _colorGenerator = new ColorGenerator();
+    ClimateMapGpuData _climateMapGpuData;
     IPlanetSurfaceProvider _surfaceProvider;
     // Typed reference to the Low-mode provider for legacy color iteration over TerrainFaces.
     // Null when running under chunked or GPU surface providers.
@@ -91,8 +92,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     static readonly int _grassFarOverlayAltitudeStartId = Shader.PropertyToID("_GrassFarOverlayAltitudeStart");
     static readonly int _grassFarOverlayAltitudeEndId = Shader.PropertyToID("_GrassFarOverlayAltitudeEnd");
     static readonly int _grassFarOverlayFiberStrengthId = Shader.PropertyToID("_GrassFarOverlayFiberStrength");
-    static readonly int _grassFarOverlayColorBlendId = Shader.PropertyToID("_GrassFarOverlayColorBlend");
-    static readonly int _grassMidOverlayTerrainStrengthId = Shader.PropertyToID("_GrassMidOverlayTerrainStrength");
     static readonly int _terrainOverrideEnabledId = Shader.PropertyToID("_TerrainOverrideEnabled");
     static readonly int _coastSliceId = Shader.PropertyToID("_CoastSlice");
     static readonly int _coastBelowSeaDepthId = Shader.PropertyToID("_CoastBelowSeaDepth");
@@ -147,8 +146,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     const float GrassFarOverlayAltitudeStart = 750f;
     const float GrassFarOverlayAltitudeEnd = 2600f;
     const float GrassFarOverlayFiberStrength = 0.65f;
-    const float GrassFarOverlayColorBlend = 0.98f;
-    const float GrassMidOverlayTerrainStrength = 0.92f;
     const float NearFieldGrassActivationAltitude = 350f;
     const float NearFieldGrassDeactivationAltitude = 500f;
     const float MidFieldGrassActivationAltitude = 650f;
@@ -183,6 +180,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         ServiceLocator.Register<IPlanet>(this);
         ServiceLocator.Register<IPlanetSurfaceSampler>(this);
         ServiceLocator.Register<IPlanetSurfaceRaycaster>(this);
+        ServiceLocator.Register<IClimateSampler>(this);
         ServiceLocator.Register<IGrassRuntimeControl>(this);
     }
 
@@ -203,6 +201,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         ServiceLocator.Unregister<IPlanet>(this);
         ServiceLocator.Unregister<IPlanetSurfaceSampler>(this);
         ServiceLocator.Unregister<IPlanetSurfaceRaycaster>(this);
+        ServiceLocator.Unregister<IClimateSampler>(this);
         ServiceLocator.Unregister<IGrassRuntimeControl>(this);
         _cts?.Cancel();
         _cts?.Dispose();
@@ -212,6 +211,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _grassMidFieldController = null;
         _grassController?.Dispose();
         _grassController = null;
+        _climateMapGpuData?.Dispose();
+        _climateMapGpuData = null;
         _surfaceProvider?.Dispose();
         _surfaceProvider = null;
         _perFaceProvider = null;
@@ -255,6 +256,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _grassMidFieldController = null;
         _grassController?.Dispose();
         _grassController = null;
+        _climateMapGpuData?.Dispose();
+        _climateMapGpuData = null;
         DestroyChildren();
 
         ISeedProvider seedProvider = ServiceLocator.Get<ISeedProvider>();
@@ -323,8 +326,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeStartId, GrassFarOverlayAltitudeStart);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeEndId, GrassFarOverlayAltitudeEnd);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayFiberStrengthId, GrassFarOverlayFiberStrength);
-        SetMaterialFloatIfPresent(mat, _grassFarOverlayColorBlendId, GrassFarOverlayColorBlend);
-        SetMaterialFloatIfPresent(mat, _grassMidOverlayTerrainStrengthId, GrassMidOverlayTerrainStrength);
         ConfigureTerrainSurfaceOverrides(mat);
     }
 
@@ -427,6 +428,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             _progressHandle.Report(0.8f, "Applying colors...");
             await GenerateColorsAsync(new ProgressRangeHandle(_progressHandle, 0.8f, 0.1f), ct);
             if (this == null) return;
+            BuildClimateMap();
             _progressHandle.Report(0.9f, "Generating water...");
             await GenerateWaterAsync(new ProgressRangeHandle(_progressHandle, 0.9f, 0.1f), ct);
             ConfigureGrassController();
@@ -475,6 +477,39 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     {
         if (_surfaceProvider == null) return;
         await _surfaceProvider.GenerateColorsAsync(_colorGenerator, progress, ct);
+    }
+
+    void BuildClimateMap()
+    {
+        _climateMapGpuData?.Dispose();
+        _climateMapGpuData = null;
+
+        BiomeSettings settings = _planetSettings?.BiomeSettings;
+        if (settings == null ||
+            _colorGenerator?.ClimateProvider == null ||
+            _surfaceProvider == null)
+        {
+            return;
+        }
+
+        try
+        {
+            _climateMapGpuData = ClimateMapGpuData.Build(
+                _colorGenerator.ClimateProvider,
+                _surfaceProvider.GetFaceMeshSamplers(),
+                settings.ClimateMapResolution,
+                settings.MinimumTemperatureCelsius,
+                settings.MaximumTemperatureCelsius,
+                Logger);
+        }
+        catch (System.Exception ex)
+        {
+            Logger.LogException("Climate", ex);
+            Logger.Log(
+                LogLevel.Warning,
+                "Climate",
+                "GPU climate map bake failed; CPU climate queries remain available.");
+        }
     }
 
     void ConfigureGrassController()
@@ -698,6 +733,30 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
         float scale = Mathf.Max(transform.lossyScale.x, Mathf.Max(transform.lossyScale.y, transform.lossyScale.z));
         surfaceRadius = localRadius * Mathf.Max(scale, 0.0001f);
+        return true;
+    }
+
+    public bool TrySampleClimate(Vector3 worldPosition, out ClimateSample sample)
+    {
+        sample = default;
+        if (_surfaceProvider == null ||
+            _colorGenerator?.ClimateProvider == null ||
+            _planetSettings == null ||
+            _planetSettings.PlanetRadius <= 0f)
+        {
+            return false;
+        }
+
+        Vector3 localPoint = transform.InverseTransformPoint(worldPosition);
+        if (localPoint.sqrMagnitude < 0.0001f)
+            return false;
+
+        Vector3 localDirection = localPoint.normalized;
+        if (!_surfaceProvider.TryGetLocalSurfaceRadius(localDirection, out float localRadius))
+            return false;
+
+        float elevation = localRadius / _planetSettings.PlanetRadius - 1f;
+        sample = _colorGenerator.ClimateProvider.Evaluate(localDirection, elevation);
         return true;
     }
 

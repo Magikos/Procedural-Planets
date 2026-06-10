@@ -5,8 +5,10 @@ using UnityEngine.Rendering;
 sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProvider
 {
     const int VerticesPerVisualBlade = 18;
-    const int VisualBladesPerInstance = 3;
-    const int BladeVertexCount = VerticesPerVisualBlade * VisualBladesPerInstance;
+    const int ClusterCardsPerInstance = 3;
+    const int VisualBladesPerCard = 5;
+    const int VisualBladesPerInstance = ClusterCardsPerInstance * VisualBladesPerCard;
+    const int BladeVertexCount = VerticesPerVisualBlade * ClusterCardsPerInstance;
     const int LaneResolution = PlanetChunkTextures.BiomeMapResolution;
     const int ThreadGroupSize = 8;
     const float LaneJitterMagnitude = 1.1f; // > 1 = blades from adjacent lanes overlap visually
@@ -64,7 +66,6 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     static readonly int GrassStatsId = Shader.PropertyToID("_GrassStats");
     readonly Transform _planetTransform;
     readonly ChunkedSurfaceProvider _surfaceProvider;
-    readonly IChunkVisibilitySource _visibilitySource;
     readonly IGrassQualitySettings _qualitySettings;
     readonly ILogger _logger;
     readonly Material _material;
@@ -73,8 +74,10 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     readonly int _placeKernel;
     readonly bool _placementAvailable;
     readonly Dictionary<PlanetChunk, GrassChunkRuntime> _chunks = new();
-    readonly HashSet<PlanetChunk> _visibleChunks = new();
+    readonly List<PlanetChunk> _residencyScratch = new(128);
+    readonly HashSet<PlanetChunk> _residencyChunks = new();
     readonly List<PlanetChunk> _chunksToRelease = new();
+    readonly Plane[] _renderFrustumPlanes = new Plane[6];
     readonly int _minChunkDepthForBlades;
     readonly int _maxChunkDepth;
     readonly int _maxCoarseLodOffsetForBlades;
@@ -88,10 +91,19 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     readonly float _maxRenderDistance;
     readonly float _distanceFadeStart;
     readonly float _cullDistanceJitter01;
+    readonly float _residencyFrustumPaddingDegrees;
+    int _lastVisibleChunks;
+    int _lastBufferedResidencyChunks;
     int _lastDrawCalls;
     int _lastBladeInstances;
+    int _lastResidentBladeInstances;
+    int _lastResidentChunksWithInstances;
     int _lastPlacementDispatches;
     int _lastChunksWithInstances;
+    int _lastFineTrackedChunks;
+    int _lastCoarseTrackedChunks;
+    int _lastFineChunksWithInstances;
+    int _lastCoarseChunksWithInstances;
     int _lastChunksWithStats;
     int _lastChunkInstanceMin;
     int _lastChunkInstanceMax;
@@ -121,7 +133,6 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     {
         _planetTransform = planetTransform;
         _surfaceProvider = surfaceProvider;
-        _visibilitySource = surfaceProvider;
         _grassParamsBuffer = grassParamsBuffer;
         _grassParamCount = Mathf.Max(grassParamCount, 0);
         _waterRadius = waterRadius;
@@ -130,7 +141,8 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         if (!ServiceLocator.TryGet(out _qualitySettings))
             _qualitySettings = new DefaultGrassQualitySettings();
         _maxChunkDepth = surfaceProvider.MaxChunkDepth;
-        _maxCoarseLodOffsetForBlades = _qualitySettings.MaxCoarseLodOffsetForBlades;
+        _maxCoarseLodOffsetForBlades = Mathf.Clamp(
+            _qualitySettings.MaxCoarseLodOffsetForBlades, 0, _maxChunkDepth);
         _minChunkDepthForBlades = Mathf.Max(0, _maxChunkDepth - _maxCoarseLodOffsetForBlades);
         _surfaceAtlasResolution = surfaceProvider.GrassSurfaceAtlases?.AtlasResolution ?? 0;
         // Quality knobs read once at controller construction. Per-chunk buffers are sized
@@ -142,6 +154,8 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         _maxRenderDistance = Mathf.Max(0f, _qualitySettings.MaxRenderDistance);
         _distanceFadeStart = Mathf.Clamp(_qualitySettings.LowLodDistance, 0f, _maxRenderDistance);
         _cullDistanceJitter01 = Mathf.Clamp01(_qualitySettings.CullDistanceJitter01);
+        _residencyFrustumPaddingDegrees = Mathf.Clamp(
+            _qualitySettings.ResidencyFrustumPaddingDegrees, 0f, 60f);
         ServiceLocator.Register<IGrassDebugStatsProvider>(this);
 
         Shader shader = Shader.Find("Planet/Grass");
@@ -185,15 +199,8 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         if (!_placementAvailable && !warnedPlacementUnavailable)
             _logger.Log(LogLevel.Warning, "Grass", "BiomeGrassPlace compute shader was not available; no production grass will be placed.");
 
-        _visibilitySource.ChunkShown += HandleChunkShown;
-        _visibilitySource.ChunkHidden += HandleChunkHidden;
-
-        var visible = _visibilitySource.GetVisibleChunksSnapshot();
-        for (int i = 0; i < visible.Count; i++)
-            TrackVisibleChunk(visible[i]);
-
         _logger.Log(LogLevel.Debug, "Grass",
-            $"Initialized placement renderer: chunks={_chunks.Count}, minDepth={_minChunkDepthForBlades}, seed={seed}, waterRadius={waterRadius:F2}, surfaceAtlas={_surfaceAtlasResolution}.");
+            $"Initialized placement renderer: chunks={_chunks.Count}, minDepth={_minChunkDepthForBlades}, residencyPadding={_residencyFrustumPaddingDegrees:F1}deg, seed={seed}, waterRadius={waterRadius:F2}, surfaceAtlas={_surfaceAtlasResolution}.");
     }
 
     Camera _lastTickCamera;
@@ -206,7 +213,9 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     {
         if (_disposed || _material == null || camera == null) return;
         _lastTickCamera = camera;
+        RefreshResidency(camera);
         ReconcileRuntimeAllocations(camera.transform.position);
+        GeometryUtility.CalculateFrustumPlanes(camera, _renderFrustumPlanes);
 
         ResolveChunkInnerFade(out float innerFadeStart, out float innerFadeEnd);
         bool transitionChanged = !Mathf.Approximately(_chunkInnerFadeStart, innerFadeStart)
@@ -227,7 +236,13 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
 
         _lastDrawCalls = 0;
         _lastBladeInstances = 0;
+        _lastResidentBladeInstances = 0;
+        _lastResidentChunksWithInstances = 0;
         _lastChunksWithInstances = 0;
+        _lastFineTrackedChunks = 0;
+        _lastCoarseTrackedChunks = 0;
+        _lastFineChunksWithInstances = 0;
+        _lastCoarseChunksWithInstances = 0;
         _lastChunksWithStats = 0;
         _lastChunkInstanceMin = 0;
         _lastChunkInstanceMax = 0;
@@ -271,6 +286,12 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             GrassChunkRuntime runtime = pair.Value;
             if (runtime == null || !runtime.IsValid) continue;
 
+            bool isFineChunk = chunk.DetailLevel == _maxChunkDepth;
+            if (isFineChunk)
+                _lastFineTrackedChunks++;
+            else
+                _lastCoarseTrackedChunks++;
+
             bool suppress = false;
             if (suppressionRadiusSq > 0f && chunk != null
                 && chunk.CpuVertices != null && chunk.CpuVertices.Length > 0)
@@ -280,20 +301,33 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
                     suppress = true;
             }
 
+            bool renderChunk = !suppress
+                && GeometryUtility.TestPlanesAABB(_renderFrustumPlanes, runtime.WorldBounds);
             if (suppress)
             {
                 _lastOldChunkSuppressedCount++;
             }
-            else
+            else if (renderChunk)
             {
                 runtime.Render(_material, camera, _planetTransform.gameObject.layer);
                 _lastDrawCalls++;
             }
 
             int instanceCount = runtime.ReportedInstanceCount;
-            _lastBladeInstances += instanceCount;
+            _lastResidentBladeInstances += instanceCount;
             if (instanceCount > 0)
-                _lastChunksWithInstances++;
+            {
+                _lastResidentChunksWithInstances++;
+                if (isFineChunk)
+                    _lastFineChunksWithInstances++;
+                else
+                    _lastCoarseChunksWithInstances++;
+
+                if (renderChunk)
+                    _lastChunksWithInstances++;
+            }
+            if (renderChunk)
+                _lastBladeInstances += instanceCount;
             chunksWithInstanceReadback++;
             chunkInstanceMin = Mathf.Min(chunkInstanceMin, instanceCount);
             _lastChunkInstanceMax = Mathf.Max(_lastChunkInstanceMax, instanceCount);
@@ -329,17 +363,13 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         if (_disposed) return;
         _disposed = true;
 
-        if (_visibilitySource != null)
-        {
-            _visibilitySource.ChunkShown -= HandleChunkShown;
-            _visibilitySource.ChunkHidden -= HandleChunkHidden;
-        }
         ServiceLocator.Unregister<IGrassDebugStatsProvider>(this);
 
         foreach (var pair in _chunks)
             pair.Value?.Dispose();
         _chunks.Clear();
-        _visibleChunks.Clear();
+        _residencyChunks.Clear();
+        _residencyScratch.Clear();
 
         if (_material != null)
         {
@@ -348,24 +378,26 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         }
     }
 
-    void HandleChunkShown(PlanetChunk chunk)
+    void RefreshResidency(Camera camera)
     {
-        TrackVisibleChunk(chunk);
-    }
+        _surfaceProvider.GetGrassResidencyChunks(
+            camera,
+            _residencyFrustumPaddingDegrees,
+            _residencyScratch);
 
-    void TrackVisibleChunk(PlanetChunk chunk)
-    {
-        if (_disposed || chunk == null) return;
-        _visibleChunks.Add(chunk);
-    }
+        _residencyChunks.Clear();
+        _lastBufferedResidencyChunks = 0;
+        for (int i = 0; i < _residencyScratch.Count; i++)
+        {
+            PlanetChunk chunk = _residencyScratch[i];
+            if (chunk == null || chunk.DetailLevel < _minChunkDepthForBlades)
+                continue;
 
-    void HandleChunkHidden(PlanetChunk chunk)
-    {
-        if (chunk == null) return;
-        _visibleChunks.Remove(chunk);
-        if (!_chunks.TryGetValue(chunk, out GrassChunkRuntime runtime)) return;
-        runtime.Dispose();
-        _chunks.Remove(chunk);
+            _residencyChunks.Add(chunk);
+            if (!_surfaceProvider.IsChunkTerrainVisible(chunk))
+                _lastBufferedResidencyChunks++;
+        }
+        _lastVisibleChunks = _residencyChunks.Count - _lastBufferedResidencyChunks;
     }
 
     void ReconcileRuntimeAllocations(Vector3 cameraPosition)
@@ -376,7 +408,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         float allocationDistanceSq = _maxRenderDistance * _maxRenderDistance;
         float releaseDistance = _maxRenderDistance + AllocationReleasePaddingMeters;
         float releaseDistanceSq = releaseDistance * releaseDistance;
-        foreach (PlanetChunk chunk in _visibleChunks)
+        foreach (PlanetChunk chunk in _residencyChunks)
         {
             if (chunk == null || chunk.DetailLevel < _minChunkDepthForBlades)
                 continue;
@@ -398,7 +430,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
 
         foreach (var pair in _chunks)
         {
-            if (!_visibleChunks.Contains(pair.Key))
+            if (!_residencyChunks.Contains(pair.Key))
                 _chunksToRelease.Add(pair.Key);
         }
 
@@ -493,10 +525,16 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             ControllerActive = !_disposed,
             ShaderAvailable = _material != null,
             SmokeRenderer = false,
-            VisibleChunks = _visibleChunks.Count,
+            VisibleChunks = _lastVisibleChunks,
+            ResidencyChunks = _residencyChunks.Count,
+            BufferedResidencyChunks = _lastBufferedResidencyChunks,
             TrackedChunks = _chunks.Count,
+            FineTrackedChunks = _lastFineTrackedChunks,
+            CoarseTrackedChunks = _lastCoarseTrackedChunks,
             DrawCalls = _lastDrawCalls,
             BladeInstances = _lastBladeInstances,
+            ResidentChunksWithInstances = _lastResidentChunksWithInstances,
+            ResidentBladeInstances = _lastResidentBladeInstances,
             MaxChunkDepth = _maxChunkDepth,
             MinChunkDepthForBlades = _minChunkDepthForBlades,
             MaxCoarseLodOffsetForBlades = _maxCoarseLodOffsetForBlades,
@@ -507,15 +545,20 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             MaxRenderDistance = _maxRenderDistance,
             DistanceFadeStart = _distanceFadeStart,
             CullDistanceJitter01 = _cullDistanceJitter01,
+            ResidencyFrustumPaddingDegrees = _residencyFrustumPaddingDegrees,
             PlacementFrustumCullEnabled = false,
             SurfaceAtlasResolution = _surfaceAtlasResolution,
             BufferMegabytes = _lastBufferBytes / (1024f * 1024f),
             PlacementDispatches = _lastPlacementDispatches,
             ChunksWithInstances = _lastChunksWithInstances,
+            FineChunksWithInstances = _lastFineChunksWithInstances,
+            CoarseChunksWithInstances = _lastCoarseChunksWithInstances,
             ChunksWithStats = _lastChunksWithStats,
             ChunkInstanceMin = _lastChunkInstanceMin,
             ChunkInstanceMax = _lastChunkInstanceMax,
-            ChunkInstanceAverage = _lastDrawCalls > 0 ? _lastBladeInstances / (float)_lastDrawCalls : 0f,
+            ChunkInstanceAverage = _chunks.Count > 0
+                ? _lastResidentBladeInstances / (float)_chunks.Count
+                : 0f,
             CandidateLanes = _lastCandidateLanes,
             DensityRejectedLanes = _lastDensityRejectedLanes,
             ShapeRejectedLanes = _lastShapeRejectedLanes,
@@ -625,6 +668,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         public int Capacity { get; }
         public int ReportedInstanceCount => _readbackInstanceCount;
         public long BufferBytes { get; }
+        public Bounds WorldBounds => _worldBounds;
         public bool HasStats => _hasStats;
 
         GrassChunkRuntime(GraphicsBuffer bladeBuffer, GraphicsBuffer argsBuffer, GraphicsBuffer statsBuffer,

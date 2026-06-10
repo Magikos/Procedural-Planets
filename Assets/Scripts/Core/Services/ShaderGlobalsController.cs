@@ -17,12 +17,14 @@ public sealed class ShaderGlobalsController : MonoBehaviour
     void Awake()
     {
         ResetTransientDebugGlobals();
+        GrassRenderDiagnostics.ApplyCurrent();
         ApplyFrameGlobals();
     }
 
     void OnEnable()
     {
         ResetTransientDebugGlobals();
+        GrassRenderDiagnostics.ApplyCurrent();
         ApplyFrameGlobals();
     }
 

@@ -30,6 +30,7 @@ public class DebugCaptureController : MonoBehaviour
     ICelestialTimeController _cachedCelestialManager;
     IPrecipitationDebugControl _cachedPrecipitationController;
     IWeatherProvider _cachedWeatherProvider;
+    static readonly int _climateMapResolutionId = Shader.PropertyToID("_ClimateMapResolution");
     DebugRegistry _debugRegistry;
     DebugModeId _currentDebugModeId;
     int _f10CaptureSetIndex = -1;
@@ -548,6 +549,23 @@ public class DebugCaptureController : MonoBehaviour
             sb.AppendLine($"PrecipitationEnabled: {precipitation.PrecipitationRenderingEnabled}");
             sb.AppendLine($"PrecipLocalParticlesEnabled: {precipitation.LocalPrecipitationParticlesEnabled}");
             sb.AppendLine($"PrecipLocalParticlesForCamera: {precipitation.ShouldRenderLocalParticles(cameraContext.CameraComponent)}");
+            sb.AppendLine($"WeatherParticles: radius={precipitation.LocalParticleRadius:F1}m, dust={precipitation.DustParticleCount}, rain={precipitation.RainParticleCount}, snow={precipitation.SnowParticleCount}, proof={precipitation.WeatherParticleProofMode}");
+            sb.AppendLine($"WeatherParticleDimensions: {precipitation.WeatherParticleSettingsSummary}");
+        }
+        if (_cachedWeatherProvider != null && cameraContext != null)
+        {
+            Vector3 samplePosition = cameraContext.CameraTransform.position;
+            Vector3 fromCenter = samplePosition - cameraContext.PlanetCenter;
+            if (cameraContext.SeaLevelRadius > 0f && fromCenter.sqrMagnitude > 0.0001f)
+            {
+                samplePosition = cameraContext.PlanetCenter +
+                    fromCenter.normalized * cameraContext.SeaLevelRadius;
+            }
+
+            WeatherSample weather = _cachedWeatherProvider.SampleWeather(samplePosition);
+            sb.AppendLine($"Wind: speed={_cachedWeatherProvider.WindSpeedMetersPerSecond:F2}m/s, strength={_cachedWeatherProvider.WindStrength01:F3}, direction=({_cachedWeatherProvider.WindDirection.x:F3},{_cachedWeatherProvider.WindDirection.y:F3},{_cachedWeatherProvider.WindDirection.z:F3})");
+            sb.AppendLine($"ClimateMapResolution: {Shader.GetGlobalFloat(_climateMapResolutionId):F0}");
+            sb.AppendLine($"CameraClimate: temperature={weather.TemperatureCelsius:F2}C");
         }
         sb.AppendLine();
 

@@ -6,7 +6,9 @@ Shader "Planet/Grass"
         {
             "RenderPipeline" = "UniversalPipeline"
             "RenderType" = "Opaque"
-            "Queue" = "Geometry+10"
+            // WaterVolume composites before transparents. Draw grass immediately after
+            // that composite, write depth, then let the ocean surface depth-test against it.
+            "Queue" = "Transparent-10"
         }
 
         Cull Off
@@ -27,6 +29,7 @@ Shader "Planet/Grass"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Includes/PlanetSunLighting.hlsl"
             #include "Includes/CloudShadows.hlsl"
+            #include "Includes/GrassColor.hlsl"
             #include "Includes/GrassInteractors.hlsl"
 
             struct BladeInstance
@@ -42,6 +45,9 @@ Shader "Planet/Grass"
             float3 _SunParams;
             float _NightAmbientIntensity;
             float3 _PlanetCenter;
+            int _GrassGeometryMode;
+            float _GrassClusterStartDistance;
+            float _GrassClusterEndDistance;
 
             struct Varyings
             {
@@ -50,12 +56,16 @@ Shader "Planet/Grass"
                 float3 positionWS : TEXCOORD1;
                 float fogFactor : TEXCOORD2;
                 float3 rootUpWS : TEXCOORD3;
+                float2 clusterUv : TEXCOORD4;
+                nointerpolation float clusterSeed : TEXCOORD5;
+                nointerpolation float clusterMode : TEXCOORD6;
                 float4 color : COLOR0;
             };
 
             #define TUFT_BLADE_VERTEX_COUNT 18u
             #define TUFT_BLADE_COUNT 3u
             #define TUFT_BLADE_SEGMENTS 3.0
+            #define CLUSTER_BLADE_COLUMNS 5.0
 
             uint HashUint(uint x)
             {
@@ -72,6 +82,11 @@ Shader "Planet/Grass"
                 return (HashUint(seed) & 0x00ffffffu) / 16777216.0;
             }
 
+            float HashFloat(float seed)
+            {
+                return frac(sin(seed * 12.9898 + 78.233) * 43758.5453);
+            }
+
             float3 AnyTangent(float3 normalWS)
             {
                 float3 axis = abs(normalWS.y) < 0.92 ? float3(0.0, 1.0, 0.0) : float3(1.0, 0.0, 0.0);
@@ -80,8 +95,16 @@ Shader "Planet/Grass"
 
             uint BladeSeed(uint instanceID, uint tuftIndex, float3 rootWS)
             {
-                uint seed = instanceID * 747796405u;
-                seed ^= asuint(rootWS.x);
+                // Determinism MUST be position-based only. The near-field re-dispatches
+                // the placement compute every page shift (~4m of camera movement), and
+                // the same world cell ends up at a different instanceID each dispatch
+                // because the compute fills the buffer in dispatch order. Mixing
+                // instanceID into the seed therefore re-rolls every blade's yaw, height,
+                // color, etc. as the camera moves — visible as the whole field
+                // "redrawing and randomizing" between page shifts. Hash purely on
+                // rootWS + tuftIndex so the same world position always produces the
+                // same blade regardless of which dispatch placed it.
+                uint seed = asuint(rootWS.x);
                 seed ^= asuint(rootWS.y) * 2891336453u;
                 seed ^= asuint(rootWS.z) * 198491317u;
                 seed ^= (tuftIndex + 1u) * 0x9e3779b9u;
@@ -107,7 +130,7 @@ Shader "Planet/Grass"
             //   1. clump phase (SmoothPatchNoise) so whole patches sway together — large gust waves
             //   2. world-position phase along wind direction so the gust visibly travels
             //   3. per-blade hash for tiny individual variation so blades aren't lockstep
-            // Magnitude scales with _WindSpeed and blade height; t*t scaling means roots stay put.
+            // Magnitude uses bounded physical wind strength; t*t scaling keeps roots planted.
             float3 ComputeWindOffset(float3 rootWs, float3 upWs, float height, float t, uint seed)
             {
                 float3 windDir = SafeNormalize(_WindDirection, float3(1.0, 0.0, 0.0));
@@ -119,7 +142,7 @@ Shader "Planet/Grass"
                 windTangent *= rsqrt(tangentLenSq);
 
                 float3 relRoot = rootWs - _PlanetCenter;
-                float waveFreq = max(_WindSpeed, 0.05) * 1.4; // baseline cadence even with low wind
+                float waveFreq = 0.25 + max(_WindSpeedMps, 0.0) * 0.12;
 
                 // Directional traveling wave is the primary signal — sin phases along the
                 // wind direction so you see gust fronts visibly travel across the field.
@@ -137,7 +160,7 @@ Shader "Planet/Grass"
 
                 // Tip displacement in meters, scales with speed and blade height. Cap at 35% of
                 // height so even violent wind doesn't fold the blade past horizontal.
-                float displacement = wave * max(_WindSpeed, 0.0) * 0.4 * height;
+                float displacement = wave * _WindStrength01 * 0.35 * height;
                 displacement = clamp(displacement, -height * 0.35, height * 0.35);
 
                 return windTangent * displacement * (t * t);
@@ -172,6 +195,18 @@ Shader "Planet/Grass"
                 float yawSin = sin(yaw);
                 float yawCos = cos(yaw);
                 float3 sideWS = normalize(tangentWS * yawCos + bitangentWS * yawSin);
+                float viewDistance = length(_WorldSpaceCameraPos - rootWS);
+                float3 toCameraTangent = _WorldSpaceCameraPos - rootWS;
+                toCameraTangent -= upWS * dot(toCameraTangent, upWS);
+                float tangentViewLengthSq = dot(toCameraTangent, toCameraTangent);
+                if (tangentViewLengthSq > 1e-6)
+                {
+                    float3 billboardSideWS = normalize(cross(upWS, toCameraTangent));
+                    if (dot(billboardSideWS, sideWS) < 0.0)
+                        billboardSideWS = -billboardSideWS;
+                    float billboardWeight = smoothstep(150.0, 420.0, viewDistance) * 0.78;
+                    sideWS = normalize(lerp(sideWS, billboardSideWS, billboardWeight));
+                }
                 float3 leanWS = normalize(cross(sideWS, upWS));
 
                 float spread = max(width * 1.65, height * 0.025);
@@ -184,10 +219,30 @@ Shader "Planet/Grass"
                 float patchWidth = lerp(0.92, 1.10, patchWidthNoise);
                 height *= patchHeight * lerp(0.48, 1.55, Hash01(seed ^ 0xa54ff53au));
                 width *= patchWidth * lerp(1.05, 1.55, Hash01(seed ^ 0x510e527fu));
+                // Preserve projected coverage as physical density thins. This is cheaper
+                // than adding more roots and works with the billboard turn above.
+                width *= lerp(1.0, 1.42, smoothstep(160.0, 500.0, viewDistance));
 
                 float bend = t * t * height * lerp(0.16, 0.34, Hash01(seed ^ 0x9b05688cu));
                 float lateralCurl = (Hash01(seed ^ 0x1f83d9abu) - 0.5) * width * t * (1.0 - t) * 0.8;
-                float widthAtT = width * pow(saturate(1.0 - t), 1.15);
+
+                // Close grass must remain physical geometry because the camera can enter it.
+                // Cluster cards are only a distant representation. Stagger the handoff per
+                // root so changing representation cannot form a camera-centered ring.
+                float clusterStart = max(_GrassClusterStartDistance, 2.0);
+                float clusterEnd = max(_GrassClusterEndDistance, clusterStart + 0.01);
+                float clusterThreshold = lerp(
+                    clusterStart,
+                    clusterEnd,
+                    Hash01(seed ^ 0x94d049bbu));
+                float clusterMode = _GrassGeometryMode <= 0
+                    ? 0.0
+                    : (_GrassGeometryMode >= 2 ? 1.0 : step(clusterThreshold, viewDistance));
+
+                float ribbonHalfWidth = width * pow(saturate(1.0 - t), 1.15);
+                float clusterHalfWidth = width * 3.4;
+                float clusterWidthAtT = clusterHalfWidth * lerp(1.0, 0.88, t);
+                float widthAtT = lerp(ribbonHalfWidth, clusterWidthAtT, clusterMode);
                 // Tangent-plane bend from dynamic interactors (debug sphere today;
                 // player character / projectiles / animals / magic AOEs later).
                 // SampleGrassInteractorBend returns 0 when no interactors are active.
@@ -207,6 +262,7 @@ Shader "Planet/Grass"
                 float3 bladeTintJitter = lerp(float3(0.88, 1.00, 0.90), float3(1.00, 0.94, 0.82), colorJitter);
                 float3 tint = baseTint * bladeTintJitter * patchTint;
                 float heightShade = lerp(0.42, 0.94, smoothstep(0.0, 1.0, t));
+                float3 biomeTint = GradeGrassTint(blade.Color.rgb, 0.76, 0.88);
 
                 Varyings output;
                 output.positionCS = TransformWorldToHClip(positionWS);
@@ -214,12 +270,31 @@ Shader "Planet/Grass"
                 output.normalWS = normalize(leanWS * 0.72 + upWS * 0.24 + sideWS * side * 0.18);
                 output.fogFactor = ComputeFogFactor(output.positionCS.z);
                 output.rootUpWS = upWS;
-                output.color = float4(saturate(blade.Color.rgb * tint * brightness) * heightShade, 1.0);
+                output.clusterUv = float2(side * 0.5 + 0.5, t);
+                output.clusterSeed = Hash01(seed ^ 0xd2511f53u);
+                output.clusterMode = clusterMode;
+                output.color = float4(saturate(biomeTint * tint * brightness) * heightShade, 1.0);
                 return output;
             }
 
             half4 GrassFragment(Varyings input) : SV_Target
             {
+                if (input.clusterMode > 0.5)
+                {
+                    float bladeCoord = min(input.clusterUv.x, 0.99999) * CLUSTER_BLADE_COLUMNS;
+                    float bladeIndex = floor(bladeCoord);
+                    float bladeLocalX = frac(bladeCoord) - 0.5;
+                    float bladeHash = HashFloat(bladeIndex + input.clusterSeed * 97.0);
+                    float bladeHeight = lerp(0.68, 1.02, bladeHash);
+                    clip(bladeHeight - input.clusterUv.y);
+
+                    float bladeT = saturate(input.clusterUv.y / max(bladeHeight, 0.001));
+                    float bladeLean = (HashFloat(bladeIndex + input.clusterSeed * 173.0) - 0.5)
+                        * bladeT * (1.0 - bladeT) * 0.24;
+                    float bladeHalfWidth = lerp(0.35, 0.018, pow(bladeT, 0.82));
+                    clip(bladeHalfWidth - abs(bladeLocalX - bladeLean));
+                }
+
                 float3 viewDir = GetWorldSpaceNormalizeViewDir(input.positionWS);
                 float3 normalWS = SafeNormalize(input.normalWS, float3(0.0, 1.0, 0.0));
 

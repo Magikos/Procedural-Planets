@@ -125,6 +125,8 @@ public sealed class ClimateProvider : IClimateProvider
 {
     readonly TemperatureProvider _temperatureProvider;
     readonly MoistureProvider _moistureProvider;
+    readonly float _minimumTemperatureCelsius;
+    readonly float _maximumTemperatureCelsius;
 
     public ClimateProvider(BiomeSettings settings)
     {
@@ -149,6 +151,8 @@ public sealed class ClimateProvider : IClimateProvider
             moistureCurve,
             settings.MoistureLatitudeInfluence,
             settings.MoistureNoiseStrength);
+        _minimumTemperatureCelsius = settings.MinimumTemperatureCelsius;
+        _maximumTemperatureCelsius = settings.MaximumTemperatureCelsius;
     }
 
     public void Initialize(int seed)
@@ -166,6 +170,10 @@ public sealed class ClimateProvider : IClimateProvider
 
         return new ClimateSample(
             temperature.FinalTemperature01,
+            TemperatureUnits.NormalizedToCelsius(
+                temperature.FinalTemperature01,
+                _minimumTemperatureCelsius,
+                _maximumTemperatureCelsius),
             moisture.FinalMoisture01,
             elevation,
             temperature.Latitude01,
@@ -175,6 +183,171 @@ public sealed class ClimateProvider : IClimateProvider
             moisture.LatitudeMoisture01,
             moisture.NoiseContribution,
             moisture.LegacyMoisture01);
+    }
+}
+
+public sealed class ClimateMapGpuData : IDisposable
+{
+    const int FaceCount = 6;
+
+    static readonly int ClimateMapId = Shader.PropertyToID("_ClimateMap");
+    static readonly int ClimateMapResolutionId = Shader.PropertyToID("_ClimateMapResolution");
+    static readonly int ClimateTemperatureRangeId =
+        Shader.PropertyToID("_ClimateTemperatureRangeCelsius");
+
+    Texture2DArray _texture;
+
+    ClimateMapGpuData(Texture2DArray texture)
+    {
+        _texture = texture;
+    }
+
+    public Texture2DArray Texture => _texture;
+    public int Resolution => _texture != null ? _texture.width : 0;
+
+    public static ClimateMapGpuData Build(
+        IClimateProvider climateProvider,
+        IReadOnlyList<IFaceMeshSampler> faceSamplers,
+        int resolution,
+        float minimumTemperatureCelsius,
+        float maximumTemperatureCelsius,
+        ILogger logger)
+    {
+        if (climateProvider == null)
+        {
+            logger?.Log(LogLevel.Warning, "Climate",
+                "Skipped GPU climate map because no climate provider was available.");
+            return null;
+        }
+        if (faceSamplers == null || faceSamplers.Count < FaceCount)
+        {
+            logger?.Log(LogLevel.Warning, "Climate",
+                "Skipped GPU climate map because six generated face samplers were not available.");
+            return null;
+        }
+
+        resolution = Mathf.Clamp(resolution, 32, 512);
+        var stopwatch = Stopwatch.StartNew();
+        var facePixels = new Color[FaceCount][];
+
+        Parallel.For(0, FaceCount, face =>
+        {
+            IFaceMeshSampler sampler = faceSamplers[face];
+            var pixels = new Color[resolution * resolution];
+            for (int y = 0; y < resolution; y++)
+            {
+                float v = EdgeSnappedUv(y, resolution);
+                int row = y * resolution;
+                for (int x = 0; x < resolution; x++)
+                {
+                    float u = EdgeSnappedUv(x, resolution);
+                    Vector3 direction = CoordinateConverter.CubeFaceToUnitSphere(
+                        face,
+                        new Vector2(u, v));
+                    float elevation = SampleElevation(sampler, u, v);
+                    ClimateSample climate = climateProvider.Evaluate(direction, elevation);
+                    pixels[row + x] = new Color(
+                        climate.Temperature01,
+                        climate.Moisture01,
+                        0f,
+                        1f);
+                }
+            }
+
+            facePixels[face] = pixels;
+        });
+
+        TextureFormat format = SystemInfo.SupportsTextureFormat(TextureFormat.RGHalf)
+            ? TextureFormat.RGHalf
+            : TextureFormat.RGBAHalf;
+        var texture = new Texture2DArray(
+            resolution,
+            resolution,
+            FaceCount,
+            format,
+            true,
+            true)
+        {
+            name = "Planet Climate Map",
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear,
+            anisoLevel = 0,
+            hideFlags = HideFlags.DontSave,
+        };
+
+        for (int face = 0; face < FaceCount; face++)
+            texture.SetPixels(facePixels[face], face, 0);
+        texture.Apply(true, true);
+
+        Shader.SetGlobalTexture(ClimateMapId, texture);
+        Shader.SetGlobalFloat(ClimateMapResolutionId, resolution);
+        Shader.SetGlobalVector(
+            ClimateTemperatureRangeId,
+            new Vector4(
+                minimumTemperatureCelsius,
+                maximumTemperatureCelsius,
+                maximumTemperatureCelsius - minimumTemperatureCelsius,
+                0f));
+
+        stopwatch.Stop();
+        int bytesPerPixel = format == TextureFormat.RGHalf ? 4 : 8;
+        long baseBytes = (long)resolution * resolution * FaceCount * bytesPerPixel;
+        long approximateBytesWithMips = baseBytes * 4L / 3L;
+        logger?.Log(
+            LogLevel.Debug,
+            "Climate",
+            $"Built GPU climate map: {resolution}x{resolution}x6 {format}, " +
+            $"~{approximateBytesWithMips / (1024f * 1024f):F2} MiB, " +
+            $"{stopwatch.ElapsedMilliseconds} ms");
+
+        return new ClimateMapGpuData(texture);
+    }
+
+    public void Dispose()
+    {
+        if (_texture == null)
+            return;
+
+        if (Shader.GetGlobalTexture(ClimateMapId) == _texture)
+        {
+            Shader.SetGlobalTexture(ClimateMapId, (Texture)null);
+            Shader.SetGlobalFloat(ClimateMapResolutionId, 0f);
+        }
+
+        UnityEngine.Object.Destroy(_texture);
+        _texture = null;
+    }
+
+    static float SampleElevation(IFaceMeshSampler sampler, float u, float v)
+    {
+        if (sampler?.Elevations == null || sampler.Resolution < 2)
+            return 0f;
+
+        int resolution = sampler.Resolution;
+        float x = Mathf.Clamp01(u) * (resolution - 1);
+        float y = Mathf.Clamp01(v) * (resolution - 1);
+        int x0 = Mathf.FloorToInt(x);
+        int y0 = Mathf.FloorToInt(y);
+        int x1 = Mathf.Min(x0 + 1, resolution - 1);
+        int y1 = Mathf.Min(y0 + 1, resolution - 1);
+        float tx = x - x0;
+        float ty = y - y0;
+        float a = Mathf.Lerp(
+            sampler.Elevations[y0 * resolution + x0],
+            sampler.Elevations[y0 * resolution + x1],
+            tx);
+        float b = Mathf.Lerp(
+            sampler.Elevations[y1 * resolution + x0],
+            sampler.Elevations[y1 * resolution + x1],
+            tx);
+        return Mathf.Lerp(a, b, ty);
+    }
+
+    static float EdgeSnappedUv(int index, int resolution)
+    {
+        if (index <= 0) return 0f;
+        if (index >= resolution - 1) return 1f;
+        return (index + 0.5f) / resolution;
     }
 }
 

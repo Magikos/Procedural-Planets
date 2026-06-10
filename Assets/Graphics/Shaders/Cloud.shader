@@ -67,7 +67,7 @@ float4 _CloudDebugParams;
 
 // Weather
 float3 _WindDirection;
-float _WindSpeed;
+float _WindSpeedMps;
 
 // Sun
 float3 _SunParams;
@@ -141,7 +141,7 @@ CloudSample SampleCloud(float3 worldPos)
         return sampleData;
 
     float3 windDir = dot(_WindDirection, _WindDirection) > 0.0001 ? normalize(_WindDirection) : float3(1.0, 0.0, 0.0);
-    float3 windOffset = windDir * (_WindSpeed * _CloudAnimSpeed * _GameTime);
+    float3 windOffset = windDir * (_WindSpeedMps * 0.2 * _CloudAnimSpeed * _GameTime);
     // Sampling at x - vt moves the procedural field toward +windDir.
     float3 shapePos = worldPos * _CloudNoiseScale - windOffset * 0.003;
     float shapeFBM = WeightedNoise(SAMPLE_TEXTURE3D_LOD(_CloudShapeNoise, sampler_CloudShapeNoise, shapePos, 0), _CloudShapeWeights);

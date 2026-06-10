@@ -37,8 +37,6 @@ Shader "Planet/VertexColor"
         _GrassFarOverlayAltitudeStart ("Grass Far Overlay Altitude Start", Float) = 750.0
         _GrassFarOverlayAltitudeEnd ("Grass Far Overlay Altitude End", Float) = 2600.0
         _GrassFarOverlayFiberStrength ("Grass Far Overlay Fiber Strength", Range(0.0, 1.0)) = 0.65
-        _GrassFarOverlayColorBlend ("Grass Far Overlay Color Blend", Range(0.0, 1.0)) = 0.98
-        _GrassMidOverlayTerrainStrength ("Grass Mid Overlay Terrain Strength", Range(0.0, 1.0)) = 0.92
     }
     SubShader
     {
@@ -65,6 +63,7 @@ Shader "Planet/VertexColor"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Includes/CloudShadows.hlsl"
             #include "Includes/DebugModes.hlsl"
+            #include "Includes/GrassColor.hlsl"
             #include "Includes/PlanetSunLighting.hlsl"
 
             struct Attributes
@@ -125,8 +124,6 @@ Shader "Planet/VertexColor"
                 float _GrassFarOverlayAltitudeStart;
                 float _GrassFarOverlayAltitudeEnd;
                 float _GrassFarOverlayFiberStrength;
-                float _GrassFarOverlayColorBlend;
-                float _GrassMidOverlayTerrainStrength;
             CBUFFER_END
 
             float _NightAmbientIntensity;
@@ -695,8 +692,8 @@ Shader "Planet/VertexColor"
                 float approachWeight = lerp(saturate(_GrassFarOverlayOrbitStrength), 1.0, nearSurface);
 
                 float envCoverage = pow(saturate(grass.density * slopeKeep * waterKeep), 0.62);
-                float nearWeight = 1.0 - smoothstep(144.0, 160.0, viewDistance);
-                float midWeight = smoothstep(144.0, 160.0, viewDistance)
+                float nearWeight = 1.0 - smoothstep(144.0, 200.0, viewDistance);
+                float midWeight = smoothstep(144.0, 200.0, viewDistance)
                     * (1.0 - smoothstep(200.0, 600.0, viewDistance));
 
                 eval.farWeight = saturate(envCoverage * farMask * approachWeight * _GrassFarOverlayStrength);
@@ -710,17 +707,22 @@ Shader "Planet/VertexColor"
                 return eval;
             }
 
-            float3 ApplyFarGrassOverlay(float2 chunkUv, float3 positionWS, float3 geometricNormalWS, float3 albedo)
+            float3 ApplyGrassSurfaceAlbedo(
+                float2 chunkUv,
+                float3 positionWS,
+                float3 geometricNormalWS,
+                float3 terrainAlbedo)
             {
                 GrassOverlayEval eval = EvaluateGrassOverlay(chunkUv, positionWS, geometricNormalWS);
-                // The production terrain blanket should not reveal LOD ownership bands while
-                // the camera moves. Use stable grass suitability for coverage, and leave the
-                // near/mid/far weights as diagnostics for draw-layer planning.
-                float terrainWeight = saturate(eval.envCoverage
-                    * eval.approachWeight
-                    * _GrassFarOverlayStrength);
-                if (terrainWeight <= 0.001)
-                    return albedo;
+                // Grass suitability defines a surface material, not a tint painted over dirt.
+                // This coverage is intentionally independent of camera distance and altitude:
+                // geometry may change LOD, but a grass-covered hill must remain grass-covered.
+                float grassCoverage = smoothstep(
+                    0.05,
+                    0.55,
+                    eval.envCoverage * _GrassFarOverlayStrength);
+                if (grassCoverage <= 0.001)
+                    return terrainAlbedo;
 
                 float3 axis = abs(eval.planetNormal.y) < 0.92 ? float3(0.0, 1.0, 0.0) : float3(1.0, 0.0, 0.0);
                 float3 tangentA = normalize(cross(axis, eval.planetNormal));
@@ -734,17 +736,14 @@ Shader "Planet/VertexColor"
                     fiberUv.y * noiseScale * 2.35,
                     11.0 + eval.tint.g * 23.0));
                 float breakup = lerp(macro * 0.65 + detail * 0.35, fiber, saturate(_GrassFarOverlayFiberStrength));
-                float brightness = lerp(0.48, 0.96, breakup);
-                float saturation = lerp(0.82, 1.20, eval.approachWeight);
-                float luma = dot(eval.tint, float3(0.299, 0.587, 0.114));
-                float3 grassTint = lerp(float3(luma, luma, luma), eval.tint, saturation);
-                grassTint *= float3(0.90, 1.00, 0.80);
-                float3 grassColor = saturate(grassTint * brightness);
-                float partialCoverage = smoothstep(0.08, 0.92, terrainWeight);
-                float colorBlend = saturate(_GrassFarOverlayColorBlend * lerp(0.72, 1.0, partialCoverage));
-                float3 coverageColor = lerp(albedo, grassColor, colorBlend);
 
-                return lerp(albedo, coverageColor, terrainWeight);
+                // Match the authored blade color pipeline so geometry and surface LOD share
+                // one material identity. Variation comes from grass fibers, never dirt albedo.
+                float3 grassSurface = GradeGrassTint(eval.tint, 0.76, 0.88);
+                grassSurface *= lerp(0.68, 0.96, breakup);
+                grassSurface *= lerp(0.94, 1.06, fiber);
+
+                return lerp(terrainAlbedo, saturate(grassSurface), grassCoverage);
             }
 
             struct TerrainOverrideMasks
@@ -987,12 +986,11 @@ Shader "Planet/VertexColor"
 
                 ApplyTerrainOverrides(terrainOverrides, input.positionWS, geometricNormalWS,
                     surfaceAlbedo, surfaceNormalWS, surfaceArm);
-                // Grass geometry is gated by biome density, slope, and water clearance, but
-                // it is not repainted by the terrain coast/slope/snow material overrides.
-                // Apply the matching distant blanket after those overrides so the terrain
-                // does not turn pale underneath otherwise-valid grass as distance increases.
+                // Grass geometry and the continuous grass surface share the same biome,
+                // slope, and water gates. Apply the grass surface after geography overrides
+                // so valid coverage remains grass at every geometry LOD.
                 #ifdef _BIOME_COLOR_MODE_TEXTURE
-                    surfaceAlbedo = ApplyFarGrassOverlay(input.chunkUv,
+                    surfaceAlbedo = ApplyGrassSurfaceAlbedo(input.chunkUv,
                         input.positionWS, geometricNormalWS, surfaceAlbedo);
                 #endif
 

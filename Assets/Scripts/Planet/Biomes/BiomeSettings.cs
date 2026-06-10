@@ -33,6 +33,16 @@ public class BiomeSettings : ScriptableObject
     [Range(16, 512), Tooltip("Samples baked from each climate curve before worker-thread terrain generation.")]
     public int ClimateLutResolution = 256;
 
+    [Header("Physical Temperature")]
+    [Range(-100f, 50f), Tooltip("Celsius value represented by normalized temperature 0.")]
+    public float MinimumTemperatureCelsius = TemperatureUnits.DefaultMinimumCelsius;
+
+    [Range(-50f, 100f), Tooltip("Celsius value represented by normalized temperature 1.")]
+    public float MaximumTemperatureCelsius = TemperatureUnits.DefaultMaximumCelsius;
+
+    [Range(32, 512), Tooltip("Resolution per face of the GPU temperature/moisture map.")]
+    public int ClimateMapResolution = 256;
+
     [Header("Temperature Noise")]
     public NoiseSettings TemperatureNoise;
     [Range(0f, 0.5f)] public float TemperatureNoiseStrength = 0.15f;
@@ -81,6 +91,12 @@ public class BiomeSettings : ScriptableObject
             MoistureLatitudeCurve = CreateEarthlikeMoistureCurve();
 
         ClimateLutResolution = Mathf.Clamp(ClimateLutResolution, 16, 512);
+        MinimumTemperatureCelsius = Mathf.Clamp(MinimumTemperatureCelsius, -100f, 50f);
+        MaximumTemperatureCelsius = Mathf.Clamp(
+            MaximumTemperatureCelsius,
+            MinimumTemperatureCelsius + 1f,
+            100f);
+        ClimateMapResolution = Mathf.Clamp(ClimateMapResolution, 32, 512);
         MoistureLatitudeInfluence = Mathf.Clamp01(MoistureLatitudeInfluence);
         MoistureNoiseStrength = Mathf.Clamp01(MoistureNoiseStrength);
         AltitudeTemperatureDrop = Mathf.Clamp(AltitudeTemperatureDrop, 0f, 10f);
@@ -163,6 +179,11 @@ public class BiomeSettings : ScriptableObject
         sb.Append(", moistureNoise=").Append(MoistureNoiseStrength.ToString("F2"));
         sb.Append(", altitudeLapse=").Append(AltitudeTemperatureDrop.ToString("F2"));
         sb.Append(", lut=").Append(ClimateLutResolution);
+        sb.Append(", map=").Append(ClimateMapResolution);
+        sb.Append(", celsius=")
+            .Append(MinimumTemperatureCelsius.ToString("F1"))
+            .Append("..")
+            .Append(MaximumTemperatureCelsius.ToString("F1"));
         sb.AppendLine();
         sb.Append("temperatureCurve=").Append(DescribeCurve(TemperatureLatitudeCurve));
         sb.AppendLine();

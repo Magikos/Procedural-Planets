@@ -7,6 +7,78 @@ public static class GrassDebugIds
     public static readonly DebugCaptureSetId Surface = new DebugCaptureSetId(Module, "surface");
 }
 
+public enum GrassGeometryMode
+{
+    Physical = 0,
+    Hybrid = 1,
+    Cluster = 2,
+}
+
+public static class GrassRenderDiagnostics
+{
+    public const float DefaultClusterStartDistance = 12f;
+    public const float DefaultClusterEndDistance = 24f;
+
+    static readonly int GeometryModeId = Shader.PropertyToID("_GrassGeometryMode");
+    static readonly int ClusterStartDistanceId = Shader.PropertyToID("_GrassClusterStartDistance");
+    static readonly int ClusterEndDistanceId = Shader.PropertyToID("_GrassClusterEndDistance");
+
+    public static GrassGeometryMode GeometryMode { get; private set; } = GrassGeometryMode.Hybrid;
+    public static float ClusterStartDistance { get; private set; } = DefaultClusterStartDistance;
+    public static float ClusterEndDistance { get; private set; } = DefaultClusterEndDistance;
+
+    public static void Reset()
+    {
+        GeometryMode = GrassGeometryMode.Hybrid;
+        ClusterStartDistance = DefaultClusterStartDistance;
+        ClusterEndDistance = DefaultClusterEndDistance;
+        Apply();
+    }
+
+    public static void SetGeometryMode(GrassGeometryMode mode)
+    {
+        GeometryMode = mode;
+        Apply();
+    }
+
+    public static bool TrySetClusterRange(float startDistance, float endDistance, out string error)
+    {
+        if (startDistance < 2f)
+        {
+            error = "cluster start must be at least 2m";
+            return false;
+        }
+        if (endDistance <= startDistance)
+        {
+            error = "cluster end must be greater than cluster start";
+            return false;
+        }
+
+        ClusterStartDistance = startDistance;
+        ClusterEndDistance = endDistance;
+        Apply();
+        error = null;
+        return true;
+    }
+
+    public static string FormatState()
+    {
+        return $"mode={GeometryMode}, clusterRange={ClusterStartDistance:F1}-{ClusterEndDistance:F1}m";
+    }
+
+    public static void ApplyCurrent()
+    {
+        Apply();
+    }
+
+    static void Apply()
+    {
+        Shader.SetGlobalInt(GeometryModeId, (int)GeometryMode);
+        Shader.SetGlobalFloat(ClusterStartDistanceId, ClusterStartDistance);
+        Shader.SetGlobalFloat(ClusterEndDistanceId, ClusterEndDistance);
+    }
+}
+
 public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvider, IDebugOverlayContributor
 {
     public DebugModuleId Id => GrassDebugIds.Module;
@@ -22,6 +94,7 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
 
     public void Register(DebugRegistry registry)
     {
+        GrassRenderDiagnostics.Reset();
         registry.RegisterDefaultCaptureSet(GrassDebugIds.Surface, "Grass",
             WaterDebugIds.Mode(DebugModeConstants.Off),
             WaterDebugIds.Mode(DebugModeConstants.AtmosphereBypass),
@@ -30,6 +103,7 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
             WaterDebugIds.Mode(DebugModeConstants.BiomeMapBlend),
             WaterDebugIds.Mode(DebugModeConstants.TerrainPrimaryAlbedo),
             WaterDebugIds.Mode(DebugModeConstants.TerrainMixedAlbedo),
+            WaterDebugIds.Mode(DebugModeConstants.TerrainSelectedAlbedo),
             WaterDebugIds.Mode(DebugModeConstants.GrassLodCoverage),
             WaterDebugIds.Mode(DebugModeConstants.TerrainSurfaceNormal),
             WaterDebugIds.Mode(DebugModeConstants.TerrainFaceId));
@@ -49,10 +123,12 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
         {
             GrassDebugStats stats = provider.GetGrassDebugStats();
             sb.AppendLine($"Controller: active={stats.ControllerActive}, shader={stats.ShaderAvailable}, smoke={stats.SmokeRenderer}");
-            sb.AppendLine($"Chunks: visible={stats.VisibleChunks}, tracked={stats.TrackedChunks}, maxDepth={stats.MaxChunkDepth}, minBladeDepth={stats.MinChunkDepthForBlades}, coarseOffset={stats.MaxCoarseLodOffsetForBlades}");
-            sb.AppendLine($"Quality: maxBladesPerLane={stats.MaxBladesPerLane}, visualBladesPerInstance={stats.VisualBladesPerInstance}, vertexCount={stats.BladeVertexCount}, densityMultiplier={stats.DensityMultiplier:F2}, maxDistance={stats.MaxRenderDistance:F1}, fadeStart={stats.DistanceFadeStart:F1}, distanceJitter={stats.CullDistanceJitter01:F2}");
+            sb.AppendLine($"Chunks: visible={stats.VisibleChunks}, residency={stats.ResidencyChunks}, buffered={stats.BufferedResidencyChunks}, tracked={stats.TrackedChunks}, maxDepth={stats.MaxChunkDepth}, minBladeDepth={stats.MinChunkDepthForBlades}, coarseOffset={stats.MaxCoarseLodOffsetForBlades}");
+            sb.AppendLine($"ChunkDepths: fine={stats.FineTrackedChunks}/{stats.FineChunksWithInstances}, coarse={stats.CoarseTrackedChunks}/{stats.CoarseChunksWithInstances} tracked/populated");
+            sb.AppendLine($"Quality: maxBladesPerLane={stats.MaxBladesPerLane}, visualBladesPerInstance={stats.VisualBladesPerInstance}, vertexCount={stats.BladeVertexCount}, densityMultiplier={stats.DensityMultiplier:F2}, maxDistance={stats.MaxRenderDistance:F1}, fadeStart={stats.DistanceFadeStart:F1}, distanceJitter={stats.CullDistanceJitter01:F2}, residencyPadding={stats.ResidencyFrustumPaddingDegrees:F1}deg");
             sb.AppendLine($"PlacementCull: frustumEnabled={stats.PlacementFrustumCullEnabled}");
             sb.AppendLine($"Draw: calls={stats.DrawCalls}, chunksWithInstances={stats.ChunksWithInstances}, instances={stats.BladeInstances}, visualBlades={(long)stats.BladeInstances * Mathf.Max(stats.VisualBladesPerInstance, 1)}, buffer={stats.BufferMegabytes:F3} MB");
+            sb.AppendLine($"ResidencyGpu: chunksWithInstances={stats.ResidentChunksWithInstances}, instances={stats.ResidentBladeInstances}");
             sb.AppendLine($"Dispatch: placement={stats.PlacementDispatches}, chunksWithStats={stats.ChunksWithStats}, chunkInstances={stats.ChunkInstanceMin}/{stats.ChunkInstanceAverage:F1}/{stats.ChunkInstanceMax} min/avg/max");
             sb.AppendLine($"CullLanes: candidates={stats.CandidateLanes}, visible={stats.VisibleLanes}, density={stats.DensityRejectedLanes}, shape={stats.ShapeRejectedLanes}, state={stats.StateRejectedLanes}, water={stats.WaterRejectedLanes}, slope={stats.SlopeRejectedLanes}, distance={stats.DistanceRejectedLanes}, distanceFade={stats.DistanceFadeRejectedLanes}, frustum={stats.FrustumRejectedLanes}");
             sb.AppendLine($"CullBlades: candidates={stats.CandidateBlades}, emitted={stats.EmittedBlades}, densityRoll={stats.DensityRejectedBlades}, innerFade={stats.InnerFadeRejectedBlades}, slopeRoll={stats.SlopeRejectedBlades}, overflow={stats.OverflowRejectedBlades}");
@@ -78,6 +154,7 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
         GrassRuntimeState state = control.GetGrassRuntimeState();
         sb.AppendLine($"Master: enabled={state.MasterEnabled}");
         sb.AppendLine($"Layers: near={state.NearFieldRequested}/{state.NearFieldActive} requested/active, mid={state.MidFieldRequested}/{state.MidFieldActive}, chunk={state.ChunkPathRequested}/{state.ChunkPathActive}, blanket={state.BlanketRequested}/{state.BlanketActive}");
+        sb.AppendLine($"Representation: {GrassRenderDiagnostics.FormatState()}");
     }
 
     static void AppendNearFieldMetadata(StringBuilder sb)
@@ -94,7 +171,11 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
         sb.AppendLine($"Quality: spacing={nf.Spacing:F2}, fullDensity={nf.FullDensityDistance:F1}, draw={nf.DrawDistance:F1}, fadeBand={nf.FadeBand:F1}, suppress={nf.SuppressionRadius:F1}");
         sb.AppendLine($"Page: cellSize={nf.PageCellSize}, face={nf.FaceIndex}, facesActive={nf.FacesActive}, multiFace={nf.MultiFaceDispatchEnabled}, originCellUV=({nf.PageOriginCellU},{nf.PageOriginCellV}), seamRisk={nf.SeamRisk}");
         sb.AppendLine($"Grid: {nf.GridWidth}x{nf.GridHeight}, reason={nf.LastDispatchReason}, dispatchedThisFrame={nf.DispatchedThisFrame}, dispatchesTotal={nf.DispatchesTotal}");
-        sb.AppendLine($"Draw: emitted={nf.EmittedInstances}, visualBlades={(long)nf.EmittedInstances * 3}, capacity={nf.CapacityInstances}, buffer={nf.BufferMegabytes:F1} MB");
+        sb.AppendLine(
+            $"Draw: emitted={nf.EmittedInstances}, " +
+            $"visualBlades={(long)nf.EmittedInstances * Mathf.Max(nf.VisualBladesPerInstance, 1)}, " +
+            $"bladesPerInstance={nf.VisualBladesPerInstance}, vertexCount={nf.BladeVertexCount}, " +
+            $"capacity={nf.CapacityInstances}, buffer={nf.BufferMegabytes:F1} MB");
         sb.AppendLine($"Cull: candidates={nf.CandidateCells}, density={nf.DensityRejectedCells}, water={nf.WaterRejectedCells}, slope={nf.SlopeRejectedCells}, distance={nf.DistanceRejectedCells}, distanceFade={nf.DistanceFadeRejectedCells}, frustum={nf.FrustumRejectedCells}, faceArea={nf.FaceAreaRejectedCells}, rangeBudget={nf.RangeBudgetRejectedCells}, overflow={nf.OverflowDropped}");
     }
 
@@ -127,12 +208,13 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
         {
             GrassRuntimeState runtime = runtimeControl.GetGrassRuntimeState();
             GUILayout.Label($"Layers: master={runtime.MasterEnabled}, near={runtime.NearFieldRequested}/{runtime.NearFieldActive}, mid={runtime.MidFieldRequested}/{runtime.MidFieldActive}, chunk={runtime.ChunkPathRequested}/{runtime.ChunkPathActive}, blanket={runtime.BlanketRequested}/{runtime.BlanketActive}");
+            GUILayout.Label($"Representation: {GrassRenderDiagnostics.FormatState()}");
         }
 
         if (ServiceLocator.TryGet(out IGrassDebugStatsProvider provider))
         {
             GrassDebugStats stats = provider.GetGrassDebugStats();
-            GUILayout.Label($"Chunk: visible={stats.VisibleChunks}, tracked={stats.TrackedChunks}, calls={stats.DrawCalls}, buffer={stats.BufferMegabytes:F1} MB");
+            GUILayout.Label($"Chunk: visible={stats.VisibleChunks}, resident={stats.ResidencyChunks}, buffered={stats.BufferedResidencyChunks}, tracked={stats.TrackedChunks}, calls={stats.DrawCalls}, buffer={stats.BufferMegabytes:F1} MB");
             GUILayout.Label($"Chunk roots: {stats.BladeInstances}, lanes={stats.VisibleLanes}/{stats.CandidateLanes}");
         }
 
@@ -210,6 +292,33 @@ public static class GrassCommands
         if (enabled.HasValue)
             control.SetGrassLayerEnabled(layer, enabled.Value);
         return FormatState(control.GetGrassRuntimeState());
+    }
+
+    [ConsoleCommand("render-mode", "Get or set Physical, Hybrid, or Cluster geometry without rebuilding.")]
+    public static string RenderMode(GrassGeometryMode? mode = null)
+    {
+        if (mode.HasValue)
+            GrassRenderDiagnostics.SetGeometryMode(mode.Value);
+        return GrassRenderDiagnostics.FormatState();
+    }
+
+    [ConsoleCommand("render-cluster-range", "Get or set the hybrid cluster handoff range in meters without rebuilding.")]
+    public static string RenderClusterRange(float? start = null, float? end = null)
+    {
+        if (!start.HasValue && !end.HasValue)
+            return GrassRenderDiagnostics.FormatState();
+        if (!start.HasValue || !end.HasValue)
+            return "both start and end are required";
+        return GrassRenderDiagnostics.TrySetClusterRange(start.Value, end.Value, out string error)
+            ? GrassRenderDiagnostics.FormatState()
+            : error;
+    }
+
+    [ConsoleCommand("render-reset", "Restore the default Hybrid grass representation.")]
+    public static string RenderReset()
+    {
+        GrassRenderDiagnostics.Reset();
+        return GrassRenderDiagnostics.FormatState();
     }
 
     static bool TryGetControl(out IGrassRuntimeControl control)

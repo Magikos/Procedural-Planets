@@ -101,6 +101,11 @@ Material:
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
+    - _CoastBelowSeaDepth: 8
+    - _CoastEndHeight: 20
+    - _CoastSlice: 1
+    - _CoastStartHeight: 2
+    - _CoastTiling: 0.08
     - _Cull: 2
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
@@ -113,26 +118,33 @@ Material:
     - _GlossyReflections: 0
     - _GrassFarOverlayAltitudeEnd: 2600
     - _GrassFarOverlayAltitudeStart: 750
-    - _GrassFarOverlayColorBlend: 0.98
     - _GrassFarOverlayEnd: 260
     - _GrassFarOverlayFiberStrength: 0.65
     - _GrassFarOverlayNoiseScale: 0.055
     - _GrassFarOverlayOrbitStrength: 0.42
     - _GrassFarOverlayStart: 35
     - _GrassFarOverlayStrength: 1
-    - _GrassMidOverlayTerrainStrength: 0.92
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueControl: 0
     - _QueueOffset: 0
     - _ReceiveShadows: 1
+    - _SlopeFullDegrees: 48
+    - _SlopeSlice: 14
+    - _SlopeStartDegrees: 28
+    - _SlopeTiling: 0.075
     - _Smoothness: 0
     - _SmoothnessTextureChannel: 0
+    - _SnowFadeEndTemperature: 0.42
+    - _SnowFullTemperature: 0.28
+    - _SnowSlice: 3
+    - _SnowTiling: 0.09
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
+    - _TerrainOverrideEnabled: 1
     - _WorkflowMode: 1
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1

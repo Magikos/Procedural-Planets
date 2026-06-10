@@ -26,8 +26,6 @@ int _PrecipitationViewSteps;
 int _PrecipitationDebugMode;
 int _OceanDebugMode;
 float4 _PrecipitationDebugDotParams;
-float4 _PrecipitationLocalParams;
-float4 _PrecipitationLocalMotion;
 
 // Platform quality - CLOUD_QUALITY_LOW keyword set by Shader.EnableKeyword on lower-tier hardware.
 #ifdef CLOUD_QUALITY_LOW
@@ -37,7 +35,7 @@ float4 _PrecipitationLocalMotion;
 #endif
 
 float3 _WindDirection;
-float _WindSpeed;
+float _WindSpeedMps;
 float3 _SunParams;
 float _NightAmbientIntensity;
 float4 _WeatherLightningColor;
@@ -73,25 +71,6 @@ float PrecipitationCameraAboveSea()
 float4 NoPrecipitationContribution(float4 sceneColor)
 {
     return _OceanDebugMode == DEBUG_PRECIPITATION_CONTRIBUTION ? float4(0.0, 0.0, 0.0, 1.0) : sceneColor;
-}
-
-float Hash11(float p)
-{
-    return Hash12(float2(p, p * 0.371 + 17.17));
-}
-
-float2 Hash21(float p)
-{
-    return float2(
-        Hash12(float2(p * 1.37 + 3.1, p * 0.41 + 29.7)),
-        Hash12(float2(p * 0.73 + 19.3, p * 1.91 + 7.5)));
-}
-
-float2 Hash22(float2 p)
-{
-    return float2(
-        Hash12(p + float2(17.17, 83.33)),
-        Hash12(p + float2(41.41, 11.71)));
 }
 
 float ValueNoise(float2 p)
@@ -203,7 +182,7 @@ float SamplePrecipitationDensity(float3 worldPos)
     float2 local = (faceUv - 0.5) * bottomRadius * 2.0 + faceOffset;
     local += windTangent * ((1.0 - height01) * _PrecipitationVisualParams.z * layerThickness);
     // Noise coordinates move opposite feature motion, so subtract to advect toward +wind.
-    local -= windTangent * (_GameTime * _WindSpeed * _PrecipitationVisualParams.w * 8.0);
+    local -= windTangent * (_GameTime * _WindSpeedMps);
 
     float curtainScale = max(_PrecipitationVisualParams.x, 1.0);
     float large = ValueNoise(local / curtainScale);
@@ -378,120 +357,5 @@ ENDHLSL
             ENDHLSL
         }
 
-        Pass
-        {
-            Name "RenderLocalRain"
-            Blend SrcAlpha OneMinusSrcAlpha
-
-            HLSLPROGRAM
-            #pragma vertex vertRain
-            #pragma fragment fragRain
-            #pragma target 4.5
-            #pragma multi_compile _ CLOUD_QUALITY_LOW
-
-            struct RainVaryings
-            {
-                float4 pos : SV_POSITION;
-                float4 screenPos : TEXCOORD0;
-                float viewDepth : TEXCOORD1;
-                float alpha : TEXCOORD2;
-                float storm : TEXCOORD3;
-                float lightning : TEXCOORD4;
-            };
-
-            RainVaryings vertRain(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
-            {
-                RainVaryings output;
-
-                float cameraAboveSea = PrecipitationCameraAboveSea();
-
-                float3 cameraVector = _WorldSpaceCameraPos.xyz - _PrecipitationPlanetCenter;
-                float cameraRadius = length(cameraVector);
-                float3 cameraNormal = cameraRadius > 0.0001 ? cameraVector / cameraRadius : float3(0.0, 1.0, 0.0);
-                float3 reference = abs(cameraNormal.y) > 0.92 ? float3(1.0, 0.0, 0.0) : float3(0.0, 1.0, 0.0);
-                float3 tangent = normalize(cross(reference, cameraNormal));
-
-                float id = (float)instanceID;
-                float bottomRadius = _PrecipitationRadii.x;
-                float topRadius = _PrecipitationRadii.y;
-                float layerThickness = max(topRadius - bottomRadius, 1.0);
-
-                float particleCount = max(_PrecipitationLocalMotion.w, 1.0);
-                float gridWidth = ceil(sqrt(particleCount));
-                float cellX = fmod(id, gridWidth);
-                float cellY = floor(id / gridWidth);
-
-                float cameraLon = atan2(cameraNormal.z, cameraNormal.x);
-                float cameraLat = asin(clamp(cameraNormal.y, -1.0, 1.0));
-                float cameraLatScale = max(cos(cameraLat), 0.25);
-                float angularRadius = max(_PrecipitationLocalParams.x, 1.0) / max(bottomRadius, 1.0);
-                float angularSpacing = max((angularRadius * 2.0) / max(gridWidth, 1.0), 0.00001);
-                float2 cameraTile = floor(float2(cameraLon * cameraLatScale, cameraLat) / angularSpacing);
-                float2 tile = cameraTile + float2(cellX, cellY) - gridWidth * 0.5;
-                float2 tileJitter = Hash22(tile);
-                float2 sphericalCell = (tile + tileJitter) * angularSpacing;
-                float lon = sphericalCell.x / cameraLatScale;
-                float lat = clamp(sphericalCell.y, -1.52, 1.52);
-                float cosLat = cos(lat);
-                float3 normal = normalize(float3(cosLat * cos(lon), sin(lat), cosLat * sin(lon)));
-
-                float speedJitter = lerp(0.72, 1.35, Hash11(id + 37.0));
-                float fall = frac(Hash11(id + 3.0) + _GameTime * max(_PrecipitationLocalMotion.x, 1.0) * speedJitter / layerThickness);
-
-                float segmentLength = _PrecipitationLocalParams.y * lerp(0.65, 1.25, Hash11(id + 71.0));
-                float tipRadius = lerp(topRadius, bottomRadius - segmentLength, fall);
-                float vertexTop = vertexID == 0 ? 1.0 : 0.0;
-                float radius = clamp(tipRadius + segmentLength * vertexTop, bottomRadius, topRadius);
-
-                float3 wind = dot(_WindDirection, _WindDirection) > 0.0001 ? normalize(_WindDirection) : float3(1.0, 0.0, 0.0);
-                float3 windTangent = wind - normal * dot(wind, normal);
-                windTangent = dot(windTangent, windTangent) > 0.0001 ? normalize(windTangent) : tangent;
-                float fall01 = saturate((topRadius - radius) / layerThickness);
-                float3 worldPos = _PrecipitationPlanetCenter + normal * radius + windTangent * (fall01 * _PrecipitationLocalParams.w);
-
-                float storm;
-                float rainRate;
-                float height01;
-                float signal = SamplePrecipitationSignal(worldPos, storm, rainRate, height01);
-                float lightning = WeatherLightning(normal, storm);
-                float rainVisibility = smoothstep(_PrecipitationLocalMotion.y, min(1.0, _PrecipitationLocalMotion.y + 0.45), signal);
-                float recycleFade = smoothstep(bottomRadius, bottomRadius + segmentLength * 1.5, tipRadius + segmentLength);
-                float angularDistance = acos(clamp(dot(normal, cameraNormal), -1.0, 1.0));
-                float edgeFade = saturate(1.0 - angularDistance * bottomRadius / max(_PrecipitationLocalParams.x, 1.0));
-                edgeFade = smoothstep(0.0, 0.18, edgeFade);
-                float randomOpacity = lerp(0.45, 1.0, Hash11(id + 109.0));
-
-                output.alpha = rainVisibility * recycleFade * edgeFade * randomOpacity * _PrecipitationLocalParams.z * cameraAboveSea;
-                output.storm = storm;
-                output.lightning = lightning;
-                output.pos = TransformWorldToHClip(worldPos);
-                output.screenPos = ComputeScreenPos(output.pos);
-                output.viewDepth = -TransformWorldToView(worldPos).z;
-                return output;
-            }
-
-            float4 fragRain(RainVaryings input) : SV_Target
-            {
-                if (input.alpha <= 0.0001)
-                    discard;
-
-                float2 uv = input.screenPos.xy / max(input.screenPos.w, 0.0001);
-                if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
-                    discard;
-
-                float sceneDepth = SceneDepthLinear(uv);
-                if (input.viewDepth > sceneDepth + 2.0)
-                    discard;
-
-                float3 toCamera = normalize(_WorldSpaceCameraPos.xyz - _PrecipitationPlanetCenter);
-                float localSun = saturate((dot(toCamera, _SunParams.xyz) + 0.1) * 3.0);
-                float light = _NightAmbientIntensity * 0.55 + localSun * 0.7 + 0.18;
-                float rainLightning = input.lightning * _WeatherLightningColor.a;
-                float3 rainColor = lerp(_PrecipitationColor.rgb, _PrecipitationStormColor.rgb, saturate(input.storm));
-                return float4(rainColor * (light + rainLightning * 0.6) + _WeatherLightningColor.rgb * rainLightning * 0.22,
-                    saturate(input.alpha));
-            }
-            ENDHLSL
-        }
     }
 }

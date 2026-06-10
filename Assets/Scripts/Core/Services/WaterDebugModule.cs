@@ -504,10 +504,10 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
             samplePosition = cameraContext.PlanetCenter + fromCenter.normalized * cameraContext.SeaLevelRadius;
 
         WeatherSample weather = weatherProvider.SampleWeather(samplePosition);
-        float wind01 = Mathf.Clamp01(weatherProvider.WindSpeed / 5f);
+        float wind01 = weatherProvider.WindStrength01;
         float waveState = Mathf.Clamp01(0.18f + wind01 * 0.82f);
         float foamState = Mathf.Clamp01(0.12f + wind01 * 0.58f + weather.StormIntensity * 0.72f);
-        sb.AppendLine($"Weather: wind={weatherProvider.WindSpeed:F2}, wave={waveState:F2}, foam={foamState:F2}, storm={weather.StormIntensity:F2}, rain={weather.Precipitation:F2}, state={weather.State}");
+        sb.AppendLine($"Weather: wind={weatherProvider.WindSpeedMetersPerSecond:F2} m/s, wave={waveState:F2}, foam={foamState:F2}, storm={weather.StormIntensity:F2}, rain={weather.Precipitation:F2}, state={weather.State}");
     }
 
     void DrawWaterDebugOverlay(DebugRuntimeState state)
@@ -562,10 +562,10 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
             samplePosition = cameraContext.PlanetCenter + fromCenter.normalized * cameraContext.SeaLevelRadius;
 
         WeatherSample weather = weatherProvider.SampleWeather(samplePosition);
-        float wind01 = Mathf.Clamp01(weatherProvider.WindSpeed / 5f);
+        float wind01 = weatherProvider.WindStrength01;
         float waveState = Mathf.Clamp01(0.18f + wind01 * 0.82f);
         float foamState = Mathf.Clamp01(0.12f + wind01 * 0.58f + weather.StormIntensity * 0.72f);
-        GUILayout.Label($"Weather/waves: wind={weatherProvider.WindSpeed:F2}, wave={waveState:F2}, foam={foamState:F2}, storm={weather.StormIntensity:F2}, rain={weather.Precipitation:F2}, state={weather.State}");
+        GUILayout.Label($"Weather/waves: wind={weatherProvider.WindSpeedMetersPerSecond:F2} m/s, wave={waveState:F2}, foam={foamState:F2}, storm={weather.StormIntensity:F2}, rain={weather.Precipitation:F2}, state={weather.State}");
     }
 
     Renderer GetWaterRenderer()

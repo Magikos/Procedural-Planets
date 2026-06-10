@@ -421,7 +421,7 @@ Shader "Planet/Ocean"
                 tangentB = SafeNormalize(waveAxisB - normalWS * dot(waveAxisB, normalWS), tangentB);
                 float2 windTS = float2(1.0, 0.0);
                 float2 crossTS = float2(0.0, 1.0);
-                float wind01 = saturate(_WindSpeed / 5.0);
+                float wind01 = _WindStrength01;
                 storm01 = SampleOceanStorm(normalWS, tangentA, tangentB);
                 float openWater01 = smoothstep(0.42, 0.88, body01);
                 float deepWater01 = smoothstep(0.035, 0.22, depth01);
@@ -750,7 +750,7 @@ Shader "Planet/Ocean"
 
                 float openWater01, deepWater01, shoreFade;
                 EvaluateSwellGating(depth01, shore01, body01, openWater01, deepWater01, shoreFade);
-                float wind01 = saturate(_WindSpeed / 5.0);
+                float wind01 = _WindStrength01;
                 float energy = saturate(0.5 + wind01 * 0.5) * deepWater01 * shoreFade;
                 if (energy <= 0.001)
                     return;
@@ -855,7 +855,7 @@ Shader "Planet/Ocean"
                 if (_OceanDebugMode == DEBUG_FOAM_PARTS)
                     return half4(layer.shoreFoam, layer.crestFoam, layer.foam, 1.0);
                 if (_OceanDebugMode == DEBUG_WATER_MOTION_MASK)
-                    return half4(layer.waveEnergy, layer.storm, saturate(_WindSpeed / 5.0), 1.0);
+                    return half4(layer.waveEnergy, layer.storm, _WindStrength01, 1.0);
                 if (_OceanDebugMode == DEBUG_WATER_WAVE_HEIGHT)
                 {
                     float3 troughColor = float3(0.02, 0.06, 0.30);

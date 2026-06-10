@@ -92,6 +92,9 @@ MonoBehaviour:
   MoistureNoiseStrength: 0.35
   AltitudeTemperatureDrop: 0
   ClimateLutResolution: 256
+  MinimumTemperatureCelsius: -40
+  MaximumTemperatureCelsius: 40
+  ClimateMapResolution: 256
   TemperatureNoise:
     Filter: 0
     Strength: 1

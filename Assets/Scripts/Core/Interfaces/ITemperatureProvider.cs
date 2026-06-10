@@ -14,3 +14,10 @@ public interface IClimateProvider
     void Initialize(int seed);
     ClimateSample Evaluate(Vector3 pointOnUnitSphere, float elevation);
 }
+
+// Authoritative world-space climate query. Consumers should use this instead of
+// reconstructing latitude, terrain elevation, or temperature ranges independently.
+public interface IClimateSampler
+{
+    bool TrySampleClimate(Vector3 worldPosition, out ClimateSample sample);
+}

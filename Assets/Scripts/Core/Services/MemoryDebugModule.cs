@@ -10,10 +10,40 @@ public static class MemoryDebugIds
 public static class MemoryDebugCounters
 {
     public static int LiveChunkTextureSets { get; private set; }
+    public static int LiveChunkBiomeTextureSets { get; private set; }
+    public static long ChunkBiomeTextureRawBytes { get; private set; }
+    public static int LiveChunkSurfaceStateTextures { get; private set; }
+    public static long ChunkSurfaceStateRawBytes { get; private set; }
+    public static int FaceBiomeAtlasTextures { get; private set; }
+    public static long FaceBiomeAtlasRawBytes { get; private set; }
+    public static long RetainedChunkCpuBytes { get; private set; }
 
     public static void ReportLiveChunkTextureSets(int count)
     {
         LiveChunkTextureSets = count < 0 ? 0 : count;
+    }
+
+    public static void ReportChunkBiomeTextures(int setCount, long rawBytes)
+    {
+        LiveChunkBiomeTextureSets = setCount < 0 ? 0 : setCount;
+        ChunkBiomeTextureRawBytes = rawBytes < 0L ? 0L : rawBytes;
+    }
+
+    public static void ReportChunkSurfaceStateTextures(int textureCount, long rawBytes)
+    {
+        LiveChunkSurfaceStateTextures = textureCount < 0 ? 0 : textureCount;
+        ChunkSurfaceStateRawBytes = rawBytes < 0L ? 0L : rawBytes;
+    }
+
+    public static void AdjustFaceBiomeAtlases(int textureDelta, long rawBytesDelta)
+    {
+        FaceBiomeAtlasTextures = System.Math.Max(0, FaceBiomeAtlasTextures + textureDelta);
+        FaceBiomeAtlasRawBytes = System.Math.Max(0L, FaceBiomeAtlasRawBytes + rawBytesDelta);
+    }
+
+    public static void ReportRetainedChunkCpuBytes(long bytes)
+    {
+        RetainedChunkCpuBytes = bytes < 0L ? 0L : bytes;
     }
 }
 
@@ -34,6 +64,10 @@ public sealed class MemoryDebugModule : IDebugModule, IDebugCaptureMetadataProvi
     string _cachedGc;
     string _cachedTempAlloc;
     string _cachedChunkTextures;
+    string _cachedChunkBiomeTextures;
+    string _cachedChunkSurfaceStateTextures;
+    string _cachedFaceBiomeAtlases;
+    string _cachedChunkCpu;
     float _nextRefreshTime;
 
     public void Register(DebugRegistry registry)
@@ -53,6 +87,10 @@ public sealed class MemoryDebugModule : IDebugModule, IDebugCaptureMetadataProvi
         sb.AppendLine(_cachedGc);
         sb.AppendLine(_cachedTempAlloc);
         sb.AppendLine(_cachedChunkTextures);
+        sb.AppendLine(_cachedChunkBiomeTextures);
+        sb.AppendLine(_cachedChunkSurfaceStateTextures);
+        sb.AppendLine(_cachedFaceBiomeAtlases);
+        sb.AppendLine(_cachedChunkCpu);
     }
 
     public void DrawOverlay(DebugRuntimeState state)
@@ -75,6 +113,10 @@ public sealed class MemoryDebugModule : IDebugModule, IDebugCaptureMetadataProvi
         GUILayout.Label(_cachedGc);
         GUILayout.Label(_cachedTempAlloc);
         GUILayout.Label(_cachedChunkTextures);
+        GUILayout.Label(_cachedChunkBiomeTextures);
+        GUILayout.Label(_cachedChunkSurfaceStateTextures);
+        GUILayout.Label(_cachedFaceBiomeAtlases);
+        GUILayout.Label(_cachedChunkCpu);
     }
 
     void RefreshStrings(bool force)
@@ -96,7 +138,17 @@ public sealed class MemoryDebugModule : IDebugModule, IDebugCaptureMetadataProvi
         _cachedGfx = $"Graphics driver: {FormatBytes(gfx)}";
         _cachedGc = $"GC tracked: {FormatBytes(gcTotal)}";
         _cachedTempAlloc = $"Temp allocator: {FormatBytes(tempAlloc)}";
-        _cachedChunkTextures = $"Chunk texture sets (biome+state): {MemoryDebugCounters.LiveChunkTextureSets}";
+        _cachedChunkTextures = $"Chunk texture sets (any): {MemoryDebugCounters.LiveChunkTextureSets}";
+        _cachedChunkBiomeTextures =
+            $"Chunk biome texture sets: {MemoryDebugCounters.LiveChunkBiomeTextureSets} " +
+            $"(raw pixels/copy={FormatBytes(MemoryDebugCounters.ChunkBiomeTextureRawBytes)})";
+        _cachedChunkSurfaceStateTextures =
+            $"Chunk surface-state textures: {MemoryDebugCounters.LiveChunkSurfaceStateTextures} " +
+            $"(raw pixels/copy={FormatBytes(MemoryDebugCounters.ChunkSurfaceStateRawBytes)})";
+        _cachedFaceBiomeAtlases =
+            $"Face biome atlas textures: {MemoryDebugCounters.FaceBiomeAtlasTextures} " +
+            $"(raw pixels/copy={FormatBytes(MemoryDebugCounters.FaceBiomeAtlasRawBytes)})";
+        _cachedChunkCpu = $"Chunk CPU arrays retained: {FormatBytes(MemoryDebugCounters.RetainedChunkCpuBytes)}";
     }
 
     static string FormatBytes(long bytes)
