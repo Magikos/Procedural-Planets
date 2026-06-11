@@ -44,11 +44,7 @@ public class BiomeSettings : ScriptableObject
     public int ClimateMapResolution = 256;
 
     [Header("Temperature Noise")]
-    public NoiseSettings TemperatureNoise;
     [Range(0f, 0.5f)] public float TemperatureNoiseStrength = 0.15f;
-
-    [Header("Moisture Noise")]
-    public NoiseSettings MoistureNoise;
 
     [Header("Voronoi Assignment")]
     [Range(128, 8192)]
@@ -57,26 +53,8 @@ public class BiomeSettings : ScriptableObject
     [Range(0f, 1f), Tooltip("Tangent-space displacement relative to the average Fibonacci seed spacing.")]
     public float VoronoiSeedJitter = 0.55f;
 
-    [Range(0.1f, 10f), Tooltip("Climate-space temperature distance multiplier used when assigning seed biomes.")]
-    public float VoronoiTemperatureWeight = 4.26f;
-
     [Range(0f, 0.25f), Tooltip("Unit-sphere displacement applied before nearest-seed lookup.")]
     public float VoronoiDomainWarpStrength = 0.08f;
-
-    [Range(0.1f, 16f), Tooltip("Domain-warp noise frequency on the unit sphere.")]
-    public float VoronoiDomainWarpScale = 2.5f;
-
-    [Range(1, 6)]
-    public int VoronoiDomainWarpOctaves = 4;
-
-    [Range(0.1f, 0.9f)]
-    public float VoronoiDomainWarpPersistence = 0.418f;
-
-    [Range(1.1f, 4f)]
-    public float VoronoiDomainWarpLacunarity = 2.73f;
-
-    [Range(0, 8)]
-    public int VoronoiCleanupIterations = 5;
 
     public void EnsureClimateCurves()
     {
@@ -102,13 +80,7 @@ public class BiomeSettings : ScriptableObject
         AltitudeTemperatureDrop = Mathf.Clamp(AltitudeTemperatureDrop, 0f, 10f);
         VoronoiSeedCount = Mathf.Clamp(VoronoiSeedCount, 128, 8192);
         VoronoiSeedJitter = Mathf.Clamp01(VoronoiSeedJitter);
-        VoronoiTemperatureWeight = Mathf.Clamp(VoronoiTemperatureWeight, 0.1f, 10f);
         VoronoiDomainWarpStrength = Mathf.Clamp(VoronoiDomainWarpStrength, 0f, 0.25f);
-        VoronoiDomainWarpScale = Mathf.Clamp(VoronoiDomainWarpScale, 0.1f, 16f);
-        VoronoiDomainWarpOctaves = Mathf.Clamp(VoronoiDomainWarpOctaves, 1, 6);
-        VoronoiDomainWarpPersistence = Mathf.Clamp(VoronoiDomainWarpPersistence, 0.1f, 0.9f);
-        VoronoiDomainWarpLacunarity = Mathf.Clamp(VoronoiDomainWarpLacunarity, 1.1f, 4f);
-        VoronoiCleanupIterations = Mathf.Clamp(VoronoiCleanupIterations, 0, 8);
     }
 
     public void ApplyPreset(ClimateLatitudePreset preset)
@@ -191,11 +163,7 @@ public class BiomeSettings : ScriptableObject
         sb.AppendLine();
         sb.Append("seeds=").Append(VoronoiSeedCount);
         sb.Append(", jitter=").Append(VoronoiSeedJitter.ToString("F2"));
-        sb.Append(", tempWeight=").Append(VoronoiTemperatureWeight.ToString("F2"));
         sb.Append(", warp=").Append(VoronoiDomainWarpStrength.ToString("F3"));
-        sb.Append('@').Append(VoronoiDomainWarpScale.ToString("F2"));
-        sb.Append(", octaves=").Append(VoronoiDomainWarpOctaves);
-        sb.Append(", cleanup=").Append(VoronoiCleanupIterations);
         return sb.ToString();
     }
 

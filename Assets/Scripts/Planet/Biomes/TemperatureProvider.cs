@@ -139,13 +139,13 @@ public sealed class ClimateProvider : IClimateProvider
         float waterLevel = BiomeConstants.OceanThreshold;
 
         _temperatureProvider = new TemperatureProvider(
-            settings.TemperatureNoise,
+            BiomeConstants.TemperatureNoise,
             temperatureCurve,
             settings.TemperatureNoiseStrength,
             settings.AltitudeTemperatureDrop,
             waterLevel);
         _moistureProvider = new MoistureProvider(
-            settings.MoistureNoise,
+            BiomeConstants.MoistureNoise,
             moistureCurve,
             settings.MoistureLatitudeInfluence,
             settings.MoistureNoiseStrength);
@@ -418,10 +418,10 @@ sealed class VoronoiBiomeField
         _warpY = new Noise(warpSeed ^ unchecked((int)0xA0F2EC75u));
         _warpZ = new Noise(warpSeed ^ unchecked((int)0x967A889Bu));
         _warpStrength = settings.VoronoiDomainWarpStrength;
-        _warpScale = settings.VoronoiDomainWarpScale;
-        _warpOctaves = settings.VoronoiDomainWarpOctaves;
-        _warpPersistence = settings.VoronoiDomainWarpPersistence;
-        _warpLacunarity = settings.VoronoiDomainWarpLacunarity;
+        _warpScale = BiomeConstants.VoronoiDomainWarpScale;
+        _warpOctaves = BiomeConstants.VoronoiDomainWarpOctaves;
+        _warpPersistence = BiomeConstants.VoronoiDomainWarpPersistence;
+        _warpLacunarity = BiomeConstants.VoronoiDomainWarpLacunarity;
         CleanupChanges = cleanupChanges;
         DistinctBiomeCount = distinctBiomeCount;
         BuildMilliseconds = buildMilliseconds;
@@ -445,10 +445,10 @@ sealed class VoronoiBiomeField
             seeds,
             registry,
             climateProvider,
-            settings.VoronoiTemperatureWeight);
+            BiomeConstants.VoronoiTemperatureWeight);
         int cleanupChanges = CleanupBiomeAssignments(
             seeds,
-            settings.VoronoiCleanupIterations);
+            BiomeConstants.VoronoiCleanupIterations);
         int distinctBiomeCount = CountDistinctBiomes(seeds);
         BuildKdTree(seeds, out KdNode[] nodes, out int root);
         var field = new VoronoiBiomeField(
