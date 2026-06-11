@@ -128,29 +128,28 @@ public sealed class ClimateProvider : IClimateProvider
     readonly float _minimumTemperatureCelsius;
     readonly float _maximumTemperatureCelsius;
 
-    public ClimateProvider(BiomeSettings settings)
+    public ClimateProvider(BiomeDto biome)
     {
-        settings.EnsureClimateCurves();
-        int resolution = settings.ClimateLutResolution;
+        int resolution = biome.ClimateLutResolution;
         ClimateCurveLut temperatureCurve = ClimateCurveLut.Bake(
-            settings.TemperatureLatitudeCurve, resolution);
+            biome.TemperatureLatitudeCurve, resolution);
         ClimateCurveLut moistureCurve = ClimateCurveLut.Bake(
-            settings.MoistureLatitudeCurve, resolution);
+            biome.MoistureLatitudeCurve, resolution);
         float waterLevel = BiomeConstants.OceanThreshold;
 
         _temperatureProvider = new TemperatureProvider(
             BiomeConstants.TemperatureNoise,
             temperatureCurve,
-            settings.TemperatureNoiseStrength,
-            settings.AltitudeTemperatureDrop,
+            biome.TemperatureNoiseStrength,
+            biome.AltitudeTemperatureDrop,
             waterLevel);
         _moistureProvider = new MoistureProvider(
             BiomeConstants.MoistureNoise,
             moistureCurve,
-            settings.MoistureLatitudeInfluence,
-            settings.MoistureNoiseStrength);
-        _minimumTemperatureCelsius = settings.MinimumTemperatureCelsius;
-        _maximumTemperatureCelsius = settings.MaximumTemperatureCelsius;
+            biome.MoistureLatitudeInfluence,
+            biome.MoistureNoiseStrength);
+        _minimumTemperatureCelsius = biome.MinimumTemperatureCelsius;
+        _maximumTemperatureCelsius = biome.MaximumTemperatureCelsius;
     }
 
     public void Initialize(int seed)
@@ -406,7 +405,7 @@ sealed class VoronoiBiomeField
         KdNode[] nodes,
         int root,
         int warpSeed,
-        BiomeSettings settings,
+        BiomeDto biome,
         int cleanupChanges,
         int distinctBiomeCount,
         long buildMilliseconds)
@@ -417,7 +416,7 @@ sealed class VoronoiBiomeField
         _warpX = new Noise(warpSeed ^ unchecked((int)0x68BC21EBu));
         _warpY = new Noise(warpSeed ^ unchecked((int)0xA0F2EC75u));
         _warpZ = new Noise(warpSeed ^ unchecked((int)0x967A889Bu));
-        _warpStrength = settings.VoronoiDomainWarpStrength;
+        _warpStrength = biome.VoronoiDomainWarpStrength;
         _warpScale = BiomeConstants.VoronoiDomainWarpScale;
         _warpOctaves = BiomeConstants.VoronoiDomainWarpOctaves;
         _warpPersistence = BiomeConstants.VoronoiDomainWarpPersistence;
@@ -428,22 +427,20 @@ sealed class VoronoiBiomeField
     }
 
     public static VoronoiBiomeField Build(
-        BiomeSettings settings,
-        BiomeRegistry registry,
+        BiomeDto biome,
         IClimateProvider climateProvider,
         int seed)
     {
-        if (settings == null) throw new ArgumentNullException(nameof(settings));
-        if (registry == null) throw new ArgumentNullException(nameof(registry));
+        if (biome == null) throw new ArgumentNullException(nameof(biome));
+        if (biome.Registry == null) throw new ArgumentException("BiomeDto.Registry is null.", nameof(biome));
         if (climateProvider == null) throw new ArgumentNullException(nameof(climateProvider));
 
-        settings.EnsureClimateCurves();
         var stopwatch = Stopwatch.StartNew();
-        int seedCount = settings.VoronoiSeedCount;
-        Seed[] seeds = BuildFibonacciSeeds(seedCount, settings.VoronoiSeedJitter, seed);
+        int seedCount = biome.VoronoiSeedCount;
+        Seed[] seeds = BuildFibonacciSeeds(seedCount, biome.VoronoiSeedJitter, seed);
         AssignClimateBiomes(
             seeds,
-            registry,
+            biome.Registry,
             climateProvider,
             BiomeConstants.VoronoiTemperatureWeight);
         int cleanupChanges = CleanupBiomeAssignments(
@@ -456,7 +453,7 @@ sealed class VoronoiBiomeField
             nodes,
             root,
             seed,
-            settings,
+            biome,
             cleanupChanges,
             distinctBiomeCount,
             0);
@@ -730,7 +727,7 @@ sealed class VoronoiBiomeField
 
     static void AssignClimateBiomes(
         Seed[] seeds,
-        BiomeRegistry registry,
+        BiomeRegistryDto registry,
         IClimateProvider climateProvider,
         float temperatureWeight)
     {
@@ -749,7 +746,7 @@ sealed class VoronoiBiomeField
                 int index = t * moistureSteps + m;
                 targetTemperature[index] = (t + 0.5f) / tempSteps;
                 targetMoisture[index] = (m + 0.5f) / moistureSteps;
-                BiomeDefinition definition = registry.GridEntries != null &&
+                BiomeDefinitionDto definition = registry.GridEntries != null &&
                     index < registry.GridEntries.Length
                     ? registry.GridEntries[index]
                     : null;

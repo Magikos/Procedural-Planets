@@ -2,9 +2,9 @@ using UnityEngine;
 
 public class ColorGenerator : IBiomeProvider, System.IDisposable
 {
-    BiomeSettings _biomeSettings;
+    BiomeDto _biome;
     IClimateProvider _climateProvider;
-    IBiomeRegistry _biomeRegistry;
+    BiomeRegistryDto _biomeRegistry;
     VoronoiBiomeField _voronoiBiomeField;
     Color[] _biomeColors;
 
@@ -20,11 +20,7 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
     readonly BiomeSurfaceTextureArrays _surfaceArrays = new BiomeSurfaceTextureArrays();
     public BiomeSurfaceTextureArrays SurfaceArrays => _surfaceArrays;
 
-    // Exposed for the Phase B chunk biome-map bake (ChunkedSurfaceProvider casts the
-    // IBiomeProvider it gets to ColorGenerator and reads this to build a BiomeLookupData
-    // snapshot). IBiomeProvider stays a pure evaluation interface — Core doesn't see the
-    // BiomeRegistry concrete type.
-    public BiomeRegistry Registry => _biomeSettings?.Registry;
+    public BiomeRegistryDto Registry => _biome?.Registry;
     internal VoronoiBiomeField VoronoiBiomeField => _voronoiBiomeField;
     internal IClimateProvider ClimateProvider => _climateProvider;
 
@@ -34,19 +30,19 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
     // in sync via a single source would be cleaner long-term.
     public Color[] BiomeColors => _biomeColors;
 
-    public void Configure(BiomeSettings settings)
+    public void Configure(BiomeDto biome)
     {
-        _biomeSettings = settings;
+        _biome = biome;
         _biomeRegistry = null;
         _climateProvider = null;
         _voronoiBiomeField = null;
         _biomeColors = null;
 
-        if (_biomeSettings != null && _biomeSettings.Registry != null)
+        if (_biome != null && _biome.Registry != null)
         {
-            _biomeRegistry = _biomeSettings.Registry;
-            _climateProvider = new ClimateProvider(_biomeSettings);
-            _surfaceArrays.Build(_biomeSettings.Registry);
+            _biomeRegistry = _biome.Registry;
+            _climateProvider = new ClimateProvider(_biome);
+            _surfaceArrays.Build(_biome.Registry);
         }
         else
         {
@@ -66,11 +62,10 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
         _climateProvider?.Initialize(seed);
         _voronoiBiomeField = null;
 
-        if (_biomeSettings != null && _biomeSettings.Registry != null && _climateProvider != null)
+        if (_biome != null && _biome.Registry != null && _climateProvider != null)
         {
             _voronoiBiomeField = VoronoiBiomeField.Build(
-                _biomeSettings,
-                _biomeSettings.Registry,
+                _biome,
                 _climateProvider,
                 biomeAssignmentSeed);
             LoggerProvider.Log(
@@ -123,8 +118,6 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
         return color;
     }
 
-    // Shared color-resolution path. Returns the final blended color and writes back the raw
-    // signals (temperature, moisture, primary biome index) used by the diagnostic surface.
     Color EvaluateBiomeColor(
         Vector3 pointOnUnitSphere,
         float elevation,
@@ -147,8 +140,8 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
         altitudeTemperatureDrop = climate.AltitudeTemperatureDrop;
 
         BiomeResult result = ResolveBiome(pointOnUnitSphere, climate);
-        primaryBiomeIndex = Mathf.Clamp(_biomeSettings.Registry.GetSliceIdForBiomeType(result.PrimaryBiome), 0, _biomeColors.Length - 1);
-        int secondaryBiomeIndex = Mathf.Clamp(_biomeSettings.Registry.GetSliceIdForBiomeType(result.SecondaryBiome), 0, _biomeColors.Length - 1);
+        primaryBiomeIndex = Mathf.Clamp(_biomeRegistry.GetSliceIdForBiomeType(result.PrimaryBiome), 0, _biomeColors.Length - 1);
+        int secondaryBiomeIndex = Mathf.Clamp(_biomeRegistry.GetSliceIdForBiomeType(result.SecondaryBiome), 0, _biomeColors.Length - 1);
 
         Color primary = _biomeColors[primaryBiomeIndex];
         Color secondary = _biomeColors[secondaryBiomeIndex];
@@ -159,18 +152,18 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
     {
         if (_voronoiBiomeField == null)
         {
-            return _biomeSettings.Registry.Resolve(
+            return _biomeRegistry.Resolve(
                 climate.Temperature01,
                 climate.Moisture01,
                 climate.Elevation);
         }
 
         VoronoiBiomeSample sample = _voronoiBiomeField.Evaluate(pointOnUnitSphere);
-        BiomeDefinition primary = _biomeSettings.Registry.GetDefinitionByIndex(sample.PrimaryId);
-        BiomeDefinition secondary = _biomeSettings.Registry.GetDefinitionByIndex(sample.SecondaryId);
+        BiomeDefinitionDto primary = _biomeRegistry.GetDefinitionByIndex(sample.PrimaryId);
+        BiomeDefinitionDto secondary = _biomeRegistry.GetDefinitionByIndex(sample.SecondaryId);
         BiomeType primaryType = primary != null ? primary.Type : BiomeType.Grassland;
         BiomeType secondaryType = secondary != null ? secondary.Type : primaryType;
-        return _biomeSettings.Registry.ResolveWithLandBiomes(
+        return _biomeRegistry.ResolveWithLandBiomes(
             primaryType,
             secondaryType,
             sample.SecondaryWeight,
@@ -183,13 +176,12 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
     {
         if (_biomeRegistry == null) return;
 
-        var registry = _biomeSettings.Registry;
         int count = _biomeRegistry.BiomeCount;
         _biomeColors = new Color[count];
 
         for (int i = 0; i < count; i++)
         {
-            var def = registry.GetDefinitionByIndex(i);
+            var def = _biomeRegistry.GetDefinitionByIndex(i);
             if (def != null)
                 _biomeColors[i] = def.ColorGradient.Evaluate(0.5f) * (1 - def.TintPercent) + def.TintColor * def.TintPercent;
             else

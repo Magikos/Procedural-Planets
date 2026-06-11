@@ -266,7 +266,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         var shapeSettings = _planetSettings.BuildShapeSettings();
         _shapeGenerator.Configure(shapeSettings);
         _shapeGenerator.Initialize(Seed);
-        _colorGenerator.Configure(_planetSettings.BiomeSettings);
+        var biomeDto = BiomeDto.From(_planetSettings.BiomeSettings);
+        if (biomeDto != null) SettingsProvider.Register(biomeDto);
+        _colorGenerator.Configure(biomeDto);
         _colorGenerator.Initialize(
             Seed,
             seedProvider.GetSeedForSystem("BiomeVoronoi"));
@@ -326,8 +328,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     void ConfigureTerrainSurfaceOverrides(Material mat)
     {
-        BiomeRegistry registry = _planetSettings.BiomeSettings != null
-            ? _planetSettings.BiomeSettings.Registry
+        BiomeRegistryDto registry = SettingsProvider.IsRegistered<BiomeDto>()
+            ? SettingsProvider.GetSettings<BiomeDto>()?.Registry
             : null;
 
         SetMaterialAndGlobalFloat(mat, _terrainOverrideEnabledId,
@@ -468,22 +470,23 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _climateMapGpuData?.Dispose();
         _climateMapGpuData = null;
 
-        BiomeSettings settings = _planetSettings?.BiomeSettings;
-        if (settings == null ||
+        if (!SettingsProvider.IsRegistered<BiomeDto>() ||
             _colorGenerator?.ClimateProvider == null ||
             _surfaceProvider == null)
         {
             return;
         }
 
+        BiomeDto biome = SettingsProvider.GetSettings<BiomeDto>();
+
         try
         {
             _climateMapGpuData = ClimateMapGpuData.Build(
                 _colorGenerator.ClimateProvider,
                 _surfaceProvider.GetFaceMeshSamplers(),
-                settings.ClimateMapResolution,
-                settings.MinimumTemperatureCelsius,
-                settings.MaximumTemperatureCelsius,
+                biome.ClimateMapResolution,
+                biome.MinimumTemperatureCelsius,
+                biome.MaximumTemperatureCelsius,
                 Logger);
         }
         catch (System.Exception ex)

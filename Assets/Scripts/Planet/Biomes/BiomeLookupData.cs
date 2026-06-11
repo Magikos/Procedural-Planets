@@ -1,8 +1,8 @@
 using Unity.Burst;
 using Unity.Collections;
 
-// Blittable mirror of BiomeRegistry suitable for Burst jobs. Built once per planet gen via
-// BiomeRegistry.BuildLookupData(); disposed by the caller when the bake pass finishes.
+// Blittable mirror of BiomeRegistryDto suitable for Burst jobs. Built once per planet gen via
+// BiomeRegistryDto.BuildLookupData(); disposed by the caller when the bake pass finishes.
 //
 // Biome ids are GetDefinitionByIndex slot ids, NOT BiomeType enum values. Layout:
 //   0                          = Ocean
@@ -35,7 +35,7 @@ public struct BiomeLookupData
     }
 }
 
-// Burst-compatible resolver. Reproduces BiomeRegistry.Resolve() exactly, but returns slice
+// Burst-compatible resolver. Reproduces BiomeRegistryDto.Resolve() exactly, but returns slice
 // ids (for Texture2DArray sampling) instead of BiomeType enum values, plus a secondary slice
 // id used by Phase B step 5b's primary+secondary fast path (now superseded by the top-K
 // placement.
@@ -186,7 +186,7 @@ public static class BiomeLookupEvaluator
 
             if (secondaryId != primaryId)
             {
-                // Match BiomeRegistry.Resolve(): the edge itself is a symmetric 50/50
+                // Match BiomeRegistryDto.Resolve(): the edge itself is a symmetric 50/50
                 // blend, so adjacent grid cells meet continuously.
                 float t = edgeDist / BiomeConstants.BlendWidth;
                 if (t < 0f) t = 0f;

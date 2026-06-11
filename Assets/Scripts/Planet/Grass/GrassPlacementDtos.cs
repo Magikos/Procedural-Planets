@@ -13,7 +13,7 @@ public readonly struct GrassBiomeTintConfig
         TintLushShift = tintLushShift;
     }
 
-    public static GrassBiomeTintConfig From(BiomeDefinition src)
+    public static GrassBiomeTintConfig From(BiomeDefinitionDto src)
     {
         if (src == null)
             return new GrassBiomeTintConfig(Color.white, Color.white, Color.white);
@@ -45,7 +45,7 @@ public readonly struct GrassBiomePlacementConfig
         BiomeBlendPower = biomeBlendPower;
     }
 
-    public static GrassBiomePlacementConfig From(BiomeDefinition src)
+    public static GrassBiomePlacementConfig From(BiomeDefinitionDto src)
     {
         if (src == null) return default;
         return new GrassBiomePlacementConfig(

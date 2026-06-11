@@ -41,7 +41,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
     public ComputeBuffer GrassParamsBuffer => _grassParamsBuffer;
     public int SliceCount { get; private set; }
 
-    public void Build(BiomeRegistry registry)
+    public void Build(BiomeRegistryDto registry)
     {
         Dispose();
         if (registry == null) return;
@@ -98,11 +98,11 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
     }
 
     // Step 5 flat-color LUT: 1×N RGBA, one texel per biome slice id. Pixel value is the
-    // BiomeDefinition.TintColor blended with the gradient mid-sample, matching what
+    // BiomeDefinitionDto.TintColor blended with the gradient mid-sample, matching what
     // ColorGenerator's per-vertex path uses today. Sampled in the shader as the placeholder
     // for the texture-array path before Phase B step 6 (and as a fallback for biomes that
     // don't author surface textures even after step 6).
-    Texture2D BuildFlatColorLut(BiomeRegistry registry)
+    Texture2D BuildFlatColorLut(BiomeRegistryDto registry)
     {
         var tex = new Texture2D(SliceCount, 1, TextureFormat.RGBA32, mipChain: false, linear: false)
         {
@@ -115,7 +115,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         var sb = new System.Text.StringBuilder($"FlatColorLut ({SliceCount} slots): ");
         for (int slot = 0; slot < SliceCount; slot++)
         {
-            BiomeDefinition def = registry.GetDefinitionByIndex(slot);
+            BiomeDefinitionDto def = registry.GetDefinitionByIndex(slot);
             Color c = ResolveBiomeColor(def);
             pixels[slot] = c;
             string biomeName = def != null ? def.Type.ToString() : "?";
@@ -127,14 +127,14 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         return tex;
     }
 
-    static Color ResolveBiomeColor(BiomeDefinition def)
+    static Color ResolveBiomeColor(BiomeDefinitionDto def)
     {
         if (def == null) return new Color(1f, 0f, 1f, 1f); // magenta — registry hole
         Color gradient = def.ColorGradient != null ? def.ColorGradient.Evaluate(0.5f) : Color.white;
         return gradient * (1f - def.TintPercent) + def.TintColor * def.TintPercent;
     }
 
-    ComputeBuffer BuildGrassParamsBuffer(BiomeRegistry registry)
+    ComputeBuffer BuildGrassParamsBuffer(BiomeRegistryDto registry)
     {
         var data = new BiomeGrassParamsGpu[SliceCount];
         for (int slot = 0; slot < SliceCount; slot++)
@@ -177,10 +177,10 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         buffer = null;
     }
 
-    Texture2DArray BuildArray(BiomeRegistry registry, Texture2D sample,
-        System.Func<BiomeDefinition, Texture2D> selector,
+    Texture2DArray BuildArray(BiomeRegistryDto registry, Texture2D sample,
+        System.Func<BiomeDefinitionDto, Texture2D> selector,
         Color32 placeholderColor, TextureFormat defaultFormat, bool isLinear, string name,
-        System.Func<BiomeDefinition, Texture2D> secondarySelector = null)
+        System.Func<BiomeDefinitionDto, Texture2D> secondarySelector = null)
     {
         int width = sample != null ? sample.width : FallbackSliceSize;
         int height = sample != null ? sample.height : FallbackSliceSize;
@@ -223,7 +223,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
             {
                 for (int slot = 0; slot < SliceCount; slot++)
                 {
-                    BiomeDefinition def = registry.GetDefinitionByIndex(slot);
+                    BiomeDefinitionDto def = registry.GetDefinitionByIndex(slot);
                     Texture2D primary = selector(def);
                     Texture2D src = bank == 0 ? primary : secondarySelector(def) ?? primary;
                     int arraySlice = slot + bank * SliceCount;
@@ -271,7 +271,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         return tex;
     }
 
-    static Texture2D FindReferenceTexture(BiomeRegistry registry, System.Func<BiomeDefinition, Texture2D> selector)
+    static Texture2D FindReferenceTexture(BiomeRegistryDto registry, System.Func<BiomeDefinitionDto, Texture2D> selector)
     {
         int count = registry.BiomeCount;
         for (int i = 0; i < count; i++)
