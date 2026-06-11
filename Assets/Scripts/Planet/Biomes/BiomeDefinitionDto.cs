@@ -1,0 +1,48 @@
+using UnityEngine;
+
+public sealed record BiomeDefinitionDto(
+    BiomeType Type,
+    Gradient ColorGradient,
+    Color TintColor,
+    float TintPercent,
+    Vector3 BiomeOffset,
+    Texture2D SurfaceAlbedo,
+    Texture2D SurfaceSecondaryAlbedo,
+    Texture2D SurfaceNormal,
+    Texture2D SurfaceARM,
+    float SurfaceTiling,
+    float GrassDensity,
+    Color GrassTintBase,
+    Color GrassTintDryShift,
+    Color GrassTintLushShift,
+    float GrassHeight,
+    float GrassWidth,
+    float GrassClumpStrength,
+    float GrassMaxSlopeDegrees,
+    float GrassSlopeFadeDegrees,
+    float GrassMinWaterClearance,
+    float GrassBiomeBlendPower)
+{
+    public static BiomeDefinitionDto From(BiomeDefinition src) => new(
+        src.Type,
+        src.ColorGradient,
+        src.TintColor,
+        src.TintPercent,
+        src.BiomeOffset,
+        src.SurfaceAlbedo,
+        src.SurfaceSecondaryAlbedo,
+        src.SurfaceNormal,
+        src.SurfaceARM,
+        src.SurfaceTiling,
+        src.GrassDensity,
+        src.GrassTintBase,
+        src.GrassTintDryShift,
+        src.GrassTintLushShift,
+        src.GrassHeight,
+        src.GrassWidth,
+        src.GrassClumpStrength,
+        src.GrassMaxSlopeDegrees,
+        src.GrassSlopeFadeDegrees,
+        src.GrassMinWaterClearance,
+        src.GrassBiomeBlendPower);
+}
