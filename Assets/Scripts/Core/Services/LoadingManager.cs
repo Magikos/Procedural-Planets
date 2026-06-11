@@ -316,13 +316,17 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
         foreach (var reporter in allBehaviours.OfType<IProgressReporter>())
             tracker.Register(reporter);
 
+        // Priority-sort first so the InitGraph uses priority as the natural tiebreaker
+        // for services that share a dep level (or have no deps at all). Once a service
+        // declares EarlyDependencies / LateDependencies, the graph overrides priority.
         var earlyInitializers = allBehaviours
             .OfType<IEarlyInitialize>()
             .OrderByDescending(i => i.EarlyPriority)
             .ToList();
+        var earlyGraph = new InitGraph<IEarlyInitialize>(earlyInitializers, i => i.EarlyDependencies);
 
-        LoggerProvider.Get().Log(LogLevel.Info, "LoadingManager", $"Early-initializing {earlyInitializers.Count} components");
-        foreach (var initializer in earlyInitializers)
+        LoggerProvider.Get().Log(LogLevel.Info, "LoadingManager", $"Early-initializing {earlyGraph.Order.Count} components");
+        foreach (var initializer in earlyGraph.Order)
         {
             try
             {
@@ -338,9 +342,10 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
             .OfType<ILateInitialize>()
             .OrderByDescending(i => i.LatePriority)
             .ToList();
+        var lateGraph = new InitGraph<ILateInitialize>(lateInitializers, i => i.LateDependencies);
 
-        LoggerProvider.Get().Log(LogLevel.Info, "LoadingManager", $"Late-initializing {lateInitializers.Count} components");
-        foreach (var initializer in lateInitializers)
+        LoggerProvider.Get().Log(LogLevel.Info, "LoadingManager", $"Late-initializing {lateGraph.Order.Count} components");
+        foreach (var initializer in lateGraph.Order)
         {
             try
             {
