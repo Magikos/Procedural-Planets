@@ -1,28 +1,9 @@
 using UnityEngine;
 
-// Immutable runtime DTOs for grass placement. Per the project's settings DTO pattern
-// ([[feedback-settings-dto-pattern]]), grass placement consumers receive these snapshots
-// rather than reading BiomeDefinition or other Settings SOs directly. The composition
-// root (GrassPlacementController) builds these from the SOs once at chunk init.
-//
-// Why: keeps consumer dependencies signature-honest. If GrassTintBase is renamed on
-// BiomeDefinition, only the builder changes; placement code and shaders are unaffected.
-
-/// <summary>
-/// Per-biome grass tint configuration. Built once per biome at planet init from
-/// <see cref="BiomeDefinition"/>; passed to the placement compute as a packed buffer.
-/// The compute weighted-blends these by the top-K biome weights at each blade root,
-/// then lerps between dry and lush by local moisture.
-/// </summary>
 public readonly struct GrassBiomeTintConfig
 {
-    /// <summary>Base tint applied before any climate shift.</summary>
     public readonly Color TintBase;
-
-    /// <summary>Multiplier applied to <see cref="TintBase"/> when local moisture is 0.</summary>
     public readonly Color TintDryShift;
-
-    /// <summary>Multiplier applied to <see cref="TintBase"/> when local moisture is 1.</summary>
     public readonly Color TintLushShift;
 
     public GrassBiomeTintConfig(Color tintBase, Color tintDryShift, Color tintLushShift)
@@ -32,11 +13,6 @@ public readonly struct GrassBiomeTintConfig
         TintLushShift = tintLushShift;
     }
 
-    /// <summary>
-    /// Composition root: extract the tint contract from a biome SO. ONE place that
-    /// knows BiomeDefinition's field layout. Rename a field on the SO and only this
-    /// method changes.
-    /// </summary>
     public static GrassBiomeTintConfig From(BiomeDefinition src)
     {
         if (src == null)
@@ -45,3 +21,41 @@ public readonly struct GrassBiomeTintConfig
     }
 }
 
+public readonly struct GrassBiomePlacementConfig
+{
+    public readonly float Density;
+    public readonly float Height;
+    public readonly float Width;
+    public readonly float ClumpStrength;
+    public readonly float MaxSlopeDegrees;
+    public readonly float SlopeFadeDegrees;
+    public readonly float MinWaterClearance;
+    public readonly float BiomeBlendPower;
+
+    public GrassBiomePlacementConfig(float density, float height, float width, float clumpStrength,
+        float maxSlopeDegrees, float slopeFadeDegrees, float minWaterClearance, float biomeBlendPower)
+    {
+        Density = density;
+        Height = height;
+        Width = width;
+        ClumpStrength = clumpStrength;
+        MaxSlopeDegrees = maxSlopeDegrees;
+        SlopeFadeDegrees = slopeFadeDegrees;
+        MinWaterClearance = minWaterClearance;
+        BiomeBlendPower = biomeBlendPower;
+    }
+
+    public static GrassBiomePlacementConfig From(BiomeDefinition src)
+    {
+        if (src == null) return default;
+        return new GrassBiomePlacementConfig(
+            density: Mathf.Clamp01(src.GrassDensity),
+            height: Mathf.Max(0f, src.GrassHeight),
+            width: Mathf.Max(0f, src.GrassWidth),
+            clumpStrength: Mathf.Clamp01(src.GrassClumpStrength),
+            maxSlopeDegrees: Mathf.Clamp(src.GrassMaxSlopeDegrees, 0f, 90f),
+            slopeFadeDegrees: Mathf.Max(0f, src.GrassSlopeFadeDegrees),
+            minWaterClearance: Mathf.Max(0f, src.GrassMinWaterClearance),
+            biomeBlendPower: Mathf.Max(0.001f, src.GrassBiomeBlendPower));
+    }
+}

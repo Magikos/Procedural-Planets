@@ -139,7 +139,11 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         var data = new BiomeGrassParamsGpu[SliceCount];
         for (int slot = 0; slot < SliceCount; slot++)
         {
-            data[slot] = ResolveGrassParams(registry.GetDefinitionByIndex(slot));
+            var def = registry.GetDefinitionByIndex(slot);
+            if (def == null) { data[slot] = default; continue; }
+            var placement = GrassBiomePlacementConfig.From(def);
+            var tint = GrassBiomeTintConfig.From(def);
+            data[slot] = PackGrassParams(placement, tint);
         }
 
         var buffer = new ComputeBuffer(SliceCount, GrassParamsStride, ComputeBufferType.Structured);
@@ -147,24 +151,14 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         return buffer;
     }
 
-    static BiomeGrassParamsGpu ResolveGrassParams(BiomeDefinition def)
+    static BiomeGrassParamsGpu PackGrassParams(in GrassBiomePlacementConfig placement, in GrassBiomeTintConfig tint)
     {
-        if (def == null) return default;
-
-        Color tint = def.GrassTintBase;
+        Color t = tint.TintBase;
         return new BiomeGrassParamsGpu
         {
-            Shape = new Vector4(
-                Mathf.Clamp01(def.GrassDensity),
-                Mathf.Max(0f, def.GrassHeight),
-                Mathf.Max(0f, def.GrassWidth),
-                Mathf.Clamp01(def.GrassClumpStrength)),
-            Placement = new Vector4(
-                Mathf.Clamp(def.GrassMaxSlopeDegrees, 0f, 90f),
-                Mathf.Max(0f, def.GrassSlopeFadeDegrees),
-                Mathf.Max(0f, def.GrassMinWaterClearance),
-                Mathf.Max(0.001f, def.GrassBiomeBlendPower)),
-            Tint = new Vector4(tint.r, tint.g, tint.b, tint.a),
+            Shape = new Vector4(placement.Density, placement.Height, placement.Width, placement.ClumpStrength),
+            Placement = new Vector4(placement.MaxSlopeDegrees, placement.SlopeFadeDegrees, placement.MinWaterClearance, placement.BiomeBlendPower),
+            Tint = new Vector4(t.r, t.g, t.b, t.a),
         };
     }
 
