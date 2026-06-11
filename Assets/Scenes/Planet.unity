@@ -462,8 +462,6 @@ MonoBehaviour:
   _settingsFoldout: 1
   _lastGeneratedRadius: 5257.269
   _lastSeaLevelRadius: 5000
-  _lastElevationMin: -0.055924337
-  _lastElevationMax: 0.0514538
 --- !u!114 &300000003
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -476,7 +474,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1193fc8f59456b34684abd9d79a88f99, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ProceduralPlanets.Planet::AtmosphereController
-  Settings: {fileID: 11400000, guid: 7a4fdf6168f7033429d13b09712f73d8, type: 2}
   CelestialManager: {fileID: 2066598904}
   OpticalDepthCompute: {fileID: 7200000, guid: 2977511bff9f43b4cb7f5e78271fa735, type: 3}
 --- !u!1 &400000000
@@ -490,7 +487,7 @@ GameObject:
   - component: {fileID: 400000001}
   - component: {fileID: 400000002}
   m_Layer: 0
-  m_Name: GameBootstrap
+  m_Name: '[SceneBootstrap]'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -520,9 +517,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 400000000}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bc922d620879a654e90a585f96833817, type: 3}
+  m_Script: {fileID: 11500000, guid: e8b5d3193c0ba12469e0d65c02cf4379, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: ProceduralPlanets.Core::SceneBootstrap
   WorldSeed: 12345
 --- !u!1 &540153373
 GameObject:
@@ -644,19 +641,6 @@ MonoBehaviour:
   DustStreakLength: 0.65
   DustTurbulence: 0.28
   DustColor: {r: 0.72, g: 0.64, b: 0.48, a: 1}
-  RainParticleCount: 12000
-  RainParticleRadius: 600
-  RainStreakLength: 2
-  RainParticleOpacity: 0.65
-  RainFallSpeed: 25
-  RainThreshold: 0.05
-  RainWidth: 0.05
-  DistantRainParticleCount: 10000
-  DistantRainParticleRadius: 3000
-  DistantRainStreakLength: 60
-  DistantRainOpacity: 0.55
-  DistantRainThreshold: 0.03
-  DistantRainWidth: 0.4
   SnowParticleCount: 1800
   SnowParticleOpacity: 0.72
   SnowFallSpeed: 1.6
@@ -722,6 +706,50 @@ MonoBehaviour:
   VisibilityThreshold: 0.05
   DensityScale: 2.5
   RainColor: {r: 0.92, g: 0.95, b: 1, a: 0.95}
+--- !u!1 &1105297411
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1105297413}
+  - component: {fileID: 1105297412}
+  m_Layer: 0
+  m_Name: '[GameBootstrap]'
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1105297412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1105297411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc922d620879a654e90a585f96833817, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ProceduralPlanets.Core::GameBootstrap
+--- !u!4 &1105297413
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1105297411}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1819645268
 GameObject:
   m_ObjectHideFlags: 0
@@ -928,6 +956,7 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
+  - {fileID: 1105297413}
   - {fileID: 400000001}
   - {fileID: 200000001}
   - {fileID: 2066598905}
