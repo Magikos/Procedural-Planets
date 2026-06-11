@@ -1,15 +1,15 @@
+﻿#if PLANET_GPU_EXPERIMENT
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// Experimental GPU-backed surface provider.
-//
-// This is intentionally only the first proof of the pipeline: six root cube-face patches are
-// rendered from compute-generated vertex/normal buffers. CPU still owns water/surface queries
-// through a one-time readback after generation. Runtime Tick is a no-op until quadtree chunk
-// descriptors and indirect rendering land.
+// Parked experiment: move planet surface generation to GPU compute. First proof landed
+// six root cube-face patches from compute-generated vertex/normal buffers; runtime Tick
+// is a no-op until quadtree chunk descriptors and indirect rendering land. Not wired into
+// PlanetResolution; gated behind PLANET_GPU_EXPERIMENT so it stops shipping until the
+// arc resumes.
 public sealed class GpuChunkSurfaceProvider : IPlanetSurfaceProvider
 {
     const int PatchResolution = 33;
@@ -530,3 +530,4 @@ public sealed class GpuChunkSurfaceProvider : IPlanetSurfaceProvider
         }
     }
 }
+#endif

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using Unity.Collections;
 using Unity.Jobs;
@@ -13,7 +13,7 @@ public interface IChunkVisibilitySource
     event System.Action<PlanetChunk> ChunkHidden;
 }
 
-// Phase A "High" resolution provider — pre-cache + visibility filter.
+// Phase A "High" resolution provider â€” pre-cache + visibility filter.
 //
 // At Planet.GenerateAsync time, the provider builds 6 quadtrees to a fixed MaxChunkDepth and
 // schedules Burst mesh jobs for EVERY chunk (internal + leaves) in batches. All chunk CPU
@@ -28,12 +28,12 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
 {
     // Per-chunk vertex grid resolution. 97 = 9,409 vertices and 18,432 triangles per chunk
     // (vs 65 = 4,225 verts / 8,192 tris). The bump improves biome-color sharpness and terrain
-    // detail at the cost of ~2.2× memory and mesh-gen time. True per-pixel biome boundaries
-    // need shader-based biome sampling, which is Phase B work — this is the best we can do at
+    // detail at the cost of ~2.2Ã— memory and mesh-gen time. True per-pixel biome boundaries
+    // need shader-based biome sampling, which is Phase B work â€” this is the best we can do at
     // the vertex-color level.
     const int ChunkResolution = 97;
     // Schedule chunks in batches during initial gen to bound transient NativeArray memory.
-    // 128 chunks × ~135 KB/chunk ≈ 17 MB transient — comfortable on PC.
+    // 128 chunks Ã— ~135 KB/chunk â‰ˆ 17 MB transient â€” comfortable on PC.
     const int InitialGenBatchSize = 128;
     // LOD target: a chunk refines when its conservative projected diameter exceeds this.
     // This is a screen-space contract, not a terrain-value tuning knob.
@@ -46,11 +46,11 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     const float DiagnosticsLogIntervalSeconds = 1f;
     const int ChunkMeshUploadBatchSize = 24;
     // Depth at which we aggregate chunk vertex data for the WaterMeshBuilder face sampler.
-    // 2 → 385² per face (with R=97), 16× finer shorelines than the root chunk. Bounded by
+    // 2 â†’ 385Â² per face (with R=97), 16Ã— finer shorelines than the root chunk. Bounded by
     // MaxChunkDepth at construction time. Memory: ~14 MB total across 6 faces at depth 2.
     const int WaterAggregateDepth = 2;
     // Flip to true (or define the symbol below) to log per-tick chunk visibility breakdowns.
-    // Default off — was spamming the console once visibility changes were happening every frame
+    // Default off â€” was spamming the console once visibility changes were happening every frame
     // during fly-through. Useful when diagnosing LOD/culling behavior.
 #if PLANET_CHUNK_DIAGNOSTICS
     const bool EnableChunkDiagnosticsLog = true;
@@ -78,14 +78,14 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     long _reportedFaceBiomeAtlasRawBytes;
     GrassSurfaceAtlasGpuData _grassSurfaceAtlases;
 
-    // Per-face visible-leaf snapshot — compared each Tick to detect changes.
+    // Per-face visible-leaf snapshot â€” compared each Tick to detect changes.
     readonly List<PlanetChunk>[] _visibleLeavesPerFace = new List<PlanetChunk>[6];
     readonly List<PlanetChunk> _tmpVisibleLeaves = new();
     readonly HashSet<PlanetChunk> _tmpVisibleSet = new();
     readonly List<PlanetChunk> _allChunks = new();
     readonly Dictionary<PlanetChunk, ChunkRenderHandle> _chunkRenderers = new();
     // Step 5b: per-bake thread-local scratch buffer used by BiomeMapBaker for the high-res
-    // biome id grid (HighResolutionSize²). Reused across all chunks on a thread to keep the
+    // biome id grid (HighResolutionSizeÂ²). Reused across all chunks on a thread to keep the
     // bake GC-free. Sized lazily on first use.
     [System.ThreadStatic] static byte[] _tlsBakeHighResBuffer;
 
@@ -96,7 +96,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     float _lodFocalLengthPixels = 935f;
     float _nextDiagnosticsLogTime;
 
-    // In-flight chunk jobs — only used during initial gen; empty at runtime.
+    // In-flight chunk jobs â€” only used during initial gen; empty at runtime.
     readonly List<PendingChunkJob> _pendingJobs = new();
 
     NativeArray<NoiseFilterData> _filters;
@@ -141,7 +141,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         for (int f = 0; f < 6; f++)
             _quadtrees[f].BuildToFixedDepth(_maxChunkDepth);
 
-        // 2) Gather every chunk (internal + leaf) — all are rendering candidates depending
+        // 2) Gather every chunk (internal + leaf) â€” all are rendering candidates depending
         //    on camera distance. Sort leaves-first / coarse-to-fine isn't necessary; the
         //    Burst scheduler handles arbitrary order well.
         var allChunks = new List<PlanetChunk>(1024);
@@ -206,8 +206,8 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
 
         // 5) Build face-sampler views for the water builder. Aggregating depth-N chunks into
         //    a single per-face grid raises water-mesh resolution from ChunkResolution (root)
-        //    to 2^N × (ChunkResolution-1) + 1 — at depth 2 with R=97 that's 385² per face,
-        //    16× finer shorelines than the root sampler.
+        //    to 2^N Ã— (ChunkResolution-1) + 1 â€” at depth 2 with R=97 that's 385Â² per face,
+        //    16Ã— finer shorelines than the root sampler.
         int waterAggregateDepth = Mathf.Clamp(WaterAggregateDepth, 0, _maxChunkDepth);
         _rootSamplers = new IFaceMeshSampler[6];
         for (int f = 0; f < 6; f++)
@@ -966,7 +966,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     // Phase B step 9: Phase E entry point. Walks the chunk tree on the face containing the
     // direction, finds the leaf, re-runs the bake + GPU upload for that single chunk.
     // Returns the count rebaked (0 if pre-init, no registry available, etc.). Phase E callers
-    // will typically expand this to a radius — for now single-chunk is sufficient plumbing.
+    // will typically expand this to a radius â€” for now single-chunk is sufficient plumbing.
     public int RebakeBiomeMapsAt(Vector3 localUnitDirection)
     {
         if (_cachedBiomeProvider is not ColorGenerator cg || cg.Registry == null || cg.BiomeColors == null)
@@ -1186,10 +1186,10 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
             _chunkPropertyBlock.SetTexture(BiomeWeightsShaderId, weightsTexture);
         // Phase B step 9: per-chunk surface-state mask bound here. Always chunk-local
         // (no atlas) because Phase E mutations are per-chunk. Shader sampling is deferred
-        // to Phase E — for now the binding just exercises the upload path.
+        // to Phase E â€” for now the binding just exercises the upload path.
         if (chunk.SurfaceStateTexture != null)
             _chunkPropertyBlock.SetTexture(SurfaceStateMaskShaderId, chunk.SurfaceStateTexture);
-        // _TexelSize is (1/w, 1/h, w, h) — matches Unity's built-in texture layout so the
+        // _TexelSize is (1/w, 1/h, w, h) â€” matches Unity's built-in texture layout so the
         // shader can do neighbor-texel lookups without external math.
         int res = Mathf.Max(blendedTexture.width, 1);
         _chunkPropertyBlock.SetVector(BiomeMapTexelSizeShaderId,
@@ -1577,7 +1577,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
 
         // Pre-cache builds every chunk with EdgeFanMask = 0 (no vertex snapping). At runtime
         // the visibility filter renders chunks at varying depths, so any given chunk's effective
-        // neighbor LOD can change between frames — pre-baking masks would require 16 mesh
+        // neighbor LOD can change between frames â€” pre-baking masks would require 16 mesh
         // variants per chunk. For Phase A we accept small cracks at LOD transitions; fix later.
         Vector3 localUp = GetFaceLocalUp(chunk.FaceIndex);
         GetFaceAxes(chunk.FaceIndex, out Vector3 axisA, out Vector3 axisB);
@@ -1600,7 +1600,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
 
         JobHandle meshHandle = meshJob.Schedule(vertexCount, 256);
 
-        // Chain the normals pass after the mesh job — it reads Vertices written above.
+        // Chain the normals pass after the mesh job â€” it reads Vertices written above.
         var normalsJob = new PlanetChunkNormalsJob
         {
             Resolution = ChunkResolution,
@@ -1995,151 +1995,4 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         public Mesh Mesh;
         public bool Visible;
     }
-
-#if false
-    // ---- Boundary normal smoothing ---------------------------------------------------------
-    //
-    // Within-face: chunks A and B that share an edge have separate vertex indices in the
-    //   combined mesh, even though their edge vertices land at identical world positions.
-    //   Mesh.RecalculateNormals computes per-vertex normals from incident triangles only,
-    //   so each side's edge normal looks "into its own chunk" and misses the other.
-    //
-    // Cross-face: A's edge vertex on face F and B's edge vertex on face F' are at the same
-    //   world position but live in different combined meshes. Same problem at the cube edge.
-    //
-    // Fix: for each rebuilt face, pair each chunk-edge vertex with its position-matched
-    // counterpart on the matching neighbor and average their normals. This face's normals are
-    // written; the neighbor's stay untouched (its own rebuild will converge symmetrically).
-    //
-    // In pre-cache mode this runs once per face at initial gen, plus once per face whenever
-    // visibility changes mid-game (cheap since all CPU data is already populated).
-
-    void SmoothFaceNormals(int faceIdx)
-    {
-        var faceMesh = _combinedMeshes[faceIdx].Mesh;
-        var faceOffsets = _combinedMeshes[faceIdx].ChunkVertexOffsets;
-        if (faceOffsets.Count == 0) return;
-
-        _smoothFaceNormalsScratch.Clear();
-        faceMesh.GetNormals(_smoothFaceNormalsScratch);
-        bool anyModified = false;
-
-        for (int i = 0; i < 6; i++) _smoothNeighborNormalsValid[i] = false;
-        var neighborPosToNormal = _smoothPosToNormalScratch;
-
-        foreach (var pair in faceOffsets)
-        {
-            var chunk = pair.Key;
-            int chunkOffset = pair.Value;
-
-            for (int e = 0; e < 4; e++)
-            {
-                CubeEdge edge = (CubeEdge)e;
-
-                PlanetChunk neighborChunk;
-                int neighborFaceIdx;
-                if (TerrainQuadtree.IsFaceBoundaryEdge(chunk, edge))
-                {
-                    Vector2 edgeMidUv = EdgeMidpointUv(chunk, edge);
-                    if (!CubeFaceTopology.TryMirrorUv(edgeMidUv, chunk.FaceIndex, edge, out neighborFaceIdx, out Vector2 mirroredUv))
-                        continue;
-                    mirroredUv = NudgeInsideUnitSquare(mirroredUv);
-                    neighborChunk = _quadtrees[neighborFaceIdx].FindLeafContaining(mirroredUv);
-                }
-                else
-                {
-                    neighborFaceIdx = chunk.FaceIndex;
-                    float eps = chunk.UvHalfExtent * 0.5f; if (eps < 1e-5f) eps = 1e-5f;
-                    Vector2 queryUv = edge switch
-                    {
-                        CubeEdge.East  => new Vector2(chunk.UvCenter.x + chunk.UvHalfExtent + eps, chunk.UvCenter.y),
-                        CubeEdge.West  => new Vector2(chunk.UvCenter.x - chunk.UvHalfExtent - eps, chunk.UvCenter.y),
-                        CubeEdge.North => new Vector2(chunk.UvCenter.x, chunk.UvCenter.y - chunk.UvHalfExtent - eps),
-                        CubeEdge.South => new Vector2(chunk.UvCenter.x, chunk.UvCenter.y + chunk.UvHalfExtent + eps),
-                        _ => chunk.UvCenter,
-                    };
-                    neighborChunk = _quadtrees[neighborFaceIdx].FindLeafContaining(queryUv);
-                }
-
-                if (neighborChunk == null || neighborChunk.CpuVertices == null) continue;
-                // FindLeafContaining returns the deepest chunk at that UV — for pre-cache that
-                // may be deeper than our visibility filter would render. Walk up to the chunk
-                // actually in the neighbor face's visible set so we read the right normals.
-                while (neighborChunk != null
-                    && !_combinedMeshes[neighborFaceIdx].ChunkVertexOffsets.ContainsKey(neighborChunk))
-                    neighborChunk = neighborChunk.Parent;
-                if (neighborChunk == null) continue;
-                int neighborChunkOffset = _combinedMeshes[neighborFaceIdx].ChunkVertexOffsets[neighborChunk];
-
-                if (!_smoothNeighborNormalsValid[neighborFaceIdx])
-                {
-                    var buf = _smoothNeighborNormalsBuffers[neighborFaceIdx];
-                    if (buf == null) buf = _smoothNeighborNormalsBuffers[neighborFaceIdx] = new List<Vector3>();
-                    buf.Clear();
-                    _combinedMeshes[neighborFaceIdx].Mesh.GetNormals(buf);
-                    _smoothNeighborNormalsValid[neighborFaceIdx] = true;
-                }
-                var neighborNormals = _smoothNeighborNormalsBuffers[neighborFaceIdx];
-
-                CubeEdge neighborEdge = edge;
-                if (neighborFaceIdx != chunk.FaceIndex)
-                    neighborEdge = CubeFaceTopology.GetNeighbor(chunk.FaceIndex, edge).NeighborEdge;
-
-                int[] neighborEdgeIndices = EdgeVertexIndices[(int)neighborEdge];
-                int[] thisEdgeIndices = EdgeVertexIndices[(int)edge];
-
-                neighborPosToNormal.Clear();
-                for (int k = 0; k < neighborEdgeIndices.Length; k++)
-                {
-                    int vi = neighborEdgeIndices[k];
-                    if (vi < 0 || vi >= neighborChunk.CpuVertices.Length) continue;
-                    long key = PackPosition(neighborChunk.CpuVertices[vi]);
-                    neighborPosToNormal[key] = neighborNormals[neighborChunkOffset + vi];
-                }
-
-                for (int k = 0; k < thisEdgeIndices.Length; k++)
-                {
-                    int vi = thisEdgeIndices[k];
-                    if (vi < 0 || vi >= chunk.CpuVertices.Length) continue;
-                    long key = PackPosition(chunk.CpuVertices[vi]);
-                    if (!neighborPosToNormal.TryGetValue(key, out Vector3 neighborNrm)) continue;
-                    int meshIdx = chunkOffset + vi;
-                    Vector3 averaged = (_smoothFaceNormalsScratch[meshIdx] + neighborNrm).normalized;
-                    _smoothFaceNormalsScratch[meshIdx] = averaged;
-                    anyModified = true;
-                }
-            }
-        }
-
-        if (anyModified) faceMesh.SetNormals(_smoothFaceNormalsScratch);
-    }
-
-    static Vector2 EdgeMidpointUv(PlanetChunk chunk, CubeEdge edge) => edge switch
-    {
-        CubeEdge.East  => new Vector2(chunk.UvCenter.x + chunk.UvHalfExtent, chunk.UvCenter.y),
-        CubeEdge.West  => new Vector2(chunk.UvCenter.x - chunk.UvHalfExtent, chunk.UvCenter.y),
-        CubeEdge.North => new Vector2(chunk.UvCenter.x, chunk.UvCenter.y - chunk.UvHalfExtent),
-        CubeEdge.South => new Vector2(chunk.UvCenter.x, chunk.UvCenter.y + chunk.UvHalfExtent),
-        _ => chunk.UvCenter,
-    };
-
-    static Vector2 NudgeInsideUnitSquare(Vector2 uv)
-    {
-        const float eps = 1e-4f;
-        return new Vector2(
-            Mathf.Clamp(uv.x, eps, 1f - eps),
-            Mathf.Clamp(uv.y, eps, 1f - eps));
-    }
-
-    static long PackPosition(Vector3 p)
-    {
-        int xi = Mathf.RoundToInt(p.x * SpatialHashScale.x);
-        int yi = Mathf.RoundToInt(p.y * SpatialHashScale.y);
-        int zi = Mathf.RoundToInt(p.z * SpatialHashScale.z);
-        long h = (long)(uint)xi;
-        h = h * 1000003L + (uint)yi;
-        h = h * 1000003L + (uint)zi;
-        return h;
-    }
-#endif
 }

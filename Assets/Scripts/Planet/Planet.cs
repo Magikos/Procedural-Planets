@@ -24,8 +24,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 #pragma warning restore CS0414
     [SerializeField, HideInInspector] float _lastGeneratedRadius;
     [SerializeField, HideInInspector] float _lastSeaLevelRadius;
-    [SerializeField, HideInInspector] float _lastElevationMin;
-    [SerializeField, HideInInspector] float _lastElevationMax;
 
     ShapeGenerator _shapeGenerator = new ShapeGenerator();
     ColorGenerator _colorGenerator = new ColorGenerator();
@@ -438,11 +436,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             float seaLevelRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel);
             _lastGeneratedRadius = scaledRadius;
             _lastSeaLevelRadius = seaLevelRadius;
-            _lastElevationMin = _shapeGenerator.ElevationMin;
-            _lastElevationMax = _shapeGenerator.ElevationMax;
             _progressHandle.Report(1f, "Planet ready");
             await Awaitable.NextFrameAsync(ct);
-            EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _lastElevationMin, _lastElevationMax));
+            EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _shapeGenerator.ElevationMin, _shapeGenerator.ElevationMax));
             Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, mode {_planetSettings.Resolution}, perFaceResolution {PerFaceResolution}, radius {scaledRadius:F1}");
         }
         catch (System.OperationCanceledException)

@@ -549,7 +549,7 @@ public class DebugCaptureController : MonoBehaviour
             sb.AppendLine($"PrecipitationEnabled: {precipitation.PrecipitationRenderingEnabled}");
             sb.AppendLine($"PrecipLocalParticlesEnabled: {precipitation.LocalPrecipitationParticlesEnabled}");
             sb.AppendLine($"PrecipLocalParticlesForCamera: {precipitation.ShouldRenderLocalParticles(cameraContext.CameraComponent)}");
-            sb.AppendLine($"WeatherParticles: radius={precipitation.LocalParticleRadius:F1}m, dust={precipitation.DustParticleCount}, rain={precipitation.RainParticleCount}, snow={precipitation.SnowParticleCount}, proof={precipitation.WeatherParticleProofMode}");
+            sb.AppendLine($"WeatherParticles: radius={precipitation.LocalParticleRadius:F1}m, dust={precipitation.DustParticleCount}, snow={precipitation.SnowParticleCount}, proof={precipitation.WeatherParticleProofMode}");
             sb.AppendLine($"WeatherParticleDimensions: {precipitation.WeatherParticleSettingsSummary}");
         }
         if (_cachedWeatherProvider != null && cameraContext != null)

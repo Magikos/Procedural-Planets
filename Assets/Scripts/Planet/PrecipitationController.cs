@@ -76,32 +76,6 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     [Range(0f, 2f)] public float DustTurbulence = 0.28f;
     public Color DustColor = new Color(0.72f, 0.64f, 0.48f, 1f);
 
-    [Header("Rain Profile")]
-    [FormerlySerializedAs("LocalParticleCount")]
-    [Range(0, 20000)] public int RainParticleCount = 12000;
-    [Tooltip("Horizontal distribution radius of rain particles around the camera. Beyond ~800m, particles fall below the planet horizon and get depth-test culled at low camera altitudes.")]
-    [Range(200f, 5000f)] public float RainParticleRadius = 600f;
-    [Range(0.05f, 8f)] public float RainStreakLength = 4.0f;
-    [FormerlySerializedAs("LocalParticleOpacity")]
-    [Range(0f, 1f)] public float RainParticleOpacity = 0.65f;
-    [Tooltip("Visual fall speed in m/s. Real rain terminal velocity is ~9 m/s but reads as slow motion on screen; 50-70 m/s looks like 'fast rain' to the eye.")]
-    [Range(1f, 120f)] public float RainFallSpeed = 60f;
-    [FormerlySerializedAs("LocalRainThreshold")]
-    [Range(0f, 1f)] public float RainThreshold = 0.05f;
-    [Range(0.003f, 0.2f)] public float RainWidth = 0.06f;
-
-    [Header("Distant Rain Profile")]
-    [Tooltip("Planet-scale rain layer visible from far away. Renders longer, wider streaks across a much wider radius so storms are visible at a distance.")]
-    [Range(0, 30000)] public int DistantRainParticleCount = 10000;
-    [Range(800f, 8000f)] public float DistantRainParticleRadius = 3000f;
-    [Tooltip("Streak length for distant rain. Much longer than close rain so the streak reads at long viewing distance.")]
-    [Range(2f, 120f)] public float DistantRainStreakLength = 60f;
-    [Range(0f, 1f)] public float DistantRainOpacity = 0.55f;
-    [Tooltip("Visibility threshold for distant rain. Lower than close-rain threshold so light storms still show streaks at a distance.")]
-    [Range(0f, 1f)] public float DistantRainThreshold = 0.03f;
-    [Tooltip("Streak width for distant rain in meters. Close rain at 0.06m is sub-pixel at 1km+; distant rain needs to be wide enough that each streak resolves to at least 1 pixel at long viewing distance.")]
-    [Range(0.05f, 1.5f)] public float DistantRainWidth = 0.4f;
-
     [Header("Snow Profile")]
     [Range(0, 8000)] public int SnowParticleCount = 1800;
     [Range(0f, 1f)] public float SnowParticleOpacity = 0.72f;
@@ -144,10 +118,6 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     static readonly int _weatherParticleCommonId = Shader.PropertyToID("_WeatherParticleCommon");
     static readonly int _weatherParticleCountsId = Shader.PropertyToID("_WeatherParticleCounts");
     static readonly int _weatherParticleDustParamsId = Shader.PropertyToID("_WeatherParticleDustParams");
-    static readonly int _weatherParticleRainParamsId = Shader.PropertyToID("_WeatherParticleRainParams");
-    static readonly int _weatherParticleRainExtendedId = Shader.PropertyToID("_WeatherParticleRainExtended");
-    static readonly int _weatherParticleDistantRainParamsId = Shader.PropertyToID("_WeatherParticleDistantRainParams");
-    static readonly int _weatherParticleDistantRainExtendedId = Shader.PropertyToID("_WeatherParticleDistantRainExtended");
     static readonly int _weatherParticleSnowParamsId = Shader.PropertyToID("_WeatherParticleSnowParams");
     static readonly int _weatherParticlePhaseParamsId = Shader.PropertyToID("_WeatherParticlePhaseParams");
     static readonly int _weatherParticleDustColorId = Shader.PropertyToID("_WeatherParticleDustColor");
@@ -161,10 +131,7 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         RenderPrecipitation && Intensity > 0f || DebugMode != DebugView.Off;
 
     bool IsLocalParticleSystemEnabled =>
-        RenderLocalParticles && (DustParticleCount > 0 ||
-                                 RainParticleCount > 0 ||
-                                 SnowParticleCount > 0 ||
-                                 DistantRainParticleCount > 0);
+        RenderLocalParticles && (DustParticleCount > 0 || SnowParticleCount > 0);
 
     public bool PrecipitationRenderingEnabled
     {
@@ -173,17 +140,14 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     }
 
     public bool LocalPrecipitationParticlesEnabled =>
-        RenderLocalParticles && RainParticleCount > 0;
+        RenderLocalParticles && (DustParticleCount > 0 || SnowParticleCount > 0);
 
-    // Explicit forward so the interface property is satisfied by the serialized field.
     float IPrecipitationDebugControl.StormThreshold => StormThreshold;
     float IPrecipitationDebugControl.LocalParticleRadius => LocalParticleRadius;
     int IPrecipitationDebugControl.DustParticleCount => DustParticleCount;
-    int IPrecipitationDebugControl.RainParticleCount => RainParticleCount;
     int IPrecipitationDebugControl.SnowParticleCount => SnowParticleCount;
     int IPrecipitationDebugControl.WeatherParticleProofMode => (int)ParticleProof;
     string IPrecipitationDebugControl.WeatherParticleSettingsSummary =>
-        $"rain={RainStreakLength:F2}m/{RainWidth:F3}m/{RainFallSpeed:F1}mps, " +
         $"dust={DustSize:F3}m/{DustStreakLength:F2}m";
 
     public bool ShouldRenderLocalParticles(Camera camera)
@@ -209,9 +173,6 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         LocalParticleVerticalRange = Mathf.Clamp(LocalParticleVerticalRange, 5f, 100f);
         DustSize = Mathf.Clamp(DustSize, 0.005f, 0.2f);
         DustStreakLength = Mathf.Clamp(DustStreakLength, 0.02f, 4f);
-        RainStreakLength = Mathf.Clamp(RainStreakLength, 0.05f, 2f);
-        RainFallSpeed = Mathf.Clamp(RainFallSpeed, 1f, 25f);
-        RainWidth = Mathf.Clamp(RainWidth, 0.003f, 0.05f);
     }
 
     void OnEnable()
@@ -320,30 +281,14 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
             DustTurbulence));
         Shader.SetGlobalVector(_weatherParticleCountsId, new Vector4(
             Mathf.Max(1, DustParticleCount),
-            Mathf.Max(1, RainParticleCount),
+            0f,
             Mathf.Max(1, SnowParticleCount),
-            Mathf.Max(1, DistantRainParticleCount)));
+            0f));
         Shader.SetGlobalVector(_weatherParticleDustParamsId, new Vector4(
             DustBaseDensity,
             DustStormDensity,
             DustOpacity,
             DustSize));
-        Shader.SetGlobalVector(_weatherParticleRainParamsId, new Vector4(
-            RainThreshold,
-            RainParticleOpacity,
-            RainStreakLength,
-            RainFallSpeed));
-        Shader.SetGlobalVector(_weatherParticleRainExtendedId, new Vector4(
-            RainParticleRadius,
-            0f, 0f, 0f));
-        Shader.SetGlobalVector(_weatherParticleDistantRainParamsId, new Vector4(
-            DistantRainParticleRadius,
-            DistantRainStreakLength,
-            DistantRainOpacity,
-            DistantRainThreshold));
-        Shader.SetGlobalVector(_weatherParticleDistantRainExtendedId, new Vector4(
-            DistantRainWidth,
-            0f, 0f, 0f));
         Shader.SetGlobalVector(_weatherParticleSnowParamsId, new Vector4(
             SnowThreshold,
             SnowParticleOpacity,
@@ -352,7 +297,7 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         Shader.SetGlobalVector(_weatherParticlePhaseParamsId, new Vector4(
             SnowTemperatureCelsius,
             SnowTemperatureBlendCelsius,
-            RainWidth,
+            0f,
             DustStreakLength));
         Shader.SetGlobalColor(_weatherParticleDustColorId, DustColor);
         Shader.SetGlobalColor(_weatherParticleSnowColorId, SnowColor);
@@ -382,18 +327,12 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         if (_localWeatherParticleSettingsVersion >= CurrentLocalWeatherParticleSettingsVersion)
             return;
 
-        // The previous local rain used 95 m lines moving at 520 arbitrary units/s.
-        // Those serialized numbers are not compatible with the physical meter-scale renderer.
         LocalParticleRadius = 120f;
         LocalParticleVerticalRange = 18f;
         DustOpacity = 0.45f;
         DustSize = 0.025f;
         DustStreakLength = 0.65f;
         DustTurbulence = 0.28f;
-        RainStreakLength = 4.0f;
-        RainParticleOpacity = 0.65f;
-        RainFallSpeed = 60f;
-        RainWidth = 0.06f;
         _localWeatherParticleSettingsVersion = CurrentLocalWeatherParticleSettingsVersion;
     }
 
@@ -421,38 +360,6 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         return $"weather particle radius: {LocalParticleRadius:F1} m";
     }
 
-    [ConsoleCommand("rain-radius", "Get or set close rain horizontal radius in meters.", MonoTargetType.Single)]
-    string RainRadiusCmd(float? radius = null)
-    {
-        if (radius.HasValue)
-            RainParticleRadius = Mathf.Clamp(radius.Value, 200f, 5000f);
-        return $"rain particle radius: {RainParticleRadius:F1} m";
-    }
-
-    [ConsoleCommand("distant-rain-radius", "Get or set distant-rain horizontal radius in meters. Distant rain renders longer streaks at planet scale so storms are visible from far away.", MonoTargetType.Single)]
-    string DistantRainRadiusCmd(float? radius = null)
-    {
-        if (radius.HasValue)
-            DistantRainParticleRadius = Mathf.Clamp(radius.Value, 800f, 8000f);
-        return $"distant rain radius: {DistantRainParticleRadius:F1} m";
-    }
-
-    [ConsoleCommand("distant-rain-count", "Get or set the distant-rain particle count.", MonoTargetType.Single)]
-    string DistantRainCountCmd(int? count = null)
-    {
-        if (count.HasValue)
-            DistantRainParticleCount = Mathf.Clamp(count.Value, 0, 20000);
-        return $"distant rain particles: {DistantRainParticleCount}";
-    }
-
-    [ConsoleCommand("distant-rain-length", "Get or set distant-rain streak length in meters.", MonoTargetType.Single)]
-    string DistantRainLengthCmd(float? length = null)
-    {
-        if (length.HasValue)
-            DistantRainStreakLength = Mathf.Clamp(length.Value, 2f, 80f);
-        return $"distant rain streak length: {DistantRainStreakLength:F1} m";
-    }
-
     [ConsoleCommand("dust-count", "Get or set the maximum procedural dust instance count.", MonoTargetType.Single)]
     string DustCountCmd(int? count = null)
     {
@@ -461,44 +368,12 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         return $"dust instances: {DustParticleCount}";
     }
 
-    [ConsoleCommand("rain-count", "Get or set the maximum procedural rain instance count.", MonoTargetType.Single)]
-    string RainCountCmd(int? count = null)
-    {
-        if (count.HasValue)
-            RainParticleCount = Mathf.Clamp(count.Value, 0, 8000);
-        return $"rain instances: {RainParticleCount}";
-    }
-
     [ConsoleCommand("snow-count", "Get or set the maximum procedural snow instance count.", MonoTargetType.Single)]
     string SnowCountCmd(int? count = null)
     {
         if (count.HasValue)
             SnowParticleCount = Mathf.Clamp(count.Value, 0, 8000);
         return $"snow instances: {SnowParticleCount}";
-    }
-
-    [ConsoleCommand("rain-length", "Get or set local rain streak length in meters.", MonoTargetType.Single)]
-    string RainLengthCmd(float? length = null)
-    {
-        if (length.HasValue)
-            RainStreakLength = Mathf.Clamp(length.Value, 0.05f, 2f);
-        return $"rain streak length: {RainStreakLength:F2} m";
-    }
-
-    [ConsoleCommand("rain-speed", "Get or set local rain fall speed in meters per second.", MonoTargetType.Single)]
-    string RainSpeedCmd(float? speed = null)
-    {
-        if (speed.HasValue)
-            RainFallSpeed = Mathf.Clamp(speed.Value, 1f, 25f);
-        return $"rain fall speed: {RainFallSpeed:F1} m/s";
-    }
-
-    [ConsoleCommand("rain-width", "Get or set local rain streak half-width in meters.", MonoTargetType.Single)]
-    string RainWidthCmd(float? width = null)
-    {
-        if (width.HasValue)
-            RainWidth = Mathf.Clamp(width.Value, 0.003f, 0.05f);
-        return $"rain streak half-width: {RainWidth:F3} m";
     }
 
     [ConsoleCommand("dust-size", "Get or set low-wind dust mote half-width in meters.", MonoTargetType.Single)]

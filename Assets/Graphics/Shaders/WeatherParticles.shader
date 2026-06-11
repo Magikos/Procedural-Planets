@@ -20,17 +20,6 @@ float4 _PrecipitationStormColor;
 float4 _WeatherParticleCommon;
 float4 _WeatherParticleCounts;
 float4 _WeatherParticleDustParams;
-float4 _WeatherParticleRainParams;
-float4 _WeatherParticleRainExtended;
-// Distant rain profile (3). Same fall column as profile 1 but at planet-scale
-// radius so storms are visible from a distance. .x = radius (m), .y = streak
-// length (m, much longer than close rain so streaks read at distance), .z =
-// opacity multiplier, .w = visibility threshold.
-float4 _WeatherParticleDistantRainParams;
-// Distant rain extended params. .x = streak width (m, needs to be wide enough
-// that streaks resolve to at least one pixel at far viewing distances — close
-// rain at 0.06m is sub-pixel past ~500m and renders invisible).
-float4 _WeatherParticleDistantRainExtended;
 float4 _WeatherParticleSnowParams;
 float4 _WeatherParticlePhaseParams;
 float4 _WeatherParticleDustColor;
@@ -130,14 +119,7 @@ ParticleVaryings WeatherParticleVertex(
     float precipitationLayerThickness =
         precipitationTopRadius - precipitationBottomRadius;
 
-    // Profile-specific horizontal radius. Close rain (1) uses RainExtended (~600m).
-    // Distant rain (3) uses DistantRainParams.x (~3000m+, planet-scale, so storms
-    // are visible from far away). Dust (0) and snow (2) stay at the camera-local
-    // radius from Common.
-    float radius;
-    if (profile == 1) radius = max(_WeatherParticleRainExtended.x, 1.0);
-    else if (profile == 3) radius = max(_WeatherParticleDistantRainParams.x, 1.0);
-    else radius = max(_WeatherParticleCommon.x, 1.0);
+    float radius = max(_WeatherParticleCommon.x, 1.0);
     float maxCameraAltitude = max(_WeatherParticleCommon.y, 1.0);
     float verticalRange = max(_WeatherParticleCommon.z, 1.0);
     float systemVisible = _WeatherParticlesEnabled != 0 &&
@@ -236,23 +218,7 @@ ParticleVaryings WeatherParticleVertex(
         color = _WeatherParticleDustColor.rgb;
         profileOpacity = _WeatherParticleDustParams.z;
     }
-    else if (profile == 1)
-    {
-        visibility = smoothstep(
-            _WeatherParticleRainParams.x,
-            min(1.0, _WeatherParticleRainParams.x + 0.38),
-            rainSignal) * (1.0 - snowPhase);
-        width = _WeatherParticlePhaseParams.z;
-        streakLength = _WeatherParticleRainParams.z;
-        fallSpeed = _WeatherParticleRainParams.w;
-        turbulence = 0.08 + storm * 0.12;
-        color = lerp(
-            _PrecipitationColor.rgb,
-            _PrecipitationStormColor.rgb,
-            storm);
-        profileOpacity = _WeatherParticleRainParams.y;
-    }
-    else if (profile == 2)
+    else
     {
         visibility = smoothstep(
             _WeatherParticleSnowParams.x,
@@ -264,28 +230,6 @@ ParticleVaryings WeatherParticleVertex(
         turbulence = 0.45 + _WindStrength01 * 0.65;
         color = _WeatherParticleSnowColor.rgb;
         profileOpacity = _WeatherParticleSnowParams.y;
-    }
-    else
-    {
-        // Distant rain (profile 3). Same fall column as close rain but with planet-
-        // scale radius and much longer/wider streaks. Visibility uses its own
-        // threshold so distant streaks can show wherever weather has *any* rain
-        // signal, while close rain (profile 1) only shows in heavier rain. Snow
-        // temperature gate still applies — distant rain becomes invisible in snow
-        // conditions.
-        visibility = smoothstep(
-            _WeatherParticleDistantRainParams.w,
-            min(1.0, _WeatherParticleDistantRainParams.w + 0.38),
-            rainSignal) * (1.0 - snowPhase);
-        width = _WeatherParticleDistantRainExtended.x;
-        streakLength = _WeatherParticleDistantRainParams.y;
-        fallSpeed = _WeatherParticleRainParams.w;
-        turbulence = 0.04 + storm * 0.08;
-        color = lerp(
-            _PrecipitationColor.rgb,
-            _PrecipitationStormColor.rgb,
-            storm);
-        profileOpacity = _WeatherParticleDistantRainParams.z;
     }
 
     if (proofVisibility >= 0.0)
@@ -413,19 +357,9 @@ ParticleVaryings VertDust(uint vertexID : SV_VertexID, uint instanceID : SV_Inst
     return WeatherParticleVertex(vertexID, instanceID, 0);
 }
 
-ParticleVaryings VertRain(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
-{
-    return WeatherParticleVertex(vertexID, instanceID, 1);
-}
-
 ParticleVaryings VertSnow(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
 {
     return WeatherParticleVertex(vertexID, instanceID, 2);
-}
-
-ParticleVaryings VertDistantRain(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
-{
-    return WeatherParticleVertex(vertexID, instanceID, 3);
 }
 
 float4 FragParticle(ParticleVaryings input) : SV_Target
@@ -486,30 +420,10 @@ ENDHLSL
 
         Pass
         {
-            Name "Rain"
-            HLSLPROGRAM
-            #pragma target 4.5
-            #pragma vertex VertRain
-            #pragma fragment FragParticle
-            ENDHLSL
-        }
-
-        Pass
-        {
             Name "Snow"
             HLSLPROGRAM
             #pragma target 4.5
             #pragma vertex VertSnow
-            #pragma fragment FragParticle
-            ENDHLSL
-        }
-
-        Pass
-        {
-            Name "DistantRain"
-            HLSLPROGRAM
-            #pragma target 4.5
-            #pragma vertex VertDistantRain
             #pragma fragment FragParticle
             ENDHLSL
         }

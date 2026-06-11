@@ -114,9 +114,7 @@ public class PrecipitationRenderPass : ScriptableRenderPass
     Material _material;
     Material _weatherParticleMaterial;
     int _dustParticleCount;
-    int _rainParticleCount;
     int _snowParticleCount;
-    int _distantRainParticleCount;
     bool _drawLocalParticles;
     IRainParticleRenderer _rainParticles;
     int _rainParticlesDrawCount;
@@ -140,12 +138,7 @@ public class PrecipitationRenderPass : ScriptableRenderPass
         _weatherParticleMaterial = weatherParticleMaterial;
         _drawLocalParticles = controller != null && controller.ShouldRenderLocalParticles(camera);
         _dustParticleCount = _drawLocalParticles ? Mathf.Max(0, controller.DustParticleCount) : 0;
-        // Close-rain and distant-rain via the procedural WeatherParticles shader are
-        // superseded by the world-anchored compute-buffer rain (IRainParticleRenderer).
-        // Force their draw counts to zero so we don't double-render.
-        _rainParticleCount = 0;
         _snowParticleCount = _drawLocalParticles ? Mathf.Max(0, controller.SnowParticleCount) : 0;
-        _distantRainParticleCount = 0;
 
         _rainParticles = ServiceLocator.Get<IRainParticleRenderer>();
         if (_rainParticles != null && _rainParticles.IsReadyToDraw && _drawLocalParticles)
@@ -167,9 +160,7 @@ public class PrecipitationRenderPass : ScriptableRenderPass
         internal TextureHandle source;
         internal bool drawLocalParticles;
         internal int dustParticleCount;
-        internal int rainParticleCount;
         internal int snowParticleCount;
-        internal int distantRainParticleCount;
         internal IRainParticleRenderer rainParticles;
         internal int rainParticlesDrawCount;
         internal Material rainParticlesMaterial;
@@ -200,9 +191,7 @@ public class PrecipitationRenderPass : ScriptableRenderPass
             passData.source = source;
             passData.drawLocalParticles = _drawLocalParticles;
             passData.dustParticleCount = _dustParticleCount;
-            passData.rainParticleCount = _rainParticleCount;
             passData.snowParticleCount = _snowParticleCount;
-            passData.distantRainParticleCount = _distantRainParticleCount;
             passData.rainParticles = _rainParticles;
             passData.rainParticlesDrawCount = _rainParticlesDrawCount;
             passData.rainParticlesMaterial = _rainParticlesMaterial;
@@ -230,25 +219,15 @@ public class PrecipitationRenderPass : ScriptableRenderPass
                     ctx.cmd.DrawProcedural(Matrix4x4.identity, data.weatherParticleMaterial, 0,
                         MeshTopology.Triangles, 18, data.dustParticleCount, _propertyBlock);
                 }
-                if (data.rainParticleCount > 0)
-                {
-                    ctx.cmd.DrawProcedural(Matrix4x4.identity, data.weatherParticleMaterial, 1,
-                        MeshTopology.Triangles, 18, data.rainParticleCount, _propertyBlock);
-                }
                 if (data.snowParticleCount > 0)
                 {
-                    ctx.cmd.DrawProcedural(Matrix4x4.identity, data.weatherParticleMaterial, 2,
+                    ctx.cmd.DrawProcedural(Matrix4x4.identity, data.weatherParticleMaterial, 1,
                         MeshTopology.Triangles, 18, data.snowParticleCount, _propertyBlock);
                 }
-                if (data.distantRainParticleCount > 0)
-                {
-                    ctx.cmd.DrawProcedural(Matrix4x4.identity, data.weatherParticleMaterial, 3,
-                        MeshTopology.Triangles, 18, data.distantRainParticleCount, _propertyBlock);
-                }
 
-                // Rain is drawn by the separate RainParticlesAfterPostPass below,
-                // which runs AfterRenderingPostProcessing so atmospheric scattering
-                // doesn't bleed over the drops. No rain draw here.
+                // Rain draws in RainParticlesAfterPostPass below at
+                // AfterRenderingPostProcessing so atmospheric scattering does
+                // not wash over the drops.
             });
         }
 

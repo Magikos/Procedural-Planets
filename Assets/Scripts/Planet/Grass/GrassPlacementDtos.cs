@@ -45,21 +45,3 @@ public readonly struct GrassBiomeTintConfig
     }
 }
 
-/// <summary>
-/// Per-chunk climate inputs for grass placement. Built once at chunk bake; bound to
-/// the placement compute per chunk. R=temperature01, G=moisture01 in the texture.
-/// Resolution matches <see cref="PlanetChunkTextures.BiomeMapResolution"/>.
-/// </summary>
-public readonly struct GrassPlacementClimateBinding
-{
-    public readonly Texture2D ChunkClimateTexture;
-    public readonly int Resolution;
-
-    public GrassPlacementClimateBinding(Texture2D chunkClimateTexture, int resolution)
-    {
-        ChunkClimateTexture = chunkClimateTexture;
-        Resolution = resolution;
-    }
-
-    public bool IsValid => ChunkClimateTexture != null && Resolution > 0;
-}

@@ -12,7 +12,6 @@ public interface IPrecipitationDebugControl
     float StormThreshold { get; }
     float LocalParticleRadius { get; }
     int DustParticleCount { get; }
-    int RainParticleCount { get; }
     int SnowParticleCount { get; }
     int WeatherParticleProofMode { get; }
     string WeatherParticleSettingsSummary { get; }
