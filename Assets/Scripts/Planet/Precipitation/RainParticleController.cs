@@ -81,7 +81,7 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
 
     // --- Compute shader property IDs -------------------------------------------------
     static readonly int _rainParticlesId = Shader.PropertyToID("_RainParticles");
-    static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
+    static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
     static readonly int _seaRadiusId = Shader.PropertyToID("_SeaRadius");
     static readonly int _cloudBottomRadiusId = Shader.PropertyToID("_CloudBottomRadius");
     static readonly int _cloudTopRadiusId = Shader.PropertyToID("_CloudTopRadius");
@@ -102,7 +102,7 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
     static readonly int _rainColorId = Shader.PropertyToID("_RainColor");
     static readonly int _rainVisibilityThresholdId = Shader.PropertyToID("_RainVisibilityThreshold");
     static readonly int _rainDensityScaleId = Shader.PropertyToID("_RainDensityScale");
-    static readonly int _rainPlanetCenterId = Shader.PropertyToID("_PlanetCenter");
+    static readonly int _rainPlanetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
     static readonly int _rainSeaRadiusId = Shader.PropertyToID("_SeaRadius");
 
     void Awake()

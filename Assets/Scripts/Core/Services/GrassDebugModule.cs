@@ -83,12 +83,12 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
 {
     public DebugModuleId Id => GrassDebugIds.Module;
     static readonly int OceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
-    static readonly int AtmosphereRadiusId = Shader.PropertyToID("_AtmosphereRadius");
-    static readonly int SeaLevelRadiusId = Shader.PropertyToID("_SeaLevelRadius");
-    static readonly int DensityOriginRadiusId = Shader.PropertyToID("_DensityOriginRadius");
-    static readonly int ViewStepsId = Shader.PropertyToID("_ViewSteps");
-    static readonly int SunStepsId = Shader.PropertyToID("_SunSteps");
-    static readonly int WaterVolumeEnabledId = Shader.PropertyToID("_WaterVolumeEnabled");
+    static readonly int AtmosphereRadiusId = Shader.PropertyToID(ShaderGlobalIds.AtmosphereRadius);
+    static readonly int SeaLevelRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
+    static readonly int DensityOriginRadiusId = Shader.PropertyToID(ShaderGlobalIds.DensityOriginRadius);
+    static readonly int ViewStepsId = Shader.PropertyToID(ShaderGlobalIds.ViewSteps);
+    static readonly int SunStepsId = Shader.PropertyToID(ShaderGlobalIds.SunSteps);
+    static readonly int WaterVolumeEnabledId = Shader.PropertyToID(ShaderGlobalIds.WaterVolumeEnabled);
     static readonly int TerrainAerialPerspectiveDistancesId =
         Shader.PropertyToID("_TerrainAerialPerspectiveDistances");
 

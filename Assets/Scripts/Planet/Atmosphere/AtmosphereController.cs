@@ -18,12 +18,12 @@ public class AtmosphereController : MonoBehaviour
     bool _staticPropertiesDirty = true;
 
     static readonly int _sunParamsId = Shader.PropertyToID("_SunParams");
-    static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
-    static readonly int _planetRadiusId = Shader.PropertyToID("_SeaLevelRadius");
-    static readonly int _densityOriginRadiusId = Shader.PropertyToID("_DensityOriginRadius");
-    static readonly int _atmosphereRadiusId = Shader.PropertyToID("_AtmosphereRadius");
-    static readonly int _viewStepsId = Shader.PropertyToID("_ViewSteps");
-    static readonly int _sunStepsId = Shader.PropertyToID("_SunSteps");
+    static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
+    static readonly int _planetRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
+    static readonly int _densityOriginRadiusId = Shader.PropertyToID(ShaderGlobalIds.DensityOriginRadius);
+    static readonly int _atmosphereRadiusId = Shader.PropertyToID(ShaderGlobalIds.AtmosphereRadius);
+    static readonly int _viewStepsId = Shader.PropertyToID(ShaderGlobalIds.ViewSteps);
+    static readonly int _sunStepsId = Shader.PropertyToID(ShaderGlobalIds.SunSteps);
     static readonly int _rayleighScatteringId = Shader.PropertyToID("_RayleighScattering");
     static readonly int _rayleighScaleHeightId = Shader.PropertyToID("_RayleighScaleHeight");
     static readonly int _mieScatteringId = Shader.PropertyToID("_MieScatteringCoeff");

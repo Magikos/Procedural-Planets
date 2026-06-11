@@ -19,8 +19,8 @@ public class CloudRenderFeature : ScriptableRendererFeature
     float _nextControllerScanTime;
     static readonly int _waterFocusModeId = Shader.PropertyToID(ShaderGlobalIds.WaterFocusMode);
     static readonly int _oceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
-    static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
-    static readonly int _atmosphereRadiusId = Shader.PropertyToID("_AtmosphereRadius");
+    static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
+    static readonly int _atmosphereRadiusId = Shader.PropertyToID(ShaderGlobalIds.AtmosphereRadius);
     static readonly Plane[] _frustumPlanes = new Plane[6];
 
     public override void Create()
