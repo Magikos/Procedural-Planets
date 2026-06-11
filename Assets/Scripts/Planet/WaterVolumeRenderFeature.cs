@@ -20,7 +20,7 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
     static readonly int _oceanFreezeStartId = Shader.PropertyToID("_OceanFreezeStart");
     static readonly int _oceanFreezeCompleteId = Shader.PropertyToID("_OceanFreezeComplete");
     static readonly int _refractionStrengthId = Shader.PropertyToID("_RefractionStrength");
-    static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
+    static readonly int _oceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
     static readonly int _causticIntensityId = Shader.PropertyToID("_CausticIntensity");
     static readonly int _causticDepthId = Shader.PropertyToID("_CausticDepth");
     static readonly int _causticContrastId = Shader.PropertyToID("_CausticContrast");

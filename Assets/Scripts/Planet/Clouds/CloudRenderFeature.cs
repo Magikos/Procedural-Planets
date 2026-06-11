@@ -17,8 +17,8 @@ public class CloudRenderFeature : ScriptableRendererFeature
     // Throttle re-scans to 1 Hz when controller is absent (URP render features outlive scenes,
     // so a permanent null-cache would break scene reloads).
     float _nextControllerScanTime;
-    static readonly int _waterFocusModeId = Shader.PropertyToID("_WaterFocusMode");
-    static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
+    static readonly int _waterFocusModeId = Shader.PropertyToID(ShaderGlobalIds.WaterFocusMode);
+    static readonly int _oceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
     static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
     static readonly int _atmosphereRadiusId = Shader.PropertyToID("_AtmosphereRadius");
     static readonly Plane[] _frustumPlanes = new Plane[6];

@@ -66,8 +66,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     static readonly int _whitecapIntensityId = Shader.PropertyToID("_WhitecapIntensity");
     static readonly int _wakeFoamIntensityId = Shader.PropertyToID("_WakeFoamIntensity");
     static readonly int _wakeNormalStrengthId = Shader.PropertyToID("_WakeNormalStrength");
-    static readonly int _oceanFocusModeId = Shader.PropertyToID("_OceanFocusMode");
-    static readonly int _waterFocusModeId = Shader.PropertyToID("_WaterFocusMode");
+    static readonly int _oceanFocusModeId = Shader.PropertyToID(ShaderGlobalIds.OceanFocusMode);
+    static readonly int _waterFocusModeId = Shader.PropertyToID(ShaderGlobalIds.WaterFocusMode);
     static readonly int _alphaId = Shader.PropertyToID("_Alpha");
     static readonly int _freezingEnabledId = Shader.PropertyToID("_FreezingEnabled");
     static readonly int _lakeFreezeStartId = Shader.PropertyToID("_LakeFreezeStart");

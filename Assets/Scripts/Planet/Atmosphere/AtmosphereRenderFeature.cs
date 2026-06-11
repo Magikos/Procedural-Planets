@@ -10,7 +10,7 @@ using UnityEngine.Rendering.Universal;
 public class AtmosphereRenderFeature : ScriptableRendererFeature
 {
     static readonly int _waterVolumeEnabledId = Shader.PropertyToID("_WaterVolumeEnabled");
-    static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
+    static readonly int _oceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
     static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
     static readonly int _atmosphereRadiusId = Shader.PropertyToID("_AtmosphereRadius");
     static readonly Plane[] _frustumPlanes = new Plane[6];

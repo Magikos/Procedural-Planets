@@ -42,9 +42,9 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     // when the underlying mesh changes; per-refresh work shrinks to the camera-sample search.
     WaterMeshStatsCache _meshStatsCache;
 
-    static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
-    static readonly int _waterFocusModeId = Shader.PropertyToID("_WaterFocusMode");
-    static readonly int _oceanFocusModeId = Shader.PropertyToID("_OceanFocusMode");
+    static readonly int _oceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
+    static readonly int _waterFocusModeId = Shader.PropertyToID(ShaderGlobalIds.WaterFocusMode);
+    static readonly int _oceanFocusModeId = Shader.PropertyToID(ShaderGlobalIds.OceanFocusMode);
     static readonly int _waveAmplitudeId = Shader.PropertyToID("_WaveAmplitude");
     static readonly int _waveScaleId = Shader.PropertyToID("_WaveScale");
     static readonly int _waveSpeedId = Shader.PropertyToID("_WaveSpeed");

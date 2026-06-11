@@ -82,7 +82,7 @@ public static class GrassRenderDiagnostics
 public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvider, IDebugOverlayContributor
 {
     public DebugModuleId Id => GrassDebugIds.Module;
-    static readonly int OceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
+    static readonly int OceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
     static readonly int AtmosphereRadiusId = Shader.PropertyToID("_AtmosphereRadius");
     static readonly int SeaLevelRadiusId = Shader.PropertyToID("_SeaLevelRadius");
     static readonly int DensityOriginRadiusId = Shader.PropertyToID("_DensityOriginRadius");

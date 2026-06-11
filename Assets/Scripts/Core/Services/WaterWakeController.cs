@@ -8,7 +8,7 @@ public sealed class WaterWakeController : MonoBehaviour
     static readonly int _waterWakePositionsId = Shader.PropertyToID("_WaterWakePositions");
     static readonly int _waterWakeDirectionsId = Shader.PropertyToID("_WaterWakeDirections");
     static readonly int _waterWakeParamsId = Shader.PropertyToID("_WaterWakeParams");
-    static readonly int _oceanDebugModeId = Shader.PropertyToID("_OceanDebugMode");
+    static readonly int _oceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
 
     static readonly Vector4[] _positions = new Vector4[MaxWakeSources];
     static readonly Vector4[] _directions = new Vector4[MaxWakeSources];
