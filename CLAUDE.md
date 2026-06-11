@@ -13,8 +13,8 @@ The 2026-06-10 audit lives at [docs/audit/2026-06-code-refactor/](docs/audit/202
 - `ScriptableObject` settings are **editor-only authoring surfaces**. Runtime never reads an SO directly outside boot.
 - Runtime consumers read immutable **snapshot DTOs** (records or readonly structs).
 - DTOs live next to the SO they snapshot, with a static `From(SO)` factory.
-- A central `ISettingsService` is built at boot, aggregates all SOs into per-domain DTOs, and exposes `GetSettings<TDto>()`.
-- Consumers fetch once and cache: `_settings = ServiceLocator.Get<ISettingsService>().GetSettings<CloudRenderDto>();`
+- `ISettingsService` is a domain-agnostic registry exposed via the static `SettingsProvider` (LoggerProvider-style, self-creating). It never references domain-specific types; each consumer registers its own DTO from its own assembly.
+- Pattern in each consumer's `OnEnable` (or earlier): `EnsureSettingsRegistered()` does `Resources.Load<TSettings>("Settings/Name")` + `SettingsProvider.Register(TDto.From(so))` if not already registered, then `_settings = SettingsProvider.GetSettings<TDto>();`.
 - Settings changes raise `EventBus<SettingsChangedEvent>`. Consumers re-fetch on receipt.
 - No console command mutates the SO asset. Console-command setters update the runtime DTO via the service.
 - `Material` assets are cloned on first use. Runtime never writes shader properties or keywords on an SO-referenced material asset.
