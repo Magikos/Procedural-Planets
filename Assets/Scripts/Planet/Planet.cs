@@ -326,39 +326,30 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     void ConfigureTerrainSurfaceOverrides(Material mat)
     {
-        PlanetSettings.TerrainSurfaceOverrideSettings settings = _planetSettings.SurfaceOverrides;
         BiomeRegistry registry = _planetSettings.BiomeSettings != null
             ? _planetSettings.BiomeSettings.Registry
             : null;
 
         SetMaterialAndGlobalFloat(mat, _terrainOverrideEnabledId,
-            settings != null && settings.Enabled && registry != null ? 1f : 0f);
-        if (settings == null || registry == null)
+            _planetSettings.EnableSurfaceOverrides && registry != null ? 1f : 0f);
+        if (!_planetSettings.EnableSurfaceOverrides || registry == null)
             return;
 
         SetMaterialAndGlobalInt(mat, _coastSliceId, registry.GetSliceIdForBiomeType(BiomeType.Beach));
-        SetMaterialAndGlobalFloat(mat, _coastBelowSeaDepthId, Mathf.Max(0f, settings.CoastBelowSeaDepth));
-        SetMaterialAndGlobalFloat(mat, _coastStartHeightId, Mathf.Max(0f, settings.CoastStartHeight));
-        SetMaterialAndGlobalFloat(mat, _coastEndHeightId,
-            Mathf.Max(settings.CoastEndHeight, settings.CoastStartHeight + 0.01f));
-        SetMaterialAndGlobalFloat(mat, _coastTilingId, Mathf.Max(0.001f, settings.CoastTiling));
+        SetMaterialAndGlobalFloat(mat, _coastBelowSeaDepthId, PlanetConstants.CoastBelowSeaDepth);
+        SetMaterialAndGlobalFloat(mat, _coastStartHeightId, PlanetConstants.CoastStartHeight);
+        SetMaterialAndGlobalFloat(mat, _coastEndHeightId, PlanetConstants.CoastEndHeight);
+        SetMaterialAndGlobalFloat(mat, _coastTilingId, PlanetConstants.CoastTiling);
 
         SetMaterialAndGlobalInt(mat, _slopeSliceId, registry.GetSliceIdForBiomeType(BiomeType.Mountain));
-        float slopeStart = Mathf.Clamp(settings.SlopeStartDegrees, 0f, 89.99f);
-        SetMaterialAndGlobalFloat(mat, _slopeStartDegreesId,
-            slopeStart);
-        SetMaterialAndGlobalFloat(mat, _slopeFullDegreesId,
-            Mathf.Clamp(Mathf.Max(settings.SlopeFullDegrees, slopeStart + 0.01f), slopeStart + 0.01f, 90f));
-        SetMaterialAndGlobalFloat(mat, _slopeTilingId, Mathf.Max(0.001f, settings.SlopeTiling));
+        SetMaterialAndGlobalFloat(mat, _slopeStartDegreesId, PlanetConstants.SlopeStartDegrees);
+        SetMaterialAndGlobalFloat(mat, _slopeFullDegreesId, PlanetConstants.SlopeFullDegrees);
+        SetMaterialAndGlobalFloat(mat, _slopeTilingId, PlanetConstants.SlopeTiling);
 
         SetMaterialAndGlobalInt(mat, _snowSliceId, registry.GetSliceIdForBiomeType(BiomeType.Snow));
-        float snowFull = Mathf.Clamp(settings.SnowFullTemperature01, 0f, 0.999f);
-        SetMaterialAndGlobalFloat(mat, _snowFullTemperatureId,
-            snowFull);
-        SetMaterialAndGlobalFloat(mat, _snowFadeEndTemperatureId,
-            Mathf.Clamp01(Mathf.Max(settings.SnowFadeEndTemperature01,
-                snowFull + 0.001f)));
-        SetMaterialAndGlobalFloat(mat, _snowTilingId, Mathf.Max(0.001f, settings.SnowTiling));
+        SetMaterialAndGlobalFloat(mat, _snowFullTemperatureId, PlanetConstants.SnowFullTemperature01);
+        SetMaterialAndGlobalFloat(mat, _snowFadeEndTemperatureId, PlanetConstants.SnowFadeEndTemperature01);
+        SetMaterialAndGlobalFloat(mat, _snowTilingId, PlanetConstants.SnowTiling);
     }
 
     static void SetMaterialFloatIfPresent(Material mat, int propertyId, float value)
@@ -823,8 +814,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             meshFilter.sharedMesh = new Mesh { name = "WaterBodies" };
 
         float waterScale = GetWaterDistanceScale();
-        PlanetSettings.FrozenWaterSettings frozenWater = _planetSettings.FrozenWater
-            ?? new PlanetSettings.FrozenWaterSettings();
         var buildSettings = new WaterMeshBuilder.Settings
         {
             PlanetRadius = _planetSettings.PlanetRadius,
@@ -834,11 +823,11 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             SurfaceOffset = Mathf.Max(_planetSettings.PlanetRadius * 0.00003f, 0.02f),
             OceanBodyVertexThreshold = Mathf.Max(48, PerFaceResolution * PerFaceResolution / 28),
             ClimateProvider = _colorGenerator.ClimateProvider,
-            EnableFreezing = frozenWater.Enabled,
-            LakeFreezeStartTemperature01 = frozenWater.LakeFreezeStartTemperature01,
-            LakeFreezeCompleteTemperature01 = frozenWater.LakeFreezeCompleteTemperature01,
-            OceanFreezeStartTemperature01 = frozenWater.OceanFreezeStartTemperature01,
-            OceanFreezeCompleteTemperature01 = frozenWater.OceanFreezeCompleteTemperature01
+            EnableFreezing = _planetSettings.EnableFrozenWater,
+            LakeFreezeStartTemperature01 = PlanetConstants.LakeFreezeStartTemperature01,
+            LakeFreezeCompleteTemperature01 = PlanetConstants.LakeFreezeCompleteTemperature01,
+            OceanFreezeStartTemperature01 = PlanetConstants.OceanFreezeStartTemperature01,
+            OceanFreezeCompleteTemperature01 = PlanetConstants.OceanFreezeCompleteTemperature01
         };
         // Water builder reads per-face vertex/elevation grids via IFaceMeshSampler. Both
         // resolution modes (Low/High) supply this view; chunked path wraps each root chunk.
@@ -944,18 +933,16 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             mat.SetFloat(_oceanFocusModeId, 1f);
             Shader.SetGlobalFloat(_waterFocusModeId, 0f);
             mat.SetFloat(_alphaId, WaterAlpha);
-            PlanetSettings.FrozenWaterSettings frozenWater = _planetSettings.FrozenWater
-                ?? new PlanetSettings.FrozenWaterSettings();
-            mat.SetFloat(_freezingEnabledId, frozenWater.Enabled ? 1f : 0f);
-            mat.SetFloat(_lakeFreezeStartId, frozenWater.LakeFreezeStartTemperature01);
-            mat.SetFloat(_lakeFreezeCompleteId, frozenWater.LakeFreezeCompleteTemperature01);
-            mat.SetFloat(_oceanFreezeStartId, frozenWater.OceanFreezeStartTemperature01);
-            mat.SetFloat(_oceanFreezeCompleteId, frozenWater.OceanFreezeCompleteTemperature01);
-            mat.SetColor(_iceTintId, frozenWater.IceTint);
-            mat.SetFloat(_iceOpacityId, frozenWater.IceOpacity);
-            mat.SetFloat(_iceRoughnessId, frozenWater.IceRoughness);
-            mat.SetFloat(_iceNormalStrengthId, frozenWater.IceNormalStrength);
-            mat.SetFloat(_iceBreakupScaleId, frozenWater.IceBreakupScale * waterScale);
+            mat.SetFloat(_freezingEnabledId, _planetSettings.EnableFrozenWater ? 1f : 0f);
+            mat.SetFloat(_lakeFreezeStartId, PlanetConstants.LakeFreezeStartTemperature01);
+            mat.SetFloat(_lakeFreezeCompleteId, PlanetConstants.LakeFreezeCompleteTemperature01);
+            mat.SetFloat(_oceanFreezeStartId, PlanetConstants.OceanFreezeStartTemperature01);
+            mat.SetFloat(_oceanFreezeCompleteId, PlanetConstants.OceanFreezeCompleteTemperature01);
+            mat.SetColor(_iceTintId, _planetSettings.IceTint);
+            mat.SetFloat(_iceOpacityId, PlanetConstants.IceOpacity);
+            mat.SetFloat(_iceRoughnessId, PlanetConstants.IceRoughness);
+            mat.SetFloat(_iceNormalStrengthId, PlanetConstants.IceNormalStrength);
+            mat.SetFloat(_iceBreakupScaleId, PlanetConstants.IceBreakupScale * waterScale);
             mat.renderQueue = 3000;
             mat.SetOverrideTag("RenderType", "Transparent");
             Logger.Log(LogLevel.Debug, "Water", "Applied integrated ocean mode: clouds, rain, and terrain cloud shadows enabled; focused water rendering retained.");
