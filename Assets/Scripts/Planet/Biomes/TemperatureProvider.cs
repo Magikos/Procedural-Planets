@@ -136,9 +136,7 @@ public sealed class ClimateProvider : IClimateProvider
             settings.TemperatureLatitudeCurve, resolution);
         ClimateCurveLut moistureCurve = ClimateCurveLut.Bake(
             settings.MoistureLatitudeCurve, resolution);
-        float waterLevel = settings.Registry != null
-            ? settings.Registry.OceanThreshold
-            : 0f;
+        float waterLevel = BiomeConstants.OceanThreshold;
 
         _temperatureProvider = new TemperatureProvider(
             settings.TemperatureNoise,
@@ -765,7 +763,7 @@ sealed class VoronoiBiomeField
         {
             ClimateSample climate = climateProvider.Evaluate(
                 seeds[i].Position,
-                registry.OceanThreshold);
+                BiomeConstants.OceanThreshold);
             float bestDistance = float.PositiveInfinity;
             byte bestBiomeId = fallback;
             for (int target = 0; target < targetCount; target++)

@@ -17,16 +17,6 @@ public class BiomeRegistry : ScriptableObject, IBiomeRegistry
     public BiomeDefinition MountainBiome;
     public BiomeDefinition SnowyMountainBiome;
 
-    [Range(-0.1f, 0.1f)] public float OceanThreshold = 0f;
-    [Range(0f, 0.1f)] public float BeachWidth = 0.003f;
-    [Range(0f, 1f)] public float MountainThreshold = 0.08f;
-
-    [Header("Blending")]
-    [Tooltip("Biome transition band as a fraction of one temperature/moisture grid cell. 0.5 blends to the cell midpoint.")]
-    [Range(0f, 0.5f)] public float BlendWidth = 0.18f;
-    [Tooltip("Elevation-space transition band around ocean/beach and mountain thresholds.")]
-    [Range(0f, 0.02f)] public float ElevationBlendWidth = 0.001f;
-
     public int BiomeCount => (GridEntries != null ? GridEntries.Length : 0) + 4;
 
     public BiomeResult Resolve(float temperature, float moisture, float elevation)
@@ -57,45 +47,45 @@ public class BiomeRegistry : ScriptableObject, IBiomeRegistry
         float moisture,
         float elevation)
     {
-        float beachWidth = Mathf.Max(BeachWidth, 0f);
-        float beachTop = OceanThreshold + beachWidth;
-        float elevationBlendWidth = Mathf.Max(ElevationBlendWidth, 0f);
-        float beachInnerBlendWidth = beachWidth > 0f
-            ? Mathf.Min(elevationBlendWidth, beachWidth * 0.5f)
+        float beachWidth = BiomeConstants.BeachWidth;
+        float beachTop = BiomeConstants.OceanThreshold + beachWidth;
+        float elevationBlend = BiomeConstants.ElevationBlendWidth;
+        float beachInnerBlend = beachWidth > 0f
+            ? Mathf.Min(elevationBlend, beachWidth * 0.5f)
             : 0f;
 
-        if (elevation < OceanThreshold)
+        if (elevation < BiomeConstants.OceanThreshold)
         {
-            float blend = BoundaryBlendWeight(OceanThreshold - elevation, elevationBlendWidth);
+            float blend = BoundaryBlendWeight(BiomeConstants.OceanThreshold - elevation, elevationBlend);
             return NewBlendedResult(BiomeType.Ocean, BiomeType.Beach, blend, temperature, moisture);
         }
 
         if (beachWidth > 0f && elevation < beachTop)
         {
-            float distanceToOcean = elevation - OceanThreshold;
+            float distanceToOcean = elevation - BiomeConstants.OceanThreshold;
             float distanceToLand = beachTop - elevation;
             if (distanceToOcean <= distanceToLand)
             {
-                float blend = BoundaryBlendWeight(distanceToOcean, beachInnerBlendWidth);
+                float blend = BoundaryBlendWeight(distanceToOcean, beachInnerBlend);
                 return NewBlendedResult(BiomeType.Beach, BiomeType.Ocean, blend, temperature, moisture);
             }
 
-            float landBlend = BoundaryBlendWeight(distanceToLand, beachInnerBlendWidth);
+            float landBlend = BoundaryBlendWeight(distanceToLand, beachInnerBlend);
             return NewBlendedResult(BiomeType.Beach, gridResult.PrimaryBiome, landBlend, temperature, moisture);
         }
 
-        if (elevation > MountainThreshold)
+        if (elevation > BiomeConstants.MountainThreshold)
         {
             BiomeType mountainBiome = temperature < 0.4f ? BiomeType.Snow : BiomeType.Mountain;
-            float blend = BoundaryBlendWeight(elevation - MountainThreshold, elevationBlendWidth);
+            float blend = BoundaryBlendWeight(elevation - BiomeConstants.MountainThreshold, elevationBlend);
             return NewBlendedResult(mountainBiome, gridResult.PrimaryBiome, blend, temperature, moisture);
         }
 
-        float shoreBlend = BoundaryBlendWeight(elevation - beachTop, elevationBlendWidth);
+        float shoreBlend = BoundaryBlendWeight(elevation - beachTop, elevationBlend);
         gridResult = ApplyBoundaryBlend(gridResult, BiomeType.Beach, shoreBlend);
 
         BiomeType nearMountainBiome = temperature < 0.4f ? BiomeType.Snow : BiomeType.Mountain;
-        float mountainBlend = BoundaryBlendWeight(MountainThreshold - elevation, elevationBlendWidth);
+        float mountainBlend = BoundaryBlendWeight(BiomeConstants.MountainThreshold - elevation, elevationBlend);
         gridResult = ApplyBoundaryBlend(gridResult, nearMountainBiome, mountainBlend);
 
         return gridResult;
@@ -123,7 +113,7 @@ public class BiomeRegistry : ScriptableObject, IBiomeRegistry
         float tempDist = Mathf.Abs(tempFrac - 0.5f);
         float moistDist = Mathf.Abs(moistFrac - 0.5f);
 
-        if (BlendWidth > 0f)
+        if (BiomeConstants.BlendWidth > 0f)
         {
             int secIdx;
             float edgeDist;
@@ -145,7 +135,7 @@ public class BiomeRegistry : ScriptableObject, IBiomeRegistry
                 // Both sides of a cell boundary must meet at the same color. A 50/50 max
                 // blend makes the current cell and its neighbor produce identical output
                 // at the boundary instead of swapping fully to the opposite biome.
-                blendWeight = 0.5f * (1f - Mathf.Clamp01(edgeDist / BlendWidth));
+                blendWeight = 0.5f * (1f - Mathf.Clamp01(edgeDist / BiomeConstants.BlendWidth));
             }
         }
 
@@ -290,11 +280,6 @@ public class BiomeRegistry : ScriptableObject, IBiomeRegistry
         {
             TemperatureSteps = TemperatureSteps,
             MoistureSteps = MoistureSteps,
-            OceanThreshold = OceanThreshold,
-            BeachWidth = BeachWidth,
-            MountainThreshold = MountainThreshold,
-            BlendWidth = BlendWidth,
-            ElevationBlendWidth = ElevationBlendWidth,
             OceanBiomeId = 0,
             BeachBiomeId = 1,
             MountainBiomeId = (byte)(gridCount + 2),

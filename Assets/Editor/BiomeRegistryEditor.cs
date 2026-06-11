@@ -67,14 +67,6 @@ public class BiomeRegistryEditor : Editor
         EditorGUILayout.PropertyField(serializedObject.FindProperty("MountainBiome"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("SnowyMountainBiome"));
 
-        EditorGUILayout.Space();
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("OceanThreshold"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("BeachWidth"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("MountainThreshold"));
-
-        EditorGUILayout.Space();
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("BlendWidth"));
-
         serializedObject.ApplyModifiedProperties();
 
         EditorGUILayout.Space();

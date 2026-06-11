@@ -16,11 +16,6 @@ public struct BiomeLookupData
 {
     public int TemperatureSteps;
     public int MoistureSteps;
-    public float OceanThreshold;
-    public float BeachWidth;
-    public float MountainThreshold;
-    public float BlendWidth;
-    public float ElevationBlendWidth;
 
     public byte OceanBiomeId;
     public byte BeachBiomeId;
@@ -75,45 +70,45 @@ public static class BiomeLookupEvaluator
         out byte secondaryId,
         out float blendWeight)
     {
-        float beachWidth = lookup.BeachWidth > 0f ? lookup.BeachWidth : 0f;
-        float beachTop = lookup.OceanThreshold + beachWidth;
-        float elevationBlendWidth = lookup.ElevationBlendWidth > 0f ? lookup.ElevationBlendWidth : 0f;
-        float beachInnerBlendWidth = beachWidth > 0f
-            ? Min(elevationBlendWidth, beachWidth * 0.5f)
+        float beachWidth = BiomeConstants.BeachWidth;
+        float beachTop = BiomeConstants.OceanThreshold + beachWidth;
+        float elevationBlend = BiomeConstants.ElevationBlendWidth;
+        float beachInnerBlend = beachWidth > 0f
+            ? Min(elevationBlend, beachWidth * 0.5f)
             : 0f;
 
-        if (elevation < lookup.OceanThreshold)
+        if (elevation < BiomeConstants.OceanThreshold)
         {
             SetBlendedResult(lookup.OceanBiomeId, lookup.BeachBiomeId,
-                BoundaryBlendWeight(lookup.OceanThreshold - elevation, elevationBlendWidth),
+                BoundaryBlendWeight(BiomeConstants.OceanThreshold - elevation, elevationBlend),
                 out primaryId, out secondaryId, out blendWeight);
             return;
         }
 
         if (beachWidth > 0f && elevation < beachTop)
         {
-            float distanceToOcean = elevation - lookup.OceanThreshold;
+            float distanceToOcean = elevation - BiomeConstants.OceanThreshold;
             float distanceToLand = beachTop - elevation;
             if (distanceToOcean <= distanceToLand)
             {
                 SetBlendedResult(lookup.BeachBiomeId, lookup.OceanBiomeId,
-                    BoundaryBlendWeight(distanceToOcean, beachInnerBlendWidth),
+                    BoundaryBlendWeight(distanceToOcean, beachInnerBlend),
                     out primaryId, out secondaryId, out blendWeight);
             }
             else
             {
                 SetBlendedResult(lookup.BeachBiomeId, landPrimaryId,
-                    BoundaryBlendWeight(distanceToLand, beachInnerBlendWidth),
+                    BoundaryBlendWeight(distanceToLand, beachInnerBlend),
                     out primaryId, out secondaryId, out blendWeight);
             }
             return;
         }
 
-        if (elevation > lookup.MountainThreshold)
+        if (elevation > BiomeConstants.MountainThreshold)
         {
             byte mountainId = temperature < 0.4f ? lookup.SnowyMountainBiomeId : lookup.MountainBiomeId;
             SetBlendedResult(mountainId, landPrimaryId,
-                BoundaryBlendWeight(elevation - lookup.MountainThreshold, elevationBlendWidth),
+                BoundaryBlendWeight(elevation - BiomeConstants.MountainThreshold, elevationBlend),
                 out primaryId, out secondaryId, out blendWeight);
             return;
         }
@@ -122,11 +117,11 @@ public static class BiomeLookupEvaluator
         secondaryId = landSecondaryId;
         blendWeight = landBlendWeight;
 
-        float shoreBlend = BoundaryBlendWeight(elevation - beachTop, elevationBlendWidth);
+        float shoreBlend = BoundaryBlendWeight(elevation - beachTop, elevationBlend);
         ApplyBoundaryBlend(primaryId, lookup.BeachBiomeId, shoreBlend, ref secondaryId, ref blendWeight);
 
         byte nearMountainId = temperature < 0.4f ? lookup.SnowyMountainBiomeId : lookup.MountainBiomeId;
-        float mountainBlend = BoundaryBlendWeight(lookup.MountainThreshold - elevation, elevationBlendWidth);
+        float mountainBlend = BoundaryBlendWeight(BiomeConstants.MountainThreshold - elevation, elevationBlend);
         ApplyBoundaryBlend(primaryId, nearMountainId, mountainBlend, ref secondaryId, ref blendWeight);
     }
 
@@ -167,7 +162,7 @@ public static class BiomeLookupEvaluator
         secondaryId = primaryId;
         blendWeight = 0f;
 
-        if (lookup.BlendWidth > 0f)
+        if (BiomeConstants.BlendWidth > 0f)
         {
             float tempDist = tempFrac - 0.5f;
             if (tempDist < 0f) tempDist = -tempDist;
@@ -193,7 +188,7 @@ public static class BiomeLookupEvaluator
             {
                 // Match BiomeRegistry.Resolve(): the edge itself is a symmetric 50/50
                 // blend, so adjacent grid cells meet continuously.
-                float t = edgeDist / lookup.BlendWidth;
+                float t = edgeDist / BiomeConstants.BlendWidth;
                 if (t < 0f) t = 0f;
                 else if (t > 1f) t = 1f;
                 blendWeight = 0.5f * (1f - t);
