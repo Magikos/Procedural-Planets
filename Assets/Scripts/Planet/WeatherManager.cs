@@ -15,6 +15,8 @@ using UnityEngine.Serialization;
 [CommandPrefix("weather")]
 public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigurator, ILateInitialize, IProgressReporter
 {
+    CloudDto _settings;
+
     [ConsoleCommand("diagnostics", "Write weather diagnostics file (F9 equivalent).")]
     static void DiagnosticsCmd()
         => EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.DumpWeatherDiagnostics));
@@ -43,10 +45,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     }
 
     [Header("References")]
-    public CloudSettings Settings;
     public ComputeShader WeatherCompute;
-
-    CloudSettings IWeatherConfigurator.Settings => Settings;
 
     [Header("Wind")]
     [Tooltip("World-space direction the wind and weather features move toward.")]
@@ -158,6 +157,8 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     void Awake()
     {
         MigrateWindUnits();
+        CloudDto.EnsureRegistered();
+        _settings = SettingsProvider.GetSettings<CloudDto>();
         ServiceLocator.Register<IWeatherProvider>(this);
         ServiceLocator.Register<IWeatherConfigurator>(this);
         Shader.SetGlobalMatrix(_cloudWeatherRotationId, Matrix4x4.identity);
@@ -173,12 +174,26 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     {
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
         EventBus<DebugWeatherDiagnosticsRequestedEvent>.Listen(OnWeatherDiagnosticsRequested);
+        EventBus<SettingsChangedEvent>.Listen(OnSettingsChanged);
     }
 
     void OnDisable()
     {
         EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
         EventBus<DebugWeatherDiagnosticsRequestedEvent>.Unlisten(OnWeatherDiagnosticsRequested);
+        EventBus<SettingsChangedEvent>.Unlisten(OnSettingsChanged);
+    }
+
+    void OnSettingsChanged(SettingsChangedEvent evt)
+    {
+        if (evt.DtoType != typeof(CloudDto)) return;
+        var prev = _settings;
+        _settings = SettingsProvider.GetSettings<CloudDto>();
+        if (_seaLevelRadius > 0f && (_settings.WeatherResolution != prev.WeatherResolution
+            || _settings.InitialCoverage != prev.InitialCoverage))
+        {
+            GenerateWeatherGrid();
+        }
     }
 
     void OnDestroy()
@@ -220,13 +235,6 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         }
     }
 
-    public void Configure(CloudSettings settings)
-    {
-        Settings = settings;
-        if (_seaLevelRadius > 0f)
-            GenerateWeatherGrid();
-    }
-
     public void RegenerateWeatherGrid()
     {
         if (_seaLevelRadius > 0f)
@@ -237,7 +245,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     {
         if (_grid == null)
         {
-            float fallbackCoverage = Settings != null ? Settings.InitialCoverage : 0f;
+            float fallbackCoverage = _settings.InitialCoverage;
             return new WeatherSample(fallbackCoverage, 0f, 0f, GetTemperature(worldPosition), 0f,
                 fallbackCoverage >= CloudyThreshold ? WeatherCellState.Cloudy : WeatherCellState.Clear);
         }
@@ -379,14 +387,12 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
         // During startup, LateInitialize handles generation.  At runtime (after init), re-generate
         // whenever the planet changes.
-        if (_lateInitialized && Settings != null)
+        if (_lateInitialized)
             _ = GenerateWeatherGridAsync();
     }
 
     async Awaitable GenerateWeatherGridAsync(CancellationToken externalToken = default)
     {
-        if (Settings == null) return;
-
         // Cancel any in-flight generation before starting a new one.
         _generateCts?.Cancel();
         _generateCts?.Dispose();
@@ -399,12 +405,11 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         try
         {
             int seed = ServiceLocator.Get<ISeedProvider>().GetSeedForSystem("Weather");
-            var settings = Settings;
 
             _progressHandle.Report(0.15f, "Seeding weather grid...");
 
             // Compute cell data on background thread, upload textures on main thread.
-            var newGrid = await SphericalWeatherGrid.GenerateAsync(settings, seed, linked.Token);
+            var newGrid = await SphericalWeatherGrid.GenerateAsync(_settings, seed, linked.Token);
 
             if (this == null) return;
             _progressHandle.Report(0.85f, "Uploading weather...");
@@ -422,12 +427,10 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     void GenerateWeatherGrid()
     {
-        if (Settings == null) return;
-
         int seed = ServiceLocator.Get<ISeedProvider>().GetSeedForSystem("Weather");
 
         _grid?.Dispose();
-        _grid = SphericalWeatherGrid.Generate(Settings, seed);
+        _grid = SphericalWeatherGrid.Generate(_settings, seed);
         _weatherVisualRotation = Quaternion.identity;
         _evolutionAccumulator = 0f;
         ResetWeatherDiagnostics();
@@ -439,7 +442,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     void UpdateWeatherAdvection()
     {
-        if (_grid == null || Settings == null)
+        if (_grid == null)
         {
             Shader.SetGlobalMatrix(_cloudWeatherRotationId, Matrix4x4.identity);
             return;
@@ -460,7 +463,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     void UpdateWeatherEvolution()
     {
-        if (_grid == null || Settings == null || !Settings.EnableWeatherEvolution)
+        if (_grid == null || !_settings.EnableWeatherEvolution)
         {
             _evolutionAccumulator = 0f;
             return;
@@ -478,7 +481,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         }
 
         _evolutionAccumulator += Time.deltaTime;
-        float interval = Mathf.Max(Settings.EvolutionInterval, 0.05f);
+        float interval = Mathf.Max(_settings.EvolutionInterval, 0.05f);
         if (_evolutionAccumulator < interval)
             return;
 
@@ -486,7 +489,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         int steps = 0;
         while (_evolutionAccumulator >= interval && steps < maxSteps)
         {
-            if (_grid.Advance(WeatherCompute, Settings, interval, _weatherVisualRotation))
+            if (_grid.Advance(WeatherCompute, _settings, interval, _weatherVisualRotation))
             {
                 _evolutionDispatchCount++;
                 _lastEvolutionDelta = interval;
@@ -743,10 +746,10 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         GUILayout.Label($"Delta avg/max: {_weatherAverageCondensationChange:+0.0000;-0.0000;0.0000} / {_weatherMaxCondensationChange:F4}");
         GUILayout.Label($"Condensing: {_weatherCondensingFraction * 100f:F1}%, drying: {_weatherDryingFraction * 100f:F1}%");
         GUILayout.Label("F9=Dump weather diagnostics");
-        if (Settings != null && Settings.DebugMode == CloudSettings.DebugView.CondensationChange)
+        if (_settings.DebugMode == CloudSettings.DebugView.CondensationChange)
         {
             GUILayout.Label("Delta view: cyan condensing, red drying, dim below threshold");
-            GUILayout.Label($"Threshold/saturation: {Settings.CondensationChangeDebugThreshold:F4} / {Settings.CondensationChangeDebugSaturation:F4}");
+            GUILayout.Label($"Threshold/saturation: {_settings.CondensationChangeDebugThreshold:F4} / {_settings.CondensationChangeDebugSaturation:F4}");
         }
         GUILayout.EndArea();
     }

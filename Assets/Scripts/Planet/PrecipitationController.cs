@@ -21,11 +21,6 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         All = 4,
     }
 
-    [Header("References")]
-    public CloudSettings CloudSettings;
-
-    ICloudController _cloudController;
-
     [Header("Rendering")]
     public bool RenderPrecipitation = true;
     [Range(0f, 2f)] public float Intensity = 1.15f;
@@ -97,6 +92,7 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     [Range(0f, 1f)] public float DebugDotOpacity = 0.95f;
 
     PrecipitationDto _settings;
+    CloudDto _cloudSettings;
     Vector3 _planetCenter;
     float _seaLevelRadius;
 
@@ -161,7 +157,9 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     {
         MigrateLocalWeatherParticleSettings();
         EnsureSettingsRegistered();
+        CloudDto.EnsureRegistered();
         _settings = SettingsProvider.GetSettings<PrecipitationDto>();
+        _cloudSettings = SettingsProvider.GetSettings<CloudDto>();
         ServiceLocator.Register<IPrecipitationDebugControl>(this);
     }
 
@@ -200,7 +198,6 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
 
     void Start()
     {
-        Initialize();
         UploadGlobals();
     }
 
@@ -223,21 +220,10 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
 
     void OnSettingsChanged(SettingsChangedEvent evt)
     {
-        if (evt.DtoType != typeof(PrecipitationDto)) return;
-        _settings = SettingsProvider.GetSettings<PrecipitationDto>();
-    }
-
-    void Initialize()
-    {
-        if (CloudSettings != null)
-            return;
-
-        _cloudController = ServiceLocator.Get<ICloudController>();
-        CloudSettings = _cloudController.Settings;
-
-        if (CloudSettings == null)
-            throw new System.InvalidOperationException(
-                "CloudController settings are missing. Assign CloudSettings or initialize CloudController before precipitation initialization.");
+        if (evt.DtoType == typeof(PrecipitationDto))
+            _settings = SettingsProvider.GetSettings<PrecipitationDto>();
+        else if (evt.DtoType == typeof(CloudDto))
+            _cloudSettings = SettingsProvider.GetSettings<CloudDto>();
     }
 
     void UploadGlobals()
@@ -247,7 +233,7 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         if (!IsRenderingEnabled)
             return;
 
-        float cloudBaseAltitude = CloudSettings != null ? CloudSettings.BaseAltitude : 330f;
+        float cloudBaseAltitude = _cloudSettings != null ? _cloudSettings.BaseAltitude : 330f;
         float bottomRadius = _seaLevelRadius + _settings.BottomAltitude;
         float topRadius = _seaLevelRadius + Mathf.Max(_settings.BottomAltitude + 1f, cloudBaseAltitude + _settings.CloudBaseOverlap);
 

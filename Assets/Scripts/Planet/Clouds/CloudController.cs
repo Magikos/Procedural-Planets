@@ -1,18 +1,12 @@
 using UnityEngine;
 
-/// <summary>
-/// Uploads planet-scale cloud data and render settings to the cloud shader.
-/// Weather state lives in WeatherManager; this component owns render-only noise textures.
-/// </summary>
 [CommandPrefix("cloud")]
-public class CloudController : MonoBehaviour, ICloudController
+public class CloudController : MonoBehaviour
 {
     [Header("References")]
-    public CloudSettings Settings;
     public ComputeShader NoiseCompute;
 
-    CloudSettings ICloudController.Settings => Settings;
-
+    CloudDto _settings;
     float _planetRadius;
     float _seaLevelRadius;
     Vector3 _planetCenter;
@@ -20,16 +14,13 @@ public class CloudController : MonoBehaviour, ICloudController
     RenderTexture _detailNoise;
     IWeatherConfigurator _weather;
 
-    // Per-frame upload elides the ~30 static SetGlobal* calls unless something invalidated them.
-    // Settings is treated as immutable at runtime (inspector edits are not supported); the dirty
-    // flag is raised by OnPlanetGenerated when planet position / radius change, and by a Settings
-    // reference swap (e.g. asset reload).
     bool _staticPropertiesDirty = true;
-    CloudSettings _lastStaticSettings;
     Texture _lastWeatherTexture;
     Texture _lastDynamicsTexture;
     int _lastWeatherResolution = -1;
     int _lastUploadedViewSteps = int.MinValue;
+    int _lastNoiseShapeResolution = -1;
+    int _lastNoiseDetailResolution = -1;
 
     static readonly int _cloudPlanetCenterId = Shader.PropertyToID("_CloudPlanetCenter");
     static readonly int _cloudInnerRadiusId = Shader.PropertyToID("_CloudInnerRadius");
@@ -65,17 +56,19 @@ public class CloudController : MonoBehaviour, ICloudController
     static readonly int _cloudShapeNoiseId = Shader.PropertyToID("_CloudShapeNoise");
     static readonly int _cloudDetailNoiseId = Shader.PropertyToID("_CloudDetailNoise");
 
-    void Awake()
-    {
-        ServiceLocator.Register<ICloudController>(this);
-    }
-
     void OnEnable()
     {
+        CloudDto.EnsureRegistered();
+        _settings = SettingsProvider.GetSettings<CloudDto>();
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+        EventBus<SettingsChangedEvent>.Listen(OnSettingsChanged);
     }
 
-    void OnDisable() => EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
+    void OnDisable()
+    {
+        EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
+        EventBus<SettingsChangedEvent>.Unlisten(OnSettingsChanged);
+    }
 
     void Start()
     {
@@ -95,9 +88,21 @@ public class CloudController : MonoBehaviour, ICloudController
         UpdatePerFrameProperties();
     }
 
+    void OnSettingsChanged(SettingsChangedEvent evt)
+    {
+        if (evt.DtoType != typeof(CloudDto)) return;
+        _settings = SettingsProvider.GetSettings<CloudDto>();
+        _staticPropertiesDirty = true;
+        if (_settings.ShapeNoiseResolution != _lastNoiseShapeResolution
+            || _settings.DetailNoiseResolution != _lastNoiseDetailResolution)
+        {
+            GenerateNoiseTextures();
+        }
+    }
+
     void Update()
     {
-        if (Settings == null || _planetRadius <= 0f)
+        if (_planetRadius <= 0f)
         {
             if (_lastWeatherResolution != 0)
             {
@@ -113,34 +118,31 @@ public class CloudController : MonoBehaviour, ICloudController
 
     void Initialize()
     {
-        _weather = ServiceLocator.Get<IWeatherConfigurator>();
-        if (_weather != null && _weather.Settings != Settings)
-            _weather.Configure(Settings);
+        if (_weather == null)
+            _weather = ServiceLocator.Get<IWeatherConfigurator>();
     }
 
     void GenerateNoiseTextures()
     {
-        if (NoiseCompute == null || Settings == null) return;
+        if (NoiseCompute == null) return;
 
         int seed = ServiceLocator.Get<ISeedProvider>().GetSeedForSystem("CloudNoise");
 
         ReleaseTextures();
-        _shapeNoise = CloudNoiseGenerator.GenerateShapeNoise(NoiseCompute, Settings.ShapeNoiseResolution, seed);
-        _detailNoise = CloudNoiseGenerator.GenerateDetailNoise(NoiseCompute, Settings.DetailNoiseResolution, seed);
-        // Force the noise-texture globals to re-bind on the next static upload.
+        _shapeNoise = CloudNoiseGenerator.GenerateShapeNoise(NoiseCompute, _settings.ShapeNoiseResolution, seed);
+        _detailNoise = CloudNoiseGenerator.GenerateDetailNoise(NoiseCompute, _settings.DetailNoiseResolution, seed);
+        _lastNoiseShapeResolution = _settings.ShapeNoiseResolution;
+        _lastNoiseDetailResolution = _settings.DetailNoiseResolution;
         _staticPropertiesDirty = true;
     }
 
-    // Uploads all settings that are constant for a given (Settings, planet) pair. Skipped after
-    // the first upload unless the planet is regenerated or Settings reference changes.
     void EnsureStaticPropertiesUploaded()
     {
-        if (!_staticPropertiesDirty && _lastStaticSettings == Settings) return;
+        if (!_staticPropertiesDirty) return;
         _staticPropertiesDirty = false;
-        _lastStaticSettings = Settings;
 
-        float innerRadius = _seaLevelRadius + Settings.BaseAltitude;
-        float outerRadius = innerRadius + Settings.LayerThickness;
+        float innerRadius = _seaLevelRadius + _settings.BaseAltitude;
+        float outerRadius = innerRadius + _settings.LayerThickness;
 
         Shader.SetGlobalVector(_cloudPlanetCenterId, _planetCenter);
         Shader.SetGlobalFloat(_cloudInnerRadiusId, innerRadius);
@@ -149,7 +151,7 @@ public class CloudController : MonoBehaviour, ICloudController
         Shader.SetGlobalFloat(_cloudDetailNoiseScaleId, CloudConstants.DetailNoiseScale);
         Shader.SetGlobalFloat(_cloudDetailWeightId, CloudConstants.DetailWeight);
         Shader.SetGlobalVector(_cloudShapeWeightsId, CloudConstants.ShapeNoiseWeights);
-        Shader.SetGlobalFloat(_cloudDensityMultiplierId, Settings.DensityMultiplier);
+        Shader.SetGlobalFloat(_cloudDensityMultiplierId, _settings.DensityMultiplier);
         Shader.SetGlobalFloat(_cloudDensityThresholdId, CloudConstants.DensityThreshold);
         Shader.SetGlobalFloat(_cloudShapeSharpnessId, CloudConstants.ShapeSharpness);
         Shader.SetGlobalFloat(_cloudBottomFeatherId, CloudConstants.BottomFeather);
@@ -159,8 +161,8 @@ public class CloudController : MonoBehaviour, ICloudController
         Shader.SetGlobalFloat(_cloudDarknessThresholdId, CloudConstants.DarknessThreshold);
         Shader.SetGlobalVector(_cloudPhaseParamsId, new Vector4(
             CloudConstants.ForwardScattering, CloudConstants.BackScattering, CloudConstants.BaseBrightness, CloudConstants.PhaseStrength));
-        Shader.SetGlobalColor(_cloudColorId, Settings.CloudColor);
-        Shader.SetGlobalColor(_cloudStormColorId, Settings.StormColor);
+        Shader.SetGlobalColor(_cloudColorId, _settings.CloudColor);
+        Shader.SetGlobalColor(_cloudStormColorId, _settings.StormColor);
         Shader.SetGlobalFloat(_cloudAmbientStrengthId, CloudConstants.AmbientStrength);
         Shader.SetGlobalFloat(_cloudStormDarkeningId, CloudConstants.StormDarkening);
         Shader.SetGlobalVector(_cloudSilverLiningParamsId, new Vector4(
@@ -173,13 +175,13 @@ public class CloudController : MonoBehaviour, ICloudController
             CloudConstants.ShadowSoftness,
             CloudConstants.StormShadowBoost,
             CloudConstants.ShadowHorizonFade));
-        Shader.SetGlobalFloat(_cloudAnimSpeedId, Settings.AnimationSpeed);
-        Shader.SetGlobalInt(_cloudLightStepsId, Settings.LightSteps);
-        Shader.SetGlobalFloat(_cloudRayOffsetStrengthId, Settings.RayOffsetStrength);
-        Shader.SetGlobalInt(_cloudDebugModeId, (int)Settings.DebugMode);
+        Shader.SetGlobalFloat(_cloudAnimSpeedId, _settings.AnimationSpeed);
+        Shader.SetGlobalInt(_cloudLightStepsId, _settings.LightSteps);
+        Shader.SetGlobalFloat(_cloudRayOffsetStrengthId, _settings.RayOffsetStrength);
+        Shader.SetGlobalInt(_cloudDebugModeId, (int)_settings.DebugMode);
         Shader.SetGlobalVector(_cloudDebugParamsId, new Vector4(
-            Settings.CondensationChangeDebugThreshold,
-            Mathf.Max(Settings.CondensationChangeDebugSaturation, Settings.CondensationChangeDebugThreshold + 0.0001f),
+            _settings.CondensationChangeDebugThreshold,
+            Mathf.Max(_settings.CondensationChangeDebugSaturation, _settings.CondensationChangeDebugThreshold + 0.0001f),
             SphericalWeatherGrid.DeltaVisualizationScale,
             0f));
 
@@ -188,28 +190,24 @@ public class CloudController : MonoBehaviour, ICloudController
         if (_detailNoise != null)
             Shader.SetGlobalTexture(_cloudDetailNoiseId, _detailNoise);
 
-        // Reset the per-frame texture cache so weather bindings re-publish against the fresh
-        // state. Cheap; ensures consistency if a planet regen changed which weather grid is live.
         _lastWeatherTexture = null;
         _lastDynamicsTexture = null;
         _lastWeatherResolution = -1;
         _lastUploadedViewSteps = int.MinValue;
     }
 
-    // Per-frame work: re-evaluate camera-distance-dependent ViewSteps, and re-bind weather
-    // textures when WeatherManager has swapped them. Every other shader property is static.
     void UpdatePerFrameProperties()
     {
-        int viewSteps = Settings.ViewSteps;
+        int viewSteps = _settings.ViewSteps;
         Camera mainCam = Camera.main;
         if (mainCam != null && _seaLevelRadius > 0f)
         {
             float altitude = Vector3.Distance(mainCam.transform.position, _planetCenter) - _seaLevelRadius;
-            float t = Mathf.InverseLerp(Settings.StepScaleNearAltitude,
-                Mathf.Max(Settings.StepScaleFarAltitude, Settings.StepScaleNearAltitude + 1f), altitude);
-            viewSteps = Mathf.RoundToInt(Mathf.Lerp(Settings.ViewSteps, Settings.MinViewSteps, t));
+            float t = Mathf.InverseLerp(_settings.StepScaleNearAltitude,
+                Mathf.Max(_settings.StepScaleFarAltitude, _settings.StepScaleNearAltitude + 1f), altitude);
+            viewSteps = Mathf.RoundToInt(Mathf.Lerp(_settings.ViewSteps, _settings.MinViewSteps, t));
         }
-        viewSteps = Mathf.Max(Settings.MinViewSteps,
+        viewSteps = Mathf.Max(_settings.MinViewSteps,
             Mathf.RoundToInt(viewSteps * QualityController.CloudStepMultiplier));
         if (viewSteps != _lastUploadedViewSteps)
         {
@@ -263,39 +261,33 @@ public class CloudController : MonoBehaviour, ICloudController
 
     void OnDestroy()
     {
-        ServiceLocator.Unregister<ICloudController>(this);
         ReleaseTextures();
     }
-
-    // --- Console commands -------------------------------------------------
 
     [ConsoleCommand("density", "Get or set cloud density multiplier (range 0-0.08).", MonoTargetType.Single)]
     string DensityCmd(float? value = null)
     {
-        if (Settings == null) return "no CloudSettings bound";
-        if (value == null) return $"cloud density: {Settings.DensityMultiplier:F4}";
-        Settings.DensityMultiplier = Mathf.Clamp(value.Value, 0f, 0.08f);
-        _staticPropertiesDirty = true;
-        return $"cloud density: {Settings.DensityMultiplier:F4}";
+        if (value == null) return $"cloud density: {_settings.DensityMultiplier:F4}";
+        float clamped = Mathf.Clamp(value.Value, 0f, 0.08f);
+        SettingsProvider.Update(_settings with { DensityMultiplier = clamped });
+        return $"cloud density: {clamped:F4}";
     }
 
     [ConsoleCommand("altitude", "Get or set cloud base altitude in meters (range 20-1000).", MonoTargetType.Single)]
     string AltitudeCmd(float? value = null)
     {
-        if (Settings == null) return "no CloudSettings bound";
-        if (value == null) return $"cloud base altitude: {Settings.BaseAltitude:F0}m";
-        Settings.BaseAltitude = Mathf.Clamp(value.Value, 20f, 1000f);
-        _staticPropertiesDirty = true;
-        return $"cloud base altitude: {Settings.BaseAltitude:F0}m";
+        if (value == null) return $"cloud base altitude: {_settings.BaseAltitude:F0}m";
+        float clamped = Mathf.Clamp(value.Value, 20f, 1000f);
+        SettingsProvider.Update(_settings with { BaseAltitude = clamped });
+        return $"cloud base altitude: {clamped:F0}m";
     }
 
     [ConsoleCommand("thickness", "Get or set cloud layer thickness in meters (range 50-1000).", MonoTargetType.Single)]
     string ThicknessCmd(float? value = null)
     {
-        if (Settings == null) return "no CloudSettings bound";
-        if (value == null) return $"cloud layer thickness: {Settings.LayerThickness:F0}m";
-        Settings.LayerThickness = Mathf.Clamp(value.Value, 50f, 1000f);
-        _staticPropertiesDirty = true;
-        return $"cloud layer thickness: {Settings.LayerThickness:F0}m";
+        if (value == null) return $"cloud layer thickness: {_settings.LayerThickness:F0}m";
+        float clamped = Mathf.Clamp(value.Value, 50f, 1000f);
+        SettingsProvider.Update(_settings with { LayerThickness = clamped });
+        return $"cloud layer thickness: {clamped:F0}m";
     }
 }

@@ -147,7 +147,7 @@ public sealed class SphericalWeatherGrid : IDisposable
 
     // Schedules the parallel Burst job + allocates the NativeArrays it writes into.
     // Must be called on the main thread (Job scheduling requirement).
-    static WeatherJobState ScheduleGridJob(CloudSettings settings, int seed)
+    static WeatherJobState ScheduleGridJob(CloudDto settings, int seed)
     {
         int resolution = Mathf.ClosestPowerOfTwo(Mathf.Clamp(settings.WeatherResolution, 32, 512));
         int cellCount = resolution * resolution * 6;
@@ -501,7 +501,7 @@ public sealed class SphericalWeatherGrid : IDisposable
     /// frames until the job completes, then uploads textures.
     /// </summary>
     public static async Awaitable<SphericalWeatherGrid> GenerateAsync(
-        CloudSettings settings, int seed, System.Threading.CancellationToken ct = default)
+        CloudDto settings, int seed, System.Threading.CancellationToken ct = default)
     {
         // Job scheduling and texture upload both require the main thread.
         var state = ScheduleGridJob(settings, seed);
@@ -528,7 +528,7 @@ public sealed class SphericalWeatherGrid : IDisposable
         return UploadGridData(data, seed);
     }
 
-    public static SphericalWeatherGrid Generate(CloudSettings settings, int seed)
+    public static SphericalWeatherGrid Generate(CloudDto settings, int seed)
     {
         var state = ScheduleGridJob(settings, seed);
         state.Handle.Complete();
@@ -728,7 +728,7 @@ public sealed class SphericalWeatherGrid : IDisposable
             _moistureSource[bestIndex]);
     }
 
-    public bool Advance(ComputeShader compute, CloudSettings settings, float deltaTime, Quaternion visualRotation)
+    public bool Advance(ComputeShader compute, CloudDto settings, float deltaTime, Quaternion visualRotation)
     {
         if (compute == null || settings == null || !settings.EnableWeatherEvolution || deltaTime <= 0f)
             return false;
