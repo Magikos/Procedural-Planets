@@ -1,5 +1,4 @@
 using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -881,15 +880,16 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         // thread so the loading bar advances through the heavy global-graph + per-face phases.
         progress?.Report(0f, "Building water bodies...");
         float buildProgress = 0f;
-        var computeTask = Task.Run(
-            () => WaterMeshBuilder.Compute(terrainFaces, buildSettings,
-                p => System.Threading.Volatile.Write(ref buildProgress, p)), ct);
-        while (!computeTask.IsCompleted)
+        var buildTask = BuildWaterMeshAsync(
+            terrainFaces, buildSettings,
+            p => System.Threading.Volatile.Write(ref buildProgress, p));
+        var buildAwaiter = buildTask.GetAwaiter();
+        while (!buildAwaiter.IsCompleted)
         {
             progress?.Report(0.6f * System.Threading.Volatile.Read(ref buildProgress), "Building water bodies...");
             await Awaitable.NextFrameAsync(ct);
         }
-        var waterMeshData = await computeTask;
+        var waterMeshData = buildAwaiter.GetResult();
         if (this == null) return;
         progress?.Report(0.7f, "Uploading water mesh...");
 
@@ -925,6 +925,17 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         renderer.sharedMaterial = _waterMaterial;
         UpdateWaterMaterial(_waterMaterial);
         progress?.Report(1f, "Water ready.");
+    }
+
+    static async Awaitable<WaterMeshBuilder.MeshData> BuildWaterMeshAsync(
+        IFaceMeshSampler[] terrainFaces,
+        WaterMeshBuilder.Settings buildSettings,
+        System.Action<float> onProgress)
+    {
+        await Awaitable.BackgroundThreadAsync();
+        var result = WaterMeshBuilder.Compute(terrainFaces, buildSettings, onProgress);
+        await Awaitable.MainThreadAsync();
+        return result;
     }
 
     Material CreateWaterMaterial()
