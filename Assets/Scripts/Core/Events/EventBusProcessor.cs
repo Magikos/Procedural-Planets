@@ -9,7 +9,7 @@ public class EventBusProcessor : MonoBehaviour
 
     void Awake()
     {
-        if (_instance != null)
+        if (_instance != null && _instance != this)
         {
             Destroy(gameObject);
             return;
@@ -17,6 +17,12 @@ public class EventBusProcessor : MonoBehaviour
 
         _instance = this;
         DontDestroyOnLoad(gameObject);
+    }
+
+    void OnDestroy()
+    {
+        if (_instance == this)
+            _instance = null;
     }
 
     void LateUpdate()
@@ -36,16 +42,19 @@ public class EventBusProcessor : MonoBehaviour
 
     public static void RegisterProcessor(Action processor)
     {
+        EnsureProcessorExists();
         if (!_processors.Contains(processor))
             _processors.Add(processor);
     }
 
     public static void ClearProcessors() => _processors.Clear();
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    static void Init()
+    static void EnsureProcessorExists()
     {
-        if (FindAnyObjectByType<EventBusProcessor>() != null) return;
+        if (_instance != null) return;
+
+        _instance = FindAnyObjectByType<EventBusProcessor>();
+        if (_instance != null) return;
 
         var go = new GameObject("[EventBusProcessor]");
         go.AddComponent<EventBusProcessor>();
