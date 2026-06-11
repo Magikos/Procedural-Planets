@@ -92,7 +92,7 @@ public sealed class CameraFollowGrassInteractor : MonoBehaviour
                 // for mountains/valleys. Falls back to LastSeaLevelRadius if shape isn't ready
                 // (e.g. mid-regeneration).
                 ShapeGenerator shape = _planet.ShapeGenerator;
-                if (shape != null && _planet.PlanetSettingsAsset != null)
+                if (shape != null && SettingsProvider.IsRegistered<PlanetDto>())
                 {
                     float elevation = shape.EvaluateElevation(dir);
                     surfaceRadius = shape.GetScaledElevation(elevation);

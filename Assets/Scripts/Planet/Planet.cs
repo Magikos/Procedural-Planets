@@ -16,7 +16,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     [SerializeField] PlanetSettings _planetSettings;
 
+#if UNITY_EDITOR
     public PlanetSettings PlanetSettingsAsset => _planetSettings;
+#endif
 
     // Read reflectively by PlanetEditor through SerializedObject.FindProperty.
 #pragma warning disable CS0414
@@ -263,17 +265,27 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _perFaceProvider = null;
         _waterObject = null;
 
-        var shapeSettings = _planetSettings.BuildShapeSettings();
-        _shapeGenerator.Configure(shapeSettings);
-        _shapeGenerator.Initialize(Seed);
+        if (!SettingsProvider.IsRegistered<PlanetDto>())
+        {
+            var initialPlanet = PlanetDto.From(_planetSettings);
+            if (initialPlanet != null) SettingsProvider.Register(initialPlanet);
+        }
         if (!SettingsProvider.IsRegistered<BiomeDto>())
         {
-            var initial = BiomeDto.From(_planetSettings.BiomeSettings);
-            if (initial != null) SettingsProvider.Register(initial);
+            var initialBiome = BiomeDto.From(_planetSettings.BiomeSettings);
+            if (initialBiome != null) SettingsProvider.Register(initialBiome);
         }
+
+        PlanetDto planet = SettingsProvider.IsRegistered<PlanetDto>()
+            ? SettingsProvider.GetSettings<PlanetDto>()
+            : null;
         BiomeDto biomeDto = SettingsProvider.IsRegistered<BiomeDto>()
             ? SettingsProvider.GetSettings<BiomeDto>()
             : null;
+
+        var shapeSettings = planet?.BuildShapeSettings();
+        _shapeGenerator.Configure(shapeSettings);
+        _shapeGenerator.Initialize(Seed);
         _colorGenerator.Configure(biomeDto);
         _colorGenerator.Initialize(
             Seed,
@@ -281,17 +293,18 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
         ConfigureMaterial();
 
-        switch (_planetSettings.Resolution)
+        if (planet == null) return;
+        switch (planet.Resolution)
         {
             case PlanetResolution.Low:
                 _perFaceProvider = new PerFaceSurfaceProvider(
-                    transform, _shapeGenerator, PerFaceResolution, _planetSettings.PlanetMaterial, RenderMask);
+                    transform, _shapeGenerator, PerFaceResolution, planet.PlanetMaterial, RenderMask);
                 _surfaceProvider = _perFaceProvider;
                 break;
             case PlanetResolution.High:
                 _surfaceProvider = new ChunkedSurfaceProvider(
-                    transform, _shapeGenerator, _planetSettings.PlanetMaterial, RenderMask,
-                    _planetSettings.MaxChunkDepth);
+                    transform, _shapeGenerator, planet.PlanetMaterial, RenderMask,
+                    planet.MaxChunkDepth);
                 // Pre-cache mode: all chunks at all depths <= MaxChunkDepth are generated up
                 // front during the loading bar. Runtime Tick is a cheap visibility filter; no
                 // mesh jobs run at runtime. Per-vertex colors stay disabled until Phase B.
@@ -310,7 +323,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     void ConfigureMaterial()
     {
-        var mat = _planetSettings.PlanetMaterial;
+        var mat = SettingsProvider.GetSettings<PlanetDto>().PlanetMaterial;
         if (mat == null)
         {
             Logger.Log(LogLevel.Warning, "Planet", "PlanetMaterial is not assigned in PlanetSettings.");
@@ -337,10 +350,12 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         BiomeRegistryDto registry = SettingsProvider.IsRegistered<BiomeDto>()
             ? SettingsProvider.GetSettings<BiomeDto>()?.Registry
             : null;
+        bool surfaceOverridesEnabled = SettingsProvider.IsRegistered<PlanetDto>()
+            && SettingsProvider.GetSettings<PlanetDto>().EnableSurfaceOverrides;
 
         SetMaterialAndGlobalFloat(mat, _terrainOverrideEnabledId,
-            _planetSettings.EnableSurfaceOverrides && registry != null ? 1f : 0f);
-        if (!_planetSettings.EnableSurfaceOverrides || registry == null)
+            surfaceOverridesEnabled && registry != null ? 1f : 0f);
+        if (!surfaceOverridesEnabled || registry == null)
             return;
 
         SetMaterialAndGlobalInt(mat, _coastSliceId, registry.GetSliceIdForBiomeType(BiomeType.Beach));
@@ -428,14 +443,15 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             ConfigureGrassController();
             // Atmosphere is rendered by AtmosphereController + AtmosphereRenderFeature (post-process).
 
-            float scaledRadius = _planetSettings.PlanetRadius * (1 + _shapeGenerator.ElevationMax);
-            float seaLevelRadius = _planetSettings.PlanetRadius * (1 + _planetSettings.OceanLevel);
+            var planet = SettingsProvider.GetSettings<PlanetDto>();
+            float scaledRadius = planet.PlanetRadius * (1 + _shapeGenerator.ElevationMax);
+            float seaLevelRadius = planet.PlanetRadius * (1 + planet.OceanLevel);
             _lastGeneratedRadius = scaledRadius;
             _lastSeaLevelRadius = seaLevelRadius;
             _progressHandle.Report(1f, "Planet ready");
             await Awaitable.NextFrameAsync(ct);
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _shapeGenerator.ElevationMin, _shapeGenerator.ElevationMax));
-            Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, mode {_planetSettings.Resolution}, perFaceResolution {PerFaceResolution}, radius {scaledRadius:F1}");
+            Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, mode {planet.Resolution}, perFaceResolution {PerFaceResolution}, radius {scaledRadius:F1}");
         }
         catch (System.OperationCanceledException)
         {
@@ -517,8 +533,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         if (_surfaceProvider is not ChunkedSurfaceProvider chunkedProvider)
             return;
 
-        float waterRadius = _planetSettings.HasOceans
-            ? _planetSettings.PlanetRadius * (1f + _planetSettings.OceanLevel)
+        var planet = SettingsProvider.GetSettings<PlanetDto>();
+        float waterRadius = planet.HasOceans
+            ? planet.PlanetRadius * (1f + planet.OceanLevel)
             : -1f;
         if (_grassEnabled && _chunkGrassEnabled)
             CreateChunkGrassController(chunkedProvider, waterRadius);
@@ -538,7 +555,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             CreateMidFieldGrassController(chunkedProvider, waterRadius);
         }
 
-        ApplyGrassBlanketState(_planetSettings.PlanetMaterial);
+        ApplyGrassBlanketState(planet.PlanetMaterial);
     }
 
     void UpdateGrassControllerActivation(Camera camera)
@@ -546,8 +563,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         if (_surfaceProvider is not ChunkedSurfaceProvider chunkedProvider || camera == null)
             return;
 
-        float waterRadius = _planetSettings.HasOceans
-            ? _planetSettings.PlanetRadius * (1f + _planetSettings.OceanLevel)
+        var planet = SettingsProvider.GetSettings<PlanetDto>();
+        float waterRadius = planet.HasOceans
+            ? planet.PlanetRadius * (1f + planet.OceanLevel)
             : -1f;
 
         if (_grassEnabled && _chunkGrassEnabled)
@@ -625,14 +643,14 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     {
         _grassNearFieldController = new GrassNearFieldController(transform, chunkedProvider,
             _colorGenerator.SurfaceArrays.GrassParamsBuffer, _colorGenerator.SurfaceArrays.SliceCount,
-            waterRadius, _planetSettings.PlanetRadius, Seed, Logger);
+            waterRadius, SettingsProvider.GetSettings<PlanetDto>().PlanetRadius, Seed, Logger);
     }
 
     void CreateMidFieldGrassController(ChunkedSurfaceProvider chunkedProvider, float waterRadius)
     {
         _grassMidFieldController = new GrassMidFieldController(transform, chunkedProvider,
             _colorGenerator.SurfaceArrays.GrassParamsBuffer, _colorGenerator.SurfaceArrays.SliceCount,
-            waterRadius, _planetSettings.PlanetRadius, Seed, Logger);
+            waterRadius, SettingsProvider.GetSettings<PlanetDto>().PlanetRadius, Seed, Logger);
     }
 
     void ApplyGrassBlanketState(Material mat)
@@ -662,7 +680,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     public void SetGrassEnabled(bool enabled)
     {
         _grassEnabled = enabled;
-        ApplyGrassBlanketState(_planetSettings != null ? _planetSettings.PlanetMaterial : null);
+        ApplyGrassBlanketState(SettingsProvider.IsRegistered<PlanetDto>()
+            ? SettingsProvider.GetSettings<PlanetDto>().PlanetMaterial
+            : null);
         if (!enabled)
         {
             _grassNearFieldController?.Dispose();
@@ -704,7 +724,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
                 break;
             case GrassRenderLayer.Blanket:
                 _grassBlanketEnabled = enabled;
-                ApplyGrassBlanketState(_planetSettings != null ? _planetSettings.PlanetMaterial : null);
+                ApplyGrassBlanketState(SettingsProvider.IsRegistered<PlanetDto>()
+            ? SettingsProvider.GetSettings<PlanetDto>().PlanetMaterial
+            : null);
                 break;
             default:
                 throw new System.ArgumentOutOfRangeException(nameof(layer), layer, null);
@@ -734,11 +756,14 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         sample = default;
         if (_surfaceProvider == null ||
             _colorGenerator?.ClimateProvider == null ||
-            _planetSettings == null ||
-            _planetSettings.PlanetRadius <= 0f)
+            !SettingsProvider.IsRegistered<PlanetDto>())
         {
             return false;
         }
+
+        var planet = SettingsProvider.GetSettings<PlanetDto>();
+        if (planet.PlanetRadius <= 0f)
+            return false;
 
         Vector3 localPoint = transform.InverseTransformPoint(worldPosition);
         if (localPoint.sqrMagnitude < 0.0001f)
@@ -748,7 +773,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         if (!_surfaceProvider.TryGetLocalSurfaceRadius(localDirection, out float localRadius))
             return false;
 
-        float elevation = localRadius / _planetSettings.PlanetRadius - 1f;
+        float elevation = localRadius / planet.PlanetRadius - 1f;
         sample = _colorGenerator.ClimateProvider.Evaluate(localDirection, elevation);
         return true;
     }
@@ -796,7 +821,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         Shader.SetGlobalInt(_partiallyFrozenWaterBodiesId, 0);
         Shader.SetGlobalInt(_liquidWaterBodiesId, 0);
 
-        if (!_planetSettings.HasOceans)
+        var planet = SettingsProvider.GetSettings<PlanetDto>();
+        if (!planet.HasOceans)
         {
             if (_waterObject != null) _waterObject.SetActive(false);
             progress?.Report(1f, "Water skipped.");
@@ -825,14 +851,14 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         float waterScale = GetWaterDistanceScale();
         var buildSettings = new WaterMeshBuilder.Settings
         {
-            PlanetRadius = _planetSettings.PlanetRadius,
-            OceanLevel = _planetSettings.OceanLevel,
+            PlanetRadius = planet.PlanetRadius,
+            OceanLevel = planet.OceanLevel,
             DeepDepth = WaterDeepDepth * waterScale,
             ShoreRange = WaterShoreRange * waterScale,
-            SurfaceOffset = Mathf.Max(_planetSettings.PlanetRadius * 0.00003f, 0.02f),
+            SurfaceOffset = Mathf.Max(planet.PlanetRadius * 0.00003f, 0.02f),
             OceanBodyVertexThreshold = Mathf.Max(48, PerFaceResolution * PerFaceResolution / 28),
             ClimateProvider = _colorGenerator.ClimateProvider,
-            EnableFreezing = _planetSettings.EnableFrozenWater,
+            EnableFreezing = planet.EnableFrozenWater,
             LakeFreezeStartTemperature01 = PlanetConstants.LakeFreezeStartTemperature01,
             LakeFreezeCompleteTemperature01 = PlanetConstants.LakeFreezeCompleteTemperature01,
             OceanFreezeStartTemperature01 = PlanetConstants.OceanFreezeStartTemperature01,
@@ -912,7 +938,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     void UpdateWaterMaterial(Material mat)
     {
-        var color = _planetSettings.WaterColor;
+        var planet = SettingsProvider.GetSettings<PlanetDto>();
+        var color = planet.WaterColor;
         float waterScale = GetWaterDistanceScale();
         if (mat.HasProperty(_shallowColorId))
         {
@@ -942,12 +969,12 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             mat.SetFloat(_oceanFocusModeId, 1f);
             Shader.SetGlobalFloat(_waterFocusModeId, 0f);
             mat.SetFloat(_alphaId, WaterAlpha);
-            mat.SetFloat(_freezingEnabledId, _planetSettings.EnableFrozenWater ? 1f : 0f);
+            mat.SetFloat(_freezingEnabledId, planet.EnableFrozenWater ? 1f : 0f);
             mat.SetFloat(_lakeFreezeStartId, PlanetConstants.LakeFreezeStartTemperature01);
             mat.SetFloat(_lakeFreezeCompleteId, PlanetConstants.LakeFreezeCompleteTemperature01);
             mat.SetFloat(_oceanFreezeStartId, PlanetConstants.OceanFreezeStartTemperature01);
             mat.SetFloat(_oceanFreezeCompleteId, PlanetConstants.OceanFreezeCompleteTemperature01);
-            mat.SetColor(_iceTintId, _planetSettings.IceTint);
+            mat.SetColor(_iceTintId, planet.IceTint);
             mat.SetFloat(_iceOpacityId, PlanetConstants.IceOpacity);
             mat.SetFloat(_iceRoughnessId, PlanetConstants.IceRoughness);
             mat.SetFloat(_iceNormalStrengthId, PlanetConstants.IceNormalStrength);
@@ -973,10 +1000,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     float GetWaterDistanceScale()
     {
-        if (_planetSettings == null)
+        if (!SettingsProvider.IsRegistered<PlanetDto>())
             return 1f;
 
-        return Mathf.Max(_planetSettings.PlanetRadius / WaterReferenceRadius, 0.0001f);
+        return Mathf.Max(SettingsProvider.GetSettings<PlanetDto>().PlanetRadius / WaterReferenceRadius, 0.0001f);
     }
 
     sealed class ProgressRangeHandle : IProgressHandle
@@ -1030,8 +1057,11 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         if (seed.HasValue)
             ServiceLocator.Get<ISeedProvider>().SetWorldSeed(seed.Value);
 
-        if (radius.HasValue && _planetSettings != null)
-            _planetSettings.PlanetRadius = Mathf.Max(100f, radius.Value);
+        if (radius.HasValue && SettingsProvider.IsRegistered<PlanetDto>())
+        {
+            var dto = SettingsProvider.GetSettings<PlanetDto>();
+            SettingsProvider.Update(dto with { PlanetRadius = Mathf.Max(100f, radius.Value) });
+        }
 
         await GeneratePlanetAsync(ct);
     }
