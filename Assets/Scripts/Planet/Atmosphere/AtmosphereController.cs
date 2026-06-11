@@ -4,10 +4,10 @@ using UnityEngine;
 public class AtmosphereController : MonoBehaviour
 {
     [Header("References")]
-    public AtmosphereSettings Settings;
     public CelestialManager CelestialManager;
     public ComputeShader OpticalDepthCompute;
 
+    AtmosphereDto _settings;
     float _planetRadius;
     float _seaLevelRadius;
     Vector3 _planetCenter;
@@ -15,11 +15,7 @@ public class AtmosphereController : MonoBehaviour
     float _lastBakedScaleR, _lastBakedScaleM, _lastBakedAtmoScale;
     int _lastBakedSize, _lastBakedSteps;
     IPlanet _planet;
-    // Per-frame Update() previously re-pushed ~20 SetGlobal* calls every tick. Only _SunParams
-    // genuinely changes per frame; the rest are bound to (Settings, planet) and only need a
-    // re-upload when the planet regenerates or the Settings reference swaps.
     bool _staticPropertiesDirty = true;
-    AtmosphereSettings _lastStaticSettings;
 
     static readonly int _sunParamsId = Shader.PropertyToID("_SunParams");
     static readonly int _planetCenterId = Shader.PropertyToID("_PlanetCenter");
@@ -43,7 +39,13 @@ public class AtmosphereController : MonoBehaviour
     static readonly int _lightShaftSamplesId = Shader.PropertyToID("_LightShaftSamples");
     static readonly int _debugModeId = Shader.PropertyToID("_DebugMode");
     static readonly int _bakedOpticalDepthId = Shader.PropertyToID("_BakedOpticalDepth");
-    void OnEnable() => EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+
+    void OnEnable()
+    {
+        _settings = SettingsProvider.GetSettings<AtmosphereDto>();
+        EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+        EventBus<SettingsChangedEvent>.Listen(OnSettingsChanged);
+    }
 
     void Start()
     {
@@ -53,6 +55,7 @@ public class AtmosphereController : MonoBehaviour
     void OnDisable()
     {
         EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
+        EventBus<SettingsChangedEvent>.Unlisten(OnSettingsChanged);
         Shader.SetGlobalTexture(_bakedOpticalDepthId, null);
     }
 
@@ -63,7 +66,7 @@ public class AtmosphereController : MonoBehaviour
         if (CelestialManager != null)
             Shader.SetGlobalVector(_sunParamsId, CelestialManager.SunDirection);
 
-        if (Settings == null || _planetRadius <= 0f) return;
+        if (_planetRadius <= 0f) return;
 
         EnsureStaticPropertiesUploaded();
     }
@@ -80,6 +83,13 @@ public class AtmosphereController : MonoBehaviour
         Initialize();
     }
 
+    void OnSettingsChanged(SettingsChangedEvent evt)
+    {
+        if (evt.DtoType != typeof(AtmosphereDto)) return;
+        _settings = SettingsProvider.GetSettings<AtmosphereDto>();
+        _staticPropertiesDirty = true;
+    }
+
     void InitializeDependencies()
     {
         if (_planet == null)
@@ -92,16 +102,12 @@ public class AtmosphereController : MonoBehaviour
         EnsureStaticPropertiesUploaded();
     }
 
-    // Uploads (planet, Settings)-bound shader globals. Skipped after the first upload unless the
-    // planet regenerates or the Settings reference swaps; _SunParams (which actually changes per
-    // frame) is handled directly in Update().
     void EnsureStaticPropertiesUploaded()
     {
-        if (!_staticPropertiesDirty && _lastStaticSettings == Settings) return;
+        if (!_staticPropertiesDirty) return;
         _staticPropertiesDirty = false;
-        _lastStaticSettings = Settings;
 
-        float atmosphereRadius = _planetRadius * Settings.AtmosphereScale;
+        float atmosphereRadius = _planetRadius * _settings.AtmosphereScale;
         float atmosphereThickness = atmosphereRadius - _seaLevelRadius;
 
         if (LutNeedsRebake()) BakeOpticalDepth();
@@ -113,53 +119,53 @@ public class AtmosphereController : MonoBehaviour
         Shader.SetGlobalFloat(_densityOriginRadiusId, _seaLevelRadius);
         Shader.SetGlobalFloat(_atmosphereRadiusId, atmosphereRadius);
 
-        Shader.SetGlobalInt(_viewStepsId, Settings.ViewSteps);
-        Shader.SetGlobalInt(_sunStepsId, Settings.SunSteps);
+        Shader.SetGlobalInt(_viewStepsId, _settings.ViewSteps);
+        Shader.SetGlobalInt(_sunStepsId, _settings.SunSteps);
 
-        Shader.SetGlobalVector(_rayleighScatteringId, Settings.RayleighScattering);
-        Shader.SetGlobalFloat(_rayleighScaleHeightId, Settings.RayleighScaleHeight * atmosphereThickness);
-        Shader.SetGlobalFloat(_mieScatteringId, Settings.MieScattering);
-        Shader.SetGlobalFloat(_mieScaleHeightId, Settings.MieScaleHeight * atmosphereThickness);
-        Shader.SetGlobalFloat(_mieAnisotropyId, Settings.MieAnisotropy);
-        float terrainClarityDistance = Mathf.Max(0f, Settings.TerrainClarityDistance);
+        Shader.SetGlobalVector(_rayleighScatteringId, _settings.RayleighScattering);
+        Shader.SetGlobalFloat(_rayleighScaleHeightId, _settings.RayleighScaleHeight * atmosphereThickness);
+        Shader.SetGlobalFloat(_mieScatteringId, _settings.MieScattering);
+        Shader.SetGlobalFloat(_mieScaleHeightId, _settings.MieScaleHeight * atmosphereThickness);
+        Shader.SetGlobalFloat(_mieAnisotropyId, _settings.MieAnisotropy);
+        float terrainClarityDistance = Mathf.Max(0f, _settings.TerrainClarityDistance);
         float terrainAtmosphereDistance = Mathf.Max(
-            terrainClarityDistance + 1f, Settings.TerrainAtmosphereDistance);
+            terrainClarityDistance + 1f, _settings.TerrainAtmosphereDistance);
         Shader.SetGlobalVector(_terrainAerialPerspectiveDistancesId,
             new Vector4(terrainClarityDistance, terrainAtmosphereDistance, 0f, 0f));
 
-        Shader.SetGlobalFloat(_sunIntensityId, Settings.SunIntensity);
-        Shader.SetGlobalFloat(_sunDiscSizeId, Settings.SunDiscSize);
-        Shader.SetGlobalFloat(_sunDiscBlendId, Settings.SunDiscBlend);
+        Shader.SetGlobalFloat(_sunIntensityId, _settings.SunIntensity);
+        Shader.SetGlobalFloat(_sunDiscSizeId, _settings.SunDiscSize);
+        Shader.SetGlobalFloat(_sunDiscBlendId, _settings.SunDiscBlend);
         Shader.SetGlobalVector(_lightShaftParamsId, new Vector4(
-            Settings.EnableLightShafts ? Settings.LightShaftStrength : 0f,
-            Settings.LightShaftDensity,
-            Settings.LightShaftDecay,
-            Settings.LightShaftWeight));
+            _settings.EnableLightShafts ? _settings.LightShaftStrength : 0f,
+            _settings.LightShaftDensity,
+            _settings.LightShaftDecay,
+            _settings.LightShaftWeight));
         Shader.SetGlobalVector(_lightShaftParams2Id, new Vector4(
-            Settings.LightShaftExposure,
-            Settings.LightShaftThreshold,
+            _settings.LightShaftExposure,
+            _settings.LightShaftThreshold,
             0.25f,
             1.35f));
-        Shader.SetGlobalInt(_lightShaftSamplesId, Settings.EnableLightShafts ? Settings.LightShaftSamples : 0);
-        Shader.SetGlobalInt(_debugModeId, Settings.DebugMode);
+        Shader.SetGlobalInt(_lightShaftSamplesId, _settings.EnableLightShafts ? _settings.LightShaftSamples : 0);
+        Shader.SetGlobalInt(_debugModeId, _settings.DebugMode);
     }
 
     bool LutNeedsRebake()
     {
-        return Settings.RayleighScaleHeight != _lastBakedScaleR
-            || Settings.MieScaleHeight != _lastBakedScaleM
-            || Settings.AtmosphereScale != _lastBakedAtmoScale
-            || Settings.BakeTextureSize != _lastBakedSize
-            || Settings.BakeSteps != _lastBakedSteps;
+        return _settings.RayleighScaleHeight != _lastBakedScaleR
+            || _settings.MieScaleHeight != _lastBakedScaleM
+            || _settings.AtmosphereScale != _lastBakedAtmoScale
+            || _settings.BakeTextureSize != _lastBakedSize
+            || _settings.BakeSteps != _lastBakedSteps;
     }
 
     void BakeOpticalDepth()
     {
-        if (OpticalDepthCompute == null || Settings == null || _seaLevelRadius <= 0f) return;
+        if (OpticalDepthCompute == null || _seaLevelRadius <= 0f) return;
 
-        float atmosphereRadius = _planetRadius * Settings.AtmosphereScale;
+        float atmosphereRadius = _planetRadius * _settings.AtmosphereScale;
         float atmosphereThickness = atmosphereRadius - _seaLevelRadius;
-        int size = Settings.BakeTextureSize;
+        int size = _settings.BakeTextureSize;
 
         if (_bakedOpticalDepth != null && _bakedOpticalDepth.width != size)
         {
@@ -182,67 +188,60 @@ public class AtmosphereController : MonoBehaviour
         int kernel = OpticalDepthCompute.FindKernel("Main");
         OpticalDepthCompute.SetTexture(kernel, "_Result", _bakedOpticalDepth);
         OpticalDepthCompute.SetInt("_TextureSize", size);
-        OpticalDepthCompute.SetInt("_NumSteps", Settings.BakeSteps);
+        OpticalDepthCompute.SetInt("_NumSteps", _settings.BakeSteps);
         OpticalDepthCompute.SetFloat("_SeaLevelRadius", _seaLevelRadius);
         OpticalDepthCompute.SetFloat("_AtmosphereRadius", atmosphereRadius);
-        OpticalDepthCompute.SetFloat("_RayleighScaleHeight", Settings.RayleighScaleHeight * atmosphereThickness);
-        OpticalDepthCompute.SetFloat("_MieScaleHeight", Settings.MieScaleHeight * atmosphereThickness);
+        OpticalDepthCompute.SetFloat("_RayleighScaleHeight", _settings.RayleighScaleHeight * atmosphereThickness);
+        OpticalDepthCompute.SetFloat("_MieScaleHeight", _settings.MieScaleHeight * atmosphereThickness);
 
         int groups = Mathf.CeilToInt(size / 8f);
         OpticalDepthCompute.Dispatch(kernel, groups, groups, 1);
 
         Shader.SetGlobalTexture(_bakedOpticalDepthId, _bakedOpticalDepth);
 
-        _lastBakedScaleR = Settings.RayleighScaleHeight;
-        _lastBakedScaleM = Settings.MieScaleHeight;
-        _lastBakedAtmoScale = Settings.AtmosphereScale;
-        _lastBakedSize = Settings.BakeTextureSize;
-        _lastBakedSteps = Settings.BakeSteps;
+        _lastBakedScaleR = _settings.RayleighScaleHeight;
+        _lastBakedScaleM = _settings.MieScaleHeight;
+        _lastBakedAtmoScale = _settings.AtmosphereScale;
+        _lastBakedSize = _settings.BakeTextureSize;
+        _lastBakedSteps = _settings.BakeSteps;
     }
-
-    // --- Console commands -------------------------------------------------
 
     [ConsoleCommand("sun-intensity", "Get or set scattering sun intensity (range 1-100).", MonoTargetType.Single)]
     string SunIntensityCmd(float? value = null)
     {
-        if (Settings == null) return "no AtmosphereSettings bound";
-        if (value == null) return $"sun intensity: {Settings.SunIntensity:F2}";
-        Settings.SunIntensity = Mathf.Clamp(value.Value, 1f, 100f);
-        _staticPropertiesDirty = true;
-        return $"sun intensity: {Settings.SunIntensity:F2}";
+        if (value == null) return $"sun intensity: {_settings.SunIntensity:F2}";
+        float clamped = Mathf.Clamp(value.Value, 1f, 100f);
+        SettingsProvider.Update(_settings with { SunIntensity = clamped });
+        return $"sun intensity: {clamped:F2}";
     }
 
     [ConsoleCommand("rayleigh", "Get or set Rayleigh scattering vector (sky color).", MonoTargetType.Single)]
     string RayleighCmd(Vector3? value = null)
     {
-        if (Settings == null) return "no AtmosphereSettings bound";
         if (value == null)
         {
-            Vector3 r = Settings.RayleighScattering;
+            Vector3 r = _settings.RayleighScattering;
             return $"rayleigh scattering: ({r.x:E3}, {r.y:E3}, {r.z:E3})";
         }
-        Settings.RayleighScattering = value.Value;
-        _staticPropertiesDirty = true;
+        SettingsProvider.Update(_settings with { RayleighScattering = value.Value });
         return $"rayleigh scattering: ({value.Value.x:E3}, {value.Value.y:E3}, {value.Value.z:E3})";
     }
 
     [ConsoleCommand("mie", "Get or set Mie scattering coefficient (haze; range 0-0.1).", MonoTargetType.Single)]
     string MieCmd(float? value = null)
     {
-        if (Settings == null) return "no AtmosphereSettings bound";
-        if (value == null) return $"mie scattering: {Settings.MieScattering:E3}";
-        Settings.MieScattering = Mathf.Clamp(value.Value, 0f, 0.1f);
-        _staticPropertiesDirty = true;
-        return $"mie scattering: {Settings.MieScattering:E3}";
+        if (value == null) return $"mie scattering: {_settings.MieScattering:E3}";
+        float clamped = Mathf.Clamp(value.Value, 0f, 0.1f);
+        SettingsProvider.Update(_settings with { MieScattering = clamped });
+        return $"mie scattering: {clamped:E3}";
     }
 
     [ConsoleCommand("scale", "Get or set atmosphere thickness scale (range 1.01-1.5).", MonoTargetType.Single)]
     string ScaleCmd(float? value = null)
     {
-        if (Settings == null) return "no AtmosphereSettings bound";
-        if (value == null) return $"atmosphere scale: {Settings.AtmosphereScale:F3}";
-        Settings.AtmosphereScale = Mathf.Clamp(value.Value, 1.01f, 1.5f);
-        _staticPropertiesDirty = true;
-        return $"atmosphere scale: {Settings.AtmosphereScale:F3}";
+        if (value == null) return $"atmosphere scale: {_settings.AtmosphereScale:F3}";
+        float clamped = Mathf.Clamp(value.Value, 1.01f, 1.5f);
+        SettingsProvider.Update(_settings with { AtmosphereScale = clamped });
+        return $"atmosphere scale: {clamped:F3}";
     }
 }

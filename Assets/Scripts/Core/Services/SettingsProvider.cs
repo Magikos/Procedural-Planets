@@ -13,7 +13,7 @@ public static class SettingsProvider
         return _fallback = ServiceLocator.Register<ISettingsService>(new SettingsService());
     }
 
-    public static TDto GetSettings<TDto>() where TDto : struct => Get().GetSettings<TDto>();
+    public static TDto GetSettings<TDto>() => Get().GetSettings<TDto>();
 
-    public static void Update<TDto>(TDto next) where TDto : struct => Get().Update(next);
+    public static void Update<TDto>(TDto next) => Get().Update(next);
 }

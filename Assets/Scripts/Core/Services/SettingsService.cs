@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 public sealed class SettingsService : ISettingsService
 {
@@ -7,11 +8,11 @@ public sealed class SettingsService : ISettingsService
 
     public SettingsService()
     {
-        // DTO construction lives here, one explicit Resources.Load + From(SO) per DTO.
-        // Empty for now; first DTO lands with the GrassPlacementController migration.
+        var atmosphereSo = Resources.Load<AtmosphereSettings>("Settings/AtmosphereSettings");
+        _dtos[typeof(AtmosphereDto)] = AtmosphereDto.From(atmosphereSo);
     }
 
-    public TDto GetSettings<TDto>() where TDto : struct
+    public TDto GetSettings<TDto>()
     {
         if (!_dtos.TryGetValue(typeof(TDto), out var value))
             throw new InvalidOperationException(
@@ -20,7 +21,7 @@ public sealed class SettingsService : ISettingsService
         return (TDto)value;
     }
 
-    public void Update<TDto>(TDto next) where TDto : struct
+    public void Update<TDto>(TDto next)
     {
         _dtos[typeof(TDto)] = next;
         EventBus<SettingsChangedEvent>.Raise(new SettingsChangedEvent(typeof(TDto)));
