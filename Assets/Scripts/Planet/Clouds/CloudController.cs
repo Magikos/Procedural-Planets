@@ -145,34 +145,34 @@ public class CloudController : MonoBehaviour, ICloudController
         Shader.SetGlobalVector(_cloudPlanetCenterId, _planetCenter);
         Shader.SetGlobalFloat(_cloudInnerRadiusId, innerRadius);
         Shader.SetGlobalFloat(_cloudOuterRadiusId, outerRadius);
-        Shader.SetGlobalFloat(_cloudNoiseScaleId, Settings.NoiseScale);
-        Shader.SetGlobalFloat(_cloudDetailNoiseScaleId, Settings.DetailNoiseScale);
-        Shader.SetGlobalFloat(_cloudDetailWeightId, Settings.DetailWeight);
-        Shader.SetGlobalVector(_cloudShapeWeightsId, Settings.ShapeNoiseWeights);
+        Shader.SetGlobalFloat(_cloudNoiseScaleId, CloudConstants.NoiseScale);
+        Shader.SetGlobalFloat(_cloudDetailNoiseScaleId, CloudConstants.DetailNoiseScale);
+        Shader.SetGlobalFloat(_cloudDetailWeightId, CloudConstants.DetailWeight);
+        Shader.SetGlobalVector(_cloudShapeWeightsId, CloudConstants.ShapeNoiseWeights);
         Shader.SetGlobalFloat(_cloudDensityMultiplierId, Settings.DensityMultiplier);
-        Shader.SetGlobalFloat(_cloudDensityThresholdId, Settings.DensityThreshold);
-        Shader.SetGlobalFloat(_cloudShapeSharpnessId, Settings.ShapeSharpness);
-        Shader.SetGlobalFloat(_cloudBottomFeatherId, Settings.BottomFeather);
-        Shader.SetGlobalFloat(_cloudTopFeatherId, Settings.TopFeather);
-        Shader.SetGlobalFloat(_cloudTopDensityBiasId, Settings.TopDensityBias);
-        Shader.SetGlobalFloat(_cloudLightAbsorptionId, Settings.LightAbsorption);
-        Shader.SetGlobalFloat(_cloudDarknessThresholdId, Settings.DarknessThreshold);
+        Shader.SetGlobalFloat(_cloudDensityThresholdId, CloudConstants.DensityThreshold);
+        Shader.SetGlobalFloat(_cloudShapeSharpnessId, CloudConstants.ShapeSharpness);
+        Shader.SetGlobalFloat(_cloudBottomFeatherId, CloudConstants.BottomFeather);
+        Shader.SetGlobalFloat(_cloudTopFeatherId, CloudConstants.TopFeather);
+        Shader.SetGlobalFloat(_cloudTopDensityBiasId, CloudConstants.TopDensityBias);
+        Shader.SetGlobalFloat(_cloudLightAbsorptionId, CloudConstants.LightAbsorption);
+        Shader.SetGlobalFloat(_cloudDarknessThresholdId, CloudConstants.DarknessThreshold);
         Shader.SetGlobalVector(_cloudPhaseParamsId, new Vector4(
-            Settings.ForwardScattering, Settings.BackScattering, Settings.BaseBrightness, Settings.PhaseStrength));
+            CloudConstants.ForwardScattering, CloudConstants.BackScattering, CloudConstants.BaseBrightness, CloudConstants.PhaseStrength));
         Shader.SetGlobalColor(_cloudColorId, Settings.CloudColor);
         Shader.SetGlobalColor(_cloudStormColorId, Settings.StormColor);
-        Shader.SetGlobalFloat(_cloudAmbientStrengthId, Settings.AmbientStrength);
-        Shader.SetGlobalFloat(_cloudStormDarkeningId, Settings.StormDarkening);
+        Shader.SetGlobalFloat(_cloudAmbientStrengthId, CloudConstants.AmbientStrength);
+        Shader.SetGlobalFloat(_cloudStormDarkeningId, CloudConstants.StormDarkening);
         Shader.SetGlobalVector(_cloudSilverLiningParamsId, new Vector4(
-            Settings.SilverLiningStrength,
-            Settings.SilverLiningPower,
-            Settings.SilverLiningEdgePower,
-            Settings.SilverLiningStormSuppression));
+            CloudConstants.SilverLiningStrength,
+            CloudConstants.SilverLiningPower,
+            CloudConstants.SilverLiningEdgePower,
+            CloudConstants.SilverLiningStormSuppression));
         Shader.SetGlobalVector(_cloudShadowParamsId, new Vector4(
-            Settings.ShadowStrength,
-            Settings.ShadowSoftness,
-            Settings.StormShadowBoost,
-            Settings.ShadowHorizonFade));
+            CloudConstants.ShadowStrength,
+            CloudConstants.ShadowSoftness,
+            CloudConstants.StormShadowBoost,
+            CloudConstants.ShadowHorizonFade));
         Shader.SetGlobalFloat(_cloudAnimSpeedId, Settings.AnimationSpeed);
         Shader.SetGlobalInt(_cloudLightStepsId, Settings.LightSteps);
         Shader.SetGlobalFloat(_cloudRayOffsetStrengthId, Settings.RayOffsetStrength);

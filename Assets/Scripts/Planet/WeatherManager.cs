@@ -447,7 +447,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
         float angularSpeedRadians = WindSpeedMetersPerSecond / Mathf.Max(_seaLevelRadius, 1f);
         float degrees = angularSpeedRadians * Mathf.Rad2Deg *
-            Settings.FrontAdvectionSpeedMultiplier * Time.deltaTime;
+            CloudConstants.FrontAdvectionSpeedMultiplier * Time.deltaTime;
         if (degrees > 0f)
         {
             Vector3 axis = GetAdvectionAxis(WindDirection);
@@ -478,7 +478,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         }
 
         _evolutionAccumulator += Time.deltaTime;
-        float interval = Mathf.Max(Settings.ActiveEvolutionInterval, 0.05f);
+        float interval = Mathf.Max(Settings.EvolutionInterval, 0.05f);
         if (_evolutionAccumulator < interval)
             return;
 
@@ -723,8 +723,6 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             return;
         }
 
-        bool validationRates = Settings != null && Settings.UseValidationEvolutionRates;
-        string evolutionMode = validationRates ? "validation" : "normal";
         string readbackState = _weatherDiagnosticsError ? "readback error" :
             _weatherDiagnosticsPending ? "readback pending" : $"{_weatherDiagnosticsSamples} cells";
         string lastUpdateAge = _evolutionDispatchCount > 0
@@ -736,7 +734,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         if (_weatherQueryCacheError)
             GUILayout.Label("Query cache readback error");
         GUILayout.Label($"Diagnostics face: {(_weatherDiagnosticsLastFace >= 0 ? _weatherDiagnosticsLastFace.ToString() : "none")}");
-        GUILayout.Label($"Evolution: {evolutionMode}, dispatches {_evolutionDispatchCount}, last dt {_lastEvolutionDelta:F2}s");
+        GUILayout.Label($"Evolution: dispatches {_evolutionDispatchCount}, last dt {_lastEvolutionDelta:F2}s");
         GUILayout.Label($"Last update age: {lastUpdateAge}");
         GUILayout.Label($"Condensation avg: {_weatherAverageCondensation:F3}, storm avg: {_weatherAverageStorm:F3}");
         GUILayout.Label($"Cloudy/storm/raining: {_weatherCloudyFraction:P1} / {_weatherStormFraction:P1} / {_weatherRainingFraction:P1}");
@@ -792,7 +790,6 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         AppendJsonBool(sb, "queryCacheComplete", queryCacheFaces >= 6, 1, true);
         AppendJsonNumber(sb, "evolutionDispatches", _evolutionDispatchCount, 1, true);
         AppendJsonNumber(sb, "lastEvolutionDelta", _lastEvolutionDelta, 1, true);
-        AppendJsonBool(sb, "validationEvolutionRates", Settings != null && Settings.UseValidationEvolutionRates, 1, true);
         AppendJsonBool(sb, "precipitationRenderEnabled",
             precipitationController != null && precipitationController.PrecipitationRenderingEnabled && precipitationController.IsRenderingEnabled,
             1, true);

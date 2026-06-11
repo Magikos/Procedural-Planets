@@ -166,7 +166,7 @@ public sealed class SphericalWeatherGrid : IDisposable
         };
 
         float coverageThreshold = Mathf.Lerp(0.84f, 0.18f, settings.InitialCoverage);
-        float edgeWidth = Mathf.Clamp(1f / Mathf.Max(1f, settings.FrontSharpness), 0.015f, 0.25f);
+        float edgeWidth = Mathf.Clamp(1f / Mathf.Max(1f, CloudConstants.FrontSharpness), 0.015f, 0.25f);
 
         var job = new WeatherGridGenerationJob
         {
@@ -174,17 +174,17 @@ public sealed class SphericalWeatherGrid : IDisposable
             FrontNoise = NoiseData.Create(seed),
             DetailNoise = NoiseData.Create(seed + 7919),
             ClimateNoise = NoiseData.Create(seed + 104729),
-            FrontScale = settings.FrontScale,
-            BiomeInfluence = settings.BiomeInfluence,
+            FrontScale = CloudConstants.FrontScale,
+            BiomeInfluence = CloudConstants.BiomeInfluence,
             CoverageThreshold = coverageThreshold,
             EdgeWidth = edgeWidth,
-            StormSourceThreshold = settings.StormSourceThreshold,
-            StormSourceSoftness = settings.StormSourceSoftness,
-            StormMoistureBias = settings.StormMoistureBias,
+            StormSourceThreshold = CloudConstants.StormSourceThreshold,
+            StormSourceSoftness = CloudConstants.StormSourceSoftness,
+            StormMoistureBias = CloudConstants.StormMoistureBias,
             StormThreshold = settings.StormThreshold,
-            RainFormationThreshold = settings.RainFormationThreshold,
-            RainFormationSoftness = settings.RainFormationSoftness,
-            RainCloudThreshold = settings.RainCloudThreshold,
+            RainFormationThreshold = CloudConstants.RainFormationThreshold,
+            RainFormationSoftness = CloudConstants.RainFormationSoftness,
+            RainCloudThreshold = CloudConstants.RainCloudThreshold,
             Condensation = state.Condensation,
             Storm = state.Storm,
             MoistureSource = state.MoistureSource,
@@ -741,21 +741,21 @@ public sealed class SphericalWeatherGrid : IDisposable
         compute.SetInt(_resolutionId, Resolution);
         compute.SetFloat(_deltaTimeId, deltaTime);
         compute.SetFloat(_stormThresholdId, settings.StormThreshold);
-        compute.SetFloat(_moistureSourceStrengthId, settings.ActiveMoistureSourceStrength);
-        compute.SetFloat(_dryAirEvaporationRateId, settings.ActiveDryAirEvaporationRate);
-        compute.SetFloat(_stormGrowthRateId, settings.ActiveStormGrowthRate);
-        compute.SetFloat(_stormDecayRateId, settings.ActiveStormDecayRate);
-        compute.SetFloat(_stormMoistureBiasId, settings.StormMoistureBias);
-        compute.SetFloat(_stormSourceThresholdId, settings.StormSourceThreshold);
-        compute.SetFloat(_stormSourceSoftnessId, settings.StormSourceSoftness);
-        compute.SetFloat(_rainFormationThresholdId, settings.RainFormationThreshold);
-        compute.SetFloat(_rainFormationSoftnessId, settings.RainFormationSoftness);
-        compute.SetFloat(_rainCloudThresholdId, settings.RainCloudThreshold);
-        compute.SetFloat(_precipitationBuildRateId, settings.PrecipitationBuildRate);
-        compute.SetFloat(_precipitationDecayRateId, settings.PrecipitationDecayRate);
-        compute.SetFloat(_rainOutRateId, settings.RainOutRate);
-        compute.SetFloat(_humidityRecoveryRateId, settings.HumidityRecoveryRate);
-        compute.SetFloat(_condensationRainDrainId, settings.CondensationRainDrain);
+        compute.SetFloat(_moistureSourceStrengthId, CloudConstants.MoistureSourceStrength);
+        compute.SetFloat(_dryAirEvaporationRateId, CloudConstants.DryAirEvaporationRate);
+        compute.SetFloat(_stormGrowthRateId, CloudConstants.StormGrowthRate);
+        compute.SetFloat(_stormDecayRateId, CloudConstants.StormDecayRate);
+        compute.SetFloat(_stormMoistureBiasId, CloudConstants.StormMoistureBias);
+        compute.SetFloat(_stormSourceThresholdId, CloudConstants.StormSourceThreshold);
+        compute.SetFloat(_stormSourceSoftnessId, CloudConstants.StormSourceSoftness);
+        compute.SetFloat(_rainFormationThresholdId, CloudConstants.RainFormationThreshold);
+        compute.SetFloat(_rainFormationSoftnessId, CloudConstants.RainFormationSoftness);
+        compute.SetFloat(_rainCloudThresholdId, CloudConstants.RainCloudThreshold);
+        compute.SetFloat(_precipitationBuildRateId, CloudConstants.PrecipitationBuildRate);
+        compute.SetFloat(_precipitationDecayRateId, CloudConstants.PrecipitationDecayRate);
+        compute.SetFloat(_rainOutRateId, CloudConstants.RainOutRate);
+        compute.SetFloat(_humidityRecoveryRateId, CloudConstants.HumidityRecoveryRate);
+        compute.SetFloat(_condensationRainDrainId, CloudConstants.CondensationRainDrain);
         compute.SetFloat(_deltaVisualizationScaleId, DeltaVisualizationScale);
         compute.SetMatrix(_weatherVisualRotationId, Matrix4x4.Rotate(visualRotation));
 
