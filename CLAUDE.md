@@ -1,0 +1,132 @@
+# Project rules
+
+This file captures the agreed-upon rules for the ProceduralPlanets codebase. It is loaded into every Claude session. Rules are operative — read them as "do this / don't do that," not as suggestions. If a rule conflicts with what you find in code, the rule wins (the code is drift to be corrected, not a counter-example).
+
+The 2026-06-10 audit lives at [docs/audit/2026-06-code-refactor/](docs/audit/2026-06-code-refactor/) and is the current source of refactor findings. The active perf-maintainability plan is [docs/design/2026-06-08-performance-maintainability-plan.md](docs/design/2026-06-08-performance-maintainability-plan.md).
+
+---
+
+## Architecture
+
+### Settings: SO authoring, DTO runtime
+
+- `ScriptableObject` settings are **editor-only authoring surfaces**. Runtime never reads an SO directly outside boot.
+- Runtime consumers read immutable **snapshot DTOs** (records or readonly structs).
+- DTOs live next to the SO they snapshot, with a static `From(SO)` factory.
+- A central `ISettingsService` is built at boot, aggregates all SOs into per-domain DTOs, and exposes `GetSettings<TDto>()`.
+- Consumers fetch once and cache: `_settings = ServiceLocator.Get<ISettingsService>().GetSettings<CloudRenderDto>();`
+- Settings changes raise `EventBus<SettingsChangedEvent>`. Consumers re-fetch on receipt.
+- No console command mutates the SO asset. Console-command setters update the runtime DTO via the service.
+- `Material` assets are cloned on first use. Runtime never writes shader properties or keywords on an SO-referenced material asset.
+
+### SOs are narrow
+
+- One SO per domain concern. Break god-SOs into many targeted SOs so DTOs can compose only what they need.
+- Example: `CloudSettings` → `CloudRenderSettings`, `CloudEvolutionSettings`, `WeatherGridSeedSettings`, `RainFormationSettings`. Each DTO composes the slice its consumer needs.
+
+### Services over MonoBehaviours
+
+- Default to a **plain class service**. Use `MonoBehaviour` only when you need a Unity message (`OnTriggerEnter`, `OnDrawGizmos`, `OnValidate`, `[ContextMenu]`, custom inspector, `OnBecameVisible`, etc.).
+- One **orchestrator MonoBehaviour** drives many services by forwarding `Update`/`FixedUpdate`/`LateUpdate` to them.
+- The orchestrator also owns deterministic disposal in reverse init order.
+- Editor-only authoring affordances on SOs/MBs are legitimate and should not be stripped to satisfy "default to plain class."
+
+### Boot path discipline
+
+- All initialization goes through `IEarlyInitialize` / `ILateInitialize` driven by `LoadingManager`.
+- **No `[DefaultExecutionOrder]`.** Ordering belongs in the init phase system.
+- **No `RuntimeInitializeOnLoadMethod`** except `LoadingManager.CreateInstance` (sanctioned because the loading overlay must paint before any `IEarlyInitialize` runs). Self-test fixtures don't count.
+- Dependency declaration over priority numbers: services declare `Type[] Dependencies`; a generic dependency-resolved init graph topologically orders them. *(In-progress design — until landed, declare deps with a `// Depends on: …` comment and pick a Priority that respects them.)*
+- External observers (UI, debug, gameplay code outside the init graph) may use `DependencyManager.WhenReady<T>()`. Services *inside* the init graph declare deps formally — never `await WhenReady<T>()` as a substitute.
+
+### ServiceLocator
+
+- `TryGet<>` for optional services with downstream null-check.
+- `Get<>` only when the service **must** exist (throws otherwise).
+- Resolve once at init for hot-path consumers. Never `TryGet`/`Get` per frame.
+
+### File size is a symptom
+
+- Real rule: **when you're about to add a new responsibility to a class, split first.**
+- ~400 lines is a guardrail. Don't split to hit a number; split to find cohesion. Existing oversized files are flagged in the audit.
+
+### Console commands
+
+- Commands stay on the service that owns the underlying state — `[ConsoleCommand]` / `[CommandPrefix]` attributes live on the service.
+- Don't extract a `*Commands` companion class unless the command set genuinely outgrows the service.
+
+### Debug surfaces own their domain
+
+- Each subsystem owns its own debug module: `AtmosphereDebugModule` owns atmosphere globals, `BiomeDebugModule` owns biome metadata, etc.
+- `WaterDebugModule` audits water only. `GrassDebugModule` audits grass only.
+- `DebugCaptureController` orchestrates; it doesn't enumerate per-domain fields.
+
+---
+
+## Async, background, and compute
+
+- **Awaitable only.** No coroutines (`IEnumerator`). No `async void`. No `Task.Run`.
+- Wrap Unity's non-`Awaitable` async surfaces (`AsyncGPUReadback`, `Resources.LoadAsync`, `SceneManager.LoadSceneAsync`) with extensions that return `Awaitable<T>`.
+- **Expensive one-shot work** (generation, IO, image encoding, mesh build) runs on a background thread via `Awaitable.BackgroundThreadAsync`.
+- **Per-frame hot work** uses Burst jobs or compute shaders. Compute is the preferred tool when the work fits a kernel and the inputs/outputs are buffers — it's often the fastest answer even for complex math.
+- Caveats to know, not rules: `ComputeShader.Dispatch` has ~50-100μs launch overhead (don't compute-shader trivial workloads). `AsyncGPUReadback` adds 1-2 frames of latency (don't use when a result is needed this frame).
+
+---
+
+## Per-frame discipline
+
+- Any controller that uploads shader globals every frame uses the **dirty-flag pattern**: static-vs-dynamic split, dirty-marked on `OnPlanetGenerated` and on each console-command setter, only push when dirty.
+- Atmosphere and clouds are the precedent. New controllers follow.
+- `ShaderGlobalsController` runs in `LateUpdate` so publish phase is consistent across writers.
+
+---
+
+## Shader globals
+
+- `ShaderGlobalIds` holds shared **string-constant names** for globals (`public const string GameTime = "_GameTime";`).
+- Each module does its own `Shader.PropertyToID(ShaderGlobalIds.GameTime)` cache locally.
+- This gives a single source of truth for *names* (two modules can't disagree on `_OceanDebugMode`) without forcing every PropertyToID into one file.
+
+---
+
+## Code style
+
+### Comments
+
+- **Default to no comments.** Name things well; let the code speak.
+- Write a comment only when the **WHY is non-obvious**: a hidden constraint, a subtle invariant, a non-obvious workaround for a specific bug.
+- **Never** write change-history or course-correction commentary. No `// was X, now Y`, `// added for Z issue`, `// see PR #123`. That belongs in commit messages and rots in code.
+- **Never** explain what the code does — well-named identifiers already do that.
+- When you touch a file for another reason, prune existing change-history comments you encounter.
+
+### Logger
+
+- New code uses `ILogger` / `LoggerProvider`. Direct `UnityEngine.Debug.Log*` migrates as files are touched for other reasons.
+- **`Warning` is reserved for "developer probably wants to fix this."** "Feature disabled, continuing silently" is `Info` (one-time) or a debug channel.
+
+### Dead code
+
+- Experiments are deleted at the same commit that supersedes them, or within one week.
+- If genuinely parking an experiment, gate behind `#if PROJECT_X_EXPERIMENT` so it stops shipping. Document what's parked and why.
+- Dead fields, unused enum values, `#if false` blocks, and unused DTOs are removed when discovered.
+
+---
+
+## Tests
+
+- No test framework is being added near-term. Don't propose one.
+- Editor-time self-tests that run via `RuntimeInitializeOnLoadMethod` are dead fixtures, not tests — delete them.
+
+---
+
+## Don't touch
+
+- **Caustics** (`Assets/Graphics/Shaders/Ocean.shader` and related caustics code). They look correct; every touch breaks them. Audit findings against caustics are flag-only — no code changes.
+
+---
+
+## Audit workflow
+
+- Audits are read-only and produce a findings doc. Bryan reviews findings and marks decisions (fix / defer / wontfix) before any code changes.
+- Don't start fixing during an audit phase. Don't fix while findings are still under review.
+- Cross-reference baseline audit findings instead of re-listing them.
