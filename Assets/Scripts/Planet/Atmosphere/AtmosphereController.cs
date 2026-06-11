@@ -42,9 +42,17 @@ public class AtmosphereController : MonoBehaviour
 
     void OnEnable()
     {
+        EnsureSettingsRegistered();
         _settings = SettingsProvider.GetSettings<AtmosphereDto>();
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
         EventBus<SettingsChangedEvent>.Listen(OnSettingsChanged);
+    }
+
+    static void EnsureSettingsRegistered()
+    {
+        if (SettingsProvider.IsRegistered<AtmosphereDto>()) return;
+        var so = Resources.Load<AtmosphereSettings>("Settings/AtmosphereSettings");
+        SettingsProvider.Register(AtmosphereDto.From(so));
     }
 
     void Start()
