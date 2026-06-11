@@ -43,7 +43,7 @@ public sealed class ShaderGlobalsController : MonoBehaviour
         ApplyFrameGlobals();
     }
 
-    void Update()
+    void LateUpdate()
     {
         ApplyFrameGlobals();
     }
