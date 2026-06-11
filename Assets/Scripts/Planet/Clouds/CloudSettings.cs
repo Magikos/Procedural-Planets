@@ -3,18 +3,6 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Planet/Settings/Cloud Settings")]
 public class CloudSettings : ScriptableObject
 {
-    public enum DebugView
-    {
-        Off = 0,
-        Weather = 1,
-        Storm = 2,
-        Density = 3,
-        OpticalDepth = 4,
-        SilverLining = 5,
-        MoistureSource = 6,
-        CondensationChange = 7
-    }
-
     [Header("Weather Grid")]
     [Range(32, 512)] public int WeatherResolution = 256;
     [Range(0f, 1f)] public float InitialCoverage = 0.48f;
@@ -52,11 +40,4 @@ public class CloudSettings : ScriptableObject
     [Header("Noise Textures")]
     [Range(32, 256)] public int ShapeNoiseResolution = 128;
     [Range(16, 64)] public int DetailNoiseResolution = 32;
-
-    // Debug visualization: runtime toggles, not authored settings. Kept here for now;
-    // candidate to move to a CloudDebugState runtime module in a follow-up.
-    [Header("Debug")]
-    public DebugView DebugMode = DebugView.Off;
-    [Range(0f, 0.01f)] public float CondensationChangeDebugThreshold = 0.0002f;
-    [Range(0.0005f, 0.02f)] public float CondensationChangeDebugSaturation = 0.004f;
 }

@@ -19,10 +19,7 @@ public sealed record CloudDto(
     float StepScaleNearAltitude,
     float StepScaleFarAltitude,
     int ShapeNoiseResolution,
-    int DetailNoiseResolution,
-    CloudSettings.DebugView DebugMode,
-    float CondensationChangeDebugThreshold,
-    float CondensationChangeDebugSaturation)
+    int DetailNoiseResolution)
 {
     public static void EnsureRegistered()
     {
@@ -50,8 +47,5 @@ public sealed record CloudDto(
         src.StepScaleNearAltitude,
         src.StepScaleFarAltitude,
         src.ShapeNoiseResolution,
-        src.DetailNoiseResolution,
-        src.DebugMode,
-        src.CondensationChangeDebugThreshold,
-        src.CondensationChangeDebugSaturation);
+        src.DetailNoiseResolution);
 }

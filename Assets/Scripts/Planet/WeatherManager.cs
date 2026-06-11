@@ -746,10 +746,10 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         GUILayout.Label($"Delta avg/max: {_weatherAverageCondensationChange:+0.0000;-0.0000;0.0000} / {_weatherMaxCondensationChange:F4}");
         GUILayout.Label($"Condensing: {_weatherCondensingFraction * 100f:F1}%, drying: {_weatherDryingFraction * 100f:F1}%");
         GUILayout.Label("F9=Dump weather diagnostics");
-        if (_settings.DebugMode == CloudSettings.DebugView.CondensationChange)
+        if (CloudDebugState.Mode == CloudDebugState.View.CondensationChange)
         {
             GUILayout.Label("Delta view: cyan condensing, red drying, dim below threshold");
-            GUILayout.Label($"Threshold/saturation: {_settings.CondensationChangeDebugThreshold:F4} / {_settings.CondensationChangeDebugSaturation:F4}");
+            GUILayout.Label($"Threshold/saturation: {CloudDebugState.CondensationChangeThreshold:F4} / {CloudDebugState.CondensationChangeSaturation:F4}");
         }
         GUILayout.EndArea();
     }

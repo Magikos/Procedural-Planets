@@ -178,10 +178,10 @@ public class CloudController : MonoBehaviour
         Shader.SetGlobalFloat(_cloudAnimSpeedId, _settings.AnimationSpeed);
         Shader.SetGlobalInt(_cloudLightStepsId, _settings.LightSteps);
         Shader.SetGlobalFloat(_cloudRayOffsetStrengthId, _settings.RayOffsetStrength);
-        Shader.SetGlobalInt(_cloudDebugModeId, (int)_settings.DebugMode);
+        Shader.SetGlobalInt(_cloudDebugModeId, (int)CloudDebugState.Mode);
         Shader.SetGlobalVector(_cloudDebugParamsId, new Vector4(
-            _settings.CondensationChangeDebugThreshold,
-            Mathf.Max(_settings.CondensationChangeDebugSaturation, _settings.CondensationChangeDebugThreshold + 0.0001f),
+            CloudDebugState.CondensationChangeThreshold,
+            Mathf.Max(CloudDebugState.CondensationChangeSaturation, CloudDebugState.CondensationChangeThreshold + 0.0001f),
             SphericalWeatherGrid.DeltaVisualizationScale,
             0f));
 
@@ -289,5 +289,32 @@ public class CloudController : MonoBehaviour
         float clamped = Mathf.Clamp(value.Value, 50f, 1000f);
         SettingsProvider.Update(_settings with { LayerThickness = clamped });
         return $"cloud layer thickness: {clamped:F0}m";
+    }
+
+    [ConsoleCommand("debug-mode", "Get or set cloud debug visualization mode.", MonoTargetType.Single)]
+    string DebugModeCmd(CloudDebugState.View? mode = null)
+    {
+        if (mode == null) return $"cloud debug mode: {CloudDebugState.Mode}";
+        CloudDebugState.Mode = mode.Value;
+        _staticPropertiesDirty = true;
+        return $"cloud debug mode: {CloudDebugState.Mode}";
+    }
+
+    [ConsoleCommand("debug-threshold", "Get or set condensation-change debug threshold (range 0-0.01).", MonoTargetType.Single)]
+    string DebugThresholdCmd(float? value = null)
+    {
+        if (value == null) return $"cloud debug threshold: {CloudDebugState.CondensationChangeThreshold:F4}";
+        CloudDebugState.CondensationChangeThreshold = Mathf.Clamp(value.Value, 0f, 0.01f);
+        _staticPropertiesDirty = true;
+        return $"cloud debug threshold: {CloudDebugState.CondensationChangeThreshold:F4}";
+    }
+
+    [ConsoleCommand("debug-saturation", "Get or set condensation-change debug saturation (range 0.0005-0.02).", MonoTargetType.Single)]
+    string DebugSaturationCmd(float? value = null)
+    {
+        if (value == null) return $"cloud debug saturation: {CloudDebugState.CondensationChangeSaturation:F4}";
+        CloudDebugState.CondensationChangeSaturation = Mathf.Clamp(value.Value, 0.0005f, 0.02f);
+        _staticPropertiesDirty = true;
+        return $"cloud debug saturation: {CloudDebugState.CondensationChangeSaturation:F4}";
     }
 }
