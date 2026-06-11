@@ -266,8 +266,14 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         var shapeSettings = _planetSettings.BuildShapeSettings();
         _shapeGenerator.Configure(shapeSettings);
         _shapeGenerator.Initialize(Seed);
-        var biomeDto = BiomeDto.From(_planetSettings.BiomeSettings);
-        if (biomeDto != null) SettingsProvider.Register(biomeDto);
+        if (!SettingsProvider.IsRegistered<BiomeDto>())
+        {
+            var initial = BiomeDto.From(_planetSettings.BiomeSettings);
+            if (initial != null) SettingsProvider.Register(initial);
+        }
+        BiomeDto biomeDto = SettingsProvider.IsRegistered<BiomeDto>()
+            ? SettingsProvider.GetSettings<BiomeDto>()
+            : null;
         _colorGenerator.Configure(biomeDto);
         _colorGenerator.Initialize(
             Seed,
