@@ -165,9 +165,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     ILogger Logger => LoggerProvider.Get();
 
-    public int EarlyPriority => 50;
-    public int LatePriority => 0;
-
     void Awake()
     {
         if (_vcShader == null) _vcShader = Shader.Find("Planet/VertexColor");

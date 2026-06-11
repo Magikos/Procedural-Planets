@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -137,11 +138,11 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     public string ReporterName => "WeatherManager";
     public IProgressHandle ProgressHandle => _progressHandle;
 
-    // ILateInitialize — runs after Planet (priority 0).  OnPlanetGenerated has already fired
-    // (synchronously during Planet.LateInitialize), so _seaLevelRadius is populated.
-    // We generate the grid here directly rather than fire-and-forget so the overlay stays up
-    // until clouds are ready.
-    public int LatePriority => -10;
+    // OnPlanetGenerated fires synchronously during Planet.LateInitialize, so by the time
+    // our LateInitialize runs _seaLevelRadius is populated. Generate the grid here directly
+    // rather than fire-and-forget so the loading overlay stays up until clouds are ready.
+    static readonly Type[] _lateDeps = { typeof(IPlanet) };
+    public IReadOnlyList<Type> LateDependencies => _lateDeps;
     public async Awaitable LateInitialize(CancellationToken cancellationToken)
     {
         if (_seaLevelRadius <= 0f) return;   // no planet in this scene
