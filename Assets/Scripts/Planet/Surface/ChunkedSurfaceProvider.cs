@@ -67,14 +67,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     TerrainQuadtree[] _quadtrees;
     bool[] _faceVisible;
     IFaceMeshSampler[] _rootSamplers;
-    Texture2D[] _faceBiomeBlendedAtlases;
-    Texture2D[] _faceBiomeIdAtlases;
-    Texture2D[] _faceBiomeWeightAtlases;
-    Texture2D _biomeBlendedAtlasStaging;
-    Texture2D _biomeIdAtlasStaging;
-    Texture2D _biomeWeightAtlasStaging;
-    int _reportedFaceBiomeAtlasTextureCount;
-    long _reportedFaceBiomeAtlasRawBytes;
+    readonly IBiomeAtlasService _biomeAtlas;
     GrassSurfaceAtlasGpuData _grassSurfaceAtlases;
 
     // Per-face visible-leaf snapshot â€” compared each Tick to detect changes.
@@ -89,10 +82,6 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     readonly Dictionary<PlanetChunk, ChunkRenderHandle> _chunkRenderers = new();
     readonly LinkedList<PlanetChunk> _renderReserveLru = new();
     const int MaxRenderHandles = 320;
-    // Step 5b: per-bake thread-local scratch buffer used by BiomeMapBaker for the high-res
-    // biome id grid (HighResolutionSizeÂ²). Reused across all chunks on a thread to keep the
-    // bake GC-free. Sized lazily on first use.
-    [System.ThreadStatic] static byte[] _tlsBakeHighResBuffer;
 
     readonly Plane[] _lodFrustumPlanes = new Plane[6];
     readonly Plane[] _grassResidencyFrustumPlanes = new Plane[6];
@@ -127,6 +116,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         _faceMaterial = faceMaterial;
         _renderMask = renderMask;
         _maxChunkDepth = Mathf.Clamp(maxChunkDepth, 0, PlanetChunk.MaxDetailLevel);
+        _biomeAtlas = new BiomeAtlasService(_maxChunkDepth);
     }
 
     public async Awaitable GenerateAsync(IProgressHandle progress, CancellationToken ct)
@@ -446,7 +436,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                     var chunk = _allChunks[i];
                     CalculateChunkColors(chunk, biomeProvider);
                     if (bakeEnabled)
-                        BakeChunkBiomeMap(chunk, lookupCopy, voronoiCopy, lutCopy);
+                        BiomeAtlasService.BakeChunkMap(chunk, lookupCopy, voronoiCopy, lutCopy);
                 });
                 ct.ThrowIfCancellationRequested();
 
@@ -460,7 +450,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                             retainSurfaceSamplingAndRebakeData: chunk.IsLeaf,
                             retainUnitSphereForWaterSampler: _maxChunkDepth == 0);
                     }
-                    if (bakeEnabled) UploadChunkBiomeMap(chunk, releasePendingPixels: !chunk.IsLeaf);
+                    if (bakeEnabled) BiomeAtlasService.UploadChunkMap(chunk, releasePendingPixels: !chunk.IsLeaf);
                 }
 
                 float pct = (float)batchEnd / total;
@@ -470,270 +460,30 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
 
             if (bakeLookupBuilt)
             {
-                BuildFaceBiomeAtlases();
+                _biomeAtlas.BuildFaceAtlases(_allChunks);
                 RebindAllChunkBiomeProperties();
                 if (_faceMaterial != null) _faceMaterial.EnableKeyword(BiomeTextureModeKeyword);
-                releaseChunkBiomeTextures = HasCompleteFaceBiomeAtlases();
+                releaseChunkBiomeTextures = _biomeAtlas.HasCompleteAtlases();
             }
         }
         finally
         {
             if (bakeLookupBuilt)
             {
-                LogBiomeMapBakeSummary(biomeProvider);
-                ReleasePendingBiomeMapPixels();
+                BiomeAtlasService.LogBakeSummary(_allChunks, biomeProvider);
+                BiomeAtlasService.ReleasePendingPixels(_allChunks);
                 if (releaseChunkBiomeTextures)
-                    ReleaseChunkBiomeTextures();
+                    _biomeAtlas.ReleasePerChunkBiomeTextures(_allChunks);
                 lookup.Dispose();
             }
             ReportRetainedChunkCpuMemory();
         }
     }
 
-    // One-shot diagnostic: scan all chunks, pick the leaf with the most distinct biomes (more
-    // informative than the polar/corner default), and report its texel histogram. Also reports
-    // any chunks where the biome map is uniformly zero (which would render as Ocean).
-    void LogBiomeMapBakeSummary(IBiomeProvider biomeProvider)
-    {
-        var registry = (biomeProvider as ColorGenerator)?.Registry;
-
-        PlanetChunk best = null;
-        int bestUnique = 0;
-        int allZeroCount = 0;
-        int totalLeafCount = 0;
-
-        // The pending leaf buffers are the authoritative bake output and remain available
-        // until atlas stitching completes. Fall back to the local texture only for legacy or
-        // partial-atlas paths.
-        for (int i = 0; i < _allChunks.Count; i++)
-        {
-            var c = _allChunks[i];
-            if (c == null || !c.IsLeaf) continue;
-            Color32[] pixels = GetBiomeIdDiagnosticPixels(c);
-            if (pixels == null || pixels.Length == 0) continue;
-            totalLeafCount++;
-            var seen = new System.Collections.Generic.HashSet<byte>();
-            for (int j = 0; j < pixels.Length; j++) seen.Add(pixels[j].r);
-            if (seen.Count == 1 && pixels[0].r == 0) allZeroCount++;
-            if (seen.Count > bestUnique) { best = c; bestUnique = seen.Count; }
-        }
-
-        if (best == null)
-        {
-            LoggerProvider.Log(LogLevel.Warning, "PhaseB", "Bake: no leaf chunks have populated biome ID pixels.");
-            return;
-        }
-
-        var counts = new int[256];
-        var bestPixels = GetBiomeIdDiagnosticPixels(best);
-        for (int i = 0; i < bestPixels.Length; i++) counts[bestPixels[i].r]++;
-
-        var sb = new System.Text.StringBuilder();
-        sb.Append($"Bake: {_allChunks.Count} chunks ({allZeroCount}/{totalLeafCount} leaves are uniformly Ocean). Most-diverse chunk F{best.FaceIndex} D{best.DetailLevel} H{best.HashValue} dominant-id distribution: ");
-        bool first = true;
-        for (int id = 0; id < counts.Length; id++)
-        {
-            if (counts[id] == 0) continue;
-            if (!first) sb.Append(", ");
-            string biomeName = registry?.GetDefinitionByIndex(id)?.Type.ToString() ?? "?";
-            sb.Append($"{biomeName}({id})={counts[id]}");
-            first = false;
-        }
-        LoggerProvider.Log(LogLevel.Debug, "PhaseB", sb.ToString());
-    }
-
-    static Color32[] GetBiomeIdDiagnosticPixels(PlanetChunk chunk)
-    {
-        if (chunk?.PendingBiomeIdsPixels != null)
-            return chunk.PendingBiomeIdsPixels;
-        return chunk?.BiomeIdsTexture != null ? chunk.BiomeIdsTexture.GetPixels32() : null;
-    }
-
-    // Step 5b: bake top-K biome textures for one chunk on a worker thread. Allocates the
-    // pending Color32 buffers lazily (per chunk, GC'd after upload) and reuses a thread-local
-    // scratch buffer for the high-res biome id grid (no per-chunk GC pressure for that).
-    static void BakeChunkBiomeMap(
-        PlanetChunk chunk,
-        in BiomeLookupData lookup,
-        VoronoiBiomeField voronoiField,
-        Color[] lutColors)
-    {
-        if (chunk == null) return;
-        int texelCount = PlanetChunkTextures.BiomeMapResolution * PlanetChunkTextures.BiomeMapResolution;
-        int hrCount = BiomeMapBaker.HighResolutionSize * BiomeMapBaker.HighResolutionSize;
-
-        if (chunk.PendingBiomeBlendedColorPixels == null || chunk.PendingBiomeBlendedColorPixels.Length != texelCount)
-            chunk.PendingBiomeBlendedColorPixels = new Color32[texelCount];
-        if (chunk.PendingBiomeIdsPixels == null || chunk.PendingBiomeIdsPixels.Length != texelCount)
-            chunk.PendingBiomeIdsPixels = new Color32[texelCount];
-        if (chunk.PendingBiomeWeightsPixels == null || chunk.PendingBiomeWeightsPixels.Length != texelCount)
-            chunk.PendingBiomeWeightsPixels = new Color32[texelCount];
-        if (_tlsBakeHighResBuffer == null || _tlsBakeHighResBuffer.Length != hrCount)
-            _tlsBakeHighResBuffer = new byte[hrCount];
-
-        BiomeMapBaker.Bake(chunk, lookup, voronoiField, lutColors,
-            chunk.PendingBiomeBlendedColorPixels,
-            chunk.PendingBiomeIdsPixels,
-            chunk.PendingBiomeWeightsPixels,
-            _tlsBakeHighResBuffer);
-    }
-
-    // Step 5b: upload the 3 baked Color32 buffers to their GPU textures. Leaf pending arrays
-    // stay alive until the face-space biome atlases are stitched, then ReleasePendingBiomeMapPixels
-    // drops them all at once.
-    static void UploadChunkBiomeMap(PlanetChunk chunk, bool releasePendingPixels)
-    {
-        if (chunk == null) return;
-        if (chunk.BiomeBlendedColorTexture != null && chunk.PendingBiomeBlendedColorPixels != null)
-        {
-            chunk.BiomeBlendedColorTexture.SetPixels32(chunk.PendingBiomeBlendedColorPixels);
-            chunk.BiomeBlendedColorTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
-        }
-        if (chunk.BiomeIdsTexture != null && chunk.PendingBiomeIdsPixels != null)
-        {
-            chunk.BiomeIdsTexture.SetPixels32(chunk.PendingBiomeIdsPixels);
-            chunk.BiomeIdsTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
-        }
-        if (chunk.BiomeWeightsTexture != null && chunk.PendingBiomeWeightsPixels != null)
-        {
-            chunk.BiomeWeightsTexture.SetPixels32(chunk.PendingBiomeWeightsPixels);
-            chunk.BiomeWeightsTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
-        }
-        if (releasePendingPixels)
-        {
-            chunk.PendingBiomeBlendedColorPixels = null;
-            chunk.PendingBiomeIdsPixels = null;
-            chunk.PendingBiomeWeightsPixels = null;
-        }
-    }
-
-    void BuildFaceBiomeAtlases()
-    {
-        DisposeFaceBiomeAtlases();
-
-        if (_maxChunkDepth <= 0) return;
-
-        int leafsPerAxis = 1 << _maxChunkDepth;
-        int leafStride = PlanetChunkTextures.BiomeMapResolution - 1;
-        int atlasResolution = leafsPerAxis * leafStride + 1;
-        if (atlasResolution <= 1 || atlasResolution > SystemInfo.maxTextureSize)
-        {
-            LoggerProvider.Log(LogLevel.Warning, "PhaseB",
-                $"Biome atlas skipped: requested {atlasResolution}x{atlasResolution}, max texture size is {SystemInfo.maxTextureSize}.");
-            return;
-        }
-
-        _faceBiomeBlendedAtlases = new Texture2D[6];
-        _faceBiomeIdAtlases = new Texture2D[6];
-        _faceBiomeWeightAtlases = new Texture2D[6];
-
-        int expectedLeafCount = leafsPerAxis * leafsPerAxis;
-        for (int face = 0; face < 6; face++)
-        {
-            var blendedPixels = new Color32[atlasResolution * atlasResolution];
-            var idPixels = new Color32[blendedPixels.Length];
-            var weightPixels = new Color32[blendedPixels.Length];
-            int copiedLeaves = 0;
-
-            for (int i = 0; i < _allChunks.Count; i++)
-            {
-                PlanetChunk chunk = _allChunks[i];
-                if (chunk == null || !chunk.IsLeaf || chunk.FaceIndex != face) continue;
-                if (chunk.PendingBiomeBlendedColorPixels == null
-                    || chunk.PendingBiomeIdsPixels == null
-                    || chunk.PendingBiomeWeightsPixels == null)
-                {
-                    continue;
-                }
-
-                CopyLeafBiomeMapIntoAtlas(chunk, chunk.PendingBiomeBlendedColorPixels,
-                    blendedPixels, atlasResolution, leafsPerAxis, leafStride);
-                CopyLeafBiomeMapIntoAtlas(chunk, chunk.PendingBiomeIdsPixels,
-                    idPixels, atlasResolution, leafsPerAxis, leafStride);
-                CopyLeafBiomeMapIntoAtlas(chunk, chunk.PendingBiomeWeightsPixels,
-                    weightPixels, atlasResolution, leafsPerAxis, leafStride);
-                copiedLeaves++;
-            }
-
-            if (copiedLeaves <= 0)
-            {
-                LoggerProvider.Log(LogLevel.Warning, "PhaseB", $"Biome atlas face {face}: no leaf maps available.");
-                continue;
-            }
-
-            _faceBiomeBlendedAtlases[face] = CreateBiomeAtlasTexture(
-                $"BiomeBlendedAtlas_F{face}", atlasResolution, blendedPixels, FilterMode.Bilinear, linear: false);
-            _faceBiomeIdAtlases[face] = CreateBiomeAtlasTexture(
-                $"BiomeIdsAtlas_F{face}", atlasResolution, idPixels, FilterMode.Point, linear: true);
-            _faceBiomeWeightAtlases[face] = CreateBiomeAtlasTexture(
-                $"BiomeWeightsAtlas_F{face}", atlasResolution, weightPixels, FilterMode.Point, linear: true);
-
-            LoggerProvider.Log(LogLevel.Debug, "PhaseB",
-                $"Biome atlas face {face}: {atlasResolution}x{atlasResolution}, copied {copiedLeaves}/{expectedLeafCount} max-depth leaves.");
-        }
-        ReportFaceBiomeAtlasMemory();
-    }
-
-    static Texture2D CreateBiomeAtlasTexture(string name, int resolution, Color32[] pixels, FilterMode filterMode, bool linear)
-    {
-        var tex = new Texture2D(resolution, resolution, TextureFormat.RGBA32, mipChain: false, linear: linear)
-        {
-            name = name,
-            filterMode = filterMode,
-            wrapMode = TextureWrapMode.Clamp,
-        };
-        tex.SetPixels32(pixels);
-        tex.Apply(updateMipmaps: false, makeNoLongerReadable: true);
-        return tex;
-    }
-
-    static void CopyLeafBiomeMapIntoAtlas(PlanetChunk chunk, Color32[] source,
-        Color32[] atlas, int atlasResolution, int leafsPerAxis, int leafStride)
-    {
-        int mapResolution = PlanetChunkTextures.BiomeMapResolution;
-        if (source == null || source.Length != mapResolution * mapResolution) return;
-
-        GetLeafAtlasOrigin(chunk, leafsPerAxis, leafStride, out int dstX0, out int dstY0);
-
-        for (int y = 0; y < mapResolution; y++)
-        {
-            int srcRow = y * mapResolution;
-            int dstRow = (dstY0 + y) * atlasResolution + dstX0;
-            System.Array.Copy(source, srcRow, atlas, dstRow, mapResolution);
-        }
-    }
-
-    static void GetLeafAtlasOrigin(
-        PlanetChunk chunk,
-        int leafsPerAxis,
-        int leafStride,
-        out int dstX,
-        out int dstY)
-    {
-        float minU = chunk.UvCenter.x - chunk.UvHalfExtent;
-        float minV = chunk.UvCenter.y - chunk.UvHalfExtent;
-        int leafX = Mathf.Clamp(Mathf.RoundToInt(minU * leafsPerAxis), 0, leafsPerAxis - 1);
-        int leafY = Mathf.Clamp(Mathf.RoundToInt(minV * leafsPerAxis), 0, leafsPerAxis - 1);
-        dstX = leafX * leafStride;
-        dstY = leafY * leafStride;
-    }
-
     void BuildGrassSurfaceAtlases()
     {
         DisposeGrassSurfaceAtlases();
         _grassSurfaceAtlases = GrassSurfaceAtlasBuilder.Build(_allChunks, _maxChunkDepth);
-    }
-
-    void ReleasePendingBiomeMapPixels()
-    {
-        for (int i = 0; i < _allChunks.Count; i++)
-        {
-            PlanetChunk chunk = _allChunks[i];
-            if (chunk == null) continue;
-            chunk.PendingBiomeBlendedColorPixels = null;
-            chunk.PendingBiomeIdsPixels = null;
-            chunk.PendingBiomeWeightsPixels = null;
-        }
     }
 
     public IReadOnlyList<IFaceMeshSampler> GetFaceMeshSamplers()
@@ -760,11 +510,11 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         bool updated = false;
         try
         {
-            BakeChunkBiomeMap(leaf, lookup, cg.VoronoiBiomeField, cg.BiomeColors);
-            updated = UpdateFaceBiomeAtlasRegion(leaf);
+            BiomeAtlasService.BakeChunkMap(leaf, lookup, cg.VoronoiBiomeField, cg.BiomeColors);
+            updated = _biomeAtlas.UpdateFaceAtlasRegion(leaf);
             if (!updated && leaf.BiomeBlendedColorTexture != null)
             {
-                UploadChunkBiomeMap(leaf, releasePendingPixels: true);
+                BiomeAtlasService.UploadChunkMap(leaf, releasePendingPixels: true);
                 updated = true;
             }
             if (_chunkRenderers.TryGetValue(leaf, out var handle))
@@ -786,7 +536,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     {
         DisposeAllPendingJobs();
         if (_filters.IsCreated) _filters.Dispose();
-        DisposeFaceBiomeAtlases();
+        _biomeAtlas.Dispose();
         DisposeGrassSurfaceAtlases();
         if (_faceMaterial != null) _faceMaterial.DisableKeyword(BiomeTextureModeKeyword);
         foreach (var pair in _chunkRenderers)
@@ -987,7 +737,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     void BindChunkBiomeProperties(ChunkRenderHandle handle, PlanetChunk chunk)
     {
         if (handle?.Renderer == null || chunk == null) return;
-        bool usingAtlas = TryGetFaceBiomeAtlases(chunk.FaceIndex,
+        bool usingAtlas = _biomeAtlas.TryGetFaceAtlases(chunk.FaceIndex,
             out Texture2D blendedTexture, out Texture2D idsTexture, out Texture2D weightsTexture);
         if (!usingAtlas)
         {
@@ -1020,20 +770,9 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         handle.Renderer.SetPropertyBlock(_chunkPropertyBlock);
     }
 
+    // Public surface contract (grass placement reads the face atlases). Delegates to the service.
     public bool TryGetFaceBiomeAtlases(int face, out Texture2D blended, out Texture2D ids, out Texture2D weights)
-    {
-        blended = null;
-        ids = null;
-        weights = null;
-        if (face < 0 || face >= 6) return false;
-        if (_faceBiomeBlendedAtlases == null || _faceBiomeIdAtlases == null || _faceBiomeWeightAtlases == null)
-            return false;
-
-        blended = _faceBiomeBlendedAtlases[face];
-        ids = _faceBiomeIdAtlases[face];
-        weights = _faceBiomeWeightAtlases[face];
-        return blended != null && ids != null && weights != null;
-    }
+        => _biomeAtlas.TryGetFaceAtlases(face, out blended, out ids, out weights);
 
     static Vector4 GetFaceAtlasUvScale(PlanetChunk chunk)
     {
@@ -1049,172 +788,10 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
             BindChunkBiomeProperties(pair.Value, pair.Key);
     }
 
-    bool HasCompleteFaceBiomeAtlases()
-    {
-        for (int face = 0; face < 6; face++)
-        {
-            if (!TryGetFaceBiomeAtlases(face, out _, out _, out _))
-                return false;
-        }
-        return true;
-    }
-
-    void ReleaseChunkBiomeTextures()
-    {
-        int released = 0;
-        for (int i = 0; i < _allChunks.Count; i++)
-        {
-            if (PlanetChunkTextures.ReleaseBiomeTextures(_allChunks[i]))
-                released++;
-        }
-        LoggerProvider.Log(LogLevel.Debug, "PhaseB",
-            $"Released {released} redundant chunk biome texture sets after face-atlas binding.");
-    }
-
-    bool UpdateFaceBiomeAtlasRegion(PlanetChunk chunk)
-    {
-        if (chunk == null
-            || chunk.PendingBiomeBlendedColorPixels == null
-            || chunk.PendingBiomeIdsPixels == null
-            || chunk.PendingBiomeWeightsPixels == null)
-        {
-            return false;
-        }
-        if (!TryGetFaceBiomeAtlases(chunk.FaceIndex,
-            out Texture2D blendedAtlas, out Texture2D idAtlas, out Texture2D weightAtlas))
-        {
-            return false;
-        }
-
-        EnsureBiomeAtlasStagingTextures();
-        _biomeBlendedAtlasStaging.SetPixels32(chunk.PendingBiomeBlendedColorPixels);
-        _biomeBlendedAtlasStaging.Apply(updateMipmaps: false, makeNoLongerReadable: false);
-        _biomeIdAtlasStaging.SetPixels32(chunk.PendingBiomeIdsPixels);
-        _biomeIdAtlasStaging.Apply(updateMipmaps: false, makeNoLongerReadable: false);
-        _biomeWeightAtlasStaging.SetPixels32(chunk.PendingBiomeWeightsPixels);
-        _biomeWeightAtlasStaging.Apply(updateMipmaps: false, makeNoLongerReadable: false);
-
-        int leafsPerAxis = 1 << _maxChunkDepth;
-        int leafStride = PlanetChunkTextures.BiomeMapResolution - 1;
-        GetLeafAtlasOrigin(chunk, leafsPerAxis, leafStride, out int dstX, out int dstY);
-        int resolution = PlanetChunkTextures.BiomeMapResolution;
-        CopyBiomeAtlasRegion(_biomeBlendedAtlasStaging, blendedAtlas, resolution, dstX, dstY);
-        CopyBiomeAtlasRegion(_biomeIdAtlasStaging, idAtlas, resolution, dstX, dstY);
-        CopyBiomeAtlasRegion(_biomeWeightAtlasStaging, weightAtlas, resolution, dstX, dstY);
-
-        chunk.PendingBiomeBlendedColorPixels = null;
-        chunk.PendingBiomeIdsPixels = null;
-        chunk.PendingBiomeWeightsPixels = null;
-        return true;
-    }
-
-    void EnsureBiomeAtlasStagingTextures()
-    {
-        if (_biomeBlendedAtlasStaging == null)
-        {
-            _biomeBlendedAtlasStaging = CreateBiomeAtlasStagingTexture(
-                "BiomeBlendedAtlasStaging", FilterMode.Bilinear, linear: false);
-        }
-        if (_biomeIdAtlasStaging == null)
-        {
-            _biomeIdAtlasStaging = CreateBiomeAtlasStagingTexture(
-                "BiomeIdsAtlasStaging", FilterMode.Point, linear: true);
-        }
-        if (_biomeWeightAtlasStaging == null)
-        {
-            _biomeWeightAtlasStaging = CreateBiomeAtlasStagingTexture(
-                "BiomeWeightsAtlasStaging", FilterMode.Point, linear: true);
-        }
-    }
-
-    static Texture2D CreateBiomeAtlasStagingTexture(string name, FilterMode filterMode, bool linear)
-    {
-        return new Texture2D(
-            PlanetChunkTextures.BiomeMapResolution,
-            PlanetChunkTextures.BiomeMapResolution,
-            TextureFormat.RGBA32,
-            mipChain: false,
-            linear: linear)
-        {
-            name = name,
-            filterMode = filterMode,
-            wrapMode = TextureWrapMode.Clamp,
-        };
-    }
-
-    static void CopyBiomeAtlasRegion(Texture2D source, Texture2D destination, int resolution, int dstX, int dstY)
-    {
-        Graphics.CopyTexture(
-            source, 0, 0, 0, 0, resolution, resolution,
-            destination, 0, 0, dstX, dstY);
-    }
-
-    void DisposeFaceBiomeAtlases()
-    {
-        DestroyTextureArray(ref _faceBiomeBlendedAtlases);
-        DestroyTextureArray(ref _faceBiomeIdAtlases);
-        DestroyTextureArray(ref _faceBiomeWeightAtlases);
-        DestroyTexture(ref _biomeBlendedAtlasStaging);
-        DestroyTexture(ref _biomeIdAtlasStaging);
-        DestroyTexture(ref _biomeWeightAtlasStaging);
-        MemoryDebugCounters.AdjustFaceBiomeAtlases(
-            -_reportedFaceBiomeAtlasTextureCount,
-            -_reportedFaceBiomeAtlasRawBytes);
-        _reportedFaceBiomeAtlasTextureCount = 0;
-        _reportedFaceBiomeAtlasRawBytes = 0L;
-    }
-
     void DisposeGrassSurfaceAtlases()
     {
         _grassSurfaceAtlases?.Dispose();
         _grassSurfaceAtlases = null;
-    }
-
-    static void DestroyTextureArray(ref Texture2D[] textures)
-    {
-        if (textures == null) return;
-        for (int i = 0; i < textures.Length; i++)
-        {
-            if (textures[i] == null) continue;
-            if (Application.isPlaying) Object.Destroy(textures[i]);
-            else Object.DestroyImmediate(textures[i]);
-            textures[i] = null;
-        }
-        textures = null;
-    }
-
-    static void DestroyTexture(ref Texture2D texture)
-    {
-        if (texture == null) return;
-        if (Application.isPlaying) Object.Destroy(texture);
-        else Object.DestroyImmediate(texture);
-        texture = null;
-    }
-
-    void ReportFaceBiomeAtlasMemory()
-    {
-        int textureCount = 0;
-        long rawBytes = 0L;
-        CountTextureArray(_faceBiomeBlendedAtlases, ref textureCount, ref rawBytes);
-        CountTextureArray(_faceBiomeIdAtlases, ref textureCount, ref rawBytes);
-        CountTextureArray(_faceBiomeWeightAtlases, ref textureCount, ref rawBytes);
-        MemoryDebugCounters.AdjustFaceBiomeAtlases(
-            textureCount - _reportedFaceBiomeAtlasTextureCount,
-            rawBytes - _reportedFaceBiomeAtlasRawBytes);
-        _reportedFaceBiomeAtlasTextureCount = textureCount;
-        _reportedFaceBiomeAtlasRawBytes = rawBytes;
-    }
-
-    static void CountTextureArray(Texture2D[] textures, ref int count, ref long rawBytes)
-    {
-        if (textures == null) return;
-        for (int i = 0; i < textures.Length; i++)
-        {
-            Texture2D texture = textures[i];
-            if (texture == null) continue;
-            count++;
-            rawBytes += (long)texture.width * texture.height * 4L;
-        }
     }
 
     void SetChunkVisible(PlanetChunk chunk, bool visible)
