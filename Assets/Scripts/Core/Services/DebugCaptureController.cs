@@ -23,7 +23,6 @@ public class DebugCaptureController : MonoBehaviour
     const int DebugScreenshotMaxRuns = 6;
     const float DebugCaptureModeDelaySeconds = 0.12f;
     const bool RestoreDebugOffAfterCaptureSet = true;
-    const string DebugScreenshotFolder = "local-only/debug-screenshots";
 
     Light _cachedSunLight;
     ICameraRigContext _cachedCameraContext;
@@ -157,7 +156,7 @@ public class DebugCaptureController : MonoBehaviour
 
     void TogglePrecipitationRendering()
     {
-        IPrecipitationDebugControl controller = GetPrecipitationController();
+        IPrecipitationDebugControl controller = _cachedPrecipitationController;
         if (controller == null)
             return;
 
@@ -175,7 +174,7 @@ public class DebugCaptureController : MonoBehaviour
 
     void ToggleSunFreeze()
     {
-        ICelestialTimeController celestial = GetCelestialManager();
+        ICelestialTimeController celestial = _cachedCelestialManager;
         if (celestial != null)
             celestial.ToggleTimeFrozen();
     }
@@ -244,7 +243,7 @@ public class DebugCaptureController : MonoBehaviour
         CancellationToken ct)
     {
         _debugScreenshotCaptureRunning = true;
-        RecordLastDebugCaptureCamera();
+        DebugScreenshotFiles.RecordLastCaptureCamera();
         DebugModeId restoreMode = RestoreDebugOffAfterCaptureSet ? _debugRegistry.DefaultModeId : _currentDebugModeId;
         LoggerProvider.Log(LogLevel.Debug, "DebugCapture", $"F10 start. Modes={modes.Length}, CaptureScreenshots={captureScreenshots}");
 
@@ -297,7 +296,7 @@ public class DebugCaptureController : MonoBehaviour
         CancellationToken ct)
     {
         _debugScreenshotCaptureRunning = true;
-        RecordLastDebugCaptureCamera();
+        DebugScreenshotFiles.RecordLastCaptureCamera();
 
         try
         {
@@ -346,14 +345,14 @@ public class DebugCaptureController : MonoBehaviour
         try
         {
             source = ScreenCapture.CaptureScreenshotAsTexture();
-            resized = DownsampleTexture(source, DebugScreenshotMaxWidth);
+            resized = DebugScreenshotFiles.Downsample(source, DebugScreenshotMaxWidth);
 
-            string directory = GetDebugScreenshotDirectory();
+            string directory = DebugScreenshotFiles.GetDirectory();
             System.IO.Directory.CreateDirectory(directory);
 
             string timestamp = System.DateTime.Now.ToString("yyyyMMdd-HHmmss-fff");
-            string safeModeName = SanitizeFilePart(modeName);
-            string safeModeId = SanitizeFilePart(modeId.ToString());
+            string safeModeName = DebugScreenshotFiles.SanitizeFilePart(modeName);
+            string safeModeId = DebugScreenshotFiles.SanitizeFilePart(modeId.ToString());
             string baseName = $"F10-{safeModeId}-{safeModeName}-{timestamp}";
             string imagePath = System.IO.Path.Combine(directory, baseName + ".png");
             string metadataPath = System.IO.Path.Combine(directory, baseName + ".txt");
@@ -367,7 +366,10 @@ public class DebugCaptureController : MonoBehaviour
                 resized.width,
                 resized.height,
                 imagePath));
-            PruneDebugScreenshots(directory);
+
+            int modesPerRun = GetDebugCaptureModes().Length;
+            int keepFiles = Mathf.Max(1, DebugScreenshotMaxRuns) * Mathf.Max(1, modesPerRun) * 2;
+            DebugScreenshotFiles.Prune(directory, keepFiles);
 
             LoggerProvider.Log(LogLevel.Debug, "DebugCapture", $"Saved F10 debug screenshot: {imagePath}");
         }
@@ -380,222 +382,24 @@ public class DebugCaptureController : MonoBehaviour
         }
     }
 
-    Texture2D DownsampleTexture(Texture2D source, int maxWidth)
-    {
-        int targetWidth = Mathf.Clamp(maxWidth, 160, 1920);
-        if (source.width <= targetWidth)
-            return source;
-
-        int targetHeight = Mathf.Max(1, Mathf.RoundToInt(source.height * (targetWidth / (float)source.width)));
-        RenderTexture previous = RenderTexture.active;
-        RenderTexture rt = RenderTexture.GetTemporary(targetWidth, targetHeight, 0, RenderTextureFormat.ARGB32);
-
-        try
-        {
-            Graphics.Blit(source, rt);
-            RenderTexture.active = rt;
-            Texture2D scaled = new Texture2D(targetWidth, targetHeight, TextureFormat.RGB24, false);
-            scaled.ReadPixels(new Rect(0, 0, targetWidth, targetHeight), 0, 0);
-            scaled.Apply(false, false);
-            return scaled;
-        }
-        finally
-        {
-            RenderTexture.active = previous;
-            RenderTexture.ReleaseTemporary(rt);
-        }
-    }
-
-    string GetDebugScreenshotDirectory()
-    {
-        string folder = string.IsNullOrWhiteSpace(DebugScreenshotFolder)
-            ? "local-only/debug-screenshots"
-            : DebugScreenshotFolder;
-
-        return System.IO.Path.IsPathRooted(folder)
-            ? folder
-            : System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "..", folder));
-    }
-
-    void PruneDebugScreenshots(string directory)
-    {
-        int modesPerRun = GetDebugCaptureModes().Length;
-        int keepFiles = Mathf.Max(1, DebugScreenshotMaxRuns) * Mathf.Max(1, modesPerRun) * 2;
-        if (keepFiles <= 0 || string.IsNullOrWhiteSpace(directory) || !System.IO.Directory.Exists(directory))
-            return;
-
-        System.Collections.Generic.List<System.IO.FileInfo> captures = new System.Collections.Generic.List<System.IO.FileInfo>();
-        System.IO.DirectoryInfo dir = new System.IO.DirectoryInfo(directory);
-        System.IO.FileInfo[] files = dir.GetFiles("F10-*.*", System.IO.SearchOption.TopDirectoryOnly);
-
-        for (int i = 0; i < files.Length; i++)
-        {
-            string extension = files[i].Extension;
-            if (string.Equals(extension, ".png", System.StringComparison.OrdinalIgnoreCase)
-                || string.Equals(extension, ".txt", System.StringComparison.OrdinalIgnoreCase))
-            {
-                captures.Add(files[i]);
-            }
-        }
-
-        if (captures.Count <= keepFiles)
-            return;
-
-        captures.Sort((a, b) => b.LastWriteTimeUtc.CompareTo(a.LastWriteTimeUtc));
-        for (int i = keepFiles; i < captures.Count; i++)
-        {
-            try
-            {
-                captures[i].Delete();
-            }
-            catch (System.Exception ex)
-            {
-                LoggerProvider.Log(LogLevel.Warning, "DebugCapture", $"Could not prune F10 debug capture '{captures[i].FullName}': {ex.Message}");
-            }
-        }
-    }
-
-    static string SanitizeFilePart(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return "capture";
-
-        char[] chars = value.ToCharArray();
-        char[] invalid = System.IO.Path.GetInvalidFileNameChars();
-        for (int i = 0; i < chars.Length; i++)
-        {
-            if (System.Array.IndexOf(invalid, chars[i]) >= 0 || char.IsWhiteSpace(chars[i]))
-                chars[i] = '_';
-        }
-
-        return new string(chars);
-    }
-
     string BuildDebugCaptureMetadata(DebugModeId modeId, string modeName, int sourceWidth, int sourceHeight, int savedWidth, int savedHeight, string imagePath)
     {
-        ICameraRigContext cameraContext = _cachedCameraContext;
-        DebugCaptureSetDefinition captureSet = GetCurrentCaptureSet();
-        System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        sb.AppendLine("=== F10 DEBUG CAPTURE ===");
-        sb.AppendLine($"Image: {imagePath}");
-        sb.AppendLine($"Source: {sourceWidth}x{sourceHeight}");
-        sb.AppendLine($"Saved: {savedWidth}x{savedHeight}");
-        sb.AppendLine($"Mode: {modeId}:{modeName}");
-        sb.AppendLine($"CaptureSet: {captureSet.Name} ({captureSet.Id})");
-        sb.AppendLine($"Time: {System.DateTime.Now:O}");
-        sb.AppendLine();
-
-        sb.AppendLine("--- Camera ---");
-        if (cameraContext != null)
-        {
-            sb.AppendLine($"Position: {cameraContext.CameraTransform.position.x:F2}, {cameraContext.CameraTransform.position.y:F2}, {cameraContext.CameraTransform.position.z:F2}");
-            sb.AppendLine($"Forward: {cameraContext.CameraTransform.forward.x:F4}, {cameraContext.CameraTransform.forward.y:F4}, {cameraContext.CameraTransform.forward.z:F4}");
-            sb.AppendLine($"Up: {cameraContext.CameraTransform.up.x:F4}, {cameraContext.CameraTransform.up.y:F4}, {cameraContext.CameraTransform.up.z:F4}");
-            sb.AppendLine($"Right: {cameraContext.CameraTransform.right.x:F4}, {cameraContext.CameraTransform.right.y:F4}, {cameraContext.CameraTransform.right.z:F4}");
-            Camera captureCamera = cameraContext.CameraComponent;
-            if (captureCamera != null)
-            {
-                sb.AppendLine($"Projection: orthographic={captureCamera.orthographic}, fov={captureCamera.fieldOfView:F2}, aspect={captureCamera.aspect:F4}, near={captureCamera.nearClipPlane:F3}, far={captureCamera.farClipPlane:F1}");
-                Plane[] frustumPlanes = GeometryUtility.CalculateFrustumPlanes(captureCamera);
-                string[] planeNames = { "Left", "Right", "Bottom", "Top", "Near", "Far" };
-                for (int i = 0; i < frustumPlanes.Length; i++)
-                {
-                    Plane plane = frustumPlanes[i];
-                    Vector3 normal = plane.normal;
-                    string planeName = i < planeNames.Length ? planeNames[i] : i.ToString();
-                    sb.AppendLine($"FrustumPlane.{planeName}: normal=({normal.x:F5},{normal.y:F5},{normal.z:F5}), distance={plane.distance:F3}");
-                }
-            }
-            sb.AppendLine($"Surface view: {cameraContext.SurfaceView}");
-            if (cameraContext.TargetCenter != null)
-            {
-                Vector3 dirToSurface = (cameraContext.CameraTransform.position - cameraContext.TargetCenter.position).normalized;
-                (float lat, float lon) = CoordinateConverter.UnitSphereToLatLong(dirToSurface);
-                sb.AppendLine($"LatLonDeg: {lat * Mathf.Rad2Deg:F2}, {lon * Mathf.Rad2Deg:F2}");
-                sb.AppendLine($"DistanceToCenter: {Vector3.Distance(cameraContext.CameraTransform.position, cameraContext.TargetCenter.position):F2}");
-            }
-            sb.AppendLine($"PlanetRadius: {cameraContext.PlanetRadius:F2}");
-            sb.AppendLine($"SeaLevelRadius: {cameraContext.SeaLevelRadius:F2}");
-            sb.AppendLine($"ElevationMinMax: {cameraContext.ElevationMin:F4}, {cameraContext.ElevationMax:F4}");
-        }
-        sb.AppendLine();
-
-        sb.AppendLine("--- Runtime ---");
-        sb.AppendLine($"FPS: {(Time.unscaledDeltaTime > 0f ? 1f / Time.unscaledDeltaTime : 0f):F1}");
-        sb.AppendLine($"FrameTarget: {Application.targetFrameRate}");
-        sb.AppendLine($"VSync: {QualitySettings.vSyncCount}");
-        int qualityLevel = QualitySettings.GetQualityLevel();
-        string[] qualityNames = QualitySettings.names;
-        string qualityName = qualityLevel >= 0 && qualityLevel < qualityNames.Length
-            ? qualityNames[qualityLevel]
-            : "Unknown";
-        sb.AppendLine($"QualityLevel: {qualityLevel} ({qualityName})");
-        sb.AppendLine($"CloudQuality: tier={QualityController.AppliedQualityTier}, low={QualityController.IsCloudLowQualityEnabled}, stepMultiplier={QualityController.CloudStepMultiplier:F2}");
-        ICelestialTimeController celestial = _cachedCelestialManager;
-        if (celestial != null)
-            sb.AppendLine($"SunFrozen: {celestial.IsTimeFrozen}");
-
         if (_cachedSunLight == null)
             _cachedSunLight = FindSunLight();
-        if (_cachedSunLight != null && cameraContext != null && cameraContext.PlanetRadius > 0f)
-        {
-            Vector3 sd = -_cachedSunLight.transform.forward;
-            sb.AppendLine($"SunDirection: {sd.x:F4}, {sd.y:F4}, {sd.z:F4}");
-            sb.AppendLine($"SunLight: intensity={_cachedSunLight.intensity:F3}, color=({_cachedSunLight.color.r:F3},{_cachedSunLight.color.g:F3},{_cachedSunLight.color.b:F3})");
-            float sunElevation = Vector3.Dot(sd, (cameraContext.CameraTransform.position - cameraContext.PlanetCenter).normalized);
-            sb.AppendLine($"SunElevationDeg: {Mathf.Asin(sunElevation) * Mathf.Rad2Deg:F2}");
-        }
-        IPrecipitationDebugControl precipitation = _cachedPrecipitationController;
-        if (precipitation != null && cameraContext != null)
-        {
-            sb.AppendLine($"PrecipitationEnabled: {precipitation.PrecipitationRenderingEnabled}");
-            sb.AppendLine($"PrecipLocalParticlesEnabled: {precipitation.LocalPrecipitationParticlesEnabled}");
-            sb.AppendLine($"PrecipLocalParticlesForCamera: {precipitation.ShouldRenderLocalParticles(cameraContext.CameraComponent)}");
-            sb.AppendLine($"WeatherParticles: radius={precipitation.LocalParticleRadius:F1}m, dust={precipitation.DustParticleCount}, snow={precipitation.SnowParticleCount}, proof={precipitation.WeatherParticleProofMode}");
-            sb.AppendLine($"WeatherParticleDimensions: {precipitation.WeatherParticleSettingsSummary}");
-        }
-        if (_cachedWeatherProvider != null && cameraContext != null)
-        {
-            Vector3 samplePosition = cameraContext.CameraTransform.position;
-            Vector3 fromCenter = samplePosition - cameraContext.PlanetCenter;
-            if (cameraContext.SeaLevelRadius > 0f && fromCenter.sqrMagnitude > 0.0001f)
-            {
-                samplePosition = cameraContext.PlanetCenter +
-                    fromCenter.normalized * cameraContext.SeaLevelRadius;
-            }
 
-            WeatherSample weather = _cachedWeatherProvider.SampleWeather(samplePosition);
-            sb.AppendLine($"Wind: speed={_cachedWeatherProvider.WindSpeedMetersPerSecond:F2}m/s, strength={_cachedWeatherProvider.WindStrength01:F3}, direction=({_cachedWeatherProvider.WindDirection.x:F3},{_cachedWeatherProvider.WindDirection.y:F3},{_cachedWeatherProvider.WindDirection.z:F3})");
-            sb.AppendLine($"ClimateMapResolution: {Shader.GetGlobalFloat(_climateMapResolutionId):F0}");
-            sb.AppendLine($"CameraClimate: temperature={weather.TemperatureCelsius:F2}C");
-        }
-        sb.AppendLine();
-
-        DebugRuntimeState runtimeState = CreateRuntimeState(modeId, modeName);
-        var captureContext = new DebugCaptureContext(
-            runtimeState,
-            modeId,
-            modeName,
-            sourceWidth,
-            sourceHeight,
-            savedWidth,
-            savedHeight,
-            imagePath);
-
-        for (int i = 0; i < _debugRegistry.Diagnostics.Count; i++)
-        {
-            IDebugDiagnosticProvider diagnostic = _debugRegistry.Diagnostics[i];
-            if (!diagnostic.IsEnabled)
-                continue;
-
-            diagnostic.Refresh(runtimeState);
-            diagnostic.AppendCachedResult(captureContext, sb);
-        }
-
-        for (int i = 0; i < _debugRegistry.MetadataProviders.Count; i++)
-            _debugRegistry.MetadataProviders[i].AppendMetadata(captureContext, sb);
-
-        return sb.ToString();
+        var inputs = new DebugCaptureMetadataInputs(
+            _debugRegistry,
+            GetCurrentCaptureSet(),
+            _cachedCameraContext,
+            _cachedCelestialManager,
+            _cachedSunLight,
+            _cachedPrecipitationController,
+            _cachedWeatherProvider,
+            _climateMapResolutionId,
+            ShowWaterDebugDetails,
+            IncludeMeshIntegrityInDebugCaptures);
+        return DebugCaptureMetadataBuilder.Build(
+            inputs, modeId, modeName, sourceWidth, sourceHeight, savedWidth, savedHeight, imagePath);
     }
 
     DebugRuntimeState CreateRuntimeState(DebugModeId modeId, string modeName)
@@ -625,27 +429,6 @@ public class DebugCaptureController : MonoBehaviour
         }
 
         return null;
-    }
-
-    ICelestialTimeController GetCelestialManager()
-    {
-        return _cachedCelestialManager;
-    }
-
-    IPrecipitationDebugControl GetPrecipitationController()
-    {
-        return _cachedPrecipitationController;
-    }
-
-    ICameraRigContext GetCameraContext()
-    {
-        return _cachedCameraContext;
-    }
-
-    static void RecordLastDebugCaptureCamera()
-    {
-        if (ServiceLocator.TryGet<ICameraTeleportRegistry>(out var teleports))
-            teleports.RecordLastDebugCapture();
     }
 
     void OnGUI()
@@ -761,7 +544,7 @@ public class DebugCaptureController : MonoBehaviour
     string PrecipitationCmd()
     {
         TogglePrecipitationRendering();
-        IPrecipitationDebugControl c = GetPrecipitationController();
+        IPrecipitationDebugControl c = _cachedPrecipitationController;
         return c != null ? $"precipitation render: {(c.PrecipitationRenderingEnabled ? "ON" : "OFF")}" : "no precipitation controller";
     }
 
@@ -883,126 +666,3 @@ public class DebugCaptureController : MonoBehaviour
     }
 }
 
-public static class CloudDebugIds
-{
-    public static readonly DebugModuleId Module = new DebugModuleId("cloud");
-    public static readonly DebugCaptureSetId Diagnostics = new DebugCaptureSetId(Module, "diagnostics");
-
-    public static DebugModeId Mode(int localId)
-    {
-        return new DebugModeId(Module, localId);
-    }
-}
-
-public sealed class CloudDebugModule : IDebugModule, IDebugModeApplier, IDebugCaptureMetadataProvider, IDebugOverlayContributor
-{
-    const int Off = 0;
-    const int Weather = 1;
-    const int Storm = 2;
-    const int Density = 3;
-    const int OpticalDepth = 4;
-    const int SilverLining = 5;
-    const int MoistureSource = 6;
-    const int CondensationChange = 7;
-
-    static readonly int _cloudDebugModeId = Shader.PropertyToID("_CloudDebugMode");
-    static readonly int _cloudWeatherResolutionId = Shader.PropertyToID("_CloudWeatherResolution");
-    static readonly int _cloudInnerRadiusId = Shader.PropertyToID("_CloudInnerRadius");
-    static readonly int _cloudOuterRadiusId = Shader.PropertyToID("_CloudOuterRadius");
-    static readonly int _cloudViewStepsId = Shader.PropertyToID("_CloudViewSteps");
-    static readonly int _cloudRayOffsetStrengthId = Shader.PropertyToID("_CloudRayOffsetStrength");
-    static readonly int _cloudDensityThresholdId = Shader.PropertyToID("_CloudDensityThreshold");
-    static readonly int _cloudDensityMultiplierId = Shader.PropertyToID("_CloudDensityMultiplier");
-
-    public DebugModuleId Id => CloudDebugIds.Module;
-    public DebugModuleId ModuleId => CloudDebugIds.Module;
-
-    public void Register(DebugRegistry registry)
-    {
-        RegisterMode(registry, Off, "Off", "Clouds");
-        RegisterMode(registry, Weather, "CloudWeather", "Clouds");
-        RegisterMode(registry, Storm, "CloudStorm", "Clouds");
-        RegisterMode(registry, Density, "CloudDensity", "Clouds");
-        RegisterMode(registry, OpticalDepth, "CloudOpticalDepth", "Clouds");
-        RegisterMode(registry, SilverLining, "CloudSilverLining", "Clouds");
-        RegisterMode(registry, MoistureSource, "CloudMoistureSource", "Clouds");
-        RegisterMode(registry, CondensationChange, "CloudCondensationChange", "Clouds");
-
-        registry.RegisterCaptureSet(CloudDebugIds.Diagnostics, "Cloud Diagnostics",
-            Modes(Off, Weather, Density, OpticalDepth, Storm, MoistureSource, CondensationChange));
-        registry.RegisterModeApplier(this);
-        registry.RegisterMetadataProvider(this);
-        registry.RegisterOverlayContributor(this);
-    }
-
-    public void ApplyDebugMode(DebugModeDefinition mode)
-    {
-        Shader.SetGlobalInt(_cloudDebugModeId, mode.Id.LocalId);
-    }
-
-    public void ClearDebugMode()
-    {
-        Shader.SetGlobalInt(_cloudDebugModeId, Off);
-    }
-
-    public void AppendMetadata(DebugCaptureContext context, System.Text.StringBuilder sb)
-    {
-        sb.AppendLine("--- Clouds ---");
-        sb.AppendLine($"DebugMode: {Shader.GetGlobalInt(_cloudDebugModeId)} ({context.ModeId}:{context.ModeName})");
-        sb.AppendLine($"WeatherResolution: {Shader.GetGlobalInt(_cloudWeatherResolutionId)}");
-        sb.AppendLine($"LayerRadii: inner={Shader.GetGlobalFloat(_cloudInnerRadiusId):F2}, outer={Shader.GetGlobalFloat(_cloudOuterRadiusId):F2}");
-        sb.AppendLine($"Raymarch: viewSteps={Shader.GetGlobalInt(_cloudViewStepsId)}, jitter={Shader.GetGlobalFloat(_cloudRayOffsetStrengthId):F2}");
-        sb.AppendLine($"Density: threshold={Shader.GetGlobalFloat(_cloudDensityThresholdId):F3}, multiplier={Shader.GetGlobalFloat(_cloudDensityMultiplierId):F4}");
-
-        IWeatherProvider weatherProvider = context.Runtime.WeatherProvider;
-        ICameraRigContext cameraContext = context.Runtime.CameraContext;
-        if (weatherProvider == null || cameraContext == null)
-            return;
-
-        Vector3 samplePosition = cameraContext.CameraTransform.position;
-        Vector3 fromCenter = cameraContext.CameraTransform.position - cameraContext.PlanetCenter;
-        if (cameraContext.SeaLevelRadius > 0f && fromCenter.sqrMagnitude > 0.0001f)
-            samplePosition = cameraContext.PlanetCenter + fromCenter.normalized * cameraContext.SeaLevelRadius;
-
-        WeatherSample weather = weatherProvider.SampleWeather(samplePosition);
-        sb.AppendLine($"CameraWeather: coverage={weather.CloudCoverage:F3}, storm={weather.StormIntensity:F3}, moisture={weather.MoistureSource:F3}, rain={weather.Precipitation:F3}, state={weather.State}");
-    }
-
-    public void DrawOverlay(DebugRuntimeState state)
-    {
-        if (!state.ShowDetailedDebug)
-            return;
-
-        GUILayout.Space(6);
-        GUILayout.Label("Cloud Debug");
-        GUILayout.Label($"Mode: {Shader.GetGlobalInt(_cloudDebugModeId)} ({state.CurrentModeId}:{state.CurrentModeName})");
-        GUILayout.Label($"Weather: {Shader.GetGlobalInt(_cloudWeatherResolutionId)} px, view steps {Shader.GetGlobalInt(_cloudViewStepsId)}");
-        GUILayout.Label($"Layer: {Shader.GetGlobalFloat(_cloudInnerRadiusId):F0}-{Shader.GetGlobalFloat(_cloudOuterRadiusId):F0}");
-
-        IWeatherProvider weatherProvider = state.WeatherProvider;
-        ICameraRigContext cameraContext = state.CameraContext;
-        if (weatherProvider == null || cameraContext == null)
-            return;
-
-        Vector3 samplePosition = cameraContext.CameraTransform.position;
-        Vector3 fromCenter = cameraContext.CameraTransform.position - cameraContext.PlanetCenter;
-        if (cameraContext.SeaLevelRadius > 0f && fromCenter.sqrMagnitude > 0.0001f)
-            samplePosition = cameraContext.PlanetCenter + fromCenter.normalized * cameraContext.SeaLevelRadius;
-
-        WeatherSample weather = weatherProvider.SampleWeather(samplePosition);
-        GUILayout.Label($"Sample: cloud={weather.CloudCoverage:F2}, storm={weather.StormIntensity:F2}, rain={weather.Precipitation:F2}, state={weather.State}");
-    }
-
-    static void RegisterMode(DebugRegistry registry, int localId, string name, string category)
-    {
-        registry.RegisterMode(CloudDebugIds.Mode(localId), name, category);
-    }
-
-    static DebugModeId[] Modes(params int[] localIds)
-    {
-        DebugModeId[] modes = new DebugModeId[localIds.Length];
-        for (int i = 0; i < localIds.Length; i++)
-            modes[i] = CloudDebugIds.Mode(localIds[i]);
-        return modes;
-    }
-}
