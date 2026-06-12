@@ -148,19 +148,19 @@ Shader "Planet/Grass"
                 // wind direction so you see gust fronts visibly travel across the field.
                 // Wave velocity ≈ waveFreq / 0.18 m/s along +windTangent (matches cloud
                 // advection direction). sin(ωt - kx) propagates in +x.
-                float travelWave = sin(_Time.y * waveFreq - dot(rootWs, windTangent) * 0.18);
+                float travelWave = sin(_GameTime * waveFreq - dot(relRoot, windTangent) * 0.18);
                 // Patch-level gust envelope: amplitude modulation only, not phase. Some
                 // patches catch a strong gust while neighbors stay calm, but the wave
                 // direction remains coherent across patches.
                 float gustEnvelope = lerp(0.6, 1.0, SmoothPatchNoise(relRoot, 8.0, 0.0));
                 // Per-blade jitter at higher frequency adds fine-grained life without
                 // breaking the traveling wave (small amplitude, additive, not phase mix).
-                float bladeJitter = sin(_Time.y * waveFreq * 2.5 + Hash01(seed ^ 0x44444444u) * 6.2831853) * 0.12;
+                float bladeJitter = sin(_GameTime * waveFreq * 2.5 + Hash01(seed ^ 0x44444444u) * 6.2831853) * 0.12;
                 float wave = travelWave * gustEnvelope + bladeJitter;
 
-                // Tip displacement in meters, scales with speed and blade height. Cap at 35% of
-                // height so even violent wind doesn't fold the blade past horizontal.
-                float displacement = wave * _WindStrength01 * 0.35 * height;
+                // Tip displacement in meters. sqrt response keeps light wind visible while the
+                // clamp stops violent wind from folding the blade past horizontal.
+                float displacement = wave * sqrt(saturate(_WindStrength01)) * 0.35 * height;
                 displacement = clamp(displacement, -height * 0.35, height * 0.35);
 
                 return windTangent * displacement * (t * t);

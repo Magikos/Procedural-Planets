@@ -44,6 +44,7 @@ Shader "Planet/GrassMidField"
             float3 _WindDirection;
             float _WindSpeedMps;
             float _WindStrength01;
+            float _GameTime;
             float3 _SunParams;
             float _NightAmbientIntensity;
             float3 _PlanetCenter;
@@ -79,10 +80,10 @@ Shader "Planet/GrassMidField"
                 float3 wind = PlanetSafeNormalize(_WindDirection, float3(1.0, 0.0, 0.0));
                 wind -= upWS * dot(wind, upWS);
                 wind = PlanetSafeNormalize(wind, float3(0.0, 0.0, 0.0));
-                float phase = _Time.y * (0.22 + max(_WindSpeedMps, 0.0) * 0.10)
-                    - dot(rootWS, wind) * 0.12
+                float phase = _GameTime * (0.22 + max(_WindSpeedMps, 0.0) * 0.10)
+                    - dot(rootWS - _PlanetCenter, wind) * 0.12
                     + Hash01(seed) * 1.7;
-                float displacement = sin(phase) * height * 0.16 * _WindStrength01;
+                float displacement = sin(phase) * height * 0.16 * sqrt(saturate(_WindStrength01));
                 return wind * displacement * top
                     + SampleGrassInteractorBend(rootWS, upWS, height * 0.70) * top;
             }
