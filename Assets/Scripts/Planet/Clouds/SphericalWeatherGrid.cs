@@ -107,7 +107,8 @@ public sealed class SphericalWeatherGrid : IDisposable
     static readonly int _humidityRecoveryRateId = Shader.PropertyToID("_HumidityRecoveryRate");
     static readonly int _condensationRainDrainId = Shader.PropertyToID("_CondensationRainDrain");
     static readonly int _deltaVisualizationScaleId = Shader.PropertyToID("_DeltaVisualizationScale");
-    static readonly int _weatherVisualRotationId = Shader.PropertyToID("_WeatherVisualRotation");
+    static readonly int _windDirectionId = Shader.PropertyToID("_WindDirection");
+    static readonly int _stepAngleId = Shader.PropertyToID("_StepAngle");
 
     SphericalWeatherGrid(
         int resolution,
@@ -728,7 +729,7 @@ public sealed class SphericalWeatherGrid : IDisposable
             _moistureSource[bestIndex]);
     }
 
-    public bool Advance(ComputeShader compute, CloudDto settings, float deltaTime, Quaternion visualRotation)
+    public bool Advance(ComputeShader compute, CloudDto settings, float deltaTime, Vector3 windDirection, float stepAngle)
     {
         if (compute == null || settings == null || !settings.EnableWeatherEvolution || deltaTime <= 0f)
             return false;
@@ -757,7 +758,8 @@ public sealed class SphericalWeatherGrid : IDisposable
         compute.SetFloat(_humidityRecoveryRateId, CloudConstants.HumidityRecoveryRate);
         compute.SetFloat(_condensationRainDrainId, CloudConstants.CondensationRainDrain);
         compute.SetFloat(_deltaVisualizationScaleId, DeltaVisualizationScale);
-        compute.SetMatrix(_weatherVisualRotationId, Matrix4x4.Rotate(visualRotation));
+        compute.SetVector(_windDirectionId, windDirection);
+        compute.SetFloat(_stepAngleId, stepAngle);
 
         int groups = Mathf.CeilToInt(Resolution / 8f);
         compute.Dispatch(kernel, groups, groups, 6);

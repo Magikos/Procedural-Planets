@@ -7,6 +7,14 @@ static const float MAX_FLOAT = 3.402823466e+38;
 static const float DEG2RAD = (MATH_PI * 2) / 360;
 static const float RAD2DEG = 360 / (MATH_PI * 2);
 
+// Rodrigues rotation of a vector about a unit axis by an angle (radians).
+float3 RotateAroundAxis(float3 v, float3 axis, float angle)
+{
+    float s = sin(angle);
+    float c = cos(angle);
+    return v * c + cross(axis, v) * s + axis * dot(axis, v) * (1.0 - c);
+}
+
 
 // Remap the components of a vector from one range to another
 float4 Remap(float4 v, float minOld, float maxOld, float minNew, float maxNew) 

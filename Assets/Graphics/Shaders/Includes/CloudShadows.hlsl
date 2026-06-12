@@ -14,6 +14,7 @@ float _CloudOuterRadius;
 int _CloudWeatherResolution;
 float4x4 _CloudWeatherRotation;
 float _CloudNoiseScale;
+float _CloudWindAngle;
 float4 _CloudShapeWeights;
 float _CloudDensityThreshold;
 float _CloudShapeSharpness;
@@ -87,10 +88,14 @@ float SampleCloudShadowDensity(float3 worldPos)
     if (condensation <= 0.001)
         return 0.0;
 
-    float3 windDir = dot(_WindDirection, _WindDirection) > 0.0001 ? normalize(_WindDirection) : float3(1.0, 0.0, 0.0);
-    float3 windOffset = windDir * (_WindSpeedMps * 0.2 * _CloudAnimSpeed * _GameTime);
-    // Match Cloud.shader: x - vt moves the procedural field toward +windDir.
-    float3 shapePos = worldPos * _CloudNoiseScale - windOffset * 0.003;
+    // Match Cloud.shader: advect the shape noise along the local windTangent so shadows track
+    // the moving clouds.
+    float3 windAxis = cross(direction, _WindDirection);
+    float windAxisLen = length(windAxis);
+    float3 advectedPos = windAxisLen > 1e-5
+        ? RotateAroundAxis(fromCenter, windAxis / windAxisLen, -_CloudWindAngle) + _CloudPlanetCenter
+        : worldPos;
+    float3 shapePos = advectedPos * _CloudNoiseScale;
     float shapeFBM = WeightedCloudShadowNoise(SAMPLE_TEXTURE3D_LOD(_CloudShapeNoise, sampler_CloudShapeNoise, shapePos, 0), _CloudShapeWeights);
 
     float cloudShape = shapeFBM * condensation;

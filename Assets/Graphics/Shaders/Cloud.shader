@@ -48,6 +48,7 @@ float4 _WeatherLightningColor;
 
 // Animation
 float _CloudAnimSpeed;
+float _CloudWindAngle;
 
 // Ray march
 int _CloudViewSteps;
@@ -140,15 +141,21 @@ CloudSample SampleCloud(float3 worldPos)
     if (condensation <= 0.001)
         return sampleData;
 
-    float3 windDir = dot(_WindDirection, _WindDirection) > 0.0001 ? normalize(_WindDirection) : float3(1.0, 0.0, 0.0);
-    float3 windOffset = windDir * (_WindSpeedMps * 0.2 * _CloudAnimSpeed * _GameTime);
-    // Sampling at x - vt moves the procedural field toward +windDir.
-    float3 shapePos = worldPos * _CloudNoiseScale - windOffset * 0.003;
+    // The procedural cloud shape rides with the wind: advect the noise along the local
+    // windTangent (the same convention as grass and weather particles) by rotating the sample
+    // position back about cross(direction, windDir) by the accumulated wind angle. Sampling the
+    // origin makes the detail flow toward +windTangent instead of staying pinned to world space.
+    float3 windAxis = cross(direction, _WindDirection);
+    float windAxisLen = length(windAxis);
+    float3 advectedPos = windAxisLen > 1e-5
+        ? RotateAroundAxis(fromCenter, windAxis / windAxisLen, -_CloudWindAngle) + _CloudPlanetCenter
+        : worldPos;
+    float3 shapePos = advectedPos * _CloudNoiseScale;
     float shapeFBM = WeightedNoise(SAMPLE_TEXTURE3D_LOD(_CloudShapeNoise, sampler_CloudShapeNoise, shapePos, 0), _CloudShapeWeights);
 #ifdef CLOUD_QUALITY_LOW
     float detailFBM = 0.5; // skip detail noise sample on low-quality path
 #else
-    float3 detailPos = worldPos * _CloudDetailNoiseScale - windOffset * 0.008;
+    float3 detailPos = advectedPos * _CloudDetailNoiseScale;
     float detailFBM = dot(SAMPLE_TEXTURE3D_LOD(_CloudDetailNoise, sampler_CloudDetailNoise, detailPos, 0).rgb,
         float3(0.5, 0.35, 0.15));
 #endif

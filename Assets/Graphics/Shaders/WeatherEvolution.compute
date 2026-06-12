@@ -27,7 +27,8 @@ float _RainOutRate;
 float _HumidityRecoveryRate;
 float _CondensationRainDrain;
 float _DeltaVisualizationScale;
-float4x4 _WeatherVisualRotation;
+float3 _WindDirection;
+float _StepAngle;
 
 float3 CubeFaceLocalUp(int face)
 {
@@ -76,14 +77,14 @@ void CubeFaceUv(float3 direction, out int face, out float2 uv)
     uv = saturate(float2(u, v) * 0.5 + 0.5);
 }
 
-float SampleMoistureSource(float3 direction)
+SamplerState sampler_linear_clamp;
+
+float4 SampleDirection(Texture2DArray<float4> tex, float3 direction)
 {
     int face;
     float2 uv;
     CubeFaceUv(direction, face, uv);
-
-    int2 pixel = clamp(int2(floor(uv * _Resolution)), int2(0, 0), int2(_Resolution - 1, _Resolution - 1));
-    return _WeatherRead.Load(int4(pixel, face, 0)).b;
+    return tex.SampleLevel(sampler_linear_clamp, float3(uv, face), 0);
 }
 
 float EdgeSnappedUv(uint idx, int resolution)
@@ -91,6 +92,13 @@ float EdgeSnappedUv(uint idx, int resolution)
     if (idx == 0u) return 0.0;
     if (idx == (uint)(resolution - 1)) return 1.0;
     return ((float)idx + 0.5) / max((float)resolution, 1.0);
+}
+
+float3 RotateAroundAxis(float3 v, float3 axis, float angle)
+{
+    float s = sin(angle);
+    float c = cos(angle);
+    return v * c + cross(axis, v) * s + axis * dot(axis, v) * (1.0 - c);
 }
 
 float MoveTowards(float current, float target, float maxDelta)
@@ -108,21 +116,32 @@ void CSEvolveWeather(uint3 id : SV_DispatchThreadID)
         return;
 
     int3 pixel = int3(id.x, id.y, id.z);
-    float4 current = _WeatherRead.Load(int4(pixel, 0));
-    float4 dynamics = _DynamicsRead.Load(int4(pixel, 0));
+    float4 localWeather = _WeatherRead.Load(int4(pixel, 0));
+    float4 localDynamics = _DynamicsRead.Load(int4(pixel, 0));
 
     // Match SphericalWeatherGrid generation: border texels sample the exact cube edge so
     // adjacent faces evolve from the same spherical direction instead of drifting apart.
     float2 uv = float2(EdgeSnappedUv(id.x, _Resolution), EdgeSnappedUv(id.y, _Resolution));
     float3 direction = CubeFaceToUnitSphere((int)id.z, uv);
-    float3 sourceDirection = mul((float3x3)_WeatherVisualRotation, direction);
-    float source = SampleMoistureSource(sourceDirection);
 
-    float condensation = saturate(current.r);
-    float storm = saturate(current.g);
-    float humidity = saturate(dynamics.r);
-    float precipitationWater = saturate(dynamics.g);
-    float moistureSupply = saturate(dynamics.a);
+    // Semi-Lagrangian advection along the local windTangent (matching grass, particles and the
+    // cloud shape noise): the parcel now over this cell drifted in from upwind, found by rotating
+    // back about cross(direction, windDir) by one wind step. The moisture source (weather .b) and
+    // supply (dynamics .a) are geographic - fixed to the planet - so those are read at this cell.
+    float3 windAxis = cross(direction, _WindDirection);
+    float windAxisLen = length(windAxis);
+    float3 upwind = windAxisLen > 1e-5
+        ? RotateAroundAxis(direction, windAxis / windAxisLen, -_StepAngle)
+        : direction;
+    float4 advectedWeather = SampleDirection(_WeatherRead, upwind);
+    float4 advectedDynamics = SampleDirection(_DynamicsRead, upwind);
+
+    float source = localWeather.b;
+    float condensation = saturate(advectedWeather.r);
+    float storm = saturate(advectedWeather.g);
+    float humidity = saturate(advectedDynamics.r);
+    float precipitationWater = saturate(advectedDynamics.g);
+    float moistureSupply = saturate(localDynamics.a);
 
     // The stationary channel is a front potential map, not raw humidity. Evolving
     // toward it keeps the authored cloud structure stable while still allowing
@@ -159,6 +178,6 @@ void CSEvolveWeather(uint3 id : SV_DispatchThreadID)
 
     float condensationDelta = nextCondensation - condensation;
     float deltaDebug = saturate(0.5 + condensationDelta * _DeltaVisualizationScale);
-    _WeatherWrite[pixel] = float4(nextCondensation, nextStorm, current.b, deltaDebug);
+    _WeatherWrite[pixel] = float4(nextCondensation, nextStorm, localWeather.b, deltaDebug);
     _DynamicsWrite[pixel] = float4(nextHumidity, nextPrecipitationWater, rainRate, moistureSupply);
 }

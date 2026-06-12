@@ -44,6 +44,13 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         return $"wind direction: ({WindDir.x:F2}, {WindDir.y:F2}, {WindDir.z:F2})";
     }
 
+    [ConsoleCommand("wind-arrow", "Toggle the on-surface wind compass (cyan = local wind, red = planet north).", MonoTargetType.Single)]
+    string WindArrowCmd(bool? on = null)
+    {
+        _showWindArrow = on ?? !_showWindArrow;
+        return $"wind arrow: {(_showWindArrow ? "on" : "off")}";
+    }
+
     [Header("References")]
     public ComputeShader WeatherCompute;
 
@@ -75,7 +82,11 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     SphericalWeatherGrid _grid;
     Vector3 _planetCenter;
     float _seaLevelRadius;
-    Quaternion _weatherVisualRotation = Quaternion.identity;
+    float _cloudWindAngle;
+    bool _showWindArrow;
+    Material _windArrowMaterial;
+    LineRenderer _windArrowLine;
+    LineRenderer _northArrowLine;
     float _evolutionAccumulator;
     bool _missingWeatherComputeLogged;
     int _evolutionDispatchCount;
@@ -110,6 +121,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     static readonly int _windSpeedMetersPerSecondId = Shader.PropertyToID("_WindSpeedMps");
     static readonly int _windStrengthId = Shader.PropertyToID("_WindStrength01");
     static readonly int _cloudWeatherRotationId = Shader.PropertyToID("_CloudWeatherRotation");
+    static readonly int _cloudWindAngleId = Shader.PropertyToID("_CloudWindAngle");
 
     CancellationTokenSource _generateCts;
     bool _lateInitialized;
@@ -162,6 +174,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         ServiceLocator.Register<IWeatherProvider>(this);
         ServiceLocator.Register<IWeatherConfigurator>(this);
         Shader.SetGlobalMatrix(_cloudWeatherRotationId, Matrix4x4.identity);
+        Shader.SetGlobalFloat(_cloudWindAngleId, 0f);
     }
 
     void OnValidate()
@@ -205,11 +218,13 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         _generateCts = null;
         _grid?.Dispose();
         _grid = null;
+        if (_windArrowLine != null) Destroy(_windArrowLine.gameObject);
+        if (_northArrowLine != null) Destroy(_northArrowLine.gameObject);
+        if (_windArrowMaterial != null) Destroy(_windArrowMaterial);
     }
 
     void Update()
     {
-        UpdateWeatherAdvection();
         UpdateWeatherEvolution();
         UpdateWeatherQueryCache();
         UpdateWeatherDiagnostics();
@@ -250,7 +265,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
                 fallbackCoverage >= CloudyThreshold ? WeatherCellState.Cloudy : WeatherCellState.Clear);
         }
 
-        _grid.GetWeatherCell(worldPosition, _planetCenter, SampleWeatherRotation,
+        _grid.GetWeatherCell(worldPosition, _planetCenter, Quaternion.identity,
             out float cloudCoverage, out float stormIntensity, out float moistureSource);
 
         float precipitation = CalculatePrecipitation(stormIntensity);
@@ -316,7 +331,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             out float moistureSource))
             return false;
 
-        Vector3 worldDirection = (_weatherVisualRotation * weatherDirection).normalized;
+        Vector3 worldDirection = weatherDirection.normalized;
         worldPosition = _planetCenter + worldDirection * (_seaLevelRadius + 25f);
 
         float precipitation = CalculatePrecipitation(stormIntensity);
@@ -415,10 +430,9 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             _progressHandle.Report(0.85f, "Uploading weather...");
             _grid?.Dispose();
             _grid = newGrid;
-            _weatherVisualRotation = Quaternion.identity;
             _evolutionAccumulator = 0f;
+            ResetAdvection();
             ResetWeatherDiagnostics();
-            UploadWeatherAdvection();
             Logger.Log(LogLevel.Debug, "Weather", $"Generated {WeatherResolution}x{WeatherResolution}x6 condensation grid.");
         }
         catch (System.OperationCanceledException) { }
@@ -431,34 +445,25 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
         _grid?.Dispose();
         _grid = SphericalWeatherGrid.Generate(_settings, seed);
-        _weatherVisualRotation = Quaternion.identity;
         _evolutionAccumulator = 0f;
+        ResetAdvection();
         ResetWeatherDiagnostics();
-        UploadWeatherAdvection();
         Logger.Log(LogLevel.Debug, "Weather", $"Generated {WeatherResolution}x{WeatherResolution}x6 condensation grid.");
     }
 
-    Quaternion SampleWeatherRotation => Quaternion.Inverse(_weatherVisualRotation);
-
-    void UpdateWeatherAdvection()
+    // How far (radians) weather drifts along the sphere in one evolution step. The compute and
+    // the cloud-shape noise both advect along the local windTangent by rotating about
+    // cross(direction, windDir) by the accumulated angle, so detail and fronts ride together.
+    float StepAdvectionAngle(float stepSeconds)
     {
-        if (_grid == null)
-        {
-            Shader.SetGlobalMatrix(_cloudWeatherRotationId, Matrix4x4.identity);
-            return;
-        }
+        float angularSpeed = WindSpeedMetersPerSecond / Mathf.Max(_seaLevelRadius, 1f);
+        return angularSpeed * CloudConstants.FrontAdvectionSpeedMultiplier * stepSeconds;
+    }
 
-        float angularSpeedRadians = WindSpeedMetersPerSecond / Mathf.Max(_seaLevelRadius, 1f);
-        float degrees = angularSpeedRadians * Mathf.Rad2Deg *
-            CloudConstants.FrontAdvectionSpeedMultiplier * Time.deltaTime;
-        if (degrees > 0f)
-        {
-            Vector3 axis = GetAdvectionAxis(WindDirection);
-            _weatherVisualRotation = Quaternion.AngleAxis(degrees, axis) * _weatherVisualRotation;
-            _weatherVisualRotation = Normalize(_weatherVisualRotation);
-        }
-
-        UploadWeatherAdvection();
+    void ResetAdvection()
+    {
+        _cloudWindAngle = 0f;
+        Shader.SetGlobalFloat(_cloudWindAngleId, 0f);
     }
 
     void UpdateWeatherEvolution()
@@ -485,12 +490,15 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         if (_evolutionAccumulator < interval)
             return;
 
+        float stepAngle = StepAdvectionAngle(interval);
+        Vector3 windDir = WindDirection;
         int maxSteps = 3;
         int steps = 0;
         while (_evolutionAccumulator >= interval && steps < maxSteps)
         {
-            if (_grid.Advance(WeatherCompute, _settings, interval, _weatherVisualRotation))
+            if (_grid.Advance(WeatherCompute, _settings, interval, windDir, stepAngle))
             {
+                _cloudWindAngle += stepAngle;
                 _evolutionDispatchCount++;
                 _lastEvolutionDelta = interval;
                 _lastEvolutionTime = Time.time;
@@ -499,6 +507,8 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             _evolutionAccumulator -= interval;
             steps++;
         }
+
+        Shader.SetGlobalFloat(_cloudWindAngleId, _cloudWindAngle);
 
         float maxCarry = interval * maxSteps;
         if (_evolutionAccumulator > maxCarry)
@@ -872,28 +882,81 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             .AppendLine(comma ? "," : string.Empty);
     }
 
-    void UploadWeatherAdvection()
+    void LateUpdate()
     {
-        Shader.SetGlobalMatrix(_cloudWeatherRotationId, Matrix4x4.Rotate(SampleWeatherRotation));
+        if (!_showWindArrow || _seaLevelRadius <= 0f)
+        {
+            if (_windArrowLine != null) _windArrowLine.enabled = false;
+            if (_northArrowLine != null) _northArrowLine.enabled = false;
+            return;
+        }
+
+        Camera cam = Camera.main;
+        if (cam == null)
+            return;
+
+        EnsureWindArrows();
+        Vector3 normal = (cam.transform.position - _planetCenter).normalized;
+        Vector3 anchor = _planetCenter + normal * (_seaLevelRadius + 1f);
+        float length = Mathf.Max(_seaLevelRadius * 0.15f, 2f);
+
+        UpdateArrowLine(_windArrowLine, anchor, normal, WindDirection, length);
+        UpdateArrowLine(_northArrowLine, anchor, normal, Vector3.up, length * 0.6f);
     }
 
-    static Vector3 GetAdvectionAxis(Vector3 windDirection)
+    static void UpdateArrowLine(LineRenderer line, Vector3 anchor, Vector3 normal, Vector3 worldDir, float length)
     {
-        Vector3 wind = windDirection.sqrMagnitude > 0.0001f ? windDirection.normalized : Vector3.right;
-        Vector3 referenceNormal = Mathf.Abs(Vector3.Dot(wind, Vector3.up)) > 0.92f ? Vector3.forward : Vector3.up;
-        Vector3 axis = Vector3.Cross(referenceNormal, wind);
-        return axis.sqrMagnitude > 0.0001f ? axis.normalized : Vector3.forward;
+        Vector3 tangent = worldDir - normal * Vector3.Dot(worldDir, normal);
+        if (tangent.sqrMagnitude < 1e-6f)
+        {
+            line.enabled = false;
+            return;
+        }
+
+        line.enabled = true;
+        tangent.Normalize();
+        Vector3 tip = anchor + tangent * length;
+        Vector3 side = Vector3.Cross(normal, tangent) * (length * 0.12f);
+        Vector3 back = tip - tangent * (length * 0.25f);
+        line.SetPosition(0, anchor);
+        line.SetPosition(1, tip);
+        line.SetPosition(2, back + side);
+        line.SetPosition(3, tip);
+        line.SetPosition(4, back - side);
     }
 
-    static Quaternion Normalize(Quaternion rotation)
+    void EnsureWindArrows()
     {
-        float magnitude = Mathf.Sqrt(rotation.x * rotation.x + rotation.y * rotation.y
-            + rotation.z * rotation.z + rotation.w * rotation.w);
-        if (magnitude <= 0.000001f)
-            return Quaternion.identity;
+        if (_windArrowMaterial == null)
+        {
+            _windArrowMaterial = new Material(Shader.Find("Hidden/Internal-Colored"))
+            {
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            _windArrowMaterial.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
+            _windArrowMaterial.SetInt("_ZWrite", 0);
+            _windArrowMaterial.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+            _windArrowMaterial.renderQueue = 5000;
+        }
 
-        float invMagnitude = 1f / magnitude;
-        return new Quaternion(rotation.x * invMagnitude, rotation.y * invMagnitude,
-            rotation.z * invMagnitude, rotation.w * invMagnitude);
+        float width = Mathf.Max(_seaLevelRadius * 0.15f, 2f) * 0.03f;
+        _windArrowLine ??= CreateArrowLine("WindArrow", Color.cyan, width);
+        _northArrowLine ??= CreateArrowLine("NorthArrow", Color.red, width);
+    }
+
+    LineRenderer CreateArrowLine(string lineName, Color color, float width)
+    {
+        var go = new GameObject(lineName) { hideFlags = HideFlags.HideAndDontSave };
+        go.transform.SetParent(transform, false);
+        var line = go.AddComponent<LineRenderer>();
+        line.useWorldSpace = true;
+        line.sharedMaterial = _windArrowMaterial;
+        line.startColor = line.endColor = color;
+        line.startWidth = line.endWidth = width;
+        line.numCapVertices = 2;
+        line.positionCount = 5;
+        line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        line.receiveShadows = false;
+        return line;
     }
 }
