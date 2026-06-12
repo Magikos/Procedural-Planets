@@ -17,6 +17,8 @@ public static class MemoryDebugCounters
     public static int FaceBiomeAtlasTextures { get; private set; }
     public static long FaceBiomeAtlasRawBytes { get; private set; }
     public static long RetainedChunkCpuBytes { get; private set; }
+    public static int LiveChunkRenderHandles { get; private set; }
+    public static long ChunkRenderHandleBytes { get; private set; }
 
     public static void ReportLiveChunkTextureSets(int count)
     {
@@ -45,6 +47,12 @@ public static class MemoryDebugCounters
     {
         RetainedChunkCpuBytes = bytes < 0L ? 0L : bytes;
     }
+
+    public static void ReportChunkRenderHandles(int count, long bytes)
+    {
+        LiveChunkRenderHandles = count < 0 ? 0 : count;
+        ChunkRenderHandleBytes = bytes < 0L ? 0L : bytes;
+    }
 }
 
 // Lightweight memory overlay + F10 sidecar contributor. Reads only Unity Profiler counters
@@ -68,6 +76,7 @@ public sealed class MemoryDebugModule : IDebugModule, IDebugCaptureMetadataProvi
     string _cachedChunkSurfaceStateTextures;
     string _cachedFaceBiomeAtlases;
     string _cachedChunkCpu;
+    string _cachedChunkRenderHandles;
     float _nextRefreshTime;
 
     public void Register(DebugRegistry registry)
@@ -91,6 +100,7 @@ public sealed class MemoryDebugModule : IDebugModule, IDebugCaptureMetadataProvi
         sb.AppendLine(_cachedChunkSurfaceStateTextures);
         sb.AppendLine(_cachedFaceBiomeAtlases);
         sb.AppendLine(_cachedChunkCpu);
+        sb.AppendLine(_cachedChunkRenderHandles);
     }
 
     public void DrawOverlay(DebugRuntimeState state)
@@ -117,6 +127,7 @@ public sealed class MemoryDebugModule : IDebugModule, IDebugCaptureMetadataProvi
         GUILayout.Label(_cachedChunkSurfaceStateTextures);
         GUILayout.Label(_cachedFaceBiomeAtlases);
         GUILayout.Label(_cachedChunkCpu);
+        GUILayout.Label(_cachedChunkRenderHandles);
     }
 
     void RefreshStrings(bool force)
@@ -149,6 +160,9 @@ public sealed class MemoryDebugModule : IDebugModule, IDebugCaptureMetadataProvi
             $"Face biome atlas textures: {MemoryDebugCounters.FaceBiomeAtlasTextures} " +
             $"(raw pixels/copy={FormatBytes(MemoryDebugCounters.FaceBiomeAtlasRawBytes)})";
         _cachedChunkCpu = $"Chunk CPU arrays retained: {FormatBytes(MemoryDebugCounters.RetainedChunkCpuBytes)}";
+        _cachedChunkRenderHandles =
+            $"Chunk render handles (live meshes): {MemoryDebugCounters.LiveChunkRenderHandles} " +
+            $"({FormatBytes(MemoryDebugCounters.ChunkRenderHandleBytes)})";
     }
 
     static string FormatBytes(long bytes)

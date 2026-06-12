@@ -44,7 +44,6 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     const float HorizonRadiusScale = 0.98f;
     const float HorizonMarginScale = 2f;
     const float DiagnosticsLogIntervalSeconds = 1f;
-    const int ChunkMeshUploadBatchSize = 24;
     // Depth at which we aggregate chunk vertex data for the WaterMeshBuilder face sampler.
     // 2 â†’ 385Â² per face (with R=97), 16Ã— finer shorelines than the root chunk. Bounded by
     // MaxChunkDepth at construction time. Memory: ~14 MB total across 6 faces at depth 2.
@@ -83,7 +82,13 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     readonly List<PlanetChunk> _tmpVisibleLeaves = new();
     readonly HashSet<PlanetChunk> _tmpVisibleSet = new();
     readonly List<PlanetChunk> _allChunks = new();
+    // Render handles are pooled: only the visible set plus a small LRU reserve hold a live
+    // Unity mesh. Chunks page in (mesh rebuilt from retained compact CPU source) when shown and
+    // are parked in the reserve when hidden; the oldest reserve handle is recycled once the cap
+    // is hit. _chunkRenderers maps only the chunks currently holding a handle.
     readonly Dictionary<PlanetChunk, ChunkRenderHandle> _chunkRenderers = new();
+    readonly LinkedList<PlanetChunk> _renderReserveLru = new();
+    const int MaxRenderHandles = 320;
     // Step 5b: per-bake thread-local scratch buffer used by BiomeMapBaker for the high-res
     // biome id grid (HighResolutionSizeÂ²). Reused across all chunks on a thread to keep the
     // bake GC-free. Sized lazily on first use.
@@ -200,9 +205,9 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
             progress?.Report(0.05f + 0.80f * pct, $"Generated chunks {batchEnd}/{total}");
         }
 
-        // 4) Upload cached Unity meshes once. Runtime LOD toggles renderers instead of
-        // rebuilding combined face meshes.
-        await UploadChunkRenderersAsync(allChunks, progress, ct);
+        // 4) Meshes are no longer pre-built for every node. Render handles are pooled and built
+        // on demand as chunks become visible (see AcquireRenderHandle); the retained compact CPU
+        // source rebuilds them on page-in. Visibility (step 7) drives the initial uploads.
 
         // 5) Build face-sampler views for the water builder. Aggregating depth-N chunks into
         //    a single per-face grid raises water-mesh resolution from ChunkResolution (root)
@@ -449,7 +454,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                 for (int i = batchStart; i < batchEnd; i++)
                 {
                     var chunk = _allChunks[i];
-                    if (ApplyChunkColors(chunk))
+                    if (RetainChunkColorSource(chunk))
                     {
                         chunk.ReleaseCpuDataAfterColorUpload(
                             retainSurfaceSamplingAndRebakeData: chunk.IsLeaf,
@@ -1018,8 +1023,11 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
             var handle = pair.Value;
             if (handle == null) continue;
             if (handle.Mesh != null) Object.Destroy(handle.Mesh);
+            if (handle.GameObject != null) Object.Destroy(handle.GameObject);
         }
         _chunkRenderers.Clear();
+        _renderReserveLru.Clear();
+        MemoryDebugCounters.ReportChunkRenderHandles(0, 0);
 
         // Phase B step 3: dispose per-chunk biome + surface-state textures so we don't leak
         // GPU memory across planet regen.
@@ -1082,45 +1090,75 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         }
     }
 
-    async Awaitable UploadChunkRenderersAsync(IReadOnlyList<PlanetChunk> chunks, IProgressHandle progress, CancellationToken ct)
-    {
-        if (chunks == null || chunks.Count == 0) return;
-
-        int uploaded = 0;
-        for (int i = 0; i < chunks.Count; i++)
-        {
-            ct.ThrowIfCancellationRequested();
-            EnsureChunkRenderer(chunks[i]);
-            uploaded++;
-
-            if (uploaded % ChunkMeshUploadBatchSize == 0)
-            {
-                float pct = (float)uploaded / chunks.Count;
-                progress?.Report(0.85f + 0.09f * pct, $"Uploading chunk meshes {uploaded}/{chunks.Count}");
-                await Awaitable.NextFrameAsync(ct);
-            }
-        }
-
-        progress?.Report(0.94f, $"Uploaded chunk meshes {uploaded}/{chunks.Count}");
-    }
-
-    ChunkRenderHandle EnsureChunkRenderer(PlanetChunk chunk)
+    // Returns the render handle for a chunk, building it (and its mesh) on demand. Reuses a
+    // pooled handle once the cap is reached by recycling the least-recently-hidden reserve chunk.
+    ChunkRenderHandle AcquireRenderHandle(PlanetChunk chunk)
     {
         if (chunk == null) return null;
-        if (_chunkRenderers.TryGetValue(chunk, out var existing)) return existing;
+        if (_chunkRenderers.TryGetValue(chunk, out var existing))
+        {
+            // Wanted again — pull it back out of the reserve if it was parked there.
+            if (existing.ReserveNode != null)
+            {
+                _renderReserveLru.Remove(existing.ReserveNode);
+                existing.ReserveNode = null;
+            }
+            return existing;
+        }
         if (chunk.CpuVertices == null || chunk.CpuVertices.Length == 0) return null;
         if (_faceRoots == null || chunk.FaceIndex < 0 || chunk.FaceIndex >= _faceRoots.Length) return null;
 
-        var go = new GameObject($"chunk-f{chunk.FaceIndex}-d{chunk.DetailLevel}-{chunk.HashValue:X}");
-        go.transform.parent = _faceRoots[chunk.FaceIndex];
+        ChunkRenderHandle handle = _chunkRenderers.Count < MaxRenderHandles
+            ? CreateRenderHandle()
+            : EvictReserveHandle();
+        if (handle == null) return null; // cap reached with nothing parked to recycle
+
+        PopulateRenderHandle(handle, chunk);
+        handle.Chunk = chunk;
+        _chunkRenderers[chunk] = handle;
+        ReportRenderHandleMemory();
+        return handle;
+    }
+
+    ChunkRenderHandle CreateRenderHandle()
+    {
+        var go = new GameObject("chunk-pooled");
+        var renderer = go.AddComponent<MeshRenderer>();
+        renderer.sharedMaterial = _faceMaterial;
+        var filter = go.AddComponent<MeshFilter>();
+        go.SetActive(false);
+        return new ChunkRenderHandle { GameObject = go, Renderer = renderer, Filter = filter };
+    }
+
+    // Recycles the oldest hidden (reserve) handle: frees its GPU mesh and returns the bare
+    // GameObject + components for reuse. The retained CPU source rebuilds it on the next page-in.
+    ChunkRenderHandle EvictReserveHandle()
+    {
+        var node = _renderReserveLru.First;
+        if (node == null) return null; // everything mapped is currently visible
+        _renderReserveLru.RemoveFirst();
+        PlanetChunk chunk = node.Value;
+        if (!_chunkRenderers.TryGetValue(chunk, out var handle) || handle == null) return null;
+
+        _chunkRenderers.Remove(chunk);
+        handle.ReserveNode = null;
+        handle.Chunk = null;
+        handle.Visible = false;
+        if (handle.GameObject != null) handle.GameObject.SetActive(false);
+        if (handle.Filter != null) handle.Filter.sharedMesh = null;
+        if (handle.Mesh != null) { Object.Destroy(handle.Mesh); handle.Mesh = null; }
+        return handle;
+    }
+
+    void PopulateRenderHandle(ChunkRenderHandle handle, PlanetChunk chunk)
+    {
+        var go = handle.GameObject;
+        go.name = $"chunk-f{chunk.FaceIndex}-d{chunk.DetailLevel}-{chunk.HashValue:X}";
+        go.transform.SetParent(_faceRoots[chunk.FaceIndex], worldPositionStays: false);
         go.transform.localPosition = Vector3.zero;
         go.transform.localRotation = Quaternion.identity;
         go.transform.localScale = Vector3.one;
 
-        var renderer = go.AddComponent<MeshRenderer>();
-        renderer.sharedMaterial = _faceMaterial;
-
-        var filter = go.AddComponent<MeshFilter>();
         var mesh = new Mesh { name = go.name };
         mesh.SetVertices(chunk.CpuVertices);
         // Prefer the Burst-computed terrain-aware normals; fall back to unit-sphere directions
@@ -1131,25 +1169,36 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
             mesh.SetNormals(chunk.CpuUnitSpherePoints);
         mesh.SetUVs(0, ChunkUvTemplate.Get(ChunkResolution));
         mesh.SetTriangles(ChunkTriangleTemplate.Get(ChunkResolution), 0, false);
+        if (chunk.CpuColors32 != null && chunk.CpuColors32.Length == chunk.CpuVertices.Length)
+            mesh.SetColors(chunk.CpuColors32);
+        if (chunk.CpuBiomeData != null && chunk.CpuBiomeData.Length == chunk.CpuVertices.Length)
+            mesh.SetUVs(2, chunk.CpuBiomeData);
         mesh.bounds = chunk.CpuLocalBounds;
-        filter.sharedMesh = mesh;
+        // GPU-only; raycasts read CpuVertices, never the mesh, and we always rebuild on page-in.
+        mesh.UploadMeshData(true);
 
-        go.SetActive(false);
+        handle.Mesh = mesh;
+        handle.Filter.sharedMesh = mesh;
 
-        var handle = new ChunkRenderHandle
-        {
-            GameObject = go,
-            Renderer = renderer,
-            Filter = filter,
-            Mesh = mesh,
-        };
-        _chunkRenderers.Add(chunk, handle);
-
-        // Phase B step 5: bind the per-chunk biome map as a MaterialPropertyBlock so the
-        // shared planet material can sample it without a per-chunk material instance. The
-        // map texture itself was allocated in step 3 and populated by the step 4 bake.
+        // Bind the per-chunk biome map (or face atlas) as a MaterialPropertyBlock so the shared
+        // planet material can sample it without a per-chunk material instance.
         BindChunkBiomeProperties(handle, chunk);
-        return handle;
+    }
+
+    void ReportRenderHandleMemory()
+    {
+        MemoryDebugCounters.ReportChunkRenderHandles(
+            _chunkRenderers.Count, _chunkRenderers.Count * EstimateChunkMeshBytes());
+    }
+
+    static long EstimateChunkMeshBytes()
+    {
+        int verts = ChunkResolution * ChunkResolution;
+        // pos(12) + normal(12) + uv0(8) + color32(4) + uv2(16) = 52 B/vertex.
+        long vertexBytes = (long)verts * 52L;
+        int quads = (ChunkResolution - 1) * (ChunkResolution - 1);
+        long indexBytes = (long)quads * 6L * 2L; // 16-bit indices (verts < 65535)
+        return vertexBytes + indexBytes;
     }
 
     // Step 5b: per-chunk shader-property ids. Three textures replace the single _BiomeMap
@@ -1399,18 +1448,31 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
 
     void SetChunkVisible(PlanetChunk chunk, bool visible)
     {
-        var handle = EnsureChunkRenderer(chunk);
-        if (handle == null || handle.GameObject == null) return;
-
         bool active = visible && _faceVisible != null && _faceVisible[chunk.FaceIndex];
-        if (handle.Visible == active) return;
-
-        handle.Visible = active;
-        handle.GameObject.SetActive(active);
         if (active)
-            ChunkShown?.Invoke(chunk);
+        {
+            var handle = AcquireRenderHandle(chunk);
+            if (handle == null || handle.GameObject == null) return;
+            if (!handle.Visible)
+            {
+                handle.Visible = true;
+                handle.GameObject.SetActive(true);
+                ChunkShown?.Invoke(chunk);
+            }
+        }
         else
-            ChunkHidden?.Invoke(chunk);
+        {
+            if (!_chunkRenderers.TryGetValue(chunk, out var handle) || handle == null) return;
+            if (handle.Visible)
+            {
+                handle.Visible = false;
+                handle.GameObject.SetActive(false);
+                ChunkHidden?.Invoke(chunk);
+            }
+            // Park in the reserve LRU so a quick return reuses the mesh instead of rebuilding it.
+            if (handle.ReserveNode == null)
+                handle.ReserveNode = _renderReserveLru.AddLast(chunk);
+        }
     }
 
     bool IsChunkActuallyVisible(PlanetChunk chunk)
@@ -1537,15 +1599,17 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         chunk.CpuBiomeData = biomeData;
     }
 
-    bool ApplyChunkColors(PlanetChunk chunk)
+    // Compacts the baked per-vertex colors to Color32 and retains them so the pooled render path
+    // can rebuild a chunk's mesh on page-in. The heavy Color[] is freed by the caller afterward.
+    static bool RetainChunkColorSource(PlanetChunk chunk)
     {
         if (chunk == null || chunk.CpuColors == null) return false;
-        if (!_chunkRenderers.TryGetValue(chunk, out var handle) || handle?.Mesh == null) return false;
 
-        handle.Mesh.SetColors(chunk.CpuColors);
-        if (chunk.CpuBiomeData != null)
-            handle.Mesh.SetUVs(2, chunk.CpuBiomeData);
-        handle.Mesh.UploadMeshData(true);
+        int count = chunk.CpuColors.Length;
+        var compact = chunk.CpuColors32;
+        if (compact == null || compact.Length != count) compact = new Color32[count];
+        for (int i = 0; i < count; i++) compact[i] = chunk.CpuColors[i];
+        chunk.CpuColors32 = compact;
         return true;
     }
 
@@ -1994,5 +2058,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         public MeshFilter Filter;
         public Mesh Mesh;
         public bool Visible;
+        public PlanetChunk Chunk;                        // which chunk this handle currently renders
+        public LinkedListNode<PlanetChunk> ReserveNode;  // non-null while parked in the reserve LRU
     }
 }

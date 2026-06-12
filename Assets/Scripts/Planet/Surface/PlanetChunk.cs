@@ -40,6 +40,10 @@ public sealed class PlanetChunk
     public float[] CpuVertexRadii;        // |CpuVertices[i]| — bilinear surface sampler input
     public Bounds CpuLocalBounds;         // Local-space bounds of CpuVertices for LOD/culling diagnostics.
     public Color[] CpuColors;
+    // Compact retained vertex colors. The heavy Color[] is freed after the bake, but the pooled
+    // render path rebuilds chunk meshes on page-in, so the colors must survive in a cheap form.
+    // Color32 is what the GPU stores anyway, so this is lossless for rendering.
+    public Color32[] CpuColors32;
     public Vector4[] CpuBiomeData;
     // True terrain-aware vertex normals from PlanetChunkNormalsJob (cross-product of neighbor
     // tangents). Preferred over CpuUnitSpherePoints when uploading mesh normals — gives
@@ -142,6 +146,10 @@ public sealed class PlanetChunk
         bool retainSurfaceSamplingAndRebakeData,
         bool retainUnitSphereForWaterSampler)
     {
+        // The heavy Color[] is released; CpuColors32 is kept as the compact mesh source.
+        // CpuBiomeData is now kept for every node (not just leaves): the pooled render path
+        // rebuilds meshes on page-in and needs the uv2 biome channel, which the shader's
+        // terrain-override masks (coast/slope/snow) read in production - not just diagnostics.
         CpuColors = null;
 
         if (!retainUnitSphereForWaterSampler)
@@ -152,7 +160,6 @@ public sealed class PlanetChunk
 
         CpuElevations = null;
         CpuVertexRadii = null;
-        CpuBiomeData = null;
     }
 
     public long GetRetainedCpuDataBytes()
@@ -162,7 +169,7 @@ public sealed class PlanetChunk
         bytes += ArrayBytes(CpuUnitSpherePoints, sizeof(float) * 3);
         bytes += ArrayBytes(CpuElevations, sizeof(float));
         bytes += ArrayBytes(CpuVertexRadii, sizeof(float));
-        bytes += ArrayBytes(CpuColors, sizeof(float) * 4);
+        bytes += ArrayBytes(CpuColors32, 4);
         bytes += ArrayBytes(CpuBiomeData, sizeof(float) * 4);
         bytes += ArrayBytes(CpuNormals, sizeof(float) * 3);
         return bytes;
