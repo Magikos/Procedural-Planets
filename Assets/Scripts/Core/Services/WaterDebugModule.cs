@@ -18,10 +18,7 @@ public static class WaterDebugIds
     public static readonly DebugCaptureSetId Waves = new DebugCaptureSetId(Module, "waves");
     public static readonly DebugCaptureSetId Foam = new DebugCaptureSetId(Module, "foam");
     public static readonly DebugCaptureSetId Glint = new DebugCaptureSetId(Module, "glint");
-    public static readonly DebugCaptureSetId Biome = new DebugCaptureSetId(Module, "biome");
     public static readonly DebugCaptureSetId Frozen = new DebugCaptureSetId(Module, "frozen");
-    public static readonly DebugCaptureSetId TerrainGeography = new DebugCaptureSetId(Module, "terrain-geography");
-    public static readonly DebugCaptureSetId TerrainTextures = new DebugCaptureSetId(Module, "terrain-textures");
 
     public static DebugModeId Mode(int localId)
     {
@@ -42,7 +39,6 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     // when the underlying mesh changes; per-refresh work shrinks to the camera-sample search.
     WaterMeshStatsCache _meshStatsCache;
 
-    static readonly int _oceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
     static readonly int _waterFocusModeId = Shader.PropertyToID(ShaderGlobalIds.WaterFocusMode);
     static readonly int _oceanFocusModeId = Shader.PropertyToID(ShaderGlobalIds.OceanFocusMode);
     static readonly int _waveAmplitudeId = Shader.PropertyToID("_WaveAmplitude");
@@ -60,11 +56,6 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     static readonly int _deepDepthId = Shader.PropertyToID("_DeepDepth");
     static readonly int _shoreFoamDepthId = Shader.PropertyToID("_ShoreFoamDepth");
     static readonly int _shoreFoamSoftnessId = Shader.PropertyToID("_ShoreFoamSoftness");
-    static readonly int _biomeVoronoiSeedCountId = Shader.PropertyToID("_BiomeVoronoiSeedCount");
-    static readonly int _biomeVoronoiCleanupChangesId = Shader.PropertyToID("_BiomeVoronoiCleanupChanges");
-    static readonly int _biomeVoronoiDistinctBiomesId = Shader.PropertyToID("_BiomeVoronoiDistinctBiomes");
-    static readonly int _biomeVoronoiBuildMsId = Shader.PropertyToID("_BiomeVoronoiBuildMs");
-    static readonly int _biomeVoronoiAtlasResolutionId = Shader.PropertyToID("_BiomeVoronoiAtlasResolution");
     static readonly int _freezingEnabledId = Shader.PropertyToID("_FreezingEnabled");
     static readonly int _lakeFreezeStartId = Shader.PropertyToID("_LakeFreezeStart");
     static readonly int _lakeFreezeCompleteId = Shader.PropertyToID("_LakeFreezeComplete");
@@ -73,20 +64,6 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     static readonly int _frozenWaterBodiesId = Shader.PropertyToID("_FrozenWaterBodies");
     static readonly int _partiallyFrozenWaterBodiesId = Shader.PropertyToID("_PartiallyFrozenWaterBodies");
     static readonly int _liquidWaterBodiesId = Shader.PropertyToID("_LiquidWaterBodies");
-    static readonly int _terrainOverrideEnabledId = Shader.PropertyToID("_TerrainOverrideEnabled");
-    static readonly int _coastSliceId = Shader.PropertyToID("_CoastSlice");
-    static readonly int _coastBelowSeaDepthId = Shader.PropertyToID("_CoastBelowSeaDepth");
-    static readonly int _coastStartHeightId = Shader.PropertyToID("_CoastStartHeight");
-    static readonly int _coastEndHeightId = Shader.PropertyToID("_CoastEndHeight");
-    static readonly int _coastTilingId = Shader.PropertyToID("_CoastTiling");
-    static readonly int _slopeSliceId = Shader.PropertyToID("_SlopeSlice");
-    static readonly int _slopeStartDegreesId = Shader.PropertyToID("_SlopeStartDegrees");
-    static readonly int _slopeFullDegreesId = Shader.PropertyToID("_SlopeFullDegrees");
-    static readonly int _slopeTilingId = Shader.PropertyToID("_SlopeTiling");
-    static readonly int _snowSliceId = Shader.PropertyToID("_SnowSlice");
-    static readonly int _snowFullTemperatureId = Shader.PropertyToID("_SnowFullTemperature");
-    static readonly int _snowFadeEndTemperatureId = Shader.PropertyToID("_SnowFadeEndTemperature");
-    static readonly int _snowTilingId = Shader.PropertyToID("_SnowTiling");
 
     struct WaterDebugStats
     {
@@ -126,52 +103,17 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
 
     public void ApplyDebugMode(DebugModeDefinition mode)
     {
-        Shader.SetGlobalInt(_oceanDebugModeId, mode.Id.LocalId);
+        OceanDebugModeWriter.Set(WaterDebugIds.Module, mode.Id.LocalId);
     }
 
     public void ClearDebugMode()
     {
-        Shader.SetGlobalInt(_oceanDebugModeId, DebugModeConstants.Off);
+        OceanDebugModeWriter.Clear(WaterDebugIds.Module);
     }
 
     public void AppendMetadata(DebugCaptureContext context, StringBuilder sb)
     {
         AppendWaterDebugMetadata(sb, context.Runtime);
-        AppendBiomeAssignmentMetadata(sb);
-        AppendTerrainGeographyMetadata(sb);
-    }
-
-    static void AppendBiomeAssignmentMetadata(StringBuilder sb)
-    {
-        int atlasResolution = Shader.GetGlobalInt(_biomeVoronoiAtlasResolutionId);
-        sb.AppendLine();
-        sb.AppendLine("--- Biome Assignment ---");
-        sb.AppendLine(
-            $"Voronoi: seeds={Shader.GetGlobalInt(_biomeVoronoiSeedCountId)}, " +
-            $"distinct={Shader.GetGlobalInt(_biomeVoronoiDistinctBiomesId)}, " +
-            $"cleanupChanges={Shader.GetGlobalInt(_biomeVoronoiCleanupChangesId)}, " +
-            $"atlas={atlasResolution}x{atlasResolution}x6, " +
-            $"buildMs={Shader.GetGlobalInt(_biomeVoronoiBuildMsId)}");
-    }
-
-    static void AppendTerrainGeographyMetadata(StringBuilder sb)
-    {
-        sb.AppendLine();
-        sb.AppendLine("--- Terrain Geography ---");
-        sb.AppendLine($"Enabled: {Shader.GetGlobalFloat(_terrainOverrideEnabledId) > 0.5f}");
-        sb.AppendLine(
-            $"Coast: slice={Shader.GetGlobalInt(_coastSliceId)}, " +
-            $"belowSea={Shader.GetGlobalFloat(_coastBelowSeaDepthId):F2}m, " +
-            $"height={Shader.GetGlobalFloat(_coastStartHeightId):F2}-{Shader.GetGlobalFloat(_coastEndHeightId):F2}m, " +
-            $"tiling={Shader.GetGlobalFloat(_coastTilingId):F3}");
-        sb.AppendLine(
-            $"Slope: slice={Shader.GetGlobalInt(_slopeSliceId)}, " +
-            $"degrees={Shader.GetGlobalFloat(_slopeStartDegreesId):F1}-{Shader.GetGlobalFloat(_slopeFullDegreesId):F1}, " +
-            $"tiling={Shader.GetGlobalFloat(_slopeTilingId):F3}");
-        sb.AppendLine(
-            $"Snow: slice={Shader.GetGlobalInt(_snowSliceId)}, " +
-            $"temperature={Shader.GetGlobalFloat(_snowFullTemperatureId):F3}-{Shader.GetGlobalFloat(_snowFadeEndTemperatureId):F3}, " +
-            $"tiling={Shader.GetGlobalFloat(_snowTilingId):F3}");
     }
 
     public void DrawOverlay(DebugRuntimeState state)
@@ -257,30 +199,9 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         RegisterMode(registry, DebugModeConstants.FoamOnSwell, "FoamOnSwell", "Water Foam");
         RegisterMode(registry, DebugModeConstants.FoamLocator, "FoamLocator", "Water Foam");
         RegisterMode(registry, DebugModeConstants.GlintLocator, "GlintLocator", "Water Glint");
-        RegisterMode(registry, DebugModeConstants.BiomePrimaryId, "BiomePrimaryId", "Biome");
-        RegisterMode(registry, DebugModeConstants.BiomeTemperature, "BiomeTemperature", "Biome");
-        RegisterMode(registry, DebugModeConstants.BiomeMoisture, "BiomeMoisture", "Biome");
-        RegisterMode(registry, DebugModeConstants.BiomeLatitude, "BiomeLatitude", "Biome");
-        RegisterMode(registry, DebugModeConstants.BiomeElevationBand, "BiomeElevationBand", "Biome");
-        RegisterMode(registry, DebugModeConstants.BiomeAltitudeCooling, "BiomeAltitudeCooling", "Biome");
-        RegisterMode(registry, DebugModeConstants.BiomeMapPrimaryId, "BiomeMapPrimaryId", "Biome");
-        RegisterMode(registry, DebugModeConstants.BiomeMapBlend, "BiomeMapBlend", "Biome");
-        RegisterMode(registry, DebugModeConstants.BiomeMapFlatColor, "BiomeMapFlatColor", "Biome");
-        RegisterMode(registry, DebugModeConstants.TerrainSelectedAlbedo, "TerrainSelectedAlbedo", "Biome");
-        RegisterMode(registry, DebugModeConstants.TerrainSunLighting, "TerrainSunLighting", "Biome");
-        RegisterMode(registry, DebugModeConstants.TerrainSurfaceNormal, "TerrainSurfaceNormal", "Biome");
-        RegisterMode(registry, DebugModeConstants.TerrainSurfaceAo, "TerrainSurfaceAO", "Biome");
-        RegisterMode(registry, DebugModeConstants.TerrainSurfaceRoughness, "TerrainSurfaceRoughness", "Biome");
-        RegisterMode(registry, DebugModeConstants.GrassLodCoverage, "GrassLodCoverage", "Biome");
         RegisterMode(registry, DebugModeConstants.WaterTemperature, "WaterTemperature", "Frozen Water");
         RegisterMode(registry, DebugModeConstants.WaterFreeze, "WaterFreeze", "Frozen Water");
         RegisterMode(registry, DebugModeConstants.WaterIceContribution, "WaterIceContribution", "Frozen Water");
-        RegisterMode(registry, DebugModeConstants.TerrainCoastMask, "TerrainCoastMask", "Terrain Geography");
-        RegisterMode(registry, DebugModeConstants.TerrainSlopeMask, "TerrainSlopeMask", "Terrain Geography");
-        RegisterMode(registry, DebugModeConstants.TerrainSnowMask, "TerrainSnowMask", "Terrain Geography");
-        RegisterMode(registry, DebugModeConstants.TerrainOverrideComposite, "TerrainOverrideComposite", "Terrain Geography");
-        RegisterMode(registry, DebugModeConstants.TerrainPrimaryAlbedo, "TerrainPrimaryAlbedo", "Terrain Textures");
-        RegisterMode(registry, DebugModeConstants.TerrainMixedAlbedo, "TerrainMixedAlbedo", "Terrain Textures");
     }
 
     static void RegisterCaptureSets(DebugRegistry registry)
@@ -316,42 +237,12 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
                 DebugModeConstants.GlintLocator, DebugModeConstants.WaterGlint,
                 DebugModeConstants.WaterLighting, DebugModeConstants.WaterWaveSlope,
                 DebugModeConstants.WaterNormals));
-        // Biome set becomes the default for the current biome diagnostic phase. Atmosphere and
-        // clouds are bypassed for these modes (DebugModeConstants.SuppressesWeatherPasses +
-        // Atmosphere.shader ShouldBypassAtmosphereForWaterDebug), so unlike orbit captures of
-        // Off/AtmosphereBypass the planet surface is never obscured by weather.
-        registry.RegisterDefaultCaptureSet(WaterDebugIds.Biome, "Biome",
-            Modes(DebugModeConstants.Off, DebugModeConstants.AtmosphereBypass,
-                DebugModeConstants.WaterOff,
-                DebugModeConstants.BiomePrimaryId, DebugModeConstants.BiomeTemperature,
-                DebugModeConstants.BiomeMoisture, DebugModeConstants.BiomeLatitude,
-                DebugModeConstants.BiomeElevationBand, DebugModeConstants.BiomeAltitudeCooling,
-                DebugModeConstants.BiomeMapPrimaryId,
-                DebugModeConstants.BiomeMapBlend, DebugModeConstants.BiomeMapFlatColor,
-                DebugModeConstants.TerrainSelectedAlbedo, DebugModeConstants.TerrainSunLighting,
-                DebugModeConstants.TerrainSurfaceNormal, DebugModeConstants.TerrainSurfaceAo,
-                DebugModeConstants.TerrainSurfaceRoughness, DebugModeConstants.GrassLodCoverage,
-                DebugModeConstants.TerrainFaceId));
         registry.RegisterCaptureSet(WaterDebugIds.Frozen, "Frozen Water",
             Modes(DebugModeConstants.Off, DebugModeConstants.SurfaceOnly,
                 DebugModeConstants.WaterBody, DebugModeConstants.WaterTemperature,
                 DebugModeConstants.WaterFreeze, DebugModeConstants.WaterIceContribution,
                 DebugModeConstants.WaterMotionMask, DebugModeConstants.WaterNormals,
                 DebugModeConstants.WaterFoam));
-        registry.RegisterCaptureSet(WaterDebugIds.TerrainGeography, "Terrain Geography",
-            Modes(DebugModeConstants.Off, DebugModeConstants.WaterOff,
-                DebugModeConstants.BiomeTemperature, DebugModeConstants.BiomeElevationBand,
-                DebugModeConstants.TerrainCoastMask, DebugModeConstants.TerrainSlopeMask,
-                DebugModeConstants.TerrainSnowMask, DebugModeConstants.TerrainOverrideComposite,
-                DebugModeConstants.TerrainSelectedAlbedo, DebugModeConstants.TerrainSurfaceNormal,
-                DebugModeConstants.TerrainSurfaceRoughness));
-        registry.RegisterCaptureSet(WaterDebugIds.TerrainTextures, "Terrain Textures",
-            Modes(DebugModeConstants.Off, DebugModeConstants.AtmosphereBypass,
-                DebugModeConstants.WaterOff, DebugModeConstants.BiomeMapBlend,
-                DebugModeConstants.TerrainPrimaryAlbedo, DebugModeConstants.TerrainMixedAlbedo,
-                DebugModeConstants.TerrainSelectedAlbedo, DebugModeConstants.TerrainSurfaceNormal,
-                DebugModeConstants.TerrainSurfaceAo, DebugModeConstants.TerrainSurfaceRoughness,
-                DebugModeConstants.TerrainFaceId));
         registry.RegisterCaptureSet(WaterDebugIds.Caustics, "Water Caustics",
             Modes(DebugModeConstants.Off, DebugModeConstants.VolumeOnly,
                 DebugModeConstants.CausticsOnly, DebugModeConstants.CausticsPrism,

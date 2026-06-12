@@ -84,6 +84,8 @@ public class DebugCaptureController : MonoBehaviour
 
         _debugRegistry = new DebugRegistry();
         _debugRegistry.RegisterModule(new WaterDebugModule());
+        _debugRegistry.RegisterModule(new BiomeDebugModule());
+        _debugRegistry.RegisterModule(new TerrainDebugModule());
         _debugRegistry.RegisterModule(new GrassDebugModule());
         _debugRegistry.RegisterModule(new CloudDebugModule());
         _debugRegistry.RegisterModule(new MemoryDebugModule());

@@ -99,13 +99,13 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
             WaterDebugIds.Mode(DebugModeConstants.Off),
             WaterDebugIds.Mode(DebugModeConstants.AtmosphereBypass),
             WaterDebugIds.Mode(DebugModeConstants.WaterOff),
-            WaterDebugIds.Mode(DebugModeConstants.BiomeMapPrimaryId),
-            WaterDebugIds.Mode(DebugModeConstants.BiomeMapBlend),
-            WaterDebugIds.Mode(DebugModeConstants.TerrainPrimaryAlbedo),
-            WaterDebugIds.Mode(DebugModeConstants.TerrainMixedAlbedo),
-            WaterDebugIds.Mode(DebugModeConstants.TerrainSelectedAlbedo),
-            WaterDebugIds.Mode(DebugModeConstants.GrassLodCoverage),
-            WaterDebugIds.Mode(DebugModeConstants.TerrainSurfaceNormal),
+            BiomeDebugIds.Mode(DebugModeConstants.BiomeMapPrimaryId),
+            BiomeDebugIds.Mode(DebugModeConstants.BiomeMapBlend),
+            TerrainDebugIds.Mode(DebugModeConstants.TerrainPrimaryAlbedo),
+            TerrainDebugIds.Mode(DebugModeConstants.TerrainMixedAlbedo),
+            BiomeDebugIds.Mode(DebugModeConstants.TerrainSelectedAlbedo),
+            BiomeDebugIds.Mode(DebugModeConstants.GrassLodCoverage),
+            BiomeDebugIds.Mode(DebugModeConstants.TerrainSurfaceNormal),
             WaterDebugIds.Mode(DebugModeConstants.TerrainFaceId));
         registry.RegisterMetadataProvider(this);
         registry.RegisterOverlayContributor(this);
