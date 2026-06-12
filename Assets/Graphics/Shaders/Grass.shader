@@ -125,12 +125,15 @@ Shader "Planet/Grass"
                 return lenSq > 1e-8 ? value * rsqrt(lenSq) : fallback;
             }
 
-            // Slice 5a wind: tip-only bend in the wind direction projected onto the local
-            // tangent plane. Uses three phase sources for richness:
-            //   1. clump phase (SmoothPatchNoise) so whole patches sway together — large gust waves
-            //   2. world-position phase along wind direction so the gust visibly travels
-            //   3. per-blade hash for tiny individual variation so blades aren't lockstep
-            // Magnitude uses bounded physical wind strength; t*t scaling keeps roots planted.
+            // Wind speed at which the blade bends halfway. Higher = stiffer grass that
+            // resists wind; the steady lean is windForce / (windForce + stiffness), so wind
+            // far above this pins the blade bent over while wind far below barely moves it.
+            #define GRASS_WIND_STIFFNESS 6.0
+
+            // Tip bend driven as wind force vs blade stiffness. The wind leaves a steady lean
+            // in the wind direction (force overcoming springiness) with a wiggle layered on
+            // top: lively at moderate wind, just a flutter once the blade is pinned over.
+            // t*t scaling keeps roots planted and only the tip moving.
             float3 ComputeWindOffset(float3 rootWs, float3 upWs, float height, float t, uint seed)
             {
                 float3 windDir = SafeNormalize(_WindDirection, float3(1.0, 0.0, 0.0));
@@ -142,26 +145,26 @@ Shader "Planet/Grass"
                 windTangent *= rsqrt(tangentLenSq);
 
                 float3 relRoot = rootWs - _PlanetCenter;
-                float waveFreq = 0.25 + max(_WindSpeedMps, 0.0) * 0.12;
+                float windForce = max(_WindSpeedMps, 0.0);
+                float bend01 = windForce / (windForce + GRASS_WIND_STIFFNESS); // 0 calm .. ->1 gale
 
-                // Directional traveling wave is the primary signal — sin phases along the
-                // wind direction so you see gust fronts visibly travel across the field.
-                // Wave velocity ≈ waveFreq / 0.18 m/s along +windTangent (matches cloud
-                // advection direction). sin(ωt - kx) propagates in +x.
+                // Steady lean held in the wind direction while the gust persists.
+                float steadyBend = bend01 * 0.7;
+
+                // Wiggle around the leaned pose. Travelling gust front + patch envelope + a
+                // per-blade jitter, all phased on planet-relative position so it can't lose
+                // precision at large world coordinates. sin(wt - kx) propagates along +wind.
+                float waveFreq = 0.5 + windForce * 0.12;
                 float travelWave = sin(_GameTime * waveFreq - dot(relRoot, windTangent) * 0.18);
-                // Patch-level gust envelope: amplitude modulation only, not phase. Some
-                // patches catch a strong gust while neighbors stay calm, but the wave
-                // direction remains coherent across patches.
-                float gustEnvelope = lerp(0.6, 1.0, SmoothPatchNoise(relRoot, 8.0, 0.0));
-                // Per-blade jitter at higher frequency adds fine-grained life without
-                // breaking the traveling wave (small amplitude, additive, not phase mix).
+                float gustEnvelope = lerp(0.7, 1.0, SmoothPatchNoise(relRoot, 8.0, 0.0));
                 float bladeJitter = sin(_GameTime * waveFreq * 2.5 + Hash01(seed ^ 0x44444444u) * 6.2831853) * 0.12;
-                float wave = travelWave * gustEnvelope + bladeJitter;
+                // Flutter peaks at mid wind and tapers as the blade pins over, so a gale is a
+                // held bend with a small shiver rather than a wide sway.
+                float wiggleEnvelope = bend01 * (1.0 - 0.55 * bend01);
+                float wiggle = (travelWave * gustEnvelope + bladeJitter) * wiggleEnvelope * 0.28;
 
-                // Tip displacement in meters. sqrt response keeps light wind visible while the
-                // clamp stops violent wind from folding the blade past horizontal.
-                float displacement = wave * sqrt(saturate(_WindStrength01)) * 0.35 * height;
-                displacement = clamp(displacement, -height * 0.35, height * 0.35);
+                float displacement = (steadyBend + wiggle) * height;
+                displacement = clamp(displacement, -0.12 * height, 0.72 * height);
 
                 return windTangent * displacement * (t * t);
             }

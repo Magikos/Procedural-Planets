@@ -43,7 +43,6 @@ Shader "Planet/GrassMidField"
 
             float3 _WindDirection;
             float _WindSpeedMps;
-            float _WindStrength01;
             float _GameTime;
             float3 _SunParams;
             float _NightAmbientIntensity;
@@ -75,15 +74,27 @@ Shader "Planet/GrassMidField"
                 return (HashUint(seed) & 0x00ffffffu) / 16777216.0;
             }
 
+            // Matches Grass.shader: steady lean as wind force vs blade stiffness, with a
+            // flutter that tapers once the card pins over.
+            #define GRASS_WIND_STIFFNESS 6.0
+
             float3 CardWindOffset(float3 rootWS, float3 upWS, float height, float top, uint seed)
             {
                 float3 wind = PlanetSafeNormalize(_WindDirection, float3(1.0, 0.0, 0.0));
                 wind -= upWS * dot(wind, upWS);
                 wind = PlanetSafeNormalize(wind, float3(0.0, 0.0, 0.0));
-                float phase = _GameTime * (0.22 + max(_WindSpeedMps, 0.0) * 0.10)
+
+                float windForce = max(_WindSpeedMps, 0.0);
+                float bend01 = windForce / (windForce + GRASS_WIND_STIFFNESS);
+                float steadyBend = bend01 * 0.7;
+
+                float phase = _GameTime * (0.5 + windForce * 0.10)
                     - dot(rootWS - _PlanetCenter, wind) * 0.12
                     + Hash01(seed) * 1.7;
-                float displacement = sin(phase) * height * 0.16 * sqrt(saturate(_WindStrength01));
+                float wiggleEnvelope = bend01 * (1.0 - 0.55 * bend01);
+                float wiggle = sin(phase) * wiggleEnvelope * 0.16;
+
+                float displacement = clamp((steadyBend + wiggle) * height, -0.12 * height, 0.72 * height);
                 return wind * displacement * top
                     + SampleGrassInteractorBend(rootWS, upWS, height * 0.70) * top;
             }
