@@ -44,13 +44,6 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         return $"wind direction: ({WindDir.x:F2}, {WindDir.y:F2}, {WindDir.z:F2})";
     }
 
-    [ConsoleCommand("wind-arrow", "Toggle the on-surface wind compass (cyan = local wind, red = planet north).", MonoTargetType.Single)]
-    string WindArrowCmd(bool? on = null)
-    {
-        _showWindArrow = on ?? !_showWindArrow;
-        return $"wind arrow: {(_showWindArrow ? "on" : "off")}";
-    }
-
     [Header("References")]
     public ComputeShader WeatherCompute;
 
@@ -83,10 +76,6 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     Vector3 _planetCenter;
     float _seaLevelRadius;
     float _cloudWindAngle;
-    bool _showWindArrow;
-    Material _windArrowMaterial;
-    LineRenderer _windArrowLine;
-    LineRenderer _northArrowLine;
     float _evolutionAccumulator;
     bool _missingWeatherComputeLogged;
     int _evolutionDispatchCount;
@@ -218,9 +207,6 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         _generateCts = null;
         _grid?.Dispose();
         _grid = null;
-        if (_windArrowLine != null) Destroy(_windArrowLine.gameObject);
-        if (_northArrowLine != null) Destroy(_northArrowLine.gameObject);
-        if (_windArrowMaterial != null) Destroy(_windArrowMaterial);
     }
 
     void Update()
@@ -882,81 +868,4 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             .AppendLine(comma ? "," : string.Empty);
     }
 
-    void LateUpdate()
-    {
-        if (!_showWindArrow || _seaLevelRadius <= 0f)
-        {
-            if (_windArrowLine != null) _windArrowLine.enabled = false;
-            if (_northArrowLine != null) _northArrowLine.enabled = false;
-            return;
-        }
-
-        Camera cam = Camera.main;
-        if (cam == null)
-            return;
-
-        EnsureWindArrows();
-        Vector3 normal = (cam.transform.position - _planetCenter).normalized;
-        Vector3 anchor = _planetCenter + normal * (_seaLevelRadius + 1f);
-        float length = Mathf.Max(_seaLevelRadius * 0.15f, 2f);
-
-        UpdateArrowLine(_windArrowLine, anchor, normal, WindDirection, length);
-        UpdateArrowLine(_northArrowLine, anchor, normal, Vector3.up, length * 0.6f);
-    }
-
-    static void UpdateArrowLine(LineRenderer line, Vector3 anchor, Vector3 normal, Vector3 worldDir, float length)
-    {
-        Vector3 tangent = worldDir - normal * Vector3.Dot(worldDir, normal);
-        if (tangent.sqrMagnitude < 1e-6f)
-        {
-            line.enabled = false;
-            return;
-        }
-
-        line.enabled = true;
-        tangent.Normalize();
-        Vector3 tip = anchor + tangent * length;
-        Vector3 side = Vector3.Cross(normal, tangent) * (length * 0.12f);
-        Vector3 back = tip - tangent * (length * 0.25f);
-        line.SetPosition(0, anchor);
-        line.SetPosition(1, tip);
-        line.SetPosition(2, back + side);
-        line.SetPosition(3, tip);
-        line.SetPosition(4, back - side);
-    }
-
-    void EnsureWindArrows()
-    {
-        if (_windArrowMaterial == null)
-        {
-            _windArrowMaterial = new Material(Shader.Find("Hidden/Internal-Colored"))
-            {
-                hideFlags = HideFlags.HideAndDontSave
-            };
-            _windArrowMaterial.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
-            _windArrowMaterial.SetInt("_ZWrite", 0);
-            _windArrowMaterial.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
-            _windArrowMaterial.renderQueue = 5000;
-        }
-
-        float width = Mathf.Max(_seaLevelRadius * 0.15f, 2f) * 0.03f;
-        _windArrowLine ??= CreateArrowLine("WindArrow", Color.cyan, width);
-        _northArrowLine ??= CreateArrowLine("NorthArrow", Color.red, width);
-    }
-
-    LineRenderer CreateArrowLine(string lineName, Color color, float width)
-    {
-        var go = new GameObject(lineName) { hideFlags = HideFlags.HideAndDontSave };
-        go.transform.SetParent(transform, false);
-        var line = go.AddComponent<LineRenderer>();
-        line.useWorldSpace = true;
-        line.sharedMaterial = _windArrowMaterial;
-        line.startColor = line.endColor = color;
-        line.startWidth = line.endWidth = width;
-        line.numCapVertices = 2;
-        line.positionCount = 5;
-        line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        line.receiveShadows = false;
-        return line;
-    }
 }

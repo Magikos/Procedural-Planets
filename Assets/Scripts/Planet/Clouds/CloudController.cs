@@ -47,7 +47,6 @@ public class CloudController : MonoBehaviour
     static readonly int _cloudStormDarkeningId = Shader.PropertyToID("_CloudStormDarkening");
     static readonly int _cloudSilverLiningParamsId = Shader.PropertyToID("_CloudSilverLiningParams");
     static readonly int _cloudShadowParamsId = Shader.PropertyToID("_CloudShadowParams");
-    static readonly int _cloudAnimSpeedId = Shader.PropertyToID("_CloudAnimSpeed");
     static readonly int _cloudViewStepsId = Shader.PropertyToID("_CloudViewSteps");
     static readonly int _cloudLightStepsId = Shader.PropertyToID("_CloudLightSteps");
     static readonly int _cloudRayOffsetStrengthId = Shader.PropertyToID("_CloudRayOffsetStrength");
@@ -175,7 +174,6 @@ public class CloudController : MonoBehaviour
             CloudConstants.ShadowSoftness,
             CloudConstants.StormShadowBoost,
             CloudConstants.ShadowHorizonFade));
-        Shader.SetGlobalFloat(_cloudAnimSpeedId, _settings.AnimationSpeed);
         Shader.SetGlobalInt(_cloudLightStepsId, _settings.LightSteps);
         Shader.SetGlobalFloat(_cloudRayOffsetStrengthId, _settings.RayOffsetStrength);
         Shader.SetGlobalInt(_cloudDebugModeId, (int)CloudDebugState.Mode);

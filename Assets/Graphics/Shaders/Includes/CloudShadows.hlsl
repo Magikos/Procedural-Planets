@@ -22,7 +22,6 @@ float4 _CloudShadowParams;
 float3 _WindDirection;
 float _WindSpeedMps;
 float _WindStrength01;
-float _CloudAnimSpeed;
 float _WaterFocusMode;
 
 float3 CloudShadowCubeFaceLocalUp(int face)

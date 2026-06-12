@@ -23,9 +23,6 @@ public class CloudSettings : ScriptableObject
     public Color CloudColor = new Color(1f, 0.98f, 0.92f, 1f);
     public Color StormColor = new Color(0.35f, 0.37f, 0.42f, 1f);
 
-    [Header("Animation")]
-    [Range(0f, 2f)] public float AnimationSpeed = 0.35f;
-
     [Header("Ray March")]
     [Range(8, 96)] public int ViewSteps = 72;
     [Range(2, 16)] public int LightSteps = 8;

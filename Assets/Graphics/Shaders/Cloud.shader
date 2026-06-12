@@ -47,7 +47,6 @@ float4 _CloudSilverLiningParams;
 float4 _WeatherLightningColor;
 
 // Animation
-float _CloudAnimSpeed;
 float _CloudWindAngle;
 
 // Ray march
