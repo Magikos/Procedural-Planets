@@ -29,7 +29,7 @@ public class DebugCaptureController : MonoBehaviour
     ICelestialTimeController _cachedCelestialManager;
     IPrecipitationDebugControl _cachedPrecipitationController;
     IWeatherProvider _cachedWeatherProvider;
-    static readonly int _climateMapResolutionId = Shader.PropertyToID("_ClimateMapResolution");
+    static readonly int _climateMapResolutionId = Shader.PropertyToID(ShaderGlobalIds.ClimateMapResolution);
     DebugRegistry _debugRegistry;
     DebugModeId _currentDebugModeId;
     int _f10CaptureSetIndex = -1;

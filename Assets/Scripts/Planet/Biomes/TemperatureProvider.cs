@@ -187,10 +187,10 @@ public sealed class ClimateMapGpuData : IDisposable
 {
     const int FaceCount = 6;
 
-    static readonly int ClimateMapId = Shader.PropertyToID("_ClimateMap");
-    static readonly int ClimateMapResolutionId = Shader.PropertyToID("_ClimateMapResolution");
+    static readonly int ClimateMapId = Shader.PropertyToID(ShaderGlobalIds.ClimateMap);
+    static readonly int ClimateMapResolutionId = Shader.PropertyToID(ShaderGlobalIds.ClimateMapResolution);
     static readonly int ClimateTemperatureRangeId =
-        Shader.PropertyToID("_ClimateTemperatureRangeCelsius");
+        Shader.PropertyToID(ShaderGlobalIds.ClimateTemperatureRangeCelsius);
 
     Texture2DArray _texture;
 

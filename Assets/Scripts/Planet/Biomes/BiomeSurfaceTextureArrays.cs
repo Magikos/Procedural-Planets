@@ -13,15 +13,15 @@ using UnityEngine;
 public sealed class BiomeSurfaceTextureArrays : System.IDisposable
 {
     // Global shader IDs — terrain shader (and Phase B+ debug shaders) bind by these names.
-    static readonly int AlbedoArrayId = Shader.PropertyToID("_BiomeAlbedoArray");
-    static readonly int NormalArrayId = Shader.PropertyToID("_BiomeNormalArray");
-    static readonly int ArmArrayId = Shader.PropertyToID("_BiomeArmArray");
-    static readonly int BiomeCountId = Shader.PropertyToID("_BiomeCount");
-    static readonly int GrassParamsId = Shader.PropertyToID("_BiomeGrassParams");
-    static readonly int GrassParamCountId = Shader.PropertyToID("_BiomeGrassParamCount");
+    static readonly int AlbedoArrayId = Shader.PropertyToID(ShaderGlobalIds.BiomeAlbedoArray);
+    static readonly int NormalArrayId = Shader.PropertyToID(ShaderGlobalIds.BiomeNormalArray);
+    static readonly int ArmArrayId = Shader.PropertyToID(ShaderGlobalIds.BiomeArmArray);
+    static readonly int BiomeCountId = Shader.PropertyToID(ShaderGlobalIds.BiomeCount);
+    static readonly int GrassParamsId = Shader.PropertyToID(ShaderGlobalIds.BiomeGrassParams);
+    static readonly int GrassParamCountId = Shader.PropertyToID(ShaderGlobalIds.BiomeGrassParamCount);
     // Step 5: 1×N flat color LUT. Sampled by primary biome slice id; gives crisp per-pixel
     // biome boundaries before step 6 wires up the texture-array triplanar sampler.
-    static readonly int FlatColorsId = Shader.PropertyToID("_BiomeFlatColors");
+    static readonly int FlatColorsId = Shader.PropertyToID(ShaderGlobalIds.BiomeFlatColors);
 
     // Fallback slice size when no biome supplies any surface texture. Tiny so we don't
     // burn memory on the magenta path; the shader still gets a bindable array.

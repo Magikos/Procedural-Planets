@@ -8,11 +8,11 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
     VoronoiBiomeField _voronoiBiomeField;
     Color[] _biomeColors;
 
-    static readonly int _biomeVoronoiSeedCountId = Shader.PropertyToID("_BiomeVoronoiSeedCount");
-    static readonly int _biomeVoronoiCleanupChangesId = Shader.PropertyToID("_BiomeVoronoiCleanupChanges");
-    static readonly int _biomeVoronoiDistinctBiomesId = Shader.PropertyToID("_BiomeVoronoiDistinctBiomes");
-    static readonly int _biomeVoronoiBuildMsId = Shader.PropertyToID("_BiomeVoronoiBuildMs");
-    static readonly int _biomeVoronoiAtlasResolutionId = Shader.PropertyToID("_BiomeVoronoiAtlasResolution");
+    static readonly int _biomeVoronoiSeedCountId = Shader.PropertyToID(ShaderGlobalIds.BiomeVoronoiSeedCount);
+    static readonly int _biomeVoronoiCleanupChangesId = Shader.PropertyToID(ShaderGlobalIds.BiomeVoronoiCleanupChanges);
+    static readonly int _biomeVoronoiDistinctBiomesId = Shader.PropertyToID(ShaderGlobalIds.BiomeVoronoiDistinctBiomes);
+    static readonly int _biomeVoronoiBuildMsId = Shader.PropertyToID(ShaderGlobalIds.BiomeVoronoiBuildMs);
+    static readonly int _biomeVoronoiAtlasResolutionId = Shader.PropertyToID(ShaderGlobalIds.BiomeVoronoiAtlasResolution);
 
     // Per-planet Texture2DArrays bound globally as _BiomeAlbedoArray / _BiomeNormalArray /
     // _BiomeArmArray. Rebuilt on every Configure(); the build call disposes its previous

@@ -18,20 +18,20 @@ public sealed class TerrainDebugModule : IDebugModule, IDebugModeApplier, IDebug
     public DebugModuleId Id => TerrainDebugIds.Module;
     public DebugModuleId ModuleId => TerrainDebugIds.Module;
 
-    static readonly int _terrainOverrideEnabledId = Shader.PropertyToID("_TerrainOverrideEnabled");
-    static readonly int _coastSliceId = Shader.PropertyToID("_CoastSlice");
-    static readonly int _coastBelowSeaDepthId = Shader.PropertyToID("_CoastBelowSeaDepth");
-    static readonly int _coastStartHeightId = Shader.PropertyToID("_CoastStartHeight");
-    static readonly int _coastEndHeightId = Shader.PropertyToID("_CoastEndHeight");
-    static readonly int _coastTilingId = Shader.PropertyToID("_CoastTiling");
-    static readonly int _slopeSliceId = Shader.PropertyToID("_SlopeSlice");
-    static readonly int _slopeStartDegreesId = Shader.PropertyToID("_SlopeStartDegrees");
-    static readonly int _slopeFullDegreesId = Shader.PropertyToID("_SlopeFullDegrees");
-    static readonly int _slopeTilingId = Shader.PropertyToID("_SlopeTiling");
-    static readonly int _snowSliceId = Shader.PropertyToID("_SnowSlice");
-    static readonly int _snowFullTemperatureId = Shader.PropertyToID("_SnowFullTemperature");
-    static readonly int _snowFadeEndTemperatureId = Shader.PropertyToID("_SnowFadeEndTemperature");
-    static readonly int _snowTilingId = Shader.PropertyToID("_SnowTiling");
+    static readonly int _terrainOverrideEnabledId = Shader.PropertyToID(ShaderGlobalIds.TerrainOverrideEnabled);
+    static readonly int _coastSliceId = Shader.PropertyToID(ShaderGlobalIds.CoastSlice);
+    static readonly int _coastBelowSeaDepthId = Shader.PropertyToID(ShaderGlobalIds.CoastBelowSeaDepth);
+    static readonly int _coastStartHeightId = Shader.PropertyToID(ShaderGlobalIds.CoastStartHeight);
+    static readonly int _coastEndHeightId = Shader.PropertyToID(ShaderGlobalIds.CoastEndHeight);
+    static readonly int _coastTilingId = Shader.PropertyToID(ShaderGlobalIds.CoastTiling);
+    static readonly int _slopeSliceId = Shader.PropertyToID(ShaderGlobalIds.SlopeSlice);
+    static readonly int _slopeStartDegreesId = Shader.PropertyToID(ShaderGlobalIds.SlopeStartDegrees);
+    static readonly int _slopeFullDegreesId = Shader.PropertyToID(ShaderGlobalIds.SlopeFullDegrees);
+    static readonly int _slopeTilingId = Shader.PropertyToID(ShaderGlobalIds.SlopeTiling);
+    static readonly int _snowSliceId = Shader.PropertyToID(ShaderGlobalIds.SnowSlice);
+    static readonly int _snowFullTemperatureId = Shader.PropertyToID(ShaderGlobalIds.SnowFullTemperature);
+    static readonly int _snowFadeEndTemperatureId = Shader.PropertyToID(ShaderGlobalIds.SnowFadeEndTemperature);
+    static readonly int _snowTilingId = Shader.PropertyToID(ShaderGlobalIds.SnowTiling);
 
     public void Register(DebugRegistry registry)
     {
