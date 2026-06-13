@@ -89,8 +89,8 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
     static readonly int _cameraForwardId = Shader.PropertyToID("_CameraForward");
     static readonly int _cameraNearRadiusId = Shader.PropertyToID("_CameraNearRadius");
     static readonly int _forwardConeBiasId = Shader.PropertyToID("_ForwardConeBias");
-    static readonly int _windDirectionId = Shader.PropertyToID("_WindDirection");
-    static readonly int _windSpeedMpsId = Shader.PropertyToID("_WindSpeedMps");
+    static readonly int _windDirectionId = Shader.PropertyToID(ShaderGlobalIds.WindDirection);
+    static readonly int _windSpeedMpsId = Shader.PropertyToID(ShaderGlobalIds.WindSpeedMps);
     static readonly int _windCouplingId = Shader.PropertyToID("_WindCoupling");
     static readonly int _fallSpeedId = Shader.PropertyToID("_FallSpeedMps");
     static readonly int _deltaTimeId = Shader.PropertyToID("_DeltaTime");
@@ -136,7 +136,7 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
         // exposes the precipitation top radius via the existing _PrecipitationRadii
         // global, so we read it from there to stay in lockstep without taking a
         // direct dependency on CloudSettings or PrecipitationController.
-        Vector4 precipRadii = Shader.GetGlobalVector(Shader.PropertyToID("_PrecipitationRadii"));
+        Vector4 precipRadii = Shader.GetGlobalVector(Shader.PropertyToID(ShaderGlobalIds.PrecipitationRadii));
         _cloudBottomRadius = precipRadii.y > 0f ? precipRadii.y : _seaLevelRadius + 375f;
         _cloudTopRadius = _cloudBottomRadius + 60f;
         _ready = true;
@@ -237,12 +237,12 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
         if (cam == null)
             return;
 
-        Vector3 windDirection = Shader.GetGlobalVector(Shader.PropertyToID("_WindDirection"));
+        Vector3 windDirection = Shader.GetGlobalVector(Shader.PropertyToID(ShaderGlobalIds.WindDirection));
         if (windDirection.sqrMagnitude < 1e-6f)
             windDirection = Vector3.right;
         else
             windDirection.Normalize();
-        float windSpeed = Shader.GetGlobalFloat(Shader.PropertyToID("_WindSpeedMps"));
+        float windSpeed = Shader.GetGlobalFloat(Shader.PropertyToID(ShaderGlobalIds.WindSpeedMps));
 
         _updateCompute.SetBuffer(_updateKernel, _rainParticlesId, _particleBuffer);
         _updateCompute.SetVector(_planetCenterId, _planetCenter);

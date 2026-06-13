@@ -96,26 +96,26 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     Vector3 _planetCenter;
     float _seaLevelRadius;
 
-    static readonly int _precipitationEnabledId = Shader.PropertyToID("_PrecipitationEnabled");
-    static readonly int _precipitationPlanetCenterId = Shader.PropertyToID("_PrecipitationPlanetCenter");
-    static readonly int _precipitationRadiiId = Shader.PropertyToID("_PrecipitationRadii");
-    static readonly int _precipitationParamsId = Shader.PropertyToID("_PrecipitationParams");
-    static readonly int _precipitationFadeParamsId = Shader.PropertyToID("_PrecipitationFadeParams");
-    static readonly int _precipitationVisualParamsId = Shader.PropertyToID("_PrecipitationVisualParams");
-    static readonly int _precipitationColorId = Shader.PropertyToID("_PrecipitationColor");
-    static readonly int _precipitationStormColorId = Shader.PropertyToID("_PrecipitationStormColor");
-    static readonly int _precipitationViewStepsId = Shader.PropertyToID("_PrecipitationViewSteps");
-    static readonly int _precipitationDebugModeId = Shader.PropertyToID("_PrecipitationDebugMode");
-    static readonly int _precipitationDebugDotParamsId = Shader.PropertyToID("_PrecipitationDebugDotParams");
-    static readonly int _weatherParticlesEnabledId = Shader.PropertyToID("_WeatherParticlesEnabled");
-    static readonly int _weatherParticleCommonId = Shader.PropertyToID("_WeatherParticleCommon");
-    static readonly int _weatherParticleCountsId = Shader.PropertyToID("_WeatherParticleCounts");
-    static readonly int _weatherParticleDustParamsId = Shader.PropertyToID("_WeatherParticleDustParams");
-    static readonly int _weatherParticleSnowParamsId = Shader.PropertyToID("_WeatherParticleSnowParams");
-    static readonly int _weatherParticlePhaseParamsId = Shader.PropertyToID("_WeatherParticlePhaseParams");
-    static readonly int _weatherParticleDustColorId = Shader.PropertyToID("_WeatherParticleDustColor");
-    static readonly int _weatherParticleSnowColorId = Shader.PropertyToID("_WeatherParticleSnowColor");
-    static readonly int _weatherParticleProofId = Shader.PropertyToID("_WeatherParticleProof");
+    static readonly int _precipitationEnabledId = Shader.PropertyToID(ShaderGlobalIds.PrecipitationEnabled);
+    static readonly int _precipitationPlanetCenterId = Shader.PropertyToID(ShaderGlobalIds.PrecipitationPlanetCenter);
+    static readonly int _precipitationRadiiId = Shader.PropertyToID(ShaderGlobalIds.PrecipitationRadii);
+    static readonly int _precipitationParamsId = Shader.PropertyToID(ShaderGlobalIds.PrecipitationParams);
+    static readonly int _precipitationFadeParamsId = Shader.PropertyToID(ShaderGlobalIds.PrecipitationFadeParams);
+    static readonly int _precipitationVisualParamsId = Shader.PropertyToID(ShaderGlobalIds.PrecipitationVisualParams);
+    static readonly int _precipitationColorId = Shader.PropertyToID(ShaderGlobalIds.PrecipitationColor);
+    static readonly int _precipitationStormColorId = Shader.PropertyToID(ShaderGlobalIds.PrecipitationStormColor);
+    static readonly int _precipitationViewStepsId = Shader.PropertyToID(ShaderGlobalIds.PrecipitationViewSteps);
+    static readonly int _precipitationDebugModeId = Shader.PropertyToID(ShaderGlobalIds.PrecipitationDebugMode);
+    static readonly int _precipitationDebugDotParamsId = Shader.PropertyToID(ShaderGlobalIds.PrecipitationDebugDotParams);
+    static readonly int _weatherParticlesEnabledId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticlesEnabled);
+    static readonly int _weatherParticleCommonId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleCommon);
+    static readonly int _weatherParticleCountsId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleCounts);
+    static readonly int _weatherParticleDustParamsId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleDustParams);
+    static readonly int _weatherParticleSnowParamsId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleSnowParams);
+    static readonly int _weatherParticlePhaseParamsId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticlePhaseParams);
+    static readonly int _weatherParticleDustColorId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleDustColor);
+    static readonly int _weatherParticleSnowColorId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleSnowColor);
+    static readonly int _weatherParticleProofId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleProof);
 
     public bool IsRenderingEnabled =>
         _seaLevelRadius > 0f && (IsDistantPrecipitationEnabled || IsLocalParticleSystemEnabled);

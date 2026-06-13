@@ -107,7 +107,7 @@ public sealed class SphericalWeatherGrid : IDisposable
     static readonly int _humidityRecoveryRateId = Shader.PropertyToID("_HumidityRecoveryRate");
     static readonly int _condensationRainDrainId = Shader.PropertyToID("_CondensationRainDrain");
     static readonly int _deltaVisualizationScaleId = Shader.PropertyToID("_DeltaVisualizationScale");
-    static readonly int _windDirectionId = Shader.PropertyToID("_WindDirection");
+    static readonly int _windDirectionId = Shader.PropertyToID(ShaderGlobalIds.WindDirection);
     static readonly int _stepAngleId = Shader.PropertyToID("_StepAngle");
 
     SphericalWeatherGrid(
