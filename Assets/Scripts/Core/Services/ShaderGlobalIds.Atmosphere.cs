@@ -4,7 +4,6 @@ public static partial class ShaderGlobalIds
     public const string DensityOriginRadius = "_DensityOriginRadius";
     public const string ViewSteps = "_ViewSteps";
     public const string SunSteps = "_SunSteps";
-    public const string WaterVolumeEnabled = "_WaterVolumeEnabled";
 
     public const string RayleighScattering = "_RayleighScattering";
     public const string RayleighScaleHeight = "_RayleighScaleHeight";

@@ -7,7 +7,7 @@ using UnityEngine.Rendering.Universal;
 [DisallowMultipleRendererFeature("WaterVolumeRenderFeature")]
 public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
 {
-    static readonly int _waterVolumeEnabledId = Shader.PropertyToID("_WaterVolumeEnabled");
+    static readonly int _waterVolumeEnabledId = Shader.PropertyToID(ShaderGlobalIds.WaterVolumeEnabled);
     static readonly int _shallowColorId = Shader.PropertyToID("_ShallowColor");
     static readonly int _deepColorId = Shader.PropertyToID("_DeepColor");
     static readonly int _shallowDepthId = Shader.PropertyToID("_ShallowDepth");
@@ -256,8 +256,8 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
 
 public sealed class WaterVolumePrepassRenderPass : ScriptableRenderPass
 {
-    static readonly int _waterVolumeDataId = Shader.PropertyToID("_WaterVolumeData");
-    static readonly int _waterInterfaceTextureId = Shader.PropertyToID("_WaterInterfaceTexture");
+    static readonly int _waterVolumeDataId = Shader.PropertyToID(ShaderGlobalIds.WaterVolumeData);
+    static readonly int _waterInterfaceTextureId = Shader.PropertyToID(ShaderGlobalIds.WaterInterfaceTexture);
     const int WaterPrepassPass = 0;
     const int WaterVolumeLipPrepassPass = 1;
 
@@ -354,7 +354,7 @@ public sealed class WaterVolumePrepassRenderPass : ScriptableRenderPass
 public sealed class WaterVolumeCompositeRenderPass : ScriptableRenderPass
 {
     static readonly int _sourceId = Shader.PropertyToID("_Source");
-    static readonly int _waterVolumeDataId = Shader.PropertyToID("_WaterVolumeData");
+    static readonly int _waterVolumeDataId = Shader.PropertyToID(ShaderGlobalIds.WaterVolumeData);
     const int WaterVolumeLipSceneDebugPass = 2;
     static MaterialPropertyBlock _propertyBlock;
 

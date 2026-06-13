@@ -16,7 +16,7 @@ using UnityEngine.Rendering.RenderGraphModule;
 public class AtmosphereRenderPass : ScriptableRenderPass
 {
     static readonly int _sourceId = Shader.PropertyToID("_Source");
-    static readonly int _waterInterfaceTextureId = Shader.PropertyToID("_WaterInterfaceTexture");
+    static readonly int _waterInterfaceTextureId = Shader.PropertyToID(ShaderGlobalIds.WaterInterfaceTexture);
     static MaterialPropertyBlock _propertyBlock;
 
     Material _material;

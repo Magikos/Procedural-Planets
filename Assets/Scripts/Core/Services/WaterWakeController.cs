@@ -4,10 +4,10 @@ public sealed class WaterWakeController : MonoBehaviour
 {
     public const int MaxWakeSources = 8;
 
-    static readonly int _waterWakeCountId = Shader.PropertyToID("_WaterWakeCount");
-    static readonly int _waterWakePositionsId = Shader.PropertyToID("_WaterWakePositions");
-    static readonly int _waterWakeDirectionsId = Shader.PropertyToID("_WaterWakeDirections");
-    static readonly int _waterWakeParamsId = Shader.PropertyToID("_WaterWakeParams");
+    static readonly int _waterWakeCountId = Shader.PropertyToID(ShaderGlobalIds.WaterWakeCount);
+    static readonly int _waterWakePositionsId = Shader.PropertyToID(ShaderGlobalIds.WaterWakePositions);
+    static readonly int _waterWakeDirectionsId = Shader.PropertyToID(ShaderGlobalIds.WaterWakeDirections);
+    static readonly int _waterWakeParamsId = Shader.PropertyToID(ShaderGlobalIds.WaterWakeParams);
     static readonly int _oceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
 
     static readonly Vector4[] _positions = new Vector4[MaxWakeSources];

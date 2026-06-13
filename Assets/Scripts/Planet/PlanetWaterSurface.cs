@@ -49,9 +49,9 @@ public sealed class PlanetWaterSurface
     static readonly int _iceRoughnessId = Shader.PropertyToID("_IceRoughness");
     static readonly int _iceNormalStrengthId = Shader.PropertyToID("_IceNormalStrength");
     static readonly int _iceBreakupScaleId = Shader.PropertyToID("_IceBreakupScale");
-    static readonly int _frozenWaterBodiesId = Shader.PropertyToID("_FrozenWaterBodies");
-    static readonly int _partiallyFrozenWaterBodiesId = Shader.PropertyToID("_PartiallyFrozenWaterBodies");
-    static readonly int _liquidWaterBodiesId = Shader.PropertyToID("_LiquidWaterBodies");
+    static readonly int _frozenWaterBodiesId = Shader.PropertyToID(ShaderGlobalIds.FrozenWaterBodies);
+    static readonly int _partiallyFrozenWaterBodiesId = Shader.PropertyToID(ShaderGlobalIds.PartiallyFrozenWaterBodies);
+    static readonly int _liquidWaterBodiesId = Shader.PropertyToID(ShaderGlobalIds.LiquidWaterBodies);
 
     static readonly Color _waterShallowBaseColor = new Color(0.20f, 0.76f, 0.82f, 1f);
     static readonly Color _waterDeepBaseColor = new Color(0.00f, 0.018f, 0.065f, 1f);

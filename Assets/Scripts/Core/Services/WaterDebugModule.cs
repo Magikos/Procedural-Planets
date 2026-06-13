@@ -48,7 +48,7 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     static readonly int _whitecapIntensityId = Shader.PropertyToID("_WhitecapIntensity");
     static readonly int _wakeFoamIntensityId = Shader.PropertyToID("_WakeFoamIntensity");
     static readonly int _wakeNormalStrengthId = Shader.PropertyToID("_WakeNormalStrength");
-    static readonly int _waterWakeCountId = Shader.PropertyToID("_WaterWakeCount");
+    static readonly int _waterWakeCountId = Shader.PropertyToID(ShaderGlobalIds.WaterWakeCount);
     static readonly int _shallowDepthId = Shader.PropertyToID("_ShallowDepth");
     static readonly int _deepDepthId = Shader.PropertyToID("_DeepDepth");
     static readonly int _shoreFoamDepthId = Shader.PropertyToID("_ShoreFoamDepth");
@@ -58,9 +58,9 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     static readonly int _lakeFreezeCompleteId = Shader.PropertyToID("_LakeFreezeComplete");
     static readonly int _oceanFreezeStartId = Shader.PropertyToID("_OceanFreezeStart");
     static readonly int _oceanFreezeCompleteId = Shader.PropertyToID("_OceanFreezeComplete");
-    static readonly int _frozenWaterBodiesId = Shader.PropertyToID("_FrozenWaterBodies");
-    static readonly int _partiallyFrozenWaterBodiesId = Shader.PropertyToID("_PartiallyFrozenWaterBodies");
-    static readonly int _liquidWaterBodiesId = Shader.PropertyToID("_LiquidWaterBodies");
+    static readonly int _frozenWaterBodiesId = Shader.PropertyToID(ShaderGlobalIds.FrozenWaterBodies);
+    static readonly int _partiallyFrozenWaterBodiesId = Shader.PropertyToID(ShaderGlobalIds.PartiallyFrozenWaterBodies);
+    static readonly int _liquidWaterBodiesId = Shader.PropertyToID(ShaderGlobalIds.LiquidWaterBodies);
 
     public void Register(DebugRegistry registry)
     {
