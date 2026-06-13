@@ -1,7 +1,9 @@
 # Chunked Surface Provider Restructure
 
 **Date:** 2026-06-12
-**Status:** Agreed; implementation pending
+**Status:** Complete (landed 2026-06-12 on `code-refactor`). Provider went ~2,064 → 546 lines;
+collaborators: `BiomeAtlasService`, `ChunkSurfaceGenerator`, `ChunkMeshCache`,
+`ChunkVisibilitySelector` (+ stateless `GrassSurfaceAtlasBuilder` / `ChunkSurfaceQueries`).
 **Supersedes for this file:** perf-maintainability plan slice 4 (this is the worked-out version of that split)
 
 ## Problem
