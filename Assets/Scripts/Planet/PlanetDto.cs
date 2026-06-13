@@ -38,13 +38,11 @@ public sealed record PlanetDto(
             src.PlanetMaterial);
     }
 
-    public ShapeSettings BuildShapeSettings()
+    public ShapeSettings BuildShapeSettings() => new()
     {
-        var shape = ScriptableObject.CreateInstance<ShapeSettings>();
-        shape.PlanetRadius = PlanetRadius;
-        shape.NoiseLayers = BuildNoiseLayers();
-        return shape;
-    }
+        PlanetRadius = PlanetRadius,
+        NoiseLayers = BuildNoiseLayers()
+    };
 
     ShapeSettings.NoiseLayer[] BuildNoiseLayers()
     {
