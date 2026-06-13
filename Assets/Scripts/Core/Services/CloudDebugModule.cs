@@ -22,14 +22,14 @@ public sealed class CloudDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     const int MoistureSource = 6;
     const int CondensationChange = 7;
 
-    static readonly int _cloudDebugModeId = Shader.PropertyToID("_CloudDebugMode");
-    static readonly int _cloudWeatherResolutionId = Shader.PropertyToID("_CloudWeatherResolution");
-    static readonly int _cloudInnerRadiusId = Shader.PropertyToID("_CloudInnerRadius");
-    static readonly int _cloudOuterRadiusId = Shader.PropertyToID("_CloudOuterRadius");
-    static readonly int _cloudViewStepsId = Shader.PropertyToID("_CloudViewSteps");
-    static readonly int _cloudRayOffsetStrengthId = Shader.PropertyToID("_CloudRayOffsetStrength");
-    static readonly int _cloudDensityThresholdId = Shader.PropertyToID("_CloudDensityThreshold");
-    static readonly int _cloudDensityMultiplierId = Shader.PropertyToID("_CloudDensityMultiplier");
+    static readonly int _cloudDebugModeId = Shader.PropertyToID(ShaderGlobalIds.CloudDebugMode);
+    static readonly int _cloudWeatherResolutionId = Shader.PropertyToID(ShaderGlobalIds.CloudWeatherResolution);
+    static readonly int _cloudInnerRadiusId = Shader.PropertyToID(ShaderGlobalIds.CloudInnerRadius);
+    static readonly int _cloudOuterRadiusId = Shader.PropertyToID(ShaderGlobalIds.CloudOuterRadius);
+    static readonly int _cloudViewStepsId = Shader.PropertyToID(ShaderGlobalIds.CloudViewSteps);
+    static readonly int _cloudRayOffsetStrengthId = Shader.PropertyToID(ShaderGlobalIds.CloudRayOffsetStrength);
+    static readonly int _cloudDensityThresholdId = Shader.PropertyToID(ShaderGlobalIds.CloudDensityThreshold);
+    static readonly int _cloudDensityMultiplierId = Shader.PropertyToID(ShaderGlobalIds.CloudDensityMultiplier);
 
     public DebugModuleId Id => CloudDebugIds.Module;
     public DebugModuleId ModuleId => CloudDebugIds.Module;

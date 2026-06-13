@@ -82,11 +82,11 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     int _weatherQueryCacheNextFace;
     int _weatherQueryCacheLastFace = -1;
     int _weatherQueryCacheFaceMask;
-    static readonly int _windDirectionId = Shader.PropertyToID("_WindDirection");
-    static readonly int _windSpeedMetersPerSecondId = Shader.PropertyToID("_WindSpeedMps");
-    static readonly int _windStrengthId = Shader.PropertyToID("_WindStrength01");
-    static readonly int _cloudWeatherRotationId = Shader.PropertyToID("_CloudWeatherRotation");
-    static readonly int _cloudWindAngleId = Shader.PropertyToID("_CloudWindAngle");
+    static readonly int _windDirectionId = Shader.PropertyToID(ShaderGlobalIds.WindDirection);
+    static readonly int _windSpeedMetersPerSecondId = Shader.PropertyToID(ShaderGlobalIds.WindSpeedMps);
+    static readonly int _windStrengthId = Shader.PropertyToID(ShaderGlobalIds.WindStrength01);
+    static readonly int _cloudWeatherRotationId = Shader.PropertyToID(ShaderGlobalIds.CloudWeatherRotation);
+    static readonly int _cloudWindAngleId = Shader.PropertyToID(ShaderGlobalIds.CloudWindAngle);
 
     CancellationTokenSource _generateCts;
     bool _lateInitialized;

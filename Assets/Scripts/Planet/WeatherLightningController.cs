@@ -41,14 +41,14 @@ public class WeatherLightningController : MonoBehaviour
     float _secondaryPower;
     float _nextStrikeTime;
 
-    static readonly int _weatherLightningParamsId = Shader.PropertyToID("_WeatherLightningParams");
-    static readonly int _weatherLightningColorId = Shader.PropertyToID("_WeatherLightningColor");
+    static readonly int _weatherLightningParamsId = Shader.PropertyToID(ShaderGlobalIds.WeatherLightningParams);
+    static readonly int _weatherLightningColorId = Shader.PropertyToID(ShaderGlobalIds.WeatherLightningColor);
     static readonly int[] _weatherLightningCellIds =
     {
-        Shader.PropertyToID("_WeatherLightningCell0"),
-        Shader.PropertyToID("_WeatherLightningCell1"),
-        Shader.PropertyToID("_WeatherLightningCell2"),
-        Shader.PropertyToID("_WeatherLightningCell3")
+        Shader.PropertyToID(ShaderGlobalIds.WeatherLightningCell0),
+        Shader.PropertyToID(ShaderGlobalIds.WeatherLightningCell1),
+        Shader.PropertyToID(ShaderGlobalIds.WeatherLightningCell2),
+        Shader.PropertyToID(ShaderGlobalIds.WeatherLightningCell3)
     };
 
     void OnEnable()
