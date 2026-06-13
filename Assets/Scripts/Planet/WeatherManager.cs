@@ -1,8 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Text;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -73,33 +70,12 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     public bool WriteWeatherDiagnosticsFile = true;
 
     SphericalWeatherGrid _grid;
+    WeatherDiagnostics _diagnostics;
     Vector3 _planetCenter;
     float _seaLevelRadius;
     float _cloudWindAngle;
     float _evolutionAccumulator;
     bool _missingWeatherComputeLogged;
-    int _evolutionDispatchCount;
-    float _lastEvolutionDelta;
-    float _lastEvolutionTime;
-    bool _weatherDiagnosticsPending;
-    bool _weatherDiagnosticsError;
-    float _nextWeatherDiagnosticsTime;
-    float _weatherAverageCondensation;
-    float _weatherAverageStorm;
-    float _weatherAveragePrecipitation;
-    float _weatherAverageRainRate;
-    float _weatherAverageMoistureSource;
-    float _weatherAverageCondensationChange;
-    float _weatherMaxCondensationChange;
-    float _weatherCloudyFraction;
-    float _weatherStormFraction;
-    float _weatherRainingFraction;
-    float _weatherCondensingFraction;
-    float _weatherDryingFraction;
-    int _weatherDiagnosticsSamples;
-    float _nextWeatherAggregateStatsTime;
-    int _weatherDiagnosticsNextFace;
-    int _weatherDiagnosticsLastFace = -1;
     bool _weatherQueryCachePending;
     bool _weatherQueryCacheError;
     float _nextWeatherQueryCacheTime;
@@ -122,8 +98,13 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     // Resolved through ServiceLocator (PrecipitationController self-registers in Awake/OnEnable).
     // Returns null if no precipitation system is wired up.
-    IPrecipitationDebugControl PrecipitationDebugControl =>
+    internal IPrecipitationDebugControl PrecipitationDebugControl =>
         ServiceLocator.Get<IPrecipitationDebugControl>();
+
+    internal SphericalWeatherGrid Grid => _grid;
+    internal int QueryCacheFaceCount => GetQueryCacheFaceCount();
+    internal int QueryCacheLastFace => _weatherQueryCacheLastFace;
+    internal bool QueryCacheError => _weatherQueryCacheError;
 
     public Vector3 WindDirection => WindDir.sqrMagnitude > 0.0001f ? WindDir.normalized : Vector3.right;
     float IWeatherProvider.WindSpeedMetersPerSecond => WindSpeedMetersPerSecond;
@@ -160,6 +141,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         MigrateWindUnits();
         CloudDto.EnsureRegistered();
         _settings = SettingsProvider.GetSettings<CloudDto>();
+        _diagnostics = new WeatherDiagnostics(this);
         ServiceLocator.Register<IWeatherProvider>(this);
         ServiceLocator.Register<IWeatherConfigurator>(this);
         Shader.SetGlobalMatrix(_cloudWeatherRotationId, Matrix4x4.identity);
@@ -213,8 +195,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     {
         UpdateWeatherEvolution();
         UpdateWeatherQueryCache();
-        UpdateWeatherDiagnostics();
-        UpdateWeatherAggregateDiagnostics();
+        _diagnostics.Tick();
 
         Vector3 windDir = WindDirection;
         float windSpeed = WindSpeedMetersPerSecond;
@@ -335,52 +316,6 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         return true;
     }
 
-    public string DumpWeatherDiagnostics(string reason)
-    {
-        if (_grid == null)
-        {
-            const string noGrid = "[WeatherDiagnostics] No weather grid generated.";
-            Logger.Log(LogLevel.Info, "Weather", noGrid);
-            return noGrid;
-        }
-
-        var precipitationController = PrecipitationDebugControl;
-        float rainThreshold = precipitationController != null
-            ? precipitationController.StormThreshold
-            : PrecipitationStormThreshold;
-        var stats = _grid.CalculateStats(CloudyThreshold, PrecipitationStormThreshold, rainThreshold);
-        TryFindStrongestPrecipitation(out Vector3 strongestPosition, out WeatherSample strongestSample);
-
-        bool precipitationRenderEnabled = precipitationController != null
-            && precipitationController.PrecipitationRenderingEnabled
-            && precipitationController.IsRenderingEnabled;
-        string report = BuildWeatherDiagnosticsJson(reason, stats, strongestPosition, strongestSample, precipitationController);
-        string path = string.Empty;
-        if (WriteWeatherDiagnosticsFile)
-        {
-            string fileName = $"weather-diagnostics-{DateTime.Now:yyyyMMdd-HHmmss}.json";
-            path = Path.Combine(Application.persistentDataPath, fileName);
-            File.WriteAllText(path, report);
-        }
-
-        float invCellCount = stats.CellCount > 0 ? 1f / stats.CellCount : 0f;
-        int queryCacheFaces = GetQueryCacheFaceCount();
-        string summary = $"[WeatherDiagnostics] cells={stats.CellCount}, " +
-            $"avgCloud={stats.AverageCondensation:F3}, cloudy={stats.CloudyCellCount * invCellCount:P1}, " +
-            $"avgPotential={stats.AverageMoistureSource:F3}, maxCloud={stats.MaxCondensation:F3}, " +
-            $"avgStorm={stats.AverageStorm:F3}, storm={stats.StormCellCount * invCellCount:P1}, maxStorm={stats.MaxStorm:F3}, " +
-            $"avgRain={stats.AverageRainRate:F3}, raining={stats.RainingCellCount * invCellCount:P1}, maxRain={stats.MaxRainRate:F3}, " +
-            $"rainCandidates={stats.RainCandidateCellCount}, rainRender={(precipitationRenderEnabled ? "on" : "off")}, " +
-            $"queryCacheFaces={queryCacheFaces}/6";
-        if (queryCacheFaces < 6)
-            summary += ", cache=warming";
-        if (!string.IsNullOrEmpty(path))
-            summary += $", file={path}";
-
-        Logger.Log(LogLevel.Info, "Weather", summary);
-        return report;
-    }
-
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
         _planetCenter = evt.PlanetCenter;
@@ -418,7 +353,8 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             _grid = newGrid;
             _evolutionAccumulator = 0f;
             ResetAdvection();
-            ResetWeatherDiagnostics();
+            ResetQueryCache();
+            _diagnostics.Reset();
             Logger.Log(LogLevel.Debug, "Weather", $"Generated {WeatherResolution}x{WeatherResolution}x6 condensation grid.");
         }
         catch (System.OperationCanceledException) { }
@@ -433,7 +369,8 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         _grid = SphericalWeatherGrid.Generate(_settings, seed);
         _evolutionAccumulator = 0f;
         ResetAdvection();
-        ResetWeatherDiagnostics();
+        ResetQueryCache();
+        _diagnostics.Reset();
         Logger.Log(LogLevel.Debug, "Weather", $"Generated {WeatherResolution}x{WeatherResolution}x6 condensation grid.");
     }
 
@@ -485,9 +422,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             if (_grid.Advance(WeatherCompute, _settings, interval, windDir, stepAngle))
             {
                 _cloudWindAngle += stepAngle;
-                _evolutionDispatchCount++;
-                _lastEvolutionDelta = interval;
-                _lastEvolutionTime = Time.time;
+                _diagnostics.RecordEvolutionDispatch(interval);
             }
 
             _evolutionAccumulator -= interval;
@@ -501,61 +436,8 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             _evolutionAccumulator = maxCarry;
     }
 
-    void UpdateWeatherDiagnostics()
-    {
-        if (EnableWeatherQueryCache)
-            return;
-
-        if (!ShowWeatherDiagnostics || _grid == null || _grid.Texture == null)
-            return;
-
-        if (_weatherDiagnosticsPending || Time.unscaledTime < _nextWeatherDiagnosticsTime)
-            return;
-
-        int face = _weatherDiagnosticsNextFace;
-        _weatherDiagnosticsNextFace = (_weatherDiagnosticsNextFace + 1) % 6;
-        _weatherDiagnosticsLastFace = face;
-        _weatherDiagnosticsPending = true;
-        _weatherDiagnosticsError = false;
-        _nextWeatherDiagnosticsTime = Time.unscaledTime + Mathf.Max(WeatherDiagnosticsInterval, 0.25f);
-        AsyncGPUReadback.Request(_grid.Texture, 0,
-            0, WeatherResolution,
-            0, WeatherResolution,
-            face, 1,
-            TextureFormat.RGBAFloat,
-            OnWeatherDiagnosticsReadback);
-    }
-
-    void UpdateWeatherAggregateDiagnostics()
-    {
-        if (!ShowWeatherDiagnostics || _grid == null || Time.unscaledTime < _nextWeatherAggregateStatsTime)
-            return;
-
-        var precipitationController = PrecipitationDebugControl;
-        float rainThreshold = precipitationController != null
-            ? precipitationController.StormThreshold
-            : PrecipitationStormThreshold;
-        var stats = _grid.CalculateStats(CloudyThreshold, PrecipitationStormThreshold, rainThreshold);
-        float invCount = stats.CellCount > 0 ? 1f / stats.CellCount : 0f;
-
-        _weatherAverageCondensation = stats.AverageCondensation;
-        _weatherAverageStorm = stats.AverageStorm;
-        _weatherAverageMoistureSource = stats.AverageMoistureSource;
-        _weatherAverageRainRate = stats.AverageRainRate;
-        _weatherCloudyFraction = stats.CloudyCellCount * invCount;
-        _weatherStormFraction = stats.StormCellCount * invCount;
-        _weatherRainingFraction = stats.RainingCellCount * invCount;
-        _weatherDiagnosticsSamples = stats.CellCount;
-        _nextWeatherAggregateStatsTime = Time.unscaledTime + Mathf.Max(WeatherDiagnosticsInterval, 0.5f);
-    }
-
     void OnWeatherDiagnosticsRequested(DebugWeatherDiagnosticsRequestedEvent evt)
-    {
-        if (!EnableWeatherDiagnosticHotkey)
-            return;
-
-        DumpWeatherDiagnostics("F9");
-    }
+        => _diagnostics.OnDiagnosticsRequested();
 
     void UpdateWeatherQueryCache()
     {
@@ -603,10 +485,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         _weatherQueryCacheFaceMask |= 1 << face;
 
         if (ShowWeatherDiagnostics)
-        {
-            _weatherDiagnosticsLastFace = face;
-            UpdateWeatherDiagnosticsStats(data);
-        }
+            _diagnostics.OnQueryCacheFaceData(face, data);
     }
 
     void OnWeatherDynamicsQueryCacheReadback(AsyncGPUReadbackRequest request, int face)
@@ -617,88 +496,8 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         _grid?.ApplyDynamicsFaceReadback(face, request.GetData<Color>());
     }
 
-    void OnWeatherDiagnosticsReadback(AsyncGPUReadbackRequest request)
+    void ResetQueryCache()
     {
-        _weatherDiagnosticsPending = false;
-
-        if (request.hasError)
-        {
-            _weatherDiagnosticsError = true;
-            return;
-        }
-
-        UpdateWeatherDiagnosticsStats(request.GetData<Color>());
-    }
-
-    void UpdateWeatherDiagnosticsStats(Unity.Collections.NativeArray<Color> data)
-    {
-        int count = data.Length;
-        if (count <= 0)
-            return;
-
-        double condensationSum = 0;
-        double stormSum = 0;
-        double precipitationSum = 0;
-        double sourceSum = 0;
-        double changeSum = 0;
-        float maxChange = 0f;
-        int condensing = 0;
-        int drying = 0;
-
-        for (int i = 0; i < count; i++)
-        {
-            Color pixel = data[i];
-            float change = (pixel.a - 0.5f) / SphericalWeatherGrid.DeltaVisualizationScale;
-
-            condensationSum += pixel.r;
-            stormSum += pixel.g;
-            precipitationSum += CalculatePrecipitation(pixel.g);
-            sourceSum += pixel.b;
-            changeSum += change;
-            maxChange = Mathf.Max(maxChange, Mathf.Abs(change));
-
-            if (change > 0.0001f)
-                condensing++;
-            else if (change < -0.0001f)
-                drying++;
-        }
-
-        float invCount = 1f / count;
-        _weatherAverageCondensation = (float)condensationSum * invCount;
-        _weatherAverageStorm = (float)stormSum * invCount;
-        _weatherAveragePrecipitation = (float)precipitationSum * invCount;
-        _weatherAverageMoistureSource = (float)sourceSum * invCount;
-        _weatherAverageCondensationChange = (float)changeSum * invCount;
-        _weatherMaxCondensationChange = maxChange;
-        _weatherCondensingFraction = condensing * invCount;
-        _weatherDryingFraction = drying * invCount;
-        _weatherDiagnosticsSamples = count;
-    }
-
-    void ResetWeatherDiagnostics()
-    {
-        _evolutionDispatchCount = 0;
-        _lastEvolutionDelta = 0f;
-        _lastEvolutionTime = 0f;
-        _weatherDiagnosticsPending = false;
-        _weatherDiagnosticsError = false;
-        _nextWeatherDiagnosticsTime = 0f;
-        _weatherAverageCondensation = 0f;
-        _weatherAverageStorm = 0f;
-        _weatherAveragePrecipitation = 0f;
-        _weatherAverageRainRate = 0f;
-        _weatherAverageMoistureSource = 0f;
-        _weatherAverageCondensationChange = 0f;
-        _weatherMaxCondensationChange = 0f;
-        _weatherCloudyFraction = 0f;
-        _weatherStormFraction = 0f;
-        _weatherRainingFraction = 0f;
-        _weatherCondensingFraction = 0f;
-        _weatherDryingFraction = 0f;
-        _weatherDiagnosticsSamples = 0;
-        _nextWeatherAggregateStatsTime = 0f;
-        _weatherDiagnosticsNextFace = 0;
-        _weatherDiagnosticsLastFace = -1;
         _weatherQueryCachePending = false;
         _weatherQueryCacheError = false;
         _nextWeatherQueryCacheTime = 0f;
@@ -707,48 +506,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         _weatherQueryCacheFaceMask = 0;
     }
 
-    void OnGUI()
-    {
-        if (!ShowWeatherDiagnostics)
-            return;
-
-        GUILayout.BeginArea(new Rect(10, 225, 430, 265), GUI.skin.box);
-        GUILayout.Label("Weather Diagnostics");
-
-        if (_grid == null)
-        {
-            GUILayout.Label("Grid: not generated");
-            GUILayout.EndArea();
-            return;
-        }
-
-        string readbackState = _weatherDiagnosticsError ? "readback error" :
-            _weatherDiagnosticsPending ? "readback pending" : $"{_weatherDiagnosticsSamples} cells";
-        string lastUpdateAge = _evolutionDispatchCount > 0
-            ? $"{Mathf.Max(0f, Time.time - _lastEvolutionTime):F2}s"
-            : "none";
-
-        GUILayout.Label($"Grid: {WeatherResolution} x {WeatherResolution} x 6 ({readbackState})");
-        GUILayout.Label($"Query cache: {GetQueryCacheFaceCount()}/6 faces, last face {(_weatherQueryCacheLastFace >= 0 ? _weatherQueryCacheLastFace.ToString() : "none")}");
-        if (_weatherQueryCacheError)
-            GUILayout.Label("Query cache readback error");
-        GUILayout.Label($"Diagnostics face: {(_weatherDiagnosticsLastFace >= 0 ? _weatherDiagnosticsLastFace.ToString() : "none")}");
-        GUILayout.Label($"Evolution: dispatches {_evolutionDispatchCount}, last dt {_lastEvolutionDelta:F2}s");
-        GUILayout.Label($"Last update age: {lastUpdateAge}");
-        GUILayout.Label($"Condensation avg: {_weatherAverageCondensation:F3}, storm avg: {_weatherAverageStorm:F3}");
-        GUILayout.Label($"Cloudy/storm/raining: {_weatherCloudyFraction:P1} / {_weatherStormFraction:P1} / {_weatherRainingFraction:P1}");
-        GUILayout.Label($"Rain rate avg: {_weatherAverageRainRate:F3}");
-        GUILayout.Label($"Moisture source avg: {_weatherAverageMoistureSource:F3}");
-        GUILayout.Label($"Delta avg/max: {_weatherAverageCondensationChange:+0.0000;-0.0000;0.0000} / {_weatherMaxCondensationChange:F4}");
-        GUILayout.Label($"Condensing: {_weatherCondensingFraction * 100f:F1}%, drying: {_weatherDryingFraction * 100f:F1}%");
-        GUILayout.Label("F9=Dump weather diagnostics");
-        if (CloudDebugState.Mode == CloudDebugState.View.CondensationChange)
-        {
-            GUILayout.Label("Delta view: cyan condensing, red drying, dim below threshold");
-            GUILayout.Label($"Threshold/saturation: {CloudDebugState.CondensationChangeThreshold:F4} / {CloudDebugState.CondensationChangeSaturation:F4}");
-        }
-        GUILayout.EndArea();
-    }
+    void OnGUI() => _diagnostics.DrawOverlay();
 
     int GetQueryCacheFaceCount()
     {
@@ -763,109 +521,11 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         return count;
     }
 
-    float CalculatePrecipitation(float stormIntensity)
+    internal float CalculatePrecipitation(float stormIntensity)
     {
         return Precipitation * Mathf.SmoothStep(
             PrecipitationStormThreshold,
             Mathf.Min(1f, PrecipitationStormThreshold + PrecipitationStormSoftness),
             stormIntensity);
     }
-
-    string BuildWeatherDiagnosticsJson(
-        string reason,
-        WeatherGridStats stats,
-        Vector3 strongestPosition,
-        WeatherSample strongestSample,
-        IPrecipitationDebugControl precipitationController)
-    {
-        var culture = CultureInfo.InvariantCulture;
-        var sb = new StringBuilder(2048);
-        sb.AppendLine("{");
-        AppendJsonString(sb, "reason", reason, 1, true);
-        AppendJsonString(sb, "utc", DateTime.UtcNow.ToString("O", culture), 1, true);
-        AppendJsonNumber(sb, "weatherResolution", WeatherResolution, 1, true);
-        int queryCacheFaces = GetQueryCacheFaceCount();
-        AppendJsonNumber(sb, "queryCacheFaces", queryCacheFaces, 1, true);
-        AppendJsonBool(sb, "queryCacheComplete", queryCacheFaces >= 6, 1, true);
-        AppendJsonNumber(sb, "evolutionDispatches", _evolutionDispatchCount, 1, true);
-        AppendJsonNumber(sb, "lastEvolutionDelta", _lastEvolutionDelta, 1, true);
-        AppendJsonBool(sb, "precipitationRenderEnabled",
-            precipitationController != null && precipitationController.PrecipitationRenderingEnabled && precipitationController.IsRenderingEnabled,
-            1, true);
-        AppendJsonNumber(sb, "precipitationStormThreshold", precipitationController != null ? precipitationController.StormThreshold : PrecipitationStormThreshold, 1, true);
-
-        Indent(sb, 1).AppendLine("\"gridStats\": {");
-        float invCellCount = stats.CellCount > 0 ? 1f / stats.CellCount : 0f;
-        AppendJsonNumber(sb, "cellCount", stats.CellCount, 2, true);
-        AppendJsonNumber(sb, "cloudyCellCount", stats.CloudyCellCount, 2, true);
-        AppendJsonNumber(sb, "stormCellCount", stats.StormCellCount, 2, true);
-        AppendJsonNumber(sb, "rainCandidateCellCount", stats.RainCandidateCellCount, 2, true);
-        AppendJsonNumber(sb, "rainingCellCount", stats.RainingCellCount, 2, true);
-        AppendJsonNumber(sb, "cloudyFraction", stats.CloudyCellCount * invCellCount, 2, true);
-        AppendJsonNumber(sb, "stormFraction", stats.StormCellCount * invCellCount, 2, true);
-        AppendJsonNumber(sb, "rainCandidateFraction", stats.RainCandidateCellCount * invCellCount, 2, true);
-        AppendJsonNumber(sb, "rainingFraction", stats.RainingCellCount * invCellCount, 2, true);
-        AppendJsonNumber(sb, "averageCondensation", stats.AverageCondensation, 2, true);
-        AppendJsonNumber(sb, "averageStorm", stats.AverageStorm, 2, true);
-        AppendJsonNumber(sb, "averageMoistureSource", stats.AverageMoistureSource, 2, true);
-        AppendJsonNumber(sb, "averageRainRate", stats.AverageRainRate, 2, true);
-        AppendJsonNumber(sb, "maxCondensation", stats.MaxCondensation, 2, true);
-        AppendJsonNumber(sb, "maxStorm", stats.MaxStorm, 2, true);
-        AppendJsonNumber(sb, "maxMoistureSource", stats.MaxMoistureSource, 2, true);
-        AppendJsonNumber(sb, "maxRainRate", stats.MaxRainRate, 2, false);
-        Indent(sb, 1).AppendLine("},");
-
-        Indent(sb, 1).AppendLine("\"strongestStorm\": {");
-        AppendJsonVector(sb, "weatherDirection", stats.StrongestStormDirection, 2, true);
-        AppendJsonVector(sb, "worldPosition", strongestPosition, 2, true);
-        AppendJsonNumber(sb, "condensation", stats.StrongestStormCondensation, 2, true);
-        AppendJsonNumber(sb, "storm", stats.StrongestStorm, 2, true);
-        AppendJsonNumber(sb, "moistureSource", stats.StrongestStormMoistureSource, 2, true);
-        AppendJsonNumber(sb, "samplePrecipitation", strongestSample.Precipitation, 2, false);
-        Indent(sb, 1).AppendLine("}");
-        sb.AppendLine("}");
-        return sb.ToString();
-    }
-
-    static StringBuilder Indent(StringBuilder sb, int count)
-    {
-        for (int i = 0; i < count; i++)
-            sb.Append("  ");
-        return sb;
-    }
-
-    static void AppendJsonString(StringBuilder sb, string name, string value, int indent, bool comma)
-    {
-        Indent(sb, indent).Append('"').Append(name).Append("\": \"")
-            .Append((value ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\""))
-            .Append('"').AppendLine(comma ? "," : string.Empty);
-    }
-
-    static void AppendJsonBool(StringBuilder sb, string name, bool value, int indent, bool comma)
-    {
-        Indent(sb, indent).Append('"').Append(name).Append("\": ")
-            .Append(value ? "true" : "false").AppendLine(comma ? "," : string.Empty);
-    }
-
-    static void AppendJsonNumber(StringBuilder sb, string name, float value, int indent, bool comma)
-    {
-        Indent(sb, indent).Append('"').Append(name).Append("\": ")
-            .Append(value.ToString("0.####", CultureInfo.InvariantCulture)).AppendLine(comma ? "," : string.Empty);
-    }
-
-    static void AppendJsonNumber(StringBuilder sb, string name, int value, int indent, bool comma)
-    {
-        Indent(sb, indent).Append('"').Append(name).Append("\": ")
-            .Append(value.ToString(CultureInfo.InvariantCulture)).AppendLine(comma ? "," : string.Empty);
-    }
-
-    static void AppendJsonVector(StringBuilder sb, string name, Vector3 value, int indent, bool comma)
-    {
-        Indent(sb, indent).Append('"').Append(name).Append("\": { ")
-            .Append("\"x\": ").Append(value.x.ToString("0.####", CultureInfo.InvariantCulture)).Append(", ")
-            .Append("\"y\": ").Append(value.y.ToString("0.####", CultureInfo.InvariantCulture)).Append(", ")
-            .Append("\"z\": ").Append(value.z.ToString("0.####", CultureInfo.InvariantCulture)).Append(" }")
-            .AppendLine(comma ? "," : string.Empty);
-    }
-
 }
