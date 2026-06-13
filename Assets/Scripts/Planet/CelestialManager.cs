@@ -48,12 +48,12 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController
     bool[] _moonRendererDefaults;
     Camera _cachedMainCamera;
 
-    static readonly int _nightAmbientIntensityId = Shader.PropertyToID("_NightAmbientIntensity");
-    static readonly int _starSeedId = Shader.PropertyToID("_StarSeed");
-    static readonly int _starDensityId = Shader.PropertyToID("_StarDensity");
-    static readonly int _starBrightnessId = Shader.PropertyToID("_StarBrightness");
-    static readonly int _moonParamsId = Shader.PropertyToID("_MoonParams");
-    static readonly int _moonIntensityId = Shader.PropertyToID("_MoonIntensity");
+    static readonly int _nightAmbientIntensityId = Shader.PropertyToID(ShaderGlobalIds.NightAmbientIntensity);
+    static readonly int _starSeedId = Shader.PropertyToID(ShaderGlobalIds.StarSeed);
+    static readonly int _starDensityId = Shader.PropertyToID(ShaderGlobalIds.StarDensity);
+    static readonly int _starBrightnessId = Shader.PropertyToID(ShaderGlobalIds.StarBrightness);
+    static readonly int _moonParamsId = Shader.PropertyToID(ShaderGlobalIds.MoonParams);
+    static readonly int _moonIntensityId = Shader.PropertyToID(ShaderGlobalIds.MoonIntensity);
     const float MoonCausticMaxIntensity = 0.015f;
 
     public float TimeOfDay => _timeOfDay;
