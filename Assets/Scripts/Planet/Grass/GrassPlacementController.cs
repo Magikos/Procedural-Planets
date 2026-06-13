@@ -14,22 +14,6 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     const float GrassBoundsPaddingMeters = 8f;
     const float AllocationReleasePaddingMeters = 50f;
     const string PlacementComputeResource = "BiomeGrassPlace";
-    const int StatCandidateLanes = 0;
-    const int StatDensityRejectedLanes = 1;
-    const int StatShapeRejectedLanes = 2;
-    const int StatStateRejectedLanes = 3;
-    const int StatWaterRejectedLanes = 4;
-    const int StatSlopeRejectedLanes = 5;
-    const int StatDistanceRejectedLanes = 6;
-    const int StatDistanceFadeRejectedLanes = 7;
-    const int StatFrustumRejectedLanes = 8;
-    const int StatVisibleLanes = 9;
-    const int StatCandidateBlades = 10;
-    const int StatDensityRejectedBlades = 11;
-    const int StatSlopeRejectedBlades = 12;
-    const int StatEmittedBlades = 13;
-    const int StatOverflowRejectedBlades = 14;
-    const int StatInnerFadeRejectedBlades = 15;
 
     static readonly int BladeInstancesId = Shader.PropertyToID("_GrassBladeInstances");
     static readonly int GrassDrawArgsId = Shader.PropertyToID("_GrassDrawArgs");
@@ -90,39 +74,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     readonly float _distanceFadeStart;
     readonly float _cullDistanceJitter01;
     readonly float _residencyFrustumPaddingDegrees;
-    int _lastVisibleChunks;
-    int _lastBufferedResidencyChunks;
-    int _lastDrawCalls;
-    int _lastBladeInstances;
-    int _lastResidentBladeInstances;
-    int _lastResidentChunksWithInstances;
-    int _lastPlacementDispatches;
-    int _lastChunksWithInstances;
-    int _lastFineTrackedChunks;
-    int _lastCoarseTrackedChunks;
-    int _lastFineChunksWithInstances;
-    int _lastCoarseChunksWithInstances;
-    int _lastChunksWithStats;
-    int _lastChunkInstanceMin;
-    int _lastChunkInstanceMax;
-    long _lastCandidateLanes;
-    long _lastDensityRejectedLanes;
-    long _lastShapeRejectedLanes;
-    long _lastStateRejectedLanes;
-    long _lastWaterRejectedLanes;
-    long _lastSlopeRejectedLanes;
-    long _lastDistanceRejectedLanes;
-    long _lastDistanceFadeRejectedLanes;
-    long _lastFrustumRejectedLanes;
-    long _lastVisibleLanes;
-    long _lastCandidateBlades;
-    long _lastDensityRejectedBlades;
-    long _lastSlopeRejectedBlades;
-    long _lastInnerFadeRejectedBlades;
-    long _lastEmittedBlades;
-    long _lastOverflowRejectedBlades;
-    long _lastBufferBytes;
-    int _lastOldChunkSuppressedCount;
+    readonly GrassPlacementStats _stats = new();
     bool _disposed;
 
     public GrassPlacementController(Transform planetTransform, ChunkedSurfaceProvider surfaceProvider,
@@ -232,36 +184,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             RedispatchAllPlacements();
         }
 
-        _lastDrawCalls = 0;
-        _lastBladeInstances = 0;
-        _lastResidentBladeInstances = 0;
-        _lastResidentChunksWithInstances = 0;
-        _lastChunksWithInstances = 0;
-        _lastFineTrackedChunks = 0;
-        _lastCoarseTrackedChunks = 0;
-        _lastFineChunksWithInstances = 0;
-        _lastCoarseChunksWithInstances = 0;
-        _lastChunksWithStats = 0;
-        _lastChunkInstanceMin = 0;
-        _lastChunkInstanceMax = 0;
-        _lastCandidateLanes = 0;
-        _lastDensityRejectedLanes = 0;
-        _lastShapeRejectedLanes = 0;
-        _lastStateRejectedLanes = 0;
-        _lastWaterRejectedLanes = 0;
-        _lastSlopeRejectedLanes = 0;
-        _lastDistanceRejectedLanes = 0;
-        _lastDistanceFadeRejectedLanes = 0;
-        _lastFrustumRejectedLanes = 0;
-        _lastVisibleLanes = 0;
-        _lastCandidateBlades = 0;
-        _lastDensityRejectedBlades = 0;
-        _lastSlopeRejectedBlades = 0;
-        _lastInnerFadeRejectedBlades = 0;
-        _lastEmittedBlades = 0;
-        _lastOverflowRejectedBlades = 0;
-        _lastBufferBytes = 0L;
-        _lastOldChunkSuppressedCount = 0;
+        _stats.ResetPerTick();
         int chunksWithInstanceReadback = 0;
         int chunkInstanceMin = int.MaxValue;
 
@@ -286,9 +209,9 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
 
             bool isFineChunk = chunk.DetailLevel == _maxChunkDepth;
             if (isFineChunk)
-                _lastFineTrackedChunks++;
+                _stats.FineTrackedChunks++;
             else
-                _lastCoarseTrackedChunks++;
+                _stats.CoarseTrackedChunks++;
 
             bool suppress = false;
             if (suppressionRadiusSq > 0f && chunk != null
@@ -303,43 +226,43 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
                 && GeometryUtility.TestPlanesAABB(_renderFrustumPlanes, runtime.WorldBounds);
             if (suppress)
             {
-                _lastOldChunkSuppressedCount++;
+                _stats.OldChunkSuppressedCount++;
             }
             else if (renderChunk)
             {
                 runtime.Render(_material, camera, _planetTransform.gameObject.layer);
-                _lastDrawCalls++;
+                _stats.DrawCalls++;
             }
 
             int instanceCount = runtime.ReportedInstanceCount;
-            _lastResidentBladeInstances += instanceCount;
+            _stats.ResidentBladeInstances += instanceCount;
             if (instanceCount > 0)
             {
-                _lastResidentChunksWithInstances++;
+                _stats.ResidentChunksWithInstances++;
                 if (isFineChunk)
-                    _lastFineChunksWithInstances++;
+                    _stats.FineChunksWithInstances++;
                 else
-                    _lastCoarseChunksWithInstances++;
+                    _stats.CoarseChunksWithInstances++;
 
                 if (renderChunk)
-                    _lastChunksWithInstances++;
+                    _stats.ChunksWithInstances++;
             }
             if (renderChunk)
-                _lastBladeInstances += instanceCount;
+                _stats.BladeInstances += instanceCount;
             chunksWithInstanceReadback++;
             chunkInstanceMin = Mathf.Min(chunkInstanceMin, instanceCount);
-            _lastChunkInstanceMax = Mathf.Max(_lastChunkInstanceMax, instanceCount);
-            _lastBufferBytes += runtime.BufferBytes;
-            AccumulateRuntimeStats(runtime);
+            _stats.ChunkInstanceMax = Mathf.Max(_stats.ChunkInstanceMax, instanceCount);
+            _stats.BufferBytes += runtime.BufferBytes;
+            _stats.Accumulate(runtime);
         }
 
-        _lastChunkInstanceMin = chunksWithInstanceReadback > 0 ? chunkInstanceMin : 0;
+        _stats.ChunkInstanceMin = chunksWithInstanceReadback > 0 ? chunkInstanceMin : 0;
     }
 
     void RedispatchAllPlacements()
     {
         if (!_placementAvailable) return;
-        _lastPlacementDispatches = 0;
+        _stats.PlacementDispatches = 0;
         foreach (var pair in _chunks)
         {
             PlanetChunk chunk = pair.Key;
@@ -351,7 +274,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
                     out Texture2D surfaceRadius, out Texture2D surfaceNormal)) continue;
             if (chunk.SurfaceStateTexture == null) continue;
             DispatchPlacement(chunk, runtime, biomeIds, biomeWeights, surfaceRadius, surfaceNormal);
-            _lastPlacementDispatches++;
+            _stats.PlacementDispatches++;
             runtime.RequestReadbacks();
         }
     }
@@ -384,7 +307,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             _residencyScratch);
 
         _residencyChunks.Clear();
-        _lastBufferedResidencyChunks = 0;
+        _stats.BufferedResidencyChunks = 0;
         for (int i = 0; i < _residencyScratch.Count; i++)
         {
             PlanetChunk chunk = _residencyScratch[i];
@@ -393,9 +316,9 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
 
             _residencyChunks.Add(chunk);
             if (!_surfaceProvider.IsChunkTerrainVisible(chunk))
-                _lastBufferedResidencyChunks++;
+                _stats.BufferedResidencyChunks++;
         }
-        _lastVisibleChunks = _residencyChunks.Count - _lastBufferedResidencyChunks;
+        _stats.VisibleChunks = _residencyChunks.Count - _stats.BufferedResidencyChunks;
     }
 
     void ReconcileRuntimeAllocations(Vector3 cameraPosition)
@@ -461,7 +384,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             return null;
 
         DispatchPlacement(chunk, runtime, biomeIds, biomeWeights, surfaceRadius, surfaceNormal);
-        _lastPlacementDispatches++;
+        _stats.PlacementDispatches++;
         runtime.RequestReadbacks();
         return runtime;
     }
@@ -522,16 +445,16 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         {
             ControllerActive = !_disposed,
             ShaderAvailable = _material != null,
-            VisibleChunks = _lastVisibleChunks,
+            VisibleChunks = _stats.VisibleChunks,
             ResidencyChunks = _residencyChunks.Count,
-            BufferedResidencyChunks = _lastBufferedResidencyChunks,
+            BufferedResidencyChunks = _stats.BufferedResidencyChunks,
             TrackedChunks = _chunks.Count,
-            FineTrackedChunks = _lastFineTrackedChunks,
-            CoarseTrackedChunks = _lastCoarseTrackedChunks,
-            DrawCalls = _lastDrawCalls,
-            BladeInstances = _lastBladeInstances,
-            ResidentChunksWithInstances = _lastResidentChunksWithInstances,
-            ResidentBladeInstances = _lastResidentBladeInstances,
+            FineTrackedChunks = _stats.FineTrackedChunks,
+            CoarseTrackedChunks = _stats.CoarseTrackedChunks,
+            DrawCalls = _stats.DrawCalls,
+            BladeInstances = _stats.BladeInstances,
+            ResidentChunksWithInstances = _stats.ResidentChunksWithInstances,
+            ResidentBladeInstances = _stats.ResidentBladeInstances,
             MaxChunkDepth = _maxChunkDepth,
             MinChunkDepthForBlades = _minChunkDepthForBlades,
             MaxCoarseLodOffsetForBlades = _maxCoarseLodOffsetForBlades,
@@ -545,64 +468,40 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             ResidencyFrustumPaddingDegrees = _residencyFrustumPaddingDegrees,
             PlacementFrustumCullEnabled = false,
             SurfaceAtlasResolution = _surfaceAtlasResolution,
-            BufferMegabytes = _lastBufferBytes / (1024f * 1024f),
-            PlacementDispatches = _lastPlacementDispatches,
-            ChunksWithInstances = _lastChunksWithInstances,
-            FineChunksWithInstances = _lastFineChunksWithInstances,
-            CoarseChunksWithInstances = _lastCoarseChunksWithInstances,
-            ChunksWithStats = _lastChunksWithStats,
-            ChunkInstanceMin = _lastChunkInstanceMin,
-            ChunkInstanceMax = _lastChunkInstanceMax,
+            BufferMegabytes = _stats.BufferBytes / (1024f * 1024f),
+            PlacementDispatches = _stats.PlacementDispatches,
+            ChunksWithInstances = _stats.ChunksWithInstances,
+            FineChunksWithInstances = _stats.FineChunksWithInstances,
+            CoarseChunksWithInstances = _stats.CoarseChunksWithInstances,
+            ChunksWithStats = _stats.ChunksWithStats,
+            ChunkInstanceMin = _stats.ChunkInstanceMin,
+            ChunkInstanceMax = _stats.ChunkInstanceMax,
             ChunkInstanceAverage = _chunks.Count > 0
-                ? _lastResidentBladeInstances / (float)_chunks.Count
+                ? _stats.ResidentBladeInstances / (float)_chunks.Count
                 : 0f,
-            CandidateLanes = _lastCandidateLanes,
-            DensityRejectedLanes = _lastDensityRejectedLanes,
-            ShapeRejectedLanes = _lastShapeRejectedLanes,
-            StateRejectedLanes = _lastStateRejectedLanes,
-            WaterRejectedLanes = _lastWaterRejectedLanes,
-            SlopeRejectedLanes = _lastSlopeRejectedLanes,
-            DistanceRejectedLanes = _lastDistanceRejectedLanes,
-            DistanceFadeRejectedLanes = _lastDistanceFadeRejectedLanes,
-            FrustumRejectedLanes = _lastFrustumRejectedLanes,
-            VisibleLanes = _lastVisibleLanes,
-            CandidateBlades = _lastCandidateBlades,
-            DensityRejectedBlades = _lastDensityRejectedBlades,
-            SlopeRejectedBlades = _lastSlopeRejectedBlades,
-            InnerFadeRejectedBlades = _lastInnerFadeRejectedBlades,
-            EmittedBlades = _lastEmittedBlades,
-            OverflowRejectedBlades = _lastOverflowRejectedBlades,
-            OldChunkSuppressedCount = _lastOldChunkSuppressedCount,
+            CandidateLanes = _stats.CandidateLanes,
+            DensityRejectedLanes = _stats.DensityRejectedLanes,
+            ShapeRejectedLanes = _stats.ShapeRejectedLanes,
+            StateRejectedLanes = _stats.StateRejectedLanes,
+            WaterRejectedLanes = _stats.WaterRejectedLanes,
+            SlopeRejectedLanes = _stats.SlopeRejectedLanes,
+            DistanceRejectedLanes = _stats.DistanceRejectedLanes,
+            DistanceFadeRejectedLanes = _stats.DistanceFadeRejectedLanes,
+            FrustumRejectedLanes = _stats.FrustumRejectedLanes,
+            VisibleLanes = _stats.VisibleLanes,
+            CandidateBlades = _stats.CandidateBlades,
+            DensityRejectedBlades = _stats.DensityRejectedBlades,
+            SlopeRejectedBlades = _stats.SlopeRejectedBlades,
+            InnerFadeRejectedBlades = _stats.InnerFadeRejectedBlades,
+            EmittedBlades = _stats.EmittedBlades,
+            OverflowRejectedBlades = _stats.OverflowRejectedBlades,
+            OldChunkSuppressedCount = _stats.OldChunkSuppressedCount,
             RegisteredInteractors = GrassInteractorRegistry.RegisteredCount,
             UploadedInteractors = GrassInteractorRegistry.LastActiveCount,
             ActiveInteractorSources = GrassInteractorRegistry.LastActiveSourceCount,
             UploadedReleaseSamples = GrassInteractorRegistry.LastReleaseSampleCount,
             RetainedReleaseSamples = GrassInteractorRegistry.RetainedReleaseSampleCount,
         };
-    }
-
-    void AccumulateRuntimeStats(GrassChunkRuntime runtime)
-    {
-        if (runtime == null || !runtime.HasStats)
-            return;
-
-        _lastChunksWithStats++;
-        _lastCandidateLanes += runtime.GetStat(StatCandidateLanes);
-        _lastDensityRejectedLanes += runtime.GetStat(StatDensityRejectedLanes);
-        _lastShapeRejectedLanes += runtime.GetStat(StatShapeRejectedLanes);
-        _lastStateRejectedLanes += runtime.GetStat(StatStateRejectedLanes);
-        _lastWaterRejectedLanes += runtime.GetStat(StatWaterRejectedLanes);
-        _lastSlopeRejectedLanes += runtime.GetStat(StatSlopeRejectedLanes);
-        _lastDistanceRejectedLanes += runtime.GetStat(StatDistanceRejectedLanes);
-        _lastDistanceFadeRejectedLanes += runtime.GetStat(StatDistanceFadeRejectedLanes);
-        _lastFrustumRejectedLanes += runtime.GetStat(StatFrustumRejectedLanes);
-        _lastVisibleLanes += runtime.GetStat(StatVisibleLanes);
-        _lastCandidateBlades += runtime.GetStat(StatCandidateBlades);
-        _lastDensityRejectedBlades += runtime.GetStat(StatDensityRejectedBlades);
-        _lastSlopeRejectedBlades += runtime.GetStat(StatSlopeRejectedBlades);
-        _lastInnerFadeRejectedBlades += runtime.GetStat(StatInnerFadeRejectedBlades);
-        _lastEmittedBlades += runtime.GetStat(StatEmittedBlades);
-        _lastOverflowRejectedBlades += runtime.GetStat(StatOverflowRejectedBlades);
     }
 
     static void ResolveChunkInnerFade(out float start, out float end)
