@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Threading;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -12,23 +10,12 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
     const float FadeDuration = 0.12f;
     const float RepeatInitialDelay = 0.40f;
     const float RepeatInterval = 0.05f;
-    const float SpinnerUpdateInterval = 0.2f;
-    const float SpinnerDotPeriod = 0.5f;
     const int PopupVisibleCount = 8;
 
     // Input-line syntax-highlight colors live on ConsoleTheme (Resources/ConsoleTheme.asset).
     // Accessed via _renderer.Theme.InputXyz at use sites.
 
     enum InputMode { Normal, Confirm }
-
-    struct PendingAsync
-    {
-        public string Alias;
-        public object Awaitable;
-        public float StartTime;
-        public long LineId;
-        public bool IsCancellable;
-    }
 
     sealed class ConfirmContext
     {
@@ -90,9 +77,7 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
     int _scrollOffset;
     int _tailScrollbackVersion;  // scrollback.Version last seen while _scrollOffset == 0
     string _draftBeforeHistory;
-    PendingAsync? _pending;
-    CancellationTokenSource _pendingCts;
-    float _spinnerLastUpdate;
+    ConsoleAsyncRunner _runner;
     InputMode _mode = InputMode.Normal;
     ConfirmContext _confirm;
     float _currentAlpha;
@@ -114,6 +99,7 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
     void Awake()
     {
         _renderer = new ConsoleRenderer();
+        _runner = new ConsoleAsyncRunner(_scrollback, this, (question, onYes) => ShowConfirm(question, onYes));
     }
 
     void OnEnable()
@@ -131,12 +117,8 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
 
     void OnDestroy()
     {
-        // Null out _pending before anything else so any in-flight ObservePending sees
-        // 'abandoned == true' and skips writing to dead scrollback state.
-        _pending = null;
-        _pendingCts?.Cancel();
-        _pendingCts?.Dispose();
-        _pendingCts = null;
+        // Shut the runner down first so any in-flight ObservePending skips writing to dead state.
+        _runner.Shutdown();
         if (_isOpen && _input != null)
         {
             _input.DisableConsole();
@@ -172,8 +154,7 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
             }
         }
 
-        if (_pending.HasValue)
-            UpdatePendingLine();
+        _runner.Tick();
 
         float step = Time.unscaledDeltaTime / FadeDuration;
         _currentAlpha = Mathf.MoveTowards(_currentAlpha, _targetAlpha, step);
@@ -523,89 +504,23 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
             return;
         }
 
-        bool isBypass = _pending.HasValue && IsBypassPendingCommand(line);
-
-        // While async is pending, only `console.abandon` and `console.cancel` get through.
-        // Everything else is rejected with a hint so the user knows what their options are.
-        if (_pending.HasValue && !isBypass)
-        {
-            float elapsed = Time.unscaledTime - _pending.Value.StartTime;
-            _scrollback.Append(
-                $"'{_pending.Value.Alias}' running ({elapsed:F1}s) — wait, or run 'console.abandon' / 'console.cancel'",
-                ConsoleMessageType.Warning);
+        // Rejected while another async is pending — preserve the typed line so the user
+        // can abandon/cancel and resubmit.
+        if (!_runner.TryRunInteractive(line))
             return;
-        }
 
         _inputBuffer.Clear();
         ResetSuggestions();
         _suggestions = System.Array.Empty<Suggestion>();
         _scrollOffset = 0;
-
-        _scrollback.Append($"> {line}", ConsoleMessageType.Input);
         _history.Add(line);
         _draftBeforeHistory = null;
-
-        if (isBypass)
-        {
-            // Preserve _pendingCts — it belongs to the async being abandoned/cancelled.
-            // Bypass commands are sync and don't take a CancellationToken.
-            CommandExecutor.Execute(line, this, CancellationToken.None);
-            return;
-        }
-
-        ExecuteWithOwnedCancellation(line);
-    }
-
-    void ExecuteWithOwnedCancellation(string commandLine)
-    {
-        var cts = new CancellationTokenSource();
-        _pendingCts = cts;
-        try
-        {
-            CommandExecutor.Execute(commandLine, this, cts.Token);
-        }
-        finally
-        {
-            if (!_pending.HasValue)
-            {
-                _pendingCts = null;
-                cts.Dispose();
-            }
-            // else: cts was passed to ObservePending as a parameter; it owns disposal.
-        }
-    }
-
-    static bool IsBypassPendingCommand(string line)
-    {
-        if (string.IsNullOrWhiteSpace(line)) return false;
-        var tokens = CommandParser.Tokenize(line);
-        if (tokens.Count == 0) return false;
-        return tokens[0].Equals("console.abandon", StringComparison.OrdinalIgnoreCase)
-            || tokens[0].Equals("console.cancel", StringComparison.OrdinalIgnoreCase);
     }
 
     public void RunCommand(string commandLine)
     {
         if (string.IsNullOrWhiteSpace(commandLine)) return;
-
-        bool isBypass = _pending.HasValue && IsBypassPendingCommand(commandLine);
-        if (_pending.HasValue && !isBypass)
-        {
-            float elapsed = Time.unscaledTime - _pending.Value.StartTime;
-            _scrollback.Append(
-                $"'{_pending.Value.Alias}' running ({elapsed:F1}s) - reject '{commandLine}'",
-                ConsoleMessageType.Warning);
-            return;
-        }
-
-        _scrollback.Append($"> {commandLine}", ConsoleMessageType.Input);
-        if (isBypass)
-        {
-            CommandExecutor.Execute(commandLine, this, CancellationToken.None);
-            return;
-        }
-
-        ExecuteWithOwnedCancellation(commandLine);
+        _runner.RunProgrammatic(commandLine);
     }
 
     public void Print(string text)
@@ -629,72 +544,11 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
     // --- Async pending tracking --------------------------------------------
 
     public void BeginAsync(string alias, object awaitable, bool isCancellable)
-    {
-        if (awaitable == null) return;
-        if (_pending.HasValue)
-        {
-            float elapsed = Time.unscaledTime - _pending.Value.StartTime;
-            _scrollback.Append(
-                $"'{_pending.Value.Alias}' running ({elapsed:F1}s) — reject '{alias}'",
-                ConsoleMessageType.Warning);
-            return;
-        }
+        => _runner.BeginAsync(alias, awaitable, isCancellable);
 
-        long id = _scrollback.Append($"running {alias} ... (0.0s)", ConsoleMessageType.Log);
-        _pending = new PendingAsync
-        {
-            Alias = alias,
-            Awaitable = awaitable,
-            StartTime = Time.unscaledTime,
-            LineId = id,
-            IsCancellable = isCancellable,
-        };
-        _spinnerLastUpdate = Time.unscaledTime;
-        var cts = _pendingCts;  // captured by ObservePending
-        _ = ObservePending(_pending.Value, cts);
-    }
+    public void AbandonPending() => _runner.AbandonPending();
 
-    public void AbandonPending()
-    {
-        if (!_pending.HasValue)
-        {
-            _scrollback.Append("nothing to abandon", ConsoleMessageType.Warning);
-            return;
-        }
-        var p = _pending.Value;
-        float elapsed = Time.unscaledTime - p.StartTime;
-        _scrollback.Replace(p.LineId, $"{p.Alias} abandoned ({elapsed:F2}s)", ConsoleMessageType.Warning);
-        _pending = null;
-        // Detach our reference; the observer still holds the CTS via its closure and
-        // will dispose it when the underlying awaitable eventually finishes.
-        _pendingCts = null;
-    }
-
-    public void RequestCancelPending()
-    {
-        if (!_pending.HasValue)
-        {
-            _scrollback.Append("nothing to cancel", ConsoleMessageType.Warning);
-            return;
-        }
-        var p = _pending.Value;
-        if (!p.IsCancellable)
-        {
-            _scrollback.Append(
-                $"'{p.Alias}' does not support cancellation (no CancellationToken parameter) — use 'console.abandon' instead",
-                ConsoleMessageType.Warning);
-            return;
-        }
-        ShowConfirm(
-            $"Cancel '{p.Alias}'?",
-            onYes: () =>
-            {
-                if (_pendingCts != null && !_pendingCts.IsCancellationRequested)
-                    _pendingCts.Cancel();
-                else
-                    _scrollback.Append("cancellation already requested", ConsoleMessageType.Warning);
-            });
-    }
+    public void RequestCancelPending() => _runner.RequestCancelPending();
 
     /// <inheritdoc/>
     public void Confirm(string question, Action onYes, Action onNo = null)
@@ -703,9 +557,9 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
     /// <inheritdoc/>
     public ConsoleDiagnostics GetDiagnostics()
     {
-        string pendingAlias = _pending?.Alias;
-        float elapsed = _pending.HasValue ? Time.unscaledTime - _pending.Value.StartTime : 0f;
-        bool cancellable = _pending?.IsCancellable ?? false;
+        string pendingAlias = _runner.PendingAlias;
+        float elapsed = _runner.PendingElapsedSeconds;
+        bool cancellable = _runner.PendingIsCancellable;
         return new ConsoleDiagnostics(
             _isOpen,
             Anchor,
@@ -736,119 +590,6 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
         if (invokeNo) _confirm.OnNo?.Invoke();
         _confirm = null;
         _mode = InputMode.Normal;
-    }
-
-    void UpdatePendingLine()
-    {
-        if (!_pending.HasValue) return;
-        if (Time.unscaledTime - _spinnerLastUpdate < SpinnerUpdateInterval) return;
-        _spinnerLastUpdate = Time.unscaledTime;
-
-        var p = _pending.Value;
-        float elapsed = Time.unscaledTime - p.StartTime;
-        string dots = CurrentDotPhase();
-        _scrollback.Replace(p.LineId, $"running {p.Alias} {dots} ({elapsed:F1}s)", ConsoleMessageType.Log);
-    }
-
-    static string CurrentDotPhase()
-    {
-        int phase = Mathf.FloorToInt(Time.unscaledTime / (SpinnerDotPeriod / 4f)) % 4;
-        return phase switch
-        {
-            0 => "   ",
-            1 => ".  ",
-            2 => ".. ",
-            _ => "...",
-        };
-    }
-
-    async Awaitable ObservePending(PendingAsync p, CancellationTokenSource cts)
-    {
-        object result = null;
-        string error = null;
-        bool cancelled = false;
-
-        try
-        {
-            result = await AwaitGeneric(p.Awaitable);
-        }
-        catch (OperationCanceledException)
-        {
-            cancelled = true;
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message ?? ex.GetType().Name;
-        }
-
-        bool abandoned = !_pending.HasValue || _pending.Value.LineId != p.LineId;
-
-        // this != null: Unity null check guards against MonoBehaviour destruction.
-        // abandoned: true if _pending was cleared (OnDestroy, user abandon, etc.).
-        if (this != null && !abandoned)
-        {
-            float elapsed = Time.unscaledTime - p.StartTime;
-            if (cancelled)
-            {
-                _scrollback.Replace(p.LineId, $"{p.Alias} cancelled ({elapsed:F2}s)", ConsoleMessageType.Warning);
-            }
-            else if (error != null)
-            {
-                _scrollback.Replace(p.LineId, $"{p.Alias}: {error} ({elapsed:F2}s)", ConsoleMessageType.Error);
-            }
-            else
-            {
-                _scrollback.Replace(p.LineId, $"{p.Alias} completed in {elapsed:F2}s", ConsoleMessageType.Output);
-                if (result != null) _scrollback.AppendText(result.ToString(), ConsoleMessageType.Output);
-            }
-            _pending = null;
-            _pendingCts = null;
-        }
-
-        cts?.Dispose();
-    }
-
-    static async Awaitable<object> AwaitGeneric(object awaitableObj)
-    {
-        if (awaitableObj is Awaitable nonGeneric)
-        {
-            await nonGeneric;
-            return null;
-        }
-
-        // Registers a continuation via UnsafeOnCompleted so the Awaitable<T>'s internal
-        // scheduler drives completion — no per-frame reflection polling.
-        // Polling IsCompleted via reflection without a registered continuation may never
-        // see it become true, because Unity's Awaitable<T> only updates that state after
-        // a continuation is attached.
-        var type = awaitableObj.GetType();
-        var getAwaiter = type.GetMethod("GetAwaiter", BindingFlags.Public | BindingFlags.Instance);
-        if (getAwaiter == null) throw new InvalidOperationException($"{type.Name} has no GetAwaiter()");
-        object awaiter = getAwaiter.Invoke(awaitableObj, null);
-        var awaiterType = awaiter.GetType();
-        var getResult = awaiterType.GetMethod("GetResult");
-        var unsafeOnCompleted = awaiterType.GetMethod("UnsafeOnCompleted")
-                             ?? awaiterType.GetMethod("OnCompleted");
-        if (getResult == null || unsafeOnCompleted == null)
-            throw new InvalidOperationException($"{awaiterType.Name} is not a valid awaiter");
-
-        bool done = false;
-        object result = null;
-        Exception caught = null;
-        Action continuation = () =>
-        {
-            try { result = getResult.Invoke(awaiter, null); }
-            catch (TargetInvocationException tex) { caught = tex.InnerException ?? tex; }
-            catch (Exception ex) { caught = ex; }
-            done = true;
-        };
-        unsafeOnCompleted.Invoke(awaiter, new object[] { continuation });
-
-        while (!done)
-            await Awaitable.NextFrameAsync();
-
-        if (caught != null) throw caught;
-        return result;
     }
 
     void OnLogMessageReceived(string condition, string stackTrace, LogType type)
@@ -896,10 +637,9 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
                 ? System.Array.Empty<Suggestion>()
                 : _suggestions;
 
-        string pendingDots = _pending.HasValue ? CurrentDotPhase() : null;
         List<TextSpan> inputSpans = _inputFormatter.Build(
             _renderer.Theme, typed, cursorPos, cursorOn,
-            _suggestions, ghostActive, _pending.HasValue, pendingDots);
+            _suggestions, ghostActive, _runner.HasPending, _runner.PendingSpinnerDots);
 
         var cmd = new CommandBuffer { name = "ConsoleOverlay" };
         try
