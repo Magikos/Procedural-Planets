@@ -48,6 +48,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     bool _grassBlanketEnabled = true;
     GameObject _waterObject;
     Material _waterMaterial;
+    // Runtime clone of the authoring PlanetMaterial asset. All runtime shader-property/keyword
+    // writes and the surface renderers target this clone so the SO-referenced asset is never
+    // mutated (CLAUDE.md: materials are cloned on first use).
+    Material _terrainMaterial;
 
     static readonly int _shallowColorId = Shader.PropertyToID("_ShallowColor");
     static readonly int _deepColorId = Shader.PropertyToID("_DeepColor");
@@ -218,6 +222,11 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             Destroy(_waterMaterial);
             _waterMaterial = null;
         }
+        if (_terrainMaterial != null)
+        {
+            Destroy(_terrainMaterial);
+            _terrainMaterial = null;
+        }
         GrassInteractorRegistry.DisposeBuffer();
     }
 
@@ -290,6 +299,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             Seed,
             seedProvider.GetSeedForSystem("BiomeVoronoi"));
 
+        EnsureRuntimeTerrainMaterial(planet?.PlanetMaterial);
         ConfigureMaterial();
 
         if (planet == null) return;
@@ -297,12 +307,12 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         {
             case PlanetResolution.Low:
                 _perFaceProvider = new PerFaceSurfaceProvider(
-                    transform, _shapeGenerator, PerFaceResolution, planet.PlanetMaterial, RenderMask);
+                    transform, _shapeGenerator, PerFaceResolution, _terrainMaterial, RenderMask);
                 _surfaceProvider = _perFaceProvider;
                 break;
             case PlanetResolution.High:
                 _surfaceProvider = new ChunkedSurfaceProvider(
-                    transform, _shapeGenerator, planet.PlanetMaterial, RenderMask,
+                    transform, _shapeGenerator, _terrainMaterial, RenderMask,
                     planet.MaxChunkDepth);
                 // Pre-cache mode: all chunks at all depths <= MaxChunkDepth are generated up
                 // front during the loading bar. Runtime Tick is a cheap visibility filter; no
@@ -320,9 +330,22 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     }
 
 
+    // Clones the authoring PlanetMaterial into the runtime material, replacing any prior clone.
+    // Everything downstream (renderers, property writes) targets the clone so the asset stays clean.
+    void EnsureRuntimeTerrainMaterial(Material source)
+    {
+        if (_terrainMaterial != null)
+        {
+            Destroy(_terrainMaterial);
+            _terrainMaterial = null;
+        }
+        if (source != null)
+            _terrainMaterial = new Material(source) { name = $"{source.name} (runtime)" };
+    }
+
     void ConfigureMaterial()
     {
-        var mat = SettingsProvider.GetSettings<PlanetDto>().PlanetMaterial;
+        var mat = _terrainMaterial;
         if (mat == null)
         {
             Logger.Log(LogLevel.Warning, "Planet", "PlanetMaterial is not assigned in PlanetSettings.");
@@ -554,7 +577,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             CreateMidFieldGrassController(chunkedProvider, waterRadius);
         }
 
-        ApplyGrassBlanketState(planet.PlanetMaterial);
+        ApplyGrassBlanketState(_terrainMaterial);
     }
 
     void UpdateGrassControllerActivation(Camera camera)
@@ -679,9 +702,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     public void SetGrassEnabled(bool enabled)
     {
         _grassEnabled = enabled;
-        ApplyGrassBlanketState(SettingsProvider.IsRegistered<PlanetDto>()
-            ? SettingsProvider.GetSettings<PlanetDto>().PlanetMaterial
-            : null);
+        ApplyGrassBlanketState(_terrainMaterial);
         if (!enabled)
         {
             _grassNearFieldController?.Dispose();
@@ -723,9 +744,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
                 break;
             case GrassRenderLayer.Blanket:
                 _grassBlanketEnabled = enabled;
-                ApplyGrassBlanketState(SettingsProvider.IsRegistered<PlanetDto>()
-            ? SettingsProvider.GetSettings<PlanetDto>().PlanetMaterial
-            : null);
+                ApplyGrassBlanketState(_terrainMaterial);
                 break;
             default:
                 throw new System.ArgumentOutOfRangeException(nameof(layer), layer, null);
