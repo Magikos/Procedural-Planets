@@ -2,24 +2,24 @@ using UnityEngine;
 
 public sealed class GrassSurfaceAtlasGpuData : System.IDisposable
 {
-    static readonly int AtlasResolutionId = Shader.PropertyToID("_GrassSurfaceAtlasResolution");
+    static readonly int AtlasResolutionId = Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceAtlasResolution);
     static readonly int[] RadiusIds =
     {
-        Shader.PropertyToID("_GrassSurfaceRadius_F0"),
-        Shader.PropertyToID("_GrassSurfaceRadius_F1"),
-        Shader.PropertyToID("_GrassSurfaceRadius_F2"),
-        Shader.PropertyToID("_GrassSurfaceRadius_F3"),
-        Shader.PropertyToID("_GrassSurfaceRadius_F4"),
-        Shader.PropertyToID("_GrassSurfaceRadius_F5"),
+        Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceRadiusF0),
+        Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceRadiusF1),
+        Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceRadiusF2),
+        Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceRadiusF3),
+        Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceRadiusF4),
+        Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceRadiusF5),
     };
     static readonly int[] NormalIds =
     {
-        Shader.PropertyToID("_GrassSurfaceNormal_F0"),
-        Shader.PropertyToID("_GrassSurfaceNormal_F1"),
-        Shader.PropertyToID("_GrassSurfaceNormal_F2"),
-        Shader.PropertyToID("_GrassSurfaceNormal_F3"),
-        Shader.PropertyToID("_GrassSurfaceNormal_F4"),
-        Shader.PropertyToID("_GrassSurfaceNormal_F5"),
+        Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceNormalF0),
+        Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceNormalF1),
+        Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceNormalF2),
+        Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceNormalF3),
+        Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceNormalF4),
+        Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceNormalF5),
     };
 
     public readonly Texture2D[] RadiusByFace;

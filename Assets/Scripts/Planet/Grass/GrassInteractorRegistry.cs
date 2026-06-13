@@ -12,8 +12,8 @@ public static class GrassInteractorRegistry
     const float TrailSampleInterval = 0.12f;
     const float TrailMinimumMovement = 0.15f;
 
-    static readonly int InteractorsBufferId = Shader.PropertyToID("_GrassInteractors");
-    static readonly int InteractorCountId = Shader.PropertyToID("_GrassInteractorCount");
+    static readonly int InteractorsBufferId = Shader.PropertyToID(ShaderGlobalIds.GrassInteractors);
+    static readonly int InteractorCountId = Shader.PropertyToID(ShaderGlobalIds.GrassInteractorCount);
 
     static readonly List<IGrassInteractor> InteractorsList = new();
     static readonly GrassInteractorGpu[] CpuBuffer = new GrassInteractorGpu[MaxInteractors];

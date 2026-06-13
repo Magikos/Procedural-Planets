@@ -19,9 +19,9 @@ public static class GrassRenderDiagnostics
     public const float DefaultClusterStartDistance = 12f;
     public const float DefaultClusterEndDistance = 24f;
 
-    static readonly int GeometryModeId = Shader.PropertyToID("_GrassGeometryMode");
-    static readonly int ClusterStartDistanceId = Shader.PropertyToID("_GrassClusterStartDistance");
-    static readonly int ClusterEndDistanceId = Shader.PropertyToID("_GrassClusterEndDistance");
+    static readonly int GeometryModeId = Shader.PropertyToID(ShaderGlobalIds.GrassGeometryMode);
+    static readonly int ClusterStartDistanceId = Shader.PropertyToID(ShaderGlobalIds.GrassClusterStartDistance);
+    static readonly int ClusterEndDistanceId = Shader.PropertyToID(ShaderGlobalIds.GrassClusterEndDistance);
 
     public static GrassGeometryMode GeometryMode { get; private set; } = GrassGeometryMode.Hybrid;
     public static float ClusterStartDistance { get; private set; } = DefaultClusterStartDistance;

@@ -25,7 +25,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     static readonly int BiomeGrassParamsId = Shader.PropertyToID("_BiomeGrassParams");
     static readonly int BiomeGrassParamCountId = Shader.PropertyToID("_BiomeGrassParamCount");
     static readonly int BiomeAtlasResolutionId = Shader.PropertyToID("_BiomeAtlasResolution");
-    static readonly int GrassSurfaceAtlasResolutionId = Shader.PropertyToID("_GrassSurfaceAtlasResolution");
+    static readonly int GrassSurfaceAtlasResolutionId = Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceAtlasResolution);
     static readonly int LaneResolutionId = Shader.PropertyToID("_LaneResolution");
     static readonly int MaxBladeInstancesId = Shader.PropertyToID("_MaxBladeInstances");
     static readonly int MaxBladesPerLaneId = Shader.PropertyToID("_MaxBladesPerLane");
