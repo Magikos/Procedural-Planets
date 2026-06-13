@@ -611,8 +611,11 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         }
     }
 
-    // Returns the render handle for a chunk, building it (and its mesh) on demand. Reuses a
-    // pooled handle once the cap is reached by recycling the least-recently-hidden reserve chunk.
+    // Returns the render handle for a chunk, building it (and its mesh) on demand. Once over the
+    // cap, prefers recycling the least-recently-hidden reserve handle; if nothing is parked
+    // (every live handle is currently visible) it still builds a new one rather than starve a
+    // visible chunk. The cap therefore bounds the *reserve*, not the visible set — total live
+    // handles settle at the peak simultaneously-visible count.
     ChunkRenderHandle AcquireRenderHandle(PlanetChunk chunk)
     {
         if (chunk == null) return null;
@@ -631,8 +634,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
 
         ChunkRenderHandle handle = _chunkRenderers.Count < MaxRenderHandles
             ? CreateRenderHandle()
-            : EvictReserveHandle();
-        if (handle == null) return null; // cap reached with nothing parked to recycle
+            : EvictReserveHandle() ?? CreateRenderHandle();
 
         PopulateRenderHandle(handle, chunk);
         handle.Chunk = chunk;
