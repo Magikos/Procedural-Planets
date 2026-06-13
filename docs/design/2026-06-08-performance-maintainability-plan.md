@@ -1,7 +1,9 @@
 # Performance and Maintainability Plan
 
 **Date:** 2026-06-08  
-**Status:** Active; slice 1 validated, slice 2 implemented
+**Status:** Active; slices 1–4 implemented and validated (slice 4 split landed 2026-06-12, see
+[2026-06-12-chunked-surface-provider-restructure.md](2026-06-12-chunked-surface-provider-restructure.md)).
+Slices 5–6 outstanding.
 
 ## Goals
 
