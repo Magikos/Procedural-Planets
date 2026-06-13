@@ -32,7 +32,8 @@ public interface IScaleReferenceDebugStatsProvider
 /// </summary>
 [DisallowMultipleComponent]
 [CommandPrefix("scale")]
-public sealed class ScaleReferenceMarkers : MonoBehaviour, IScaleReferenceDebugStatsProvider
+public sealed class ScaleReferenceMarkers : MonoBehaviour, IScaleReferenceDebugStatsProvider,
+    IWorldServiceRegistrar
 {
     [ConsoleCommand("drop", "Drop scale reference markers (1m / 1.8m human / 3m / 10m / 30m) at the camera look target.")]
     static void DropCmd()
@@ -76,7 +77,6 @@ public sealed class ScaleReferenceMarkers : MonoBehaviour, IScaleReferenceDebugS
 
     void OnEnable()
     {
-        ServiceLocator.Register<IScaleReferenceDebugStatsProvider>(this);
         EventBus<DebugDropScaleMarkersRequestedEvent>.Listen(OnDropRequested);
         EventBus<DebugClearScaleMarkersRequestedEvent>.Listen(OnClearRequested);
         EventBus<DebugTeleportToScaleMarkersRequestedEvent>.Listen(OnTeleportRequested);
@@ -87,7 +87,11 @@ public sealed class ScaleReferenceMarkers : MonoBehaviour, IScaleReferenceDebugS
         EventBus<DebugDropScaleMarkersRequestedEvent>.Unlisten(OnDropRequested);
         EventBus<DebugClearScaleMarkersRequestedEvent>.Unlisten(OnClearRequested);
         EventBus<DebugTeleportToScaleMarkersRequestedEvent>.Unlisten(OnTeleportRequested);
-        ServiceLocator.Unregister<IScaleReferenceDebugStatsProvider>(this);
+    }
+
+    public void RegisterWorldServices(IWorldContext context)
+    {
+        context.Register<IScaleReferenceDebugStatsProvider>(this);
     }
 
     void OnDestroy()

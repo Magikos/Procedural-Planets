@@ -2,7 +2,8 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [CommandPrefix("camera")]
-public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTeleportTarget
+public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTeleportTarget,
+    IWorldServiceRegistrar
 {
     [Header("Movement")]
     public float MoveSpeed = 10f;
@@ -53,7 +54,11 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
     {
         _camera = GetComponent<Camera>();
         _teleports = new CameraTeleportStore(this);
-        ServiceLocator.Register<ICameraRigContext>(this);
+    }
+
+    public void RegisterWorldServices(IWorldContext context)
+    {
+        context.Register<ICameraRigContext>(this);
     }
 
     void OnEnable()
@@ -70,7 +75,6 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
     void OnDestroy()
     {
         _teleports?.Dispose();
-        ServiceLocator.Unregister<ICameraRigContext>(this);
     }
 
     void Start()

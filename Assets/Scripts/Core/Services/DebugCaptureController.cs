@@ -14,7 +14,7 @@ public class DebugCaptureController : MonoBehaviour
     [Header("Debug Info")]
     [System.NonSerialized]
     public bool ShowDebugOverlay;
-    public bool ShowWaterDebugDetails;
+    public bool ShowDetailedDebug;
     public bool IncludeMeshIntegrityInDebugCaptures;
 
     [Header("Debug Capture")]
@@ -40,6 +40,7 @@ public class DebugCaptureController : MonoBehaviour
     string _precipitationToggleFlashMessage;
     GUIStyle _debugOverlayPanelStyle;
     Texture2D _debugOverlayPanelTexture;
+    Vector2 _debugOverlayScroll;
 
     void Awake()
     {
@@ -58,8 +59,9 @@ public class DebugCaptureController : MonoBehaviour
         EventBus<DebugCaptureRequestedEvent>.Listen(OnDebugCaptureRequested);
         EventBus<DebugSunFreezeToggleRequestedEvent>.Listen(OnDebugSunFreezeToggleRequested);
         EventBus<DebugOverlayToggleRequestedEvent>.Listen(OnDebugOverlayToggleRequested);
-        EventBus<DebugWaterDebugDetailsToggleRequestedEvent>.Listen(OnDebugWaterDebugDetailsToggleRequested);
+        EventBus<DebugDetailedToggleRequestedEvent>.Listen(OnDebugDetailedToggleRequested);
         EventBus<DebugProfilingToggleRequestedEvent>.Listen(OnDebugProfilingToggleRequested);
+        EventBus<WorldReadyEvent>.Listen(OnWorldReady);
     }
 
     void Start()
@@ -90,6 +92,7 @@ public class DebugCaptureController : MonoBehaviour
         _debugRegistry.RegisterModule(new ScaleReferenceDebugModule());
         _debugRegistry.RegisterModule(new CloudDebugModule());
         _debugRegistry.RegisterModule(new MemoryDebugModule());
+        _debugRegistry.RegisterModule(new FrameTimingModule());
         _debugRegistry.RegisterModule(new ConsoleDebugModule());
         _debugRegistry.RegisterCoreCaptureSets();
 
@@ -105,9 +108,15 @@ public class DebugCaptureController : MonoBehaviour
         EventBus<DebugCaptureRequestedEvent>.Unlisten(OnDebugCaptureRequested);
         EventBus<DebugSunFreezeToggleRequestedEvent>.Unlisten(OnDebugSunFreezeToggleRequested);
         EventBus<DebugOverlayToggleRequestedEvent>.Unlisten(OnDebugOverlayToggleRequested);
-        EventBus<DebugWaterDebugDetailsToggleRequestedEvent>.Unlisten(OnDebugWaterDebugDetailsToggleRequested);
+        EventBus<DebugDetailedToggleRequestedEvent>.Unlisten(OnDebugDetailedToggleRequested);
         EventBus<DebugProfilingToggleRequestedEvent>.Unlisten(OnDebugProfilingToggleRequested);
+        EventBus<WorldReadyEvent>.Unlisten(OnWorldReady);
         _debugRegistry?.ClearModes();
+    }
+
+    void OnWorldReady(WorldReadyEvent _)
+    {
+        Initialize();
     }
 
     void OnDestroy()
@@ -146,9 +155,9 @@ public class DebugCaptureController : MonoBehaviour
         ShowDebugOverlay = !ShowDebugOverlay;
     }
 
-    void OnDebugWaterDebugDetailsToggleRequested(DebugWaterDebugDetailsToggleRequestedEvent _)
+    void OnDebugDetailedToggleRequested(DebugDetailedToggleRequestedEvent _)
     {
-        ShowWaterDebugDetails = !ShowWaterDebugDetails;
+        ShowDetailedDebug = !ShowDetailedDebug;
     }
 
     void OnDebugProfilingToggleRequested(DebugProfilingToggleRequestedEvent _)
@@ -398,7 +407,7 @@ public class DebugCaptureController : MonoBehaviour
             _cachedPrecipitationController,
             _cachedWeatherProvider,
             _climateMapResolutionId,
-            ShowWaterDebugDetails,
+            ShowDetailedDebug,
             IncludeMeshIntegrityInDebugCaptures);
         return DebugCaptureMetadataBuilder.Build(
             inputs, modeId, modeName, sourceWidth, sourceHeight, savedWidth, savedHeight, imagePath);
@@ -417,7 +426,7 @@ public class DebugCaptureController : MonoBehaviour
             modeName,
             captureSet.Id,
             captureSet.Name,
-            ShowWaterDebugDetails,
+            ShowDetailedDebug,
             IncludeMeshIntegrityInDebugCaptures);
     }
 
@@ -446,10 +455,11 @@ public class DebugCaptureController : MonoBehaviour
             return;
 
         GUILayout.BeginArea(GetDebugOverlayRect(), GetDebugOverlayPanelStyle());
-        GUILayout.Label("Debug Camera");
-        GUILayout.Label($"Position: {cameraContext.CameraTransform.position.x:F1}, {cameraContext.CameraTransform.position.y:F1}, {cameraContext.CameraTransform.position.z:F1}");
-        GUILayout.Label($"FPS: {1f / Time.unscaledDeltaTime:F0}");
+        _debugOverlayScroll = GUILayout.BeginScrollView(_debugOverlayScroll);
 
+        // F6 tier: high-value glanceable info, always visible.
+        GUILayout.Label("Camera");
+        GUILayout.Label($"Position: {cameraContext.CameraTransform.position.x:F1}, {cameraContext.CameraTransform.position.y:F1}, {cameraContext.CameraTransform.position.z:F1}");
         if (cameraContext.TargetCenter != null)
         {
             Vector3 dirToSurface = (cameraContext.CameraTransform.position - cameraContext.TargetCenter.position).normalized;
@@ -459,18 +469,10 @@ public class DebugCaptureController : MonoBehaviour
             GUILayout.Label($"Distance to center: {distToCenter:F1}");
         }
 
-        GUILayout.Label("RMB=Look, WASD=Move, Shift=Fast, QE=Up/Down, ZC=Roll");
-        GUILayout.Label("Space=Toggle Orbit/Surface, Backspace=Face Sun, R=Frame Storm");
-        GUILayout.Label("F6=Debug UI, F7=Cycle F10 Set, F8=Freeze Sun, F9=Water Stats, F11=FPS Cap, P=Precip");
-        GUILayout.Label("M=Drop scale markers @ look, Shift+M=Clear, T=Teleport to markers");
-        DebugCaptureSetDefinition captureSet = GetCurrentCaptureSet();
-        GUILayout.Label($"F10={captureSet.Name} capture ({GetDebugCaptureModes().Length} modes, current {_debugRegistry.GetModeName(_currentDebugModeId)})");
-        IPrecipitationDebugControl precipitation = _cachedPrecipitationController;
-        if (precipitation != null)
-        {
-            GUILayout.Label($"Precipitation render: {(precipitation.PrecipitationRenderingEnabled ? "ON" : "OFF")}");
-            GUILayout.Label($"Precip local particles: {(precipitation.ShouldRenderLocalParticles(cameraContext.CameraComponent) ? "ON" : "OFF")}");
-        }
+        GUILayout.Space(6);
+        GUILayout.Label("Performance");
+        GUILayout.Label($"FPS: {1f / Time.unscaledDeltaTime:F0}");
+        GUILayout.Label($"Frame: CPU={FormatFrameMs(FrameTimingCounters.LastCpuFrameMs)} GPU={FormatFrameMs(FrameTimingCounters.LastGpuFrameMs)}");
 
         if (_precipitationToggleFlashActive)
         {
@@ -480,25 +482,51 @@ public class DebugCaptureController : MonoBehaviour
                 _precipitationToggleFlashActive = false;
         }
 
-        GUILayout.Label($"Frame target: {Application.targetFrameRate}, vSync: {QualitySettings.vSyncCount}");
+        if (!ShowDetailedDebug)
+            GUILayout.Label("F9 = detailed debug");
 
-        ICelestialTimeController celestial = _cachedCelestialManager;
-        if (celestial != null)
-            GUILayout.Label($"Sun frozen: {(celestial.IsTimeFrozen ? "yes" : "no")}");
-
-        if (_cachedSunLight == null)
-            _cachedSunLight = FindSunLight();
-        if (_cachedSunLight != null && cameraContext.PlanetRadius > 0f)
+        // F9 tier: controls reference + toggle/system state, shown only when detailed debug is on.
+        if (ShowDetailedDebug)
         {
-            Vector3 sd = -_cachedSunLight.transform.forward;
-            float sunElevation = Vector3.Dot(sd, (cameraContext.CameraTransform.position - cameraContext.PlanetCenter).normalized);
-            GUILayout.Label($"Sun elevation: {Mathf.Asin(sunElevation) * Mathf.Rad2Deg:F1}\u00b0");
+            GUILayout.Space(6);
+            GUILayout.Label("Controls");
+            GUILayout.Label("RMB=Look, WASD=Move, Shift=Fast, QE=Up/Down, ZC=Roll");
+            GUILayout.Label("Space=Toggle Orbit/Surface, Backspace=Face Sun, R=Frame Storm");
+            GUILayout.Label("F6=Debug UI, F7=Cycle F10 Set, F8=Freeze Sun, F9=Detailed, F11=FPS Cap, P=Precip");
+            GUILayout.Label("M=Drop scale markers @ look, Shift+M=Clear, T=Teleport to markers");
+
+            GUILayout.Space(6);
+            GUILayout.Label("State");
+            DebugCaptureSetDefinition captureSet = GetCurrentCaptureSet();
+            GUILayout.Label($"F10={captureSet.Name} capture ({GetDebugCaptureModes().Length} modes, current {_debugRegistry.GetModeName(_currentDebugModeId)})");
+            IPrecipitationDebugControl precipitation = _cachedPrecipitationController;
+            if (precipitation != null)
+            {
+                GUILayout.Label($"Precipitation render: {(precipitation.PrecipitationRenderingEnabled ? "ON" : "OFF")}");
+                GUILayout.Label($"Precip local particles: {(precipitation.ShouldRenderLocalParticles(cameraContext.CameraComponent) ? "ON" : "OFF")}");
+            }
+
+            GUILayout.Label($"Frame target: {Application.targetFrameRate}, vSync: {QualitySettings.vSyncCount}");
+
+            ICelestialTimeController celestial = _cachedCelestialManager;
+            if (celestial != null)
+                GUILayout.Label($"Sun frozen: {(celestial.IsTimeFrozen ? "yes" : "no")}");
+
+            if (_cachedSunLight == null)
+                _cachedSunLight = FindSunLight();
+            if (_cachedSunLight != null && cameraContext.PlanetRadius > 0f)
+            {
+                Vector3 sd = -_cachedSunLight.transform.forward;
+                float sunElevation = Vector3.Dot(sd, (cameraContext.CameraTransform.position - cameraContext.PlanetCenter).normalized);
+                GUILayout.Label($"Sun elevation: {Mathf.Asin(sunElevation) * Mathf.Rad2Deg:F1}\u00b0");
+            }
         }
 
         DebugRuntimeState runtimeState = CreateRuntimeState(_currentDebugModeId, _debugRegistry.GetModeName(_currentDebugModeId));
         for (int i = 0; i < _debugRegistry.OverlayContributors.Count; i++)
             _debugRegistry.OverlayContributors[i].DrawOverlay(runtimeState);
 
+        GUILayout.EndScrollView();
         GUILayout.EndArea();
     }
 
@@ -512,10 +540,12 @@ public class DebugCaptureController : MonoBehaviour
     Rect GetDebugOverlayRect()
     {
         float width = Mathf.Min(820f, Mathf.Max(320f, Screen.width - 20f));
-        float targetHeight = ShowWaterDebugDetails ? Screen.height - 20f : 360f;
-        float height = Mathf.Min(targetHeight, Mathf.Max(160f, Screen.height - 20f));
+        float available = Screen.height - 20f;
+        float height = ShowDetailedDebug ? available : Mathf.Min(230f, available);
         return new Rect(10f, 10f, width, height);
     }
+
+    static string FormatFrameMs(double ms) => ms < 0.0 ? "?" : $"{ms:F1}ms";
 
     // --- Console commands -------------------------------------------------
 
@@ -527,12 +557,12 @@ public class DebugCaptureController : MonoBehaviour
         return $"debug overlay: {ShowDebugOverlay}";
     }
 
-    [ConsoleCommand("water-details", "Get or set the expanded water debug HUD section.", MonoTargetType.Single)]
-    string WaterDetailsCmd(bool? on = null)
+    [ConsoleCommand("detailed-debug", "Get or set the detailed debug HUD section (F9 equivalent).", MonoTargetType.Single)]
+    string DetailedDebugCmd(bool? on = null)
     {
-        if (on == null) return $"water details: {ShowWaterDebugDetails}";
-        ShowWaterDebugDetails = on.Value;
-        return $"water details: {ShowWaterDebugDetails}";
+        if (on == null) return $"detailed debug: {ShowDetailedDebug}";
+        ShowDetailedDebug = on.Value;
+        return $"detailed debug: {ShowDetailedDebug}";
     }
 
     [ConsoleCommand("profiling", "Toggle the high-FPS profiling target (F11 equivalent).", MonoTargetType.Single)]

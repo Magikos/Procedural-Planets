@@ -32,6 +32,12 @@ public sealed class WaterWakeController : MonoBehaviour
 
     void LateUpdate()
     {
+        using (FrameTimingCounters.Measure(FrameTimingSection.Water))
+            PublishWakeSources();
+    }
+
+    void PublishWakeSources()
+    {
         int count = 0;
         var emitters = WaterWakeEmitter.ActiveEmitters;
         for (int i = 0; i < emitters.Count && count < MaxWakeSources; i++)

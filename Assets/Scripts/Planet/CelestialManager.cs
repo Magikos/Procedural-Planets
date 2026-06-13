@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [CommandPrefix("time")]
-public class CelestialManager : MonoBehaviour, ICelestialTimeController
+public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldServiceRegistrar
 {
     [Header("References")]
     public Light SunLight;
@@ -79,9 +79,9 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController
     /// <summary>0-1 progress through the current season cycle.</summary>
     public float SeasonProgress => 0f;
 
-    void Awake()
+    public void RegisterWorldServices(IWorldContext context)
     {
-        ServiceLocator.Register<ICelestialTimeController>(this);
+        context.Register<ICelestialTimeController>(this);
     }
 
     void OnEnable()
@@ -101,11 +101,6 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController
         UpdateMoon(0f);
         UpdateAmbient();
         UpdateMoonShaderGlobals();
-    }
-
-    void OnDestroy()
-    {
-        ServiceLocator.Unregister<ICelestialTimeController>(this);
     }
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)

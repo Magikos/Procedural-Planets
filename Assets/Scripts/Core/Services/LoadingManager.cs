@@ -15,6 +15,7 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
     private int _lastDisplayedPercent = -1;
     private SDFTextRenderer _messageRenderer;
     private SDFTextRenderer _percentRenderer;
+    private bool _hasFatalFailure;
 
     private const float FadeDuration = 0.35f;
 
@@ -37,6 +38,9 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
 
         ServiceLocator.Register<ILoadingManager>(this);
         DontDestroyOnLoad(gameObject);
+
+        if (!ServiceLocator.HasActiveWorld)
+            ServiceLocator.ActivateWorld(new WorldContext());
     }
 
     void OnEnable()
@@ -130,50 +134,68 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
     private async Awaitable InitializeCurrentSceneAsync(CancellationToken cancellationToken)
     {
         _isTransitioning = true;
+        bool initialized = false;
 
         try
         {
             var currentScene = SceneManager.GetActiveScene();
             if (!currentScene.IsValid())
-            {
-                LoggerProvider.Get().Log(LogLevel.Error, "LoadingManager", "No valid active scene found during startup initialization. This should never happen at Start() — check your scene setup.");
-                return;
-            }
+                throw new System.InvalidOperationException(
+                    "No valid active scene found during startup initialization. Check the scene setup.");
 
             SetOverlay(1f);
             await Awaitable.NextFrameAsync(cancellationToken); // let the opaque overlay render
 
-            await InitializeAsync(currentScene, cancellationToken);
+            await InitializeAsync(currentScene, includePersistentObjects: true, cancellationToken);
+            EventBus<WorldReadyEvent>.Raise(new WorldReadyEvent(ServiceLocator.GetWorld()));
 
             await Awaitable.NextFrameAsync(cancellationToken);
             await Awaitable.NextFrameAsync(cancellationToken);
 
             await FadeInAsync(cancellationToken);
+            initialized = true;
         }
         catch (System.OperationCanceledException) { } // expected during app teardown
         catch (System.Exception ex)
         {
-            LoggerProvider.Get().LogException("LoadingManager", ex);
+            if (ServiceLocator.HasActiveWorld)
+                TeardownWorldSafely(ServiceLocator.GetWorld(), "startup failure");
+            EnterFatalFailure("Startup initialization failed.", ex);
         }
         finally
         {
-            SetOverlay(0f);
+            if (initialized)
+                SetOverlay(0f);
             _isTransitioning = false;
         }
     }
 
     public async Awaitable<bool> TransitionToSceneAsync(string sceneName, bool useOverlay = true, CancellationToken cancellationToken = default)
     {
-        return await InternalTransitionToSceneAsync(sceneName, -1, useOverlay, cancellationToken);
+        return await TransitionToWorldAsync(
+            WorldLoadRequest.ForScene(sceneName), useOverlay, cancellationToken);
     }
 
     public async Awaitable<bool> TransitionToSceneAsync(int buildIndex, bool useOverlay = true, CancellationToken cancellationToken = default)
     {
-        return await InternalTransitionToSceneAsync(null, buildIndex, useOverlay, cancellationToken);
+        return await TransitionToWorldAsync(
+            WorldLoadRequest.ForBuildIndex(buildIndex), useOverlay, cancellationToken);
     }
 
-    private async Awaitable<bool> InternalTransitionToSceneAsync(string sceneName, int buildIndex, bool useOverlay, CancellationToken cancellationToken)
+    public async Awaitable<bool> TransitionToWorldAsync(
+        WorldLoadRequest request,
+        bool useOverlay = true,
+        CancellationToken cancellationToken = default)
     {
+        if (request == null)
+            throw new System.ArgumentNullException(nameof(request));
+        if (request.SettingsSchemaVersion != WorldLoadRequest.CurrentSettingsSchemaVersion)
+            throw new System.InvalidOperationException(
+                $"Settings schema {request.SettingsSchemaVersion} is not supported; " +
+                $"expected {WorldLoadRequest.CurrentSettingsSchemaVersion}. Migrate save data before loading.");
+        if (_hasFatalFailure)
+            return false;
+
         if (_isTransitioning)
         {
             LoggerProvider.Get().Log(LogLevel.Warning, "LoadingManager", "Already transitioning. Please wait.");
@@ -183,90 +205,177 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
         if (cancellationToken.CanBeCanceled)
         {
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
-            return await RunTransitionAsync(sceneName, buildIndex, useOverlay, linkedCts.Token);
+            return await RunTransitionAsync(request, useOverlay, linkedCts.Token);
         }
 
-        return await RunTransitionAsync(sceneName, buildIndex, useOverlay, _cancellationTokenSource.Token);
+        return await RunTransitionAsync(request, useOverlay, _cancellationTokenSource.Token);
     }
 
-    private async Awaitable<bool> RunTransitionAsync(string sceneName, int buildIndex, bool useOverlay, CancellationToken cancellationToken)
+    private async Awaitable<bool> RunTransitionAsync(
+        WorldLoadRequest request,
+        bool useOverlay,
+        CancellationToken cancellationToken)
     {
         _isTransitioning = true;
+        Scene oldScene = default;
+        Scene newScene = default;
+        IWorldContext oldWorld = null;
+        IWorldContext newWorld = null;
+        bool worldSwapCommitted = false;
+        bool newSceneLoaded = false;
 
         try
         {
-            var oldScene = SceneManager.GetActiveScene();
+            oldScene = SceneManager.GetActiveScene();
 
             if (useOverlay)
                 await FadeOutAsync(cancellationToken);
 
+            cancellationToken.ThrowIfCancellationRequested();
             Time.timeScale = 0f;
-            var asyncOp = sceneName != null
-                ? SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive)
-                : SceneManager.LoadSceneAsync(buildIndex, LoadSceneMode.Additive);
+            var asyncOp = request.SceneName != null
+                ? SceneManager.LoadSceneAsync(request.SceneName, LoadSceneMode.Additive)
+                : SceneManager.LoadSceneAsync(request.BuildIndex, LoadSceneMode.Additive);
+            if (asyncOp == null)
+                throw new System.InvalidOperationException(
+                    $"Scene '{request.SceneName ?? $"build index {request.BuildIndex}"}' could not begin loading.");
             asyncOp.allowSceneActivation = false;
 
             while (asyncOp.progress < 0.9f)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                await Awaitable.NextFrameAsync(cancellationToken);
-            }
+                await Awaitable.NextFrameAsync();
+
+            oldWorld = ServiceLocator.GetWorld();
+            oldWorld.Cancel();
+            SetSceneRootsActive(oldScene, false);
+            oldWorld.Teardown();
+            ServiceLocator.DeactivateWorld(oldWorld);
+
+            newWorld = new WorldContext(request);
+            ServiceLocator.ActivateWorld(newWorld);
+            worldSwapCommitted = true;
 
             asyncOp.allowSceneActivation = true;
             while (!asyncOp.isDone)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                await Awaitable.NextFrameAsync(cancellationToken);
-            }
+                await Awaitable.NextFrameAsync();
 
-            var newScene = sceneName != null
-                ? SceneManager.GetSceneByName(sceneName)
-                : SceneManager.GetSceneByBuildIndex(buildIndex);
+            newScene = request.SceneName != null
+                ? SceneManager.GetSceneByName(request.SceneName)
+                : SceneManager.GetSceneByBuildIndex(request.BuildIndex);
 
             if (!newScene.IsValid())
                 throw new System.InvalidOperationException(
-                    $"Scene '{sceneName ?? $"build index {buildIndex}"}' could not be found after async load. Verify it is added to Build Settings.");
+                    $"Scene '{request.SceneName ?? $"build index {request.BuildIndex}"}' could not be found after async load. Verify it is added to Build Settings.");
 
+            newSceneLoaded = true;
             SceneManager.SetActiveScene(newScene);
 
-            await InitializeAsync(newScene, cancellationToken);
+            await InitializeAsync(newScene, includePersistentObjects: false, newWorld.LifetimeToken);
 
             if (oldScene.IsValid() && oldScene != newScene)
-            {
-                var unloadOp = SceneManager.UnloadSceneAsync(oldScene);
-                if (unloadOp != null)
-                {
-                    while (!unloadOp.isDone)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        await Awaitable.NextFrameAsync(cancellationToken);
-                    }
-                }
-            }
+                await UnloadSceneAsync(oldScene);
+
+            oldWorld.Dispose();
+            oldWorld = null;
+            EventBus<WorldReadyEvent>.Raise(new WorldReadyEvent(newWorld));
 
             // Wait for two frames to ensure all pending operations settle before fading back in
-            await Awaitable.NextFrameAsync(cancellationToken);
-            await Awaitable.NextFrameAsync(cancellationToken);
+            await Awaitable.NextFrameAsync();
+            await Awaitable.NextFrameAsync();
 
             Time.timeScale = 1f;
 
             if (useOverlay)
-                await FadeInAsync(cancellationToken);
+                await FadeInAsync(CancellationToken.None);
 
             return true;
         }
-        catch (System.OperationCanceledException) { return false; }
+        catch (System.OperationCanceledException)
+        {
+            if (worldSwapCommitted)
+                await AbortCommittedTransitionAsync(oldScene, oldWorld, newScene, newWorld, newSceneLoaded);
+            return false;
+        }
         catch (System.Exception ex)
         {
-            LoggerProvider.Get().LogException("LoadingManager", ex);
+            if (worldSwapCommitted)
+                await AbortCommittedTransitionAsync(oldScene, oldWorld, newScene, newWorld, newSceneLoaded);
+            EnterFatalFailure("World transition failed.", ex);
             return false;
         }
         finally
         {
-            Time.timeScale = 1f;
-            SetOverlay(0f);
+            if (!_hasFatalFailure)
+            {
+                Time.timeScale = 1f;
+                SetOverlay(0f);
+            }
             _isTransitioning = false;
         }
+    }
+
+    private static async Awaitable AbortCommittedTransitionAsync(
+        Scene oldScene,
+        IWorldContext oldWorld,
+        Scene newScene,
+        IWorldContext newWorld,
+        bool newSceneLoaded)
+    {
+        newWorld?.Cancel();
+        TeardownWorldSafely(newWorld, "failed new world");
+        TeardownWorldSafely(oldWorld, "released old world");
+
+        if (newSceneLoaded)
+            await UnloadSceneAsync(newScene);
+        if (oldScene.IsValid() && oldScene.isLoaded)
+            await UnloadSceneAsync(oldScene);
+
+        if (newWorld != null)
+        {
+            ServiceLocator.DeactivateWorld(newWorld);
+            newWorld.Dispose();
+        }
+
+        oldWorld?.Dispose();
+    }
+
+    private static void TeardownWorldSafely(IWorldContext world, string context)
+    {
+        if (world == null || world.IsDisposed)
+            return;
+
+        try
+        {
+            world.Teardown();
+        }
+        catch (System.Exception ex)
+        {
+            LoggerProvider.Get().LogException(
+                "LoadingManager",
+                new System.InvalidOperationException($"World teardown failed during {context}.", ex));
+        }
+    }
+
+    private static async Awaitable UnloadSceneAsync(Scene scene)
+    {
+        if (!scene.IsValid() || !scene.isLoaded)
+            return;
+
+        var unloadOp = SceneManager.UnloadSceneAsync(scene);
+        if (unloadOp == null)
+            return;
+
+        while (!unloadOp.isDone)
+            await Awaitable.NextFrameAsync();
+    }
+
+    private static void SetSceneRootsActive(Scene scene, bool active)
+    {
+        if (!scene.IsValid() || !scene.isLoaded)
+            return;
+
+        var roots = scene.GetRootGameObjects();
+        for (int i = 0; i < roots.Length; i++)
+            roots[i].SetActive(active);
     }
 
     private async Awaitable FadeInAsync(CancellationToken cancellationToken)
@@ -299,14 +408,18 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
 
     private void SetOverlay(float alpha) => _overlayAlpha = alpha;
 
-    private async Awaitable InitializeAsync(Scene scene, CancellationToken cancellationToken)
+    private async Awaitable InitializeAsync(
+        Scene scene,
+        bool includePersistentObjects,
+        CancellationToken cancellationToken)
     {
-        // Include DontDestroyOnLoad objects (e.g. GameBootstrap) which Unity moves out
-        // of the active scene during Awake — they live in LoadingManager's own scene.
         var rootObjects = scene.GetRootGameObjects().AsEnumerable();
-        var ddolScene = gameObject.scene;
-        if (ddolScene.IsValid() && ddolScene != scene)
-            rootObjects = rootObjects.Concat(ddolScene.GetRootGameObjects());
+        if (includePersistentObjects)
+        {
+            var persistentScene = gameObject.scene;
+            if (persistentScene.IsValid() && persistentScene != scene)
+                rootObjects = rootObjects.Concat(persistentScene.GetRootGameObjects());
+        }
 
         var allBehaviours = rootObjects
             .SelectMany(go => go.GetComponentsInChildren<MonoBehaviour>(true))
@@ -316,48 +429,87 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
         foreach (var reporter in allBehaviours.OfType<IProgressReporter>())
             tracker.Register(reporter);
 
-        // Priority-sort first so the InitGraph uses priority as the natural tiebreaker
-        // for services that share a dep level (or have no deps at all). Once a service
-        // declares EarlyDependencies / LateDependencies, the graph overrides priority.
-        var earlyInitializers = allBehaviours
-            .OfType<IEarlyInitialize>()
-            .OrderByDescending(i => i.EarlyPriority)
-            .ToList();
-        var earlyGraph = new InitGraph<IEarlyInitialize>(earlyInitializers, i => i.EarlyDependencies);
-
-        LoggerProvider.Get().Log(LogLevel.Info, "LoadingManager", $"Early-initializing {earlyGraph.Order.Count} components");
-        foreach (var initializer in earlyGraph.Order)
+        bool completed = false;
+        try
         {
-            try
+            // Priority remains a deterministic tiebreaker while dependency migration is in progress.
+            var earlyInitializers = allBehaviours
+                .OfType<IEarlyInitialize>()
+                .OrderByDescending(i => i.EarlyPriority)
+                .ToList();
+            var earlyGraph = new InitGraph<IEarlyInitialize>(earlyInitializers, i => i.EarlyDependencies);
+
+            LoggerProvider.Get().Log(LogLevel.Info, "LoadingManager", $"Early-initializing {earlyGraph.Order.Count} components");
+            foreach (var initializer in earlyGraph.Order)
             {
-                await initializer.EarlyInitialize(cancellationToken);
+                try
+                {
+                    TrackWorldInitializer(scene, initializer);
+                    await initializer.EarlyInitialize(cancellationToken);
+                }
+                catch (System.OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (System.Exception ex)
+                {
+                    throw new System.InvalidOperationException(
+                        $"Early initialization failed in {initializer.GetType().Name}.", ex);
+                }
             }
-            catch (System.Exception ex)
+
+            var lateInitializers = allBehaviours
+                .OfType<ILateInitialize>()
+                .OrderByDescending(i => i.LatePriority)
+                .ToList();
+            var lateGraph = new InitGraph<ILateInitialize>(lateInitializers, i => i.LateDependencies);
+
+            LoggerProvider.Get().Log(LogLevel.Info, "LoadingManager", $"Late-initializing {lateGraph.Order.Count} components");
+            foreach (var initializer in lateGraph.Order)
             {
-                LoggerProvider.Get().LogException("LoadingManager", ex);
+                try
+                {
+                    TrackWorldInitializer(scene, initializer);
+                    await initializer.LateInitialize(cancellationToken);
+                }
+                catch (System.OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (System.Exception ex)
+                {
+                    throw new System.InvalidOperationException(
+                        $"Late initialization failed in {initializer.GetType().Name}.", ex);
+                }
             }
+
+            tracker.Complete();
+            completed = true;
         }
-
-        var lateInitializers = allBehaviours
-            .OfType<ILateInitialize>()
-            .OrderByDescending(i => i.LatePriority)
-            .ToList();
-        var lateGraph = new InitGraph<ILateInitialize>(lateInitializers, i => i.LateDependencies);
-
-        LoggerProvider.Get().Log(LogLevel.Info, "LoadingManager", $"Late-initializing {lateGraph.Order.Count} components");
-        foreach (var initializer in lateGraph.Order)
+        finally
         {
-            try
-            {
-                await initializer.LateInitialize(cancellationToken);
-            }
-            catch (System.Exception ex)
-            {
-                LoggerProvider.Get().LogException("LoadingManager", ex);
-            }
+            if (!completed)
+                tracker.Abort();
         }
+    }
 
-        tracker.Complete();
+    private static void TrackWorldInitializer<TInitializer>(Scene scene, TInitializer initializer)
+    {
+        if (initializer is not Component component || component.gameObject.scene != scene)
+            return;
+
+        ServiceLocator.GetWorld().TrackInitializer(initializer);
+    }
+
+    private void EnterFatalFailure(string message, System.Exception exception)
+    {
+        _hasFatalFailure = true;
+        if (ServiceLocator.HasActiveWorld)
+            ServiceLocator.GetWorld().Cancel();
+        Time.timeScale = 0f;
+        SetOverlay(1f);
+        _messageRenderer?.SetText(message, 0.5f, 0.375f, 0.025f, TextAnchor.UpperCenter);
+        LoggerProvider.Get().LogException("LoadingManager", exception);
     }
 
     private void OnProgressEvent(ProgressEvent evt)
@@ -391,6 +543,21 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
 
         _percentRenderer?.Dispose();
         _percentRenderer = null;
+
+        if (ServiceLocator.HasActiveWorld)
+        {
+            IWorldContext world = ServiceLocator.GetWorld();
+            ServiceLocator.DeactivateWorld(world);
+            TeardownWorldSafely(world, "loading manager shutdown");
+            try
+            {
+                world.Dispose();
+            }
+            catch (System.Exception ex)
+            {
+                LoggerProvider.Get().LogException("LoadingManager", ex);
+            }
+        }
 
         ServiceLocator.Unregister<ILoadingManager>(this);
     }

@@ -29,8 +29,8 @@ public class DebugCommandProvider : IDebugCommandProvider, System.IDisposable
             case DebugCommandType.ToggleDebugOverlay:
                 EventBus<DebugOverlayToggleRequestedEvent>.Raise(new DebugOverlayToggleRequestedEvent());
                 break;
-            case DebugCommandType.ToggleWaterDebugDetails:
-                EventBus<DebugWaterDebugDetailsToggleRequestedEvent>.Raise(new DebugWaterDebugDetailsToggleRequestedEvent());
+            case DebugCommandType.ToggleDetailedDebug:
+                EventBus<DebugDetailedToggleRequestedEvent>.Raise(new DebugDetailedToggleRequestedEvent());
                 break;
             case DebugCommandType.ToggleProfiling:
                 EventBus<DebugProfilingToggleRequestedEvent>.Raise(new DebugProfilingToggleRequestedEvent());

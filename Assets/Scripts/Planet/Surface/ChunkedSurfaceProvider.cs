@@ -166,7 +166,8 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     public void Tick(Vector3 observerWorldPosition, Camera observerCamera)
     {
         if (!_initialized) return;
-        _selector.UpdateForCamera(observerWorldPosition, observerCamera);
+        using (FrameTimingCounters.Measure(FrameTimingSection.SurfaceVisibility))
+            _selector.UpdateForCamera(observerWorldPosition, observerCamera);
     }
 
     public IReadOnlyList<PlanetChunk> GetVisibleChunksSnapshot()

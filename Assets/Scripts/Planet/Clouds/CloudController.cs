@@ -1,8 +1,11 @@
 using UnityEngine;
 
 [CommandPrefix("cloud")]
-public class CloudController : MonoBehaviour
+public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegistrar,
+    IWorldSettingsRegistrar
 {
+    static readonly System.Type[] RequiredSettings = { typeof(CloudDto) };
+
     [Header("References")]
     public ComputeShader NoiseCompute;
 
@@ -54,6 +57,18 @@ public class CloudController : MonoBehaviour
     static readonly int _cloudDebugParamsId = Shader.PropertyToID(ShaderGlobalIds.CloudDebugParams);
     static readonly int _cloudShapeNoiseId = Shader.PropertyToID(ShaderGlobalIds.CloudShapeNoise);
     static readonly int _cloudDetailNoiseId = Shader.PropertyToID(ShaderGlobalIds.CloudDetailNoise);
+
+    public System.Collections.Generic.IReadOnlyList<System.Type> RequiredSettingsTypes => RequiredSettings;
+
+    public void RegisterWorldServices(IWorldContext context)
+    {
+        context.Register<ICloudRuntime>(this);
+    }
+
+    public void RegisterWorldSettings(ISettingsService settings)
+    {
+        CloudDto.EnsureRegistered(settings);
+    }
 
     void OnEnable()
     {
@@ -111,8 +126,11 @@ public class CloudController : MonoBehaviour
             return;
         }
 
-        EnsureStaticPropertiesUploaded();
-        UpdatePerFrameProperties();
+        using (FrameTimingCounters.Measure(FrameTimingSection.Clouds))
+        {
+            EnsureStaticPropertiesUploaded();
+            UpdatePerFrameProperties();
+        }
     }
 
     void Initialize()

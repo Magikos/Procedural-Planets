@@ -1,7 +1,7 @@
 # Settings Service + smaller SO breakup design
 
 **Date:** 2026-06-10
-**Status:** Design draft — not yet implemented
+**Status:** World scoping, duplicate protection, construction freeze, and required-DTO validation implemented
 **Branch:** code-refactor
 **Closes:** Audit findings PLANET-1, WEATHER-1, GRASS-1 (Settings DTO violations)
 
@@ -14,7 +14,7 @@ Per [CLAUDE.md](../../CLAUDE.md): SOs are editor-only authoring surfaces; runtim
 ## Locked decisions
 
 - **SOs are narrow.** One SO per coherent concern. No god-SOs.
-- **DTOs are immutable** `readonly record struct` (records compose with `with` expressions; structs avoid heap allocs for the small types).
+- **DTOs are immutable records.** Use a sealed record class for composed settings snapshots; reserve readonly record structs for genuinely small value types.
 - **Each DTO has `From(SO[, …])` static factory.** Composition root for that DTO. Rename a field on the SO, only the factory changes.
 - **Service surface is `ISettingsService.GetSettings<TDto>()`** + `EventBus<SettingsChangedEvent>` for change notification.
 - **Consumers fetch once and cache.** Re-fetch on `SettingsChangedEvent`. Never `GetSettings<>` per frame.
@@ -26,8 +26,8 @@ Per [CLAUDE.md](../../CLAUDE.md): SOs are editor-only authoring surfaces; runtim
 ```csharp
 public interface ISettingsService
 {
-    TDto GetSettings<TDto>() where TDto : struct;
-    void Update<TDto>(TDto next) where TDto : struct;
+    TDto GetSettings<TDto>();
+    void Update<TDto>(TDto next);
 }
 
 public readonly struct SettingsChangedEvent
@@ -44,7 +44,7 @@ public readonly struct SettingsChangedEvent
 ## DTO authoring shape
 
 ```csharp
-public readonly record struct CloudRenderDto(
+public sealed record CloudRenderDto(
     Color Color,
     float Density,
     float AltitudeKm,
@@ -61,7 +61,7 @@ Records give us `with` for partial updates: `_service.Update(current with { Dens
 DTOs that compose multiple SOs declare them in the factory:
 
 ```csharp
-public readonly record struct PrecipitationDto(
+public sealed record PrecipitationDto(
     bool RenderPrecipitation,
     float Intensity,
     float RainParticleSize,
@@ -72,59 +72,50 @@ public readonly record struct PrecipitationDto(
 }
 ```
 
-## Service implementation sketch
+## Target service shape
 
-Mirrors the `LoggerProvider` pattern: static provider with a cached fallback, lazy `Get()`, self-registers in `ServiceLocator`. Not a `MonoBehaviour` — no inspector wiring, no init-graph participation, no boot-order dependency. Consumers can call it from anywhere, including editor scripts.
+The initial implementation mirrored `LoggerProvider` with a cached fallback. That fallback is transitional. The target is one registry constructed, populated, validated, and frozen by the active world context; see [2026-06-13-world-lifecycle.md](2026-06-13-world-lifecycle.md).
 
 ```csharp
 public static class SettingsProvider
 {
-    static ISettingsService _fallback;
+    public static ISettingsService Get() =>
+        ServiceLocator.Get<IWorldContext>().Settings;
 
-    public static ISettingsService Get()
-    {
-        if (_fallback != null) return _fallback;
-        if (ServiceLocator.TryGet(out _fallback)) return _fallback;
-        return _fallback = ServiceLocator.Register<ISettingsService>(new SettingsService());
-    }
-
-    public static TDto GetSettings<TDto>() where TDto : struct => Get().GetSettings<TDto>();
-    public static void Update<TDto>(TDto next) where TDto : struct => Get().Update(next);
+    public static TDto GetSettings<TDto>() => Get().GetSettings<TDto>();
+    public static void Update<TDto>(TDto next) => Get().Update(next);
 }
 
 public sealed class SettingsService : ISettingsService
 {
     readonly Dictionary<Type, object> _dtos = new();
+    bool _frozen;
 
-    public SettingsService()
+    public void Register<TDto>(TDto initial)
     {
-        // Discovery: one explicit Resources.Load per SO. Each new SO adds one line here.
-        // SOs live under Assets/Resources/Settings/ and are loaded by path-relative name.
-        var cloudRender = Resources.Load<CloudRenderSettings>("Settings/CloudRender");
-        _dtos[typeof(CloudRenderDto)] = CloudRenderDto.From(cloudRender);
-
-        var cloudEvolution = Resources.Load<CloudEvolutionSettings>("Settings/CloudEvolution");
-        _dtos[typeof(CloudEvolutionDto)] = CloudEvolutionDto.From(cloudEvolution);
-
-        var precipitation = Resources.Load<PrecipitationRenderSettings>("Settings/Precipitation");
-        _dtos[typeof(PrecipitationDto)] = PrecipitationDto.From(precipitation, /* ... */);
-        // ... one block per DTO
+        if (_frozen) throw new InvalidOperationException("Settings registration is frozen.");
+        if (!_dtos.TryAdd(typeof(TDto), initial))
+            throw new InvalidOperationException($"{typeof(TDto).Name} is already registered.");
     }
 
-    public TDto GetSettings<TDto>() where TDto : struct => (TDto)_dtos[typeof(TDto)];
+    public TDto GetSettings<TDto>() => (TDto)_dtos[typeof(TDto)];
 
-    public void Update<TDto>(TDto next) where TDto : struct
+    public void Update<TDto>(TDto next)
     {
         _dtos[typeof(TDto)] = next;
         EventBus<SettingsChangedEvent>.Raise(new SettingsChangedEvent(typeof(TDto)));
     }
+
+    public void ValidateRequired(IReadOnlyCollection<Type> required) { /* throw for each missing type */ }
+    public void Freeze() => _frozen = true;
 }
 ```
 
-- **No `MonoBehaviour`, no `IEarlyInitialize`.** The provider self-creates on first use, identical to how `LoggerProvider` resolves its `ILogger`.
-- **Discovery via `Resources.Load<TSettings>("Settings/Name")`.** SOs are placed under `Assets/Resources/Settings/`. Each SO type is loaded by explicit path — no `Resources.LoadAll` scanning, no attribute-based dispatch, no magic.
-- **First call triggers DTO build.** Consumers in `EarlyInitialize` / `LateInitialize` will all share the same instance because the second call resolves through `ServiceLocator`. To force eager build (so the first consumer doesn't pay the discovery cost), `GameBootstrap.Awake` can `SettingsProvider.Get()` once.
-- **Construction throws if any SO is missing.** Better to fail at boot with a clear `NullReferenceException` than to silently return default DTOs.
+- **No lazy fallback.** Access without an active world is an error.
+- **Composition is explicit.** The world bootstrap loads authoring assets and registers each DTO before initialization.
+- **Registration is one-time.** Duplicate registration or registration after `Freeze()` throws.
+- **Validation is eager.** Missing required DTOs fail before any world initializer runs.
+- **Save loading happens at the boundary.** Stable persisted keys are translated into typed DTO registrations during world construction.
 
 ## Console-command setter shape
 
@@ -175,7 +166,7 @@ Five of six are clear. `CloudValidationSettings` is a question — see open ques
 
 Land in narrow slices, one consumer end-to-end per commit. Each slice is small enough to validate in Unity before the next.
 
-1. **Skeleton.** `ISettingsService`, `SettingsService` (plain class), `SettingsProvider` (static, LoggerProvider-style), `SettingsChangedEvent`. Empty constructor (no DTOs registered yet). Nothing consumes it yet. Validates the provider self-registers in `ServiceLocator` and survives a regen.
+1. **Skeleton.** `ISettingsService`, `SettingsService`, `SettingsProvider`, and `SettingsChangedEvent`. The currently shipped lazy provider is transitional and is replaced by world-owned construction in the lifecycle pass.
 2. **First consumer: `GrassPlacementController`** — closes the GRASS-1 showcase finding. Build `GrassBiomeTintConfig` (already exists) through the service; route `BiomeSurfaceTextureArrays.ResolveGrassParams` to consume it. Smallest blast radius; highest visibility.
 3. **`PrecipitationController`.** Single SO, simpler than the cloud breakup. Land before the cloud work to exercise the console-command pattern.
 4. **`CloudSettings` breakup.** Most work, biggest payoff. Six SOs, six DTOs, three controllers refactored (`CloudController`, `SphericalWeatherGrid`, `WeatherManager` — the last partial, since `WeatherManager` is also a split target). Ship in two commits: (a) create the new SOs, populate them from the existing god-SO via an editor migration script (or inspector copy-paste — TBD), build the DTOs at boot; (b) point consumers at the DTOs, remove the god-SO references.

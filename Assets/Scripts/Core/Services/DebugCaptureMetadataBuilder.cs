@@ -11,7 +11,7 @@ public readonly struct DebugCaptureMetadataInputs
     public readonly IPrecipitationDebugControl PrecipitationController;
     public readonly IWeatherProvider WeatherProvider;
     public readonly int ClimateMapResolutionId;
-    public readonly bool ShowWaterDebugDetails;
+    public readonly bool ShowDetailedDebug;
     public readonly bool IncludeMeshIntegrityInDebugCaptures;
 
     public DebugCaptureMetadataInputs(
@@ -23,7 +23,7 @@ public readonly struct DebugCaptureMetadataInputs
         IPrecipitationDebugControl precipitationController,
         IWeatherProvider weatherProvider,
         int climateMapResolutionId,
-        bool showWaterDebugDetails,
+        bool showDetailedDebug,
         bool includeMeshIntegrityInDebugCaptures)
     {
         Registry = registry;
@@ -34,7 +34,7 @@ public readonly struct DebugCaptureMetadataInputs
         PrecipitationController = precipitationController;
         WeatherProvider = weatherProvider;
         ClimateMapResolutionId = climateMapResolutionId;
-        ShowWaterDebugDetails = showWaterDebugDetails;
+        ShowDetailedDebug = showDetailedDebug;
         IncludeMeshIntegrityInDebugCaptures = includeMeshIntegrityInDebugCaptures;
     }
 }
@@ -156,7 +156,7 @@ public static class DebugCaptureMetadataBuilder
             modeName,
             captureSet.Id,
             captureSet.Name,
-            inputs.ShowWaterDebugDetails,
+            inputs.ShowDetailedDebug,
             inputs.IncludeMeshIntegrityInDebugCaptures);
         var captureContext = new DebugCaptureContext(
             runtimeState,

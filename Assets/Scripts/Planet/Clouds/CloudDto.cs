@@ -22,9 +22,17 @@ public sealed record CloudDto(
 {
     public static void EnsureRegistered()
     {
-        if (SettingsProvider.IsRegistered<CloudDto>()) return;
+        EnsureRegistered(SettingsProvider.Get());
+    }
+
+    public static void EnsureRegistered(ISettingsService settings)
+    {
+        if (settings.IsRegistered<CloudDto>()) return;
         var so = Resources.Load<CloudSettings>("Settings/CloudSettings");
-        SettingsProvider.Register(From(so));
+        if (so == null)
+            throw new System.InvalidOperationException(
+                "CloudDto requires Resources/Settings/CloudSettings.asset.");
+        settings.Register(From(so));
     }
 
     public static CloudDto From(CloudSettings src) => new(

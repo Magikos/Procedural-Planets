@@ -2,8 +2,11 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 [CommandPrefix("precipitation")]
-public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
+public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl,
+    IWorldServiceRegistrar, IWorldSettingsRegistrar
 {
+    static readonly System.Type[] RequiredSettings = { typeof(PrecipitationDto) };
+
     public enum DebugView
     {
         Off = 0,
@@ -160,13 +163,30 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         CloudDto.EnsureRegistered();
         _settings = SettingsProvider.GetSettings<PrecipitationDto>();
         _cloudSettings = SettingsProvider.GetSettings<CloudDto>();
-        ServiceLocator.Register<IPrecipitationDebugControl>(this);
+    }
+
+    public void RegisterWorldServices(IWorldContext context)
+    {
+        context.Register<IPrecipitationDebugControl>(this);
+    }
+
+    public System.Collections.Generic.IReadOnlyList<System.Type> RequiredSettingsTypes => RequiredSettings;
+
+    public void RegisterWorldSettings(ISettingsService settings)
+    {
+        MigrateLocalWeatherParticleSettings();
+        EnsureSettingsRegistered(settings);
     }
 
     void EnsureSettingsRegistered()
     {
-        if (SettingsProvider.IsRegistered<PrecipitationDto>()) return;
-        SettingsProvider.Register(PrecipitationDto.From(this));
+        EnsureSettingsRegistered(SettingsProvider.Get());
+    }
+
+    void EnsureSettingsRegistered(ISettingsService settings)
+    {
+        if (settings.IsRegistered<PrecipitationDto>()) return;
+        settings.Register(PrecipitationDto.From(this));
     }
 
     void OnValidate()
@@ -199,11 +219,6 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     void Start()
     {
         UploadGlobals();
-    }
-
-    void OnDestroy()
-    {
-        ServiceLocator.Unregister<IPrecipitationDebugControl>(this);
     }
 
     void Update()

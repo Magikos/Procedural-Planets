@@ -57,6 +57,11 @@ internal sealed class ProgressTracker
         Dispose();
     }
 
+    internal void Abort()
+    {
+        Dispose();
+    }
+
     private void Dispose()
     {
         foreach (var (_, handle) in _entries)

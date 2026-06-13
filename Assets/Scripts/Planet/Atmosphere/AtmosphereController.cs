@@ -1,8 +1,11 @@
 using UnityEngine;
 
 [CommandPrefix("atmosphere")]
-public class AtmosphereController : MonoBehaviour
+public class AtmosphereController : MonoBehaviour, IAtmosphereRuntime, IWorldServiceRegistrar,
+    IWorldSettingsRegistrar
 {
+    static readonly System.Type[] RequiredSettings = { typeof(AtmosphereDto) };
+
     [Header("References")]
     public CelestialManager CelestialManager;
     public ComputeShader OpticalDepthCompute;
@@ -40,6 +43,18 @@ public class AtmosphereController : MonoBehaviour
     static readonly int _debugModeId = Shader.PropertyToID(ShaderGlobalIds.AtmosphereDebugMode);
     static readonly int _bakedOpticalDepthId = Shader.PropertyToID(ShaderGlobalIds.BakedOpticalDepth);
 
+    public System.Collections.Generic.IReadOnlyList<System.Type> RequiredSettingsTypes => RequiredSettings;
+
+    public void RegisterWorldServices(IWorldContext context)
+    {
+        context.Register<IAtmosphereRuntime>(this);
+    }
+
+    public void RegisterWorldSettings(ISettingsService settings)
+    {
+        EnsureSettingsRegistered(settings);
+    }
+
     void OnEnable()
     {
         EnsureSettingsRegistered();
@@ -50,9 +65,17 @@ public class AtmosphereController : MonoBehaviour
 
     static void EnsureSettingsRegistered()
     {
-        if (SettingsProvider.IsRegistered<AtmosphereDto>()) return;
+        EnsureSettingsRegistered(SettingsProvider.Get());
+    }
+
+    static void EnsureSettingsRegistered(ISettingsService settings)
+    {
+        if (settings.IsRegistered<AtmosphereDto>()) return;
         var so = Resources.Load<AtmosphereSettings>("Settings/AtmosphereSettings");
-        SettingsProvider.Register(AtmosphereDto.From(so));
+        if (so == null)
+            throw new System.InvalidOperationException(
+                "AtmosphereDto requires Resources/Settings/AtmosphereSettings.asset.");
+        settings.Register(AtmosphereDto.From(so));
     }
 
     void Start()

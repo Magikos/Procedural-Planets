@@ -4,8 +4,15 @@ using UnityEngine.Serialization;
 
 [CommandPrefix("planet")]
 public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurfaceRaycaster,
-    IClimateSampler, IGrassRuntimeControl, IEarlyInitialize, ILateInitialize, IProgressReporter
+    IClimateSampler, IGrassRuntimeControl, IEarlyInitialize, ILateInitialize, IProgressReporter,
+    IWorldServiceRegistrar, IWorldSettingsRegistrar, IWorldTeardown
 {
+    static readonly System.Type[] RequiredSettings =
+    {
+        typeof(PlanetDto),
+        typeof(BiomeDto),
+    };
+
     public enum FaceRenderMask { All, Top, Bottom, Left, Right, Front, Back }
 
     [Range(2, 256), FormerlySerializedAs("Resolution"),
@@ -39,6 +46,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     CancellationTokenSource _cts;
     bool _isGenerating;
+    bool _worldTornDown;
     readonly ProgressHandle _progressHandle = new ProgressHandle();
 
     public bool IsGenerating => _isGenerating;
@@ -59,11 +67,32 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _waterSurface = new PlanetWaterSurface(transform);
         _terrainMaterial = new PlanetTerrainMaterial(Logger);
 
-        ServiceLocator.Register<IPlanet>(this);
-        ServiceLocator.Register<IPlanetSurfaceSampler>(this);
-        ServiceLocator.Register<IPlanetSurfaceRaycaster>(this);
-        ServiceLocator.Register<IClimateSampler>(this);
-        ServiceLocator.Register<IGrassRuntimeControl>(this);
+    }
+
+    public void RegisterWorldServices(IWorldContext context)
+    {
+        context.Register<IPlanet>(this);
+        context.Register<IPlanetSurfaceSampler>(this);
+        context.Register<IPlanetSurfaceRaycaster>(this);
+        context.Register<IClimateSampler>(this);
+        context.Register<IGrassRuntimeControl>(this);
+    }
+
+    public System.Collections.Generic.IReadOnlyList<System.Type> RequiredSettingsTypes => RequiredSettings;
+
+    public void RegisterWorldSettings(ISettingsService settings)
+    {
+        if (_planetSettings == null)
+            throw new System.InvalidOperationException("Planet requires a PlanetSettings asset.");
+        if (_planetSettings.BiomeSettings == null)
+            throw new System.InvalidOperationException("PlanetSettings requires a BiomeSettings asset.");
+        if (_planetSettings.BiomeSettings.Registry == null)
+            throw new System.InvalidOperationException("BiomeSettings requires a BiomeRegistry asset.");
+
+        if (!settings.IsRegistered<PlanetDto>())
+            settings.Register(PlanetDto.From(_planetSettings));
+        if (!settings.IsRegistered<BiomeDto>())
+            settings.Register(BiomeDto.From(_planetSettings.BiomeSettings));
     }
 
     public async Awaitable EarlyInitialize(CancellationToken cancellationToken)
@@ -80,13 +109,18 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     void OnDestroy()
     {
-        ServiceLocator.Unregister<IPlanet>(this);
-        ServiceLocator.Unregister<IPlanetSurfaceSampler>(this);
-        ServiceLocator.Unregister<IPlanetSurfaceRaycaster>(this);
-        ServiceLocator.Unregister<IClimateSampler>(this);
-        ServiceLocator.Unregister<IGrassRuntimeControl>(this);
+        TeardownWorld();
+    }
+
+    public void TeardownWorld()
+    {
+        if (_worldTornDown)
+            return;
+
+        _worldTornDown = true;
         _cts?.Cancel();
         _cts?.Dispose();
+        _cts = null;
         _grass?.Dispose();
         _climateMapGpuData?.Dispose();
         _climateMapGpuData = null;
@@ -134,25 +168,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _perFaceProvider = null;
         _waterSurface.NotifyChildrenDestroyed();
 
-        if (!SettingsProvider.IsRegistered<PlanetDto>())
-        {
-            var initialPlanet = PlanetDto.From(_planetSettings);
-            if (initialPlanet != null) SettingsProvider.Register(initialPlanet);
-        }
-        if (!SettingsProvider.IsRegistered<BiomeDto>())
-        {
-            var initialBiome = BiomeDto.From(_planetSettings.BiomeSettings);
-            if (initialBiome != null) SettingsProvider.Register(initialBiome);
-        }
+        PlanetDto planet = SettingsProvider.GetSettings<PlanetDto>();
+        BiomeDto biomeDto = SettingsProvider.GetSettings<BiomeDto>();
 
-        PlanetDto planet = SettingsProvider.IsRegistered<PlanetDto>()
-            ? SettingsProvider.GetSettings<PlanetDto>()
-            : null;
-        BiomeDto biomeDto = SettingsProvider.IsRegistered<BiomeDto>()
-            ? SettingsProvider.GetSettings<BiomeDto>()
-            : null;
-
-        var shapeSettings = planet?.BuildShapeSettings();
+        var shapeSettings = planet.BuildShapeSettings();
         _shapeGenerator.Configure(shapeSettings);
         _shapeGenerator.Initialize(Seed);
         _colorGenerator.Configure(biomeDto);
@@ -160,10 +179,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             Seed,
             seedProvider.GetSeedForSystem("BiomeVoronoi"));
 
-        _terrainMaterial.EnsureRuntime(planet?.PlanetMaterial);
+        _terrainMaterial.EnsureRuntime(planet.PlanetMaterial);
         _terrainMaterial.Configure(_grass);
 
-        if (planet == null) return;
         switch (planet.Resolution)
         {
             case PlanetResolution.Low:

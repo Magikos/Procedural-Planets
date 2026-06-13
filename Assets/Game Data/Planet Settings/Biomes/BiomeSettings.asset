@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -95,31 +95,7 @@ MonoBehaviour:
   MinimumTemperatureCelsius: -40
   MaximumTemperatureCelsius: 40
   ClimateMapResolution: 256
-  TemperatureNoise:
-    Filter: 0
-    Strength: 1
-    Layers: 3
-    BaseRoughness: 0.8
-    Roughness: 2
-    Persistence: 0.5
-    Center: {x: 100, y: 0, z: 0}
-    MinValue: 0
   TemperatureNoiseStrength: 0.3
-  MoistureNoise:
-    Filter: 0
-    Strength: 1
-    Layers: 4
-    BaseRoughness: 1.2
-    Roughness: 2.5
-    Persistence: 0.5
-    Center: {x: 0, y: 0, z: 200}
-    MinValue: 0
   VoronoiSeedCount: 2048
   VoronoiSeedJitter: 0.55
-  VoronoiTemperatureWeight: 4.26
   VoronoiDomainWarpStrength: 0.08
-  VoronoiDomainWarpScale: 2.5
-  VoronoiDomainWarpOctaves: 4
-  VoronoiDomainWarpPersistence: 0.418
-  VoronoiDomainWarpLacunarity: 2.73
-  VoronoiCleanupIterations: 5

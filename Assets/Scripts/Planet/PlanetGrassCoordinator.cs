@@ -79,8 +79,10 @@ sealed class PlanetGrassCoordinator
     public void Tick(Camera camera)
     {
         UpdateControllerActivation(camera);
-        _grassController?.Tick(camera);
-        _grassNearFieldController?.Tick(camera);
+        using (FrameTimingCounters.Measure(FrameTimingSection.ChunkGrass))
+            _grassController?.Tick(camera);
+        using (FrameTimingCounters.Measure(FrameTimingSection.NearGrass))
+            _grassNearFieldController?.Tick(camera);
     }
 
     void UpdateControllerActivation(Camera camera)

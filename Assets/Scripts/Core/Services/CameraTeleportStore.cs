@@ -53,12 +53,12 @@ public sealed class CameraTeleportStore : ICameraTeleportRegistry, IDisposable
         _target = target;
         LoadTeleports();
         ConsoleRegistry.RegisterInstance(this);
-        ServiceLocator.Register<ICameraTeleportRegistry>(this);
+        ServiceLocator.RegisterWorld<ICameraTeleportRegistry>(this);
     }
 
     public void Dispose()
     {
-        ServiceLocator.Unregister<ICameraTeleportRegistry>(this);
+        ServiceLocator.UnregisterWorld<ICameraTeleportRegistry>(this);
         ConsoleRegistry.UnregisterInstance(typeof(CameraTeleportStore));
     }
 

@@ -5,7 +5,7 @@ public enum DebugCommandType
     TriggerCapture,
     ToggleSunFreeze,
     ToggleDebugOverlay,
-    ToggleWaterDebugDetails,
+    ToggleDetailedDebug,
     ToggleProfiling,
     DumpWeatherDiagnostics,
     // Scale reference markers (Phase C measurement aid).

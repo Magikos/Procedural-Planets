@@ -106,7 +106,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         _cullDistanceJitter01 = Mathf.Clamp01(_qualitySettings.CullDistanceJitter01);
         _residencyFrustumPaddingDegrees = Mathf.Clamp(
             _qualitySettings.ResidencyFrustumPaddingDegrees, 0f, 60f);
-        ServiceLocator.Register<IGrassDebugStatsProvider>(this);
+        ServiceLocator.RegisterWorld<IGrassDebugStatsProvider>(this);
 
         Shader shader = Shader.Find("Planet/Grass");
         if (shader == null)
@@ -284,7 +284,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         if (_disposed) return;
         _disposed = true;
 
-        ServiceLocator.Unregister<IGrassDebugStatsProvider>(this);
+        ServiceLocator.UnregisterWorld<IGrassDebugStatsProvider>(this);
 
         foreach (var pair in _chunks)
             pair.Value?.Dispose();

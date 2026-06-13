@@ -25,7 +25,7 @@ using UnityEngine;
 /// </para>
 /// </summary>
 [DefaultExecutionOrder(-50)]
-public sealed class RainParticleController : MonoBehaviour, IRainParticleRenderer
+public sealed class RainParticleController : MonoBehaviour, IRainParticleRenderer, IWorldServiceRegistrar
 {
     [Header("Particle Budget")]
     [Tooltip("Total raindrop instances in the persistent buffer.")]
@@ -105,9 +105,9 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
     static readonly int _rainPlanetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
     static readonly int _rainSeaRadiusId = Shader.PropertyToID("_SeaRadius");
 
-    void Awake()
+    public void RegisterWorldServices(IWorldContext context)
     {
-        ServiceLocator.Register<IRainParticleRenderer>(this);
+        context.Register<IRainParticleRenderer>(this);
     }
 
     void OnEnable()
@@ -124,7 +124,6 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
     void OnDestroy()
     {
         ReleaseResources();
-        ServiceLocator.Unregister<IRainParticleRenderer>(this);
     }
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)

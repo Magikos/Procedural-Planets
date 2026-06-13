@@ -10,7 +10,8 @@ using UnityEngine.Serialization;
 /// grid, then runtime evolution is dispatched to a GPU ping-pong texture.
 /// </summary>
 [CommandPrefix("weather")]
-public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigurator, ILateInitialize, IProgressReporter
+public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigurator, ILateInitialize,
+    IProgressReporter, IWorldServiceRegistrar, IWorldTeardown
 {
     CloudDto _settings;
 
@@ -90,6 +91,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     CancellationTokenSource _generateCts;
     bool _lateInitialized;
+    bool _worldTornDown;
     // Last wind values pushed to shader globals; sentinel values force the first upload.
     Vector3 _lastUploadedWindDirection = new Vector3(float.NaN, float.NaN, float.NaN);
     float _lastUploadedWindSpeedMetersPerSecond = float.NaN;
@@ -142,10 +144,14 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         CloudDto.EnsureRegistered();
         _settings = SettingsProvider.GetSettings<CloudDto>();
         _diagnostics = new WeatherDiagnostics(this);
-        ServiceLocator.Register<IWeatherProvider>(this);
-        ServiceLocator.Register<IWeatherConfigurator>(this);
         Shader.SetGlobalMatrix(_cloudWeatherRotationId, Matrix4x4.identity);
         Shader.SetGlobalFloat(_cloudWindAngleId, 0f);
+    }
+
+    public void RegisterWorldServices(IWorldContext context)
+    {
+        context.Register<IWeatherProvider>(this);
+        context.Register<IWeatherConfigurator>(this);
     }
 
     void OnValidate()
@@ -182,8 +188,15 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     void OnDestroy()
     {
-        ServiceLocator.Unregister<IWeatherProvider>(this);
-        ServiceLocator.Unregister<IWeatherConfigurator>(this);
+        TeardownWorld();
+    }
+
+    public void TeardownWorld()
+    {
+        if (_worldTornDown)
+            return;
+
+        _worldTornDown = true;
         _generateCts?.Cancel();
         _generateCts?.Dispose();
         _generateCts = null;

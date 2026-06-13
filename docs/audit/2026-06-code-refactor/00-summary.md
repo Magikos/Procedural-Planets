@@ -3,7 +3,7 @@
 **Date:** 2026-06-10
 **Branch:** code-refactor
 **Scope:** All four hotspots (Planet generation, Weather / precipitation, Grass / vegetation, Debug / console / services) across all four motivations (architectural consistency, cross-coupling, perf / allocations, style).
-**Status:** Findings only. **No code modified. Do not start fixing until Bryan reviews and marks decisions on each finding.**
+**Status:** Findings accepted as an active refactor worklist. Implementation is ongoing; current lifecycle decisions are recorded in [the world lifecycle design](../../design/2026-06-13-world-lifecycle.md).
 
 ## How to read this audit
 
@@ -151,7 +151,7 @@ Pulled together from the four hotspot docs.
 1. **DTO shape:** one `PlanetSnapshot` carrying everything, or narrow records (`PlanetGenerationDTO`, `PlanetWaterDTO`, `PlanetGrassDTO`, `PlanetClimateDTO`)? Narrow records pair better with the Planet split (Wave 4). ([PLANET-1](01-planet-generation.md) Q3, [GRASS-1](03-grass-vegetation.md) Q1, [WEATHER-1](02-weather-precipitation.md) Q1)
 2. **Shader globals:** centralized partial-class hub, or documented "tiny shared hub" + per-module caches with naming convention? ([CORE-4](04-debug-console-services.md))
 3. **`GpuChunkSurfaceProvider`:** keep behind `#if PLANET_GPU_EXPERIMENT`, exclude from asmdef, or delete? ([PLANET-6](01-planet-generation.md))
-4. **`ShapeSettings`:** any `.asset` files for it on disk? If yes, conversion to plain class needs migration. ([PLANET-15](01-planet-generation.md))
+4. **`ShapeSettings`:** resolved 2026-06-13. The unreferenced legacy `Shape.asset` was removed after `ShapeSettings` became a runtime-only class. ([PLANET-15](01-planet-generation.md))
 5. **Self-test removal:** confirm deletion is fine per your testing stance. ([PLANET-4](01-planet-generation.md))
 6. **Procedural rain fallback path:** is the zero-forced `WeatherParticles.shader` Rain pass intentional for low-spec LOD where `RainParticleController` is disabled, or safe to delete? ([WEATHER-4](02-weather-precipitation.md))
 7. **`GrassMidField` deletion timing:** A/B done? If yes, delete in T5. If keeping warm, can we at least remove the dead F10 block + enum value? ([GRASS-3](03-grass-vegetation.md))

@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class GameBootstrap : MonoBehaviour, IEarlyInitialize
 {
+    static GameBootstrap _instance;
+
     IDebugCommandProvider _debugCommandProvider;
     IGrassQualitySettings _grassQualitySettings;
     IInputMapService _inputMapService;
@@ -12,11 +14,21 @@ public class GameBootstrap : MonoBehaviour, IEarlyInitialize
 
     void Awake()
     {
+        if (_instance != null && _instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        _instance = this;
         DontDestroyOnLoad(gameObject);
     }
 
     void OnDestroy()
     {
+        if (_instance != this)
+            return;
+
         if (_ownsGrassQualitySettings && _grassQualitySettings != null)
             ServiceLocator.Unregister<IGrassQualitySettings>(_grassQualitySettings);
         if (_debugCommandProvider != null)
@@ -32,10 +44,14 @@ public class GameBootstrap : MonoBehaviour, IEarlyInitialize
 
         EventBusRegistry.ClearAll();
         EventBusProcessor.ClearProcessors();
+        _instance = null;
     }
 
     public async Awaitable EarlyInitialize(CancellationToken cancellationToken)
     {
+        if (_instance != this || _debugCommandProvider != null)
+            return;
+
         var logger = ServiceLocator.Get<ILogger>();
 
         _debugCommandProvider = new DebugCommandProvider();

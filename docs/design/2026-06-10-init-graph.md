@@ -1,7 +1,7 @@
 # Init Graph design
 
 **Date:** 2026-06-10
-**Status:** Design draft — not yet implemented
+**Status:** Implemented; fail-fast execution and world-owned reverse teardown landed
 **Branch:** code-refactor
 **Replaces:** Priority-number ordering in `IEarlyInitialize` / `ILateInitialize`
 
@@ -114,9 +114,7 @@ foreach (var initializer in earlyGraph.Order)
     await initializer.EarlyInitialize(ct);
 ```
 
-Identical at the call site; the graph just resolves the order. Same for late.
-
-The exception-per-service `try/catch` in the current loop stays — one service failing doesn't tear down the whole boot. But it does mean dependent services run anyway, possibly against bad state. Open question below.
+The graph resolves the order for both phases. If any initializer throws, `LoadingManager` wraps the failure with phase and service context, aborts the pass, and does not run later initializers.
 
 ## Teardown
 
@@ -134,11 +132,7 @@ Land in three commits:
 
 ## Open questions
 
-1. **Service-failure semantics.** Today a thrown exception in `EarlyInitialize` is logged and the next service runs anyway. With formal deps, this is more dangerous — downstream services may be running against missing state. Three options:
-   - Keep current behavior (log and continue). Simple, matches today.
-   - Halt the entire phase on any service failure. Safer, but one bad service blocks everything.
-   - Halt only the subgraph downstream of the failed service. Best behavior, hardest to implement (need reverse adjacency).
-   Recommended: option 3, but defer to v2 if it's complexity we don't need yet.
+1. **Service-failure semantics.** Decided 2026-06-13: halt the entire initialization pass on any service failure. A partially initialized world is invalid. Reverse teardown will be owned by the world context described in [2026-06-13-world-lifecycle.md](2026-06-13-world-lifecycle.md).
 2. **Service registration timing.** The graph needs the service list before sorting. `LoadingManager` currently uses `FindObjectsByType` which catches every scene `MonoBehaviour`. Pure-class services (the post-Wave-2 future) aren't `MonoBehaviour`s — they need to be registered explicitly somewhere. Probably via the orchestrator MB. Worth designing alongside the orchestrator pattern.
 3. **`WhenReady<T>()` interface vs concrete generic.** `WhenReady<IPlanet>()` resolves by interface — same matching rule as deps. Should `WhenReady<Planet>()` (concrete type) also work? Recommended: no. Encourages coupling to concrete types. Force interface usage.
 4. **Tiebreaker for siblings.** Two services with the same dep set — what determines their order? Today priority does. With priority gone, options: declaration order in the source list, alphabetical by type name, or "undefined — don't depend on it." Recommended: undefined, with a debug warning if two siblings reference each other's state in a way that hints at an undeclared dep.

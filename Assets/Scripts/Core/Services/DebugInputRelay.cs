@@ -22,7 +22,7 @@ public class DebugInputRelay : MonoBehaviour
 
         if (_input.DumpWeather.WasPerformedThisFrame())
         {
-            EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.ToggleWaterDebugDetails));
+            EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.ToggleDetailedDebug));
             EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.DumpWeatherDiagnostics));
         }
 

@@ -13,8 +13,9 @@ The 2026-06-10 audit lives at [docs/audit/2026-06-code-refactor/](docs/audit/202
 - `ScriptableObject` settings are **editor-only authoring surfaces**. Runtime never reads an SO directly outside boot.
 - Runtime consumers read immutable **snapshot DTOs** (records or readonly structs).
 - DTOs live next to the SO they snapshot, with a static `From(SO)` factory.
-- `ISettingsService` is a domain-agnostic registry exposed via the static `SettingsProvider` (LoggerProvider-style, self-creating). It never references domain-specific types; each consumer registers its own DTO from its own assembly.
-- Pattern in each consumer's `OnEnable` (or earlier): `EnsureSettingsRegistered()` does `Resources.Load<TSettings>("Settings/Name")` + `SettingsProvider.Register(TDto.From(so))` if not already registered, then `_settings = SettingsProvider.GetSettings<TDto>();`.
+- Each active `WorldContext` owns one domain-agnostic `ISettingsService`. `SettingsProvider` resolves that active world registry and never creates a fallback.
+- World setting owners implement `IWorldSettingsRegistrar`. `SceneBootstrap` builds and validates every required DTO, then freezes registration before other world initializers run.
+- Consumers resolve and cache DTOs with `SettingsProvider.GetSettings<TDto>()`; runtime changes use `Update<TDto>`.
 - Settings changes raise `EventBus<SettingsChangedEvent>`. Consumers re-fetch on receipt.
 - No console command mutates the SO asset. Console-command setters update the runtime DTO via the service.
 - `Material` assets are cloned on first use. Runtime never writes shader properties or keywords on an SO-referenced material asset.
@@ -41,6 +42,10 @@ The 2026-06-10 audit lives at [docs/audit/2026-06-code-refactor/](docs/audit/202
 
 ### ServiceLocator
 
+- `ServiceLocator.Register<>` is application scope only.
+- Scene and runtime-world services use `IWorldServiceRegistrar` or `RegisterWorld<>` and resolve from the active `WorldContext`.
+- The active world context is replaced for each loaded or newly generated world. Never retain world services across `WorldReadyEvent`.
+- Saved-world transitions enter through `WorldLoadRequest`; persistence code translates stable save keys into typed `WorldSettingsOverride<TDto>` values before loading.
 - `TryGet<>` for optional services with downstream null-check.
 - `Get<>` only when the service **must** exist (throws otherwise).
 - Resolve once at init for hot-path consumers. Never `TryGet`/`Get` per frame.

@@ -5,7 +5,7 @@ using UnityEngine;
 
 // FUTURE: Command pattern for undoable world modifications (terrain deform, building place/remove).
 // Will be used when player interaction systems are implemented.
-// Registered in GameBootstrap, accessed via ServiceLocator.Get<IWorldActionManager>().
+// Registered by SceneBootstrap in the active world context.
 public class WorldActionManager : IWorldActionManager
 {
     readonly List<IWorldAction> _history = new();
