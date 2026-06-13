@@ -35,27 +35,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     PerFaceSurfaceProvider _perFaceProvider;
     PlanetGrassCoordinator _grass;
     PlanetWaterSurface _waterSurface;
-    // Runtime clone of the authoring PlanetMaterial asset. All runtime shader-property/keyword
-    // writes and the surface renderers target this clone so the SO-referenced asset is never
-    // mutated (CLAUDE.md: materials are cloned on first use).
-    Material _terrainMaterial;
-
-    static readonly int _terrainOverrideEnabledId = Shader.PropertyToID("_TerrainOverrideEnabled");
-    static readonly int _coastSliceId = Shader.PropertyToID("_CoastSlice");
-    static readonly int _coastBelowSeaDepthId = Shader.PropertyToID("_CoastBelowSeaDepth");
-    static readonly int _coastStartHeightId = Shader.PropertyToID("_CoastStartHeight");
-    static readonly int _coastEndHeightId = Shader.PropertyToID("_CoastEndHeight");
-    static readonly int _coastTilingId = Shader.PropertyToID("_CoastTiling");
-    static readonly int _slopeSliceId = Shader.PropertyToID("_SlopeSlice");
-    static readonly int _slopeStartDegreesId = Shader.PropertyToID("_SlopeStartDegrees");
-    static readonly int _slopeFullDegreesId = Shader.PropertyToID("_SlopeFullDegrees");
-    static readonly int _slopeTilingId = Shader.PropertyToID("_SlopeTiling");
-    static readonly int _snowSliceId = Shader.PropertyToID("_SnowSlice");
-    static readonly int _snowFullTemperatureId = Shader.PropertyToID("_SnowFullTemperature");
-    static readonly int _snowFadeEndTemperatureId = Shader.PropertyToID("_SnowFadeEndTemperature");
-    static readonly int _snowTilingId = Shader.PropertyToID("_SnowTiling");
-
-    static Shader _vcShader;
+    PlanetTerrainMaterial _terrainMaterial;
 
     CancellationTokenSource _cts;
     bool _isGenerating;
@@ -75,9 +55,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     void Awake()
     {
-        if (_vcShader == null) _vcShader = Shader.Find("Planet/VertexColor");
         _grass = new PlanetGrassCoordinator(transform, this, Logger);
         _waterSurface = new PlanetWaterSurface(transform);
+        _terrainMaterial = new PlanetTerrainMaterial(Logger);
 
         ServiceLocator.Register<IPlanet>(this);
         ServiceLocator.Register<IPlanetSurfaceSampler>(this);
@@ -115,11 +95,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _perFaceProvider = null;
         _colorGenerator?.Dispose();
         _waterSurface?.Dispose();
-        if (_terrainMaterial != null)
-        {
-            Destroy(_terrainMaterial);
-            _terrainMaterial = null;
-        }
+        _terrainMaterial?.Dispose();
         GrassInteractorRegistry.DisposeBuffer();
     }
 
@@ -184,20 +160,20 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             Seed,
             seedProvider.GetSeedForSystem("BiomeVoronoi"));
 
-        EnsureRuntimeTerrainMaterial(planet?.PlanetMaterial);
-        ConfigureMaterial();
+        _terrainMaterial.EnsureRuntime(planet?.PlanetMaterial);
+        _terrainMaterial.Configure(_grass);
 
         if (planet == null) return;
         switch (planet.Resolution)
         {
             case PlanetResolution.Low:
                 _perFaceProvider = new PerFaceSurfaceProvider(
-                    transform, _shapeGenerator, PerFaceResolution, _terrainMaterial, RenderMask);
+                    transform, _shapeGenerator, PerFaceResolution, _terrainMaterial.Material, RenderMask);
                 _surfaceProvider = _perFaceProvider;
                 break;
             case PlanetResolution.High:
                 _surfaceProvider = new ChunkedSurfaceProvider(
-                    transform, _shapeGenerator, _terrainMaterial, RenderMask,
+                    transform, _shapeGenerator, _terrainMaterial.Material, RenderMask,
                     planet.MaxChunkDepth);
                 // Pre-cache mode: all chunks at all depths <= MaxChunkDepth are generated up
                 // front during the loading bar. Runtime Tick is a cheap visibility filter; no
@@ -212,86 +188,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     {
         for (int i = transform.childCount - 1; i >= 0; i--)
             Destroy(transform.GetChild(i).gameObject);
-    }
-
-
-    // Clones the authoring PlanetMaterial into the runtime material, replacing any prior clone.
-    // Everything downstream (renderers, property writes) targets the clone so the asset stays clean.
-    void EnsureRuntimeTerrainMaterial(Material source)
-    {
-        if (_terrainMaterial != null)
-        {
-            Destroy(_terrainMaterial);
-            _terrainMaterial = null;
-        }
-        if (source != null)
-            _terrainMaterial = new Material(source) { name = $"{source.name} (runtime)" };
-    }
-
-    void ConfigureMaterial()
-    {
-        var mat = _terrainMaterial;
-        if (mat == null)
-        {
-            Logger.Log(LogLevel.Warning, "Planet", "PlanetMaterial is not assigned in PlanetSettings.");
-            return;
-        }
-        if (mat.shader.name != "Planet/VertexColor")
-        {
-            if (_vcShader != null) mat.shader = _vcShader;
-        }
-        mat.SetFloat("_Smoothness", 0f);
-        _grass.ApplyTerrainOverlay(mat);
-        ConfigureTerrainSurfaceOverrides(mat);
-    }
-
-    void ConfigureTerrainSurfaceOverrides(Material mat)
-    {
-        BiomeRegistryDto registry = SettingsProvider.IsRegistered<BiomeDto>()
-            ? SettingsProvider.GetSettings<BiomeDto>()?.Registry
-            : null;
-        bool surfaceOverridesEnabled = SettingsProvider.IsRegistered<PlanetDto>()
-            && SettingsProvider.GetSettings<PlanetDto>().EnableSurfaceOverrides;
-
-        SetMaterialAndGlobalFloat(mat, _terrainOverrideEnabledId,
-            surfaceOverridesEnabled && registry != null ? 1f : 0f);
-        if (!surfaceOverridesEnabled || registry == null)
-            return;
-
-        SetMaterialAndGlobalInt(mat, _coastSliceId, registry.GetSliceIdForBiomeType(BiomeType.Beach));
-        SetMaterialAndGlobalFloat(mat, _coastBelowSeaDepthId, PlanetConstants.CoastBelowSeaDepth);
-        SetMaterialAndGlobalFloat(mat, _coastStartHeightId, PlanetConstants.CoastStartHeight);
-        SetMaterialAndGlobalFloat(mat, _coastEndHeightId, PlanetConstants.CoastEndHeight);
-        SetMaterialAndGlobalFloat(mat, _coastTilingId, PlanetConstants.CoastTiling);
-
-        SetMaterialAndGlobalInt(mat, _slopeSliceId, registry.GetSliceIdForBiomeType(BiomeType.Mountain));
-        SetMaterialAndGlobalFloat(mat, _slopeStartDegreesId, PlanetConstants.SlopeStartDegrees);
-        SetMaterialAndGlobalFloat(mat, _slopeFullDegreesId, PlanetConstants.SlopeFullDegrees);
-        SetMaterialAndGlobalFloat(mat, _slopeTilingId, PlanetConstants.SlopeTiling);
-
-        SetMaterialAndGlobalInt(mat, _snowSliceId, registry.GetSliceIdForBiomeType(BiomeType.Snow));
-        SetMaterialAndGlobalFloat(mat, _snowFullTemperatureId, PlanetConstants.SnowFullTemperature01);
-        SetMaterialAndGlobalFloat(mat, _snowFadeEndTemperatureId, PlanetConstants.SnowFadeEndTemperature01);
-        SetMaterialAndGlobalFloat(mat, _snowTilingId, PlanetConstants.SnowTiling);
-    }
-
-    static void SetMaterialFloatIfPresent(Material mat, int propertyId, float value)
-    {
-        if (!mat.HasProperty(propertyId)) return;
-        mat.SetFloat(propertyId, value);
-    }
-
-    static void SetMaterialAndGlobalFloat(Material mat, int propertyId, float value)
-    {
-        SetMaterialFloatIfPresent(mat, propertyId, value);
-        Shader.SetGlobalFloat(propertyId, value);
-    }
-
-    static void SetMaterialAndGlobalInt(Material mat, int propertyId, int value)
-    {
-        if (mat.HasProperty(propertyId))
-            mat.SetInt(propertyId, value);
-        Shader.SetGlobalInt(propertyId, value);
     }
 
     public async Awaitable LateInitialize(CancellationToken cancellationToken)
@@ -346,7 +242,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
                 new ProgressRangeHandle(_progressHandle, 0.9f, 0.1f),
                 ct);
             _grass.Configure(_surfaceProvider as ChunkedSurfaceProvider,
-                _colorGenerator.SurfaceArrays, Seed, _observerCamera, _terrainMaterial);
+                _colorGenerator.SurfaceArrays, Seed, _observerCamera, _terrainMaterial.Material);
             // Atmosphere is rendered by AtmosphereController + AtmosphereRenderFeature (post-process).
 
             var planet = SettingsProvider.GetSettings<PlanetDto>();
