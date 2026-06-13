@@ -17,28 +17,28 @@ public class AtmosphereController : MonoBehaviour
     IPlanet _planet;
     bool _staticPropertiesDirty = true;
 
-    static readonly int _sunParamsId = Shader.PropertyToID("_SunParams");
+    static readonly int _sunParamsId = Shader.PropertyToID(ShaderGlobalIds.SunParams);
     static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
     static readonly int _planetRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
     static readonly int _densityOriginRadiusId = Shader.PropertyToID(ShaderGlobalIds.DensityOriginRadius);
     static readonly int _atmosphereRadiusId = Shader.PropertyToID(ShaderGlobalIds.AtmosphereRadius);
     static readonly int _viewStepsId = Shader.PropertyToID(ShaderGlobalIds.ViewSteps);
     static readonly int _sunStepsId = Shader.PropertyToID(ShaderGlobalIds.SunSteps);
-    static readonly int _rayleighScatteringId = Shader.PropertyToID("_RayleighScattering");
-    static readonly int _rayleighScaleHeightId = Shader.PropertyToID("_RayleighScaleHeight");
-    static readonly int _mieScatteringId = Shader.PropertyToID("_MieScatteringCoeff");
-    static readonly int _mieScaleHeightId = Shader.PropertyToID("_MieScaleHeight");
-    static readonly int _mieAnisotropyId = Shader.PropertyToID("_MieAnisotropy");
+    static readonly int _rayleighScatteringId = Shader.PropertyToID(ShaderGlobalIds.RayleighScattering);
+    static readonly int _rayleighScaleHeightId = Shader.PropertyToID(ShaderGlobalIds.RayleighScaleHeight);
+    static readonly int _mieScatteringId = Shader.PropertyToID(ShaderGlobalIds.MieScatteringCoeff);
+    static readonly int _mieScaleHeightId = Shader.PropertyToID(ShaderGlobalIds.MieScaleHeight);
+    static readonly int _mieAnisotropyId = Shader.PropertyToID(ShaderGlobalIds.MieAnisotropy);
     static readonly int _terrainAerialPerspectiveDistancesId =
-        Shader.PropertyToID("_TerrainAerialPerspectiveDistances");
-    static readonly int _sunIntensityId = Shader.PropertyToID("_SunIntensity");
-    static readonly int _sunDiscSizeId = Shader.PropertyToID("_SunDiscSize");
-    static readonly int _sunDiscBlendId = Shader.PropertyToID("_SunDiscBlend");
-    static readonly int _lightShaftParamsId = Shader.PropertyToID("_LightShaftParams");
-    static readonly int _lightShaftParams2Id = Shader.PropertyToID("_LightShaftParams2");
-    static readonly int _lightShaftSamplesId = Shader.PropertyToID("_LightShaftSamples");
-    static readonly int _debugModeId = Shader.PropertyToID("_DebugMode");
-    static readonly int _bakedOpticalDepthId = Shader.PropertyToID("_BakedOpticalDepth");
+        Shader.PropertyToID(ShaderGlobalIds.TerrainAerialPerspectiveDistances);
+    static readonly int _sunIntensityId = Shader.PropertyToID(ShaderGlobalIds.SunIntensity);
+    static readonly int _sunDiscSizeId = Shader.PropertyToID(ShaderGlobalIds.SunDiscSize);
+    static readonly int _sunDiscBlendId = Shader.PropertyToID(ShaderGlobalIds.SunDiscBlend);
+    static readonly int _lightShaftParamsId = Shader.PropertyToID(ShaderGlobalIds.LightShaftParams);
+    static readonly int _lightShaftParams2Id = Shader.PropertyToID(ShaderGlobalIds.LightShaftParams2);
+    static readonly int _lightShaftSamplesId = Shader.PropertyToID(ShaderGlobalIds.LightShaftSamples);
+    static readonly int _debugModeId = Shader.PropertyToID(ShaderGlobalIds.AtmosphereDebugMode);
+    static readonly int _bakedOpticalDepthId = Shader.PropertyToID(ShaderGlobalIds.BakedOpticalDepth);
 
     void OnEnable()
     {

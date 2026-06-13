@@ -1,23 +1,5 @@
 using UnityEngine;
 
-// Shared name constants for shader globals. Modules cache their own
-// Shader.PropertyToID(ShaderGlobalIds.X) locally; this hub is the single
-// source of truth for the string so two modules can't disagree on a name.
-public static class ShaderGlobalIds
-{
-    public const string GameTime = "_GameTime";
-    public const string OceanDebugMode = "_OceanDebugMode";
-    public const string WaterFocusMode = "_WaterFocusMode";
-    public const string OceanFocusMode = "_OceanFocusMode";
-    public const string PlanetCenter = "_PlanetCenter";
-    public const string AtmosphereRadius = "_AtmosphereRadius";
-    public const string SeaLevelRadius = "_SeaLevelRadius";
-    public const string DensityOriginRadius = "_DensityOriginRadius";
-    public const string ViewSteps = "_ViewSteps";
-    public const string SunSteps = "_SunSteps";
-    public const string WaterVolumeEnabled = "_WaterVolumeEnabled";
-}
-
 [DisallowMultipleComponent]
 public sealed class ShaderGlobalsController : MonoBehaviour
 {

@@ -83,9 +83,10 @@ The 2026-06-10 audit lives at [docs/audit/2026-06-code-refactor/](docs/audit/202
 
 ## Shader globals
 
-- `ShaderGlobalIds` holds shared **string-constant names** for globals (`public const string GameTime = "_GameTime";`).
-- Each module does its own `Shader.PropertyToID(ShaderGlobalIds.GameTime)` cache locally.
-- This gives a single source of truth for *names* (two modules can't disagree on `_OceanDebugMode`) without forcing every PropertyToID into one file.
+- `ShaderGlobalIds` is the single source of truth for **every** shader-global string name. It is a `partial` class split one file per domain: `ShaderGlobalIds.Core.cs`, `.Atmosphere.cs`, `.Water.cs`, `.Cloud.cs`, `.Grass.cs`, `.Precipitation.cs`, `.Terrain.cs`, `.Celestial.cs`.
+- **A global name is any name passed to `Shader.SetGlobal*` / `Shader.GetGlobal*`.** Every such name lives in `ShaderGlobalIds`; there are **no raw string literals** at a `Shader.PropertyToID(...)` whose ID is used as a global. A new global adds a `public const string X = "_X";` to its domain partial first.
+- Each module still caches its own `static readonly int _xId = Shader.PropertyToID(ShaderGlobalIds.X)` locally — the hub owns *names*, not the cached IDs.
+- This is **globals only.** Per-`Material` property names and compute-shader property names are shader-*scoped*, not globals; they stay as module-local consts/literals and do **not** belong in `ShaderGlobalIds` (a material property can't collide across shaders the way a global can).
 
 ---
 

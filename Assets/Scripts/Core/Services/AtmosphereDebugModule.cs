@@ -20,7 +20,7 @@ public sealed class AtmosphereDebugModule : IDebugModule, IDebugCaptureMetadataP
     static readonly int SunStepsId = Shader.PropertyToID(ShaderGlobalIds.SunSteps);
     static readonly int WaterVolumeEnabledId = Shader.PropertyToID(ShaderGlobalIds.WaterVolumeEnabled);
     static readonly int TerrainAerialPerspectiveDistancesId =
-        Shader.PropertyToID("_TerrainAerialPerspectiveDistances");
+        Shader.PropertyToID(ShaderGlobalIds.TerrainAerialPerspectiveDistances);
 
     public void Register(DebugRegistry registry)
     {

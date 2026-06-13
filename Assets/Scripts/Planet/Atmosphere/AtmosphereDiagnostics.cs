@@ -10,23 +10,23 @@ public class AtmosphereDiagnostics : MonoBehaviour
 {
     bool _captureRequested;
 
-    static readonly int _seaLevelRadiusId = Shader.PropertyToID("_SeaLevelRadius");
-    static readonly int _densityOriginRadiusId = Shader.PropertyToID("_DensityOriginRadius");
-    static readonly int _atmosphereRadiusId = Shader.PropertyToID("_AtmosphereRadius");
-    static readonly int _rayleighScatteringId = Shader.PropertyToID("_RayleighScattering");
-    static readonly int _rayleighScaleHeightId = Shader.PropertyToID("_RayleighScaleHeight");
-    static readonly int _mieScatteringCoeffId = Shader.PropertyToID("_MieScatteringCoeff");
-    static readonly int _mieScaleHeightId = Shader.PropertyToID("_MieScaleHeight");
-    static readonly int _mieAnisotropyId = Shader.PropertyToID("_MieAnisotropy");
-    static readonly int _sunIntensityId = Shader.PropertyToID("_SunIntensity");
-    static readonly int _viewStepsId = Shader.PropertyToID("_ViewSteps");
-    static readonly int _sunStepsId = Shader.PropertyToID("_SunSteps");
-    static readonly int _debugModeId = Shader.PropertyToID("_DebugMode");
-    static readonly int _starSeedId = Shader.PropertyToID("_StarSeed");
-    static readonly int _starDensityId = Shader.PropertyToID("_StarDensity");
-    static readonly int _starBrightnessId = Shader.PropertyToID("_StarBrightness");
-    static readonly int _nightAmbientIntensityId = Shader.PropertyToID("_NightAmbientIntensity");
-    static readonly int _sunParamsId = Shader.PropertyToID("_SunParams");
+    static readonly int _seaLevelRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
+    static readonly int _densityOriginRadiusId = Shader.PropertyToID(ShaderGlobalIds.DensityOriginRadius);
+    static readonly int _atmosphereRadiusId = Shader.PropertyToID(ShaderGlobalIds.AtmosphereRadius);
+    static readonly int _rayleighScatteringId = Shader.PropertyToID(ShaderGlobalIds.RayleighScattering);
+    static readonly int _rayleighScaleHeightId = Shader.PropertyToID(ShaderGlobalIds.RayleighScaleHeight);
+    static readonly int _mieScatteringCoeffId = Shader.PropertyToID(ShaderGlobalIds.MieScatteringCoeff);
+    static readonly int _mieScaleHeightId = Shader.PropertyToID(ShaderGlobalIds.MieScaleHeight);
+    static readonly int _mieAnisotropyId = Shader.PropertyToID(ShaderGlobalIds.MieAnisotropy);
+    static readonly int _sunIntensityId = Shader.PropertyToID(ShaderGlobalIds.SunIntensity);
+    static readonly int _viewStepsId = Shader.PropertyToID(ShaderGlobalIds.ViewSteps);
+    static readonly int _sunStepsId = Shader.PropertyToID(ShaderGlobalIds.SunSteps);
+    static readonly int _debugModeId = Shader.PropertyToID(ShaderGlobalIds.AtmosphereDebugMode);
+    static readonly int _starSeedId = Shader.PropertyToID(ShaderGlobalIds.StarSeed);
+    static readonly int _starDensityId = Shader.PropertyToID(ShaderGlobalIds.StarDensity);
+    static readonly int _starBrightnessId = Shader.PropertyToID(ShaderGlobalIds.StarBrightness);
+    static readonly int _nightAmbientIntensityId = Shader.PropertyToID(ShaderGlobalIds.NightAmbientIntensity);
+    static readonly int _sunParamsId = Shader.PropertyToID(ShaderGlobalIds.SunParams);
 
     void Update()
     {
