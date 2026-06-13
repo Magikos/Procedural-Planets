@@ -82,15 +82,6 @@ public static class GrassRenderDiagnostics
 public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvider, IDebugOverlayContributor
 {
     public DebugModuleId Id => GrassDebugIds.Module;
-    static readonly int OceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
-    static readonly int AtmosphereRadiusId = Shader.PropertyToID(ShaderGlobalIds.AtmosphereRadius);
-    static readonly int SeaLevelRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
-    static readonly int DensityOriginRadiusId = Shader.PropertyToID(ShaderGlobalIds.DensityOriginRadius);
-    static readonly int ViewStepsId = Shader.PropertyToID(ShaderGlobalIds.ViewSteps);
-    static readonly int SunStepsId = Shader.PropertyToID(ShaderGlobalIds.SunSteps);
-    static readonly int WaterVolumeEnabledId = Shader.PropertyToID(ShaderGlobalIds.WaterVolumeEnabled);
-    static readonly int TerrainAerialPerspectiveDistancesId =
-        Shader.PropertyToID("_TerrainAerialPerspectiveDistances");
 
     public void Register(DebugRegistry registry)
     {
@@ -137,8 +128,6 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
             sb.AppendLine($"SurfaceAtlas: resolution={stats.SurfaceAtlasResolution}");
         }
         AppendNearFieldMetadata(sb);
-        AppendAtmosphereMetadata(sb);
-        AppendScaleReferenceMetadata(sb);
     }
 
     static void AppendRuntimeStateMetadata(StringBuilder sb)
@@ -206,34 +195,6 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
         }
     }
 
-    static void AppendAtmosphereMetadata(StringBuilder sb)
-    {
-        sb.AppendLine("--- Atmosphere ---");
-        sb.AppendLine($"Globals: oceanDebug={Shader.GetGlobalInt(OceanDebugModeId)}, radius={Shader.GetGlobalFloat(AtmosphereRadiusId):F2}, sea={Shader.GetGlobalFloat(SeaLevelRadiusId):F2}, densityOrigin={Shader.GetGlobalFloat(DensityOriginRadiusId):F2}");
-        sb.AppendLine($"PassInputs: waterVolume={Shader.GetGlobalFloat(WaterVolumeEnabledId):F2}, viewSteps={Shader.GetGlobalInt(ViewStepsId)}, sunSteps={Shader.GetGlobalInt(SunStepsId)}");
-        Vector4 terrainDistances = Shader.GetGlobalVector(TerrainAerialPerspectiveDistancesId);
-        sb.AppendLine($"TerrainClarity: fullTo={terrainDistances.x:F1}m, atmosphereBy={terrainDistances.y:F1}m");
-    }
-
-    static void AppendScaleReferenceMetadata(StringBuilder sb)
-    {
-        sb.AppendLine("--- ScaleRef ---");
-        if (!ServiceLocator.TryGet(out IScaleReferenceDebugStatsProvider provider))
-        {
-            sb.AppendLine("Markers: provider=missing");
-            return;
-        }
-
-        ScaleReferenceDebugStats stats = provider.GetScaleReferenceDebugStats();
-        sb.AppendLine($"Markers: hasDrop={stats.HasDrop}, lastSuccess={stats.LastDropSucceeded}, status={stats.LastTargetStatus ?? "none"}, count={stats.MarkerCount}");
-        sb.AppendLine($"MarkerProjection: meshHits={stats.MarkerProjectionHits}, fallbacks={stats.MarkerProjectionFallbacks}");
-        if (!stats.HasDrop && !stats.LastDropSucceeded)
-            return;
-
-        sb.AppendLine($"Target: anchor={stats.LastAnchor:F1}, up={stats.LastWorldUp:F3}, forward={stats.LastTangentForward:F3}");
-        sb.AppendLine($"Ray: distance={stats.LastRayDistance:F2}m, cameraToAnchor={stats.LastCameraToAnchorDistance:F2}m, cameraRadius={stats.LastCameraDistance:F2}m");
-        sb.AppendLine($"Surface: radius={stats.LastSurfaceRadius:F2}m, sea={stats.LastSeaLevelRadius:F2}m, altitude={stats.LastAltitudeAboveSurface:F2}m");
-    }
 }
 
 [CommandPrefix("grass")]
