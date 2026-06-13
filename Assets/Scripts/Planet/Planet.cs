@@ -37,13 +37,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     // and bridges the camera-centered near field to the far terrain blanket.
     GrassPlacementController _grassController;
     GrassNearFieldController _grassNearFieldController;
-    // Deprecated card experiment retained only for short-term regression A/B.
-    // It is disabled by default and should be removed after its diagnostics are
-    // no longer needed; do not extend it as the production medium LOD.
-    GrassMidFieldController _grassMidFieldController;
     bool _grassEnabled = true;
     bool _nearFieldGrassEnabled = true;
-    bool _midFieldGrassEnabled;
     bool _chunkGrassEnabled = true;
     bool _grassBlanketEnabled = true;
     GameObject _waterObject;
@@ -151,8 +146,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     const float GrassFarOverlayFiberStrength = 0.65f;
     const float NearFieldGrassActivationAltitude = 350f;
     const float NearFieldGrassDeactivationAltitude = 500f;
-    const float MidFieldGrassActivationAltitude = 650f;
-    const float MidFieldGrassDeactivationAltitude = 850f;
 
     CancellationTokenSource _cts;
     bool _isGenerating;
@@ -207,8 +200,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _cts?.Dispose();
         _grassNearFieldController?.Dispose();
         _grassNearFieldController = null;
-        _grassMidFieldController?.Dispose();
-        _grassMidFieldController = null;
         _grassController?.Dispose();
         _grassController = null;
         _climateMapGpuData?.Dispose();
@@ -249,7 +240,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _surfaceProvider.Tick(_observerCamera.transform.position, _observerCamera);
         UpdateGrassControllerActivation(_observerCamera);
         _grassController?.Tick(_observerCamera);
-        _grassMidFieldController?.Tick(_observerCamera);
         _grassNearFieldController?.Tick(_observerCamera);
     }
 
@@ -257,8 +247,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     {
         _grassNearFieldController?.Dispose();
         _grassNearFieldController = null;
-        _grassMidFieldController?.Dispose();
-        _grassMidFieldController = null;
         _grassController?.Dispose();
         _grassController = null;
         _climateMapGpuData?.Dispose();
@@ -547,8 +535,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     {
         _grassNearFieldController?.Dispose();
         _grassNearFieldController = null;
-        _grassMidFieldController?.Dispose();
-        _grassMidFieldController = null;
         _grassController?.Dispose();
         _grassController = null;
 
@@ -567,14 +553,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             && ShouldActivateNearFieldGrass(_observerCamera.transform.position, false))
         {
             CreateNearFieldGrassController(chunkedProvider, waterRadius);
-        }
-
-        if (_grassEnabled && _midFieldGrassEnabled
-            && _observerCamera != null
-            && ShouldActivateGrassLayer(_observerCamera.transform.position, false,
-                MidFieldGrassActivationAltitude, MidFieldGrassDeactivationAltitude))
-        {
-            CreateMidFieldGrassController(chunkedProvider, waterRadius);
         }
 
         ApplyGrassBlanketState(_terrainMaterial);
@@ -615,20 +593,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             _grassNearFieldController = null;
         }
 
-        bool midFieldShouldBeActive = _grassEnabled
-            && _midFieldGrassEnabled
-            && ShouldActivateGrassLayer(camera.transform.position, _grassMidFieldController != null,
-                MidFieldGrassActivationAltitude, MidFieldGrassDeactivationAltitude);
-        if (midFieldShouldBeActive)
-        {
-            if (_grassMidFieldController == null)
-                CreateMidFieldGrassController(chunkedProvider, waterRadius);
-        }
-        else if (_grassMidFieldController != null)
-        {
-            _grassMidFieldController.Dispose();
-            _grassMidFieldController = null;
-        }
     }
 
     bool ShouldActivateNearFieldGrass(Vector3 cameraPosition, bool currentlyActive)
@@ -668,13 +632,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             waterRadius, SettingsProvider.GetSettings<PlanetDto>().PlanetRadius, Seed, Logger);
     }
 
-    void CreateMidFieldGrassController(ChunkedSurfaceProvider chunkedProvider, float waterRadius)
-    {
-        _grassMidFieldController = new GrassMidFieldController(transform, chunkedProvider,
-            _colorGenerator.SurfaceArrays.GrassParamsBuffer, _colorGenerator.SurfaceArrays.SliceCount,
-            waterRadius, SettingsProvider.GetSettings<PlanetDto>().PlanetRadius, Seed, Logger);
-    }
-
     void ApplyGrassBlanketState(Material mat)
     {
         if (mat == null)
@@ -690,8 +647,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             MasterEnabled = _grassEnabled,
             NearFieldRequested = _nearFieldGrassEnabled,
             NearFieldActive = _grassNearFieldController != null,
-            MidFieldRequested = _midFieldGrassEnabled,
-            MidFieldActive = _grassMidFieldController != null,
             ChunkPathRequested = _chunkGrassEnabled,
             ChunkPathActive = _grassController != null,
             BlanketRequested = _grassBlanketEnabled,
@@ -707,8 +662,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         {
             _grassNearFieldController?.Dispose();
             _grassNearFieldController = null;
-            _grassMidFieldController?.Dispose();
-            _grassMidFieldController = null;
             _grassController?.Dispose();
             _grassController = null;
         }
@@ -724,14 +677,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
                 {
                     _grassNearFieldController?.Dispose();
                     _grassNearFieldController = null;
-                }
-                break;
-            case GrassRenderLayer.Mid:
-                _midFieldGrassEnabled = enabled;
-                if (!enabled)
-                {
-                    _grassMidFieldController?.Dispose();
-                    _grassMidFieldController = null;
                 }
                 break;
             case GrassRenderLayer.Chunk:

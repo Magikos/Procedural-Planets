@@ -524,7 +524,6 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         {
             ControllerActive = !_disposed,
             ShaderAvailable = _material != null,
-            SmokeRenderer = false,
             VisibleChunks = _lastVisibleChunks,
             ResidencyChunks = _residencyChunks.Count,
             BufferedResidencyChunks = _lastBufferedResidencyChunks,

@@ -2,8 +2,8 @@
 #define GRASS_DITHER_INCLUDED
 
 // Shared Bayer 3x3 dither for grass fade clip. Used by Grass.shader (near-field +
-// chunk-path tuft shader) and GrassMidField.shader (slice 4c) so fade transitions at the
-// near/mid overlap band use the same stipple pattern - prevents visible seam.
+// chunk-path tuft shader) so fade transitions use a stable stipple pattern - prevents
+// visible seam.
 //
 // Stable across frames (no time / camera coordinate input) so dithered fade does not
 // shimmer. Pattern varies by 2D screen-space pixel coords.

@@ -1,8 +1,7 @@
 using UnityEngine;
 
 // Reusable cube-face cell-range builder for camera-centered grass dispatches. Used by
-// GrassNearFieldController today; GrassMidFieldController (slice 4c) will use the same
-// helper at coarser spacing. Multi-face dispatch handles the cube-face seam case: when
+// GrassNearFieldController. Multi-face dispatch handles the cube-face seam case: when
 // the visible disc straddles a face edge, we add the neighbor face's overlapping region
 // as a separate FaceSpaceCell entry.
 //
