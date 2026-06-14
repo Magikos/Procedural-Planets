@@ -1,0 +1,10 @@
+# Codex cannot redirect only its native memory directory; CODEX_HOME also
+# contains credentials, sessions, logs, and other machine-local state.
+# This repository uses the committed .agent-memory tree through AGENTS.md.
+
+[features]
+memories = true
+
+[memories]
+generate_memories = false
+use_memories = false

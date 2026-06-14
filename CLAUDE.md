@@ -1,3 +1,5 @@
+@.agent-memory/MEMORY.md
+
 # Project rules
 
 This file captures the agreed-upon rules for the ProceduralPlanets codebase. It is loaded into every Claude session. Rules are operative — read them as "do this / don't do that," not as suggestions. If a rule conflicts with what you find in code, the rule wins (the code is drift to be corrected, not a counter-example).
