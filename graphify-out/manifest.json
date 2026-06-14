@@ -1,0 +1,1162 @@
+{
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Commands\\ConsoleBuiltins.cs": {
+    "mtime": 1781104109.0642514,
+    "ast_hash": "7e4d9970851fc6bc179bd63de1282651",
+    "semantic_hash": "7e4d9970851fc6bc179bd63de1282651"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Commands\\TestConsoleCommands.cs": {
+    "mtime": 1781104109.0673068,
+    "ast_hash": "a8933329fa6662fb45d2aa85e61792d9",
+    "semantic_hash": "a8933329fa6662fb45d2aa85e61792d9"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\ConsoleAnchor.cs": {
+    "mtime": 1781104109.0703034,
+    "ast_hash": "fffbf4f28568fc2e0ba77fb9ca4c39ed",
+    "semantic_hash": "fffbf4f28568fc2e0ba77fb9ca4c39ed"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\ConsoleAsyncRunner.cs": {
+    "mtime": 1781386527.3437605,
+    "ast_hash": "583fe616687f191122254678d93a66be",
+    "semantic_hash": "583fe616687f191122254678d93a66be"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\ConsoleController.cs": {
+    "mtime": 1781390025.0200448,
+    "ast_hash": "577927e740cf8a5728e0e102bb9325b4",
+    "semantic_hash": "577927e740cf8a5728e0e102bb9325b4"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\ConsoleDebugModule.cs": {
+    "mtime": 1781104109.0783682,
+    "ast_hash": "1bb1c413879435d17d4bdf1befb24b1e",
+    "semantic_hash": "1bb1c413879435d17d4bdf1befb24b1e"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\ConsoleEvents.cs": {
+    "mtime": 1781104109.0823994,
+    "ast_hash": "b8c829acecb595f933cfa835ed3e27ce",
+    "semantic_hash": "b8c829acecb595f933cfa835ed3e27ce"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\ConsoleHistory.cs": {
+    "mtime": 1781104109.0859203,
+    "ast_hash": "61ec6c2f77c5719b35c9dc17520de973",
+    "semantic_hash": "61ec6c2f77c5719b35c9dc17520de973"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\ConsoleInputBuffer.cs": {
+    "mtime": 1781104109.0904703,
+    "ast_hash": "0f1403134c06c81a3ff57d54f7ec56e9",
+    "semantic_hash": "0f1403134c06c81a3ff57d54f7ec56e9"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\ConsoleInputController.cs": {
+    "mtime": 1781389903.886518,
+    "ast_hash": "1fb61b860884d5ff9af9de73a2224473",
+    "semantic_hash": "1fb61b860884d5ff9af9de73a2224473"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\ConsoleInputLineFormatter.cs": {
+    "mtime": 1781385817.4931514,
+    "ast_hash": "6d12a51e35dfa2e877cfb7893da10f4d",
+    "semantic_hash": "6d12a51e35dfa2e877cfb7893da10f4d"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\ConsoleRenderer.cs": {
+    "mtime": 1781104109.0940022,
+    "ast_hash": "ba2e924ee49508b77ae54423278cb36c",
+    "semantic_hash": "ba2e924ee49508b77ae54423278cb36c"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\ConsoleScrollback.cs": {
+    "mtime": 1781104109.0980356,
+    "ast_hash": "fb3fb9e48c6a00b062bf4c5d0e45b6fd",
+    "semantic_hash": "fb3fb9e48c6a00b062bf4c5d0e45b6fd"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\ConsoleTheme.cs": {
+    "mtime": 1781104109.1017134,
+    "ast_hash": "5577ce0d67336e8e668b15857bfcb831",
+    "semantic_hash": "5577ce0d67336e8e668b15857bfcb831"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\DebugConsoleBootstrap.cs": {
+    "mtime": 1781104109.1047254,
+    "ast_hash": "1ebf375399724390eb4db8f6b1182fe8",
+    "semantic_hash": "1ebf375399724390eb4db8f6b1182fe8"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\IConsoleService.cs": {
+    "mtime": 1781104109.1077533,
+    "ast_hash": "07ab405b08d8e4ed18a7bc244a22ab18",
+    "semantic_hash": "07ab405b08d8e4ed18a7bc244a22ab18"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Intellisense\\BoolCompletionProvider.cs": {
+    "mtime": 1781104109.115839,
+    "ast_hash": "0767b78d577c9b6f5c20c073025a411e",
+    "semantic_hash": "0767b78d577c9b6f5c20c073025a411e"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Intellisense\\CommandNamesProvider.cs": {
+    "mtime": 1781104109.1188927,
+    "ast_hash": "1402fa3a4ef66754ed66078636a744c5",
+    "semantic_hash": "1402fa3a4ef66754ed66078636a744c5"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Intellisense\\CompletionRanker.cs": {
+    "mtime": 1781104109.1224637,
+    "ast_hash": "a18772ce9237f77d6bdd306c3559ab9d",
+    "semantic_hash": "a18772ce9237f77d6bdd306c3559ab9d"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Intellisense\\DebugCaptureSetNamesProvider.cs": {
+    "mtime": 1781104109.1259744,
+    "ast_hash": "00e1d48298009c9f86edf22f908e1835",
+    "semantic_hash": "00e1d48298009c9f86edf22f908e1835"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Intellisense\\DebugModeNamesProvider.cs": {
+    "mtime": 1781104109.1301389,
+    "ast_hash": "91f28bd08eeaef94ed79e14c8ef8932f",
+    "semantic_hash": "91f28bd08eeaef94ed79e14c8ef8932f"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Intellisense\\EnumCompletionProvider.cs": {
+    "mtime": 1781104109.1326597,
+    "ast_hash": "50d966e7ead714628671d80ea8c446e7",
+    "semantic_hash": "50d966e7ead714628671d80ea8c446e7"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Intellisense\\IConsoleCompletionProvider.cs": {
+    "mtime": 1781104109.1387491,
+    "ast_hash": "75244da47c2d2f83c66f61233fb20c45",
+    "semantic_hash": "75244da47c2d2f83c66f61233fb20c45"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Intellisense\\IntellisenseEngine.cs": {
+    "mtime": 1781104109.142272,
+    "ast_hash": "8836c2a0895b62f27c62c2f5b4515b09",
+    "semantic_hash": "8836c2a0895b62f27c62c2f5b4515b09"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Intellisense\\Suggestion.cs": {
+    "mtime": 1781104109.1468115,
+    "ast_hash": "2c4477391457f2bd28949263cfd44fd0",
+    "semantic_hash": "2c4477391457f2bd28949263cfd44fd0"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Registry\\CommandData.cs": {
+    "mtime": 1781104109.154428,
+    "ast_hash": "7f38d61f91ba91aeb2b40605051a65af",
+    "semantic_hash": "7f38d61f91ba91aeb2b40605051a65af"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Registry\\CommandExecutor.cs": {
+    "mtime": 1781104109.15847,
+    "ast_hash": "622796a6fc7edf654ca2eed783fbc035",
+    "semantic_hash": "622796a6fc7edf654ca2eed783fbc035"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Registry\\CommandParser.cs": {
+    "mtime": 1781104109.1624994,
+    "ast_hash": "d3a62b52f97235dedae00e187459ff11",
+    "semantic_hash": "d3a62b52f97235dedae00e187459ff11"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Registry\\CommandPrefixAttribute.cs": {
+    "mtime": 1781104109.1675408,
+    "ast_hash": "b857a52efcc73d34881229667182fd90",
+    "semantic_hash": "b857a52efcc73d34881229667182fd90"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Registry\\CompletionSourceAttribute.cs": {
+    "mtime": 1781104109.1700602,
+    "ast_hash": "83a07f2ac1e968b155f61083195ab407",
+    "semantic_hash": "83a07f2ac1e968b155f61083195ab407"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Registry\\ConsoleArgumentParsers.cs": {
+    "mtime": 1781104109.1746378,
+    "ast_hash": "fd0ea67990aab87955d0361c27329dec",
+    "semantic_hash": "fd0ea67990aab87955d0361c27329dec"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Registry\\ConsoleCommandAttribute.cs": {
+    "mtime": 1781104109.178238,
+    "ast_hash": "18f5c1f7c311da0d165d2fb6bc70dcad",
+    "semantic_hash": "18f5c1f7c311da0d165d2fb6bc70dcad"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Registry\\ConsoleRegistry.cs": {
+    "mtime": 1781104109.1822724,
+    "ast_hash": "86fd4279b8bb77ed3e205b6fc5e5fcd3",
+    "semantic_hash": "86fd4279b8bb77ed3e205b6fc5e5fcd3"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Registry\\ExpressionEvaluator.cs": {
+    "mtime": 1781104109.1863184,
+    "ast_hash": "1839f0eb034cc95d8d938ffd7081de60",
+    "semantic_hash": "1839f0eb034cc95d8d938ffd7081de60"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Registry\\IConsoleArgumentParser.cs": {
+    "mtime": 1781104109.1903915,
+    "ast_hash": "0d43e6142bb45956d65d02cbce97c645",
+    "semantic_hash": "0d43e6142bb45956d65d02cbce97c645"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Registry\\MonoTargetType.cs": {
+    "mtime": 1781104109.195432,
+    "ast_hash": "d5a6a70ef13aa5265b4eccd852b506c8",
+    "semantic_hash": "d5a6a70ef13aa5265b4eccd852b506c8"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Registry\\ParamDescriptionAttribute.cs": {
+    "mtime": 1781104109.2000391,
+    "ast_hash": "6a0e5a9aa6d1e46e26d53323db1b1df2",
+    "semantic_hash": "6a0e5a9aa6d1e46e26d53323db1b1df2"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Registry\\ParameterData.cs": {
+    "mtime": 1781104109.2035444,
+    "ast_hash": "67d8a4c048b58a5cd54c52c2c17c1348",
+    "semantic_hash": "67d8a4c048b58a5cd54c52c2c17c1348"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Text\\ConsoleColorTagParser.cs": {
+    "mtime": 1781104109.2096357,
+    "ast_hash": "72ddb84027e550a564f774a795b1b190",
+    "semantic_hash": "72ddb84027e550a564f774a795b1b190"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Text\\ConsoleColors.cs": {
+    "mtime": 1781104109.2141607,
+    "ast_hash": "410e78e201d9b011dfc9bd5daa52ded6",
+    "semantic_hash": "410e78e201d9b011dfc9bd5daa52ded6"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Console\\Text\\TextSpan.cs": {
+    "mtime": 1781104109.2172005,
+    "ast_hash": "fd9175d2cee62790460618e4aef01d31",
+    "semantic_hash": "fd9175d2cee62790460618e4aef01d31"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Data\\BiomeTypes.cs": {
+    "mtime": 1781104109.2237217,
+    "ast_hash": "2717345821ad2ab4efee7995fc20198d",
+    "semantic_hash": "2717345821ad2ab4efee7995fc20198d"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Data\\ChunkCoord.cs": {
+    "mtime": 1779392861.2419693,
+    "ast_hash": "6277606e881904494a46c1013ef9d50b",
+    "semantic_hash": "6277606e881904494a46c1013ef9d50b"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Data\\PlanetResolution.cs": {
+    "mtime": 1781104109.2257524,
+    "ast_hash": "86a349bb614ca36dd1900369acfe4e94",
+    "semantic_hash": "86a349bb614ca36dd1900369acfe4e94"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Events\\CelestialEvents.cs": {
+    "mtime": 1781104109.23093,
+    "ast_hash": "80f344379e17b5e2166523df16a836aa",
+    "semantic_hash": "80f344379e17b5e2166523df16a836aa"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Events\\DebugActionEvents.cs": {
+    "mtime": 1781381631.3017292,
+    "ast_hash": "1e149e888dd9d4f41c5de1cbe5c1b337",
+    "semantic_hash": "1e149e888dd9d4f41c5de1cbe5c1b337"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Events\\DebugCommandRequestedEvent.cs": {
+    "mtime": 1781381630.0885108,
+    "ast_hash": "82a382794543359a82026a87a8714da7",
+    "semantic_hash": "82a382794543359a82026a87a8714da7"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Events\\EventBus.cs": {
+    "mtime": 1781104109.2431166,
+    "ast_hash": "e4defa30f98d86e51a6dfb0995de9bb8",
+    "semantic_hash": "e4defa30f98d86e51a6dfb0995de9bb8"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Events\\EventBusAutoBinder.cs": {
+    "mtime": 1781104109.2456372,
+    "ast_hash": "f4216e8eaf9dbe2ef485c6315b1fb425",
+    "semantic_hash": "f4216e8eaf9dbe2ef485c6315b1fb425"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Events\\EventBusProcessor.cs": {
+    "mtime": 1781401117.7764826,
+    "ast_hash": "a7e09f56305dda163be829e4988d1518",
+    "semantic_hash": "a7e09f56305dda163be829e4988d1518"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Events\\EventBusRegistry.cs": {
+    "mtime": 1781104109.2527747,
+    "ast_hash": "9a04cdb93082e91b762b0c3ed1ba7bb5",
+    "semantic_hash": "9a04cdb93082e91b762b0c3ed1ba7bb5"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Events\\IGameEvent.cs": {
+    "mtime": 1779392861.2571526,
+    "ast_hash": "30d36d44393e5d30c57834bc5bd2f893",
+    "semantic_hash": "30d36d44393e5d30c57834bc5bd2f893"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Events\\IProgressEvent.cs": {
+    "mtime": 1781104109.2598503,
+    "ast_hash": "958c2974cf8f34f5b9d989fa84c3f532",
+    "semantic_hash": "958c2974cf8f34f5b9d989fa84c3f532"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Events\\PlanetGeneratedEvent.cs": {
+    "mtime": 1781104109.2644126,
+    "ast_hash": "a14dfa6541d25791605627a081f852a4",
+    "semantic_hash": "a14dfa6541d25791605627a081f852a4"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Events\\ProgressEvent.cs": {
+    "mtime": 1781104109.2669377,
+    "ast_hash": "75ea847b1a02767997e319967d1e0fab",
+    "semantic_hash": "75ea847b1a02767997e319967d1e0fab"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Events\\ScaleReferenceMarkerEvents.cs": {
+    "mtime": 1781104109.2709703,
+    "ast_hash": "c7cca073589555c214bb2aee4618f15d",
+    "semantic_hash": "c7cca073589555c214bb2aee4618f15d"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Events\\SettingsChangedEvent.cs": {
+    "mtime": 1781146367.5714598,
+    "ast_hash": "8b9b87460f6fe37d83f54772f2b46c68",
+    "semantic_hash": "8b9b87460f6fe37d83f54772f2b46c68"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Events\\WeatherEvents.cs": {
+    "mtime": 1781104109.2750146,
+    "ast_hash": "c70d91dbe12289491e86e5827270474d",
+    "semantic_hash": "c70d91dbe12289491e86e5827270474d"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IBiomeProvider.cs": {
+    "mtime": 1781104109.2805681,
+    "ast_hash": "ce14d99f09dce264129679c42956a6ec",
+    "semantic_hash": "ce14d99f09dce264129679c42956a6ec"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\ICelestialTimeController.cs": {
+    "mtime": 1781394548.6150558,
+    "ast_hash": "f9d18f2d046d6c2a6bda3209befef2bb",
+    "semantic_hash": "f9d18f2d046d6c2a6bda3209befef2bb"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IEarlyInitialize.cs": {
+    "mtime": 1781145677.2159598,
+    "ast_hash": "b6afb048d3db3c7588a65132dabf16fa",
+    "semantic_hash": "b6afb048d3db3c7588a65132dabf16fa"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IFaceMeshSampler.cs": {
+    "mtime": 1781104109.2948105,
+    "ast_hash": "543248f1c69ca550fa88b27b6fc4a493",
+    "semantic_hash": "543248f1c69ca550fa88b27b6fc4a493"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IGrassDebugStatsProvider.cs": {
+    "mtime": 1781320022.9338408,
+    "ast_hash": "2f79310425093edd5fe5f0dde411f65e",
+    "semantic_hash": "2f79310425093edd5fe5f0dde411f65e"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IGrassInteractor.cs": {
+    "mtime": 1781104109.302183,
+    "ast_hash": "2ca57dfd90dd60fb88d47ae294aa9dbe",
+    "semantic_hash": "2ca57dfd90dd60fb88d47ae294aa9dbe"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IGrassNearFieldStatsProvider.cs": {
+    "mtime": 1781319613.1475077,
+    "ast_hash": "66551302f526ae098882c4a4480f60ac",
+    "semantic_hash": "66551302f526ae098882c4a4480f60ac"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IInputMapService.cs": {
+    "mtime": 1781104109.310493,
+    "ast_hash": "0841ea6825c9ae743214410e7ac5b2cd",
+    "semantic_hash": "0841ea6825c9ae743214410e7ac5b2cd"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\ILateInitialize.cs": {
+    "mtime": 1781145679.8179185,
+    "ast_hash": "0c33541a5d97c8b3cbab40b60cb600f5",
+    "semantic_hash": "0c33541a5d97c8b3cbab40b60cb600f5"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\ILoadingManager.cs": {
+    "mtime": 1781379935.7242362,
+    "ast_hash": "342ed5b95081dc663e502a53dddae7d0",
+    "semantic_hash": "342ed5b95081dc663e502a53dddae7d0"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\ILogger.cs": {
+    "mtime": 1779392861.275449,
+    "ast_hash": "24f7d71a95e87c9cbc7d445bba6b0637",
+    "semantic_hash": "24f7d71a95e87c9cbc7d445bba6b0637"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IMoistureProvider.cs": {
+    "mtime": 1781104109.3231392,
+    "ast_hash": "57c26ca8015d026827edcdd560ef5379",
+    "semantic_hash": "57c26ca8015d026827edcdd560ef5379"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IPlanet.cs": {
+    "mtime": 1781104109.3261702,
+    "ast_hash": "30282fce98c4c06d519b5b6b0bd01616",
+    "semantic_hash": "30282fce98c4c06d519b5b6b0bd01616"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IPlanetSurfaceProvider.cs": {
+    "mtime": 1781104109.330716,
+    "ast_hash": "8f25130a2bd8994570244818cc551224",
+    "semantic_hash": "8f25130a2bd8994570244818cc551224"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IPlanetSurfaceSampler.cs": {
+    "mtime": 1781104109.3347485,
+    "ast_hash": "32e3e6e425d2a8fa655e99a43a65bd98",
+    "semantic_hash": "32e3e6e425d2a8fa655e99a43a65bd98"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IPrecipitationDebugControl.cs": {
+    "mtime": 1781140303.543177,
+    "ast_hash": "84732ba3054df4d0d06ff1ee170c8004",
+    "semantic_hash": "84732ba3054df4d0d06ff1ee170c8004"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IProgressHandle.cs": {
+    "mtime": 1781104109.3424168,
+    "ast_hash": "00984c3783b03e955f1f87e4f729ef8a",
+    "semantic_hash": "00984c3783b03e955f1f87e4f729ef8a"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IProgressReporter.cs": {
+    "mtime": 1781104109.3525622,
+    "ast_hash": "bcfc1c8db30778dd9712e163ea9c73c0",
+    "semantic_hash": "bcfc1c8db30778dd9712e163ea9c73c0"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IRainParticleRenderer.cs": {
+    "mtime": 1781104109.3560946,
+    "ast_hash": "838a2c9aa91cfe90ae148501ec1263c9",
+    "semantic_hash": "838a2c9aa91cfe90ae148501ec1263c9"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\ISeedProvider.cs": {
+    "mtime": 1781104109.3611448,
+    "ast_hash": "eb5d35308536f70241fda9277fd44ef0",
+    "semantic_hash": "eb5d35308536f70241fda9277fd44ef0"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\ISettingsService.cs": {
+    "mtime": 1781379857.1911614,
+    "ast_hash": "cb927906ca3d8945a3176682710bc27b",
+    "semantic_hash": "cb927906ca3d8945a3176682710bc27b"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\ITemperatureProvider.cs": {
+    "mtime": 1781104109.3631678,
+    "ast_hash": "2040b0f30476fee52eb7013cd7d77f64",
+    "semantic_hash": "2040b0f30476fee52eb7013cd7d77f64"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\ITerrainProvider.cs": {
+    "mtime": 1781104109.369275,
+    "ast_hash": "d34db3cda1c95047774c7c5e432b7fa5",
+    "semantic_hash": "d34db3cda1c95047774c7c5e432b7fa5"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IWeatherProvider.cs": {
+    "mtime": 1781104109.3718085,
+    "ast_hash": "db943d70dd6af481ae700bf561d3f2d3",
+    "semantic_hash": "db943d70dd6af481ae700bf561d3f2d3"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IWorldAction.cs": {
+    "mtime": 1781104109.3759236,
+    "ast_hash": "4cb01036756920be4a5d5e4dcca654e1",
+    "semantic_hash": "4cb01036756920be4a5d5e4dcca654e1"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Interfaces\\IWorldActionManager.cs": {
+    "mtime": 1781104109.377935,
+    "ast_hash": "08facfb9b7b1ca920f0ae2fe9712c159",
+    "semantic_hash": "08facfb9b7b1ca920f0ae2fe9712c159"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\QualityController.cs": {
+    "mtime": 1781104109.3819692,
+    "ast_hash": "bee8cf4e383944149e1cb7aa0dbebe91",
+    "semantic_hash": "bee8cf4e383944149e1cb7aa0dbebe91"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\AtmosphereDebugModule.cs": {
+    "mtime": 1781363729.4156382,
+    "ast_hash": "f6f6818e56290aa07bdd864ea18a32fb",
+    "semantic_hash": "f6f6818e56290aa07bdd864ea18a32fb"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\BiomeDebugModule.cs": {
+    "mtime": 1781367926.244325,
+    "ast_hash": "b6febe1dd0e69a28f14456b2d959cc90",
+    "semantic_hash": "b6febe1dd0e69a28f14456b2d959cc90"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\CameraTeleportStore.cs": {
+    "mtime": 1781376178.4216385,
+    "ast_hash": "d79e9fd04ab433d726ffd50b61db855d",
+    "semantic_hash": "d79e9fd04ab433d726ffd50b61db855d"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\CloudDebugModule.cs": {
+    "mtime": 1781399448.1099405,
+    "ast_hash": "ca2c074a17f94dc57d869e62c3553c8c",
+    "semantic_hash": "ca2c074a17f94dc57d869e62c3553c8c"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\Commands\\ActionCommands.cs": {
+    "mtime": 1781104109.388552,
+    "ast_hash": "d5d7140998b0e42fdfc1c66785d4630c",
+    "semantic_hash": "d5d7140998b0e42fdfc1c66785d4630c"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\DebugCaptureController.cs": {
+    "mtime": 1781399856.5724816,
+    "ast_hash": "abe7e74c59d3cc53e41a917021b07692",
+    "semantic_hash": "abe7e74c59d3cc53e41a917021b07692"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\DebugCaptureMetadataBuilder.cs": {
+    "mtime": 1781398658.8359761,
+    "ast_hash": "c783d94829882cd1f3722dd5cdd59b9b",
+    "semantic_hash": "c783d94829882cd1f3722dd5cdd59b9b"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\DebugCommandProvider.cs": {
+    "mtime": 1781381658.3447628,
+    "ast_hash": "b3e06ebdc616f897b68d9d3087613d07",
+    "semantic_hash": "b3e06ebdc616f897b68d9d3087613d07"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\DebugInputRelay.cs": {
+    "mtime": 1781381656.0340538,
+    "ast_hash": "86fb091a011e5bc23030c775427ac791",
+    "semantic_hash": "86fb091a011e5bc23030c775427ac791"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\DebugModeConstants.cs": {
+    "mtime": 1781399434.185387,
+    "ast_hash": "8eb7a40ccbb7eada35c5965e862e69b9",
+    "semantic_hash": "8eb7a40ccbb7eada35c5965e862e69b9"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\DebugRegistry.cs": {
+    "mtime": 1781399856.5724816,
+    "ast_hash": "74f8680ce1472b984fa44058ad4719a8",
+    "semantic_hash": "74f8680ce1472b984fa44058ad4719a8"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\DebugScreenshotFiles.cs": {
+    "mtime": 1781226369.2409208,
+    "ast_hash": "a1f4da05bc1f4c073fb3351fecb9fe8c",
+    "semantic_hash": "a1f4da05bc1f4c073fb3351fecb9fe8c"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\FrameTimingModule.cs": {
+    "mtime": 1781398658.8255074,
+    "ast_hash": "d38c21d1ebcde5de9bb6e23a64cfacb0",
+    "semantic_hash": "d38c21d1ebcde5de9bb6e23a64cfacb0"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\FreeCameraController.cs": {
+    "mtime": 1781376387.140511,
+    "ast_hash": "67f5b52c270d540ba7fc61d89045689e",
+    "semantic_hash": "67f5b52c270d540ba7fc61d89045689e"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\GameBootstrap.cs": {
+    "mtime": 1781401117.7754836,
+    "ast_hash": "c240037599101c820318cdb741101ec2",
+    "semantic_hash": "c240037599101c820318cdb741101ec2"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\GrassDebugModule.cs": {
+    "mtime": 1781366657.7099159,
+    "ast_hash": "30e7955d93ebc7fa008bd02b7a08b21d",
+    "semantic_hash": "30e7955d93ebc7fa008bd02b7a08b21d"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ICameraRigContext.cs": {
+    "mtime": 1781104109.4245367,
+    "ast_hash": "291245eefc916eeb316c8a7f2e21681d",
+    "semantic_hash": "291245eefc916eeb316c8a7f2e21681d"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\IDebugCommandProvider.cs": {
+    "mtime": 1781104109.4306054,
+    "ast_hash": "f058fbee7f3edd24f0a74df36721fa76",
+    "semantic_hash": "f058fbee7f3edd24f0a74df36721fa76"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\InitGraph.cs": {
+    "mtime": 1781145673.851881,
+    "ast_hash": "4d3b21294388ca01fba961eec22e4f3c",
+    "semantic_hash": "4d3b21294388ca01fba961eec22e4f3c"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\InputMapService.cs": {
+    "mtime": 1781104109.4356687,
+    "ast_hash": "ea96b9cb143c5b753375e648a4df05b9",
+    "semantic_hash": "ea96b9cb143c5b753375e648a4df05b9"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\LoadingManager.cs": {
+    "mtime": 1781379900.1499262,
+    "ast_hash": "d3d7e5f5516e7f665f08a7652cea70eb",
+    "semantic_hash": "d3d7e5f5516e7f665f08a7652cea70eb"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\MemoryDebugModule.cs": {
+    "mtime": 1781293184.8266425,
+    "ast_hash": "ee92a97fc5510dbfe00450dc2c17aa70",
+    "semantic_hash": "ee92a97fc5510dbfe00450dc2c17aa70"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\OceanDebugModeWriter.cs": {
+    "mtime": 1781223601.723294,
+    "ast_hash": "1042f18494f598f1ea153050f607fd93",
+    "semantic_hash": "1042f18494f598f1ea153050f607fd93"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ProgressHandle.cs": {
+    "mtime": 1781412198.583079,
+    "ast_hash": "082f1aa40a0803154b85714173fb0be6",
+    "semantic_hash": "082f1aa40a0803154b85714173fb0be6"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ProgressTracker.cs": {
+    "mtime": 1781374597.4964876,
+    "ast_hash": "f02b746b366f2061f02ed22a243cd12f",
+    "semantic_hash": "f02b746b366f2061f02ed22a243cd12f"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ScaleReferenceDebugModule.cs": {
+    "mtime": 1781321576.864197,
+    "ast_hash": "a5dbcbec62ed55c00320d8e2d3f7eeae",
+    "semantic_hash": "a5dbcbec62ed55c00320d8e2d3f7eeae"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ScaleReferenceMarkers.cs": {
+    "mtime": 1781376387.1425304,
+    "ast_hash": "82c162818dcc7781579c1511781f2942",
+    "semantic_hash": "82c162818dcc7781579c1511781f2942"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\SceneBootstrap.cs": {
+    "mtime": 1781401246.83796,
+    "ast_hash": "cf08a181aceadff66b35188599eccc99",
+    "semantic_hash": "cf08a181aceadff66b35188599eccc99"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\SeedProvider.cs": {
+    "mtime": 1781104109.4696822,
+    "ast_hash": "951f8f5378a555c0c09b5f771e9f28b0",
+    "semantic_hash": "951f8f5378a555c0c09b5f771e9f28b0"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ServiceLocator.cs": {
+    "mtime": 1781379874.5347013,
+    "ast_hash": "f972aab8f0ce31e47225fa24277cd5b9",
+    "semantic_hash": "f972aab8f0ce31e47225fa24277cd5b9"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\SettingsProvider.cs": {
+    "mtime": 1781376130.168175,
+    "ast_hash": "0c5aef80ba08fc1e940ab43308be2f24",
+    "semantic_hash": "0c5aef80ba08fc1e940ab43308be2f24"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\SettingsService.cs": {
+    "mtime": 1781379857.1911614,
+    "ast_hash": "4a813a6da0e4725617ad31df180942d8",
+    "semantic_hash": "4a813a6da0e4725617ad31df180942d8"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ShaderGlobalIds.Atmosphere.cs": {
+    "mtime": 1781364450.5484724,
+    "ast_hash": "0bd60ade71053736314479c41e9087e9",
+    "semantic_hash": "0bd60ade71053736314479c41e9087e9"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ShaderGlobalIds.Biome.cs": {
+    "mtime": 1781367822.8117766,
+    "ast_hash": "f0d09329adfcd49d1781225082017461",
+    "semantic_hash": "f0d09329adfcd49d1781225082017461"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ShaderGlobalIds.Celestial.cs": {
+    "mtime": 1781368539.4785264,
+    "ast_hash": "0b099368320553d942bfb6c8850eb330",
+    "semantic_hash": "0b099368320553d942bfb6c8850eb330"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ShaderGlobalIds.Cloud.cs": {
+    "mtime": 1781365256.8890233,
+    "ast_hash": "a3f1499545394471c91601898e78ab46",
+    "semantic_hash": "a3f1499545394471c91601898e78ab46"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ShaderGlobalIds.Core.cs": {
+    "mtime": 1781363307.251282,
+    "ast_hash": "d2e949a7436505037ffa9161593a6b20",
+    "semantic_hash": "d2e949a7436505037ffa9161593a6b20"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ShaderGlobalIds.Grass.cs": {
+    "mtime": 1781366588.4638195,
+    "ast_hash": "f481d426036bb2e93b0f8aa567f937c1",
+    "semantic_hash": "f481d426036bb2e93b0f8aa567f937c1"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ShaderGlobalIds.Precipitation.cs": {
+    "mtime": 1781367068.7890763,
+    "ast_hash": "263380db0c42950e8ae840111678b23a",
+    "semantic_hash": "263380db0c42950e8ae840111678b23a"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ShaderGlobalIds.Terrain.cs": {
+    "mtime": 1781367812.981333,
+    "ast_hash": "bc9ede15cf1e1504356d821597b99084",
+    "semantic_hash": "bc9ede15cf1e1504356d821597b99084"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ShaderGlobalIds.Water.cs": {
+    "mtime": 1781398112.2126386,
+    "ast_hash": "2acf6665f6b9d20c2744a088680375c2",
+    "semantic_hash": "2acf6665f6b9d20c2744a088680375c2"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\ShaderGlobalsController.cs": {
+    "mtime": 1781398112.2136462,
+    "ast_hash": "8d23eea4929a5d6d6de76ee234fc1305",
+    "semantic_hash": "8d23eea4929a5d6d6de76ee234fc1305"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\TerrainDebugModule.cs": {
+    "mtime": 1781367876.9189308,
+    "ast_hash": "1bbe2e87753f25b487104bb5b62ba060",
+    "semantic_hash": "1bbe2e87753f25b487104bb5b62ba060"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\UnityLogger.cs": {
+    "mtime": 1781104109.4812896,
+    "ast_hash": "8d0c629f7af653c60b96453ea57d0b09",
+    "semantic_hash": "8d0c629f7af653c60b96453ea57d0b09"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\WaterDebugModule.cs": {
+    "mtime": 1781364485.6887417,
+    "ast_hash": "076eba92e47b37ee85021c59876f72b5",
+    "semantic_hash": "076eba92e47b37ee85021c59876f72b5"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\WaterDebugRegistration.cs": {
+    "mtime": 1781399434.1884382,
+    "ast_hash": "e3facc787e81a7ba55ac85547ca2238f",
+    "semantic_hash": "e3facc787e81a7ba55ac85547ca2238f"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\WaterMeshAnalysis.cs": {
+    "mtime": 1781361520.587263,
+    "ast_hash": "666f5bf0149bf8f5edfb1aec5db4261c",
+    "semantic_hash": "666f5bf0149bf8f5edfb1aec5db4261c"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\WaterWakeController.cs": {
+    "mtime": 1781376578.543172,
+    "ast_hash": "a7b841fa21b2ead56c52f9b66438a89d",
+    "semantic_hash": "a7b841fa21b2ead56c52f9b66438a89d"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\WaterWakeEmitter.cs": {
+    "mtime": 1781104109.4969277,
+    "ast_hash": "dfdf4d21b99e22696c9f720f3b9debb1",
+    "semantic_hash": "dfdf4d21b99e22696c9f720f3b9debb1"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Services\\WorldActionManager.cs": {
+    "mtime": 1781376178.4276614,
+    "ast_hash": "09d567cbbdcea05f012786cdc23a739f",
+    "semantic_hash": "09d567cbbdcea05f012786cdc23a739f"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Text\\SDFFontAsset.cs": {
+    "mtime": 1781104109.5065117,
+    "ast_hash": "713c280e33e98df03ac057544c281e77",
+    "semantic_hash": "713c280e33e98df03ac057544c281e77"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Text\\SDFGlyph.cs": {
+    "mtime": 1781104109.5100434,
+    "ast_hash": "acf1d673585adc926bcca155db65f636",
+    "semantic_hash": "acf1d673585adc926bcca155db65f636"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Text\\SDFTextMeshBuilder.cs": {
+    "mtime": 1781104109.514555,
+    "ast_hash": "fea4fdb69c9f81c030fca31df16b77a5",
+    "semantic_hash": "fea4fdb69c9f81c030fca31df16b77a5"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Text\\SDFTextRenderer.cs": {
+    "mtime": 1781104109.5181036,
+    "ast_hash": "323f82a8894c45ddb0da983e12f93d1f",
+    "semantic_hash": "323f82a8894c45ddb0da983e12f93d1f"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Utilities\\CoordinateConverter.cs": {
+    "mtime": 1779392861.3230066,
+    "ast_hash": "6beb9db3c5d8cd6e5f1ae77bb8205693",
+    "semantic_hash": "6beb9db3c5d8cd6e5f1ae77bb8205693"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Utilities\\CubeFaceTopology.cs": {
+    "mtime": 1781321105.8278308,
+    "ast_hash": "0e1c71f4154255a8c97f059c183f076b",
+    "semantic_hash": "0e1c71f4154255a8c97f059c183f076b"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Utilities\\CubeSphereMeshBuilder.cs": {
+    "mtime": 1781104109.5283296,
+    "ast_hash": "f8a6f9602e2c5199c177344808746ed9",
+    "semantic_hash": "f8a6f9602e2c5199c177344808746ed9"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Core\\Utilities\\ObjectPool.cs": {
+    "mtime": 1781104109.5339491,
+    "ast_hash": "c5fc911ee7d2c463891d3adc2f18985b",
+    "semantic_hash": "c5fc911ee7d2c463891d3adc2f18985b"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Atmosphere\\AtmosphereController.cs": {
+    "mtime": 1781379309.5241659,
+    "ast_hash": "ced362ef058703fffea1346d8b2994c2",
+    "semantic_hash": "ced362ef058703fffea1346d8b2994c2"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Atmosphere\\AtmosphereDiagnostics.cs": {
+    "mtime": 1781363717.3448875,
+    "ast_hash": "b358d90e54c4f1b2a253a2dfd276d2db",
+    "semantic_hash": "b358d90e54c4f1b2a253a2dfd276d2db"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Atmosphere\\AtmosphereDto.cs": {
+    "mtime": 1781181370.249118,
+    "ast_hash": "dd86cbaab71eb64b9dc6df7152d73dce",
+    "semantic_hash": "dd86cbaab71eb64b9dc6df7152d73dce"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Atmosphere\\AtmosphereRenderFeature.cs": {
+    "mtime": 1781398658.833967,
+    "ast_hash": "83a21d994e9acc703ebaa6000e08f8a8",
+    "semantic_hash": "83a21d994e9acc703ebaa6000e08f8a8"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Atmosphere\\AtmosphereRenderPass.cs": {
+    "mtime": 1781364544.0322282,
+    "ast_hash": "060f86c16962ef59521244c37de59a9b",
+    "semantic_hash": "060f86c16962ef59521244c37de59a9b"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Atmosphere\\AtmosphereSettings.cs": {
+    "mtime": 1781104109.5557454,
+    "ast_hash": "02d2714304e8d13ae809ed72bc5a05b0",
+    "semantic_hash": "02d2714304e8d13ae809ed72bc5a05b0"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Atmosphere\\StarRenderFeature.cs": {
+    "mtime": 1781104109.558778,
+    "ast_hash": "f8d49ab826f75b3c452acdac505e2419",
+    "semantic_hash": "f8d49ab826f75b3c452acdac505e2419"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Biomes\\BiomeConstants.cs": {
+    "mtime": 1781211743.634401,
+    "ast_hash": "b8927610c4260926622f3b13738bc40e",
+    "semantic_hash": "b8927610c4260926622f3b13738bc40e"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Biomes\\BiomeDefinition.cs": {
+    "mtime": 1781104109.564897,
+    "ast_hash": "6010ba7255649e6d73df340892424aa6",
+    "semantic_hash": "6010ba7255649e6d73df340892424aa6"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Biomes\\BiomeDefinitionDto.cs": {
+    "mtime": 1781212888.6405494,
+    "ast_hash": "54add1d8244cf0f4e4f6eb41500a33e6",
+    "semantic_hash": "54add1d8244cf0f4e4f6eb41500a33e6"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Biomes\\BiomeDto.cs": {
+    "mtime": 1781216840.6270645,
+    "ast_hash": "b670df5099a5614be9166c7d1cff3adf",
+    "semantic_hash": "b670df5099a5614be9166c7d1cff3adf"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Biomes\\BiomeLookupData.cs": {
+    "mtime": 1781215320.854713,
+    "ast_hash": "8c9f1e05f206e17515e48d26fb2dae4f",
+    "semantic_hash": "8c9f1e05f206e17515e48d26fb2dae4f"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Biomes\\BiomeMapBaker.cs": {
+    "mtime": 1781394674.92517,
+    "ast_hash": "78a04141a66317e94a163c99fe5c4030",
+    "semantic_hash": "78a04141a66317e94a163c99fe5c4030"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Biomes\\BiomeRegistry.cs": {
+    "mtime": 1781214649.6917934,
+    "ast_hash": "70bf4402720049c70fa0b8cb760894d4",
+    "semantic_hash": "70bf4402720049c70fa0b8cb760894d4"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Biomes\\BiomeRegistryDto.cs": {
+    "mtime": 1781214325.4850814,
+    "ast_hash": "d23f6b0132fe944323e6bc5637d1bff7",
+    "semantic_hash": "d23f6b0132fe944323e6bc5637d1bff7"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Biomes\\BiomeSettings.cs": {
+    "mtime": 1781216942.3436563,
+    "ast_hash": "81ed1756080dbd793d5698ac2c236545",
+    "semantic_hash": "81ed1756080dbd793d5698ac2c236545"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Biomes\\BiomeSurfaceTextureArrays.cs": {
+    "mtime": 1781367950.7530315,
+    "ast_hash": "4632c2080b84caa9d17debe7da4748a3",
+    "semantic_hash": "4632c2080b84caa9d17debe7da4748a3"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Biomes\\ClimateCommands.cs": {
+    "mtime": 1781216907.6632793,
+    "ast_hash": "bbde34d7d0524b69dad3dc929855f277",
+    "semantic_hash": "bbde34d7d0524b69dad3dc929855f277"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Biomes\\ClimateCurves.cs": {
+    "mtime": 1781216812.4334576,
+    "ast_hash": "ee4aed5296554d73d017760dcf765324",
+    "semantic_hash": "ee4aed5296554d73d017760dcf765324"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Biomes\\MoistureProvider.cs": {
+    "mtime": 1781104109.5969925,
+    "ast_hash": "a3dc1238f5a016ec7a9beb803143114e",
+    "semantic_hash": "a3dc1238f5a016ec7a9beb803143114e"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Biomes\\TemperatureProvider.cs": {
+    "mtime": 1781412425.1314526,
+    "ast_hash": "c43ff89add0029bf07a7f05a9853be4a",
+    "semantic_hash": "c43ff89add0029bf07a7f05a9853be4a"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\CelestialManager.cs": {
+    "mtime": 1781395130.073657,
+    "ast_hash": "633ecf8beff1222f50d747a230ee15ba",
+    "semantic_hash": "633ecf8beff1222f50d747a230ee15ba"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Clouds\\CloudConstants.cs": {
+    "mtime": 1781200008.9800577,
+    "ast_hash": "22c225c61d2b5f226b40ec5d42a8fc1e",
+    "semantic_hash": "22c225c61d2b5f226b40ec5d42a8fc1e"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Clouds\\CloudController.cs": {
+    "mtime": 1781379309.523643,
+    "ast_hash": "c15b3379af2b180355b0ed8947e324cd",
+    "semantic_hash": "c15b3379af2b180355b0ed8947e324cd"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Clouds\\CloudDebugState.cs": {
+    "mtime": 1781221215.8519502,
+    "ast_hash": "8f91bb69a9e90931d0bfa98aab49374e",
+    "semantic_hash": "8f91bb69a9e90931d0bfa98aab49374e"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Clouds\\CloudDto.cs": {
+    "mtime": 1781379309.5216277,
+    "ast_hash": "f32c707ac7026e865da4e9d454be2c2c",
+    "semantic_hash": "f32c707ac7026e865da4e9d454be2c2c"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Clouds\\CloudNoiseGenerator.cs": {
+    "mtime": 1781104109.616752,
+    "ast_hash": "b89316a28ca6b4f7ea775f71bad2e38d",
+    "semantic_hash": "b89316a28ca6b4f7ea775f71bad2e38d"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Clouds\\CloudRenderFeature.cs": {
+    "mtime": 1781398658.8314512,
+    "ast_hash": "89adc08d985380fd8359b3d31dc2c26c",
+    "semantic_hash": "89adc08d985380fd8359b3d31dc2c26c"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Clouds\\CloudSettings.cs": {
+    "mtime": 1781399856.5694249,
+    "ast_hash": "25532fd290f629689eb5fda9341cab12",
+    "semantic_hash": "25532fd290f629689eb5fda9341cab12"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Clouds\\SphericalWeatherGrid.cs": {
+    "mtime": 1781367210.1619174,
+    "ast_hash": "7f42e30a1053f2f702be3d94f6114505",
+    "semantic_hash": "7f42e30a1053f2f702be3d94f6114505"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\ColorGenerator.cs": {
+    "mtime": 1781412303.1989882,
+    "ast_hash": "2af54ebe5d76e50d16b48dd0985b760d",
+    "semantic_hash": "2af54ebe5d76e50d16b48dd0985b760d"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Grass\\CameraFollowGrassInteractor.cs": {
+    "mtime": 1781219058.7877407,
+    "ast_hash": "ea7424d922448875c23ca61e237e67e0",
+    "semantic_hash": "ea7424d922448875c23ca61e237e67e0"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Grass\\DebugGrassInteractor.cs": {
+    "mtime": 1781104109.6446044,
+    "ast_hash": "d3c5e57f55b56b8720b53ee604c10ac9",
+    "semantic_hash": "d3c5e57f55b56b8720b53ee604c10ac9"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Grass\\FaceSpaceCellRangeBuilder.cs": {
+    "mtime": 1781319977.5276902,
+    "ast_hash": "b23b66d64dcc7efa62e1899028ab2a4f",
+    "semantic_hash": "b23b66d64dcc7efa62e1899028ab2a4f"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Grass\\GrassBladeBufferPool.cs": {
+    "mtime": 1781404977.0299077,
+    "ast_hash": "675238858f85db1833d7728fc65ab54e",
+    "semantic_hash": "675238858f85db1833d7728fc65ab54e"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Grass\\GrassChunkRuntime.cs": {
+    "mtime": 1781405027.3733687,
+    "ast_hash": "0e58dd5c3bd51b9790dca8405434137d",
+    "semantic_hash": "0e58dd5c3bd51b9790dca8405434137d"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Grass\\GrassInteractorCommands.cs": {
+    "mtime": 1781104109.652979,
+    "ast_hash": "5c41ec6068ae901a164e181325938d3d",
+    "semantic_hash": "5c41ec6068ae901a164e181325938d3d"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Grass\\GrassInteractorDtos.cs": {
+    "mtime": 1781104109.656003,
+    "ast_hash": "e9aaca853ee362a71a90725bc14fff9c",
+    "semantic_hash": "e9aaca853ee362a71a90725bc14fff9c"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Grass\\GrassInteractorRegistry.cs": {
+    "mtime": 1781366644.772064,
+    "ast_hash": "b131cd0d4c603e457806e594fdbc3d4a",
+    "semantic_hash": "b131cd0d4c603e457806e594fdbc3d4a"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Grass\\GrassNearFieldController.cs": {
+    "mtime": 1781401246.8413453,
+    "ast_hash": "fe22ab0077313b17c4e2537f0bca4091",
+    "semantic_hash": "fe22ab0077313b17c4e2537f0bca4091"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Grass\\GrassPlacementController.cs": {
+    "mtime": 1781405081.1685922,
+    "ast_hash": "e02eaae7fbc9fc82ddb1c76786b35443",
+    "semantic_hash": "e02eaae7fbc9fc82ddb1c76786b35443"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Grass\\GrassPlacementDtos.cs": {
+    "mtime": 1781214376.3460243,
+    "ast_hash": "17d9acdfc7c8d593e03e610cab73e027",
+    "semantic_hash": "17d9acdfc7c8d593e03e610cab73e027"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Grass\\GrassPlacementStats.cs": {
+    "mtime": 1781359930.560783,
+    "ast_hash": "470285685c4c641f058fc175d11b5fc7",
+    "semantic_hash": "470285685c4c641f058fc175d11b5fc7"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\IWeatherConfigurator.cs": {
+    "mtime": 1781202361.102893,
+    "ast_hash": "5235ae402134b2ce9ad3d811c3782808",
+    "semantic_hash": "5235ae402134b2ce9ad3d811c3782808"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\IsExternalInit.cs": {
+    "mtime": 1781181953.1263041,
+    "ast_hash": "3b44ae777c51a0f3de0ad3d186289dc8",
+    "semantic_hash": "3b44ae777c51a0f3de0ad3d186289dc8"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\MinMax.cs": {
+    "mtime": 1781104109.6920612,
+    "ast_hash": "93ddf6ee5798609ad869eee02fc1dba6",
+    "semantic_hash": "93ddf6ee5798609ad869eee02fc1dba6"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Noise.cs": {
+    "mtime": 1781104109.694569,
+    "ast_hash": "97947997a31570bfbd65cb50ca53651c",
+    "semantic_hash": "97947997a31570bfbd65cb50ca53651c"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\NoiseFilters\\INoiseFilter.cs": {
+    "mtime": 1779392861.4238102,
+    "ast_hash": "52b1237d8b63ed1004e9e40037b54aed",
+    "semantic_hash": "52b1237d8b63ed1004e9e40037b54aed"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\NoiseFilters\\NoiseFilterData.cs": {
+    "mtime": 1781104109.6976068,
+    "ast_hash": "2606a965bd44531de1790443aca55349",
+    "semantic_hash": "2606a965bd44531de1790443aca55349"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\NoiseFilters\\NoiseFilterFactory.cs": {
+    "mtime": 1781104109.7046845,
+    "ast_hash": "68a59e1f37ddbe350046ddf4dbb56f9c",
+    "semantic_hash": "68a59e1f37ddbe350046ddf4dbb56f9c"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\NoiseFilters\\RigidNoiseFilter.cs": {
+    "mtime": 1779392861.4283793,
+    "ast_hash": "b3b53b2e4153884b46e85dc1fc27bb73",
+    "semantic_hash": "b3b53b2e4153884b46e85dc1fc27bb73"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\NoiseFilters\\SimpleNoiseFilter.cs": {
+    "mtime": 1779392861.4319222,
+    "ast_hash": "61534082826b84b4a8704a644e4a3b53",
+    "semantic_hash": "61534082826b84b4a8704a644e4a3b53"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\NoiseSettings.cs": {
+    "mtime": 1779392861.4339373,
+    "ast_hash": "e77c7677daa162802cfbb33d8df0b24a",
+    "semantic_hash": "e77c7677daa162802cfbb33d8df0b24a"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Planet.cs": {
+    "mtime": 1781412425.1299357,
+    "ast_hash": "551fa47ae3640e0420165be8a2b04e44",
+    "semantic_hash": "551fa47ae3640e0420165be8a2b04e44"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\PlanetConstants.cs": {
+    "mtime": 1781207280.978421,
+    "ast_hash": "3b4dca4f7a07c5b15f212b16e3bc0d13",
+    "semantic_hash": "3b4dca4f7a07c5b15f212b16e3bc0d13"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\PlanetDto.cs": {
+    "mtime": 1781318176.4007049,
+    "ast_hash": "ae5f4a325e24105f01c5a1392841b954",
+    "semantic_hash": "ae5f4a325e24105f01c5a1392841b954"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\PlanetGrassCoordinator.cs": {
+    "mtime": 1781410291.851896,
+    "ast_hash": "5035604e5f0b49e57c6df941ed63266e",
+    "semantic_hash": "5035604e5f0b49e57c6df941ed63266e"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\PlanetSettings.cs": {
+    "mtime": 1781219136.7952347,
+    "ast_hash": "8b648a91f73f352d279405b90bf088cb",
+    "semantic_hash": "8b648a91f73f352d279405b90bf088cb"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\PlanetTerrainMaterial.cs": {
+    "mtime": 1781367839.806943,
+    "ast_hash": "17e49f8c2ad03ad9a777b696ba87185c",
+    "semantic_hash": "17e49f8c2ad03ad9a777b696ba87185c"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\PlanetWaterSurface.cs": {
+    "mtime": 1781412227.1140332,
+    "ast_hash": "7841b7f561075e3df1e09ee588990265",
+    "semantic_hash": "7841b7f561075e3df1e09ee588990265"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\PrecipitationController.cs": {
+    "mtime": 1781380005.3400538,
+    "ast_hash": "e3a7ad2c4fb17377dc0a649a9f66c167",
+    "semantic_hash": "e3a7ad2c4fb17377dc0a649a9f66c167"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\PrecipitationDto.cs": {
+    "mtime": 1781182692.3970416,
+    "ast_hash": "d01d0c0f06f453bd9294ca2d0bd8d31c",
+    "semantic_hash": "d01d0c0f06f453bd9294ca2d0bd8d31c"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\PrecipitationRenderFeature.cs": {
+    "mtime": 1781398658.8334603,
+    "ast_hash": "37abca75aceddf1318d1485ea8674ffb",
+    "semantic_hash": "37abca75aceddf1318d1485ea8674ffb"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Precipitation\\RainParticleController.cs": {
+    "mtime": 1781376387.1379945,
+    "ast_hash": "5606a37b446034e178df0b2955aef724",
+    "semantic_hash": "5606a37b446034e178df0b2955aef724"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\ShapeGenerator.cs": {
+    "mtime": 1781104109.7346811,
+    "ast_hash": "ed5c7925f7a5ff16f58ad65692f20907",
+    "semantic_hash": "ed5c7925f7a5ff16f58ad65692f20907"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\ShapeSettings.cs": {
+    "mtime": 1781318163.8611634,
+    "ast_hash": "eb184c2829397896b1d4b70e0a0d9ac4",
+    "semantic_hash": "eb184c2829397896b1d4b70e0a0d9ac4"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\BiomeAtlasService.cs": {
+    "mtime": 1781412227.1104999,
+    "ast_hash": "bf406c5053721fdbc85012fa05ddc728",
+    "semantic_hash": "bf406c5053721fdbc85012fa05ddc728"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\ChunkMeshCache.cs": {
+    "mtime": 1781387810.4481714,
+    "ast_hash": "e3f993b94c7868ed63c828532c2e7ecd",
+    "semantic_hash": "e3f993b94c7868ed63c828532c2e7ecd"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\ChunkSurfaceGenerator.cs": {
+    "mtime": 1781311043.595484,
+    "ast_hash": "9137c289277b9d465c6ec2077d595bc7",
+    "semantic_hash": "9137c289277b9d465c6ec2077d595bc7"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\ChunkSurfaceQueries.cs": {
+    "mtime": 1781295135.769473,
+    "ast_hash": "9d7de0a1429b577677c1612456bb353e",
+    "semantic_hash": "9d7de0a1429b577677c1612456bb353e"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\ChunkTriangleTemplate.cs": {
+    "mtime": 1781104109.7407868,
+    "ast_hash": "5db1ff1cb2cdcb72268fafba2e40f6a8",
+    "semantic_hash": "5db1ff1cb2cdcb72268fafba2e40f6a8"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\ChunkUvTemplate.cs": {
+    "mtime": 1781104109.7452981,
+    "ast_hash": "827f384e00cb4fb6bb0eeab35dbfef24",
+    "semantic_hash": "827f384e00cb4fb6bb0eeab35dbfef24"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\ChunkVisibilitySelector.cs": {
+    "mtime": 1781313644.3795004,
+    "ast_hash": "bb78dcdce4d97b6d6f5f198ad3b5d22f",
+    "semantic_hash": "bb78dcdce4d97b6d6f5f198ad3b5d22f"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\ChunkedFaceMeshSampler.cs": {
+    "mtime": 1781104109.748335,
+    "ast_hash": "132e3aff18704d10382cc858240ff47e",
+    "semantic_hash": "132e3aff18704d10382cc858240ff47e"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\ChunkedSurfaceProvider.cs": {
+    "mtime": 1781412362.4453013,
+    "ast_hash": "2f299f4d85a14eef04cf2fa5c8fe9ac2",
+    "semantic_hash": "2f299f4d85a14eef04cf2fa5c8fe9ac2"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\GrassSurfaceAtlasBuilder.cs": {
+    "mtime": 1781412425.1335018,
+    "ast_hash": "6debed05c3aff97bbf4154219d0a3a85",
+    "semantic_hash": "6debed05c3aff97bbf4154219d0a3a85"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\GrassSurfaceAtlasGpuData.cs": {
+    "mtime": 1781366620.5395806,
+    "ast_hash": "88e71247a2914d95e8de7fbb1f85dbd3",
+    "semantic_hash": "88e71247a2914d95e8de7fbb1f85dbd3"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\PerFaceSurfaceProvider.cs": {
+    "mtime": 1781104109.769602,
+    "ast_hash": "aabbd6732d429eb997d86c2e9b5365cc",
+    "semantic_hash": "aabbd6732d429eb997d86c2e9b5365cc"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\PlanetChunk.cs": {
+    "mtime": 1781412394.814068,
+    "ast_hash": "e73abf65b1403706df97b36c78a43b4a",
+    "semantic_hash": "e73abf65b1403706df97b36c78a43b4a"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\PlanetChunkMeshJob.cs": {
+    "mtime": 1781104109.7783217,
+    "ast_hash": "4c705706e53d1284d5baab87013628d1",
+    "semantic_hash": "4c705706e53d1284d5baab87013628d1"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\Surface\\TerrainQuadtree.cs": {
+    "mtime": 1781104109.785878,
+    "ast_hash": "c56fd72a71e785119df0ff136b3fd885",
+    "semantic_hash": "c56fd72a71e785119df0ff136b3fd885"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\TerrainFace.cs": {
+    "mtime": 1781104109.7944398,
+    "ast_hash": "f39096cc1eccdb27bceaf884c1261459",
+    "semantic_hash": "f39096cc1eccdb27bceaf884c1261459"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\WaterMeshBuilder.cs": {
+    "mtime": 1781104109.797494,
+    "ast_hash": "d3c35a8d675a97e716d0408faf14389e",
+    "semantic_hash": "d3c35a8d675a97e716d0408faf14389e"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\WaterVolumeRenderFeature.cs": {
+    "mtime": 1781364516.2449296,
+    "ast_hash": "709b5aa3326a39c034928f81bb6b4ee9",
+    "semantic_hash": "709b5aa3326a39c034928f81bb6b4ee9"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\WeatherDiagnostics.cs": {
+    "mtime": 1781325867.6832702,
+    "ast_hash": "c9bde1123339c480f805967f8d3cf200",
+    "semantic_hash": "c9bde1123339c480f805967f8d3cf200"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\WeatherLightningController.cs": {
+    "mtime": 1781365376.4596786,
+    "ast_hash": "de7374e2931de9a60d1561ead813282c",
+    "semantic_hash": "de7374e2931de9a60d1561ead813282c"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\Planet\\WeatherManager.cs": {
+    "mtime": 1781379460.4338822,
+    "ast_hash": "58b917f20802a34a9ec236b2036fb3dd",
+    "semantic_hash": "58b917f20802a34a9ec236b2036fb3dd"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\PoissonDiscSampling.cs": {
+    "mtime": 1779392861.472162,
+    "ast_hash": "8f5e0eaab61deffbe89577e975b5db3d",
+    "semantic_hash": "8f5e0eaab61deffbe89577e975b5db3d"
+  },
+  "C:\\Users\\Bryan\\Source\\Repos\\Magikorp\\ProceduralPlanets\\Assets\\Scripts\\PoissonDiscSphereSampling.cs": {
+    "mtime": 1779392861.475698,
+    "ast_hash": "727a03dd288d6da55564373146e2f895",
+    "semantic_hash": "727a03dd288d6da55564373146e2f895"
+  }
+}
