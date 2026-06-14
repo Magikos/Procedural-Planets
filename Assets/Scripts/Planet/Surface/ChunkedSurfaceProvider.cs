@@ -33,12 +33,14 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     // 2 â†’ 385Â² per face (with R=97), 16Ã— finer shorelines than the root chunk. Bounded by
     // MaxChunkDepth at construction time. Memory: ~14 MB total across 6 faces at depth 2.
     const int WaterAggregateDepth = 2;
+    const int TextureAllocationBatchSize = 64;
 
     readonly Transform _planetTransform;
     readonly ShapeGenerator _shapeGenerator;
     readonly Material _faceMaterial;
     readonly Planet.FaceRenderMask _renderMask;
     readonly int _maxChunkDepth;
+    readonly bool _usesFaceBiomeAtlases;
 
     Transform[] _faceRoots;
     TerrainQuadtree[] _quadtrees;
@@ -81,6 +83,9 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         _faceMaterial = faceMaterial;
         _renderMask = renderMask;
         _maxChunkDepth = Mathf.Clamp(maxChunkDepth, 0, PlanetChunk.MaxDetailLevel);
+        _usesFaceBiomeAtlases = BiomeAtlasService.CanBuildFaceAtlases(
+            _maxChunkDepth,
+            out _);
         _biomeAtlas = new BiomeAtlasService(_maxChunkDepth);
         _generator = new ChunkSurfaceGenerator(_shapeGenerator, ChunkResolution);
         _meshCache = new ChunkMeshCache(_faceMaterial, _biomeAtlas, ChunkResolution);
@@ -93,6 +98,12 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         EnsureFaceObjects();
 
         progress?.Report(0f, "Building chunk quadtrees...");
+        LoggerProvider.Log(
+            LogLevel.Debug,
+            "ChunkLOD",
+            _usesFaceBiomeAtlases
+                ? "Using direct face-atlas biome bake; temporary per-chunk biome textures are disabled."
+                : "Using per-chunk biome texture fallback because face atlases are unavailable.");
 
         // Keep texture-mode terrain disabled until GenerateColorsAsync has baked and bound
         // real biome maps. Otherwise newly visible chunks sample blank startup textures.
@@ -100,7 +111,13 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
 
         // 1) Build the full quadtree to max depth on every face.
         for (int f = 0; f < 6; f++)
+        {
             _quadtrees[f].BuildToFixedDepth(_maxChunkDepth);
+            progress?.Report(
+                0.025f * ((f + 1f) / 6f),
+                $"Built terrain tree {f + 1}/6...");
+            await Awaitable.NextFrameAsync(ct);
+        }
 
         // 2) Gather every chunk (internal + leaf) â€” all are rendering candidates depending
         //    on camera distance. Sort leaves-first / coarse-to-fine isn't necessary; the
@@ -110,17 +127,34 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         _allChunks.Clear();
         _allChunks.AddRange(allChunks);
 
-        // Phase B step 3: allocate per-chunk biome map + surface state textures up front.
-        // Bake population happens in step 4; for now they're cleared to zero so the lifecycle
-        // path is exercised regardless of whether the bake exists.
-        for (int i = 0; i < _allChunks.Count; i++)
-            PlanetChunkTextures.Allocate(_allChunks[i]);
+        // Surface-state textures persist per chunk. Per-chunk biome textures are only needed
+        // on the fallback path; the normal high-resolution path bakes directly into face atlases.
+        for (int batchStart = 0; batchStart < _allChunks.Count; batchStart += TextureAllocationBatchSize)
+        {
+            int batchEnd = Mathf.Min(
+                batchStart + TextureAllocationBatchSize,
+                _allChunks.Count);
+            for (int i = batchStart; i < batchEnd; i++)
+            {
+                PlanetChunkTextures.Allocate(
+                    _allChunks[i],
+                    allocateBiomeTextures: !_usesFaceBiomeAtlases);
+            }
+
+            float pct = _allChunks.Count > 0
+                ? (float)batchEnd / _allChunks.Count
+                : 1f;
+            progress?.Report(
+                0.025f + 0.095f * pct,
+                $"Prepared chunk textures {batchEnd}/{_allChunks.Count}...");
+            await Awaitable.NextFrameAsync(ct);
+        }
 
         int total = allChunks.Count;
-        progress?.Report(0.05f, $"Generating {total} chunks...");
+        progress?.Report(0.12f, $"Generating {total} chunks...");
 
         // 3) Schedule + drain mesh jobs in bounded batches (owned by the generator).
-        await _generator.GenerateMeshesAsync(allChunks, progress, 0.05f, 0.80f, ct);
+        await _generator.GenerateMeshesAsync(allChunks, progress, 0.12f, 0.66f, ct);
 
         // 4) Meshes are no longer pre-built for every node. Render handles are pooled by the
         // mesh cache and built on demand as chunks become visible; the retained compact CPU
@@ -144,17 +178,24 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                 CollectChunksAtDepth(_quadtrees[f].Root, waterAggregateDepth, chunksAtDepth);
                 _rootSamplers[f] = new ChunkedFaceMeshSampler(chunksAtDepth, ChunkResolution, waterAggregateDepth);
             }
+
+            progress?.Report(
+                0.78f + 0.08f * ((f + 1f) / 6f),
+                $"Preparing water terrain data {f + 1}/6...");
+            await Awaitable.NextFrameAsync(ct);
         }
 
         // 6) Build face-space radius + normal atlases for Phase C grass placement. The
         // renderer is added later; this data must exist before grass compute can place roots.
-        progress?.Report(0.92f, "Building grass surface atlases...");
-        BuildGrassSurfaceAtlases();
+        progress?.Report(0.86f, "Building grass surface atlases...");
+        await BuildGrassSurfaceAtlasesAsync(
+            new ProgressRangeHandle(progress, 0.86f, 0.12f),
+            ct);
 
         // 7) Defer initial visibility until Planet finishes color/water generation.
-        // The biome textures exist here but are still blank; showing chunks now can render a
-        // cyan/teal placeholder surface if the player jumps to ground during loading.
-        progress?.Report(0.94f, "Preparing visibility...");
+        // Showing chunks before biome generation can render placeholder terrain, so visibility
+        // stays deferred until the complete planet generation sequence finishes.
+        progress?.Report(0.99f, "Preparing visibility...");
         _selector.ResetVisibleLeaves();
 
         _initialized = true;
@@ -351,16 +392,25 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                 }
 
                 float pct = (float)batchEnd / total;
-                progress?.Report(pct, $"Applied biome colors {batchEnd}/{total}");
+                progress?.Report(0.75f * pct, $"Applied biome colors {batchEnd}/{total}");
                 await Awaitable.NextFrameAsync(ct);
             }
 
             if (bakeLookupBuilt)
             {
-                _biomeAtlas.BuildFaceAtlases(_allChunks);
+                await _biomeAtlas.BuildFaceAtlasesAsync(
+                    _allChunks,
+                    new ProgressRangeHandle(progress, 0.75f, 0.23f),
+                    ct);
+                if (_usesFaceBiomeAtlases && !_biomeAtlas.HasCompleteAtlases())
+                {
+                    throw new System.InvalidOperationException(
+                        "Required biome face atlases were not built completely.");
+                }
                 _meshCache.RebindAll();
                 if (_faceMaterial != null) _faceMaterial.EnableKeyword(BiomeTextureModeKeyword);
                 releaseChunkBiomeTextures = _biomeAtlas.HasCompleteAtlases();
+                progress?.Report(1f, "Biome colors ready.");
             }
         }
         finally
@@ -380,10 +430,16 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         }
     }
 
-    void BuildGrassSurfaceAtlases()
+    async Awaitable BuildGrassSurfaceAtlasesAsync(
+        IProgressHandle progress,
+        CancellationToken ct)
     {
         DisposeGrassSurfaceAtlases();
-        _grassSurfaceAtlases = GrassSurfaceAtlasBuilder.Build(_allChunks, _maxChunkDepth);
+        _grassSurfaceAtlases = await GrassSurfaceAtlasBuilder.BuildAsync(
+            _allChunks,
+            _maxChunkDepth,
+            progress,
+            ct);
     }
 
     public IReadOnlyList<IFaceMeshSampler> GetFaceMeshSamplers()

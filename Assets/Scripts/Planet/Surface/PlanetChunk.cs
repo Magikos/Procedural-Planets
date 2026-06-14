@@ -215,6 +215,7 @@ public static class PlanetChunkTextures
     const int TexelCount = BiomeMapResolution * BiomeMapResolution;
     const int BytesPerRgba32Texel = 4;
     const int BiomeTexturesPerSet = 3;
+    static readonly Color32[] BlankPixels = new Color32[TexelCount];
 
     public static int LiveTextureSets { get; private set; }
     public static int LiveBiomeTextureSets { get; private set; }
@@ -224,46 +225,49 @@ public static class PlanetChunkTextures
     // the textures change format / the shader's weighted sum loop has to change.
     public const int TopK = 4;
 
-    public static void Allocate(PlanetChunk chunk)
+    public static void Allocate(PlanetChunk chunk, bool allocateBiomeTextures = true)
     {
         if (chunk == null) return;
         Dispose(chunk);
 
         string suffix = $"F{chunk.FaceIndex}_D{chunk.DetailLevel}_H{chunk.HashValue}";
 
-        // Pre-blended color: bilinear so neighbor-texel color values interpolate smoothly
-        // across the grid (this is the cheap-path used by step 5).
-        chunk.BiomeBlendedColorTexture = new Texture2D(BiomeMapResolution, BiomeMapResolution,
-            TextureFormat.RGBA32, mipChain: false, linear: false)
+        if (allocateBiomeTextures)
         {
-            name = $"BiomeBlendedColor_{suffix}",
-            filterMode = FilterMode.Bilinear,
-            wrapMode = TextureWrapMode.Clamp,
-        };
+            // Pre-blended color: bilinear so neighbor-texel color values interpolate smoothly
+            // across the grid (this is the cheap-path used by step 5).
+            chunk.BiomeBlendedColorTexture = new Texture2D(BiomeMapResolution, BiomeMapResolution,
+                TextureFormat.RGBA32, mipChain: false, linear: false)
+            {
+                name = $"BiomeBlendedColor_{suffix}",
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+            };
 
-        // Top-K biome ids: POINT filter — interpolating categorical ids would produce
-        // nonsense. The shader does manual bilinear over 4 corner texels for ID-aware
-        // sampling (step 6+).
-        chunk.BiomeIdsTexture = new Texture2D(BiomeMapResolution, BiomeMapResolution,
-            TextureFormat.RGBA32, mipChain: false, linear: true)
-        {
-            name = $"BiomeIds_{suffix}",
-            filterMode = FilterMode.Point,
-            wrapMode = TextureWrapMode.Clamp,
-        };
+            // Top-K biome ids: POINT filter — interpolating categorical ids would produce
+            // nonsense. The shader does manual bilinear over 4 corner texels for ID-aware
+            // sampling (step 6+).
+            chunk.BiomeIdsTexture = new Texture2D(BiomeMapResolution, BiomeMapResolution,
+                TextureFormat.RGBA32, mipChain: false, linear: true)
+            {
+                name = $"BiomeIds_{suffix}",
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
+            };
 
-        // Top-K weights: POINT filter. The step 6 shader samples weights at 4 corner texels
-        // explicitly and combines them with manual bilinear corner weights — letting Unity's
-        // bilinear sampler interpolate weights here would mix slot weights across texels
-        // that have DIFFERENT ids in those slots (nonsense). Point gives raw texel weights;
-        // the shader does the smoothing correctly.
-        chunk.BiomeWeightsTexture = new Texture2D(BiomeMapResolution, BiomeMapResolution,
-            TextureFormat.RGBA32, mipChain: false, linear: true)
-        {
-            name = $"BiomeWeights_{suffix}",
-            filterMode = FilterMode.Point,
-            wrapMode = TextureWrapMode.Clamp,
-        };
+            // Top-K weights: POINT filter. The step 6 shader samples weights at 4 corner texels
+            // explicitly and combines them with manual bilinear corner weights — letting Unity's
+            // bilinear sampler interpolate weights here would mix slot weights across texels
+            // that have DIFFERENT ids in those slots (nonsense). Point gives raw texel weights;
+            // the shader does the smoothing correctly.
+            chunk.BiomeWeightsTexture = new Texture2D(BiomeMapResolution, BiomeMapResolution,
+                TextureFormat.RGBA32, mipChain: false, linear: true)
+            {
+                name = $"BiomeWeights_{suffix}",
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
+            };
+        }
 
         chunk.SurfaceStateTexture = new Texture2D(BiomeMapResolution, BiomeMapResolution,
             TextureFormat.RGBA32, mipChain: false, linear: true)
@@ -273,18 +277,21 @@ public static class PlanetChunkTextures
             wrapMode = TextureWrapMode.Clamp,
         };
 
-        var blank = new Color32[TexelCount];
-        chunk.BiomeBlendedColorTexture.SetPixels32(blank);
-        chunk.BiomeBlendedColorTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
-        chunk.BiomeIdsTexture.SetPixels32(blank);
-        chunk.BiomeIdsTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
-        chunk.BiomeWeightsTexture.SetPixels32(blank);
-        chunk.BiomeWeightsTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
-        chunk.SurfaceStateTexture.SetPixels32(blank);
+        if (allocateBiomeTextures)
+        {
+            chunk.BiomeBlendedColorTexture.SetPixels32(BlankPixels);
+            chunk.BiomeBlendedColorTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+            chunk.BiomeIdsTexture.SetPixels32(BlankPixels);
+            chunk.BiomeIdsTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+            chunk.BiomeWeightsTexture.SetPixels32(BlankPixels);
+            chunk.BiomeWeightsTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+        }
+        chunk.SurfaceStateTexture.SetPixels32(BlankPixels);
         chunk.SurfaceStateTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
 
         LiveTextureSets++;
-        LiveBiomeTextureSets++;
+        if (allocateBiomeTextures)
+            LiveBiomeTextureSets++;
         LiveSurfaceStateTextures++;
         ReportCounters();
     }

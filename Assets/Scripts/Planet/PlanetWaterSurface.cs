@@ -172,9 +172,10 @@ public sealed class PlanetWaterSurface
         while (!buildAwaiter.IsCompleted)
         {
             progress?.Report(0.6f * System.Threading.Volatile.Read(ref buildProgress), "Building water bodies...");
-            await Awaitable.NextFrameAsync(ct);
+            await Awaitable.NextFrameAsync();
         }
         var waterMeshData = buildAwaiter.GetResult();
+        ct.ThrowIfCancellationRequested();
         if (_waterObject == null) return;
         progress?.Report(0.7f, "Uploading water mesh...");
 

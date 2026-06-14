@@ -164,8 +164,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _grass.Tick(_observerCamera);
     }
 
-    void Initialize()
+    async Awaitable InitializeAsync(IProgressHandle progress, CancellationToken ct)
     {
+        progress?.Report(0f, "Resetting planet...");
         _grass.DisposeControllers();
         _climateMapGpuData?.Dispose();
         _climateMapGpuData = null;
@@ -186,10 +187,14 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _shapeGenerator.Configure(shapeSettings);
         _shapeGenerator.Initialize(Seed);
         _colorGenerator.Configure(biomeDto);
-        _colorGenerator.Initialize(
+        progress?.Report(0.15f, "Preparing biome regions...");
+        await _colorGenerator.InitializeAsync(
             Seed,
-            seedProvider.GetSeedForSystem("BiomeVoronoi"));
+            seedProvider.GetSeedForSystem("BiomeVoronoi"),
+            new ProgressRangeHandle(progress, 0.15f, 0.7f),
+            ct);
 
+        progress?.Report(0.9f, "Preparing terrain renderer...");
         _terrainMaterial.EnsureRuntime(planet.PlanetMaterial);
         _terrainMaterial.Configure(_grass);
 
@@ -211,6 +216,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             default:
                 throw new System.ArgumentOutOfRangeException();
         }
+
+        progress?.Report(1f, "Planet initialized.");
     }
 
     void DestroyChildren()
@@ -253,23 +260,35 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         try
         {
             _isGenerating = true;
+            var totalTimer = System.Diagnostics.Stopwatch.StartNew();
+            var phaseTimer = System.Diagnostics.Stopwatch.StartNew();
             _progressHandle.Report(0f, "Initializing planet...");
-            Initialize();
+            await InitializeAsync(new ProgressRangeHandle(_progressHandle, 0f, 0.1f), ct);
+            long initializationMs = phaseTimer.ElapsedMilliseconds;
+            phaseTimer.Restart();
             _progressHandle.Report(0.1f, "Generating terrain...");
-            await GenerateMeshAsync(new ProgressRangeHandle(_progressHandle, 0.1f, 0.7f), ct);
+            await GenerateMeshAsync(new ProgressRangeHandle(_progressHandle, 0.1f, 0.68f), ct);
+            long terrainMs = phaseTimer.ElapsedMilliseconds;
+            phaseTimer.Restart();
             if (this == null) return;
             _shapeGenerator.CommitElevationRange();
-            _progressHandle.Report(0.8f, "Applying colors...");
-            await GenerateColorsAsync(new ProgressRangeHandle(_progressHandle, 0.8f, 0.1f), ct);
+            _progressHandle.Report(0.78f, "Applying colors...");
+            await GenerateColorsAsync(new ProgressRangeHandle(_progressHandle, 0.78f, 0.12f), ct);
+            long colorsMs = phaseTimer.ElapsedMilliseconds;
+            phaseTimer.Restart();
             if (this == null) return;
-            BuildClimateMap();
-            _progressHandle.Report(0.9f, "Generating water...");
+            _progressHandle.Report(0.9f, "Building climate map...");
+            await BuildClimateMapAsync(new ProgressRangeHandle(_progressHandle, 0.9f, 0.04f), ct);
+            long climateMs = phaseTimer.ElapsedMilliseconds;
+            phaseTimer.Restart();
+            _progressHandle.Report(0.94f, "Generating water...");
             await _waterSurface.GenerateAsync(
                 _surfaceProvider?.GetFaceMeshSamplers(),
                 _colorGenerator.ClimateProvider,
                 PerFaceResolution,
-                new ProgressRangeHandle(_progressHandle, 0.9f, 0.1f),
+                new ProgressRangeHandle(_progressHandle, 0.94f, 0.06f),
                 ct);
+            long waterMs = phaseTimer.ElapsedMilliseconds;
             _grass.Configure(_surfaceProvider as ChunkedSurfaceProvider,
                 _colorGenerator.SurfaceArrays, Seed, _observerCamera, _terrainMaterial.Material);
             // Atmosphere is rendered by AtmosphereController + AtmosphereRenderFeature (post-process).
@@ -283,6 +302,12 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             await Awaitable.NextFrameAsync(ct);
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _shapeGenerator.ElevationMin, _shapeGenerator.ElevationMax));
             Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, mode {planet.Resolution}, perFaceResolution {PerFaceResolution}, radius {scaledRadius:F1}");
+            Logger.Log(
+                LogLevel.Debug,
+                "Planet",
+                $"Generation timings: initialize={initializationMs}ms, terrain={terrainMs}ms, " +
+                $"colors={colorsMs}ms, climate={climateMs}ms, water={waterMs}ms, " +
+                $"total={totalTimer.ElapsedMilliseconds}ms");
         }
         catch (System.OperationCanceledException)
         {
@@ -318,7 +343,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         await _surfaceProvider.GenerateColorsAsync(_colorGenerator, progress, ct);
     }
 
-    void BuildClimateMap()
+    async Awaitable BuildClimateMapAsync(IProgressHandle progress, CancellationToken ct)
     {
         _climateMapGpuData?.Dispose();
         _climateMapGpuData = null;
@@ -327,28 +352,34 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             _colorGenerator?.ClimateProvider == null ||
             _surfaceProvider == null)
         {
-            return;
+            throw new System.InvalidOperationException(
+                "Climate map generation requires biome settings, a climate provider, and a generated surface.");
         }
 
         BiomeDto biome = SettingsProvider.GetSettings<BiomeDto>();
 
         try
         {
-            _climateMapGpuData = ClimateMapGpuData.Build(
+            _climateMapGpuData = await ClimateMapGpuData.BuildAsync(
                 _colorGenerator.ClimateProvider,
                 _surfaceProvider.GetFaceMeshSamplers(),
                 biome.ClimateMapResolution,
                 biome.MinimumTemperatureCelsius,
                 biome.MaximumTemperatureCelsius,
-                Logger);
+                Logger,
+                progress,
+                ct);
+        }
+        catch (System.OperationCanceledException)
+        {
+            throw;
         }
         catch (System.Exception ex)
         {
             Logger.LogException("Climate", ex);
-            Logger.Log(
-                LogLevel.Warning,
-                "Climate",
-                "GPU climate map bake failed; CPU climate queries remain available.");
+            throw new System.InvalidOperationException(
+                "GPU climate map generation failed.",
+                ex);
         }
     }
 
@@ -439,30 +470,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             SurfaceRadius = Vector3.Distance(worldPoint, transform.position),
         };
         return true;
-    }
-
-    sealed class ProgressRangeHandle : IProgressHandle
-    {
-        readonly IProgressHandle _inner;
-        readonly float _start;
-        readonly float _length;
-
-        public float CurrentProgress { get; private set; }
-        public string CurrentMessage { get; private set; } = string.Empty;
-
-        public ProgressRangeHandle(IProgressHandle inner, float start, float length)
-        {
-            _inner = inner;
-            _start = start;
-            _length = length;
-        }
-
-        public void Report(float progress, string message = "")
-        {
-            CurrentProgress = _start + Mathf.Clamp01(progress) * _length;
-            CurrentMessage = message ?? string.Empty;
-            _inner?.Report(CurrentProgress, CurrentMessage);
-        }
     }
 
     // --- Console commands -------------------------------------------------

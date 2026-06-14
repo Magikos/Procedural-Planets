@@ -1,3 +1,4 @@
+using System.Threading;
 using UnityEngine;
 
 public class ColorGenerator : IBiomeProvider, System.IDisposable
@@ -59,15 +60,89 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
 
     public void Initialize(int seed, int biomeAssignmentSeed)
     {
-        _climateProvider?.Initialize(seed);
-        _voronoiBiomeField = null;
+        PrepareInitialization(seed);
+        VoronoiBiomeField field = BuildVoronoiBiomeField(biomeAssignmentSeed);
+        CommitVoronoiBiomeField(field);
+    }
+
+    public async Awaitable InitializeAsync(
+        int seed,
+        int biomeAssignmentSeed,
+        IProgressHandle progress,
+        CancellationToken ct)
+    {
+        PrepareInitialization(seed);
+        progress?.Report(0f, "Building biome regions...");
+
+        VoronoiBiomeField field = null;
 
         if (_biome != null && _biome.Registry != null && _climateProvider != null)
         {
-            _voronoiBiomeField = VoronoiBiomeField.Build(
-                _biome,
-                _climateProvider,
-                biomeAssignmentSeed);
+            float buildProgress = 0f;
+            Awaitable<VoronoiBiomeField> buildTask = BuildVoronoiBiomeFieldAsync(
+                biomeAssignmentSeed,
+                ct,
+                value => System.Threading.Volatile.Write(ref buildProgress, value));
+            var buildAwaiter = buildTask.GetAwaiter();
+            float reportedBuildProgress = 0f;
+            while (!buildAwaiter.IsCompleted)
+            {
+                reportedBuildProgress = Mathf.Max(
+                    reportedBuildProgress,
+                    System.Threading.Volatile.Read(ref buildProgress));
+                progress?.Report(
+                    reportedBuildProgress,
+                    "Building biome regions...");
+                await Awaitable.NextFrameAsync();
+            }
+            field = buildAwaiter.GetResult();
+        }
+
+        ct.ThrowIfCancellationRequested();
+        CommitVoronoiBiomeField(field);
+        progress?.Report(1f, "Biome regions ready.");
+    }
+
+    void PrepareInitialization(int seed)
+    {
+        _climateProvider?.Initialize(seed);
+        _voronoiBiomeField = null;
+    }
+
+    VoronoiBiomeField BuildVoronoiBiomeField(int biomeAssignmentSeed)
+    {
+        if (_biome == null || _biome.Registry == null || _climateProvider == null)
+            return null;
+
+        return VoronoiBiomeField.Build(
+            _biome,
+            _climateProvider,
+            biomeAssignmentSeed);
+    }
+
+    async Awaitable<VoronoiBiomeField> BuildVoronoiBiomeFieldAsync(
+        int biomeAssignmentSeed,
+        CancellationToken ct,
+        System.Action<float> onProgress)
+    {
+        await Awaitable.BackgroundThreadAsync();
+        ct.ThrowIfCancellationRequested();
+        VoronoiBiomeField field = VoronoiBiomeField.Build(
+            _biome,
+            _climateProvider,
+            biomeAssignmentSeed,
+            onProgress,
+            ct);
+        ct.ThrowIfCancellationRequested();
+        await Awaitable.MainThreadAsync();
+        return field;
+    }
+
+    void CommitVoronoiBiomeField(VoronoiBiomeField field)
+    {
+        _voronoiBiomeField = field;
+        if (_voronoiBiomeField != null)
+        {
             LoggerProvider.Log(
                 LogLevel.Debug,
                 "Biome",

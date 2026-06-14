@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 
 // Builds the per-face grass surface atlases (radius + normal) consumed by the grass placement
@@ -6,24 +8,111 @@ using UnityEngine;
 // out of ChunkedSurfaceProvider (perf-maintainability plan slice 4).
 public static class GrassSurfaceAtlasBuilder
 {
-    public static GrassSurfaceAtlasGpuData Build(IReadOnlyList<PlanetChunk> allChunks, int maxChunkDepth)
+    public static async Awaitable<GrassSurfaceAtlasGpuData> BuildAsync(
+        IReadOnlyList<PlanetChunk> allChunks,
+        int maxChunkDepth,
+        IProgressHandle progress,
+        CancellationToken ct)
     {
         int leafsPerAxis = 1 << Mathf.Max(maxChunkDepth, 0);
         int leafStride = PlanetChunkTextures.BiomeMapResolution - 1;
         int atlasResolution = leafsPerAxis * leafStride + 1;
         if (atlasResolution <= 1 || atlasResolution > SystemInfo.maxTextureSize)
         {
-            LoggerProvider.Log(LogLevel.Warning, "PhaseC",
-                $"Grass surface atlas skipped: requested {atlasResolution}x{atlasResolution}, max texture size is {SystemInfo.maxTextureSize}.");
-            return null;
+            throw new System.InvalidOperationException(
+                $"Grass surface atlas requires {atlasResolution}x{atlasResolution}, " +
+                $"but the maximum texture size is {SystemInfo.maxTextureSize}.");
         }
 
-        var radiusPixelsByFace = new float[6][];
+        progress?.Report(0f, "Calculating grass surface atlases...");
+        float computeProgress = 0f;
+        Awaitable<GrassAtlasPixels> computeTask = ComputePixelsAsync(
+            allChunks,
+            atlasResolution,
+            leafsPerAxis,
+            leafStride,
+            ct,
+            value => Volatile.Write(ref computeProgress, value));
+        var computeAwaiter = computeTask.GetAwaiter();
+        float reportedComputeProgress = 0f;
+        while (!computeAwaiter.IsCompleted)
+        {
+            reportedComputeProgress = Mathf.Max(
+                reportedComputeProgress,
+                Volatile.Read(ref computeProgress));
+            progress?.Report(
+                reportedComputeProgress * 0.8f,
+                "Calculating grass surface atlases...");
+            await Awaitable.NextFrameAsync();
+        }
+        GrassAtlasPixels pixels = computeAwaiter.GetResult();
+
         var radiusTextures = new Texture2D[6];
         var normalTextures = new Texture2D[6];
         int expectedLeafCount = leafsPerAxis * leafsPerAxis;
 
-        for (int face = 0; face < 6; face++)
+        try
+        {
+            for (int face = 0; face < 6; face++)
+            {
+                float[] radiusPixels = pixels.RadiusByFace[face];
+                Color32[] normalPixels = pixels.NormalByFace[face];
+                if (radiusPixels == null || normalPixels == null)
+                {
+                    LoggerProvider.Log(LogLevel.Warning, "PhaseC", $"Grass surface atlas face {face}: no leaf surface data available.");
+                    continue;
+                }
+
+                radiusTextures[face] = CreateGrassRadiusTexture(
+                    $"GrassSurfaceRadius_F{face}", atlasResolution, radiusPixels);
+                normalTextures[face] = CreateGrassNormalTexture(
+                    $"GrassSurfaceNormal_F{face}", atlasResolution, normalPixels);
+                LoggerProvider.Log(LogLevel.Debug, "PhaseC",
+                    $"Grass surface radius face {face}: {atlasResolution}x{atlasResolution}, copied {pixels.CopiedLeavesByFace[face]}/{expectedLeafCount} max-depth leaves.");
+                pixels.RadiusByFace[face] = null;
+                pixels.NormalByFace[face] = null;
+                progress?.Report(
+                    0.8f + 0.2f * ((face + 1f) / 6f),
+                    $"Uploading grass surface atlas {face + 1}/6...");
+                await Awaitable.NextFrameAsync(ct);
+            }
+
+            for (int face = 0; face < 6; face++)
+            {
+                if (radiusTextures[face] == null || normalTextures[face] == null)
+                {
+                    throw new System.InvalidOperationException(
+                        $"Grass surface atlas face {face} was not built.");
+                }
+            }
+        }
+        catch
+        {
+            DestroyTextureArray(radiusTextures);
+            DestroyTextureArray(normalTextures);
+            throw;
+        }
+
+        progress?.Report(1f, "Grass surface atlases ready.");
+        return new GrassSurfaceAtlasGpuData(radiusTextures, normalTextures, atlasResolution);
+    }
+
+    static async Awaitable<GrassAtlasPixels> ComputePixelsAsync(
+        IReadOnlyList<PlanetChunk> allChunks,
+        int atlasResolution,
+        int leafsPerAxis,
+        int leafStride,
+        CancellationToken ct,
+        System.Action<float> onProgress)
+    {
+        await Awaitable.BackgroundThreadAsync();
+        var pixels = new GrassAtlasPixels();
+        int expectedLeafCount = leafsPerAxis * leafsPerAxis;
+        int totalLeaves = Mathf.Max(expectedLeafCount * 6, 1);
+        int completedLeaves = 0;
+        var options = new ParallelOptions { CancellationToken = ct };
+
+        Parallel.For(0, 6, options, face =>
         {
             var radiusPixels = new float[atlasResolution * atlasResolution];
             int copiedLeaves = 0;
@@ -32,32 +121,62 @@ public static class GrassSurfaceAtlasBuilder
             {
                 PlanetChunk chunk = allChunks[i];
                 if (chunk == null || !chunk.IsLeaf || chunk.FaceIndex != face) continue;
-                if (CopyLeafSurfaceRadiusIntoAtlas(chunk, radiusPixels, atlasResolution, leafsPerAxis, leafStride))
-                    copiedLeaves++;
+                if (!CopyLeafSurfaceRadiusIntoAtlas(
+                    chunk,
+                    radiusPixels,
+                    atlasResolution,
+                    leafsPerAxis,
+                    leafStride))
+                {
+                    continue;
+                }
+
+                copiedLeaves++;
+                int leaves = Interlocked.Increment(ref completedLeaves);
+                if ((leaves & 7) == 0 || leaves == totalLeaves)
+                    onProgress?.Invoke(0.45f * Mathf.Clamp01((float)leaves / totalLeaves));
             }
 
-            if (copiedLeaves <= 0)
+            if (copiedLeaves > 0)
             {
-                LoggerProvider.Log(LogLevel.Warning, "PhaseC", $"Grass surface atlas face {face}: no leaf surface data available.");
-                continue;
+                pixels.RadiusByFace[face] = radiusPixels;
+                pixels.CopiedLeavesByFace[face] = copiedLeaves;
             }
+        });
 
-            radiusPixelsByFace[face] = radiusPixels;
-            LoggerProvider.Log(LogLevel.Debug, "PhaseC",
-                $"Grass surface radius face {face}: {atlasResolution}x{atlasResolution}, copied {copiedLeaves}/{expectedLeafCount} max-depth leaves.");
-        }
-
-        for (int face = 0; face < 6; face++)
+        int completedNormalRows = 0;
+        int totalNormalRows = Mathf.Max(atlasResolution * 6, 1);
+        Parallel.For(0, 6, options, face =>
         {
-            float[] radiusPixels = radiusPixelsByFace[face];
-            if (radiusPixels == null) continue;
+            if (pixels.RadiusByFace[face] == null)
+                return;
 
-            var normalPixels = BuildGrassSurfaceNormalPixels(face, radiusPixelsByFace, atlasResolution);
-            radiusTextures[face] = CreateGrassRadiusTexture($"GrassSurfaceRadius_F{face}", atlasResolution, radiusPixels);
-            normalTextures[face] = CreateGrassNormalTexture($"GrassSurfaceNormal_F{face}", atlasResolution, normalPixels);
-        }
+            pixels.NormalByFace[face] = BuildGrassSurfaceNormalPixels(
+                face,
+                pixels.RadiusByFace,
+                atlasResolution,
+                ct,
+                () =>
+                {
+                    int rows = Interlocked.Increment(ref completedNormalRows);
+                    if ((rows & 7) == 0 || rows == totalNormalRows)
+                    {
+                        onProgress?.Invoke(
+                            0.45f + 0.55f * Mathf.Clamp01((float)rows / totalNormalRows));
+                    }
+                });
+        });
 
-        return new GrassSurfaceAtlasGpuData(radiusTextures, normalTextures, atlasResolution);
+        ct.ThrowIfCancellationRequested();
+        await Awaitable.MainThreadAsync();
+        return pixels;
+    }
+
+    sealed class GrassAtlasPixels
+    {
+        public readonly float[][] RadiusByFace = new float[6][];
+        public readonly Color32[][] NormalByFace = new Color32[6][];
+        public readonly int[] CopiedLeavesByFace = new int[6];
     }
 
     static bool CopyLeafSurfaceRadiusIntoAtlas(PlanetChunk chunk, float[] atlas, int atlasResolution, int leafsPerAxis, int leafStride)
@@ -89,13 +208,20 @@ public static class GrassSurfaceAtlasBuilder
         return true;
     }
 
-    static Color32[] BuildGrassSurfaceNormalPixels(int face, float[][] radiusPixelsByFace, int atlasResolution)
+    static Color32[] BuildGrassSurfaceNormalPixels(
+        int face,
+        float[][] radiusPixelsByFace,
+        int atlasResolution,
+        CancellationToken ct,
+        System.Action onRowCompleted)
     {
         var normalPixels = new Color32[atlasResolution * atlasResolution];
         float invMax = 1f / (atlasResolution - 1);
 
         for (int y = 0; y < atlasResolution; y++)
         {
+            if ((y & 31) == 0)
+                ct.ThrowIfCancellationRequested();
             float v = y * invMax;
             int row = y * atlasResolution;
             for (int x = 0; x < atlasResolution; x++)
@@ -120,6 +246,8 @@ public static class GrassSurfaceAtlasBuilder
 
                 normalPixels[row + x] = PackNormalToColor32(normal);
             }
+
+            onRowCompleted?.Invoke();
         }
 
         return normalPixels;
@@ -237,5 +365,17 @@ public static class GrassSurfaceAtlasBuilder
         tex.SetPixels32(pixels);
         tex.Apply(updateMipmaps: false, makeNoLongerReadable: true);
         return tex;
+    }
+
+    static void DestroyTextureArray(Texture2D[] textures)
+    {
+        if (textures == null) return;
+        for (int i = 0; i < textures.Length; i++)
+        {
+            if (textures[i] == null) continue;
+            if (Application.isPlaying) Object.Destroy(textures[i]);
+            else Object.DestroyImmediate(textures[i]);
+            textures[i] = null;
+        }
     }
 }

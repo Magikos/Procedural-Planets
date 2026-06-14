@@ -31,3 +31,27 @@ public sealed class ProgressHandle : IProgressHandle
         CurrentMessage = string.Empty;
     }
 }
+
+public sealed class ProgressRangeHandle : IProgressHandle
+{
+    readonly IProgressHandle _inner;
+    readonly float _start;
+    readonly float _length;
+
+    public float CurrentProgress { get; private set; }
+    public string CurrentMessage { get; private set; } = string.Empty;
+
+    public ProgressRangeHandle(IProgressHandle inner, float start, float length)
+    {
+        _inner = inner;
+        _start = Mathf.Clamp01(start);
+        _length = Mathf.Clamp(length, 0f, 1f - _start);
+    }
+
+    public void Report(float progress, string message = "")
+    {
+        CurrentProgress = _start + Mathf.Clamp01(progress) * _length;
+        CurrentMessage = message ?? string.Empty;
+        _inner?.Report(CurrentProgress, CurrentMessage);
+    }
+}

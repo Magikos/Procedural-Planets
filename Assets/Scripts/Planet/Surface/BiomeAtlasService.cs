@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 
 // Owns the per-face biome atlas textures and the biome-map bake/stitch pipeline. Split out of
@@ -8,7 +10,10 @@ using UnityEngine;
 // never depends back on the mesh cache.
 public interface IBiomeAtlasService
 {
-    void BuildFaceAtlases(IReadOnlyList<PlanetChunk> chunks);
+    Awaitable BuildFaceAtlasesAsync(
+        IReadOnlyList<PlanetChunk> chunks,
+        IProgressHandle progress,
+        CancellationToken ct);
     bool TryGetFaceAtlases(int face, out Texture2D blended, out Texture2D ids, out Texture2D weights);
     bool HasCompleteAtlases();
     bool UpdateFaceAtlasRegion(PlanetChunk chunk);
@@ -34,6 +39,20 @@ public sealed class BiomeAtlasService : IBiomeAtlasService
     public BiomeAtlasService(int maxChunkDepth)
     {
         _maxChunkDepth = maxChunkDepth;
+    }
+
+    public static bool CanBuildFaceAtlases(int maxChunkDepth, out int atlasResolution)
+    {
+        if (maxChunkDepth <= 0)
+        {
+            atlasResolution = 0;
+            return false;
+        }
+
+        int leafsPerAxis = 1 << maxChunkDepth;
+        int leafStride = PlanetChunkTextures.BiomeMapResolution - 1;
+        atlasResolution = leafsPerAxis * leafStride + 1;
+        return atlasResolution > 1 && atlasResolution <= SystemInfo.maxTextureSize;
     }
 
     // Step 5b: bake top-K biome textures for one chunk on a worker thread. Allocates the
@@ -94,19 +113,26 @@ public sealed class BiomeAtlasService : IBiomeAtlasService
         }
     }
 
-    public void BuildFaceAtlases(IReadOnlyList<PlanetChunk> chunks)
+    public async Awaitable BuildFaceAtlasesAsync(
+        IReadOnlyList<PlanetChunk> chunks,
+        IProgressHandle progress,
+        CancellationToken ct)
     {
         DisposeAtlases();
 
-        if (_maxChunkDepth <= 0) return;
+        if (_maxChunkDepth <= 0)
+        {
+            progress?.Report(1f, "Biome atlases skipped.");
+            return;
+        }
 
         int leafsPerAxis = 1 << _maxChunkDepth;
         int leafStride = PlanetChunkTextures.BiomeMapResolution - 1;
-        int atlasResolution = leafsPerAxis * leafStride + 1;
-        if (atlasResolution <= 1 || atlasResolution > SystemInfo.maxTextureSize)
+        if (!CanBuildFaceAtlases(_maxChunkDepth, out int atlasResolution))
         {
             LoggerProvider.Log(LogLevel.Warning, "PhaseB",
                 $"Biome atlas skipped: requested {atlasResolution}x{atlasResolution}, max texture size is {SystemInfo.maxTextureSize}.");
+            progress?.Report(1f, "Biome atlases skipped.");
             return;
         }
 
@@ -115,13 +141,85 @@ public sealed class BiomeAtlasService : IBiomeAtlasService
         _faceWeightAtlases = new Texture2D[6];
 
         int expectedLeafCount = leafsPerAxis * leafsPerAxis;
-        for (int face = 0; face < 6; face++)
+        progress?.Report(0f, "Stitching biome atlases...");
+        float buildProgress = 0f;
+        Awaitable<FaceAtlasPixels[]> buildTask = BuildFacePixelsAsync(
+            chunks,
+            atlasResolution,
+            leafsPerAxis,
+            leafStride,
+            expectedLeafCount,
+            ct,
+            value => Volatile.Write(ref buildProgress, value));
+        var buildAwaiter = buildTask.GetAwaiter();
+        float reportedBuildProgress = 0f;
+        while (!buildAwaiter.IsCompleted)
         {
-            var blendedPixels = new Color32[atlasResolution * atlasResolution];
-            var idPixels = new Color32[blendedPixels.Length];
-            var weightPixels = new Color32[blendedPixels.Length];
-            int copiedLeaves = 0;
+            reportedBuildProgress = Mathf.Max(
+                reportedBuildProgress,
+                Volatile.Read(ref buildProgress));
+            progress?.Report(
+                reportedBuildProgress * 0.65f,
+                "Stitching biome atlases...");
+            await Awaitable.NextFrameAsync();
+        }
+        FaceAtlasPixels[] facePixels = buildAwaiter.GetResult();
 
+        try
+        {
+            for (int face = 0; face < 6; face++)
+            {
+                FaceAtlasPixels pixels = facePixels[face];
+                if (pixels == null || pixels.CopiedLeaves <= 0)
+                {
+                    LoggerProvider.Log(LogLevel.Warning, "PhaseB", $"Biome atlas face {face}: no leaf maps available.");
+                    continue;
+                }
+
+                _faceBlendedAtlases[face] = CreateAtlasTexture(
+                    $"BiomeBlendedAtlas_F{face}", atlasResolution, pixels.Blended, FilterMode.Bilinear, linear: false);
+                _faceIdAtlases[face] = CreateAtlasTexture(
+                    $"BiomeIdsAtlas_F{face}", atlasResolution, pixels.Ids, FilterMode.Point, linear: true);
+                _faceWeightAtlases[face] = CreateAtlasTexture(
+                    $"BiomeWeightsAtlas_F{face}", atlasResolution, pixels.Weights, FilterMode.Point, linear: true);
+
+                LoggerProvider.Log(LogLevel.Debug, "PhaseB",
+                    $"Biome atlas face {face}: {atlasResolution}x{atlasResolution}, copied {pixels.CopiedLeaves}/{expectedLeafCount} max-depth leaves.");
+                facePixels[face] = null;
+                progress?.Report(
+                    0.65f + 0.35f * ((face + 1f) / 6f),
+                    $"Uploading biome atlas {face + 1}/6...");
+                await Awaitable.NextFrameAsync(ct);
+            }
+        }
+        catch
+        {
+            DisposeAtlases();
+            throw;
+        }
+
+        ReportMemory();
+        progress?.Report(1f, "Biome atlases ready.");
+    }
+
+    static async Awaitable<FaceAtlasPixels[]> BuildFacePixelsAsync(
+        IReadOnlyList<PlanetChunk> chunks,
+        int atlasResolution,
+        int leafsPerAxis,
+        int leafStride,
+        int expectedLeafCount,
+        CancellationToken ct,
+        System.Action<float> onProgress)
+    {
+        await Awaitable.BackgroundThreadAsync();
+        var results = new FaceAtlasPixels[6];
+        int completedLeaves = 0;
+        int totalLeaves = Mathf.Max(expectedLeafCount * 6, 1);
+        var options = new ParallelOptions { CancellationToken = ct };
+
+        Parallel.For(0, 6, options, face =>
+        {
+            var pixels = new FaceAtlasPixels(atlasResolution);
             for (int i = 0; i < chunks.Count; i++)
             {
                 PlanetChunk chunk = chunks[i];
@@ -134,31 +232,40 @@ public sealed class BiomeAtlasService : IBiomeAtlasService
                 }
 
                 CopyLeafBiomeMapIntoAtlas(chunk, chunk.PendingBiomeBlendedColorPixels,
-                    blendedPixels, atlasResolution, leafsPerAxis, leafStride);
+                    pixels.Blended, atlasResolution, leafsPerAxis, leafStride);
                 CopyLeafBiomeMapIntoAtlas(chunk, chunk.PendingBiomeIdsPixels,
-                    idPixels, atlasResolution, leafsPerAxis, leafStride);
+                    pixels.Ids, atlasResolution, leafsPerAxis, leafStride);
                 CopyLeafBiomeMapIntoAtlas(chunk, chunk.PendingBiomeWeightsPixels,
-                    weightPixels, atlasResolution, leafsPerAxis, leafStride);
-                copiedLeaves++;
+                    pixels.Weights, atlasResolution, leafsPerAxis, leafStride);
+                pixels.CopiedLeaves++;
+
+                int leaves = Interlocked.Increment(ref completedLeaves);
+                if ((leaves & 7) == 0 || leaves == totalLeaves)
+                    onProgress?.Invoke(Mathf.Clamp01((float)leaves / totalLeaves));
             }
 
-            if (copiedLeaves <= 0)
-            {
-                LoggerProvider.Log(LogLevel.Warning, "PhaseB", $"Biome atlas face {face}: no leaf maps available.");
-                continue;
-            }
+            results[face] = pixels;
+        });
 
-            _faceBlendedAtlases[face] = CreateAtlasTexture(
-                $"BiomeBlendedAtlas_F{face}", atlasResolution, blendedPixels, FilterMode.Bilinear, linear: false);
-            _faceIdAtlases[face] = CreateAtlasTexture(
-                $"BiomeIdsAtlas_F{face}", atlasResolution, idPixels, FilterMode.Point, linear: true);
-            _faceWeightAtlases[face] = CreateAtlasTexture(
-                $"BiomeWeightsAtlas_F{face}", atlasResolution, weightPixels, FilterMode.Point, linear: true);
+        ct.ThrowIfCancellationRequested();
+        await Awaitable.MainThreadAsync();
+        return results;
+    }
 
-            LoggerProvider.Log(LogLevel.Debug, "PhaseB",
-                $"Biome atlas face {face}: {atlasResolution}x{atlasResolution}, copied {copiedLeaves}/{expectedLeafCount} max-depth leaves.");
+    sealed class FaceAtlasPixels
+    {
+        public readonly Color32[] Blended;
+        public readonly Color32[] Ids;
+        public readonly Color32[] Weights;
+        public int CopiedLeaves;
+
+        public FaceAtlasPixels(int resolution)
+        {
+            int pixelCount = resolution * resolution;
+            Blended = new Color32[pixelCount];
+            Ids = new Color32[pixelCount];
+            Weights = new Color32[pixelCount];
         }
-        ReportMemory();
     }
 
     public bool TryGetFaceAtlases(int face, out Texture2D blended, out Texture2D ids, out Texture2D weights)

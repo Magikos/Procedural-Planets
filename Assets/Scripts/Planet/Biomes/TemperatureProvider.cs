@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -202,57 +203,51 @@ public sealed class ClimateMapGpuData : IDisposable
     public Texture2DArray Texture => _texture;
     public int Resolution => _texture != null ? _texture.width : 0;
 
-    public static ClimateMapGpuData Build(
+    public static async Awaitable<ClimateMapGpuData> BuildAsync(
         IClimateProvider climateProvider,
         IReadOnlyList<IFaceMeshSampler> faceSamplers,
         int resolution,
         float minimumTemperatureCelsius,
         float maximumTemperatureCelsius,
-        ILogger logger)
+        ILogger logger,
+        IProgressHandle progress,
+        CancellationToken ct)
     {
         if (climateProvider == null)
-        {
-            logger?.Log(LogLevel.Warning, "Climate",
-                "Skipped GPU climate map because no climate provider was available.");
-            return null;
-        }
+            throw new ArgumentNullException(nameof(climateProvider));
         if (faceSamplers == null || faceSamplers.Count < FaceCount)
-        {
-            logger?.Log(LogLevel.Warning, "Climate",
-                "Skipped GPU climate map because six generated face samplers were not available.");
-            return null;
-        }
+            throw new ArgumentException(
+                "Six generated face samplers are required.",
+                nameof(faceSamplers));
 
         resolution = Mathf.Clamp(resolution, 32, 512);
         var stopwatch = Stopwatch.StartNew();
-        var facePixels = new Color[FaceCount][];
+        progress?.Report(0f, "Calculating climate map...");
+        var samplerSnapshot = new IFaceMeshSampler[FaceCount];
+        for (int face = 0; face < FaceCount; face++)
+            samplerSnapshot[face] = faceSamplers[face];
 
-        Parallel.For(0, FaceCount, face =>
+        float computeProgress = 0f;
+        Awaitable<Color[][]> computeTask = ComputeFacePixelsAsync(
+            climateProvider,
+            samplerSnapshot,
+            resolution,
+            ct,
+            value => Volatile.Write(ref computeProgress, value));
+        var computeAwaiter = computeTask.GetAwaiter();
+        float reportedComputeProgress = 0f;
+        while (!computeAwaiter.IsCompleted)
         {
-            IFaceMeshSampler sampler = faceSamplers[face];
-            var pixels = new Color[resolution * resolution];
-            for (int y = 0; y < resolution; y++)
-            {
-                float v = EdgeSnappedUv(y, resolution);
-                int row = y * resolution;
-                for (int x = 0; x < resolution; x++)
-                {
-                    float u = EdgeSnappedUv(x, resolution);
-                    Vector3 direction = CoordinateConverter.CubeFaceToUnitSphere(
-                        face,
-                        new Vector2(u, v));
-                    float elevation = SampleElevation(sampler, u, v);
-                    ClimateSample climate = climateProvider.Evaluate(direction, elevation);
-                    pixels[row + x] = new Color(
-                        climate.Temperature01,
-                        climate.Moisture01,
-                        0f,
-                        1f);
-                }
-            }
-
-            facePixels[face] = pixels;
-        });
+            reportedComputeProgress = Mathf.Max(
+                reportedComputeProgress,
+                Volatile.Read(ref computeProgress));
+            progress?.Report(
+                reportedComputeProgress * 0.75f,
+                "Calculating climate map...");
+            await Awaitable.NextFrameAsync();
+        }
+        Color[][] facePixels = computeAwaiter.GetResult();
+        ct.ThrowIfCancellationRequested();
 
         TextureFormat format = SystemInfo.SupportsTextureFormat(TextureFormat.RGHalf)
             ? TextureFormat.RGHalf
@@ -272,9 +267,23 @@ public sealed class ClimateMapGpuData : IDisposable
             hideFlags = HideFlags.DontSave,
         };
 
-        for (int face = 0; face < FaceCount; face++)
-            texture.SetPixels(facePixels[face], face, 0);
-        texture.Apply(true, true);
+        try
+        {
+            for (int face = 0; face < FaceCount; face++)
+            {
+                texture.SetPixels(facePixels[face], face, 0);
+                progress?.Report(
+                    0.75f + 0.15f * ((face + 1f) / FaceCount),
+                    $"Uploading climate face {face + 1}/{FaceCount}...");
+                await Awaitable.NextFrameAsync(ct);
+            }
+            texture.Apply(true, true);
+        }
+        catch
+        {
+            UnityEngine.Object.Destroy(texture);
+            throw;
+        }
 
         Shader.SetGlobalTexture(ClimateMapId, texture);
         Shader.SetGlobalFloat(ClimateMapResolutionId, resolution);
@@ -297,7 +306,57 @@ public sealed class ClimateMapGpuData : IDisposable
             $"~{approximateBytesWithMips / (1024f * 1024f):F2} MiB, " +
             $"{stopwatch.ElapsedMilliseconds} ms");
 
+        progress?.Report(1f, "Climate map ready.");
         return new ClimateMapGpuData(texture);
+    }
+
+    static async Awaitable<Color[][]> ComputeFacePixelsAsync(
+        IClimateProvider climateProvider,
+        IFaceMeshSampler[] faceSamplers,
+        int resolution,
+        CancellationToken ct,
+        Action<float> onProgress)
+    {
+        await Awaitable.BackgroundThreadAsync();
+        var facePixels = new Color[FaceCount][];
+        int completedRows = 0;
+        int totalRows = FaceCount * resolution;
+        var options = new ParallelOptions { CancellationToken = ct };
+
+        Parallel.For(0, FaceCount, options, face =>
+        {
+            IFaceMeshSampler sampler = faceSamplers[face];
+            var pixels = new Color[resolution * resolution];
+            for (int y = 0; y < resolution; y++)
+            {
+                float v = EdgeSnappedUv(y, resolution);
+                int row = y * resolution;
+                for (int x = 0; x < resolution; x++)
+                {
+                    float u = EdgeSnappedUv(x, resolution);
+                    Vector3 direction = CoordinateConverter.CubeFaceToUnitSphere(
+                        face,
+                        new Vector2(u, v));
+                    float elevation = SampleElevation(sampler, u, v);
+                    ClimateSample climate = climateProvider.Evaluate(direction, elevation);
+                    pixels[row + x] = new Color(
+                        climate.Temperature01,
+                        climate.Moisture01,
+                        0f,
+                        1f);
+                }
+
+                int rows = Interlocked.Increment(ref completedRows);
+                if ((rows & 7) == 0 || rows == totalRows)
+                    onProgress?.Invoke((float)rows / totalRows);
+            }
+
+            facePixels[face] = pixels;
+        });
+
+        ct.ThrowIfCancellationRequested();
+        await Awaitable.MainThreadAsync();
+        return facePixels;
     }
 
     public void Dispose()
@@ -429,25 +488,34 @@ sealed class VoronoiBiomeField
     public static VoronoiBiomeField Build(
         BiomeDto biome,
         IClimateProvider climateProvider,
-        int seed)
+        int seed,
+        Action<float> onProgress = null,
+        CancellationToken ct = default)
     {
         if (biome == null) throw new ArgumentNullException(nameof(biome));
         if (biome.Registry == null) throw new ArgumentException("BiomeDto.Registry is null.", nameof(biome));
         if (climateProvider == null) throw new ArgumentNullException(nameof(climateProvider));
 
         var stopwatch = Stopwatch.StartNew();
+        ct.ThrowIfCancellationRequested();
         int seedCount = biome.VoronoiSeedCount;
         Seed[] seeds = BuildFibonacciSeeds(seedCount, biome.VoronoiSeedJitter, seed);
+        onProgress?.Invoke(0.02f);
         AssignClimateBiomes(
             seeds,
             biome.Registry,
             climateProvider,
             BiomeConstants.VoronoiTemperatureWeight);
+        ct.ThrowIfCancellationRequested();
+        onProgress?.Invoke(0.05f);
         int cleanupChanges = CleanupBiomeAssignments(
             seeds,
             BiomeConstants.VoronoiCleanupIterations);
+        ct.ThrowIfCancellationRequested();
+        onProgress?.Invoke(0.08f);
         int distinctBiomeCount = CountDistinctBiomes(seeds);
         BuildKdTree(seeds, out KdNode[] nodes, out int root);
+        onProgress?.Invoke(0.1f);
         var field = new VoronoiBiomeField(
             seeds,
             nodes,
@@ -457,7 +525,9 @@ sealed class VoronoiBiomeField
             cleanupChanges,
             distinctBiomeCount,
             0);
-        field.BuildPrimaryAtlas();
+        field.BuildPrimaryAtlas(
+            value => onProgress?.Invoke(0.1f + value * 0.9f),
+            ct);
         stopwatch.Stop();
         field.BuildMilliseconds = stopwatch.ElapsedMilliseconds;
         return field;
@@ -514,13 +584,16 @@ sealed class VoronoiBiomeField
         return seedIndex >= 0 ? _seeds[seedIndex].BiomeId : (byte)0;
     }
 
-    void BuildPrimaryAtlas()
+    void BuildPrimaryAtlas(Action<float> onProgress, CancellationToken ct)
     {
         var atlas = new byte[CubeFaceCount][];
         for (int face = 0; face < CubeFaceCount; face++)
             atlas[face] = new byte[PrimaryAtlasResolution * PrimaryAtlasResolution];
 
-        Parallel.For(0, CubeFaceCount, face =>
+        int completedRows = 0;
+        int totalRows = CubeFaceCount * PrimaryAtlasResolution;
+        var options = new ParallelOptions { CancellationToken = ct };
+        Parallel.For(0, CubeFaceCount, options, face =>
         {
             byte[] faceIds = atlas[face];
             for (int y = 0; y < PrimaryAtlasResolution; y++)
@@ -535,6 +608,10 @@ sealed class VoronoiBiomeField
                         new Vector2(u, v));
                     faceIds[row + x] = EvaluatePrimaryIdExact(direction);
                 }
+
+                int rows = Interlocked.Increment(ref completedRows);
+                if ((rows & 15) == 0 || rows == totalRows)
+                    onProgress?.Invoke((float)rows / totalRows);
             }
         });
 
