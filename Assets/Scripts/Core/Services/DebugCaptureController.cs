@@ -82,6 +82,7 @@ public class DebugCaptureController : MonoBehaviour
         ServiceLocator.TryGet(out _cachedCelestialManager);
         ServiceLocator.TryGet(out _cachedPrecipitationController);
         ServiceLocator.TryGet(out _cachedWeatherProvider);
+        _cachedSunLight = FindSunLight();
     }
 
     void InitializeRegistry()
@@ -505,9 +506,6 @@ public class DebugCaptureController : MonoBehaviour
 
     string BuildDebugCaptureMetadata(DebugModeId modeId, string modeName, int sourceWidth, int sourceHeight, int savedWidth, int savedHeight, string imagePath)
     {
-        if (_cachedSunLight == null)
-            _cachedSunLight = FindSunLight();
-
         var inputs = new DebugCaptureMetadataInputs(
             _debugRegistry,
             GetCurrentCaptureSet(),
@@ -622,12 +620,9 @@ public class DebugCaptureController : MonoBehaviour
             if (celestial != null)
                 GUILayout.Label($"Sun frozen: {(celestial.IsTimeFrozen ? "yes" : "no")}");
 
-            if (_cachedSunLight == null)
-                _cachedSunLight = FindSunLight();
-            if (_cachedSunLight != null && cameraContext.PlanetRadius > 0f)
+            if (celestial != null && cameraContext.PlanetRadius > 0f)
             {
-                Vector3 sd = -_cachedSunLight.transform.forward;
-                float sunElevation = Vector3.Dot(sd, (cameraContext.CameraTransform.position - cameraContext.PlanetCenter).normalized);
+                float sunElevation = Vector3.Dot(celestial.SunDirection, (cameraContext.CameraTransform.position - cameraContext.PlanetCenter).normalized);
                 GUILayout.Label($"Sun elevation: {Mathf.Asin(sunElevation) * Mathf.Rad2Deg:F1}\u00b0");
             }
         }

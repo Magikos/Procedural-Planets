@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 
 [CommandPrefix("camera")]
 public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTeleportTarget,
-    IWorldServiceRegistrar
+    IWorldServiceRegistrar, IFreeCameraService
 {
     [Header("Movement")]
     public float MoveSpeed = 10f;
@@ -32,8 +32,7 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
     bool _looking;
     bool _skipNextDelta;
     bool _surfaceView;
-    Light _cachedSunLight;
-    IWeatherProvider _cachedWeatherProvider;
+    ICelestialTimeController _celestial;
     IPlanetSurfaceSampler _cachedPlanet;
     Vector3 _sunOrbitAxis = Vector3.forward;
     Vector3 _lastSunDirectionToSun;
@@ -59,6 +58,7 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
     public void RegisterWorldServices(IWorldContext context)
     {
         context.Register<ICameraRigContext>(this);
+        context.Register<IFreeCameraService>(this);
     }
 
     void OnEnable()
@@ -85,7 +85,7 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
 
     void Initialize()
     {
-        ServiceLocator.TryGet(out _cachedWeatherProvider);
+        ServiceLocator.TryGet(out _celestial);
         ServiceLocator.TryGet(out _cachedPlanet);
     }
 
@@ -151,7 +151,11 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
             FaceSun();
 
         if (input.FrameStorm.WasPerformedThisFrame())
-            FrameStrongestStorm();
+        {
+            if (ServiceLocator.TryGet<IWeatherProvider>(out var weather) &&
+                weather.TryFindStrongestPrecipitation(out Vector3 stormPos, out _))
+                FrameWorldTarget(stormPos);
+        }
     }
 
     void ToggleOrbitSurfaceView()
@@ -169,13 +173,9 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
 
     Vector3 GetSunDirectionToSun()
     {
-        if (_cachedSunLight == null)
-            _cachedSunLight = FindSunLight();
-
-        if (_cachedSunLight == null)
-            return Vector3.up;
-
-        return -_cachedSunLight.transform.forward.normalized;
+        if (_celestial == null)
+            ServiceLocator.TryGet(out _celestial);
+        return _celestial?.SunDirection ?? Vector3.up;
     }
 
     void UpdateSunOrbitAxis()
@@ -276,47 +276,38 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
 
     void FaceSun()
     {
-        if (_cachedSunLight == null)
-            _cachedSunLight = FindSunLight();
-        if (_cachedSunLight == null)
-            return;
-
         Vector3 toSun = GetSunDirectionToSun();
+        if (_celestial == null)
+            return;
         transform.rotation = Quaternion.LookRotation(toSun, GetStableViewUp(toSun));
     }
 
-    void FrameStrongestStorm()
+    public void FrameWorldTarget(Vector3 worldPosition)
     {
         if (_lastPlanetRadius <= 0f)
             return;
 
-        if (_cachedWeatherProvider == null)
-            return;
-
-        if (!_cachedWeatherProvider.TryFindStrongestPrecipitation(out Vector3 stormPosition, out _))
-            return;
-
-        Vector3 stormNormal = (stormPosition - _lastPlanetCenter).normalized;
-        if (stormNormal.sqrMagnitude < 0.0001f)
-            stormNormal = Vector3.up;
+        Vector3 targetNormal = (worldPosition - _lastPlanetCenter).normalized;
+        if (targetNormal.sqrMagnitude < 0.0001f)
+            targetNormal = Vector3.up;
 
         if (_surfaceView)
         {
-            Vector3 tangent = Vector3.Cross(stormNormal, GetSunDirectionToSun());
+            Vector3 tangent = Vector3.Cross(targetNormal, GetSunDirectionToSun());
             if (tangent.sqrMagnitude < 0.0001f)
-                tangent = Vector3.Cross(stormNormal, Vector3.up);
+                tangent = Vector3.Cross(targetNormal, Vector3.up);
             if (tangent.sqrMagnitude < 0.0001f)
-                tangent = Vector3.Cross(stormNormal, Vector3.right);
+                tangent = Vector3.Cross(targetNormal, Vector3.right);
 
             tangent.Normalize();
-            Vector3 viewNormal = Quaternion.AngleAxis(10f, tangent) * stormNormal;
+            Vector3 viewNormal = Quaternion.AngleAxis(10f, tangent) * targetNormal;
             float surfaceRadius = Mathf.Max(_lastPlanetRadius, _lastSeaLevelRadius);
             var planet = GetPlanet();
             if (planet != null && planet.TryGetSurfaceRadius(viewNormal.normalized, out float sampledRadius))
                 surfaceRadius = Mathf.Max(sampledRadius, _lastSeaLevelRadius);
 
             transform.position = _lastPlanetCenter + viewNormal.normalized * (surfaceRadius + GetSurfaceClearance(_lastPlanetRadius));
-            Vector3 lookDir = (stormPosition - transform.position).normalized;
+            Vector3 lookDir = (worldPosition - transform.position).normalized;
             transform.rotation = Quaternion.LookRotation(lookDir, viewNormal.normalized);
             MoveSpeed = Mathf.Max(0.25f, _lastPlanetRadius * SurfaceSpeedMultiplier);
             ScrollSpeed = Mathf.Max(1f, _lastPlanetRadius * 0.1f);
@@ -324,24 +315,12 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
         else
         {
             float distance = Mathf.Max(_lastPlanetRadius * 1.85f, _lastPlanetRadius + 1000f);
-            transform.position = _lastPlanetCenter + stormNormal * distance;
-            Vector3 lookDir = (stormPosition - transform.position).normalized;
+            transform.position = _lastPlanetCenter + targetNormal * distance;
+            Vector3 lookDir = (worldPosition - transform.position).normalized;
             transform.rotation = Quaternion.LookRotation(lookDir, GetStableViewUp(lookDir));
             MoveSpeed = Mathf.Max(1f, _lastPlanetRadius * OrbitSpeedMultiplier);
             ScrollSpeed = Mathf.Max(5f, _lastPlanetRadius * 2f);
         }
-    }
-
-    Light FindSunLight()
-    {
-        var lights = FindObjectsByType<Light>(FindObjectsInactive.Exclude);
-        for (int i = 0; i < lights.Length; i++)
-        {
-            if (lights[i].type == LightType.Directional)
-                return lights[i];
-        }
-
-        return null;
     }
 
     IPlanetSurfaceSampler GetPlanet()

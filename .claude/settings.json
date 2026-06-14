@@ -2,7 +2,7 @@
   "autoMemoryEnabled": true,
   "autoMemoryDirectory": "~/Source/Repos/Magikorp/ProceduralPlanets/.agent-memory/claude",
   "permissions": {
-    "defaultMode": "auto"
+    "defaultMode": "bypassPermissions"
   },
   "hooks": {
     "PreToolUse": [

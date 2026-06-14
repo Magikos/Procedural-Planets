@@ -19,6 +19,17 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     static void DiagnosticsCmd()
         => EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.DumpWeatherDiagnostics));
 
+    [ConsoleCommand("frame-storm", "Reposition the camera to frame the strongest active storm.", MonoTargetType.Single)]
+    string FrameStormCmd()
+    {
+        if (!TryFindStrongestPrecipitation(out Vector3 pos, out _))
+            return "no active storm found";
+        if (!ServiceLocator.TryGet<IFreeCameraService>(out var cam))
+            return "no free camera active";
+        cam.FrameWorldTarget(pos);
+        return "framing strongest storm";
+    }
+
     [ConsoleCommand("wind-speed", "Get or set global wind speed in meters per second.", MonoTargetType.Single)]
     string WindSpeedCmd(float? value = null)
     {

@@ -1,0 +1,6 @@
+# Editor plugins — not project code
+Assets/Plugins/Wingman/
+Packages/com.singularitygroup.hotreload/
+
+# Graphify's own output directory
+graphify-out/
