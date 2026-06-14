@@ -45,6 +45,10 @@ public sealed class PlanetChunk
     // Color32 is what the GPU stores anyway, so this is lossless for rendering.
     public Color32[] CpuColors32;
     public Vector4[] CpuBiomeData;
+    // Compact retained copy of the normalized biome diagnostics. The initial bake uses the
+    // full Vector4 data, then pooled mesh uploads expand this RGBA8 source through one shared
+    // scratch buffer. All four channels are authored in [0,1].
+    public Color32[] CpuBiomeData32;
     // True terrain-aware vertex normals from PlanetChunkNormalsJob (cross-product of neighbor
     // tangents). Preferred over CpuUnitSpherePoints when uploading mesh normals — gives
     // proper lighting on terrain elevation features rather than smooth-sphere shading.
@@ -142,20 +146,18 @@ public sealed class PlanetChunk
         return radius > 0f;
     }
 
-    public void ReleaseCpuDataAfterColorUpload(
-        bool retainSurfaceSamplingAndRebakeData,
+    public void ReleaseCpuDataAfterBake(
+        bool retainSurfaceSamplingData,
         bool retainUnitSphereForWaterSampler)
     {
-        // The heavy Color[] is released; CpuColors32 is kept as the compact mesh source.
-        // CpuBiomeData is now kept for every node (not just leaves): the pooled render path
-        // rebuilds meshes on page-in and needs the uv2 biome channel, which the shader's
-        // terrain-override masks (coast/slope/snow) read in production - not just diagnostics.
+        // Heavy bake arrays are released after compact mesh sources have been retained.
         CpuColors = null;
+        CpuBiomeData = null;
 
         if (!retainUnitSphereForWaterSampler)
             CpuUnitSpherePoints = null;
 
-        if (retainSurfaceSamplingAndRebakeData)
+        if (retainSurfaceSamplingData)
             return;
 
         CpuElevations = null;
@@ -171,6 +173,7 @@ public sealed class PlanetChunk
         bytes += ArrayBytes(CpuVertexRadii, sizeof(float));
         bytes += ArrayBytes(CpuColors32, 4);
         bytes += ArrayBytes(CpuBiomeData, sizeof(float) * 4);
+        bytes += ArrayBytes(CpuBiomeData32, 4);
         bytes += ArrayBytes(CpuNormals, sizeof(float) * 3);
         return bytes;
     }

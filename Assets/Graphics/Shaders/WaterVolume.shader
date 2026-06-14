@@ -639,7 +639,9 @@ Shader "Hidden/WaterVolume"
             }
 
             float waterMask = step(0.001, waterMaskProof);
-            float3 outsideColor = _OceanDebugMode == DEBUG_OFF ? source.rgb : float3(0.0, 0.0, 0.0);
+            float3 outsideColor = IsProductionEquivalentDebugMode(_OceanDebugMode)
+                ? source.rgb
+                : float3(0.0, 0.0, 0.0);
             return float4(lerp(outsideColor, float3(0.0, 0.0, 1.0), waterMask), 1.0);
         }
         #endif
@@ -654,6 +656,7 @@ Shader "Hidden/WaterVolume"
             || _OceanDebugMode == DEBUG_VOLUME_REFRACTION;
         bool volumeBodyDebug = _OceanDebugMode == DEBUG_VOLUME_ONLY
             || _OceanDebugMode == DEBUG_VOLUME_CONTRIBUTION;
+        bool volumeOpticalDebug = _OceanDebugMode == DEBUG_VOLUME_OPTICAL;
 
         float3 viewVector = ViewVectorFromUv(input.uv);
         float viewLength = max(length(viewVector), 0.0001);
@@ -661,7 +664,8 @@ Shader "Hidden/WaterVolume"
 
         if (SceneDepthValid(rawDepth) <= 0.0)
         {
-            if (CameraUnderwater01() > 0.01 && (_OceanDebugMode == DEBUG_OFF || volumeBodyDebug))
+            if (CameraUnderwater01() > 0.01
+                && (IsProductionEquivalentDebugMode(_OceanDebugMode) || volumeBodyDebug))
                 return float4(UnderwaterNoDepthColor(rayDir), 1.0);
 
             return (causticDebug || bottomDistortionDebug || volumeBodyDebug) ? float4(0.0, 0.0, 0.0, 1.0) : source;
@@ -680,19 +684,6 @@ Shader "Hidden/WaterVolume"
         caustics.prismContribution *= layerVisibility;
         caustics.contribution *= liquidContribution;
         caustics.prismContribution *= liquidContribution;
-        float farTerrainWaterlinePath;
-        float farTerrainWaterlineMask = FarTerrainWaterlineMask(receiverWS, rayDir, receiverDistance, screenWaterCoverage, farTerrainWaterlinePath) * layerVisibility;
-        farTerrainWaterlinePath *= layerVisibility;
-        float distortionDebugScale = bottomDistortionDebug ? 3.0 : 1.0;
-        BottomDistortionResult bottomDistortion = ComputeBottomDistortion(
-            input.uv,
-            source.rgb,
-            receiverWS,
-            caustics,
-            distortionDebugScale);
-        bottomDistortion.mask *= liquidContribution;
-        bottomDistortion.offsetUv *= liquidContribution;
-        bottomDistortion.strengthPixels *= liquidContribution;
 
         if (_OceanDebugMode == DEBUG_VOLUME_MASK || _OceanDebugMode == DEBUG_VOLUME_OCCLUSION)
             return float4(caustics.mask, screenWaterCoverage, saturate(caustics.waterPath / max(_DeepDepth, 1.0)), 1.0);
@@ -706,20 +697,6 @@ Shader "Hidden/WaterVolume"
 
         if (_OceanDebugMode == DEBUG_VOLUME_LIGHT)
             return float4(caustics.sunLight, caustics.moonLight, caustics.light, 1.0);
-
-        if (_OceanDebugMode == DEBUG_BOTTOM_DISTORTION_VECTOR || _OceanDebugMode == DEBUG_VOLUME_REFRACTION)
-        {
-            float2 pixelOffset = bottomDistortion.offsetUv * _ScreenParams.xy;
-            float3 vectorColor = float3(saturate(pixelOffset * 0.15 + 0.5), bottomDistortion.mask);
-            return float4(lerp(float3(0.0, 0.0, 0.0), vectorColor, saturate(bottomDistortion.mask * 2.0)), 1.0);
-        }
-
-        if (_OceanDebugMode == DEBUG_BOTTOM_DISTORTION_ONLY)
-        {
-            float distortionHeat = saturate(bottomDistortion.strengthPixels / 6.0);
-            float3 proofColor = lerp(bottomDistortion.color, float3(0.25, 0.72, 1.0), distortionHeat * 0.22);
-            return float4(lerp(float3(0.0, 0.0, 0.0), proofColor, saturate(bottomDistortion.mask * 1.45)), 1.0);
-        }
 
         if (_OceanDebugMode == DEBUG_CAUSTICS_MASK)
             return float4(caustics.mask, caustics.depthFade, caustics.pathFade, 1.0);
@@ -745,6 +722,51 @@ Shader "Hidden/WaterVolume"
             float3 chromaticDeviation = (c - luma) * 4.0 + 0.5; // amplify deviation, recentre at grey
             return float4(saturate(chromaticDeviation), 1.0);
         }
+
+        float distortionDebugScale = bottomDistortionDebug ? 3.0 : 1.0;
+        BottomDistortionResult bottomDistortion = EmptyBottomDistortionResult(source.rgb);
+        if (!volumeBodyDebug && !volumeOpticalDebug)
+        {
+            bottomDistortion = ComputeBottomDistortion(
+                input.uv,
+                source.rgb,
+                receiverWS,
+                caustics,
+                distortionDebugScale);
+            bottomDistortion.mask *= liquidContribution;
+            bottomDistortion.offsetUv *= liquidContribution;
+            bottomDistortion.strengthPixels *= liquidContribution;
+        }
+
+        if (_OceanDebugMode == DEBUG_BOTTOM_DISTORTION_VECTOR || _OceanDebugMode == DEBUG_VOLUME_REFRACTION)
+        {
+            float2 pixelOffset = bottomDistortion.offsetUv * _ScreenParams.xy;
+            float3 vectorColor = float3(saturate(pixelOffset * 0.15 + 0.5), bottomDistortion.mask);
+            return float4(lerp(float3(0.0, 0.0, 0.0), vectorColor, saturate(bottomDistortion.mask * 2.0)), 1.0);
+        }
+
+        if (_OceanDebugMode == DEBUG_BOTTOM_DISTORTION_ONLY)
+        {
+            float distortionHeat = saturate(bottomDistortion.strengthPixels / 6.0);
+            float3 proofColor = lerp(bottomDistortion.color, float3(0.25, 0.72, 1.0), distortionHeat * 0.22);
+            return float4(lerp(float3(0.0, 0.0, 0.0), proofColor, saturate(bottomDistortion.mask * 1.45)), 1.0);
+        }
+
+        if (volumeOpticalDebug)
+        {
+            float opticalDepth = VolumeOpticalDepth(caustics);
+            float opticalOpacity = saturate(1.0 - exp(-opticalDepth * 1.72));
+            float depthFog = VolumeDepthFog(caustics);
+            return float4(
+                saturate(opticalDepth / max(_VolumeDensity * 4.0, 0.001)),
+                opticalOpacity * caustics.mask,
+                depthFog,
+                1.0);
+        }
+
+        float farTerrainWaterlinePath;
+        float farTerrainWaterlineMask = FarTerrainWaterlineMask(receiverWS, rayDir, receiverDistance, screenWaterCoverage, farTerrainWaterlinePath) * layerVisibility;
+        farTerrainWaterlinePath *= layerVisibility;
 
         float causticMask = caustics.mask * caustics.depthFade * caustics.pathFade * caustics.light;
         float troughShadow = saturate((1.0 - caustics.pattern) * causticMask * 0.025 * liquidContribution);

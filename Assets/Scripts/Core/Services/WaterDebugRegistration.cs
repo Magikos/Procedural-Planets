@@ -87,6 +87,15 @@ static class WaterDebugRegistration
         RegisterMode(registry, DebugModeConstants.WaterTemperature, "WaterTemperature", "Frozen Water");
         RegisterMode(registry, DebugModeConstants.WaterFreeze, "WaterFreeze", "Frozen Water");
         RegisterMode(registry, DebugModeConstants.WaterIceContribution, "WaterIceContribution", "Frozen Water");
+        RegisterMode(registry, DebugModeConstants.PerformanceWeatherNone, "PerfWeatherNone", "Performance");
+        RegisterMode(registry, DebugModeConstants.PerformanceWeatherClouds, "PerfWeatherClouds", "Performance");
+        RegisterMode(registry, DebugModeConstants.PerformanceWeatherPrecipitation, "PerfWeatherPrecipitation", "Performance");
+        RegisterMode(registry, DebugModeConstants.PerformanceWeatherAtmosphere, "PerfWeatherAtmosphere", "Performance");
+        RegisterMode(registry, DebugModeConstants.PerformanceWeatherAll, "PerfWeatherAll", "Performance");
+        RegisterMode(registry, DebugModeConstants.PerformanceCloud72x8, "PerfCloud72x8", "Performance");
+        RegisterMode(registry, DebugModeConstants.PerformanceCloud48x8, "PerfCloud48x8", "Performance");
+        RegisterMode(registry, DebugModeConstants.PerformanceCloud72x4, "PerfCloud72x4", "Performance");
+        RegisterMode(registry, DebugModeConstants.PerformanceCloud48x4, "PerfCloud48x4", "Performance");
     }
 
     static void RegisterCaptureSets(DebugRegistry registry)

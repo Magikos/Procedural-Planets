@@ -49,6 +49,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     readonly Transform _planetTransform;
     readonly ChunkedSurfaceProvider _surfaceProvider;
     readonly IGrassQualitySettings _qualitySettings;
+    readonly IGrassNearFieldStatsProvider _nearFieldStatsProvider;
     readonly ILogger _logger;
     readonly Material _material;
     readonly ComputeShader _placementCompute;
@@ -56,6 +57,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     readonly int _placeKernel;
     readonly bool _placementAvailable;
     readonly Dictionary<PlanetChunk, GrassChunkRuntime> _chunks = new();
+    readonly GrassBladeBufferPool _bladePool;
     readonly List<PlanetChunk> _residencyScratch = new(128);
     readonly HashSet<PlanetChunk> _residencyChunks = new();
     readonly List<PlanetChunk> _chunksToRelease = new();
@@ -79,7 +81,8 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
 
     public GrassPlacementController(Transform planetTransform, ChunkedSurfaceProvider surfaceProvider,
         ComputeBuffer grassParamsBuffer, int grassParamCount,
-        float waterRadius, int seed, ILogger logger)
+        float waterRadius, int seed, IGrassNearFieldStatsProvider nearFieldStatsProvider,
+        ILogger logger)
     {
         _planetTransform = planetTransform;
         _surfaceProvider = surfaceProvider;
@@ -88,8 +91,9 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         _waterRadius = waterRadius;
         _seed = seed;
         _logger = logger ?? LoggerProvider.Get();
-        if (!ServiceLocator.TryGet(out _qualitySettings))
-            _qualitySettings = new DefaultGrassQualitySettings();
+        _qualitySettings = ServiceLocator.Get<IGrassQualitySettings>();
+        _nearFieldStatsProvider = nearFieldStatsProvider
+            ?? throw new System.ArgumentNullException(nameof(nearFieldStatsProvider));
         _maxChunkDepth = surfaceProvider.MaxChunkDepth;
         _maxCoarseLodOffsetForBlades = Mathf.Clamp(
             _qualitySettings.MaxCoarseLodOffsetForBlades, 0, _maxChunkDepth);
@@ -100,6 +104,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         // many of those allocated slots are drawn.
         _maxBladesPerLane = Mathf.Clamp(_qualitySettings.MaxBladesPerLane, 1, 32);
         _maxBladeInstancesPerChunk = LaneResolution * LaneResolution * _maxBladesPerLane;
+        _bladePool = new GrassBladeBufferPool(_maxBladeInstancesPerChunk, GrassChunkRuntime.BladeStride);
         _grassDensityMultiplier = Mathf.Max(0f, _qualitySettings.DensityMultiplier);
         _maxRenderDistance = Mathf.Max(0f, _qualitySettings.MaxRenderDistance);
         _distanceFadeStart = Mathf.Clamp(_qualitySettings.LowLodDistance, 0f, _maxRenderDistance);
@@ -193,12 +198,9 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         // chunk blades would double up wastefully. Placement remains warm so chunk
         // grass is ready as soon as the camera crosses the handoff boundary.
         float suppressionRadiusSq = 0f;
-        if (ServiceLocator.TryGet(out IGrassNearFieldStatsProvider nfProvider))
-        {
-            GrassNearFieldStats nfStats = nfProvider.GetGrassNearFieldStats();
-            if (nfStats.ControllerActive && nfStats.ShaderAvailable && nfStats.SuppressionRadius > 0f)
-                suppressionRadiusSq = nfStats.SuppressionRadius * nfStats.SuppressionRadius;
-        }
+        GrassNearFieldStats nfStats = _nearFieldStatsProvider.GetGrassNearFieldStats();
+        if (nfStats.ControllerActive && nfStats.ShaderAvailable && nfStats.SuppressionRadius > 0f)
+            suppressionRadiusSq = nfStats.SuppressionRadius * nfStats.SuppressionRadius;
         Vector3 cameraPos = camera.transform.position;
 
         foreach (var pair in _chunks)
@@ -289,6 +291,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         foreach (var pair in _chunks)
             pair.Value?.Dispose();
         _chunks.Clear();
+        _bladePool.Dispose();
         _residencyChunks.Clear();
         _residencyScratch.Clear();
 
@@ -378,7 +381,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             return null;
 
         Bounds worldBounds = EstimateGrassWorldBounds(chunk);
-        var runtime = GrassChunkRuntime.Create(_maxBladeInstancesPerChunk, BladeVertexCount,
+        var runtime = GrassChunkRuntime.Create(_bladePool, _maxBladeInstancesPerChunk, BladeVertexCount,
             BladeInstancesId, GrassChunkRuntime.StatsCount, worldBounds);
         if (runtime == null)
             return null;
@@ -504,14 +507,12 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         };
     }
 
-    static void ResolveChunkInnerFade(out float start, out float end)
+    void ResolveChunkInnerFade(out float start, out float end)
     {
         start = 0f;
         end = 0f;
-        if (!ServiceLocator.TryGet(out IGrassNearFieldStatsProvider provider))
-            return;
 
-        GrassNearFieldStats near = provider.GetGrassNearFieldStats();
+        GrassNearFieldStats near = _nearFieldStatsProvider.GetGrassNearFieldStats();
         if (!near.ControllerActive || !near.ShaderAvailable || near.DrawDistance <= 0f)
             return;
 

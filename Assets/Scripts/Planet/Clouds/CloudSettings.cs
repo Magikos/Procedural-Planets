@@ -24,8 +24,8 @@ public class CloudSettings : ScriptableObject
     public Color StormColor = new Color(0.35f, 0.37f, 0.42f, 1f);
 
     [Header("Ray March")]
-    [Range(8, 96)] public int ViewSteps = 72;
-    [Range(2, 16)] public int LightSteps = 8;
+    [Range(8, 96)] public int ViewSteps = 48;
+    [Range(2, 16)] public int LightSteps = 4;
     [Range(0f, 2f)] public float RayOffsetStrength = 1.1f;
     [Tooltip("Minimum view steps used when the camera is very far from the planet.")]
     [Range(4, 64)] public int MinViewSteps = 24;

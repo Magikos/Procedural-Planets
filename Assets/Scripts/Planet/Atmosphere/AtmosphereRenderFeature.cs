@@ -11,6 +11,7 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
 {
     static readonly int _waterVolumeEnabledId = Shader.PropertyToID(ShaderGlobalIds.WaterVolumeEnabled);
     static readonly int _oceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
+    static readonly int _debugSuppressWeatherPassesId = Shader.PropertyToID(ShaderGlobalIds.DebugSuppressWeatherPasses);
     static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
     static readonly int _atmosphereRadiusId = Shader.PropertyToID(ShaderGlobalIds.AtmosphereRadius);
     static readonly Plane[] _frustumPlanes = new Plane[6];
@@ -34,6 +35,13 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
         if (camType == CameraType.Preview || camType == CameraType.Reflection)
             return;
 
+        if (Shader.GetGlobalFloat(_debugSuppressWeatherPassesId) > 0.5f)
+            return;
+
+        int oceanDebugMode = Shader.GetGlobalInt(_oceanDebugModeId);
+        if (!DebugModeConstants.PerformanceWeatherIncludesAtmosphere(oceanDebugMode))
+            return;
+
         bool needsController = _cachedController == null || !_cachedController.isActiveAndEnabled;
         if (needsController && Time.unscaledTime >= _nextControllerScanTime)
         {
@@ -52,7 +60,6 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
             _material.EnableKeyword("DIRECTIONAL_SUN");
         }
 
-        int oceanDebugMode = Shader.GetGlobalInt(_oceanDebugModeId);
         bool useWaterInterface = Shader.GetGlobalFloat(_waterVolumeEnabledId) > 0.5f
             && oceanDebugMode != DebugModeConstants.AtmosphereBypass
             && oceanDebugMode != DebugModeConstants.VolumeAfterAtmosphere;

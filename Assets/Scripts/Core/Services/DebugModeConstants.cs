@@ -150,8 +150,21 @@ public static class DebugModeConstants
     public const int TerrainPrimaryAlbedo = 95;
     public const int TerrainMixedAlbedo = 96;
 
+    // Performance-only weather pass isolation
+    public const int PerformanceWeatherNone = 97;
+    public const int PerformanceWeatherClouds = 98;
+    public const int PerformanceWeatherPrecipitation = 99;
+    public const int PerformanceWeatherAtmosphere = 100;
+    public const int PerformanceWeatherAll = 101;
+
+    // Performance-only cloud raymarch isolation
+    public const int PerformanceCloud72x8 = 102;
+    public const int PerformanceCloud48x8 = 103;
+    public const int PerformanceCloud72x4 = 104;
+    public const int PerformanceCloud48x4 = 105;
+
     /// <summary>Highest defined mode value. Update when adding new modes.</summary>
-    public const int Max = 96;
+    public const int Max = 105;
 
     public static bool SuppressesWeatherPasses(int mode)
     {
@@ -178,5 +191,49 @@ public static class DebugModeConstants
             || (mode >= BiomePrimaryId && mode <= BiomeAltitudeCooling)
             || (mode >= WaterTemperature && mode <= WaterIceContribution)
             || (mode >= TerrainCoastMask && mode <= TerrainMixedAlbedo);
+    }
+
+    public static bool IsPerformanceWeatherMode(int mode)
+    {
+        return mode >= PerformanceWeatherNone && mode <= PerformanceWeatherAll;
+    }
+
+    public static bool IsPerformanceCloudMode(int mode)
+    {
+        return mode >= PerformanceCloud72x8 && mode <= PerformanceCloud48x4;
+    }
+
+    public static bool PerformanceWeatherIncludesClouds(int mode)
+    {
+        return !IsPerformanceWeatherMode(mode)
+            || mode == PerformanceWeatherClouds
+            || mode == PerformanceWeatherAll;
+    }
+
+    public static bool PerformanceWeatherIncludesPrecipitation(int mode)
+    {
+        return !IsPerformanceWeatherMode(mode) && !IsPerformanceCloudMode(mode)
+            || mode == PerformanceWeatherPrecipitation
+            || mode == PerformanceWeatherAll;
+    }
+
+    public static bool PerformanceWeatherIncludesAtmosphere(int mode)
+    {
+        return !IsPerformanceWeatherMode(mode) && !IsPerformanceCloudMode(mode)
+            || mode == PerformanceWeatherAtmosphere
+            || mode == PerformanceWeatherAll;
+    }
+
+    public static string GetPerformanceWeatherStageName(int mode)
+    {
+        return mode switch
+        {
+            PerformanceWeatherNone => "None",
+            PerformanceWeatherClouds => "CloudsOnly",
+            PerformanceWeatherPrecipitation => "PrecipitationOnly",
+            PerformanceWeatherAtmosphere => "AtmosphereOnly",
+            PerformanceWeatherAll => "All",
+            _ => "Default",
+        };
     }
 }

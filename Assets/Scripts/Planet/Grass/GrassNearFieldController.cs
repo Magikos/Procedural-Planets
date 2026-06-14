@@ -221,7 +221,6 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             + GraphicsBuffer.IndirectDrawArgs.size
             + (long)(StatsCount + FaceSpaceCellRangeBuilder.MaxRanges) * sizeof(uint);
         _available = true;
-        ServiceLocator.RegisterWorld<IGrassNearFieldStatsProvider>(this);
 
         _logger.Log(LogLevel.Debug, "GrassNF",
             $"Initialized: capacity={_capacity}, spacing={_spacing}, cellUvWidth={_cellUvWidth:E3}, fullDensity={_fullDensityDistance}, draw={_drawDistance}, fadeBand={_fadeBand}, pageCellSize={_pageCellSize}, buffer={_bufferBytes / (1024f * 1024f):F1} MB");
@@ -521,7 +520,6 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     {
         if (_disposed) return;
         _disposed = true;
-        ServiceLocator.UnregisterWorld<IGrassNearFieldStatsProvider>(this);
 
         _instancesBuffer?.Dispose();
         _argsBuffer?.Dispose();

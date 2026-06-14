@@ -150,13 +150,56 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
         FreezeTime = !FreezeTime;
     }
 
+    public void SetTimeFrozen(bool frozen)
+    {
+        FreezeTime = frozen;
+    }
+
+    public void SetTimeOfDay(float timeOfDay)
+    {
+        _timeOfDay = Mathf.Repeat(timeOfDay, 1f);
+        UpdateSun(0f);
+        UpdateMoon(0f);
+        UpdateAmbient();
+        UpdateMoonShaderGlobals();
+    }
+
+    public bool TrySetLocalTimeOfDay(float localTimeOfDay)
+    {
+        if (PlanetCenter == null)
+            return false;
+
+        Camera cam = GetViewCamera();
+        if (cam == null)
+            return false;
+
+        Vector3 camDir = (cam.transform.position - PlanetCenter.position).normalized;
+        if (camDir.sqrMagnitude < 0.0001f)
+            return false;
+
+        Quaternion tilt = Quaternion.Euler(AxialTilt, 0f, 0f);
+        Vector3 untilted = Quaternion.Inverse(tilt) * -camDir;
+        Vector3 inPlane = new Vector3(untilted.x, untilted.y, 0f);
+        if (inPlane.sqrMagnitude < 0.0001f)
+            return false;
+
+        inPlane.Normalize();
+        float tNoon = Mathf.Atan2(inPlane.x, -inPlane.y) / (2f * Mathf.PI);
+        if (tNoon < 0f)
+            tNoon += 1f;
+
+        localTimeOfDay = Mathf.Repeat(localTimeOfDay, 1f);
+        SetTimeOfDay(tNoon + localTimeOfDay - 0.5f);
+        return true;
+    }
+
     // --- Console commands -------------------------------------------------
 
     [ConsoleCommand("freeze", "Get or set sun freeze state. No-arg reads, true/false sets.", MonoTargetType.Single)]
     string FreezeCmd(bool? frozen = null)
     {
         if (frozen == null) return $"sun frozen: {FreezeTime}";
-        FreezeTime = frozen.Value;
+        SetTimeFrozen(frozen.Value);
         return $"sun frozen: {FreezeTime}";
     }
 
@@ -180,7 +223,7 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
 
         // Un-tilt: the sun orbits in the world XY plane in the un-tilted frame.
         Quaternion tilt = Quaternion.Euler(AxialTilt, 0f, 0f);
-        Vector3 untilted = Quaternion.Inverse(tilt) * camDir;
+        Vector3 untilted = Quaternion.Inverse(tilt) * -camDir;
 
         // Project onto the sun's orbital plane (XY). At the poles, no projection exists → local time undefined.
         Vector3 inPlane = new Vector3(untilted.x, untilted.y, 0f);
@@ -192,8 +235,7 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
         if (tNoon < 0f) tNoon += 1f;
 
         fraction = ((fraction % 1f) + 1f) % 1f;
-        _timeOfDay = (tNoon + (fraction - 0.5f) + 1f) % 1f;
-        UpdateSun(0f);
+        SetTimeOfDay(tNoon + fraction - 0.5f);
         return $"local time at camera: {fraction:F2} (global time-of-day = {_timeOfDay:F2})";
     }
 

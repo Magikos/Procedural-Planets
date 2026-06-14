@@ -6,10 +6,15 @@ using UnityEngine;
 public class DebugCaptureController : MonoBehaviour
 {
     static readonly Color DebugOverlayBackgroundColor = new(0f, 0f, 0f, 0.55f);
+    static readonly int DebugSuppressWeatherPassesId = Shader.PropertyToID(ShaderGlobalIds.DebugSuppressWeatherPasses);
+    static readonly int CloudViewStepsId = Shader.PropertyToID(ShaderGlobalIds.CloudViewSteps);
+    static readonly int CloudLightStepsId = Shader.PropertyToID(ShaderGlobalIds.CloudLightSteps);
 
     [Header("Debug Runtime")]
     public int CappedFrameRate = 60;
     public int ProfilingFrameRate = 1000;
+    [Range(0f, 1f)]
+    public float TimedCaptureLocalTime = 0.5f;
 
     [Header("Debug Info")]
     [System.NonSerialized]
@@ -22,6 +27,7 @@ public class DebugCaptureController : MonoBehaviour
     const int DebugScreenshotMaxWidth = 960;
     const int DebugScreenshotMaxRuns = 6;
     const float DebugCaptureModeDelaySeconds = 0.12f;
+    const float TimedCaptureSampleTimeoutSeconds = 10f;
     const bool RestoreDebugOffAfterCaptureSet = true;
 
     Light _cachedSunLight;
@@ -220,7 +226,7 @@ public class DebugCaptureController : MonoBehaviour
             return;
         }
 
-        QueueDebugCapture(GetDebugCaptureModes(), captureScreenshots: true);
+        QueueDebugCapture(captureSet, GetDebugCaptureModes(), captureScreenshots: true);
     }
 
     void ApplyDebugMode(DebugModeId modeId)
@@ -240,15 +246,19 @@ public class DebugCaptureController : MonoBehaviour
         return _debugRegistry.GetCaptureSet(_f10CaptureSetIndex);
     }
 
-    void QueueDebugCapture(DebugModeId[] modes, bool captureScreenshots)
+    void QueueDebugCapture(
+        DebugCaptureSetDefinition captureSet,
+        DebugModeId[] modes,
+        bool captureScreenshots)
     {
         if (_debugScreenshotCaptureRunning || !gameObject.activeInHierarchy || modes == null || modes.Length == 0)
             return;
 
-        _ = CaptureDebugSequenceAsync(modes, captureScreenshots, CancellationToken.None);
+        _ = CaptureDebugSequenceAsync(captureSet, modes, captureScreenshots, CancellationToken.None);
     }
 
     async Awaitable CaptureDebugSequenceAsync(
+        DebugCaptureSetDefinition captureSet,
         DebugModeId[] modes,
         bool captureScreenshots,
         CancellationToken ct)
@@ -256,19 +266,54 @@ public class DebugCaptureController : MonoBehaviour
         _debugScreenshotCaptureRunning = true;
         DebugScreenshotFiles.RecordLastCaptureCamera();
         DebugModeId restoreMode = RestoreDebugOffAfterCaptureSet ? _debugRegistry.DefaultModeId : _currentDebugModeId;
+        bool timedCapture = captureSet.TimingSamplesPerMode > 0;
+        int restoreFrameRate = Application.targetFrameRate;
+        int restoreVSync = QualitySettings.vSyncCount;
+        float restoreDebugSuppressWeatherPasses = Shader.GetGlobalFloat(DebugSuppressWeatherPassesId);
+        int restoreCloudViewSteps = Shader.GetGlobalInt(CloudViewStepsId);
+        int restoreCloudLightSteps = Shader.GetGlobalInt(CloudLightStepsId);
+        bool suppressWeatherPasses = captureSet.Id == DebugCoreIds.PerformanceWaterVolumeStages;
+        bool cloudStepCapture = captureSet.Id == DebugCoreIds.PerformanceCloudSteps;
+        ICelestialTimeController celestial = _cachedCelestialManager;
+        float restoreTimeOfDay = celestial != null ? celestial.TimeOfDay : 0f;
+        bool restoreTimeFrozen = celestial != null && celestial.IsTimeFrozen;
         LoggerProvider.Log(LogLevel.Debug, "DebugCapture", $"F10 start. Modes={modes.Length}, CaptureScreenshots={captureScreenshots}");
 
         try
         {
+            if (timedCapture)
+            {
+                if (celestial == null)
+                    throw new System.InvalidOperationException("Timed debug captures require an ICelestialTimeController.");
+
+                QualitySettings.vSyncCount = 0;
+                Application.targetFrameRate = Mathf.Max(ProfilingFrameRate, CappedFrameRate + 1);
+                Shader.SetGlobalFloat(DebugSuppressWeatherPassesId, suppressWeatherPasses ? 1f : 0f);
+                celestial.SetTimeFrozen(true);
+                if (!celestial.TrySetLocalTimeOfDay(TimedCaptureLocalTime))
+                    throw new System.InvalidOperationException("Timed debug capture could not set local celestial time.");
+
+                await WaitForDebugModeRenderAsync(ct);
+            }
+
             for (int i = 0; i < modes.Length; i++)
             {
                 ct.ThrowIfCancellationRequested();
                 DebugModeDefinition mode = _debugRegistry.GetMode(modes[i]);
                 string modeName = mode.Name;
                 ApplyDebugMode(mode.Id);
+                if (cloudStepCapture)
+                    ApplyCloudStepBenchmark(mode.Id.LocalId, restoreCloudViewSteps, restoreCloudLightSteps);
                 LoggerProvider.Log(LogLevel.Debug, "DebugCapture", $"F10 step {i + 1}/{modes.Length}: mode {mode.Id}:{modeName}");
 
                 await WaitForDebugModeRenderAsync(ct);
+                if (captureSet.TimingSamplesPerMode > 0)
+                {
+                    FrameTimingCounters.Reset();
+                    await WaitForFrameTimingSamplesAsync(
+                        captureSet.TimingSamplesPerMode,
+                        ct);
+                }
 
                 if (captureScreenshots)
                 {
@@ -287,9 +332,74 @@ public class DebugCaptureController : MonoBehaviour
         finally
         {
             ApplyDebugMode(restoreMode);
+            if (timedCapture)
+            {
+                if (celestial != null)
+                {
+                    celestial.SetTimeOfDay(restoreTimeOfDay);
+                    celestial.SetTimeFrozen(restoreTimeFrozen);
+                }
+
+                Application.targetFrameRate = restoreFrameRate;
+                QualitySettings.vSyncCount = restoreVSync;
+                Shader.SetGlobalFloat(DebugSuppressWeatherPassesId, restoreDebugSuppressWeatherPasses);
+                Shader.SetGlobalInt(CloudViewStepsId, restoreCloudViewSteps);
+                Shader.SetGlobalInt(CloudLightStepsId, restoreCloudLightSteps);
+            }
+
             _debugScreenshotCaptureRunning = false;
             LoggerProvider.Log(LogLevel.Debug, "DebugCapture", "F10 end.");
         }
+    }
+
+    static void ApplyCloudStepBenchmark(int mode, int baselineViewSteps, int baselineLightSteps)
+    {
+        switch (mode)
+        {
+            case DebugModeConstants.PerformanceCloud72x8:
+                Shader.SetGlobalInt(CloudViewStepsId, 72);
+                Shader.SetGlobalInt(CloudLightStepsId, 8);
+                break;
+            case DebugModeConstants.PerformanceCloud48x8:
+                Shader.SetGlobalInt(CloudViewStepsId, 48);
+                Shader.SetGlobalInt(CloudLightStepsId, 8);
+                break;
+            case DebugModeConstants.PerformanceCloud72x4:
+                Shader.SetGlobalInt(CloudViewStepsId, 72);
+                Shader.SetGlobalInt(CloudLightStepsId, 4);
+                break;
+            case DebugModeConstants.PerformanceCloud48x4:
+                Shader.SetGlobalInt(CloudViewStepsId, 48);
+                Shader.SetGlobalInt(CloudLightStepsId, 4);
+                break;
+            default:
+                Shader.SetGlobalInt(CloudViewStepsId, Mathf.Max(1, baselineViewSteps));
+                Shader.SetGlobalInt(CloudLightStepsId, Mathf.Max(1, baselineLightSteps));
+                break;
+        }
+    }
+
+    static async Awaitable WaitForFrameTimingSamplesAsync(
+        int requiredSamples,
+        CancellationToken ct)
+    {
+        float timeoutAt = Time.realtimeSinceStartup + TimedCaptureSampleTimeoutSeconds;
+        while (FrameTimingCounters.CompletedSampleCount < requiredSamples)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (Time.realtimeSinceStartup >= timeoutAt)
+            {
+                LoggerProvider.Log(
+                    LogLevel.Warning,
+                    "DebugCapture",
+                    $"Timed capture reached {FrameTimingCounters.CompletedSampleCount}/{requiredSamples} samples before timeout.");
+                break;
+            }
+
+            await Awaitable.NextFrameAsync(ct);
+        }
+
+        await Awaitable.EndOfFrameAsync();
     }
 
     void QueueDebugScreenshot()
@@ -669,7 +779,11 @@ public class DebugCaptureController : MonoBehaviour
             return;
         }
 
-        await CaptureDebugSequenceAsync(GetDebugCaptureModes(), captureScreenshots: true, ct);
+        await CaptureDebugSequenceAsync(
+            captureSet,
+            GetDebugCaptureModes(),
+            captureScreenshots: true,
+            ct);
     }
 
     GUIStyle GetDebugOverlayPanelStyle()

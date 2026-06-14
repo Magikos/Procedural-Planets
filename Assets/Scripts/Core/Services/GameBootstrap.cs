@@ -1,6 +1,7 @@
 using System.Threading;
 using UnityEngine;
 
+[DefaultExecutionOrder(-9000)]
 public class GameBootstrap : MonoBehaviour, IEarlyInitialize
 {
     static GameBootstrap _instance;
@@ -22,6 +23,7 @@ public class GameBootstrap : MonoBehaviour, IEarlyInitialize
 
         _instance = this;
         DontDestroyOnLoad(gameObject);
+        EnsureComponent<EventBusProcessor>();
     }
 
     void OnDestroy()

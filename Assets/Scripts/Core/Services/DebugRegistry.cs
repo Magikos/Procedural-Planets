@@ -123,6 +123,11 @@ public static class DebugCoreIds
     public static readonly DebugModuleId Module = new DebugModuleId("debug");
     public static readonly DebugCaptureSetId CurrentModeOnly = new DebugCaptureSetId(Module, "current-mode");
     public static readonly DebugCaptureSetId FullLoop = new DebugCaptureSetId(Module, "full-loop");
+    public static readonly DebugCaptureSetId PerformanceBaseline = new DebugCaptureSetId(Module, "performance-baseline");
+    public static readonly DebugCaptureSetId PerformanceWaterIsolation = new DebugCaptureSetId(Module, "performance-water-isolation");
+    public static readonly DebugCaptureSetId PerformanceWaterVolumeStages = new DebugCaptureSetId(Module, "performance-water-volume-stages");
+    public static readonly DebugCaptureSetId PerformanceWeatherStages = new DebugCaptureSetId(Module, "performance-weather-stages");
+    public static readonly DebugCaptureSetId PerformanceCloudSteps = new DebugCaptureSetId(Module, "performance-cloud-steps");
 }
 
 public enum DebugCaptureSetBehavior
@@ -152,13 +157,20 @@ public readonly struct DebugCaptureSetDefinition
     public readonly string Name;
     public readonly DebugCaptureSetBehavior Behavior;
     public readonly DebugModeId[] ModeIds;
+    public readonly int TimingSamplesPerMode;
 
-    public DebugCaptureSetDefinition(DebugCaptureSetId id, string name, DebugCaptureSetBehavior behavior, DebugModeId[] modeIds)
+    public DebugCaptureSetDefinition(
+        DebugCaptureSetId id,
+        string name,
+        DebugCaptureSetBehavior behavior,
+        DebugModeId[] modeIds,
+        int timingSamplesPerMode)
     {
         Id = id;
         Name = string.IsNullOrWhiteSpace(name) ? id.ToString() : name;
         Behavior = behavior;
         ModeIds = modeIds ?? System.Array.Empty<DebugModeId>();
+        TimingSamplesPerMode = System.Math.Max(0, timingSamplesPerMode);
     }
 }
 
@@ -338,6 +350,35 @@ public sealed class DebugRegistry
 
     public void RegisterCoreCaptureSets()
     {
+        RegisterCaptureSet(DebugCoreIds.PerformanceBaseline, "Performance Baseline",
+            WaterDebugIds.Mode(DebugModeConstants.Off));
+        RegisterTimedCaptureSet(DebugCoreIds.PerformanceWaterIsolation, "Performance Water Isolation", 60,
+            WaterDebugIds.Mode(DebugModeConstants.Off),
+            WaterDebugIds.Mode(DebugModeConstants.AtmosphereBypass),
+            WaterDebugIds.Mode(DebugModeConstants.WaterNoPost),
+            WaterDebugIds.Mode(DebugModeConstants.SurfaceOnly),
+            WaterDebugIds.Mode(DebugModeConstants.VolumeOnly),
+            WaterDebugIds.Mode(DebugModeConstants.WaterOff));
+        RegisterTimedCaptureSet(DebugCoreIds.PerformanceWaterVolumeStages, "Performance Water Volume Stages", 60,
+            WaterDebugIds.Mode(DebugModeConstants.WaterOff),
+            WaterDebugIds.Mode(DebugModeConstants.CausticsOnly),
+            WaterDebugIds.Mode(DebugModeConstants.BottomDistortionOnly),
+            WaterDebugIds.Mode(DebugModeConstants.VolumeOptical),
+            WaterDebugIds.Mode(DebugModeConstants.VolumeOnly),
+            WaterDebugIds.Mode(DebugModeConstants.Off));
+        RegisterTimedCaptureSet(DebugCoreIds.PerformanceWeatherStages, "Performance Weather Stages", 60,
+            WaterDebugIds.Mode(DebugModeConstants.PerformanceWeatherNone),
+            WaterDebugIds.Mode(DebugModeConstants.PerformanceWeatherClouds),
+            WaterDebugIds.Mode(DebugModeConstants.PerformanceWeatherPrecipitation),
+            WaterDebugIds.Mode(DebugModeConstants.PerformanceWeatherAtmosphere),
+            WaterDebugIds.Mode(DebugModeConstants.PerformanceWeatherAll),
+            WaterDebugIds.Mode(DebugModeConstants.Off));
+        RegisterTimedCaptureSet(DebugCoreIds.PerformanceCloudSteps, "Performance Cloud Steps", 60,
+            WaterDebugIds.Mode(DebugModeConstants.PerformanceCloud72x8),
+            WaterDebugIds.Mode(DebugModeConstants.PerformanceCloud48x8),
+            WaterDebugIds.Mode(DebugModeConstants.PerformanceCloud72x4),
+            WaterDebugIds.Mode(DebugModeConstants.PerformanceCloud48x4),
+            WaterDebugIds.Mode(DebugModeConstants.Off));
         RegisterCaptureSet(DebugCoreIds.CurrentModeOnly, "Current Mode Only", DebugCaptureSetBehavior.CurrentModeOnly);
         RegisterCaptureSet(DebugCoreIds.FullLoop, "Full Loop", DebugCaptureSetBehavior.FullLoop);
     }
@@ -362,30 +403,61 @@ public sealed class DebugRegistry
 
     public void RegisterCaptureSet(DebugCaptureSetId id, string name, params DebugModeId[] modeIds)
     {
-        RegisterCaptureSet(id, name, DebugCaptureSetBehavior.ModeList, false, modeIds);
+        RegisterCaptureSet(id, name, DebugCaptureSetBehavior.ModeList, false, 0, modeIds);
+    }
+
+    public void RegisterTimedCaptureSet(
+        DebugCaptureSetId id,
+        string name,
+        int timingSamplesPerMode,
+        params DebugModeId[] modeIds)
+    {
+        if (timingSamplesPerMode <= 0)
+            throw new System.ArgumentOutOfRangeException(nameof(timingSamplesPerMode));
+
+        RegisterCaptureSet(
+            id,
+            name,
+            DebugCaptureSetBehavior.ModeList,
+            false,
+            timingSamplesPerMode,
+            modeIds);
     }
 
     public void RegisterDefaultCaptureSet(DebugCaptureSetId id, string name, params DebugModeId[] modeIds)
     {
-        RegisterCaptureSet(id, name, DebugCaptureSetBehavior.ModeList, true, modeIds);
+        RegisterCaptureSet(id, name, DebugCaptureSetBehavior.ModeList, true, 0, modeIds);
     }
 
     public void RegisterCaptureSet(DebugCaptureSetId id, string name, DebugCaptureSetBehavior behavior, params DebugModeId[] modeIds)
     {
-        RegisterCaptureSet(id, name, behavior, false, modeIds);
+        RegisterCaptureSet(id, name, behavior, false, 0, modeIds);
     }
 
-    public void RegisterCaptureSet(DebugCaptureSetId id, string name, DebugCaptureSetBehavior behavior, bool isDefault, params DebugModeId[] modeIds)
+    public void RegisterCaptureSet(
+        DebugCaptureSetId id,
+        string name,
+        DebugCaptureSetBehavior behavior,
+        bool isDefault,
+        int timingSamplesPerMode,
+        params DebugModeId[] modeIds)
     {
         if (!id.IsValid)
             throw new System.ArgumentException("Debug capture set id must be valid.", nameof(id));
         if (behavior == DebugCaptureSetBehavior.ModeList && (modeIds == null || modeIds.Length == 0))
             throw new System.ArgumentException("Mode-list capture sets must include at least one mode.", nameof(modeIds));
+        if (timingSamplesPerMode < 0)
+            throw new System.ArgumentOutOfRangeException(nameof(timingSamplesPerMode));
 
         if (!_captureSets.ContainsKey(id))
             _captureSetOrder.Add(id);
 
-        _captureSets[id] = new DebugCaptureSetDefinition(id, name, behavior, modeIds);
+        _captureSets[id] = new DebugCaptureSetDefinition(
+            id,
+            name,
+            behavior,
+            modeIds,
+            timingSamplesPerMode);
 
         if (isDefault || !_defaultCaptureSetId.IsValid)
             _defaultCaptureSetId = id;

@@ -27,6 +27,7 @@ public sealed class CloudDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     static readonly int _cloudInnerRadiusId = Shader.PropertyToID(ShaderGlobalIds.CloudInnerRadius);
     static readonly int _cloudOuterRadiusId = Shader.PropertyToID(ShaderGlobalIds.CloudOuterRadius);
     static readonly int _cloudViewStepsId = Shader.PropertyToID(ShaderGlobalIds.CloudViewSteps);
+    static readonly int _cloudLightStepsId = Shader.PropertyToID(ShaderGlobalIds.CloudLightSteps);
     static readonly int _cloudRayOffsetStrengthId = Shader.PropertyToID(ShaderGlobalIds.CloudRayOffsetStrength);
     static readonly int _cloudDensityThresholdId = Shader.PropertyToID(ShaderGlobalIds.CloudDensityThreshold);
     static readonly int _cloudDensityMultiplierId = Shader.PropertyToID(ShaderGlobalIds.CloudDensityMultiplier);
@@ -68,7 +69,7 @@ public sealed class CloudDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         sb.AppendLine($"DebugMode: {Shader.GetGlobalInt(_cloudDebugModeId)} ({context.ModeId}:{context.ModeName})");
         sb.AppendLine($"WeatherResolution: {Shader.GetGlobalInt(_cloudWeatherResolutionId)}");
         sb.AppendLine($"LayerRadii: inner={Shader.GetGlobalFloat(_cloudInnerRadiusId):F2}, outer={Shader.GetGlobalFloat(_cloudOuterRadiusId):F2}");
-        sb.AppendLine($"Raymarch: viewSteps={Shader.GetGlobalInt(_cloudViewStepsId)}, jitter={Shader.GetGlobalFloat(_cloudRayOffsetStrengthId):F2}");
+        sb.AppendLine($"Raymarch: viewSteps={Shader.GetGlobalInt(_cloudViewStepsId)}, lightSteps={Shader.GetGlobalInt(_cloudLightStepsId)}, jitter={Shader.GetGlobalFloat(_cloudRayOffsetStrengthId):F2}");
         sb.AppendLine($"Density: threshold={Shader.GetGlobalFloat(_cloudDensityThresholdId):F3}, multiplier={Shader.GetGlobalFloat(_cloudDensityMultiplierId):F4}");
 
         IWeatherProvider weatherProvider = context.Runtime.WeatherProvider;

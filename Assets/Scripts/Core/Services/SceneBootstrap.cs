@@ -16,6 +16,7 @@ public class SceneBootstrap : MonoBehaviour, IEarlyInitialize
         typeof(IPlanetSurfaceRaycaster),
         typeof(IClimateSampler),
         typeof(IGrassRuntimeControl),
+        typeof(IGrassNearFieldStatsProvider),
         typeof(ICloudRuntime),
         typeof(IAtmosphereRuntime),
         typeof(IWeatherProvider),

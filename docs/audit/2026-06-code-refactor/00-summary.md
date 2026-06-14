@@ -3,7 +3,58 @@
 **Date:** 2026-06-10
 **Branch:** code-refactor
 **Scope:** All four hotspots (Planet generation, Weather / precipitation, Grass / vegetation, Debug / console / services) across all four motivations (architectural consistency, cross-coupling, perf / allocations, style).
-**Status:** Findings accepted as an active refactor worklist. Implementation is ongoing; current lifecycle decisions are recorded in [the world lifecycle design](../../design/2026-06-13-world-lifecycle.md).
+**Status:** Historical findings plus live reconciliation. Implementation is ongoing; use the reconciliation below before acting on an older finding.
+
+## Live reconciliation - 2026-06-13
+
+The detailed finding documents remain useful evidence, but several cross-cutting
+claims in the original summary are no longer current:
+
+- World-scoped settings are implemented. Runtime planet, biome, cloud,
+  atmosphere, weather, and precipitation consumers use typed DTOs from one
+  `ISettingsService` per world. Runtime settings are keyed by DTO type; stable
+  string keys remain a persistence-boundary concern.
+- Fail-fast world construction, required service/DTO validation, registration
+  freeze, teardown, and same-scene world replacement are implemented. See
+  [the world lifecycle design](../../design/2026-06-13-world-lifecycle.md).
+- The dead surface experiments, boot self-tests, and rejected grass mid-field
+  path listed in T5 have been removed.
+- Shader-global names are centralized in the per-domain `ShaderGlobalIds`
+  partial files.
+- `EventBusProcessor` is now owned by the early `GameBootstrap` application
+  scope. It no longer creates an out-of-band persistent GameObject.
+- The large-class split work is underway. `ChunkedSurfaceProvider`,
+  `ConsoleController`, and `WaterDebugModule` have already had responsibilities
+  extracted.
+
+Measured performance work completed during the reconciliation:
+
+- Packed biome retention and post-atlas release reduced retained chunk CPU
+  arrays from 918.1 MB to 624.3 MB, saving 293.8 MB in the validated scene.
+- Deterministic timed F10 captures now report rolling CPU/GPU averages and p95,
+  reject malformed frame samples, freeze local sunlight, and isolate render
+  stages.
+- Water stages were not the suspected hotspot once weather was held constant.
+- Clouds were the dominant measured render cost. Reducing the high/PC default
+  from 72 view steps and 8 light steps to 48/4 reduced isolated average GPU
+  frame time from 16.60 ms to 11.07 ms at the validated viewpoint, without an
+  observed silhouette or lighting regression. The production `Off` control
+  confirms the runtime uses 48/4.
+
+Remaining live priorities:
+
+1. Finish the saved-world persistence adapter and schema migration boundary.
+2. Continue evidence-driven large-class splits without combining them with
+   visual changes.
+3. Make required grass dependencies explicit and remove per-frame service
+   lookup from `GrassPlacementController`.
+4. Use the retained timing capture sets to measure grass representation and
+   residency before replacing the current 54-vertex tuft.
+5. Migrate direct `UnityEngine.Debug.Log*` calls when their owning files are
+   otherwise touched.
+
+Everything below this section is the original 2026-06-10 audit snapshot. Verify
+each finding against the live tree before scheduling it.
 
 ## How to read this audit
 

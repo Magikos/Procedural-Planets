@@ -37,6 +37,7 @@ Shader "Planet/VertexColor"
         _GrassFarOverlayAltitudeStart ("Grass Far Overlay Altitude Start", Float) = 750.0
         _GrassFarOverlayAltitudeEnd ("Grass Far Overlay Altitude End", Float) = 2600.0
         _GrassFarOverlayFiberStrength ("Grass Far Overlay Fiber Strength", Range(0.0, 1.0)) = 0.65
+        _GrassSurfaceBrightness ("Grass Surface Brightness", Range(0.3, 1.5)) = 1.0
     }
     SubShader
     {
@@ -124,6 +125,7 @@ Shader "Planet/VertexColor"
                 float _GrassFarOverlayAltitudeStart;
                 float _GrassFarOverlayAltitudeEnd;
                 float _GrassFarOverlayFiberStrength;
+                float _GrassSurfaceBrightness;
             CBUFFER_END
 
             float _NightAmbientIntensity;
@@ -742,6 +744,7 @@ Shader "Planet/VertexColor"
                 float3 grassSurface = GradeGrassTint(eval.tint, 0.76, 0.88);
                 grassSurface *= lerp(0.68, 0.96, breakup);
                 grassSurface *= lerp(0.94, 1.06, fiber);
+                grassSurface *= _GrassSurfaceBrightness;
 
                 return lerp(terrainAlbedo, saturate(grassSurface), grassCoverage);
             }

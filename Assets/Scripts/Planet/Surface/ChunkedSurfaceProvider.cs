@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading;
 using Unity.Collections;
 using UnityEngine;
@@ -339,10 +339,12 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                 for (int i = batchStart; i < batchEnd; i++)
                 {
                     var chunk = _allChunks[i];
-                    if (_meshCache.RetainColorSource(chunk))
+                    bool retainedColorSource = _meshCache.RetainColorSource(chunk);
+                    bool retainedBiomeSource = _meshCache.RetainBiomeSource(chunk);
+                    if (retainedColorSource && retainedBiomeSource)
                     {
-                        chunk.ReleaseCpuDataAfterColorUpload(
-                            retainSurfaceSamplingAndRebakeData: chunk.IsLeaf,
+                        chunk.ReleaseCpuDataAfterBake(
+                            retainSurfaceSamplingData: chunk.IsLeaf,
                             retainUnitSphereForWaterSampler: _maxChunkDepth == 0);
                     }
                     if (bakeEnabled) BiomeAtlasService.UploadChunkMap(chunk, releasePendingPixels: !chunk.IsLeaf);
@@ -368,7 +370,10 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                 BiomeAtlasService.LogBakeSummary(_allChunks, biomeProvider);
                 BiomeAtlasService.ReleasePendingPixels(_allChunks);
                 if (releaseChunkBiomeTextures)
+                {
                     _biomeAtlas.ReleasePerChunkBiomeTextures(_allChunks);
+                    ReleaseRetainedVertexColors();
+                }
                 lookup.Dispose();
             }
             ReportRetainedChunkCpuMemory();
@@ -542,6 +547,16 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         }
 
         MemoryDebugCounters.ReportRetainedChunkCpuBytes(retainedBytes);
+    }
+
+    void ReleaseRetainedVertexColors()
+    {
+        for (int i = 0; i < _allChunks.Count; i++)
+        {
+            PlanetChunk chunk = _allChunks[i];
+            if (chunk != null)
+                chunk.CpuColors32 = null;
+        }
     }
 
 }

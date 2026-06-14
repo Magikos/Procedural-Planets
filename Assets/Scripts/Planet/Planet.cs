@@ -63,19 +63,30 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     void Awake()
     {
-        _grass = new PlanetGrassCoordinator(transform, this, Logger);
-        _waterSurface = new PlanetWaterSurface(transform);
-        _terrainMaterial = new PlanetTerrainMaterial(Logger);
-
+        EnsureRuntimeOwners();
     }
 
     public void RegisterWorldServices(IWorldContext context)
     {
+        EnsureGrassCoordinator();
         context.Register<IPlanet>(this);
         context.Register<IPlanetSurfaceSampler>(this);
         context.Register<IPlanetSurfaceRaycaster>(this);
         context.Register<IClimateSampler>(this);
         context.Register<IGrassRuntimeControl>(this);
+        context.Register<IGrassNearFieldStatsProvider>(_grass);
+    }
+
+    void EnsureRuntimeOwners()
+    {
+        EnsureGrassCoordinator();
+        _waterSurface ??= new PlanetWaterSurface(transform);
+        _terrainMaterial ??= new PlanetTerrainMaterial(Logger);
+    }
+
+    void EnsureGrassCoordinator()
+    {
+        _grass ??= new PlanetGrassCoordinator(transform, this, Logger);
     }
 
     public System.Collections.Generic.IReadOnlyList<System.Type> RequiredSettingsTypes => RequiredSettings;

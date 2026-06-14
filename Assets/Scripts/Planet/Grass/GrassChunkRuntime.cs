@@ -7,11 +7,12 @@ using UnityEngine.Rendering;
 sealed class GrassChunkRuntime : System.IDisposable
 {
     public const int StatsCount = 16;
+    public const int BladeStride = sizeof(float) * 12;
 
-    const int BladeStride = sizeof(float) * 12;
     static readonly uint[] ArgsScratch = new uint[4];
     static readonly uint[] StatsScratch = new uint[StatsCount];
 
+    readonly GrassBladeBufferPool _bladePool;
     readonly GraphicsBuffer _bladeBuffer;
     readonly GraphicsBuffer _argsBuffer;
     readonly GraphicsBuffer _statsBuffer;
@@ -32,9 +33,11 @@ sealed class GrassChunkRuntime : System.IDisposable
     public Bounds WorldBounds => _worldBounds;
     public bool HasStats => _hasStats;
 
-    GrassChunkRuntime(GraphicsBuffer bladeBuffer, GraphicsBuffer argsBuffer, GraphicsBuffer statsBuffer,
+    GrassChunkRuntime(GrassBladeBufferPool bladePool, GraphicsBuffer bladeBuffer,
+        GraphicsBuffer argsBuffer, GraphicsBuffer statsBuffer,
         MaterialPropertyBlock props, int capacity, Bounds worldBounds)
     {
+        _bladePool = bladePool;
         _bladeBuffer = bladeBuffer;
         _argsBuffer = argsBuffer;
         _statsBuffer = statsBuffer;
@@ -44,12 +47,12 @@ sealed class GrassChunkRuntime : System.IDisposable
         BufferBytes = (long)Capacity * BladeStride + GraphicsBuffer.IndirectDrawArgs.size + (long)StatsCount * sizeof(uint);
     }
 
-    public static GrassChunkRuntime Create(int capacity, int vertexCount, int bladeInstancesId,
-        int statsCount, Bounds worldBounds)
+    public static GrassChunkRuntime Create(GrassBladeBufferPool bladePool, int capacity, int vertexCount,
+        int bladeInstancesId, int statsCount, Bounds worldBounds)
     {
-        if (capacity <= 0) return null;
+        if (capacity <= 0 || bladePool == null) return null;
 
-        var bladeBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, capacity, BladeStride);
+        var bladeBuffer = bladePool.Acquire();
         var argsBuffer = new GraphicsBuffer(
             GraphicsBuffer.Target.IndirectArguments | GraphicsBuffer.Target.Structured,
             4,
@@ -59,7 +62,7 @@ sealed class GrassChunkRuntime : System.IDisposable
         var props = new MaterialPropertyBlock();
         props.SetBuffer(bladeInstancesId, bladeBuffer);
 
-        var runtime = new GrassChunkRuntime(bladeBuffer, argsBuffer, statsBuffer, props, capacity, worldBounds);
+        var runtime = new GrassChunkRuntime(bladePool, bladeBuffer, argsBuffer, statsBuffer, props, capacity, worldBounds);
         runtime.ResetArgsAndStats(vertexCount);
         return runtime;
     }
@@ -134,8 +137,10 @@ sealed class GrassChunkRuntime : System.IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        _bladeBuffer?.Dispose();
+        // args/stats carry in-flight readbacks and are cheap, so dispose them per-runtime.
+        // The blade buffer has no readback; return it to the pool for the next paged-in chunk.
         _argsBuffer?.Dispose();
         _statsBuffer?.Dispose();
+        _bladePool?.Release(_bladeBuffer);
     }
 }

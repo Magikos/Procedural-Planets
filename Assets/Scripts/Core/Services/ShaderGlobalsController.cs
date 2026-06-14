@@ -8,6 +8,7 @@ public sealed class ShaderGlobalsController : MonoBehaviour
 
     static readonly int _gameTimeId = Shader.PropertyToID(ShaderGlobalIds.GameTime);
     static readonly int _oceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
+    static readonly int _debugSuppressWeatherPassesId = Shader.PropertyToID(ShaderGlobalIds.DebugSuppressWeatherPasses);
     static readonly int _waterFocusModeId = Shader.PropertyToID(ShaderGlobalIds.WaterFocusMode);
     static readonly int _oceanFocusModeId = Shader.PropertyToID(ShaderGlobalIds.OceanFocusMode);
 
@@ -39,6 +40,7 @@ public sealed class ShaderGlobalsController : MonoBehaviour
     static void ResetTransientDebugGlobals()
     {
         Shader.SetGlobalInt(_oceanDebugModeId, DebugModeConstants.Off);
+        Shader.SetGlobalFloat(_debugSuppressWeatherPassesId, 0f);
         Shader.SetGlobalFloat(_waterFocusModeId, 0f);
         Shader.SetGlobalFloat(_oceanFocusModeId, 0f);
     }

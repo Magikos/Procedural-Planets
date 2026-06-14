@@ -41,14 +41,17 @@ public static class BiomeMapBaker
         Color[] lutColors,
         Color32[] blendedColors, Color32[] ids, Color32[] weights, byte[] tempHighRes)
     {
-        if (chunk == null || chunk.CpuBiomeData == null || chunk.CpuElevations == null) return;
+        if (chunk == null || chunk.CpuElevations == null) return;
+        if (chunk.CpuBiomeData == null && chunk.CpuBiomeData32 == null) return;
         if (blendedColors == null || blendedColors.Length != TexelCount) return;
         if (ids == null || ids.Length != TexelCount) return;
         if (weights == null || weights.Length != TexelCount) return;
         if (tempHighRes == null || tempHighRes.Length != HighResCount) return;
         if (lutColors == null || lutColors.Length == 0) return;
 
-        int vertCount = chunk.CpuBiomeData.Length;
+        int vertCount = chunk.CpuBiomeData != null
+            ? chunk.CpuBiomeData.Length
+            : chunk.CpuBiomeData32.Length;
         if (vertCount == 0 || chunk.CpuElevations.Length != vertCount) return;
         int vertRes = (int)Mathf.Sqrt(vertCount);
         if (vertRes * vertRes != vertCount) return;
@@ -72,8 +75,7 @@ public static class BiomeMapBaker
             for (int px = 0; px < PaddedResolution; px++)
             {
                 float localU = (float)(px - KernelRadius) / (HighResolution - 1);
-                Vector2 tm = BilinearSampleXY(
-                    chunk.CpuBiomeData, vertRes, localU, localV);
+                Vector2 tm = BilinearSampleXY(chunk, vertRes, localU, localV);
                 float elevation = BilinearSample(
                     chunk.CpuElevations, vertRes, localU, localV);
 
@@ -226,7 +228,7 @@ public static class BiomeMapBaker
         return Mathf.Lerp(Mathf.Lerp(a, b, tx), Mathf.Lerp(c, d, tx), ty);
     }
 
-    static Vector2 BilinearSampleXY(Vector4[] grid, int res, float u, float v)
+    static Vector2 BilinearSampleXY(PlanetChunk chunk, int res, float u, float v)
     {
         float fx = Mathf.Clamp01(u) * (res - 1);
         float fy = Mathf.Clamp01(v) * (res - 1);
@@ -236,12 +238,30 @@ public static class BiomeMapBaker
         int y1 = Mathf.Min(y0 + 1, res - 1);
         float tx = fx - x0;
         float ty = fy - y0;
-        Vector4 a = grid[x0 + y0 * res];
-        Vector4 b = grid[x1 + y0 * res];
-        Vector4 c = grid[x0 + y1 * res];
-        Vector4 d = grid[x1 + y1 * res];
+
+        int i00 = x0 + y0 * res;
+        int i10 = x1 + y0 * res;
+        int i01 = x0 + y1 * res;
+        int i11 = x1 + y1 * res;
+        Vector2 a = GetTemperatureMoisture(chunk, i00);
+        Vector2 b = GetTemperatureMoisture(chunk, i10);
+        Vector2 c = GetTemperatureMoisture(chunk, i01);
+        Vector2 d = GetTemperatureMoisture(chunk, i11);
         float xResult = Mathf.Lerp(Mathf.Lerp(a.x, b.x, tx), Mathf.Lerp(c.x, d.x, tx), ty);
         float yResult = Mathf.Lerp(Mathf.Lerp(a.y, b.y, tx), Mathf.Lerp(c.y, d.y, tx), ty);
         return new Vector2(xResult, yResult);
+    }
+
+    static Vector2 GetTemperatureMoisture(PlanetChunk chunk, int index)
+    {
+        if (chunk.CpuBiomeData != null)
+        {
+            Vector4 data = chunk.CpuBiomeData[index];
+            return new Vector2(data.x, data.y);
+        }
+
+        Color32 packed = chunk.CpuBiomeData32[index];
+        const float byteToFloat = 1f / 255f;
+        return new Vector2(packed.r * byteToFloat, packed.g * byteToFloat);
     }
 }

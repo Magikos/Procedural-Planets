@@ -157,7 +157,26 @@
 #define DEBUG_TERRAIN_PRIMARY_ALBEDO       95
 #define DEBUG_TERRAIN_MIXED_ALBEDO         96
 
+// --- Performance-only weather pass isolation (97-101) ---
+#define DEBUG_PERF_WEATHER_NONE             97
+#define DEBUG_PERF_WEATHER_CLOUDS           98
+#define DEBUG_PERF_WEATHER_PRECIPITATION    99
+#define DEBUG_PERF_WEATHER_ATMOSPHERE       100
+#define DEBUG_PERF_WEATHER_ALL              101
+
+// --- Performance-only cloud raymarch isolation (102-105) ---
+#define DEBUG_PERF_CLOUD_72X8                102
+#define DEBUG_PERF_CLOUD_48X8                103
+#define DEBUG_PERF_CLOUD_72X4                104
+#define DEBUG_PERF_CLOUD_48X4                105
+
 // Convenience: last defined mode. Update when adding new modes.
-#define DEBUG_MODE_MAX                    96
+#define DEBUG_MODE_MAX                    105
+
+bool IsProductionEquivalentDebugMode(int mode)
+{
+    return mode == DEBUG_OFF
+        || (mode >= DEBUG_PERF_WEATHER_NONE && mode <= DEBUG_PERF_CLOUD_48X4);
+}
 
 #endif

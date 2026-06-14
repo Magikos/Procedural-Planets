@@ -41,6 +41,8 @@ public readonly struct DebugCaptureMetadataInputs
 
 public static class DebugCaptureMetadataBuilder
 {
+    static readonly int DebugSuppressWeatherPassesId = Shader.PropertyToID(ShaderGlobalIds.DebugSuppressWeatherPasses);
+
     public static string Build(
         in DebugCaptureMetadataInputs inputs,
         DebugModeId modeId,
@@ -102,6 +104,8 @@ public static class DebugCaptureMetadataBuilder
         sb.AppendLine($"FPS: {(Time.unscaledDeltaTime > 0f ? 1f / Time.unscaledDeltaTime : 0f):F1}");
         sb.AppendLine($"FrameTarget: {Application.targetFrameRate}");
         sb.AppendLine($"VSync: {QualitySettings.vSyncCount}");
+        sb.AppendLine($"WeatherPassesSuppressed: {Shader.GetGlobalFloat(DebugSuppressWeatherPassesId) > 0.5f}");
+        sb.AppendLine($"PerformanceWeatherStage: {DebugModeConstants.GetPerformanceWeatherStageName(modeId.LocalId)}");
         int qualityLevel = QualitySettings.GetQualityLevel();
         string[] qualityNames = QualitySettings.names;
         string qualityName = qualityLevel >= 0 && qualityLevel < qualityNames.Length

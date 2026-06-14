@@ -4,7 +4,8 @@ using UnityEngine;
 // camera-centered GrassNearFieldController, and the far terrain-blanket overlay baked into the
 // terrain material. Tracks the master/per-layer enable flags and drives altitude-based activation
 // of the near field. Planet forwards Configure/Tick/Dispose and the IGrassRuntimeControl surface.
-sealed class PlanetGrassCoordinator
+[CommandPrefix("grass")]
+sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
 {
     readonly Transform _planetTransform;
     readonly IPlanetSurfaceSampler _surfaceSampler;
@@ -30,15 +31,21 @@ sealed class PlanetGrassCoordinator
     static readonly int _grassFarOverlayAltitudeStartId = Shader.PropertyToID("_GrassFarOverlayAltitudeStart");
     static readonly int _grassFarOverlayAltitudeEndId = Shader.PropertyToID("_GrassFarOverlayAltitudeEnd");
     static readonly int _grassFarOverlayFiberStrengthId = Shader.PropertyToID("_GrassFarOverlayFiberStrength");
+    static readonly int _grassSurfaceBrightnessId = Shader.PropertyToID("_GrassSurfaceBrightness");
 
-    const float GrassFarOverlayStrength = 1.0f;
+    // Live-tunable via grass.* console commands (see bottom of file). surface-brightness was
+    // dialed to 0.4 to bring the painted ground grass down to the dark 3D-tuft shade, which is
+    // what removes the visible grass line; strength stays at full coverage.
+    float _farOverlayStrength = 1.0f;
+    float _grassSurfaceBrightness = 0.4f;
+
     const float GrassFarOverlayStart = 35f;
     const float GrassFarOverlayEnd = 260f;
     const float GrassFarOverlayNoiseScale = 0.055f;
+    const float GrassFarOverlayFiberStrength = 0.65f;
     const float GrassFarOverlayOrbitStrength = 0.42f;
     const float GrassFarOverlayAltitudeStart = 750f;
     const float GrassFarOverlayAltitudeEnd = 2600f;
-    const float GrassFarOverlayFiberStrength = 0.65f;
     const float NearFieldGrassActivationAltitude = 350f;
     const float NearFieldGrassDeactivationAltitude = 500f;
 
@@ -47,6 +54,7 @@ sealed class PlanetGrassCoordinator
         _planetTransform = planetTransform;
         _surfaceSampler = surfaceSampler;
         _logger = logger;
+        ConsoleRegistry.RegisterInstance(this);
     }
 
     public void Configure(ChunkedSurfaceProvider provider, BiomeSurfaceTextureArrays surfaceArrays,
@@ -63,15 +71,15 @@ sealed class PlanetGrassCoordinator
 
         var planet = SettingsProvider.GetSettings<PlanetDto>();
         float waterRadius = ComputeWaterRadius(planet);
-        if (_grassEnabled && _chunkGrassEnabled)
-            CreateChunkGrassController(waterRadius);
-
         if (_grassEnabled && _nearFieldGrassEnabled
             && observerCamera != null
             && ShouldActivateNearFieldGrass(observerCamera.transform.position, false))
         {
             CreateNearFieldGrassController(waterRadius);
         }
+
+        if (_grassEnabled && _chunkGrassEnabled)
+            CreateChunkGrassController(waterRadius);
 
         ApplyBlanketState(_terrainMaterial);
     }
@@ -153,7 +161,7 @@ sealed class PlanetGrassCoordinator
     {
         _grassController = new GrassPlacementController(_planetTransform, _chunkedProvider,
             _surfaceArrays.GrassParamsBuffer, _surfaceArrays.SliceCount,
-            waterRadius, _seed, _logger);
+            waterRadius, _seed, this, _logger);
     }
 
     void CreateNearFieldGrassController(float waterRadius)
@@ -161,6 +169,13 @@ sealed class PlanetGrassCoordinator
         _grassNearFieldController = new GrassNearFieldController(_planetTransform, _chunkedProvider,
             _surfaceArrays.GrassParamsBuffer, _surfaceArrays.SliceCount,
             waterRadius, SettingsProvider.GetSettings<PlanetDto>().PlanetRadius, _seed, _logger);
+    }
+
+    public GrassNearFieldStats GetGrassNearFieldStats()
+    {
+        return _grassNearFieldController != null
+            ? _grassNearFieldController.GetGrassNearFieldStats()
+            : default;
     }
 
     public void ApplyTerrainOverlay(Material mat)
@@ -174,13 +189,14 @@ sealed class PlanetGrassCoordinator
         SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeStartId, GrassFarOverlayAltitudeStart);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeEndId, GrassFarOverlayAltitudeEnd);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayFiberStrengthId, GrassFarOverlayFiberStrength);
+        SetMaterialFloatIfPresent(mat, _grassSurfaceBrightnessId, _grassSurfaceBrightness);
     }
 
     void ApplyBlanketState(Material mat)
     {
         if (mat == null)
             return;
-        float strength = _grassEnabled && _grassBlanketEnabled ? GrassFarOverlayStrength : 0f;
+        float strength = _grassEnabled && _grassBlanketEnabled ? _farOverlayStrength : 0f;
         SetMaterialFloatIfPresent(mat, _grassFarOverlayStrengthId, strength);
     }
 
@@ -257,5 +273,37 @@ sealed class PlanetGrassCoordinator
     public void Dispose()
     {
         DisposeControllers();
+        ConsoleRegistry.UnregisterInstance(typeof(PlanetGrassCoordinator));
+    }
+
+    // --- Live grass-line tuning (console) ---------------------------------
+    // The far overlay paints grass onto the terrain surface where real blades are sparse or
+    // culled; surface-brightness darkens/brightens that painted grass to match the 3D tufts.
+    // Tune live, then bake the winning values into the field defaults above.
+
+    void ReapplyOverlay()
+    {
+        if (_terrainMaterial != null)
+            ApplyTerrainOverlay(_terrainMaterial);
+    }
+
+    [ConsoleCommand("overlay-strength", "Grass far-overlay coverage strength (0-1). How much terrain reads as grass.", MonoTargetType.Registry)]
+    string OverlayStrengthCmd(float? value = null)
+    {
+        if (value.HasValue) { _farOverlayStrength = Mathf.Clamp01(value.Value); ReapplyOverlay(); }
+        return $"grass overlay-strength: {_farOverlayStrength:F3}";
+    }
+
+    [ConsoleCommand("surface-brightness", "Painted grass-surface brightness (0.3-1.5). Lower to darken ground to match 3D tufts.", MonoTargetType.Registry)]
+    string SurfaceBrightnessCmd(float? value = null)
+    {
+        if (value.HasValue) { _grassSurfaceBrightness = Mathf.Clamp(value.Value, 0.3f, 1.5f); ReapplyOverlay(); }
+        return $"grass surface-brightness: {_grassSurfaceBrightness:F3}";
+    }
+
+    [ConsoleCommand("overlay-status", "Print the live grass-line overlay tuning values.", MonoTargetType.Registry)]
+    string OverlayStatusCmd()
+    {
+        return $"strength={_farOverlayStrength:F3} surface-brightness={_grassSurfaceBrightness:F3}";
     }
 }

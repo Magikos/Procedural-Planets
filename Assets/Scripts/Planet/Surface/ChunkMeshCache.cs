@@ -12,6 +12,7 @@ public interface IChunkMeshCache
     void Rebind(PlanetChunk chunk);
     void RebindAll();
     bool RetainColorSource(PlanetChunk chunk);
+    bool RetainBiomeSource(PlanetChunk chunk);
     void Dispose();
 }
 
@@ -39,6 +40,7 @@ public sealed class ChunkMeshCache : IChunkMeshCache
     const int MaxRenderHandles = 320;
 
     MaterialPropertyBlock _chunkPropertyBlock;
+    Vector4[] _biomeUploadScratch;
 
     // Step 5b: per-chunk shader-property ids. Three textures replace the single _BiomeMap
     // of step 5: _BiomeBlendedColor (bilinear, the cheap shader path), _BiomeIds (point,
@@ -217,6 +219,21 @@ public sealed class ChunkMeshCache : IChunkMeshCache
             mesh.SetColors(chunk.CpuColors32);
         if (chunk.CpuBiomeData != null && chunk.CpuBiomeData.Length == chunk.CpuVertices.Length)
             mesh.SetUVs(2, chunk.CpuBiomeData);
+        else if (chunk.CpuBiomeData32 != null && chunk.CpuBiomeData32.Length == chunk.CpuVertices.Length)
+        {
+            EnsureBiomeUploadScratch(chunk.CpuBiomeData32.Length);
+            const float byteToFloat = 1f / 255f;
+            for (int i = 0; i < chunk.CpuBiomeData32.Length; i++)
+            {
+                Color32 packed = chunk.CpuBiomeData32[i];
+                _biomeUploadScratch[i] = new Vector4(
+                    packed.r * byteToFloat,
+                    packed.g * byteToFloat,
+                    packed.b * byteToFloat,
+                    packed.a * byteToFloat);
+            }
+            mesh.SetUVs(2, _biomeUploadScratch);
+        }
         mesh.bounds = chunk.CpuLocalBounds;
         // GPU-only; raycasts read CpuVertices, never the mesh, and we always rebuild on page-in.
         mesh.UploadMeshData(true);
@@ -301,6 +318,43 @@ public sealed class ChunkMeshCache : IChunkMeshCache
         for (int i = 0; i < count; i++) compact[i] = chunk.CpuColors[i];
         chunk.CpuColors32 = compact;
         return true;
+    }
+
+    public bool RetainBiomeSource(PlanetChunk chunk)
+    {
+        if (chunk == null)
+            return false;
+        if (chunk.CpuBiomeData == null)
+            return chunk.CpuBiomeData32 != null;
+
+        int count = chunk.CpuBiomeData.Length;
+        var compact = chunk.CpuBiomeData32;
+        if (compact == null || compact.Length != count)
+            compact = new Color32[count];
+
+        for (int i = 0; i < count; i++)
+        {
+            Vector4 data = chunk.CpuBiomeData[i];
+            compact[i] = new Color32(
+                ToNormalizedByte(data.x),
+                ToNormalizedByte(data.y),
+                ToNormalizedByte(data.z),
+                ToNormalizedByte(data.w));
+        }
+
+        chunk.CpuBiomeData32 = compact;
+        return true;
+    }
+
+    void EnsureBiomeUploadScratch(int count)
+    {
+        if (_biomeUploadScratch == null || _biomeUploadScratch.Length != count)
+            _biomeUploadScratch = new Vector4[count];
+    }
+
+    static byte ToNormalizedByte(float value)
+    {
+        return (byte)Mathf.RoundToInt(Mathf.Clamp01(value) * 255f);
     }
 
     sealed class ChunkRenderHandle

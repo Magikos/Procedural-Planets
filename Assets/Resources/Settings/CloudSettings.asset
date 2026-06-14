@@ -72,8 +72,8 @@ MonoBehaviour:
   StormShadowBoost: 1.35
   ShadowHorizonFade: 0.18
   AnimationSpeed: 0.35
-  ViewSteps: 72
-  LightSteps: 8
+  ViewSteps: 48
+  LightSteps: 4
   RayOffsetStrength: 1.1
   ShapeNoiseResolution: 128
   DetailNoiseResolution: 32
