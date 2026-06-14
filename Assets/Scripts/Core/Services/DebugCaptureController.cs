@@ -3,13 +3,8 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [CommandPrefix("debug")]
-public class DebugCaptureController : MonoBehaviour
+public class DebugCaptureController : MonoBehaviour, IDebugCaptureModeContext
 {
-    static readonly Color DebugOverlayBackgroundColor = new(0f, 0f, 0f, 0.55f);
-    static readonly int DebugSuppressWeatherPassesId = Shader.PropertyToID(ShaderGlobalIds.DebugSuppressWeatherPasses);
-    static readonly int CloudViewStepsId = Shader.PropertyToID(ShaderGlobalIds.CloudViewSteps);
-    static readonly int CloudLightStepsId = Shader.PropertyToID(ShaderGlobalIds.CloudLightSteps);
-
     [Header("Debug Runtime")]
     public int CappedFrameRate = 60;
     public int ProfilingFrameRate = 1000;
@@ -22,37 +17,43 @@ public class DebugCaptureController : MonoBehaviour
     public bool ShowDetailedDebug;
     public bool IncludeMeshIntegrityInDebugCaptures;
 
-    [Header("Debug Capture")]
-    static readonly bool SaveF10DebugScreenshots = true;
-    const int DebugScreenshotMaxWidth = 960;
-    const int DebugScreenshotMaxRuns = 6;
-    const float DebugCaptureModeDelaySeconds = 0.12f;
-    const float TimedCaptureSampleTimeoutSeconds = 10f;
-    const bool RestoreDebugOffAfterCaptureSet = true;
+    static readonly int _climateMapResolutionId = Shader.PropertyToID(ShaderGlobalIds.ClimateMapResolution);
 
     Light _cachedSunLight;
     ICameraRigContext _cachedCameraContext;
     ICelestialTimeController _cachedCelestialManager;
     IPrecipitationDebugControl _cachedPrecipitationController;
     IWeatherProvider _cachedWeatherProvider;
-    static readonly int _climateMapResolutionId = Shader.PropertyToID(ShaderGlobalIds.ClimateMapResolution);
     DebugRegistry _debugRegistry;
     DebugModeId _currentDebugModeId;
     int _f10CaptureSetIndex = -1;
     bool _profilingFrameRateEnabled;
-    bool _debugScreenshotCaptureRunning;
-    bool _precipitationToggleFlashActive;
-    float _precipitationToggleFlashUntil;
-    string _precipitationToggleFlashMessage;
-    GUIStyle _debugOverlayPanelStyle;
-    Texture2D _debugOverlayPanelTexture;
-    Vector2 _debugOverlayScroll;
+    DebugOverlayHud _hud;
+    DebugCapturePipeline _pipeline;
+
+    // IDebugCaptureModeContext
+    bool IDebugCaptureModeContext.IsActive => gameObject.activeInHierarchy;
+    DebugRegistry IDebugCaptureModeContext.Registry => _debugRegistry;
+    DebugModeId IDebugCaptureModeContext.CurrentModeId => _currentDebugModeId;
+    void IDebugCaptureModeContext.ApplyDebugMode(DebugModeId id) => ApplyDebugMode(id);
+    void IDebugCaptureModeContext.CycleDebugMode() => CycleDebugMode();
+    DebugCaptureSetDefinition IDebugCaptureModeContext.GetCurrentCaptureSet() => GetCurrentCaptureSet();
+    DebugModeId[] IDebugCaptureModeContext.GetCaptureModes() => GetDebugCaptureModes();
+    int IDebugCaptureModeContext.CappedFrameRate => CappedFrameRate;
+    int IDebugCaptureModeContext.ProfilingFrameRate => ProfilingFrameRate;
+    float IDebugCaptureModeContext.TimedCaptureLocalTime => TimedCaptureLocalTime;
+    bool IDebugCaptureModeContext.ShowDetailedDebug => ShowDetailedDebug;
+    bool IDebugCaptureModeContext.IncludeMeshIntegrityInDebugCaptures => IncludeMeshIntegrityInDebugCaptures;
+    ICelestialTimeController IDebugCaptureModeContext.CelestialController => _cachedCelestialManager;
+    Light IDebugCaptureModeContext.SunLight => _cachedSunLight;
+    IPrecipitationDebugControl IDebugCaptureModeContext.PrecipitationController => _cachedPrecipitationController;
+    IWeatherProvider IDebugCaptureModeContext.WeatherProvider => _cachedWeatherProvider;
+    ICameraRigContext IDebugCaptureModeContext.CameraContext => _cachedCameraContext;
+    int IDebugCaptureModeContext.ClimateMapResolutionId => _climateMapResolutionId;
 
     void Awake()
     {
         InitializeRegistry();
-        // Register the registry with the service locator so console completion providers
-        // (DebugModeNamesProvider, DebugCaptureSetNamesProvider) can enumerate modes/sets.
         if (_debugRegistry != null)
             ServiceLocator.Register<DebugRegistry>(_debugRegistry);
     }
@@ -83,6 +84,8 @@ public class DebugCaptureController : MonoBehaviour
         ServiceLocator.TryGet(out _cachedPrecipitationController);
         ServiceLocator.TryGet(out _cachedWeatherProvider);
         _cachedSunLight = FindSunLight();
+        _hud ??= new DebugOverlayHud();
+        _pipeline ??= new DebugCapturePipeline(this);
     }
 
     void InitializeRegistry()
@@ -128,49 +131,18 @@ public class DebugCaptureController : MonoBehaviour
 
     void OnDestroy()
     {
-        if (_debugOverlayPanelTexture != null)
-        {
-            Destroy(_debugOverlayPanelTexture);
-            _debugOverlayPanelTexture = null;
-        }
+        _hud?.Dispose();
         if (_debugRegistry != null)
             ServiceLocator.Unregister<DebugRegistry>(_debugRegistry);
     }
 
-    void OnDebugPrecipitationToggleRequested(DebugPrecipitationToggleRequestedEvent _)
-    {
-        TogglePrecipitationRendering();
-    }
-
-    void OnDebugCaptureSetCycleRequested(DebugCaptureSetCycleRequestedEvent _)
-    {
-        CycleF10CaptureSet();
-    }
-
-    void OnDebugCaptureRequested(DebugCaptureRequestedEvent _)
-    {
-        TriggerDebugCapture();
-    }
-
-    void OnDebugSunFreezeToggleRequested(DebugSunFreezeToggleRequestedEvent _)
-    {
-        ToggleSunFreeze();
-    }
-
-    void OnDebugOverlayToggleRequested(DebugOverlayToggleRequestedEvent _)
-    {
-        ShowDebugOverlay = !ShowDebugOverlay;
-    }
-
-    void OnDebugDetailedToggleRequested(DebugDetailedToggleRequestedEvent _)
-    {
-        ShowDetailedDebug = !ShowDetailedDebug;
-    }
-
-    void OnDebugProfilingToggleRequested(DebugProfilingToggleRequestedEvent _)
-    {
-        ToggleProfilingFrameRate();
-    }
+    void OnDebugPrecipitationToggleRequested(DebugPrecipitationToggleRequestedEvent _) => TogglePrecipitationRendering();
+    void OnDebugCaptureSetCycleRequested(DebugCaptureSetCycleRequestedEvent _) => CycleF10CaptureSet();
+    void OnDebugCaptureRequested(DebugCaptureRequestedEvent _) => _pipeline?.TriggerCapture();
+    void OnDebugSunFreezeToggleRequested(DebugSunFreezeToggleRequestedEvent _) => ToggleSunFreeze();
+    void OnDebugOverlayToggleRequested(DebugOverlayToggleRequestedEvent _) => ShowDebugOverlay = !ShowDebugOverlay;
+    void OnDebugDetailedToggleRequested(DebugDetailedToggleRequestedEvent _) => ShowDetailedDebug = !ShowDetailedDebug;
+    void OnDebugProfilingToggleRequested(DebugProfilingToggleRequestedEvent _) => ToggleProfilingFrameRate();
 
     void TogglePrecipitationRendering()
     {
@@ -180,9 +152,7 @@ public class DebugCaptureController : MonoBehaviour
 
         bool next = !controller.PrecipitationRenderingEnabled;
         controller.PrecipitationRenderingEnabled = next;
-        _precipitationToggleFlashActive = true;
-        _precipitationToggleFlashUntil = Time.unscaledTime + 1.2f;
-        _precipitationToggleFlashMessage = $"Precipitation: {(next ? "ON" : "OFF")}";
+        _hud?.NotifyPrecipitationToggle(next);
     }
 
     void CycleF10CaptureSet()
@@ -192,9 +162,7 @@ public class DebugCaptureController : MonoBehaviour
 
     void ToggleSunFreeze()
     {
-        ICelestialTimeController celestial = _cachedCelestialManager;
-        if (celestial != null)
-            celestial.ToggleTimeFrozen();
+        _cachedCelestialManager?.ToggleTimeFrozen();
     }
 
     void ToggleProfilingFrameRate()
@@ -209,25 +177,6 @@ public class DebugCaptureController : MonoBehaviour
     void CycleDebugMode()
     {
         ApplyDebugMode(_debugRegistry.GetNextModeId(_currentDebugModeId));
-    }
-
-    void TriggerDebugCapture()
-    {
-        DebugCaptureSetDefinition captureSet = GetCurrentCaptureSet();
-        if (captureSet.Behavior == DebugCaptureSetBehavior.CurrentModeOnly)
-        {
-            CycleDebugMode();
-            QueueDebugScreenshot();
-            return;
-        }
-
-        if (!SaveF10DebugScreenshots)
-        {
-            CycleDebugMode();
-            return;
-        }
-
-        QueueDebugCapture(captureSet, GetDebugCaptureModes(), captureScreenshots: true);
     }
 
     void ApplyDebugMode(DebugModeId modeId)
@@ -247,290 +196,17 @@ public class DebugCaptureController : MonoBehaviour
         return _debugRegistry.GetCaptureSet(_f10CaptureSetIndex);
     }
 
-    void QueueDebugCapture(
-        DebugCaptureSetDefinition captureSet,
-        DebugModeId[] modes,
-        bool captureScreenshots)
-    {
-        if (_debugScreenshotCaptureRunning || !gameObject.activeInHierarchy || modes == null || modes.Length == 0)
-            return;
-
-        _ = CaptureDebugSequenceAsync(captureSet, modes, captureScreenshots, CancellationToken.None);
-    }
-
-    async Awaitable CaptureDebugSequenceAsync(
-        DebugCaptureSetDefinition captureSet,
-        DebugModeId[] modes,
-        bool captureScreenshots,
-        CancellationToken ct)
-    {
-        _debugScreenshotCaptureRunning = true;
-        DebugScreenshotFiles.RecordLastCaptureCamera();
-        DebugModeId restoreMode = RestoreDebugOffAfterCaptureSet ? _debugRegistry.DefaultModeId : _currentDebugModeId;
-        bool timedCapture = captureSet.TimingSamplesPerMode > 0;
-        int restoreFrameRate = Application.targetFrameRate;
-        int restoreVSync = QualitySettings.vSyncCount;
-        float restoreDebugSuppressWeatherPasses = Shader.GetGlobalFloat(DebugSuppressWeatherPassesId);
-        int restoreCloudViewSteps = Shader.GetGlobalInt(CloudViewStepsId);
-        int restoreCloudLightSteps = Shader.GetGlobalInt(CloudLightStepsId);
-        bool suppressWeatherPasses = captureSet.Id == DebugCoreIds.PerformanceWaterVolumeStages;
-        bool cloudStepCapture = captureSet.Id == DebugCoreIds.PerformanceCloudSteps;
-        ICelestialTimeController celestial = _cachedCelestialManager;
-        float restoreTimeOfDay = celestial != null ? celestial.TimeOfDay : 0f;
-        bool restoreTimeFrozen = celestial != null && celestial.IsTimeFrozen;
-        LoggerProvider.Log(LogLevel.Debug, "DebugCapture", $"F10 start. Modes={modes.Length}, CaptureScreenshots={captureScreenshots}");
-
-        try
-        {
-            if (timedCapture)
-            {
-                if (celestial == null)
-                    throw new System.InvalidOperationException("Timed debug captures require an ICelestialTimeController.");
-
-                QualitySettings.vSyncCount = 0;
-                Application.targetFrameRate = Mathf.Max(ProfilingFrameRate, CappedFrameRate + 1);
-                Shader.SetGlobalFloat(DebugSuppressWeatherPassesId, suppressWeatherPasses ? 1f : 0f);
-                celestial.SetTimeFrozen(true);
-                if (!celestial.TrySetLocalTimeOfDay(TimedCaptureLocalTime))
-                    throw new System.InvalidOperationException("Timed debug capture could not set local celestial time.");
-
-                await WaitForDebugModeRenderAsync(ct);
-            }
-
-            for (int i = 0; i < modes.Length; i++)
-            {
-                ct.ThrowIfCancellationRequested();
-                DebugModeDefinition mode = _debugRegistry.GetMode(modes[i]);
-                string modeName = mode.Name;
-                ApplyDebugMode(mode.Id);
-                if (cloudStepCapture)
-                    ApplyCloudStepBenchmark(mode.Id.LocalId, restoreCloudViewSteps, restoreCloudLightSteps);
-                LoggerProvider.Log(LogLevel.Debug, "DebugCapture", $"F10 step {i + 1}/{modes.Length}: mode {mode.Id}:{modeName}");
-
-                await WaitForDebugModeRenderAsync(ct);
-                if (captureSet.TimingSamplesPerMode > 0)
-                {
-                    FrameTimingCounters.Reset();
-                    await WaitForFrameTimingSamplesAsync(
-                        captureSet.TimingSamplesPerMode,
-                        ct);
-                }
-
-                if (captureScreenshots)
-                {
-                    ct.ThrowIfCancellationRequested();
-                    try
-                    {
-                        SaveDebugScreenshot(mode.Id, modeName);
-                    }
-                    catch (System.Exception ex)
-                    {
-                        LoggerProvider.LogException("DebugCapture", ex);
-                    }
-                }
-            }
-        }
-        finally
-        {
-            ApplyDebugMode(restoreMode);
-            if (timedCapture)
-            {
-                if (celestial != null)
-                {
-                    celestial.SetTimeOfDay(restoreTimeOfDay);
-                    celestial.SetTimeFrozen(restoreTimeFrozen);
-                }
-
-                Application.targetFrameRate = restoreFrameRate;
-                QualitySettings.vSyncCount = restoreVSync;
-                Shader.SetGlobalFloat(DebugSuppressWeatherPassesId, restoreDebugSuppressWeatherPasses);
-                Shader.SetGlobalInt(CloudViewStepsId, restoreCloudViewSteps);
-                Shader.SetGlobalInt(CloudLightStepsId, restoreCloudLightSteps);
-            }
-
-            _debugScreenshotCaptureRunning = false;
-            LoggerProvider.Log(LogLevel.Debug, "DebugCapture", "F10 end.");
-        }
-    }
-
-    static void ApplyCloudStepBenchmark(int mode, int baselineViewSteps, int baselineLightSteps)
-    {
-        switch (mode)
-        {
-            case DebugModeConstants.PerformanceCloud72x8:
-                Shader.SetGlobalInt(CloudViewStepsId, 72);
-                Shader.SetGlobalInt(CloudLightStepsId, 8);
-                break;
-            case DebugModeConstants.PerformanceCloud48x8:
-                Shader.SetGlobalInt(CloudViewStepsId, 48);
-                Shader.SetGlobalInt(CloudLightStepsId, 8);
-                break;
-            case DebugModeConstants.PerformanceCloud72x4:
-                Shader.SetGlobalInt(CloudViewStepsId, 72);
-                Shader.SetGlobalInt(CloudLightStepsId, 4);
-                break;
-            case DebugModeConstants.PerformanceCloud48x4:
-                Shader.SetGlobalInt(CloudViewStepsId, 48);
-                Shader.SetGlobalInt(CloudLightStepsId, 4);
-                break;
-            default:
-                Shader.SetGlobalInt(CloudViewStepsId, Mathf.Max(1, baselineViewSteps));
-                Shader.SetGlobalInt(CloudLightStepsId, Mathf.Max(1, baselineLightSteps));
-                break;
-        }
-    }
-
-    static async Awaitable WaitForFrameTimingSamplesAsync(
-        int requiredSamples,
-        CancellationToken ct)
-    {
-        float timeoutAt = Time.realtimeSinceStartup + TimedCaptureSampleTimeoutSeconds;
-        while (FrameTimingCounters.CompletedSampleCount < requiredSamples)
-        {
-            ct.ThrowIfCancellationRequested();
-            if (Time.realtimeSinceStartup >= timeoutAt)
-            {
-                LoggerProvider.Log(
-                    LogLevel.Warning,
-                    "DebugCapture",
-                    $"Timed capture reached {FrameTimingCounters.CompletedSampleCount}/{requiredSamples} samples before timeout.");
-                break;
-            }
-
-            await Awaitable.NextFrameAsync(ct);
-        }
-
-        await Awaitable.EndOfFrameAsync();
-    }
-
-    void QueueDebugScreenshot()
-    {
-        if (!SaveF10DebugScreenshots || _debugScreenshotCaptureRunning || !gameObject.activeInHierarchy)
-            return;
-
-        string modeName = _debugRegistry.GetModeName(_currentDebugModeId);
-        _ = CaptureDebugScreenshotAsync(_currentDebugModeId, modeName, CancellationToken.None);
-    }
-
-    async Awaitable CaptureDebugScreenshotAsync(
-        DebugModeId modeId,
-        string modeName,
-        CancellationToken ct)
-    {
-        _debugScreenshotCaptureRunning = true;
-        DebugScreenshotFiles.RecordLastCaptureCamera();
-
-        try
-        {
-            await WaitForDebugModeRenderAsync(ct);
-            ct.ThrowIfCancellationRequested();
-            SaveDebugScreenshot(modeId, modeName);
-        }
-        catch (System.OperationCanceledException)
-        {
-            throw;
-        }
-        catch (System.Exception ex)
-        {
-            LoggerProvider.LogException("DebugCapture", ex);
-        }
-        finally
-        {
-            _debugScreenshotCaptureRunning = false;
-        }
-    }
-
-    async Awaitable WaitForDebugModeRenderAsync(CancellationToken ct)
-    {
-        await Awaitable.NextFrameAsync(ct);
-
-        if (DebugCaptureModeDelaySeconds > 0f)
-            await WaitUnscaledAsync(DebugCaptureModeDelaySeconds, ct);
-
-        await Awaitable.NextFrameAsync(ct);
-        await Awaitable.EndOfFrameAsync();
-        ct.ThrowIfCancellationRequested();
-    }
-
-    static async Awaitable WaitUnscaledAsync(float seconds, CancellationToken ct)
-    {
-        float endTime = Time.unscaledTime + Mathf.Max(0f, seconds);
-        while (Time.unscaledTime < endTime)
-            await Awaitable.NextFrameAsync(ct);
-    }
-
-    void SaveDebugScreenshot(DebugModeId modeId, string modeName)
-    {
-        Texture2D source = null;
-        Texture2D resized = null;
-
-        try
-        {
-            source = ScreenCapture.CaptureScreenshotAsTexture();
-            resized = DebugScreenshotFiles.Downsample(source, DebugScreenshotMaxWidth);
-
-            string directory = DebugScreenshotFiles.GetDirectory();
-            System.IO.Directory.CreateDirectory(directory);
-
-            string timestamp = System.DateTime.Now.ToString("yyyyMMdd-HHmmss-fff");
-            string safeModeName = DebugScreenshotFiles.SanitizeFilePart(modeName);
-            string safeModeId = DebugScreenshotFiles.SanitizeFilePart(modeId.ToString());
-            string baseName = $"F10-{safeModeId}-{safeModeName}-{timestamp}";
-            string imagePath = System.IO.Path.Combine(directory, baseName + ".png");
-            string metadataPath = System.IO.Path.Combine(directory, baseName + ".txt");
-
-            System.IO.File.WriteAllBytes(imagePath, resized.EncodeToPNG());
-            System.IO.File.WriteAllText(metadataPath, BuildDebugCaptureMetadata(
-                modeId,
-                modeName,
-                source.width,
-                source.height,
-                resized.width,
-                resized.height,
-                imagePath));
-
-            int modesPerRun = GetDebugCaptureModes().Length;
-            int keepFiles = Mathf.Max(1, DebugScreenshotMaxRuns) * Mathf.Max(1, modesPerRun) * 2;
-            DebugScreenshotFiles.Prune(directory, keepFiles);
-
-            LoggerProvider.Log(LogLevel.Debug, "DebugCapture", $"Saved F10 debug screenshot: {imagePath}");
-        }
-        finally
-        {
-            if (source != null)
-                Destroy(source);
-            if (resized != null && resized != source)
-                Destroy(resized);
-        }
-    }
-
-    string BuildDebugCaptureMetadata(DebugModeId modeId, string modeName, int sourceWidth, int sourceHeight, int savedWidth, int savedHeight, string imagePath)
-    {
-        var inputs = new DebugCaptureMetadataInputs(
-            _debugRegistry,
-            GetCurrentCaptureSet(),
-            _cachedCameraContext,
-            _cachedCelestialManager,
-            _cachedSunLight,
-            _cachedPrecipitationController,
-            _cachedWeatherProvider,
-            _climateMapResolutionId,
-            ShowDetailedDebug,
-            IncludeMeshIntegrityInDebugCaptures);
-        return DebugCaptureMetadataBuilder.Build(
-            inputs, modeId, modeName, sourceWidth, sourceHeight, savedWidth, savedHeight, imagePath);
-    }
-
-    DebugRuntimeState CreateRuntimeState(DebugModeId modeId, string modeName)
+    DebugRuntimeState CreateRuntimeState()
     {
         DebugCaptureSetDefinition captureSet = GetCurrentCaptureSet();
+        string modeName = _debugRegistry.GetModeName(_currentDebugModeId);
         return new DebugRuntimeState(
             _debugRegistry,
             _cachedCameraContext,
             _cachedCelestialManager,
             _cachedPrecipitationController,
             _cachedWeatherProvider,
-            modeId,
+            _currentDebugModeId,
             modeName,
             captureSet.Id,
             captureSet.Name,
@@ -552,105 +228,24 @@ public class DebugCaptureController : MonoBehaviour
 
     void OnGUI()
     {
+        if (_hud == null) return;
+
         if (!ShowDebugOverlay)
         {
-            DrawDebugOverlayHint();
+            _hud.DrawHint();
             return;
         }
 
-        ICameraRigContext cameraContext = _cachedCameraContext;
-        if (cameraContext == null)
-            return;
-
-        GUILayout.BeginArea(GetDebugOverlayRect(), GetDebugOverlayPanelStyle());
-        _debugOverlayScroll = GUILayout.BeginScrollView(_debugOverlayScroll);
-
-        // F6 tier: high-value glanceable info, always visible.
-        GUILayout.Label("Camera");
-        GUILayout.Label($"Position: {cameraContext.CameraTransform.position.x:F1}, {cameraContext.CameraTransform.position.y:F1}, {cameraContext.CameraTransform.position.z:F1}");
-        if (cameraContext.TargetCenter != null)
-        {
-            Vector3 dirToSurface = (cameraContext.CameraTransform.position - cameraContext.TargetCenter.position).normalized;
-            (float lat, float lon) = CoordinateConverter.UnitSphereToLatLong(dirToSurface);
-            GUILayout.Label($"Lat: {lat * Mathf.Rad2Deg:F1}\u00b0 Lon: {lon * Mathf.Rad2Deg:F1}\u00b0");
-            float distToCenter = Vector3.Distance(cameraContext.CameraTransform.position, cameraContext.TargetCenter.position);
-            GUILayout.Label($"Distance to center: {distToCenter:F1}");
-        }
-
-        GUILayout.Space(6);
-        GUILayout.Label("Performance");
-        GUILayout.Label($"FPS: {1f / Time.unscaledDeltaTime:F0}");
-        GUILayout.Label($"Frame: CPU={FormatFrameMs(FrameTimingCounters.LastCpuFrameMs)} GPU={FormatFrameMs(FrameTimingCounters.LastGpuFrameMs)}");
-
-        if (_precipitationToggleFlashActive)
-        {
-            if (Time.unscaledTime <= _precipitationToggleFlashUntil)
-                GUILayout.Label(_precipitationToggleFlashMessage);
-            else
-                _precipitationToggleFlashActive = false;
-        }
-
-        if (!ShowDetailedDebug)
-            GUILayout.Label("F9 = detailed debug");
-
-        // F9 tier: controls reference + toggle/system state, shown only when detailed debug is on.
-        if (ShowDetailedDebug)
-        {
-            GUILayout.Space(6);
-            GUILayout.Label("Controls");
-            GUILayout.Label("RMB=Look, WASD=Move, Shift=Fast, QE=Up/Down, ZC=Roll");
-            GUILayout.Label("Space=Toggle Orbit/Surface, Backspace=Face Sun, R=Frame Storm");
-            GUILayout.Label("F6=Debug UI, F7=Cycle F10 Set, F8=Freeze Sun, F9=Detailed, F11=FPS Cap, P=Precip");
-            GUILayout.Label("M=Drop scale markers @ look, Shift+M=Clear, T=Teleport to markers");
-
-            GUILayout.Space(6);
-            GUILayout.Label("State");
-            DebugCaptureSetDefinition captureSet = GetCurrentCaptureSet();
-            GUILayout.Label($"F10={captureSet.Name} capture ({GetDebugCaptureModes().Length} modes, current {_debugRegistry.GetModeName(_currentDebugModeId)})");
-            IPrecipitationDebugControl precipitation = _cachedPrecipitationController;
-            if (precipitation != null)
-            {
-                GUILayout.Label($"Precipitation render: {(precipitation.PrecipitationRenderingEnabled ? "ON" : "OFF")}");
-                GUILayout.Label($"Precip local particles: {(precipitation.ShouldRenderLocalParticles(cameraContext.CameraComponent) ? "ON" : "OFF")}");
-            }
-
-            GUILayout.Label($"Frame target: {Application.targetFrameRate}, vSync: {QualitySettings.vSyncCount}");
-
-            ICelestialTimeController celestial = _cachedCelestialManager;
-            if (celestial != null)
-                GUILayout.Label($"Sun frozen: {(celestial.IsTimeFrozen ? "yes" : "no")}");
-
-            if (celestial != null && cameraContext.PlanetRadius > 0f)
-            {
-                float sunElevation = Vector3.Dot(celestial.SunDirection, (cameraContext.CameraTransform.position - cameraContext.PlanetCenter).normalized);
-                GUILayout.Label($"Sun elevation: {Mathf.Asin(sunElevation) * Mathf.Rad2Deg:F1}\u00b0");
-            }
-        }
-
-        DebugRuntimeState runtimeState = CreateRuntimeState(_currentDebugModeId, _debugRegistry.GetModeName(_currentDebugModeId));
-        for (int i = 0; i < _debugRegistry.OverlayContributors.Count; i++)
-            _debugRegistry.OverlayContributors[i].DrawOverlay(runtimeState);
-
-        GUILayout.EndScrollView();
-        GUILayout.EndArea();
+        _hud.Draw(
+            _debugRegistry,
+            _currentDebugModeId,
+            GetCurrentCaptureSet(),
+            _cachedCameraContext,
+            _cachedCelestialManager,
+            _cachedPrecipitationController,
+            ShowDetailedDebug,
+            CreateRuntimeState());
     }
-
-    void DrawDebugOverlayHint()
-    {
-        GUILayout.BeginArea(new Rect(10f, 10f, 132f, 30f), GetDebugOverlayPanelStyle());
-        GUILayout.Label("F6: debug data");
-        GUILayout.EndArea();
-    }
-
-    Rect GetDebugOverlayRect()
-    {
-        float width = Mathf.Min(820f, Mathf.Max(320f, Screen.width - 20f));
-        float available = Screen.height - 20f;
-        float height = ShowDetailedDebug ? available : Mathf.Min(230f, available);
-        return new Rect(10f, 10f, width, height);
-    }
-
-    static string FormatFrameMs(double ms) => ms < 0.0 ? "?" : $"{ms:F1}ms";
 
     // --- Console commands -------------------------------------------------
 
@@ -720,7 +315,7 @@ public class DebugCaptureController : MonoBehaviour
     }
 
     [ConsoleCommand("capture", "Trigger F10 capture using current set. Closes console during capture so it stays out of screenshots, then reopens.", MonoTargetType.Single)]
-    async Awaitable CaptureCmd(System.Threading.CancellationToken ct)
+    async Awaitable CaptureCmd(CancellationToken ct)
     {
         bool reopenConsole = false;
         ServiceLocator.TryGet<IConsoleService>(out var console);
@@ -731,9 +326,9 @@ public class DebugCaptureController : MonoBehaviour
             {
                 reopenConsole = true;
                 console.Close();
-                // Let the console fade-out finish before grabbing the screenshot so we don't
-                // catch it mid-alpha. FadeDuration is 0.12s; round up to be safe.
-                await WaitUnscaledAsync(0.2f, ct);
+                float endTime = Time.unscaledTime + 0.2f;
+                while (Time.unscaledTime < endTime)
+                    await Awaitable.NextFrameAsync(ct);
             }
 
             await CaptureCurrentSetAsync(ct);
@@ -744,66 +339,9 @@ public class DebugCaptureController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Public async entry point for triggering the current F10 capture set. Equivalent to the
-    /// F10 keypath but awaitable so callers (the console <c>debug.capture</c> command) can wrap
-    /// it with close/reopen logic.
-    /// </summary>
-    public async Awaitable CaptureCurrentSetAsync(System.Threading.CancellationToken ct)
+    public async Awaitable CaptureCurrentSetAsync(CancellationToken ct)
     {
-        if (_debugRegistry == null) return;
-        if (_debugScreenshotCaptureRunning)
-            throw new System.InvalidOperationException("A debug capture is already running.");
-
-        ct.ThrowIfCancellationRequested();
-        DebugCaptureSetDefinition captureSet = GetCurrentCaptureSet();
-
-        if (captureSet.Behavior == DebugCaptureSetBehavior.CurrentModeOnly)
-        {
-            CycleDebugMode();
-            await CaptureDebugScreenshotAsync(
-                _currentDebugModeId,
-                _debugRegistry.GetModeName(_currentDebugModeId),
-                ct);
-            return;
-        }
-
-        if (!SaveF10DebugScreenshots)
-        {
-            CycleDebugMode();
-            return;
-        }
-
-        await CaptureDebugSequenceAsync(
-            captureSet,
-            GetDebugCaptureModes(),
-            captureScreenshots: true,
-            ct);
-    }
-
-    GUIStyle GetDebugOverlayPanelStyle()
-    {
-        if (_debugOverlayPanelStyle != null)
-            return _debugOverlayPanelStyle;
-
-        _debugOverlayPanelTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false)
-        {
-            hideFlags = HideFlags.HideAndDontSave
-        };
-        _debugOverlayPanelTexture.SetPixel(0, 0, DebugOverlayBackgroundColor);
-        _debugOverlayPanelTexture.Apply();
-
-        _debugOverlayPanelStyle = new GUIStyle(GUI.skin.box)
-        {
-            normal =
-            {
-                background = _debugOverlayPanelTexture
-            },
-            padding = new RectOffset(10, 10, 8, 8),
-            border = new RectOffset(4, 4, 4, 4)
-        };
-
-        return _debugOverlayPanelStyle;
+        if (_pipeline == null) return;
+        await _pipeline.CaptureCurrentSetAsync(ct);
     }
 }
-

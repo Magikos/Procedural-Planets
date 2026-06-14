@@ -2,5 +2,7 @@
 Assets/Plugins/Wingman/
 Packages/com.singularitygroup.hotreload/
 
-# Graphify's own output directory
+# Graphify's own output directory (project root canonical location)
 graphify-out/
+# Guard against graphify writing inside Assets/Scripts when run with that scope
+Assets/Scripts/graphify-out/
