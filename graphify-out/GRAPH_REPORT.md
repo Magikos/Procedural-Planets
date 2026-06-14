@@ -1,16 +1,16 @@
 # Graph Report - Assets\Scripts  (2026-06-14)
 
 ## Corpus Check
-- 239 files · ~114,082 words
+- 241 files · ~113,993 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3428 nodes · 5285 edges · 237 communities (192 shown, 45 thin omitted)
+- 3445 nodes · 5295 edges · 243 communities (198 shown, 45 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `55c00d7e`
+- Built from commit: `ae423172`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -238,6 +238,12 @@
 - [[_COMMUNITY_Community 220|Community 220]]
 - [[_COMMUNITY_Community 221|Community 221]]
 - [[_COMMUNITY_Community 222|Community 222]]
+- [[_COMMUNITY_Community 223|Community 223]]
+- [[_COMMUNITY_Community 224|Community 224]]
+- [[_COMMUNITY_Community 225|Community 225]]
+- [[_COMMUNITY_Community 226|Community 226]]
+- [[_COMMUNITY_Community 227|Community 227]]
+- [[_COMMUNITY_Community 228|Community 228]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `Planet` - 57 edges
@@ -266,107 +272,107 @@
 ## Import Cycles
 - None detected.
 
-## Communities (237 total, 45 thin omitted)
+## Communities (243 total, 45 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.05
 Nodes (26): DebugWeatherDiagnosticsRequestedEvent, IProgressReporter, IWeatherConfigurator, IWeatherProvider, AsyncGPUReadbackRequest, Awaitable, bool, CancellationToken (+18 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.05
-Nodes (26): Awaitable, bool, CancellationToken, ConsoleCommand, DebugCaptureSetDefinition, DebugModeId, DebugRegistry, DebugRuntimeState (+18 more)
-
-### Community 2 - "Community 2"
-Cohesion: 0.07
-Nodes (25): Awaitable, CancellationToken, int, IReadOnlyList, Awaitable, bool, Camera, CancellationToken (+17 more)
-
-### Community 3 - "Community 3"
 Cohesion: 0.07
 Nodes (16): CameraTeleportStore, Vector3, bool, Camera, CameraTeleportLocation, ConsoleCommand, float, ICelestialTimeController (+8 more)
 
-### Community 4 - "Community 4"
+### Community 2 - "Community 2"
 Cohesion: 0.08
 Nodes (20): FaceAtlasPixels, FilterMode, Action<float>, Awaitable, BiomeLookupData, byte, CancellationToken, Color (+12 more)
 
-### Community 5 - "Community 5"
+### Community 3 - "Community 3"
 Cohesion: 0.08
 Nodes (28): CubeFaceLocalUp(), CubeFaceToUnitSphere(), Dispose(), Execute(), Fbm(), NormalizedLatitude(), SphericalWeatherGrid, Unlerp() (+20 more)
 
-### Community 6 - "Community 6"
+### Community 4 - "Community 4"
 Cohesion: 0.07
 Nodes (27): ChunkSurfaceGenerator, IChunkVisibilitySelector, Awaitable, bool, Camera, CancellationToken, FaceRenderMask, GrassSurfaceAtlasGpuData (+19 more)
 
-### Community 7 - "Community 7"
+### Community 5 - "Community 5"
 Cohesion: 0.09
 Nodes (18): bool, Bounds, Camera, float, HashSet, IChunkMeshCache, int, IReadOnlyList (+10 more)
 
-### Community 8 - "Community 8"
+### Community 6 - "Community 6"
 Cohesion: 0.06
 Nodes (31): GrassDebugStats, GrassRenderLayer, GrassRuntimeState, GrassPlacementController, GrassPlacementStats, IGrassDebugStatsProvider, IGrassRuntimeControl, bool (+23 more)
 
-### Community 9 - "Community 9"
+### Community 7 - "Community 7"
 Cohesion: 0.08
 Nodes (19): ChunkRenderHandle, LinkedList, LinkedListNode, bool, Dictionary, GameObject, IBiomeAtlasService, int (+11 more)
 
-### Community 10 - "Community 10"
+### Community 8 - "Community 8"
+Cohesion: 0.08
+Nodes (20): Awaitable, CancellationToken, int, IReadOnlyList, Awaitable, bool, CancellationToken, CancellationTokenSource (+12 more)
+
+### Community 9 - "Community 9"
 Cohesion: 0.09
 Nodes (17): bool, ConsoleCommand, float, int, IPlanetSurfaceSampler, IWorldContext, List, Material (+9 more)
 
-### Community 11 - "Community 11"
+### Community 10 - "Community 10"
 Cohesion: 0.10
 Nodes (20): BuiltInTeleport, bool, CameraTeleportLocation, ConsoleCommand, float, int, IReadOnlyList, List (+12 more)
 
-### Community 12 - "Community 12"
+### Community 11 - "Community 11"
 Cohesion: 0.08
 Nodes (18): DebugView, IPrecipitationDebugControl, bool, Camera, CloudDto, Color, ConsoleCommand, float (+10 more)
 
-### Community 13 - "Community 13"
+### Community 12 - "Community 12"
 Cohesion: 0.09
 Nodes (16): ConfirmContext, ConsoleInputController, KeyRepeat, ConsoleHistory, ConsoleInputBuffer, Action, bool, ConsoleAsyncRunner (+8 more)
 
-### Community 14 - "Community 14"
+### Community 13 - "Community 13"
 Cohesion: 0.12
 Nodes (15): VoronoiBiomeField, KdNode, Action, BiomeDto, BiomeRegistryDto, byte, CancellationToken, float (+7 more)
 
-### Community 15 - "Community 15"
+### Community 14 - "Community 14"
 Cohesion: 0.09
 Nodes (13): ICelestialTimeController, CelestialManager, bool, Camera, ConsoleCommand, float, int, IWorldContext (+5 more)
 
-### Community 16 - "Community 16"
+### Community 15 - "Community 15"
 Cohesion: 0.06
 Nodes (16): ConsoleController, ConsoleInputController, ConsoleInputLineFormatter, ConsoleRenderer, Action, bool, Camera, ConsoleAsyncRunner (+8 more)
 
-### Community 17 - "Community 17"
+### Community 16 - "Community 16"
 Cohesion: 0.08
 Nodes (17): CloudController, bool, CloudDto, ComputeShader, ConsoleCommand, float, int, ISettingsService (+9 more)
 
-### Community 18 - "Community 18"
+### Community 17 - "Community 17"
 Cohesion: 0.10
 Nodes (17): DebugCaptureContext, DebugModuleId, DebugRegistry, DebugRuntimeState, float, int, long, string (+9 more)
 
-### Community 19 - "Community 19"
+### Community 18 - "Community 18"
 Cohesion: 0.12
 Nodes (15): IReadOnlyList, List, Type, Type, IReadOnlyList<string>, BoolParser, ColorParser, ConsoleArgumentParsers (+7 more)
 
-### Community 20 - "Community 20"
+### Community 19 - "Community 19"
 Cohesion: 0.12
 Nodes (16): Action, bool, Dictionary, Exception, Func, List, MethodInfo, EventBus (+8 more)
 
-### Community 21 - "Community 21"
+### Community 20 - "Community 20"
 Cohesion: 0.10
 Nodes (17): ConsoleCommand, DebugCaptureContext, DebugCaptureSetId, DebugModuleId, DebugRegistry, DebugRuntimeState, float, GrassRenderLayer (+9 more)
 
-### Community 22 - "Community 22"
+### Community 21 - "Community 21"
 Cohesion: 0.09
 Nodes (16): AtmosphereController, CelestialManager, AtmosphereDto, bool, ComputeShader, ConsoleCommand, float, int (+8 more)
 
-### Community 23 - "Community 23"
-Cohesion: 0.09
-Nodes (20): DebugCaptureContext, DebugCaptureSetId, DebugModeDefinition, DebugModeId, DebugModuleId, DebugRegistry, DebugRuntimeState, float (+12 more)
+### Community 22 - "Community 22"
+Cohesion: 0.07
+Nodes (17): bool, DebugRegistry, float, ICameraRigContext, ICelestialTimeController, int, IPrecipitationDebugControl, IWeatherProvider (+9 more)
 
-### Community 24 - "Community 24"
+### Community 23 - "Community 23"
 Cohesion: 0.12
 Nodes (12): DebugCaptureSetDefinition, DebugCaptureSetId, DebugModeDefinition, DebugModeId, DebugModuleId, Dictionary, List, DebugCaptureSetBehavior (+4 more)
+
+### Community 24 - "Community 24"
+Cohesion: 0.10
+Nodes (14): IRainParticleRenderer, bool, Color, ComputeBuffer, ComputeShader, ConsoleCommand, float, int (+6 more)
 
 ### Community 25 - "Community 25"
 Cohesion: 0.15
@@ -401,44 +407,44 @@ Cohesion: 0.14
 Nodes (18): ConfirmRenderData, ConsoleRenderer, ConsoleRenderState, bool, Color, CommandBuffer, ConsoleAnchor, ConsoleMessage (+10 more)
 
 ### Community 33 - "Community 33"
+Cohesion: 0.12
+Nodes (16): DebugCaptureContext, DebugModeDefinition, DebugRegistry, DebugRuntimeState, float, ICameraRigContext, int, IWeatherProvider (+8 more)
+
+### Community 34 - "Community 34"
 Cohesion: 0.10
 Nodes (19): GrassNearFieldController, GrassNearFieldDispatchReason, bool, Camera, ChunkedSurfaceProvider, ComputeBuffer, ComputeShader, FaceSpaceCell (+11 more)
 
-### Community 34 - "Community 34"
+### Community 35 - "Community 35"
 Cohesion: 0.11
 Nodes (20): bool, Camera, ContextContainer, float, int, IRainParticleRenderer, Material, MaterialPropertyBlock (+12 more)
 
-### Community 35 - "Community 35"
+### Community 36 - "Community 36"
 Cohesion: 0.15
 Nodes (16): BuildStats, DirectionKey, FaceWaterData, Action<float>, Color, Dictionary, float, IFaceMeshSampler (+8 more)
 
-### Community 36 - "Community 36"
+### Community 37 - "Community 37"
 Cohesion: 0.07
 Nodes (22): ClimateMapGpuData, ColorGenerator, IClimateSampler, IGrassRuntimeControl, IPlanet, IPlanetSurfaceSampler, PerFaceSurfaceProvider, bool (+14 more)
 
-### Community 37 - "Community 37"
+### Community 38 - "Community 38"
 Cohesion: 0.15
 Nodes (14): BiomeGrassParamsGpu, BiomeSurfaceTextureArrays, Func<BiomeDefinitionDto, Texture2D>, BiomeDefinitionDto, BiomeRegistryDto, Color, Color32, ComputeBuffer (+6 more)
 
-### Community 38 - "Community 38"
+### Community 39 - "Community 39"
 Cohesion: 0.21
 Nodes (9): Awaitable, bool, CancellationToken, DebugCaptureSetDefinition, DebugModeId, float, int, DebugCapturePipeline (+1 more)
 
-### Community 39 - "Community 39"
+### Community 40 - "Community 40"
 Cohesion: 0.10
 Nodes (17): IPlanetSurfaceProvider, Awaitable, Camera, CancellationToken, FaceRenderMask, IBiomeProvider, IFaceMeshSampler, int (+9 more)
 
-### Community 40 - "Community 40"
+### Community 41 - "Community 41"
 Cohesion: 0.13
 Nodes (9): ConsoleAsyncRunner, Action, Awaitable, bool, CancellationTokenSource, ConsoleScrollback, float, IConsoleService (+1 more)
 
-### Community 41 - "Community 41"
+### Community 42 - "Community 42"
 Cohesion: 0.09
 Nodes (14): IEnumerable, string, IEnumerable, IEnumerable, IEnumerable, IEnumerable, string, IConsoleCompletionProvider (+6 more)
-
-### Community 42 - "Community 42"
-Cohesion: 0.11
-Nodes (12): IRainParticleRenderer, bool, Color, ComputeBuffer, ComputeShader, float, int, IWorldContext (+4 more)
 
 ### Community 43 - "Community 43"
 Cohesion: 0.11
@@ -473,36 +479,36 @@ Cohesion: 0.17
 Nodes (22): ApplyBoundaryBlend(), BoundaryBlendWeight(), BuildLookupData(), From(), GetBiomeAt(), GetDefinition(), GetDefinitionByIndex(), GetGridIndex() (+14 more)
 
 ### Community 51 - "Community 51"
-Cohesion: 0.16
-Nodes (4): Dictionary, T, IWorldContext, ServiceLocator
-
-### Community 52 - "Community 52"
 Cohesion: 0.11
 Nodes (12): TemperatureProvider, ClimateSample, Vector3, IClimateProvider, IClimateSampler, ITemperatureProvider, ClimateCurveLut, float (+4 more)
+
+### Community 52 - "Community 52"
+Cohesion: 0.16
+Nodes (4): Dictionary, T, IWorldContext, ServiceLocator
 
 ### Community 53 - "Community 53"
 Cohesion: 0.19
 Nodes (9): FaceSpaceRangeResult, FaceSpaceCellRangeBuilder, Camera, CubeEdge, FaceSpaceCell, int, Transform, Vector2 (+1 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.10
-Nodes (13): ConsoleDebugModule, DebugCaptureContext, DebugModuleId, DebugRegistry, StringBuilder, DebugRegistry, DebugCaptureContext, DebugModuleId (+5 more)
-
-### Community 55 - "Community 55"
 Cohesion: 0.16
 Nodes (11): Color, Dictionary, ICameraRigContext, Mesh, Renderer, Transform, Vector3, WaterDebugStats (+3 more)
 
-### Community 56 - "Community 56"
+### Community 55 - "Community 55"
 Cohesion: 0.16
 Nodes (12): Awaitable, CancellationToken, int, IProgressHandle, IReadOnlyList, List, NativeArray, PlanetChunk (+4 more)
 
-### Community 57 - "Community 57"
+### Community 56 - "Community 56"
 Cohesion: 0.16
 Nodes (8): ConsoleCommand, float, int, string, DefaultGrassQualitySettings, IGrassQualitySettings, OnValidate(), QualityController
 
-### Community 58 - "Community 58"
+### Community 57 - "Community 57"
 Cohesion: 0.13
 Nodes (11): DebugCaptureContext, DebugCaptureSetId, DebugModeDefinition, DebugModeId, DebugModuleId, DebugRegistry, DebugRuntimeState, int (+3 more)
+
+### Community 58 - "Community 58"
+Cohesion: 0.17
+Nodes (6): bool, CancellationTokenSource, IReadOnlyList, List, Type, WorldContext
 
 ### Community 59 - "Community 59"
 Cohesion: 0.11
@@ -521,28 +527,28 @@ Cohesion: 0.15
 Nodes (10): DebugCaptureContext, DebugCaptureSetId, DebugModeDefinition, DebugModeId, DebugModuleId, DebugRegistry, int, StringBuilder (+2 more)
 
 ### Community 63 - "Community 63"
-Cohesion: 0.18
-Nodes (6): bool, CancellationTokenSource, IReadOnlyList, List, Type, WorldContext
-
-### Community 64 - "Community 64"
 Cohesion: 0.15
 Nodes (10): DebugCaptureContext, DebugCaptureSetId, DebugModeDefinition, DebugModeId, DebugModuleId, DebugRegistry, int, StringBuilder (+2 more)
 
-### Community 65 - "Community 65"
+### Community 64 - "Community 64"
 Cohesion: 0.11
 Nodes (11): ITerrainProvider, MinMax, Allocator, float, INoiseFilter, int, NativeArray, NoiseFilterData (+3 more)
 
-### Community 66 - "Community 66"
+### Community 65 - "Community 65"
 Cohesion: 0.16
 Nodes (12): ClimateMapGpuData, Action, Awaitable, CancellationToken, Color, IClimateProvider, IFaceMeshSampler, ILogger (+4 more)
 
-### Community 67 - "Community 67"
+### Community 66 - "Community 66"
 Cohesion: 0.21
 Nodes (7): TestConsoleCommands, Awaitable, CancellationToken, Color, ConsoleCommand, Vector3, TestEnumOption
 
-### Community 68 - "Community 68"
+### Community 67 - "Community 67"
 Cohesion: 0.11
 Nodes (3): IConsoleService, Action, ConsoleDiagnostics
+
+### Community 68 - "Community 68"
+Cohesion: 0.13
+Nodes (10): Awaitable, Camera, CancellationToken, float, int, Material, ScriptableRenderContext, SDFTextRenderer (+2 more)
 
 ### Community 69 - "Community 69"
 Cohesion: 0.22
@@ -629,376 +635,400 @@ Cohesion: 0.17
 Nodes (3): ConsoleInputBuffer, int, StringBuilder
 
 ### Community 91 - "Community 91"
+Cohesion: 0.18
+Nodes (4): DebugCaptureSetDefinition, DebugModeId, DebugRuntimeState, DebugCaptureSetCycleRequestedEvent
+
+### Community 92 - "Community 92"
 Cohesion: 0.19
 Nodes (6): int, IProgressReporter, List, ProgressHandle, string, ProgressTracker
 
-### Community 92 - "Community 92"
+### Community 93 - "Community 93"
 Cohesion: 0.22
 Nodes (8): Awaitable, CancellationToken, ILogger, int, IWorldAction, List, IWorldActionManager, WorldActionManager
 
-### Community 93 - "Community 93"
+### Community 94 - "Community 94"
 Cohesion: 0.22
 Nodes (6): Action, Func, Stack, T, IObjectPool, ObjectPool
 
-### Community 94 - "Community 94"
+### Community 95 - "Community 95"
 Cohesion: 0.36
 Nodes (3): Awaitable, CancellationToken, IProgressHandle
 
-### Community 95 - "Community 95"
+### Community 96 - "Community 96"
 Cohesion: 0.23
 Nodes (5): BiomeSurfaceTextureArrays, Camera, ChunkedSurfaceProvider, PlanetDto, Vector3
 
-### Community 96 - "Community 96"
+### Community 97 - "Community 97"
 Cohesion: 0.24
 Nodes (6): ILogger, int, Material, PlanetGrassCoordinator, Shader, PlanetTerrainMaterial
 
-### Community 97 - "Community 97"
+### Community 98 - "Community 98"
 Cohesion: 0.20
 Nodes (9): AtmosphereRenderPass, PassData, bool, ContextContainer, int, Material, MaterialPropertyBlock, RenderGraph (+1 more)
 
-### Community 98 - "Community 98"
+### Community 99 - "Community 99"
 Cohesion: 0.27
 Nodes (3): ConsoleBuiltins, ConsoleAnchor, ConsoleCommand
 
-### Community 99 - "Community 99"
+### Community 100 - "Community 100"
+Cohesion: 0.18
+Nodes (7): ConsoleDebugModule, DebugCaptureContext, DebugModuleId, DebugRegistry, StringBuilder, DebugRegistry, IDebugModule
+
+### Community 101 - "Community 101"
 Cohesion: 0.18
 Nodes (5): ConsoleHistory, SerializableHistory, int, List, string
 
-### Community 100 - "Community 100"
+### Community 102 - "Community 102"
 Cohesion: 0.35
 Nodes (7): ConsoleInputLineFormatter, ConsoleTheme, Color, IReadOnlyList, List, Suggestion, TextSpan
 
-### Community 101 - "Community 101"
+### Community 103 - "Community 103"
 Cohesion: 0.39
 Nodes (4): int, string, ExpressionEvaluator, Parser
 
-### Community 102 - "Community 102"
+### Community 104 - "Community 104"
 Cohesion: 0.23
 Nodes (8): Dictionary, Func, HashSet, IReadOnlyList, List, T, Type, InitGraph
 
-### Community 103 - "Community 103"
+### Community 105 - "Community 105"
 Cohesion: 0.21
 Nodes (7): DebugCaptureContext, DebugRegistry, DebugRuntimeState, float, string, StringBuilder, MemoryDebugModule
 
-### Community 104 - "Community 104"
+### Community 106 - "Community 106"
 Cohesion: 0.23
 Nodes (5): int, PlanetChunk, Texture2D, Vector4, GrassSurfaceAtlasGpuData
 
-### Community 105 - "Community 105"
+### Community 107 - "Community 107"
 Cohesion: 0.24
 Nodes (9): BurstCompile, Create(), float3, NoiseData, Vector3, Evaluate(), FastFloor(), Grad3Dot() (+1 more)
 
-### Community 106 - "Community 106"
+### Community 108 - "Community 108"
 Cohesion: 0.36
 Nodes (5): CloudNoiseGenerator, ComputeShader, int, RenderTexture, Vector3
 
-### Community 107 - "Community 107"
+### Community 109 - "Community 109"
+Cohesion: 0.22
+Nodes (4): Awaitable, CancellationToken, ConsoleCommand, DebugPrecipitationToggleRequestedEvent
+
+### Community 110 - "Community 110"
 Cohesion: 0.27
 Nodes (4): ChunkCoord, uint, ISeedProvider, SeedProvider
 
-### Community 108 - "Community 108"
+### Community 111 - "Community 111"
 Cohesion: 0.33
 Nodes (5): Exception, LogLevel, ILogger, LoggerProvider, UnityLogger
 
-### Community 109 - "Community 109"
+### Community 112 - "Community 112"
 Cohesion: 0.27
 Nodes (7): Func<Vector3, int>, ITerrainProvider, List, Vector3, PoissonDiscSphereSampling, Random, SpawnLocation
 
-### Community 110 - "Community 110"
+### Community 113 - "Community 113"
 Cohesion: 0.18
 Nodes (4): IInputMapService, InputAction, InputActionAsset, InputMapService
 
-### Community 111 - "Community 111"
+### Community 114 - "Community 114"
 Cohesion: 0.18
 Nodes (7): INoiseFilter, RigidNoiseFilter, SimpleNoiseFilter, Vector3, Noise, NoiseSettings, Vector3
 
-### Community 112 - "Community 112"
+### Community 115 - "Community 115"
 Cohesion: 0.38
 Nodes (3): ClimateCurves, AnimationCurve, Vector2
 
-### Community 113 - "Community 113"
+### Community 116 - "Community 116"
 Cohesion: 0.20
 Nodes (7): ClimateProvider, IClimateProvider, MoistureProvider, ClimateSample, float, Vector3, TemperatureProvider
 
-### Community 114 - "Community 114"
+### Community 117 - "Community 117"
 Cohesion: 0.20
 Nodes (7): DebugCaptureContext, DebugModuleId, DebugRegistry, int, StringBuilder, AtmosphereDebugIds, AtmosphereDebugModule
 
-### Community 116 - "Community 116"
+### Community 119 - "Community 119"
 Cohesion: 0.20
 Nodes (3): DebugModuleId, MemoryDebugCounters, MemoryDebugIds
 
-### Community 117 - "Community 117"
+### Community 120 - "Community 120"
 Cohesion: 0.20
 Nodes (6): ISettingsService, IAtmosphereRuntime, ICloudRuntime, IWorldServiceRegistrar, IWorldSettingsRegistrar, IWorldTeardown
 
-### Community 118 - "Community 118"
+### Community 121 - "Community 121"
 Cohesion: 0.20
 Nodes (6): bool, float, List, Vector3, WakeSource, WaterWakeEmitter
 
-### Community 119 - "Community 119"
+### Community 122 - "Community 122"
 Cohesion: 0.29
 Nodes (5): Dictionary, float, Texture2D, SDFGlyph, SDFFontAsset
 
-### Community 120 - "Community 120"
+### Community 123 - "Community 123"
 Cohesion: 0.28
 Nodes (5): BiomeSettings, AnimationCurve, BiomeRegistry, float, int
 
-### Community 121 - "Community 121"
+### Community 124 - "Community 124"
 Cohesion: 0.36
 Nodes (4): ActionCommands, Awaitable, CancellationToken, ConsoleCommand
 
-### Community 122 - "Community 122"
+### Community 125 - "Community 125"
 Cohesion: 0.25
 Nodes (6): bool, CommandData, string, Type, object, ParameterData
 
-### Community 123 - "Community 123"
+### Community 126 - "Community 126"
 Cohesion: 0.36
 Nodes (4): Color, List, TextSpan, ConsoleColorTagParser
 
-### Community 124 - "Community 124"
+### Community 127 - "Community 127"
 Cohesion: 0.25
 Nodes (3): Action, List, EventBusProcessor
 
-### Community 125 - "Community 125"
+### Community 128 - "Community 128"
 Cohesion: 0.31
 Nodes (5): BiomeResult, Color, Vector3, Vector4, IBiomeProvider
 
-### Community 126 - "Community 126"
+### Community 129 - "Community 129"
+Cohesion: 0.28
+Nodes (3): Awaitable, CancellationToken, ILoadingOverlay
+
+### Community 130 - "Community 130"
 Cohesion: 0.33
 Nodes (4): Awaitable, CancellationToken, IWorldAction, IWorldActionManager
 
-### Community 127 - "Community 127"
+### Community 131 - "Community 131"
 Cohesion: 0.25
 Nodes (5): DebugCommandType, DebugCommandRequestedEvent, IDebugCommandProvider, IDisposable, DebugCommandProvider
 
-### Community 128 - "Community 128"
+### Community 132 - "Community 132"
 Cohesion: 0.22
 Nodes (3): string, Texture2D, DebugScreenshotFiles
 
-### Community 129 - "Community 129"
+### Community 133 - "Community 133"
+Cohesion: 0.22
+Nodes (6): DebugCaptureContext, DebugModuleId, DebugRegistry, StringBuilder, ScaleReferenceDebugIds, ScaleReferenceDebugModule
+
+### Community 134 - "Community 134"
 Cohesion: 0.39
 Nodes (3): ISettingsService, TDto, SettingsProvider
 
-### Community 130 - "Community 130"
+### Community 135 - "Community 135"
 Cohesion: 0.36
 Nodes (3): float, int, ShaderGlobalsController
 
-### Community 131 - "Community 131"
+### Community 136 - "Community 136"
 Cohesion: 0.42
 Nodes (3): DebugModeId, DebugRegistry, WaterDebugRegistration
 
-### Community 132 - "Community 132"
+### Community 137 - "Community 137"
 Cohesion: 0.28
 Nodes (5): CameraFollowGrassInteractor, Camera, float, IInputMapService, Planet
 
-### Community 133 - "Community 133"
+### Community 138 - "Community 138"
 Cohesion: 0.25
 Nodes (4): DebugGrassInteractor, IGrassInteractor, float, Material
 
-### Community 134 - "Community 134"
+### Community 139 - "Community 139"
 Cohesion: 0.42
 Nodes (5): Create(), NoiseFilterEvaluator, float3, NoiseFilterData, NoiseSettings
 
-### Community 135 - "Community 135"
+### Community 140 - "Community 140"
 Cohesion: 0.22
 Nodes (8): BiomeSettings, bool, Color, float, int, Material, PlanetSettings, PlanetResolution
 
-### Community 137 - "Community 137"
+### Community 141 - "Community 141"
 Cohesion: 0.25
 Nodes (7): BiomeDefinition, Gradient, BiomeType, Color, float, Texture2D, Vector3
 
-### Community 138 - "Community 138"
+### Community 142 - "Community 142"
 Cohesion: 0.25
 Nodes (7): bool, MethodInfo, MonoTargetType, ParameterData, string, Type, CommandData
 
-### Community 139 - "Community 139"
+### Community 143 - "Community 143"
 Cohesion: 0.36
 Nodes (4): CancellationToken, CommandData, IConsoleService, CommandExecutor
 
-### Community 140 - "Community 140"
+### Community 144 - "Community 144"
 Cohesion: 0.29
 Nodes (3): float, TemperatureUnit, TemperatureUnits
 
-### Community 141 - "Community 141"
+### Community 145 - "Community 145"
 Cohesion: 0.25
 Nodes (5): PlanetSurfaceRaycastHit, Ray, Vector3, IPlanetSurfaceRaycaster, IPlanetSurfaceSampler
 
-### Community 142 - "Community 142"
+### Community 146 - "Community 146"
 Cohesion: 0.32
 Nodes (3): Awaitable, CancellationToken, IWorldAction
 
-### Community 143 - "Community 143"
+### Community 147 - "Community 147"
 Cohesion: 0.29
 Nodes (4): float, IProgressHandle, ProgressHandle, ProgressRangeHandle
 
-### Community 144 - "Community 144"
+### Community 148 - "Community 148"
 Cohesion: 0.29
 Nodes (4): GrassBladeBufferPool, GraphicsBuffer, int, Stack
 
-### Community 145 - "Community 145"
+### Community 149 - "Community 149"
 Cohesion: 0.29
 Nodes (7): BuildNoiseLayers(), BuildShapeSettings(), NoiseLayer, PlanetDto, PlanetSettings, ShapeSettings, From()
 
-### Community 146 - "Community 146"
+### Community 150 - "Community 150"
 Cohesion: 0.38
 Nodes (4): ConsoleAnchorExtensions, ConsoleAnchor, Vector2, Vector4
 
-### Community 147 - "Community 147"
+### Community 151 - "Community 151"
 Cohesion: 0.29
 Nodes (4): CommandData, IReadOnlyList, List, CommandParser
 
-### Community 149 - "Community 149"
+### Community 153 - "Community 153"
 Cohesion: 0.38
 Nodes (4): CubeEdge, Vector2, CubeFaceEdgeNeighbor, CubeFaceTopology
 
-### Community 150 - "Community 150"
+### Community 154 - "Community 154"
 Cohesion: 0.29
 Nodes (4): GrassPlacementStats, GrassChunkRuntime, int, long
 
-### Community 151 - "Community 151"
+### Community 155 - "Community 155"
 Cohesion: 0.29
 Nodes (6): bool, float, NoiseLayer, NoiseSettings, NoiseLayer, ShapeSettings
 
-### Community 152 - "Community 152"
+### Community 156 - "Community 156"
 Cohesion: 0.43
 Nodes (4): PlanetChunk, Ray, Vector3, ChunkSurfaceQueries
 
-### Community 153 - "Community 153"
+### Community 157 - "Community 157"
 Cohesion: 0.33
 Nodes (5): AtmosphereSettings, bool, float, int, Vector3
 
-### Community 154 - "Community 154"
+### Community 158 - "Community 158"
 Cohesion: 0.40
 Nodes (4): BiomeRegistry, BiomeDefinition, int, ScriptableObject
 
-### Community 155 - "Community 155"
+### Community 159 - "Community 159"
 Cohesion: 0.33
 Nodes (3): ClimateCurveLut, AnimationCurve, float
 
-### Community 156 - "Community 156"
+### Community 160 - "Community 160"
 Cohesion: 0.40
 Nodes (5): EnsureRegistered(), From(), CloudSettings, CloudDto, ISettingsService
 
-### Community 157 - "Community 157"
+### Community 161 - "Community 161"
 Cohesion: 0.33
 Nodes (5): CloudSettings, bool, Color, float, int
 
-### Community 158 - "Community 158"
+### Community 162 - "Community 162"
 Cohesion: 0.40
 Nodes (3): DebugConsoleBootstrap, ConsoleController, string
 
-### Community 159 - "Community 159"
+### Community 163 - "Community 163"
 Cohesion: 0.33
 Nodes (3): Action, List, EventBusRegistry
 
-### Community 160 - "Community 160"
+### Community 164 - "Community 164"
 Cohesion: 0.33
 Nodes (3): Exception, LogLevel, ILogger
 
-### Community 161 - "Community 161"
+### Community 165 - "Community 165"
 Cohesion: 0.33
 Nodes (4): DebugModeId, int, DebugCaptureMetadataInputs, DebugCaptureMetadataBuilder
 
-### Community 162 - "Community 162"
+### Community 166 - "Community 166"
 Cohesion: 0.47
 Nodes (3): DebugModuleId, int, OceanDebugModeWriter
 
-### Community 163 - "Community 163"
+### Community 167 - "Community 167"
+Cohesion: 0.33
+Nodes (4): DebugCaptureSetId, DebugModeId, DebugModuleId, WaterDebugIds
+
+### Community 168 - "Community 168"
 Cohesion: 0.33
 Nodes (5): FilterType, float, int, Vector3, NoiseSettings
 
-### Community 167 - "Community 167"
+### Community 172 - "Community 172"
 Cohesion: 0.53
 Nodes (4): float3, ComputeVertexWorld(), EvaluateElevation(), Execute()
 
-### Community 168 - "Community 168"
+### Community 173 - "Community 173"
 Cohesion: 0.53
 Nodes (3): List, Vector2, PoissonDiscSampling
 
-### Community 169 - "Community 169"
+### Community 174 - "Community 174"
 Cohesion: 0.40
 Nodes (4): BiomeConstants, float, int, NoiseSettings
 
-### Community 170 - "Community 170"
+### Community 175 - "Community 175"
 Cohesion: 0.40
 Nodes (3): From(), BiomeDto, BiomeSettings
 
-### Community 171 - "Community 171"
+### Community 176 - "Community 176"
 Cohesion: 0.40
 Nodes (3): ConsoleTheme, Color, float
 
-### Community 172 - "Community 172"
+### Community 177 - "Community 177"
 Cohesion: 0.40
 Nodes (3): IEnumerable, StringComparison, CompletionRanker
 
-### Community 174 - "Community 174"
+### Community 179 - "Community 179"
 Cohesion: 0.40
 Nodes (3): Awaitable, CancellationToken, ILateInitialize
 
-### Community 176 - "Community 176"
+### Community 181 - "Community 181"
 Cohesion: 0.40
 Nodes (3): IInputMapService, MonoBehaviour, DebugInputRelay
 
-### Community 177 - "Community 177"
+### Community 182 - "Community 182"
 Cohesion: 0.40
 Nodes (3): Mesh, Vector3, CubeSphereMeshBuilder
 
-### Community 178 - "Community 178"
+### Community 183 - "Community 183"
 Cohesion: 0.40
 Nodes (4): From(), BiomeDefinitionDto, GrassBiomePlacementConfig, GrassBiomeTintConfig
 
-### Community 179 - "Community 179"
+### Community 184 - "Community 184"
 Cohesion: 0.40
 Nodes (3): NoiseFilterFactory, INoiseFilter, NoiseSettings
 
-### Community 183 - "Community 183"
+### Community 188 - "Community 188"
 Cohesion: 0.40
 Nodes (3): Dictionary, Vector2, ChunkUvTemplate
 
-### Community 184 - "Community 184"
+### Community 189 - "Community 189"
 Cohesion: 0.50
 Nodes (3): From(), AtmosphereSettings, AtmosphereDto
 
-### Community 185 - "Community 185"
+### Community 190 - "Community 190"
 Cohesion: 0.50
 Nodes (3): From(), BiomeDefinition, BiomeDefinitionDto
 
-### Community 186 - "Community 186"
+### Community 191 - "Community 191"
 Cohesion: 0.50
 Nodes (3): CloudConstants, float, Vector4
 
-### Community 187 - "Community 187"
+### Community 192 - "Community 192"
 Cohesion: 0.50
 Nodes (3): CloudDebugState, float, View
 
-### Community 193 - "Community 193"
+### Community 199 - "Community 199"
 Cohesion: 0.50
 Nodes (3): From(), GrassInteractorSnapshot, IGrassInteractor
 
-### Community 196 - "Community 196"
+### Community 202 - "Community 202"
 Cohesion: 0.50
 Nodes (3): PrecipitationController, PrecipitationDto, From()
 
 ## Knowledge Gaps
-- **946 isolated node(s):** `ConsoleAnchor`, `CancellationToken`, `TestEnumOption`, `Vector3`, `Color` (+941 more)
+- **947 isolated node(s):** `ConsoleAnchor`, `CancellationToken`, `TestEnumOption`, `Vector3`, `Color` (+942 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **45 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `FreeCameraController` connect `Community 3` to `Community 176`, `Community 11`, `Community 117`?**
+- **Why does `FreeCameraController` connect `Community 1` to `Community 120`, `Community 10`, `Community 181`?**
+  _High betweenness centrality (0.044) - this node is a cross-community bridge._
+- **Why does `CameraTeleportStore` connect `Community 10` to `Community 131`?**
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+- **Why does `ICameraTeleportTarget` connect `Community 10` to `Community 1`?**
   _High betweenness centrality (0.036) - this node is a cross-community bridge._
-- **Why does `CameraTeleportStore` connect `Community 11` to `Community 127`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
-- **Why does `ICameraTeleportTarget` connect `Community 11` to `Community 3`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
 - **What connects `ConsoleAnchor`, `CancellationToken`, `TestEnumOption` to the rest of the system?**
-  _946 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _947 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.050595238095238096 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.05017921146953405 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07256894049346879 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.06936026936026936 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08313725490196078 - nodes in this community are weakly interconnected._

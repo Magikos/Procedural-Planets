@@ -2,25 +2,16 @@ using System.Linq;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.Rendering;
 
 public class LoadingManager : MonoBehaviour, ILoadingManager
 {
-    private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-    private bool _isTransitioning = false;
-    private Material _overlayMaterial;
-    private float _overlayAlpha;
-    private float _targetProgress;
-    private float _displayProgress;
-    private int _lastDisplayedPercent = -1;
-    private SDFTextRenderer _messageRenderer;
-    private SDFTextRenderer _percentRenderer;
-    private bool _hasFatalFailure;
-
-    private const float FadeDuration = 0.35f;
+    CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+    bool _isTransitioning;
+    bool _hasFatalFailure;
+    ILoadingOverlay _overlay;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void CreateInstance()
+    static void CreateInstance()
     {
         if (FindAnyObjectByType<LoadingManager>() != null) return;
 
@@ -39,6 +30,10 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
         ServiceLocator.Register<ILoadingManager>(this);
         DontDestroyOnLoad(gameObject);
 
+        // Create the default overlay immediately so it can paint before any IEarlyInitialize runs.
+        // A scene-placed ILoadingOverlay registered in ServiceLocator will replace it in Start().
+        _overlay = new LoadingProgressBarOverlay();
+
         if (!ServiceLocator.HasActiveWorld)
             ServiceLocator.ActivateWorld(new WorldContext());
     }
@@ -46,92 +41,27 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
     void OnEnable()
     {
         EventBus<ProgressEvent>.Listen(OnProgressEvent);
-        RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
     }
 
     void OnDisable()
     {
         EventBus<ProgressEvent>.Unlisten(OnProgressEvent);
-        RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
-    }
-
-    private void CreateOverlayMaterial()
-    {
-        if (_overlayMaterial != null) return;
-
-        var shader = Shader.Find("Hidden/LoadingOverlay");
-        if (shader == null)
-        {
-            LoggerProvider.Get().Log(LogLevel.Error, "LoadingManager", "Hidden/LoadingOverlay shader not found. Ensure Assets/Graphics/Shaders/LoadingOverlay.shader is in the project.");
-            return;
-        }
-        _overlayMaterial = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
-
-        // Set up SDF text renderers for progress labels.
-        // The SDFFontAsset must be in Assets/Resources/ with the name "DefaultFont".
-        // Text is silently skipped if the asset is missing (graceful degradation).
-        var font = Resources.Load<SDFFontAsset>("DefaultFont");
-        _messageRenderer = new SDFTextRenderer(font);
-        _percentRenderer = new SDFTextRenderer(font);
-    }
-
-    // Injected at the end of every camera render via RenderPipelineManager.
-    // Draws a fullscreen black quad (with optional progress bar) on the main camera only,
-    // followed by the SDF text label (if a font asset is available).
-    private void OnEndCameraRendering(ScriptableRenderContext ctx, Camera cam)
-    {
-        if (_overlayAlpha <= 0.001f) return;
-        if (_overlayMaterial == null) return;
-        if (cam != Camera.main) return;
-
-        _displayProgress = Mathf.Lerp(_displayProgress, _targetProgress, Time.unscaledDeltaTime * 8f);
-
-        _overlayMaterial.SetFloat("_Alpha", _overlayAlpha);
-        _overlayMaterial.SetFloat("_Progress", _displayProgress);
-
-        var cmd = new CommandBuffer { name = "LoadingOverlay" };
-        try
-        {
-            // 1. Fullscreen overlay + progress bar.
-            cmd.DrawProcedural(Matrix4x4.identity, _overlayMaterial, 0, MeshTopology.Triangles, 3);
-
-            // 2. Message text — centred above the bar (baseline y=0.530, bar top y=0.513).
-            if (_messageRenderer != null)
-            {
-                _messageRenderer.SetAlpha(_overlayAlpha);
-                _messageRenderer.Draw(cmd);
-            }
-
-            // 3. Percentage — right of the bar, vertically centred on it.
-            if (_percentRenderer != null)
-            {
-                int pct = Mathf.RoundToInt(_displayProgress * 100);
-                if (pct != _lastDisplayedPercent)
-                {
-                    _percentRenderer.SetText($"{pct}%", 0.862f, 0.341f, 0.025f);
-                    _lastDisplayedPercent = pct;
-                }
-                _percentRenderer.SetAlpha(_overlayAlpha);
-                _percentRenderer.Draw(cmd);
-            }
-
-            ctx.ExecuteCommandBuffer(cmd);
-            ctx.Submit();
-        }
-        finally
-        {
-            cmd.Release();
-        }
     }
 
     void Start()
     {
-        CreateOverlayMaterial();
+        // Allow a scene-placed ILoadingOverlay (registered in its own Awake) to take over.
+        if (ServiceLocator.TryGet<ILoadingOverlay>(out var sceneOverlay) && sceneOverlay != _overlay)
+        {
+            _overlay.Dispose();
+            _overlay = sceneOverlay;
+        }
+
         if (_isTransitioning) return;
         _ = InitializeCurrentSceneAsync(_cancellationTokenSource.Token);
     }
 
-    private async Awaitable InitializeCurrentSceneAsync(CancellationToken cancellationToken)
+    async Awaitable InitializeCurrentSceneAsync(CancellationToken cancellationToken)
     {
         _isTransitioning = true;
         bool initialized = false;
@@ -143,8 +73,8 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
                 throw new System.InvalidOperationException(
                     "No valid active scene found during startup initialization. Check the scene setup.");
 
-            SetOverlay(1f);
-            await Awaitable.NextFrameAsync(cancellationToken); // let the opaque overlay render
+            _overlay.SetAlpha(1f);
+            await Awaitable.NextFrameAsync(cancellationToken);
 
             await InitializeAsync(currentScene, includePersistentObjects: true, cancellationToken);
             EventBus<WorldReadyEvent>.Raise(new WorldReadyEvent(ServiceLocator.GetWorld()));
@@ -152,10 +82,10 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
             await Awaitable.NextFrameAsync(cancellationToken);
             await Awaitable.NextFrameAsync(cancellationToken);
 
-            await FadeInAsync(cancellationToken);
+            await _overlay.FadeInAsync(cancellationToken);
             initialized = true;
         }
-        catch (System.OperationCanceledException) { } // expected during app teardown
+        catch (System.OperationCanceledException) { }
         catch (System.Exception ex)
         {
             if (ServiceLocator.HasActiveWorld)
@@ -165,7 +95,7 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
         finally
         {
             if (initialized)
-                SetOverlay(0f);
+                _overlay.SetAlpha(0f);
             _isTransitioning = false;
         }
     }
@@ -211,7 +141,7 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
         return await RunTransitionAsync(request, useOverlay, _cancellationTokenSource.Token);
     }
 
-    private async Awaitable<bool> RunTransitionAsync(
+    async Awaitable<bool> RunTransitionAsync(
         WorldLoadRequest request,
         bool useOverlay,
         CancellationToken cancellationToken)
@@ -229,7 +159,7 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
             oldScene = SceneManager.GetActiveScene();
 
             if (useOverlay)
-                await FadeOutAsync(cancellationToken);
+                await _overlay.FadeOutAsync(cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
             Time.timeScale = 0f;
@@ -278,14 +208,13 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
             oldWorld = null;
             EventBus<WorldReadyEvent>.Raise(new WorldReadyEvent(newWorld));
 
-            // Wait for two frames to ensure all pending operations settle before fading back in
             await Awaitable.NextFrameAsync();
             await Awaitable.NextFrameAsync();
 
             Time.timeScale = 1f;
 
             if (useOverlay)
-                await FadeInAsync(CancellationToken.None);
+                await _overlay.FadeInAsync(CancellationToken.None);
 
             return true;
         }
@@ -307,13 +236,13 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
             if (!_hasFatalFailure)
             {
                 Time.timeScale = 1f;
-                SetOverlay(0f);
+                _overlay.SetAlpha(0f);
             }
             _isTransitioning = false;
         }
     }
 
-    private static async Awaitable AbortCommittedTransitionAsync(
+    static async Awaitable AbortCommittedTransitionAsync(
         Scene oldScene,
         IWorldContext oldWorld,
         Scene newScene,
@@ -338,7 +267,7 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
         oldWorld?.Dispose();
     }
 
-    private static void TeardownWorldSafely(IWorldContext world, string context)
+    static void TeardownWorldSafely(IWorldContext world, string context)
     {
         if (world == null || world.IsDisposed)
             return;
@@ -355,7 +284,7 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
         }
     }
 
-    private static async Awaitable UnloadSceneAsync(Scene scene)
+    static async Awaitable UnloadSceneAsync(Scene scene)
     {
         if (!scene.IsValid() || !scene.isLoaded)
             return;
@@ -368,7 +297,7 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
             await Awaitable.NextFrameAsync();
     }
 
-    private static void SetSceneRootsActive(Scene scene, bool active)
+    static void SetSceneRootsActive(Scene scene, bool active)
     {
         if (!scene.IsValid() || !scene.isLoaded)
             return;
@@ -378,37 +307,7 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
             roots[i].SetActive(active);
     }
 
-    private async Awaitable FadeInAsync(CancellationToken cancellationToken)
-    {
-        float elapsed = 0f;
-        while (elapsed < FadeDuration)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            _overlayAlpha = Mathf.Clamp01(1f - elapsed / FadeDuration);
-            elapsed += Mathf.Min(Time.unscaledDeltaTime, 0.05f);
-            await Awaitable.NextFrameAsync(cancellationToken);
-        }
-
-        _overlayAlpha = 0f;
-    }
-
-    private async Awaitable FadeOutAsync(CancellationToken cancellationToken)
-    {
-        float elapsed = 0f;
-        while (elapsed < FadeDuration)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            _overlayAlpha = Mathf.Clamp01(elapsed / FadeDuration);
-            elapsed += Mathf.Min(Time.unscaledDeltaTime, 0.05f);
-            await Awaitable.NextFrameAsync(cancellationToken);
-        }
-
-        _overlayAlpha = 1f;
-    }
-
-    private void SetOverlay(float alpha) => _overlayAlpha = alpha;
-
-    private async Awaitable InitializeAsync(
+    async Awaitable InitializeAsync(
         Scene scene,
         bool includePersistentObjects,
         CancellationToken cancellationToken)
@@ -432,7 +331,6 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
         bool completed = false;
         try
         {
-            // Priority remains a deterministic tiebreaker while dependency migration is in progress.
             var earlyInitializers = allBehaviours
                 .OfType<IEarlyInitialize>()
                 .OrderByDescending(i => i.EarlyPriority)
@@ -493,7 +391,7 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
         }
     }
 
-    private static void TrackWorldInitializer<TInitializer>(Scene scene, TInitializer initializer)
+    static void TrackWorldInitializer<TInitializer>(Scene scene, TInitializer initializer)
     {
         if (initializer is not Component component || component.gameObject.scene != scene)
             return;
@@ -501,29 +399,22 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
         ServiceLocator.GetWorld().TrackInitializer(initializer);
     }
 
-    private void EnterFatalFailure(string message, System.Exception exception)
+    void EnterFatalFailure(string message, System.Exception exception)
     {
         _hasFatalFailure = true;
         if (ServiceLocator.HasActiveWorld)
             ServiceLocator.GetWorld().Cancel();
         Time.timeScale = 0f;
-        SetOverlay(1f);
-        _messageRenderer?.SetText(message, 0.5f, 0.375f, 0.025f, TextAnchor.UpperCenter);
+        _overlay.ShowFatalError(message);
         LoggerProvider.Get().LogException("LoadingManager", exception);
     }
 
-    private void OnProgressEvent(ProgressEvent evt)
+    void OnProgressEvent(ProgressEvent evt)
     {
-        _targetProgress = Mathf.Clamp01(evt.Progress);
-
-        // Message text: centred horizontally, baseline just above the bar border.
-        // Bar is at y=[0.340, 0.360], border top = 0.363, gap ≈ 12 px at 1080p.
-        // Percentage text is updated every frame in OnEndCameraRendering to stay in sync with the animated bar.
-        if (!string.IsNullOrEmpty(evt.Message))
-            _messageRenderer?.SetText(evt.Message, 0.5f, 0.375f, 0.025f, TextAnchor.UpperCenter);
+        _overlay?.SetProgress(evt.Progress, evt.Message);
     }
 
-    private void OnDestroy()
+    void OnDestroy()
     {
         if (_cancellationTokenSource != null)
         {
@@ -532,17 +423,8 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
             _cancellationTokenSource = null;
         }
 
-        if (_overlayMaterial != null)
-        {
-            Destroy(_overlayMaterial);
-            _overlayMaterial = null;
-        }
-
-        _messageRenderer?.Dispose();
-        _messageRenderer = null;
-
-        _percentRenderer?.Dispose();
-        _percentRenderer = null;
+        _overlay?.Dispose();
+        _overlay = null;
 
         if (ServiceLocator.HasActiveWorld)
         {
