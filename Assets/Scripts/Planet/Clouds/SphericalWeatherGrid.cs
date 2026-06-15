@@ -1,8 +1,5 @@
 using System;
-using Unity.Burst;
 using Unity.Collections;
-using Unity.Jobs;
-using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -89,6 +86,11 @@ public sealed class SphericalWeatherGrid : IDisposable
     static readonly int _dynamicsReadId = Shader.PropertyToID("_DynamicsRead");
     static readonly int _dynamicsWriteId = Shader.PropertyToID("_DynamicsWrite");
     static readonly int _resolutionId = Shader.PropertyToID("_Resolution");
+    static readonly int _permutationsId = Shader.PropertyToID("_Permutations");
+    static readonly int _frontScaleId = Shader.PropertyToID("_FrontScale");
+    static readonly int _biomeInfluenceId = Shader.PropertyToID("_BiomeInfluence");
+    static readonly int _coverageThresholdId = Shader.PropertyToID("_CoverageThreshold");
+    static readonly int _edgeWidthId = Shader.PropertyToID("_EdgeWidth");
     static readonly int _deltaTimeId = Shader.PropertyToID("_DeltaTime");
     static readonly int _stormThresholdId = Shader.PropertyToID("_StormThreshold");
     static readonly int _moistureSourceStrengthId = Shader.PropertyToID("_MoistureSourceStrength");
@@ -136,405 +138,79 @@ public sealed class SphericalWeatherGrid : IDisposable
         _rainRate = rainRate;
     }
 
-    // Holds the CPU-side computation result before any Unity texture API is called.
-    // All fields are plain C# arrays — safe to produce on a background thread.
-    struct GridComputeData
-    {
-        public int Resolution;
-        public float[] Condensation, Storm, MoistureSource, Humidity, PrecipitationWater, RainRate;
-        public Color[][] PixelsByFace;
-        public Color[][] DynamicsPixelsByFace;
-    }
-
-    // Schedules the parallel Burst job + allocates the NativeArrays it writes into.
-    // Must be called on the main thread (Job scheduling requirement).
-    static WeatherJobState ScheduleGridJob(CloudDto settings, int seed)
+    /// <summary>
+    /// Generates a weather grid by dispatching CSInitWeather, writing directly into the
+    /// ping-pong RenderTextures. Eliminates the staging Texture2DArray upload path.
+    /// CPU-side cell arrays start empty and are populated progressively via async GPU readback.
+    /// </summary>
+    public static async Awaitable<SphericalWeatherGrid> GenerateComputeAsync(
+        ComputeShader compute, CloudDto settings, int seed,
+        System.Threading.CancellationToken ct = default)
     {
         int resolution = Mathf.ClosestPowerOfTwo(Mathf.Clamp(settings.WeatherResolution, 32, 512));
-        int cellCount = resolution * resolution * 6;
+        int cellCount  = resolution * resolution * 6;
 
-        var state = new WeatherJobState
-        {
-            Resolution = resolution,
-            Condensation = new NativeArray<float>(cellCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory),
-            Storm = new NativeArray<float>(cellCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory),
-            MoistureSource = new NativeArray<float>(cellCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory),
-            Humidity = new NativeArray<float>(cellCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory),
-            PrecipitationWater = new NativeArray<float>(cellCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory),
-            RainRate = new NativeArray<float>(cellCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory),
-            WeatherPixels = new NativeArray<float4>(cellCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory),
-            DynamicsPixels = new NativeArray<float4>(cellCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory),
-        };
+        var activeTexture          = CreateWeatherTexture(resolution, $"CloudWeatherActive_{resolution}_{seed}");
+        var scratchTexture         = CreateWeatherTexture(resolution, $"CloudWeatherScratch_{resolution}_{seed}");
+        var dynamicsActiveTexture  = CreateWeatherTexture(resolution, $"WeatherDynamicsActive_{resolution}_{seed}");
+        var dynamicsScratchTexture = CreateWeatherTexture(resolution, $"WeatherDynamicsScratch_{resolution}_{seed}");
+
+        // Build concatenated permutation table: [0..511]=front, [512..1023]=detail, [1024..1535]=climate.
+        var frontData   = NoiseData.Create(seed);
+        var detailData  = NoiseData.Create(seed + 7919);
+        var climateData = NoiseData.Create(seed + 104729);
+        var permArray   = new int[NoiseData.PermutationSize * 2 * 3];
+        frontData.CopyPermutation(permArray,    0);
+        detailData.CopyPermutation(permArray,  NoiseData.PermutationSize * 2);
+        climateData.CopyPermutation(permArray, NoiseData.PermutationSize * 4);
+
+        using var permBuffer = new ComputeBuffer(permArray.Length, sizeof(int));
+        permBuffer.SetData(permArray);
 
         float coverageThreshold = Mathf.Lerp(0.84f, 0.18f, settings.InitialCoverage);
-        float edgeWidth = Mathf.Clamp(1f / Mathf.Max(1f, CloudConstants.FrontSharpness), 0.015f, 0.25f);
+        float edgeWidth         = Mathf.Clamp(1f / Mathf.Max(1f, CloudConstants.FrontSharpness), 0.015f, 0.25f);
 
-        var job = new WeatherGridGenerationJob
-        {
-            Resolution = resolution,
-            FrontNoise = NoiseData.Create(seed),
-            DetailNoise = NoiseData.Create(seed + 7919),
-            ClimateNoise = NoiseData.Create(seed + 104729),
-            FrontScale = CloudConstants.FrontScale,
-            BiomeInfluence = CloudConstants.BiomeInfluence,
-            CoverageThreshold = coverageThreshold,
-            EdgeWidth = edgeWidth,
-            StormSourceThreshold = CloudConstants.StormSourceThreshold,
-            StormSourceSoftness = CloudConstants.StormSourceSoftness,
-            StormMoistureBias = CloudConstants.StormMoistureBias,
-            StormThreshold = settings.StormThreshold,
-            RainFormationThreshold = CloudConstants.RainFormationThreshold,
-            RainFormationSoftness = CloudConstants.RainFormationSoftness,
-            RainCloudThreshold = CloudConstants.RainCloudThreshold,
-            Condensation = state.Condensation,
-            Storm = state.Storm,
-            MoistureSource = state.MoistureSource,
-            Humidity = state.Humidity,
-            PrecipitationWater = state.PrecipitationWater,
-            RainRate = state.RainRate,
-            WeatherPixels = state.WeatherPixels,
-            DynamicsPixels = state.DynamicsPixels,
-        };
+        int kernel = compute.FindKernel("CSInitWeather");
+        compute.SetBuffer(kernel, _permutationsId,     permBuffer);
+        compute.SetTexture(kernel, _weatherWriteId,    activeTexture);
+        compute.SetTexture(kernel, _dynamicsWriteId,   dynamicsActiveTexture);
+        compute.SetInt(_resolutionId,                  resolution);
+        compute.SetFloat(_frontScaleId,                CloudConstants.FrontScale);
+        compute.SetFloat(_biomeInfluenceId,            CloudConstants.BiomeInfluence);
+        compute.SetFloat(_coverageThresholdId,         coverageThreshold);
+        compute.SetFloat(_edgeWidthId,                 edgeWidth);
+        compute.SetFloat(_stormSourceThresholdId,      CloudConstants.StormSourceThreshold);
+        compute.SetFloat(_stormSourceSoftnessId,       CloudConstants.StormSourceSoftness);
+        compute.SetFloat(_stormMoistureBiasId,         CloudConstants.StormMoistureBias);
+        compute.SetFloat(_stormThresholdId,            settings.StormThreshold);
+        compute.SetFloat(_rainFormationThresholdId,    CloudConstants.RainFormationThreshold);
+        compute.SetFloat(_rainFormationSoftnessId,     CloudConstants.RainFormationSoftness);
+        compute.SetFloat(_rainCloudThresholdId,        CloudConstants.RainCloudThreshold);
 
-        state.Handle = job.Schedule(cellCount, 256);
-        JobHandle.ScheduleBatchedJobs();
-        return state;
-    }
+        int groups = Mathf.CeilToInt(resolution / 8f);
+        compute.Dispatch(kernel, groups, groups, 6);
 
-    // Copies job results out of NativeArrays into the managed arrays expected by
-    // UploadGridData and the SphericalWeatherGrid runtime accessors, then disposes
-    // the NativeArrays. Must be called after the job's handle has completed.
-    static GridComputeData CopyOutAndDispose(WeatherJobState state)
-    {
-        int resolution = state.Resolution;
-        int facePixelCount = resolution * resolution;
-        int cellCount = facePixelCount * 6;
+        // Seed the scratch (ping-pong twin) from the freshly written active texture.
+        Graphics.CopyTexture(activeTexture,         scratchTexture);
+        Graphics.CopyTexture(dynamicsActiveTexture, dynamicsScratchTexture);
 
-        var condensation = new float[cellCount];
-        var storm = new float[cellCount];
-        var moistureSource = new float[cellCount];
-        var humidity = new float[cellCount];
-        var precipitationWater = new float[cellCount];
-        var rainRate = new float[cellCount];
-        var pixelsByFace = new Color[6][];
-        var dynamicsPixelsByFace = new Color[6][];
+        await Awaitable.NextFrameAsync(ct);
 
-        NativeArray<float>.Copy(state.Condensation, condensation, cellCount);
-        NativeArray<float>.Copy(state.Storm, storm, cellCount);
-        NativeArray<float>.Copy(state.MoistureSource, moistureSource, cellCount);
-        NativeArray<float>.Copy(state.Humidity, humidity, cellCount);
-        NativeArray<float>.Copy(state.PrecipitationWater, precipitationWater, cellCount);
-        NativeArray<float>.Copy(state.RainRate, rainRate, cellCount);
-
-        // float4 ↔ Color are bit-identical (4 floats); use Reinterpret + face-slice copy.
-        var weatherAsColor = state.WeatherPixels.Reinterpret<Color>(sizeof(float) * 4);
-        var dynamicsAsColor = state.DynamicsPixels.Reinterpret<Color>(sizeof(float) * 4);
-        for (int face = 0; face < 6; face++)
-        {
-            var weatherFace = new Color[facePixelCount];
-            var dynamicsFace = new Color[facePixelCount];
-            NativeArray<Color>.Copy(weatherAsColor, face * facePixelCount, weatherFace, 0, facePixelCount);
-            NativeArray<Color>.Copy(dynamicsAsColor, face * facePixelCount, dynamicsFace, 0, facePixelCount);
-            pixelsByFace[face] = weatherFace;
-            dynamicsPixelsByFace[face] = dynamicsFace;
-        }
-
-        state.Dispose();
-
-        return new GridComputeData
-        {
-            Resolution = resolution,
-            Condensation = condensation,
-            Storm = storm,
-            MoistureSource = moistureSource,
-            Humidity = humidity,
-            PrecipitationWater = precipitationWater,
-            RainRate = rainRate,
-            PixelsByFace = pixelsByFace,
-            DynamicsPixelsByFace = dynamicsPixelsByFace
-        };
-    }
-
-    struct WeatherJobState
-    {
-        public int Resolution;
-        public JobHandle Handle;
-        public NativeArray<float> Condensation;
-        public NativeArray<float> Storm;
-        public NativeArray<float> MoistureSource;
-        public NativeArray<float> Humidity;
-        public NativeArray<float> PrecipitationWater;
-        public NativeArray<float> RainRate;
-        public NativeArray<float4> WeatherPixels;
-        public NativeArray<float4> DynamicsPixels;
-
-        public void Dispose()
-        {
-            if (Condensation.IsCreated) Condensation.Dispose();
-            if (Storm.IsCreated) Storm.Dispose();
-            if (MoistureSource.IsCreated) MoistureSource.Dispose();
-            if (Humidity.IsCreated) Humidity.Dispose();
-            if (PrecipitationWater.IsCreated) PrecipitationWater.Dispose();
-            if (RainRate.IsCreated) RainRate.Dispose();
-            if (WeatherPixels.IsCreated) WeatherPixels.Dispose();
-            if (DynamicsPixels.IsCreated) DynamicsPixels.Dispose();
-        }
-    }
-
-    [BurstCompile]
-    struct WeatherGridGenerationJob : IJobParallelFor
-    {
-        public int Resolution;
-
-        public NoiseData FrontNoise;
-        public NoiseData DetailNoise;
-        public NoiseData ClimateNoise;
-
-        public float FrontScale;
-        public float BiomeInfluence;
-        public float CoverageThreshold;
-        public float EdgeWidth;
-        public float StormSourceThreshold;
-        public float StormSourceSoftness;
-        public float StormMoistureBias;
-        public float StormThreshold;
-        public float RainFormationThreshold;
-        public float RainFormationSoftness;
-        public float RainCloudThreshold;
-
-        [WriteOnly] public NativeArray<float> Condensation;
-        [WriteOnly] public NativeArray<float> Storm;
-        [WriteOnly] public NativeArray<float> MoistureSource;
-        [WriteOnly] public NativeArray<float> Humidity;
-        [WriteOnly] public NativeArray<float> PrecipitationWater;
-        [WriteOnly] public NativeArray<float> RainRate;
-        [WriteOnly] public NativeArray<float4> WeatherPixels;
-        [WriteOnly] public NativeArray<float4> DynamicsPixels;
-
-        public void Execute(int index)
-        {
-            int faceCellCount = Resolution * Resolution;
-            int face = index / faceCellCount;
-            int faceIndex = index - face * faceCellCount;
-            int x = faceIndex % Resolution;
-            int y = faceIndex / Resolution;
-
-            // Edge cells snap their noise-sample UV to the exact cube edge (0 or 1).
-            // Reason: at face boundaries, an adjacent face's edge cell sees the SAME 3D
-            // direction when both sides snap to the shared edge, so noise returns identical
-            // values on both faces. Without snapping, each face samples the noise ~0.5/res
-            // inside its boundary at a slightly different direction, producing the small
-            // value mismatch that bilinear filtering in the cloud-shadow shader amplifies
-            // into a visible rectangular artifact at the cube-face seam.
-            float u = EdgeSnappedUv(x, Resolution);
-            float v = EdgeSnappedUv(y, Resolution);
-            float3 direction = CubeFaceToUnitSphere(face, new float2(u, v));
-
-            float largeFronts = Fbm(ref FrontNoise, direction * FrontScale, 5, 2.05f, 0.54f);
-            float smallFronts = Fbm(ref DetailNoise, direction * FrontScale * 3.25f, 3, 2.2f, 0.48f);
-            float latitudeWetness = 1f - NormalizedLatitude(direction);
-            float climate = Fbm(ref ClimateNoise, direction * 2.35f, 4, 2.1f, 0.52f);
-            float biomeBias = (latitudeWetness - 0.5f) * BiomeInfluence;
-            float frontValue = math.saturate(largeFronts * 0.82f + smallFronts * 0.18f + biomeBias);
-            float humidAir = math.saturate(latitudeWetness * 0.62f + climate * 0.38f);
-
-            float cellCondensation = math.smoothstep(0f, 1f,
-                Unlerp(CoverageThreshold - EdgeWidth, CoverageThreshold + EdgeWidth, frontValue));
-            cellCondensation = math.pow(cellCondensation, 1.08f);
-            float source = math.saturate(cellCondensation * 0.92f + humidAir * 0.08f);
-
-            float stormSource = math.smoothstep(
-                StormSourceThreshold,
-                math.min(1f, StormSourceThreshold + StormSourceSoftness),
-                source);
-            stormSource = math.lerp(1f - StormMoistureBias, 1f, stormSource) * stormSource;
-            float cellStorm = math.smoothstep(StormThreshold, 1f, cellCondensation) * stormSource;
-            float initialPrecipitation = math.smoothstep(
-                RainFormationThreshold,
-                math.min(1f, RainFormationThreshold + RainFormationSoftness),
-                cellStorm) * math.smoothstep(
-                RainCloudThreshold,
-                math.min(1f, RainCloudThreshold + 0.2f),
-                cellCondensation) * humidAir * 0.22f;
-            float initialRainRate = math.saturate(initialPrecipitation * cellStorm);
-
-            Condensation[index] = cellCondensation;
-            Storm[index] = cellStorm;
-            MoistureSource[index] = source;
-            Humidity[index] = humidAir;
-            PrecipitationWater[index] = initialPrecipitation;
-            RainRate[index] = initialRainRate;
-            WeatherPixels[index] = new float4(cellCondensation, cellStorm, source, 0.5f);
-            DynamicsPixels[index] = new float4(humidAir, initialPrecipitation, initialRainRate, humidAir);
-        }
-
-        static float EdgeSnappedUv(int idx, int resolution)
-        {
-            if (idx == 0) return 0f;
-            if (idx == resolution - 1) return 1f;
-            return (idx + 0.5f) / resolution;
-        }
-
-        static float3 CubeFaceLocalUp(int face)
-        {
-            // Matches CoordinateConverter.CubeFaceDirections in face order:
-            // 0 up, 1 down, 2 left, 3 right, 4 forward, 5 back.
-            switch (face)
-            {
-                case 0:  return new float3(0f, 1f, 0f);
-                case 1:  return new float3(0f, -1f, 0f);
-                case 2:  return new float3(-1f, 0f, 0f);
-                case 3:  return new float3(1f, 0f, 0f);
-                case 4:  return new float3(0f, 0f, 1f);
-                default: return new float3(0f, 0f, -1f);
-            }
-        }
-
-        static float3 CubeFaceToUnitSphere(int face, float2 uv)
-        {
-            float u = uv.x * 2f - 1f;
-            float v = uv.y * 2f - 1f;
-            float3 localUp = CubeFaceLocalUp(face);
-            float3 axisA = new float3(localUp.y, localUp.z, localUp.x);
-            float3 axisB = math.cross(localUp, axisA);
-            float3 pointOnCube = localUp + u * axisA + v * axisB;
-            return math.normalize(pointOnCube);
-        }
-
-        static float NormalizedLatitude(float3 p)
-        {
-            return math.abs(math.asin(math.clamp(p.y, -1f, 1f))) / (math.PI * 0.5f);
-        }
-
-        static float Unlerp(float a, float b, float x)
-        {
-            float d = b - a;
-            return d != 0f ? math.saturate((x - a) / d) : 0f;
-        }
-
-        static float Fbm(ref NoiseData noise, float3 point, int octaves, float lacunarity, float persistence)
-        {
-            float sum = 0f;
-            float amplitude = 1f;
-            float amplitudeSum = 0f;
-            float frequency = 1f;
-            for (int i = 0; i < octaves; i++)
-            {
-                float value = noise.Evaluate(point * frequency) * 0.5f + 0.5f;
-                sum += value * amplitude;
-                amplitudeSum += amplitude;
-                amplitude *= persistence;
-                frequency *= lacunarity;
-            }
-            return amplitudeSum > 0f ? sum / amplitudeSum : 0f;
-        }
-    }
-
-    /// <summary>
-    /// Creates Unity textures from pre-computed grid data and constructs the grid object.
-    /// Must be called on the main thread.
-    /// </summary>
-    static SphericalWeatherGrid UploadGridData(GridComputeData data, int seed)
-    {
-        int resolution = data.Resolution;
-
-        var stagingTexture = new Texture2DArray(resolution, resolution, 6, TextureFormat.RGBAHalf, false, true)
-        {
-            name = $"CloudWeather_{resolution}_{seed}",
-            filterMode = FilterMode.Bilinear,
-            wrapMode = TextureWrapMode.Clamp,
-            anisoLevel = 1
-        };
-        var dynamicsStagingTexture = new Texture2DArray(resolution, resolution, 6, TextureFormat.RGBAHalf, false, true)
-        {
-            name = $"WeatherDynamics_{resolution}_{seed}",
-            filterMode = FilterMode.Bilinear,
-            wrapMode = TextureWrapMode.Clamp,
-            anisoLevel = 1
-        };
-
-        for (int face = 0; face < 6; face++)
-        {
-            stagingTexture.SetPixels(data.PixelsByFace[face], face);
-            dynamicsStagingTexture.SetPixels(data.DynamicsPixelsByFace[face], face);
-        }
-
-        stagingTexture.Apply(false, false);
-        dynamicsStagingTexture.Apply(false, false);
-
-        var activeTexture = CreateWeatherTexture(resolution, $"CloudWeatherActive_{resolution}_{seed}");
-        var scratchTexture = CreateWeatherTexture(resolution, $"CloudWeatherScratch_{resolution}_{seed}");
-        var dynamicsActiveTexture = CreateWeatherTexture(resolution, $"WeatherDynamicsActive_{resolution}_{seed}");
-        var dynamicsScratchTexture = CreateWeatherTexture(resolution, $"WeatherDynamicsScratch_{resolution}_{seed}");
-        Graphics.CopyTexture(stagingTexture, activeTexture);
-        Graphics.CopyTexture(stagingTexture, scratchTexture);
-        Graphics.CopyTexture(dynamicsStagingTexture, dynamicsActiveTexture);
-        Graphics.CopyTexture(dynamicsStagingTexture, dynamicsScratchTexture);
-
-        if (Application.isPlaying)
-        {
-            UnityEngine.Object.Destroy(stagingTexture);
-            UnityEngine.Object.Destroy(dynamicsStagingTexture);
-        }
-        else
-        {
-            UnityEngine.Object.DestroyImmediate(stagingTexture);
-            UnityEngine.Object.DestroyImmediate(dynamicsStagingTexture);
-        }
-
+        // CPU cell arrays start empty. WeatherManager's async GPU readback populates them
+        // progressively (one face per WeatherQueryCacheInterval). SampleWeather falls back
+        // to InitialCoverage until readback completes, which is the existing null-grid path.
         return new SphericalWeatherGrid(
             resolution,
             activeTexture,
             scratchTexture,
             dynamicsActiveTexture,
             dynamicsScratchTexture,
-            data.Condensation,
-            data.Storm,
-            data.MoistureSource,
-            data.Humidity,
-            data.PrecipitationWater,
-            data.RainRate);
-    }
-
-    /// <summary>
-    /// Generates a weather grid asynchronously. Cell-value computation runs on Burst-compiled
-    /// worker threads via <see cref="WeatherGridGenerationJob"/>; the main thread yields between
-    /// frames until the job completes, then uploads textures.
-    /// </summary>
-    public static async Awaitable<SphericalWeatherGrid> GenerateAsync(
-        CloudDto settings, int seed, System.Threading.CancellationToken ct = default)
-    {
-        // Job scheduling and texture upload both require the main thread.
-        var state = ScheduleGridJob(settings, seed);
-        try
-        {
-            while (!state.Handle.IsCompleted)
-            {
-                if (ct.IsCancellationRequested)
-                {
-                    state.Handle.Complete();
-                    state.Dispose();
-                    ct.ThrowIfCancellationRequested();
-                }
-                await Awaitable.NextFrameAsync();
-            }
-            state.Handle.Complete();
-        }
-        catch
-        {
-            state.Dispose();
-            throw;
-        }
-        var data = CopyOutAndDispose(state);
-        return UploadGridData(data, seed);
-    }
-
-    public static SphericalWeatherGrid Generate(CloudDto settings, int seed)
-    {
-        var state = ScheduleGridJob(settings, seed);
-        state.Handle.Complete();
-        var data = CopyOutAndDispose(state);
-        return UploadGridData(data, seed);
+            new float[cellCount],
+            new float[cellCount],
+            new float[cellCount],
+            new float[cellCount],
+            new float[cellCount],
+            new float[cellCount]);
     }
 
     public float GetCondensation(Vector3 worldPosition, Vector3 planetCenter, Quaternion sampleRotation)

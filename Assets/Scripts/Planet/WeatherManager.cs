@@ -193,7 +193,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         if (_seaLevelRadius > 0f && (_settings.WeatherResolution != prev.WeatherResolution
             || _settings.InitialCoverage != prev.InitialCoverage))
         {
-            GenerateWeatherGrid();
+            _ = GenerateWeatherGridAsync();
         }
     }
 
@@ -239,12 +239,6 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             Shader.SetGlobalFloat(_windStrengthId, windStrength);
             _lastUploadedWindStrength = windStrength;
         }
-    }
-
-    public void RegenerateWeatherGrid()
-    {
-        if (_seaLevelRadius > 0f)
-            GenerateWeatherGrid();
     }
 
     public WeatherSample SampleWeather(Vector3 worldPosition)
@@ -368,8 +362,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
             _progressHandle.Report(0.15f, "Seeding weather grid...");
 
-            // Compute cell data on background thread, upload textures on main thread.
-            var newGrid = await SphericalWeatherGrid.GenerateAsync(_settings, seed, linked.Token);
+            var newGrid = await SphericalWeatherGrid.GenerateComputeAsync(WeatherCompute, _settings, seed, linked.Token);
 
             if (this == null) return;
             _progressHandle.Report(0.85f, "Uploading weather...");
@@ -383,19 +376,6 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         }
         catch (System.OperationCanceledException) { }
         catch (System.Exception ex) { Logger.LogException("Weather", ex); }
-    }
-
-    void GenerateWeatherGrid()
-    {
-        int seed = ServiceLocator.Get<ISeedProvider>().GetSeedForSystem("Weather");
-
-        _grid?.Dispose();
-        _grid = SphericalWeatherGrid.Generate(_settings, seed);
-        _evolutionAccumulator = 0f;
-        ResetAdvection();
-        ResetQueryCache();
-        _diagnostics.Reset();
-        Logger.Log(LogLevel.Debug, "Weather", $"Generated {WeatherResolution}x{WeatherResolution}x6 condensation grid.");
     }
 
     // How far (radians) weather drifts along the sphere in one evolution step. The compute and

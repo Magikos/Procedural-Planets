@@ -147,6 +147,13 @@ public unsafe struct NoiseData
         return (n0 + n1 + n2 + n3) * 32f;
     }
 
+    public unsafe void CopyPermutation(int[] dest, int destOffset)
+    {
+        fixed (int* src = Permutation)
+            for (int i = 0; i < PermutationSize * 2; i++)
+                dest[destOffset + i] = src[i];
+    }
+
     static int FastFloor(float x) => x >= 0f ? (int)x : (int)x - 1;
 
     static float Grad3Dot(int hash, float x, float y, float z)
