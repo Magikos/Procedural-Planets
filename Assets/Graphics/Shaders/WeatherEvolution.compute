@@ -255,12 +255,12 @@ float WGSimplex(int base, float3 p)
     return (n0 + n1 + n2 + n3) * 32.0;
 }
 
-float WGFbm(int base, float3 point, int octaves, float lacunarity, float persistence)
+float WGFbm(int base, float3 pos, int octaves, float lacunarity, float persistence)
 {
     float sum = 0, amplitude = 1, amplitudeSum = 0, frequency = 1;
     for (int o = 0; o < octaves; o++)
     {
-        float value = WGSimplex(base, point * frequency) * 0.5 + 0.5;
+        float value = WGSimplex(base, pos * frequency) * 0.5 + 0.5;
         sum          += value * amplitude;
         amplitudeSum += amplitude;
         amplitude    *= persistence;
