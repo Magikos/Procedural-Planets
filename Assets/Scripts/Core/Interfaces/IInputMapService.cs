@@ -31,8 +31,10 @@ public interface IInputMapService
     InputAction TriggerCapture { get; }
     InputAction ToggleProfiling { get; }
     InputAction DropScaleMarker { get; }
+    InputAction ClearScaleMarkers { get; }
     InputAction TeleportToMarkers { get; }
     InputAction GrassInteractorDistance { get; }
+    InputAction DumpAtmosphereDiagnostics { get; }
 
     InputAction OpenConsole { get; }
     InputAction CloseConsole { get; }

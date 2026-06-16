@@ -351,7 +351,11 @@ public static class ServiceLocator
             return;
 
         if (ReferenceEquals(existing, service) || !IsAlive(existing))
+        {
             _services.Remove(type);
+            if (ReferenceEquals(existing, service) && existing is IDisposable disposable)
+                disposable.Dispose();
+        }
     }
 
     public static void Clear()

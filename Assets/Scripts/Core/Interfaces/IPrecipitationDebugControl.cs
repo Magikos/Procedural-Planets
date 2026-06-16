@@ -11,6 +11,7 @@ public interface IPrecipitationDebugControl
     bool IsRenderingEnabled { get; }
     float StormThreshold { get; }
     float LocalParticleRadius { get; }
+    float LocalMaxCameraAltitude { get; }
     int DustParticleCount { get; }
     int SnowParticleCount { get; }
     int WeatherParticleProofMode { get; }

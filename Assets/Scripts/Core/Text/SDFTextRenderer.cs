@@ -53,14 +53,14 @@ public sealed class SDFTextRenderer
         _font = font;
         if (font == null)
         {
-            Debug.LogWarning("[SDFTextRenderer] No font asset supplied — text rendering disabled.");
+            LoggerProvider.Get().Log(LogLevel.Warning, "SDFTextRenderer", "No font asset supplied — text rendering disabled.");
             return;
         }
 
         var shader = Shader.Find("Hidden/SDFText");
         if (shader == null)
         {
-            Debug.LogError("[SDFTextRenderer] Shader 'Hidden/SDFText' not found. " +
+            LoggerProvider.Get().Log(LogLevel.Error, "SDFTextRenderer", "Shader 'Hidden/SDFText' not found. " +
                            "Ensure it is in Assets/Graphics/Shaders/ and listed under " +
                            "Project Settings → Graphics → Always Included Shaders.");
             return;

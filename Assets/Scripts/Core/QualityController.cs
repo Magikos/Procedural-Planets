@@ -10,6 +10,10 @@ public interface IGrassQualitySettings
     int MaxCoarseLodOffsetForBlades { get; }
     float ResidencyFrustumPaddingDegrees { get; }
     bool EnableScreenSpaceShadows { get; }
+    float FarOverlayAltitudeStart { get; }
+    float FarOverlayAltitudeEnd { get; }
+    float NearFieldActivationAltitude { get; }
+    float NearFieldDeactivationAltitude { get; }
 }
 
 public sealed class DefaultGrassQualitySettings : IGrassQualitySettings
@@ -26,6 +30,10 @@ public sealed class DefaultGrassQualitySettings : IGrassQualitySettings
     public int MaxCoarseLodOffsetForBlades => 1;
     public float ResidencyFrustumPaddingDegrees => 25f;
     public bool EnableScreenSpaceShadows => true;
+    public float FarOverlayAltitudeStart => 750f;
+    public float FarOverlayAltitudeEnd => 2600f;
+    public float NearFieldActivationAltitude => 350f;
+    public float NearFieldDeactivationAltitude => 500f;
 }
 
 /// <summary>

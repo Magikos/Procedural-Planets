@@ -44,10 +44,6 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     const float GrassFarOverlayNoiseScale = 0.055f;
     const float GrassFarOverlayFiberStrength = 0.65f;
     const float GrassFarOverlayOrbitStrength = 0.42f;
-    const float GrassFarOverlayAltitudeStart = 750f;
-    const float GrassFarOverlayAltitudeEnd = 2600f;
-    const float NearFieldGrassActivationAltitude = 350f;
-    const float NearFieldGrassDeactivationAltitude = 500f;
 
     public PlanetGrassCoordinator(Transform planetTransform, IPlanetSurfaceSampler surfaceSampler, ILogger logger)
     {
@@ -136,8 +132,9 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
 
     bool ShouldActivateNearFieldGrass(Vector3 cameraPosition, bool currentlyActive)
     {
+        var quality = ServiceLocator.Get<IGrassQualitySettings>();
         return ShouldActivateGrassLayer(cameraPosition, currentlyActive,
-            NearFieldGrassActivationAltitude, NearFieldGrassDeactivationAltitude);
+            quality.NearFieldActivationAltitude, quality.NearFieldDeactivationAltitude);
     }
 
     bool ShouldActivateGrassLayer(Vector3 cameraPosition, bool currentlyActive,
@@ -186,8 +183,9 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
         SetMaterialFloatIfPresent(mat, _grassFarOverlayEndId, GrassFarOverlayEnd);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayNoiseScaleId, GrassFarOverlayNoiseScale);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayOrbitStrengthId, GrassFarOverlayOrbitStrength);
-        SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeStartId, GrassFarOverlayAltitudeStart);
-        SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeEndId, GrassFarOverlayAltitudeEnd);
+        var quality = ServiceLocator.Get<IGrassQualitySettings>();
+        SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeStartId, quality.FarOverlayAltitudeStart);
+        SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeEndId, quality.FarOverlayAltitudeEnd);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayFiberStrengthId, GrassFarOverlayFiberStrength);
         SetMaterialFloatIfPresent(mat, _grassSurfaceBrightnessId, _grassSurfaceBrightness);
     }

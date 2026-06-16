@@ -90,7 +90,12 @@ public static class CommandExecutor
 
             case MonoTargetType.Single:
                 if (typeof(UnityEngine.Object).IsAssignableFrom(cmd.DeclaringType))
-                    return UnityEngine.Object.FindAnyObjectByType(cmd.DeclaringType, FindObjectsInactive.Exclude);
+                {
+                    if (cmd.CachedSingleTarget != null)
+                        return cmd.CachedSingleTarget;
+                    cmd.CachedSingleTarget = UnityEngine.Object.FindAnyObjectByType(cmd.DeclaringType, FindObjectsInactive.Exclude);
+                    return cmd.CachedSingleTarget;
+                }
                 throw new InvalidOperationException(
                     $"MonoTargetType.Single requires a UnityEngine.Object-derived type; {cmd.DeclaringType.Name} is not.");
 

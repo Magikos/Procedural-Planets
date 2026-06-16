@@ -25,7 +25,7 @@ public interface IChunkMeshCache
 // Split out of ChunkedSurfaceProvider (restructure step 3). Reads IBiomeAtlasService one-way;
 // the provider mediates the rebake feedback (bake, then Rebind here) so this layer never calls
 // back into the bake.
-public sealed class ChunkMeshCache : IChunkMeshCache
+public sealed class ChunkMeshCache : IChunkMeshCache, IMemoryReporter
 {
     readonly Material _faceMaterial;
     readonly IBiomeAtlasService _biomeAtlas;
@@ -61,6 +61,14 @@ public sealed class ChunkMeshCache : IChunkMeshCache
         _faceMaterial = faceMaterial;
         _biomeAtlas = biomeAtlas;
         _chunkResolution = chunkResolution;
+        MemoryDebugModule.Register(this);
+    }
+
+    public void AppendMemoryReport(System.Text.StringBuilder sb)
+    {
+        int count = _chunkRenderers.Count;
+        long bytes = count * EstimateChunkMeshBytes();
+        sb.AppendLine($"Chunk render handles (live meshes): {count} ({MemoryDebugModule.FormatBytes(bytes)})");
     }
 
     // Face roots + per-face visibility are created by the orchestrator (EnsureFaceObjects) after
@@ -131,7 +139,7 @@ public sealed class ChunkMeshCache : IChunkMeshCache
         }
         _chunkRenderers.Clear();
         _renderReserveLru.Clear();
-        MemoryDebugCounters.ReportChunkRenderHandles(0, 0);
+        MemoryDebugModule.Unregister(this);
     }
 
     // Returns the render handle for a chunk, building it (and its mesh) on demand. Once over the
@@ -162,7 +170,6 @@ public sealed class ChunkMeshCache : IChunkMeshCache
         PopulateRenderHandle(handle, chunk);
         handle.Chunk = chunk;
         _chunkRenderers[chunk] = handle;
-        ReportRenderHandleMemory();
         return handle;
     }
 
@@ -236,7 +243,7 @@ public sealed class ChunkMeshCache : IChunkMeshCache
         }
         mesh.bounds = chunk.CpuLocalBounds;
         // GPU-only; raycasts read CpuVertices, never the mesh, and we always rebuild on page-in.
-        mesh.UploadMeshData(true);
+        mesh.UploadMeshData(false);
 
         handle.Mesh = mesh;
         handle.Filter.sharedMesh = mesh;
@@ -244,12 +251,6 @@ public sealed class ChunkMeshCache : IChunkMeshCache
         // Bind the per-chunk biome map (or face atlas) as a MaterialPropertyBlock so the shared
         // planet material can sample it without a per-chunk material instance.
         BindChunkBiomeProperties(handle, chunk);
-    }
-
-    void ReportRenderHandleMemory()
-    {
-        MemoryDebugCounters.ReportChunkRenderHandles(
-            _chunkRenderers.Count, _chunkRenderers.Count * EstimateChunkMeshBytes());
     }
 
     long EstimateChunkMeshBytes()

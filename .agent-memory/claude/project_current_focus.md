@@ -1,47 +1,55 @@
 ---
 name: project-current-focus
-description: "As of 2026-06-06: Phase B (biome textures K=4) shipped. Active work: biome model overhaul (BiomeOffset → climate model lat+alt+noise → Voronoi assignment) per Bryan's 5-step plan. Then texture/look work using Synty assets."
+description: "As of 2026-06-15: code-refactor arc COMPLETE. All audit backlog items closed. Biome arc remains paused."
 metadata:
   node_type: memory
   type: project
   originSessionId: 97829702-a6c8-47a8-a3db-f18c9ac1f8af
 ---
 
-**Phase B IS shipped on branch `phase4-biomes`** (confirmed by code 2026-06-06):
-- K=4 biome blending (NOT K=2 as the Phase B draft suggested — see [[biome-climate-overhaul]] §0.1).
-- Three per-chunk textures: `BiomeBlendedColorTexture`, `BiomeIdsTexture` (R/G/B/A = id1..id4), `BiomeWeightsTexture` (R/G/B/A = w1..w4). Both ID + weights are POINT filter to avoid invalid intermediate IDs; shader does manual 4-corner bilinear blend.
-- Per-biome `Texture2DArray` triplanar sampling for albedo + normal + ARM is live.
-- `_SurfaceStateMask` per-chunk binding + Phase E stub in `IPlanetSurfaceProvider`.
+**Active branch:** `code-refactor`
 
-**Active arc — biome model overhaul + texture/look work (Bryan's 5-step plan, 2026-06-06):**
+**Arc status: COMPLETE as of 2026-06-15.** All audit backlog items are closed and committed. The biome-climate-overhaul arc remains paused.
 
-1. **Biome model overhaul** — finishing biome normalization/blend. Design at [`docs/design/2026-06-05-biome-climate-overhaul.md`](../../docs/design/2026-06-05-biome-climate-overhaul.md). Three slices:
-   - **1a: SHIPPED 2026-06-06** ✓ — `BiomeOffset: Vector3` added to `BiomeDefinition` under "Placement noise" header; all 15 biome SOs populated with unique pseudo-random values in ~1000-10000 range. Build clean. No consumers yet — grass placement (step 4) and props (step 5) will read it. Slice log: `docs/agent-conversation/2026-06-06-biome-1a-biome-offset.md`.
-   - **1b: NEXT** — Climate model overhaul. `TemperatureProvider`/`MoistureProvider` switch from pure noise to `latitudeBase(|y|) +/- altitudeLapse(elevation) + noise`. New fields on `BiomeSettings`: `AltitudeTemperatureDropConstant`, two latitude `AnimationCurve`s (temp and moisture — moisture curve emulates Hadley/Westerlies bands: wet equator, dry subtropical, wet temperate, dry polar). New console commands `climate.temp-noise-scale`, `climate.altitude-lapse`, `climate.show-bands` (debug viz). **Open decision when picking up: ship inline (net additive — old behavior preserved behind init defaults) OR write short design doc first per audit workflow?** Bryan was about to choose when the session ran out.
-   - 1c: Voronoi + domain warp + 5-iter cleanup biome assignment. Behind feature flag, A/B vs current direct lookup. The 5-iter cleanup is THE fix for thin-stripe biomes (Bryan's specific concern 2026-06-06).
-2. **Grass on/off console toggle** — small enabler so Bryan can judge biome look without grass overlay.
-3. **Texture/look work** — multi-variant Synty texture blend per biome (using POLYGON Meadow Forest / Tropical Jungle / Swamp Marshland packs at `D:\UnityExtractedPackages\Sorted`); snow/slope/coast overrides; stylization pass; URP volume tuning. Reference look: Genshin Impact, Zelda BotW, Valheim.
-4. **Grass tuning** — size/color/placement variation, especially fade near biome edges. Implies per-grass-species Gaussian climate niche (analogous to tree species).
-   - **4a-1 SHIPPED 2026-06-06** ✓ Foundation: `GrassTintDryShift` + `GrassTintLushShift` fields on `BiomeDefinition` (Color.white defaults, all 15 biome SOs populated); `GrassBiomeTintConfig` + `GrassPlacementClimateBinding` DTOs in new `GrassPlacementDtos.cs`. **First demonstration of [[feedback-settings-dto-pattern]] in code.** Slice log: `docs/agent-conversation/2026-06-06-grass-climate-color-foundation.md`. Design doc: `docs/design/2026-06-06-grass-climate-color.md`.
-   - **4a-2 NEXT** — Per-chunk `ChunkClimateTexture` bake plumbing. Adds RG16 (temp01, moisture01) per chunk via `BiomeMapBaker` extension; uses existing per-vertex `CpuBiomeData.x/.y`. ~16 MB for 2000 active chunks. No consumer yet — foundation only, same shape as 4a-1.
-   - **4a-3 PLANNED** — Placement compute consumption: build `GrassBiomeTintConfig[]` at init via `From(BiomeDefinition)` factory; bind climate texture; sample + apply dry/lush weighted blend; per-blade `blade.Color` write. Plus `grass.dry-shift` / `grass.lush-shift` console commands + `BiomeGrassClimateShift` debug mode. **First visible result.**
-   - **4b SHIPPED 2026-06-07** ✓ **Grass interactors** — `IGrassInteractor` interface + `GrassInteractorRegistry` (static, max 8 active, ComputeBuffer-backed) + `GrassInteractorBootstrap` (lazy-spawn MonoBehaviour for per-frame upload) + `DebugGrassInteractor` MonoBehaviour + `CameraFollowGrassInteractor` (sea-level surface snap) + `grass.interactor-*` console commands. Stub `SampleGrassInteractorBend` in `GrassInteractors.hlsl` replaced with real implementation (tangent-plane projection, smoothstep falloff). **Second use of [[feedback-settings-dto-pattern]]** via `GrassInteractorSnapshot`. Design doc: `docs/design/2026-06-07-grass-interactors.md`. Slice log: `docs/agent-conversation/2026-06-07-grass-interactors.md`. Validate in Unity with `grass.interactor-spawn`. **Spherical gravity / character controller / 3rd-person camera explicitly deferred to a separate big arc — interactor system is character-agnostic.**
-5. **Props** — rocks, bushes, trees. Tree species get full Gaussian niche from biome-climate-overhaul §3.3.
+## Completed this arc (all verified against source)
 
-**Known perf characteristics (do not "optimize" without context):**
-- **Voronoi global-field build is ~5 seconds at default `VoronoiSeedCount = 2048`.** That's measured one-time cost during planet generation, not steady-state. F10 sidecar reports it as `buildMs`. Generation is intentionally allowed to be expensive — parallelize for load speed if/when needed, but the spec is "do correct work once at gen, fast lookups at runtime."
-- **`MoistureNoiseStrength` has zero effect while `MoistureLatitudeInfluence = 0`** — the legacy path takes `lerp(legacy, band, 0) = legacy` and discards the band-derived noise contribution. Tooltip updated 2026-06-06 to call this out; the parameter remains live for the latitude-band moisture path.
+- **T3 boot-path:** LoadingManager is the only RuntimeInitializeOnLoadMethod. ✓
+- **T5 dead code:** GrassMidField, GpuChunkSurfaceProvider, CombinedFaceMesh, self-tests, GrassPlacementClimateBinding — all deleted. ✓
+- **T6 shader-globals:** All global names in ShaderGlobalIds partial files. ✓
+- **T7 debug-module hygiene:** AtmosphereDebugModule, ScaleReferenceDebugModule, BiomeDebugModule, TerrainGeographyDebugModule all own their domain. ✓
+- **Slice 4:** ChunkedSurfaceProvider 2146 → 546 lines. ✓
+- **Slice 5:** FrameTimingCounters + FrameTimingModule, GrassBladeBufferPool, F6/F9 overlay reorganization. ✓
+- **Slice 6 god-class splits:** Planet (1043→406), WeatherManager (898→388 via WeatherDiagnostics + WeatherEvolutionScheduler + WeatherQueryCache), DebugCaptureController, WaterDebugModule (878→243), GrassPlacementController (781→494), FreeCameraController (859→415). ✓
+- **ConsoleController split:** 1083 → 265 + ConsoleInputController 491 + ConsoleAsyncRunner 321 + ConsoleInputLineFormatter 148. ✓
+- **GRASS-1/4/5/6/7/8:** DTO path, Warning→Info, dead DTO deleted, blade constants consolidated, altitude consts to IGrassQualitySettings. ✓
+- **TintDryShift/TintLushShift:** Fully wired 2026-06-14. ✓
+- **Settings DTO pattern (WEATHER-1):** Fully realized for all hub SOs — Atmosphere, Cloud, Biome, Planet. ✓
+- **WEATHER-2:** WeatherEvolutionScheduler + WeatherQueryCache extracted from WeatherManager into plain class collaborators. ✓
+- **WEATHER-3 dirty flag:** PrecipitationController migrated to EnsureStaticPropertiesUploaded + UpdatePerFrameProperties pattern. ✓
+- **WEATHER-6:** RainParticleController reads wind via IWeatherProvider (resolved at init). ✓
+- **WEATHER-7 logger migration:** All non-backend Debug.Log* calls migrated to ILogger/LoggerProvider. ✓
+- **WEATHER-8:** RainParticleController uses Destroy (not DestroyImmediate). ✓
+- **WEATHER-9:** RainParticleCommands nested class deleted; commands moved onto controller with MonoTargetType.Single. ✓
+- **WEATHER-10:** DumpAtmosphereDiagnostics added to DebugCommandType; raised from DebugInputRelay; AtmosphereDiagnostics listens. ✓
+- **WEATHER-12:** All three render features (Atmosphere, Cloud, Precipitation) use ServiceLocator.TryGet instead of FindAnyObjectByType. ✓
+- **WEATHER-13:** AtmosphereController field renamed to _seaLevelRadiusId. ✓
+- **WEATHER-14:** WeatherManager uses bool _windDirty flag (NaN sentinels removed). ✓
+- **WEATHER-15:** Lightning extracted to WeatherLightning.hlsl; WeatherSampling.hlsl #includes it. ✓
+- **WEATHER-16:** Cube-face UV helpers extracted to WeatherCubeFace.hlsl; both WeatherSampling + CloudShadows #include it. ✓
+- **WEATHER-18:** TryFindStrongestStorm deleted; TryFindStrongestPrecipitation reads from CalculateStats. ✓
+- **PLANET-9:** GetVisibleChunksSnapshot changed to output-list pattern (no per-call allocation). ✓
+- **CORE-10:** MonoTargetType.Single caches result in CommandData.CachedSingleTarget. ✓
+- **CORE-11:** ConsoleRegistry.Scan filters to Assembly-CSharp*/Magikorp* assemblies. ✓
+- **CORE-13:** IMemoryReporter pull model replaces MemoryDebugCounters push bag; ChunkMeshCache + BiomeAtlasService + ChunkedSurfaceProvider implement it. ✓
+- **Audit open questions:** All 15 stamped. ✓
+- **Persistence adapter:** Deferred by Bryan — will design after world development is further along.
 
-**Locked decisions (do not re-litigate):**
-- **K=4** is correct and already shipped — do not change.
-- **5-iter Voronoi seed cleanup** is required (not optional) — it's the explicit fix for the thin-stripe biome problem.
-- **Generation is one-time, not per-frame** — expensive but correct algorithms are fine; parallelize via Burst/compute/Awaitable for load time but don't constrain to a frame budget.
-- **K=3 for trees, with single grass species per biome → upgraded:** grass DOES get Gaussian niche (closes design doc open question #6).
+## Deferred / future work
 
-**Known issues still queued (do not block this arc):**
-- [[normal-mapping-flat]] — terrain reads flat under lighting; data pipeline confirmed working, lighting compression likely the cause. May be addressed by texture work in step 3.
-- [[chunk-biome-seam]] — faint chunk-boundary seams in current kernel-based bake. **Closed by construction once 1c (Voronoi) ships** — Voronoi assignment is global, no kernel boundaries.
+- **Rain curtain LOD bridge (WEATHER-4 re-classified):** Distant WeatherParticles.shader rain pass intended as LOD layer. Currently zero-forced in PrecipitationRenderFeature.Setup. Not yet implemented.
+- **Debug.Log* migration:** Opportunistic — migrate when files are touched for other reasons.
+- **VoronoiBiomeField.cs** (641 lines, new file): Not yet reviewed. Flag for split if responsibilities grow past ~400 lines.
 
-**Reference materials for texture work:**
-- [[reference-planet-architect]] — biome/climate/vegetation reference
-- Synty extracted packs at `D:\UnityExtractedPackages\Sorted` — Meadow Forest, Tropical Jungle, Swamp Marshland, Prototype
+## Biome arc (paused — context preserved)
+
+The biome-climate-overhaul work (TemperatureProvider lat+alt model, Voronoi assignment, Synty texture work) is on hold. Remaining steps: 1b (climate model), 1c (Voronoi+domain-warp), grass Gaussian niche, props. TintDryShift/TintLushShift is SHIPPED — do not re-implement.

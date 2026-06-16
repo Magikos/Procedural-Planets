@@ -33,12 +33,6 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     const int StatOverflow = 9;
     const int StatRangeBudgetRejected = 10;
     const int ThreadGroupSize = 8;
-    const int BladeStride = sizeof(float) * 12;
-    const int VerticesPerVisualBlade = 18;
-    const int ClusterCardsPerInstance = 3;
-    const int VisualBladesPerCard = 5;
-    const int VisualBladesPerInstance = ClusterCardsPerInstance * VisualBladesPerCard;
-    const int BladeVertexCount = VerticesPerVisualBlade * ClusterCardsPerInstance;
 
     // Keep the dense field fully populated through 144m, then use a broad stochastic
     // overlap with chunk grass. The previous 16m handoff exposed a visible density ring.
@@ -85,6 +79,8 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     static readonly int PlanetCenterWsId = Shader.PropertyToID("_NearFieldPlanetCenterWs");
     static readonly int CameraPositionWsId = Shader.PropertyToID("_NearFieldCameraPositionWs");
     static readonly int BladeInstancesShaderId = Shader.PropertyToID("_GrassBladeInstances");
+    static readonly int ClimateMapId = Shader.PropertyToID(ShaderGlobalIds.ClimateMap);
+    static readonly int ClimateMapResolutionId = Shader.PropertyToID(ShaderGlobalIds.ClimateMapResolution);
 
     static GrassNearFieldController()
     {
@@ -127,6 +123,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     readonly uint[] _rangeCountsScratch = new uint[FaceSpaceCellRangeBuilder.MaxRanges];
     readonly int[] _rangeBudgets = new int[FaceSpaceCellRangeBuilder.MaxRanges];
     readonly long _bufferBytes;
+    Texture2DArray _neutralClimateMap;
     bool _disposed;
 
     // Last-dispatch state for change detection.
@@ -170,7 +167,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         Shader shader = Shader.Find("Planet/Grass");
         if (shader == null)
         {
-            _logger.Log(LogLevel.Warning, "GrassNF", "Planet/Grass shader not found; near-field renderer disabled.");
+            _logger.Log(LogLevel.Info, "GrassNF", "Planet/Grass shader not found; near-field renderer disabled.");
             return;
         }
         _material = new Material(shader)
@@ -181,14 +178,14 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
 
         if (!SystemInfo.supportsComputeShaders)
         {
-            _logger.Log(LogLevel.Warning, "GrassNF", "Compute shaders not supported; near-field disabled.");
+            _logger.Log(LogLevel.Info, "GrassNF", "Compute shaders not supported; near-field disabled.");
             return;
         }
 
         _compute = Resources.Load<ComputeShader>(ComputeResource);
         if (_compute == null)
         {
-            _logger.Log(LogLevel.Warning, "GrassNF", $"Compute shader '{ComputeResource}' not found.");
+            _logger.Log(LogLevel.Info, "GrassNF", $"Compute shader '{ComputeResource}' not found.");
             return;
         }
 
@@ -204,11 +201,11 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
 
         if (_grassParamsBuffer == null || _grassParamCount <= 0)
         {
-            _logger.Log(LogLevel.Warning, "GrassNF", "Biome grass params buffer unavailable; near-field disabled.");
+            _logger.Log(LogLevel.Info, "GrassNF", "Biome grass params buffer unavailable; near-field disabled.");
             return;
         }
 
-        _instancesBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, _capacity, BladeStride);
+        _instancesBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, _capacity, GrassChunkRuntime.BladeStride);
         _argsBuffer = new GraphicsBuffer(
             GraphicsBuffer.Target.IndirectArguments | GraphicsBuffer.Target.Structured,
             4, sizeof(uint));
@@ -217,7 +214,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             GraphicsBuffer.Target.Structured, FaceSpaceCellRangeBuilder.MaxRanges, sizeof(uint));
         _props = new MaterialPropertyBlock();
         _props.SetBuffer(BladeInstancesShaderId, _instancesBuffer);
-        _bufferBytes = (long)_capacity * BladeStride
+        _bufferBytes = (long)_capacity * GrassChunkRuntime.BladeStride
             + GraphicsBuffer.IndirectDrawArgs.size
             + (long)(StatsCount + FaceSpaceCellRangeBuilder.MaxRanges) * sizeof(uint);
         _available = true;
@@ -354,6 +351,10 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         _compute.SetFloat(PlanetRadiusId, _planetRadius);
         _compute.SetFloat(PlanetWorldScaleId, FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform));
         _compute.SetMatrix(PlanetLocalToWorldId, _planetTransform.localToWorldMatrix);
+
+        Texture2DArray climateMap = GetClimateMap();
+        _compute.SetTexture(_kernel, ClimateMapId, climateMap);
+        _compute.SetInt(ClimateMapResolutionId, climateMap.width);
     }
 
     void DispatchOneFaceRange(
@@ -419,7 +420,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     {
         // vertexCountPerInstance, instanceCount, startVertex, startInstance.
         // Kernel increments [1] via InterlockedAdd; no CopyCount needed.
-        _argsScratch[0] = BladeVertexCount;
+        _argsScratch[0] = GrassChunkRuntime.BladeVertexCount;
         _argsScratch[1] = 0;
         _argsScratch[2] = 0;
         _argsScratch[3] = 0;
@@ -493,8 +494,8 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             DispatchedThisFrame = _dispatchedThisFrame,
             DispatchesTotal = _dispatchesTotal,
             EmittedInstances = _lastEmittedInstances,
-            VisualBladesPerInstance = VisualBladesPerInstance,
-            BladeVertexCount = BladeVertexCount,
+            VisualBladesPerInstance = GrassChunkRuntime.VisualBladesPerInstance,
+            BladeVertexCount = GrassChunkRuntime.BladeVertexCount,
             CandidateCells = _hasStats ? _statsReadback[StatCandidateCells] : 0L,
             DensityRejectedCells = _hasStats ? _statsReadback[StatDensityRejected] : 0L,
             WaterRejectedCells = _hasStats ? _statsReadback[StatWaterRejected] : 0L,
@@ -531,5 +532,31 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             if (Application.isPlaying) Object.Destroy(_material);
             else Object.DestroyImmediate(_material);
         }
+
+        if (_neutralClimateMap != null)
+        {
+            if (Application.isPlaying) Object.Destroy(_neutralClimateMap);
+            else Object.DestroyImmediate(_neutralClimateMap);
+            _neutralClimateMap = null;
+        }
+    }
+
+    Texture2DArray GetClimateMap()
+    {
+        if (Shader.GetGlobalTexture(ClimateMapId) is Texture2DArray map)
+            return map;
+        if (_neutralClimateMap == null)
+        {
+            _neutralClimateMap = new Texture2DArray(1, 1, 6, TextureFormat.RGHalf, false, true)
+            {
+                hideFlags = HideFlags.HideAndDontSave,
+                name = "NeutralClimateMapFallback",
+            };
+            var neutral = new Color(0f, 0.5f, 0f, 1f);
+            for (int f = 0; f < 6; f++)
+                _neutralClimateMap.SetPixels(new[] { neutral }, f);
+            _neutralClimateMap.Apply(false, true);
+        }
+        return _neutralClimateMap;
     }
 }

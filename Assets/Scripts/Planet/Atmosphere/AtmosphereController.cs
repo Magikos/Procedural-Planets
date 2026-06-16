@@ -22,7 +22,7 @@ public class AtmosphereController : MonoBehaviour, IAtmosphereRuntime, IWorldSer
 
     static readonly int _sunParamsId = Shader.PropertyToID(ShaderGlobalIds.SunParams);
     static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
-    static readonly int _planetRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
+    static readonly int _seaLevelRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
     static readonly int _densityOriginRadiusId = Shader.PropertyToID(ShaderGlobalIds.DensityOriginRadius);
     static readonly int _atmosphereRadiusId = Shader.PropertyToID(ShaderGlobalIds.AtmosphereRadius);
     static readonly int _viewStepsId = Shader.PropertyToID(ShaderGlobalIds.ViewSteps);
@@ -146,7 +146,7 @@ public class AtmosphereController : MonoBehaviour, IAtmosphereRuntime, IWorldSer
         Vector3 center = _planetCenter;
 
         Shader.SetGlobalVector(_planetCenterId, center);
-        Shader.SetGlobalFloat(_planetRadiusId, _seaLevelRadius);
+        Shader.SetGlobalFloat(_seaLevelRadiusId, _seaLevelRadius);
         Shader.SetGlobalFloat(_densityOriginRadiusId, _seaLevelRadius);
         Shader.SetGlobalFloat(_atmosphereRadiusId, atmosphereRadius);
 

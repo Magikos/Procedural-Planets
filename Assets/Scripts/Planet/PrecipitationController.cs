@@ -98,6 +98,8 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     CloudDto _cloudSettings;
     Vector3 _planetCenter;
     float _seaLevelRadius;
+    bool _staticPropertiesDirty = true;
+    int _lastUploadedViewSteps = int.MinValue;
 
     static readonly int _precipitationEnabledId = Shader.PropertyToID(ShaderGlobalIds.PrecipitationEnabled);
     static readonly int _precipitationPlanetCenterId = Shader.PropertyToID(ShaderGlobalIds.PrecipitationPlanetCenter);
@@ -140,6 +142,7 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
 
     float IPrecipitationDebugControl.StormThreshold => _settings.StormThreshold;
     float IPrecipitationDebugControl.LocalParticleRadius => _settings.LocalParticleRadius;
+    float IPrecipitationDebugControl.LocalMaxCameraAltitude => _settings.LocalMaxCameraAltitude;
     int IPrecipitationDebugControl.DustParticleCount => _settings.DustParticleCount;
     int IPrecipitationDebugControl.SnowParticleCount => _settings.SnowParticleCount;
     int IPrecipitationDebugControl.WeatherParticleProofMode => (int)_settings.ParticleProof;
@@ -205,7 +208,9 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     {
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
         EventBus<SettingsChangedEvent>.Listen(OnSettingsChanged);
-        UploadGlobals();
+        _staticPropertiesDirty = true;
+        EnsureStaticPropertiesUploaded();
+        UpdatePerFrameProperties();
     }
 
     void OnDisable()
@@ -216,21 +221,20 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         Shader.SetGlobalInt(_weatherParticlesEnabledId, 0);
     }
 
-    void Start()
-    {
-        UploadGlobals();
-    }
-
     void Update()
     {
-        UploadGlobals();
+        EnsureStaticPropertiesUploaded();
+        UpdatePerFrameProperties();
     }
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
         _planetCenter = evt.PlanetCenter;
         _seaLevelRadius = evt.SeaLevelRadius > 0f ? evt.SeaLevelRadius : evt.PlanetRadius;
-        UploadGlobals();
+        _staticPropertiesDirty = true;
+        _lastUploadedViewSteps = int.MinValue;
+        EnsureStaticPropertiesUploaded();
+        UpdatePerFrameProperties();
     }
 
     void OnSettingsChanged(SettingsChangedEvent evt)
@@ -239,14 +243,20 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
             _settings = SettingsProvider.GetSettings<PrecipitationDto>();
         else if (evt.DtoType == typeof(CloudDto))
             _cloudSettings = SettingsProvider.GetSettings<CloudDto>();
+        else
+            return;
+        _staticPropertiesDirty = true;
+        _lastUploadedViewSteps = int.MinValue;
     }
 
-    void UploadGlobals()
+    void EnsureStaticPropertiesUploaded()
     {
+        if (!_staticPropertiesDirty) return;
+        _staticPropertiesDirty = false;
+
         Shader.SetGlobalInt(_precipitationEnabledId, IsDistantPrecipitationEnabled ? 1 : 0);
         Shader.SetGlobalInt(_weatherParticlesEnabledId, IsLocalParticleSystemEnabled ? 1 : 0);
-        if (!IsRenderingEnabled)
-            return;
+        if (!IsRenderingEnabled) return;
 
         float cloudBaseAltitude = _cloudSettings != null ? _cloudSettings.BaseAltitude : 330f;
         float bottomRadius = _seaLevelRadius + _settings.BottomAltitude;
@@ -271,26 +281,12 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
             _settings.FallSpeed));
         Shader.SetGlobalColor(_precipitationColorId, _settings.RainColor);
         Shader.SetGlobalColor(_precipitationStormColorId, _settings.StormRainColor);
-
-        int viewSteps = _settings.ViewSteps;
-        Camera mainCam = Camera.main;
-        if (mainCam != null && _seaLevelRadius > 0f)
-        {
-            float altitude = Vector3.Distance(mainCam.transform.position, _planetCenter) - _seaLevelRadius;
-            float t = Mathf.InverseLerp(_settings.StepScaleNearAltitude,
-                Mathf.Max(_settings.StepScaleFarAltitude, _settings.StepScaleNearAltitude + 1f), altitude);
-            viewSteps = Mathf.RoundToInt(Mathf.Lerp(_settings.ViewSteps, _settings.MinViewSteps, t));
-        }
-        viewSteps = Mathf.Max(_settings.MinViewSteps,
-            Mathf.RoundToInt(viewSteps * QualityController.CloudStepMultiplier));
-        Shader.SetGlobalInt(_precipitationViewStepsId, viewSteps);
         Shader.SetGlobalInt(_precipitationDebugModeId, (int)_settings.DebugMode);
         Shader.SetGlobalVector(_precipitationDebugDotParamsId, new Vector4(
             _settings.DebugDotMinRadius,
             Mathf.Max(_settings.DebugDotMaxRadius, _settings.DebugDotMinRadius + 0.01f),
             _settings.DebugDotOpacity,
             0f));
-
         Shader.SetGlobalVector(_weatherParticleCommonId, new Vector4(
             _settings.LocalParticleRadius,
             _settings.LocalMaxCameraAltitude,
@@ -319,6 +315,28 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         Shader.SetGlobalColor(_weatherParticleDustColorId, _settings.DustColor);
         Shader.SetGlobalColor(_weatherParticleSnowColorId, _settings.SnowColor);
         Shader.SetGlobalInt(_weatherParticleProofId, (int)_settings.ParticleProof);
+    }
+
+    void UpdatePerFrameProperties()
+    {
+        if (!IsRenderingEnabled) return;
+
+        int viewSteps = _settings.ViewSteps;
+        Camera mainCam = Camera.main;
+        if (mainCam != null && _seaLevelRadius > 0f)
+        {
+            float altitude = Vector3.Distance(mainCam.transform.position, _planetCenter) - _seaLevelRadius;
+            float t = Mathf.InverseLerp(_settings.StepScaleNearAltitude,
+                Mathf.Max(_settings.StepScaleFarAltitude, _settings.StepScaleNearAltitude + 1f), altitude);
+            viewSteps = Mathf.RoundToInt(Mathf.Lerp(_settings.ViewSteps, _settings.MinViewSteps, t));
+        }
+        viewSteps = Mathf.Max(_settings.MinViewSteps,
+            Mathf.RoundToInt(viewSteps * QualityController.CloudStepMultiplier));
+        if (viewSteps != _lastUploadedViewSteps)
+        {
+            Shader.SetGlobalInt(_precipitationViewStepsId, viewSteps);
+            _lastUploadedViewSteps = viewSteps;
+        }
     }
 
     // --- Console commands -------------------------------------------------

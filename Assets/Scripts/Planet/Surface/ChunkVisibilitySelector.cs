@@ -62,6 +62,11 @@ public sealed class ChunkVisibilitySelector : IChunkVisibilitySelector
     float _lodFocalLengthPixels = 935f;
     float _nextDiagnosticsLogTime;
 
+    // Cached per-tick to avoid repeated Transform property reads across hundreds of EstimateWorldBounds calls.
+    Vector3 _cachedPlanetPosition;
+    Matrix4x4 _cachedLocalToWorld;
+    float _cachedPlanetScale;
+
     static readonly string ProfTick = "ChunkedSurfaceProvider.Tick";
     static readonly string ProfVisibility = "ChunkedSurfaceProvider.UpdateVisibility";
 
@@ -127,6 +132,7 @@ public sealed class ChunkVisibilitySelector : IChunkVisibilitySelector
         if (camera == null || !camera.isActiveAndEnabled || _quadtrees == null)
             return;
 
+        RefreshTransformCache();
         CalculateExpandedFrustumPlanes(camera, frustumPaddingDegrees, _grassResidencyFrustumPlanes);
         Vector3 observerPosition = camera.transform.position;
         for (int face = 0; face < _quadtrees.Length; face++)
@@ -159,6 +165,7 @@ public sealed class ChunkVisibilitySelector : IChunkVisibilitySelector
     {
         _lodCamera = camera != null && camera.isActiveAndEnabled ? camera : null;
         _hasLodCamera = _lodCamera != null;
+        RefreshTransformCache();
         if (!_hasLodCamera) return;
 
         GeometryUtility.CalculateFrustumPlanes(_lodCamera, _lodFrustumPlanes);
@@ -166,6 +173,14 @@ public sealed class ChunkVisibilitySelector : IChunkVisibilitySelector
         float pixelHeight = _lodCamera.pixelHeight > 0 ? _lodCamera.pixelHeight : Mathf.Max(Screen.height, 1);
         float halfFovRad = Mathf.Max(_lodCamera.fieldOfView, 1f) * Mathf.Deg2Rad * 0.5f;
         _lodFocalLengthPixels = pixelHeight / (2f * Mathf.Tan(halfFovRad));
+    }
+
+    void RefreshTransformCache()
+    {
+        _cachedPlanetPosition = _planetTransform.position;
+        _cachedLocalToWorld = _planetTransform.localToWorldMatrix;
+        Vector3 lossyScale = _planetTransform.lossyScale;
+        _cachedPlanetScale = Mathf.Max(Mathf.Max(Mathf.Abs(lossyScale.x), Mathf.Abs(lossyScale.y)), Mathf.Abs(lossyScale.z));
     }
 
     bool UpdateVisibleLeavesForFace(int faceIdx, Vector3 observerPos)
@@ -219,10 +234,12 @@ public sealed class ChunkVisibilitySelector : IChunkVisibilitySelector
     void GatherVisibleLeaves(PlanetChunk chunk, Vector3 observerPos, List<PlanetChunk> output)
     {
         if (chunk == null || chunk.CpuVertices == null) return;
-        if (!IsChunkVisibleCandidate(chunk, observerPos)) return;
+
+        Bounds worldBounds = EstimateWorldBounds(chunk);
+        if (!IsChunkVisibleCandidate(chunk, observerPos, worldBounds)) return;
 
         bool hasChildren = chunk.Children != null && chunk.Children.Length > 0;
-        if (hasChildren && ShouldSubdivide(chunk, observerPos))
+        if (hasChildren && ShouldSubdivide(chunk, observerPos, worldBounds))
         {
             for (int i = 0; i < chunk.Children.Length; i++)
                 GatherVisibleLeaves(chunk.Children[i], observerPos, output);
@@ -250,7 +267,7 @@ public sealed class ChunkVisibilitySelector : IChunkVisibilitySelector
         }
 
         bool hasChildren = chunk.Children != null && chunk.Children.Length > 0;
-        if (hasChildren && ShouldSubdivide(chunk, observerPos))
+        if (hasChildren && ShouldSubdivide(chunk, observerPos, worldBounds))
         {
             for (int i = 0; i < chunk.Children.Length; i++)
                 GatherGrassResidencyLeaves(
@@ -299,12 +316,12 @@ public sealed class ChunkVisibilitySelector : IChunkVisibilitySelector
             outputPlanes);
     }
 
-    bool ShouldSubdivide(PlanetChunk chunk, Vector3 observerPos)
+    bool ShouldSubdivide(PlanetChunk chunk, Vector3 observerPos, Bounds worldBounds)
     {
         if (chunk.DetailLevel >= _maxChunkDepth) return false;
         if (!_hasLodCamera) return false;
 
-        float projectedPixels = ProjectedChunkDiameterPixels(chunk, observerPos);
+        float projectedPixels = ProjectedChunkDiameterPixels(chunk, observerPos, worldBounds);
         float threshold = WasRefinedInPreviousVisibility(chunk)
             ? TargetChunkScreenPixels * LodMergeHysteresis
             : TargetChunkScreenPixels * LodSplitHysteresis;
@@ -335,44 +352,38 @@ public sealed class ChunkVisibilitySelector : IChunkVisibilitySelector
     float DistanceToChunkCenterSquared(PlanetChunk chunk, Vector3 observerPos)
     {
         Vector3 sphereCenter = CoordinateConverter.CubeFaceToUnitSphere(chunk.FaceIndex, chunk.UvCenter);
-        Vector3 worldCenter = _planetTransform.position
-            + _planetTransform.TransformDirection(sphereCenter) * _shapeGenerator.Settings.PlanetRadius;
+        Vector3 worldCenter = _cachedPlanetPosition
+            + _cachedLocalToWorld.MultiplyVector(sphereCenter) * _shapeGenerator.Settings.PlanetRadius;
         return (observerPos - worldCenter).sqrMagnitude;
     }
 
-    float ProjectedChunkDiameterPixels(PlanetChunk chunk, Vector3 observerPos)
+    float ProjectedChunkDiameterPixels(PlanetChunk chunk, Vector3 observerPos, Bounds worldBounds)
     {
-        Bounds worldBounds = EstimateWorldBounds(chunk);
         float diameter = worldBounds.extents.magnitude * 2f;
         float distance = Mathf.Sqrt(Mathf.Max(DistanceToChunkCenterSquared(chunk, observerPos), 0.0001f));
         float safeDistance = Mathf.Max(Mathf.Max(distance, diameter * 0.25f), 1f);
         return diameter * _lodFocalLengthPixels / safeDistance;
     }
 
-    bool IsChunkVisibleCandidate(PlanetChunk chunk, Vector3 observerPos)
+    bool IsChunkVisibleCandidate(PlanetChunk chunk, Vector3 observerPos, Bounds worldBounds)
     {
         if (!_hasLodCamera) return true;
-
-        Bounds worldBounds = EstimateWorldBounds(chunk);
         if (!GeometryUtility.TestPlanesAABB(_lodFrustumPlanes, worldBounds))
             return false;
-
         return IsChunkAboveHorizon(chunk, observerPos, worldBounds);
     }
 
     Bounds EstimateWorldBounds(PlanetChunk chunk)
     {
         Bounds local = chunk.CpuLocalBounds;
-        Vector3 center = _planetTransform.TransformPoint(local.center);
-        Vector3 lossyScale = _planetTransform.lossyScale;
-        float scale = Mathf.Max(Mathf.Max(Mathf.Abs(lossyScale.x), Mathf.Abs(lossyScale.y)), Mathf.Abs(lossyScale.z));
-        float radius = Mathf.Max(local.extents.magnitude * scale * FrustumBoundsPadding, 1f);
+        Vector3 center = _cachedLocalToWorld.MultiplyPoint3x4(local.center);
+        float radius = Mathf.Max(local.extents.magnitude * _cachedPlanetScale * FrustumBoundsPadding, 1f);
         return new Bounds(center, Vector3.one * (radius * 2f));
     }
 
     bool IsChunkAboveHorizon(PlanetChunk chunk, Vector3 observerPos, Bounds worldBounds)
     {
-        Vector3 planetCenter = _planetTransform.position;
+        Vector3 planetCenter = _cachedPlanetPosition;
         Vector3 observer = observerPos - planetCenter;
         float observerDistance = observer.magnitude;
         float planetRadius = _shapeGenerator.Settings.PlanetRadius * Mathf.Max(HorizonRadiusScale, 0.01f);

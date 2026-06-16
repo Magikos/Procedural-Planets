@@ -24,6 +24,7 @@ using UnityEngine;
 /// </list>
 /// </para>
 /// </summary>
+[CommandPrefix("rain-particles")]
 [DefaultExecutionOrder(-50)]
 public sealed class RainParticleController : MonoBehaviour, IRainParticleRenderer, IWorldServiceRegistrar
 {
@@ -44,6 +45,10 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
 
     [Tooltip("Fraction of wind speed added to each particle's horizontal velocity. 0 = drops fall straight down. 0.2 = subtle wind drift.")]
     [Range(0f, 1f)] public float WindCoupling = 0.2f;
+
+    [Header("LOD Fade")]
+    [Tooltip("Altitude band (meters) below LocalMaxCameraAltitude over which rain fades to zero. Keeps the particle cutoff invisible.")]
+    [Range(50f, 1000f)] public float AltitudeFadeBand = 200f;
 
     [Header("Visuals")]
     [Tooltip("Width of each rendered streak in meters. Human-scale rain is ~1cm; bigger values read as 'fire hoses' next to a 1.8m capsule.")]
@@ -78,6 +83,9 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
     float _seaLevelRadius;
     float _cloudBottomRadius;
     float _cloudTopRadius;
+    IWeatherProvider _weatherProvider;
+    IPrecipitationDebugControl _precipControl;
+    float _altitudeFadeAlpha = 1f;
 
     // --- Compute shader property IDs -------------------------------------------------
     static readonly int _rainParticlesId = Shader.PropertyToID("_RainParticles");
@@ -148,7 +156,7 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
             _updateCompute = Resources.Load<ComputeShader>("RainParticleUpdate");
             if (_updateCompute == null)
             {
-                Debug.LogError("RainParticleController: failed to load RainParticleUpdate.compute from Resources.");
+                LoggerProvider.Get().Log(LogLevel.Error, "RainParticleController", "Failed to load RainParticleUpdate.compute from Resources.");
                 return;
             }
             _updateKernel = _updateCompute.FindKernel("RainUpdate");
@@ -159,7 +167,7 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
             var shader = Shader.Find("Hidden/RainParticles");
             if (shader == null)
             {
-                Debug.LogError("RainParticleController: shader 'Hidden/RainParticles' not found.");
+                LoggerProvider.Get().Log(LogLevel.Error, "RainParticleController", "Shader 'Hidden/RainParticles' not found.");
                 return;
             }
             _runtimeMaterial = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
@@ -195,7 +203,7 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
         ReleaseBuffer();
         if (_runtimeMaterial != null)
         {
-            DestroyImmediate(_runtimeMaterial);
+            Destroy(_runtimeMaterial);
             _runtimeMaterial = null;
         }
     }
@@ -212,8 +220,26 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
         if (_allocatedCount != Mathf.Max(64, ParticleCountSetting))
             EnsureBuffer();
 
+        UpdateAltitudeFade();
         UploadMaterialParams();
         DispatchUpdate();
+    }
+
+    void UpdateAltitudeFade()
+    {
+        if (_precipControl == null)
+            ServiceLocator.TryGet(out _precipControl);
+
+        Camera cam = Camera.main;
+        if (_precipControl == null || cam == null || _seaLevelRadius <= 0f)
+        {
+            _altitudeFadeAlpha = 1f;
+            return;
+        }
+
+        float altitude = Vector3.Distance(cam.transform.position, _planetCenter) - _seaLevelRadius;
+        float maxAlt = _precipControl.LocalMaxCameraAltitude;
+        _altitudeFadeAlpha = 1f - Mathf.Clamp01(Mathf.InverseLerp(maxAlt - AltitudeFadeBand, maxAlt, altitude));
     }
 
     void UploadMaterialParams()
@@ -223,7 +249,9 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
         _runtimeMaterial.SetBuffer(_rainParticlesId, _particleBuffer);
         _runtimeMaterial.SetFloat(_rainStreakWidthId, StreakWidth);
         _runtimeMaterial.SetFloat(_rainStreakLengthId, StreakLength);
-        _runtimeMaterial.SetColor(_rainColorId, RainColor);
+        Color fadeColor = RainColor;
+        fadeColor.a *= _altitudeFadeAlpha;
+        _runtimeMaterial.SetColor(_rainColorId, fadeColor);
         _runtimeMaterial.SetFloat(_rainVisibilityThresholdId, VisibilityThreshold);
         _runtimeMaterial.SetFloat(_rainDensityScaleId, DensityScale);
         _runtimeMaterial.SetVector(_rainPlanetCenterId, _planetCenter);
@@ -236,12 +264,10 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
         if (cam == null)
             return;
 
-        Vector3 windDirection = Shader.GetGlobalVector(Shader.PropertyToID(ShaderGlobalIds.WindDirection));
-        if (windDirection.sqrMagnitude < 1e-6f)
-            windDirection = Vector3.right;
-        else
-            windDirection.Normalize();
-        float windSpeed = Shader.GetGlobalFloat(Shader.PropertyToID(ShaderGlobalIds.WindSpeedMps));
+        if (_weatherProvider == null)
+            ServiceLocator.TryGet(out _weatherProvider);
+        Vector3 windDirection = _weatherProvider != null ? _weatherProvider.WindDirection : Vector3.right;
+        float windSpeed = _weatherProvider != null ? _weatherProvider.WindSpeedMetersPerSecond : 0f;
 
         _updateCompute.SetBuffer(_updateKernel, _rainParticlesId, _particleBuffer);
         _updateCompute.SetVector(_planetCenterId, _planetCenter);
@@ -265,57 +291,45 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
 
     // --- Console commands -------------------------------------------------------------
 
-    [CommandPrefix("rain-particles")]
-    static class RainParticleCommands
+    [ConsoleCommand("count", "Get or set the rain particle count.", MonoTargetType.Single)]
+    string CountCmd(int? value = null)
     {
-        static RainParticleController Get() => Object.FindAnyObjectByType<RainParticleController>();
+        if (value.HasValue) ParticleCountSetting = Mathf.Clamp(value.Value, 0, 50000);
+        return $"rain particles: {ParticleCountSetting}";
+    }
 
-        [ConsoleCommand("count", "Get or set the rain particle count.", MonoTargetType.Single)]
-        public static string Count(int? value = null)
-        {
-            var c = Get(); if (c == null) return "no RainParticleController";
-            if (value.HasValue) c.ParticleCountSetting = Mathf.Clamp(value.Value, 0, 50000);
-            return $"rain particles: {c.ParticleCountSetting}";
-        }
+    [ConsoleCommand("near-radius", "Camera-near radius in meters. Particles beyond this respawn near camera.", MonoTargetType.Single)]
+    string NearRadiusCmd(float? value = null)
+    {
+        if (value.HasValue) CameraNearRadius = Mathf.Clamp(value.Value, 50f, 3000f);
+        return $"rain near-radius: {CameraNearRadius:F0} m";
+    }
 
-        [ConsoleCommand("near-radius", "Camera-near radius in meters. Particles beyond this respawn near camera.", MonoTargetType.Single)]
-        public static string NearRadius(float? value = null)
-        {
-            var c = Get(); if (c == null) return "no RainParticleController";
-            if (value.HasValue) c.CameraNearRadius = Mathf.Clamp(value.Value, 50f, 3000f);
-            return $"rain near-radius: {c.CameraNearRadius:F0} m";
-        }
+    [ConsoleCommand("fall-speed", "Constant fall speed in m/s. Each drop gets a 0.8x..1.2x personal multiplier on top of this.", MonoTargetType.Single)]
+    string FallSpeedCmd(float? value = null)
+    {
+        if (value.HasValue) FallSpeedMps = Mathf.Clamp(value.Value, 5f, 5000f);
+        return $"rain fall speed: {FallSpeedMps:F1} m/s";
+    }
 
-        [ConsoleCommand("fall-speed", "Constant fall speed in m/s. Each drop gets a 0.8x..1.2x personal multiplier on top of this.", MonoTargetType.Single)]
-        public static string FallSpeed(float? value = null)
-        {
-            var c = Get(); if (c == null) return "no RainParticleController";
-            if (value.HasValue) c.FallSpeedMps = Mathf.Clamp(value.Value, 5f, 5000f);
-            return $"rain fall speed: {c.FallSpeedMps:F1} m/s";
-        }
+    [ConsoleCommand("streak-length", "Streak length in meters.", MonoTargetType.Single)]
+    string StreakLenCmd(float? value = null)
+    {
+        if (value.HasValue) StreakLength = Mathf.Clamp(value.Value, 0.05f, 5f);
+        return $"rain streak length: {StreakLength:F3} m";
+    }
 
-        [ConsoleCommand("streak-length", "Streak length in meters.", MonoTargetType.Single)]
-        public static string StreakLen(float? value = null)
-        {
-            var c = Get(); if (c == null) return "no RainParticleController";
-            if (value.HasValue) c.StreakLength = Mathf.Clamp(value.Value, 0.05f, 5f);
-            return $"rain streak length: {c.StreakLength:F3} m";
-        }
+    [ConsoleCommand("streak-width", "Streak width in meters.", MonoTargetType.Single)]
+    string StreakWidCmd(float? value = null)
+    {
+        if (value.HasValue) StreakWidth = Mathf.Clamp(value.Value, 0.002f, 0.5f);
+        return $"rain streak width: {StreakWidth:F4} m";
+    }
 
-        [ConsoleCommand("streak-width", "Streak width in meters.", MonoTargetType.Single)]
-        public static string StreakWid(float? value = null)
-        {
-            var c = Get(); if (c == null) return "no RainParticleController";
-            if (value.HasValue) c.StreakWidth = Mathf.Clamp(value.Value, 0.002f, 0.5f);
-            return $"rain streak width: {c.StreakWidth:F4} m";
-        }
-
-        [ConsoleCommand("density-scale", "Density gate multiplier on rain rate. Higher = denser rain at the same dynamics.b. Tune to taste between sprinkle and downpour.", MonoTargetType.Single)]
-        public static string DensityScale(float? value = null)
-        {
-            var c = Get(); if (c == null) return "no RainParticleController";
-            if (value.HasValue) c.DensityScale = Mathf.Clamp(value.Value, 0.5f, 6f);
-            return $"rain density scale: {c.DensityScale:F2}";
-        }
+    [ConsoleCommand("density-scale", "Density gate multiplier on rain rate. Higher = denser rain at the same dynamics.b. Tune to taste between sprinkle and downpour.", MonoTargetType.Single)]
+    string DensityScaleCmd(float? value = null)
+    {
+        if (value.HasValue) DensityScale = Mathf.Clamp(value.Value, 0.5f, 6f);
+        return $"rain density scale: {DensityScale:F2}";
     }
 }

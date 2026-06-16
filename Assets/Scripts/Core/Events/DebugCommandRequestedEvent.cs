@@ -15,6 +15,7 @@ public enum DebugCommandType
     DropScaleMarkers,
     ClearScaleMarkers,
     TeleportToScaleMarkers,
+    DumpAtmosphereDiagnostics,
 }
 
 public readonly struct DebugCommandRequestedEvent : IGameEvent

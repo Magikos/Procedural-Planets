@@ -34,15 +34,9 @@ public class GameBootstrap : MonoBehaviour, IEarlyInitialize
         if (_ownsGrassQualitySettings && _grassQualitySettings != null)
             ServiceLocator.Unregister<IGrassQualitySettings>(_grassQualitySettings);
         if (_debugCommandProvider != null)
-        {
-            (_debugCommandProvider as System.IDisposable)?.Dispose();
             ServiceLocator.Unregister<IDebugCommandProvider>(_debugCommandProvider);
-        }
         if (_inputMapService != null)
-        {
-            (_inputMapService as System.IDisposable)?.Dispose();
             ServiceLocator.Unregister<IInputMapService>(_inputMapService);
-        }
 
         EventBusRegistry.ClearAll();
         EventBusProcessor.ClearProcessors();
@@ -68,10 +62,13 @@ public class GameBootstrap : MonoBehaviour, IEarlyInitialize
             _ownsGrassQualitySettings = true;
         }
 
-        EnsureComponent<ShaderGlobalsController>();
-        EnsureComponent<QualityController>();
-        EnsureComponent<DebugInputRelay>();
-        EnsureComponent<DebugCaptureController>();
+        // These MonoBehaviours must exist before any scene content runs. They cannot
+        // be placed in the scene directly because GameBootstrap uses DontDestroyOnLoad
+        // and must own the full debug/input/render lifecycle.
+        EnsureComponent<ShaderGlobalsController>();   // writes _GameTime and transient debug globals each LateUpdate
+        EnsureComponent<QualityController>();         // reads IGrassQualitySettings and pushes quality shader globals
+        EnsureComponent<DebugInputRelay>();           // routes F-key presses to EventBus<DebugCommandRequestedEvent>
+        EnsureComponent<DebugCaptureController>();    // orchestrates F10 captures and the debug overlay
 
         DebugConsoleBootstrap.Initialize();
 

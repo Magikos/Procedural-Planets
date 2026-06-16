@@ -33,6 +33,12 @@ public static class ConsoleRegistry
 
         foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
         {
+            // Skip Unity engine, system, and third-party assemblies; only scan project code.
+            string asmName = asm.GetName().Name;
+            if (!asmName.StartsWith("Assembly-CSharp", StringComparison.Ordinal)
+                && !asmName.StartsWith("Magikorp", StringComparison.Ordinal))
+                continue;
+
             Type[] types;
             try
             {

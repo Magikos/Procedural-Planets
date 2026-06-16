@@ -8,6 +8,11 @@ sealed class GrassChunkRuntime : System.IDisposable
 {
     public const int StatsCount = 16;
     public const int BladeStride = sizeof(float) * 12;
+    public const int VerticesPerVisualBlade = 18;
+    public const int ClusterCardsPerInstance = 3;
+    public const int VisualBladesPerCard = 5;
+    public const int VisualBladesPerInstance = ClusterCardsPerInstance * VisualBladesPerCard;
+    public const int BladeVertexCount = VerticesPerVisualBlade * ClusterCardsPerInstance;
 
     static readonly uint[] ArgsScratch = new uint[4];
     static readonly uint[] StatsScratch = new uint[StatsCount];

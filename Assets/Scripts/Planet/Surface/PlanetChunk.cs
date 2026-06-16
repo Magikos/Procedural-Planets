@@ -293,7 +293,6 @@ public static class PlanetChunkTextures
         if (allocateBiomeTextures)
             LiveBiomeTextureSets++;
         LiveSurfaceStateTextures++;
-        ReportCounters();
     }
 
     public static bool ReleaseBiomeTextures(PlanetChunk chunk)
@@ -311,8 +310,7 @@ public static class PlanetChunkTextures
         if (hadBiomeTextures && LiveBiomeTextureSets > 0)
         {
             LiveBiomeTextureSets--;
-            ReportCounters();
-        }
+            }
         return hadBiomeTextures;
     }
 
@@ -330,20 +328,8 @@ public static class PlanetChunkTextures
             LiveSurfaceStateTextures--;
         if (hadTextures && LiveTextureSets > 0)
             LiveTextureSets--;
-        ReportCounters();
     }
 
-    static void ReportCounters()
-    {
-        long bytesPerTexture = (long)TexelCount * BytesPerRgba32Texel;
-        MemoryDebugCounters.ReportLiveChunkTextureSets(LiveTextureSets);
-        MemoryDebugCounters.ReportChunkBiomeTextures(
-            LiveBiomeTextureSets,
-            LiveBiomeTextureSets * BiomeTexturesPerSet * bytesPerTexture);
-        MemoryDebugCounters.ReportChunkSurfaceStateTextures(
-            LiveSurfaceStateTextures,
-            LiveSurfaceStateTextures * bytesPerTexture);
-    }
 
     static void DestroyTexture(ref Texture2D tex)
     {

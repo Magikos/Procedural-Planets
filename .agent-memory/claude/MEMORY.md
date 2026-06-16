@@ -6,8 +6,8 @@
 - [Settings DTO pattern](feedback_settings_dto_pattern.md) — Settings SOs are editor-only; runtime consumers read immutable snapshot DTOs (NEVER the SO directly). Prevents god-object cross-coupling.
 - [Subsystem decomposition wiring](feedback_subsystem_decomposition_wiring.md) — split god-class internals into interfaces + orchestrator-injected refs; ServiceLocator/EventBus are for cross-subsystem boundaries only, not internal pipelines.
 - [local-only reference material](reference_local_only.md) — external projects/papers that source the key features
-- [Current work focus](project_current_focus.md) — Phase A chunk skeleton shipped; Phase B biome textures design doc awaiting Bryan's review
-- [Code refactor arc](project_code_refactor_arc.md) — 2026-06-10: codebase-wide audit-first refactor on branch `code-refactor`; biome arc paused
+- [Current work focus](project_current_focus.md) — 2026-06-15: code-refactor arc COMPLETE; all audit backlog items closed; biome arc remains paused
+- [Code refactor arc](project_code_refactor_arc.md) — 2026-06-10–15: codebase-wide audit-first refactor on branch `code-refactor`; arc complete
 - [Ocean wave approach](project_ocean_wave_approach.md) — displace the existing mesh (Lague), NOT a camera patch
 - [Grass + chunks research](project_grass_chunks_research.md) — Phase 8 SOT; Phase A done, Phase B design doc drafted 2026-05-31
 - [Chunk biome seam](project_chunk_biome_seam.md) — known polish issue: faint chunk-boundary seams in top-K biome blend (kernel can't see across chunk borders)

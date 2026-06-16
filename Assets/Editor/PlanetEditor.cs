@@ -17,7 +17,7 @@ public class PlanetEditor : Editor
         {
             if (GUILayout.Button(_planet.IsGenerating ? "Generating..." : "Generate Planet"))
             {
-                _planet.GeneratePlanetAsync();
+                _ = _planet.GeneratePlanetAsync();
             }
         }
 

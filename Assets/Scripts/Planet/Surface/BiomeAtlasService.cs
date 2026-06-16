@@ -21,7 +21,7 @@ public interface IBiomeAtlasService
     void Dispose();
 }
 
-public sealed class BiomeAtlasService : IBiomeAtlasService
+public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
 {
     readonly int _maxChunkDepth;
 
@@ -39,6 +39,13 @@ public sealed class BiomeAtlasService : IBiomeAtlasService
     public BiomeAtlasService(int maxChunkDepth)
     {
         _maxChunkDepth = maxChunkDepth;
+        MemoryDebugModule.Register(this);
+    }
+
+    public void AppendMemoryReport(System.Text.StringBuilder sb)
+    {
+        sb.AppendLine($"Face biome atlas textures: {_reportedTextureCount} " +
+            $"(raw pixels/copy={MemoryDebugModule.FormatBytes(_reportedRawBytes)})");
     }
 
     public static bool CanBuildFaceAtlases(int maxChunkDepth, out int atlasResolution)
@@ -342,7 +349,11 @@ public sealed class BiomeAtlasService : IBiomeAtlasService
         return true;
     }
 
-    public void Dispose() => DisposeAtlases();
+    public void Dispose()
+    {
+        DisposeAtlases();
+        MemoryDebugModule.Unregister(this);
+    }
 
     // One-shot diagnostic: scan all chunks, pick the leaf with the most distinct biomes (more
     // informative than the polar/corner default), and report its texel histogram. Also reports
@@ -429,9 +440,6 @@ public sealed class BiomeAtlasService : IBiomeAtlasService
         CountTextureArray(_faceBlendedAtlases, ref textureCount, ref rawBytes);
         CountTextureArray(_faceIdAtlases, ref textureCount, ref rawBytes);
         CountTextureArray(_faceWeightAtlases, ref textureCount, ref rawBytes);
-        MemoryDebugCounters.AdjustFaceBiomeAtlases(
-            textureCount - _reportedTextureCount,
-            rawBytes - _reportedRawBytes);
         _reportedTextureCount = textureCount;
         _reportedRawBytes = rawBytes;
     }
@@ -444,7 +452,6 @@ public sealed class BiomeAtlasService : IBiomeAtlasService
         DestroyTexture(ref _blendedStaging);
         DestroyTexture(ref _idStaging);
         DestroyTexture(ref _weightStaging);
-        MemoryDebugCounters.AdjustFaceBiomeAtlases(-_reportedTextureCount, -_reportedRawBytes);
         _reportedTextureCount = 0;
         _reportedRawBytes = 0L;
     }

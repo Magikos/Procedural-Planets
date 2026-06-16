@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 [DisallowMultipleComponent]
 public class DebugInputRelay : MonoBehaviour
@@ -35,16 +34,16 @@ public class DebugInputRelay : MonoBehaviour
         if (_input.ToggleProfiling.WasPerformedThisFrame())
             EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.ToggleProfiling));
 
-        // Scale reference markers — measurement aid for Phase C grass density tuning.
-        // M = drop at camera look-target. Shift+M = clear. T = teleport to markers.
-        if (_input.DropScaleMarker.WasPerformedThisFrame())
-        {
-            bool shift = Keyboard.current?.shiftKey.isPressed ?? false;
-            EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(
-                shift ? DebugCommandType.ClearScaleMarkers : DebugCommandType.DropScaleMarkers));
-        }
+        // Scale reference markers — M = drop, Shift+M = clear, T = teleport.
+        if (_input.ClearScaleMarkers.WasPerformedThisFrame())
+            EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.ClearScaleMarkers));
+        else if (_input.DropScaleMarker.WasPerformedThisFrame())
+            EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.DropScaleMarkers));
 
         if (_input.TeleportToMarkers.WasPerformedThisFrame())
             EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.TeleportToScaleMarkers));
+
+        if (_input.DumpAtmosphereDiagnostics.WasPerformedThisFrame())
+            EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.DumpAtmosphereDiagnostics));
     }
 }

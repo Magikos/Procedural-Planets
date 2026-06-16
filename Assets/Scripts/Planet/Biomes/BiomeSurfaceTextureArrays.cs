@@ -26,7 +26,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
     // Fallback slice size when no biome supplies any surface texture. Tiny so we don't
     // burn memory on the magenta path; the shader still gets a bindable array.
     const int FallbackSliceSize = 4;
-    const int GrassParamsStride = sizeof(float) * 12;
+    const int GrassParamsStride = sizeof(float) * 20;
 
     Texture2DArray _albedoArray;
     Texture2DArray _normalArray;
@@ -123,7 +123,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         }
         tex.SetPixels32(pixels);
         tex.Apply(updateMipmaps: false, makeNoLongerReadable: true);
-        Debug.Log($"[PhaseB] {sb}");
+        LoggerProvider.Get().Log(LogLevel.Info, "BiomeSurfaceTextureArrays", sb.ToString());
         return tex;
     }
 
@@ -154,11 +154,15 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
     static BiomeGrassParamsGpu PackGrassParams(in GrassBiomePlacementConfig placement, in GrassBiomeTintConfig tint)
     {
         Color t = tint.TintBase;
+        Color d = tint.TintDryShift;
+        Color l = tint.TintLushShift;
         return new BiomeGrassParamsGpu
         {
             Shape = new Vector4(placement.Density, placement.Height, placement.Width, placement.ClumpStrength),
             Placement = new Vector4(placement.MaxSlopeDegrees, placement.SlopeFadeDegrees, placement.MinWaterClearance, placement.BiomeBlendPower),
             Tint = new Vector4(t.r, t.g, t.b, t.a),
+            TintDry = new Vector4(d.r, d.g, d.b, 1f),
+            TintLush = new Vector4(l.r, l.g, l.b, 1f),
         };
     }
 
@@ -203,7 +207,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         {
             // Some formats are unsupported as array members on certain platforms — fall
             // back to RGBA32 and warn.
-            Debug.LogWarning($"[BiomeSurfaceTextureArrays] {name} format {format} unsupported as array ({ex.Message}); falling back to RGBA32.");
+            LoggerProvider.Get().Log(LogLevel.Warning, "BiomeSurfaceTextureArrays", $"{name} format {format} unsupported as array ({ex.Message}); falling back to RGBA32.");
             format = TextureFormat.RGBA32;
             mipCount = 1;
             array = new Texture2DArray(width, height, arrayDepth, format, false, isLinear)
@@ -238,7 +242,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
                     {
                         if (src != null)
                         {
-                            Debug.LogWarning($"[BiomeSurfaceTextureArrays] {name} bank {bank} slot {slot} ({def?.Type}) texture '{src.name}' is {src.width}x{src.height} {src.format}, expected {width}x{height} {format}. Using placeholder.");
+                            LoggerProvider.Get().Log(LogLevel.Warning, "BiomeSurfaceTextureArrays", $"{name} bank {bank} slot {slot} ({def?.Type}) texture '{src.name}' is {src.width}x{src.height} {src.format}, expected {width}x{height} {format}. Using placeholder.");
                         }
                         Graphics.CopyTexture(placeholder, 0, 0, array, arraySlice, 0);
                         placeholderUsed++;
@@ -251,7 +255,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
             Object.DestroyImmediate(placeholder);
         }
 
-        Debug.Log($"[BiomeSurfaceTextureArrays] {name}: {width}x{height} {format}, {matched}/{arrayDepth} slices from source, {placeholderUsed} placeholder, {bankCount} bank(s). Reference texture: {(sample != null ? sample.name : "<none>")}.");
+        LoggerProvider.Get().Log(LogLevel.Info, "BiomeSurfaceTextureArrays", $"{name}: {width}x{height} {format}, {matched}/{arrayDepth} slices from source, {placeholderUsed} placeholder, {bankCount} bank(s). Reference texture: {(sample != null ? sample.name : "<none>")}.");
 
         array.Apply(updateMipmaps: false, makeNoLongerReadable: true);
         return array;
@@ -296,5 +300,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         public Vector4 Shape;
         public Vector4 Placement;
         public Vector4 Tint;
+        public Vector4 TintDry;
+        public Vector4 TintLush;
     }
 }

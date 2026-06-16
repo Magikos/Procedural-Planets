@@ -2,6 +2,7 @@
 #define CLOUD_SHADOWS_INCLUDED
 
 #include "Math.hlsl"
+#include "WeatherCubeFace.hlsl"
 
 TEXTURE2D_ARRAY(_CloudWeatherMap);
 SAMPLER(sampler_CloudWeatherMap);
@@ -24,42 +25,6 @@ float _WindSpeedMps;
 float _WindStrength01;
 float _WaterFocusMode;
 
-float3 CloudShadowCubeFaceLocalUp(int face)
-{
-    if (face == 0) return float3(0.0, 1.0, 0.0);
-    if (face == 1) return float3(0.0, -1.0, 0.0);
-    if (face == 2) return float3(-1.0, 0.0, 0.0);
-    if (face == 3) return float3(1.0, 0.0, 0.0);
-    if (face == 4) return float3(0.0, 0.0, 1.0);
-    return float3(0.0, 0.0, -1.0);
-}
-
-void CloudShadowCubeFaceUv(float3 direction, out int face, out float2 uv)
-{
-    float3 absDirection = abs(direction);
-
-    if (absDirection.y >= absDirection.x && absDirection.y >= absDirection.z)
-    {
-        face = direction.y > 0 ? 0 : 1;
-    }
-    else if (absDirection.x >= absDirection.y && absDirection.x >= absDirection.z)
-    {
-        face = direction.x > 0 ? 3 : 2;
-    }
-    else
-    {
-        face = direction.z > 0 ? 4 : 5;
-    }
-
-    float3 localUp = CloudShadowCubeFaceLocalUp(face);
-    float3 axisA = float3(localUp.y, localUp.z, localUp.x);
-    float3 axisB = cross(localUp, axisA);
-    float major = max(abs(dot(direction, localUp)), 0.00001);
-    float u = dot(direction, axisA) / major;
-    float v = dot(direction, axisB) / major;
-    uv = saturate(float2(u, v) * 0.5 + 0.5);
-}
-
 float4 SampleCloudShadowWeather(float3 direction)
 {
     float3 weatherDirection = mul((float3x3)_CloudWeatherRotation, direction);
@@ -67,7 +32,7 @@ float4 SampleCloudShadowWeather(float3 direction)
 
     int face;
     float2 uv;
-    CloudShadowCubeFaceUv(direction, face, uv);
+    CubeFaceUv(direction, face, uv);
     return SAMPLE_TEXTURE2D_ARRAY_LOD(_CloudWeatherMap, sampler_CloudWeatherMap, uv, face, 0);
 }
 

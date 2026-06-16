@@ -5,6 +5,8 @@ struct BiomeGrassParams
     float4 Shape;     // x density, y height, z width, w clump strength
     float4 Placement; // x maxSlopeDeg, y slopeFadeDeg, z waterClearance, w blendPower
     float4 Tint;
+    float4 TintDry;   // multiplier on Tint at moisture == 0; default (1,1,1,1) = no shift
+    float4 TintLush;  // multiplier on Tint at moisture == 1; default (1,1,1,1) = no shift
 };
 
 struct GrassBladeInstance
@@ -65,6 +67,17 @@ float _ChunkInnerFadeStart;
 float _ChunkInnerFadeEnd;
 int _FrustumCullEnabled;
 float4 _CameraFrustumPlanes[6];
+Texture2DArray _ClimateMap;
+int _ClimateMapResolution;
+
+float SampleClimateMoisture(int face, float2 faceUv)
+{
+    if (_ClimateMapResolution <= 0)
+        return 0.5;
+    int res = max(_ClimateMapResolution - 1, 0);
+    int2 ip = clamp(int2(round(saturate(faceUv) * (float)res)), int2(0, 0), int2(res, res));
+    return saturate(_ClimateMap.Load(int4(ip, face, 0)).g);
+}
 
 void AddStat(uint index, uint value)
 {
@@ -140,6 +153,8 @@ BiomeGrassParams GetGrassParams(uint id)
     p.Shape = 0.0;
     p.Placement = 0.0;
     p.Tint = 0.0;
+    p.TintDry = 1.0;
+    p.TintLush = 1.0;
     if (id < (uint)_BiomeGrassParamCount)
         p = _BiomeGrassParams[id];
     return p;
@@ -151,6 +166,8 @@ BiomeGrassParams BlendGrassParams(float4 idsPacked, float4 weightsPacked, out fl
     blended.Shape = 0.0;
     blended.Placement = 0.0;
     blended.Tint = 0.0;
+    blended.TintDry = 0.0;
+    blended.TintLush = 0.0;
 
     density = 0.0;
     float totalParamWeight = 0.0;
@@ -180,12 +197,16 @@ BiomeGrassParams BlendGrassParams(float4 idsPacked, float4 weightsPacked, out fl
         blended.Shape.w += p.Shape.w * paramWeight;
         blended.Placement += p.Placement * paramWeight;
         blended.Tint.rgb += p.Tint.rgb * paramWeight;
+        blended.TintDry.rgb += p.TintDry.rgb * paramWeight;
+        blended.TintLush.rgb += p.TintLush.rgb * paramWeight;
         totalParamWeight += paramWeight;
     }
 
     density = saturate(density);
     blended.Shape.x = density;
     blended.Tint.a = 1.0;
+    blended.TintDry.a = 1.0;
+    blended.TintLush.a = 1.0;
 
     if (totalParamWeight > 0.0001)
     {
@@ -195,6 +216,8 @@ BiomeGrassParams BlendGrassParams(float4 idsPacked, float4 weightsPacked, out fl
         blended.Shape.w *= inv;
         blended.Placement *= inv;
         blended.Tint.rgb *= inv;
+        blended.TintDry.rgb *= inv;
+        blended.TintLush.rgb *= inv;
     }
 
     return blended;
@@ -206,6 +229,8 @@ BiomeGrassParams LerpGrassParams(BiomeGrassParams a, BiomeGrassParams b, float t
     result.Shape = lerp(a.Shape, b.Shape, t);
     result.Placement = lerp(a.Placement, b.Placement, t);
     result.Tint = lerp(a.Tint, b.Tint, t);
+    result.TintDry = lerp(a.TintDry, b.TintDry, t);
+    result.TintLush = lerp(a.TintLush, b.TintLush, t);
     return result;
 }
 
@@ -421,10 +446,12 @@ void PlaceAndCull(uint3 id : SV_DispatchThreadID)
         float3 rootWs = mul(_PlanetLocalToWorld, float4(localRoot, 1.0)).xyz;
         float3 upWs = normalize(mul((float3x3)_PlanetLocalToWorld, normalLocal));
 
+        float moisture = SampleClimateMoisture(_FaceIndex, laneCenterFaceUv);
+        float3 shift = lerp(biome.TintDry.rgb, biome.TintLush.rgb, moisture);
         GrassBladeInstance blade;
         blade.RootHeight = float4(rootWs, height);
         blade.UpWidth = float4(upWs, width);
-        blade.Color = float4(saturate(biome.Tint.rgb), 1.0);
+        blade.Color = float4(saturate(biome.Tint.rgb * shift), 1.0);
         _GrassBladeInstances[slot] = blade;
         AddStat(STAT_EMITTED_BLADES, 1u);
     }

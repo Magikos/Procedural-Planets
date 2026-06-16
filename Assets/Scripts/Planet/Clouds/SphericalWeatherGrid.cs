@@ -278,49 +278,6 @@ public sealed class SphericalWeatherGrid : IDisposable
         }
     }
 
-    public bool TryFindStrongestStorm(
-        out Vector3 weatherDirection,
-        out float condensation,
-        out float storm,
-        out float moistureSource)
-    {
-        weatherDirection = Vector3.up;
-        condensation = 0f;
-        storm = 0f;
-        moistureSource = 0f;
-
-        if (_condensation.Length == 0 || _storm.Length == 0)
-            return false;
-
-        int bestIndex = -1;
-        float bestScore = -1f;
-        int faceCellCount = Resolution * Resolution;
-        for (int i = 0; i < _storm.Length; i++)
-        {
-            float score = _storm[i] * 0.82f + _condensation[i] * 0.18f;
-            if (score <= bestScore)
-                continue;
-
-            bestScore = score;
-            bestIndex = i;
-        }
-
-        if (bestIndex < 0)
-            return false;
-
-        int face = bestIndex / faceCellCount;
-        int faceIndex = bestIndex - face * faceCellCount;
-        int x = faceIndex % Resolution;
-        int y = faceIndex / Resolution;
-        weatherDirection = CoordinateConverter.CubeFaceToUnitSphere(
-            face,
-            new Vector2((x + 0.5f) / Resolution, (y + 0.5f) / Resolution));
-        condensation = _condensation[bestIndex];
-        storm = _storm[bestIndex];
-        moistureSource = _moistureSource[bestIndex];
-        return true;
-    }
-
     public WeatherGridStats CalculateStats(float cloudyThreshold, float stormThreshold, float rainThreshold)
     {
         int count = _condensation.Length;

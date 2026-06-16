@@ -13,10 +13,7 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
     RainParticlesAfterPostPass _rainPass;
     Material _material;
     Material _weatherParticleMaterial;
-    PrecipitationController _cachedController;
-    // Throttle re-scans to 1 Hz when controller is absent (URP render features outlive scenes,
-    // so a permanent null-cache would break scene reloads).
-    float _nextControllerScanTime;
+    IPrecipitationDebugControl _cachedController;
     static readonly int _waterFocusModeId = Shader.PropertyToID(ShaderGlobalIds.WaterFocusMode);
     static readonly int _oceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
     static readonly int _debugSuppressWeatherPassesId = Shader.PropertyToID(ShaderGlobalIds.DebugSuppressWeatherPasses);
@@ -50,13 +47,9 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
         if (!IsPlanetInFrustum(renderingData.cameraData.camera))
             return;
 
-        if (_cachedController == null && Time.unscaledTime >= _nextControllerScanTime)
-        {
-            _cachedController = Object.FindAnyObjectByType<PrecipitationController>();
-            if (_cachedController == null)
-                _nextControllerScanTime = Time.unscaledTime + 1f;
-        }
-        if (_cachedController == null || !_cachedController.isActiveAndEnabled || !_cachedController.IsRenderingEnabled)
+        if (_cachedController == null)
+            ServiceLocator.TryGet(out _cachedController);
+        if (_cachedController == null || !_cachedController.IsRenderingEnabled)
             return;
 
         if (_material == null)
@@ -122,9 +115,6 @@ public class PrecipitationRenderPass : ScriptableRenderPass
     int _dustParticleCount;
     int _snowParticleCount;
     bool _drawLocalParticles;
-    IRainParticleRenderer _rainParticles;
-    int _rainParticlesDrawCount;
-    Material _rainParticlesMaterial;
 
     public PrecipitationRenderPass()
     {
@@ -137,7 +127,7 @@ public class PrecipitationRenderPass : ScriptableRenderPass
     public void Setup(
         Material material,
         Material weatherParticleMaterial,
-        PrecipitationController controller,
+        IPrecipitationDebugControl controller,
         Camera camera)
     {
         _material = material;
@@ -145,18 +135,6 @@ public class PrecipitationRenderPass : ScriptableRenderPass
         _drawLocalParticles = controller != null && controller.ShouldRenderLocalParticles(camera);
         _dustParticleCount = _drawLocalParticles ? Mathf.Max(0, controller.DustParticleCount) : 0;
         _snowParticleCount = _drawLocalParticles ? Mathf.Max(0, controller.SnowParticleCount) : 0;
-
-        _rainParticles = ServiceLocator.Get<IRainParticleRenderer>();
-        if (_rainParticles != null && _rainParticles.IsReadyToDraw && _drawLocalParticles)
-        {
-            _rainParticlesDrawCount = _rainParticles.ParticleCount;
-            _rainParticlesMaterial = _rainParticles.Material;
-        }
-        else
-        {
-            _rainParticlesDrawCount = 0;
-            _rainParticlesMaterial = null;
-        }
     }
 
     private class PassData
@@ -167,9 +145,6 @@ public class PrecipitationRenderPass : ScriptableRenderPass
         internal bool drawLocalParticles;
         internal int dustParticleCount;
         internal int snowParticleCount;
-        internal IRainParticleRenderer rainParticles;
-        internal int rainParticlesDrawCount;
-        internal Material rainParticlesMaterial;
     }
 
     public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
@@ -198,9 +173,6 @@ public class PrecipitationRenderPass : ScriptableRenderPass
             passData.drawLocalParticles = _drawLocalParticles;
             passData.dustParticleCount = _dustParticleCount;
             passData.snowParticleCount = _snowParticleCount;
-            passData.rainParticles = _rainParticles;
-            passData.rainParticlesDrawCount = _rainParticlesDrawCount;
-            passData.rainParticlesMaterial = _rainParticlesMaterial;
 
             builder.UseTexture(source, AccessFlags.Read);
             builder.SetRenderAttachment(destination, 0, AccessFlags.Write);

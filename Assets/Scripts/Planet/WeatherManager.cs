@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
-using UnityEngine.Rendering;
 using UnityEngine.Serialization;
 
 /// <summary>
@@ -83,31 +82,24 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     SphericalWeatherGrid _grid;
     WeatherDiagnostics _diagnostics;
+    WeatherEvolutionScheduler _evolutionScheduler;
+    WeatherQueryCache _queryCache;
     Vector3 _planetCenter;
     float _seaLevelRadius;
-    float _cloudWindAngle;
-    float _evolutionAccumulator;
-    bool _missingWeatherComputeLogged;
-    bool _weatherQueryCachePending;
-    bool _weatherQueryCacheError;
-    float _nextWeatherQueryCacheTime;
-    int _weatherQueryCacheNextFace;
-    int _weatherQueryCacheLastFace = -1;
-    int _weatherQueryCacheFaceMask;
+    bool _windDirty = true;
+    Vector3 _lastUploadedWindDirection;
+    float _lastUploadedWindSpeedMetersPerSecond;
+    float _lastUploadedWindStrength;
+    IClimateSampler _climateSampler;
+
     static readonly int _windDirectionId = Shader.PropertyToID(ShaderGlobalIds.WindDirection);
     static readonly int _windSpeedMetersPerSecondId = Shader.PropertyToID(ShaderGlobalIds.WindSpeedMps);
     static readonly int _windStrengthId = Shader.PropertyToID(ShaderGlobalIds.WindStrength01);
     static readonly int _cloudWeatherRotationId = Shader.PropertyToID(ShaderGlobalIds.CloudWeatherRotation);
-    static readonly int _cloudWindAngleId = Shader.PropertyToID(ShaderGlobalIds.CloudWindAngle);
 
     CancellationTokenSource _generateCts;
     bool _lateInitialized;
     bool _worldTornDown;
-    // Last wind values pushed to shader globals; sentinel values force the first upload.
-    Vector3 _lastUploadedWindDirection = new Vector3(float.NaN, float.NaN, float.NaN);
-    float _lastUploadedWindSpeedMetersPerSecond = float.NaN;
-    float _lastUploadedWindStrength = float.NaN;
-    IClimateSampler _climateSampler;
 
     // Resolved through ServiceLocator (PrecipitationController self-registers in Awake/OnEnable).
     // Returns null if no precipitation system is wired up.
@@ -115,9 +107,9 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         ServiceLocator.Get<IPrecipitationDebugControl>();
 
     internal SphericalWeatherGrid Grid => _grid;
-    internal int QueryCacheFaceCount => GetQueryCacheFaceCount();
-    internal int QueryCacheLastFace => _weatherQueryCacheLastFace;
-    internal bool QueryCacheError => _weatherQueryCacheError;
+    internal int QueryCacheFaceCount => _queryCache.FaceCount;
+    internal int QueryCacheLastFace => _queryCache.LastFace;
+    internal bool QueryCacheError => _queryCache.Error;
 
     public Vector3 WindDirection => WindDir.sqrMagnitude > 0.0001f ? WindDir.normalized : Vector3.right;
     float IWeatherProvider.WindSpeedMetersPerSecond => WindSpeedMetersPerSecond;
@@ -155,8 +147,10 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         CloudDto.EnsureRegistered();
         _settings = SettingsProvider.GetSettings<CloudDto>();
         _diagnostics = new WeatherDiagnostics(this);
+        _evolutionScheduler = new WeatherEvolutionScheduler(Logger);
+        _queryCache = new WeatherQueryCache();
         Shader.SetGlobalMatrix(_cloudWeatherRotationId, Matrix4x4.identity);
-        Shader.SetGlobalFloat(_cloudWindAngleId, 0f);
+        _evolutionScheduler.Reset();
     }
 
     public void RegisterWorldServices(IWorldContext context)
@@ -217,28 +211,31 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     void Update()
     {
-        UpdateWeatherEvolution();
-        UpdateWeatherQueryCache();
+        _evolutionScheduler.Tick(_grid, _settings, WeatherCompute, WindDirection,
+            WindSpeedMetersPerSecond, _seaLevelRadius, _diagnostics);
+        _queryCache.Tick(_grid, EnableWeatherQueryCache, WeatherQueryCacheInterval,
+            ShowWeatherDiagnostics, _diagnostics);
         _diagnostics.Tick();
 
         Vector3 windDir = WindDirection;
         float windSpeed = WindSpeedMetersPerSecond;
         float windStrength = WindStrength01;
-        if (windDir != _lastUploadedWindDirection)
+        if (_windDirty || windDir != _lastUploadedWindDirection)
         {
             Shader.SetGlobalVector(_windDirectionId, windDir);
             _lastUploadedWindDirection = windDir;
         }
-        if (windSpeed != _lastUploadedWindSpeedMetersPerSecond)
+        if (_windDirty || windSpeed != _lastUploadedWindSpeedMetersPerSecond)
         {
             Shader.SetGlobalFloat(_windSpeedMetersPerSecondId, windSpeed);
             _lastUploadedWindSpeedMetersPerSecond = windSpeed;
         }
-        if (windStrength != _lastUploadedWindStrength)
+        if (_windDirty || windStrength != _lastUploadedWindStrength)
         {
             Shader.SetGlobalFloat(_windStrengthId, windStrength);
             _lastUploadedWindStrength = windStrength;
         }
+        _windDirty = false;
     }
 
     public WeatherSample SampleWeather(Vector3 worldPosition)
@@ -310,26 +307,24 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         if (_grid == null || _seaLevelRadius <= 0f)
             return false;
 
-        if (!_grid.TryFindStrongestStorm(out Vector3 weatherDirection,
-            out float cloudCoverage,
-            out float stormIntensity,
-            out float moistureSource))
+        var stats = _grid.CalculateStats(CloudyThreshold, PrecipitationStormThreshold, PrecipitationStormThreshold);
+        if (stats.CellCount == 0)
             return false;
 
-        Vector3 worldDirection = weatherDirection.normalized;
+        Vector3 worldDirection = stats.StrongestStormDirection.normalized;
         worldPosition = _planetCenter + worldDirection * (_seaLevelRadius + 25f);
 
-        float precipitation = CalculatePrecipitation(stormIntensity);
-        WeatherCellState state = stormIntensity >= PrecipitationStormThreshold
+        float precipitation = CalculatePrecipitation(stats.StrongestStorm);
+        WeatherCellState state = stats.StrongestStorm >= PrecipitationStormThreshold
             ? WeatherCellState.Storm
-            : cloudCoverage >= CloudyThreshold ? WeatherCellState.Cloudy : WeatherCellState.Clear;
+            : stats.StrongestStormCondensation >= CloudyThreshold ? WeatherCellState.Cloudy : WeatherCellState.Clear;
 
         sample = new WeatherSample(
-            cloudCoverage,
-            stormIntensity,
+            stats.StrongestStormCondensation,
+            stats.StrongestStorm,
             precipitation,
             GetTemperature(worldPosition),
-            moistureSource,
+            stats.StrongestStormMoistureSource,
             state);
         return true;
     }
@@ -339,7 +334,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         _planetCenter = evt.PlanetCenter;
         _seaLevelRadius = evt.SeaLevelRadius > 0f ? evt.SeaLevelRadius : evt.PlanetRadius;
 
-        // During startup, LateInitialize handles generation.  At runtime (after init), re-generate
+        // During startup, LateInitialize handles generation. At runtime (after init), re-generate
         // whenever the planet changes.
         if (_lateInitialized)
             _ = GenerateWeatherGridAsync();
@@ -368,9 +363,8 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             _progressHandle.Report(0.85f, "Uploading weather...");
             _grid?.Dispose();
             _grid = newGrid;
-            _evolutionAccumulator = 0f;
-            ResetAdvection();
-            ResetQueryCache();
+            _evolutionScheduler.Reset();
+            _queryCache.Reset();
             _diagnostics.Reset();
             Logger.Log(LogLevel.Debug, "Weather", $"Generated {WeatherResolution}x{WeatherResolution}x6 condensation grid.");
         }
@@ -378,152 +372,10 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         catch (System.Exception ex) { Logger.LogException("Weather", ex); }
     }
 
-    // How far (radians) weather drifts along the sphere in one evolution step. The compute and
-    // the cloud-shape noise both advect along the local windTangent by rotating about
-    // cross(direction, windDir) by the accumulated angle, so detail and fronts ride together.
-    float StepAdvectionAngle(float stepSeconds)
-    {
-        float angularSpeed = WindSpeedMetersPerSecond / Mathf.Max(_seaLevelRadius, 1f);
-        return angularSpeed * CloudConstants.FrontAdvectionSpeedMultiplier * stepSeconds;
-    }
-
-    void ResetAdvection()
-    {
-        _cloudWindAngle = 0f;
-        Shader.SetGlobalFloat(_cloudWindAngleId, 0f);
-    }
-
-    void UpdateWeatherEvolution()
-    {
-        if (_grid == null || !_settings.EnableWeatherEvolution)
-        {
-            _evolutionAccumulator = 0f;
-            return;
-        }
-
-        if (WeatherCompute == null)
-        {
-            if (!_missingWeatherComputeLogged)
-            {
-                Logger.Log(LogLevel.Warning, "Weather", "WeatherCompute is not assigned; dynamic weather evolution is disabled.");
-                _missingWeatherComputeLogged = true;
-            }
-            _evolutionAccumulator = 0f;
-            return;
-        }
-
-        _evolutionAccumulator += Time.deltaTime;
-        float interval = Mathf.Max(_settings.EvolutionInterval, 0.05f);
-        if (_evolutionAccumulator < interval)
-            return;
-
-        float stepAngle = StepAdvectionAngle(interval);
-        Vector3 windDir = WindDirection;
-        int maxSteps = 3;
-        int steps = 0;
-        while (_evolutionAccumulator >= interval && steps < maxSteps)
-        {
-            if (_grid.Advance(WeatherCompute, _settings, interval, windDir, stepAngle))
-            {
-                _cloudWindAngle += stepAngle;
-                _diagnostics.RecordEvolutionDispatch(interval);
-            }
-
-            _evolutionAccumulator -= interval;
-            steps++;
-        }
-
-        Shader.SetGlobalFloat(_cloudWindAngleId, _cloudWindAngle);
-
-        float maxCarry = interval * maxSteps;
-        if (_evolutionAccumulator > maxCarry)
-            _evolutionAccumulator = maxCarry;
-    }
-
     void OnWeatherDiagnosticsRequested(DebugWeatherDiagnosticsRequestedEvent evt)
         => _diagnostics.OnDiagnosticsRequested();
 
-    void UpdateWeatherQueryCache()
-    {
-        if (!EnableWeatherQueryCache || _grid == null || _grid.Texture == null)
-            return;
-
-        if (_weatherQueryCachePending || Time.unscaledTime < _nextWeatherQueryCacheTime)
-            return;
-
-        int face = _weatherQueryCacheNextFace;
-        _weatherQueryCacheNextFace = (_weatherQueryCacheNextFace + 1) % 6;
-        _weatherQueryCacheLastFace = face;
-        _weatherQueryCachePending = true;
-        _weatherQueryCacheError = false;
-        _nextWeatherQueryCacheTime = Time.unscaledTime + Mathf.Max(WeatherQueryCacheInterval, 0.05f);
-        AsyncGPUReadback.Request(_grid.Texture, 0,
-            0, WeatherResolution,
-            0, WeatherResolution,
-            face, 1,
-            TextureFormat.RGBAFloat,
-            request => OnWeatherQueryCacheReadback(request, face));
-    }
-
-    void OnWeatherQueryCacheReadback(AsyncGPUReadbackRequest request, int face)
-    {
-        _weatherQueryCachePending = false;
-
-        if (request.hasError)
-        {
-            _weatherQueryCacheError = true;
-            return;
-        }
-
-        var data = request.GetData<Color>();
-        _grid?.ApplyWeatherFaceReadback(face, data);
-        if (_grid != null && _grid.DynamicsTexture != null)
-        {
-            AsyncGPUReadback.Request(_grid.DynamicsTexture, 0,
-                0, WeatherResolution,
-                0, WeatherResolution,
-                face, 1,
-                TextureFormat.RGBAFloat,
-                request => OnWeatherDynamicsQueryCacheReadback(request, face));
-        }
-        _weatherQueryCacheFaceMask |= 1 << face;
-
-        if (ShowWeatherDiagnostics)
-            _diagnostics.OnQueryCacheFaceData(face, data);
-    }
-
-    void OnWeatherDynamicsQueryCacheReadback(AsyncGPUReadbackRequest request, int face)
-    {
-        if (request.hasError)
-            return;
-
-        _grid?.ApplyDynamicsFaceReadback(face, request.GetData<Color>());
-    }
-
-    void ResetQueryCache()
-    {
-        _weatherQueryCachePending = false;
-        _weatherQueryCacheError = false;
-        _nextWeatherQueryCacheTime = 0f;
-        _weatherQueryCacheNextFace = 0;
-        _weatherQueryCacheLastFace = -1;
-        _weatherQueryCacheFaceMask = 0;
-    }
-
     void OnGUI() => _diagnostics.DrawOverlay();
-
-    int GetQueryCacheFaceCount()
-    {
-        int count = 0;
-        int mask = _weatherQueryCacheFaceMask;
-        while (mask != 0)
-        {
-            count += mask & 1;
-            mask >>= 1;
-        }
-
-        return count;
-    }
 
     internal float CalculatePrecipitation(float stormIntensity)
     {

@@ -18,11 +18,7 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
 
     AtmosphereRenderPass _pass;
     Material _material;
-    AtmosphereController _cachedController;
-    // FindAnyObjectByType is expensive; throttle re-scans to 1 Hz when no controller is present
-    // so scenes that intentionally lack atmosphere don't pay a per-frame scan. Re-scans pick up
-    // controllers that load late (scene reload, planet regenerate).
-    float _nextControllerScanTime;
+    IAtmosphereRuntime _cachedController;
 
     public override void Create()
     {
@@ -42,14 +38,9 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
         if (!DebugModeConstants.PerformanceWeatherIncludesAtmosphere(oceanDebugMode))
             return;
 
-        bool needsController = _cachedController == null || !_cachedController.isActiveAndEnabled;
-        if (needsController && Time.unscaledTime >= _nextControllerScanTime)
-        {
-            _cachedController = Object.FindAnyObjectByType<AtmosphereController>();
-            if (_cachedController == null)
-                _nextControllerScanTime = Time.unscaledTime + 1f;
-        }
-        if (_cachedController == null || !_cachedController.isActiveAndEnabled)
+        if (_cachedController == null)
+            ServiceLocator.TryGet(out _cachedController);
+        if (_cachedController == null)
             return;
 
         if (_material == null)

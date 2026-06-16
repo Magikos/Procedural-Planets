@@ -1,8 +1,7 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
-/// Captures atmosphere diagnostic data. Press F12 to dump.
+/// Captures atmosphere diagnostic data. Triggered by F12 via DebugInputRelay.
 /// Add to any active GameObject (e.g. Camera).
 /// No references needed — reads shader globals directly.
 /// </summary>
@@ -28,14 +27,14 @@ public class AtmosphereDiagnostics : MonoBehaviour
     static readonly int _nightAmbientIntensityId = Shader.PropertyToID(ShaderGlobalIds.NightAmbientIntensity);
     static readonly int _sunParamsId = Shader.PropertyToID(ShaderGlobalIds.SunParams);
 
-    void Update()
+    void OnEnable() => EventBus<DebugCommandRequestedEvent>.Listen(OnDebugCommand);
+    void OnDisable() => EventBus<DebugCommandRequestedEvent>.Unlisten(OnDebugCommand);
+
+    void OnDebugCommand(DebugCommandRequestedEvent evt)
     {
-        var keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.f12Key.wasPressedThisFrame)
-        {
-            LoggerProvider.Log(LogLevel.Debug, "AtmosphereDiagnostics", "F12 pressed, capturing...");
-            _captureRequested = true;
-        }
+        if (evt.Command != DebugCommandType.DumpAtmosphereDiagnostics) return;
+        LoggerProvider.Log(LogLevel.Debug, "AtmosphereDiagnostics", "Dump requested, capturing...");
+        _captureRequested = true;
     }
 
     void LateUpdate()

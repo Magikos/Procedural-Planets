@@ -13,10 +13,7 @@ public class CloudRenderFeature : ScriptableRendererFeature
 {
     CloudRenderPass _pass;
     Material _material;
-    CloudController _cachedController;
-    // Throttle re-scans to 1 Hz when controller is absent (URP render features outlive scenes,
-    // so a permanent null-cache would break scene reloads).
-    float _nextControllerScanTime;
+    ICloudRuntime _cachedController;
     static readonly int _waterFocusModeId = Shader.PropertyToID(ShaderGlobalIds.WaterFocusMode);
     static readonly int _oceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
     static readonly int _debugSuppressWeatherPassesId = Shader.PropertyToID(ShaderGlobalIds.DebugSuppressWeatherPasses);
@@ -46,13 +43,9 @@ public class CloudRenderFeature : ScriptableRendererFeature
             || !DebugModeConstants.PerformanceWeatherIncludesClouds(oceanDebugMode))
             return;
 
-        if (_cachedController == null && Time.unscaledTime >= _nextControllerScanTime)
-        {
-            _cachedController = Object.FindAnyObjectByType<CloudController>();
-            if (_cachedController == null)
-                _nextControllerScanTime = Time.unscaledTime + 1f;
-        }
-        if (_cachedController == null || !_cachedController.isActiveAndEnabled)
+        if (_cachedController == null)
+            ServiceLocator.TryGet(out _cachedController);
+        if (_cachedController == null)
             return;
 
         if (_material == null)

@@ -30,8 +30,10 @@ public sealed class InputMapService : IInputMapService, IDisposable
     public InputAction TriggerCapture { get; }
     public InputAction ToggleProfiling { get; }
     public InputAction DropScaleMarker { get; }
+    public InputAction ClearScaleMarkers { get; }
     public InputAction TeleportToMarkers { get; }
     public InputAction GrassInteractorDistance { get; }
+    public InputAction DumpAtmosphereDiagnostics { get; }
 
     public InputAction OpenConsole { get; }
     public InputAction CloseConsole { get; }
@@ -103,7 +105,15 @@ public sealed class InputMapService : IInputMapService, IDisposable
         TriggerCapture = AddButton("TriggerCapture", "<Keyboard>/f10");
         ToggleProfiling = AddButton("ToggleProfiling", "<Keyboard>/f11");
         DropScaleMarker = AddButton("DropScaleMarker", "<Keyboard>/m");
+        ClearScaleMarkers = GameplayMap.AddAction("ClearScaleMarkers", InputActionType.Button);
+        ClearScaleMarkers.AddCompositeBinding("ButtonWithOneModifier")
+            .With("modifier", "<Keyboard>/leftShift")
+            .With("button", "<Keyboard>/m");
+        ClearScaleMarkers.AddCompositeBinding("ButtonWithOneModifier")
+            .With("modifier", "<Keyboard>/rightShift")
+            .With("button", "<Keyboard>/m");
         TeleportToMarkers = AddButton("TeleportToMarkers", "<Keyboard>/t");
+        DumpAtmosphereDiagnostics = AddButton("DumpAtmosphereDiagnostics", "<Keyboard>/f12");
         GrassInteractorDistance = GameplayMap.AddAction(
             "GrassInteractorDistance", InputActionType.Value, expectedControlLayout: "Axis");
         GrassInteractorDistance.AddCompositeBinding("1DAxis")

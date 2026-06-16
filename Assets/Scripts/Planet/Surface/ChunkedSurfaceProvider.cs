@@ -5,7 +5,7 @@ using UnityEngine;
 
 public interface IChunkVisibilitySource
 {
-    IReadOnlyList<PlanetChunk> GetVisibleChunksSnapshot();
+    void GetVisibleChunksSnapshot(List<PlanetChunk> output);
     event System.Action<PlanetChunk> ChunkShown;
     event System.Action<PlanetChunk> ChunkHidden;
 }
@@ -21,7 +21,7 @@ public interface IChunkVisibilitySource
 //
 // Pivoted to this design 2026-05-30 after step-7 perf testing showed dynamic subdivision
 // hitched too hard during fly-through. See docs/design/2026-05-30-chunk-skeleton.md.
-public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisibilitySource
+public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisibilitySource, IMemoryReporter
 {
     // Per-chunk vertex grid resolution. 97 = 9,409 vertices and 18,432 triangles per chunk
     // (vs 65 = 4,225 verts / 8,192 tris). The bump improves biome-color sharpness and terrain
@@ -91,6 +91,25 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         _meshCache = new ChunkMeshCache(_faceMaterial, _biomeAtlas, ChunkResolution);
         _selector = new ChunkVisibilitySelector(
             _planetTransform, _shapeGenerator, _meshCache, _maxChunkDepth, ChunkResolution);
+        MemoryDebugModule.Register(this);
+    }
+
+    public void AppendMemoryReport(System.Text.StringBuilder sb)
+    {
+        long bytesPerTexture = (long)(PlanetChunkTextures.BiomeMapResolution * PlanetChunkTextures.BiomeMapResolution) * 4L;
+        sb.AppendLine($"Chunk texture sets (any): {PlanetChunkTextures.LiveTextureSets}");
+        sb.AppendLine($"Chunk biome texture sets: {PlanetChunkTextures.LiveBiomeTextureSets} " +
+            $"(raw pixels/copy={MemoryDebugModule.FormatBytes(PlanetChunkTextures.LiveBiomeTextureSets * 3 * bytesPerTexture)})");
+        sb.AppendLine($"Chunk surface-state textures: {PlanetChunkTextures.LiveSurfaceStateTextures} " +
+            $"(raw pixels/copy={MemoryDebugModule.FormatBytes(PlanetChunkTextures.LiveSurfaceStateTextures * bytesPerTexture)})");
+
+        long retainedBytes = 0;
+        for (int i = 0; i < _allChunks.Count; i++)
+        {
+            if (_allChunks[i] != null)
+                retainedBytes += _allChunks[i].GetRetainedCpuDataBytes();
+        }
+        sb.AppendLine($"Chunk CPU arrays retained: {MemoryDebugModule.FormatBytes(retainedBytes)}");
     }
 
     public async Awaitable GenerateAsync(IProgressHandle progress, CancellationToken ct)
@@ -199,7 +218,6 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         _selector.ResetVisibleLeaves();
 
         _initialized = true;
-        ReportRetainedChunkCpuMemory();
         _selector.LogInitialDiagnostics();
         progress?.Report(1f, "Chunked planet ready.");
     }
@@ -211,9 +229,9 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
             _selector.UpdateForCamera(observerWorldPosition, observerCamera);
     }
 
-    public IReadOnlyList<PlanetChunk> GetVisibleChunksSnapshot()
+    public void GetVisibleChunksSnapshot(List<PlanetChunk> output)
     {
-        var snapshot = new List<PlanetChunk>(128);
+        output.Clear();
         for (int f = 0; f < 6; f++)
         {
             var leaves = _selector.GetVisibleLeaves(f);
@@ -223,11 +241,9 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
             {
                 PlanetChunk chunk = leaves[i];
                 if (chunk != null && _meshCache.IsActuallyVisible(chunk))
-                    snapshot.Add(chunk);
+                    output.Add(chunk);
             }
         }
-
-        return snapshot;
     }
 
     public bool IsChunkTerrainVisible(PlanetChunk chunk)
@@ -259,7 +275,6 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         if (face < 0 || face >= 6 || _quadtrees[face] == null) return false;
 
         var leaf = _quadtrees[face].FindLeafContaining(faceUv);
-        while (leaf != null && leaf.CpuVertices == null) leaf = leaf.Parent;
         if (leaf == null) return false;
 
         float chunkSize = leaf.UvHalfExtent * 2f;
@@ -426,7 +441,6 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                 }
                 lookup.Dispose();
             }
-            ReportRetainedChunkCpuMemory();
         }
     }
 
@@ -462,7 +476,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         PlanetChunk leaf = _quadtrees[face].FindLeafContaining(faceUv);
         if (leaf == null) return 0;
 
-        BiomeLookupData lookup = cg.Registry.BuildLookupData(Allocator.TempJob);
+        BiomeLookupData lookup = cg.Registry.BuildLookupData(Allocator.Persistent);
         bool updated = false;
         try
         {
@@ -506,7 +520,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         for (int i = 0; i < _allChunks.Count; i++)
             PlanetChunkTextures.Dispose(_allChunks[i]);
         _allChunks.Clear();
-        MemoryDebugCounters.ReportRetainedChunkCpuBytes(0);
+        MemoryDebugModule.Unregister(this);
         LoggerProvider.Log(LogLevel.Debug, "ChunkLOD",
             $"Dispose: disposed {chunkCount} chunk texture sets. " +
             $"Any {chunkTexturesBefore} -> {PlanetChunkTextures.LiveTextureSets}, " +
@@ -590,19 +604,6 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
 
         chunk.CpuColors = colors;
         chunk.CpuBiomeData = biomeData;
-    }
-
-    void ReportRetainedChunkCpuMemory()
-    {
-        long retainedBytes = 0;
-        for (int i = 0; i < _allChunks.Count; i++)
-        {
-            PlanetChunk chunk = _allChunks[i];
-            if (chunk != null)
-                retainedBytes += chunk.GetRetainedCpuDataBytes();
-        }
-
-        MemoryDebugCounters.ReportRetainedChunkCpuBytes(retainedBytes);
     }
 
     void ReleaseRetainedVertexColors()

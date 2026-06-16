@@ -76,7 +76,7 @@ public class SDFFontAsset : ScriptableObject
         {
             int unicode = Glyphs[i].Unicode;
             if (_glyphIndex.ContainsKey(unicode))
-                UnityEngine.Debug.LogWarning($"[SDFFontAsset] Duplicate unicode U+{unicode:X4} in '{name}' at index {i} — previous entry overwritten.");
+                LoggerProvider.Get().Log(LogLevel.Warning, "SDFFontAsset", $"Duplicate unicode U+{unicode:X4} in '{name}' at index {i} — previous entry overwritten.");
             _glyphIndex[unicode] = i;
         }
     }
