@@ -78,7 +78,7 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
         // main precipitation pass — has already finished. Without this, rain
         // drops near the horizon get washed out by sunset/sunrise scattering
         // because they were drawn before the atmosphere overlay.
-        var rainRenderer = ServiceLocator.Get<IRainParticleRenderer>();
+        ServiceLocator.TryGet(out IRainParticleRenderer rainRenderer);
         if (rainRenderer != null && rainRenderer.IsReadyToDraw
             && _cachedController.ShouldRenderLocalParticles(renderingData.cameraData.camera))
         {

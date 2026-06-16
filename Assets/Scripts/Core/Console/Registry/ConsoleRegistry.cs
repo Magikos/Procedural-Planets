@@ -36,7 +36,8 @@ public static class ConsoleRegistry
             // Skip Unity engine, system, and third-party assemblies; only scan project code.
             string asmName = asm.GetName().Name;
             if (!asmName.StartsWith("Assembly-CSharp", StringComparison.Ordinal)
-                && !asmName.StartsWith("Magikorp", StringComparison.Ordinal))
+                && !asmName.StartsWith("Magikorp", StringComparison.Ordinal)
+                && !asmName.StartsWith("ProceduralPlanets", StringComparison.Ordinal))
                 continue;
 
             Type[] types;
