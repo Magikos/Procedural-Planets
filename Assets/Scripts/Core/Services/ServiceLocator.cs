@@ -376,7 +376,7 @@ public static class ServiceLocator
         _services.Clear();
     }
 
-    internal static bool IsAlive(object service)
+    public static bool IsAlive(object service)
     {
         if (service == null)
             return false;

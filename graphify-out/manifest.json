@@ -525,9 +525,9 @@
     "semantic_hash": "ea96b9cb143c5b753375e648a4df05b9"
   },
   "Assets/Scripts/Core/Services/LoadingManager.cs": {
-    "mtime": 1781379900.1499262,
-    "ast_hash": "d3d7e5f5516e7f665f08a7652cea70eb",
-    "semantic_hash": "d3d7e5f5516e7f665f08a7652cea70eb"
+    "mtime": 1781481251.7816393,
+    "ast_hash": "55820049704ef34a81203398bc4f2d43",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/MemoryDebugModule.cs": {
     "mtime": 1781293184.8266425,
@@ -169477,6 +169477,16 @@
   "Assets/Scripts/Core/Services/DebugOverlayHud.cs": {
     "mtime": 1781478538.0053976,
     "ast_hash": "0813c53b9c92491a564b9d015e1ed16d",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Core/Interfaces/ILoadingOverlay.cs": {
+    "mtime": 1781481182.3622994,
+    "ast_hash": "d1a21c1dc20754ba41d459fdab9ecbc5",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Core/Services/LoadingProgressBarOverlay.cs": {
+    "mtime": 1781481199.7359164,
+    "ast_hash": "1047925b7ad837d6c83a8e0d70e88ba0",
     "semantic_hash": ""
   }
 }

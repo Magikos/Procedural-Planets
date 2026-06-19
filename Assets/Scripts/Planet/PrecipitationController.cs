@@ -80,6 +80,13 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     [Range(0.1f, 10f)] public float SnowTemperatureBlendCelsius = 2f;
     public Color SnowColor = new Color(0.88f, 0.92f, 0.96f, 1f);
 
+    [Header("Rain Streaks")]
+    [Range(0, 8000)] public int RainParticleCount = 1800;
+    [Range(0f, 1f)] public float RainOpacity = 0.55f;
+    [Range(0.002f, 0.2f)] public float RainStreakWidth = 0.018f;
+    [Range(0.1f, 2f)] public float RainStreakLength = 0.4f;
+    [Range(0f, 1f)] public float RainThreshold = 0.08f;
+
     const int CurrentLocalWeatherParticleSettingsVersion = 1;
     [SerializeField, HideInInspector]
     int _localWeatherParticleSettingsVersion;
@@ -121,6 +128,7 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     static readonly int _weatherParticleDustColorId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleDustColor);
     static readonly int _weatherParticleSnowColorId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleSnowColor);
     static readonly int _weatherParticleProofId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleProof);
+    static readonly int _weatherParticleRainParamsId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleRainParams);
 
     public bool IsRenderingEnabled =>
         _seaLevelRadius > 0f && (IsDistantPrecipitationEnabled || IsLocalParticleSystemEnabled);
@@ -129,7 +137,7 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         _settings.RenderPrecipitation && _settings.Intensity > 0f || _settings.DebugMode != DebugView.Off;
 
     bool IsLocalParticleSystemEnabled =>
-        _settings.RenderLocalParticles && (_settings.DustParticleCount > 0 || _settings.SnowParticleCount > 0);
+        _settings.RenderLocalParticles && (_settings.DustParticleCount > 0 || _settings.SnowParticleCount > 0 || _settings.RainParticleCount > 0);
 
     public bool PrecipitationRenderingEnabled
     {
@@ -138,13 +146,14 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     }
 
     public bool LocalPrecipitationParticlesEnabled =>
-        _settings.RenderLocalParticles && (_settings.DustParticleCount > 0 || _settings.SnowParticleCount > 0);
+        _settings.RenderLocalParticles && (_settings.DustParticleCount > 0 || _settings.SnowParticleCount > 0 || _settings.RainParticleCount > 0);
 
     float IPrecipitationDebugControl.StormThreshold => _settings.StormThreshold;
     float IPrecipitationDebugControl.LocalParticleRadius => _settings.LocalParticleRadius;
     float IPrecipitationDebugControl.LocalMaxCameraAltitude => _settings.LocalMaxCameraAltitude;
     int IPrecipitationDebugControl.DustParticleCount => _settings.DustParticleCount;
     int IPrecipitationDebugControl.SnowParticleCount => _settings.SnowParticleCount;
+    int IPrecipitationDebugControl.RainParticleCount => _settings.RainParticleCount;
     int IPrecipitationDebugControl.WeatherParticleProofMode => (int)_settings.ParticleProof;
     string IPrecipitationDebugControl.WeatherParticleSettingsSummary =>
         $"dust={_settings.DustSize:F3}m/{_settings.DustStreakLength:F2}m";
@@ -156,7 +165,11 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
             return false;
 
         float cameraAltitude = Vector3.Distance(camera.transform.position, _planetCenter) - _seaLevelRadius;
-        return cameraAltitude >= 0f && cameraAltitude <= _settings.LocalMaxCameraAltitude;
+        // LocalMaxCameraAltitude is an absolute meter value that doesn't scale with planet size.
+        // Cap at cloud-base altitude so particles never appear above the cloud layer regardless of scale.
+        float cloudBase = _cloudSettings?.BaseAltitude ?? 330f;
+        float maxAlt = Mathf.Min(_settings.LocalMaxCameraAltitude, cloudBase);
+        return cameraAltitude >= 0f && cameraAltitude <= maxAlt;
     }
 
     void Awake()
@@ -287,16 +300,22 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
             Mathf.Max(_settings.DebugDotMaxRadius, _settings.DebugDotMinRadius + 0.01f),
             _settings.DebugDotOpacity,
             0f));
+        float cloudBase = _cloudSettings?.BaseAltitude ?? 330f;
         Shader.SetGlobalVector(_weatherParticleCommonId, new Vector4(
             _settings.LocalParticleRadius,
-            _settings.LocalMaxCameraAltitude,
+            Mathf.Min(_settings.LocalMaxCameraAltitude, cloudBase),
             _settings.LocalParticleVerticalRange,
             _settings.DustTurbulence));
         Shader.SetGlobalVector(_weatherParticleCountsId, new Vector4(
             Mathf.Max(1, _settings.DustParticleCount),
-            0f,
+            Mathf.Max(1, _settings.RainParticleCount),
             Mathf.Max(1, _settings.SnowParticleCount),
             0f));
+        Shader.SetGlobalVector(_weatherParticleRainParamsId, new Vector4(
+            _settings.RainThreshold,
+            _settings.RainOpacity,
+            _settings.RainStreakWidth,
+            _settings.RainStreakLength));
         Shader.SetGlobalVector(_weatherParticleDustParamsId, new Vector4(
             _settings.DustBaseDensity,
             _settings.DustStormDensity,

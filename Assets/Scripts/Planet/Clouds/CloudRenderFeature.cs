@@ -43,9 +43,7 @@ public class CloudRenderFeature : ScriptableRendererFeature
             || !DebugModeConstants.PerformanceWeatherIncludesClouds(oceanDebugMode))
             return;
 
-        if (_cachedController == null)
-            ServiceLocator.TryGet(out _cachedController);
-        if (_cachedController == null)
+        if (!TryGetLiveController())
             return;
 
         if (_material == null)
@@ -66,6 +64,20 @@ public class CloudRenderFeature : ScriptableRendererFeature
     {
         CoreUtils.Destroy(_material);
         _material = null;
+        _cachedController = null;
+    }
+
+    bool TryGetLiveController()
+    {
+        if (!ServiceLocator.IsAlive(_cachedController))
+            _cachedController = null;
+        if (_cachedController == null)
+            ServiceLocator.TryGet(out _cachedController);
+        if (ServiceLocator.IsAlive(_cachedController))
+            return true;
+
+        _cachedController = null;
+        return false;
     }
 
     static bool IsPlanetInFrustum(Camera camera)

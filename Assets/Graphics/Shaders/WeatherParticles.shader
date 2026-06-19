@@ -22,8 +22,10 @@ float4 _WeatherParticleCounts;
 float4 _WeatherParticleDustParams;
 float4 _WeatherParticleSnowParams;
 float4 _WeatherParticlePhaseParams;
+float4 _WeatherParticleRainParams;
 float4 _WeatherParticleDustColor;
 float4 _WeatherParticleSnowColor;
+float4 _PrecipitationVisualParams;
 float3 _WindDirection;
 float _WindSpeedMps;
 float _WindStrength01;
@@ -218,6 +220,17 @@ ParticleVaryings WeatherParticleVertex(
         color = _WeatherParticleDustColor.rgb;
         profileOpacity = _WeatherParticleDustParams.z;
     }
+    else if (profile == 1 || profile == 3)
+    {
+        float threshold = _WeatherParticleRainParams.x;
+        visibility = saturate((rainSignal - threshold) / max(1.0 - threshold, 0.001));
+        width = _WeatherParticleRainParams.z;
+        streakLength = _WeatherParticleRainParams.w;
+        fallSpeed = _PrecipitationVisualParams.w;
+        turbulence = 0.04 + _WindStrength01 * 0.1;
+        color = _PrecipitationColor.rgb;
+        profileOpacity = _WeatherParticleRainParams.y;
+    }
     else
     {
         visibility = smoothstep(
@@ -362,6 +375,11 @@ ParticleVaryings VertSnow(uint vertexID : SV_VertexID, uint instanceID : SV_Inst
     return WeatherParticleVertex(vertexID, instanceID, 2);
 }
 
+ParticleVaryings VertRain(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
+{
+    return WeatherParticleVertex(vertexID, instanceID, 1);
+}
+
 float4 FragParticle(ParticleVaryings input) : SV_Target
 {
     if (input.alpha <= 0.0001)
@@ -424,6 +442,16 @@ ENDHLSL
             HLSLPROGRAM
             #pragma target 4.5
             #pragma vertex VertSnow
+            #pragma fragment FragParticle
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "Rain"
+            HLSLPROGRAM
+            #pragma target 4.5
+            #pragma vertex VertRain
             #pragma fragment FragParticle
             ENDHLSL
         }

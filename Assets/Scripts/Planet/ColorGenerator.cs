@@ -184,13 +184,67 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
             out float moisture,
             out int primaryBiomeIndex,
             out float altitudeTemperatureDrop);
-        float biomeCount = _biomeColors != null && _biomeColors.Length > 0 ? _biomeColors.Length : 1f;
-        biomeData = new Vector4(
+        biomeData = PackBiomeData(temperature, moisture, primaryBiomeIndex, altitudeTemperatureDrop);
+        return color;
+    }
+
+    public void GetBiomeData(Vector3 pointOnUnitSphere, float elevation, out Vector4 biomeData)
+    {
+        EvaluateBiomeData(
+            pointOnUnitSphere,
+            elevation,
+            out float temperature,
+            out float moisture,
+            out int primaryBiomeIndex,
+            out float altitudeTemperatureDrop);
+        biomeData = PackBiomeData(temperature, moisture, primaryBiomeIndex, altitudeTemperatureDrop);
+    }
+
+    Vector4 PackBiomeData(
+        float temperature,
+        float moisture,
+        int primaryBiomeIndex,
+        float altitudeTemperatureDrop)
+    {
+        float biomeCount = _biomeColors != null && _biomeColors.Length > 0
+            ? _biomeColors.Length
+            : Mathf.Max(_biomeRegistry?.BiomeCount ?? 1, 1);
+        return new Vector4(
             temperature,
             moisture,
             primaryBiomeIndex / biomeCount,
             Mathf.Clamp01(altitudeTemperatureDrop));
-        return color;
+    }
+
+    void EvaluateBiomeData(
+        Vector3 pointOnUnitSphere,
+        float elevation,
+        out float temperature,
+        out float moisture,
+        out int primaryBiomeIndex,
+        out float altitudeTemperatureDrop)
+    {
+        temperature = 0f;
+        moisture = 0f;
+        primaryBiomeIndex = 0;
+        altitudeTemperatureDrop = 0f;
+
+        if (_biomeRegistry == null || _climateProvider == null)
+            return;
+
+        ClimateSample climate = _climateProvider.Evaluate(pointOnUnitSphere, elevation);
+        temperature = climate.Temperature01;
+        moisture = climate.Moisture01;
+        altitudeTemperatureDrop = climate.AltitudeTemperatureDrop;
+
+        BiomeResult result = ResolveBiome(pointOnUnitSphere, climate);
+        int maxIndex = _biomeColors != null && _biomeColors.Length > 0
+            ? _biomeColors.Length - 1
+            : Mathf.Max(_biomeRegistry.BiomeCount - 1, 0);
+        primaryBiomeIndex = Mathf.Clamp(
+            _biomeRegistry.GetSliceIdForBiomeType(result.PrimaryBiome),
+            0,
+            maxIndex);
     }
 
     Color EvaluateBiomeColor(

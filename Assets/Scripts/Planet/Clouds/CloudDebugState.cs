@@ -9,7 +9,8 @@ public static class CloudDebugState
         OpticalDepth = 4,
         SilverLining = 5,
         MoistureSource = 6,
-        CondensationChange = 7
+        CondensationChange = 7,
+        PrecipitationSignal = 8
     }
 
     public static View Mode = View.Off;

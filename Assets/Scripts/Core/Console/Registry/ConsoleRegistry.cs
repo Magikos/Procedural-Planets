@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public static class ConsoleRegistry
 {
@@ -31,7 +34,20 @@ public static class ConsoleRegistry
         _commands.Clear();
         int added = 0;
 
+#if UNITY_EDITOR
+        var scannedTypes = new HashSet<Type>();
+        foreach (MethodInfo method in TypeCache.GetMethodsWithAttribute<ConsoleCommandAttribute>())
+        {
+            Type type = method.DeclaringType;
+            if (type == null || !scannedTypes.Add(type))
+                continue;
+
+            added += ScanType(type);
+        }
+#else
+#pragma warning disable UAC0005
         foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
+#pragma warning restore UAC0005
         {
             // Skip Unity engine, system, and third-party assemblies; only scan project code.
             string asmName = asm.GetName().Name;
@@ -60,6 +76,7 @@ public static class ConsoleRegistry
                 added += ScanType(type);
             }
         }
+#endif
 
         return added;
     }

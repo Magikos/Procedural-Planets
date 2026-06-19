@@ -31,6 +31,8 @@ public static class BiomeMapBaker
     const int TexelCount = MapResolution * MapResolution;
     const int HighResCount = PaddedResolution * PaddedResolution;
 
+    [System.ThreadStatic] static int[] _tlsTopKCounts;
+
     // Bake top-K biome maps for one chunk. All three output buffers must be Color32[TexelCount].
     // lutColors must be at least (max biome id + 1) entries. tempHighRes is a scratch byte buffer
     // of length HighResCount; caller can pool one per worker thread to eliminate GC pressure.
@@ -56,8 +58,19 @@ public static class BiomeMapBaker
         int vertRes = (int)Mathf.Sqrt(vertCount);
         if (vertRes * vertRes != vertCount) return;
 
+        int activeBiomeCount = GetActiveBiomeCount(lookup, lutColors);
         BuildHighResIdGrid(chunk, lookup, voronoiField, vertRes, tempHighRes);
-        SampleTopKPerTexel(tempHighRes, lutColors, blendedColors, ids, weights);
+        SampleTopKPerTexel(tempHighRes, lutColors, activeBiomeCount, blendedColors, ids, weights);
+    }
+
+    static int GetActiveBiomeCount(in BiomeLookupData lookup, Color[] lutColors)
+    {
+        if (lookup.BiomeCount > 0 && lookup.BiomeCount <= lutColors.Length)
+            return Mathf.Min(lookup.BiomeCount, 256);
+
+        // Preserve previous behavior for inconsistent lookup/LUT snapshots: scan the full
+        // byte range so invalid IDs still surface through SafeLut's magenta fallback.
+        return 256;
     }
 
     // Pass 1: fill the padded high-resolution id grid. Padding samples beyond this chunk's
@@ -113,13 +126,17 @@ public static class BiomeMapBaker
 
     // Pass 2: per output texel, scan a kernel of the high-res id grid, count biome occurrences,
     // pick top K, normalize weights, compute pre-blended color.
-    static void SampleTopKPerTexel(byte[] hrIds, Color[] lutColors,
+    static void SampleTopKPerTexel(byte[] hrIds, Color[] lutColors, int activeBiomeCount,
         Color32[] blendedColors, Color32[] ids, Color32[] weights)
     {
-        // 256-slot accumulator buffer (biome ids are bytes). Stack-allocated would be ideal
-        // but C# arrays GC-allocate; we keep this as a single shared buffer per Bake call.
-        // Resetting via Array.Clear is essentially free for 256 ints.
-        var counts = new int[256];
+        // Biome ids are bytes, but valid ids are normally contiguous [0, BiomeCount).
+        // Keep the backing buffer at 256 for the fallback path while scanning only active ids.
+        var counts = _tlsTopKCounts;
+        if (counts == null || counts.Length != 256)
+        {
+            counts = new int[256];
+            _tlsTopKCounts = counts;
+        }
 
         for (int ty = 0; ty < MapResolution; ty++)
         {
@@ -133,7 +150,7 @@ public static class BiomeMapBaker
                     + tx * (HighResolution / MapResolution)
                     + (HighResolution / MapResolution) / 2;
 
-                System.Array.Clear(counts, 0, counts.Length);
+                System.Array.Clear(counts, 0, activeBiomeCount);
 
                 // Every texel scans exactly (2r+1)^2 samples from the padded grid. The grid
                 // already contains samples outside this chunk, so no edge clamping is needed.
@@ -144,13 +161,15 @@ public static class BiomeMapBaker
                     for (int dx = -KernelRadius; dx <= KernelRadius; dx++)
                     {
                         int hx = hrCenterX + dx;
-                        counts[hrIds[rowBase + hx]]++;
+                        byte id = hrIds[rowBase + hx];
+                        if (id < activeBiomeCount)
+                            counts[id]++;
                     }
                 }
 
-                // Pick top K by count. Linear sweep of 256 is cheap; max-K-heap would be
-                // overkill at K=4.
-                PickTopK(counts, out byte id0, out int c0, out byte id1, out int c1,
+                // Pick top K by count. Linear sweep over the active biome slots is cheaper
+                // than scanning the whole byte range for every texel.
+                PickTopK(counts, activeBiomeCount, out byte id0, out int c0, out byte id1, out int c1,
                     out byte id2, out int c2, out byte id3, out int c3);
 
                 // Normalize weights to sum = 255. Assign rounding remainder only to a slot
@@ -190,7 +209,7 @@ public static class BiomeMapBaker
     static Color SafeLut(Color[] lut, byte id) =>
         id < lut.Length ? lut[id] : Color.magenta;
 
-    static void PickTopK(int[] counts,
+    static void PickTopK(int[] counts, int activeBiomeCount,
         out byte i0, out int c0,
         out byte i1, out int c1,
         out byte i2, out int c2,
@@ -198,7 +217,7 @@ public static class BiomeMapBaker
     {
         i0 = i1 = i2 = i3 = 0;
         c0 = c1 = c2 = c3 = 0;
-        for (int i = 0; i < counts.Length; i++)
+        for (int i = 0; i < activeBiomeCount; i++)
         {
             int c = counts[i];
             if (c == 0) continue;

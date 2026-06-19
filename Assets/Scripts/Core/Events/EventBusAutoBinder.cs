@@ -144,7 +144,7 @@ public static class EventBusAutoBinder
 
                 listenMethod.Invoke(null, new object[] { handler, null });
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || UNITY_INCLUDE_INSTRUMENTATION
                 LoggerProvider.Log(LogLevel.Debug, "EventBusAutoBinder", $"Bound {type.Name}.{method.Name} to {busType.Name}.{methodName}()");
 #endif
             }
@@ -159,7 +159,7 @@ public static class EventBusAutoBinder
 
                 unlistenMethod.Invoke(null, new object[] { handler });
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || UNITY_INCLUDE_INSTRUMENTATION
                 LoggerProvider.Log(LogLevel.Debug, "EventBusAutoBinder", $"Unbound {type.Name}.{method.Name} from {busType.Name}.Unlisten()");
 #endif
             }

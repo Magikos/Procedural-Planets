@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using Unity.Collections;
 using UnityEngine;
@@ -370,8 +371,18 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
 
         try
         {
+            var totalTimer = Stopwatch.StartNew();
+            long vertexTicks = 0;
+            long mapBakeTicks = 0;
+            long retainUploadTicks = 0;
+            long atlasTicks = 0;
+            int bakedMapChunks = 0;
             const int colorBatchSize = 96;
             int total = _allChunks.Count;
+            int mapBakeTarget = bakeLookupBuilt
+                ? CountBiomeMapBakeTargets(_allChunks, _usesFaceBiomeAtlases)
+                : 0;
+            bool vertexColorsRequired = !bakeLookupBuilt || !_usesFaceBiomeAtlases;
             for (int batchStart = 0; batchStart < total; batchStart += colorBatchSize)
             {
                 int batchEnd = Mathf.Min(batchStart + colorBatchSize, total);
@@ -382,20 +393,45 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                 Color[] lutCopy = lutColors;
                 VoronoiBiomeField voronoiCopy = voronoiField;
                 bool bakeEnabled = bakeLookupBuilt;
+                bool faceAtlasMode = _usesFaceBiomeAtlases;
+                bool calculateVertexColors = vertexColorsRequired;
+                var vertexTimer = Stopwatch.StartNew();
                 System.Threading.Tasks.Parallel.For(batchStart, batchEnd, i =>
                 {
                     var chunk = _allChunks[i];
-                    CalculateChunkColors(chunk, biomeProvider);
-                    if (bakeEnabled)
-                        BiomeAtlasService.BakeChunkMap(chunk, lookupCopy, voronoiCopy, lutCopy);
+                    if (calculateVertexColors)
+                        CalculateChunkColors(chunk, biomeProvider);
+                    else
+                        CalculateChunkBiomeData(chunk, biomeProvider);
                 });
+                vertexTimer.Stop();
+                vertexTicks += vertexTimer.ElapsedTicks;
+
+                if (bakeEnabled)
+                {
+                    var mapBakeTimer = Stopwatch.StartNew();
+                    System.Threading.Tasks.Parallel.For(batchStart, batchEnd, i =>
+                    {
+                        var chunk = _allChunks[i];
+                        if (!ShouldBakeChunkMap(chunk, faceAtlasMode))
+                            return;
+
+                        BiomeAtlasService.BakeChunkMap(chunk, lookupCopy, voronoiCopy, lutCopy);
+                        System.Threading.Interlocked.Increment(ref bakedMapChunks);
+                    });
+                    mapBakeTimer.Stop();
+                    mapBakeTicks += mapBakeTimer.ElapsedTicks;
+                }
                 ct.ThrowIfCancellationRequested();
 
                 await Awaitable.MainThreadAsync();
+                var retainUploadTimer = Stopwatch.StartNew();
                 for (int i = batchStart; i < batchEnd; i++)
                 {
                     var chunk = _allChunks[i];
-                    bool retainedColorSource = _meshCache.RetainColorSource(chunk);
+                    bool retainedColorSource = vertexColorsRequired
+                        ? _meshCache.RetainColorSource(chunk)
+                        : true;
                     bool retainedBiomeSource = _meshCache.RetainBiomeSource(chunk);
                     if (retainedColorSource && retainedBiomeSource)
                     {
@@ -403,8 +439,11 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                             retainSurfaceSamplingData: chunk.IsLeaf,
                             retainUnitSphereForWaterSampler: _maxChunkDepth == 0);
                     }
-                    if (bakeEnabled) BiomeAtlasService.UploadChunkMap(chunk, releasePendingPixels: !chunk.IsLeaf);
+                    if (bakeEnabled && !faceAtlasMode)
+                        BiomeAtlasService.UploadChunkMap(chunk, releasePendingPixels: !chunk.IsLeaf);
                 }
+                retainUploadTimer.Stop();
+                retainUploadTicks += retainUploadTimer.ElapsedTicks;
 
                 float pct = (float)batchEnd / total;
                 progress?.Report(0.75f * pct, $"Applied biome colors {batchEnd}/{total}");
@@ -413,6 +452,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
 
             if (bakeLookupBuilt)
             {
+                var atlasTimer = Stopwatch.StartNew();
                 await _biomeAtlas.BuildFaceAtlasesAsync(
                     _allChunks,
                     new ProgressRangeHandle(progress, 0.75f, 0.23f),
@@ -426,7 +466,21 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                 if (_faceMaterial != null) _faceMaterial.EnableKeyword(BiomeTextureModeKeyword);
                 releaseChunkBiomeTextures = _biomeAtlas.HasCompleteAtlases();
                 progress?.Report(1f, "Biome colors ready.");
+                atlasTimer.Stop();
+                atlasTicks += atlasTimer.ElapsedTicks;
             }
+
+            totalTimer.Stop();
+            LoggerProvider.Log(
+                LogLevel.Debug,
+                "PhaseB",
+                $"Biome color timings: total={totalTimer.ElapsedMilliseconds}ms, " +
+                $"vertex={TicksToMilliseconds(vertexTicks):F1}ms, " +
+                $"mapBake={TicksToMilliseconds(mapBakeTicks):F1}ms, " +
+                $"retainUpload={TicksToMilliseconds(retainUploadTicks):F1}ms, " +
+                $"atlas={TicksToMilliseconds(atlasTicks):F1}ms, " +
+                $"chunks={total}, mapBakeChunks={bakedMapChunks}/{mapBakeTarget}, " +
+                $"faceAtlas={_usesFaceBiomeAtlases}");
         }
         finally
         {
@@ -605,6 +659,46 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         chunk.CpuColors = colors;
         chunk.CpuBiomeData = biomeData;
     }
+
+    static void CalculateChunkBiomeData(PlanetChunk chunk, IBiomeProvider biomeProvider)
+    {
+        if (chunk == null || biomeProvider == null || chunk.CpuUnitSpherePoints == null || chunk.CpuElevations == null)
+            return;
+
+        int count = chunk.CpuUnitSpherePoints.Length;
+        if (chunk.CpuElevations.Length != count) return;
+
+        var biomeData = chunk.CpuBiomeData;
+        if (biomeData == null || biomeData.Length != count) biomeData = new Vector4[count];
+
+        for (int i = 0; i < count; i++)
+            biomeProvider.GetBiomeData(chunk.CpuUnitSpherePoints[i], chunk.CpuElevations[i], out biomeData[i]);
+
+        chunk.CpuBiomeData = biomeData;
+    }
+
+    static bool ShouldBakeChunkMap(PlanetChunk chunk, bool usesFaceBiomeAtlases)
+        => chunk != null && (!usesFaceBiomeAtlases || chunk.IsLeaf);
+
+    static int CountBiomeMapBakeTargets(IReadOnlyList<PlanetChunk> chunks, bool usesFaceBiomeAtlases)
+    {
+        if (chunks == null)
+            return 0;
+
+        if (!usesFaceBiomeAtlases)
+            return chunks.Count;
+
+        int count = 0;
+        for (int i = 0; i < chunks.Count; i++)
+        {
+            if (chunks[i]?.IsLeaf == true)
+                count++;
+        }
+        return count;
+    }
+
+    static double TicksToMilliseconds(long ticks)
+        => ticks * 1000.0 / Stopwatch.Frequency;
 
     void ReleaseRetainedVertexColors()
     {

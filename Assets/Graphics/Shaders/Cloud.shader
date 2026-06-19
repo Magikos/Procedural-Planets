@@ -304,6 +304,7 @@ ENDHLSL
                 float debugMoistureSource = 0.0;
                 float debugCondensationChange = 0.0;
                 float debugCondensationSign = 0.0;
+                float debugRainRate = 0.0;
 
                 UNITY_LOOP
                 for (int s = 0; s < viewSteps; s++)
@@ -350,6 +351,7 @@ ENDHLSL
 
                         debugDensity = max(debugDensity, density01);
                         debugSilverLining = max(debugSilverLining, saturate(silverLining));
+                        debugRainRate = max(debugRainRate, SampleDynamics(surfaceNormal).b);
 
                         lightEnergy += cloud.density * stepSize * transmittance * lighting;
                         transmittance *= exp(-cloud.density * stepSize * _CloudLightAbsorption);
@@ -384,6 +386,15 @@ ENDHLSL
                         float3 condensing = float3(0.1, 0.75, 1.0);
                         debugColor = lerp(drying, condensing, step(0.0, debugCondensationSign));
                     }
+                    if (_CloudDebugMode == 8)
+                    {
+                        float3 noRain    = float3(0.02, 0.08, 0.04);
+                        float3 lightRain = float3(0.15, 1.0,  0.25);
+                        float3 heavyRain = float3(1.0,  0.55, 0.02);
+                        debugColor = debugRainRate < 0.5
+                            ? lerp(noRain, lightRain, debugRainRate * 2.0)
+                            : lerp(lightRain, heavyRain, (debugRainRate - 0.5) * 2.0);
+                    }
 
                     float debugMask = max(max(max(debugWeather, debugStorm), max(debugDensity, opticalDepth)),
                         debugSilverLining);
@@ -395,6 +406,8 @@ ENDHLSL
                         float changeSaturation = max(_CloudDebugParams.y, changeThreshold + 0.00001);
                         debugMask = smoothstep(changeThreshold, changeSaturation, debugCondensationChange);
                     }
+                    if (_CloudDebugMode == 8)
+                        debugMask = debugWeather;
                     return float4(baseScene + debugColor * saturate(debugMask), sceneColor.a);
                 }
 

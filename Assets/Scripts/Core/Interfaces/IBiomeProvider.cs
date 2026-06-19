@@ -15,4 +15,8 @@ public interface IBiomeProvider
     //   w = normalized temperature removed by altitude lapse.
     // Computed in a single pass to avoid re-evaluating noise twice per vertex.
     Color GetBiomeColorAndData(Vector3 pointOnUnitSphere, float elevation, out Vector4 biomeData);
+
+    // Writes only the per-vertex diagnostic data. Chunked terrain uses this when
+    // face biome atlases provide the actual color/material path.
+    void GetBiomeData(Vector3 pointOnUnitSphere, float elevation, out Vector4 biomeData);
 }

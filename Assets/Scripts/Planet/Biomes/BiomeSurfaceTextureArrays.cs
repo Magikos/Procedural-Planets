@@ -252,7 +252,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         }
         finally
         {
-            Object.DestroyImmediate(placeholder);
+            DestroyTex(ref placeholder);
         }
 
         LoggerProvider.Get().Log(LogLevel.Info, "BiomeSurfaceTextureArrays", $"{name}: {width}x{height} {format}, {matched}/{arrayDepth} slices from source, {placeholderUsed} placeholder, {bankCount} bank(s). Reference texture: {(sample != null ? sample.name : "<none>")}.");

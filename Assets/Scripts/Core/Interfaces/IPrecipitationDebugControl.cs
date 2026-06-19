@@ -14,6 +14,7 @@ public interface IPrecipitationDebugControl
     float LocalMaxCameraAltitude { get; }
     int DustParticleCount { get; }
     int SnowParticleCount { get; }
+    int RainParticleCount { get; }
     int WeatherParticleProofMode { get; }
     string WeatherParticleSettingsSummary { get; }
 }

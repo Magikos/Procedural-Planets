@@ -45,4 +45,5 @@ public static partial class ShaderGlobalIds
     public const string WeatherLightningCell1 = "_WeatherLightningCell1";
     public const string WeatherLightningCell2 = "_WeatherLightningCell2";
     public const string WeatherLightningCell3 = "_WeatherLightningCell3";
+
 }

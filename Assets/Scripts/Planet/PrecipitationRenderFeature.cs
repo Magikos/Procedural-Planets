@@ -47,9 +47,8 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
         if (!IsPlanetInFrustum(renderingData.cameraData.camera))
             return;
 
-        if (_cachedController == null)
-            ServiceLocator.TryGet(out _cachedController);
-        if (_cachedController == null || !_cachedController.IsRenderingEnabled)
+        if (!TryGetLiveController(out IPrecipitationDebugControl controller)
+            || !controller.IsRenderingEnabled)
             return;
 
         if (_material == null)
@@ -69,7 +68,7 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
         _pass.Setup(
             _material,
             _weatherParticleMaterial,
-            _cachedController,
+            controller,
             renderingData.cameraData.camera);
         renderer.EnqueuePass(_pass);
 
@@ -80,7 +79,7 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
         // because they were drawn before the atmosphere overlay.
         ServiceLocator.TryGet(out IRainParticleRenderer rainRenderer);
         if (rainRenderer != null && rainRenderer.IsReadyToDraw
-            && _cachedController.ShouldRenderLocalParticles(renderingData.cameraData.camera))
+            && controller.ShouldRenderLocalParticles(renderingData.cameraData.camera))
         {
             _rainPass.Setup(rainRenderer);
             renderer.EnqueuePass(_rainPass);
@@ -93,6 +92,24 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
         _material = null;
         CoreUtils.Destroy(_weatherParticleMaterial);
         _weatherParticleMaterial = null;
+        _cachedController = null;
+    }
+
+    bool TryGetLiveController(out IPrecipitationDebugControl controller)
+    {
+        if (!ServiceLocator.IsAlive(_cachedController))
+            _cachedController = null;
+        if (_cachedController == null)
+            ServiceLocator.TryGet(out _cachedController);
+        if (ServiceLocator.IsAlive(_cachedController))
+        {
+            controller = _cachedController;
+            return true;
+        }
+
+        _cachedController = null;
+        controller = null;
+        return false;
     }
 
     static bool IsPlanetInFrustum(Camera camera)
@@ -114,6 +131,7 @@ public class PrecipitationRenderPass : ScriptableRenderPass
     Material _weatherParticleMaterial;
     int _dustParticleCount;
     int _snowParticleCount;
+    int _rainParticleCount;
     bool _drawLocalParticles;
 
     public PrecipitationRenderPass()
@@ -135,6 +153,7 @@ public class PrecipitationRenderPass : ScriptableRenderPass
         _drawLocalParticles = controller != null && controller.ShouldRenderLocalParticles(camera);
         _dustParticleCount = _drawLocalParticles ? Mathf.Max(0, controller.DustParticleCount) : 0;
         _snowParticleCount = _drawLocalParticles ? Mathf.Max(0, controller.SnowParticleCount) : 0;
+        _rainParticleCount = _drawLocalParticles ? Mathf.Max(0, controller.RainParticleCount) : 0;
     }
 
     private class PassData
@@ -145,6 +164,7 @@ public class PrecipitationRenderPass : ScriptableRenderPass
         internal bool drawLocalParticles;
         internal int dustParticleCount;
         internal int snowParticleCount;
+        internal int rainParticleCount;
     }
 
     public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
@@ -173,6 +193,7 @@ public class PrecipitationRenderPass : ScriptableRenderPass
             passData.drawLocalParticles = _drawLocalParticles;
             passData.dustParticleCount = _dustParticleCount;
             passData.snowParticleCount = _snowParticleCount;
+            passData.rainParticleCount = _rainParticleCount;
 
             builder.UseTexture(source, AccessFlags.Read);
             builder.SetRenderAttachment(destination, 0, AccessFlags.Write);
@@ -202,8 +223,13 @@ public class PrecipitationRenderPass : ScriptableRenderPass
                     ctx.cmd.DrawProcedural(Matrix4x4.identity, data.weatherParticleMaterial, 1,
                         MeshTopology.Triangles, 18, data.snowParticleCount, _propertyBlock);
                 }
+                if (data.rainParticleCount > 0)
+                {
+                    ctx.cmd.DrawProcedural(Matrix4x4.identity, data.weatherParticleMaterial, 2,
+                        MeshTopology.Triangles, 18, data.rainParticleCount, _propertyBlock);
+                }
 
-                // Rain draws in RainParticlesAfterPostPass below at
+                // Rain drops in RainParticlesAfterPostPass below at
                 // AfterRenderingPostProcessing so atmospheric scattering does
                 // not wash over the drops.
             });

@@ -20,4 +20,5 @@ public static partial class ShaderGlobalIds
     public const string WeatherParticleDustColor = "_WeatherParticleDustColor";
     public const string WeatherParticleSnowColor = "_WeatherParticleSnowColor";
     public const string WeatherParticleProof = "_WeatherParticleProof";
+    public const string WeatherParticleRainParams = "_WeatherParticleRainParams";
 }
