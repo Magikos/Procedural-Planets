@@ -1,0 +1,111 @@
+@name Grass Color Match Sweep
+@timeout 360
+@defer debug.capture-set "Grass"
+@defer grass.enabled true
+@defer grass.layer near true
+@defer grass.layer chunk false
+@defer grass.layer blanket true
+@defer grass.overlay-strength 1
+@defer grass.surface-brightness 0.35
+@defer grass.debug-tint 0
+@defer grass.debug-layer-colors false
+@sidecar camera.position
+@sidecar debug.capture-set
+@sidecar debug.mode
+@sidecar planet.status
+@sidecar light.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+
+# Fixed pose from Grass Pop-in Edge B. Compare sidecars for layer state, strength, and brightness.
+debug.capture-set "Grass Visual"
+camera.speed 6
+camera.look-at -1569.27,-160.83,-1.16 -1548.27,837.17,-60.06
+light.local-noon
+grass.enabled true
+grass.debug-tint 0
+grass.debug-layer-colors true
+grass.overlay-strength 1
+grass.surface-brightness 0.35
+grass.layer near true
+grass.layer chunk false
+grass.layer blanket true
+@wait seconds 4
+debug.capture
+@wait seconds 2
+
+# Near + blanket only: find the blanket brightness that best matches near grass.
+grass.debug-layer-colors false
+grass.layer near true
+grass.layer chunk false
+grass.layer blanket true
+grass.overlay-strength 1
+
+grass.surface-brightness 0.28
+@wait frames 30
+debug.capture
+@wait seconds 2
+
+grass.surface-brightness 0.35
+@wait frames 30
+debug.capture
+@wait seconds 2
+
+grass.surface-brightness 0.42
+@wait frames 30
+debug.capture
+@wait seconds 2
+
+# Default near-to-blanket handoff at the same brightness values.
+grass.layer near true
+grass.layer chunk false
+grass.layer blanket true
+grass.overlay-strength 1
+
+grass.surface-brightness 0.28
+@wait frames 30
+debug.capture
+@wait seconds 2
+
+grass.surface-brightness 0.35
+@wait frames 30
+debug.capture
+@wait seconds 2
+
+grass.surface-brightness 0.42
+@wait frames 30
+debug.capture
+@wait seconds 2
+
+# Strength check: same brightness, softer blanket coverage.
+grass.surface-brightness 0.35
+grass.overlay-strength 0.75
+@wait frames 30
+debug.capture
+@wait seconds 2
+
+grass.surface-brightness 0.42
+grass.overlay-strength 0.75
+@wait frames 30
+debug.capture
+@wait seconds 2
+
+# Chunk + blanket only at the current default, to isolate the transition layer.
+grass.overlay-strength 1
+grass.surface-brightness 0.35
+grass.layer near false
+grass.layer chunk true
+grass.layer blanket true
+@wait frames 30
+debug.capture
+@wait seconds 2
+
+# Final current default normal view.
+grass.layer near true
+grass.layer chunk false
+grass.layer blanket true
+grass.overlay-strength 1
+grass.surface-brightness 0.35
+@wait frames 30
+debug.capture
+@wait seconds 2

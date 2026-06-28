@@ -39,7 +39,7 @@ public static class BiomeMapBaker
     internal static void Bake(
         PlanetChunk chunk,
         in BiomeLookupData lookup,
-        VoronoiBiomeField voronoiField,
+        IBiomeAssignmentField assignmentField,
         Color[] lutColors,
         Color32[] blendedColors, Color32[] ids, Color32[] weights, byte[] tempHighRes)
     {
@@ -59,7 +59,7 @@ public static class BiomeMapBaker
         if (vertRes * vertRes != vertCount) return;
 
         int activeBiomeCount = GetActiveBiomeCount(lookup, lutColors);
-        BuildHighResIdGrid(chunk, lookup, voronoiField, vertRes, tempHighRes);
+        BuildHighResIdGrid(chunk, lookup, assignmentField, vertRes, tempHighRes);
         SampleTopKPerTexel(tempHighRes, lutColors, activeBiomeCount, blendedColors, ids, weights);
     }
 
@@ -78,7 +78,7 @@ public static class BiomeMapBaker
     static void BuildHighResIdGrid(
         PlanetChunk chunk,
         in BiomeLookupData lookup,
-        VoronoiBiomeField voronoiField,
+        IBiomeAssignmentField assignmentField,
         int vertRes,
         byte[] outIds)
     {
@@ -93,14 +93,14 @@ public static class BiomeMapBaker
                     chunk.CpuElevations, vertRes, localU, localV);
 
                 byte primary;
-                if (voronoiField != null)
+                if (assignmentField != null)
                 {
                     Vector2 faceUv = chunk.UvCenter + new Vector2(
                         (localU - 0.5f) * chunk.UvHalfExtent * 2f,
                         (localV - 0.5f) * chunk.UvHalfExtent * 2f);
                     Vector3 direction = CoordinateConverter.CubeFaceToUnitSphere(
                         chunk.FaceIndex, faceUv);
-                    byte landPrimary = voronoiField.EvaluatePrimaryId(direction);
+                    byte landPrimary = assignmentField.EvaluatePrimaryId(direction);
                     BiomeLookupEvaluator.ResolveFromLandBiomes(
                         lookup,
                         tm.x,

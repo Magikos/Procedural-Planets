@@ -31,6 +31,7 @@ Shader "Planet/Grass"
             #include "Includes/CloudShadows.hlsl"
             #include "Includes/GrassColor.hlsl"
             #include "Includes/GrassInteractors.hlsl"
+            #include "Includes/GrassDither.hlsl"
 
             struct BladeInstance
             {
@@ -48,6 +49,14 @@ Shader "Planet/Grass"
             int _GrassGeometryMode;
             float _GrassClusterStartDistance;
             float _GrassClusterEndDistance;
+            float _GrassVisualNearFadeStart;
+            float _GrassVisualNearFadeEnd;
+            float _GrassVisualFadeStart;
+            float _GrassVisualFadeEnd;
+            float _GrassChunkFade;
+            float4 _GrassDebugBladeTint;
+            float _GrassDebugLayerColors;
+            float4 _GrassLayerDebugTint;
 
             struct Varyings
             {
@@ -59,6 +68,7 @@ Shader "Planet/Grass"
                 float2 clusterUv : TEXCOORD4;
                 nointerpolation float clusterSeed : TEXCOORD5;
                 nointerpolation float clusterMode : TEXCOORD6;
+                nointerpolation float fadeAlpha : TEXCOORD7;
                 float4 color : COLOR0;
             };
 
@@ -199,6 +209,13 @@ Shader "Planet/Grass"
                 float yawCos = cos(yaw);
                 float3 sideWS = normalize(tangentWS * yawCos + bitangentWS * yawSin);
                 float viewDistance = length(_WorldSpaceCameraPos - rootWS);
+                float visualEdgeFade = 1.0;
+                if (_GrassVisualNearFadeEnd > _GrassVisualNearFadeStart + 0.01)
+                    visualEdgeFade *= smoothstep(_GrassVisualNearFadeStart, _GrassVisualNearFadeEnd, viewDistance);
+                if (_GrassVisualFadeEnd > _GrassVisualFadeStart + 0.01)
+                    visualEdgeFade *= 1.0 - smoothstep(_GrassVisualFadeStart, _GrassVisualFadeEnd, viewDistance);
+                visualEdgeFade *= saturate(_GrassChunkFade);
+
                 float3 toCameraTangent = _WorldSpaceCameraPos - rootWS;
                 toCameraTangent -= upWS * dot(toCameraTangent, upWS);
                 float tangentViewLengthSq = dot(toCameraTangent, toCameraTangent);
@@ -218,13 +235,16 @@ Shader "Planet/Grass"
                     Hash01(seed ^ 0x3c6ef372u) - 0.5) * spread;
                 float3 tuftRootWS = rootWS + tangentWS * rootJitter.x + bitangentWS * rootJitter.y;
 
-                float patchHeight = lerp(0.82, 1.18, patchHeightNoise);
-                float patchWidth = lerp(0.92, 1.10, patchWidthNoise);
-                height *= patchHeight * lerp(0.48, 1.55, Hash01(seed ^ 0xa54ff53au));
-                width *= patchWidth * lerp(1.05, 1.55, Hash01(seed ^ 0x510e527fu));
+                float patchHeight = lerp(0.76, 1.24, patchHeightNoise);
+                float patchWidth = lerp(0.88, 1.16, patchWidthNoise);
+                height *= patchHeight * lerp(0.42, 1.68, Hash01(seed ^ 0xa54ff53au));
+                width *= patchWidth * lerp(0.96, 1.68, Hash01(seed ^ 0x510e527fu));
                 // Preserve projected coverage as physical density thins. This is cheaper
                 // than adding more roots and works with the billboard turn above.
                 width *= lerp(1.0, 1.42, smoothstep(160.0, 500.0, viewDistance));
+                float geometryFade = smoothstep(0.0, 1.0, saturate(visualEdgeFade));
+                height *= geometryFade;
+                width *= geometryFade;
 
                 float bend = t * t * height * lerp(0.16, 0.34, Hash01(seed ^ 0x9b05688cu));
                 float lateralCurl = (Hash01(seed ^ 0x1f83d9abu) - 0.5) * width * t * (1.0 - t) * 0.8;
@@ -257,15 +277,18 @@ Shader "Planet/Grass"
                 float3 spineWS = tuftRootWS + upWS * (height * t) + leanWS * bend + sideWS * lateralCurl + interactorBend + windOffset;
                 float3 positionWS = spineWS + sideWS * (side * widthAtT);
 
-                float brightness = lerp(0.64, 0.98, Hash01(seed ^ 0x5be0cd19u));
+                float brightness = lerp(0.56, 1.04, Hash01(seed ^ 0x5be0cd19u));
                 float tintHash = saturate(lerp(Hash01(seed ^ 0xc2b2ae35u), patchTintNoise, 0.18));
-                float patchTint = lerp(0.90, 1.02, patchTintNoise);
+                float patchTint = lerp(0.86, 1.06, patchTintNoise);
                 float colorJitter = Hash01(seed ^ 0x27d4eb2fu);
-                float3 baseTint = lerp(float3(0.76, 0.91, 0.70), float3(0.98, 0.94, 0.76), tintHash);
-                float3 bladeTintJitter = lerp(float3(0.88, 1.00, 0.90), float3(1.00, 0.94, 0.82), colorJitter);
+                float3 baseTint = lerp(float3(0.70, 0.88, 0.64), float3(1.04, 0.96, 0.72), tintHash);
+                float3 bladeTintJitter = lerp(float3(0.82, 1.03, 0.86), float3(1.05, 0.91, 0.78), colorJitter);
                 float3 tint = baseTint * bladeTintJitter * patchTint;
                 float heightShade = lerp(0.42, 0.94, smoothstep(0.0, 1.0, t));
                 float3 biomeTint = GradeGrassTint(blade.Color.rgb, 0.76, 0.88);
+                float3 bladeAlbedo = saturate(biomeTint * tint * brightness) * heightShade;
+                float3 canopyAlbedo = GradeGrassTint(blade.Color.rgb, 0.82, 0.98) * 0.76;
+                float canopyHandoff = smoothstep(120.0, 240.0, viewDistance);
 
                 Varyings output;
                 output.positionCS = TransformWorldToHClip(positionWS);
@@ -276,12 +299,15 @@ Shader "Planet/Grass"
                 output.clusterUv = float2(side * 0.5 + 0.5, t);
                 output.clusterSeed = Hash01(seed ^ 0xd2511f53u);
                 output.clusterMode = clusterMode;
-                output.color = float4(saturate(biomeTint * tint * brightness) * heightShade, 1.0);
+                output.fadeAlpha = saturate(visualEdgeFade);
+                output.color = float4(lerp(bladeAlbedo, canopyAlbedo, canopyHandoff), 1.0);
                 return output;
             }
 
             half4 GrassFragment(Varyings input) : SV_Target
             {
+                clip(input.fadeAlpha - SampleGrassDither(input.positionCS.xy) - 0.001);
+
                 if (input.clusterMode > 0.5)
                 {
                     float bladeCoord = min(input.clusterUv.x, 0.99999) * CLUSTER_BLADE_COLUMNS;
@@ -301,7 +327,19 @@ Shader "Planet/Grass"
                 float3 viewDir = GetWorldSpaceNormalizeViewDir(input.positionWS);
                 float3 normalWS = SafeNormalize(input.normalWS, float3(0.0, 1.0, 0.0));
 
-                float3 albedo = saturate(input.color.rgb);
+                float layerDebugStrength = saturate(_GrassDebugLayerColors) * saturate(_GrassLayerDebugTint.a);
+                float3 debugTint = lerp(
+                    saturate(_GrassDebugBladeTint.rgb),
+                    saturate(_GrassLayerDebugTint.rgb),
+                    layerDebugStrength);
+                float edgeShade = lerp(0.55, 1.0, saturate(input.fadeAlpha));
+                float3 sourceAlbedo = saturate(input.color.rgb)
+                    * lerp(0.45, 1.0, saturate(_GrassChunkFade))
+                    * edgeShade;
+                float3 albedo = lerp(
+                    sourceAlbedo,
+                    debugTint,
+                    max(saturate(_GrassDebugBladeTint.a), layerDebugStrength));
                 float3 planetNormal = PlanetSafeNormalize(input.positionWS - _PlanetCenter, normalWS);
                 float3 rootUpWS = PlanetSafeNormalize(input.rootUpWS, planetNormal);
                 float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);

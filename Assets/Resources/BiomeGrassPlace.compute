@@ -123,6 +123,30 @@ float4 LoadAtlas4(Texture2D<float4> tex, float2 uv, int resolution)
     return tex.Load(int3(ip, 0));
 }
 
+float4 SampleAtlas4(Texture2D<float4> tex, float2 uv, int resolution)
+{
+    int maxTexel = max(resolution - 1, 0);
+    float2 p = saturate(uv) * max(maxTexel, 1);
+    int2 p0 = clamp(int2(floor(p)), int2(0, 0), int2(maxTexel, maxTexel));
+    int2 p1 = min(p0 + 1, int2(maxTexel, maxTexel));
+    float2 f = saturate(p - p0);
+    float4 c00 = tex.Load(int3(p0, 0));
+    float4 c10 = tex.Load(int3(p1.x, p0.y, 0));
+    float4 c01 = tex.Load(int3(p0.x, p1.y, 0));
+    float4 c11 = tex.Load(int3(p1, 0));
+    return lerp(lerp(c00, c10, f.x), lerp(c01, c11, f.x), f.y);
+}
+
+float SurfaceStateReject(float4 state)
+{
+    return saturate(max(state.r, state.g));
+}
+
+float SamplePathMask(float2 uv)
+{
+    return SurfaceStateReject(SampleAtlas4(_SurfaceStateMask, uv, max(_LaneResolution, 1)));
+}
+
 float LoadRadius(float2 uv)
 {
     int resolution = max(_GrassSurfaceAtlasResolution, 1);
@@ -320,13 +344,6 @@ void PlaceAndCull(uint3 id : SV_DispatchThreadID)
         return;
     }
 
-    float4 state = LoadAtlas4(_SurfaceStateMask, laneCenterChunkUv, _LaneResolution);
-    if (state.r > 0.5 || state.g > 0.5)
-    {
-        AddStat(STAT_STATE_REJECTED_LANES, 1u);
-        return;
-    }
-
     float laneRadius = LoadRadius(laneCenterFaceUv);
     if (_WaterRadius > 0.0 && laneRadius <= _WaterRadius + max(biome.Placement.z, 0.0))
     {
@@ -422,6 +439,9 @@ void PlaceAndCull(uint3 id : SV_DispatchThreadID)
             Hash01(subHash ^ 0xbb67ae85u) - 0.5) * _LaneJitterMagnitude;
         float2 chunkUv = (float2(id.xy) + 0.5 + subJitter) / max((float)_LaneResolution, 1.0);
         float2 faceUv = _ChunkUvScaleOffset.zw + chunkUv * _ChunkUvScaleOffset.xy;
+        float grassScale = saturate(1.0 - SamplePathMask(chunkUv));
+        if (grassScale <= 0.02)
+            continue;
 
         float radius = LoadRadius(faceUv);
         float3 sphereNormal = CubeFaceToUnitSphere(_FaceIndex, faceUv);
@@ -439,8 +459,8 @@ void PlaceAndCull(uint3 id : SV_DispatchThreadID)
 
         float heightVariation = lerp(0.75, 1.25, Hash01(subHash ^ 0x510e527fu));
         float widthVariation = lerp(0.80, 1.15, Hash01(subHash ^ 0x9b05688cu));
-        float height = biome.Shape.y * max(_PlanetWorldScale, 0.0001) * heightVariation;
-        float width = biome.Shape.z * max(_PlanetWorldScale, 0.0001) * widthVariation;
+        float height = biome.Shape.y * max(_PlanetWorldScale, 0.0001) * heightVariation * grassScale;
+        float width = biome.Shape.z * max(_PlanetWorldScale, 0.0001) * widthVariation * grassScale;
 
         float3 localRoot = sphereNormal * radius;
         float3 rootWs = mul(_PlanetLocalToWorld, float4(localRoot, 1.0)).xyz;

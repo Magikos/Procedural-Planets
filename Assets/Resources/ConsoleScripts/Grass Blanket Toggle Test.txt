@@ -1,0 +1,41 @@
+@name Grass Blanket Toggle Test
+@timeout 120
+@defer grass.enabled true
+@defer grass.layer near true
+@defer grass.layer chunk true
+@defer grass.layer blanket true
+@defer grass.overlay-strength 1
+@defer grass.surface-brightness 0.4
+@sidecar planet.status
+@sidecar light.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+
+debug.capture-set "Grass"
+camera.teleport "Grass Blanket Test"
+light.local-noon
+@wait frames 4
+
+grass.enabled true
+grass.overlay-strength 1
+grass.surface-brightness 0.4
+grass.layer near false
+grass.layer chunk false
+grass.layer blanket false
+@wait frames 3
+debug.capture
+
+grass.layer blanket true
+@wait frames 3
+debug.capture
+
+grass.surface-brightness 1.5
+@wait frames 3
+debug.capture
+
+grass.surface-brightness 0.4
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+@wait frames 3
+debug.capture

@@ -51,6 +51,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     static readonly int[] BiomeWeightsIds = new int[6];
     static readonly int[] SurfaceRadiusIds = new int[6];
     static readonly int[] SurfaceNormalIds = new int[6];
+    static readonly int[] SurfaceStateIds = new int[6];
 
     static readonly int BiomeGrassParamsId = Shader.PropertyToID("_NearFieldBiomeGrassParams");
     static readonly int InstancesId = Shader.PropertyToID("_NearFieldGrassInstances");
@@ -59,6 +60,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     static readonly int RangeCountsId = Shader.PropertyToID("_NearFieldRangeCounts");
     static readonly int BiomeAtlasResolutionId = Shader.PropertyToID("_NearFieldBiomeAtlasResolution");
     static readonly int SurfaceAtlasResolutionId = Shader.PropertyToID("_NearFieldSurfaceAtlasResolution");
+    static readonly int SurfaceStateAtlasResolutionId = Shader.PropertyToID("_NearFieldSurfaceStateAtlasResolution");
     static readonly int BiomeParamCountId = Shader.PropertyToID("_NearFieldBiomeParamCount");
     static readonly int CapacityId = Shader.PropertyToID("_NearFieldCapacity");
     static readonly int SeedId = Shader.PropertyToID("_NearFieldSeed");
@@ -81,6 +83,12 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     static readonly int BladeInstancesShaderId = Shader.PropertyToID("_GrassBladeInstances");
     static readonly int ClimateMapId = Shader.PropertyToID(ShaderGlobalIds.ClimateMap);
     static readonly int ClimateMapResolutionId = Shader.PropertyToID(ShaderGlobalIds.ClimateMapResolution);
+    static readonly int VisualNearFadeStartId = Shader.PropertyToID("_GrassVisualNearFadeStart");
+    static readonly int VisualNearFadeEndId = Shader.PropertyToID("_GrassVisualNearFadeEnd");
+    static readonly int VisualFadeStartId = Shader.PropertyToID("_GrassVisualFadeStart");
+    static readonly int VisualFadeEndId = Shader.PropertyToID("_GrassVisualFadeEnd");
+    static readonly int ChunkFadeId = Shader.PropertyToID("_GrassChunkFade");
+    static readonly int LayerDebugTintId = Shader.PropertyToID("_GrassLayerDebugTint");
 
     static GrassNearFieldController()
     {
@@ -90,6 +98,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             BiomeWeightsIds[i] = Shader.PropertyToID($"_NearFieldBiomeWeights_F{i}");
             SurfaceRadiusIds[i] = Shader.PropertyToID($"_NearFieldSurfaceRadius_F{i}");
             SurfaceNormalIds[i] = Shader.PropertyToID($"_NearFieldSurfaceNormal_F{i}");
+            SurfaceStateIds[i] = Shader.PropertyToID($"_NearFieldSurfaceState_F{i}");
         }
     }
 
@@ -124,6 +133,9 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     readonly int[] _rangeBudgets = new int[FaceSpaceCellRangeBuilder.MaxRanges];
     readonly long _bufferBytes;
     Texture2DArray _neutralClimateMap;
+    Texture2D _fallbackVectorTexture;
+    Texture2D _fallbackRadiusTexture;
+    Texture2D _fallbackNormalTexture;
     bool _disposed;
 
     // Last-dispatch state for change detection.
@@ -175,6 +187,12 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             name = "Runtime NearField Grass Material",
             hideFlags = HideFlags.HideAndDontSave,
         };
+        _material.SetFloat(VisualNearFadeStartId, 0f);
+        _material.SetFloat(VisualNearFadeEndId, 0f);
+        _material.SetFloat(VisualFadeStartId, Mathf.Max(0f, _drawDistance - _fadeBand));
+        _material.SetFloat(VisualFadeEndId, _drawDistance);
+        _material.SetFloat(ChunkFadeId, 1f);
+        _material.SetColor(LayerDebugTintId, Color.green);
 
         if (!SystemInfo.supportsComputeShaders)
         {
@@ -316,21 +334,30 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     {
         GrassSurfaceAtlasGpuData grassAtlases = _surfaceProvider.GrassSurfaceAtlases;
         int surfaceAtlasResolution = grassAtlases != null ? grassAtlases.AtlasResolution : 0;
+        int surfaceStateAtlasResolution = 0;
         int biomeAtlasResolution = 0;
+        Texture2D fallbackVector = GetFallbackVectorTexture();
+        Texture2D fallbackRadius = GetFallbackRadiusTexture();
+        Texture2D fallbackNormal = GetFallbackNormalTexture();
         for (int f = 0; f < 6; f++)
         {
             Texture2D radius = null, normal = null;
             if (grassAtlases != null)
                 grassAtlases.TryGetFace(f, out radius, out normal);
-            _compute.SetTexture(_kernel, SurfaceRadiusIds[f], radius != null ? (Texture)radius : Texture2D.blackTexture);
-            _compute.SetTexture(_kernel, SurfaceNormalIds[f], normal != null ? (Texture)normal : Texture2D.normalTexture);
+            _compute.SetTexture(_kernel, SurfaceRadiusIds[f], radius != null ? (Texture)radius : fallbackRadius);
+            _compute.SetTexture(_kernel, SurfaceNormalIds[f], normal != null ? (Texture)normal : fallbackNormal);
 
             Texture2D ids = null, weights = null;
             _surfaceProvider.TryGetFaceBiomeAtlases(f, out _, out ids, out weights);
-            _compute.SetTexture(_kernel, BiomeIdsIds[f], ids != null ? (Texture)ids : Texture2D.blackTexture);
-            _compute.SetTexture(_kernel, BiomeWeightsIds[f], weights != null ? (Texture)weights : Texture2D.blackTexture);
+            _compute.SetTexture(_kernel, BiomeIdsIds[f], ids != null ? (Texture)ids : fallbackVector);
+            _compute.SetTexture(_kernel, BiomeWeightsIds[f], weights != null ? (Texture)weights : fallbackVector);
             if (ids != null && biomeAtlasResolution == 0)
                 biomeAtlasResolution = ids.width;
+
+            _surfaceProvider.TryGetFaceSurfaceStateAtlas(f, out Texture2D state);
+            _compute.SetTexture(_kernel, SurfaceStateIds[f], state != null ? (Texture)state : fallbackVector);
+            if (state != null && surfaceStateAtlasResolution == 0)
+                surfaceStateAtlasResolution = state.width;
         }
 
         _compute.SetBuffer(_kernel, BiomeGrassParamsId, _grassParamsBuffer);
@@ -340,6 +367,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         _compute.SetBuffer(_kernel, RangeCountsId, _rangeCountsBuffer);
         _compute.SetInt(BiomeAtlasResolutionId, Mathf.Max(biomeAtlasResolution, 1));
         _compute.SetInt(SurfaceAtlasResolutionId, Mathf.Max(surfaceAtlasResolution, 1));
+        _compute.SetInt(SurfaceStateAtlasResolutionId, Mathf.Max(surfaceStateAtlasResolution, 1));
         _compute.SetInt(BiomeParamCountId, _grassParamCount);
         _compute.SetInt(CapacityId, _capacity);
         _compute.SetInt(SeedId, _seed);
@@ -539,6 +567,9 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             else Object.DestroyImmediate(_neutralClimateMap);
             _neutralClimateMap = null;
         }
+        DestroyTexture(ref _fallbackVectorTexture);
+        DestroyTexture(ref _fallbackRadiusTexture);
+        DestroyTexture(ref _fallbackNormalTexture);
     }
 
     Texture2DArray GetClimateMap()
@@ -558,5 +589,52 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             _neutralClimateMap.Apply(false, true);
         }
         return _neutralClimateMap;
+    }
+
+    Texture2D GetFallbackVectorTexture()
+    {
+        if (_fallbackVectorTexture == null)
+            _fallbackVectorTexture = CreateFallbackTexture("NearFieldFallbackVector", TextureFormat.RGBA32, Color.clear, true);
+        return _fallbackVectorTexture;
+    }
+
+    Texture2D GetFallbackRadiusTexture()
+    {
+        if (_fallbackRadiusTexture == null)
+            _fallbackRadiusTexture = CreateFallbackTexture(
+                "NearFieldFallbackRadius",
+                TextureFormat.RFloat,
+                new Color(Mathf.Max(_planetRadius, 1f), 0f, 0f, 1f),
+                true);
+        return _fallbackRadiusTexture;
+    }
+
+    Texture2D GetFallbackNormalTexture()
+    {
+        if (_fallbackNormalTexture == null)
+            _fallbackNormalTexture = CreateFallbackTexture("NearFieldFallbackNormal", TextureFormat.RGBA32, new Color(0.5f, 1f, 0.5f, 1f), true);
+        return _fallbackNormalTexture;
+    }
+
+    static Texture2D CreateFallbackTexture(string name, TextureFormat format, Color color, bool linear)
+    {
+        var texture = new Texture2D(1, 1, format, false, linear)
+        {
+            hideFlags = HideFlags.HideAndDontSave,
+            name = name,
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+        texture.SetPixel(0, 0, color);
+        texture.Apply(false, true);
+        return texture;
+    }
+
+    static void DestroyTexture(ref Texture2D texture)
+    {
+        if (texture == null) return;
+        if (Application.isPlaying) Object.Destroy(texture);
+        else Object.DestroyImmediate(texture);
+        texture = null;
     }
 }

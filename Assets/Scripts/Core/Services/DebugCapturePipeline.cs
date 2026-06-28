@@ -253,7 +253,10 @@ sealed class DebugCapturePipeline
             string timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss-fff");
             string safeModeName = DebugScreenshotFiles.SanitizeFilePart(modeName);
             string safeModeId = DebugScreenshotFiles.SanitizeFilePart(modeId.ToString());
-            string baseName = $"F10-{safeModeId}-{safeModeName}-{timestamp}";
+            string scriptPrefix = ConsoleScriptRuntime.GetCaptureFilePrefix();
+            string baseName = string.IsNullOrEmpty(scriptPrefix)
+                ? $"F10-{safeModeId}-{safeModeName}-{timestamp}"
+                : $"F10-{scriptPrefix}-{safeModeId}-{safeModeName}-{timestamp}";
             string imagePath = System.IO.Path.Combine(directory, baseName + ".png");
             string metadataPath = System.IO.Path.Combine(directory, baseName + ".txt");
 

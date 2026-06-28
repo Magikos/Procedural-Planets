@@ -13,9 +13,10 @@ sealed class GrassChunkRuntime : System.IDisposable
     public const int VisualBladesPerCard = 5;
     public const int VisualBladesPerInstance = ClusterCardsPerInstance * VisualBladesPerCard;
     public const int BladeVertexCount = VerticesPerVisualBlade * ClusterCardsPerInstance;
-
+    const float ChunkPeakCoverage = 0.42f;
     static readonly uint[] ArgsScratch = new uint[4];
     static readonly uint[] StatsScratch = new uint[StatsCount];
+    static readonly int ChunkFadeId = Shader.PropertyToID("_GrassChunkFade");
 
     readonly GrassBladeBufferPool _bladePool;
     readonly GraphicsBuffer _bladeBuffer;
@@ -125,6 +126,8 @@ sealed class GrassChunkRuntime : System.IDisposable
     public void Render(Material material, Camera camera, int layer)
     {
         if (_disposed || _argsBuffer == null) return;
+
+        _props.SetFloat(ChunkFadeId, ChunkPeakCoverage);
 
         var renderParams = new RenderParams(material)
         {

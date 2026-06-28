@@ -1,0 +1,95 @@
+@name Grass Transition Sequence
+@timeout 240
+@defer debug.capture-set "Grass"
+@defer scale.clear
+@defer grass.enabled true
+@defer grass.layer near true
+@defer grass.layer chunk true
+@defer grass.layer blanket true
+@defer grass.overlay-strength 1
+@defer grass.surface-brightness 0.4
+@defer grass.debug-tint 0
+@sidecar camera.position
+@sidecar debug.capture-set
+@sidecar debug.mode
+@sidecar planet.status
+@sidecar light.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+
+# Use with GrassDiagnosticRecipe assigned.
+# Starts at Grass Scout B, captures one scale frame, then seven cyan blade-tint walk frames.
+debug.capture-set "Grass Visual"
+camera.speed 12
+grass.enabled true
+grass.overlay-strength 1
+grass.surface-brightness 0.4
+grass.debug-tint 0
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+
+# Scale baseline at the start of the path.
+camera.look-at -431.81,-298.46,-1464.09 -1317.91,-390.56,-1009.89
+light.local-noon
+camera.save-teleport "Grass Transition Start"
+scale.drop
+@wait frames 20
+debug.capture
+@wait seconds 1
+
+scale.clear
+@wait frames 12
+grass.debug-tint-color 0,1,1
+grass.debug-tint 1
+@wait frames 8
+
+# 0m
+camera.look-at -431.81,-298.46,-1464.09 -1225.45,-350.96,-857.98
+light.local-noon
+@wait frames 8
+debug.capture
+@wait seconds 1
+
+# 20m
+camera.look-at -450.66,-300.94,-1457.89 -1243.45,-353.12,-850.63
+light.local-noon
+@wait frames 8
+debug.capture
+@wait seconds 1
+
+# 40m
+camera.look-at -469.44,-303.37,-1451.44 -1261.39,-355.23,-843.07
+light.local-noon
+@wait frames 8
+debug.capture
+@wait seconds 1
+
+# 60m
+camera.look-at -488.14,-305.75,-1444.76 -1279.28,-357.30,-835.31
+light.local-noon
+@wait frames 8
+debug.capture
+@wait seconds 1
+
+# 80m
+camera.look-at -506.76,-308.08,-1437.84 -1297.12,-359.33,-827.34
+light.local-noon
+@wait frames 8
+debug.capture
+@wait seconds 1
+
+# 100m
+camera.look-at -525.29,-310.36,-1430.68 -1314.89,-361.32,-819.18
+light.local-noon
+@wait frames 8
+debug.capture
+@wait seconds 1
+
+# 120m
+camera.look-at -543.74,-312.59,-1423.28 -1332.60,-363.27,-810.80
+light.local-noon
+camera.save-teleport "Grass Transition End"
+@wait frames 8
+debug.capture
+@wait seconds 1

@@ -47,6 +47,7 @@ public sealed class PerFaceSurfaceProvider : IPlanetSurfaceProvider
         progress?.Report(0f, "Generating terrain...");
 
         var filters = _shapeGenerator.BuildNoiseFilterData(Allocator.Persistent);
+        var diagnosticTerrainCells = _shapeGenerator.BuildDiagnosticTerrainCells(Allocator.Persistent);
         var faceStates = new TerrainFaceJobState[_terrainFaces.Length];
         var handles = new NativeArray<JobHandle>(_terrainFaces.Length, Allocator.Temp);
         JobHandle combined;
@@ -54,7 +55,11 @@ public sealed class PerFaceSurfaceProvider : IPlanetSurfaceProvider
         {
             for (int i = 0; i < _terrainFaces.Length; i++)
             {
-                faceStates[i] = _terrainFaces[i].ScheduleMeshDataJob(filters, _shapeGenerator.Settings.PlanetRadius);
+                faceStates[i] = _terrainFaces[i].ScheduleMeshDataJob(
+                    filters,
+                    diagnosticTerrainCells,
+                    _shapeGenerator.DiagnosticTerrainData,
+                    _shapeGenerator.Settings.PlanetRadius);
                 handles[i] = faceStates[i].Handle;
             }
             combined = JobHandle.CombineDependencies(handles);
@@ -67,6 +72,7 @@ public sealed class PerFaceSurfaceProvider : IPlanetSurfaceProvider
                 {
                     combined.Complete();
                     for (int i = 0; i < faceStates.Length; i++) faceStates[i].Dispose();
+                    diagnosticTerrainCells.Dispose();
                     filters.Dispose();
                     ct.ThrowIfCancellationRequested();
                 }
@@ -78,12 +84,14 @@ public sealed class PerFaceSurfaceProvider : IPlanetSurfaceProvider
         {
             if (handles.IsCreated) handles.Dispose();
             for (int i = 0; i < faceStates.Length; i++) faceStates[i].Dispose();
+            if (diagnosticTerrainCells.IsCreated) diagnosticTerrainCells.Dispose();
             filters.Dispose();
             throw;
         }
 
         for (int i = 0; i < _terrainFaces.Length; i++)
             _terrainFaces[i].CompleteMeshDataJob(faceStates[i]);
+        diagnosticTerrainCells.Dispose();
         filters.Dispose();
 
         // EvaluateElevation isn't called per vertex anymore (Burst job bypasses it), so feed

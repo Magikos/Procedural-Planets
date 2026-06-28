@@ -37,7 +37,9 @@ Shader "Planet/VertexColor"
         _GrassFarOverlayAltitudeStart ("Grass Far Overlay Altitude Start", Float) = 750.0
         _GrassFarOverlayAltitudeEnd ("Grass Far Overlay Altitude End", Float) = 2600.0
         _GrassFarOverlayFiberStrength ("Grass Far Overlay Fiber Strength", Range(0.0, 1.0)) = 0.65
-        _GrassSurfaceBrightness ("Grass Surface Brightness", Range(0.3, 1.5)) = 1.0
+        _GrassSurfaceBrightness ("Grass Surface Brightness", Range(0.3, 1.5)) = 0.4
+        [HideInInspector] _GrassWaterRadius ("Grass Water Radius", Float) = -1.0
+        [HideInInspector] _SurfacePathDebug ("Surface Path Debug", Float) = 0.0
     }
     SubShader
     {
@@ -126,10 +128,13 @@ Shader "Planet/VertexColor"
                 float _GrassFarOverlayAltitudeEnd;
                 float _GrassFarOverlayFiberStrength;
                 float _GrassSurfaceBrightness;
+                float _GrassWaterRadius;
+                float _SurfacePathDebug;
             CBUFFER_END
 
             float _NightAmbientIntensity;
             float3 _SunParams;
+            float _GrassDebugLayerColors;
             float3 _PlanetCenter;
             float _SeaLevelRadius;
             int _OceanDebugMode;
@@ -167,6 +172,8 @@ Shader "Planet/VertexColor"
                 float4 Shape;     // x density, y height, z width, w clump strength
                 float4 Placement; // x maxSlopeDeg, y slopeFadeDeg, z waterClearance, w blendPower
                 float4 Tint;
+                float4 TintDry;
+                float4 TintLush;
             };
 
             struct GrassOverlayParams
@@ -185,6 +192,9 @@ Shader "Planet/VertexColor"
                 float nearWeight;
                 float envCoverage;
                 float approachWeight;
+                float density;
+                float slopeKeep;
+                float waterKeep;
                 float3 tint;
                 float3 relPos;
                 float3 planetNormal;
@@ -239,6 +249,11 @@ Shader "Planet/VertexColor"
             float2 BiomeMapUv(float2 chunkUv)
             {
                 return saturate(chunkUv * _BiomeMapUvScale.xy + _BiomeMapUvScale.zw);
+            }
+
+            float4 SampleSurfaceState(float2 chunkUv)
+            {
+                return SAMPLE_TEXTURE2D(_SurfaceStateMask, sampler_SurfaceStateMask, saturate(chunkUv));
             }
 
             // Phase B step 5b: cheap-path surface albedo. Bakes already weight-summed the
@@ -604,9 +619,8 @@ Shader "Planet/VertexColor"
 
             GrassOverlayParams CornerGrassOverlayParams(int2 texel)
             {
-                float2 uv = (texel + 0.5) * _BiomeMap_TexelSize.xy;
-                float4 ids = SAMPLE_TEXTURE2D(_BiomeIds, sampler_BiomeIds, uv);
-                float4 weights = SAMPLE_TEXTURE2D(_BiomeWeights, sampler_BiomeWeights, uv);
+                float4 ids = LOAD_TEXTURE2D(_BiomeIds, texel);
+                float4 weights = LOAD_TEXTURE2D(_BiomeWeights, texel);
 
                 GrassOverlayParams overlay = EmptyGrassOverlayParams();
                 float totalParamWeight = 0.0;
@@ -661,6 +675,9 @@ Shader "Planet/VertexColor"
                 e.nearWeight = 0.0;
                 e.envCoverage = 0.0;
                 e.approachWeight = 0.0;
+                e.density = 0.0;
+                e.slopeKeep = 0.0;
+                e.waterKeep = 0.0;
                 e.tint = 0.0;
                 e.relPos = 0.0;
                 e.planetNormal = 0.0;
@@ -674,17 +691,27 @@ Shader "Planet/VertexColor"
                     return eval;
 
                 GrassOverlayParams grass = SampleGrassOverlayParams(chunkUv);
+                eval.density = saturate(grass.density);
                 if (grass.density <= 0.001)
                     return eval;
 
                 float3 relPos = positionWS - _PlanetCenter;
                 float3 planetNormal = PlanetSafeNormalize(relPos, normalize(geometricNormalWS));
-                float slopeDeg = acos(saturate(dot(normalize(geometricNormalWS), planetNormal))) * 57.2957795;
+                float3 slopeNormal = normalize(geometricNormalWS);
+                if (dot(slopeNormal, planetNormal) < 0.0)
+                    slopeNormal = -slopeNormal;
+                float slopeDeg = acos(saturate(dot(slopeNormal, planetNormal))) * 57.2957795;
                 float slopeFade = max(grass.slopeFadeDeg, 0.001);
                 float slopeKeep = 1.0 - smoothstep(grass.maxSlopeDeg - slopeFade, grass.maxSlopeDeg + slopeFade, slopeDeg);
+                eval.slopeKeep = saturate(slopeKeep);
 
-                float altitude = length(relPos) - _SeaLevelRadius;
-                float waterKeep = smoothstep(max(grass.waterClearance, 0.0), max(grass.waterClearance, 0.0) + 4.0, altitude);
+                float waterKeep = 1.0;
+                if (_GrassWaterRadius > 0.0)
+                {
+                    float altitude = length(relPos) - _GrassWaterRadius;
+                    waterKeep = smoothstep(max(grass.waterClearance, 0.0), max(grass.waterClearance, 0.0) + 4.0, altitude);
+                }
+                eval.waterKeep = saturate(waterKeep);
 
                 float viewDistance = length(positionWS - _WorldSpaceCameraPos);
                 float farMask = smoothstep(_GrassFarOverlayStart, max(_GrassFarOverlayEnd, _GrassFarOverlayStart + 1.0), viewDistance);
@@ -715,16 +742,24 @@ Shader "Planet/VertexColor"
                 float3 geometricNormalWS,
                 float3 terrainAlbedo)
             {
+                float4 surfaceState = SampleSurfaceState(chunkUv);
+                float paved = saturate(surfaceState.r);
+                float scorched = saturate(surfaceState.g);
+                float pathMask = saturate(max(paved, scorched));
+                if (_SurfacePathDebug > 0.5 && pathMask > 0.001)
+                    return lerp(terrainAlbedo, float3(1.0, 0.0, 0.85), pathMask);
+                terrainAlbedo = lerp(terrainAlbedo, float3(0.32, 0.26, 0.18), paved);
+                terrainAlbedo = lerp(terrainAlbedo, float3(0.055, 0.050, 0.045), scorched);
+
                 GrassOverlayEval eval = EvaluateGrassOverlay(chunkUv, positionWS, geometricNormalWS);
-                // Grass suitability defines a surface material, not a tint painted over dirt.
-                // This coverage is intentionally independent of camera distance and altitude:
-                // geometry may change LOD, but a grass-covered hill must remain grass-covered.
-                float grassCoverage = smoothstep(
-                    0.05,
-                    0.55,
-                    eval.envCoverage * _GrassFarOverlayStrength);
+                // Keep close ground free to show through blade gaps, then hand off to a full
+                // grass-surface material where physical blades thin out near their draw limit.
+                float grassCoverage = smoothstep(0.05, 0.55, eval.farWeight);
+                grassCoverage *= 1.0 - pathMask;
                 if (grassCoverage <= 0.001)
                     return terrainAlbedo;
+                if (_GrassDebugLayerColors > 0.5)
+                    return lerp(terrainAlbedo, float3(0.70, 0.0, 0.0), grassCoverage);
 
                 float3 axis = abs(eval.planetNormal.y) < 0.92 ? float3(0.0, 1.0, 0.0) : float3(1.0, 0.0, 0.0);
                 float3 tangentA = normalize(cross(axis, eval.planetNormal));
@@ -738,12 +773,24 @@ Shader "Planet/VertexColor"
                     fiberUv.y * noiseScale * 2.35,
                     11.0 + eval.tint.g * 23.0));
                 float breakup = lerp(macro * 0.65 + detail * 0.35, fiber, saturate(_GrassFarOverlayFiberStrength));
+                float patch = ValueNoise3D(eval.relPos * (noiseScale * 0.22) + eval.tint * 71.0 + 5.0);
+                float2 fleckUv = float2(fiberUv.x * 0.9, fiberUv.y * 3.0);
+                float fleckFilter = saturate(1.0 - max(fwidth(fleckUv.x), fwidth(fleckUv.y)) * 1.5);
+                float fleck = smoothstep(0.52, 0.88,
+                    ValueNoise3D(float3(fleckUv.x, fleckUv.y, 23.0 + eval.tint.r * 19.0)));
+                fleck = lerp(0.5, fleck, fleckFilter);
+                grassCoverage = saturate(grassCoverage
+                    * lerp(0.86, 1.08, patch)
+                    * lerp(0.58, 1.22, fleck));
 
                 // Match the authored blade color pipeline so geometry and surface LOD share
                 // one material identity. Variation comes from grass fibers, never dirt albedo.
-                float3 grassSurface = GradeGrassTint(eval.tint, 0.76, 0.88);
-                grassSurface *= lerp(0.68, 0.96, breakup);
-                grassSurface *= lerp(0.94, 1.06, fiber);
+                float3 grassSurface = GradeGrassTint(eval.tint, 0.82, 0.98);
+                float surfaceVariation = lerp(0.82, 1.04, breakup)
+                    * lerp(0.98, 1.06, fiber)
+                    * lerp(0.84, 1.16, patch)
+                    * lerp(0.68, 1.30, fleck);
+                grassSurface *= max(0.05, surfaceVariation);
                 grassSurface *= _GrassSurfaceBrightness;
 
                 return lerp(terrainAlbedo, saturate(grassSurface), grassCoverage);
@@ -937,7 +984,6 @@ Shader "Planet/VertexColor"
                     GrassOverlayEval grassEval = EvaluateGrassOverlay(input.chunkUv,
                         input.positionWS, normalize(input.normalWS));
                     // Diagnostic contribution weights follow the active handoff ranges.
-                    // Current output is R/G/B = far/chunk/near contribution weights.
                     return half4(grassEval.farWeight, grassEval.midWeight, grassEval.nearWeight, 1.0);
                 }
 

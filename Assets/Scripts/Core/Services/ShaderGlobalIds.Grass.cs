@@ -20,4 +20,6 @@ public static partial class ShaderGlobalIds
     public const string GrassGeometryMode = "_GrassGeometryMode";
     public const string GrassClusterStartDistance = "_GrassClusterStartDistance";
     public const string GrassClusterEndDistance = "_GrassClusterEndDistance";
+    public const string GrassDebugBladeTint = "_GrassDebugBladeTint";
+    public const string GrassDebugLayerColors = "_GrassDebugLayerColors";
 }

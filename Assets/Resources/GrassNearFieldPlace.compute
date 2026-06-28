@@ -55,6 +55,12 @@ Texture2D<float4> _NearFieldSurfaceNormal_F2;
 Texture2D<float4> _NearFieldSurfaceNormal_F3;
 Texture2D<float4> _NearFieldSurfaceNormal_F4;
 Texture2D<float4> _NearFieldSurfaceNormal_F5;
+Texture2D<float4> _NearFieldSurfaceState_F0;
+Texture2D<float4> _NearFieldSurfaceState_F1;
+Texture2D<float4> _NearFieldSurfaceState_F2;
+Texture2D<float4> _NearFieldSurfaceState_F3;
+Texture2D<float4> _NearFieldSurfaceState_F4;
+Texture2D<float4> _NearFieldSurfaceState_F5;
 
 StructuredBuffer<BiomeGrassParams> _NearFieldBiomeGrassParams;
 RWStructuredBuffer<GrassBladeInstance> _NearFieldGrassInstances;
@@ -76,6 +82,7 @@ RWStructuredBuffer<uint> _NearFieldRangeCounts;
 
 int _NearFieldBiomeAtlasResolution;
 int _NearFieldSurfaceAtlasResolution;
+int _NearFieldSurfaceStateAtlasResolution;
 int _NearFieldBiomeParamCount;
 int _NearFieldCapacity;
 int _NearFieldSeed;
@@ -155,22 +162,26 @@ float CubeFaceAreaKeep(float2 uv)
 
 float4 LoadBiomeIdsTexel(int face, int2 ip)
 {
-    if (face == 0) return _NearFieldBiomeIds_F0.Load(int3(ip, 0));
-    if (face == 1) return _NearFieldBiomeIds_F1.Load(int3(ip, 0));
-    if (face == 2) return _NearFieldBiomeIds_F2.Load(int3(ip, 0));
-    if (face == 3) return _NearFieldBiomeIds_F3.Load(int3(ip, 0));
-    if (face == 4) return _NearFieldBiomeIds_F4.Load(int3(ip, 0));
-    return _NearFieldBiomeIds_F5.Load(int3(ip, 0));
+    float4 ids = 0.0;
+    if (face == 0) ids = _NearFieldBiomeIds_F0.Load(int3(ip, 0));
+    else if (face == 1) ids = _NearFieldBiomeIds_F1.Load(int3(ip, 0));
+    else if (face == 2) ids = _NearFieldBiomeIds_F2.Load(int3(ip, 0));
+    else if (face == 3) ids = _NearFieldBiomeIds_F3.Load(int3(ip, 0));
+    else if (face == 4) ids = _NearFieldBiomeIds_F4.Load(int3(ip, 0));
+    else ids = _NearFieldBiomeIds_F5.Load(int3(ip, 0));
+    return ids;
 }
 
 float4 LoadBiomeWeightsTexel(int face, int2 ip)
 {
-    if (face == 0) return _NearFieldBiomeWeights_F0.Load(int3(ip, 0));
-    if (face == 1) return _NearFieldBiomeWeights_F1.Load(int3(ip, 0));
-    if (face == 2) return _NearFieldBiomeWeights_F2.Load(int3(ip, 0));
-    if (face == 3) return _NearFieldBiomeWeights_F3.Load(int3(ip, 0));
-    if (face == 4) return _NearFieldBiomeWeights_F4.Load(int3(ip, 0));
-    return _NearFieldBiomeWeights_F5.Load(int3(ip, 0));
+    float4 weights = 0.0;
+    if (face == 0) weights = _NearFieldBiomeWeights_F0.Load(int3(ip, 0));
+    else if (face == 1) weights = _NearFieldBiomeWeights_F1.Load(int3(ip, 0));
+    else if (face == 2) weights = _NearFieldBiomeWeights_F2.Load(int3(ip, 0));
+    else if (face == 3) weights = _NearFieldBiomeWeights_F3.Load(int3(ip, 0));
+    else if (face == 4) weights = _NearFieldBiomeWeights_F4.Load(int3(ip, 0));
+    else weights = _NearFieldBiomeWeights_F5.Load(int3(ip, 0));
+    return weights;
 }
 
 float SampleSurfaceRadius(int face, float2 uv)
@@ -239,6 +250,42 @@ float3 SampleSurfaceNormal(int face, float2 uv)
     else if (face == 4) packed = _NearFieldSurfaceNormal_F4.Load(int3(ip, 0));
     else packed = _NearFieldSurfaceNormal_F5.Load(int3(ip, 0));
     return normalize(packed.xyz * 2.0 - 1.0);
+}
+
+float4 LoadSurfaceStateTexel(int face, int2 ip)
+{
+    float4 state = 0.0;
+    if (face == 0) state = _NearFieldSurfaceState_F0.Load(int3(ip, 0));
+    else if (face == 1) state = _NearFieldSurfaceState_F1.Load(int3(ip, 0));
+    else if (face == 2) state = _NearFieldSurfaceState_F2.Load(int3(ip, 0));
+    else if (face == 3) state = _NearFieldSurfaceState_F3.Load(int3(ip, 0));
+    else if (face == 4) state = _NearFieldSurfaceState_F4.Load(int3(ip, 0));
+    else state = _NearFieldSurfaceState_F5.Load(int3(ip, 0));
+    return state;
+}
+
+float4 SampleSurfaceState(int face, float2 uv)
+{
+    int maxTexel = max(_NearFieldSurfaceStateAtlasResolution - 1, 0);
+    float2 p = saturate(uv) * max(maxTexel, 1);
+    int2 p0 = clamp(int2(floor(p)), int2(0, 0), int2(maxTexel, maxTexel));
+    int2 p1 = min(p0 + 1, int2(maxTexel, maxTexel));
+    float2 f = saturate(p - p0);
+    float4 c00 = LoadSurfaceStateTexel(face, p0);
+    float4 c10 = LoadSurfaceStateTexel(face, int2(p1.x, p0.y));
+    float4 c01 = LoadSurfaceStateTexel(face, int2(p0.x, p1.y));
+    float4 c11 = LoadSurfaceStateTexel(face, p1);
+    return lerp(lerp(c00, c10, f.x), lerp(c01, c11, f.x), f.y);
+}
+
+float SurfaceStateReject(float4 state)
+{
+    return saturate(max(state.r, state.g));
+}
+
+float SamplePathMask(int face, float2 uv)
+{
+    return SurfaceStateReject(SampleSurfaceState(face, uv));
 }
 
 BiomeGrassParams GetGrassParams(uint id)
@@ -396,6 +443,13 @@ void PlaceAndCullNearField(uint3 id : SV_DispatchThreadID)
         return;
     }
 
+    float grassScale = saturate(1.0 - SamplePathMask(_NearFieldFaceIndex, faceUv));
+    if (grassScale <= 0.02)
+    {
+        AddStat(NF_STAT_DENSITY_REJECTED, 1u);
+        return;
+    }
+
     float3 dirWs = CubeFaceToUnitSphere(_NearFieldFaceIndex, faceUv);
 
     // Sample surface radius to get the exact root position on the sphere.
@@ -492,8 +546,8 @@ void PlaceAndCullNearField(uint3 id : SV_DispatchThreadID)
 
     float heightVariation = lerp(0.75, 1.25, Hash01(cellHash ^ 0x510e527fu));
     float widthVariation = lerp(0.80, 1.15, Hash01(cellHash ^ 0x9b05688cu));
-    float height = biome.Shape.y * max(_NearFieldPlanetWorldScale, 0.0001) * heightVariation;
-    float width = biome.Shape.z * max(_NearFieldPlanetWorldScale, 0.0001) * widthVariation;
+    float height = biome.Shape.y * max(_NearFieldPlanetWorldScale, 0.0001) * heightVariation * grassScale;
+    float width = biome.Shape.z * max(_NearFieldPlanetWorldScale, 0.0001) * widthVariation * grassScale;
 
     float moisture = SampleClimateMoisture(_NearFieldFaceIndex, faceUv);
     float3 shift = lerp(biome.TintDry.rgb, biome.TintLush.rgb, moisture);

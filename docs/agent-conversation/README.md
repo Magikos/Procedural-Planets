@@ -1,6 +1,6 @@
 # Agent conversation
 
-Cross-agent scratchpad. When multiple Claude sessions or different model agents work on the same phase in parallel, they leave structured feedback / observations / questions here so the next agent has full context without needing to ask Bryan to re-summarize.
+Cross-agent scratchpad. When multiple agent sessions or different model agents work on the same phase in parallel, they leave structured feedback / observations / questions here so the next agent has full context without needing to ask Bryan to re-summarize.
 
 ## When to use
 

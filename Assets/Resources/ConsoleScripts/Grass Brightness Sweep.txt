@@ -1,0 +1,30 @@
+@name Grass Brightness Sweep
+@timeout 120
+@defer grass.surface-brightness 0.85
+@defer grass.enabled true
+@sidecar planet.status
+@sidecar light.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+
+debug.capture-set "Grass"
+camera.look-at -114.86,164.22,-3400.39 -186.06,129.22,-2403.59
+light.local-noon
+grass.enabled true
+@wait frames 2
+
+grass.surface-brightness 0.55
+@wait frames 2
+debug.capture
+
+grass.surface-brightness 0.85
+@wait frames 2
+debug.capture
+
+grass.surface-brightness 1.10
+@wait frames 2
+debug.capture
+
+grass.surface-brightness 1.35
+@wait frames 2
+debug.capture

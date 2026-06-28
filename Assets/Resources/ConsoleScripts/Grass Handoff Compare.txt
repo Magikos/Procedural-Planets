@@ -1,0 +1,91 @@
+@name Grass Handoff Compare
+@timeout 300
+@defer debug.capture-set "Grass"
+@defer grass.enabled true
+@defer grass.layer near true
+@defer grass.layer chunk true
+@defer grass.layer blanket true
+@defer grass.overlay-strength 1
+@defer grass.surface-brightness 0.4
+@defer grass.debug-tint 0
+@defer grass.debug-layer-colors false
+@sidecar camera.position
+@sidecar debug.capture-set
+@sidecar debug.mode
+@sidecar planet.status
+@sidecar light.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+
+# A/B/C use the known pop-in edge poses. Layer colors: blanket=red, chunk=blue, near=green.
+debug.capture-set "Grass Visual"
+camera.speed 6
+grass.enabled true
+grass.overlay-strength 1
+grass.surface-brightness 0.35
+grass.debug-tint 0
+grass.debug-layer-colors true
+@wait seconds 4
+
+# Baseline: near + blanket, no chunk.
+grass.layer near true
+grass.layer chunk false
+grass.layer blanket true
+
+camera.look-at -1570.16,-203.03,1.33 -1549.16,794.97,-57.57
+light.local-noon
+@wait frames 16
+debug.capture
+@wait seconds 1
+
+camera.look-at -1569.72,-181.93,0.09 -1548.72,816.07,-58.82
+light.local-noon
+@wait frames 16
+debug.capture
+@wait seconds 1
+
+camera.look-at -1569.27,-160.83,-1.16 -1548.27,837.17,-60.06
+light.local-noon
+@wait frames 16
+debug.capture
+@wait seconds 1
+
+# Current full stack.
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+
+camera.look-at -1570.16,-203.03,1.33 -1549.16,794.97,-57.57
+light.local-noon
+@wait frames 16
+debug.capture
+@wait seconds 1
+
+camera.look-at -1569.72,-181.93,0.09 -1548.72,816.07,-58.82
+light.local-noon
+@wait frames 16
+debug.capture
+@wait seconds 1
+
+camera.look-at -1569.27,-160.83,-1.16 -1548.27,837.17,-60.06
+light.local-noon
+@wait frames 16
+debug.capture
+@wait seconds 1
+
+# Chunk alone at the worst pose.
+grass.layer near false
+grass.layer chunk true
+grass.layer blanket false
+@wait frames 16
+debug.capture
+@wait seconds 1
+
+# Final normal view with chunk removed.
+grass.debug-layer-colors false
+grass.layer near true
+grass.layer chunk false
+grass.layer blanket true
+@wait frames 16
+debug.capture
+@wait seconds 1

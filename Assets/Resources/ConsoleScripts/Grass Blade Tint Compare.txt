@@ -1,0 +1,48 @@
+@name Grass Blade Tint Compare
+@timeout 120
+@defer debug.capture-set "Grass"
+@defer grass.debug-tint 0
+@defer grass.layer near true
+@defer grass.layer chunk true
+@defer grass.layer blanket true
+@sidecar camera.position
+@sidecar debug.capture-set
+@sidecar debug.mode
+@sidecar planet.status
+@sidecar light.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+
+# Use with GrassDiagnosticRecipe assigned.
+# Captures normal grass, cyan-tinted blade geometry, then blanket/terrain only.
+debug.capture-set "Grass Visual"
+camera.look-at -450.66,-300.94,-1457.89 -1243.45,-353.12,-850.63
+light.local-noon
+grass.enabled true
+grass.overlay-strength 1
+grass.surface-brightness 0.4
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+
+# Normal production-like view.
+grass.debug-tint 0
+@wait frames 8
+debug.capture
+@wait seconds 1
+
+# Blade geometry made obvious.
+grass.debug-tint-color 0,1,1
+grass.debug-tint 1
+@wait frames 8
+debug.capture
+@wait seconds 1
+
+# No blade geometry: terrain texture plus blanket/far overlay only.
+grass.debug-tint 0
+grass.layer near false
+grass.layer chunk false
+grass.layer blanket true
+@wait frames 8
+debug.capture
+@wait seconds 1

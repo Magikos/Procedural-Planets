@@ -4,21 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
-readonly struct VoronoiBiomeSample
-{
-    public readonly byte PrimaryId;
-    public readonly byte SecondaryId;
-    public readonly float SecondaryWeight;
-
-    public VoronoiBiomeSample(byte primaryId, byte secondaryId, float secondaryWeight)
-    {
-        PrimaryId = primaryId;
-        SecondaryId = secondaryId;
-        SecondaryWeight = secondaryId != primaryId ? Mathf.Clamp01(secondaryWeight) : 0f;
-    }
-}
-
-sealed class VoronoiBiomeField
+sealed class VoronoiBiomeField : IBiomeAssignmentField
 {
     const int PrimaryAtlasResolution = 512;
     const int CubeFaceCount = 6;
@@ -130,18 +116,18 @@ sealed class VoronoiBiomeField
         return field;
     }
 
-    public VoronoiBiomeSample Evaluate(Vector3 pointOnUnitSphere)
+    public BiomeAssignmentSample Evaluate(Vector3 pointOnUnitSphere)
     {
         Vector3 query = DomainWarp(pointOnUnitSphere.normalized);
         int primarySeedIndex = FindNearest(query);
         if (primarySeedIndex < 0)
-            return new VoronoiBiomeSample(0, 0, 0f);
+            return new BiomeAssignmentSample(0, 0, 0f);
 
         byte primaryId = _seeds[primarySeedIndex].BiomeId;
         float primaryDistanceSq = (_seeds[primarySeedIndex].Position - query).sqrMagnitude;
         int secondarySeedIndex = FindNearestDifferentBiome(query, primaryId);
         if (secondarySeedIndex < 0)
-            return new VoronoiBiomeSample(primaryId, primaryId, 0f);
+            return new BiomeAssignmentSample(primaryId, primaryId, 0f);
 
         byte secondaryId = _seeds[secondarySeedIndex].BiomeId;
         float secondaryDistanceSq = (_seeds[secondarySeedIndex].Position - query).sqrMagnitude;
@@ -152,14 +138,14 @@ sealed class VoronoiBiomeField
             ? primaryDistance / denominator
             : 0.5f;
 
-        return new VoronoiBiomeSample(primaryId, secondaryId, secondaryWeight);
+        return new BiomeAssignmentSample(primaryId, secondaryId, secondaryWeight);
     }
 
     public byte EvaluatePrimaryId(Vector3 pointOnUnitSphere)
     {
         if (_primaryAtlas != null)
         {
-            DirectionToAtlasFaceUv(pointOnUnitSphere.normalized, out int face, out Vector2 uv);
+            CoordinateConverter.UnitSphereToCubeFaceUvExact(pointOnUnitSphere.normalized, out int face, out Vector2 uv);
             int x = Mathf.Clamp(
                 Mathf.FloorToInt(uv.x * PrimaryAtlasResolution),
                 0,
@@ -213,42 +199,6 @@ sealed class VoronoiBiomeField
         });
 
         _primaryAtlas = atlas;
-    }
-
-    // Exact inverse of CoordinateConverter.CubeFaceToUnitSphere. The older
-    // CoordinateConverter.UnitSphereToCubeFace uses a different UV orientation and cannot
-    // address an atlas generated with the current cube-face basis.
-    static void DirectionToAtlasFaceUv(Vector3 direction, out int face, out Vector2 uv)
-    {
-        float absX = Mathf.Abs(direction.x);
-        float absY = Mathf.Abs(direction.y);
-        float absZ = Mathf.Abs(direction.z);
-
-        Vector3 localUp;
-        if (absY >= absX && absY >= absZ)
-        {
-            face = direction.y >= 0f ? 0 : 1;
-            localUp = direction.y >= 0f ? Vector3.up : Vector3.down;
-        }
-        else if (absX >= absY && absX >= absZ)
-        {
-            face = direction.x >= 0f ? 3 : 2;
-            localUp = direction.x >= 0f ? Vector3.right : Vector3.left;
-        }
-        else
-        {
-            face = direction.z >= 0f ? 4 : 5;
-            localUp = direction.z >= 0f ? Vector3.forward : Vector3.back;
-        }
-
-        Vector3 axisA = new Vector3(localUp.y, localUp.z, localUp.x);
-        Vector3 axisB = Vector3.Cross(localUp, axisA);
-        float major = Mathf.Max(Mathf.Abs(Vector3.Dot(direction, localUp)), 0.00001f);
-        float u = Vector3.Dot(direction, axisA) / major;
-        float v = Vector3.Dot(direction, axisB) / major;
-        uv = new Vector2(
-            Mathf.Clamp01(u * 0.5f + 0.5f),
-            Mathf.Clamp01(v * 0.5f + 0.5f));
     }
 
     static float EdgeSnappedUv(int index)

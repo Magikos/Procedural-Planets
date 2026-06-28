@@ -8,7 +8,6 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
     [Header("Movement")]
     public float MoveSpeed = 10f;
     public float FastMultiplier = 3f;
-    public float ScrollSpeed = 50f;
     public float OrbitSpeedMultiplier = 0.5f;
     public float SurfaceSpeedMultiplier = 0.02f;
 
@@ -269,9 +268,6 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
         if (Mathf.Abs(rollAxis) > 0.0001f)
             transform.Rotate(Vector3.forward, 60f * rollAxis * Time.deltaTime, Space.Self);
 
-        float scroll = input.Scroll.ReadValue<Vector2>().y;
-        if (Mathf.Abs(scroll) > 0.001f)
-            transform.position += transform.forward * scroll * ScrollSpeed * Time.deltaTime;
     }
 
     void FaceSun()
@@ -310,7 +306,6 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
             Vector3 lookDir = (worldPosition - transform.position).normalized;
             transform.rotation = Quaternion.LookRotation(lookDir, viewNormal.normalized);
             MoveSpeed = Mathf.Max(0.25f, _lastPlanetRadius * SurfaceSpeedMultiplier);
-            ScrollSpeed = Mathf.Max(1f, _lastPlanetRadius * 0.1f);
         }
         else
         {
@@ -319,7 +314,6 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
             Vector3 lookDir = (worldPosition - transform.position).normalized;
             transform.rotation = Quaternion.LookRotation(lookDir, GetStableViewUp(lookDir));
             MoveSpeed = Mathf.Max(1f, _lastPlanetRadius * OrbitSpeedMultiplier);
-            ScrollSpeed = Mathf.Max(5f, _lastPlanetRadius * 2f);
         }
     }
 
@@ -338,7 +332,6 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
         transform.rotation = Quaternion.LookRotation(forward, GetStableViewUp(forward));
 
         MoveSpeed = Mathf.Max(1f, radius * OrbitSpeedMultiplier);
-        ScrollSpeed = Mathf.Max(5f, radius * 2f);
         _surfaceView = false;
     }
 
@@ -369,7 +362,6 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
         transform.rotation = Quaternion.LookRotation(lookDir.normalized, surfaceNormal);
 
         MoveSpeed = Mathf.Max(0.25f, radius * SurfaceSpeedMultiplier);
-        ScrollSpeed = Mathf.Max(1f, radius * 0.1f);
         _surfaceView = true;
     }
 
@@ -409,6 +401,30 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
     {
         Vector3 p = transform.position;
         return $"camera position: ({p.x:F2}, {p.y:F2}, {p.z:F2})";
+    }
+
+    [ConsoleCommand("look-at", "Set camera world position and aim at a world target.", MonoTargetType.Single)]
+    string LookAtCmd(Vector3 position, Vector3 target)
+    {
+        Vector3 forward = target - position;
+        if (forward.sqrMagnitude < 0.0001f)
+            return "camera look-at target must differ from position";
+
+        StopLooking();
+        transform.position = position;
+        Vector3 viewForward = forward.normalized;
+        Vector3 viewUp = GetStableViewUp(viewForward);
+        if (TargetCenter != null)
+        {
+            Vector3 radialUp = Vector3.ProjectOnPlane(position - TargetCenter.position, viewForward);
+            if (radialUp.sqrMagnitude > 0.0001f)
+                viewUp = radialUp.normalized;
+        }
+        transform.rotation = Quaternion.LookRotation(viewForward, viewUp);
+        _surfaceView = false;
+        _skipNextDelta = true;
+
+        return $"camera look-at: position=({position.x:F2}, {position.y:F2}, {position.z:F2}) target=({target.x:F2}, {target.y:F2}, {target.z:F2})";
     }
 
     [ConsoleCommand("surface-view", "Get or toggle surface-following view (vs orbit view).", MonoTargetType.Single)]
@@ -469,12 +485,10 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
         if (_surfaceView)
         {
             MoveSpeed = Mathf.Max(0.25f, radius * SurfaceSpeedMultiplier);
-            ScrollSpeed = Mathf.Max(1f, radius * 0.1f);
         }
         else
         {
             MoveSpeed = Mathf.Max(1f, radius * OrbitSpeedMultiplier);
-            ScrollSpeed = Mathf.Max(5f, radius * 2f);
         }
 
         return true;

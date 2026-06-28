@@ -1,0 +1,105 @@
+@name Path Pattern Probe
+@timeout 240
+@defer debug.capture-set "Grass"
+@defer grass.enabled true
+@defer grass.layer near true
+@defer grass.layer chunk true
+@defer grass.layer blanket true
+@defer grass.overlay-strength 1
+@defer grass.surface-brightness 0.35
+@defer grass.debug-tint 0
+@defer grass.debug-layer-colors false
+@defer path.debug false
+@sidecar camera.position
+@sidecar debug.capture-set
+@sidecar debug.mode
+@sidecar planet.status
+@sidecar light.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+@sidecar path.status
+
+# Move to a lush grass field first and save it once:
+# camera.save-teleport "Path Pattern Field"
+#
+# Paints deterministic surface-state patterns under that pose:
+# winding road, gradient circle, hard foundation rectangle, checker, and strength ramp.
+debug.capture-set "Grass Visual"
+camera.teleport "Path Pattern Field"
+camera.speed 8
+light.local-noon
+grass.enabled true
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+grass.overlay-strength 1
+grass.surface-brightness 0.35
+grass.debug-tint 0
+grass.debug-layer-colors false
+path.debug false
+path.clear
+@wait seconds 3
+debug.capture
+
+path.debug true
+path.pattern-here 260 1
+@wait seconds 2
+
+# Full rendered result with path debug enabled.
+grass.enabled true
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+grass.debug-tint 0
+grass.debug-layer-colors false
+@wait frames 30
+debug.capture
+
+# Terrain/path mask only. Confirms whether the painted texture is correct.
+grass.enabled false
+@wait frames 30
+debug.capture
+
+# Near blades only. Cyan inside high-strength path areas means near grass ignored the mask.
+grass.enabled true
+grass.layer near true
+grass.layer chunk false
+grass.layer blanket false
+grass.debug-layer-colors false
+grass.debug-tint-color 0,1,1
+grass.debug-tint 1
+@wait frames 30
+debug.capture
+
+# Chunk layer only. Layer colors make this blue when it renders.
+grass.debug-tint 0
+grass.debug-layer-colors true
+grass.layer near false
+grass.layer chunk true
+grass.layer blanket false
+@wait frames 30
+debug.capture
+
+# Blanket only. Layer colors make this red when it renders.
+grass.layer near false
+grass.layer chunk false
+grass.layer blanket true
+@wait frames 30
+debug.capture
+
+# Full stack with diagnostic layer colors: near=green, chunk=blue, blanket=red.
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+@wait frames 30
+debug.capture
+
+# Final normal view.
+path.debug false
+grass.debug-layer-colors false
+grass.debug-tint 0
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+@wait frames 30
+debug.capture

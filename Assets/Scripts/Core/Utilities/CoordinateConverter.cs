@@ -81,6 +81,42 @@ public static class CoordinateConverter
         return pointOnCube.normalized;
     }
 
+    // Exact inverse of CubeFaceToUnitSphere. UnitSphereToCubeFace uses an older UV
+    // orientation; biome atlases and diagnostic grids need this basis.
+    public static void UnitSphereToCubeFaceUvExact(Vector3 direction, out int face, out Vector2 uv)
+    {
+        direction.Normalize();
+        float absX = Mathf.Abs(direction.x);
+        float absY = Mathf.Abs(direction.y);
+        float absZ = Mathf.Abs(direction.z);
+
+        Vector3 localUp;
+        if (absY >= absX && absY >= absZ)
+        {
+            face = direction.y >= 0f ? 0 : 1;
+            localUp = direction.y >= 0f ? Vector3.up : Vector3.down;
+        }
+        else if (absX >= absY && absX >= absZ)
+        {
+            face = direction.x >= 0f ? 3 : 2;
+            localUp = direction.x >= 0f ? Vector3.right : Vector3.left;
+        }
+        else
+        {
+            face = direction.z >= 0f ? 4 : 5;
+            localUp = direction.z >= 0f ? Vector3.forward : Vector3.back;
+        }
+
+        Vector3 axisA = new Vector3(localUp.y, localUp.z, localUp.x);
+        Vector3 axisB = Vector3.Cross(localUp, axisA);
+        float major = Mathf.Max(Mathf.Abs(Vector3.Dot(direction, localUp)), 0.00001f);
+        float u = Vector3.Dot(direction, axisA) / major;
+        float v = Vector3.Dot(direction, axisB) / major;
+        uv = new Vector2(
+            Mathf.Clamp01(u * 0.5f + 0.5f),
+            Mathf.Clamp01(v * 0.5f + 0.5f));
+    }
+
     public static ChunkCoord UnitSphereToChunkCoord(Vector3 point, int chunksPerFaceEdge)
     {
         var (face, uv) = UnitSphereToCubeFace(point);

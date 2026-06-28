@@ -35,6 +35,8 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     // MaxChunkDepth at construction time. Memory: ~14 MB total across 6 faces at depth 2.
     const int WaterAggregateDepth = 2;
     const int TextureAllocationBatchSize = 64;
+    static readonly Color32[] EmptySurfaceStatePixels =
+        new Color32[PlanetChunkTextures.BiomeMapResolution * PlanetChunkTextures.BiomeMapResolution];
 
     readonly Transform _planetTransform;
     readonly ShapeGenerator _shapeGenerator;
@@ -47,7 +49,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     TerrainQuadtree[] _quadtrees;
     bool[] _faceVisible;
     IFaceMeshSampler[] _rootSamplers;
-    readonly IBiomeAtlasService _biomeAtlas;
+    readonly BiomeAtlasService _biomeAtlas;
     readonly ChunkSurfaceGenerator _generator;
     readonly IChunkMeshCache _meshCache;
     readonly IChunkVisibilitySelector _selector;
@@ -286,6 +288,154 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         return leaf.TrySampleRadius(chunkLocalUv, out localRadius) && localRadius > 0f;
     }
 
+    public bool TryPaintSurfaceStateDisc(
+        Vector3 localUnitDirection,
+        float radiusMeters,
+        float strength,
+        out string summary)
+    {
+        summary = "surface-state paint unavailable";
+        if (!_initialized || _quadtrees == null || _allChunks.Count == 0)
+            return false;
+        if (localUnitDirection.sqrMagnitude < 0.0001f)
+            return false;
+
+        Vector3 dir = localUnitDirection.normalized;
+        FaceSpaceCellRangeBuilder.DirectionToFaceUv(dir, out int face, out Vector2 faceUv);
+        if (face < 0 || face >= _quadtrees.Length || _quadtrees[face] == null)
+            return false;
+
+        PlanetChunk centerChunk = _quadtrees[face].FindLeafContaining(faceUv);
+        if (centerChunk == null)
+            return false;
+
+        float chunkSize = centerChunk.UvHalfExtent * 2f;
+        Vector2 centerLocalUv = new(
+            (faceUv.x - (centerChunk.UvCenter.x - centerChunk.UvHalfExtent)) / chunkSize,
+            (faceUv.y - (centerChunk.UvCenter.y - centerChunk.UvHalfExtent)) / chunkSize);
+        float localRadius = _shapeGenerator.Settings != null ? _shapeGenerator.Settings.PlanetRadius : 1f;
+        if (centerChunk.TrySampleRadius(centerLocalUv, out float sampledRadius) && sampledRadius > 0f)
+            localRadius = sampledRadius;
+
+        float worldScale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform);
+        float metersPerUv = FaceSpaceCellRangeBuilder.ComputeMetersPerUV(
+            face,
+            faceUv,
+            Mathf.Max(localRadius * worldScale, 0.001f));
+        float radiusFaceUv = Mathf.Max(0.00001f, Mathf.Max(radiusMeters, 0.1f) / metersPerUv);
+        byte pavedAlpha = (byte)Mathf.RoundToInt(Mathf.Clamp01(strength) * 255f);
+
+        int touchedChunks = 0;
+        int changedPixels = 0;
+        Vector2 minUv = faceUv - Vector2.one * radiusFaceUv;
+        Vector2 maxUv = faceUv + Vector2.one * radiusFaceUv;
+        for (int i = 0; i < _allChunks.Count; i++)
+        {
+            PlanetChunk chunk = _allChunks[i];
+            if (chunk == null || !chunk.IsLeaf || chunk.FaceIndex != face || chunk.SurfaceStateTexture == null)
+                continue;
+            if (!ChunkUvRectOverlaps(chunk, minUv, maxUv))
+                continue;
+
+            int changed = PaintChunkSurfaceState(chunk, faceUv, radiusFaceUv, pavedAlpha);
+            if (changed <= 0)
+                continue;
+
+            chunk.SurfaceStateTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+            _biomeAtlas.UpdateSurfaceStateAtlasRegion(chunk);
+            touchedChunks++;
+            changedPixels += changed;
+        }
+
+        summary = $"painted path face={face} uv=({faceUv.x:F3},{faceUv.y:F3}) radius={radiusMeters:F1}m chunks={touchedChunks} pixels={changedPixels}";
+        return changedPixels > 0;
+    }
+
+    public bool TryPaintSurfaceStateTestPattern(
+        Vector3 localUnitDirection,
+        float sizeMeters,
+        float strength,
+        out string summary)
+    {
+        summary = "surface-state pattern unavailable";
+        if (!_initialized || _quadtrees == null || _allChunks.Count == 0)
+            return false;
+        if (localUnitDirection.sqrMagnitude < 0.0001f)
+            return false;
+
+        Vector3 dir = localUnitDirection.normalized;
+        FaceSpaceCellRangeBuilder.DirectionToFaceUv(dir, out int face, out Vector2 faceUv);
+        if (face < 0 || face >= _quadtrees.Length || _quadtrees[face] == null)
+            return false;
+
+        PlanetChunk centerChunk = _quadtrees[face].FindLeafContaining(faceUv);
+        if (centerChunk == null)
+            return false;
+
+        float chunkSize = centerChunk.UvHalfExtent * 2f;
+        Vector2 centerLocalUv = new(
+            (faceUv.x - (centerChunk.UvCenter.x - centerChunk.UvHalfExtent)) / chunkSize,
+            (faceUv.y - (centerChunk.UvCenter.y - centerChunk.UvHalfExtent)) / chunkSize);
+        float localRadius = _shapeGenerator.Settings != null ? _shapeGenerator.Settings.PlanetRadius : 1f;
+        if (centerChunk.TrySampleRadius(centerLocalUv, out float sampledRadius) && sampledRadius > 0f)
+            localRadius = sampledRadius;
+
+        float worldScale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform);
+        float metersPerUv = FaceSpaceCellRangeBuilder.ComputeMetersPerUV(
+            face,
+            faceUv,
+            Mathf.Max(localRadius * worldScale, 0.001f));
+        float halfSizeFaceUv = Mathf.Max(0.00001f, Mathf.Max(sizeMeters, 1f) * 0.5f / metersPerUv);
+        byte pavedAlpha = (byte)Mathf.RoundToInt(Mathf.Clamp01(strength) * 255f);
+
+        int touchedChunks = 0;
+        int changedPixels = 0;
+        Vector2 minUv = faceUv - Vector2.one * halfSizeFaceUv;
+        Vector2 maxUv = faceUv + Vector2.one * halfSizeFaceUv;
+        for (int i = 0; i < _allChunks.Count; i++)
+        {
+            PlanetChunk chunk = _allChunks[i];
+            if (chunk == null || !chunk.IsLeaf || chunk.FaceIndex != face || chunk.SurfaceStateTexture == null)
+                continue;
+            if (!ChunkUvRectOverlaps(chunk, minUv, maxUv))
+                continue;
+
+            int changed = PaintChunkSurfaceStateTestPattern(chunk, faceUv, halfSizeFaceUv, pavedAlpha);
+            if (changed <= 0)
+                continue;
+
+            chunk.SurfaceStateTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+            _biomeAtlas.UpdateSurfaceStateAtlasRegion(chunk);
+            touchedChunks++;
+            changedPixels += changed;
+        }
+
+        summary = $"painted path test pattern face={face} uv=({faceUv.x:F3},{faceUv.y:F3}) size={sizeMeters:F1}m chunks={touchedChunks} pixels={changedPixels}";
+        return changedPixels > 0;
+    }
+
+    public int ClearSurfaceStateMasks()
+    {
+        int cleared = 0;
+        for (int i = 0; i < _allChunks.Count; i++)
+        {
+            PlanetChunk chunk = _allChunks[i];
+            Texture2D texture = chunk?.SurfaceStateTexture;
+            if (texture == null)
+                continue;
+
+            texture.SetPixels32(EmptySurfaceStatePixels);
+            texture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+            if (chunk.IsLeaf)
+                _biomeAtlas.UpdateSurfaceStateAtlasRegion(chunk);
+            cleared++;
+        }
+        return cleared;
+    }
+
+    public bool TryGetFaceSurfaceStateAtlas(int face, out Texture2D surfaceState)
+        => _biomeAtlas.TryGetFaceSurfaceStateAtlas(face, out surfaceState);
+
     public bool TryRaycastVisibleSurface(Ray localRay, float maxDistance,
         out Vector3 localPoint, out Vector3 localNormal, out float localDistance)
     {
@@ -340,6 +490,160 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         return true;
     }
 
+    static bool ChunkUvRectOverlaps(PlanetChunk chunk, Vector2 minUv, Vector2 maxUv)
+    {
+        float cMinU = chunk.UvCenter.x - chunk.UvHalfExtent;
+        float cMaxU = chunk.UvCenter.x + chunk.UvHalfExtent;
+        float cMinV = chunk.UvCenter.y - chunk.UvHalfExtent;
+        float cMaxV = chunk.UvCenter.y + chunk.UvHalfExtent;
+        return maxUv.x >= cMinU && minUv.x <= cMaxU
+            && maxUv.y >= cMinV && minUv.y <= cMaxV;
+    }
+
+    static int PaintChunkSurfaceState(
+        PlanetChunk chunk,
+        Vector2 centerFaceUv,
+        float radiusFaceUv,
+        byte pavedAlpha)
+    {
+        Texture2D texture = chunk.SurfaceStateTexture;
+        int resolution = texture.width;
+        if (resolution <= 0 || radiusFaceUv <= 0f || pavedAlpha == 0)
+            return 0;
+
+        float minU = chunk.UvCenter.x - chunk.UvHalfExtent;
+        float minV = chunk.UvCenter.y - chunk.UvHalfExtent;
+        float size = Mathf.Max(chunk.UvHalfExtent * 2f, 0.00001f);
+        Vector2 centerLocal = new(
+            (centerFaceUv.x - minU) / size,
+            (centerFaceUv.y - minV) / size);
+        float radiusLocal = radiusFaceUv / size;
+        if (radiusLocal <= 0f)
+            return 0;
+
+        int startX = Mathf.Clamp(Mathf.FloorToInt((centerLocal.x - radiusLocal) * resolution), 0, resolution - 1);
+        int endX = Mathf.Clamp(Mathf.CeilToInt((centerLocal.x + radiusLocal) * resolution), 0, resolution - 1);
+        int startY = Mathf.Clamp(Mathf.FloorToInt((centerLocal.y - radiusLocal) * resolution), 0, resolution - 1);
+        int endY = Mathf.Clamp(Mathf.CeilToInt((centerLocal.y + radiusLocal) * resolution), 0, resolution - 1);
+
+        Color32[] pixels = texture.GetPixels32();
+        int changed = 0;
+        for (int y = startY; y <= endY; y++)
+        {
+            float py = (y + 0.5f) / resolution;
+            for (int x = startX; x <= endX; x++)
+            {
+                float px = (x + 0.5f) / resolution;
+                float distance01 = Vector2.Distance(new Vector2(px, py), centerLocal) / radiusLocal;
+                if (distance01 >= 1f)
+                    continue;
+
+                float falloff = 1f - Mathf.SmoothStep(0.65f, 1f, distance01);
+                byte value = (byte)Mathf.RoundToInt(pavedAlpha * falloff);
+                int index = y * resolution + x;
+                if (value <= pixels[index].r)
+                    continue;
+
+                pixels[index].r = value;
+                changed++;
+            }
+        }
+
+        if (changed > 0)
+            texture.SetPixels32(pixels);
+        return changed;
+    }
+
+    static int PaintChunkSurfaceStateTestPattern(
+        PlanetChunk chunk,
+        Vector2 centerFaceUv,
+        float halfSizeFaceUv,
+        byte pavedAlpha)
+    {
+        Texture2D texture = chunk.SurfaceStateTexture;
+        int resolution = texture.width;
+        if (resolution <= 0 || halfSizeFaceUv <= 0f || pavedAlpha == 0)
+            return 0;
+
+        float minU = chunk.UvCenter.x - chunk.UvHalfExtent;
+        float minV = chunk.UvCenter.y - chunk.UvHalfExtent;
+        float chunkSize = Mathf.Max(chunk.UvHalfExtent * 2f, 0.00001f);
+        Vector2 patternMin = centerFaceUv - Vector2.one * halfSizeFaceUv;
+        float patternSize = Mathf.Max(halfSizeFaceUv * 2f, 0.00001f);
+
+        int startX = Mathf.Clamp(Mathf.FloorToInt(((patternMin.x - minU) / chunkSize) * resolution), 0, resolution - 1);
+        int endX = Mathf.Clamp(Mathf.CeilToInt(((patternMin.x + patternSize - minU) / chunkSize) * resolution), 0, resolution - 1);
+        int startY = Mathf.Clamp(Mathf.FloorToInt(((patternMin.y - minV) / chunkSize) * resolution), 0, resolution - 1);
+        int endY = Mathf.Clamp(Mathf.CeilToInt(((patternMin.y + patternSize - minV) / chunkSize) * resolution), 0, resolution - 1);
+
+        Color32[] pixels = texture.GetPixels32();
+        int changed = 0;
+        for (int y = startY; y <= endY; y++)
+        {
+            float faceY = minV + ((y + 0.5f) / resolution) * chunkSize;
+            for (int x = startX; x <= endX; x++)
+            {
+                float faceX = minU + ((x + 0.5f) / resolution) * chunkSize;
+                Vector2 p = new(
+                    (faceX - patternMin.x) / patternSize,
+                    (faceY - patternMin.y) / patternSize);
+                float mask = EvaluateSurfaceStateTestPattern(p);
+                if (mask <= 0f)
+                    continue;
+
+                byte value = (byte)Mathf.RoundToInt(pavedAlpha * mask);
+                int index = y * resolution + x;
+                if (value <= pixels[index].r)
+                    continue;
+
+                pixels[index].r = value;
+                changed++;
+            }
+        }
+
+        if (changed > 0)
+            texture.SetPixels32(pixels);
+        return changed;
+    }
+
+    static float EvaluateSurfaceStateTestPattern(Vector2 p)
+    {
+        if (p.x < 0f || p.x > 1f || p.y < 0f || p.y > 1f)
+            return 0f;
+
+        float mask = 0f;
+
+        float roadCenter = 0.77f + Mathf.Sin((p.x * 2.35f + 0.08f) * Mathf.PI * 2f) * 0.07f;
+        float road = 1f - SmoothStep01(0.035f, 0.075f, Mathf.Abs(p.y - roadCenter));
+        float roadGate = SmoothStep01(0.04f, 0.09f, p.x) * (1f - SmoothStep01(0.91f, 0.96f, p.x));
+        mask = Mathf.Max(mask, road * roadGate);
+
+        float circleDistance = Vector2.Distance(p, new Vector2(0.22f, 0.27f)) / 0.19f;
+        mask = Mathf.Max(mask, 1f - SmoothStep01(0.12f, 1f, circleDistance));
+
+        if (p.x >= 0.43f && p.x <= 0.62f && p.y >= 0.14f && p.y <= 0.38f)
+            mask = 1f;
+
+        if (p.x >= 0.69f && p.x <= 0.95f && p.y >= 0.12f && p.y <= 0.40f)
+        {
+            int cx = Mathf.FloorToInt((p.x - 0.69f) / (0.26f / 6f));
+            int cy = Mathf.FloorToInt((p.y - 0.12f) / (0.28f / 6f));
+            if (((cx + cy) & 1) == 0)
+                mask = 1f;
+        }
+
+        if (p.x >= 0.08f && p.x <= 0.92f && p.y >= 0.48f && p.y <= 0.58f)
+        {
+            float t = Mathf.InverseLerp(0.08f, 0.92f, p.x);
+            mask = Mathf.Max(mask, Mathf.SmoothStep(0f, 1f, t));
+        }
+
+        return Mathf.Clamp01(mask);
+    }
+
+    static float SmoothStep01(float edge0, float edge1, float value)
+        => Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(edge0, edge1, value));
+
     // Phase B step 9: cached biome provider so RebakeBiomeMapsAt (Phase E entry point) can
     // re-run the bake without the caller plumbing the provider through again. Set on each
     // GenerateColorsAsync call.
@@ -358,14 +662,14 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         // biome textures stay at their step-3 zero-init state.
         BiomeLookupData lookup = default;
         Color[] lutColors = null;
-        VoronoiBiomeField voronoiField = null;
+        IBiomeAssignmentField assignmentField = null;
         bool bakeLookupBuilt = false;
         bool releaseChunkBiomeTextures = false;
         if (biomeProvider is ColorGenerator cg && cg.Registry != null && cg.BiomeColors != null)
         {
             lookup = cg.Registry.BuildLookupData(Allocator.Persistent);
             lutColors = cg.BiomeColors;
-            voronoiField = cg.VoronoiBiomeField;
+            assignmentField = cg.BiomeAssignmentField;
             bakeLookupBuilt = true;
         }
 
@@ -391,7 +695,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                 ct.ThrowIfCancellationRequested();
                 BiomeLookupData lookupCopy = lookup; // captured by closure
                 Color[] lutCopy = lutColors;
-                VoronoiBiomeField voronoiCopy = voronoiField;
+                IBiomeAssignmentField assignmentCopy = assignmentField;
                 bool bakeEnabled = bakeLookupBuilt;
                 bool faceAtlasMode = _usesFaceBiomeAtlases;
                 bool calculateVertexColors = vertexColorsRequired;
@@ -416,7 +720,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                         if (!ShouldBakeChunkMap(chunk, faceAtlasMode))
                             return;
 
-                        BiomeAtlasService.BakeChunkMap(chunk, lookupCopy, voronoiCopy, lutCopy);
+                        BiomeAtlasService.BakeChunkMap(chunk, lookupCopy, assignmentCopy, lutCopy);
                         System.Threading.Interlocked.Increment(ref bakedMapChunks);
                     });
                     mapBakeTimer.Stop();
@@ -534,7 +838,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         bool updated = false;
         try
         {
-            BiomeAtlasService.BakeChunkMap(leaf, lookup, cg.VoronoiBiomeField, cg.BiomeColors);
+            BiomeAtlasService.BakeChunkMap(leaf, lookup, cg.BiomeAssignmentField, cg.BiomeColors);
             updated = _biomeAtlas.UpdateFaceAtlasRegion(leaf);
             if (!updated && leaf.BiomeBlendedColorTexture != null)
             {

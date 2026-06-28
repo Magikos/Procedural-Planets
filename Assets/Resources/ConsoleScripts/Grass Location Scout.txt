@@ -1,0 +1,41 @@
+@name Grass Location Scout
+@timeout 180
+@defer debug.capture-set "Grass"
+@defer grass.enabled true
+@defer grass.layer near true
+@defer grass.layer chunk true
+@defer grass.layer blanket true
+@defer grass.overlay-strength 1
+@defer grass.surface-brightness 0.4
+@sidecar camera.position
+@sidecar debug.capture-set
+@sidecar debug.mode
+@sidecar planet.status
+@sidecar light.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+
+# Use with the diagnostic grass/test planet recipe assigned.
+# Saves each scout pose as a teleport, then captures a normal visual frame.
+debug.capture-set "Grass Visual"
+camera.speed 12
+grass.enabled true
+grass.overlay-strength 1
+grass.surface-brightness 0.4
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+
+# Scout A: user-found grass/snow/mountain seam with active near and chunk grass.
+camera.look-at 702.80,-750.47,-1232.23 1190.00,83.73,-974.03
+light.local-noon
+camera.save-teleport "Grass Scout A"
+@wait frames 8
+debug.capture
+
+# Scout B: user-found grass/mountain transition with heavier near-field grass.
+camera.look-at -431.81,-298.46,-1464.09 -1317.91,-390.56,-1009.89
+light.local-noon
+camera.save-teleport "Grass Scout B"
+@wait frames 8
+debug.capture

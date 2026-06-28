@@ -3,6 +3,12 @@ using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 
+public enum WorldServiceValidationProfile
+{
+    Full,
+    TerrainGrassBiome,
+}
+
 [DefaultExecutionOrder(-10000)]
 public class SceneBootstrap : MonoBehaviour, IEarlyInitialize
 {
@@ -28,8 +34,27 @@ public class SceneBootstrap : MonoBehaviour, IEarlyInitialize
         typeof(IScaleReferenceDebugStatsProvider),
     };
 
+    static readonly Type[] TerrainGrassBiomeWorldServices =
+    {
+        typeof(ISettingsService),
+        typeof(ISeedProvider),
+        typeof(IWorldActionManager),
+        typeof(IPlanet),
+        typeof(IPlanetSurfaceSampler),
+        typeof(IPlanetSurfaceRaycaster),
+        typeof(IClimateSampler),
+        typeof(IGrassRuntimeControl),
+        typeof(IGrassNearFieldStatsProvider),
+        typeof(ICameraRigContext),
+        typeof(ICameraTeleportRegistry),
+        typeof(IScaleReferenceDebugStatsProvider),
+    };
+
     [Header("Settings")]
     public int WorldSeed = 12345;
+
+    [Header("Diagnostics")]
+    [SerializeField] WorldServiceValidationProfile _validationProfile = WorldServiceValidationProfile.Full;
 
     ISeedProvider _seedProvider;
     IWorldActionManager _worldActionManager;
@@ -56,19 +81,28 @@ public class SceneBootstrap : MonoBehaviour, IEarlyInitialize
         ServiceLocator.RegisterWorld<ISeedProvider>(_seedProvider);
         ServiceLocator.RegisterWorld<IWorldActionManager>(_worldActionManager);
 
-        EnsureComponent<WaterWakeController>();
+        if (_validationProfile == WorldServiceValidationProfile.Full)
+            EnsureComponent<WaterWakeController>();
         EnsureComponent<ScaleReferenceMarkers>();
         RegisterSceneServices();
         RegisterSceneSettings();
         context.ApplySettingsOverrides();
-        context.ValidateRequired(RequiredWorldServices);
+        context.ValidateRequired(GetRequiredWorldServices());
         ISettingsService settings = context.Settings;
         settings.ValidateRequired(_requiredSettings);
         settings.Freeze();
 
-        logger.Log(LogLevel.Info, "Bootstrap", $"Scene services initialized. World seed: {worldSeed}");
+        logger.Log(LogLevel.Info, "Bootstrap",
+            $"Scene services initialized. World seed: {worldSeed}; validation profile: {_validationProfile}");
 
         await Awaitable.NextFrameAsync(cancellationToken);
+    }
+
+    Type[] GetRequiredWorldServices()
+    {
+        return _validationProfile == WorldServiceValidationProfile.TerrainGrassBiome
+            ? TerrainGrassBiomeWorldServices
+            : RequiredWorldServices;
     }
 
     private void EnsureComponent<T>() where T : Component

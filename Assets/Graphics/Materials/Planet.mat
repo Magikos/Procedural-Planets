@@ -124,6 +124,7 @@ Material:
     - _GrassFarOverlayOrbitStrength: 0.42
     - _GrassFarOverlayStart: 35
     - _GrassFarOverlayStrength: 1
+    - _GrassSurfaceBrightness: 0.4
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005

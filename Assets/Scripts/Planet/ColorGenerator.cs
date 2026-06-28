@@ -6,6 +6,7 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
     BiomeDto _biome;
     IClimateProvider _climateProvider;
     BiomeRegistryDto _biomeRegistry;
+    IBiomeAssignmentField _biomeAssignmentField;
     VoronoiBiomeField _voronoiBiomeField;
     Color[] _biomeColors;
 
@@ -22,7 +23,7 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
     public BiomeSurfaceTextureArrays SurfaceArrays => _surfaceArrays;
 
     public BiomeRegistryDto Registry => _biome?.Registry;
-    internal VoronoiBiomeField VoronoiBiomeField => _voronoiBiomeField;
+    internal IBiomeAssignmentField BiomeAssignmentField => _biomeAssignmentField;
     internal IClimateProvider ClimateProvider => _climateProvider;
 
     // Per-biome flat color, indexed by GetDefinitionByIndex slot id. Phase B step 5b bake
@@ -36,6 +37,7 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
         _biome = biome;
         _biomeRegistry = null;
         _climateProvider = null;
+        _biomeAssignmentField = null;
         _voronoiBiomeField = null;
         _biomeColors = null;
 
@@ -61,8 +63,8 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
     public void Initialize(int seed, int biomeAssignmentSeed)
     {
         PrepareInitialization(seed);
-        VoronoiBiomeField field = BuildVoronoiBiomeField(biomeAssignmentSeed);
-        CommitVoronoiBiomeField(field);
+        IBiomeAssignmentField field = BuildBiomeAssignmentField(biomeAssignmentSeed, out VoronoiBiomeField voronoiField);
+        CommitBiomeAssignmentField(field, voronoiField);
     }
 
     public async Awaitable InitializeAsync(
@@ -74,39 +76,62 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
         PrepareInitialization(seed);
         progress?.Report(0f, "Building biome regions...");
 
-        VoronoiBiomeField field = null;
+        IBiomeAssignmentField field = null;
+        VoronoiBiomeField voronoiField = null;
 
         if (_biome != null && _biome.Registry != null && _climateProvider != null)
         {
-            float buildProgress = 0f;
-            Awaitable<VoronoiBiomeField> buildTask = BuildVoronoiBiomeFieldAsync(
-                biomeAssignmentSeed,
-                ct,
-                value => System.Threading.Volatile.Write(ref buildProgress, value));
-            var buildAwaiter = buildTask.GetAwaiter();
-            float reportedBuildProgress = 0f;
-            while (!buildAwaiter.IsCompleted)
+            if (_biome.AssignmentMode == BiomeAssignmentMode.DiagnosticGrid)
             {
-                reportedBuildProgress = Mathf.Max(
-                    reportedBuildProgress,
-                    System.Threading.Volatile.Read(ref buildProgress));
-                progress?.Report(
-                    reportedBuildProgress,
-                    "Building biome regions...");
-                await Awaitable.NextFrameAsync();
+                field = BuildDiagnosticGridBiomeField();
             }
-            field = buildAwaiter.GetResult();
+            else
+            {
+                float buildProgress = 0f;
+                Awaitable<VoronoiBiomeField> buildTask = BuildVoronoiBiomeFieldAsync(
+                    biomeAssignmentSeed,
+                    ct,
+                    value => System.Threading.Volatile.Write(ref buildProgress, value));
+                var buildAwaiter = buildTask.GetAwaiter();
+                float reportedBuildProgress = 0f;
+                while (!buildAwaiter.IsCompleted)
+                {
+                    reportedBuildProgress = Mathf.Max(
+                        reportedBuildProgress,
+                        System.Threading.Volatile.Read(ref buildProgress));
+                    progress?.Report(
+                        reportedBuildProgress,
+                        "Building biome regions...");
+                    await Awaitable.NextFrameAsync();
+                }
+                voronoiField = buildAwaiter.GetResult();
+                field = voronoiField;
+            }
         }
 
         ct.ThrowIfCancellationRequested();
-        CommitVoronoiBiomeField(field);
+        CommitBiomeAssignmentField(field, voronoiField);
         progress?.Report(1f, "Biome regions ready.");
     }
 
     void PrepareInitialization(int seed)
     {
         _climateProvider?.Initialize(seed);
+        _biomeAssignmentField = null;
         _voronoiBiomeField = null;
+    }
+
+    IBiomeAssignmentField BuildBiomeAssignmentField(int biomeAssignmentSeed, out VoronoiBiomeField voronoiField)
+    {
+        voronoiField = null;
+        if (_biome == null || _biome.Registry == null || _climateProvider == null)
+            return null;
+
+        if (_biome.AssignmentMode == BiomeAssignmentMode.DiagnosticGrid)
+            return BuildDiagnosticGridBiomeField();
+
+        voronoiField = BuildVoronoiBiomeField(biomeAssignmentSeed);
+        return voronoiField;
     }
 
     VoronoiBiomeField BuildVoronoiBiomeField(int biomeAssignmentSeed)
@@ -138,9 +163,18 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
         return field;
     }
 
-    void CommitVoronoiBiomeField(VoronoiBiomeField field)
+    DiagnosticGridBiomeField BuildDiagnosticGridBiomeField()
     {
-        _voronoiBiomeField = field;
+        if (_biome?.DiagnosticGridLayout == null)
+            return null;
+
+        return new DiagnosticGridBiomeField(_biome.DiagnosticGridLayout);
+    }
+
+    void CommitBiomeAssignmentField(IBiomeAssignmentField field, VoronoiBiomeField voronoiField)
+    {
+        _biomeAssignmentField = field;
+        _voronoiBiomeField = voronoiField;
         if (_voronoiBiomeField != null)
         {
             LoggerProvider.Log(
@@ -151,6 +185,10 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
                 $"cleanupChanges={_voronoiBiomeField.CleanupChanges}, " +
                 $"atlas={_voronoiBiomeField.LookupAtlasResolution}x{_voronoiBiomeField.LookupAtlasResolution}x6, " +
                 $"build={_voronoiBiomeField.BuildMilliseconds}ms");
+        }
+        else if (_biome?.AssignmentMode == BiomeAssignmentMode.DiagnosticGrid && field != null)
+        {
+            LoggerProvider.Log(LogLevel.Debug, "Biome", "Built diagnostic grid biome field.");
         }
 
         Shader.SetGlobalInt(_biomeVoronoiSeedCountId, _voronoiBiomeField?.SeedCount ?? 0);
@@ -279,7 +317,7 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
 
     BiomeResult ResolveBiome(Vector3 pointOnUnitSphere, ClimateSample climate)
     {
-        if (_voronoiBiomeField == null)
+        if (_biomeAssignmentField == null)
         {
             return _biomeRegistry.Resolve(
                 climate.Temperature01,
@@ -287,7 +325,7 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
                 climate.Elevation);
         }
 
-        VoronoiBiomeSample sample = _voronoiBiomeField.Evaluate(pointOnUnitSphere);
+        BiomeAssignmentSample sample = _biomeAssignmentField.Evaluate(pointOnUnitSphere);
         BiomeDefinitionDto primary = _biomeRegistry.GetDefinitionByIndex(sample.PrimaryId);
         BiomeDefinitionDto secondary = _biomeRegistry.GetDefinitionByIndex(sample.SecondaryId);
         BiomeType primaryType = primary != null ? primary.Type : BiomeType.Grassland;

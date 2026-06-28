@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Threading;
 using UnityEngine;
 
 public static class CommandExecutor
@@ -9,26 +10,103 @@ public static class CommandExecutor
     /// scrollback display. Async-returning commands are handed off to
     /// <see cref="IConsoleService.BeginAsync"/> for in-place spinner UX.
     /// </summary>
-    public static void Execute(string commandLine, IConsoleService console, System.Threading.CancellationToken cancellation = default)
+    public static void Execute(string commandLine, IConsoleService console, CancellationToken cancellation = default)
     {
-        if (string.IsNullOrWhiteSpace(commandLine)) return;
+        ConsoleCommandResult result = Invoke(commandLine, cancellation);
+        if (!result.Success)
+        {
+            PrintFailure(console, result);
+            return;
+        }
+
+        if (result.IsAsync && result.AwaitableResult != null)
+        {
+            console?.BeginAsync(result.Alias, result.AwaitableResult, result.IsCancellable);
+            return;
+        }
+
+        PrintOutput(console, result);
+    }
+
+    /// <summary>
+    /// Execute a command and await async-returning command methods inline. Used by diagnostic
+    /// command scripts where commands must run sequentially instead of through console UI state.
+    /// </summary>
+    public static async Awaitable<ConsoleCommandResult> ExecuteAsync(
+        string commandLine,
+        IConsoleService console,
+        CancellationToken cancellation = default,
+        bool printOutput = true)
+    {
+        ConsoleCommandResult result = Invoke(commandLine, cancellation);
+        if (!result.Success)
+        {
+            PrintFailure(console, result);
+            return result;
+        }
+
+        if (result.IsAsync && result.AwaitableResult != null)
+        {
+            try
+            {
+                object asyncResult = await ConsoleAwaitableUtility.AwaitResultAsync(
+                    result.AwaitableResult,
+                    cancellation);
+                result = result.WithOutput(asyncResult?.ToString());
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                result = result.WithError($"{result.Alias}: {ex.Message}");
+                PrintFailure(console, result);
+                return result;
+            }
+        }
+
+        if (printOutput)
+            PrintOutput(console, result);
+
+        return result;
+    }
+
+    /// <summary>
+    /// Execute only a synchronous command and return its output without printing to the console.
+    /// This is intended for F10 sidecar metadata recorders.
+    /// </summary>
+    public static ConsoleCommandResult ExecuteImmediate(string commandLine)
+    {
+        ConsoleCommandResult result = Invoke(commandLine, CancellationToken.None);
+        if (!result.Success)
+            return result;
+        return result.IsAsync
+            ? result.WithError($"{result.Alias}: async commands are not valid in immediate execution")
+            : result;
+    }
+
+    static ConsoleCommandResult Invoke(string commandLine, CancellationToken cancellation)
+    {
+        if (string.IsNullOrWhiteSpace(commandLine))
+            return ConsoleCommandResult.Failed(commandLine, "", "empty command");
 
         var tokens = CommandParser.Tokenize(commandLine);
-        if (tokens.Count == 0) return;
+        if (tokens.Count == 0)
+            return ConsoleCommandResult.Failed(commandLine, "", "empty command");
 
         string alias = tokens[0];
         if (!ConsoleRegistry.TryGet(alias, out CommandData cmd))
-        {
-            console.PrintError($"unknown command: '{alias}' — try 'help'");
-            return;
-        }
+            return ConsoleCommandResult.Failed(commandLine, alias, $"unknown command: '{alias}' - try 'help'");
 
         var argTokens = tokens.GetRange(1, tokens.Count - 1);
         if (!CommandParser.TryBind(cmd, argTokens, out object[] args, out string bindError))
         {
-            console.PrintError($"{alias}: {bindError}");
-            console.PrintLine($"  usage: {FormatSignature(cmd)}");
-            return;
+            return ConsoleCommandResult.Failed(
+                commandLine,
+                alias,
+                $"{alias}: {bindError}",
+                FormatSignature(cmd));
         }
 
         object target;
@@ -38,47 +116,68 @@ public static class CommandExecutor
         }
         catch (Exception ex)
         {
-            console.PrintError($"{alias}: could not resolve target — {ex.Message}");
-            return;
+            return ConsoleCommandResult.Failed(
+                commandLine,
+                alias,
+                $"{alias}: could not resolve target - {ex.Message}");
         }
 
         if (cmd.TargetType != MonoTargetType.Static && target == null)
         {
-            console.PrintError($"{alias}: no live instance of {cmd.DeclaringType.Name} found");
-            return;
+            return ConsoleCommandResult.Failed(
+                commandLine,
+                alias,
+                $"{alias}: no live instance of {cmd.DeclaringType.Name} found");
         }
 
-        object result;
+        object rawResult;
         try
         {
             object[] finalArgs = args;
             if (cmd.HasCancellationToken)
             {
                 finalArgs = new object[args.Length + 1];
-                System.Array.Copy(args, finalArgs, args.Length);
+                Array.Copy(args, finalArgs, args.Length);
                 finalArgs[args.Length] = cancellation;
             }
-            result = cmd.Method.Invoke(target, finalArgs);
+            rawResult = cmd.Method.Invoke(target, finalArgs);
         }
         catch (TargetInvocationException tex)
         {
-            console.PrintError($"{alias}: {tex.InnerException?.Message ?? tex.Message}");
-            return;
+            return ConsoleCommandResult.Failed(
+                commandLine,
+                alias,
+                $"{alias}: {tex.InnerException?.Message ?? tex.Message}");
         }
         catch (Exception ex)
         {
-            console.PrintError($"{alias}: {ex.Message}");
-            return;
+            return ConsoleCommandResult.Failed(commandLine, alias, $"{alias}: {ex.Message}");
         }
 
-        if (cmd.IsAsync && result != null)
+        if (cmd.IsAsync)
         {
-            console.BeginAsync(alias, result, cmd.HasCancellationToken);
-            return;
+            return new ConsoleCommandResult(
+                true,
+                commandLine,
+                alias,
+                "",
+                "",
+                "",
+                true,
+                cmd.HasCancellationToken,
+                rawResult);
         }
 
-        if (result is string s && !string.IsNullOrEmpty(s))
-            console.PrintLine(s);
+        return new ConsoleCommandResult(
+            true,
+            commandLine,
+            alias,
+            rawResult?.ToString(),
+            "",
+            "",
+            false,
+            cmd.HasCancellationToken,
+            null);
     }
 
     static object ResolveTarget(CommandData cmd)
@@ -93,7 +192,9 @@ public static class CommandExecutor
                 {
                     if (cmd.CachedSingleTarget != null)
                         return cmd.CachedSingleTarget;
-                    cmd.CachedSingleTarget = UnityEngine.Object.FindAnyObjectByType(cmd.DeclaringType, FindObjectsInactive.Exclude);
+                    cmd.CachedSingleTarget = UnityEngine.Object.FindAnyObjectByType(
+                        cmd.DeclaringType,
+                        FindObjectsInactive.Exclude);
                     return cmd.CachedSingleTarget;
                 }
                 throw new InvalidOperationException(
@@ -107,5 +208,25 @@ public static class CommandExecutor
         }
     }
 
-    static string FormatSignature(CommandData cmd) => ParameterData.FormatCommandSignature(cmd, includeDefaults: true);
+    static void PrintFailure(IConsoleService console, ConsoleCommandResult result)
+    {
+        if (console == null)
+            return;
+
+        console.PrintError(result.Error);
+        if (!string.IsNullOrEmpty(result.Usage))
+            console.PrintLine($"  usage: {result.Usage}");
+    }
+
+    static void PrintOutput(IConsoleService console, ConsoleCommandResult result)
+    {
+        if (console == null || !result.HasOutput)
+            return;
+        console.PrintLine(result.Output);
+    }
+
+    static string FormatSignature(CommandData cmd)
+    {
+        return ParameterData.FormatCommandSignature(cmd, includeDefaults: true);
+    }
 }

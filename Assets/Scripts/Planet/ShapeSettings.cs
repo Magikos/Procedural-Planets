@@ -5,6 +5,7 @@ public class ShapeSettings
 {
     public float PlanetRadius = 1;
     public NoiseLayer[] NoiseLayers;
+    public DiagnosticTerrainLayoutDto DiagnosticTerrainLayout;
 
     public class NoiseLayer
     {

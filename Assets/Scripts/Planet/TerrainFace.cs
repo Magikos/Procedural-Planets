@@ -45,7 +45,11 @@ public class TerrainFace : IFaceMeshSampler
     // Schedules the Burst mesh-generation job for this face. The returned state owns the
     // NativeArrays the job writes into; call CompleteMeshDataJob() to wait, copy out, and
     // dispose. The caller-owned `filters` NativeArray is shared (read-only) across all faces.
-    public TerrainFaceJobState ScheduleMeshDataJob(NativeArray<NoiseFilterData> filters, float planetRadius)
+    public TerrainFaceJobState ScheduleMeshDataJob(
+        NativeArray<NoiseFilterData> filters,
+        NativeArray<byte> diagnosticTerrainCells,
+        DiagnosticTerrainSettingsData diagnosticTerrain,
+        float planetRadius)
     {
         int vertexCount = _resolution * _resolution;
         int triangleCount = (_resolution - 1) * (_resolution - 1) * 6;
@@ -67,6 +71,8 @@ public class TerrainFace : IFaceMeshSampler
             AxisB = new float3(_axisB.x, _axisB.y, _axisB.z),
             PlanetRadius = planetRadius,
             Filters = filters,
+            DiagnosticTerrainCells = diagnosticTerrainCells,
+            DiagnosticTerrain = diagnosticTerrain,
             Vertices = state.Vertices,
             UnitSpherePoints = state.UnitSpherePoints,
             Elevations = state.Elevations,
@@ -194,6 +200,8 @@ public struct TerrainFaceMeshJob : IJobParallelFor
     public float PlanetRadius;
 
     [ReadOnly] public NativeArray<NoiseFilterData> Filters;
+    [ReadOnly] public NativeArray<byte> DiagnosticTerrainCells;
+    public DiagnosticTerrainSettingsData DiagnosticTerrain;
 
     [WriteOnly] public NativeArray<float3> Vertices;
     [WriteOnly] public NativeArray<float3> UnitSpherePoints;
@@ -234,6 +242,9 @@ public struct TerrainFaceMeshJob : IJobParallelFor
 
     float EvaluateElevation(float3 point)
     {
+        if (DiagnosticTerrain.Enabled != 0)
+            return DiagnosticTerrainEvaluator.Evaluate(point, DiagnosticTerrain, DiagnosticTerrainCells);
+
         int count = Filters.Length;
         if (count == 0) return 0f;
 

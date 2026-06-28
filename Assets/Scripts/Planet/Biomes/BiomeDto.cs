@@ -15,7 +15,9 @@ public sealed record BiomeDto(
     float TemperatureNoiseStrength,
     int VoronoiSeedCount,
     float VoronoiSeedJitter,
-    float VoronoiDomainWarpStrength)
+    float VoronoiDomainWarpStrength,
+    BiomeAssignmentMode AssignmentMode,
+    DiagnosticGridBiomeLayoutDto DiagnosticGridLayout)
 {
     public static BiomeDto From(BiomeSettings src)
     {
@@ -35,7 +37,9 @@ public sealed record BiomeDto(
             src.TemperatureNoiseStrength,
             src.VoronoiSeedCount,
             src.VoronoiSeedJitter,
-            src.VoronoiDomainWarpStrength);
+            src.VoronoiDomainWarpStrength,
+            BiomeAssignmentMode.Voronoi,
+            null);
     }
 
     public string Describe()
@@ -59,6 +63,7 @@ public sealed record BiomeDto(
         sb.Append("seeds=").Append(VoronoiSeedCount);
         sb.Append(", jitter=").Append(VoronoiSeedJitter.ToString("F2"));
         sb.Append(", warp=").Append(VoronoiDomainWarpStrength.ToString("F3"));
+        sb.Append(", assignment=").Append(AssignmentMode);
         return sb.ToString();
     }
 }

@@ -1,0 +1,21 @@
+@name Grass Terrain Only
+@timeout 120
+@defer grass.enabled true
+@sidecar planet.status
+@sidecar light.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+
+debug.capture-set "Grass"
+
+camera.look-at -114.86,164.22,-3400.39 -186.06,129.22,-2403.59
+light.local-noon
+@wait frames 2
+grass.enabled false
+@wait frames 2
+debug.capture
+
+camera.look-at 0,0,-2600 0,0,0
+light.local-noon
+@wait frames 2
+debug.capture

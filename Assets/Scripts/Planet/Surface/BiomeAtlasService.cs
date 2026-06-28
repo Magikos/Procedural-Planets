@@ -28,6 +28,7 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
     Texture2D[] _faceBlendedAtlases;
     Texture2D[] _faceIdAtlases;
     Texture2D[] _faceWeightAtlases;
+    Texture2D[] _faceSurfaceStateAtlases;
     Texture2D _blendedStaging;
     Texture2D _idStaging;
     Texture2D _weightStaging;
@@ -68,7 +69,7 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
     internal static void BakeChunkMap(
         PlanetChunk chunk,
         in BiomeLookupData lookup,
-        VoronoiBiomeField voronoiField,
+        IBiomeAssignmentField assignmentField,
         Color[] lutColors)
     {
         if (chunk == null) return;
@@ -84,7 +85,7 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
         if (_tlsBakeHighResBuffer == null || _tlsBakeHighResBuffer.Length != hrCount)
             _tlsBakeHighResBuffer = new byte[hrCount];
 
-        BiomeMapBaker.Bake(chunk, lookup, voronoiField, lutColors,
+        BiomeMapBaker.Bake(chunk, lookup, assignmentField, lutColors,
             chunk.PendingBiomeBlendedColorPixels,
             chunk.PendingBiomeIdsPixels,
             chunk.PendingBiomeWeightsPixels,
@@ -146,6 +147,7 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
         _faceBlendedAtlases = new Texture2D[6];
         _faceIdAtlases = new Texture2D[6];
         _faceWeightAtlases = new Texture2D[6];
+        _faceSurfaceStateAtlases = new Texture2D[6];
 
         int expectedLeafCount = leafsPerAxis * leafsPerAxis;
         progress?.Report(0f, "Stitching biome atlases...");
@@ -189,6 +191,9 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
                     $"BiomeIdsAtlas_F{face}", atlasResolution, pixels.Ids, FilterMode.Point, linear: true);
                 _faceWeightAtlases[face] = CreateAtlasTexture(
                     $"BiomeWeightsAtlas_F{face}", atlasResolution, pixels.Weights, FilterMode.Point, linear: true);
+                _faceSurfaceStateAtlases[face] = CreateAtlasTexture(
+                    $"SurfaceStateAtlas_F{face}", atlasResolution,
+                    new Color32[atlasResolution * atlasResolution], FilterMode.Bilinear, linear: true);
 
                 LoggerProvider.Log(LogLevel.Debug, "PhaseB",
                     $"Biome atlas face {face}: {atlasResolution}x{atlasResolution}, copied {pixels.CopiedLeaves}/{expectedLeafCount} max-depth leaves.");
@@ -290,6 +295,16 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
         return blended != null && ids != null && weights != null;
     }
 
+    public bool TryGetFaceSurfaceStateAtlas(int face, out Texture2D surfaceState)
+    {
+        surfaceState = null;
+        if (face < 0 || face >= 6) return false;
+        if (_faceSurfaceStateAtlases == null) return false;
+
+        surfaceState = _faceSurfaceStateAtlases[face];
+        return surfaceState != null;
+    }
+
     public bool HasCompleteAtlases()
     {
         for (int face = 0; face < 6; face++)
@@ -297,6 +312,21 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
             if (!TryGetFaceAtlases(face, out _, out _, out _))
                 return false;
         }
+        return true;
+    }
+
+    public bool UpdateSurfaceStateAtlasRegion(PlanetChunk chunk)
+    {
+        if (chunk?.SurfaceStateTexture == null)
+            return false;
+        if (!TryGetFaceSurfaceStateAtlas(chunk.FaceIndex, out Texture2D surfaceStateAtlas))
+            return false;
+
+        int leafsPerAxis = 1 << _maxChunkDepth;
+        int leafStride = PlanetChunkTextures.BiomeMapResolution - 1;
+        GetLeafAtlasOrigin(chunk, leafsPerAxis, leafStride, out int dstX, out int dstY);
+        CopyAtlasRegion(chunk.SurfaceStateTexture, surfaceStateAtlas,
+            PlanetChunkTextures.BiomeMapResolution, dstX, dstY);
         return true;
     }
 
@@ -440,6 +470,7 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
         CountTextureArray(_faceBlendedAtlases, ref textureCount, ref rawBytes);
         CountTextureArray(_faceIdAtlases, ref textureCount, ref rawBytes);
         CountTextureArray(_faceWeightAtlases, ref textureCount, ref rawBytes);
+        CountTextureArray(_faceSurfaceStateAtlases, ref textureCount, ref rawBytes);
         _reportedTextureCount = textureCount;
         _reportedRawBytes = rawBytes;
     }
@@ -449,6 +480,7 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
         DestroyTextureArray(ref _faceBlendedAtlases);
         DestroyTextureArray(ref _faceIdAtlases);
         DestroyTextureArray(ref _faceWeightAtlases);
+        DestroyTextureArray(ref _faceSurfaceStateAtlases);
         DestroyTexture(ref _blendedStaging);
         DestroyTexture(ref _idStaging);
         DestroyTexture(ref _weightStaging);

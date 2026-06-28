@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19f7af85e18e4621b6b453fae7358017, type: 3}
+  m_Name: GrassDiagnosticRecipe
+  m_EditorClassIdentifier: 
+  PlanetSettings: {fileID: 11400000, guid: 4ebd5234a6c449e4ba3e37e2e09de19f, type: 2}
+  BiomeSettings: {fileID: 11400000, guid: ce38419e62833254b94ec0386401682b, type: 2}
+  DiagnosticGridBiomeLayout: {fileID: 11400000, guid: ab75894bbe704b508278c1fcc05a253a, type: 2}
+  DiagnosticTerrainLayout: {fileID: 11400000, guid: b92fe0a8d97e4b7da7a17872e64c7f6d, type: 2}

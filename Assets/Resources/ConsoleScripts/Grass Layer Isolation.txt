@@ -1,0 +1,41 @@
+@name Grass Layer Isolation
+@timeout 120
+@defer grass.enabled true
+@defer grass.layer near true
+@defer grass.layer chunk true
+@defer grass.layer blanket true
+@defer grass.surface-brightness 0.85
+@sidecar planet.status
+@sidecar light.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+
+debug.capture-set "Grass"
+camera.look-at -114.86,164.22,-3400.39 -186.06,129.22,-2403.59
+light.local-noon
+
+grass.enabled true
+grass.layer near false
+grass.layer chunk false
+grass.layer blanket false
+@wait frames 2
+debug.capture
+
+grass.layer blanket true
+@wait frames 2
+debug.capture
+
+grass.layer blanket false
+grass.layer chunk true
+@wait frames 2
+debug.capture
+
+grass.layer chunk false
+grass.layer near true
+@wait frames 2
+debug.capture
+
+grass.layer chunk true
+grass.layer blanket true
+@wait frames 2
+debug.capture

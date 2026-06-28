@@ -1,0 +1,90 @@
+@name Grass Pop-in Edge Probe
+@timeout 180
+@defer debug.capture-set "Grass"
+@defer grass.enabled true
+@defer grass.layer near true
+@defer grass.layer chunk true
+@defer grass.layer blanket true
+@defer grass.overlay-strength 1
+@defer grass.surface-brightness 0.4
+@defer grass.debug-tint 0
+@defer grass.debug-layer-colors false
+@sidecar camera.position
+@sidecar debug.capture-set
+@sidecar debug.mode
+@sidecar planet.status
+@sidecar light.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+
+# Uses the two manual F10 poses from 2026-06-27 10:59 as endpoints.
+# Short on purpose: endpoint A, midpoint, endpoint B, then layer ownership at B.
+# Layer colors: blanket=red, chunk=blue, near=green.
+debug.capture-set "Grass Visual"
+camera.speed 6
+grass.enabled true
+grass.overlay-strength 1
+grass.surface-brightness 0.35
+grass.debug-tint 0
+grass.debug-layer-colors true
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+@wait seconds 4
+
+# A: all layers, layer colors.
+camera.look-at -1570.16,-203.03,1.33 -1549.16,794.97,-57.57
+light.local-noon
+camera.save-teleport "Grass Pop-in Edge A"
+@wait frames 16
+debug.capture
+@wait seconds 2
+
+# Midpoint: all layers, layer colors.
+camera.look-at -1569.72,-181.93,0.09 -1548.72,816.07,-58.82
+light.local-noon
+@wait frames 16
+debug.capture
+@wait seconds 2
+
+# B: all layers, layer colors.
+camera.look-at -1569.27,-160.83,-1.16 -1548.27,837.17,-60.06
+light.local-noon
+camera.save-teleport "Grass Pop-in Edge B"
+@wait frames 16
+debug.capture
+@wait seconds 2
+
+# B: chunk plus blanket, no near field.
+grass.layer near false
+grass.layer chunk true
+grass.layer blanket true
+@wait frames 16
+debug.capture
+@wait seconds 2
+
+# B: near field plus blanket, no chunk grass.
+grass.layer near true
+grass.layer chunk false
+grass.layer blanket true
+@wait frames 16
+debug.capture
+@wait seconds 2
+
+# B: blanket only.
+grass.debug-tint 0
+grass.layer near false
+grass.layer chunk false
+grass.layer blanket true
+@wait frames 16
+debug.capture
+@wait seconds 2
+
+# B: final normal all-layer view.
+grass.debug-layer-colors false
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+@wait frames 16
+debug.capture
+@wait seconds 2

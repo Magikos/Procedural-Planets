@@ -22,8 +22,11 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     [SerializeField] PlanetSettings _planetSettings;
 
+    [Header("Diagnostics")]
+    [SerializeField] PlanetRecipe _recipe;
+
 #if UNITY_EDITOR
-    public PlanetSettings PlanetSettingsAsset => _planetSettings;
+    public PlanetSettings PlanetSettingsAsset => GetPlanetSettingsSource();
 #endif
 
     // Read reflectively by PlanetEditor through SerializedObject.FindProperty.
@@ -43,6 +46,11 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     PlanetGrassCoordinator _grass;
     PlanetWaterSurface _waterSurface;
     PlanetTerrainMaterial _terrainMaterial;
+
+    static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
+    static readonly int _seaLevelRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
+    static readonly int _densityOriginRadiusId = Shader.PropertyToID(ShaderGlobalIds.DensityOriginRadius);
+    static readonly int _surfacePathDebugId = Shader.PropertyToID("_SurfacePathDebug");
 
     CancellationTokenSource _cts;
     bool _isGenerating;
@@ -91,19 +99,27 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     public System.Collections.Generic.IReadOnlyList<System.Type> RequiredSettingsTypes => RequiredSettings;
 
+    PlanetSettings GetPlanetSettingsSource() =>
+        _recipe != null ? _recipe.PlanetSettings : _planetSettings;
+
+    BiomeSettings GetBiomeSettingsSource() =>
+        _recipe != null ? _recipe.BiomeSettingsSource : _planetSettings?.BiomeSettings;
+
     public void RegisterWorldSettings(ISettingsService settings)
     {
-        if (_planetSettings == null)
-            throw new System.InvalidOperationException("Planet requires a PlanetSettings asset.");
-        if (_planetSettings.BiomeSettings == null)
+        PlanetSettings planetSource = GetPlanetSettingsSource();
+        BiomeSettings biomeSource = GetBiomeSettingsSource();
+        if (planetSource == null)
+            throw new System.InvalidOperationException("Planet requires a PlanetSettings asset or PlanetRecipe.");
+        if (biomeSource == null)
             throw new System.InvalidOperationException("PlanetSettings requires a BiomeSettings asset.");
-        if (_planetSettings.BiomeSettings.Registry == null)
+        if (biomeSource.Registry == null)
             throw new System.InvalidOperationException("BiomeSettings requires a BiomeRegistry asset.");
 
         if (!settings.IsRegistered<PlanetDto>())
-            settings.Register(PlanetDto.From(_planetSettings));
+            settings.Register(_recipe != null ? _recipe.ToPlanetDto() : PlanetDto.From(planetSource));
         if (!settings.IsRegistered<BiomeDto>())
-            settings.Register(BiomeDto.From(_planetSettings.BiomeSettings));
+            settings.Register(_recipe != null ? _recipe.ToBiomeDto() : BiomeDto.From(biomeSource));
     }
 
     public async Awaitable EarlyInitialize(CancellationToken cancellationToken)
@@ -237,7 +253,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     /// </summary>
     public async Awaitable GeneratePlanetAsync(CancellationToken externalToken = default)
     {
-        if (_planetSettings == null)
+        if (GetPlanetSettingsSource() == null)
         {
             Logger.Log(LogLevel.Warning, "Planet", "PlanetSettings is not assigned.");
             return;
@@ -298,6 +314,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             float seaLevelRadius = planet.PlanetRadius * (1 + planet.OceanLevel);
             _lastGeneratedRadius = scaledRadius;
             _lastSeaLevelRadius = seaLevelRadius;
+            UploadCorePlanetShaderGlobals(seaLevelRadius);
             _progressHandle.Report(1f, "Planet ready");
             await Awaitable.NextFrameAsync(ct);
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _shapeGenerator.ElevationMin, _shapeGenerator.ElevationMax));
@@ -323,6 +340,13 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             _isGenerating = false;
             linkedCts?.Dispose();
         }
+    }
+
+    void UploadCorePlanetShaderGlobals(float seaLevelRadius)
+    {
+        Shader.SetGlobalVector(_planetCenterId, transform.position);
+        Shader.SetGlobalFloat(_seaLevelRadiusId, seaLevelRadius);
+        Shader.SetGlobalFloat(_densityOriginRadiusId, seaLevelRadius);
     }
 
     async Awaitable GenerateMeshAsync(IProgressHandle progress, CancellationToken ct)
@@ -472,7 +496,167 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         return true;
     }
 
+    public bool TryPaintSurfacePathFromCamera(Ray worldRay, float radiusMeters, float strength, out string summary)
+    {
+        summary = "path paint requires a generated chunked planet";
+        if (_surfaceProvider is not ChunkedSurfaceProvider chunkedProvider)
+            return false;
+
+        float maxDistance = Mathf.Max(_lastGeneratedRadius * 4f, 10000f);
+        if (!TryRaycastSurface(worldRay, maxDistance, out PlanetSurfaceRaycastHit hit))
+        {
+            summary = "path paint missed the visible planet surface";
+            return false;
+        }
+
+        Vector3 localDirection = transform.InverseTransformPoint(hit.Point).normalized;
+        if (!chunkedProvider.TryPaintSurfaceStateDisc(
+                localDirection,
+                Mathf.Max(radiusMeters, 0.1f),
+                Mathf.Clamp01(strength),
+                out summary))
+        {
+            return false;
+        }
+
+        _grass.DisposeControllers();
+        return true;
+    }
+
+    public bool TryPaintSurfacePathAtWorldPosition(Vector3 worldPosition, float radiusMeters, float strength, out string summary)
+    {
+        summary = "path paint requires a generated chunked planet";
+        if (_surfaceProvider is not ChunkedSurfaceProvider chunkedProvider)
+            return false;
+
+        Vector3 localPoint = transform.InverseTransformPoint(worldPosition);
+        if (localPoint.sqrMagnitude < 0.0001f)
+        {
+            summary = "path paint requires a position away from the planet center";
+            return false;
+        }
+
+        bool painted = chunkedProvider.TryPaintSurfaceStateDisc(
+            localPoint.normalized,
+            Mathf.Max(radiusMeters, 0.1f),
+            Mathf.Clamp01(strength),
+            out summary);
+        if (painted)
+            _grass.DisposeControllers();
+        return painted;
+    }
+
+    public bool TryPaintSurfacePathPatternAtWorldPosition(Vector3 worldPosition, float sizeMeters, float strength, out string summary)
+    {
+        summary = "path pattern requires a generated chunked planet";
+        if (_surfaceProvider is not ChunkedSurfaceProvider chunkedProvider)
+            return false;
+
+        Vector3 localPoint = transform.InverseTransformPoint(worldPosition);
+        if (localPoint.sqrMagnitude < 0.0001f)
+        {
+            summary = "path pattern requires a position away from the planet center";
+            return false;
+        }
+
+        bool painted = chunkedProvider.TryPaintSurfaceStateTestPattern(
+            localPoint.normalized,
+            Mathf.Max(sizeMeters, 1f),
+            Mathf.Clamp01(strength),
+            out summary);
+        if (painted)
+            _grass.DisposeControllers();
+        return painted;
+    }
+
+    public int ClearSurfacePaths()
+    {
+        if (_surfaceProvider is not ChunkedSurfaceProvider chunkedProvider)
+            return 0;
+
+        int cleared = chunkedProvider.ClearSurfaceStateMasks();
+        if (cleared > 0)
+            _grass.DisposeControllers();
+        return cleared;
+    }
+
+    public string SurfacePathStatus()
+    {
+        if (_surfaceProvider is not ChunkedSurfaceProvider)
+            return "path mask unavailable: active provider is not chunked";
+
+        float debug = _terrainMaterial?.Material != null && _terrainMaterial.Material.HasProperty(_surfacePathDebugId)
+            ? _terrainMaterial.Material.GetFloat(_surfacePathDebugId)
+            : 0f;
+        return $"path mask ready: R=paved, G=scorched; debug={(debug > 0.5f ? "hot-pink" : "off")}";
+    }
+
+    public string SetSurfacePathDebug(bool? enabled = null)
+    {
+        if (_terrainMaterial?.Material == null || !_terrainMaterial.Material.HasProperty(_surfacePathDebugId))
+            return "path debug unavailable: terrain material has no _SurfacePathDebug";
+
+        if (enabled.HasValue)
+            _terrainMaterial.Material.SetFloat(_surfacePathDebugId, enabled.Value ? 1f : 0f);
+
+        bool active = _terrainMaterial.Material.GetFloat(_surfacePathDebugId) > 0.5f;
+        return $"path debug: {(active ? "hot-pink" : "off")}";
+    }
+
     // --- Console commands -------------------------------------------------
+
+    [ConsoleCommand("status", "Show active planet recipe, generated runtime, and diagnostic layout state.", MonoTargetType.Single)]
+    string StatusCmd()
+    {
+        var sb = new System.Text.StringBuilder();
+        PlanetSettings planetSource = GetPlanetSettingsSource();
+        BiomeSettings biomeSource = GetBiomeSettingsSource();
+        sb.Append("source=").Append(_recipe != null ? "recipe" : "planet-settings");
+        sb.Append(", recipe=").Append(AssetName(_recipe));
+        sb.Append(", planetSettings=").Append(AssetName(planetSource));
+        sb.Append(", biomeSettings=").Append(AssetName(biomeSource));
+        sb.Append(", diagnosticBiome=").Append(AssetName(_recipe != null ? _recipe.DiagnosticGridBiomeLayout : null));
+        sb.Append(", diagnosticTerrain=").Append(AssetName(_recipe != null ? _recipe.DiagnosticTerrainLayout : null));
+        sb.AppendLine();
+
+        sb.Append("runtime: seed=").Append(Seed);
+        sb.Append(", generating=").Append(_isGenerating);
+        sb.Append(", renderMask=").Append(RenderMask);
+        sb.Append(", perFaceResolution=").Append(PerFaceResolution);
+        sb.Append(", generatedRadius=").Append(_lastGeneratedRadius.ToString("F2"));
+        sb.Append(", seaLevelRadius=").Append(_lastSeaLevelRadius.ToString("F2"));
+        sb.Append(", provider=").Append(_surfaceProvider != null ? _surfaceProvider.GetType().Name : "none");
+        sb.AppendLine();
+
+        if (TryGetSettings(out PlanetDto planet))
+        {
+            sb.Append("planetDto: radius=").Append(planet.PlanetRadius.ToString("F2"));
+            sb.Append(", resolution=").Append(planet.Resolution);
+            sb.Append(", maxDepth=").Append(planet.MaxChunkDepth);
+            sb.Append(", oceans=").Append(planet.HasOceans);
+            sb.Append(", oceanLevel=").Append(planet.OceanLevel.ToString("F3"));
+            sb.Append(", diagnosticTerrain=").Append(DescribeDiagnosticTerrain(planet.DiagnosticTerrainLayout));
+            sb.AppendLine();
+        }
+        else
+        {
+            sb.AppendLine("planetDto: unavailable");
+        }
+
+        if (TryGetSettings(out BiomeDto biome))
+        {
+            sb.Append("biomeDto: assignment=").Append(biome.AssignmentMode);
+            sb.Append(", climateMap=").Append(biome.ClimateMapResolution);
+            sb.Append(", voronoiSeeds=").Append(biome.VoronoiSeedCount);
+            sb.Append(", diagnosticGrid=").Append(DescribeDiagnosticBiome(biome.DiagnosticGridLayout));
+        }
+        else
+        {
+            sb.Append("biomeDto: unavailable");
+        }
+
+        return sb.ToString();
+    }
 
     [ConsoleCommand("seed", "Get the current world seed, or set a new one. Does NOT auto-regenerate — run 'planet.generate' to apply.", MonoTargetType.Single)]
     string SeedCmd(int? newSeed = null)
@@ -506,5 +690,159 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         }
 
         await GeneratePlanetAsync(ct);
+    }
+
+    static string AssetName(Object asset)
+    {
+        return asset != null ? asset.name : "none";
+    }
+
+    static bool TryGetSettings<T>(out T settings)
+    {
+        try
+        {
+            if (SettingsProvider.IsRegistered<T>())
+            {
+                settings = SettingsProvider.GetSettings<T>();
+                return true;
+            }
+        }
+        catch (System.Exception)
+        {
+        }
+
+        settings = default;
+        return false;
+    }
+
+    static string DescribeDiagnosticTerrain(DiagnosticTerrainLayoutDto layout)
+    {
+        if (layout == null)
+            return "none";
+
+        return $"face={(DiagnosticTerrainFace)layout.Face}, grid={layout.Columns}x{layout.Rows}, blend={layout.BlendWidth:F3}, fallback={(DiagnosticTerrainCell)layout.FallbackCell}";
+    }
+
+    static string DescribeDiagnosticBiome(DiagnosticGridBiomeLayoutDto layout)
+    {
+        if (layout == null)
+            return "none";
+
+        return $"face={(DiagnosticGridBiomeFace)layout.Face}, grid={layout.Columns}x{layout.Rows}, blend={layout.BlendWidth:F3}, fallbackId={layout.FallbackBiome}";
+    }
+}
+
+[CommandPrefix("path")]
+public static class SurfacePathDebugCommands
+{
+    [ConsoleCommand("paint", "Paint a soft paved path mask where the camera is aimed. Args: radiusMeters strength01.", MonoTargetType.Static)]
+    public static string PaintCmd(float? radiusMeters = null, float? strength = null)
+    {
+        if (!TryGetPlanet(out Planet planet))
+            return "path paint requires an active Planet";
+        if (!TryGetCameraRay(out Ray ray, out string error))
+            return error;
+
+        float radius = Mathf.Clamp(radiusMeters ?? 5f, 0.25f, 250f);
+        float alpha = Mathf.Clamp01(strength ?? 1f);
+        return planet.TryPaintSurfacePathFromCamera(ray, radius, alpha, out string summary)
+            ? summary
+            : summary;
+    }
+
+    [ConsoleCommand("paint-here", "Paint a soft paved path mask under the camera. Args: radiusMeters strength01.", MonoTargetType.Static)]
+    public static string PaintHereCmd(float? radiusMeters = null, float? strength = null)
+    {
+        if (!TryGetPlanet(out Planet planet))
+            return "path paint-here requires an active Planet";
+        if (!TryGetCameraTransform(out Transform cameraTransform, out string error))
+            return error;
+
+        float radius = Mathf.Clamp(radiusMeters ?? 8f, 0.25f, 250f);
+        float alpha = Mathf.Clamp01(strength ?? 1f);
+        return planet.TryPaintSurfacePathAtWorldPosition(cameraTransform.position, radius, alpha, out string summary)
+            ? summary
+            : summary;
+    }
+
+    [ConsoleCommand("pattern-here", "Paint deterministic path test patterns under the camera. Args: sizeMeters strength01.", MonoTargetType.Static)]
+    public static string PatternHereCmd(float? sizeMeters = null, float? strength = null)
+    {
+        if (!TryGetPlanet(out Planet planet))
+            return "path pattern-here requires an active Planet";
+        if (!TryGetCameraTransform(out Transform cameraTransform, out string error))
+            return error;
+
+        float size = Mathf.Clamp(sizeMeters ?? 220f, 16f, 1000f);
+        float alpha = Mathf.Clamp01(strength ?? 1f);
+        return planet.TryPaintSurfacePathPatternAtWorldPosition(cameraTransform.position, size, alpha, out string summary)
+            ? summary
+            : summary;
+    }
+
+    [ConsoleCommand("clear", "Clear all painted surface path masks.", MonoTargetType.Static)]
+    public static string ClearCmd()
+    {
+        if (!TryGetPlanet(out Planet planet))
+            return "path clear requires an active Planet";
+
+        int cleared = planet.ClearSurfacePaths();
+        return $"cleared path masks on {cleared} chunks";
+    }
+
+    [ConsoleCommand("debug", "Toggle hot-pink path mask visualization.", MonoTargetType.Static)]
+    public static string DebugCmd(bool? enabled = null)
+    {
+        return TryGetPlanet(out Planet planet)
+            ? planet.SetSurfacePathDebug(enabled)
+            : "path debug requires an active Planet";
+    }
+
+    [ConsoleCommand("status", "Show path mask runtime support status.", MonoTargetType.Static)]
+    public static string StatusCmd()
+    {
+        return TryGetPlanet(out Planet planet)
+            ? planet.SurfacePathStatus()
+            : "path mask unavailable: no active Planet";
+    }
+
+    static bool TryGetPlanet(out Planet planet)
+    {
+        planet = null;
+        if (ServiceLocator.TryGet(out IPlanet servicePlanet) && servicePlanet is Planet concrete)
+        {
+            planet = concrete;
+            return true;
+        }
+
+        planet = Object.FindAnyObjectByType<Planet>();
+        return planet != null;
+    }
+
+    static bool TryGetCameraRay(out Ray ray, out string error)
+    {
+        if (!TryGetCameraTransform(out Transform cameraTransform, out error))
+        {
+            ray = default;
+            return false;
+        }
+
+        ray = new Ray(cameraTransform.position, cameraTransform.forward);
+        error = null;
+        return true;
+    }
+
+    static bool TryGetCameraTransform(out Transform cameraTransform, out string error)
+    {
+        cameraTransform = null;
+        if (ServiceLocator.TryGet(out ICameraRigContext context) && context.CameraTransform != null)
+            cameraTransform = context.CameraTransform;
+
+        Camera camera = Camera.main;
+        if (cameraTransform == null && camera != null)
+            cameraTransform = camera.transform;
+
+        error = cameraTransform == null ? "path paint requires an active camera" : null;
+        return cameraTransform != null;
     }
 }

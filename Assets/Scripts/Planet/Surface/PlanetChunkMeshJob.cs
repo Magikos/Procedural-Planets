@@ -33,6 +33,8 @@ public struct PlanetChunkMeshJob : IJobParallelFor
     public byte EdgeFanMask;           // bits ESNW — see EdgeBit* constants
 
     [ReadOnly] public NativeArray<NoiseFilterData> Filters;
+    [ReadOnly] public NativeArray<byte> DiagnosticTerrainCells;
+    public DiagnosticTerrainSettingsData DiagnosticTerrain;
 
     [WriteOnly] public NativeArray<float3> Vertices;
     [WriteOnly] public NativeArray<float3> UnitSpherePoints;
@@ -113,6 +115,9 @@ public struct PlanetChunkMeshJob : IJobParallelFor
 
     float EvaluateElevation(float3 point)
     {
+        if (DiagnosticTerrain.Enabled != 0)
+            return DiagnosticTerrainEvaluator.Evaluate(point, DiagnosticTerrain, DiagnosticTerrainCells);
+
         int count = Filters.Length;
         if (count == 0) return 0f;
 

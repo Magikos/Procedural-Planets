@@ -6,6 +6,8 @@ public class ShapeGenerator : ITerrainProvider
     ShapeSettings _shapeSettings;
     INoiseFilter[] _noiseFilters;
     int _seed;
+    DiagnosticTerrainSettingsData _diagnosticTerrain;
+    byte[] _diagnosticTerrainCells;
 
     public ShapeSettings Settings => _shapeSettings;
     public int LayerCount => _shapeSettings?.NoiseLayers?.Length ?? 0;
@@ -31,6 +33,8 @@ public class ShapeGenerator : ITerrainProvider
             throw new System.InvalidOperationException("ShapeGenerator.Configure() must be called before Initialize().");
         _seed = seed;
         _workingMinMax.Reset();
+        _diagnosticTerrain = DiagnosticTerrainEvaluator.ToData(_shapeSettings.DiagnosticTerrainLayout);
+        _diagnosticTerrainCells = _shapeSettings.DiagnosticTerrainLayout?.Cells;
         _noiseFilters = new INoiseFilter[_shapeSettings.NoiseLayers.Length];
         for (int i = 0; i < _noiseFilters.Length; i++)
         {
@@ -41,6 +45,16 @@ public class ShapeGenerator : ITerrainProvider
 
     public float EvaluateElevation(Vector3 pointOnUnitSphere)
     {
+        if (_diagnosticTerrain.Enabled != 0)
+        {
+            float diagnosticElevation = DiagnosticTerrainEvaluator.Evaluate(
+                new Unity.Mathematics.float3(pointOnUnitSphere.x, pointOnUnitSphere.y, pointOnUnitSphere.z),
+                _diagnosticTerrain,
+                _diagnosticTerrainCells);
+            _workingMinMax.AddValue(diagnosticElevation);
+            return diagnosticElevation;
+        }
+
         float elevation = 0;
         float firstLayerValue = 0;
         if (_noiseFilters.Length > 0)
@@ -90,6 +104,18 @@ public class ShapeGenerator : ITerrainProvider
             var layer = layers[i];
             data[i] = NoiseFilterData.Create(layer.NoiseSettings, _seed + i, layer.Enabled, layer.UseFirstLayerAsMask);
         }
+        return data;
+    }
+
+    public DiagnosticTerrainSettingsData DiagnosticTerrainData => _diagnosticTerrain;
+
+    public NativeArray<byte> BuildDiagnosticTerrainCells(Allocator allocator)
+    {
+        if (_diagnosticTerrain.Enabled == 0 || _diagnosticTerrainCells == null || _diagnosticTerrainCells.Length == 0)
+            return new NativeArray<byte>(0, allocator);
+
+        var data = new NativeArray<byte>(_diagnosticTerrainCells.Length, allocator, NativeArrayOptions.UninitializedMemory);
+        data.CopyFrom(_diagnosticTerrainCells);
         return data;
     }
 

@@ -15,7 +15,8 @@ public sealed record PlanetDto(
     Color WaterColor,
     bool EnableFrozenWater,
     Color IceTint,
-    Material PlanetMaterial)
+    Material PlanetMaterial,
+    DiagnosticTerrainLayoutDto DiagnosticTerrainLayout)
 {
     public static PlanetDto From(PlanetSettings src)
     {
@@ -35,13 +36,15 @@ public sealed record PlanetDto(
             src.WaterColor,
             src.EnableFrozenWater,
             src.IceTint,
-            src.PlanetMaterial);
+            src.PlanetMaterial,
+            null);
     }
 
     public ShapeSettings BuildShapeSettings() => new()
     {
         PlanetRadius = PlanetRadius,
-        NoiseLayers = BuildNoiseLayers()
+        NoiseLayers = BuildNoiseLayers(),
+        DiagnosticTerrainLayout = DiagnosticTerrainLayout
     };
 
     ShapeSettings.NoiseLayer[] BuildNoiseLayers()

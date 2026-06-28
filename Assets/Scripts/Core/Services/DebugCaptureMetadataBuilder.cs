@@ -65,6 +65,8 @@ public static class DebugCaptureMetadataBuilder
         sb.AppendLine($"Time: {System.DateTime.Now:O}");
         sb.AppendLine();
 
+        ConsoleScriptRuntime.AppendMetadata(sb);
+
         sb.AppendLine("--- Camera ---");
         if (cameraContext != null)
         {

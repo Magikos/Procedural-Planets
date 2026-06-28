@@ -15,7 +15,7 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     GrassNearFieldController _grassNearFieldController;
     bool _grassEnabled = true;
     bool _nearFieldGrassEnabled = true;
-    bool _chunkGrassEnabled = true;
+    bool _chunkGrassEnabled = false;
     bool _grassBlanketEnabled = true;
 
     ChunkedSurfaceProvider _chunkedProvider;
@@ -32,15 +32,16 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     static readonly int _grassFarOverlayAltitudeEndId = Shader.PropertyToID("_GrassFarOverlayAltitudeEnd");
     static readonly int _grassFarOverlayFiberStrengthId = Shader.PropertyToID("_GrassFarOverlayFiberStrength");
     static readonly int _grassSurfaceBrightnessId = Shader.PropertyToID("_GrassSurfaceBrightness");
+    static readonly int _grassWaterRadiusId = Shader.PropertyToID("_GrassWaterRadius");
+    static readonly int _biomeGrassParamCountId = Shader.PropertyToID(ShaderGlobalIds.BiomeGrassParamCount);
 
-    // Live-tunable via grass.* console commands (see bottom of file). surface-brightness was
-    // dialed to 0.4 to bring the painted ground grass down to the dark 3D-tuft shade, which is
-    // what removes the visible grass line; strength stays at full coverage.
+    // Live-tunable via grass.* console commands (see bottom of file). The default aims the
+    // painted surface at the aggregate blade canopy; close blade gaps still expose terrain.
     float _farOverlayStrength = 1.0f;
-    float _grassSurfaceBrightness = 0.4f;
+    float _grassSurfaceBrightness = 0.35f;
 
-    const float GrassFarOverlayStart = 35f;
-    const float GrassFarOverlayEnd = 260f;
+    const float GrassFarOverlayStart = 24f;
+    const float GrassFarOverlayEnd = 120f;
     const float GrassFarOverlayNoiseScale = 0.055f;
     const float GrassFarOverlayFiberStrength = 0.65f;
     const float GrassFarOverlayOrbitStrength = 0.42f;
@@ -188,6 +189,7 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
         SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeEndId, quality.FarOverlayAltitudeEnd);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayFiberStrengthId, GrassFarOverlayFiberStrength);
         SetMaterialFloatIfPresent(mat, _grassSurfaceBrightnessId, _grassSurfaceBrightness);
+        SetMaterialFloatIfPresent(mat, _grassWaterRadiusId, ComputeWaterRadius(SettingsProvider.GetSettings<PlanetDto>()));
     }
 
     void ApplyBlanketState(Material mat)
@@ -302,6 +304,22 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     [ConsoleCommand("overlay-status", "Print the live grass-line overlay tuning values.", MonoTargetType.Registry)]
     string OverlayStatusCmd()
     {
-        return $"strength={_farOverlayStrength:F3} surface-brightness={_grassSurfaceBrightness:F3}";
+        if (_terrainMaterial == null)
+            return $"strength={_farOverlayStrength:F3} surface-brightness={_grassSurfaceBrightness:F3} material=<none>";
+
+        bool hasStrength = _terrainMaterial.HasProperty(_grassFarOverlayStrengthId);
+        bool hasBrightness = _terrainMaterial.HasProperty(_grassSurfaceBrightnessId);
+        string materialStrength = hasStrength
+            ? _terrainMaterial.GetFloat(_grassFarOverlayStrengthId).ToString("F3")
+            : "missing";
+        string materialBrightness = hasBrightness
+            ? _terrainMaterial.GetFloat(_grassSurfaceBrightnessId).ToString("F3")
+            : "missing";
+        bool textureMode = _terrainMaterial.IsKeywordEnabled("_BIOME_COLOR_MODE_TEXTURE");
+        int grassParamCount = Shader.GetGlobalInt(_biomeGrassParamCountId);
+        string waterRadius = _terrainMaterial.HasProperty(_grassWaterRadiusId)
+            ? _terrainMaterial.GetFloat(_grassWaterRadiusId).ToString("F2")
+            : "missing";
+        return $"strength={_farOverlayStrength:F3} surface-brightness={_grassSurfaceBrightness:F3} materialStrength={materialStrength} materialBrightness={materialBrightness} textureMode={textureMode} grassParamCount={grassParamCount} waterRadius={waterRadius}";
     }
 }

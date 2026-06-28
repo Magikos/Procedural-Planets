@@ -1,0 +1,112 @@
+@name Path Paint Probe
+@timeout 180
+@defer debug.capture-set "Grass"
+@defer grass.enabled true
+@defer grass.layer near true
+@defer grass.layer chunk false
+@defer grass.layer blanket true
+@defer grass.overlay-strength 1
+@defer grass.surface-brightness 0.35
+@defer grass.debug-tint 0
+@defer grass.debug-layer-colors false
+@defer path.debug false
+@sidecar camera.position
+@sidecar debug.capture-set
+@sidecar debug.mode
+@sidecar planet.status
+@sidecar light.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+@sidecar path.status
+
+# Known grass transition view. Clears old path masks, captures before,
+# paints oversized under-camera discs along the 120m grass walk route, then isolates layers.
+debug.capture-set "Grass Visual"
+camera.speed 8
+grass.enabled true
+grass.layer near true
+grass.layer chunk false
+grass.layer blanket true
+grass.overlay-strength 1
+grass.surface-brightness 0.35
+grass.debug-tint 0
+grass.debug-layer-colors false
+path.debug true
+path.clear
+
+camera.look-at -431.81,-298.46,-1464.09 -1317.91,-390.56,-1009.89
+light.local-noon
+camera.save-teleport "Path Paint Probe"
+@wait seconds 3
+debug.capture
+@wait seconds 1
+
+# Paint directly under each camera pose from Grass Transition Sequence.
+camera.look-at -431.81,-298.46,-1464.09 -1225.45,-350.96,-857.98
+@wait frames 4
+path.paint-here 28 1
+@wait frames 8
+
+camera.look-at -450.66,-300.94,-1457.89 -1243.45,-353.12,-850.63
+@wait frames 4
+path.paint-here 28 1
+@wait frames 8
+
+camera.look-at -469.44,-303.37,-1451.44 -1261.39,-355.23,-843.07
+@wait frames 4
+path.paint-here 28 1
+@wait frames 8
+
+camera.look-at -488.14,-305.75,-1444.76 -1279.28,-357.30,-835.31
+@wait frames 4
+path.paint-here 28 1
+@wait frames 8
+
+camera.look-at -506.76,-308.08,-1437.84 -1297.12,-359.33,-827.34
+@wait frames 4
+path.paint-here 28 1
+@wait frames 8
+
+camera.look-at -525.29,-310.36,-1430.68 -1314.89,-361.32,-819.18
+@wait frames 4
+path.paint-here 28 1
+@wait frames 8
+
+camera.look-at -543.74,-312.59,-1423.28 -1332.60,-363.27,-810.80
+@wait frames 4
+path.paint-here 28 1
+@wait frames 40
+
+# After: normal all-layer view.
+camera.look-at -431.81,-298.46,-1464.09 -1317.91,-390.56,-1009.89
+light.local-noon
+@wait seconds 3
+debug.capture
+
+# Near only, cyan-tinted blades. Any cyan inside the brown path means near grass ignored the mask.
+grass.layer near true
+grass.layer chunk false
+grass.layer blanket false
+grass.debug-tint-color 0,1,1
+grass.debug-tint 1
+@wait seconds 2
+debug.capture
+
+# Blanket only. The painted path should cut through the green blanket.
+grass.debug-tint 0
+grass.layer near false
+grass.layer chunk false
+grass.layer blanket true
+@wait seconds 2
+debug.capture
+
+# Terrain only. Confirms the path mask itself is painted where expected.
+grass.enabled false
+@wait seconds 2
+debug.capture
+
+grass.enabled true
+grass.layer near true
+grass.layer chunk false
+grass.layer blanket true
+grass.debug-tint 0

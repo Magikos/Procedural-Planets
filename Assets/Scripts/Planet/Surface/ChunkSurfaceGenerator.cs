@@ -23,6 +23,7 @@ public sealed class ChunkSurfaceGenerator
     // In-flight chunk jobs â€” only populated during a generation pass; empty at runtime.
     readonly List<PendingChunkJob> _pendingJobs = new();
     NativeArray<NoiseFilterData> _filters;
+    NativeArray<byte> _diagnosticTerrainCells;
 
     public ChunkSurfaceGenerator(ShapeGenerator shapeGenerator, int chunkResolution)
     {
@@ -41,6 +42,8 @@ public sealed class ChunkSurfaceGenerator
     {
         if (_filters.IsCreated) _filters.Dispose();
         _filters = _shapeGenerator.BuildNoiseFilterData(Allocator.Persistent);
+        if (_diagnosticTerrainCells.IsCreated) _diagnosticTerrainCells.Dispose();
+        _diagnosticTerrainCells = _shapeGenerator.BuildDiagnosticTerrainCells(Allocator.Persistent);
 
         int total = chunks.Count;
         for (int batchStart = 0; batchStart < total; batchStart += InitialGenBatchSize)
@@ -89,6 +92,7 @@ public sealed class ChunkSurfaceGenerator
     {
         DisposeAllPendingJobs();
         if (_filters.IsCreated) _filters.Dispose();
+        if (_diagnosticTerrainCells.IsCreated) _diagnosticTerrainCells.Dispose();
     }
 
     void ScheduleChunkJob(PlanetChunk chunk)
@@ -122,6 +126,8 @@ public sealed class ChunkSurfaceGenerator
             PlanetRadius = _shapeGenerator.Settings.PlanetRadius,
             EdgeFanMask = 0,
             Filters = _filters,
+            DiagnosticTerrainCells = _diagnosticTerrainCells,
+            DiagnosticTerrain = _shapeGenerator.DiagnosticTerrainData,
             Vertices = state.Vertices,
             UnitSpherePoints = state.UnitSpherePoints,
             Elevations = state.Elevations,

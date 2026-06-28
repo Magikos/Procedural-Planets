@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using System.Threading;
 using UnityEngine;
 
@@ -238,7 +237,7 @@ public sealed class ConsoleAsyncRunner
 
         try
         {
-            result = await AwaitGeneric(p.Awaitable);
+            result = await ConsoleAwaitableUtility.AwaitResultAsync(p.Awaitable);
         }
         catch (OperationCanceledException)
         {
@@ -276,46 +275,4 @@ public sealed class ConsoleAsyncRunner
         cts?.Dispose();
     }
 
-    static async Awaitable<object> AwaitGeneric(object awaitableObj)
-    {
-        if (awaitableObj is Awaitable nonGeneric)
-        {
-            await nonGeneric;
-            return null;
-        }
-
-        // Registers a continuation via UnsafeOnCompleted so the Awaitable<T>'s internal
-        // scheduler drives completion — no per-frame reflection polling.
-        // Polling IsCompleted via reflection without a registered continuation may never
-        // see it become true, because Unity's Awaitable<T> only updates that state after
-        // a continuation is attached.
-        var type = awaitableObj.GetType();
-        var getAwaiter = type.GetMethod("GetAwaiter", BindingFlags.Public | BindingFlags.Instance);
-        if (getAwaiter == null) throw new InvalidOperationException($"{type.Name} has no GetAwaiter()");
-        object awaiter = getAwaiter.Invoke(awaitableObj, null);
-        var awaiterType = awaiter.GetType();
-        var getResult = awaiterType.GetMethod("GetResult");
-        var unsafeOnCompleted = awaiterType.GetMethod("UnsafeOnCompleted")
-                             ?? awaiterType.GetMethod("OnCompleted");
-        if (getResult == null || unsafeOnCompleted == null)
-            throw new InvalidOperationException($"{awaiterType.Name} is not a valid awaiter");
-
-        bool done = false;
-        object result = null;
-        Exception caught = null;
-        Action continuation = () =>
-        {
-            try { result = getResult.Invoke(awaiter, null); }
-            catch (TargetInvocationException tex) { caught = tex.InnerException ?? tex; }
-            catch (Exception ex) { caught = ex; }
-            done = true;
-        };
-        unsafeOnCompleted.Invoke(awaiter, new object[] { continuation });
-
-        while (!done)
-            await Awaitable.NextFrameAsync();
-
-        if (caught != null) throw caught;
-        return result;
-    }
 }

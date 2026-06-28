@@ -5,6 +5,7 @@ public static class GrassDebugIds
 {
     public static readonly DebugModuleId Module = new DebugModuleId("grass");
     public static readonly DebugCaptureSetId Surface = new DebugCaptureSetId(Module, "surface");
+    public static readonly DebugCaptureSetId Visual = new DebugCaptureSetId(Module, "visual");
 }
 
 public enum GrassGeometryMode
@@ -22,16 +23,25 @@ public static class GrassRenderDiagnostics
     static readonly int GeometryModeId = Shader.PropertyToID(ShaderGlobalIds.GrassGeometryMode);
     static readonly int ClusterStartDistanceId = Shader.PropertyToID(ShaderGlobalIds.GrassClusterStartDistance);
     static readonly int ClusterEndDistanceId = Shader.PropertyToID(ShaderGlobalIds.GrassClusterEndDistance);
+    static readonly int DebugBladeTintId = Shader.PropertyToID(ShaderGlobalIds.GrassDebugBladeTint);
+    static readonly int DebugLayerColorsId = Shader.PropertyToID(ShaderGlobalIds.GrassDebugLayerColors);
+    static readonly Color DefaultDebugBladeTint = new Color(0f, 1f, 1f, 1f);
 
-    public static GrassGeometryMode GeometryMode { get; private set; } = GrassGeometryMode.Hybrid;
+    public static GrassGeometryMode GeometryMode { get; private set; } = GrassGeometryMode.Physical;
     public static float ClusterStartDistance { get; private set; } = DefaultClusterStartDistance;
     public static float ClusterEndDistance { get; private set; } = DefaultClusterEndDistance;
+    public static float DebugBladeTintStrength { get; private set; }
+    public static Color DebugBladeTintColor { get; private set; } = DefaultDebugBladeTint;
+    public static bool DebugLayerColors { get; private set; }
 
     public static void Reset()
     {
-        GeometryMode = GrassGeometryMode.Hybrid;
+        GeometryMode = GrassGeometryMode.Physical;
         ClusterStartDistance = DefaultClusterStartDistance;
         ClusterEndDistance = DefaultClusterEndDistance;
+        DebugBladeTintStrength = 0f;
+        DebugBladeTintColor = DefaultDebugBladeTint;
+        DebugLayerColors = false;
         Apply();
     }
 
@@ -61,9 +71,33 @@ public static class GrassRenderDiagnostics
         return true;
     }
 
+    public static void SetDebugBladeTintStrength(float strength)
+    {
+        DebugBladeTintStrength = Mathf.Clamp01(strength);
+        Apply();
+    }
+
+    public static void SetDebugBladeTintColor(Vector3 rgb)
+    {
+        DebugBladeTintColor = new Color(
+            Mathf.Clamp01(rgb.x),
+            Mathf.Clamp01(rgb.y),
+            Mathf.Clamp01(rgb.z),
+            1f);
+        Apply();
+    }
+
+    public static void SetDebugLayerColors(bool enabled)
+    {
+        DebugLayerColors = enabled;
+        Apply();
+    }
+
     public static string FormatState()
     {
-        return $"mode={GeometryMode}, clusterRange={ClusterStartDistance:F1}-{ClusterEndDistance:F1}m";
+        return $"mode={GeometryMode}, clusterRange={ClusterStartDistance:F1}-{ClusterEndDistance:F1}m, "
+            + $"debugTint={DebugBladeTintStrength:F2} rgb=({DebugBladeTintColor.r:F2},{DebugBladeTintColor.g:F2},{DebugBladeTintColor.b:F2}), "
+            + $"layerColors={DebugLayerColors}";
     }
 
     public static void ApplyCurrent()
@@ -76,6 +110,12 @@ public static class GrassRenderDiagnostics
         Shader.SetGlobalInt(GeometryModeId, (int)GeometryMode);
         Shader.SetGlobalFloat(ClusterStartDistanceId, ClusterStartDistance);
         Shader.SetGlobalFloat(ClusterEndDistanceId, ClusterEndDistance);
+        Shader.SetGlobalVector(DebugBladeTintId, new Vector4(
+            DebugBladeTintColor.r,
+            DebugBladeTintColor.g,
+            DebugBladeTintColor.b,
+            DebugBladeTintStrength));
+        Shader.SetGlobalFloat(DebugLayerColorsId, DebugLayerColors ? 1f : 0f);
     }
 }
 
@@ -98,6 +138,8 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
             BiomeDebugIds.Mode(DebugModeConstants.GrassLodCoverage),
             BiomeDebugIds.Mode(DebugModeConstants.TerrainSurfaceNormal),
             WaterDebugIds.Mode(DebugModeConstants.TerrainFaceId));
+        registry.RegisterCaptureSet(GrassDebugIds.Visual, "Grass Visual",
+            WaterDebugIds.Mode(DebugModeConstants.Off));
         registry.RegisterMetadataProvider(this);
         registry.RegisterOverlayContributor(this);
     }
@@ -204,7 +246,7 @@ public static class GrassCommands
     public static string Status()
     {
         return TryGetControl(out IGrassRuntimeControl control)
-            ? FormatState(control.GetGrassRuntimeState())
+            ? $"{FormatState(control.GetGrassRuntimeState())}; render={GrassRenderDiagnostics.FormatState()}"
             : "grass runtime control is unavailable";
     }
 
@@ -254,6 +296,29 @@ public static class GrassCommands
     public static string RenderReset()
     {
         GrassRenderDiagnostics.Reset();
+        return GrassRenderDiagnostics.FormatState();
+    }
+
+    [ConsoleCommand("debug-tint", "Get or set debug blade tint strength (0-1).")]
+    public static string DebugTint(float? strength = null)
+    {
+        if (strength.HasValue)
+            GrassRenderDiagnostics.SetDebugBladeTintStrength(strength.Value);
+        return GrassRenderDiagnostics.FormatState();
+    }
+
+    [ConsoleCommand("debug-tint-color", "Set debug blade tint RGB as 0-1 vector, e.g. grass.debug-tint-color 0,1,1.")]
+    public static string DebugTintColor(Vector3 rgb)
+    {
+        GrassRenderDiagnostics.SetDebugBladeTintColor(rgb);
+        return GrassRenderDiagnostics.FormatState();
+    }
+
+    [ConsoleCommand("debug-layer-colors", "Toggle layer debug colors: blanket red, chunk blue, near green.")]
+    public static string DebugLayerColors(bool? enabled = null)
+    {
+        if (enabled.HasValue)
+            GrassRenderDiagnostics.SetDebugLayerColors(enabled.Value);
         return GrassRenderDiagnostics.FormatState();
     }
 

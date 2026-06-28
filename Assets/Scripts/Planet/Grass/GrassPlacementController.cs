@@ -6,6 +6,15 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     const float GrassBoundsPaddingMeters = 8f;
     const float AllocationReleasePaddingMeters = 50f;
     const float CameraRedispatchDistance = 25f; // re-place when camera moves > 25m
+    const float ChunkFadeInStart = 128f;
+    const float ChunkPeakDistance = 220f;
+
+    static readonly int VisualNearFadeStartId = Shader.PropertyToID("_GrassVisualNearFadeStart");
+    static readonly int VisualNearFadeEndId = Shader.PropertyToID("_GrassVisualNearFadeEnd");
+    static readonly int VisualFadeStartId = Shader.PropertyToID("_GrassVisualFadeStart");
+    static readonly int VisualFadeEndId = Shader.PropertyToID("_GrassVisualFadeEnd");
+    static readonly int ChunkFadeId = Shader.PropertyToID("_GrassChunkFade");
+    static readonly int LayerDebugTintId = Shader.PropertyToID("_GrassLayerDebugTint");
 
     readonly Transform _planetTransform;
     readonly IGrassNearFieldStatsProvider _nearFieldStatsProvider;
@@ -79,6 +88,10 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             name = "Runtime Grass Material",
             hideFlags = HideFlags.HideAndDontSave,
         };
+        _material.SetFloat(VisualFadeStartId, _distanceFadeStart);
+        _material.SetFloat(VisualFadeEndId, _maxRenderDistance);
+        _material.SetFloat(ChunkFadeId, 1f);
+        _material.SetColor(LayerDebugTintId, Color.blue);
 
         _logger.Log(LogLevel.Debug, "Grass",
             $"Initialized placement renderer: chunks={_chunks.Count}, minDepth={_minChunkDepthForBlades}, residencyPadding={_residencyFrustumPaddingDegrees:F1}deg, seed={seed}, waterRadius={waterRadius:F2}, surfaceAtlas={_surfaceAtlasResolution}.");
@@ -100,6 +113,8 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             || !Mathf.Approximately(_chunkInnerFadeEnd, innerFadeEnd);
         _chunkInnerFadeStart = innerFadeStart;
         _chunkInnerFadeEnd = innerFadeEnd;
+        _material.SetFloat(VisualNearFadeStartId, innerFadeStart);
+        _material.SetFloat(VisualNearFadeEndId, innerFadeEnd);
 
         // Re-dispatch placement on any chunk whose distance-LOD result may have changed
         // because the camera moved enough to materially shift which chunks are in range.
@@ -116,10 +131,8 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         int chunksWithInstanceReadback = 0;
         int chunkInstanceMin = int.MaxValue;
 
-        // Cache near-field suppression radius once per tick. Inside that radius the
-        // near-field renderer produces dense carpet grass, so the medium-distance
-        // chunk blades would double up wastefully. Placement remains warm so chunk
-        // grass is ready as soon as the camera crosses the handoff boundary.
+        // Chunk is the transition layer. The shader fades it in after near full-density
+        // range and fades it out before the blanket takes over.
         float suppressionRadiusSq = 0f;
         GrassNearFieldStats nfStats = _nearFieldStatsProvider.GetGrassNearFieldStats();
         if (nfStats.ControllerActive && nfStats.ShaderAvailable && nfStats.SuppressionRadius > 0f)
@@ -319,18 +332,8 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
 
     void ResolveChunkInnerFade(out float start, out float end)
     {
-        start = 0f;
-        end = 0f;
-
-        GrassNearFieldStats near = _nearFieldStatsProvider.GetGrassNearFieldStats();
-        if (!near.ControllerActive || !near.ShaderAvailable || near.DrawDistance <= 0f)
-            return;
-
-        end = near.DrawDistance;
-        start = Mathf.Clamp(
-            Mathf.Max(near.FullDensityDistance, end - near.FadeBand),
-            0f,
-            end);
+        start = ChunkFadeInStart;
+        end = ChunkPeakDistance;
     }
 
     Bounds EstimateGrassWorldBounds(PlanetChunk chunk)
