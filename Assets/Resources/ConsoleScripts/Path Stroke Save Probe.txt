@@ -1,0 +1,74 @@
+@name Path Stroke Save Probe
+@timeout 240
+@defer debug.capture-set "Grass"
+@defer grass.enabled true
+@defer grass.layer near true
+@defer grass.layer chunk true
+@defer grass.layer blanket true
+@defer grass.debug-tint 0
+@defer grass.debug-layer-colors false
+@defer path.debug false
+@sidecar camera.position
+@sidecar debug.capture-set
+@sidecar planet.status
+@sidecar grass.status
+@sidecar path.status
+
+# Draws and saves a deterministic stroke road in the known grass field.
+# This intentionally deletes prior saved path test data for the current seed.
+debug.capture-set "Grass Visual"
+camera.speed 8
+grass.enabled true
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+grass.debug-tint 0
+grass.debug-layer-colors false
+path.debug true
+path.clear-saved
+
+camera.look-at -431.81,-298.46,-1464.09 -1225.45,-350.96,-857.98
+light.local-noon
+@wait seconds 3
+debug.capture
+
+# Main winding road.
+path.stroke-start
+camera.look-at -450.66,-300.94,-1457.89 -1243.45,-353.12,-850.63
+@wait frames 4
+path.stroke-to 14 1 0 8
+camera.look-at -469.44,-303.37,-1451.44 -1261.39,-355.23,-843.07
+@wait frames 4
+path.stroke-to 14 1 0 8
+camera.look-at -488.14,-305.75,-1444.76 -1279.28,-357.30,-835.31
+@wait frames 4
+path.stroke-to 14 1 0 8
+camera.look-at -506.76,-308.08,-1437.84 -1297.12,-359.33,-827.34
+@wait frames 4
+path.stroke-to 14 1 0 8
+camera.look-at -525.29,-310.36,-1430.68 -1314.89,-361.32,-819.18
+@wait frames 4
+path.stroke-to 14 1 0 8
+camera.look-at -543.74,-312.59,-1423.28 -1332.60,-363.27,-810.80
+@wait frames 4
+path.stroke-to 14 1 0 8
+path.stroke-end
+
+# Wider nodes/plazas at two aimed points.
+camera.look-at -469.44,-303.37,-1451.44 -1261.39,-355.23,-843.07
+@wait frames 4
+path.paint 24 1 0
+camera.look-at -525.29,-310.36,-1430.68 -1314.89,-361.32,-819.18
+@wait frames 4
+path.paint 22 0.85 0
+
+@wait seconds 2
+debug.capture
+
+# Prove the file can rebuild the runtime mask.
+path.clear
+@wait frames 30
+debug.capture
+path.replay
+@wait frames 30
+debug.capture

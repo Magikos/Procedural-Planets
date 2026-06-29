@@ -10,6 +10,7 @@
 @defer grass.debug-tint 0
 @defer grass.debug-layer-colors false
 @defer path.debug false
+@defer camera.speed 20
 @sidecar camera.position
 @sidecar debug.capture-set
 @sidecar debug.mode

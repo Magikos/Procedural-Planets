@@ -539,6 +539,8 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         };
     }
 
+    public void RequestRedispatch() => _hasLastDispatch = false;
+
     // Helpers moved to FaceSpaceCellRangeBuilder (slice 4b) - public statics:
     //   FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(face, uv)
     //   FaceSpaceCellRangeBuilder.DirectionToFaceUv(dir, out face, out uv)

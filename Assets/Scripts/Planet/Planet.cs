@@ -46,11 +46,11 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     PlanetGrassCoordinator _grass;
     PlanetWaterSurface _waterSurface;
     PlanetTerrainMaterial _terrainMaterial;
+    SurfacePathEditController _surfacePathEdits;
 
     static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
     static readonly int _seaLevelRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
     static readonly int _densityOriginRadiusId = Shader.PropertyToID(ShaderGlobalIds.DensityOriginRadius);
-    static readonly int _surfacePathDebugId = Shader.PropertyToID("_SurfacePathDebug");
 
     CancellationTokenSource _cts;
     bool _isGenerating;
@@ -90,6 +90,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         EnsureGrassCoordinator();
         _waterSurface ??= new PlanetWaterSurface(transform);
         _terrainMaterial ??= new PlanetTerrainMaterial(Logger);
+        _surfacePathEdits ??= new SurfacePathEditController(Logger, () => _grass.InvalidateSurfaceMasks());
+        SurfacePathMousePainter.EnsureAvailable();
     }
 
     void EnsureGrassCoordinator()
@@ -178,6 +180,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         if (_observerCamera == null) return;
         _surfaceProvider.Tick(_observerCamera.transform.position, _observerCamera);
         _grass.Tick(_observerCamera);
+        _surfacePathEdits?.TickRegrowth();
     }
 
     async Awaitable InitializeAsync(IProgressHandle progress, CancellationToken ct)
@@ -307,6 +310,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             long waterMs = phaseTimer.ElapsedMilliseconds;
             _grass.Configure(_surfaceProvider as ChunkedSurfaceProvider,
                 _colorGenerator.SurfaceArrays, Seed, _observerCamera, _terrainMaterial.Material);
+            _surfacePathEdits.Configure(_surfaceProvider as ChunkedSurfaceProvider, _terrainMaterial.Material, Seed);
+            int replayedSurfaceEdits = _surfacePathEdits.ReplayStamps(clearFirst: false);
+            if (replayedSurfaceEdits > 0)
+                Logger.Log(LogLevel.Debug, "Planet", $"Replayed {replayedSurfaceEdits} saved surface edit(s).");
             // Atmosphere is rendered by AtmosphereController + AtmosphereRenderFeature (post-process).
 
             var planet = SettingsProvider.GetSettings<PlanetDto>();
@@ -496,12 +503,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         return true;
     }
 
-    public bool TryPaintSurfacePathFromCamera(Ray worldRay, float radiusMeters, float strength, out string summary)
+    public bool TryPaintSurfacePathFromCamera(Ray worldRay, float radiusMeters, float strength, float regrowSeconds, out string summary)
     {
-        summary = "path paint requires a generated chunked planet";
-        if (_surfaceProvider is not ChunkedSurfaceProvider chunkedProvider)
-            return false;
-
         float maxDistance = Mathf.Max(_lastGeneratedRadius * 4f, 10000f);
         if (!TryRaycastSurface(worldRay, maxDistance, out PlanetSurfaceRaycastHit hit))
         {
@@ -510,25 +513,11 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         }
 
         Vector3 localDirection = transform.InverseTransformPoint(hit.Point).normalized;
-        if (!chunkedProvider.TryPaintSurfaceStateDisc(
-                localDirection,
-                Mathf.Max(radiusMeters, 0.1f),
-                Mathf.Clamp01(strength),
-                out summary))
-        {
-            return false;
-        }
-
-        _grass.DisposeControllers();
-        return true;
+        return TryPaintSurfacePathAtLocalDirection(localDirection, radiusMeters, strength, regrowSeconds, out summary);
     }
 
-    public bool TryPaintSurfacePathAtWorldPosition(Vector3 worldPosition, float radiusMeters, float strength, out string summary)
+    public bool TryPaintSurfacePathAtWorldPosition(Vector3 worldPosition, float radiusMeters, float strength, float regrowSeconds, out string summary)
     {
-        summary = "path paint requires a generated chunked planet";
-        if (_surfaceProvider is not ChunkedSurfaceProvider chunkedProvider)
-            return false;
-
         Vector3 localPoint = transform.InverseTransformPoint(worldPosition);
         if (localPoint.sqrMagnitude < 0.0001f)
         {
@@ -536,22 +525,34 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             return false;
         }
 
-        bool painted = chunkedProvider.TryPaintSurfaceStateDisc(
-            localPoint.normalized,
-            Mathf.Max(radiusMeters, 0.1f),
-            Mathf.Clamp01(strength),
-            out summary);
-        if (painted)
-            _grass.DisposeControllers();
-        return painted;
+        return TryPaintSurfacePathAtLocalDirection(localPoint.normalized, radiusMeters, strength, regrowSeconds, out summary);
     }
+
+    public bool TryPaintSurfacePathAtLocalDirection(Vector3 localUnitDirection, float radiusMeters, float strength,
+        float regrowSeconds, out string summary, bool saveStamp = true, bool invalidateGrass = true,
+        bool saveImmediately = true)
+        => TryPaintSurfacePathBrushAtLocalDirection(localUnitDirection, radiusMeters, strength, regrowSeconds,
+            SurfacePathShape.SoftDisc, SurfacePathOperation.Paint, out summary, saveStamp, invalidateGrass,
+            saveImmediately);
+
+    public bool TryPaintSurfacePathBrushAtLocalDirection(Vector3 localUnitDirection, float radiusMeters, float strength,
+        float regrowSeconds, SurfacePathShape shape, SurfacePathOperation operation, out string summary,
+        bool saveStamp = true, bool invalidateGrass = true, bool saveImmediately = true)
+    {
+        if (localUnitDirection.sqrMagnitude < 0.0001f)
+        {
+            summary = "path paint requires a non-zero local direction";
+            return false;
+        }
+
+        return _surfacePathEdits.TryPaintBrush(localUnitDirection.normalized, radiusMeters, strength, regrowSeconds,
+            shape, operation, saveStamp, out summary, invalidateGrass, saveImmediately);
+    }
+
+    public void FlushSurfacePathEdits() => _surfacePathEdits?.FlushPendingSave();
 
     public bool TryPaintSurfacePathPatternAtWorldPosition(Vector3 worldPosition, float sizeMeters, float strength, out string summary)
     {
-        summary = "path pattern requires a generated chunked planet";
-        if (_surfaceProvider is not ChunkedSurfaceProvider chunkedProvider)
-            return false;
-
         Vector3 localPoint = transform.InverseTransformPoint(worldPosition);
         if (localPoint.sqrMagnitude < 0.0001f)
         {
@@ -559,49 +560,22 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             return false;
         }
 
-        bool painted = chunkedProvider.TryPaintSurfaceStateTestPattern(
-            localPoint.normalized,
-            Mathf.Max(sizeMeters, 1f),
-            Mathf.Clamp01(strength),
-            out summary);
-        if (painted)
-            _grass.DisposeControllers();
-        return painted;
+        return _surfacePathEdits.TryPaintPattern(localPoint.normalized, sizeMeters, strength, out summary);
     }
 
-    public int ClearSurfacePaths()
-    {
-        if (_surfaceProvider is not ChunkedSurfaceProvider chunkedProvider)
-            return 0;
+    public int ClearSurfacePaths() => _surfacePathEdits?.ClearRuntimeMasks() ?? 0;
 
-        int cleared = chunkedProvider.ClearSurfaceStateMasks();
-        if (cleared > 0)
-            _grass.DisposeControllers();
-        return cleared;
-    }
+    public string ReplaySurfacePaths() =>
+        _surfacePathEdits != null ? _surfacePathEdits.ReplaySavedStamps() : "path replay requires an active Planet";
 
-    public string SurfacePathStatus()
-    {
-        if (_surfaceProvider is not ChunkedSurfaceProvider)
-            return "path mask unavailable: active provider is not chunked";
+    public string ClearSavedSurfacePaths() =>
+        _surfacePathEdits != null ? _surfacePathEdits.ClearSavedStamps() : "path clear-saved requires an active Planet";
 
-        float debug = _terrainMaterial?.Material != null && _terrainMaterial.Material.HasProperty(_surfacePathDebugId)
-            ? _terrainMaterial.Material.GetFloat(_surfacePathDebugId)
-            : 0f;
-        return $"path mask ready: R=paved, G=scorched; debug={(debug > 0.5f ? "hot-pink" : "off")}";
-    }
+    public string SurfacePathStatus() =>
+        _surfacePathEdits != null ? _surfacePathEdits.Status() : "path mask unavailable: no active Planet";
 
-    public string SetSurfacePathDebug(bool? enabled = null)
-    {
-        if (_terrainMaterial?.Material == null || !_terrainMaterial.Material.HasProperty(_surfacePathDebugId))
-            return "path debug unavailable: terrain material has no _SurfacePathDebug";
-
-        if (enabled.HasValue)
-            _terrainMaterial.Material.SetFloat(_surfacePathDebugId, enabled.Value ? 1f : 0f);
-
-        bool active = _terrainMaterial.Material.GetFloat(_surfacePathDebugId) > 0.5f;
-        return $"path debug: {(active ? "hot-pink" : "off")}";
-    }
+    public string SetSurfacePathDebug(bool? enabled = null) =>
+        _surfacePathEdits != null ? _surfacePathEdits.SetDebug(enabled) : "path debug requires an active Planet";
 
     // --- Console commands -------------------------------------------------
 
@@ -729,120 +703,5 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             return "none";
 
         return $"face={(DiagnosticGridBiomeFace)layout.Face}, grid={layout.Columns}x{layout.Rows}, blend={layout.BlendWidth:F3}, fallbackId={layout.FallbackBiome}";
-    }
-}
-
-[CommandPrefix("path")]
-public static class SurfacePathDebugCommands
-{
-    [ConsoleCommand("paint", "Paint a soft paved path mask where the camera is aimed. Args: radiusMeters strength01.", MonoTargetType.Static)]
-    public static string PaintCmd(float? radiusMeters = null, float? strength = null)
-    {
-        if (!TryGetPlanet(out Planet planet))
-            return "path paint requires an active Planet";
-        if (!TryGetCameraRay(out Ray ray, out string error))
-            return error;
-
-        float radius = Mathf.Clamp(radiusMeters ?? 5f, 0.25f, 250f);
-        float alpha = Mathf.Clamp01(strength ?? 1f);
-        return planet.TryPaintSurfacePathFromCamera(ray, radius, alpha, out string summary)
-            ? summary
-            : summary;
-    }
-
-    [ConsoleCommand("paint-here", "Paint a soft paved path mask under the camera. Args: radiusMeters strength01.", MonoTargetType.Static)]
-    public static string PaintHereCmd(float? radiusMeters = null, float? strength = null)
-    {
-        if (!TryGetPlanet(out Planet planet))
-            return "path paint-here requires an active Planet";
-        if (!TryGetCameraTransform(out Transform cameraTransform, out string error))
-            return error;
-
-        float radius = Mathf.Clamp(radiusMeters ?? 8f, 0.25f, 250f);
-        float alpha = Mathf.Clamp01(strength ?? 1f);
-        return planet.TryPaintSurfacePathAtWorldPosition(cameraTransform.position, radius, alpha, out string summary)
-            ? summary
-            : summary;
-    }
-
-    [ConsoleCommand("pattern-here", "Paint deterministic path test patterns under the camera. Args: sizeMeters strength01.", MonoTargetType.Static)]
-    public static string PatternHereCmd(float? sizeMeters = null, float? strength = null)
-    {
-        if (!TryGetPlanet(out Planet planet))
-            return "path pattern-here requires an active Planet";
-        if (!TryGetCameraTransform(out Transform cameraTransform, out string error))
-            return error;
-
-        float size = Mathf.Clamp(sizeMeters ?? 220f, 16f, 1000f);
-        float alpha = Mathf.Clamp01(strength ?? 1f);
-        return planet.TryPaintSurfacePathPatternAtWorldPosition(cameraTransform.position, size, alpha, out string summary)
-            ? summary
-            : summary;
-    }
-
-    [ConsoleCommand("clear", "Clear all painted surface path masks.", MonoTargetType.Static)]
-    public static string ClearCmd()
-    {
-        if (!TryGetPlanet(out Planet planet))
-            return "path clear requires an active Planet";
-
-        int cleared = planet.ClearSurfacePaths();
-        return $"cleared path masks on {cleared} chunks";
-    }
-
-    [ConsoleCommand("debug", "Toggle hot-pink path mask visualization.", MonoTargetType.Static)]
-    public static string DebugCmd(bool? enabled = null)
-    {
-        return TryGetPlanet(out Planet planet)
-            ? planet.SetSurfacePathDebug(enabled)
-            : "path debug requires an active Planet";
-    }
-
-    [ConsoleCommand("status", "Show path mask runtime support status.", MonoTargetType.Static)]
-    public static string StatusCmd()
-    {
-        return TryGetPlanet(out Planet planet)
-            ? planet.SurfacePathStatus()
-            : "path mask unavailable: no active Planet";
-    }
-
-    static bool TryGetPlanet(out Planet planet)
-    {
-        planet = null;
-        if (ServiceLocator.TryGet(out IPlanet servicePlanet) && servicePlanet is Planet concrete)
-        {
-            planet = concrete;
-            return true;
-        }
-
-        planet = Object.FindAnyObjectByType<Planet>();
-        return planet != null;
-    }
-
-    static bool TryGetCameraRay(out Ray ray, out string error)
-    {
-        if (!TryGetCameraTransform(out Transform cameraTransform, out error))
-        {
-            ray = default;
-            return false;
-        }
-
-        ray = new Ray(cameraTransform.position, cameraTransform.forward);
-        error = null;
-        return true;
-    }
-
-    static bool TryGetCameraTransform(out Transform cameraTransform, out string error)
-    {
-        cameraTransform = null;
-        if (ServiceLocator.TryGet(out ICameraRigContext context) && context.CameraTransform != null)
-            cameraTransform = context.CameraTransform;
-
-        Camera camera = Camera.main;
-        if (cameraTransform == null && camera != null)
-            cameraTransform = camera.transform;
-
-        error = cameraTransform == null ? "path paint requires an active camera" : null;
-        return cameraTransform != null;
     }
 }

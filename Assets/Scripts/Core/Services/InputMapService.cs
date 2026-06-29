@@ -101,7 +101,7 @@ public sealed class InputMapService : IInputMapService, IDisposable
         CycleCaptureSet = AddButton("CycleCaptureSet", "<Keyboard>/f7");
         ToggleSunFreeze = AddButton("ToggleSunFreeze", "<Keyboard>/f8");
         DumpWeather = AddButton("DumpWeather", "<Keyboard>/f9");
-        TogglePrecipitation = AddButton("TogglePrecipitation", "<Keyboard>/p");
+        TogglePrecipitation = GameplayMap.AddAction("TogglePrecipitation", InputActionType.Button);
         TriggerCapture = AddButton("TriggerCapture", "<Keyboard>/f10");
         ToggleProfiling = AddButton("ToggleProfiling", "<Keyboard>/f11");
         DropScaleMarker = AddButton("DropScaleMarker", "<Keyboard>/m");

@@ -1,0 +1,51 @@
+@name Path Persistence Probe
+@timeout 240
+@defer debug.capture-set "Grass"
+@defer grass.enabled true
+@defer grass.layer near true
+@defer grass.layer chunk true
+@defer grass.layer blanket true
+@defer grass.debug-tint 0
+@defer grass.debug-layer-colors false
+@defer path.debug false
+@sidecar camera.position
+@sidecar debug.capture-set
+@sidecar planet.status
+@sidecar grass.status
+@sidecar path.status
+
+# Uses the same lush-field pose as Path Pattern Probe.
+# Save it once with:
+# camera.save-teleport "Path Pattern Field"
+debug.capture-set "Grass Visual"
+camera.teleport "Path Pattern Field"
+light.local-noon
+grass.enabled true
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+grass.debug-tint 0
+grass.debug-layer-colors false
+path.debug true
+path.clear-saved
+@wait seconds 2
+
+# Permanent stamp under the camera.
+path.paint-here 18 1 0
+@wait frames 30
+debug.capture
+
+# Runtime mask clears, then saved stamp replays.
+path.clear
+@wait frames 30
+debug.capture
+path.replay
+@wait frames 30
+debug.capture
+
+# Temporary stamp where the camera is aimed. It should fade after a few regrowth ticks.
+path.paint 10 1 12
+@wait seconds 7
+debug.capture
+@wait seconds 8
+debug.capture

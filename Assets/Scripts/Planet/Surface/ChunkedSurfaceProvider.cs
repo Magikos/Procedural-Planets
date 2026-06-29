@@ -293,6 +293,16 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         float radiusMeters,
         float strength,
         out string summary)
+        => TryPaintSurfaceStateBrush(localUnitDirection, radiusMeters, strength,
+            SurfacePathShape.SoftDisc, SurfacePathOperation.Paint, out summary);
+
+    public bool TryPaintSurfaceStateBrush(
+        Vector3 localUnitDirection,
+        float radiusMeters,
+        float strength,
+        SurfacePathShape shape,
+        SurfacePathOperation operation,
+        out string summary)
     {
         summary = "surface-state paint unavailable";
         if (!_initialized || _quadtrees == null || _allChunks.Count == 0)
@@ -337,7 +347,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
             if (!ChunkUvRectOverlaps(chunk, minUv, maxUv))
                 continue;
 
-            int changed = PaintChunkSurfaceState(chunk, faceUv, radiusFaceUv, pavedAlpha);
+            int changed = PaintChunkSurfaceState(chunk, faceUv, radiusFaceUv, pavedAlpha, shape, operation);
             if (changed <= 0)
                 continue;
 
@@ -347,7 +357,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
             changedPixels += changed;
         }
 
-        summary = $"painted path face={face} uv=({faceUv.x:F3},{faceUv.y:F3}) radius={radiusMeters:F1}m chunks={touchedChunks} pixels={changedPixels}";
+        summary = $"{operation.ToString().ToLowerInvariant()} path {shape.ToString().ToLowerInvariant()} face={face} uv=({faceUv.x:F3},{faceUv.y:F3}) radius={radiusMeters:F1}m chunks={touchedChunks} pixels={changedPixels}";
         return changedPixels > 0;
     }
 
@@ -504,7 +514,9 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         PlanetChunk chunk,
         Vector2 centerFaceUv,
         float radiusFaceUv,
-        byte pavedAlpha)
+        byte pavedAlpha,
+        SurfacePathShape shape,
+        SurfacePathOperation operation)
     {
         Texture2D texture = chunk.SurfaceStateTexture;
         int resolution = texture.width;
@@ -534,13 +546,30 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
             for (int x = startX; x <= endX; x++)
             {
                 float px = (x + 0.5f) / resolution;
-                float distance01 = Vector2.Distance(new Vector2(px, py), centerLocal) / radiusLocal;
-                if (distance01 >= 1f)
-                    continue;
+                float mask = 1f;
+                if (shape != SurfacePathShape.HardSquare)
+                {
+                    float distance01 = Vector2.Distance(new Vector2(px, py), centerLocal) / radiusLocal;
+                    if (distance01 >= 1f)
+                        continue;
+                    mask = shape == SurfacePathShape.SoftDisc
+                        ? 1f - Mathf.SmoothStep(0.88f, 1f, distance01)
+                        : 1f;
+                }
 
-                float falloff = 1f - Mathf.SmoothStep(0.65f, 1f, distance01);
-                byte value = (byte)Mathf.RoundToInt(pavedAlpha * falloff);
+                byte value = (byte)Mathf.RoundToInt(pavedAlpha * mask);
                 int index = y * resolution + x;
+                if (operation == SurfacePathOperation.Erase)
+                {
+                    byte target = (byte)Mathf.Clamp(255 - value, 0, 255);
+                    if (pixels[index].r <= target)
+                        continue;
+
+                    pixels[index].r = target;
+                    changed++;
+                    continue;
+                }
+
                 if (value <= pixels[index].r)
                     continue;
 

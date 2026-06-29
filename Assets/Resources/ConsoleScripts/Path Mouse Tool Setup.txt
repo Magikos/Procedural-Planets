@@ -1,0 +1,11 @@
+@name Path Mouse Tool Setup
+@timeout 30
+@sidecar camera.position
+@sidecar planet.status
+@sidecar path.status
+
+# Enables manual path drawing. Close the console, press P to toggle, mouse wheel changes radius, left-drag paints.
+path.debug true
+path.mouse-brush 14 1 0 4
+path.mouse true
+path.status

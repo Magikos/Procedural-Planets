@@ -270,6 +270,12 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
         _grassController = null;
     }
 
+    public void InvalidateSurfaceMasks()
+    {
+        _grassNearFieldController?.RequestRedispatch();
+        _grassController?.RequestRedispatch();
+    }
+
     public void Dispose()
     {
         DisposeControllers();

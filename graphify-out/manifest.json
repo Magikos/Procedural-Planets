@@ -520,8 +520,8 @@
     "semantic_hash": "4d3b21294388ca01fba961eec22e4f3c"
   },
   "Assets/Scripts/Core/Services/InputMapService.cs": {
-    "mtime": 1781562730.034044,
-    "ast_hash": "a23db0c1b33aead11b048c2124f0a662",
+    "mtime": 1782680172.1725068,
+    "ast_hash": "2ea547c64948f5c7f0b846a336bc70ed",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/LoadingManager.cs": {
@@ -890,8 +890,8 @@
     "semantic_hash": "675238858f85db1833d7728fc65ab54e"
   },
   "Assets/Scripts/Planet/Grass/GrassChunkRuntime.cs": {
-    "mtime": 1782582905.225114,
-    "ast_hash": "8b5e9454f3610ecfab65b13bac3f96ed",
+    "mtime": 1782622943.084369,
+    "ast_hash": "3e00085b0bb1f22c695c07dded380487",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassInteractorCommands.cs": {
@@ -910,13 +910,13 @@
     "semantic_hash": "b131cd0d4c603e457806e594fdbc3d4a"
   },
   "Assets/Scripts/Planet/Grass/GrassNearFieldController.cs": {
-    "mtime": 1782584696.551361,
-    "ast_hash": "7b3fac313498d2f9a12c22490f79dd4a",
+    "mtime": 1782681670.729013,
+    "ast_hash": "939b5d185e25da154438b308ff535ab1",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassPlacementController.cs": {
-    "mtime": 1782584622.7161996,
-    "ast_hash": "eac0f39487830dd7d606fb8ab20e5465",
+    "mtime": 1782681670.731595,
+    "ast_hash": "f24d8ffd7f302d66a3799ba869c934e2",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassPlacementDtos.cs": {
@@ -980,8 +980,8 @@
     "semantic_hash": "e77c7677daa162802cfbb33d8df0b24a"
   },
   "Assets/Scripts/Planet/Planet.cs": {
-    "mtime": 1782511408.0571146,
-    "ast_hash": "081077b255a4fbde64b4d4267a310ec9",
+    "mtime": 1782686986.275108,
+    "ast_hash": "1727649db829909533ece4286d51531d",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PlanetConstants.cs": {
@@ -995,8 +995,8 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PlanetGrassCoordinator.cs": {
-    "mtime": 1782582905.233395,
-    "ast_hash": "59e166884bfea301fdb13b7f4e6c0760",
+    "mtime": 1782681670.7198517,
+    "ast_hash": "e5835f978672f430b3b9898a78daa52a",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PlanetSettings.cs": {
@@ -1045,8 +1045,8 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/BiomeAtlasService.cs": {
-    "mtime": 1782228314.1006937,
-    "ast_hash": "43bb751a9777e50955347f82dcd3c935",
+    "mtime": 1782659656.2582808,
+    "ast_hash": "cb2fafe7f32a6bd9ba65144b79f891fd",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/ChunkMeshCache.cs": {
@@ -1085,8 +1085,8 @@
     "semantic_hash": "132e3aff18704d10382cc858240ff47e"
   },
   "Assets/Scripts/Planet/Surface/ChunkedSurfaceProvider.cs": {
-    "mtime": 1782228314.10366,
-    "ast_hash": "a382a64dada947e7b888b742f80a8222",
+    "mtime": 1782685635.4846363,
+    "ast_hash": "6fe70ef867c6c76b516fa841420c4ab8",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/GrassSurfaceAtlasBuilder.cs": {
@@ -1310,32 +1310,32 @@
     "semantic_hash": ""
   },
   "Library/Bee/1900b0aEDbg-inputdata.json": {
-    "mtime": 1782510516.4784997,
-    "ast_hash": "f9bf6844c2837e97ce4d6c70c1b2de7b",
+    "mtime": 1782680643.5889463,
+    "ast_hash": "df70fe3ed672ccec6df18e9d87cc0544",
     "semantic_hash": ""
   },
   "Library/Bee/1900b0aEDbg.dag.json": {
-    "mtime": 1782510521.1275537,
-    "ast_hash": "bb7f4fc9d3112a8f8b8941237a070ce4",
+    "mtime": 1782680653.4605336,
+    "ast_hash": "7a638eb282382245f211a870bbe228ce",
     "semantic_hash": ""
   },
   "Library/Bee/fullprofile.json": {
-    "mtime": 1782584976.6581268,
-    "ast_hash": "234ba5a5c48aa752bd2ff89e7ade0e32",
+    "mtime": 1782705551.2557018,
+    "ast_hash": "212f735c114f6d1e39b2d75e260a2bd9",
     "semantic_hash": ""
   },
   "Library/Bee/tundra.log.json": {
-    "mtime": 1782584976.4041317,
-    "ast_hash": "6c12795e7f2baed676d9c6175a3d7523",
+    "mtime": 1782705551.160405,
+    "ast_hash": "c69a0a15b0a308dbe34fe8ba84df8fe3",
     "semantic_hash": ""
   },
   "Library/EditorInstance.json": {
-    "mtime": 1781565883.7215803,
-    "ast_hash": "c197f7030caa775f330f7cfaf218ced8",
+    "mtime": 1782662386.234701,
+    "ast_hash": "1c8a447fa798ae9c4ec56de511a806d4",
     "semantic_hash": ""
   },
   "Library/EditorOnlyScriptingSettings.json": {
-    "mtime": 1782584977.0435128,
+    "mtime": 1782705567.4464467,
     "ast_hash": "12624784dfc86fd9e8e45ad7ed17284b",
     "semantic_hash": ""
   },
@@ -23865,17 +23865,17 @@
     "semantic_hash": ""
   },
   "Library/StateCache/LayerSettings/9e/9ecc5c3c162a7aba29bafa64c8b94b7c.json": {
-    "mtime": 1782584996.6175883,
+    "mtime": 1782705604.306335,
     "ast_hash": "c2bf026c0f6d2aea36de0d0d0798d77b",
     "semantic_hash": ""
   },
   "Library/StateCache/MainStageHierarchy/78/786865dfafc2d6d11cb89a9cdb0d10bf.json": {
-    "mtime": 1782584977.384303,
-    "ast_hash": "b8bb1b7a095241c1ce3631f3cd45d2e5",
+    "mtime": 1782705592.3486493,
+    "ast_hash": "206c1d54cf71495e0534bd7959bcb07d",
     "semantic_hash": ""
   },
   "Library/StateCache/SceneView/06/0687b9901da858501a34d3ce0c0d94d3.json": {
-    "mtime": 1782584977.4549463,
+    "mtime": 1782705592.4464118,
     "ast_hash": "d11c0ff631454bc94d5172195307ebcc",
     "semantic_hash": ""
   },
@@ -23935,8 +23935,8 @@
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/Solution/ProceduralPlanets.Core.csproj": {
-    "mtime": 1782154878.8171694,
-    "ast_hash": "d8c8d993c5b295060bc76c772b3eabc2",
+    "mtime": 1782662408.8369062,
+    "ast_hash": "bffe006546abce2cbf99835b1073ea74",
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/Solution/ProceduralPlanets.Editor.csproj": {
@@ -23945,8 +23945,8 @@
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/Solution/ProceduralPlanets.Planet.csproj": {
-    "mtime": 1782510558.164439,
-    "ast_hash": "797497ff7826bf28198d8448231ac63d",
+    "mtime": 1782680681.5116687,
+    "ast_hash": "f5d32922b269b1756ca0b191928088af",
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/Solution/ProceduralPlanets.Sampling.csproj": {
@@ -23980,23 +23980,23 @@
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/eventEntries.json": {
-    "mtime": 1782584977.2569377,
-    "ast_hash": "3bfa506c09a7048a8cbcf708186e36bb",
+    "mtime": 1782705592.2805862,
+    "ast_hash": "9ea2837db64f5679578a7acf42a039b8",
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/serverinfo.json": {
-    "mtime": 1781571931.0223372,
+    "mtime": 1782662651.273832,
     "ast_hash": "e182de1e639203f62ba33a1d76676d35",
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/systemAssemblies.json": {
-    "mtime": 1781571931.0056293,
+    "mtime": 1782662651.2549949,
     "ast_hash": "12c42ecc2fa98088cb547fdef11b631e",
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/updateChecker.json": {
-    "mtime": 1781569522.203996,
-    "ast_hash": "d5e56770329b9b0f585fa60bb2fc7075",
+    "mtime": 1782662405.3808029,
+    "ast_hash": "8555f6da6ad11fca98f124c4421b54ee",
     "semantic_hash": ""
   },
   "Packages/manifest.json": {
@@ -24010,8 +24010,8 @@
     "semantic_hash": ""
   },
   "ProceduralPlanets.Core.csproj": {
-    "mtime": 1782154831.7693896,
-    "ast_hash": "6c0f17bbbc5313e5cdfc8cd11aa7fda4",
+    "mtime": 1782662385.7794013,
+    "ast_hash": "5297dbc2f52733fec5df665754e0ee60",
     "semantic_hash": ""
   },
   "ProceduralPlanets.Editor.csproj": {
@@ -24020,8 +24020,8 @@
     "semantic_hash": ""
   },
   "ProceduralPlanets.Planet.csproj": {
-    "mtime": 1782510514.759609,
-    "ast_hash": "d8aac29570aa05acaeafa34a52e9cce0",
+    "mtime": 1782680641.8013985,
+    "ast_hash": "9c2312d056320bda59e9d9d2b56a1c7e",
     "semantic_hash": ""
   },
   "ProceduralPlanets.Sampling.csproj": {
@@ -24120,78 +24120,48 @@
     "semantic_hash": ""
   },
   "Temp/obj/ProceduralPlanets.Core/.NETStandard,Version=v2.1.AssemblyAttributes.cs": {
-    "mtime": 1781565859.5363462,
+    "mtime": 1782662330.2203796,
     "ast_hash": "6a74be967eb6140f94f1fe8e62892bbc",
     "semantic_hash": ""
   },
   "Temp/obj/ProceduralPlanets.Core/ProceduralPlanets.Core.csproj.nuget.dgspec.json": {
-    "mtime": 1781715659.2453325,
+    "mtime": 1782663385.588152,
     "ast_hash": "a6ddc1bc3ada15d26662e20cfb8343ba",
     "semantic_hash": ""
   },
   "Temp/obj/ProceduralPlanets.Core/project.assets.json": {
-    "mtime": 1781715659.1769922,
+    "mtime": 1782663385.5217028,
     "ast_hash": "d33283da7a0513205fa0964e14fc6ea4",
     "semantic_hash": ""
   },
   "Temp/obj/ProceduralPlanets.Editor/.NETStandard,Version=v2.1.AssemblyAttributes.cs": {
-    "mtime": 1781565857.6063826,
+    "mtime": 1782662331.4023163,
     "ast_hash": "6a74be967eb6140f94f1fe8e62892bbc",
     "semantic_hash": ""
   },
-  "Temp/obj/ProceduralPlanets.Editor/ProceduralPlanets.Editor.csproj.nuget.dgspec.json": {
-    "mtime": 1782158285.7288165,
-    "ast_hash": "7263e933645e1145a2f5537f6e98dc9f",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ProceduralPlanets.Editor/project.assets.json": {
-    "mtime": 1782158285.6965773,
-    "ast_hash": "e4f6d52bdafe06883b42f1d0b41217f1",
-    "semantic_hash": ""
-  },
   "Temp/obj/ProceduralPlanets.Planet/.NETStandard,Version=v2.1.AssemblyAttributes.cs": {
-    "mtime": 1781565860.1422033,
+    "mtime": 1782662330.785009,
     "ast_hash": "6a74be967eb6140f94f1fe8e62892bbc",
     "semantic_hash": ""
   },
   "Temp/obj/ProceduralPlanets.Planet/ProceduralPlanets.Planet.csproj.nuget.dgspec.json": {
-    "mtime": 1781715659.2453325,
+    "mtime": 1782663385.588658,
     "ast_hash": "c9e87cb4e0448e7610ebd7fc365853b0",
     "semantic_hash": ""
   },
   "Temp/obj/ProceduralPlanets.Planet/project.assets.json": {
-    "mtime": 1781715659.2142382,
+    "mtime": 1782663385.5227122,
     "ast_hash": "cab0c9bdcb03c4255ce88832c5f99f62",
     "semantic_hash": ""
   },
   "Temp/obj/ProceduralPlanets.Sampling/.NETStandard,Version=v2.1.AssemblyAttributes.cs": {
-    "mtime": 1781565860.6956735,
+    "mtime": 1782662326.8547866,
     "ast_hash": "6a74be967eb6140f94f1fe8e62892bbc",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ProceduralPlanets.Sampling/ProceduralPlanets.Sampling.csproj.nuget.dgspec.json": {
-    "mtime": 1782158285.8460467,
-    "ast_hash": "71dac3775e8946b1db21054189740e1a",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ProceduralPlanets.Sampling/project.assets.json": {
-    "mtime": 1782158285.8369606,
-    "ast_hash": "55029e822ace43d3cb19c1a722637ad0",
     "semantic_hash": ""
   },
   "Temp/obj/Wingman/.NETStandard,Version=v2.1.AssemblyAttributes.cs": {
-    "mtime": 1781565859.8441706,
+    "mtime": 1782662329.664366,
     "ast_hash": "6a74be967eb6140f94f1fe8e62892bbc",
-    "semantic_hash": ""
-  },
-  "Temp/obj/Wingman/Wingman.csproj.nuget.dgspec.json": {
-    "mtime": 1782158285.736935,
-    "ast_hash": "4849a8f756d6a754f6cb2cb677525161",
-    "semantic_hash": ""
-  },
-  "Temp/obj/Wingman/project.assets.json": {
-    "mtime": 1782158285.6955614,
-    "ast_hash": "d2278b1111c76b88693541fd38a6407c",
     "semantic_hash": ""
   },
   "Wingman.csproj": {
@@ -123255,8 +123225,8 @@
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/sessionId.txt": {
-    "mtime": 1781565893.7689779,
-    "ast_hash": "7951ac2608a41ec1d7be532d9b9ce948",
+    "mtime": 1782662401.9085867,
+    "ast_hash": "4a5a95abfd1ff1d9c451ab2d608024dc",
     "semantic_hash": ""
   },
   "ProjectSettings/ProjectVersion.txt": {
@@ -169035,23 +169005,23 @@
     "semantic_hash": ""
   },
   "Temp/bin/Debug/ProceduralPlanets.Core.deps.json": {
-    "mtime": 1782156123.4062946,
+    "mtime": 1782663394.02817,
     "ast_hash": "03b1a2716058747ae5ffbd941ede4028",
     "semantic_hash": ""
   },
   "Temp/bin/Debug/ProceduralPlanets.Planet.deps.json": {
-    "mtime": 1782511472.0832791,
+    "mtime": 1782681710.3986833,
     "ast_hash": "f8db30885644fb27eb29e7112d7525cd",
     "semantic_hash": ""
   },
   "Temp/obj/ProceduralPlanets.Core/ProceduralPlanets.Core.sourcelink.json": {
-    "mtime": 1781829132.905491,
-    "ast_hash": "6006377b4c78798cd752ec025071a083",
+    "mtime": 1782671672.0651145,
+    "ast_hash": "482adc972bac84ad910e413ebb05efef",
     "semantic_hash": ""
   },
   "Temp/obj/ProceduralPlanets.Planet/ProceduralPlanets.Planet.sourcelink.json": {
-    "mtime": 1781829139.5260682,
-    "ast_hash": "6006377b4c78798cd752ec025071a083",
+    "mtime": 1782671676.561711,
+    "ast_hash": "482adc972bac84ad910e413ebb05efef",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Biome Dot Probe.txt": {
@@ -169135,12 +169105,12 @@
     "semantic_hash": ""
   },
   "Temp/obj/ProceduralPlanets.Core/ProceduralPlanets.Core.csproj.FileListAbsolute.txt": {
-    "mtime": 1781715675.63274,
+    "mtime": 1782663394.043751,
     "ast_hash": "358e59419640950a043743cdc25af78f",
     "semantic_hash": ""
   },
   "Temp/obj/ProceduralPlanets.Planet/ProceduralPlanets.Planet.csproj.FileListAbsolute.txt": {
-    "mtime": 1781715684.7272737,
+    "mtime": 1782663396.7856512,
     "ast_hash": "7166dae357ff3cd3c35abc4b7bb70db8",
     "semantic_hash": ""
   },
@@ -169164,116 +169134,6 @@
     "ast_hash": "2016cb80c3e82108d72c0ea23e23f7c9",
     "semantic_hash": ""
   },
-  "Temp/bin/Debug/ProceduralPlanets.Editor.deps.json": {
-    "mtime": 1782577581.385126,
-    "ast_hash": "b14ae09596eabc9afd7992d44851c8e3",
-    "semantic_hash": ""
-  },
-  "Temp/bin/Debug/ProceduralPlanets.Sampling.deps.json": {
-    "mtime": 1782577581.2713394,
-    "ast_hash": "3bf706c033d4e074ec9575d8f3d1fb1f",
-    "semantic_hash": ""
-  },
-  "Temp/bin/Debug/Wingman.deps.json": {
-    "mtime": 1782577581.2505872,
-    "ast_hash": "be487851e5575c4fd288e2052d6ab7af",
-    "semantic_hash": ""
-  },
-  "Temp/obj/Assembly-CSharp-Editor/.NETStandard,Version=v2.1.AssemblyAttributes.cs": {
-    "mtime": 1782577582.072062,
-    "ast_hash": "6a74be967eb6140f94f1fe8e62892bbc",
-    "semantic_hash": ""
-  },
-  "Temp/obj/Assembly-CSharp-Editor/Assembly-CSharp-Editor.csproj.nuget.dgspec.json": {
-    "mtime": 1782577572.8924346,
-    "ast_hash": "3e5886b4bfcb945d385434f7d51fd4ae",
-    "semantic_hash": ""
-  },
-  "Temp/obj/Assembly-CSharp-Editor/Assembly-CSharp-Editor.sourcelink.json": {
-    "mtime": 1782577582.2546754,
-    "ast_hash": "6006377b4c78798cd752ec025071a083",
-    "semantic_hash": ""
-  },
-  "Temp/obj/Assembly-CSharp-Editor/project.assets.json": {
-    "mtime": 1782577572.8585563,
-    "ast_hash": "e3a662518c110e2c91a61b9c71aae518",
-    "semantic_hash": ""
-  },
-  "Temp/obj/Assembly-CSharp/.NETStandard,Version=v2.1.AssemblyAttributes.cs": {
-    "mtime": 1782577581.9402444,
-    "ast_hash": "6a74be967eb6140f94f1fe8e62892bbc",
-    "semantic_hash": ""
-  },
-  "Temp/obj/Assembly-CSharp/Assembly-CSharp.csproj.nuget.dgspec.json": {
-    "mtime": 1782577572.890367,
-    "ast_hash": "754e86fb79e56f2212be06915ab8a0c9",
-    "semantic_hash": ""
-  },
-  "Temp/obj/Assembly-CSharp/Assembly-CSharp.sourcelink.json": {
-    "mtime": 1782577582.178711,
-    "ast_hash": "6006377b4c78798cd752ec025071a083",
-    "semantic_hash": ""
-  },
-  "Temp/obj/Assembly-CSharp/project.assets.json": {
-    "mtime": 1782577572.8575404,
-    "ast_hash": "b41efc67338bd21d48a8f3ba3e06453c",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ProceduralPlanets.Editor/ProceduralPlanets.Editor.sourcelink.json": {
-    "mtime": 1782577580.7572343,
-    "ast_hash": "6006377b4c78798cd752ec025071a083",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ProceduralPlanets.Sampling/ProceduralPlanets.Sampling.sourcelink.json": {
-    "mtime": 1782577580.7073674,
-    "ast_hash": "6006377b4c78798cd752ec025071a083",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ShapesEditor/ShapesEditor.csproj.nuget.dgspec.json": {
-    "mtime": 1782577572.8862822,
-    "ast_hash": "5263cf22b5510b76509f2ddbdd850c1a",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ShapesEditor/project.assets.json": {
-    "mtime": 1782577572.8575404,
-    "ast_hash": "b32bab90f2ad177c6fc34046c92e6bab",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ShapesRuntime/.NETStandard,Version=v2.1.AssemblyAttributes.cs": {
-    "mtime": 1782577573.5574446,
-    "ast_hash": "6a74be967eb6140f94f1fe8e62892bbc",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ShapesRuntime/ShapesRuntime.csproj.nuget.dgspec.json": {
-    "mtime": 1782577572.8847911,
-    "ast_hash": "4188cf270aa5437d8e1d3dfeea577f59",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ShapesRuntime/ShapesRuntime.sourcelink.json": {
-    "mtime": 1782577573.7442946,
-    "ast_hash": "6006377b4c78798cd752ec025071a083",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ShapesRuntime/project.assets.json": {
-    "mtime": 1782577572.8565412,
-    "ast_hash": "94a16c905bcd09d521aa467b74f2d1d5",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ShapesSamples/ShapesSamples.csproj.nuget.dgspec.json": {
-    "mtime": 1782577572.8908947,
-    "ast_hash": "a8ffd9b055bce2a3e9161545bb1d4b97",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ShapesSamples/project.assets.json": {
-    "mtime": 1782577572.8575404,
-    "ast_hash": "e6c0922e0296837c1b544a5904a1ad2e",
-    "semantic_hash": ""
-  },
-  "Temp/obj/Wingman/Wingman.sourcelink.json": {
-    "mtime": 1782577580.1004274,
-    "ast_hash": "6006377b4c78798cd752ec025071a083",
-    "semantic_hash": ""
-  },
   "Assets/Resources/ConsoleScripts/Grass Blade Tint Compare.txt": {
     "mtime": 1782572447.8812575,
     "ast_hash": "41876081eb45e3ec1e49b480f6ce319c",
@@ -169295,48 +169155,133 @@
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/logs/log20260627.txt": {
-    "mtime": 1782585011.600471,
-    "ast_hash": "f05cdb0c775dd0608e8655c5422083e3",
+    "mtime": 1782622600.3213756,
+    "ast_hash": "dfeabaac29900438e7daf12e1a22ccf2",
     "semantic_hash": ""
   },
-  "Temp/obj/Assembly-CSharp-Editor/Assembly-CSharp-Editor.csproj.FileListAbsolute.txt": {
-    "mtime": 1782577582.407594,
-    "ast_hash": "5be3243f651be9b28a06346d35a9bb27",
+  "Assets/Scripts/Planet/SurfacePathDebugCommands.cs": {
+    "mtime": 1782687023.7585106,
+    "ast_hash": "9f8c3ca5232da05d1374f4e5118d508b",
     "semantic_hash": ""
   },
-  "Temp/obj/Assembly-CSharp/Assembly-CSharp.csproj.FileListAbsolute.txt": {
-    "mtime": 1782577582.330621,
-    "ast_hash": "c78b8220dcc8f4e8eccefc01fc9b6310",
+  "Assets/Scripts/Planet/Surface/SurfacePathEditController.cs": {
+    "mtime": 1782684075.6877563,
+    "ast_hash": "0154f94a71e374b4f4bd8d2fd1d23cdd",
     "semantic_hash": ""
   },
-  "Temp/obj/ProceduralPlanets.Editor/ProceduralPlanets.Editor.csproj.FileListAbsolute.txt": {
-    "mtime": 1782577581.4046204,
-    "ast_hash": "b5a04fa1053c141546d4cd33cebd12e4",
+  "Assets/Resources/ConsoleScripts/Grass Color Match Sweep.txt": {
+    "mtime": 1782623622.1291375,
+    "ast_hash": "654df6ae7075a95b8684e78d39fa1d0b",
     "semantic_hash": ""
   },
-  "Temp/obj/ProceduralPlanets.Sampling/ProceduralPlanets.Sampling.csproj.FileListAbsolute.txt": {
-    "mtime": 1782577581.3161855,
-    "ast_hash": "e9ec7d64de75c499069416fa10281c8b",
+  "Assets/Resources/ConsoleScripts/Grass Handoff Compare.txt": {
+    "mtime": 1782585832.6798797,
+    "ast_hash": "3ee4046f5a7c805f858b2d4b54ae6ebd",
     "semantic_hash": ""
   },
-  "Temp/obj/ShapesEditor/ShapesEditor.csproj.FileListAbsolute.txt": {
-    "mtime": 1782577552.1402745,
-    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+  "Assets/Resources/ConsoleScripts/Path Paint Probe.txt": {
+    "mtime": 1782662229.732834,
+    "ast_hash": "4a6ce90d12081298ff9b0dd8f2d56a3e",
     "semantic_hash": ""
   },
-  "Temp/obj/ShapesRuntime/ShapesRuntime.csproj.FileListAbsolute.txt": {
-    "mtime": 1782577574.5726812,
-    "ast_hash": "8587ef99bd8a7c9fc3c83a65cd2555ac",
+  "Assets/Resources/ConsoleScripts/Path Pattern Probe.txt": {
+    "mtime": 1782682940.038506,
+    "ast_hash": "34095c2ebae900d9a8e1bda951ecc159",
     "semantic_hash": ""
   },
-  "Temp/obj/ShapesSamples/ShapesSamples.csproj.FileListAbsolute.txt": {
-    "mtime": 1782577552.1433094,
-    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+  "Assets/Resources/ConsoleScripts/Path Persistence Probe.txt": {
+    "mtime": 1782671886.0447638,
+    "ast_hash": "69b5fc13e99a1e2d8a1d6af735133bf5",
     "semantic_hash": ""
   },
-  "Temp/obj/Wingman/Wingman.csproj.FileListAbsolute.txt": {
-    "mtime": 1782577581.2832336,
-    "ast_hash": "c07f08905ea7f93842c1265e6d2ed925",
+  "Assets/Resources/ConsoleScripts/Path Stroke Reload Check.txt": {
+    "mtime": 1782677259.9154718,
+    "ast_hash": "8d768360ffaff93c9abc80ad4a907f5c",
+    "semantic_hash": ""
+  },
+  "Assets/Resources/ConsoleScripts/Path Stroke Save Probe.txt": {
+    "mtime": 1782677259.9106483,
+    "ast_hash": "20ead4a7816c4f56ee8f4b2211e0cee4",
+    "semantic_hash": ""
+  },
+  "Library/com.singularitygroup.hotreload/logs/log20260628.txt": {
+    "mtime": 1782705965.973818,
+    "ast_hash": "e161d2dfa4f835a0cb1636a49b008fb0",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/SurfacePathMousePainter.cs": {
+    "mtime": 1782705964.6323636,
+    "ast_hash": "b02759521fee9c1906aea9327e8f7427",
+    "semantic_hash": ""
+  },
+  "Assets/Resources/ConsoleScripts/Path Mouse Tool Setup.txt": {
+    "mtime": 1782682887.547769,
+    "ast_hash": "40fdb53d3374109ad5852220943f8545",
+    "semantic_hash": ""
+  },
+  "local-only/debug-screenshots/F10-Path_Pattern_Probe-20260628-163336-step050-water.00-Off-20260628-163344-480.txt": {
+    "mtime": 1782682424.5474153,
+    "ast_hash": "1c9462fac1c8c0326b3686027e2ab70d",
+    "semantic_hash": ""
+  },
+  "local-only/debug-screenshots/F10-Path_Pattern_Probe-20260628-163336-step059-water.00-Off-20260628-163345-537.txt": {
+    "mtime": 1782682425.6127353,
+    "ast_hash": "0eee9e402b83213f2eeb6a337ecee729",
+    "semantic_hash": ""
+  },
+  "local-only/debug-screenshots/F10-Path_Pattern_Probe-20260628-163336-step066-water.00-Off-20260628-163346-653.txt": {
+    "mtime": 1782682426.715845,
+    "ast_hash": "3dc19197d60c3319b11ad28e59947e7d",
+    "semantic_hash": ""
+  },
+  "local-only/debug-screenshots/F10-Path_Pattern_Probe-20260628-163336-step071-water.00-Off-20260628-163347-725.txt": {
+    "mtime": 1782682427.8003328,
+    "ast_hash": "644194be952bc0c2149164919b7bf251",
+    "semantic_hash": ""
+  },
+  "local-only/debug-screenshots/F10-Path_Pattern_Probe-20260628-163336-step076-water.00-Off-20260628-163348-859.txt": {
+    "mtime": 1782682428.9287114,
+    "ast_hash": "24d7dba26981da5c40eda5d38204e7a3",
+    "semantic_hash": ""
+  },
+  "local-only/debug-screenshots/F10-Path_Pattern_Probe-20260628-163336-step084-water.00-Off-20260628-163349-966.txt": {
+    "mtime": 1782682430.0396588,
+    "ast_hash": "44ec7169b95f1be8b27b308a3291ca0f",
+    "semantic_hash": ""
+  },
+  "local-only/debug-screenshots/F10-Path_Pattern_Probe-20260628-163336-step050-water.00-Off-20260628-163344-480.png": {
+    "mtime": 1782682424.5358481,
+    "ast_hash": "8a7ea19183c9f8a6de091fa459a60c05",
+    "semantic_hash": ""
+  },
+  "local-only/debug-screenshots/F10-Path_Pattern_Probe-20260628-163336-step059-water.00-Off-20260628-163345-537.png": {
+    "mtime": 1782682425.5983324,
+    "ast_hash": "302571d8e42b0233fb92172619d56767",
+    "semantic_hash": ""
+  },
+  "local-only/debug-screenshots/F10-Path_Pattern_Probe-20260628-163336-step066-water.00-Off-20260628-163346-653.png": {
+    "mtime": 1782682426.7047112,
+    "ast_hash": "781b945af728edce6c75ec9590fa98c6",
+    "semantic_hash": ""
+  },
+  "local-only/debug-screenshots/F10-Path_Pattern_Probe-20260628-163336-step071-water.00-Off-20260628-163347-725.png": {
+    "mtime": 1782682427.789828,
+    "ast_hash": "02b60b767837cfc62099240870450b0f",
+    "semantic_hash": ""
+  },
+  "local-only/debug-screenshots/F10-Path_Pattern_Probe-20260628-163336-step076-water.00-Off-20260628-163348-859.png": {
+    "mtime": 1782682428.9158225,
+    "ast_hash": "000dcb2e1f1cdbb72eee82776b108aff",
+    "semantic_hash": ""
+  },
+  "local-only/debug-screenshots/F10-Path_Pattern_Probe-20260628-163336-step084-water.00-Off-20260628-163349-966.png": {
+    "mtime": 1782682430.0285742,
+    "ast_hash": "7e43c3b0a6dca9d49cdf436e70777275",
+    "semantic_hash": ""
+  },
+  "Library/com.singularitygroup.hotreload/patches.json": {
+    "mtime": 1782705966.2894306,
+    "ast_hash": "ec7ac2fadc61a9fb6b99343febcccd44",
     "semantic_hash": ""
   }
 }

@@ -1,0 +1,34 @@
+@name Path Stroke Reload Check
+@timeout 120
+@defer debug.capture-set "Grass"
+@defer grass.enabled true
+@defer grass.layer near true
+@defer grass.layer chunk true
+@defer grass.layer blanket true
+@defer grass.debug-tint 0
+@defer grass.debug-layer-colors false
+@defer path.debug false
+@sidecar camera.position
+@sidecar debug.capture-set
+@sidecar planet.status
+@sidecar grass.status
+@sidecar path.status
+
+# Does not clear saved data. Use after restarting Play Mode or after planet.generate.
+debug.capture-set "Grass Visual"
+camera.look-at -431.81,-298.46,-1464.09 -1317.91,-390.56,-1009.89
+light.local-noon
+grass.enabled true
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+grass.debug-tint 0
+grass.debug-layer-colors false
+path.debug true
+@wait seconds 3
+debug.capture
+
+# Force a saved-stamp replay and capture again.
+path.replay
+@wait frames 30
+debug.capture

@@ -41,6 +41,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     Vector3 _lastDispatchCameraPosition;
     float _chunkInnerFadeStart;
     float _chunkInnerFadeEnd;
+    bool _redispatchRequested;
     bool _disposed;
 
     public GrassPlacementController(Transform planetTransform, ChunkedSurfaceProvider surfaceProvider,
@@ -119,10 +120,12 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         // Re-dispatch placement on any chunk whose distance-LOD result may have changed
         // because the camera moved enough to materially shift which chunks are in range.
         // Cheap heuristic: if camera moved >25m, re-run placement on all tracked chunks.
-        if (transitionChanged
+        if (_redispatchRequested
+            || transitionChanged
             || (camera.transform.position - _lastDispatchCameraPosition).sqrMagnitude
                 > CameraRedispatchDistance * CameraRedispatchDistance)
         {
+            _redispatchRequested = false;
             _lastDispatchCameraPosition = camera.transform.position;
             _stats.PlacementDispatches = _dispatcher.RedispatchAll(_chunks, innerFadeStart, innerFadeEnd);
         }
@@ -216,6 +219,8 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             else Object.DestroyImmediate(_material);
         }
     }
+
+    public void RequestRedispatch() => _redispatchRequested = true;
 
     void ReconcileRuntimeAllocations(Vector3 cameraPosition)
     {
