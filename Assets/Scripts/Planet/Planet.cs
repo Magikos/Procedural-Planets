@@ -76,10 +76,12 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     public void RegisterWorldServices(IWorldContext context)
     {
-        EnsureGrassCoordinator();
+        EnsureRuntimeOwners();
         context.Register<IPlanet>(this);
         context.Register<IPlanetSurfaceSampler>(this);
         context.Register<IPlanetSurfaceRaycaster>(this);
+        context.Register<ISurfacePathBrushService>(_surfacePathEdits);
+        context.Register(_surfacePathEdits);
         context.Register<IClimateSampler>(this);
         context.Register<IGrassRuntimeControl>(this);
         context.Register<IGrassNearFieldStatsProvider>(_grass);
@@ -90,8 +92,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         EnsureGrassCoordinator();
         _waterSurface ??= new PlanetWaterSurface(transform);
         _terrainMaterial ??= new PlanetTerrainMaterial(Logger);
-        _surfacePathEdits ??= new SurfacePathEditController(Logger, () => _grass.InvalidateSurfaceMasks());
-        SurfacePathMousePainter.EnsureAvailable();
+        _surfacePathEdits ??= new SurfacePathEditController(transform, Logger, () => _grass.InvalidateSurfaceMasks());
     }
 
     void EnsureGrassCoordinator()
@@ -502,80 +503,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         };
         return true;
     }
-
-    public bool TryPaintSurfacePathFromCamera(Ray worldRay, float radiusMeters, float strength, float regrowSeconds, out string summary)
-    {
-        float maxDistance = Mathf.Max(_lastGeneratedRadius * 4f, 10000f);
-        if (!TryRaycastSurface(worldRay, maxDistance, out PlanetSurfaceRaycastHit hit))
-        {
-            summary = "path paint missed the visible planet surface";
-            return false;
-        }
-
-        Vector3 localDirection = transform.InverseTransformPoint(hit.Point).normalized;
-        return TryPaintSurfacePathAtLocalDirection(localDirection, radiusMeters, strength, regrowSeconds, out summary);
-    }
-
-    public bool TryPaintSurfacePathAtWorldPosition(Vector3 worldPosition, float radiusMeters, float strength, float regrowSeconds, out string summary)
-    {
-        Vector3 localPoint = transform.InverseTransformPoint(worldPosition);
-        if (localPoint.sqrMagnitude < 0.0001f)
-        {
-            summary = "path paint requires a position away from the planet center";
-            return false;
-        }
-
-        return TryPaintSurfacePathAtLocalDirection(localPoint.normalized, radiusMeters, strength, regrowSeconds, out summary);
-    }
-
-    public bool TryPaintSurfacePathAtLocalDirection(Vector3 localUnitDirection, float radiusMeters, float strength,
-        float regrowSeconds, out string summary, bool saveStamp = true, bool invalidateGrass = true,
-        bool saveImmediately = true)
-        => TryPaintSurfacePathBrushAtLocalDirection(localUnitDirection, radiusMeters, strength, regrowSeconds,
-            SurfacePathShape.SoftDisc, SurfacePathOperation.Paint, out summary, saveStamp, invalidateGrass,
-            saveImmediately);
-
-    public bool TryPaintSurfacePathBrushAtLocalDirection(Vector3 localUnitDirection, float radiusMeters, float strength,
-        float regrowSeconds, SurfacePathShape shape, SurfacePathOperation operation, out string summary,
-        bool saveStamp = true, bool invalidateGrass = true, bool saveImmediately = true)
-    {
-        if (localUnitDirection.sqrMagnitude < 0.0001f)
-        {
-            summary = "path paint requires a non-zero local direction";
-            return false;
-        }
-
-        return _surfacePathEdits.TryPaintBrush(localUnitDirection.normalized, radiusMeters, strength, regrowSeconds,
-            shape, operation, saveStamp, out summary, invalidateGrass, saveImmediately);
-    }
-
-    public void FlushSurfacePathEdits() => _surfacePathEdits?.FlushPendingSave();
-
-    public bool TryPaintSurfacePathPatternAtWorldPosition(Vector3 worldPosition, float sizeMeters, float strength, out string summary)
-    {
-        Vector3 localPoint = transform.InverseTransformPoint(worldPosition);
-        if (localPoint.sqrMagnitude < 0.0001f)
-        {
-            summary = "path pattern requires a position away from the planet center";
-            return false;
-        }
-
-        return _surfacePathEdits.TryPaintPattern(localPoint.normalized, sizeMeters, strength, out summary);
-    }
-
-    public int ClearSurfacePaths() => _surfacePathEdits?.ClearRuntimeMasks() ?? 0;
-
-    public string ReplaySurfacePaths() =>
-        _surfacePathEdits != null ? _surfacePathEdits.ReplaySavedStamps() : "path replay requires an active Planet";
-
-    public string ClearSavedSurfacePaths() =>
-        _surfacePathEdits != null ? _surfacePathEdits.ClearSavedStamps() : "path clear-saved requires an active Planet";
-
-    public string SurfacePathStatus() =>
-        _surfacePathEdits != null ? _surfacePathEdits.Status() : "path mask unavailable: no active Planet";
-
-    public string SetSurfacePathDebug(bool? enabled = null) =>
-        _surfacePathEdits != null ? _surfacePathEdits.SetDebug(enabled) : "path debug requires an active Planet";
 
     // --- Console commands -------------------------------------------------
 

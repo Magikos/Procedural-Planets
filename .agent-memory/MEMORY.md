@@ -72,6 +72,10 @@ Search the Codex indexes before reopening these topics:
 - Clouds: `CloudWeather`, `CubeFaceUv`, `WeatherSampling`.
 - Grass: `mesh-visible-terrain`, `MarkerProjection`, rejection counters,
   density instrumentation.
+- Paths: path wear is an R8 vector-baked mask, not true SDF. Keep hard-disc
+  support; jagged hard-disc edges were fixed by antialiasing the baked
+  hard-disc mask edge in `ChunkedSurfaceProvider.PathWearMask` with
+  `HardDiscEdgePixels` rather than removing hard-disc from the mouse tool.
 
 ## Updating Memory
 

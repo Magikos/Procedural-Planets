@@ -69,6 +69,7 @@ public class GameBootstrap : MonoBehaviour, IEarlyInitialize
         EnsureComponent<QualityController>();         // reads IGrassQualitySettings and pushes quality shader globals
         EnsureComponent<DebugInputRelay>();           // routes F-key presses to EventBus<DebugCommandRequestedEvent>
         EnsureComponent<DebugCaptureController>();    // orchestrates F10 captures and the debug overlay
+        EnsureComponent<SurfacePathMousePainter>();   // owns path paint input; Planet only exposes the brush service
 
         DebugConsoleBootstrap.Initialize();
 

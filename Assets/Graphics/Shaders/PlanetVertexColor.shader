@@ -40,6 +40,7 @@ Shader "Planet/VertexColor"
         _GrassSurfaceBrightness ("Grass Surface Brightness", Range(0.3, 1.5)) = 0.4
         [HideInInspector] _GrassWaterRadius ("Grass Water Radius", Float) = -1.0
         [HideInInspector] _SurfacePathDebug ("Surface Path Debug", Float) = 0.0
+        [HideInInspector] _PathWearMask ("Path Wear Mask", 2D) = "black" {}
     }
     SubShader
     {
@@ -166,6 +167,7 @@ Shader "Planet/VertexColor"
             // Bound but unsampled in Phase B. Phase E shader work will multiply / blend the
             // PBR signals (especially albedo + roughness) by these.
             TEXTURE2D(_SurfaceStateMask); SAMPLER(sampler_SurfaceStateMask);
+            TEXTURE2D(_PathWearMask); SAMPLER(sampler_PathWearMask);
 
             struct BiomeGrassParams
             {
@@ -254,6 +256,11 @@ Shader "Planet/VertexColor"
             float4 SampleSurfaceState(float2 chunkUv)
             {
                 return SAMPLE_TEXTURE2D(_SurfaceStateMask, sampler_SurfaceStateMask, saturate(chunkUv));
+            }
+
+            float SamplePathWear(float2 chunkUv)
+            {
+                return SAMPLE_TEXTURE2D(_PathWearMask, sampler_PathWearMask, saturate(chunkUv)).r;
             }
 
             // Phase B step 5b: cheap-path surface albedo. Bakes already weight-summed the
@@ -743,7 +750,11 @@ Shader "Planet/VertexColor"
                 float3 terrainAlbedo)
             {
                 float4 surfaceState = SampleSurfaceState(chunkUv);
-                float paved = saturate(surfaceState.r);
+                float pathWear = SamplePathWear(chunkUv);
+                if (_SurfacePathDebug > 1.5)
+                    return pathWear.xxx;
+
+                float paved = saturate(max(surfaceState.r, pathWear));
                 float scorched = saturate(surfaceState.g);
                 float pathMask = saturate(max(paved, scorched));
                 if (_SurfacePathDebug > 0.5 && pathMask > 0.001)

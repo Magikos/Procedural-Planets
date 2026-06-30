@@ -52,6 +52,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     static readonly int[] SurfaceRadiusIds = new int[6];
     static readonly int[] SurfaceNormalIds = new int[6];
     static readonly int[] SurfaceStateIds = new int[6];
+    static readonly int[] PathWearIds = new int[6];
 
     static readonly int BiomeGrassParamsId = Shader.PropertyToID("_NearFieldBiomeGrassParams");
     static readonly int InstancesId = Shader.PropertyToID("_NearFieldGrassInstances");
@@ -61,6 +62,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     static readonly int BiomeAtlasResolutionId = Shader.PropertyToID("_NearFieldBiomeAtlasResolution");
     static readonly int SurfaceAtlasResolutionId = Shader.PropertyToID("_NearFieldSurfaceAtlasResolution");
     static readonly int SurfaceStateAtlasResolutionId = Shader.PropertyToID("_NearFieldSurfaceStateAtlasResolution");
+    static readonly int PathWearAtlasResolutionId = Shader.PropertyToID("_NearFieldPathWearAtlasResolution");
     static readonly int BiomeParamCountId = Shader.PropertyToID("_NearFieldBiomeParamCount");
     static readonly int CapacityId = Shader.PropertyToID("_NearFieldCapacity");
     static readonly int SeedId = Shader.PropertyToID("_NearFieldSeed");
@@ -99,6 +101,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             SurfaceRadiusIds[i] = Shader.PropertyToID($"_NearFieldSurfaceRadius_F{i}");
             SurfaceNormalIds[i] = Shader.PropertyToID($"_NearFieldSurfaceNormal_F{i}");
             SurfaceStateIds[i] = Shader.PropertyToID($"_NearFieldSurfaceState_F{i}");
+            PathWearIds[i] = Shader.PropertyToID($"_NearFieldPathWear_F{i}");
         }
     }
 
@@ -134,6 +137,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     readonly long _bufferBytes;
     Texture2DArray _neutralClimateMap;
     Texture2D _fallbackVectorTexture;
+    Texture2D _fallbackScalarTexture;
     Texture2D _fallbackRadiusTexture;
     Texture2D _fallbackNormalTexture;
     bool _disposed;
@@ -335,8 +339,10 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         GrassSurfaceAtlasGpuData grassAtlases = _surfaceProvider.GrassSurfaceAtlases;
         int surfaceAtlasResolution = grassAtlases != null ? grassAtlases.AtlasResolution : 0;
         int surfaceStateAtlasResolution = 0;
+        int pathWearAtlasResolution = 0;
         int biomeAtlasResolution = 0;
         Texture2D fallbackVector = GetFallbackVectorTexture();
+        Texture2D fallbackScalar = GetFallbackScalarTexture();
         Texture2D fallbackRadius = GetFallbackRadiusTexture();
         Texture2D fallbackNormal = GetFallbackNormalTexture();
         for (int f = 0; f < 6; f++)
@@ -358,6 +364,11 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             _compute.SetTexture(_kernel, SurfaceStateIds[f], state != null ? (Texture)state : fallbackVector);
             if (state != null && surfaceStateAtlasResolution == 0)
                 surfaceStateAtlasResolution = state.width;
+
+            _surfaceProvider.TryGetFacePathWearAtlas(f, out Texture2D pathWear);
+            _compute.SetTexture(_kernel, PathWearIds[f], pathWear != null ? (Texture)pathWear : fallbackScalar);
+            if (pathWear != null && pathWearAtlasResolution == 0)
+                pathWearAtlasResolution = pathWear.width;
         }
 
         _compute.SetBuffer(_kernel, BiomeGrassParamsId, _grassParamsBuffer);
@@ -368,6 +379,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         _compute.SetInt(BiomeAtlasResolutionId, Mathf.Max(biomeAtlasResolution, 1));
         _compute.SetInt(SurfaceAtlasResolutionId, Mathf.Max(surfaceAtlasResolution, 1));
         _compute.SetInt(SurfaceStateAtlasResolutionId, Mathf.Max(surfaceStateAtlasResolution, 1));
+        _compute.SetInt(PathWearAtlasResolutionId, Mathf.Max(pathWearAtlasResolution, 1));
         _compute.SetInt(BiomeParamCountId, _grassParamCount);
         _compute.SetInt(CapacityId, _capacity);
         _compute.SetInt(SeedId, _seed);
@@ -570,6 +582,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             _neutralClimateMap = null;
         }
         DestroyTexture(ref _fallbackVectorTexture);
+        DestroyTexture(ref _fallbackScalarTexture);
         DestroyTexture(ref _fallbackRadiusTexture);
         DestroyTexture(ref _fallbackNormalTexture);
     }
@@ -598,6 +611,13 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         if (_fallbackVectorTexture == null)
             _fallbackVectorTexture = CreateFallbackTexture("NearFieldFallbackVector", TextureFormat.RGBA32, Color.clear, true);
         return _fallbackVectorTexture;
+    }
+
+    Texture2D GetFallbackScalarTexture()
+    {
+        if (_fallbackScalarTexture == null)
+            _fallbackScalarTexture = CreateFallbackTexture("NearFieldFallbackScalar", TextureFormat.RFloat, Color.clear, true);
+        return _fallbackScalarTexture;
     }
 
     Texture2D GetFallbackRadiusTexture()

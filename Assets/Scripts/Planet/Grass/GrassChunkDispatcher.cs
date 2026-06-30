@@ -13,12 +13,14 @@ sealed class GrassChunkDispatcher : System.IDisposable
     static readonly int BiomeIdsId = Shader.PropertyToID("_BiomeIds");
     static readonly int BiomeWeightsId = Shader.PropertyToID("_BiomeWeights");
     static readonly int SurfaceStateMaskId = Shader.PropertyToID("_SurfaceStateMask");
+    static readonly int PathWearMaskId = Shader.PropertyToID("_PathWearMask");
     static readonly int GrassSurfaceRadiusId = Shader.PropertyToID("_GrassSurfaceRadius");
     static readonly int GrassSurfaceNormalId = Shader.PropertyToID("_GrassSurfaceNormal");
     static readonly int BiomeGrassParamsId = Shader.PropertyToID(ShaderGlobalIds.BiomeGrassParams);
     static readonly int BiomeGrassParamCountId = Shader.PropertyToID(ShaderGlobalIds.BiomeGrassParamCount);
     static readonly int BiomeAtlasResolutionId = Shader.PropertyToID("_BiomeAtlasResolution");
     static readonly int GrassSurfaceAtlasResolutionId = Shader.PropertyToID(ShaderGlobalIds.GrassSurfaceAtlasResolution);
+    static readonly int PathWearResolutionId = Shader.PropertyToID("_PathWearResolution");
     static readonly int LaneResolutionId = Shader.PropertyToID("_LaneResolution");
     static readonly int MaxBladeInstancesId = Shader.PropertyToID("_MaxBladeInstances");
     static readonly int MaxBladesPerLaneId = Shader.PropertyToID("_MaxBladesPerLane");
@@ -137,7 +139,7 @@ sealed class GrassChunkDispatcher : System.IDisposable
         if (!_surfaceProvider.GrassSurfaceAtlases.TryGetFace(chunk.FaceIndex,
                 out Texture2D surfaceRadius, out Texture2D surfaceNormal))
             return null;
-        if (chunk.SurfaceStateTexture == null)
+        if (chunk.SurfaceStateTexture == null || chunk.PathWearTexture == null)
             return null;
 
         var runtime = GrassChunkRuntime.Create(_bladePool, _maxBladeInstancesPerChunk, GrassChunkRuntime.BladeVertexCount,
@@ -162,7 +164,7 @@ sealed class GrassChunkDispatcher : System.IDisposable
                     out _, out Texture2D biomeIds, out Texture2D biomeWeights)) continue;
             if (!_surfaceProvider.GrassSurfaceAtlases.TryGetFace(chunk.FaceIndex,
                     out Texture2D surfaceRadius, out Texture2D surfaceNormal)) continue;
-            if (chunk.SurfaceStateTexture == null) continue;
+            if (chunk.SurfaceStateTexture == null || chunk.PathWearTexture == null) continue;
             DispatchSingle(chunk, runtime, biomeIds, biomeWeights, surfaceRadius, surfaceNormal, innerFadeStart, innerFadeEnd);
             count++;
             runtime.RequestReadbacks();
@@ -179,6 +181,7 @@ sealed class GrassChunkDispatcher : System.IDisposable
         _placementCompute.SetTexture(_placeKernel, BiomeIdsId, biomeIds);
         _placementCompute.SetTexture(_placeKernel, BiomeWeightsId, biomeWeights);
         _placementCompute.SetTexture(_placeKernel, SurfaceStateMaskId, chunk.SurfaceStateTexture);
+        _placementCompute.SetTexture(_placeKernel, PathWearMaskId, chunk.PathWearTexture);
         _placementCompute.SetTexture(_placeKernel, GrassSurfaceRadiusId, surfaceRadius);
         _placementCompute.SetTexture(_placeKernel, GrassSurfaceNormalId, surfaceNormal);
         _placementCompute.SetBuffer(_placeKernel, BladeInstancesId, runtime.BladeBuffer);
@@ -189,6 +192,7 @@ sealed class GrassChunkDispatcher : System.IDisposable
         _placementCompute.SetBuffer(_placeKernel, BiomeGrassParamsId, _grassParamsBuffer);
         _placementCompute.SetInt(BiomeAtlasResolutionId, Mathf.Max(biomeIds.width, 1));
         _placementCompute.SetInt(GrassSurfaceAtlasResolutionId, Mathf.Max(surfaceRadius.width, 1));
+        _placementCompute.SetInt(PathWearResolutionId, Mathf.Max(chunk.PathWearTexture.width, 1));
         _placementCompute.SetInt(LaneResolutionId, LaneResolution);
         _placementCompute.SetInt(MaxBladeInstancesId, runtime.Capacity);
         _placementCompute.SetInt(MaxBladesPerLaneId, _maxBladesPerLane);

@@ -1,0 +1,22 @@
+@name Path Wear Mask Proof
+@timeout 60
+@defer path.debug-wear false
+@defer grass.enabled true
+@sidecar camera.position
+@sidecar debug.capture-set
+@sidecar debug.mode
+@sidecar planet.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+@sidecar path.status
+@sidecar path.mouse
+
+# Proof capture for the stored path-wear mask. Draw the suspect path first, then run this.
+# Expected image: black terrain where no path exists, white/gray only where the wear mask exists.
+debug.capture-set "Grass Visual"
+path.replay
+@wait frames 8
+grass.enabled false
+path.debug-wear true
+@wait seconds 1
+debug.capture

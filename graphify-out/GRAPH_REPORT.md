@@ -1,16 +1,16 @@
-# Graph Report - ProceduralPlanets  (2026-06-28)
+# Graph Report - ProceduralPlanets  (2026-06-30)
 
 ## Corpus Check
-- 24654 files · ~250,469,421 words
+- 24657 files · ~250,493,004 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 284529 nodes · 475117 edges · 19743 communities (14338 shown, 5405 thin omitted)
+- 284596 nodes · 475265 edges · 19803 communities (14396 shown, 5407 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2181 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5e33fca8`
+- Built from commit: `d97babc8`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -6162,7 +6162,6 @@
 - [[_COMMUNITY_Community 6166|Community 6166]]
 - [[_COMMUNITY_Community 6167|Community 6167]]
 - [[_COMMUNITY_Community 6168|Community 6168]]
-- [[_COMMUNITY_Community 6169|Community 6169]]
 - [[_COMMUNITY_Community 6170|Community 6170]]
 - [[_COMMUNITY_Community 6171|Community 6171]]
 - [[_COMMUNITY_Community 6172|Community 6172]]
@@ -6484,6 +6483,7 @@
 - [[_COMMUNITY_Community 6489|Community 6489]]
 - [[_COMMUNITY_Community 6490|Community 6490]]
 - [[_COMMUNITY_Community 6491|Community 6491]]
+- [[_COMMUNITY_Community 6492|Community 6492]]
 - [[_COMMUNITY_Community 6493|Community 6493]]
 - [[_COMMUNITY_Community 6494|Community 6494]]
 - [[_COMMUNITY_Community 6495|Community 6495]]
@@ -6667,6 +6667,7 @@
 - [[_COMMUNITY_Community 6673|Community 6673]]
 - [[_COMMUNITY_Community 6674|Community 6674]]
 - [[_COMMUNITY_Community 6675|Community 6675]]
+- [[_COMMUNITY_Community 6676|Community 6676]]
 - [[_COMMUNITY_Community 6677|Community 6677]]
 - [[_COMMUNITY_Community 6678|Community 6678]]
 - [[_COMMUNITY_Community 6679|Community 6679]]
@@ -7955,6 +7956,7 @@
 - [[_COMMUNITY_Community 7969|Community 7969]]
 - [[_COMMUNITY_Community 7970|Community 7970]]
 - [[_COMMUNITY_Community 7971|Community 7971]]
+- [[_COMMUNITY_Community 7972|Community 7972]]
 - [[_COMMUNITY_Community 7973|Community 7973]]
 - [[_COMMUNITY_Community 7974|Community 7974]]
 - [[_COMMUNITY_Community 7975|Community 7975]]
@@ -8618,7 +8620,6 @@
 - [[_COMMUNITY_Community 8638|Community 8638]]
 - [[_COMMUNITY_Community 8639|Community 8639]]
 - [[_COMMUNITY_Community 8640|Community 8640]]
-- [[_COMMUNITY_Community 8641|Community 8641]]
 - [[_COMMUNITY_Community 8642|Community 8642]]
 - [[_COMMUNITY_Community 8643|Community 8643]]
 - [[_COMMUNITY_Community 8644|Community 8644]]
@@ -8634,6 +8635,7 @@
 - [[_COMMUNITY_Community 8654|Community 8654]]
 - [[_COMMUNITY_Community 8655|Community 8655]]
 - [[_COMMUNITY_Community 8656|Community 8656]]
+- [[_COMMUNITY_Community 8657|Community 8657]]
 - [[_COMMUNITY_Community 8658|Community 8658]]
 - [[_COMMUNITY_Community 8659|Community 8659]]
 - [[_COMMUNITY_Community 8660|Community 8660]]
@@ -9083,6 +9085,7 @@
 - [[_COMMUNITY_Community 9104|Community 9104]]
 - [[_COMMUNITY_Community 9105|Community 9105]]
 - [[_COMMUNITY_Community 9106|Community 9106]]
+- [[_COMMUNITY_Community 9107|Community 9107]]
 - [[_COMMUNITY_Community 9108|Community 9108]]
 - [[_COMMUNITY_Community 9109|Community 9109]]
 - [[_COMMUNITY_Community 9110|Community 9110]]
@@ -9289,6 +9292,7 @@
 - [[_COMMUNITY_Community 9311|Community 9311]]
 - [[_COMMUNITY_Community 9312|Community 9312]]
 - [[_COMMUNITY_Community 9313|Community 9313]]
+- [[_COMMUNITY_Community 9314|Community 9314]]
 - [[_COMMUNITY_Community 9315|Community 9315]]
 - [[_COMMUNITY_Community 9316|Community 9316]]
 - [[_COMMUNITY_Community 9317|Community 9317]]
@@ -9364,9 +9368,10 @@
 - [[_COMMUNITY_Community 9390|Community 9390]]
 - [[_COMMUNITY_Community 9391|Community 9391]]
 - [[_COMMUNITY_Community 9392|Community 9392]]
+- [[_COMMUNITY_Community 9393|Community 9393]]
 - [[_COMMUNITY_Community 9394|Community 9394]]
-- [[_COMMUNITY_Community 9395|Community 9395]]
 - [[_COMMUNITY_Community 9396|Community 9396]]
+- [[_COMMUNITY_Community 9397|Community 9397]]
 - [[_COMMUNITY_Community 9398|Community 9398]]
 - [[_COMMUNITY_Community 9399|Community 9399]]
 - [[_COMMUNITY_Community 9400|Community 9400]]
@@ -9800,7 +9805,6 @@
 - [[_COMMUNITY_Community 9828|Community 9828]]
 - [[_COMMUNITY_Community 9829|Community 9829]]
 - [[_COMMUNITY_Community 9830|Community 9830]]
-- [[_COMMUNITY_Community 9831|Community 9831]]
 - [[_COMMUNITY_Community 9832|Community 9832]]
 - [[_COMMUNITY_Community 9833|Community 9833]]
 - [[_COMMUNITY_Community 9834|Community 9834]]
@@ -9870,7 +9874,6 @@
 - [[_COMMUNITY_Community 9898|Community 9898]]
 - [[_COMMUNITY_Community 9899|Community 9899]]
 - [[_COMMUNITY_Community 9900|Community 9900]]
-- [[_COMMUNITY_Community 9901|Community 9901]]
 - [[_COMMUNITY_Community 9902|Community 9902]]
 - [[_COMMUNITY_Community 9903|Community 9903]]
 - [[_COMMUNITY_Community 9904|Community 9904]]
@@ -10129,7 +10132,6 @@
 - [[_COMMUNITY_Community 10158|Community 10158]]
 - [[_COMMUNITY_Community 10159|Community 10159]]
 - [[_COMMUNITY_Community 10160|Community 10160]]
-- [[_COMMUNITY_Community 10161|Community 10161]]
 - [[_COMMUNITY_Community 10162|Community 10162]]
 - [[_COMMUNITY_Community 10163|Community 10163]]
 - [[_COMMUNITY_Community 10164|Community 10164]]
@@ -10341,6 +10343,7 @@
 - [[_COMMUNITY_Community 10374|Community 10374]]
 - [[_COMMUNITY_Community 10375|Community 10375]]
 - [[_COMMUNITY_Community 10376|Community 10376]]
+- [[_COMMUNITY_Community 10377|Community 10377]]
 - [[_COMMUNITY_Community 10378|Community 10378]]
 - [[_COMMUNITY_Community 10379|Community 10379]]
 - [[_COMMUNITY_Community 10380|Community 10380]]
@@ -10546,7 +10549,6 @@
 - [[_COMMUNITY_Community 10580|Community 10580]]
 - [[_COMMUNITY_Community 10581|Community 10581]]
 - [[_COMMUNITY_Community 10582|Community 10582]]
-- [[_COMMUNITY_Community 10583|Community 10583]]
 - [[_COMMUNITY_Community 10584|Community 10584]]
 - [[_COMMUNITY_Community 10585|Community 10585]]
 - [[_COMMUNITY_Community 10586|Community 10586]]
@@ -10613,7 +10615,6 @@
 - [[_COMMUNITY_Community 10647|Community 10647]]
 - [[_COMMUNITY_Community 10648|Community 10648]]
 - [[_COMMUNITY_Community 10649|Community 10649]]
-- [[_COMMUNITY_Community 10650|Community 10650]]
 - [[_COMMUNITY_Community 10651|Community 10651]]
 - [[_COMMUNITY_Community 10652|Community 10652]]
 - [[_COMMUNITY_Community 10653|Community 10653]]
@@ -10919,6 +10920,7 @@
 - [[_COMMUNITY_Community 10953|Community 10953]]
 - [[_COMMUNITY_Community 10954|Community 10954]]
 - [[_COMMUNITY_Community 10955|Community 10955]]
+- [[_COMMUNITY_Community 10956|Community 10956]]
 - [[_COMMUNITY_Community 10957|Community 10957]]
 - [[_COMMUNITY_Community 10958|Community 10958]]
 - [[_COMMUNITY_Community 10959|Community 10959]]
@@ -11040,7 +11042,6 @@
 - [[_COMMUNITY_Community 11075|Community 11075]]
 - [[_COMMUNITY_Community 11076|Community 11076]]
 - [[_COMMUNITY_Community 11077|Community 11077]]
-- [[_COMMUNITY_Community 11078|Community 11078]]
 - [[_COMMUNITY_Community 11079|Community 11079]]
 - [[_COMMUNITY_Community 11080|Community 11080]]
 - [[_COMMUNITY_Community 11081|Community 11081]]
@@ -11134,6 +11135,7 @@
 - [[_COMMUNITY_Community 11171|Community 11171]]
 - [[_COMMUNITY_Community 11172|Community 11172]]
 - [[_COMMUNITY_Community 11173|Community 11173]]
+- [[_COMMUNITY_Community 11174|Community 11174]]
 - [[_COMMUNITY_Community 11175|Community 11175]]
 - [[_COMMUNITY_Community 11176|Community 11176]]
 - [[_COMMUNITY_Community 11177|Community 11177]]
@@ -11717,6 +11719,7 @@
 - [[_COMMUNITY_Community 11761|Community 11761]]
 - [[_COMMUNITY_Community 11762|Community 11762]]
 - [[_COMMUNITY_Community 11763|Community 11763]]
+- [[_COMMUNITY_Community 11764|Community 11764]]
 - [[_COMMUNITY_Community 11765|Community 11765]]
 - [[_COMMUNITY_Community 11766|Community 11766]]
 - [[_COMMUNITY_Community 11767|Community 11767]]
@@ -11905,7 +11908,6 @@
 - [[_COMMUNITY_Community 11950|Community 11950]]
 - [[_COMMUNITY_Community 11951|Community 11951]]
 - [[_COMMUNITY_Community 11952|Community 11952]]
-- [[_COMMUNITY_Community 11953|Community 11953]]
 - [[_COMMUNITY_Community 11954|Community 11954]]
 - [[_COMMUNITY_Community 11955|Community 11955]]
 - [[_COMMUNITY_Community 11956|Community 11956]]
@@ -11930,7 +11932,6 @@
 - [[_COMMUNITY_Community 11975|Community 11975]]
 - [[_COMMUNITY_Community 11976|Community 11976]]
 - [[_COMMUNITY_Community 11977|Community 11977]]
-- [[_COMMUNITY_Community 11978|Community 11978]]
 - [[_COMMUNITY_Community 11979|Community 11979]]
 - [[_COMMUNITY_Community 11980|Community 11980]]
 - [[_COMMUNITY_Community 11981|Community 11981]]
@@ -12107,6 +12108,7 @@
 - [[_COMMUNITY_Community 12153|Community 12153]]
 - [[_COMMUNITY_Community 12154|Community 12154]]
 - [[_COMMUNITY_Community 12155|Community 12155]]
+- [[_COMMUNITY_Community 12156|Community 12156]]
 - [[_COMMUNITY_Community 12157|Community 12157]]
 - [[_COMMUNITY_Community 12158|Community 12158]]
 - [[_COMMUNITY_Community 12159|Community 12159]]
@@ -12666,6 +12668,7 @@
 - [[_COMMUNITY_Community 12720|Community 12720]]
 - [[_COMMUNITY_Community 12721|Community 12721]]
 - [[_COMMUNITY_Community 12722|Community 12722]]
+- [[_COMMUNITY_Community 12723|Community 12723]]
 - [[_COMMUNITY_Community 12724|Community 12724]]
 - [[_COMMUNITY_Community 12725|Community 12725]]
 - [[_COMMUNITY_Community 12726|Community 12726]]
@@ -12710,6 +12713,7 @@
 - [[_COMMUNITY_Community 12765|Community 12765]]
 - [[_COMMUNITY_Community 12766|Community 12766]]
 - [[_COMMUNITY_Community 12767|Community 12767]]
+- [[_COMMUNITY_Community 12768|Community 12768]]
 - [[_COMMUNITY_Community 12769|Community 12769]]
 - [[_COMMUNITY_Community 12771|Community 12771]]
 - [[_COMMUNITY_Community 12772|Community 12772]]
@@ -12725,7 +12729,6 @@
 - [[_COMMUNITY_Community 12782|Community 12782]]
 - [[_COMMUNITY_Community 12783|Community 12783]]
 - [[_COMMUNITY_Community 12784|Community 12784]]
-- [[_COMMUNITY_Community 12785|Community 12785]]
 - [[_COMMUNITY_Community 12786|Community 12786]]
 - [[_COMMUNITY_Community 12787|Community 12787]]
 - [[_COMMUNITY_Community 12788|Community 12788]]
@@ -13222,6 +13225,7 @@
 - [[_COMMUNITY_Community 13279|Community 13279]]
 - [[_COMMUNITY_Community 13280|Community 13280]]
 - [[_COMMUNITY_Community 13281|Community 13281]]
+- [[_COMMUNITY_Community 13282|Community 13282]]
 - [[_COMMUNITY_Community 13283|Community 13283]]
 - [[_COMMUNITY_Community 13284|Community 13284]]
 - [[_COMMUNITY_Community 13285|Community 13285]]
@@ -13325,6 +13329,7 @@
 - [[_COMMUNITY_Community 13383|Community 13383]]
 - [[_COMMUNITY_Community 13384|Community 13384]]
 - [[_COMMUNITY_Community 13385|Community 13385]]
+- [[_COMMUNITY_Community 13386|Community 13386]]
 - [[_COMMUNITY_Community 13387|Community 13387]]
 - [[_COMMUNITY_Community 13388|Community 13388]]
 - [[_COMMUNITY_Community 13389|Community 13389]]
@@ -13400,16 +13405,19 @@
 - [[_COMMUNITY_Community 13468|Community 13468]]
 - [[_COMMUNITY_Community 13469|Community 13469]]
 - [[_COMMUNITY_Community 13470|Community 13470]]
+- [[_COMMUNITY_Community 13471|Community 13471]]
 - [[_COMMUNITY_Community 13472|Community 13472]]
 - [[_COMMUNITY_Community 13473|Community 13473]]
 - [[_COMMUNITY_Community 13474|Community 13474]]
 - [[_COMMUNITY_Community 13475|Community 13475]]
 - [[_COMMUNITY_Community 13476|Community 13476]]
 - [[_COMMUNITY_Community 13477|Community 13477]]
+- [[_COMMUNITY_Community 13478|Community 13478]]
 - [[_COMMUNITY_Community 13479|Community 13479]]
 - [[_COMMUNITY_Community 13480|Community 13480]]
 - [[_COMMUNITY_Community 13481|Community 13481]]
 - [[_COMMUNITY_Community 13482|Community 13482]]
+- [[_COMMUNITY_Community 13484|Community 13484]]
 - [[_COMMUNITY_Community 13485|Community 13485]]
 - [[_COMMUNITY_Community 13487|Community 13487]]
 - [[_COMMUNITY_Community 13488|Community 13488]]
@@ -14331,7 +14339,6 @@
 - [[_COMMUNITY_Community 14404|Community 14404]]
 - [[_COMMUNITY_Community 14405|Community 14405]]
 - [[_COMMUNITY_Community 14406|Community 14406]]
-- [[_COMMUNITY_Community 14407|Community 14407]]
 - [[_COMMUNITY_Community 14408|Community 14408]]
 - [[_COMMUNITY_Community 14409|Community 14409]]
 - [[_COMMUNITY_Community 14410|Community 14410]]
@@ -14532,6 +14539,7 @@
 - [[_COMMUNITY_Community 14619|Community 14619]]
 - [[_COMMUNITY_Community 14620|Community 14620]]
 - [[_COMMUNITY_Community 14621|Community 14621]]
+- [[_COMMUNITY_Community 14622|Community 14622]]
 - [[_COMMUNITY_Community 14623|Community 14623]]
 - [[_COMMUNITY_Community 14624|Community 14624]]
 - [[_COMMUNITY_Community 14625|Community 14625]]
@@ -14696,7 +14704,6 @@
 - [[_COMMUNITY_Community 14784|Community 14784]]
 - [[_COMMUNITY_Community 14785|Community 14785]]
 - [[_COMMUNITY_Community 14786|Community 14786]]
-- [[_COMMUNITY_Community 14787|Community 14787]]
 - [[_COMMUNITY_Community 14788|Community 14788]]
 - [[_COMMUNITY_Community 14789|Community 14789]]
 - [[_COMMUNITY_Community 14790|Community 14790]]
@@ -14761,6 +14768,7 @@
 - [[_COMMUNITY_Community 14850|Community 14850]]
 - [[_COMMUNITY_Community 14851|Community 14851]]
 - [[_COMMUNITY_Community 14852|Community 14852]]
+- [[_COMMUNITY_Community 14853|Community 14853]]
 - [[_COMMUNITY_Community 14854|Community 14854]]
 - [[_COMMUNITY_Community 14855|Community 14855]]
 - [[_COMMUNITY_Community 14856|Community 14856]]
@@ -15270,7 +15278,6 @@
 - [[_COMMUNITY_Community 15363|Community 15363]]
 - [[_COMMUNITY_Community 15364|Community 15364]]
 - [[_COMMUNITY_Community 15365|Community 15365]]
-- [[_COMMUNITY_Community 15366|Community 15366]]
 - [[_COMMUNITY_Community 15367|Community 15367]]
 - [[_COMMUNITY_Community 15368|Community 15368]]
 - [[_COMMUNITY_Community 15369|Community 15369]]
@@ -15380,6 +15387,7 @@
 - [[_COMMUNITY_Community 15473|Community 15473]]
 - [[_COMMUNITY_Community 15474|Community 15474]]
 - [[_COMMUNITY_Community 15475|Community 15475]]
+- [[_COMMUNITY_Community 15476|Community 15476]]
 - [[_COMMUNITY_Community 15477|Community 15477]]
 - [[_COMMUNITY_Community 15478|Community 15478]]
 - [[_COMMUNITY_Community 15479|Community 15479]]
@@ -15409,15 +15417,18 @@
 - [[_COMMUNITY_Community 15503|Community 15503]]
 - [[_COMMUNITY_Community 15504|Community 15504]]
 - [[_COMMUNITY_Community 15505|Community 15505]]
+- [[_COMMUNITY_Community 15506|Community 15506]]
 - [[_COMMUNITY_Community 15507|Community 15507]]
 - [[_COMMUNITY_Community 15508|Community 15508]]
 - [[_COMMUNITY_Community 15509|Community 15509]]
 - [[_COMMUNITY_Community 15510|Community 15510]]
 - [[_COMMUNITY_Community 15511|Community 15511]]
 - [[_COMMUNITY_Community 15512|Community 15512]]
+- [[_COMMUNITY_Community 15513|Community 15513]]
 - [[_COMMUNITY_Community 15514|Community 15514]]
 - [[_COMMUNITY_Community 15515|Community 15515]]
 - [[_COMMUNITY_Community 15516|Community 15516]]
+- [[_COMMUNITY_Community 15517|Community 15517]]
 - [[_COMMUNITY_Community 15518|Community 15518]]
 - [[_COMMUNITY_Community 15519|Community 15519]]
 - [[_COMMUNITY_Community 15520|Community 15520]]
@@ -15427,7 +15438,6 @@
 - [[_COMMUNITY_Community 15524|Community 15524]]
 - [[_COMMUNITY_Community 15525|Community 15525]]
 - [[_COMMUNITY_Community 15526|Community 15526]]
-- [[_COMMUNITY_Community 15527|Community 15527]]
 - [[_COMMUNITY_Community 15528|Community 15528]]
 - [[_COMMUNITY_Community 15529|Community 15529]]
 - [[_COMMUNITY_Community 15530|Community 15530]]
@@ -15685,20 +15695,19 @@
 - [[_COMMUNITY_Community 15811|Community 15811]]
 - [[_COMMUNITY_Community 15812|Community 15812]]
 - [[_COMMUNITY_Community 15813|Community 15813]]
+- [[_COMMUNITY_Community 15814|Community 15814]]
 - [[_COMMUNITY_Community 15815|Community 15815]]
 - [[_COMMUNITY_Community 15816|Community 15816]]
+- [[_COMMUNITY_Community 15817|Community 15817]]
 - [[_COMMUNITY_Community 15818|Community 15818]]
 - [[_COMMUNITY_Community 15819|Community 15819]]
 - [[_COMMUNITY_Community 15820|Community 15820]]
-- [[_COMMUNITY_Community 15821|Community 15821]]
 - [[_COMMUNITY_Community 15822|Community 15822]]
 - [[_COMMUNITY_Community 15823|Community 15823]]
-- [[_COMMUNITY_Community 15824|Community 15824]]
 - [[_COMMUNITY_Community 15825|Community 15825]]
 - [[_COMMUNITY_Community 15826|Community 15826]]
 - [[_COMMUNITY_Community 15827|Community 15827]]
 - [[_COMMUNITY_Community 15828|Community 15828]]
-- [[_COMMUNITY_Community 15829|Community 15829]]
 - [[_COMMUNITY_Community 15830|Community 15830]]
 - [[_COMMUNITY_Community 15833|Community 15833]]
 - [[_COMMUNITY_Community 15834|Community 15834]]
@@ -15803,14 +15812,12 @@
 - [[_COMMUNITY_Community 15935|Community 15935]]
 - [[_COMMUNITY_Community 15936|Community 15936]]
 - [[_COMMUNITY_Community 15937|Community 15937]]
-- [[_COMMUNITY_Community 15938|Community 15938]]
 - [[_COMMUNITY_Community 15939|Community 15939]]
 - [[_COMMUNITY_Community 15940|Community 15940]]
 - [[_COMMUNITY_Community 15941|Community 15941]]
 - [[_COMMUNITY_Community 15942|Community 15942]]
 - [[_COMMUNITY_Community 15943|Community 15943]]
 - [[_COMMUNITY_Community 15944|Community 15944]]
-- [[_COMMUNITY_Community 15945|Community 15945]]
 - [[_COMMUNITY_Community 15946|Community 15946]]
 - [[_COMMUNITY_Community 15947|Community 15947]]
 - [[_COMMUNITY_Community 15948|Community 15948]]
@@ -15861,15 +15868,16 @@
 - [[_COMMUNITY_Community 15993|Community 15993]]
 - [[_COMMUNITY_Community 15994|Community 15994]]
 - [[_COMMUNITY_Community 15995|Community 15995]]
+- [[_COMMUNITY_Community 15996|Community 15996]]
 - [[_COMMUNITY_Community 15997|Community 15997]]
 - [[_COMMUNITY_Community 15998|Community 15998]]
 - [[_COMMUNITY_Community 15999|Community 15999]]
-- [[_COMMUNITY_Community 16000|Community 16000]]
 - [[_COMMUNITY_Community 16001|Community 16001]]
 - [[_COMMUNITY_Community 16002|Community 16002]]
 - [[_COMMUNITY_Community 16003|Community 16003]]
 - [[_COMMUNITY_Community 16004|Community 16004]]
 - [[_COMMUNITY_Community 16005|Community 16005]]
+- [[_COMMUNITY_Community 16006|Community 16006]]
 - [[_COMMUNITY_Community 16007|Community 16007]]
 - [[_COMMUNITY_Community 16008|Community 16008]]
 - [[_COMMUNITY_Community 16009|Community 16009]]
@@ -17018,6 +17026,7 @@
 - [[_COMMUNITY_Community 17156|Community 17156]]
 - [[_COMMUNITY_Community 17157|Community 17157]]
 - [[_COMMUNITY_Community 17158|Community 17158]]
+- [[_COMMUNITY_Community 17159|Community 17159]]
 - [[_COMMUNITY_Community 17160|Community 17160]]
 - [[_COMMUNITY_Community 17161|Community 17161]]
 - [[_COMMUNITY_Community 17162|Community 17162]]
@@ -17308,6 +17317,7 @@
 - [[_COMMUNITY_Community 17447|Community 17447]]
 - [[_COMMUNITY_Community 17448|Community 17448]]
 - [[_COMMUNITY_Community 17449|Community 17449]]
+- [[_COMMUNITY_Community 17450|Community 17450]]
 - [[_COMMUNITY_Community 17451|Community 17451]]
 - [[_COMMUNITY_Community 17452|Community 17452]]
 - [[_COMMUNITY_Community 17453|Community 17453]]
@@ -17704,6 +17714,7 @@
 - [[_COMMUNITY_Community 17844|Community 17844]]
 - [[_COMMUNITY_Community 17845|Community 17845]]
 - [[_COMMUNITY_Community 17846|Community 17846]]
+- [[_COMMUNITY_Community 17847|Community 17847]]
 - [[_COMMUNITY_Community 17848|Community 17848]]
 - [[_COMMUNITY_Community 17849|Community 17849]]
 - [[_COMMUNITY_Community 17850|Community 17850]]
@@ -18704,6 +18715,7 @@
 - [[_COMMUNITY_Community 18845|Community 18845]]
 - [[_COMMUNITY_Community 18846|Community 18846]]
 - [[_COMMUNITY_Community 18847|Community 18847]]
+- [[_COMMUNITY_Community 18848|Community 18848]]
 - [[_COMMUNITY_Community 18849|Community 18849]]
 - [[_COMMUNITY_Community 18850|Community 18850]]
 - [[_COMMUNITY_Community 18851|Community 18851]]
@@ -19127,21 +19139,74 @@
 - [[_COMMUNITY_Community 19271|Community 19271]]
 - [[_COMMUNITY_Community 19272|Community 19272]]
 - [[_COMMUNITY_Community 19729|Community 19729]]
+- [[_COMMUNITY_Community 19730|Community 19730]]
+- [[_COMMUNITY_Community 19731|Community 19731]]
+- [[_COMMUNITY_Community 19732|Community 19732]]
+- [[_COMMUNITY_Community 19733|Community 19733]]
+- [[_COMMUNITY_Community 19734|Community 19734]]
+- [[_COMMUNITY_Community 19736|Community 19736]]
 - [[_COMMUNITY_Community 19737|Community 19737]]
+- [[_COMMUNITY_Community 19738|Community 19738]]
+- [[_COMMUNITY_Community 19739|Community 19739]]
+- [[_COMMUNITY_Community 19740|Community 19740]]
+- [[_COMMUNITY_Community 19741|Community 19741]]
+- [[_COMMUNITY_Community 19742|Community 19742]]
+- [[_COMMUNITY_Community 19743|Community 19743]]
+- [[_COMMUNITY_Community 19744|Community 19744]]
+- [[_COMMUNITY_Community 19745|Community 19745]]
+- [[_COMMUNITY_Community 19746|Community 19746]]
+- [[_COMMUNITY_Community 19747|Community 19747]]
 - [[_COMMUNITY_Community 19748|Community 19748]]
+- [[_COMMUNITY_Community 19749|Community 19749]]
+- [[_COMMUNITY_Community 19750|Community 19750]]
+- [[_COMMUNITY_Community 19751|Community 19751]]
 - [[_COMMUNITY_Community 19752|Community 19752]]
+- [[_COMMUNITY_Community 19753|Community 19753]]
+- [[_COMMUNITY_Community 19754|Community 19754]]
 - [[_COMMUNITY_Community 19755|Community 19755]]
+- [[_COMMUNITY_Community 19756|Community 19756]]
 - [[_COMMUNITY_Community 19757|Community 19757]]
-- [[_COMMUNITY_Community 19760|Community 19760]]
+- [[_COMMUNITY_Community 19758|Community 19758]]
 - [[_COMMUNITY_Community 19761|Community 19761]]
+- [[_COMMUNITY_Community 19763|Community 19763]]
+- [[_COMMUNITY_Community 19764|Community 19764]]
+- [[_COMMUNITY_Community 19765|Community 19765]]
+- [[_COMMUNITY_Community 19766|Community 19766]]
 - [[_COMMUNITY_Community 19767|Community 19767]]
+- [[_COMMUNITY_Community 19768|Community 19768]]
 - [[_COMMUNITY_Community 19769|Community 19769]]
 - [[_COMMUNITY_Community 19770|Community 19770]]
 - [[_COMMUNITY_Community 19771|Community 19771]]
+- [[_COMMUNITY_Community 19772|Community 19772]]
+- [[_COMMUNITY_Community 19773|Community 19773]]
+- [[_COMMUNITY_Community 19774|Community 19774]]
 - [[_COMMUNITY_Community 19775|Community 19775]]
+- [[_COMMUNITY_Community 19776|Community 19776]]
+- [[_COMMUNITY_Community 19777|Community 19777]]
+- [[_COMMUNITY_Community 19778|Community 19778]]
+- [[_COMMUNITY_Community 19779|Community 19779]]
+- [[_COMMUNITY_Community 19780|Community 19780]]
+- [[_COMMUNITY_Community 19781|Community 19781]]
+- [[_COMMUNITY_Community 19782|Community 19782]]
 - [[_COMMUNITY_Community 19783|Community 19783]]
+- [[_COMMUNITY_Community 19784|Community 19784]]
 - [[_COMMUNITY_Community 19786|Community 19786]]
 - [[_COMMUNITY_Community 19787|Community 19787]]
+- [[_COMMUNITY_Community 19788|Community 19788]]
+- [[_COMMUNITY_Community 19789|Community 19789]]
+- [[_COMMUNITY_Community 19790|Community 19790]]
+- [[_COMMUNITY_Community 19791|Community 19791]]
+- [[_COMMUNITY_Community 19792|Community 19792]]
+- [[_COMMUNITY_Community 19793|Community 19793]]
+- [[_COMMUNITY_Community 19794|Community 19794]]
+- [[_COMMUNITY_Community 19795|Community 19795]]
+- [[_COMMUNITY_Community 19796|Community 19796]]
+- [[_COMMUNITY_Community 19797|Community 19797]]
+- [[_COMMUNITY_Community 19798|Community 19798]]
+- [[_COMMUNITY_Community 19799|Community 19799]]
+- [[_COMMUNITY_Community 19800|Community 19800]]
+- [[_COMMUNITY_Community 19801|Community 19801]]
+- [[_COMMUNITY_Community 19802|Community 19802]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `RAIL_API_PINVOKE` - 4743 edges
@@ -19170,7 +19235,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (19743 total, 5405 thin omitted)
+## Communities (19803 total, 5407 thin omitted)
 
 ### Community 0 - "Debug Capture System"
 Cohesion: 0.05
@@ -19178,10 +19243,10 @@ Nodes (30): Awaitable, bool, CancellationToken, CancellationTokenSource, CloudDt
 
 ### Community 1 - "Biome Climate Pipeline"
 Cohesion: 0.07
-Nodes (16): bool, Camera, CameraTeleportLocation, ConsoleCommand, float, ICelestialTimeController, IInputMapService, IPlanetSurfaceSampler (+8 more)
+Nodes (17): bool, Camera, CameraTeleportLocation, ConsoleCommand, float, ICameraLookBlocker, ICelestialTimeController, IInputMapService (+9 more)
 
 ### Community 2 - "Loading & Init Pipeline"
-Cohesion: 0.09
+Cohesion: 0.08
 Nodes (18): Action<float>, Awaitable, byte, CancellationToken, Color32, FilterMode, IBiomeProvider, int (+10 more)
 
 ### Community 3 - "Camera & Navigation"
@@ -19190,7 +19255,7 @@ Nodes (16): Awaitable, CancellationToken, CloudDto, Color, ComputeShader, face, 
 
 ### Community 4 - "Biome Atlas GPU"
 Cohesion: 0.06
-Nodes (32): Awaitable, bool, Camera, CancellationToken, Color32, FaceRenderMask, GrassSurfaceAtlasGpuData, IBiomeProvider (+24 more)
+Nodes (32): bool, byte, Camera, Color32, Dictionary, FaceRenderMask, GrassSurfaceAtlasGpuData, IChunkMeshCache (+24 more)
 
 ### Community 5 - "Spherical Weather Grid"
 Cohesion: 0.09
@@ -19257,8 +19322,8 @@ Cohesion: 0.09
 Nodes (19): Color, ConsoleCommand, DebugCaptureContext, DebugCaptureSetId, DebugModuleId, DebugRegistry, DebugRuntimeState, float (+11 more)
 
 ### Community 21 - "Event Bus"
-Cohesion: 0.07
-Nodes (19): ISettingsService, AtmosphereDto, bool, CelestialManager, ComputeShader, ConsoleCommand, float, int (+11 more)
+Cohesion: 0.08
+Nodes (17): AtmosphereDto, bool, CelestialManager, ComputeShader, ConsoleCommand, float, int, IPlanet (+9 more)
 
 ### Community 22 - "Grass Debug"
 Cohesion: 0.07
@@ -19322,7 +19387,7 @@ Nodes (16): DirectionKey, FaceWaterData, Action<float>, BuildStats, Color, Dicti
 
 ### Community 37 - "Face Render Masking"
 Cohesion: 0.04
-Nodes (43): Awaitable, BiomeSettings, bool, Camera, CancellationToken, CancellationTokenSource, ClimateSample, ConsoleCommand (+35 more)
+Nodes (42): Awaitable, BiomeSettings, bool, Camera, CancellationToken, CancellationTokenSource, ClimateSample, ConsoleCommand (+34 more)
 
 ### Community 38 - "Face Mesh Sampler"
 Cohesion: 0.15
@@ -19381,8 +19446,8 @@ Cohesion: 0.11
 Nodes (12): TemperatureProvider, ClimateSample, Vector3, IClimateProvider, IClimateSampler, ITemperatureProvider, ClimateCurveLut, float (+4 more)
 
 ### Community 52 - "Camera Rig Context"
-Cohesion: 0.08
-Nodes (14): bool, CancellationTokenSource, Dictionary, IReadOnlyList, List, T, Type, IAtmosphereRuntime (+6 more)
+Cohesion: 0.07
+Nodes (16): bool, CancellationTokenSource, Dictionary, IReadOnlyList, ISettingsService, List, T, Type (+8 more)
 
 ### Community 53 - "Init Progress Handles"
 Cohesion: 0.19
@@ -19510,7 +19575,7 @@ Nodes (7): ConsoleScrollback, ConsoleMessageType, ConsoleMessage, int, IReadOnly
 
 ### Community 85 - "Biome Lookup Data"
 Cohesion: 0.00
-Nodes (302): UnityEngine.AI, InternalGetRootGO(), UnityEngine.AI, GetOffMeshLinkInternal(), UnityEngine.AI, AnalyticsCommon, UnityEngine.Analytics, PerformanceReporting (+294 more)
+Nodes (307): UnityEngine.AI, InternalGetRootGO(), UnityEngine.AI, GetOffMeshLinkInternal(), UnityEngine.AI, AnalyticsCommon, UnityEngine.Analytics, PerformanceReporting (+299 more)
 
 ### Community 86 - "Planet Root"
 Cohesion: 0.18
@@ -19525,8 +19590,8 @@ Cohesion: 0.18
 Nodes (7): Awaitable, bool, DebugCommandRequestedEvent, int, StringBuilder, Texture2D, AtmosphereDiagnostics
 
 ### Community 89 - "Console Debug Module"
-Cohesion: 0.03
-Nodes (45): PositionMaterialSlot, UnityEditor.ShaderGraph, IMayRequirePosition, MayRequirePositionExtensions, UnityEditor.ShaderGraph, IMayRequireVertexSkinning, MayRequireVertexSkinningExtensions, UnityEditor.ShaderGraph (+37 more)
+Cohesion: 0.11
+Nodes (14): CreationContext, EventBase, EventInterest, IUxmlAttributes, string, UxmlBoolAttributeDescription, UxmlStringAttributeDescription, UxmlTraits (+6 more)
 
 ### Community 90 - "Console History"
 Cohesion: 0.17
@@ -19550,7 +19615,7 @@ Nodes (6): Action, Func, Stack, T, IObjectPool, ObjectPool
 
 ### Community 95 - "Atmosphere Render Pass"
 Cohesion: 0.02
-Nodes (473): CollisionModule, EmissionModule, LightsModule, LimitVelocityOverLifetimeModule, LayerMask, Light, Mesh, MeshRenderer (+465 more)
+Nodes (480): CollisionModule, EmissionModule, LightsModule, LimitVelocityOverLifetimeModule, Color, LayerMask, Light, Mesh (+472 more)
 
 ### Community 96 - "Grass Surface Atlas"
 Cohesion: 0.23
@@ -19561,8 +19626,8 @@ Cohesion: 0.24
 Nodes (6): ILogger, int, Material, PlanetGrassCoordinator, Shader, PlanetTerrainMaterial
 
 ### Community 98 - "Seed Provider"
-Cohesion: 0.06
-Nodes (26): CellIndexUpdateInfo, CellInstancedDebugProbes, CellStreamingRequest, IndirectionEntryInfo, bool, Bounds, Dictionary, float (+18 more)
+Cohesion: 0.05
+Nodes (31): CellIndexUpdateInfo, CellInstancedDebugProbes, CellStreamingRequest, IndirectionEntryInfo, bool, Bounds, Brick, Chunk (+23 more)
 
 ### Community 99 - "Unity Logger"
 Cohesion: 0.27
@@ -19597,8 +19662,8 @@ Cohesion: 0.23
 Nodes (5): int, PlanetChunk, Texture2D, Vector4, GrassSurfaceAtlasGpuData
 
 ### Community 107 - "Debug Mode Constants"
-Cohesion: 0.02
-Nodes (101): float3, Execute(), IncrementCounter(), UnityEngine.Rendering, Burst, UnityEngine.Rendering, InstanceCullerBurst, UnityEngine.Rendering (+93 more)
+Cohesion: 0.01
+Nodes (107): float3, Execute(), IncrementCounter(), UnityEngine.Rendering, Burst, UnityEngine.Rendering, LODGroupDataSystemBurst, UnityEngine.Rendering (+99 more)
 
 ### Community 108 - "Memory Debug Counters"
 Cohesion: 0.36
@@ -19689,8 +19754,8 @@ Cohesion: 0.33
 Nodes (4): Awaitable, CancellationToken, IWorldAction, IWorldActionManager
 
 ### Community 131 - "Console Command Data"
-Cohesion: 0.05
-Nodes (28): Action, AttachToPanelEvent, bool, CreationContext, CustomStyleProperty, CustomStyleResolvedEvent, DetachFromPanelEvent, EventBase (+20 more)
+Cohesion: 0.06
+Nodes (36): IBindable, CreationContext, float, GeometryChangedEvent, IUxmlAttributes, Label, string, UxmlFloatAttributeDescription (+28 more)
 
 ### Community 132 - "Console Command Executor"
 Cohesion: 0.22
@@ -19722,15 +19787,15 @@ Nodes (4): DebugGrassInteractor, IGrassInteractor, float, Material
 
 ### Community 139 - "Planet DTO"
 Cohesion: 0.08
-Nodes (10): UIBpFieldEntry, bool, InputField, int, PointerEventData, RectTransform, UIBlueprintInspector, UIButton (+2 more)
+Nodes (16): AxisEventData, bool, Camera, CanvasUpdate, Coroutine, Direction, DrivenRectTransformTracker, float (+8 more)
 
 ### Community 140 - "Console Anchor"
-Cohesion: 0.08
-Nodes (12): UIWarningWindow, Camera, GameData, Image, int, List, PointerEventData, RectTransform (+4 more)
+Cohesion: 0.07
+Nodes (45): ExternalForcesModule, NativeThrows, Sprite, Transform, ParticleSystemForceField, ParticleSystemGameObjectFilter, AddInfluence(), AddInfluence_Injected() (+37 more)
 
 ### Community 141 - "Console Command Parser"
 Cohesion: 0.01
-Nodes (198): ChartStyleConfig, FactoryConfig, GlobalConfig, GPGPUConfig, KeyConfig, MeshDataAsset, ModeConfig, ProtoTable (+190 more)
+Nodes (199): ChartStyleConfig, FactoryConfig, GlobalConfig, GPGPUConfig, KeyConfig, MeshDataAsset, ModeConfig, ProtoTable (+191 more)
 
 ### Community 142 - "Seed Provider Interface"
 Cohesion: 0.22
@@ -19757,8 +19822,8 @@ Cohesion: 0.29
 Nodes (4): float, IProgressHandle, ProgressHandle, ProgressRangeHandle
 
 ### Community 148 - "Console Theme"
-Cohesion: 0.02
-Nodes (93): UIMainMenuButton, UIMechaCurvePoint, UIMechaExtrudePoint, UIToggle, UIVariousPopupCard, CardType, PointerClickCallbackCheck, IPointerDownHandler (+85 more)
+Cohesion: 0.10
+Nodes (8): DataColumn, DataColumnChangeEventArgs, DataRelation, DataRow, DataRowChangeEventArgs, ElementState, XmlBoundElement, XmlElement
 
 ### Community 149 - "Debug Console Bootstrap"
 Cohesion: 0.29
@@ -19798,7 +19863,7 @@ Nodes (5): EnsureRegistered(), From(), CloudSettings, CloudDto, ISettingsService
 
 ### Community 161 - "Chunk Mesh Job"
 Cohesion: 0.01
-Nodes (179): ITestRunSettings, UnityEditor.TestTools.TestRunner.Api, IMemoryOwner, System.Buffers, UnityEditor.Rendering.Universal, URPBuildData, IComponent, System.ComponentModel (+171 more)
+Nodes (184): ITestRunSettings, UnityEditor.TestTools.TestRunner.Api, IMemoryOwner, System.Buffers, CoreBuildData, UnityEditor.Rendering, UnityEditor.Rendering.Universal, URPBuildData (+176 more)
 
 ### Community 162 - "Weather Commands"
 Cohesion: 0.40
@@ -19822,7 +19887,7 @@ Nodes (3): DebugModuleId, int, OceanDebugModeWriter
 
 ### Community 167 - "Chunk Coord Data"
 Cohesion: 0.01
-Nodes (61): ArrayList, ArrayListDebugView, ArrayListEnumerator, ArrayListEnumeratorSimple, FixedSizeArrayList, FixedSizeList, IListWrapper, IListWrapperEnumWrapper (+53 more)
+Nodes (115): AggregateEnumerator, System.Runtime.Remoting.Channels, ArrayList, ArrayListDebugView, ArrayListEnumerator, ArrayListEnumeratorSimple, FixedSizeArrayList, FixedSizeList (+107 more)
 
 ### Community 168 - "Late Init Interface"
 Cohesion: 0.33
@@ -19842,7 +19907,7 @@ Nodes (3): BiomeDto, BiomeSettings, From()
 
 ### Community 176 - "Min-Max Utility"
 Cohesion: 0.02
-Nodes (70): SetOfValueComparer, System.Security.Cryptography.Asn1, AchievementIdComparer, AchievementProgressComparer, StationRouteResultComparer, StructuralComparer, System.Collections, MemberDescriptorComparer (+62 more)
+Nodes (71): SetOfValueComparer, System.Security.Cryptography.Asn1, AchievementIdComparer, AchievementProgressComparer, StationRouteResultComparer, StructuralComparer, System.Collections, MemberDescriptorComparer (+63 more)
 
 ### Community 177 - "Noise Filter Factory"
 Cohesion: 0.40
@@ -19850,7 +19915,7 @@ Nodes (3): IEnumerable, StringComparison, CompletionRanker
 
 ### Community 181 - "Grass Near Field Stats"
 Cohesion: 0.00
-Nodes (412): CinemachineUniversalPixelPerfect, UnityEngine.Rendering.Universal, AmmoDesc, AnimDesc, AssemblerDesc, AudioDesc, BattleBaseDesc, BeaconDesc (+404 more)
+Nodes (417): CinemachineUniversalPixelPerfect, UnityEngine.Rendering.Universal, AchievementStateDisplay, AmmoDesc, AnimDesc, AssemblerDesc, AssetList, AudioDesc (+409 more)
 
 ### Community 182 - "Precipitation Debug Interface"
 Cohesion: 0.40
@@ -19892,6 +19957,10 @@ Nodes (3): CloudConstants, float, Vector4
 Cohesion: 0.50
 Nodes (3): float, View, CloudDebugState
 
+### Community 197 - "Shader Global IDs Celestial"
+Cohesion: 0.05
+Nodes (28): AttachToPanelEvent, bool, CustomStyleResolvedEvent, DetachFromPanelEvent, EventCallback, float, GeometryChangedEvent, IEventHandler (+20 more)
+
 ### Community 198 - "Shader Global IDs Cloud"
 Cohesion: 0.40
 Nodes (3): IGameEvent, IProgressEvent, IGameEvent
@@ -19902,7 +19971,7 @@ Nodes (3): From(), GrassInteractorSnapshot, IGrassInteractor
 
 ### Community 201 - "Shader Global IDs Precipitation"
 Cohesion: 0.01
-Nodes (147): AbsoluteNode, UnityEditor.ShaderGraph, NegateNode, UnityEditor.ShaderGraph, ReciprocalNode, UnityEditor.ShaderGraph, ReciprocalSquareRootNode, UnityEditor.ShaderGraph (+139 more)
+Nodes (147): AbsoluteNode, UnityEditor.ShaderGraph, NegateNode, UnityEditor.ShaderGraph, PosterizeNode, UnityEditor.ShaderGraph, ReciprocalNode, UnityEditor.ShaderGraph (+139 more)
 
 ### Community 202 - "Shader Global IDs Terrain"
 Cohesion: 0.50
@@ -19914,19 +19983,19 @@ Nodes (6): Neon, Byte, Int32, Int64, SByte, UInt64
 
 ### Community 216 - "Planet Interface"
 Cohesion: 0.02
-Nodes (109): Focusable, Hierarchy, ICustomStyle, InlineStyleAccess, LanguageDirection, ConcreteSlotValueType, Background, BackgroundPosition (+101 more)
+Nodes (107): Focusable, ICustomStyle, InlineStyleAccess, LanguageDirection, ConcreteSlotValueType, Background, BackgroundPosition, BackgroundRepeat (+99 more)
 
 ### Community 217 - "Progress Reporter Interface"
 Cohesion: 0.01
-Nodes (111): CinemachineUniversalPixelPerfectEditor, UnityEditor.Rendering.Universal, CompositeShadowCaster2DEditor, UnityEditor.Rendering.Universal, PlanetEditor, Object, Planet, SerializedProperty (+103 more)
+Nodes (123): CinemachineUniversalPixelPerfectEditor, UnityEditor.Rendering.Universal, CompositeShadowCaster2DEditor, UnityEditor.Rendering.Universal, PlanetEditor, Object, Planet, SerializedProperty (+115 more)
 
 ### Community 219 - "Weather Configurator Interface"
 Cohesion: 0.09
 Nodes (21): bool, ChunkedSurfaceProvider, Color, ComputeBuffer, ComputeShader, float, GraphicsBuffer, GrassNearFieldStats (+13 more)
 
 ### Community 226 - "Progress Event"
-Cohesion: 0.01
-Nodes (148): ConstantNode, UnityEditor.ShaderGraph, SplitNode, UnityEditor.ShaderGraph, ConstantType, IGeneratesBodyCode, UnityEditor.ShaderGraph, IMayRequireUITK (+140 more)
+Cohesion: 0.02
+Nodes (82): IMayRequireUITK, UnityEditor.ShaderGraph, ShaderStageCapability, GenerationMode, int, ShaderStageCapability, ShaderStringBuilder, string (+74 more)
 
 ### Community 227 - "Scale Reference Events"
 Cohesion: 0.05
@@ -19950,15 +20019,15 @@ Nodes (30): Array, AssemblyBuilder, ComVisible, ConstructorInfo, CustomAttribute
 
 ### Community 246 - "Community 246"
 Cohesion: 0.01
-Nodes (70): ManualBehaviour, UIAutoSave, UIControlPanelInspector, UIDeepProfilerBarsSection, UIDeepProfilerBottomPanel, UIDysonBrush, UIManualTemplate, UIMechaBrush (+62 more)
+Nodes (61): ManualBehaviour, UIAutoSave, UIControlPanelInspector, UIDysonBrush, UIManualTemplate, UIPrologueSubtitle, UIRandomTip, UISailPanel (+53 more)
 
 ### Community 247 - "Community 247"
 Cohesion: 0.02
 Nodes (51): ArrayList, Hashtable, HWStack, int, PositionInfo, SchemaNames, Stack, State (+43 more)
 
 ### Community 248 - "Community 248"
-Cohesion: 0.03
-Nodes (57): DataTable, DataColumnChangeEventHandler, DataRowBuilder, DataRowChangeEventHandler, DataRowCollection, DataTableClearEventHandler, DataTableNewRowEventArgs, DataTableNewRowEventHandler (+49 more)
+Cohesion: 0.02
+Nodes (65): DataTable, DataColumnChangeEventHandler, DataRowChangeEventHandler, DataRowCollection, DataTableClearEventHandler, DataTableNewRowEventHandler, Attribute, BitArray (+57 more)
 
 ### Community 249 - "Community 249"
 Cohesion: 0.03
@@ -19969,8 +20038,8 @@ Cohesion: 0.05
 Nodes (51): Internal_DrawTextureArguments, LightProbeProxyVolume, LightProbeUsage, Bounds, Camera, Color, ColorGamut, CommandBuffer (+43 more)
 
 ### Community 251 - "Community 251"
-Cohesion: 0.03
-Nodes (61): ApplyImportsAction, ApplyTemplatesAction, AttributeAction, AttributeSetAction, BeginEvent, CallTemplateAction, CommentAction, Compiler (+53 more)
+Cohesion: 0.10
+Nodes (9): Font, FontReference, MarkToBaseAdjustmentRecord, MarkToMarkAdjustmentRecord, MethodImpl, NativeMethod, OTL_Feature, OTL_Lookup (+1 more)
 
 ### Community 252 - "Community 252"
 Cohesion: 0.02
@@ -19978,7 +20047,7 @@ Nodes (66): bool, Guid, XAsyncBlockPtr, XClosedCaptionProperties, XGameInviteEve
 
 ### Community 253 - "Community 253"
 Cohesion: 0.02
-Nodes (72): OnUndoRedoEvent(), OnValidate(), Slider, SliderEvent, UnityEngine.UI, IDragHandler, IInitializePotentialDragHandler, AxisEventData (+64 more)
+Nodes (78): OnValidate(), Scrollbar, ScrollEvent, UnityEngine.UI, OnUndoRedoEvent(), OnValidate(), Slider, SliderEvent (+70 more)
 
 ### Community 254 - "Community 254"
 Cohesion: 0.02
@@ -20014,27 +20083,27 @@ Nodes (51): AxisEventData, BaseEventData, bool, CanvasRenderer, CanvasUpdate, ch
 
 ### Community 263 - "Community 263"
 Cohesion: 0.02
-Nodes (38): Func, int, TimeSpan, XblDeviceToken, XblErrorCondition, XblGuid, XblHttpCallHandle, XblHttpCallResponseBodyType (+30 more)
+Nodes (35): Func, int, TimeSpan, XblDeviceToken, XblErrorCondition, XblGuid, XblHttpCallHandle, XblHttpCallResponseBodyType (+27 more)
 
 ### Community 264 - "Community 264"
 Cohesion: 0.02
 Nodes (3): Double, Int64, UInt64
 
 ### Community 265 - "Community 265"
-Cohesion: 0.07
-Nodes (31): IPPacketInformation, IValueTaskSource, Action, ArraySegment, AsyncCallback, BufferOffsetSize, CancellationToken, CLSCompliant (+23 more)
+Cohesion: 0.06
+Nodes (38): IAsyncResult, IPPacketInformation, AddressFamily, ArraySegment, AsyncCallback, BufferOffsetSize, CancellationToken, CLSCompliant (+30 more)
 
 ### Community 266 - "Community 266"
-Cohesion: 0.02
-Nodes (87): DeltaSpeed, string, Vector3, DeltaSpeed, string, UxmlTraits, Vector3, DeltaSpeed (+79 more)
+Cohesion: 0.03
+Nodes (44): ToggleDropdown, UnityEditor.Rendering, AttachToPanelEvent, bool, Button, HashSet, int, List (+36 more)
 
 ### Community 267 - "Community 267"
 Cohesion: 0.05
 Nodes (27): ArrayList, bool, CollectionChangeEventArgs, Conditional, DataPointer, DataRowState, DataSet, DataSetMapper (+19 more)
 
 ### Community 268 - "Community 268"
-Cohesion: 0.02
-Nodes (84): ClipperException, Alert, AssertionException, UnityEngine.Assertions, BaselibException, Unity.Baselib, Mono.Btls, MonoBtlsException (+76 more)
+Cohesion: 0.01
+Nodes (98): Alert, AssertionException, UnityEngine.Assertions, BaselibException, Unity.Baselib, Mono.Btls, MonoBtlsException, Mono.Btls (+90 more)
 
 ### Community 269 - "Community 269"
 Cohesion: 0.04
@@ -20049,8 +20118,8 @@ Cohesion: 0.02
 Nodes (51): ConfigInfoCollection, System.Configuration, ConfigurationSectionCollection, System.Configuration, ConfigurationSectionGroupCollection, System.Configuration, PropertyInformationCollection, PropertyInformationEnumerator (+43 more)
 
 ### Community 272 - "Community 272"
-Cohesion: 0.03
-Nodes (54): ParameterList, System.Linq.Expressions.Compiler, IReadOnlyDictionary, System.Collections.Generic, IReadOnlyList, System.Collections.Generic, IReadOnlyCollection, IReadOnlyList (+46 more)
+Cohesion: 0.04
+Nodes (32): ParameterList, System.Linq.Expressions.Compiler, IReadOnlyList, Array, IEnumerator, T, Array, IEnumerator (+24 more)
 
 ### Community 273 - "Community 273"
 Cohesion: 0.08
@@ -20070,19 +20139,19 @@ Nodes (10): AnyKeyControl, DiscreteButtonControl, Keyboard, ButtonControl, Input
 
 ### Community 277 - "Community 277"
 Cohesion: 0.02
-Nodes (55): AskUser, UnityEditor.ShaderGraph.Drawing, ContextualMenuManipulator, ContextView, UnityEditor.ShaderGraph.Drawing, Edge, UnityEditor.ShaderGraph, GraphView (+47 more)
+Nodes (55): AskUser, ContextView, UnityEditor.ShaderGraph.Drawing, Edge, UnityEditor.ShaderGraph, IShaderGraphToolbarExtension, UnityEditor.ShaderGraph.Drawing, GraphView (+47 more)
 
 ### Community 278 - "Community 278"
-Cohesion: 0.02
-Nodes (89): Comparer, System.Collections, FormatException, SoapFault, System.Runtime.Serialization.Formatters, EnumEqualityComparer, System.Collections.Generic, SByteEnumEqualityComparer (+81 more)
+Cohesion: 0.01
+Nodes (173): AssemblyContentType, AssemblyVersionCompatibility, SimpleType, System.Data, ExtendedProtectionPolicy, System.Security.Authentication.ExtendedProtection, FormatException, SoapFault (+165 more)
 
 ### Community 279 - "Community 279"
 Cohesion: 0.01
 Nodes (109): UIGame, EUIPanel, bool, CanvasGroup, EViewMode, GameObject, int, RectTransform (+101 more)
 
 ### Community 280 - "Community 280"
-Cohesion: 0.15
-Nodes (4): TEdge, Directions, EdgeSides, IntPoint
+Cohesion: 0.05
+Nodes (27): Clipper, ClipperBase, ClipperException, Equals(), Int128Mul(), IntersectNode, Join, LocalMinima (+19 more)
 
 ### Community 281 - "Community 281"
 Cohesion: 0.06
@@ -20093,8 +20162,8 @@ Cohesion: 0.04
 Nodes (5): NativeHashSet, T, Test, UnsafeHashSet, NativeHashSetTestsGenerated
 
 ### Community 283 - "Community 283"
-Cohesion: 0.04
-Nodes (36): AlternatingRowBackground, CollectionVirtualizationMethod, Action, AttachToPanelEvent, bool, CollectionViewController, CollectionVirtualizationController, CustomStyleProperty (+28 more)
+Cohesion: 0.03
+Nodes (53): AlternatingRowBackground, CollectionVirtualizationMethod, Action, AttachToPanelEvent, bool, CollectionViewController, CollectionVirtualizationController, CreationContext (+45 more)
 
 ### Community 284 - "Community 284"
 Cohesion: 0.03
@@ -20102,7 +20171,7 @@ Nodes (32): ArgBuilder, Cmp, IfState, AppDomain, AssemblyBuilder, BindingFlags, 
 
 ### Community 285 - "Community 285"
 Cohesion: 0.02
-Nodes (66): AggregateDictionary, System.Runtime.Remoting.Channels, IDictionary, Array, ArrayList, IDictionaryEnumerator, IEnumerator, string (+58 more)
+Nodes (56): AggregateDictionary, System.Runtime.Remoting.Channels, OrderedDictionary, System.Runtime.Collections, IDictionary, Array, ArrayList, IDictionaryEnumerator (+48 more)
 
 ### Community 286 - "Community 286"
 Cohesion: 0.04
@@ -20118,7 +20187,7 @@ Nodes (48): ConstructorBuilder, System.Reflection.Emit, TypeBuilder, Binder, Bin
 
 ### Community 289 - "Community 289"
 Cohesion: 0.02
-Nodes (57): HorizontalAlignmentOptions, ITextPreprocessor, LayoutElement, bool, Bounds, char, Color, Color32 (+49 more)
+Nodes (70): HorizontalAlignmentOptions, ITextPreprocessor, LayoutElement, bool, Bounds, char, Color, Color32 (+62 more)
 
 ### Community 290 - "Community 290"
 Cohesion: 0.07
@@ -20149,8 +20218,8 @@ Cohesion: 0.03
 Nodes (45): BooleanShaderProperty, ChangeExposedFieldCallback, ChangeValueCallback, CubemapShaderProperty, GradientShaderProperty, IdentifierField, AbstractShaderProperty, Action (+37 more)
 
 ### Community 297 - "Community 297"
-Cohesion: 0.10
-Nodes (8): DataColumn, DataColumnChangeEventArgs, DataRelation, DataRow, DataRowChangeEventArgs, ElementState, XmlBoundElement, XmlElement
+Cohesion: 0.08
+Nodes (38): DataParseStatus, HttpRequestHeader, HttpResponseHeader, Array, ArrayList, string, FriendAccessAllowed, NameValueCollection (+30 more)
 
 ### Community 298 - "Community 298"
 Cohesion: 0.06
@@ -20173,12 +20242,12 @@ Cohesion: 0.03
 Nodes (45): DataSet, System.Data, DataTableCollection, bool, Converter, CultureInfo, DataRelation, DataRelationCollection (+37 more)
 
 ### Community 303 - "Community 303"
-Cohesion: 0.03
-Nodes (20): ACH_GalacticTransportCount, ACH_HiveNearPlanet, ACH_IntergalacticTrafficCount, ACH_LandPlanetCount, ACH_LocatedDFCommunicator, ACH_ManualUnlock, ACH_MatrixUploaded, ACH_MechaInTheWarter (+12 more)
+Cohesion: 0.02
+Nodes (38): ACH_BulletRain, ACH_CompleteItemNoUse, ACH_CompleteWithPeace, ACH_FirstLandInTime, ACH_GalacticTransportCount, ACH_IntergalacticTrafficCount, ACH_LandPlanetCount, ACH_LocatedDFCommunicator (+30 more)
 
 ### Community 304 - "Community 304"
 Cohesion: 0.09
-Nodes (17): InitInputType, bool, byte, char, Encoding, int, Stream, string (+9 more)
+Nodes (11): DataRowBuilder, DataTableNewRowEventArgs, DataRow, DataRowAction, DataRowChangeEventArgs, DataViewRowState, Exception, FillErrorEventHandler (+3 more)
 
 ### Community 305 - "Community 305"
 Cohesion: 0.05
@@ -20198,7 +20267,7 @@ Nodes (46): BrushList, Brush, BrushList, GrassFlow, GrassFlowInspector, InlineDr
 
 ### Community 309 - "Community 309"
 Cohesion: 0.02
-Nodes (72): ConversionType, CoordinateSpaceConversion, BitangentVectorNode, UnityEditor.ShaderGraph, BitangentMaterialSlot, UnityEditor.ShaderGraph, ColorRGBMaterialSlot, UnityEditor.ShaderGraph (+64 more)
+Nodes (66): ConversionType, CoordinateSpaceConversion, BitangentMaterialSlot, UnityEditor.ShaderGraph, ColorRGBMaterialSlot, UnityEditor.ShaderGraph, NormalMaterialSlot, UnityEditor.ShaderGraph (+58 more)
 
 ### Community 310 - "Community 310"
 Cohesion: 0.04
@@ -20213,28 +20282,28 @@ Cohesion: 0.07
 Nodes (26): Bounds, Collider, Collision, Component, ContactPair, ContactPairHeader, ExcludeFromDocs, float (+18 more)
 
 ### Community 313 - "Community 313"
-Cohesion: 0.05
-Nodes (92): ComMemberType, CustomQueryInterfaceMode, AddRef(), AddRefInternal(), AllocCoTaskMem(), AllocCoTaskMemSize(), AllocHGlobal(), ClearAnsi() (+84 more)
+Cohesion: 0.04
+Nodes (105): ComMemberType, CustomQueryInterfaceMode, AddRef(), AddRefInternal(), AllocCoTaskMem(), AllocCoTaskMemSize(), AllocHGlobal(), ClearAnsi() (+97 more)
 
 ### Community 314 - "Community 314"
 Cohesion: 0.05
 Nodes (5): NativeParallelHashSet, T, Test, UnsafeParallelHashSet, NativeParallelHashSetTestsGenerated
 
 ### Community 315 - "Community 315"
-Cohesion: 0.01
-Nodes (148): SGBlackboardRow, UnityEditor.ShaderGraph.Drawing, BooleanMaterialSlot, ColorRGBAMaterialSlot, ColorRGBMaterialSlot, CubemapInputMaterialSlot, DeprecatedOnboardingSections, Unity.Multiplayer.Center.Editor (+140 more)
+Cohesion: 0.02
+Nodes (70): BooleanMaterialSlot, ColorRGBAMaterialSlot, ColorRGBMaterialSlot, MultiColumnHeaderColumn, UnityEngine.UIElements.Internal, MultiColumnHeaderColumnMoveLocationPreview, UnityEngine.UIElements.Internal, MultiColumnHeaderColumnMovePreview (+62 more)
 
 ### Community 316 - "Community 316"
-Cohesion: 0.06
-Nodes (20): bool, DateTime, FieldNameLookup, Guid, SmiEventSink_Default, SmiExtendedMetaData, SmiMetaData, SmiRecordBuffer (+12 more)
+Cohesion: 0.05
+Nodes (30): bool, DateTime, DateTimeOffset, FieldNameLookup, Guid, IDataReader, SmiEventSink_Default, SmiExtendedMetaData (+22 more)
 
 ### Community 317 - "Community 317"
 Cohesion: 0.05
 Nodes (24): ConstructorInfo, FieldInfo, ILGenerator, int, Label, LocalBuilder, MethodInfo, RegexBoyerMoore (+16 more)
 
 ### Community 318 - "Community 318"
-Cohesion: 0.02
-Nodes (75): AtmosphereRenderPass, PassData, BlitToRTHandlePass, BlitData, BlitEndRenderPass, BlitRendererFeature, BlitRenderPass, BlitStartRenderPass (+67 more)
+Cohesion: 0.03
+Nodes (61): BlitData, BlitEndRenderPass, BlitRendererFeature, BlitRenderPass, BlitStartRenderPass, DistortTunnelPass_CopyColor, int, RenderPassEvent2D (+53 more)
 
 ### Community 319 - "Community 319"
 Cohesion: 0.04
@@ -20254,7 +20323,7 @@ Nodes (38): UnityEngine.Rendering, UnsafeCommandBuffer, Action, Array, AsyncGPUR
 
 ### Community 323 - "Community 323"
 Cohesion: 0.04
-Nodes (35): InputProcessor, float, InputControl, InputControl, Vector2, InputControl, bool, InputControl (+27 more)
+Nodes (35): InputProcessor, float, InputControl, InputControl, Vector2, InputControl, float, InputControl (+27 more)
 
 ### Community 324 - "Community 324"
 Cohesion: 0.03
@@ -20266,11 +20335,11 @@ Nodes (15): BatteryStatus, CopyTextureSupport, FoveatedRenderingCaps, HDRDisplay
 
 ### Community 326 - "Community 326"
 Cohesion: 0.02
-Nodes (87): ButtonControlAttribute, ButtonControlView, UnityEditor.ShaderGraph.Drawing.Controls, ChannelMixerControlAttribute, ChannelMixerControlView, UnityEditor.ShaderGraph.Drawing.Controls, CubemapControlAttribute, CubemapControlView (+79 more)
+Nodes (83): ButtonControlAttribute, ButtonControlView, UnityEditor.ShaderGraph.Drawing.Controls, ColorControlAttribute, ColorControlView, UnityEditor.ShaderGraph.Drawing.Controls, DefaultControlAttribute, UnityEditor.ShaderGraph.Drawing.Controls (+75 more)
 
 ### Community 327 - "Community 327"
-Cohesion: 0.02
-Nodes (62): UnityEditor.ShaderGraph, UVNode, IMayRequireMeshUV, MayRequireMeshUVExtensions, UnityEditor.ShaderGraph, MaterialSlot, ShaderStageCapability, UVChannel (+54 more)
+Cohesion: 0.01
+Nodes (110): IMayRequireMeshUV, MayRequireMeshUVExtensions, UnityEditor.ShaderGraph, MaterialSlot, ShaderStageCapability, UVChannel, FunctionRegistry, GenerationMode (+102 more)
 
 ### Community 328 - "Community 328"
 Cohesion: 0.06
@@ -20294,31 +20363,31 @@ Nodes (108): DirectorWrapMode, FreeFunction, IntPtr, MethodImpl, Playable, Playa
 
 ### Community 333 - "Community 333"
 Cohesion: 0.02
-Nodes (52): XblAchievementOrderBy, XblAchievementsGetAchievementResult, XblAchievementsGetAchievementsForTitleIdResult, XblAchievementsUpdateAchievementResult, XblAchievementType, XblContextHandle, XblLeaderboardQuery, XblLeaderboardResult (+44 more)
+Nodes (53): XblAchievementOrderBy, XblAchievementsGetAchievementResult, XblAchievementsGetAchievementsForTitleIdResult, XblAchievementsUpdateAchievementResult, XblAchievementType, XblAnonymousUserType, XblContextHandle, XblLeaderboardQuery (+45 more)
 
 ### Community 334 - "Community 334"
 Cohesion: 0.02
-Nodes (71): AttributedExportDefinition, System.ComponentModel.Composition.AttributedModel, System.ComponentModel.Composition.AttributedModel, AttributedPartCreationInfo, CompositionErrorDebuggerProxy, System.ComponentModel.Composition, System.ComponentModel.Composition, ExportFactory (+63 more)
+Nodes (71): System.ComponentModel.Composition.AttributedModel, CompositionError, System.ComponentModel.Composition, CompositionErrorDebuggerProxy, System.ComponentModel.Composition, System.ComponentModel.Composition, IAttributedImport, System.ComponentModel.Composition (+63 more)
 
 ### Community 335 - "Community 335"
 Cohesion: 0.02
-Nodes (79): ColorNode, UnityEditor.ShaderGraph, UnityEditor.ShaderGraph.Internal, SliderNode, UnityEditor.ShaderGraph, UnityEditor.ShaderGraph, Vector1Node, UnityEditor.ShaderGraph (+71 more)
+Nodes (67): IntegerNode, UnityEditor.ShaderGraph, SliderNode, UnityEditor.ShaderGraph, UnityEditor.ShaderGraph, Vector1Node, UnityEditor.ShaderGraph, Vector2Node (+59 more)
 
 ### Community 336 - "Community 336"
-Cohesion: 0.04
-Nodes (91): ExternalForcesModule, Color, NativeThrows, Sprite, Transform, ParticleSystemCustomData, ParticleSystemCustomDataMode, ParticleSystemForceField (+83 more)
+Cohesion: 0.02
+Nodes (76): ApplyImportsAction, ApplyTemplatesAction, UnitySourceGeneratedAssemblyMonoScriptTypes_v1, AttributeAction, AttributeSetAction, BeginEvent, CallTemplateAction, CommentAction (+68 more)
 
 ### Community 337 - "Community 337"
-Cohesion: 0.05
-Nodes (27): bool, CancellationTokenSource, DataTable, DbCommand, DbConnectionFactory, DbConnectionInternal, DbConnectionOptions, DbConnectionPoolGroup (+19 more)
+Cohesion: 0.04
+Nodes (34): bool, CancellationToken, CancellationTokenRegistration, CancellationTokenSource, DataTable, DbConnectionFactory, DbConnectionInternal, DbConnectionOptions (+26 more)
 
 ### Community 338 - "Community 338"
-Cohesion: 0.02
-Nodes (51): IntSizedArray, System.Runtime.Serialization.Formatters.Binary, SizedArray, System.Runtime.Serialization.Formatters.Binary, Stack, StackDebugView, StackEnumerator, SyncStack (+43 more)
+Cohesion: 0.01
+Nodes (114): IntSizedArray, System.Runtime.Serialization.Formatters.Binary, SizedArray, System.Runtime.Serialization.Formatters.Binary, Queue, QueueDebugView, QueueEnumerator, SynchronizedQueue (+106 more)
 
 ### Community 339 - "Community 339"
 Cohesion: 0.03
-Nodes (30): CryptoAPITransform, System.Security.Cryptography, FromBase64Transform, System.Security.Cryptography, System.Security.Cryptography, ToBase64Transform, FromBase64TransformMode, ICryptoTransform (+22 more)
+Nodes (30): CryptoAPITransform, System.Security.Cryptography, FromBase64Transform, System.Security.Cryptography, HashAlgorithm, System.Security.Cryptography, System.Security.Cryptography, ToBase64Transform (+22 more)
 
 ### Community 340 - "Community 340"
 Cohesion: 0.06
@@ -20333,12 +20402,12 @@ Cohesion: 0.03
 Nodes (31): ContentTransferEncodingHeader, ContentTypeHeader, Encoding, OnXmlDictionaryReaderClose, Stream, XmlDictionaryReaderQuotas, bool, byte (+23 more)
 
 ### Community 343 - "Community 343"
-Cohesion: 0.04
-Nodes (51): FunctionFocus, KeyMatchBuilder, bool, char, Compiler, CompilerScopeManager, Conditional, HybridDictionary (+43 more)
+Cohesion: 0.06
+Nodes (40): FunctionFocus, KeyMatchBuilder, bool, char, CompilerScopeManager, HybridDictionary, IList, int (+32 more)
 
 ### Community 344 - "Community 344"
 Cohesion: 0.04
-Nodes (34): GraphData, InspectorPreviewData, AbstractMaterialNode, AbstractShaderProperty, BlockFieldDescriptor, BlockNode, CategoryData, ColorShaderProperty (+26 more)
+Nodes (35): GraphData, InspectorPreviewData, LegacyUnknownTypeNode, AbstractMaterialNode, AbstractShaderProperty, BlockFieldDescriptor, BlockNode, CategoryData (+27 more)
 
 ### Community 345 - "Community 345"
 Cohesion: 0.04
@@ -20346,7 +20415,7 @@ Nodes (39): ActionTreeItem, ActionMapListItem, ByBindingGroup(), ByDeviceLayout(
 
 ### Community 346 - "Community 346"
 Cohesion: 0.02
-Nodes (69): ChannelMixerNode, UnityEditor.ShaderGraph, CustomTextureSelf, UnityEditor.Rendering.CustomRenderTexture.ShaderGraph, CustomTextureSize, UnityEditor.Rendering.CustomRenderTexture.ShaderGraph, CustomTextureSlice, UnityEditor.Rendering.CustomRenderTexture.ShaderGraph (+61 more)
+Nodes (79): ChannelMixerNode, UnityEditor.ShaderGraph, InvertColorsNode, UnityEditor.ShaderGraph, BlendStyle, CustomTextureSelf, UnityEditor.Rendering.CustomRenderTexture.ShaderGraph, CustomTextureSize (+71 more)
 
 ### Community 347 - "Community 347"
 Cohesion: 0.04
@@ -20354,11 +20423,11 @@ Nodes (46): DomNameTable, ArrayList, bool, EmptyEnumerator, Hashtable, IXmlSchem
 
 ### Community 348 - "Community 348"
 Cohesion: 0.03
-Nodes (36): BaseCommandBuffer, RasterCommandBuffer, UnityEngine.Rendering, Color, Camera, CameraLateLatchMatrixType, Color, ComputeBuffer (+28 more)
+Nodes (38): BaseCommandBuffer, RasterCommandBuffer, UnityEngine.Rendering, Color, Camera, CameraLateLatchMatrixType, Color, ComputeBuffer (+30 more)
 
 ### Community 349 - "Community 349"
 Cohesion: 0.02
-Nodes (70): DataException, System.Data, KeyNotFoundException, System.Collections.Generic, InvalidComObjectException, System.Runtime.InteropServices, MarshalDirectiveException, System.Runtime.InteropServices (+62 more)
+Nodes (70): DataException, System.Data, ServicedComponentException, System.EnterpriseServices, InvalidComObjectException, System.Runtime.InteropServices, InvalidOleVariantTypeException, System.Runtime.InteropServices (+62 more)
 
 ### Community 350 - "Community 350"
 Cohesion: 0.05
@@ -20366,19 +20435,19 @@ Nodes (45): DebugViewWriter, System.Linq.Expressions, Flow, Action, BinaryExpres
 
 ### Community 351 - "Community 351"
 Cohesion: 0.03
-Nodes (65): ALTROWSTATUS, bool, CancellationToken, CancellationTokenSource, char, CommandBehavior, Conditional, DataTable (+57 more)
+Nodes (53): ALTROWSTATUS, bool, CancellationTokenSource, char, CommandBehavior, Conditional, DateTime, DateTimeOffset (+45 more)
 
 ### Community 352 - "Community 352"
 Cohesion: 0.02
-Nodes (88): AbstractMaterialNode, LegacySwizzleChannelData, SwizzleNode, UnityEditor.ShaderGraph, TestNode, UnityEditor.ShaderGraph, IMasterNode1, CustomInterpolatorNode (+80 more)
+Nodes (79): AbstractMaterialNode, TestNode, UnityEditor.ShaderGraph, IMasterNode1, CustomInterpolatorNode, UnityEditor.ShaderGraph, PBRMasterNode1, UnityEditor.ShaderGraph.Legacy (+71 more)
 
 ### Community 353 - "Community 353"
 Cohesion: 0.04
 Nodes (36): CopyAction, DeleteAction, FrameAllAction, FrameSelectedAction, GotoEndAction, GotoStartAction, KeyAllAnimated, MatchContent (+28 more)
 
 ### Community 354 - "Community 354"
-Cohesion: 0.03
-Nodes (35): ADV_AssemblerNoRecipe, ADV_BeltConnectSmelter, ADV_BuildMenuNeedUnlock, ADV_CollectResource, ADV_CopyRecipe, ADV_DysonSphereEnergy, ADV_EnterSailMode, ADV_FactoryNoPower (+27 more)
+Cohesion: 0.05
+Nodes (17): ADV_AssemblerNoRecipe, ADV_CollectResource, ADV_CopyRecipe, ADV_FactoryNoPower, ADV_GameStart, ADV_MechaNeedsPower, ADV_OutOfBuildRange, ADV_PlanetViewDetail_1 (+9 more)
 
 ### Community 355 - "Community 355"
 Cohesion: 0.05
@@ -20402,7 +20471,7 @@ Nodes (99): CapsuleDirection2D, Collider2D, ContactFilter2D, List, MethodImpl, N
 
 ### Community 361 - "Community 361"
 Cohesion: 0.02
-Nodes (69): CopyRenderFeature, CopyRenderPass, BlitToRTHandleRendererFeature, BlitToRTHandlePass, DepthStackRenderPass, GbufferVisualizationRendererFeature, GBufferVisualizationRenderPass, PassData (+61 more)
+Nodes (66): AtmosphereRenderPass, Camera, IAtmosphereRuntime, int, Material, Plane, RenderingData, ScriptableRenderer (+58 more)
 
 ### Community 362 - "Community 362"
 Cohesion: 0.04
@@ -20417,8 +20486,8 @@ Cohesion: 0.04
 Nodes (5): byte, Exception, int, string, SQL
 
 ### Community 365 - "Community 365"
-Cohesion: 0.04
-Nodes (40): CreationContext, EventBase, EventInterest, IUxmlAttributes, string, UxmlBoolAttributeDescription, UxmlStringAttributeDescription, UxmlTraits (+32 more)
+Cohesion: 0.03
+Nodes (44): HeaderFoldout, HeaderToggleFoldout, UnityEditor.Rendering, Foldout, AttachToPanelEvent, bool, ChangeEvent, Func (+36 more)
 
 ### Community 366 - "Community 366"
 Cohesion: 0.08
@@ -20462,7 +20531,7 @@ Nodes (29): ChildRewriter, BindingRewriter, ChildRewriter, ListBindingRewriter, 
 
 ### Community 376 - "Community 376"
 Cohesion: 0.02
-Nodes (66): AxisCompositeEditor, UnityEngine.InputSystem.Composites, IInputInteraction, InputParameterEditor, HoldInteraction, HoldInteractionEditor, UnityEngine.InputSystem.Interactions, MultiTapInteraction (+58 more)
+Nodes (71): AxisComposite, AxisCompositeEditor, UnityEngine.InputSystem.Composites, IInputInteraction, InputParameterEditor, HoldInteraction, HoldInteractionEditor, UnityEngine.InputSystem.Interactions (+63 more)
 
 ### Community 377 - "Community 377"
 Cohesion: 0.07
@@ -20485,16 +20554,16 @@ Cohesion: 0.05
 Nodes (26): bool, char, IDictionary, int, Type, ValidationEventArgs, ValidationEventHandler, XmlNamespaceManager (+18 more)
 
 ### Community 383 - "Community 383"
-Cohesion: 0.07
+Cohesion: 0.06
 Nodes (21): DataContractAttribute, DataContractSerializerSection, CodeTypeReference, CollectionDataContractAttribute, Dictionary, ICustomAttributeProvider, IGenericNameProvider, IList (+13 more)
 
 ### Community 384 - "Community 384"
-Cohesion: 0.13
-Nodes (19): DisplayType, int, LayerMask, Material, RenderingLayerMask, BoolParameter, ClampedIntParameter, IntParameter (+11 more)
+Cohesion: 0.04
+Nodes (63): DisplayType, AnimationCurve, bool, Color, Cubemap, float, int, LayerMask (+55 more)
 
 ### Community 385 - "Community 385"
 Cohesion: 0.02
-Nodes (59): IRailAchievementHelper, IRailAssetsHelper, IRailGroupChat, IRailGroupChatHelper, IRailHttpSessionHelper, IRailIMEHelper, IRailInGameStorePurchaseHelper, IRailScreenshotHelper (+51 more)
+Nodes (61): IRailApps, IRailAssetsHelper, IRailGroupChat, IRailGroupChatHelper, IRailHttpSessionHelper, IRailIMEHelper, IRailInGameCoin, IRailInGameStorePurchaseHelper (+53 more)
 
 ### Community 386 - "Community 386"
 Cohesion: 0.05
@@ -20517,8 +20586,8 @@ Cohesion: 0.05
 Nodes (64): AddMatcher(), AsArrayOfControlsWithSize(), Builder, Clear(), ComputeDistanceInInheritanceHierarchy(), ControlItemJson, DontReset(), FindLayoutThatIntroducesControl() (+56 more)
 
 ### Community 392 - "Community 392"
-Cohesion: 0.08
-Nodes (17): OnValidate(), Scrollbar, ScrollEvent, UnityEngine.UI, AxisEventData, bool, Camera, CanvasUpdate (+9 more)
+Cohesion: 0.07
+Nodes (22): AbstractShaderProperty, AppendTo(), LegacyShaderPropertyData, PropertyAttribute, UnityEditor.ShaderGraph.Internal, ValueEquals(), AbstractMaterialNode, Action (+14 more)
 
 ### Community 393 - "Community 393"
 Cohesion: 0.04
@@ -20534,19 +20603,19 @@ Nodes (62): AbnormalityProto, AbnormalityProtoSet, AchievementProtoSet, AdvisorT
 
 ### Community 396 - "Community 396"
 Cohesion: 0.03
-Nodes (43): AnalyticsTestCallback, UnityEditor.TestTools.TestRunner.Api.Analytics, IErrorCallbacks, UnityEditor.TestTools.TestRunner.Api, ITestTreeRebuildCallbacks, UnityEditor.TestTools.TestRunner.Api, UnityEditor.TestTools.TestRunner.GUI, WindowResultUpdater (+35 more)
+Nodes (49): AnalyticsTestCallback, UnityEditor.TestTools.TestRunner.Api.Analytics, IErrorCallbacks, UnityEditor.TestTools.TestRunner.Api, ITestTreeRebuildCallbacks, UnityEditor.TestTools.TestRunner.Api, UnityEditor.TestTools.TestRunner.GUI, WindowResultUpdater (+41 more)
 
 ### Community 397 - "Community 397"
-Cohesion: 0.03
-Nodes (19): ADV_DysonSphereStressExceed, ADV_ItemInHand, ADV_OnBuildMultiLevel, ADV_OnPlayerKilled, ADV_PlanetViewDetail_2, ADV_PropertyUnlock, ADV_ResearchSlow, ADV_SpaceCapsuleRecycled (+11 more)
+Cohesion: 0.06
+Nodes (10): ADV_DeleteDysonSphereStructure, ADV_DysonSphereStressExceed, ADV_PlanetViewDetail_2, ADV_PlanningDysonShell, ADV_PropertyUnlock, ADV_UseStarMap, AdvisorWaitDeterminator, int (+2 more)
 
 ### Community 398 - "Community 398"
-Cohesion: 0.03
-Nodes (35): Reset(), Text, UnityEngine.UI, ILayoutElement, ILayoutGroup, LayoutGroup, OnValidate(), UnityEngine.UI (+27 more)
+Cohesion: 0.08
+Nodes (11): LayoutGroup, OnValidate(), UnityEngine.UI, DrivenRectTransformTracker, IEnumerator, List, RectOffset, RectTransform (+3 more)
 
 ### Community 399 - "Community 399"
-Cohesion: 0.08
-Nodes (14): AccelStructAdapter, Color, ComputeBuffer, CubemapRender, DirectionalLight, float, Material, MaterialPool (+6 more)
+Cohesion: 0.05
+Nodes (43): HandleSet, AccelStructAdapter, bool, Color, CommandBuffer, ComputeBuffer, CubemapRender, Dictionary (+35 more)
 
 ### Community 400 - "Community 400"
 Cohesion: 0.09
@@ -20565,16 +20634,16 @@ Cohesion: 0.06
 Nodes (22): GenerateHelper, System.Xml.Xsl.IlGen, bool, Conditional, ConstructorInfo, FieldInfo, GenerateNameType, ILGenerator (+14 more)
 
 ### Community 404 - "Community 404"
-Cohesion: 0.02
-Nodes (37): IRailBrowser, IRailGlobalStats, IRailHttpSession, RailResult, RailResult, RailResult, RailGroupInfo, RailResult (+29 more)
+Cohesion: 0.03
+Nodes (32): IRailGlobalStats, IRailPlayerStats, RailResult, RailResult, RailResult, RailGroupInfo, RailResult, List (+24 more)
 
 ### Community 405 - "Community 405"
 Cohesion: 0.05
 Nodes (32): AnimationClip, bool, Dictionary, DiscreteTime, GameObject, IEnumerable, IList, IMarker (+24 more)
 
 ### Community 406 - "Community 406"
-Cohesion: 0.02
-Nodes (74): ColorGradingMode, ContextContainer, ContextItem, CreateAndGetData(), Dispose(), TypeId, UnityEngine.Rendering, TexRefData (+66 more)
+Cohesion: 0.04
+Nodes (40): ColorGradingMode, ContextContainer, ContextItem, CreateAndGetData(), Dispose(), TypeId, UnityEngine.Rendering, UnityEngine.Rendering.Universal (+32 more)
 
 ### Community 407 - "Community 407"
 Cohesion: 0.05
@@ -20609,12 +20678,12 @@ Cohesion: 0.08
 Nodes (27): CodeTypeDelegate, TypedDataSetGenerator, ArrayList, bool, CodeAttributeDeclaration, CodeBinaryOperatorExpression, CodeBinaryOperatorType, CodeCatchClause (+19 more)
 
 ### Community 415 - "Community 415"
-Cohesion: 0.11
-Nodes (14): KeyCollection, KeyValuePairComparer, SortedDictionary, System.Collections.Generic, ValueCollection, Array, Enumerator, IComparer (+6 more)
+Cohesion: 0.13
+Nodes (11): Array, IDictionaryEnumerator, IEnumerator, KeyValuePair, object, TKey, TValue, KeyCollection (+3 more)
 
 ### Community 416 - "Community 416"
 Cohesion: 0.04
-Nodes (17): RenderGraphTests, Action, AsyncGPUReadbackRequest, Color, ConditionalIgnore, Dictionary, GraphicsFormat, int (+9 more)
+Nodes (13): RenderGraphTests, Action, AsyncGPUReadbackRequest, Color, ConditionalIgnore, Dictionary, int, RenderGraph (+5 more)
 
 ### Community 417 - "Community 417"
 Cohesion: 0.09
@@ -20625,16 +20694,16 @@ Cohesion: 0.04
 Nodes (29): ComputeCommandBuffer, UnityEngine.Rendering, Array, BuildSettings, Camera, CameraLateLatchMatrixType, ComputeBuffer, ComputeShader (+21 more)
 
 ### Community 419 - "Community 419"
-Cohesion: 0.04
-Nodes (37): Decoder, Encoder, EncodingProvider, bool, byte, char, CLSCompliant, ComVisible (+29 more)
+Cohesion: 0.06
+Nodes (30): Encoder, EncodingProvider, bool, byte, char, CLSCompliant, ComVisible, DecoderFallback (+22 more)
 
 ### Community 420 - "Community 420"
 Cohesion: 0.03
 Nodes (45): DownloadHandler, AssetBundle, Hash128, IntPtr, MethodImpl, UnityWebRequest, AudioClip, AudioType (+37 more)
 
 ### Community 421 - "Community 421"
-Cohesion: 0.10
-Nodes (12): IShaderScriptableStrippingData, IsKeywordEnabled(), IsShaderFeatureEnabled(), PassHasKeyword(), ShaderScriptableStripper, UnityEditor.Rendering.Universal, LocalKeyword, ShaderCompilerData (+4 more)
+Cohesion: 0.08
+Nodes (15): IShaderScriptableStrippingData, IsKeywordEnabled(), IsShaderFeatureEnabled(), IsVolumeFeatureEnabled(), PassHasKeyword(), ShaderScriptableStripper, UnityEditor.Rendering.Universal, LocalKeyword (+7 more)
 
 ### Community 422 - "Community 422"
 Cohesion: 0.03
@@ -20694,11 +20763,11 @@ Nodes (31): Attributes, HybridObjectCache, bool, ClassDataNode, CollectionDataNo
 
 ### Community 439 - "Community 439"
 Cohesion: 0.03
-Nodes (51): AudioTrack, UnityEngine.Timeline, ControlTrack, GatherProperties(), UnityEngine.Timeline, CustomAnimationTrack, DocCodeExamples, TrackAssetExamples_HideAPI (+43 more)
+Nodes (47): ControlTrack, GatherProperties(), UnityEngine.Timeline, CustomAnimationTrack, DocCodeExamples, TrackAssetExamples_HideAPI, MarkerTrack, UnityEngine.Timeline (+39 more)
 
 ### Community 440 - "Community 440"
-Cohesion: 0.05
-Nodes (68): BaseField<Color>, BaseField<Object>, BaseField<Vector2>, BaseField<Vector3>, BaseField<Vector4>, BitField, BoolField, CameraSelector (+60 more)
+Cohesion: 0.04
+Nodes (73): BaseField<Color>, BaseField<Object>, BaseField<Vector2>, BaseField<Vector3>, BaseField<Vector4>, BitField, BoolField, CameraSelector (+65 more)
 
 ### Community 441 - "Community 441"
 Cohesion: 0.06
@@ -20722,7 +20791,7 @@ Nodes (59): bool, CodeCompileUnit, CodeDomProvider, CodeGenerationOptions, CodeN
 
 ### Community 446 - "Community 446"
 Cohesion: 0.03
-Nodes (59): AttachmentDescriptor, Color, RenderTargetIdentifier, bool, Bounds, Camera, Color, CommandBuffer (+51 more)
+Nodes (59): AttachmentDescriptor, Color, RenderTargetIdentifier, Bounds, Camera, CommandBuffer, ComputeBuffer, ComputeShader (+51 more)
 
 ### Community 447 - "Community 447"
 Cohesion: 0.05
@@ -20749,16 +20818,16 @@ Cohesion: 0.03
 Nodes (29): DataColumn, System.Data, AggregateType, AutoIncrementValue, BitArray, bool, DataExpression, DataRelation (+21 more)
 
 ### Community 453 - "Community 453"
-Cohesion: 0.05
-Nodes (41): EXECTYPE, AsyncCallback, bool, CancellationToken, CommandBehavior, CommandType, DbDataReader, DbParameter (+33 more)
+Cohesion: 0.06
+Nodes (33): EXECTYPE, AsyncCallback, bool, CancellationToken, CommandBehavior, CommandType, DbDataReader, DbParameter (+25 more)
 
 ### Community 454 - "Community 454"
-Cohesion: 0.07
-Nodes (24): double, float, Func, IEnumerable, IList, IOrderedEnumerable, List, MultiColumnHeader (+16 more)
+Cohesion: 0.03
+Nodes (41): UnityEditor.ShaderGraph, ViewDirectionNode, UnityEditor.ShaderGraph, ViewDirectionMaterialSlot, IHasCustomDeprecationMessage, UnityEditor.ShaderGraph, IMayRequireViewDirection, MayRequireViewDirectionExtensions (+33 more)
 
 ### Community 455 - "Community 455"
-Cohesion: 0.10
-Nodes (11): char, int, string, XmlCanonicalWriter, XmlDictionaryString, XmlSpace, Element, Namespace (+3 more)
+Cohesion: 0.07
+Nodes (18): IDictionaryEnumerator, Array, ArrayList, bool, Hashtable, IEqualityComparer, int, object (+10 more)
 
 ### Community 456 - "Community 456"
 Cohesion: 0.07
@@ -20821,8 +20890,8 @@ Cohesion: 0.05
 Nodes (21): DataStreamReader, Func, int, T, Test, TestCase, TestRequiresDotsDebugOrCollectionChecks, UnityPlatform (+13 more)
 
 ### Community 471 - "Community 471"
-Cohesion: 0.04
-Nodes (28): ConnectionState, DataTable, DbConnectionFactory, DbConnectionInternal, DbConnectionOptions, DbConnectionPoolGroup, DbConnectionPoolKey, DbTransaction (+20 more)
+Cohesion: 0.05
+Nodes (26): ConnectionState, DataTable, DbConnectionFactory, DbConnectionInternal, DbConnectionOptions, DbConnectionPoolGroup, DbConnectionPoolKey, DbTransaction (+18 more)
 
 ### Community 472 - "Community 472"
 Cohesion: 0.03
@@ -20834,7 +20903,7 @@ Nodes (44): added, AssemblyOptions, BurstMethodTreeView, BurstInspectorGUI, Burs
 
 ### Community 475 - "Community 475"
 Cohesion: 0.06
-Nodes (26): AsyncEventArgs, SecurityCritical, AsyncCallback, AsyncCompletion, AsyncCompletionResult, AsyncEventArgsCallback, bool, byte (+18 more)
+Nodes (28): AsyncEventArgs, AsyncResult, AsyncCallback, AsyncCompletion, AsyncCompletionResult, AsyncEventArgsCallback, bool, byte (+20 more)
 
 ### Community 476 - "Community 476"
 Cohesion: 0.04
@@ -20845,8 +20914,8 @@ Cohesion: 0.05
 Nodes (10): CombineInstance, BoneWeight, BoneWeight1, FreeFunction, IndexFormat, Matrix4x4, MeshTopology, SecurityCritical (+2 more)
 
 ### Community 478 - "Community 478"
-Cohesion: 0.04
-Nodes (37): IPointerEvent, IPointerMoveHandler, IScrollHandler, AxisEventData, BaseEventData, bool, Event, EventModifiers (+29 more)
+Cohesion: 0.05
+Nodes (36): IPointerEvent, IPointerMoveHandler, AxisEventData, BaseEventData, bool, Event, EventModifiers, float (+28 more)
 
 ### Community 479 - "Community 479"
 Cohesion: 0.05
@@ -20854,7 +20923,7 @@ Nodes (70): DateTime, DateTimeKind, DateTimeStyles, IFormatProvider, MethodImpl,
 
 ### Community 480 - "Community 480"
 Cohesion: 0.08
-Nodes (28): Assembly, ClassDataContract, CodeCompileUnit, CodeMemberProperty, CodeNamespace, CodeTypeDeclaration, CodeTypeReference, CollectionBase (+20 more)
+Nodes (27): Assembly, ClassDataContract, CodeCompileUnit, CodeMemberProperty, CodeNamespace, CodeTypeDeclaration, CodeTypeReference, CollectionBase (+19 more)
 
 ### Community 481 - "Community 481"
 Cohesion: 0.06
@@ -20869,8 +20938,8 @@ Cohesion: 0.04
 Nodes (15): KeyList, SortedList, SortedListDebugView, SortedListEnumerator, SyncSortedList, System.Collections, ValueList, Array (+7 more)
 
 ### Community 484 - "Community 484"
-Cohesion: 0.06
-Nodes (24): EmitParams, Color32, FreeFunction, IntPtr, JobHandle, JobScheduleParameters, List, NativeArray (+16 more)
+Cohesion: 0.05
+Nodes (45): EmitParams, Color32, FreeFunction, IntPtr, JobHandle, JobScheduleParameters, List, NativeArray (+37 more)
 
 ### Community 485 - "Community 485"
 Cohesion: 0.08
@@ -20901,8 +20970,8 @@ Cohesion: 0.06
 Nodes (33): bool, BulkCopySimpleResultSet, CancellationToken, DataRow, DataRowState, DataTable, DbDataReader, Func (+25 more)
 
 ### Community 492 - "Community 492"
-Cohesion: 0.06
-Nodes (11): bool, char, DateTime, Encoding, SecurityCritical, SecuritySafeCritical, Stream, UniqueId (+3 more)
+Cohesion: 0.05
+Nodes (23): SecuritySafeCritical, AsyncCallback, AsyncCompletion, Base64Encoding, bool, byte, char, DateTime (+15 more)
 
 ### Community 493 - "Community 493"
 Cohesion: 0.06
@@ -20914,7 +20983,7 @@ Nodes (22): GD_GroupBasicOperations, GD_GroupCollectionOperations, GD_GroupEnerg
 
 ### Community 495 - "Community 495"
 Cohesion: 0.03
-Nodes (23): MilestoneDeterminator, MST_FirstLandAnotherPlanet, MST_FlyDistance, MST_MiningVein, MST_OnBuild, MST_PlanningBelt, MST_TankStorageCount, MST_UseFoundation (+15 more)
+Nodes (29): MilestoneDeterminator, MST_FirstLandAnotherPlanet, MST_FlyDistance, MST_ItemProduction, MST_LaunchRocket, MST_MiningVein, MST_OnBuild, MST_PowerComponentWork (+21 more)
 
 ### Community 496 - "Community 496"
 Cohesion: 0.06
@@ -20926,11 +20995,11 @@ Nodes (41): CPUTextureStackRequestLayerParameters, CPUTextureStackRequestParamet
 
 ### Community 498 - "Community 498"
 Cohesion: 0.03
-Nodes (42): GraphicsContainer, System.Drawing.Drawing2D, GraphicsState, System.Drawing.Drawing2D, Brush, System.Drawing, AssemblyLocator, System.EnterpriseServices.Internal (+34 more)
+Nodes (47): GraphicsContainer, System.Drawing.Drawing2D, GraphicsPathIterator, System.Drawing.Drawing2D, GraphicsState, System.Drawing.Drawing2D, Brush, System.Drawing (+39 more)
 
 ### Community 499 - "Community 499"
 Cohesion: 0.03
-Nodes (52): EventBase, RailSessionTicket, AsyncAcquireGameServerSessionTicketResponse, rail, CheckAllDlcsStateReadyResult, rail, CloseBrowserResult, rail (+44 more)
+Nodes (52): EventBase, RailSessionTicket, AcquireSessionTicketResponse, rail, CheckAllDlcsStateReadyResult, rail, CloseBrowserResult, rail (+44 more)
 
 ### Community 500 - "Community 500"
 Cohesion: 0.07
@@ -20957,8 +21026,8 @@ Cohesion: 0.06
 Nodes (23): ReflectedTypeData, ReflectTypeDescriptionProvider, System.ComponentModel, EditorAttribute, Attribute, AttributeCollection, EventDescriptor, EventDescriptorCollection (+15 more)
 
 ### Community 506 - "Community 506"
-Cohesion: 0.08
-Nodes (38): DataParseStatus, HttpRequestHeader, HttpResponseHeader, Array, ArrayList, string, FriendAccessAllowed, NameValueCollection (+30 more)
+Cohesion: 0.09
+Nodes (17): InitInputType, bool, byte, char, Encoding, int, Stream, string (+9 more)
 
 ### Community 507 - "Community 507"
 Cohesion: 0.07
@@ -20973,16 +21042,16 @@ Cohesion: 0.07
 Nodes (30): Array, bool, ClassDataNode, CollectionDataNode, DataContract, ExtensionDataMember, ExtensionDataObject, ICollection (+22 more)
 
 ### Community 510 - "Community 510"
-Cohesion: 0.06
-Nodes (29): Dictionary, AttributeSet, bool, Compiler, CompilerScopeManager, IEnumerable, IList, int (+21 more)
+Cohesion: 0.11
+Nodes (15): AttributeSet, Compiler, int, NodeCtor, Number, ProtoTemplate, QilName, Sort (+7 more)
 
 ### Community 511 - "Community 511"
 Cohesion: 0.11
 Nodes (74): CheckIsValidAndResolve(), GetGlobalTR(), GetGlobalTRInternal(), GetGlobalTRInternal_Injected(), GetLocalPosition(), GetLocalPositionInternal(), GetLocalPositionInternal_Injected(), GetLocalRotation() (+66 more)
 
 ### Community 512 - "Community 512"
-Cohesion: 0.04
-Nodes (17): ABN_DysonSphereConstruct, ABN_ItemForUnlockTech, ABN_MechaForgeRecipeData, ABN_PowerGenerator, ABN_PreTechUnlocked, ABN_ProtoData, ABN_StarValue, ABN_UseConsole (+9 more)
+Cohesion: 0.03
+Nodes (19): ABN_ConsumptionForUpgrade, ABN_FreeModeConfig, ABN_ItemForUnlockTech, ABN_MechaForgeRecipeData, ABN_Miner, ABN_PreTechUnlocked, ABN_ProtoData, ABN_RecipeUnlockCondition (+11 more)
 
 ### Community 513 - "Community 513"
 Cohesion: 0.06
@@ -20997,8 +21066,8 @@ Cohesion: 0.06
 Nodes (36): CellChunkData, Cell, ComputeShader, Dictionary, int, ProbeVolumeBakingSet, SphericalHarmonicsL2, BakingCell (+28 more)
 
 ### Community 516 - "Community 516"
-Cohesion: 0.04
-Nodes (43): IDataAdapter, System.Data, IDbDataAdapter, System.Data, DbDataAdapter, DataSet, DataTable, IDataParameter (+35 more)
+Cohesion: 0.09
+Nodes (14): DataRow, DataTableMapping, Exception, IDataParameter, IDbCommand, int, object, RowUpdatedEventArgs (+6 more)
 
 ### Community 517 - "Community 517"
 Cohesion: 0.07
@@ -21009,8 +21078,8 @@ Cohesion: 0.04
 Nodes (25): InputRemoting, InputSystem, Func, IEnumerable, InputAction, InputControl, InputControlLayout, InputControlList (+17 more)
 
 ### Community 519 - "Community 519"
-Cohesion: 0.10
-Nodes (12): bool, Dictionary, float, int, List, Material, RectTransform, string (+4 more)
+Cohesion: 0.04
+Nodes (28): Axis, bool, Dictionary, float, GUIContent, int, List, Material (+20 more)
 
 ### Community 520 - "Community 520"
 Cohesion: 0.07
@@ -21038,7 +21107,7 @@ Nodes (13): MoveNext(), RBTree, System.Data, TreePage, Array, Conditional, IEnum
 
 ### Community 526 - "Community 526"
 Cohesion: 0.03
-Nodes (41): ChannelBinding, System.Security.Authentication.ExtendedProtection, SafeEventLogWriteHandle, System.Runtime.Interop, SecurityCritical, SecurityCritical, Microsoft.Win32.SafeHandles, SafeLibraryHandle (+33 more)
+Nodes (38): ChannelBinding, System.Security.Authentication.ExtendedProtection, IntPtr, SecurityCritical, SecurityCritical, Microsoft.Win32.SafeHandles, SafeLibraryHandle, SecurityCritical (+30 more)
 
 ### Community 527 - "Community 527"
 Cohesion: 0.09
@@ -21046,7 +21115,7 @@ Nodes (16): GUIStyleState, bool, Color, Font, FreeFunction, GUIContent, IntPtr, 
 
 ### Community 528 - "Community 528"
 Cohesion: 0.05
-Nodes (24): Action, Brick, ObjectPool, ProbeBrickIndex, ProbeGlobalIndirection, ProbeVolumeBakingSet, ProbeVolumeBakingSetWeakReference, ProbeVolumePerSceneData (+16 more)
+Nodes (22): Action, ObjectPool, ProbeBrickIndex, ProbeGlobalIndirection, ProbeVolumeBakingSet, ProbeVolumeBakingSetWeakReference, ProbeVolumePerSceneData, ProbeVolumeSceneData (+14 more)
 
 ### Community 529 - "Community 529"
 Cohesion: 0.08
@@ -21054,15 +21123,15 @@ Nodes (20): ArrayMapping, bool, ChoiceIdentifierAccessor, Dictionary, ElementAcc
 
 ### Community 530 - "Community 530"
 Cohesion: 0.03
-Nodes (45): CompatibleComparer, System.Collections, StructuralEqualityComparer, System.Collections, EqualityWeakReference, System.ComponentModel, WeakHashtable, WeakKeyComparer (+37 more)
+Nodes (42): CompatibleComparer, System.Collections, StructuralEqualityComparer, System.Collections, EqualityWeakReference, System.ComponentModel, WeakHashtable, WeakKeyComparer (+34 more)
 
 ### Community 531 - "Community 531"
 Cohesion: 0.02
-Nodes (70): ArgumentCache, UnityEngine.Events, FullScreenPassRendererFeature, GraphDrawingData, UnityEditor.Graphing, GraphData, GraphDataUtils, UnityEditor.ShaderGraph (+62 more)
+Nodes (65): FullScreenPassRendererFeature, GraphDrawingData, UnityEditor.Graphing, GraphData, GraphDataUtils, UnityEditor.ShaderGraph, GraphData, GraphSetup (+57 more)
 
 ### Community 532 - "Community 532"
-Cohesion: 0.03
-Nodes (45): IMayRequireTransform, UnityEditor.ShaderGraph, NeededTransform, ShaderStageCapability, Dictionary, int, NeededTransform, ShaderStageCapability (+37 more)
+Cohesion: 0.04
+Nodes (33): IMayRequireTransform, UnityEditor.ShaderGraph, NeededTransform, ShaderStageCapability, Dictionary, int, NeededTransform, ShaderStageCapability (+25 more)
 
 ### Community 533 - "Community 533"
 Cohesion: 0.06
@@ -21070,7 +21139,7 @@ Nodes (59): AllocatorHandle, AtomicSafetyHandle, Conditional, Enumerator, Genera
 
 ### Community 534 - "Community 534"
 Cohesion: 0.05
-Nodes (53): bool, ContextContainer, DebugRendererLists, FilteringSettings, int, LayerMask, List, MaskSize (+45 more)
+Nodes (49): bool, ContextContainer, DebugRendererLists, FilteringSettings, int, LayerMask, List, MaskSize (+41 more)
 
 ### Community 535 - "Community 535"
 Cohesion: 0.06
@@ -21090,19 +21159,19 @@ Nodes (32): UIControlPanelStationInspector, EUIControlPanelStationPanel, bool, C
 
 ### Community 539 - "Community 539"
 Cohesion: 0.07
-Nodes (19): AttributeValue, bool, DateTime, Guid, int, IXmlDictionary, SecuritySafeCritical, Stream (+11 more)
+Nodes (20): AttributeValue, bool, DateTime, Guid, int, IXmlDictionary, SecurityCritical, SecuritySafeCritical (+12 more)
 
 ### Community 540 - "Community 540"
 Cohesion: 0.05
-Nodes (40): Collider2D, MethodImpl, SpecialName, Vector2, MethodImpl, SpecialName, Vector2, List (+32 more)
+Nodes (37): Collider2D, MethodImpl, SpecialName, Vector2, MethodImpl, SpecialName, Vector2, List (+29 more)
 
 ### Community 541 - "Community 541"
 Cohesion: 0.05
 Nodes (24): FocusBasedEventSequenceContext, BaseRuntimePanel, bool, Event, EventBase, EventModifiers, float, Focusable (+16 more)
 
 ### Community 542 - "Community 542"
-Cohesion: 0.07
-Nodes (25): FuncId, IList, QilNode, bool, Dictionary, IList, int, QilIterator (+17 more)
+Cohesion: 0.08
+Nodes (23): FuncId, bool, Dictionary, IList, int, QilIterator, QilNode, QilNodeType (+15 more)
 
 ### Community 543 - "Community 543"
 Cohesion: 0.05
@@ -21142,15 +21211,15 @@ Nodes (31): __BinaryParser, System.Runtime.Serialization.Formatters.Binary, Bina
 
 ### Community 552 - "Community 552"
 Cohesion: 0.03
-Nodes (48): CancelEventArgs, System.ComponentModel, DataErrorsChangedEventArgs, System.ComponentModel, HandledEventArgs, System.ComponentModel, ListChangedEventArgs, System.ComponentModel (+40 more)
+Nodes (48): CancelEventArgs, System.ComponentModel, CollectionChangeEventArgs, System.ComponentModel, DataErrorsChangedEventArgs, System.ComponentModel, RefreshEventArgs, System.ComponentModel (+40 more)
 
 ### Community 553 - "Community 553"
 Cohesion: 0.05
-Nodes (26): EnumBuilder, System.Reflection.Emit, Binder, BindingFlags, CallingConventions, ComVisible, ConstructorInfo, CultureInfo (+18 more)
+Nodes (25): EnumBuilder, System.Reflection.Emit, Binder, BindingFlags, CallingConventions, ComVisible, ConstructorInfo, CultureInfo (+17 more)
 
 ### Community 554 - "Community 554"
-Cohesion: 0.20
-Nodes (6): char, DateTime, IFormatProvider, TypeCode, Enum, ValueType
+Cohesion: 0.07
+Nodes (25): EnumResult, Array, char, CLSCompliant, ComVisible, DateTime, Exception, IFormatProvider (+17 more)
 
 ### Community 555 - "Community 555"
 Cohesion: 0.08
@@ -21169,8 +21238,8 @@ Cohesion: 0.04
 Nodes (16): ControllerActionSetHandle_t, ControllerAnalogActionHandle_t, ControllerDigitalActionHandle_t, ControllerHandle_t, EControllerActionOrigin, EInputActionOrigin, ESteamControllerPad, ESteamInputType (+8 more)
 
 ### Community 559 - "Community 559"
-Cohesion: 0.05
-Nodes (26): IOControlCode, AddressFamily, EventHandler, int, IntPtr, IOAsyncCallback, IPProtectionLevel, List (+18 more)
+Cohesion: 0.07
+Nodes (13): IntPtr, IPProtectionLevel, MethodImpl, MonoIOError, SocketAddress, SocketOptionLevel, SocketOptionName, SocketShutdown (+5 more)
 
 ### Community 560 - "Community 560"
 Cohesion: 0.07
@@ -21181,8 +21250,8 @@ Cohesion: 0.05
 Nodes (37): BasicNodePool, DepthOrderedDirtyTracking, Action, AtlasBase, BaseRuntimePanel, BaseVisualElementPanel, bool, Camera (+29 more)
 
 ### Community 562 - "Community 562"
-Cohesion: 0.08
-Nodes (27): ClearCameraParams, DepthCopySchedule, bool, Color, ColorGradingLutPass, CommandBuffer, DepthPrimingMode, Event (+19 more)
+Cohesion: 0.07
+Nodes (36): ClearCameraParams, DepthCopySchedule, bool, Color, ColorGradingLutPass, CommandBuffer, DepthPrimingMode, Event (+28 more)
 
 ### Community 563 - "Community 563"
 Cohesion: 0.08
@@ -21193,8 +21262,8 @@ Cohesion: 0.07
 Nodes (36): ConditionalField, IActiveFields, ICanChangeShaderGUI, keywordIfDefs, AbstractMaterialNode, ActiveFields, ConcreteSlotValueType, DependencyCollection (+28 more)
 
 ### Community 565 - "Community 565"
-Cohesion: 0.06
-Nodes (21): DateTimeFormatFlags, DateTimeFormatInfo, System.Globalization, TokenHashValue, IFormatProvider, bool, Calendar, CalendarId (+13 more)
+Cohesion: 0.07
+Nodes (13): DateTimeFormatFlags, DateTimeFormatInfo, bool, Calendar, CalendarId, char, CompareInfo, CultureData (+5 more)
 
 ### Community 566 - "Community 566"
 Cohesion: 0.05
@@ -21214,7 +21283,7 @@ Nodes (15): IRailSpaceWork, EnumRailSpaceWorkRateValue, EnumRailSpaceWorkShareLe
 
 ### Community 570 - "Community 570"
 Cohesion: 0.03
-Nodes (48): IRequireVFXContext, Action, BlockFieldDescriptor, Dictionary, FieldCollection, GenerationMode, GUID, IMasterNode1 (+40 more)
+Nodes (48): IRequireVFXContext, TargetSetupContext, Action, BlockFieldDescriptor, Dictionary, FieldCollection, GenerationMode, GUID (+40 more)
 
 ### Community 571 - "Community 571"
 Cohesion: 0.06
@@ -21234,7 +21303,7 @@ Nodes (20): Queryable, System.Linq, Expression, Func, IComparer, IEnumerable, IE
 
 ### Community 575 - "Community 575"
 Cohesion: 0.05
-Nodes (36): bool, byte, DbConnection, DbConnectionFactory, DbConnectionInternal, DbConnectionOptions, DbConnectionPoolIdentity, FederatedAuthenticationFeatureExtensionData (+28 more)
+Nodes (31): bool, byte, DbConnectionPoolIdentity, FederatedAuthenticationFeatureExtensionData, Guid, HashSet, int, IsolationLevel (+23 more)
 
 ### Community 576 - "Community 576"
 Cohesion: 0.07
@@ -21245,12 +21314,12 @@ Cohesion: 0.09
 Nodes (28): ArrayList, Hashtable, SortedList, string, Uri, XmlQualifiedName, XmlReaderSettings, XmlResolver (+20 more)
 
 ### Community 578 - "Community 578"
-Cohesion: 0.06
-Nodes (3): EHTMLKeyModifiers, EHTMLMouseButton, HHTMLBrowser
+Cohesion: 0.03
+Nodes (38): UIMechaBoneInspectorExtrudeGraph, UIWarningWindow, PointerClickCallbackCheck, IPointerDownHandler, bool, PointerEventData, bool, Color (+30 more)
 
 ### Community 579 - "Community 579"
 Cohesion: 0.03
-Nodes (69): ActivationPlayableAsset, UnityEngine.Timeline, AudioPlayableAsset, UnityEngine.Timeline, IPropertyPreview, ITimelineClipAsset, GameObject, Playable (+61 more)
+Nodes (67): ActivationPlayableAsset, UnityEngine.Timeline, AudioPlayableAsset, UnityEngine.Timeline, IPropertyPreview, ITimelineClipAsset, GameObject, Playable (+59 more)
 
 ### Community 580 - "Community 580"
 Cohesion: 0.10
@@ -21277,8 +21346,8 @@ Cohesion: 0.06
 Nodes (25): DysonSphere, DysonNodeRData, DysonRocket, DysonRocketRenderer, DysonSphereSegmentRenderer, BinaryReader, BinaryWriter, bool (+17 more)
 
 ### Community 586 - "Community 586"
-Cohesion: 0.08
-Nodes (28): BatchCommandInfo, DbDataAdapter, LoadAdapter, System.Data.Common, DataAdapter, CommandBehavior, ConnectionState, DataRow (+20 more)
+Cohesion: 0.12
+Nodes (16): DbDataAdapter, CommandBehavior, ConnectionState, DataRow, DataRowVersion, DataSet, DataTable, DataTableMapping (+8 more)
 
 ### Community 587 - "Community 587"
 Cohesion: 0.07
@@ -21290,11 +21359,11 @@ Nodes (26): BrickChunkAlloc, bool, Cell, CellStreamingScratchBuffer, CellStreami
 
 ### Community 589 - "Community 589"
 Cohesion: 0.07
-Nodes (19): RaycastReceiver, UnityEngine.UI, Graphic, VertexHelper, bool, Camera, EditorBrowsable, int (+11 more)
+Nodes (20): RaycastReceiver, UnityEngine.UI, Graphic, IMaskable, VertexHelper, bool, Camera, EditorBrowsable (+12 more)
 
 ### Community 590 - "Community 590"
-Cohesion: 0.04
-Nodes (53): CreatePostProcessData(), GetDefaultPostProcessData(), LoadResources(), Populate(), PostProcessData, Reset(), ShaderResources, TextureResources (+45 more)
+Cohesion: 0.03
+Nodes (66): CreatePostProcessData(), GetDefaultPostProcessData(), LoadResources(), Populate(), PostProcessData, Reset(), ShaderResources, TextureResources (+58 more)
 
 ### Community 591 - "Community 591"
 Cohesion: 0.05
@@ -21350,7 +21419,7 @@ Nodes (23): ClipInspector, CustomPropertiesElement, Styles, UnityEditor.Timeline
 
 ### Community 604 - "Community 604"
 Cohesion: 0.05
-Nodes (37): Accessor, ArrayMapping, Assembly, bool, CodeAttributeDeclaration, CodeAttributeDeclarationCollection, CodeCommentStatementCollection, CodeCompileUnit (+29 more)
+Nodes (38): CodeExporter, Accessor, ArrayMapping, Assembly, bool, CodeAttributeDeclaration, CodeAttributeDeclarationCollection, CodeCommentStatementCollection (+30 more)
 
 ### Community 605 - "Community 605"
 Cohesion: 0.03
@@ -21389,8 +21458,8 @@ Cohesion: 0.09
 Nodes (26): CommandBuffer, ComputeShader, EmissiveSamplingMode, GraphicsBuffer, int, IRayTracingShader, LightSamplingMode, Matrix4x4 (+18 more)
 
 ### Community 614 - "Community 614"
-Cohesion: 0.03
-Nodes (46): IShaderGraphToolbarExtension, UnityEditor.ShaderGraph.Drawing, IShaderNodeView, AbstractMaterialNode, Color, IEdgeConnectorListener, IEnumerable, MaterialSlot (+38 more)
+Cohesion: 0.05
+Nodes (27): AbstractMaterialNode, Action, Color, ContextualMenuPopulateEvent, DropdownMenuAction, EventBase, GenerationMode, IEdgeConnectorListener (+19 more)
 
 ### Community 615 - "Community 615"
 Cohesion: 0.06
@@ -21402,15 +21471,15 @@ Nodes (66): Background, BackgroundPosition, BackgroundRepeat, BackgroundSize, Co
 
 ### Community 617 - "Community 617"
 Cohesion: 0.08
-Nodes (24): IMenuChecked, UnityEditor.Timeline, IMenuName, UnityEditor.Timeline, CollapseTrackAction, CopyTracksToClipboard, DeleteTracks, DuplicateTracks (+16 more)
+Nodes (25): IMenuChecked, UnityEditor.Timeline, IMenuName, UnityEditor.Timeline, CollapseTrackAction, CopyTracksToClipboard, DeleteTracks, DuplicateTracks (+17 more)
 
 ### Community 618 - "Community 618"
 Cohesion: 0.06
 Nodes (48): ArchetypeIndex, ComponentIndex, Add(), AsReadOnly(), CompareTo(), CopyKernelID, Create(), Dispose() (+40 more)
 
 ### Community 619 - "Community 619"
-Cohesion: 0.04
-Nodes (18): BuildTool_Dismantle, BuildTool_None, BuildTool_Upgrade, BuildTool, bool, BuildModel, int, List (+10 more)
+Cohesion: 0.07
+Nodes (12): BuildTool_Dismantle, BuildTool_None, BuildTool, bool, BuildModel, int, List, UIMessageBox (+4 more)
 
 ### Community 620 - "Community 620"
 Cohesion: 0.04
@@ -21437,8 +21506,8 @@ Cohesion: 0.06
 Nodes (21): Index, IndexTree, System.Data, Listeners, bool, Comparison, DataColumnCollection, DataRow (+13 more)
 
 ### Community 626 - "Community 626"
-Cohesion: 0.05
-Nodes (26): DecoderNLS, EncoderNLS, bool, byte, char, CLSCompliant, DecoderFallbackBuffer, int (+18 more)
+Cohesion: 0.08
+Nodes (16): DecoderNLS, EncoderNLS, bool, byte, char, CLSCompliant, DecoderFallbackBuffer, int (+8 more)
 
 ### Community 627 - "Community 627"
 Cohesion: 0.10
@@ -21465,36 +21534,36 @@ Cohesion: 0.07
 Nodes (13): int, ValidationEventHandler, XmlDocument, XmlElement, XmlNamespaceManager, XmlNode, XmlNodeOrder, XmlSchemaSet (+5 more)
 
 ### Community 633 - "Community 633"
-Cohesion: 0.10
+Cohesion: 0.11
 Nodes (3): Array, Exception, XmlNodeType
 
 ### Community 634 - "Community 634"
-Cohesion: 0.06
-Nodes (36): CompleteLastLoop, CopyClipsToClipboard, DoubleSpeed, EditClipInAnimationWindow, EditSubTimeline, FindSourceAsset, HalfSpeed, MatchDuration (+28 more)
+Cohesion: 0.08
+Nodes (28): CompleteLastLoop, CopyClipsToClipboard, DoubleSpeed, EditClipInAnimationWindow, EditSubTimeline, FindSourceAsset, HalfSpeed, MatchDuration (+20 more)
 
 ### Community 635 - "Community 635"
 Cohesion: 0.06
 Nodes (24): Assembly, AssemblyName, bool, CultureInfo, CustomAttributeData, Evidence, FileStream, IList (+16 more)
 
 ### Community 636 - "Community 636"
-Cohesion: 0.08
-Nodes (22): AsyncCommit, DependentCloneOption, DependentTransaction, EnlistmentOptions, ISinglePhaseNotification, ArrayList, bool, Enlistment (+14 more)
+Cohesion: 0.05
+Nodes (32): AsyncCommit, DependentCloneOption, DependentTransaction, EnlistmentOptions, ISinglePhaseNotification, AsyncCallback, MonoTODO, object (+24 more)
 
 ### Community 637 - "Community 637"
 Cohesion: 0.05
 Nodes (6): ConnectionError, DbCommand, DbConnection, DbTransaction, IDbCommand, InvalidOperationException
 
 ### Community 638 - "Community 638"
-Cohesion: 0.03
-Nodes (39): RectMask2D, UnityEngine.UI, IClipper, bool, Camera, Canvas, HashSet, IClippable (+31 more)
+Cohesion: 0.06
+Nodes (23): bool, Camera, Canvas, HashSet, IClippable, List, Rect, RectangularVertexClipper (+15 more)
 
 ### Community 639 - "Community 639"
-Cohesion: 0.03
-Nodes (38): NormalVectorNode, UnityEditor.ShaderGraph, PositionNode, UnityEditor.ShaderGraph, TangentVectorNode, UnityEditor.ShaderGraph, UnityEditor.ShaderGraph, ViewDirectionNode (+30 more)
+Cohesion: 0.04
+Nodes (34): BitangentVectorNode, UnityEditor.ShaderGraph, NormalVectorNode, UnityEditor.ShaderGraph, PositionNode, UnityEditor.ShaderGraph, TangentVectorNode, UnityEditor.ShaderGraph (+26 more)
 
 ### Community 640 - "Community 640"
-Cohesion: 0.04
-Nodes (30): IOnAssetEnabled, UnityEditor.Graphing, PropertyNode, UnityEditor.ShaderGraph, IShaderInputObserver, GenerationMode, int, JsonRef (+22 more)
+Cohesion: 0.03
+Nodes (41): IOnAssetEnabled, UnityEditor.Graphing, PropertyNode, UnityEditor.ShaderGraph, IShaderInputObserver, GenerationMode, int, JsonRef (+33 more)
 
 ### Community 641 - "Community 641"
 Cohesion: 0.04
@@ -21502,11 +21571,11 @@ Nodes (37): HashSet<Type>, AbstractMaterialNode, BlockFieldDescriptor, Collectio
 
 ### Community 642 - "Community 642"
 Cohesion: 0.03
-Nodes (42): JsonObject, Version, AbstractMaterialNode, Action, bool, Dictionary, FieldInfo, GenerationMode (+34 more)
+Nodes (52): CanvasData, UnityEditor.Rendering.Canvas.ShaderGraph, AbstractShaderGraphDataExtension, UnityEditor.ShaderGraph, JsonObject, bool, Version, Version (+44 more)
 
 ### Community 643 - "Community 643"
-Cohesion: 0.09
-Nodes (14): bool, char, double, IFormatProvider, int, long, MethodImpl, NumberFormatInfo (+6 more)
+Cohesion: 0.10
+Nodes (13): bool, char, double, IFormatProvider, int, long, NumberFormatInfo, StringBuilder (+5 more)
 
 ### Community 644 - "Community 644"
 Cohesion: 0.06
@@ -21517,8 +21586,8 @@ Cohesion: 0.08
 Nodes (18): ComputeBuffer, ExcludeFromDocs, FreeFunction, GraphicsBuffer, LocalKeyword, LocalKeywordSpace, Matrix4x4, MethodImpl (+10 more)
 
 ### Community 646 - "Community 646"
-Cohesion: 0.06
-Nodes (11): Bounds, ColliderType, Color, GameObject, Matrix4x4, MethodImpl, NativeMethod, SpecialName (+3 more)
+Cohesion: 0.07
+Nodes (10): Bounds, ColliderType, Color, Matrix4x4, MethodImpl, NativeMethod, SpecialName, Vector3 (+2 more)
 
 ### Community 647 - "Community 647"
 Cohesion: 0.05
@@ -21622,7 +21691,7 @@ Nodes (40): System.Data.Common, System.Data.Common, System.Data.Common, Configur
 
 ### Community 673 - "Community 673"
 Cohesion: 0.04
-Nodes (42): AxisComposite, ButtonWithOneModifier, UnityEngine.InputSystem.Composites, ButtonWithTwoModifiers, UnityEngine.InputSystem.Composites, OneModifierComposite, UnityEngine.InputSystem.Composites, TwoModifiersComposite (+34 more)
+Nodes (39): ButtonWithOneModifier, UnityEngine.InputSystem.Composites, ButtonWithTwoModifiers, UnityEngine.InputSystem.Composites, OneModifierComposite, UnityEngine.InputSystem.Composites, UnityEngine.InputSystem.Composites, Vector3Composite (+31 more)
 
 ### Community 674 - "Community 674"
 Cohesion: 0.05
@@ -21641,12 +21710,12 @@ Cohesion: 0.05
 Nodes (25): DocumentOrderComparer, ArrayList, BindingFlags, EarlyBoundInfo, IList, object, Stack, string (+17 more)
 
 ### Community 678 - "Community 678"
-Cohesion: 0.07
-Nodes (19): IInspectable, Action, Color, ColorShaderProperty, ContextualMenuPopulateEvent, EventBase, GraphData, IGraphDataAction (+11 more)
+Cohesion: 0.03
+Nodes (45): SGBlackboardField, UnityEditor.ShaderGraph.Drawing, ContextualMenuManipulator, IInspectable, Action, ContextualMenuPopulateEvent, DragUpdatedEvent, EventBase (+37 more)
 
 ### Community 679 - "Community 679"
-Cohesion: 0.08
-Nodes (21): IClipCurveEditorOwner, InfiniteTrackDrawer, bool, GUIContent, int, Object, PlayableBinding, Rect (+13 more)
+Cohesion: 0.07
+Nodes (21): InfiniteTrackDrawer, TrackAsset, bool, GUIContent, int, Object, PlayableBinding, Rect (+13 more)
 
 ### Community 680 - "Community 680"
 Cohesion: 0.03
@@ -21669,8 +21738,8 @@ Cohesion: 0.05
 Nodes (24): UIReplicatorWindow, BaseEventData, bool, CanvasGroup, Color, ComputeBuffer, Dictionary, EventTrigger (+16 more)
 
 ### Community 685 - "Community 685"
-Cohesion: 0.05
-Nodes (19): UITechTree, bool, Button, Color, Dictionary, float, Image, int (+11 more)
+Cohesion: 0.04
+Nodes (22): UITechTree, BaseEventData, bool, Button, Color, Dictionary, float, Image (+14 more)
 
 ### Community 686 - "Community 686"
 Cohesion: 0.08
@@ -21681,8 +21750,8 @@ Cohesion: 0.06
 Nodes (33): FullscreenPropertyCollectorExtension, FullscreenSubTarget, FullscreenUniforms, UnityEditor.Rendering.Fullscreen.ShaderGraph, Action, Blend, BlendMode, CompareFunction (+25 more)
 
 ### Community 688 - "Community 688"
-Cohesion: 0.07
-Nodes (25): TimelineClipGUI, UnityEditor.Timeline, bool, ClipBlends, ClipBorder, ClipDrawData, ClipDrawOptions, ClipEditor (+17 more)
+Cohesion: 0.06
+Nodes (26): IClipCurveEditorOwner, TimelineClipGUI, UnityEditor.Timeline, bool, ClipBlends, ClipBorder, ClipDrawData, ClipDrawOptions (+18 more)
 
 ### Community 689 - "Community 689"
 Cohesion: 0.05
@@ -21721,12 +21790,12 @@ Cohesion: 0.09
 Nodes (14): CaseConversion, CharDescriptor, MaskedTextProvider, System.ComponentModel, BitVector32, bool, byte, char (+6 more)
 
 ### Community 699 - "Community 699"
-Cohesion: 0.04
-Nodes (42): DbException, System.Data.Common, System.ComponentModel, Win32Exception, CheckoutException, System.ComponentModel.Design, ExternalException, COMException (+34 more)
+Cohesion: 0.15
+Nodes (12): bool, Exception, Guid, int, SecurityPermission, SerializationInfo, SqlErrorCollection, SqlInternalConnectionTds (+4 more)
 
 ### Community 700 - "Community 700"
 Cohesion: 0.05
-Nodes (25): CultureTypes, CultureInfo, System.Globalization, bool, byte, Calendar, CompareInfo, ComVisible (+17 more)
+Nodes (23): CultureTypes, CultureInfo, System.Globalization, bool, byte, Calendar, CompareInfo, ComVisible (+15 more)
 
 ### Community 701 - "Community 701"
 Cohesion: 0.08
@@ -21738,7 +21807,7 @@ Nodes (37): FocusChangeDirection, EventBase, Focusable, FocusChangeDirection, Ev
 
 ### Community 703 - "Community 703"
 Cohesion: 0.07
-Nodes (15): KeyList, SortedList, SortedListKeyEnumerator, SortedListValueEnumerator, System.Collections.Generic, ValueList, IReadOnlyDictionary, Array (+7 more)
+Nodes (13): Decoder, Encoder, char, DecoderNLS, EncoderNLS, NormalizationForm, SecurityCritical, SerializationInfo (+5 more)
 
 ### Community 704 - "Community 704"
 Cohesion: 0.11
@@ -21749,8 +21818,8 @@ Cohesion: 0.05
 Nodes (34): IWebProxy, IWebRequestCreate, ArrayList, AsyncCallback, AuthenticationLevel, bool, EditorBrowsable, HostProtection (+26 more)
 
 ### Community 706 - "Community 706"
-Cohesion: 0.04
-Nodes (24): Test, TestRequiresDotsDebugOrCollectionChecks, AllocatorHelper, bool, OneTimeSetUp, OneTimeTearDown, SetUp, string (+16 more)
+Cohesion: 0.10
+Nodes (10): ComparableType, T, Test, TestRequiresDotsDebugOrCollectionChecks, NonComparableType, Compare(), CompareTo(), MathTests (+2 more)
 
 ### Community 707 - "Community 707"
 Cohesion: 0.06
@@ -21766,7 +21835,7 @@ Nodes (23): Action, CLSCompliant, IEnumerable, IntPtr, IThreadPoolWorkItem, Meth
 
 ### Community 710 - "Community 710"
 Cohesion: 0.04
-Nodes (36): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, DataContractPairKey, Dictionary, MethodInfo, Type (+28 more)
+Nodes (37): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator (+29 more)
 
 ### Community 711 - "Community 711"
 Cohesion: 0.09
@@ -21857,8 +21926,8 @@ Cohesion: 0.11
 Nodes (13): bool, CultureInfo, EtwDiagnosticTrace, EventDescriptor, EventTraceActivity, Exception, object, ResourceManager (+5 more)
 
 ### Community 733 - "Community 733"
-Cohesion: 0.04
-Nodes (41): bool, CloseExState, FileAccess, int, long, SecurityPermission, SerializationInfo, Stream (+33 more)
+Cohesion: 0.06
+Nodes (27): DateTime, FtpStatusCode, long, Stream, string, Uri, WebHeaderCollection, bool (+19 more)
 
 ### Community 734 - "Community 734"
 Cohesion: 0.09
@@ -21877,7 +21946,7 @@ Cohesion: 0.06
 Nodes (21): DFRelayComponent, DFCarrierData, AnimData, AstroData, BinaryReader, BinaryWriter, DFCarrierRenderingData, DFCarrierUIRenderingData (+13 more)
 
 ### Community 738 - "Community 738"
-Cohesion: 0.05
+Cohesion: 0.06
 Nodes (26): AddressMode, TimeNode, UnityEditor.ShaderGraph, IMayRequireTime, MayRequireTimeExtensions, UnityEditor.ShaderGraph, AbstractMaterialNode, AbstractShaderProperty (+18 more)
 
 ### Community 739 - "Community 739"
@@ -21897,8 +21966,8 @@ Cohesion: 0.05
 Nodes (35): ClaimsPrincipal, System.Security.Claims, IPrincipal, BinaryReader, BinaryWriter, byte, Claim, ClaimsIdentity (+27 more)
 
 ### Community 743 - "Community 743"
-Cohesion: 0.12
-Nodes (46): ColorBySpeedModule, ColorOverLifetimeModule, CustomDataModule, ForceOverLifetimeModule, InheritVelocityModule, LifetimeByEmitterSpeedModule, ParticleSystemAnimationMode, ParticleSystemCollisionMode (+38 more)
+Cohesion: 0.08
+Nodes (64): ColorBySpeedModule, ColorOverLifetimeModule, CustomDataModule, ForceOverLifetimeModule, InheritVelocityModule, LifetimeByEmitterSpeedModule, ParticleSystemAnimationMode, ParticleSystemCollisionMode (+56 more)
 
 ### Community 744 - "Community 744"
 Cohesion: 0.09
@@ -21946,11 +22015,11 @@ Nodes (34): FontPackingModes, bool, byte, Dictionary, double, FaceInfo, float, F
 
 ### Community 755 - "Community 755"
 Cohesion: 0.06
-Nodes (29): OnTilePostProcessResourceStripper, UnityEditor.Rendering, IStripper, GPUResidentDrawerResources, RuntimeResources, T, OnTilePostProcessResource, ProbeVolumeBakingResourceStripper (+21 more)
+Nodes (33): ScreenSpaceReflectionPersistentResourcesStripper, UnityEditor.Rendering, PathTracingWorldResourcesStripper, RayTracingResourcesStripper, SurfaceCacheStripperUtility, UnityEditor.Rendering, UniversalSurfaceCacheCoreStripper, UniversalSurfaceCacheIntegrationStripper (+25 more)
 
 ### Community 756 - "Community 756"
-Cohesion: 0.03
-Nodes (44): MinimalTexture2DInputMaterialSlot, Texture2DInputMaterialSlot, UnityEditor.ShaderGraph, HlslSourceType, IHasAssetDependencies, IHasDependencies, UnityEditor.ShaderGraph, AssetCollection (+36 more)
+Cohesion: 0.07
+Nodes (16): Transition, UIButton, Action, AudioSettings, bool, Button, Color, float (+8 more)
 
 ### Community 757 - "Community 757"
 Cohesion: 0.08
@@ -21961,8 +22030,8 @@ Cohesion: 0.06
 Nodes (27): BaseEventData, bool, Canvas, Color, Coroutine, float, GameObject, Graphic (+19 more)
 
 ### Community 759 - "Community 759"
-Cohesion: 0.11
-Nodes (14): bool, ConcurrentQueue, ConcurrentStack, DbConnectionFactory, DbConnectionPoolGroup, DbConnectionPoolGroupOptions, DbConnectionPoolIdentity, DbConnectionPoolProviderInfo (+6 more)
+Cohesion: 0.08
+Nodes (30): List, bool, ConcurrentQueue, ConcurrentStack, DbConnection, DbConnectionFactory, DbConnectionInternal, DbConnectionOptions (+22 more)
 
 ### Community 760 - "Community 760"
 Cohesion: 0.09
@@ -22017,8 +22086,8 @@ Cohesion: 0.05
 Nodes (25): UIBuildMenu, bool, BuildTool_BlueprintCopy, BuildTool_Dismantle, BuildTool_Reform, BuildTool_Upgrade, CanvasGroup, Color (+17 more)
 
 ### Community 773 - "Community 773"
-Cohesion: 0.04
-Nodes (20): UIDESwarmOrbitInfo, bool, CanvasGroup, Color, DysonSwarm, float, GameObject, Gradient (+12 more)
+Cohesion: 0.05
+Nodes (19): UIDESwarmOrbitInfo, bool, CanvasGroup, Color, DysonSwarm, float, GameObject, Gradient (+11 more)
 
 ### Community 774 - "Community 774"
 Cohesion: 0.07
@@ -22057,8 +22126,8 @@ Cohesion: 0.07
 Nodes (18): CharType, System.Runtime.Serialization.Json, XmlJsonReader, JsonComplexTextMode, Array, bool, byte, Encoding (+10 more)
 
 ### Community 783 - "Community 783"
-Cohesion: 0.06
-Nodes (20): bool, ConnectionState, DataTable, DateTime, DbConnection, DbConnectionFactory, DbConnectionOptions, DbConnectionPool (+12 more)
+Cohesion: 0.05
+Nodes (25): bool, ConnectionState, DataTable, DateTime, DbConnection, DbConnectionFactory, DbConnectionOptions, DbConnectionPool (+17 more)
 
 ### Community 784 - "Community 784"
 Cohesion: 0.05
@@ -22098,7 +22167,7 @@ Nodes (33): AuthenticodeBase, Mono.Security.Authenticode, AuthenticodeDeformatte
 
 ### Community 793 - "Community 793"
 Cohesion: 0.07
-Nodes (22): BitFlagValues, CheckSumAndSizeWriteStream, DirectToArchiveWriterStream, System.IO.Compression, ZipArchiveEntry, bool, byte, CompressionLevel (+14 more)
+Nodes (23): BitFlagValues, CheckSumAndSizeWriteStream, DirectToArchiveWriterStream, System.IO.Compression, ZipArchiveEntry, bool, byte, CompressionLevel (+15 more)
 
 ### Community 794 - "Community 794"
 Cohesion: 0.05
@@ -22121,16 +22190,16 @@ Cohesion: 0.08
 Nodes (12): EntityExpandType, EntityType, IDtdParserAdapter, IDtdParserAdapterWithValidation, StringBuilder, XmlSchemaException, XmlSeverityType, IDtdParserAdapterV1 (+4 more)
 
 ### Community 800 - "Community 800"
-Cohesion: 0.05
-Nodes (27): FileStream, Action, bool, CancellationToken, ReadOnlySpan, SeekOrigin, Span, Task (+19 more)
+Cohesion: 0.06
+Nodes (23): FileStream, Action, bool, CancellationToken, ReadOnlySpan, SeekOrigin, Span, Task (+15 more)
 
 ### Community 801 - "Community 801"
-Cohesion: 0.15
-Nodes (18): Color, CustomBinding, Default, Dropdown, Dynamic, External, Linkage, Literal (+10 more)
+Cohesion: 0.07
+Nodes (35): Func, ProviderKey, SearchCategory, SearchName, SearchTerms, UnityEditor.ShaderGraph.ProviderSystem.Hints, Color, CustomBinding (+27 more)
 
 ### Community 802 - "Community 802"
-Cohesion: 0.07
-Nodes (24): IComparable, Exception, FacetsChecker, Hashtable, int, IXmlNamespaceResolver, RestrictionFacets, string (+16 more)
+Cohesion: 0.06
+Nodes (29): IComparable, FieldInfo, int, Normalizer, Exception, FacetsChecker, Hashtable, int (+21 more)
 
 ### Community 803 - "Community 803"
 Cohesion: 0.06
@@ -22138,15 +22207,15 @@ Nodes (26): InteropCallbackManager, XGamingRuntime.Interop, Dictionary, int, Int
 
 ### Community 804 - "Community 804"
 Cohesion: 0.05
-Nodes (32): IVisualElementPanelActivatable, IVisualElementScheduledItem, Action, Func, ScheduledItem, TimerState, Func, TimerState (+24 more)
+Nodes (28): Hierarchy, IVisualElementPanelActivatable, IVisualElementScheduledItem, Func, TimerState, Action, bool, Func (+20 more)
 
 ### Community 805 - "Community 805"
 Cohesion: 0.06
 Nodes (31): JointAngleLimits2D, JointSuspension2D, JointTranslationLimits2D, MethodImpl, SpecialName, Vector2, JointMotor2D, MethodImpl (+23 more)
 
 ### Community 806 - "Community 806"
-Cohesion: 0.04
-Nodes (44): bool, Version, bool, string, Version, bool, int, bool (+36 more)
+Cohesion: 0.11
+Nodes (3): Color, MethodImpl, Scene
 
 ### Community 807 - "Community 807"
 Cohesion: 0.07
@@ -22161,12 +22230,12 @@ Cohesion: 0.06
 Nodes (19): Array, ArrayList, bool, ComVisible, IEnumerator, int, IPermission, MonoTODO (+11 more)
 
 ### Community 810 - "Community 810"
-Cohesion: 0.07
-Nodes (29): AssemblyBuilder, ConstructorInfo, Dictionary, HashSet, ILGenerator, int, List, LocalBuilder (+21 more)
+Cohesion: 0.11
+Nodes (16): AssemblyBuilder, ConstructorInfo, Dictionary, HashSet, int, List, MethodBase, ModuleBuilder (+8 more)
 
 ### Community 811 - "Community 811"
-Cohesion: 0.06
-Nodes (27): AutoResetEvent, bool, BulkCopySimpleResultSet, EncryptionOptions, IEnumerable, long, MultiPartTableName, object (+19 more)
+Cohesion: 0.07
+Nodes (21): AutoResetEvent, bool, DateTime, EncryptionOptions, IEnumerable, long, object, ServerInfo (+13 more)
 
 ### Community 812 - "Community 812"
 Cohesion: 0.06
@@ -22290,7 +22359,7 @@ Nodes (28): CodeConnectAccess, CodeGroup, Evidence, FileIOPermissionAccess, Poli
 
 ### Community 842 - "Community 842"
 Cohesion: 0.04
-Nodes (55): [0.0.9-preview.18] - 2019-05-01, [0.0.9-preview.20] - 2019-05-24, [0.3.0] - 2019-12-03, [0.4.0] - 2019-12-16, [0.5.1] - 2020-01-28, [0.7.1] - 2020-04-08, [1.2.2] - 2022-03-03, [1.2.3] - 2022-03-18 (+47 more)
+Nodes (55): [0.0.9-preview.18] - 2019-05-01, [0.0.9-preview.20] - 2019-05-24, [0.4.0] - 2019-12-16, [0.5.1] - 2020-01-28, [0.7.1] - 2020-04-08, [1.2.2] - 2022-03-03, [1.2.3] - 2022-03-18, [1.2.3-pre.1] - 2022-03-04 (+47 more)
 
 ### Community 843 - "Community 843"
 Cohesion: 0.11
@@ -22310,7 +22379,7 @@ Nodes (15): System.Dynamic, UpdateDelegates, CallSite, Obsolete, T0, T1, T2, T3 
 
 ### Community 847 - "Community 847"
 Cohesion: 0.07
-Nodes (22): BlockExpressionProxy, CatchBlockProxy, DebugInfoExpressionProxy, Expression, ParameterExpressionProxy, TryExpressionProxy, BlockExpression, CacheDict (+14 more)
+Nodes (23): BlockExpressionProxy, CatchBlockProxy, DebugInfoExpressionProxy, Expression, ParameterExpressionProxy, TryExpressionProxy, Func, BlockExpression (+15 more)
 
 ### Community 848 - "Community 848"
 Cohesion: 0.05
@@ -22341,8 +22410,8 @@ Cohesion: 0.11
 Nodes (14): ArcDirection, Color, FillRule, Gradient, IntPtr, LineCap, LineJoin, MeshWriteDataInterface (+6 more)
 
 ### Community 855 - "Community 855"
-Cohesion: 0.07
-Nodes (27): AdvancedDropdownItem, AdvancedDropdownWindow, AdvancedDropdownDataProvider, DropDownFilterWindow, DropDownFilterWindowElement, Element, FilterWindow, GroupElement (+19 more)
+Cohesion: 0.06
+Nodes (35): AdvancedDropdownItem, AdvancedDropdownWindow, ControlDropdownItem, ControlUsageDropdownItem, DeviceDropdownItem, InputControlDropdownItem, OptionalControlDropdownItem, UnityEngine.InputSystem.Editor (+27 more)
 
 ### Community 856 - "Community 856"
 Cohesion: 0.06
@@ -22366,7 +22435,7 @@ Nodes (24): AllocateSlot(), Initialize(), MS.Internal.Xml.Cache, ReadText(), Wri
 
 ### Community 861 - "Community 861"
 Cohesion: 0.06
-Nodes (15): ArrayList, BeginEvent, bool, double, HybridDictionary, InputScope, KeywordsTable, List (+7 more)
+Nodes (16): ArrayList, BeginEvent, bool, double, HybridDictionary, InputScope, KeywordsTable, List (+8 more)
 
 ### Community 862 - "Community 862"
 Cohesion: 0.05
@@ -22381,12 +22450,12 @@ Cohesion: 0.07
 Nodes (22): Image, ResetStaticsOnLoad(), UnityEngine.UI, bool, Camera, CanvasRenderer, Color32, FillMethod (+14 more)
 
 ### Community 865 - "Community 865"
-Cohesion: 0.04
-Nodes (36): CreateDevice(), CustomDevice, RemoveDevice(), DaydreamController, DaydreamHMD, Unity.XR.GoogleVr, IInputUpdateCallbackReceiver, UnityEngine.InputSystem.LowLevel (+28 more)
+Cohesion: 0.06
+Nodes (29): DaydreamController, DaydreamHMD, Unity.XR.GoogleVr, GearVRTrackedController, OculusHMD, OculusHMDExtended, OculusRemote, OculusTouchController (+21 more)
 
 ### Community 866 - "Community 866"
-Cohesion: 0.08
-Nodes (15): GdiPlusStreamHelper, System.Drawing, EmfType, byte, int, IStream, Rectangle, Stream (+7 more)
+Cohesion: 0.09
+Nodes (14): GdiPlusStreamHelper, System.Drawing, EmfType, byte, int, Rectangle, Stream, MetafileFrameUnit (+6 more)
 
 ### Community 867 - "Community 867"
 Cohesion: 0.07
@@ -22434,7 +22503,7 @@ Nodes (9): Camera, RayTracingAccelerationStructure, RayTracingShader, RectInt, R
 
 ### Community 878 - "Community 878"
 Cohesion: 0.08
-Nodes (16): bool, Bounds, CanvasUpdate, DrivenRectTransformTracker, float, Matrix4x4, MovementType, PointerEventData (+8 more)
+Nodes (17): IScrollHandler, bool, Bounds, CanvasUpdate, DrivenRectTransformTracker, float, Matrix4x4, MovementType (+9 more)
 
 ### Community 879 - "Community 879"
 Cohesion: 0.09
@@ -22449,8 +22518,8 @@ Cohesion: 0.04
 Nodes (37): UGUIBuildAnalytics, UnityEditor.UI.Analytics, Analytic, UnityEditor.Rendering.Analytics, VolumeProfileOverridesAnalytic, CorePreprocessBuild, UnityEditor.Rendering, CoreBuildData (+29 more)
 
 ### Community 882 - "Community 882"
-Cohesion: 0.05
-Nodes (39): AlternativeBuiltInToURP, AnimationClipUpgradePathsCacheTests, ConflictingUpgrader, ConflictingUpgrader01, DefaultBuiltInToURP, UnityEditor.Rendering.Universal.Tools, IEnumerable, Test (+31 more)
+Cohesion: 0.07
+Nodes (33): AlternativeBuiltInToURP, ConflictingUpgrader, ConflictingUpgrader01, DefaultBuiltInToURP, UnityEditor.Rendering.Universal.Tools, IEnumerable, Test, Material (+25 more)
 
 ### Community 883 - "Community 883"
 Cohesion: 0.04
@@ -22465,12 +22534,12 @@ Cohesion: 0.05
 Nodes (34): BaseTreeView, bool, CollectionViewController, Column, Columns, ContextualMenuPopulateEvent, CreationContext, IEnumerable (+26 more)
 
 ### Community 886 - "Community 886"
-Cohesion: 0.03
-Nodes (50): SGBlackboardCategory, UnityEditor.ShaderGraph.Drawing, ToggleDropdown, UnityEditor.Rendering, EdgeControl, GraphElement, ISelection, AttachToPanelEvent (+42 more)
+Cohesion: 0.05
+Nodes (28): SGBlackboardCategory, UnityEditor.ShaderGraph.Drawing, ISelection, BlackboardCategoryController, BlackboardCategoryViewModel, bool, ChangeEvent, ContextualMenuManipulator (+20 more)
 
 ### Community 887 - "Community 887"
-Cohesion: 0.06
-Nodes (24): UnityEditor.Rendering.Universal, UniversalRenderPipelineCameraEditor, UnityEditor.Rendering.Universal, UniversalRenderPipelineAssetEditor, Styles, TestRunnerGUI, UnityEditor.TestTools.TestRunner.GUI, Camera (+16 more)
+Cohesion: 0.09
+Nodes (16): UnityEditor.Rendering.Universal, UnityEditor.Rendering.Universal, UniversalRenderPipelineAssetEditor, Styles, TestRunnerGUI, UnityEditor.TestTools.TestRunner.GUI, Rect, ReorderableList (+8 more)
 
 ### Community 888 - "Community 888"
 Cohesion: 0.07
@@ -22486,15 +22555,15 @@ Nodes (19): ConnectionChangeType, InputDeviceCharacteristics, InputDeviceRole, B
 
 ### Community 891 - "Community 891"
 Cohesion: 0.04
-Nodes (42): CngKeyBlobFormat, System.Security.Cryptography, DisplayNameFormat, IEdge, UnityEditor.Graphing, T, string, TypeIdentifier (+34 more)
+Nodes (39): DisplayNameFormat, IEdge, UnityEditor.Graphing, T, string, TypeIdentifier, string, TypeIdentifier (+31 more)
 
 ### Community 892 - "Community 892"
-Cohesion: 0.07
-Nodes (20): SGBlackboardField, ISGControlledElement, Action, ContextualMenuPopulateEvent, DragUpdatedEvent, EventBase, IPropertyDrawer, Label (+12 more)
+Cohesion: 0.03
+Nodes (47): INotifyValueChanged, Action, AttachToPanelEvent, bool, CreationContext, CustomStyleProperty, CustomStyleResolvedEvent, DetachFromPanelEvent (+39 more)
 
 ### Community 893 - "Community 893"
-Cohesion: 0.04
-Nodes (30): SafeCustomLineCapHandle, System.Drawing.Drawing2D, SecurityCritical, IntPtr, SecureString, bool, uint, EncryptionOptions (+22 more)
+Cohesion: 0.05
+Nodes (25): SafeCustomLineCapHandle, System.Drawing.Drawing2D, SecurityCritical, RetCode, SQL_HANDLE, StringBuilder, bool, uint (+17 more)
 
 ### Community 894 - "Community 894"
 Cohesion: 0.07
@@ -22557,8 +22626,8 @@ Cohesion: 0.13
 Nodes (53): ExcludeFromDocs, FreeFunction, IFormatProvider, MethodImpl, Obsolete, Quaternion, Vector3, Angle() (+45 more)
 
 ### Community 909 - "Community 909"
-Cohesion: 0.06
-Nodes (12): bool, CollectionViewController, ICollectionDragAndDropController, IEnumerable, IList, List, PointerUpEvent, string (+4 more)
+Cohesion: 0.05
+Nodes (18): bool, CollectionViewController, CreationContext, ICollectionDragAndDropController, IEnumerable, IList, IUxmlAttributes, List (+10 more)
 
 ### Community 910 - "Community 910"
 Cohesion: 0.06
@@ -22574,7 +22643,7 @@ Nodes (14): UIControlPanelFilterPanel, bool, ControlPanelFilter, GameData, Image
 
 ### Community 913 - "Community 913"
 Cohesion: 0.05
-Nodes (26): BlackboardGroupInfo, SGBlackboard, UnityEditor.ShaderGraph.Drawing, DragEnterEvent, DragExitedEvent, BlackboardController, BlackboardViewModel, bool (+18 more)
+Nodes (27): BlackboardGroupInfo, SGBlackboard, UnityEditor.ShaderGraph.Drawing, DragEnterEvent, DragExitedEvent, ISGControlledElement, BlackboardController, BlackboardViewModel (+19 more)
 
 ### Community 914 - "Community 914"
 Cohesion: 0.10
@@ -22654,7 +22723,7 @@ Nodes (24): bool, Dictionary, Guid, SNIHandle, SNIMarsConnection, SNIMarsHandle,
 
 ### Community 934 - "Community 934"
 Cohesion: 0.11
-Nodes (8): DateTimeOffset, MetaType, SqlMoney, SqlNotificationRequest, _SqlRPC, Task, TaskCompletionSource, TimeSpan
+Nodes (9): DateTimeOffset, Exception, MetaType, SqlMoney, SqlNotificationRequest, _SqlRPC, Task, TaskCompletionSource (+1 more)
 
 ### Community 935 - "Community 935"
 Cohesion: 0.08
@@ -22677,8 +22746,8 @@ Cohesion: 0.07
 Nodes (15): DecoderFallback, DecoderFallbackBuffer, DecoderFallbackBuffer, SerializationInfo, StreamingContext, string, char, DecoderFallbackBuffer (+7 more)
 
 ### Community 940 - "Community 940"
-Cohesion: 0.04
-Nodes (29): Light2DPostProcess, AssetPostprocessor, ModelPostprocessor, UnityEditor.Rendering.Universal, SketchupMaterialDescriptionPreprocessor, UnityEditor.Rendering.Universal, UnityEditor.Rendering.Universal, UniversalRenderPipelineGlobalSettingsPostprocessor (+21 more)
+Cohesion: 0.03
+Nodes (37): Light2DPostProcess, AssetPostprocessor, ModelPostprocessor, UnityEditor.Rendering.Universal, SketchupMaterialDescriptionPreprocessor, UnityEditor.Rendering.Universal, ThreeDSMaterialDescriptionPreprocessor, UnityEditor.Rendering.Universal (+29 more)
 
 ### Community 941 - "Community 941"
 Cohesion: 0.09
@@ -22753,16 +22822,16 @@ Cohesion: 0.07
 Nodes (27): Duplex, Array, ArrayList, bool, EditorBrowsable, Graphics, IEnumerator, Image (+19 more)
 
 ### Community 960 - "Community 960"
-Cohesion: 0.13
-Nodes (16): FeatureElement, ScriptableRendererFeatureProvider, UnityEditor.Rendering.Universal, Element, List, string, Type, VolumeComponentListEditor (+8 more)
+Cohesion: 0.06
+Nodes (30): FeatureElement, ScriptableRendererFeatureProvider, UnityEditor.Rendering.Universal, Element, IProvider, List, string, Type (+22 more)
 
 ### Community 961 - "Community 961"
-Cohesion: 0.08
-Nodes (19): IndexExpressionProxy, MemberExpressionProxy, NewArrayExpressionProxy, NewExpressionProxy, CallSiteBinder, ConstructorInfo, DynamicExpression, ElementInit (+11 more)
+Cohesion: 0.07
+Nodes (20): IndexExpressionProxy, MemberExpressionProxy, NewArrayExpressionProxy, NewExpressionProxy, BindingFlags, ConstructorInfo, ElementInit, FieldInfo (+12 more)
 
 ### Community 962 - "Community 962"
-Cohesion: 0.07
-Nodes (24): FixupVisitor, QilNode, bool, Conditional, double, IList, int, List (+16 more)
+Cohesion: 0.08
+Nodes (21): FixupVisitor, bool, Conditional, double, IList, int, List, QilIterator (+13 more)
 
 ### Community 963 - "Community 963"
 Cohesion: 0.06
@@ -22802,7 +22871,7 @@ Nodes (49): Action, Func, List, Obsolete, PseudoStates, StyleSelectorRelationshi
 
 ### Community 972 - "Community 972"
 Cohesion: 0.05
-Nodes (34): AudioPlayableAssetEditor, UnityEditor.Timeline, ClipEditor, ControlPlayableAssetEditor, UnityEditor.Timeline, MyCustomClipEditor, TextPlayableAssetClipEditor, Timeline.Samples (+26 more)
+Nodes (30): AnimationPlayableAssetEditor, UnityEditor.Timeline, ClipEditor, ControlPlayableAssetEditor, UnityEditor.Timeline, MyCustomClipEditor, TextPlayableAssetClipEditor, Timeline.Samples (+22 more)
 
 ### Community 973 - "Community 973"
 Cohesion: 0.08
@@ -22866,15 +22935,15 @@ Nodes (21): Image, System.Drawing, EncoderParameters, FrameDimension, GetThumbna
 
 ### Community 988 - "Community 988"
 Cohesion: 0.05
-Nodes (32): IMaterialModifier, Color, float, Graphic, int, Material, Slider, string (+24 more)
+Nodes (30): Mask, UnityEngine.UI, IMaterialModifier, Color, float, Graphic, int, Material (+22 more)
 
 ### Community 989 - "Community 989"
-Cohesion: 0.05
-Nodes (37): IBindable, INotifyValueChanged, CreationContext, float, GeometryChangedEvent, IUxmlAttributes, Label, string (+29 more)
+Cohesion: 0.09
+Nodes (24): bool, CompareFunction, ContextContainer, CustomCameraSettings, DebugRendererLists, FilteringSettings, List, Obsolete (+16 more)
 
 ### Community 990 - "Community 990"
-Cohesion: 0.04
-Nodes (31): UnityEditor.ShaderGraph, ViewDirectionMaterialSlot, IMayRequireViewDirection, MayRequireViewDirectionExtensions, UnityEditor.ShaderGraph, GenerationMode, NeededCoordinateSpace, ShaderStageCapability (+23 more)
+Cohesion: 0.08
+Nodes (11): ILayoutGroup, DrivenRectTransformTracker, IEnumerator, List, RectOffset, RectTransform, T, TextAnchor (+3 more)
 
 ### Community 991 - "Community 991"
 Cohesion: 0.08
@@ -22893,12 +22962,12 @@ Cohesion: 0.05
 Nodes (39): Action, BlockFieldDescriptor, bool, DefineCollection, FieldCollection, FieldDescriptor, GenerationMode, GUIContent (+31 more)
 
 ### Community 995 - "Community 995"
-Cohesion: 0.05
-Nodes (28): bool, CameraData, CameraRenderType, ClearFlag, CommandBuffer, ContextContainer, GizmoSubset, IBaseCommandBuffer (+20 more)
+Cohesion: 0.04
+Nodes (43): bool, Camera, CameraData, CameraRenderType, ClearFlag, CommandBuffer, ContextContainer, GizmoSubset (+35 more)
 
 ### Community 996 - "Community 996"
-Cohesion: 0.08
-Nodes (25): BuildPlayerOptions, BuildPlayerWithProfileOptions, BuildTarget, int, ITestRunSettings, PlayerLauncherBuildOptions, PlaymodeTestsController, Scene (+17 more)
+Cohesion: 0.06
+Nodes (30): BuildPlayerOptions, BuildPlayerWithProfileOptions, BuildTarget, int, ITestRunSettings, PlayerLauncherBuildOptions, PlaymodeTestsController, Scene (+22 more)
 
 ### Community 997 - "Community 997"
 Cohesion: 0.06
@@ -22922,7 +22991,7 @@ Nodes (8): DateTime, DateTimeOffset, double, int, StringBuilder, TimeSpan, BinXm
 
 ### Community 1002 - "Community 1002"
 Cohesion: 0.10
-Nodes (25): CodeExporter, Accessor, ArrayMapping, CodeAttributeArgument, CodeAttributeDeclarationCollection, CodeCommentStatementCollection, CodeConstructor, CodeExpression (+17 more)
+Nodes (24): Accessor, ArrayMapping, CodeAttributeArgument, CodeAttributeDeclarationCollection, CodeCommentStatementCollection, CodeConstructor, CodeExpression, CodeIdentifiers (+16 more)
 
 ### Community 1003 - "Community 1003"
 Cohesion: 0.09
@@ -22937,8 +23006,8 @@ Cohesion: 0.07
 Nodes (22): bool, DiscreteTime, double, DurationMode, GameObject, IEnumerable, int, IPropertyCollector (+14 more)
 
 ### Community 1006 - "Community 1006"
-Cohesion: 0.08
-Nodes (15): ClipperOffset, PolyNode, PolyTree, ClipTypes, DoublePoint, EndTypes, IntRect, JoinTypes (+7 more)
+Cohesion: 0.09
+Nodes (14): ClipperOffset, PolyNode, PolyTree, ClipTypes, DoublePoint, EndTypes, IntRect, JoinTypes (+6 more)
 
 ### Community 1007 - "Community 1007"
 Cohesion: 0.07
@@ -23010,7 +23079,7 @@ Nodes (26): CompilerContextData, GetEnumerator(), NativeListExtensions, UnityEng
 
 ### Community 1024 - "Community 1024"
 Cohesion: 0.08
-Nodes (18): CodeArrayCreateExpression, CodeAttributeArgument, CodeAttributeDeclarationCollection, CodeConditionStatement, CodeConstructor, CodeDelegateCreateExpression, CodeIterationStatement, CodeMemberField (+10 more)
+Nodes (14): UnityEngine.TestTools.TestRunner.Callbacks, QueueData, UnityEngine.TestTools.TestRunner.Callbacks, UnityEngine.Rendering.RenderGraphModule, PlayerConnection, UnityEngine.Diagnostics, EditorBrowsable, Obsolete (+6 more)
 
 ### Community 1025 - "Community 1025"
 Cohesion: 0.10
@@ -23033,8 +23102,8 @@ Cohesion: 0.04
 Nodes (32): CreateEventsTask, UnityEditor.TestTools.TestRunner.TestRun.Tasks.Events, RegisterCallbackDelegatorEventsTask, UnityEditor.TestTools.TestRunner.TestRun.Tasks.Events, RunFinishedInvocationEvent, UnityEditor.TestTools.TestRunner.TestRun.Tasks.Events, RunStartedInvocationEvent, UnityEditor.TestTools.TestRunner.TestRun.Tasks.Events (+24 more)
 
 ### Community 1030 - "Community 1030"
-Cohesion: 0.04
-Nodes (28): Feature, GeoJSON.Net.Feature, FeatureCollection, GeoJSON.Net.Feature, GeoJSON.Net.Geometry, GeometryCollection, GeoJSON.Net.Geometry, LineString (+20 more)
+Cohesion: 0.05
+Nodes (21): FeatureCollection, GeoJSON.Net.Feature, GeoJSON.Net.Geometry, GeometryCollection, GeoJSON.Net.Geometry, LineString, GeoJSON.Net.Geometry, MultiLineString (+13 more)
 
 ### Community 1031 - "Community 1031"
 Cohesion: 0.09
@@ -23049,8 +23118,8 @@ Cohesion: 0.10
 Nodes (15): Allocator, Func, IEnumerable, IEqualityComparer, NativeArray, Predicate, SuppressMessage, TFirst (+7 more)
 
 ### Community 1034 - "Community 1034"
-Cohesion: 0.07
-Nodes (37): BaseRenderFunc, BufferDesc, BufferHandle, Conditional, DepthAccess, GraphicsBuffer, InternalRenderGraphContext, Obsolete (+29 more)
+Cohesion: 0.08
+Nodes (32): BufferDesc, BufferHandle, Conditional, DepthAccess, GraphicsBuffer, InternalRenderGraphContext, Obsolete, RayTracingAccelerationStructureHandle (+24 more)
 
 ### Community 1035 - "Community 1035"
 Cohesion: 0.05
@@ -23073,7 +23142,7 @@ Cohesion: 0.12
 Nodes (6): MemberInfo, MethodInfo, Type, TypeCode, System.Dynamic.Utils, TypeUtils
 
 ### Community 1040 - "Community 1040"
-Cohesion: 0.15
+Cohesion: 0.14
 Nodes (5): SqlBuffer, SqlCollation, _SqlMetaData, SqlMetaDataPriv, SqlReturnValue
 
 ### Community 1041 - "Community 1041"
@@ -23142,7 +23211,7 @@ Nodes (23): AttributeProperties, ByteStack, ElementProperties, bool, byte, int, 
 
 ### Community 1058 - "Community 1058"
 Cohesion: 0.05
-Nodes (28): AudioClipProperties, UnityEngine.Timeline, float, float, AnimationCurve, bool, Transform, FrameData (+20 more)
+Nodes (29): AudioClipProperties, UnityEngine.Timeline, AudioMixerProperties, UnityEngine.Timeline, float, float, FrameData, Playable (+21 more)
 
 ### Community 1059 - "Community 1059"
 Cohesion: 0.10
@@ -23157,28 +23226,28 @@ Cohesion: 0.06
 Nodes (21): DbConnectionStringBuilderDescriptor, System.Data.Common, ExtendedPropertyDescriptor, System.ComponentModel, ReflectPropertyDescriptor, System.ComponentModel, IExtenderProvider, BitVector32 (+13 more)
 
 ### Community 1062 - "Community 1062"
-Cohesion: 0.08
-Nodes (24): AttributeProvider, AttributeTypeDescriptor, ComNativeDescriptionProvider, ComNativeTypeDescriptor, GetAttributes(), GetClassName(), GetComponentName(), GetConverter() (+16 more)
+Cohesion: 0.05
+Nodes (20): ApplyImportsAction, ApplyTemplatesAction, AttributeAction, CallTemplateAction, ChooseAction, CommentAction, CopyAction, CopyOfAction (+12 more)
 
 ### Community 1063 - "Community 1063"
 Cohesion: 0.08
 Nodes (27): DebugDisplaySettingsVolume, OpenInRenderingDebugger(), SettingsPanel, Strings, Styles, UnityEngine.Rendering, WidgetFactory, bool (+19 more)
 
 ### Community 1064 - "Community 1064"
-Cohesion: 0.06
-Nodes (20): UnityEditor.ShaderGraph.Internal, Vector3ShaderProperty, UnityEditor.ShaderGraph.Internal, Vector4ShaderProperty, UnityEditor.ShaderGraph.Internal, VectorShaderProperty, AbstractMaterialNode, Action (+12 more)
+Cohesion: 0.08
+Nodes (24): AttributeProvider, AttributeTypeDescriptor, ComNativeDescriptionProvider, ComNativeTypeDescriptor, GetAttributes(), GetClassName(), GetComponentName(), GetConverter() (+16 more)
 
 ### Community 1065 - "Community 1065"
-Cohesion: 0.09
-Nodes (16): CullStateChangedEvent, MaskableGraphic, OnValidate(), UnityEngine.UI, IClippable, IMaskable, bool, Camera (+8 more)
+Cohesion: 0.10
+Nodes (15): bool, Camera, float, int, IPlanetSurfaceRaycaster, ISurfacePathBrushService, LineRenderer, Material (+7 more)
 
 ### Community 1066 - "Community 1066"
-Cohesion: 0.06
-Nodes (21): EqualityComparer, ByteEqualityComparer, System.Collections.Generic, GenericEqualityComparer, System.Collections.Generic, InternalStringComparer, System.Collections.Generic, LongEnumEqualityComparer (+13 more)
+Cohesion: 0.13
+Nodes (6): EqualityComparer, ByteEqualityComparer, System.Collections.Generic, InternalStringComparer, System.Collections.Generic, SecuritySafeCritical
 
 ### Community 1067 - "Community 1067"
-Cohesion: 0.08
-Nodes (10): MonoTODO, string, MonoTODO, PermissionSet, ApplicationDirectory, System.Security.Policy, IBuiltInEvidence, System.Security.Policy (+2 more)
+Cohesion: 0.05
+Nodes (20): EvidenceBase, ActivationArguments, System.Runtime.Hosting, ActivationContext, ApplicationIdentity, string, MonoTODO, string (+12 more)
 
 ### Community 1068 - "Community 1068"
 Cohesion: 0.06
@@ -23213,8 +23282,8 @@ Cohesion: 0.13
 Nodes (11): bool, Dictionary, IEnumerable, InputActionsEditorState, List, SerializedProperty, string, StringBuilder (+3 more)
 
 ### Community 1076 - "Community 1076"
-Cohesion: 0.06
-Nodes (32): CommandBuffer, ContextContainer, DrawingSettings, int, List, NativeArray, ProfilingSampler, RenderGraph (+24 more)
+Cohesion: 0.17
+Nodes (12): ContextContainer, Material, RenderGraph, RenderingData, RenderPassEvent, ScriptableRenderer, string, TextureHandle (+4 more)
 
 ### Community 1077 - "Community 1077"
 Cohesion: 0.10
@@ -23257,12 +23326,12 @@ Cohesion: 0.12
 Nodes (10): GUIContent, GUILayoutOption, GUIStyle, Rect, Texture, ToolbarButtonSize, Vector2, WindowFunction (+2 more)
 
 ### Community 1087 - "Community 1087"
-Cohesion: 0.10
-Nodes (9): Font, FontReference, MarkToBaseAdjustmentRecord, MarkToMarkAdjustmentRecord, MethodImpl, NativeMethod, OTL_Feature, OTL_Lookup (+1 more)
+Cohesion: 0.07
+Nodes (15): UISandPanel, ECommand, bool, Color, ESandSource, float, int, long (+7 more)
 
 ### Community 1088 - "Community 1088"
-Cohesion: 0.04
-Nodes (34): ActionMapIndices, Allocate(), AllocFromBlob(), Clone(), CopyDataFrom(), Dispose(), InputActionState, UnityEngine.InputSystem (+26 more)
+Cohesion: 0.09
+Nodes (10): InputActionState, InputBindingResolver, Action, bool, IInputInteraction, InputBinding, InputBindingComposite, InputProcessor (+2 more)
 
 ### Community 1089 - "Community 1089"
 Cohesion: 0.08
@@ -23282,7 +23351,7 @@ Nodes (12): GoalLogic, BlueprintData, bool, Dictionary, float, GameData, GoalDat
 
 ### Community 1093 - "Community 1093"
 Cohesion: 0.04
-Nodes (24): UIBattleBaseWindow, BattleBaseComponent, bool, Color, CombatModuleComponent, ConstructionModuleComponent, DefenseSystem, GameHistoryData (+16 more)
+Nodes (27): UIBattleBaseWindow, BattleBaseComponent, bool, Color, CombatModuleComponent, ConstructionModuleComponent, DefenseSystem, GameHistoryData (+19 more)
 
 ### Community 1094 - "Community 1094"
 Cohesion: 0.08
@@ -23298,7 +23367,7 @@ Nodes (30): EqualsSourceData(), InstanceCullingBatcher, UnityEngine.Rendering, B
 
 ### Community 1097 - "Community 1097"
 Cohesion: 0.09
-Nodes (29): BlendProbesUsage, GPUDrivenMeshRendererData, GPUDrivenRendererDataCallback, Allocator, DefaultGPUComponents, EntityId, GPUArchetypeHandle, GPUComponentSet (+21 more)
+Nodes (28): BlendProbesUsage, GPUDrivenMeshRendererData, GPUDrivenRendererDataCallback, Allocator, DefaultGPUComponents, EntityId, GPUArchetypeHandle, GPUComponentSet (+20 more)
 
 ### Community 1098 - "Community 1098"
 Cohesion: 0.05
@@ -23353,8 +23422,8 @@ Cohesion: 0.07
 Nodes (23): HttpContentHeaders, System.Net.Http.Headers, HeaderBucket, HttpHeaders, System.Net.Http.Headers, HttpRequestHeaders, System.Net.Http.Headers, HttpResponseHeaders (+15 more)
 
 ### Community 1111 - "Community 1111"
-Cohesion: 0.05
-Nodes (22): ICustomAttributeProvider, CustomAttributeData, Guid, IList, IntPtr, Type, CustomAttributeData, Guid (+14 more)
+Cohesion: 0.10
+Nodes (14): CustomAttributeData, Guid, IList, int, IntPtr, MemberInfo, object, ParameterAttributes (+6 more)
 
 ### Community 1112 - "Community 1112"
 Cohesion: 0.08
@@ -23401,8 +23470,8 @@ Cohesion: 0.08
 Nodes (18): Binder, BindingFlags, CallingConventions, ComVisible, ConstructorInfo, CultureInfo, EventInfo, FieldInfo (+10 more)
 
 ### Community 1123 - "Community 1123"
-Cohesion: 0.07
-Nodes (22): AbstractShaderProperty, AppendTo(), LegacyShaderPropertyData, PropertyAttribute, UnityEditor.ShaderGraph.Internal, ValueEquals(), AbstractMaterialNode, Action (+14 more)
+Cohesion: 0.04
+Nodes (28): UnityEditor.ShaderGraph.Internal, Vector2ShaderProperty, UnityEditor.ShaderGraph.Internal, Vector3ShaderProperty, UnityEditor.ShaderGraph.Internal, Vector4ShaderProperty, UnityEditor.ShaderGraph.Internal, VectorShaderProperty (+20 more)
 
 ### Community 1124 - "Community 1124"
 Cohesion: 0.12
@@ -23417,8 +23486,8 @@ Cohesion: 0.12
 Nodes (17): Color32, IntPtr, MarkerFlags, MethodImpl, NativeConditional, Object, RequiredMember, SpecialName (+9 more)
 
 ### Community 1127 - "Community 1127"
-Cohesion: 0.05
-Nodes (34): JointLimits, JointMotor, JointDrive, MethodImpl, Quaternion, SoftJointLimit, SoftJointLimitSpring, SpecialName (+26 more)
+Cohesion: 0.14
+Nodes (9): JointDrive, MethodImpl, Quaternion, SoftJointLimit, SoftJointLimitSpring, SpecialName, Vector3, ConfigurableJoint (+1 more)
 
 ### Community 1128 - "Community 1128"
 Cohesion: 0.08
@@ -23429,8 +23498,8 @@ Cohesion: 0.09
 Nodes (10): bool, BoundsInt, FreeFunction, Object, Sprite, T, TileBase, SyncTileCallbackSettings (+2 more)
 
 ### Community 1130 - "Community 1130"
-Cohesion: 0.05
-Nodes (26): bool, Color, Color32, float, Font, FontData, HorzAlignment, int (+18 more)
+Cohesion: 0.03
+Nodes (40): RawImage, UnityEngine.UI, Rect, Rect, Texture, VertexHelper, Rect, Texture (+32 more)
 
 ### Community 1131 - "Community 1131"
 Cohesion: 0.09
@@ -23485,8 +23554,8 @@ Cohesion: 0.05
 Nodes (21): UIGalaxySelect, DotNet35Random, bool, float, GalaxyData, GameDesc, GameObject, Image (+13 more)
 
 ### Community 1144 - "Community 1144"
-Cohesion: 0.04
-Nodes (34): CollectionEntry, DbReferenceCollection, EventItem, InputEventTreeView, UnityEngine.InputSystem.Editor, InputControl, InputDevice, InputEventPtr (+26 more)
+Cohesion: 0.06
+Nodes (24): CollectionEntry, EventItem, InputEventTreeView, UnityEngine.InputSystem.Editor, InputControl, InputDevice, InputEventPtr, InputEventTrace (+16 more)
 
 ### Community 1145 - "Community 1145"
 Cohesion: 0.12
@@ -23526,11 +23595,11 @@ Nodes (26): ExpandableObjectConverter, System.ComponentModel, ConstraintConverte
 
 ### Community 1154 - "Community 1154"
 Cohesion: 0.08
-Nodes (19): IServiceContainer, System.ComponentModel.Design, EmbeddedTypeAwareTypeComparer, ServiceCollection, ServiceContainer, System.ComponentModel.Design, IDesignerHost, IDesignerLoaderHost (+11 more)
+Nodes (17): IDesignerHost, System.ComponentModel.Design, IServiceContainer, System.ComponentModel.Design, DesignerTransaction, IDesignerHost, IDesignerLoaderHost, IComponent (+9 more)
 
 ### Community 1155 - "Community 1155"
-Cohesion: 0.13
-Nodes (9): Mask, UnityEngine.UI, bool, Camera, Graphic, Material, Obsolete, RectTransform (+1 more)
+Cohesion: 0.07
+Nodes (14): Evidence, IPermission, Evidence, IPermission, Evidence, IPermission, MonoTODO, string (+6 more)
 
 ### Community 1156 - "Community 1156"
 Cohesion: 0.11
@@ -23565,8 +23634,8 @@ Cohesion: 0.06
 Nodes (28): GrassEvent, CheckInspectorPaint(), GrassFlowRenderer, OnValidate(), Reset(), bool, ComputeBuffer, ComputeKernel (+20 more)
 
 ### Community 1164 - "Community 1164"
-Cohesion: 0.08
-Nodes (20): DirectoryCatalog, DirectoryCatalogDebuggerProxy, System.ComponentModel.Composition.Hosting, AssemblyCatalog, bool, ComposablePartCatalogChangeEventArgs, ComposablePartCatalogCollection, ComposablePartDefinition (+12 more)
+Cohesion: 0.06
+Nodes (28): DirectoryCatalog, DirectoryCatalogDebuggerProxy, System.ComponentModel.Composition.Hosting, ICompositionElement, AssemblyCatalog, bool, ComposablePartCatalogChangeEventArgs, ComposablePartCatalogCollection (+20 more)
 
 ### Community 1165 - "Community 1165"
 Cohesion: 0.05
@@ -23598,7 +23667,7 @@ Nodes (30): bool, CommandBuffer, ContextContainer, float, HDRDisplayInformation,
 
 ### Community 1172 - "Community 1172"
 Cohesion: 0.08
-Nodes (29): Action, BlockFieldDescriptor, bool, Dictionary, FieldCollection, GUID, IMasterNode1, IncludeCollection (+21 more)
+Nodes (30): Action, BlockFieldDescriptor, bool, Dictionary, FieldCollection, GUID, IMasterNode1, IncludeCollection (+22 more)
 
 ### Community 1173 - "Community 1173"
 Cohesion: 0.08
@@ -23637,8 +23706,8 @@ Cohesion: 0.08
 Nodes (16): XPathItem, IComparer, IEnumerator, XPathItem, XPathNavigator, Array, IEnumerator, int (+8 more)
 
 ### Community 1182 - "Community 1182"
-Cohesion: 0.16
-Nodes (12): AttributeSet, Key, NodeCtor, Number, Sort, T, Template, Text (+4 more)
+Cohesion: 0.17
+Nodes (11): AttributeSet, Key, NodeCtor, Number, Sort, T, Template, Text (+3 more)
 
 ### Community 1183 - "Community 1183"
 Cohesion: 0.12
@@ -23725,8 +23794,8 @@ Cohesion: 0.05
 Nodes (15): DataRecordInternal, DbDataRecord, Attribute, AttributeCollection, DateTime, EventDescriptor, EventDescriptorCollection, FieldNameLookup (+7 more)
 
 ### Community 1204 - "Community 1204"
-Cohesion: 0.05
-Nodes (21): ITypedList, System.ComponentModel, DataViewManager, System.Data, DataViewManagerListItemTypeDescriptor, DataViewSettingCollection, Array, bool (+13 more)
+Cohesion: 0.04
+Nodes (24): IBindingList, System.ComponentModel, IBindingListView, System.ComponentModel, DataViewManager, System.Data, DataViewManagerListItemTypeDescriptor, DataViewSettingCollection (+16 more)
 
 ### Community 1205 - "Community 1205"
 Cohesion: 0.06
@@ -23761,8 +23830,8 @@ Cohesion: 0.05
 Nodes (25): IMayObsolete, UnityEditor.ShaderGraph, IMaySupportVFX, MaySupportVFXExtensions, UnityEditor.ShaderGraph, ILegacyTarget, UnityEditor.ShaderGraph.Legacy, Target (+17 more)
 
 ### Community 1213 - "Community 1213"
-Cohesion: 0.16
-Nodes (12): int, MethodBase, RuntimeAssembly, RuntimeType, SecurityCritical, SerializationInfo, StreamingContext, string (+4 more)
+Cohesion: 0.15
+Nodes (13): IObjectReference, int, MethodBase, RuntimeAssembly, RuntimeType, SecurityCritical, SerializationInfo, StreamingContext (+5 more)
 
 ### Community 1214 - "Community 1214"
 Cohesion: 0.10
@@ -23969,15 +24038,15 @@ Cohesion: 0.06
 Nodes (26): ElementInit, System.Linq.Expressions, IDynamicExpression, System.Linq.Expressions, InstanceMethodCallExpression1, System.Linq.Expressions, InstanceMethodCallExpression, System.Linq.Expressions (+18 more)
 
 ### Community 1265 - "Community 1265"
-Cohesion: 0.04
-Nodes (22): Matrix2ShaderProperty, UnityEditor.ShaderGraph, Matrix3ShaderProperty, UnityEditor.ShaderGraph, Matrix4ShaderProperty, UnityEditor.ShaderGraph, MatrixShaderProperty, UnityEditor.ShaderGraph (+14 more)
+Cohesion: 0.13
+Nodes (3): MonoOrStereoscopicEye, Rect, Vector3
 
 ### Community 1266 - "Community 1266"
 Cohesion: 0.08
 Nodes (39): GenericDesktop, AddChildControls(), AddElement(), DetermineAxisNormalizationParameters(), DetermineDefaultState(), DetermineDisplayName(), DetermineFormat(), DetermineLayout() (+31 more)
 
 ### Community 1267 - "Community 1267"
-Cohesion: 0.09
+Cohesion: 0.08
 Nodes (23): GUIGlobals, Action, bool, Event, EventBase, EventInterest, FocusChangeDirection, int (+15 more)
 
 ### Community 1268 - "Community 1268"
@@ -23989,12 +24058,12 @@ Cohesion: 0.09
 Nodes (18): DependenciesTraversal, DependentsTraversal, FilteredCatalog, IComposablePartCatalogTraversal, System.ComponentModel.Composition.Hosting, bool, ComposablePartCatalogChangeEventArgs, ComposablePartDefinition (+10 more)
 
 ### Community 1270 - "Community 1270"
-Cohesion: 0.06
-Nodes (19): ILayoutController, ILayoutSelfController, AspectMode, bool, DrivenRectTransformTracker, float, RectTransform, Vector2 (+11 more)
+Cohesion: 0.13
+Nodes (8): AspectMode, bool, DrivenRectTransformTracker, float, RectTransform, Vector2, AspectRatioFitter, UnityEngine.UI
 
 ### Community 1271 - "Community 1271"
-Cohesion: 0.12
-Nodes (19): A, bool, HashSet, List, SetUp, string, Test, TestCaseData (+11 more)
+Cohesion: 0.10
+Nodes (9): Stack, StackDebugView, StackEnumerator, SyncStack, System.Collections, Array, IEnumerator, int (+1 more)
 
 ### Community 1272 - "Community 1272"
 Cohesion: 0.05
@@ -24022,7 +24091,7 @@ Nodes (13): bool, CallbackContext, InputAction, InputActionProperty, InputDevice
 
 ### Community 1278 - "Community 1278"
 Cohesion: 0.08
-Nodes (15): bool, Editor, ExpandedState, LightingSettings, List, MethodInfo, Object, ProbeReferenceVolume (+7 more)
+Nodes (14): bool, Editor, ExpandedState, LightingSettings, List, MethodInfo, Object, ProbeReferenceVolume (+6 more)
 
 ### Community 1279 - "Community 1279"
 Cohesion: 0.08
@@ -24033,8 +24102,8 @@ Cohesion: 0.09
 Nodes (27): bool, Category, Exception, IList, int, List, RenderPipelineAsset, SetUp (+19 more)
 
 ### Community 1281 - "Community 1281"
-Cohesion: 0.06
-Nodes (21): AttachToPanelEvent, BlurEvent, Change, ContextualMenuPopulateEvent, DropdownMenuAction, GeometryChangedEvent, GraphData, Label (+13 more)
+Cohesion: 0.05
+Nodes (31): EdgeControl, GraphElement, Color, ConcreteSlotValueType, CustomStyleProperty, CustomStyleResolvedEvent, MaterialSlot, VisualElement (+23 more)
 
 ### Community 1282 - "Community 1282"
 Cohesion: 0.13
@@ -24117,8 +24186,8 @@ Cohesion: 0.05
 Nodes (45): dependencies, depth, source, version, com.singularitygroup.hotreload, dependencies, depth, source (+37 more)
 
 ### Community 1302 - "Community 1302"
-Cohesion: 0.22
-Nodes (5): TrackAssetInspector, bool, Rect, SerializedProperty, Texture
+Cohesion: 0.06
+Nodes (20): ActivationTrackInspector, Styles, UnityEditor.Timeline, EditorClipSelection, ICurvesOwnerInspectorWrapper, GroupTrackInspector, Styles, UnityEditor.Timeline (+12 more)
 
 ### Community 1303 - "Community 1303"
 Cohesion: 0.06
@@ -24153,8 +24222,8 @@ Cohesion: 0.07
 Nodes (22): PlanetModelingManager, ThreadFlagLock, bool, Camera, Collider, CpuTopology, GameObject, int (+14 more)
 
 ### Community 1311 - "Community 1311"
-Cohesion: 0.05
-Nodes (24): TranslucentImage, IMeshModifier, EditorBrowsable, Graphic, List, Mesh, Obsolete, UIVertex (+16 more)
+Cohesion: 0.04
+Nodes (29): BaseInput, UnityEngine.EventSystems, BaseRaycaster, UnityEngine.EventSystems, IMeshModifier, Color, Graphic, EditorBrowsable (+21 more)
 
 ### Community 1312 - "Community 1312"
 Cohesion: 0.06
@@ -24193,8 +24262,8 @@ Cohesion: 0.08
 Nodes (10): CalendarData, CultureData, System.Globalization, bool, CalendarId, int, MethodImpl, NumberFormatInfo (+2 more)
 
 ### Community 1321 - "Community 1321"
-Cohesion: 0.05
-Nodes (39): [0.0.13-preview] - 2018-12-05, [0.2.1-preview] - 2019-03-11, [1.0.0] - 2020-04-23, [1.0.0-preview.3] - 2019-11-14, [1.10.0] - 2024-07-24, [1.13.0] - 2025-02-05, [1.14.2] - 2025-08-05, [1.17.0] - 2025-11-25 (+31 more)
+Cohesion: 0.04
+Nodes (46): [0.0.13-preview] - 2018-12-05, [0.2.1-preview] - 2019-03-11, [1.0.0] - 2020-04-23, [1.0.0-preview.3] - 2019-11-14, [1.13.0] - 2025-02-05, [1.14.2] - 2025-08-05, [1.17.0] - 2025-11-25, [1.18.0] - 2026-01-14 (+38 more)
 
 ### Community 1322 - "Community 1322"
 Cohesion: 0.09
@@ -24213,8 +24282,8 @@ Cohesion: 0.09
 Nodes (15): CustomizableFileSettingsProvider, System.Configuration, bool, ConfigurationUserLevel, ExeConfigurationFileMap, NameValueCollection, SettingElement, SettingsContext (+7 more)
 
 ### Community 1326 - "Community 1326"
-Cohesion: 0.08
-Nodes (20): Dictionary, KeyCollection, System.Collections.Generic, ValueCollection, InsertionBehavior, Array, Entry, Enumerator (+12 more)
+Cohesion: 0.04
+Nodes (44): Dictionary, KeyCollection, System.Collections.Generic, ValueCollection, IReadOnlyDictionary, System.Collections.Generic, IReadOnlyList, System.Collections.Generic (+36 more)
 
 ### Community 1327 - "Community 1327"
 Cohesion: 0.07
@@ -24253,16 +24322,16 @@ Cohesion: 0.05
 Nodes (28): GCCDelegate, ChannelBinding, ChannelBindingKind, AsyncCallback, bool, byte, ChannelBinding, ChannelBindingKind (+20 more)
 
 ### Community 1336 - "Community 1336"
-Cohesion: 0.09
-Nodes (9): Queue, QueueDebugView, QueueEnumerator, SynchronizedQueue, System.Collections, Array, IEnumerator, int (+1 more)
+Cohesion: 0.08
+Nodes (16): CSharpCodeGenerator, Microsoft.CSharp, bool, char, CodeComment, CodeCommentStatement, CodeNamespace, CodeNamespaceImport (+8 more)
 
 ### Community 1337 - "Community 1337"
 Cohesion: 0.08
 Nodes (29): HistoryTextureType, HistoryUpdateInfo, AccessFlags, ComputeShader, Config, GUIContent, Hash128, IBaseRenderGraphBuilder (+21 more)
 
 ### Community 1338 - "Community 1338"
-Cohesion: 0.14
-Nodes (14): InlineCurveResizeHandle, bool, Event, float, int, List, TimelineTrackGUI, TrackResizeHandle (+6 more)
+Cohesion: 0.08
+Nodes (24): InlineCurveResizeHandle, Event, WindowState, Event, WindowState, bool, Event, float (+16 more)
 
 ### Community 1339 - "Community 1339"
 Cohesion: 0.09
@@ -24302,7 +24371,7 @@ Nodes (29): AbstractMaterialNode, Action, InspectableAttribute, PropertyInfo, Vi
 
 ### Community 1348 - "Community 1348"
 Cohesion: 0.07
-Nodes (21): bool, DirectorStyles, GUIContent, int, List, Rect, TrackAsset, TreeViewItem (+13 more)
+Nodes (21): bool, DirectorStyles, GUIContent, int, List, Rect, TreeViewItem, WindowState (+13 more)
 
 ### Community 1349 - "Community 1349"
 Cohesion: 0.06
@@ -24429,8 +24498,8 @@ Cohesion: 0.08
 Nodes (12): UIUpdateLogPanel, CanvasGroup, float, int, List, RawImage, RectTransform, ScrollRect (+4 more)
 
 ### Community 1380 - "Community 1380"
-Cohesion: 0.06
-Nodes (21): AssemblyContentType, AssemblyVersionCompatibility, Assembly, AssemblyHashAlgorithm, AssemblyNameFlags, byte, CultureInfo, Guid (+13 more)
+Cohesion: 0.09
+Nodes (13): InspectorPreviewData, OldGraphDataReadConcretePrecision, PotentialTarget, UnityEditor.ShaderGraph, bool, ConcretePrecision, Edge, float (+5 more)
 
 ### Community 1381 - "Community 1381"
 Cohesion: 0.06
@@ -24446,7 +24515,7 @@ Nodes (13): BitFlagsGenerator, JsonFormatReaderInterpreter, System.Runtime.Seria
 
 ### Community 1384 - "Community 1384"
 Cohesion: 0.11
-Nodes (19): BuildCallbackContext, PlatformBuildTimeDetect, ShaderBuildPreprocessor, IPostprocessBuildWithContext, IPreprocessBuildWithContext, bool, BuildReport, DecalNormalBlend (+11 more)
+Nodes (20): BuildCallbackContext, PlatformBuildTimeDetect, ShaderBuildPreprocessor, IPostprocessBuildWithContext, IPreprocessBuildWithContext, bool, BuildReport, DecalNormalBlend (+12 more)
 
 ### Community 1385 - "Community 1385"
 Cohesion: 0.11
@@ -24466,7 +24535,7 @@ Nodes (29): Button, ComputeIndentationLevel(), Create(), CustomAlignBaseFieldLab
 
 ### Community 1389 - "Community 1389"
 Cohesion: 0.10
-Nodes (14): DebugState, DebugState, DebugUIDrawer, DebugUIDrawerContainer, DebugUIDrawerFoldout, DebugUIDrawerHBox, DebugUIDrawerMessageBox, DebugUIDrawerObjectListField (+6 more)
+Nodes (16): DebugState, DebugState, DebugUIDrawer, DebugUIDrawerContainer, DebugUIDrawerFoldout, DebugUIDrawerHBox, DebugUIDrawerMessageBox, DebugUIDrawerObjectListField (+8 more)
 
 ### Community 1390 - "Community 1390"
 Cohesion: 0.12
@@ -24489,8 +24558,8 @@ Cohesion: 0.10
 Nodes (17): GenerateHLSL, bool, Dictionary, FieldInfo, int, List, PrimitiveType, string (+9 more)
 
 ### Community 1395 - "Community 1395"
-Cohesion: 0.07
-Nodes (31): BoxedCounter, GPUDrivenRenderingTests, OnBecameInvisibleBehaviour, OnBecameVisibleBehaviour, OnLoad, OnWillRenderObjectBehaviour, TestInstanceDataSystemWindParamsCountIsInSyncWithTerrainModule(), UnityEngine.Rendering.Tests (+23 more)
+Cohesion: 0.11
+Nodes (24): GPUDrivenRenderingTests, GPUResidentDrawer, bool, Camera, ConditionalIgnore, float4, GPUDrivenProcessor, GPUResidentDrawerResources (+16 more)
 
 ### Community 1396 - "Community 1396"
 Cohesion: 0.05
@@ -24525,8 +24594,8 @@ Cohesion: 0.08
 Nodes (20): bool, Color, HashSet, IEnumerable, int, List, ListView, MenuItem (+12 more)
 
 ### Community 1404 - "Community 1404"
-Cohesion: 0.10
-Nodes (9): Dictionary, HashSet, int, IPointerEvent, List, PointerDownEvent, PointerMoveEvent, PointerUpEvent (+1 more)
+Cohesion: 0.08
+Nodes (8): QilNode, IList, QilNode, List, QilFunction, XmlQualifiedName, IFocus, System.Xml.Xsl.XPath
 
 ### Community 1405 - "Community 1405"
 Cohesion: 0.06
@@ -24621,8 +24690,8 @@ Cohesion: 0.07
 Nodes (17): PlayerAnimator, Animation, AnimationCurve, AnimationState, bool, EMovementState, float, int (+9 more)
 
 ### Community 1428 - "Community 1428"
-Cohesion: 0.07
-Nodes (16): UIChartTech, EChartStyleType, UIPopupMenu, UIPopupMenuButton, ComputeBuffer, GameObject, Image, long (+8 more)
+Cohesion: 0.08
+Nodes (23): double, float, Func, IEnumerable, IList, IOrderedEnumerable, List, MultiColumnHeader (+15 more)
 
 ### Community 1429 - "Community 1429"
 Cohesion: 0.07
@@ -24645,8 +24714,8 @@ Cohesion: 0.10
 Nodes (18): BrotliDecoder, BrotliEncoder, BrotliStream, System.IO.Compression, AsyncCallback, bool, byte, CancellationToken (+10 more)
 
 ### Community 1434 - "Community 1434"
-Cohesion: 0.06
-Nodes (20): CompilerProviderOptionsCollection, System.CodeDom.Compiler, CompilerProviderOption, SchemeSettingElementCollection, System.Configuration, SettingElementCollection, System.Configuration, ConfigurationElementCollection (+12 more)
+Cohesion: 0.05
+Nodes (21): CompilerProviderOptionsCollection, System.CodeDom.Compiler, CompilerProviderOption, ProviderSettingsCollection, System.Configuration, SchemeSettingElementCollection, System.Configuration, ConfigurationElementCollection (+13 more)
 
 ### Community 1435 - "Community 1435"
 Cohesion: 0.08
@@ -24657,8 +24726,8 @@ Cohesion: 0.12
 Nodes (23): ControlPlayableAsset, UnityEngine.Timeline, bool, double, ExposedReference, GameObject, HashSet, ICollection (+15 more)
 
 ### Community 1437 - "Community 1437"
-Cohesion: 0.08
-Nodes (16): CSharpCodeGenerator, Microsoft.CSharp, bool, char, CodeComment, CodeCommentStatement, CodeNamespace, CodeNamespaceImport (+8 more)
+Cohesion: 0.15
+Nodes (10): Assembly, AssemblyHashAlgorithm, AssemblyName, Binder, BindingFlags, CultureInfo, Evidence, ObjectHandle (+2 more)
 
 ### Community 1438 - "Community 1438"
 Cohesion: 0.09
@@ -24689,16 +24758,16 @@ Cohesion: 0.09
 Nodes (23): IBeginDragHandler, ICancelHandler, IDeselectHandler, IDragHandler, IDropHandler, IEndDragHandler, IEventSystemHandler, IInitializePotentialDragHandler (+15 more)
 
 ### Community 1445 - "Community 1445"
-Cohesion: 0.06
-Nodes (28): BinaryExpressionProxy, ConditionalExpressionProxy, ConstantExpressionProxy, DefaultExpressionProxy, ExtensionInfo, GotoExpressionProxy, LabelExpressionProxy, LambdaExpressionProxy (+20 more)
+Cohesion: 0.05
+Nodes (30): BinaryExpressionProxy, ConditionalExpressionProxy, ConstantExpressionProxy, DefaultExpressionProxy, ExtensionInfo, GotoExpressionProxy, InvocationExpressionProxy, LabelExpressionProxy (+22 more)
 
 ### Community 1446 - "Community 1446"
 Cohesion: 0.11
 Nodes (39): GetBytesMode, BigInteger, CLSCompliant, Conditional, IFormatProvider, NumberStyles, ReadOnlySpan, Span (+31 more)
 
 ### Community 1447 - "Community 1447"
-Cohesion: 0.21
-Nodes (12): ExportProvider, AtomicComposition, Export, ExportCardinalityCheckResult, ExportsChangeEventArgs, IEnumerable, ImportCardinality, ImportDefinition (+4 more)
+Cohesion: 0.10
+Nodes (22): AggregateExportProvider, System.ComponentModel.Composition.Hosting, ExportProvider, AtomicComposition, DebuggerStepThrough, Export, ExportsChangeEventArgs, IEnumerable (+14 more)
 
 ### Community 1448 - "Community 1448"
 Cohesion: 0.08
@@ -24721,8 +24790,8 @@ Cohesion: 0.12
 Nodes (19): CommandGenerator, UnityEngine.UIElements.UIR.Implementation, ChainBuilderStats, ClosingInfo, IntPtr, Material, Matrix4x4, MeshGenerationContext (+11 more)
 
 ### Community 1453 - "Community 1453"
-Cohesion: 0.14
-Nodes (14): ShaderSubGraphImporter, UnityEditor.ShaderGraph, AssetCollection, AssetImportContext, AssetImportErrorLog, Dictionary, GraphData, GUID (+6 more)
+Cohesion: 0.05
+Nodes (36): IESEngine, IESMetaData, ShaderGraphImporter, ShaderSubGraphImporter, UnityEditor.ShaderGraph, AssetImportContext, ScriptedImporter, AssetImportContext (+28 more)
 
 ### Community 1454 - "Community 1454"
 Cohesion: 0.10
@@ -24765,8 +24834,8 @@ Cohesion: 0.06
 Nodes (34): Func, GroupKeyData, HashLookup, TElement, TGroupKey, TOrderKey, TSource, Wrapper (+26 more)
 
 ### Community 1464 - "Community 1464"
-Cohesion: 0.07
-Nodes (31): CancellationToken, IEnumerable, OrdinalIndexState, QueryResults, QuerySettings, TSource, CancellationToken, IEnumerable (+23 more)
+Cohesion: 0.13
+Nodes (13): bool, ContextContainer, float, int, List, OneTimeSetUp, SetUp, Test (+5 more)
 
 ### Community 1465 - "Community 1465"
 Cohesion: 0.08
@@ -24793,16 +24862,16 @@ Cohesion: 0.07
 Nodes (11): DateTime, DateTimeOffset, OnRemoveWriter, Stream, TextWriter, XmlEventCache, XmlOutputMethod, XmlStandalone (+3 more)
 
 ### Community 1471 - "Community 1471"
-Cohesion: 0.20
-Nodes (5): bool, Encoding, int, DecoderNLS, System.Text
+Cohesion: 0.06
+Nodes (3): EHTMLKeyModifiers, EHTMLMouseButton, HHTMLBrowser
 
 ### Community 1472 - "Community 1472"
 Cohesion: 0.08
 Nodes (17): ArrayList, bool, BuilderInfo, Conditional, int, OutputResult, OutputScopeManager, Processor (+9 more)
 
 ### Community 1473 - "Community 1473"
-Cohesion: 0.11
-Nodes (16): Array, Color, Color32, ExcludeFromDocs, FreeFunction, GraphicsFormat, IntPtr, MethodImpl (+8 more)
+Cohesion: 0.13
+Nodes (14): Array, Color, Color32, ExcludeFromDocs, FreeFunction, GraphicsFormat, IntPtr, MethodImpl (+6 more)
 
 ### Community 1474 - "Community 1474"
 Cohesion: 0.12
@@ -25089,16 +25158,16 @@ Cohesion: 0.14
 Nodes (13): AnimatorJobExtensions, UnityEngine.Animations, CustomStreamPropertyType, AnimationStream, Animator, JobHandle, MethodImpl, PropertySceneHandle (+5 more)
 
 ### Community 1545 - "Community 1545"
-Cohesion: 0.08
-Nodes (20): TestRunner.Callbacks, WindowResultUpdaterDataHolder, MultiplayerCenterSettings, Unity.Multiplayer.Center.Common, RenderPipelineConverterManager, UnityEditor.Rendering.Converter, Packages.Rider.Editor, RiderScriptEditorPersistedState (+12 more)
+Cohesion: 0.06
+Nodes (30): TestRunner.Callbacks, WindowResultUpdaterDataHolder, RunData, UnityEditor.TestTools.TestRunner.CommandLineTest, MultiplayerCenterSettings, Unity.Multiplayer.Center.Common, Packages.Rider.Editor, RiderScriptEditorPersistedState (+22 more)
 
 ### Community 1546 - "Community 1546"
 Cohesion: 0.11
 Nodes (10): NearColliderLogic, BuildPreview, Collider, ColliderContainer, Dictionary, int, List, PlanetData (+2 more)
 
 ### Community 1547 - "Community 1547"
-Cohesion: 0.05
-Nodes (27): UIDysonEditor, DESelection, DysonBlueprintData, DysonMapCamera, bool, Camera, Color, double (+19 more)
+Cohesion: 0.04
+Nodes (31): UIDysonEditor, DESelection, DysonBlueprintData, DysonMapCamera, bool, Camera, Color, double (+23 more)
 
 ### Community 1548 - "Community 1548"
 Cohesion: 0.06
@@ -25297,8 +25366,8 @@ Cohesion: 0.12
 Nodes (6): bool, string, Task, XmlCharType, System.Xml, XmlCharCheckingWriter
 
 ### Community 1597 - "Community 1597"
-Cohesion: 0.08
-Nodes (4): AvatarTarget, AnimatorTransitionInfo, MethodImpl, NativeConditional
+Cohesion: 0.10
+Nodes (11): char, int, string, XmlCanonicalWriter, XmlDictionaryString, XmlSpace, Element, Namespace (+3 more)
 
 ### Community 1598 - "Community 1598"
 Cohesion: 0.11
@@ -25473,7 +25542,7 @@ Cohesion: 0.07
 Nodes (13): EditorLockTracker, bool, EntityId, GenericMenu, int, MenuItem, OnOpenAsset, Rect (+5 more)
 
 ### Community 1641 - "Community 1641"
-Cohesion: 0.18
+Cohesion: 0.17
 Nodes (3): ExpressionType, MethodInfo, UnaryExpression
 
 ### Community 1642 - "Community 1642"
@@ -25517,8 +25586,8 @@ Cohesion: 0.09
 Nodes (13): XGamingRuntime.Interop, XGRInterop, int, string, XUserAgeGroup, XUserGamerPictureSize, XUserGamertagComponent, XUserHandle (+5 more)
 
 ### Community 1652 - "Community 1652"
-Cohesion: 0.07
-Nodes (16): Transition, UIButton, Action, AudioSettings, bool, Button, Color, float (+8 more)
+Cohesion: 0.12
+Nodes (15): ILayoutSelfController, AspectRatioFitter, DoesParentExists(), GetParentSize(), GetSizeDeltaToProduceSize(), IsAspectModeValid(), IsComponentValidOnObject(), SetDirty() (+7 more)
 
 ### Community 1653 - "Community 1653"
 Cohesion: 0.13
@@ -25621,8 +25690,8 @@ Cohesion: 0.14
 Nodes (20): BinaryReader, BinaryWriter, bool, Conditional, IList, List, XmlNodeKindFlags, XmlQueryCardinality (+12 more)
 
 ### Community 1678 - "Community 1678"
-Cohesion: 0.05
-Nodes (20): ApplyImportsAction, ApplyTemplatesAction, AttributeAction, CallTemplateAction, ChooseAction, CommentAction, CopyAction, CopyOfAction (+12 more)
+Cohesion: 0.08
+Nodes (14): BaseInputModule, UnityEngine.EventSystems, AxisEventData, BaseEventData, BaseInput, bool, EventSystem, GameObject (+6 more)
 
 ### Community 1679 - "Community 1679"
 Cohesion: 0.10
@@ -25673,7 +25742,7 @@ Cohesion: 0.08
 Nodes (18): Batch, DysonSphereSegmentRenderer, bool, ComputeBuffer, DysonFrame, DysonNode, DysonSphere, ERenderPlace (+10 more)
 
 ### Community 1691 - "Community 1691"
-Cohesion: 0.06
+Cohesion: 0.05
 Nodes (14): GameHistoryData, JournalSystem, bool, ClusterPropertyData, CombatSettings, CombatUpgradeData, Dictionary, float (+6 more)
 
 ### Community 1692 - "Community 1692"
@@ -25709,8 +25778,8 @@ Cohesion: 0.12
 Nodes (15): AttributedExportDefinition, AttributedPartCreationInfo, bool, ConstructorInfo, ExportAttribute, ExportDefinition, HashSet, ICustomAttributeProvider (+7 more)
 
 ### Community 1700 - "Community 1700"
-Cohesion: 0.07
-Nodes (19): AudioSourceCurveType, FFTWindow, MethodImpl, NativeThrows, Obsolete, AnimationCurve, AudioClip, ExcludeFromDocs (+11 more)
+Cohesion: 0.11
+Nodes (11): AudioSourceCurveType, AnimationCurve, AudioClip, ExcludeFromDocs, FFTWindow, MethodImpl, NativeThrows, Obsolete (+3 more)
 
 ### Community 1701 - "Community 1701"
 Cohesion: 0.06
@@ -25729,8 +25798,8 @@ Cohesion: 0.06
 Nodes (21): ArrayMemoryPool, ArrayMemoryPoolBuffer, System.Buffers, IPinnable, System.Buffers, MemoryManager, System.Buffers, MemoryPool (+13 more)
 
 ### Community 1705 - "Community 1705"
-Cohesion: 0.05
-Nodes (26): PlayerQuitHandler, UnityEngine.TestTools.TestRunner.Callbacks, PlayModeRunnerCallback, UnityEngine.TestTools.TestRunner.Callbacks, RemoteTestResultSender, TestResultRendererCallback, UnityEngine.TestTools.TestRunner.Callbacks, ITestRunnerListener (+18 more)
+Cohesion: 0.07
+Nodes (16): PlayerQuitHandler, PlayModeRunnerCallback, UnityEngine.TestTools.TestRunner.Callbacks, TestResultRendererCallback, UnityEngine.TestTools.TestRunner.Callbacks, ITestRunnerListener, ITest, ITestResult (+8 more)
 
 ### Community 1706 - "Community 1706"
 Cohesion: 0.10
@@ -25742,7 +25811,7 @@ Nodes (32): CodeMemberEvent, System.CodeDom, CodeMemberField, System.CodeDom, Co
 
 ### Community 1708 - "Community 1708"
 Cohesion: 0.05
-Nodes (37): [0.1.15] - 2018-05-02, [0.1.18] - 2018-05-24, [0.1.22] - 2018-05-29, [0.1.27] - 2018-05-31, [0.1.30] - 2018-06-27, [0.1.33] - 2018-08-03, [0.1.36] - 2018-08-27, [0.1.3] - 2018-03-14 (+29 more)
+Nodes (37): [0.1.18] - 2018-05-24, [0.1.22] - 2018-05-29, [0.1.27] - 2018-05-31, [0.1.30] - 2018-06-27, [0.1.33] - 2018-08-03, [0.1.3] - 2018-03-14, [0.1.44] - 2018-11-08, [0.1.45] - 2018-11-08 (+29 more)
 
 ### Community 1709 - "Community 1709"
 Cohesion: 0.08
@@ -25829,8 +25898,8 @@ Cohesion: 0.11
 Nodes (12): TrackExtensions, UnityEditor.Timeline, AnimationClip, AnimationTrack, IEnumerable, IExposedPropertyTable, List, PlayableAsset (+4 more)
 
 ### Community 1730 - "Community 1730"
-Cohesion: 0.07
-Nodes (20): UnityEditor.ShaderGraph, VertexIDNode, IMayRequireVertexID, MayRequireVertexIDExtensions, UnityEditor.ShaderGraph, MaterialSlot, ShaderStageCapability, int (+12 more)
+Cohesion: 0.06
+Nodes (24): IMayRequireNormal, MayRequireNormalExtensions, UnityEditor.ShaderGraph, MaterialSlot, NeededCoordinateSpace, ShaderStageCapability, bool, GenerationMode (+16 more)
 
 ### Community 1731 - "Community 1731"
 Cohesion: 0.08
@@ -25893,8 +25962,8 @@ Cohesion: 0.11
 Nodes (18): BakeProgressState, CommandBuffer, EmissiveSamplingMode, GraphicsBuffer, int, IRayTracingShader, LightSamplingMode, RayTracingContext (+10 more)
 
 ### Community 1746 - "Community 1746"
-Cohesion: 0.07
-Nodes (15): UISandPanel, ECommand, bool, Color, ESandSource, float, int, long (+7 more)
+Cohesion: 0.09
+Nodes (16): HierarchicalSphere, Color, DrawGizmo, Func, GizmoType, GUIContent, HierarchicalBox, MenuItem (+8 more)
 
 ### Community 1747 - "Community 1747"
 Cohesion: 0.11
@@ -25917,8 +25986,8 @@ Cohesion: 0.07
 Nodes (20): DeferredDisposableLifetime, Win32ThreadPoolNativeOverlapped, CLSCompliant, DeferredDisposableLifetime, IntPtr, IOCompletionCallback, NativeOverlapped, OverlappedData (+12 more)
 
 ### Community 1753 - "Community 1753"
-Cohesion: 0.10
-Nodes (17): Action, bool, ChunkedSurfaceProvider, float, ILogger, int, List, long (+9 more)
+Cohesion: 0.08
+Nodes (20): Action, bool, ChunkedSurfaceProvider, float, ILogger, int, List, long (+12 more)
 
 ### Community 1754 - "Community 1754"
 Cohesion: 0.10
@@ -25985,16 +26054,12 @@ Cohesion: 0.12
 Nodes (11): AddNode, KeyValuePair, List, SetUp, ShaderMessage, string, Test, MessageManager (+3 more)
 
 ### Community 1771 - "Community 1771"
-Cohesion: 0.07
-Nodes (19): BMPEncoding, System.Security.Cryptography.Asn1, IA5Encoding, System.Security.Cryptography.Asn1, PrintableStringEncoding, System.Security.Cryptography.Asn1, RestrictedAsciiStringEncoding, System.Security.Cryptography.Asn1 (+11 more)
+Cohesion: 0.12
+Nodes (11): IA5Encoding, System.Security.Cryptography.Asn1, PrintableStringEncoding, System.Security.Cryptography.Asn1, RestrictedAsciiStringEncoding, System.Security.Cryptography.Asn1, System.Security.Cryptography.Asn1, VisibleStringEncoding (+3 more)
 
 ### Community 1772 - "Community 1772"
 Cohesion: 0.07
 Nodes (8): DysonSphereStatPlan, BinaryReader, BinaryWriter, DysonSphere, float, int, long, ProductStat
-
-### Community 1773 - "Community 1773"
-Cohesion: 0.09
-Nodes (4): Bounds, ECraftProto, Quaternion, Vector3
 
 ### Community 1774 - "Community 1774"
 Cohesion: 0.06
@@ -26081,12 +26146,12 @@ Cohesion: 0.11
 Nodes (14): Branch, LongTextArea, HoverBox, AsmEdge, bool, BurstDisassembler, Color, Dictionary (+6 more)
 
 ### Community 1795 - "Community 1795"
-Cohesion: 0.09
-Nodes (18): BufferOffsetSize2, IMonoSslStream, AsyncOperationStatus, AsyncProtocolRequest, bool, BufferOffsetSize, Conditional, Exception (+10 more)
+Cohesion: 0.16
+Nodes (8): BufferOffsetSize2, AsyncOperationStatus, AsyncProtocolRequest, BufferOffsetSize, Exception, ExceptionDispatchInfo, ret, wantMore
 
 ### Community 1796 - "Community 1796"
-Cohesion: 0.17
-Nodes (8): MS.Internal.Xml.Cache, XPathDocumentBaseIterator, MS.Internal.Xml.Cache, XPathDocumentElementChildIterator, int, XPathDocumentNavigator, string, XPathNodeIterator
+Cohesion: 0.05
+Nodes (24): MS.Internal.Xml.Cache, XPathDocumentBaseIterator, MS.Internal.Xml.Cache, XPathDocumentElementChildIterator, MS.Internal.Xml.Cache, XPathDocumentElementDescendantIterator, MS.Internal.Xml.Cache, XPathDocumentKindChildIterator (+16 more)
 
 ### Community 1797 - "Community 1797"
 Cohesion: 0.09
@@ -26129,8 +26194,8 @@ Cohesion: 0.10
 Nodes (10): AsnSetValueComparer, DerEncoder, System.Security.Cryptography, BigInteger, byte, DateTime, IEnumerable, List (+2 more)
 
 ### Community 1807 - "Community 1807"
-Cohesion: 0.07
-Nodes (6): IDataRecord, System.Data, DateTime, Guid, IDataReader, Type
+Cohesion: 0.05
+Nodes (9): IDataReader, System.Data, IDataRecord, System.Data, DataTable, DateTime, Guid, IDataReader (+1 more)
 
 ### Community 1808 - "Community 1808"
 Cohesion: 0.14
@@ -26197,8 +26262,8 @@ Cohesion: 0.15
 Nodes (20): BenchmarkContainerType, BenchmarkTestFootnote, Category, MenuItem, MethodImpl, NativeHashSet, Performance, Test (+12 more)
 
 ### Community 1824 - "Community 1824"
-Cohesion: 0.12
-Nodes (5): Obsolete, Quaternion, SpecialName, Vector3, MatchTargetWeightMask
+Cohesion: 0.08
+Nodes (18): CodeArrayCreateExpression, CodeAttributeArgument, CodeAttributeDeclarationCollection, CodeConditionStatement, CodeConstructor, CodeDelegateCreateExpression, CodeIterationStatement, CodeMemberField (+10 more)
 
 ### Community 1825 - "Community 1825"
 Cohesion: 0.09
@@ -26237,8 +26302,8 @@ Cohesion: 0.11
 Nodes (20): ArrayList, ASN1, AsymmetricAlgorithm, bool, byte, int, SignerInfo, string (+12 more)
 
 ### Community 1834 - "Community 1834"
-Cohesion: 0.06
-Nodes (18): CompareInfo, CompareOptions, SerializationInfo, StreamingContext, SerializationInfo, StreamingContext, bool, SerializationInfo (+10 more)
+Cohesion: 0.08
+Nodes (4): AvatarTarget, AnimatorTransitionInfo, MethodImpl, NativeConditional
 
 ### Community 1835 - "Community 1835"
 Cohesion: 0.08
@@ -26268,6 +26333,10 @@ Nodes (13): Camera, ComputeBuffer, FreeFunction, GraphicsBuffer, Matrix4x4, Meth
 Cohesion: 0.15
 Nodes (17): Action, Allocator, Component, IntPtr, List, MethodImpl, NativeArray, Object (+9 more)
 
+### Community 1842 - "Community 1842"
+Cohesion: 0.11
+Nodes (16): AnimationClip, AppliedOffsetMode, bool, GameObject, int, IPropertyCollector, LoopMode, MatchTargetFields (+8 more)
+
 ### Community 1843 - "Community 1843"
 Cohesion: 0.23
 Nodes (15): Action, AsyncGPUReadbackRequest, AsyncRequestNativeArrayData, ComputeBuffer, GraphicsBuffer, GraphicsFormat, MethodImpl, NativeArray (+7 more)
@@ -26281,8 +26350,8 @@ Cohesion: 0.08
 Nodes (9): Color, Texture, Texture2D, ProceduralMaterial, UnityEngine, Vector4, Material, ProceduralPropertyDescription (+1 more)
 
 ### Community 1846 - "Community 1846"
-Cohesion: 0.11
-Nodes (5): FreeFunction, int, string, PatchExtents, TerrainData
+Cohesion: 0.05
+Nodes (27): BoundaryValueType, DetailInstanceTransform, DetailScatterMode, Bounds, Color, FreeFunction, int, MethodImpl (+19 more)
 
 ### Community 1847 - "Community 1847"
 Cohesion: 0.15
@@ -26297,12 +26366,12 @@ Cohesion: 0.06
 Nodes (29): CreationContext, IUxmlAttributes, string, VisualElement, CreationContext, IUxmlAttributes, string, VisualElement (+21 more)
 
 ### Community 1850 - "Community 1850"
-Cohesion: 0.12
-Nodes (6): XblMultiplayerSearchHandle, XblMultiplayerSessionNumberAttribute, XblMultiplayerSessionStringAttribute, XblMultiplayerSessionTag, XblMultiplayerSessionVisibility, XblMultiplayerCreateSearchHandleResult
+Cohesion: 0.06
+Nodes (12): XblMultiplayerSearchHandle, XblMultiplayerSessionInitArgs, XblMultiplayerSessionNumberAttribute, XblMultiplayerSessionReference, XblMultiplayerSessionStringAttribute, XblMultiplayerSessionTag, XblMultiplayerSessionVisibility, XblPreserveSessionMode (+4 more)
 
 ### Community 1851 - "Community 1851"
-Cohesion: 0.10
-Nodes (10): UIIllustrationImage, bool, IllustrationRenderState, int, PointerEventData, RawImage, Ray, RenderTextureFormat (+2 more)
+Cohesion: 0.05
+Nodes (36): IPointerUpHandler, PointerEventData, string, InlinedArray, InputControl, InputEventPtr, int, RectTransform (+28 more)
 
 ### Community 1852 - "Community 1852"
 Cohesion: 0.06
@@ -26337,8 +26406,8 @@ Cohesion: 0.10
 Nodes (14): MechaForge, BinaryReader, BinaryWriter, bool, float, ForgeTask, GameHistoryData, HashSet (+6 more)
 
 ### Community 1860 - "Community 1860"
-Cohesion: 0.08
-Nodes (18): PlanetTransport, Action, BinaryWriter, bool, DeliveryPackage, DispenserComponent, double, ELogisticStorage (+10 more)
+Cohesion: 0.07
+Nodes (18): PlanetTransport, Action, BinaryWriter, bool, DeliveryPackage, DispenserComponent, double, EPlayerDeliveryMode (+10 more)
 
 ### Community 1861 - "Community 1861"
 Cohesion: 0.06
@@ -26473,8 +26542,8 @@ Cohesion: 0.07
 Nodes (24): EnumSlotControlView, UnityEditor.ShaderGraph, Vector1MaterialEnumSlot, IntegerSlotControlView, UnityEditor.ShaderGraph, Vector1MaterialIntegerSlot, SliderSlotControlView, UnityEditor.ShaderGraph (+16 more)
 
 ### Community 1894 - "Community 1894"
-Cohesion: 0.11
-Nodes (14): ComposablePartDefinition, ComposablePart, ConstructorInfo, ExportDefinition, IDictionary, IEnumerable, ImportDefinition, IReflectionPartCreationInfo (+6 more)
+Cohesion: 0.09
+Nodes (12): ILayoutIgnorer, LayoutElement, OnValidate(), UnityEngine.UI, bool, float, int, bool (+4 more)
 
 ### Community 1895 - "Community 1895"
 Cohesion: 0.12
@@ -26506,7 +26575,7 @@ Nodes (21): AccelStructInstances, bool, Bounds, CommandBuffer, GraphicsBuffer, I
 
 ### Community 1902 - "Community 1902"
 Cohesion: 0.08
-Nodes (24): Action, BlockFieldDescriptor, FieldCollection, GenerationMode, GUID, IncludeCollection, KeywordCollection, PassDescriptor (+16 more)
+Nodes (23): Action, BlockFieldDescriptor, FieldCollection, GenerationMode, GUID, IncludeCollection, KeywordCollection, PassDescriptor (+15 more)
 
 ### Community 1903 - "Community 1903"
 Cohesion: 0.09
@@ -26701,12 +26770,12 @@ Cohesion: 0.06
 Nodes (26): SwitchExpressionException, System.Runtime.CompilerServices, InvalidOperationException, SecurityCritical, SerializationInfo, StreamingContext, string, SerializationInfo (+18 more)
 
 ### Community 1951 - "Community 1951"
-Cohesion: 0.06
-Nodes (30): Container, Site, System.ComponentModel, INestedContainer, System.ComponentModel, INestedSite, System.ComponentModel, ISite (+22 more)
+Cohesion: 0.05
+Nodes (34): Container, Site, System.ComponentModel, INestedContainer, System.ComponentModel, INestedSite, System.ComponentModel, ISite (+26 more)
 
 ### Community 1952 - "Community 1952"
-Cohesion: 0.09
-Nodes (13): UISectorGraph, FanData, bool, Color, double, float, Image, int (+5 more)
+Cohesion: 0.14
+Nodes (10): Array, ArrayList, bool, Cookie, DateTime, int, CookieCollection, CookieCollectionEnumerator (+2 more)
 
 ### Community 1953 - "Community 1953"
 Cohesion: 0.12
@@ -26733,8 +26802,8 @@ Cohesion: 0.09
 Nodes (13): UnityEngine.Events, UnityEventBase, BaseInvokableCall, bool, InvokableCallList, List, MethodInfo, Object (+5 more)
 
 ### Community 1959 - "Community 1959"
-Cohesion: 0.15
-Nodes (11): FAMConnection, FAMData, FAMWatcher, bool, DllImport, FAMRequest, Hashtable, IntPtr (+3 more)
+Cohesion: 0.16
+Nodes (8): FAMData, FAMWatcher, System.IO, bool, Hashtable, MethodImpl, NotifyFilters, Thread
 
 ### Community 1960 - "Community 1960"
 Cohesion: 0.09
@@ -27029,8 +27098,8 @@ Cohesion: 0.06
 Nodes (20): AxisEventData, BaseEventData, AxisEventData, UnityEngine.EventSystems, PointerEventData, UnityEngine.EventSystems, AxisEventData, UnityEngine.EventSystems (+12 more)
 
 ### Community 2033 - "Community 2033"
-Cohesion: 0.06
-Nodes (24): IMayRequireNormal, MayRequireNormalExtensions, UnityEditor.ShaderGraph, MaterialSlot, NeededCoordinateSpace, ShaderStageCapability, bool, GenerationMode (+16 more)
+Cohesion: 0.11
+Nodes (21): IStripper, A, bool, HashSet, List, SetUp, string, Test (+13 more)
 
 ### Community 2034 - "Community 2034"
 Cohesion: 0.11
@@ -27069,8 +27138,8 @@ Cohesion: 0.13
 Nodes (10): DataTableMappingCollection, System.Data.Common, ITableMappingCollection, Array, DataTableMapping, EditorBrowsable, IEnumerator, ITableMapping (+2 more)
 
 ### Community 2043 - "Community 2043"
-Cohesion: 0.10
-Nodes (10): ComparableType, T, Test, TestRequiresDotsDebugOrCollectionChecks, NonComparableType, Compare(), CompareTo(), MathTests (+2 more)
+Cohesion: 0.09
+Nodes (11): UIChartAstroTransport, AstroTransportStatPlan, GameObject, Image, List, RectTransform, Text, UIEventReceiver (+3 more)
 
 ### Community 2044 - "Community 2044"
 Cohesion: 0.16
@@ -27116,10 +27185,6 @@ Nodes (16): BooleanSwitch, System.Diagnostics, SourceSwitch, System.Diagnostics,
 Cohesion: 0.10
 Nodes (15): DiagnosticTraceBase, System.Runtime.Diagnostics, bool, EventArgs, Exception, object, SecurityCritical, SecurityPermission (+7 more)
 
-### Community 2055 - "Community 2055"
-Cohesion: 0.06
-Nodes (3): IconInfo, FillMode, Point
-
 ### Community 2056 - "Community 2056"
 Cohesion: 0.11
 Nodes (11): Region, System.Drawing, Graphics, GraphicsPath, IntPtr, Matrix, Point, PointF (+3 more)
@@ -27145,8 +27210,8 @@ Cohesion: 0.12
 Nodes (8): HijriCalendar, System.Globalization, ComVisible, DateTime, DayOfWeek, int, SecurityCritical, string
 
 ### Community 2062 - "Community 2062"
-Cohesion: 0.13
-Nodes (5): MethodImpl, NativeName, RenderTexture, RequiredByNativeCode, Texture2D
+Cohesion: 0.07
+Nodes (20): UnityEditor.ShaderGraph, VertexIDNode, IMayRequireVertexID, MayRequireVertexIDExtensions, UnityEditor.ShaderGraph, MaterialSlot, ShaderStageCapability, int (+12 more)
 
 ### Community 2063 - "Community 2063"
 Cohesion: 0.14
@@ -27158,7 +27223,7 @@ Nodes (25): MonoWebRequestHandler, System.Net.Http, IMonoHttpClientHandler, Auth
 
 ### Community 2065 - "Community 2065"
 Cohesion: 0.09
-Nodes (17): DocCodeExamples, LightTrack, MenuActionInsideSubMenu, MenuActionWithPriority, MyCustomClip, SetNameToTypeAction, ShortcutAction, SimpleMenuAction (+9 more)
+Nodes (19): AnnotationMarker, Timeline.Samples, MyMarker, INotification, INotificationOptionProvider, bool, SignalAsset, bool (+11 more)
 
 ### Community 2066 - "Community 2066"
 Cohesion: 0.08
@@ -27177,8 +27242,8 @@ Cohesion: 0.10
 Nodes (19): InspectorUtils, InspectorView, UnityEditor.ShaderGraph.Drawing.Inspector, Action, bool, float, HashSet, IEnumerable (+11 more)
 
 ### Community 2070 - "Community 2070"
-Cohesion: 0.17
-Nodes (6): CodeCompileUnit, CompilerError, CompilerParameters, CompilerResults, IDictionary, TempFileCollection
+Cohesion: 0.12
+Nodes (5): Obsolete, Quaternion, SpecialName, Vector3, MatchTargetWeightMask
 
 ### Community 2071 - "Community 2071"
 Cohesion: 0.07
@@ -27309,8 +27374,8 @@ Cohesion: 0.07
 Nodes (17): Hashtable, IList, QueryReaderSettings, Uri, WhitespaceRuleLookup, XmlExtensionFunctionTable, XmlQueryRuntime, XmlResolver (+9 more)
 
 ### Community 2103 - "Community 2103"
-Cohesion: 0.15
-Nodes (12): int, object, XmlDocument, XmlNode, SmallXmlNodeList, Add(), GetEnumerator(), Insert() (+4 more)
+Cohesion: 0.07
+Nodes (16): UIChartTech, EChartStyleType, UIPopupMenu, UIPopupMenuButton, ComputeBuffer, GameObject, Image, long (+8 more)
 
 ### Community 2104 - "Community 2104"
 Cohesion: 0.07
@@ -27369,8 +27434,8 @@ Cohesion: 0.07
 Nodes (14): UIBroadcastWarningEntry, bool, BroadcastData, GameObject, Image, int, LineGizmo, RectTransform (+6 more)
 
 ### Community 2119 - "Community 2119"
-Cohesion: 0.09
-Nodes (11): UIChartAstroTransport, AstroTransportStatPlan, GameObject, Image, List, RectTransform, Text, UIEventReceiver (+3 more)
+Cohesion: 0.08
+Nodes (21): AttributedExportDefinition, System.ComponentModel.Composition.AttributedModel, AttributedPartCreationInfo, ExportDefinition, ExportAttribute, IDictionary, MemberInfo, Type (+13 more)
 
 ### Community 2120 - "Community 2120"
 Cohesion: 0.08
@@ -27381,8 +27446,8 @@ Cohesion: 0.07
 Nodes (15): UIDETopFunction, bool, GameData, Image, RectTransform, Sprite, string, Text (+7 more)
 
 ### Community 2122 - "Community 2122"
-Cohesion: 0.05
-Nodes (22): UIDispenserWindow, BaseEventData, bool, Color, DispenserComponent, GameObject, Image, int (+14 more)
+Cohesion: 0.06
+Nodes (17): UIDispenserWindow, bool, Color, GameObject, Image, int, PlanetTransport, Player (+9 more)
 
 ### Community 2123 - "Community 2123"
 Cohesion: 0.07
@@ -27437,8 +27502,8 @@ Cohesion: 0.06
 Nodes (23): CodeDomProvider, CSharpCodeProvider, Microsoft.CSharp, CSharpCodeGenerator, CodeGeneratorOptions, CodeTypeMember, ICodeCompiler, ICodeGenerator (+15 more)
 
 ### Community 2136 - "Community 2136"
-Cohesion: 0.15
-Nodes (4): ClipperBase, LocalMinima, ClipInt, PolyTypes
+Cohesion: 0.11
+Nodes (13): UIMilestoneItem, AnimationCurve, bool, Button, Color, float, GameObject, Image (+5 more)
 
 ### Community 2137 - "Community 2137"
 Cohesion: 0.11
@@ -27493,8 +27558,8 @@ Cohesion: 0.13
 Nodes (10): ExpressionParser, System.Data, char, DataTable, ExpressionNode, FunctionId, int, OperatorInfo (+2 more)
 
 ### Community 2150 - "Community 2150"
-Cohesion: 0.12
-Nodes (18): GetDefault(), UnityEngine.Rendering.Universal, UniversalRenderPipelineAsset, UnityEditor.Rendering.Universal, ShaderPrefilteringTests, ShaderStrippingAndPrefiltering, TestHelper, ShaderPrefilteringData (+10 more)
+Cohesion: 0.13
+Nodes (17): GetDefault(), UnityEngine.Rendering.Universal, UniversalRenderPipelineAsset, UnityEditor.Rendering.Universal, ShaderPrefilteringTests, ShaderStrippingAndPrefiltering, TestHelper, bool (+9 more)
 
 ### Community 2151 - "Community 2151"
 Cohesion: 0.11
@@ -27541,8 +27606,8 @@ Cohesion: 0.10
 Nodes (16): OnSettingsChanged(), ReEnableAfterDomainReload(), TouchSimulation, TouchSimulationEditor, UnityEngine.InputSystem.EnhancedTouch, IInputStateChangeMonitor, Action, ButtonControl (+8 more)
 
 ### Community 2162 - "Community 2162"
-Cohesion: 0.08
-Nodes (14): BaseInputModule, UnityEngine.EventSystems, AxisEventData, BaseEventData, BaseInput, bool, EventSystem, GameObject (+6 more)
+Cohesion: 0.20
+Nodes (6): ToggleGroup, UnityEngine.UI, bool, IEnumerable, List, Toggle
 
 ### Community 2163 - "Community 2163"
 Cohesion: 0.13
@@ -27557,16 +27622,16 @@ Cohesion: 0.08
 Nodes (19): PostEffectsBase, UnityStandardAssets.ImageEffects, SunShafts, UnityStandardAssets.ImageEffects, bool, Material, RenderTexture, Shader (+11 more)
 
 ### Community 2166 - "Community 2166"
-Cohesion: 0.13
-Nodes (10): PropertyDescriptorCollection, PropertyDescriptorEnumerator, System.ComponentModel, Array, bool, IComparer, int, object (+2 more)
+Cohesion: 0.09
+Nodes (15): CullStateChangedEvent, MaskableGraphic, OnValidate(), UnityEngine.UI, IClippable, bool, Camera, EditorBrowsable (+7 more)
 
 ### Community 2167 - "Community 2167"
 Cohesion: 0.04
 Nodes (31): Dragger, MasterPreviewView, UnityEditor.ShaderGraph.Drawing.Inspector, ISGResizable, UnityEditor.ShaderGraph.Drawing.Interfaces, IResizable, Action, ContextualMenuPopulateEvent (+23 more)
 
 ### Community 2168 - "Community 2168"
-Cohesion: 0.14
-Nodes (7): AnimationTrackInspector, AnimationTrack, OffsetEditMode, SceneView, SerializedProperty, TrackOffset, Vector3
+Cohesion: 0.11
+Nodes (11): AnimationTrackInspector, Styles, UnityEditor.Timeline, AnimationTrack, GUIContent, OffsetEditMode, SceneView, SerializedProperty (+3 more)
 
 ### Community 2169 - "Community 2169"
 Cohesion: 0.06
@@ -27601,15 +27666,15 @@ Cohesion: 0.11
 Nodes (14): ISocialPlatform, Leaderboard, Action, IAchievement, IAchievementDescription, ILeaderboard, ILocalUser, IScore (+6 more)
 
 ### Community 2177 - "Community 2177"
-Cohesion: 0.12
-Nodes (15): MethodImpl, SpecialName, Vector2, MethodImpl, SpecialName, Vector2, MethodImpl, SpecialName (+7 more)
+Cohesion: 0.15
+Nodes (8): bool, byte, Mono.Security.Cryptography, SymmetricTransform, int, PaddingMode, RandomNumberGenerator, SymmetricAlgorithm
 
 ### Community 2178 - "Community 2178"
 Cohesion: 0.08
 Nodes (13): ISubsystem, IntPtr, ISubsystemDescriptor, MethodImpl, ISubsystemDescriptor, SubsystemDescriptorWithProvider, SubsystemProvider, SubsystemWithProvider (+5 more)
 
 ### Community 2179 - "Community 2179"
-Cohesion: 0.12
+Cohesion: 0.13
 Nodes (16): IXPathBuilder, int, QilLoop, QilNode, XPathQilFactory, int, QilNode, XPathParser (+8 more)
 
 ### Community 2180 - "Community 2180"
@@ -27617,8 +27682,8 @@ Cohesion: 0.21
 Nodes (32): CheckHierarchyValid(), CheckWriteAccess(), GetLocalPosition(), GetLocalPositionAndRotation(), GetLocalPositionAndRotation_Internal(), GetLocalRotation(), GetLocalScale(), GetLocalToWorldMatrix() (+24 more)
 
 ### Community 2181 - "Community 2181"
-Cohesion: 0.06
-Nodes (21): QueueData, UnityEngine.TestTools.TestRunner.Callbacks, UnityEngine.Rendering.RenderGraphModule, DelayedCallback, PlayerConnection, UnityEngine.Diagnostics, bool, BuildTarget (+13 more)
+Cohesion: 0.14
+Nodes (10): Array, bool, int, List, Match, Regex, string, Enumerator (+2 more)
 
 ### Community 2182 - "Community 2182"
 Cohesion: 0.09
@@ -27709,16 +27774,16 @@ Cohesion: 0.16
 Nodes (9): FreeFunction, IntPtr, Keyframe, MethodImpl, NativeMethod, NativeThrows, ThreadSafe, AnimationCurve (+1 more)
 
 ### Community 2204 - "Community 2204"
-Cohesion: 0.09
-Nodes (17): FormatUsage, FreeFunction, GraphicsFormat, int, IntPtr, MethodImpl, NativeMethod, NativeName (+9 more)
+Cohesion: 0.08
+Nodes (19): NativeArray, T, FormatUsage, FreeFunction, GraphicsFormat, int, IntPtr, MethodImpl (+11 more)
 
 ### Community 2205 - "Community 2205"
 Cohesion: 0.09
 Nodes (17): CreationContext, DragState, EventBase, EventInterest, float, GeometryChangedEvent, IUxmlAttributes, Rect (+9 more)
 
 ### Community 2206 - "Community 2206"
-Cohesion: 0.05
-Nodes (34): bool, CreationContext, EventBase, int, IUxmlAttributes, KeyboardNavigationManipulator, KeyboardNavigationOperation, string (+26 more)
+Cohesion: 0.10
+Nodes (16): bool, CreationContext, float, GeometryChangedEvent, int, IUxmlAttributes, string, UxmlEnumAttributeDescription (+8 more)
 
 ### Community 2207 - "Community 2207"
 Cohesion: 0.10
@@ -27813,8 +27878,8 @@ Cohesion: 0.06
 Nodes (22): UIPlayerDeliveryPanel, ECountSliderState, bool, Color, DeliveryPackage, float, GameData, GameHistoryData (+14 more)
 
 ### Community 2232 - "Community 2232"
-Cohesion: 0.02
-Nodes (80): UIDashboardTip, UIMechaBoneInspectorExtrudeGraph, UIProductSimpleTipTrigger, UIReferenceSpeedTipTrigger, UIStorageCountTip, UIStorageCountTipTrigger, UIWarningSignalEntry, NotifyEvent (+72 more)
+Cohesion: 0.01
+Nodes (98): UIFunctionPanel, UIMainMenuButton, UIMechaExtrudePoint, UIProductSimpleTipTrigger, UIReferenceSpeedTipTrigger, UISectorGraph, UIStorageCountTip, UIStorageCountTipTrigger (+90 more)
 
 ### Community 2233 - "Community 2233"
 Cohesion: 0.06
@@ -27925,8 +27990,8 @@ Cohesion: 0.12
 Nodes (11): PInvoke, System.Diagnostics, FormatMessageFlags, DllImport, EventLogEntryType, int, IntPtr, LoadFlags (+3 more)
 
 ### Community 2260 - "Community 2260"
-Cohesion: 0.13
-Nodes (15): IAsyncLocal, int, KeyValuePair, object, IAsyncLocal, AsyncLocalValueMap, EmptyAsyncLocalValueMap, ManyElementAsyncLocalValueMap (+7 more)
+Cohesion: 0.12
+Nodes (16): Dictionary, IAsyncLocal, int, KeyValuePair, object, IAsyncLocal, AsyncLocalValueMap, EmptyAsyncLocalValueMap (+8 more)
 
 ### Community 2261 - "Community 2261"
 Cohesion: 0.11
@@ -28017,8 +28082,8 @@ Cohesion: 0.09
 Nodes (11): InternalBufferManager, AsyncCallback, bool, byte, Exception, IAsyncResult, int, MemoryStream (+3 more)
 
 ### Community 2283 - "Community 2283"
-Cohesion: 0.08
-Nodes (34): IPartitionedStreamRecipient, bool, OrdinalIndexState, PartitionedStream, QuerySettings, TLeftInput, TLeftKey, TOutput (+26 more)
+Cohesion: 0.13
+Nodes (23): IPartitionedStreamRecipient, bool, OrdinalIndexState, PartitionedStream, QuerySettings, TLeftInput, TLeftKey, TOutput (+15 more)
 
 ### Community 2284 - "Community 2284"
 Cohesion: 0.07
@@ -28069,8 +28134,8 @@ Cohesion: 0.10
 Nodes (21): ContextContainer, int, Material, RasterCommandBuffer, RenderGraph, RenderingData, ScriptableRenderer, Shader (+13 more)
 
 ### Community 2296 - "Community 2296"
-Cohesion: 0.15
-Nodes (3): MonoOrStereoscopicEye, Ray, Vector3
+Cohesion: 0.12
+Nodes (16): JointLimits, JointMotor, JointSpring, MethodImpl, SpecialName, MethodImpl, SpecialName, Vector3 (+8 more)
 
 ### Community 2297 - "Community 2297"
 Cohesion: 0.07
@@ -28117,8 +28182,8 @@ Cohesion: 0.11
 Nodes (21): ActivationContext, AppDomain, AssemblyHashAlgorithm, Binder, BindingFlags, Conditional, CultureInfo, Evidence (+13 more)
 
 ### Community 2308 - "Community 2308"
-Cohesion: 0.09
-Nodes (15): BindingFlags, CustomAttributeData, IList, IntPtr, MemberInfo, MethodImpl, MethodInfo, RuntimeModule (+7 more)
+Cohesion: 0.20
+Nodes (7): BindingFlags, IntPtr, MemberInfo, MethodImpl, MethodInfo, MonoEventInfo, RuntimeEventInfo
 
 ### Community 2309 - "Community 2309"
 Cohesion: 0.11
@@ -28326,7 +28391,7 @@ Nodes (18): UIPlanetShieldDetail, bool, Color, DefenseSystem, FactoryModel, Game
 
 ### Community 2362 - "Community 2362"
 Cohesion: 0.08
-Nodes (11): UISimpleColorPicker, BaseEventData, bool, ComputeBuffer, EventTrigger, int, Material, RawImage (+3 more)
+Nodes (13): UISimpleColorPicker, Action, bool, Color, ComputeBuffer, EventTrigger, int, Material (+5 more)
 
 ### Community 2363 - "Community 2363"
 Cohesion: 0.08
@@ -28342,11 +28407,11 @@ Nodes (10): InputAxis, VFInput, bool, CombineKey, float, InputValue, int, KeyCod
 
 ### Community 2366 - "Community 2366"
 Cohesion: 0.08
-Nodes (5): IDictionary, XmlNamespaceScope, XmlValidatingReaderImpl, System.Xml, XmlValidatingReader
+Nodes (16): RectMask2D, UnityEngine.UI, IClipper, bool, Camera, Canvas, HashSet, IClippable (+8 more)
 
 ### Community 2367 - "Community 2367"
-Cohesion: 0.17
-Nodes (8): bool, ConsoleCommand, float, Planet, Ray, Transform, Vector3, SurfacePathDebugCommands
+Cohesion: 0.14
+Nodes (9): bool, ConsoleCommand, float, ISurfacePathBrushService, Ray, SurfacePathEditController, Transform, Vector3 (+1 more)
 
 ### Community 2368 - "Community 2368"
 Cohesion: 0.16
@@ -28377,8 +28442,8 @@ Cohesion: 0.14
 Nodes (18): DictionaryPool, Dispose(), GenericPool, HashSetPool, ListPool, ObjectPool, UnityEngine.Rendering, UnsafeGenericPool (+10 more)
 
 ### Community 2375 - "Community 2375"
-Cohesion: 0.07
-Nodes (15): CodeAssignStatement, CodeAttachEventStatement, CodeConditionStatement, CodeExpressionStatement, CodeGotoStatement, CodeIterationStatement, CodeLabeledStatement, CodeMethodReturnStatement (+7 more)
+Cohesion: 0.14
+Nodes (7): Enumerator, ReadOnlyCollectionBuilder, System.Runtime.CompilerServices, Array, int, ReadOnlyCollection, T
 
 ### Community 2376 - "Community 2376"
 Cohesion: 0.11
@@ -28497,8 +28562,8 @@ Cohesion: 0.14
 Nodes (7): NullTextReader, SyncTextReader, System.IO, TextReader, MethodImpl, Span, Task
 
 ### Community 2405 - "Community 2405"
-Cohesion: 0.04
-Nodes (35): IOOperation, IThreadPoolWorkItem, bool, ExecutionContext, IMessage, IMessageCtrl, IntPtr, long (+27 more)
+Cohesion: 0.11
+Nodes (15): bool, ExecutionContext, IMessage, IMessageCtrl, IntPtr, long, MethodImpl, MonoMethodMessage (+7 more)
 
 ### Community 2406 - "Community 2406"
 Cohesion: 0.10
@@ -28537,12 +28602,12 @@ Cohesion: 0.10
 Nodes (14): GraphicsBuffer, int, Light2D, Material, Matrix4x4, Mesh, NativeArray, RasterCommandBuffer (+6 more)
 
 ### Community 2415 - "Community 2415"
-Cohesion: 0.10
-Nodes (15): Action, PassDescriptor, RenderPipelineAsset, String>, SubShaderDescriptor, TargetActiveBlockContext, TargetFieldContext, TargetPropertyGUIContext (+7 more)
+Cohesion: 0.06
+Nodes (20): Action, bool, OneTimeSetUp, PassDescriptor, RenderPipelineAsset, String>, SubShaderDescriptor, TargetActiveBlockContext (+12 more)
 
 ### Community 2416 - "Community 2416"
-Cohesion: 0.14
-Nodes (23): ObjectId, Rect, TreeViewItem, Vector2, BeginPingItem(), BeginRename(), BeginRowGUI(), CalculateRowRects() (+15 more)
+Cohesion: 0.12
+Nodes (24): RowGUIArgs, ObjectId, Rect, TreeViewItem, Vector2, BeginPingItem(), BeginRename(), BeginRowGUI() (+16 more)
 
 ### Community 2417 - "Community 2417"
 Cohesion: 0.13
@@ -28561,24 +28626,24 @@ Cohesion: 0.17
 Nodes (10): Color, ColorGradingModel, float, Material, RenderTexture, RenderTextureFormat, Texture2D, TextureFormat (+2 more)
 
 ### Community 2421 - "Community 2421"
-Cohesion: 0.15
-Nodes (10): Assembly, AssemblyHashAlgorithm, AssemblyName, Binder, BindingFlags, CultureInfo, Evidence, ObjectHandle (+2 more)
+Cohesion: 0.05
+Nodes (32): HlslSourceType, IHasAssetDependencies, IHasDependencies, UnityEditor.ShaderGraph, AssetCollection, HashSet, AssetCollection, bool (+24 more)
 
 ### Community 2422 - "Community 2422"
 Cohesion: 0.07
 Nodes (21): byte, Stream, Stream, ICONDIRENTRY, Stream, BinaryWriter, Hashtable, int (+13 more)
 
 ### Community 2423 - "Community 2423"
-Cohesion: 0.11
-Nodes (11): Encoding, byte, SecuritySafeCritical, string, byte, SecuritySafeCritical, string, Base64Encoding (+3 more)
+Cohesion: 0.08
+Nodes (5): IDictionary, XmlNamespaceScope, XmlValidatingReaderImpl, System.Xml, XmlValidatingReader
 
 ### Community 2424 - "Community 2424"
 Cohesion: 0.11
 Nodes (10): DateTime, DateTimeOffset, Guid, SmiEventSink, SmiMetaData, SqlDecimal, TdsParserStateObject, TimeSpan (+2 more)
 
 ### Community 2425 - "Community 2425"
-Cohesion: 0.11
-Nodes (13): bool, List, SecuritySafeCritical, Type, XmlDictionaryString, XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlQualifiedName (+5 more)
+Cohesion: 0.10
+Nodes (15): bool, DataContractPairKey, Dictionary, List, SecuritySafeCritical, Type, XmlDictionaryString, XmlObjectSerializerReadContext (+7 more)
 
 ### Community 2426 - "Community 2426"
 Cohesion: 0.09
@@ -28621,8 +28686,8 @@ Cohesion: 0.15
 Nodes (12): EditorBrowsable, FreeFunction, int, IntPtr, MethodImpl, Obsolete, RefreshRate, RenderBuffer (+4 more)
 
 ### Community 2436 - "Community 2436"
-Cohesion: 0.14
-Nodes (11): Axis, Edge, MethodImpl, NativeMethod, Rect, RequiredByNativeCode, SpecialName, Vector2 (+3 more)
+Cohesion: 0.16
+Nodes (10): Axis, Edge, MethodImpl, NativeMethod, Rect, RequiredByNativeCode, SpecialName, Vector2 (+2 more)
 
 ### Community 2437 - "Community 2437"
 Cohesion: 0.13
@@ -28661,8 +28726,8 @@ Cohesion: 0.08
 Nodes (18): Behavior, bool, Dictionary, ILog, int, IPredicates, List, NodeNumbering (+10 more)
 
 ### Community 2446 - "Community 2446"
-Cohesion: 0.10
-Nodes (25): BurstExecutionEnvironment, AotCompilation(), Cancel(), Disable(), Enable(), FakeDelegate, GetExecutionMode(), GetTargetCpuFromHost() (+17 more)
+Cohesion: 0.11
+Nodes (22): AotCompilation(), Cancel(), Disable(), Enable(), FakeDelegate, GetTargetCpuFromHost(), InitialiseDebuggerHooks(), Initialize() (+14 more)
 
 ### Community 2447 - "Community 2447"
 Cohesion: 0.07
@@ -28865,24 +28930,24 @@ Cohesion: 0.09
 Nodes (23): DefaultTestAssemblyBuilder, ITestAssemblyBuilder, Assembly, IDictionary, IEnumerator, ITest, TestPlatform, Assembly (+15 more)
 
 ### Community 2497 - "Community 2497"
-Cohesion: 0.10
-Nodes (4): Color, MethodImpl, Rect, Scene
+Cohesion: 0.07
+Nodes (15): CodeAssignStatement, CodeAttachEventStatement, CodeConditionStatement, CodeExpressionStatement, CodeGotoStatement, CodeIterationStatement, CodeLabeledStatement, CodeMethodReturnStatement (+7 more)
 
 ### Community 2498 - "Community 2498"
 Cohesion: 0.13
 Nodes (13): GrassFlow, GrassGUIExtensions, GrassShaderGUI, AnimBool, bool, Dictionary, GUIStyle, Material (+5 more)
 
 ### Community 2499 - "Community 2499"
-Cohesion: 0.08
-Nodes (14): RawImage, UnityEngine.UI, Rect, Rect, Texture, VertexHelper, Rect, Texture (+6 more)
+Cohesion: 0.23
+Nodes (7): EventInfo, ComAwareEventInfo, System.Runtime.InteropServices, Delegate, MethodInfo, MonoTODO, Type
 
 ### Community 2500 - "Community 2500"
 Cohesion: 0.09
 Nodes (3): Easing, UnityEngine.UIElements.Experimental, float
 
 ### Community 2501 - "Community 2501"
-Cohesion: 0.16
-Nodes (7): TypeBinaryExpressionProxy, GotoExpressionKind, GotoExpression, LabelTarget, Type, TypeBinaryExpression, TryGetFuncActionArgsResult
+Cohesion: 0.13
+Nodes (9): TypeBinaryExpressionProxy, GotoExpressionKind, CallSiteBinder, DynamicExpression, GotoExpression, LabelTarget, Type, TypeBinaryExpression (+1 more)
 
 ### Community 2502 - "Community 2502"
 Cohesion: 0.08
@@ -28893,8 +28958,8 @@ Cohesion: 0.14
 Nodes (6): JulianCalendar, System.Globalization, ComVisible, DateTime, DayOfWeek, int
 
 ### Community 2504 - "Community 2504"
-Cohesion: 0.13
-Nodes (17): Create16BitIndexMesh(), Initialize(), MergeMeshes(), RenderPassGlobalSettings, RenderPassTest, RenderPassTestCullInstance, UnityEngine.Rendering.Tests, UnpackUintTo4x8Bit() (+9 more)
+Cohesion: 0.10
+Nodes (22): Create16BitIndexMesh(), Initialize(), MergeMeshes(), RenderPassGlobalSettings, RenderPassTest, RenderPassTestCullInstance, UnityEngine.Rendering.Tests, UnpackUintTo4x8Bit() (+14 more)
 
 ### Community 2505 - "Community 2505"
 Cohesion: 0.13
@@ -28909,8 +28974,12 @@ Cohesion: 0.09
 Nodes (13): IGenericNameProvider, IList, List, string, XmlQualifiedName, IList, object, string (+5 more)
 
 ### Community 2508 - "Community 2508"
-Cohesion: 0.13
-Nodes (7): IEnumerable, IList, T, TreeDataController, TreeViewItemData, DefaultMultiColumnTreeViewController, UnityEngine.UIElements
+Cohesion: 0.07
+Nodes (17): ColorRGBAMaterialSlot, UnityEditor.ShaderGraph, DefaultVector4MaterialSlot, UnityEditor.ShaderGraph, UnityEditor.ShaderGraph, VertexColorMaterialSlot, GenerationMode, List (+9 more)
+
+### Community 2509 - "Community 2509"
+Cohesion: 0.12
+Nodes (15): MethodImpl, SpecialName, Vector2, MethodImpl, SpecialName, Vector2, MethodImpl, SpecialName (+7 more)
 
 ### Community 2510 - "Community 2510"
 Cohesion: 0.13
@@ -28969,8 +29038,8 @@ Cohesion: 0.12
 Nodes (17): Allocator, EntityId, GPUDrivenMaterialData, GPUDrivenProcessor, GPUResidentContext, InstanceCullingBatcher, InstanceDataSystem, LODGroupProcessor (+9 more)
 
 ### Community 2524 - "Community 2524"
-Cohesion: 0.14
-Nodes (9): RijndaelManagedTransform, System.Security.Cryptography, byte, CipherMode, int, PaddingMode, RijndaelManagedTransformMode, SecurityCritical (+1 more)
+Cohesion: 0.17
+Nodes (6): CodeCompileUnit, CompilerError, CompilerParameters, CompilerResults, IDictionary, TempFileCollection
 
 ### Community 2525 - "Community 2525"
 Cohesion: 0.13
@@ -28989,8 +29058,8 @@ Cohesion: 0.08
 Nodes (24): bool, GlobalKeyword, int, Lazy, Matrix4x4, RasterCommandBuffer, RTHandle, string (+16 more)
 
 ### Community 2529 - "Community 2529"
-Cohesion: 0.09
-Nodes (29): bool, DummyRenderPipeline, EntityId, int, PostProcessData, ProbeVolumeSceneData, RenderPipelineGraphicsSettingsContainer, string (+21 more)
+Cohesion: 0.11
+Nodes (24): EntityId, int, PostProcessData, ProbeVolumeSceneData, RenderPipelineGraphicsSettingsContainer, string, T, uint (+16 more)
 
 ### Community 2530 - "Community 2530"
 Cohesion: 0.11
@@ -29013,8 +29082,8 @@ Cohesion: 0.09
 Nodes (9): FieldAttributes, Guid, IntPtr, ISymbolDocumentWriter, ParameterAttributes, SymbolToken, SymAddressKind, ISymbolWriter (+1 more)
 
 ### Community 2535 - "Community 2535"
-Cohesion: 0.21
-Nodes (8): IFormatProvider, IntPtr, MethodImpl, object, Rect, ThreadAndSerializationSafe, RectOffset, UnityEngine
+Cohesion: 0.10
+Nodes (14): IFormatProvider, IFormatProvider, IFormatProvider, IntPtr, MethodImpl, object, Rect, ThreadAndSerializationSafe (+6 more)
 
 ### Community 2536 - "Community 2536"
 Cohesion: 0.10
@@ -29046,7 +29115,7 @@ Nodes (13): byte, CancellationToken, Encoding, int, SeekOrigin, short, StreamDat
 
 ### Community 2543 - "Community 2543"
 Cohesion: 0.08
-Nodes (15): byte, Conditional, long, SerializationInfo, SqlBinary, SqlBytesCharsState, Stream, StreamingContext (+7 more)
+Nodes (16): IXmlSerializable, byte, Conditional, long, SerializationInfo, SqlBinary, SqlBytesCharsState, Stream (+8 more)
 
 ### Community 2544 - "Community 2544"
 Cohesion: 0.08
@@ -29073,8 +29142,8 @@ Cohesion: 0.12
 Nodes (18): ArraySegment, CancellationToken, ClientWebSocketOptions, int, Memory, ReadOnlyMemory, Task, Uri (+10 more)
 
 ### Community 2550 - "Community 2550"
-Cohesion: 0.11
-Nodes (10): List, XPathNavigator, XPathNodeIterator, XsltContext, XPathNavigator, XPathNodeIterator, CacheOutputQuery, MS.Internal.Xml.XPath (+2 more)
+Cohesion: 0.08
+Nodes (16): List, XPathNavigator, XPathNodeIterator, XsltContext, XPathNavigator, XPathNodeIterator, Query, XPathNavigator (+8 more)
 
 ### Community 2551 - "Community 2551"
 Cohesion: 0.09
@@ -29105,12 +29174,12 @@ Cohesion: 0.20
 Nodes (29): float3, float4x4, IFormatProvider, MethodImpl, quaternion, RotationOrder, AxisAngle(), Equals() (+21 more)
 
 ### Community 2558 - "Community 2558"
-Cohesion: 0.06
-Nodes (46): CodeIdentifiers, Type, ArrayMapping, AttributeAccessor, bool, CodeCompileUnit, CodeIdentifiers, CodeNamespace (+38 more)
+Cohesion: 0.13
+Nodes (15): ArrayMapping, ElementAccessor, EnumMapping, INameScope, List, MemberMapping, NameTable, PermissionSet (+7 more)
 
 ### Community 2559 - "Community 2559"
-Cohesion: 0.16
-Nodes (8): HashAlgorithm, System.Security.Cryptography, bool, byte, int, ReadOnlySpan, Span, Stream
+Cohesion: 0.03
+Nodes (45): PositionMaterialSlot, UnityEditor.ShaderGraph, IMayRequirePosition, MayRequirePositionExtensions, UnityEditor.ShaderGraph, IMayRequireVertexSkinning, MayRequireVertexSkinningExtensions, UnityEditor.ShaderGraph (+37 more)
 
 ### Community 2560 - "Community 2560"
 Cohesion: 0.14
@@ -29177,8 +29246,8 @@ Cohesion: 0.13
 Nodes (16): BindingTreeViewDataSource, CompareTo(), Equals(), GetHashCode(), UnityEditor.Timeline, BindingGroup, AnimationClip, CurveDataSource (+8 more)
 
 ### Community 2576 - "Community 2576"
-Cohesion: 0.36
-Nodes (6): DateTime, XmlDictionaryReader, XmlDictionaryString, XmlDictionaryWriter, DateTimeArrayHelperWithDictionaryString, System.Xml
+Cohesion: 0.11
+Nodes (15): ArrayHelper, XmlDictionaryReader, XmlDictionaryWriter, DateTime, XmlDictionaryReader, XmlDictionaryString, XmlDictionaryWriter, XmlDictionaryReader (+7 more)
 
 ### Community 2577 - "Community 2577"
 Cohesion: 0.11
@@ -29273,8 +29342,8 @@ Cohesion: 0.13
 Nodes (11): Converter, System.Runtime.Serialization.Formatters.Binary, InternalNameSpaceE, Array, Assembly, int, InternalPrimitiveTypeE, string (+3 more)
 
 ### Community 2600 - "Community 2600"
-Cohesion: 0.10
-Nodes (24): BoolField, DebugStateBool, DebugStateFloat, DebugUIDrawerBoolField, DebugUIDrawerButton, DebugUIDrawerFloatField, DebugUIDrawerHistoryBoolField, DebugUIDrawerProgressBarValue (+16 more)
+Cohesion: 0.11
+Nodes (21): BoolField, DebugStateBool, DebugUIDrawerBoolField, DebugUIDrawerButton, DebugUIDrawerHistoryBoolField, DebugUIDrawerProgressBarValue, DebugUIDrawerValue, DebugUIDrawerValueTuple (+13 more)
 
 ### Community 2601 - "Community 2601"
 Cohesion: 0.14
@@ -29301,16 +29370,16 @@ Cohesion: 0.07
 Nodes (9): IndexOutOfRangeException, ArgumentNullException, Array, DbParameterCollection, DbType, IColumnMappingCollection, ITableMappingCollection, Type (+1 more)
 
 ### Community 2607 - "Community 2607"
-Cohesion: 0.09
-Nodes (11): CodeGenerator, System.CodeDom.Compiler, ICodeGenerator, bool, CodeObject, CodePrimitiveExpression, ExposedTabStringIndentedTextWriter, GeneratorSupport (+3 more)
+Cohesion: 0.15
+Nodes (12): int, object, XmlDocument, XmlNode, SmallXmlNodeList, Add(), GetEnumerator(), Insert() (+4 more)
 
 ### Community 2608 - "Community 2608"
 Cohesion: 0.12
 Nodes (13): CodeAttributeDeclarationCollection, CodeConstructor, CodeMemberEvent, CodeMemberMethod, CodeMemberProperty, CodeParameterDeclarationExpression, CodeParameterDeclarationExpressionCollection, CodeStatementCollection (+5 more)
 
 ### Community 2609 - "Community 2609"
-Cohesion: 0.10
-Nodes (16): CharConverter, System.ComponentModel, DateTimeConverter, System.ComponentModel, ExtendedProtectionPolicyTypeConverter, System.Security.Authentication.ExtendedProtection, CultureInfo, ITypeDescriptorContext (+8 more)
+Cohesion: 0.09
+Nodes (18): CharConverter, System.ComponentModel, MultilineStringConverter, System.ComponentModel, ExtendedProtectionPolicyTypeConverter, System.Security.Authentication.ExtendedProtection, CultureInfo, ITypeDescriptorContext (+10 more)
 
 ### Community 2610 - "Community 2610"
 Cohesion: 0.10
@@ -29329,8 +29398,8 @@ Cohesion: 0.10
 Nodes (18): IApplicationSettingsProvider, System.Configuration, LocalFileSettingsProvider, System.Configuration, CustomizableFileSettingsProvider, SettingsContext, SettingsProperty, SettingsPropertyCollection (+10 more)
 
 ### Community 2614 - "Community 2614"
-Cohesion: 0.07
-Nodes (19): FileWebRequest, AsyncCallback, CloseExState, IAsyncResult, AsyncCallback, bool, CloseExState, FtpWebRequest (+11 more)
+Cohesion: 0.13
+Nodes (10): AsyncCallback, bool, CloseExState, FtpWebRequest, IAsyncResult, int, NetworkStream, SeekOrigin (+2 more)
 
 ### Community 2615 - "Community 2615"
 Cohesion: 0.12
@@ -29409,8 +29478,8 @@ Cohesion: 0.07
 Nodes (16): EnumRailIDDomain, ulong, rail, RailComparableID, rail, RailDlcID, rail, RailGameID (+8 more)
 
 ### Community 2634 - "Community 2634"
-Cohesion: 0.07
-Nodes (34): EventCacheKey, EventRegistrationTokenList, IActivationFactory, Action, bool, ConditionalWeakTable, Dictionary, EventRegistrationToken (+26 more)
+Cohesion: 0.21
+Nodes (13): EventRegistrationTokenList, Action, ConditionalWeakTable, Dictionary, EventRegistrationToken, Func, List, T (+5 more)
 
 ### Community 2635 - "Community 2635"
 Cohesion: 0.09
@@ -29437,8 +29506,8 @@ Cohesion: 0.14
 Nodes (17): ICertificateValidator, HttpWebRequest, LocalCertSelectionCallback, MobileTlsProvider, MonoSslPolicyErrors, MonoTlsSettings, MonoTlsStream, ServerCertValidationCallback (+9 more)
 
 ### Community 2641 - "Community 2641"
-Cohesion: 0.13
-Nodes (7): IConvertible, DateTime, IFormatProvider, Type, TypeCode, DBNull, System
+Cohesion: 0.11
+Nodes (10): IConvertible, DateTime, IFormatProvider, SecurityCritical, SerializationInfo, StreamingContext, Type, TypeCode (+2 more)
 
 ### Community 2642 - "Community 2642"
 Cohesion: 0.13
@@ -29461,7 +29530,7 @@ Cohesion: 0.09
 Nodes (8): System.Runtime.InteropServices, UCOMIMoniker, FILETIME, Guid, PreserveSig, UCOMIEnumMoniker, UCOMIBindCtx, UCOMIStream
 
 ### Community 2647 - "Community 2647"
-Cohesion: 0.08
+Cohesion: 0.09
 Nodes (16): IntRef, bool, ClassDataContract, GenericInfo, int, MethodInfo, object, TypeHandleRef (+8 more)
 
 ### Community 2648 - "Community 2648"
@@ -29489,16 +29558,16 @@ Cohesion: 0.10
 Nodes (17): ISubsystemDescriptor, IntPtr, ISubsystem, TSubsystem, ISubsystem, TSubsystem, ISubsystem, TProvider (+9 more)
 
 ### Community 2654 - "Community 2654"
-Cohesion: 0.06
-Nodes (22): ICanvasElement, LayoutRebuilder, ResetStaticsOnLoad(), UnityEngine.UI, CanvasUpdate, Component, int, List (+14 more)
+Cohesion: 0.13
+Nodes (11): LayoutRebuilder, ResetStaticsOnLoad(), UnityEngine.UI, CanvasUpdate, Component, int, List, ObjectPool (+3 more)
 
 ### Community 2655 - "Community 2655"
 Cohesion: 0.15
 Nodes (4): NativeList, Test, TestRequiresCollectionChecks, NativeListJobDebuggerTests
 
 ### Community 2656 - "Community 2656"
-Cohesion: 0.08
-Nodes (23): ActionMapWarning(), ActionWarning(), GetAssetReference(), InputActionAssetVerifier, UnityEngine.InputSystem.Plugins.InputForUI, Verify(), IReportInputActionAssetVerificationErrors, bool (+15 more)
+Cohesion: 0.12
+Nodes (13): bool, Func, InputActionAsset, List, string, DefaultInputActionAssetVerificationReporter, IInputActionAssetVerifier, IReportInputActionAssetVerificationErrors (+5 more)
 
 ### Community 2657 - "Community 2657"
 Cohesion: 0.10
@@ -29513,8 +29582,8 @@ Cohesion: 0.13
 Nodes (28): AABB, Allocator, BatchCullingContext, float3, float3x3, float4, FrustumPlaneCuller, JobHandle (+20 more)
 
 ### Community 2660 - "Community 2660"
-Cohesion: 0.13
-Nodes (10): Conditional, GraphicsFormat, ImportResourceParams, RenderTargetIdentifier, RenderTargetInfo, ResType, RTHandle, TextureDesc (+2 more)
+Cohesion: 0.10
+Nodes (6): BuildTool_Upgrade, bool, BuildModel, HashSet, int, Vector3
 
 ### Community 2661 - "Community 2661"
 Cohesion: 0.13
@@ -29613,8 +29682,8 @@ Cohesion: 0.17
 Nodes (19): bool, CancellationToken, Func, IEnumerable, IEnumerator, int, IPartitionedStreamRecipient, Pair (+11 more)
 
 ### Community 2685 - "Community 2685"
-Cohesion: 0.10
-Nodes (20): char, DataTable, DbConnection, IDataReader, OdbcCommand, OdbcConnection, OdbcDataReader, string (+12 more)
+Cohesion: 0.21
+Nodes (10): char, DataTable, DbConnection, IDataReader, OdbcCommand, OdbcConnection, OdbcDataReader, string (+2 more)
 
 ### Community 2686 - "Community 2686"
 Cohesion: 0.10
@@ -29657,8 +29726,8 @@ Cohesion: 0.21
 Nodes (28): FreeFunction, JobHandle, MethodImpl, ReadHandle, ReadStatus, ThreadAndSerializationSafe, Cancel(), CancelInternal() (+20 more)
 
 ### Community 2696 - "Community 2696"
-Cohesion: 0.10
-Nodes (10): CameraCallback, float, FreeFunction, int, RenderBuffer, RequiredByNativeCode, Shader, Vector4 (+2 more)
+Cohesion: 0.21
+Nodes (9): CodeIdentifiers, PrimitiveMapping, StructMapping, Type, TypeDesc, TypeFlags, TypeMapping, XmlSchemaComplexType (+1 more)
 
 ### Community 2697 - "Community 2697"
 Cohesion: 0.11
@@ -29681,12 +29750,12 @@ Cohesion: 0.16
 Nodes (8): ConversionRegistry, TSource, Type, TypeConverter, PrimitiveConverters, TypeConversion, Unity.Properties, TDestination
 
 ### Community 2702 - "Community 2702"
-Cohesion: 0.11
-Nodes (10): Action, CancellationToken, CancellationTokenRegistration, SqlException, T, Task, TaskCompletionSource, OpenAsyncRetry (+2 more)
+Cohesion: 0.08
+Nodes (15): UIMarkerTipIcons, bool, Color, float, GameObject, Image, int, List (+7 more)
 
 ### Community 2703 - "Community 2703"
-Cohesion: 0.08
-Nodes (23): string, MeasureMode, Vector2, string, UxmlTraits, string, UxmlTraits, VisualElement (+15 more)
+Cohesion: 0.19
+Nodes (10): Clickable, MeasureMode, NavigationSubmitEvent, string, UxmlTraits, Vector2, Button, UnityEngine.UIElements (+2 more)
 
 ### Community 2704 - "Community 2704"
 Cohesion: 0.16
@@ -29797,8 +29866,8 @@ Cohesion: 0.08
 Nodes (12): UIDEShellInfo, bool, Color32, List, RectTransform, string, StringBuilder, Text (+4 more)
 
 ### Community 2733 - "Community 2733"
-Cohesion: 0.16
-Nodes (7): KeyOrValue, IEnumerator, KeyValuePair, StringDictionary, GenericAdapter, ICollectionToGenericCollectionAdapter, System.Collections.Specialized
+Cohesion: 0.20
+Nodes (6): Array, XmlAttribute, XmlNode, System.Xml, XmlAttributeCollection, XmlNamedNodeMap
 
 ### Community 2734 - "Community 2734"
 Cohesion: 0.08
@@ -29829,8 +29898,8 @@ Cohesion: 0.10
 Nodes (13): UITechTip, bool, CanvasGroup, Color, Image, int, RectTransform, Sprite (+5 more)
 
 ### Community 2741 - "Community 2741"
-Cohesion: 0.36
-Nodes (4): InputActionImporterEditor, UnityEngine.InputSystem.Editor, GUIContent, InputActionAsset
+Cohesion: 0.08
+Nodes (17): EnumType, FloatType, UnityEditor.ShaderGraph.Internal, Vector1ShaderProperty, AbstractMaterialNode, Action, bool, float (+9 more)
 
 ### Community 2742 - "Community 2742"
 Cohesion: 0.14
@@ -29909,8 +29978,8 @@ Cohesion: 0.16
 Nodes (9): ECDsa, System.Security.Cryptography, ECCurve, ECParameters, Exception, HashAlgorithmName, ReadOnlySpan, Span (+1 more)
 
 ### Community 2761 - "Community 2761"
-Cohesion: 0.16
-Nodes (4): MethodImpl, Obsolete, RuntimeType, SecuritySafeCritical
+Cohesion: 0.08
+Nodes (13): UnityEditor.ShaderGraph, VirtualTextureShaderProperty, AbstractMaterialNode, Action, GenerationMode, HLSLDeclaration, HLSLProperty, List (+5 more)
 
 ### Community 2762 - "Community 2762"
 Cohesion: 0.11
@@ -29929,8 +29998,8 @@ Cohesion: 0.16
 Nodes (12): DictationCompletionCause, DictationTopicConstraint, ConfidenceLevel, IntPtr, MethodImpl, NativeHeader, NativeThrows, RequiredByNativeCode (+4 more)
 
 ### Community 2766 - "Community 2766"
-Cohesion: 0.09
-Nodes (12): DigitShapes, NumberFormatInfo, System.Globalization, bool, int, NumberStyles, OnDeserialized, OnDeserializing (+4 more)
+Cohesion: 0.08
+Nodes (14): DigitShapes, NumberFormatInfo, System.Globalization, IFormatProvider, Type, bool, int, NumberStyles (+6 more)
 
 ### Community 2767 - "Community 2767"
 Cohesion: 0.12
@@ -29941,8 +30010,8 @@ Cohesion: 0.13
 Nodes (12): FontConverter, FontNameConverter, FontUnitConverter, System.Drawing, Attribute, CultureInfo, FontFamily, IDictionary (+4 more)
 
 ### Community 2769 - "Community 2769"
-Cohesion: 0.13
-Nodes (9): GraphicsContainer, Brush, CombineMode, Font, Rectangle, RectangleF, Region, SizeF (+1 more)
+Cohesion: 0.16
+Nodes (6): Brush, CombineMode, GraphicsPath, Rectangle, RectangleF, Region
 
 ### Community 2770 - "Community 2770"
 Cohesion: 0.11
@@ -29970,7 +30039,7 @@ Nodes (12): Client, Microsoft.Unity.VisualStudio.Editor, VisualStudioIntegration
 
 ### Community 2776 - "Community 2776"
 Cohesion: 0.11
-Nodes (13): EventOnTypeBuilderInst, System.Reflection.Emit, EventInfo, ComAwareEventInfo, System.Runtime.InteropServices, EventBuilder, MethodInfo, Type (+5 more)
+Nodes (14): ComposablePartDefinition, ComposablePart, ConstructorInfo, ExportDefinition, IDictionary, IEnumerable, ImportDefinition, IReflectionPartCreationInfo (+6 more)
 
 ### Community 2777 - "Community 2777"
 Cohesion: 0.09
@@ -29989,16 +30058,12 @@ Cohesion: 0.10
 Nodes (9): System.Globalization, ThaiBuddhistCalendar, CalendarWeekRule, ComVisible, DateTime, DayOfWeek, EraInfo, GregorianCalendarHelper (+1 more)
 
 ### Community 2781 - "Community 2781"
-Cohesion: 0.07
-Nodes (17): ColorRGBAMaterialSlot, UnityEditor.ShaderGraph, DefaultVector4MaterialSlot, UnityEditor.ShaderGraph, UnityEditor.ShaderGraph, VertexColorMaterialSlot, GenerationMode, List (+9 more)
+Cohesion: 0.13
+Nodes (10): PropertyDescriptorCollection, PropertyDescriptorEnumerator, System.ComponentModel, Array, bool, IComparer, int, object (+2 more)
 
 ### Community 2782 - "Community 2782"
-Cohesion: 0.12
-Nodes (11): CubemapInputMaterialSlot, MinimalCubemapInputMaterialSlot, UnityEditor.ShaderGraph, AssetCollection, GenerationMode, List, MaterialSlot, PreviewProperty (+3 more)
-
-### Community 2783 - "Community 2783"
-Cohesion: 0.15
-Nodes (8): bool, byte, Mono.Security.Cryptography, SymmetricTransform, int, PaddingMode, RandomNumberGenerator, SymmetricAlgorithm
+Cohesion: 0.08
+Nodes (17): CubemapInputMaterialSlot, MinimalCubemapInputMaterialSlot, UnityEditor.ShaderGraph, CubemapMaterialSlot, UnityEditor.ShaderGraph, AssetCollection, GenerationMode, List (+9 more)
 
 ### Community 2784 - "Community 2784"
 Cohesion: 0.10
@@ -30009,8 +30074,8 @@ Cohesion: 0.15
 Nodes (10): FixedMemoryStream, HttpContent, System.Net.Http, HttpContentHeaders, bool, Encoding, long, Stream (+2 more)
 
 ### Community 2786 - "Community 2786"
-Cohesion: 0.15
-Nodes (9): CanvasUpdate, Component, int, List, ObjectPool, RectTransform, UnityAction, LayoutRebuilder (+1 more)
+Cohesion: 0.06
+Nodes (20): ICanvasElement, CanvasUpdate, Component, int, List, ObjectPool, RectTransform, UnityAction (+12 more)
 
 ### Community 2787 - "Community 2787"
 Cohesion: 0.08
@@ -30089,8 +30154,8 @@ Cohesion: 0.19
 Nodes (9): CoordinateSpace, IEnumerable, NeededTransform, ShaderStringBuilder, SpaceTransform, TransformFunction, NormalizeString(), SpaceTransformUtil (+1 more)
 
 ### Community 2806 - "Community 2806"
-Cohesion: 0.05
-Nodes (35): IAsyncResult, AsyncCallback, bool, object, Task, System.Threading.Tasks, TaskToApm, TaskWrapperAsyncResult (+27 more)
+Cohesion: 0.15
+Nodes (10): Action, AsyncCompletion, bool, Exception, Func, ManualResetEvent, object, AsyncResult (+2 more)
 
 ### Community 2807 - "Community 2807"
 Cohesion: 0.08
@@ -30205,8 +30270,8 @@ Cohesion: 0.17
 Nodes (4): string, System.Xml.Serialization, XmlSerializationPrimitiveReader, XmlSerializationReader
 
 ### Community 2835 - "Community 2835"
-Cohesion: 0.20
-Nodes (6): Array, XmlAttribute, XmlNode, System.Xml, XmlAttributeCollection, XmlNamedNodeMap
+Cohesion: 0.14
+Nodes (13): DielectricSpecularControlAttribute, DielectricSpecularControlView, UnityEditor.ShaderGraph.Drawing.Controls, AbstractMaterialNode, ChangeEvent, DielectricMaterial, Enum, FloatField (+5 more)
 
 ### Community 2837 - "Community 2837"
 Cohesion: 0.13
@@ -30345,12 +30410,12 @@ Cohesion: 0.09
 Nodes (8): UIFatalErrorTip, bool, int, Mutex, RectTransform, string, Text, UIButton
 
 ### Community 2871 - "Community 2871"
-Cohesion: 0.08
-Nodes (15): UIFunctionPanel, bool, Color, float, GameObject, Graphic, Image, Player (+7 more)
+Cohesion: 0.04
+Nodes (35): ICollectionPropertyBag, IPropertyBag, TCollection, ICollectionPropertyBagVisitor, TContainer, IProperty, TContainer, TElement (+27 more)
 
 ### Community 2872 - "Community 2872"
-Cohesion: 0.14
-Nodes (13): DataColumnMapping, DataColumnMappingConverter, System.Data.Common, IColumnMapping, CultureInfo, DataColumn, DataColumnMappingCollection, DataTable (+5 more)
+Cohesion: 0.09
+Nodes (12): UIChartSingleProducer, Color, float, GameObject, Image, List, RectTransform, StringBuilder (+4 more)
 
 ### Community 2873 - "Community 2873"
 Cohesion: 0.08
@@ -30413,8 +30478,8 @@ Cohesion: 0.17
 Nodes (3): Matrix4x4, SpecialName, StereoscopicEye
 
 ### Community 2888 - "Community 2888"
-Cohesion: 0.04
-Nodes (35): ContractBasedImportDefinition, ImportSourceImportDefinitionHelpers, NonImportSourceImportDefinition, System.ComponentModel.Composition.Hosting, ICompositionElement, IReflectionPartCreationInfo, ExportDefinition, IDictionary (+27 more)
+Cohesion: 0.15
+Nodes (11): IReflectionPartCreationInfo, bool, ConstructorInfo, ExportDefinition, IDictionary, IEnumerable, ImportDefinition, Lazy (+3 more)
 
 ### Community 2889 - "Community 2889"
 Cohesion: 0.07
@@ -30437,12 +30502,12 @@ Cohesion: 0.17
 Nodes (6): AsymmetricAlgorithm, CryptoConvert, Mono.Security.Cryptography, DSA, RSA, RSAParameters
 
 ### Community 2894 - "Community 2894"
-Cohesion: 0.09
+Cohesion: 0.10
 Nodes (5): FreeFunction, MaterialPropertyType, MethodImpl, NativeThrows, Shader
 
 ### Community 2895 - "Community 2895"
 Cohesion: 0.11
-Nodes (16): Dispose(), HasVersion(), Init(), InstanceCuller, MoveToDebugStatsAndClear(), IndirectBufferContextStorage, InstanceCullerSplitDebugArray, InstanceOcclusionEventDebugArray (+8 more)
+Nodes (15): HasVersion(), Init(), InstanceCuller, MoveToDebugStatsAndClear(), IndirectBufferContextStorage, InstanceCullerSplitDebugArray, InstanceOcclusionEventDebugArray, Camera (+7 more)
 
 ### Community 2896 - "Community 2896"
 Cohesion: 0.12
@@ -30469,8 +30534,8 @@ Cohesion: 0.27
 Nodes (7): DiagnosticsConfigurationHandler, Hashtable, IDictionary, TraceListenerCollection, XmlAttributeCollection, XmlNode, TraceImplSettings
 
 ### Community 2902 - "Community 2902"
-Cohesion: 0.09
-Nodes (20): CopyMarkersToClipboard, UnityEditor.Timeline, ActionExamples_HideAPI, DocCodeExamples, SampleClipAction, SampleMarkerAction, SampleTimelineAction, SampleTrackAction (+12 more)
+Cohesion: 0.13
+Nodes (14): ActionExamples_HideAPI, DocCodeExamples, SampleClipAction, SampleMarkerAction, SampleTimelineAction, SampleTrackAction, ActionContext, ActionValidity (+6 more)
 
 ### Community 2903 - "Community 2903"
 Cohesion: 0.07
@@ -30549,8 +30614,8 @@ Cohesion: 0.10
 Nodes (10): _PropertyInfo, System.Runtime.InteropServices, Binder, BindingFlags, CultureInfo, Guid, IntPtr, MethodInfo (+2 more)
 
 ### Community 2922 - "Community 2922"
-Cohesion: 0.22
-Nodes (8): Exception, Func, IDisposable, IObserver, TValue, UnityEngine.InputSystem.Utilities, Where, WhereObservable
+Cohesion: 0.14
+Nodes (8): UniversalRenderPipelineCameraEditor, Camera, GameObject, List, Rect, ReorderableList, Settings, UniversalRenderPipelineSerializedCamera
 
 ### Community 2923 - "Community 2923"
 Cohesion: 0.13
@@ -30717,7 +30782,7 @@ Cohesion: 0.13
 Nodes (20): bool, CancellationToken, CountdownEvent, Func, IComparer, IEnumerable, int, IPartitionedStreamRecipient (+12 more)
 
 ### Community 2964 - "Community 2964"
-Cohesion: 0.10
+Cohesion: 0.11
 Nodes (16): bool, byte, int, List, _SqlMetaDataSet, _SqlMetaDataSetCollection, ulong, NullBitmap (+8 more)
 
 ### Community 2965 - "Community 2965"
@@ -30745,8 +30810,8 @@ Cohesion: 0.08
 Nodes (17): bool, IComparer, IXmlNamespaceResolver, IXsltContextFunction, IXsltContextVariable, Query, string, XmlCaseOrder (+9 more)
 
 ### Community 2971 - "Community 2971"
-Cohesion: 0.14
-Nodes (10): XPathNodeIterator, bool, int, string, XPathNavigator, XPathNodeType, MS.Internal.Xml.XPath, XPathAncestorIterator (+2 more)
+Cohesion: 0.07
+Nodes (17): XPathNodeIterator, bool, int, string, XPathNavigator, XPathNodeType, XPathNodeIterator, int (+9 more)
 
 ### Community 2972 - "Community 2972"
 Cohesion: 0.09
@@ -30773,16 +30838,16 @@ Cohesion: 0.11
 Nodes (14): ArrayList, bool, byte, char, Encoding, Hashtable, HtmlElementProps, OutputResult (+6 more)
 
 ### Community 2978 - "Community 2978"
-Cohesion: 0.17
-Nodes (4): OutRec, bool, Boolean, OutPt
+Cohesion: 0.09
+Nodes (13): Reset(), Text, UnityEngine.UI, ILayoutElement, bool, FontData, string, TextAnchor (+5 more)
 
 ### Community 2979 - "Community 2979"
 Cohesion: 0.17
 Nodes (15): AnimationPlayableOutput, bool, Dictionary, FrameData, GameObject, IEnumerable, int, IntervalTree (+7 more)
 
 ### Community 2980 - "Community 2980"
-Cohesion: 0.24
-Nodes (6): ReplaceAnnotationDescriptionAction, Timeline.Samples, ActionValidity, IEnumerable, IMarker, TimelineShortcut
+Cohesion: 0.09
+Nodes (11): CodeGenerator, System.CodeDom.Compiler, ICodeGenerator, bool, CodeObject, CodePrimitiveExpression, ExposedTabStringIndentedTextWriter, GeneratorSupport (+3 more)
 
 ### Community 2981 - "Community 2981"
 Cohesion: 0.19
@@ -30886,7 +30951,7 @@ Nodes (8): UIBlueprintSettingPanel, EUsage, Image, PlayerAction_Build, RectTrans
 
 ### Community 3006 - "Community 3006"
 Cohesion: 0.09
-Nodes (12): UIChartSingleProducer, Color, float, GameObject, Image, List, RectTransform, StringBuilder (+4 more)
+Nodes (17): DocCodeExamples, LightTrack, MenuActionInsideSubMenu, MenuActionWithPriority, MyCustomClip, SetNameToTypeAction, ShortcutAction, SimpleMenuAction (+9 more)
 
 ### Community 3007 - "Community 3007"
 Cohesion: 0.09
@@ -30965,8 +31030,8 @@ Cohesion: 0.08
 Nodes (13): CodeAssignStatement, CodeAttachEventStatement, CodeConditionStatement, CodeEventReferenceExpression, CodeExpressionStatement, CodeGotoStatement, CodeIterationStatement, CodeMethodReturnStatement (+5 more)
 
 ### Community 3026 - "Community 3026"
-Cohesion: 0.09
-Nodes (19): AnnotationMarker, Timeline.Samples, MyMarker, INotification, INotificationOptionProvider, bool, SignalAsset, bool (+11 more)
+Cohesion: 0.17
+Nodes (5): CancellationToken, Func, T, Task, TaskCompletionSource
 
 ### Community 3027 - "Community 3027"
 Cohesion: 0.09
@@ -31005,8 +31070,8 @@ Cohesion: 0.17
 Nodes (10): Visualizer, Mesh, Quaternion, Vector3, Color, float, IEnumerable, Style (+2 more)
 
 ### Community 3036 - "Community 3036"
-Cohesion: 0.08
-Nodes (19): CreateXmlSerializableDelegate, DataContractPairKey, DataContractPairKey, Dictionary, bool, ConstructorInfo, DataContractPairKey, Dictionary (+11 more)
+Cohesion: 0.09
+Nodes (17): CreateXmlSerializableDelegate, DataContractPairKey, bool, ConstructorInfo, DataContractPairKey, Dictionary, SecurityCritical, XmlDictionaryString (+9 more)
 
 ### Community 3037 - "Community 3037"
 Cohesion: 0.10
@@ -31021,8 +31086,8 @@ Cohesion: 0.10
 Nodes (13): FunctionNode, System.Data, DataColumn, DataRow, DataRowVersion, DataTable, Function, FunctionId (+5 more)
 
 ### Community 3041 - "Community 3041"
-Cohesion: 0.09
-Nodes (13): SimpleType, System.Data, Hashtable, int, SerializationInfo, StorageType, StreamingContext, string (+5 more)
+Cohesion: 0.12
+Nodes (9): BulkCopySimpleResultSet, RunBehavior, SqlCommand, SqlConnection, SqlDataReader, SqlError, _SqlMetaDataSet, TransactionManagerIsolationLevel (+1 more)
 
 ### Community 3042 - "Community 3042"
 Cohesion: 0.09
@@ -31074,7 +31139,7 @@ Nodes (16): AnimationTrackDrawer, Styles, UnityEditor.Timeline, InfiniteTrackDra
 
 ### Community 3055 - "Community 3055"
 Cohesion: 0.10
-Nodes (12): Graphics, System.Drawing, GraphicsState, bool, Color, float, GraphicsPath, IMacContext (+4 more)
+Nodes (12): Graphics, System.Drawing, GraphicsContainer, GraphicsState, bool, Color, float, IMacContext (+4 more)
 
 ### Community 3056 - "Community 3056"
 Cohesion: 0.10
@@ -31097,8 +31162,8 @@ Cohesion: 0.10
 Nodes (16): EnumField, List, Obsolete, T, Type, Volume, ProbeAdjustmentVolume, DebugManager (+8 more)
 
 ### Community 3061 - "Community 3061"
-Cohesion: 0.11
-Nodes (13): UIMilestoneItem, AnimationCurve, bool, Button, Color, float, GameObject, Image (+5 more)
+Cohesion: 0.22
+Nodes (9): JointDrive, MethodImpl, Quaternion, SoftJointLimit, SoftJointLimitSpring, SpecialName, Vector3, CharacterJoint (+1 more)
 
 ### Community 3062 - "Community 3062"
 Cohesion: 0.14
@@ -31144,6 +31209,10 @@ Nodes (9): ShaderInput, UnityEditor.ShaderGraph.Internal, bool, GraphData, HashS
 Cohesion: 0.09
 Nodes (14): Texture2DShaderProperty, UnityEditor.ShaderGraph.Internal, AbstractMaterialNode, Action, bool, DefaultType, GenerationMode, GraphData (+6 more)
 
+### Community 3073 - "Community 3073"
+Cohesion: 0.11
+Nodes (11): PixelPerfectCamera, UnityEngine.Rendering.Universal, CropFrame, GridSnapping, bool, Camera, int, ScriptableRenderContext (+3 more)
+
 ### Community 3074 - "Community 3074"
 Cohesion: 0.19
 Nodes (12): HorizontalTextAligment, float, GUIContent, GUIStyle, int, Rect, SerializedProperty, TextAnchor (+4 more)
@@ -31153,8 +31222,8 @@ Cohesion: 0.14
 Nodes (15): ComposablePartExportProvider, AtomicComposition, bool, ComposablePart, CompositionBatch, CompositionLock, CompositionOptions, DebuggerStepThrough (+7 more)
 
 ### Community 3076 - "Community 3076"
-Cohesion: 0.14
-Nodes (8): Array, Group, Hashtable, int, Match, Enumerator, GroupCollection, System.Text.RegularExpressions
+Cohesion: 0.12
+Nodes (13): BuildPlatform, DisplayItem, BurstAotSettingsIMGUIRegister, BurstAotSettingsProvider, BurstCommonSettingAttribute, BurstMetadataSettingAttribute, BurstPlatformLegacySettings, Unity.Burst.Editor (+5 more)
 
 ### Community 3077 - "Community 3077"
 Cohesion: 0.19
@@ -31173,8 +31242,8 @@ Cohesion: 0.11
 Nodes (12): ReadOnlyMemoryStream, System.IO, AsyncCallback, CancellationToken, IAsyncResult, int, Memory, ReadOnlyMemory (+4 more)
 
 ### Community 3081 - "Community 3081"
-Cohesion: 0.08
-Nodes (4): IRailBrowserRender, EnumRailMouseActionType, IRailBrowserRenderImpl, rail
+Cohesion: 0.12
+Nodes (15): ChannelMixerControlAttribute, ChannelMixerControlView, UnityEditor.ShaderGraph.Drawing.Controls, AbstractMaterialNode, bool, ChangeEvent, ChannelMixer, float (+7 more)
 
 ### Community 3082 - "Community 3082"
 Cohesion: 0.11
@@ -31205,7 +31274,7 @@ Cohesion: 0.15
 Nodes (16): Dictionary, IEnumerable, InputAction, InputActionAsset, InputActionMap, MenuItem, StringBuilder, Substring (+8 more)
 
 ### Community 3089 - "Community 3089"
-Cohesion: 0.12
+Cohesion: 0.13
 Nodes (14): bool, Dictionary, float, GenericMenu, List, string, TextElement, TwoPaneSplitView (+6 more)
 
 ### Community 3090 - "Community 3090"
@@ -31261,8 +31330,8 @@ Cohesion: 0.14
 Nodes (14): AnimationClip, bool, double, GameObject, int, Keyframe, Object, ObjectReferenceKeyframe (+6 more)
 
 ### Community 3103 - "Community 3103"
-Cohesion: 0.10
-Nodes (20): Event, WindowState, Event, WindowState, bool, Event, float, Vector2 (+12 more)
+Cohesion: 0.18
+Nodes (10): bool, Event, float, Vector2, WindowState, InlineCurvesShortcutManipulator, TimelinePanManipulator, TimelineShortcutManipulator (+2 more)
 
 ### Community 3104 - "Community 3104"
 Cohesion: 0.11
@@ -31321,8 +31390,8 @@ Cohesion: 0.12
 Nodes (8): ApplicationIntent, bool, Dictionary, Exception, int, Keywords, string, SqlConnectionStringBuilder
 
 ### Community 3118 - "Community 3118"
-Cohesion: 0.16
-Nodes (10): CancellationToken, IMonoSslClientAuthenticationOptions, IMonoSslServerAuthenticationOptions, MobileTlsContext, MonoSslAuthenticationOptions, SslProtocols, Task, X509Certificate (+2 more)
+Cohesion: 0.10
+Nodes (20): IMonoSslStream, bool, CancellationToken, Conditional, IMonoSslClientAuthenticationOptions, IMonoSslServerAuthenticationOptions, int, MobileTlsContext (+12 more)
 
 ### Community 3119 - "Community 3119"
 Cohesion: 0.08
@@ -31345,8 +31414,8 @@ Cohesion: 0.11
 Nodes (9): AsyncCallback, CancellationToken, IAsyncResult, NetworkStream, SeekOrigin, Task, TcpClient, NetworkStreamWrapper (+1 more)
 
 ### Community 3124 - "Community 3124"
-Cohesion: 0.17
-Nodes (12): bool, BufferOffsetSize, byte, CancellationToken, int, long, MemoryStream, string (+4 more)
+Cohesion: 0.19
+Nodes (11): bool, BufferOffsetSize, byte, CancellationToken, int, long, MemoryStream, string (+3 more)
 
 ### Community 3125 - "Community 3125"
 Cohesion: 0.10
@@ -31399,10 +31468,6 @@ Nodes (13): Color, FreeFunction, MethodImpl, NativeMethod, Obsolete, Quaternion,
 ### Community 3137 - "Community 3137"
 Cohesion: 0.19
 Nodes (25): ExcludeFromDocs, IFormatProvider, MethodImpl, Vector2, Angle(), ClampMagnitude(), Distance(), Dot() (+17 more)
-
-### Community 3138 - "Community 3138"
-Cohesion: 0.04
-Nodes (35): ICollectionPropertyBag, IPropertyBag, TCollection, ICollectionPropertyBagVisitor, TContainer, IProperty, TContainer, TElement (+27 more)
 
 ### Community 3139 - "Community 3139"
 Cohesion: 0.18
@@ -31477,8 +31542,8 @@ Cohesion: 0.18
 Nodes (11): ActionMapsView, ActionsTreeView, InputActionMapsTreeViewItem, InputActionsTreeViewItem, Action, ContextualMenuPopulateEvent, string, TreeView (+3 more)
 
 ### Community 3157 - "Community 3157"
-Cohesion: 0.13
-Nodes (11): List, Rect, TimelineAsset, TimelineTrackBaseGUI, TimelineWindow, TreeViewController, TreeViewItem, TimelineDataSource (+3 more)
+Cohesion: 0.10
+Nodes (10): UIIllustrationImage, bool, IllustrationRenderState, int, PointerEventData, RawImage, Ray, RenderTextureFormat (+2 more)
 
 ### Community 3158 - "Community 3158"
 Cohesion: 0.08
@@ -31489,8 +31554,8 @@ Cohesion: 0.16
 Nodes (14): AdditionalRootsHandlerDelegate, FreeFunction, IntPtr, MethodImpl, NativeThrows, Object, ResourceRequest, Shader (+6 more)
 
 ### Community 3160 - "Community 3160"
-Cohesion: 0.04
-Nodes (43): AnimationClipConverter, AnimationClipConverterItem, UnityEditor.Rendering.Universal, BuiltInPixelPerfectCameraConverter, PixelPerfectCameraConverterItem, UnityEditor.Rendering.Universal, UpgradeGameObject(), UpgradePixelPerfectCamera() (+35 more)
+Cohesion: 0.12
+Nodes (15): AnimationClipConverter, AnimationClipConverterItem, UnityEditor.Rendering.Universal, RenderPipelineConverterAssetItem, UnityEditor.Rendering.Converter, Object, string, Action (+7 more)
 
 ### Community 3161 - "Community 3161"
 Cohesion: 0.11
@@ -31629,7 +31694,7 @@ Cohesion: 0.27
 Nodes (24): Internal_AddAttenuationKey(), Internal_AddFloatKey(), Internal_AddInletPort(), Internal_AddOutletPort(), Internal_Cancel(), Internal_Complete(), Internal_Connect(), Internal_CreateDSPNode() (+16 more)
 
 ### Community 3196 - "Community 3196"
-Cohesion: 0.15
+Cohesion: 0.17
 Nodes (5): Baselib_RegisteredNetwork_CompletionQueueStatus, Baselib_RegisteredNetwork_CompletionResult, Baselib_RegisteredNetwork_ProcessStatus, Baselib_RegisteredNetwork_Request, Baselib_RegisteredNetwork_Socket_UDP
 
 ### Community 3197 - "Community 3197"
@@ -31637,8 +31702,8 @@ Cohesion: 0.09
 Nodes (14): BindIPEndPoint, bool, DateTime, int, IPEndPoint, IPHostEntry, object, Socket (+6 more)
 
 ### Community 3198 - "Community 3198"
-Cohesion: 0.24
-Nodes (20): BinningConfig, AddSync(), ScheduleFilteringCullingOutputJob_EditorOnly(), SchedulePickingCullingOutputJob_EditorOnly(), ScheduleSceneViewHiddenObjectsCullingJob_EditorOnly(), IncludeExcludeListFilter, BatchCullingContext, BatchCullingOutput (+12 more)
+Cohesion: 0.17
+Nodes (24): BinningConfig, AddSync(), Dispose(), ScheduleFilteringCullingOutputJob_EditorOnly(), SchedulePickingCullingOutputJob_EditorOnly(), ScheduleSceneViewHiddenObjectsCullingJob_EditorOnly(), TryAddSplits(), BatchCullingContext (+16 more)
 
 ### Community 3199 - "Community 3199"
 Cohesion: 0.09
@@ -31670,7 +31735,7 @@ Nodes (11): CollectionVirtualizationController, BaseVerticalCollectionView, Func
 
 ### Community 3206 - "Community 3206"
 Cohesion: 0.08
-Nodes (24): [1.2.10] - 2019-12-08, [1.2.12] - 2020-02-21, [1.2.2] - 2019-08-20, [1.2.7] - 2019-11-15, [1.2.9] - 2019-12-06, [1.3.4] - 2020-06-09, [1.4.1] - 2020-07-15, [1.7.2] - 2022-09-12 (+16 more)
+Nodes (24): [1.2.10] - 2019-12-08, [1.2.13] - 2020-02-24, [1.2.1] - 2019-08-01, [1.2.2] - 2019-08-20, [1.2.8] - 2019-11-21, [1.3.1] - 2020-03-13, [1.4.1] - 2020-07-15, [1.4.4] - 2020-10-09 (+16 more)
 
 ### Community 3207 - "Community 3207"
 Cohesion: 0.14
@@ -31709,12 +31774,12 @@ Cohesion: 0.10
 Nodes (14): Ship, bool, Collision, float, GameObject, InputSettings, int, Interactable (+6 more)
 
 ### Community 3216 - "Community 3216"
-Cohesion: 0.09
-Nodes (12): ILayoutIgnorer, LayoutElement, OnValidate(), UnityEngine.UI, bool, float, int, bool (+4 more)
+Cohesion: 0.10
+Nodes (12): IShaderNodeView, AbstractMaterialNode, Color, IEdgeConnectorListener, IEnumerable, MaterialSlot, ModificationScope, ShaderCompilerMessageSeverity (+4 more)
 
 ### Community 3217 - "Community 3217"
-Cohesion: 0.15
-Nodes (10): HttpAbortDelegate, bool, HttpWebRequest, int, List, Uri, WebException, ProxyChain (+2 more)
+Cohesion: 0.13
+Nodes (7): IEnumerable, IList, T, TreeDataController, TreeViewItemData, DefaultMultiColumnTreeViewController, UnityEngine.UIElements
 
 ### Community 3218 - "Community 3218"
 Cohesion: 0.15
@@ -31785,8 +31850,8 @@ Cohesion: 0.12
 Nodes (13): HeaderFoldout, Action, bool, HelpBox, Label, Lazy, MultiColumnTreeView, Node (+5 more)
 
 ### Community 3235 - "Community 3235"
-Cohesion: 0.03
-Nodes (54): IGroupBoxOption, Clickable, EventBase, Label, NavigationSubmitEvent, string, VisualElement, CreationContext (+46 more)
+Cohesion: 0.19
+Nodes (3): CraftData, ECraftProto, Quaternion
 
 ### Community 3236 - "Community 3236"
 Cohesion: 0.13
@@ -31821,8 +31886,8 @@ Cohesion: 0.16
 Nodes (10): IRailFriends, List, RailFriendInfo, RailFriendsAddFriendRequest, RailID, RailKeyValue, RailResult, RailUserPlayedWith (+2 more)
 
 ### Community 3244 - "Community 3244"
-Cohesion: 0.12
-Nodes (14): AspectRatioFitter, DoesParentExists(), GetParentSize(), GetSizeDeltaToProduceSize(), IsAspectModeValid(), IsComponentValidOnObject(), SetDirty(), UnityEngine.UI (+6 more)
+Cohesion: 0.07
+Nodes (32): bool, IList, int, IPartitionedStreamRecipient, PartitionedStream, T, CancellationToken, IEnumerable (+24 more)
 
 ### Community 3245 - "Community 3245"
 Cohesion: 0.11
@@ -31925,8 +31990,8 @@ Cohesion: 0.08
 Nodes (17): string, Type, Type, string, Type, string, Type, WellKnownObjectMode (+9 more)
 
 ### Community 3270 - "Community 3270"
-Cohesion: 0.13
-Nodes (11): HandleSet, bool, CommandBuffer, Dictionary, GraphicsBuffer, Handle, Light, LightType (+3 more)
+Cohesion: 0.08
+Nodes (4): IRailBrowserRender, EnumRailMouseActionType, IRailBrowserRenderImpl, rail
 
 ### Community 3271 - "Community 3271"
 Cohesion: 0.13
@@ -31953,8 +32018,8 @@ Cohesion: 0.13
 Nodes (20): Matrix4x4, Quaternion, Vector3, Add(), Concatenate(), Conjugate(), CreateFromAxisAngle(), CreateFromRotationMatrix() (+12 more)
 
 ### Community 3277 - "Community 3277"
-Cohesion: 0.14
-Nodes (15): bool, Canvas, ExtendedPointerEventData, float, InlinedArray, LayerMask, List, PointerEventData (+7 more)
+Cohesion: 0.09
+Nodes (12): NotifyEvent, UIWindow, EWindowStatus, bool, Button, CanvasGroup, Image, PointerEventData (+4 more)
 
 ### Community 3278 - "Community 3278"
 Cohesion: 0.13
@@ -31969,24 +32034,24 @@ Cohesion: 0.08
 Nodes (18): XmlQualifiedName, XmlSchemaObject, XmlSchemaSimpleType, XmlQualifiedName, XmlSchemaObject, XmlSchemaObjectCollection, XmlSchemaSimpleType, XmlQualifiedName (+10 more)
 
 ### Community 3281 - "Community 3281"
-Cohesion: 0.08
-Nodes (12): IEnumerator, StringBuilder, XmlDocument, XmlNamespaceManager, XmlNodeChangedAction, XmlNodeChangedEventArgs, XmlNodeList, XmlNodeType (+4 more)
+Cohesion: 0.10
+Nodes (6): IEnumerator, StringBuilder, XmlNodeType, XmlWriter, System.Xml, XmlNode
 
 ### Community 3282 - "Community 3282"
-Cohesion: 0.09
-Nodes (12): UIBeltBuildTip, Camera, Color, GameHistoryData, GameObject, Image, int, List (+4 more)
+Cohesion: 0.15
+Nodes (8): bool, byte, Mono.Security.Cryptography, SymmetricTransform, int, PaddingMode, RandomNumberGenerator, SymmetricAlgorithm
 
 ### Community 3283 - "Community 3283"
-Cohesion: 0.07
-Nodes (19): IXPathNavigable, XNode, XPathNavigator, bool, Dictionary, int, LoadFlags, XmlNameTable (+11 more)
+Cohesion: 0.11
+Nodes (11): bool, Dictionary, int, LoadFlags, XmlNameTable, XmlRawWriter, XmlTextReaderImpl, XPathNavigator (+3 more)
 
 ### Community 3284 - "Community 3284"
 Cohesion: 0.16
 Nodes (10): bool, char, int, LexKind, string, XmlCharType, XPathScanner, XPathAxis (+2 more)
 
 ### Community 3285 - "Community 3285"
-Cohesion: 0.12
-Nodes (13): bool, FunctionRegistry, GenerationMode, int, List, PreviewProperty, PropertyCollector, ShaderStageCapability (+5 more)
+Cohesion: 0.08
+Nodes (10): UIBpFieldEntry, bool, InputField, int, PointerEventData, RectTransform, UIBlueprintInspector, UIButton (+2 more)
 
 ### Community 3286 - "Community 3286"
 Cohesion: 0.21
@@ -32037,8 +32102,8 @@ Cohesion: 0.16
 Nodes (7): Dictionary, FontAsset, Material, SpriteAsset, TextColorGradient, MaterialReferenceManager, UnityEngine.TextCore.Text
 
 ### Community 3298 - "Community 3298"
-Cohesion: 0.11
-Nodes (13): Func, IGenericMenu, List, NavigationSubmitEvent, PointerDownEvent, PointerEventBase, PointerMoveEvent, PointerUpEvent (+5 more)
+Cohesion: 0.07
+Nodes (23): string, Func, IGenericMenu, List, MeasureMode, NavigationSubmitEvent, PointerDownEvent, PointerEventBase (+15 more)
 
 ### Community 3299 - "Community 3299"
 Cohesion: 0.13
@@ -32157,8 +32222,8 @@ Cohesion: 0.08
 Nodes (17): QilChoice, System.Xml.Xsl.Qil, QilDataSource, System.Xml.Xsl.Qil, QilInvoke, System.Xml.Xsl.Qil, QilInvokeLateBound, System.Xml.Xsl.Qil (+9 more)
 
 ### Community 3328 - "Community 3328"
-Cohesion: 0.11
-Nodes (11): PixelPerfectCamera, UnityEngine.Rendering.Universal, CropFrame, GridSnapping, bool, Camera, int, ScriptableRenderContext (+3 more)
+Cohesion: 0.15
+Nodes (11): IActivationFactory, bool, Exception, FriendAccessAllowed, Guid, IntPtr, IRestrictedErrorInfo, SecurityCritical (+3 more)
 
 ### Community 3329 - "Community 3329"
 Cohesion: 0.13
@@ -32177,8 +32242,8 @@ Cohesion: 0.16
 Nodes (15): AdditionalCommandCollection, IncludeCollection, PassDescriptor, PragmaCollection, RenderStateCollection, string, SubShaderDescriptor, UniversalTarget (+7 more)
 
 ### Community 3333 - "Community 3333"
-Cohesion: 0.12
-Nodes (12): ComputeDuration(), ImplicitFocus(), Initialize(), InputActionsEditorSessionAnalytic, TryGatherData(), UnityEngine.InputSystem.Editor, Exception, IData (+4 more)
+Cohesion: 0.17
+Nodes (10): DataColumn, DataColumnCollection, DataRow, DataSet, DataTable, DbConnection, Stream, string (+2 more)
 
 ### Community 3334 - "Community 3334"
 Cohesion: 0.13
@@ -32385,8 +32450,8 @@ Cohesion: 0.15
 Nodes (5): CollectionBase, System.Collections, Array, ArrayList, IEnumerator
 
 ### Community 3385 - "Community 3385"
-Cohesion: 0.08
-Nodes (23): [15.0.3] - 2022-12-02, [17.2.0] - 2025-05-14, [17.3.0] - 2025-08-27, [17.4.0] - 2025-10-22, [17.5.0] - 2026-02-18, [1.1.2-preview] - 2018-01-01, [3.1.0-preview] - 2018-01-01, [3.2.0-preview] - 2018-01-01 (+15 more)
+Cohesion: 0.10
+Nodes (20): [15.0.3] - 2022-12-02, [17.2.0] - 2025-05-14, [17.3.0] - 2025-08-27, [17.4.0] - 2025-10-22, [17.5.0] - 2026-02-18, [1.1.4-preview] - 2018-01-01, [3.1.0-preview] - 2018-01-01, [6.1.0] - 2019-02-13 (+12 more)
 
 ### Community 3386 - "Community 3386"
 Cohesion: 0.14
@@ -32513,8 +32578,8 @@ Cohesion: 0.13
 Nodes (14): GraphicRaycaster, Canvas, Component, Description, EventSystem, IEnumerator, List, RaycastResult (+6 more)
 
 ### Community 3417 - "Community 3417"
-Cohesion: 0.12
-Nodes (13): BuildPlatform, DisplayItem, BurstAotSettingsIMGUIRegister, BurstAotSettingsProvider, BurstCommonSettingAttribute, BurstMetadataSettingAttribute, BurstPlatformLegacySettings, Unity.Burst.Editor (+5 more)
+Cohesion: 0.14
+Nodes (9): RijndaelManagedTransform, System.Security.Cryptography, byte, CipherMode, int, PaddingMode, RijndaelManagedTransformMode, SecurityCritical (+1 more)
 
 ### Community 3418 - "Community 3418"
 Cohesion: 0.14
@@ -32541,8 +32606,8 @@ Cohesion: 0.09
 Nodes (15): HideFlags, IStateSerializer, BindingFlags, bool, double, EnumerableTestState, int, LogMatch (+7 more)
 
 ### Community 3424 - "Community 3424"
-Cohesion: 0.09
-Nodes (16): HierarchicalSphere, Color, DrawGizmo, Func, GizmoType, GUIContent, HierarchicalBox, MenuItem (+8 more)
+Cohesion: 0.14
+Nodes (4): GateFitMode, GateFitParameters, Ray, Vector2
 
 ### Community 3425 - "Community 3425"
 Cohesion: 0.10
@@ -32578,7 +32643,7 @@ Nodes (18): FileStreamAsyncResult, System.IO, AsyncCallback, bool, byte, Excepti
 
 ### Community 3433 - "Community 3433"
 Cohesion: 0.13
-Nodes (14): IXmlSerializable, bool, Func, MethodInfo, Stream, XmlParserContext, XmlQualifiedName, XmlReader (+6 more)
+Nodes (13): bool, Func, MethodInfo, Stream, XmlParserContext, XmlQualifiedName, XmlReader, XmlReaderSettings (+5 more)
 
 ### Community 3434 - "Community 3434"
 Cohesion: 0.16
@@ -32625,8 +32690,8 @@ Cohesion: 0.14
 Nodes (17): BottomLevelAccelStruct, CommandBuffer, ComputeShader, GraphicsBuffer, IndexFormat, int, RadixSort, ScratchBufferLayout (+9 more)
 
 ### Community 3445 - "Community 3445"
-Cohesion: 0.06
-Nodes (25): CustomRenderPipeline, DummyRenderPipeline, RenderPipeline, RenderPipeline, RenderPipeline, Camera, List, RenderPipeline (+17 more)
+Cohesion: 0.09
+Nodes (17): DummyRenderPipeline, RenderPipeline, RenderPipeline, RenderPipeline, Camera, List, RenderPipeline, ScriptableRenderContext (+9 more)
 
 ### Community 3446 - "Community 3446"
 Cohesion: 0.17
@@ -32653,8 +32718,8 @@ Cohesion: 0.11
 Nodes (16): BaseEventData, Graphic, int, Material, MenuCommand, MenuItem, PointerEventData, SelectionState (+8 more)
 
 ### Community 3452 - "Community 3452"
-Cohesion: 0.06
-Nodes (27): IProvider, IReadOnlyDictionary, IShaderFunction, string, GUID, IShaderFunction, string, Dictionary (+19 more)
+Cohesion: 0.16
+Nodes (13): Dictionary, HintRegistry, IEnumerable, IShaderField, IShaderObject, IShaderType, List, string (+5 more)
 
 ### Community 3453 - "Community 3453"
 Cohesion: 0.17
@@ -32717,8 +32782,8 @@ Cohesion: 0.10
 Nodes (14): ASN1, AsymmetricAlgorithm, byte, DateTime, DSA, int, RSA, SecurityPermission (+6 more)
 
 ### Community 3468 - "Community 3468"
-Cohesion: 0.16
-Nodes (13): CancellationToken, IEnumerable, IEnumerator, IPartitionedStreamRecipient, OrdinalIndexState, Partitioner, QuerySettings, TElement (+5 more)
+Cohesion: 0.13
+Nodes (10): BinaryWriter, int, string, TypeFlags, ulong, XmlQualifiedName, XmlTypeCode, BitMatrix (+2 more)
 
 ### Community 3469 - "Community 3469"
 Cohesion: 0.14
@@ -32757,12 +32822,12 @@ Cohesion: 0.10
 Nodes (14): CommandBehavior, CommandType, Exception, int, List, Regex, SqlCommand, SqlParameter (+6 more)
 
 ### Community 3478 - "Community 3478"
-Cohesion: 0.13
-Nodes (8): IRailUtils, EnumRailLaunchAppType, EnumRailPlatformType, RailDirtyWordsCheckResult, RailResult, RailWarningMessageCallbackFunction, IRailUtilsImpl, rail
+Cohesion: 0.09
+Nodes (15): IGroupBoxOption, AttachToPanelEvent, CreationContext, DetachFromPanelEvent, IUxmlAttributes, Obsolete, string, UxmlBoolAttributeDescription (+7 more)
 
 ### Community 3479 - "Community 3479"
 Cohesion: 0.13
-Nodes (12): List, bool, DateTime, Dictionary, object, SqlDependency, SqlNotification, string (+4 more)
+Nodes (11): bool, DateTime, Dictionary, object, SqlDependency, SqlNotification, string, Timer (+3 more)
 
 ### Community 3480 - "Community 3480"
 Cohesion: 0.08
@@ -32813,16 +32878,16 @@ Cohesion: 0.09
 Nodes (9): bool, Dictionary, System.Net, TrackingStringDictionary, System.Net, TrackingValidationObjectDictionary, CaseSensitiveStringDictionary, System.Collections.Specialized (+1 more)
 
 ### Community 3492 - "Community 3492"
-Cohesion: 0.10
-Nodes (11): AsyncCallback, bool, CancellationToken, Exception, IAsyncResult, int, object, SeekOrigin (+3 more)
+Cohesion: 0.12
+Nodes (9): AsyncCallback, bool, Exception, IAsyncResult, int, object, SeekOrigin, System.Net (+1 more)
 
 ### Community 3493 - "Community 3493"
 Cohesion: 0.09
 Nodes (16): AsymmetricAlgorithm, byte, CLSCompliant, int, Oid, PublicKey, SecureString, X500DistinguishedName (+8 more)
 
 ### Community 3495 - "Community 3495"
-Cohesion: 0.15
-Nodes (14): AnimationPlayableAsset, LiveLink(), UnityEngine.Timeline, AnimationClip, AppliedOffsetMode, bool, GameObject, IPropertyCollector (+6 more)
+Cohesion: 0.11
+Nodes (6): UIMechaMaterialPanel, double, RectTransform, Text, UIMechaEditor, UIMechaMaterialBall
 
 ### Community 3496 - "Community 3496"
 Cohesion: 0.14
@@ -32857,8 +32922,8 @@ Cohesion: 0.18
 Nodes (21): ComputeShader, FreeFunction, LocalKeyword, LocalKeywordSpace, MethodImpl, Shader, ShaderKeywordType, Equals() (+13 more)
 
 ### Community 3504 - "Community 3504"
-Cohesion: 0.12
-Nodes (17): bool, CommandBuffer, ContextContainer, DecalCachedChunk, DecalScreenSpaceSettings, DeferredLights, FilteringSettings, List (+9 more)
+Cohesion: 0.16
+Nodes (11): EventBase, EventInterest, Hash128, string, UxmlTraits, Hash128Field, Hash128Input, UnityEngine.UIElements (+3 more)
 
 ### Community 3505 - "Community 3505"
 Cohesion: 0.24
@@ -32941,8 +33006,8 @@ Cohesion: 0.08
 Nodes (12): netstandard2.1, netstandard2.1, netstandard2.1, netstandard2.1, netstandard2.1, netstandard2.1, netstandard2.1, netstandard2.1 (+4 more)
 
 ### Community 3525 - "Community 3525"
-Cohesion: 0.10
-Nodes (21): Bitmap Custom Atlas Shader, Bitmap Shader, Bitmap Shaders, Debug Settings, Debug Settings, Debug Settings, Distance Field Masking Mobile Shader, Distance Field (Surface) Shader (+13 more)
+Cohesion: 0.08
+Nodes (24): Bevel, Bitmap Custom Atlas Shader, Bitmap Shader, Bitmap Shaders, Bump Map, Debug Settings, Debug Settings, Debug Settings (+16 more)
 
 ### Community 3526 - "Community 3526"
 Cohesion: 0.09
@@ -32970,7 +33035,7 @@ Nodes (17): GenreSelectedEvent, Unity.Multiplayer.Center.Editor.Analytics, Packa
 
 ### Community 3532 - "Community 3532"
 Cohesion: 0.11
-Nodes (14): bool, GenerationMode, int, Mip2DSamplingInputs, NormalMapSpace, RGBANodeOutput, ShaderStageCapability, ShaderStringBuilder (+6 more)
+Nodes (8): bool, CompilerScopeManager, IList, XPathAxis, XPathNodeType, XPathOperator, XPathParser, XPathAnalyzer
 
 ### Community 3533 - "Community 3533"
 Cohesion: 0.14
@@ -33049,8 +33114,8 @@ Cohesion: 0.11
 Nodes (11): UIMechaMoveTip, bool, EMovementState, float, ForgeTask, GuideMissionStandardMode, int, long (+3 more)
 
 ### Community 3552 - "Community 3552"
-Cohesion: 0.17
-Nodes (9): CellStreamingScratchBuffer, CellStreamingScratchBufferLayout, Chunk, CommandBuffer, DataLocation, List, NativeArray, T (+1 more)
+Cohesion: 0.22
+Nodes (6): CellStreamingScratchBuffer, CellStreamingScratchBufferLayout, CommandBuffer, NativeArray, T, Texture
 
 ### Community 3553 - "Community 3553"
 Cohesion: 0.10
@@ -33149,8 +33214,8 @@ Cohesion: 0.13
 Nodes (7): GetProcessors(), ReadStateInEditor(), ReadUnprocessedStateInEditor(), UnityEngine.InputSystem, IEnumerable, MethodImpl, TValue
 
 ### Community 3577 - "Community 3577"
-Cohesion: 0.05
-Nodes (27): BuiltInToURP2DRenderSettingsConverter, UnityEditor.Rendering.Universal, BuiltInToURP2DShaderConverter, UnityEditor.Rendering.Universal, RenderPipelineConverterMaterialUpgrader, RenderPipelineConverterMaterialUpgraderItem, UnityEditor.Rendering.Converter, RenderSettingsConverter (+19 more)
+Cohesion: 0.10
+Nodes (15): BuiltInToURP2DShaderConverter, UnityEditor.Rendering.Universal, RenderPipelineConverterMaterialUpgrader, RenderPipelineConverterMaterialUpgraderItem, UnityEditor.Rendering.Converter, UnityEditor.Rendering.Universal, URP3DToURP2DShaderConverter, BuiltInToURP3DMaterialUpgrader (+7 more)
 
 ### Community 3578 - "Community 3578"
 Cohesion: 0.15
@@ -33173,8 +33238,8 @@ Cohesion: 0.11
 Nodes (14): DefaultVolumeProfileCategories, Dictionary, Editor, int, Lazy, SerializedObject, string, Vector2 (+6 more)
 
 ### Community 3583 - "Community 3583"
-Cohesion: 0.12
-Nodes (14): DepthBlitFeature, DepthBlitCopyDepthPass, DepthBlitDepthOnlyPass, DepthBlitEdgePass, CameraData, FilterMode, Material, RenderingData (+6 more)
+Cohesion: 0.10
+Nodes (15): DepthBlitFeature, TexRefData, DepthBlitCopyDepthPass, DepthBlitDepthOnlyPass, DepthBlitEdgePass, FilterMode, Material, RenderingData (+7 more)
 
 ### Community 3584 - "Community 3584"
 Cohesion: 0.09
@@ -33257,8 +33322,8 @@ Cohesion: 0.11
 Nodes (12): Graphics, MaskTests, Dictionary, GameObject, IEnumerator, OneTimeTearDown, SetUp, string (+4 more)
 
 ### Community 3604 - "Community 3604"
-Cohesion: 0.09
-Nodes (13): GradientInputMaterialSlot, UnityEditor.ShaderGraph, GradientMaterialSlot, UnityEditor.ShaderGraph, GenerationMode, Gradient, List, MaterialSlot (+5 more)
+Cohesion: 0.14
+Nodes (9): GradientInputMaterialSlot, UnityEditor.ShaderGraph, GenerationMode, Gradient, List, MaterialSlot, PreviewProperty, PropertyCollector (+1 more)
 
 ### Community 3605 - "Community 3605"
 Cohesion: 0.14
@@ -33521,8 +33586,8 @@ Cohesion: 0.11
 Nodes (9): DataRow, DataTable, DbCommand, DbDataAdapter, DbParameter, SqlCommand, StatementType, SqlCommandBuilder (+1 more)
 
 ### Community 3671 - "Community 3671"
-Cohesion: 0.10
-Nodes (13): UISailIndicator, GalaxyData, GameData, GameObject, int, Player, PlayerNavigation, SpaceSector (+5 more)
+Cohesion: 0.09
+Nodes (13): Clickable, EventBase, Label, NavigationSubmitEvent, string, VisualElement, string, UxmlTraits (+5 more)
 
 ### Community 3672 - "Community 3672"
 Cohesion: 0.18
@@ -33565,8 +33630,8 @@ Cohesion: 0.16
 Nodes (11): int, IntPtr, MethodImpl, OpenExistingResult, PrePrepareMethod, ReliabilityContract, SecurityPermission, SemaphoreRights (+3 more)
 
 ### Community 3682 - "Community 3682"
-Cohesion: 0.09
-Nodes (13): bool, Query, XPathNodeIterator, XsltContext, object, XPathNodeIterator, XPathNavigator, BooleanExpr (+5 more)
+Cohesion: 0.10
+Nodes (14): FunctionType, Query, XPathNavigator, XPathNodeIterator, XsltContext, object, XPathNodeIterator, XPathNavigator (+6 more)
 
 ### Community 3683 - "Community 3683"
 Cohesion: 0.22
@@ -33593,8 +33658,8 @@ Cohesion: 0.25
 Nodes (22): float3, IFormatProvider, MethodImpl, quaternion, RotationOrder, AxisAngle(), Equals(), Euler() (+14 more)
 
 ### Community 3689 - "Community 3689"
-Cohesion: 0.08
-Nodes (15): UIMarkerTipIcons, bool, Color, float, GameObject, Image, int, List (+7 more)
+Cohesion: 0.14
+Nodes (7): CompressedStack, ExecutionContext, Obsolete, Reader, ReliabilityContract, SecurityCritical, SecuritySafeCritical
 
 ### Community 3690 - "Community 3690"
 Cohesion: 0.15
@@ -33625,8 +33690,8 @@ Cohesion: 0.09
 Nodes (13): bool, Event, float, Func, GameObject, int, Matrix4x4, RenderTexture (+5 more)
 
 ### Community 3697 - "Community 3697"
-Cohesion: 0.12
-Nodes (9): UIWindowDrag, BaseEventData, bool, EventTrigger, float, int, PointerEventData, RectTransform (+1 more)
+Cohesion: 0.10
+Nodes (10): UIStarmapDFHive, bool, EnemyDFHiveSystem, GameHistoryData, GameObject, LineRenderer, Material, Text (+2 more)
 
 ### Community 3698 - "Community 3698"
 Cohesion: 0.12
@@ -33693,8 +33758,8 @@ Cohesion: 0.10
 Nodes (11): AndroidAssetPacks, UnityEngine.Android, DownloadAssetPackAsyncOperation, GetAssetPackStateAsyncOperation, Action, AndroidAssetPackInfo, AndroidAssetPackState, AndroidAssetPackUseMobileDataRequestResult (+3 more)
 
 ### Community 3715 - "Community 3715"
-Cohesion: 0.14
-Nodes (11): InvertColorsNode, UnityEditor.ShaderGraph, bool, FunctionRegistry, GenerationMode, int, List, PreviewProperty (+3 more)
+Cohesion: 0.13
+Nodes (12): CopyMarkersToClipboard, UnityEditor.Timeline, ReplaceAnnotationDescriptionAction, Timeline.Samples, ActionValidity, IEnumerable, IMarker, ActionValidity (+4 more)
 
 ### Community 3716 - "Community 3716"
 Cohesion: 0.09
@@ -33785,8 +33850,8 @@ Cohesion: 0.12
 Nodes (9): TutorialLogic, Dictionary, GameData, GameHistoryData, List, UIGame, TOR_Ex_FlightMode, TOR_Ex_ResearchSlow (+1 more)
 
 ### Community 3738 - "Community 3738"
-Cohesion: 0.14
-Nodes (7): CompressedStack, ExecutionContext, Obsolete, Reader, ReliabilityContract, SecurityCritical, SecuritySafeCritical
+Cohesion: 0.15
+Nodes (10): HttpAbortDelegate, bool, HttpWebRequest, int, List, Uri, WebException, ProxyChain (+2 more)
 
 ### Community 3739 - "Community 3739"
 Cohesion: 0.10
@@ -33893,12 +33958,12 @@ Cohesion: 0.20
 Nodes (4): MS.Internal.Xml.Cache, XPathNodeHelper, XPathNode, XPathNodeType
 
 ### Community 3766 - "Community 3766"
-Cohesion: 0.15
-Nodes (9): DepthHistory, UnityEngine.Rendering.Universal, Hash128, int, RenderTextureDescriptor, RTHandle, string, UniversalCameraData (+1 more)
+Cohesion: 0.05
+Nodes (32): CameraHistoryItem, ColorHistory, UnityEngine.Rendering.Universal, DepthHistory, UnityEngine.Rendering.Universal, BufferedRTHandleSystem, FilterMode, RenderTextureDescriptor (+24 more)
 
 ### Community 3767 - "Community 3767"
-Cohesion: 0.11
-Nodes (9): UIMilkyWayClusterName, ClusterPlayerData, Color, float, int, MilkyWayData, RectTransform, Text (+1 more)
+Cohesion: 0.13
+Nodes (8): BackgroundWorker, System.ComponentModel, DoWorkEventArgs, AsyncOperation, bool, ProgressChangedEventArgs, SendOrPostCallback, RunWorkerCompletedEventArgs
 
 ### Community 3768 - "Community 3768"
 Cohesion: 0.15
@@ -33933,11 +33998,11 @@ Cohesion: 0.16
 Nodes (7): ControlSchemeCommands, UnityEngine.InputSystem.Editor, Command, DeviceRequirement, InputActionsEditorState, SerializedProperty, string
 
 ### Community 3776 - "Community 3776"
-Cohesion: 0.12
+Cohesion: 0.10
 Nodes (5): System.Data.Common, UInt64Storage, AggregateType, BitArray, ulong
 
 ### Community 3777 - "Community 3777"
-Cohesion: 0.12
+Cohesion: 0.10
 Nodes (5): SByteStorage, System.Data.Common, AggregateType, BitArray, sbyte
 
 ### Community 3778 - "Community 3778"
@@ -33979,6 +34044,10 @@ Nodes (12): ConfigurationManager, System.Configuration, InternalConfigurationFac
 ### Community 3787 - "Community 3787"
 Cohesion: 0.12
 Nodes (8): SettingValueElement, System.Configuration, ConfigurationSaveMode, MonoTODO, PropertyInformation, XmlNode, XmlReader, XmlWriter
+
+### Community 3788 - "Community 3788"
+Cohesion: 0.13
+Nodes (11): List, Rect, TimelineAsset, TimelineTrackBaseGUI, TimelineWindow, TreeViewController, TreeViewItem, TimelineDataSource (+3 more)
 
 ### Community 3789 - "Community 3789"
 Cohesion: 0.15
@@ -34137,8 +34206,8 @@ Cohesion: 0.16
 Nodes (10): Canvas, EventSystem, InputModuleTests, FakeBaseInput, IEnumerator, Image, SetUp, TearDown (+2 more)
 
 ### Community 3828 - "Community 3828"
-Cohesion: 0.12
-Nodes (14): HeaderFoldout, HeaderToggleFoldout, UnityEditor.Rendering, Foldout, AttachToPanelEvent, bool, ChangeEvent, Func (+6 more)
+Cohesion: 0.13
+Nodes (8): IRailUtils, EnumRailLaunchAppType, EnumRailPlatformType, RailDirtyWordsCheckResult, RailResult, RailWarningMessageCallbackFunction, IRailUtilsImpl, rail
 
 ### Community 3829 - "Community 3829"
 Cohesion: 0.10
@@ -34157,16 +34226,16 @@ Cohesion: 0.18
 Nodes (11): FormatNumber(), FormatProvider, Number, int, NumberBuffer, NumberFormatInfo, NumberStyles, ReadOnlySpan (+3 more)
 
 ### Community 3833 - "Community 3833"
-Cohesion: 0.16
-Nodes (9): MetaExpando, BindingRestrictions, DeleteMemberBinder, DynamicMetaObjectBinder, Expression, Func, GetMemberBinder, InvokeMemberBinder (+1 more)
+Cohesion: 0.12
+Nodes (12): ComputeDuration(), ImplicitFocus(), Initialize(), InputActionsEditorSessionAnalytic, TryGatherData(), UnityEngine.InputSystem.Editor, Exception, IData (+4 more)
 
 ### Community 3834 - "Community 3834"
 Cohesion: 0.12
 Nodes (14): GradientRemapPool, GradientSettingsAtlas, AtlasBase, bool, Dictionary, GradientRemap, List, ProfilerMarker (+6 more)
 
 ### Community 3835 - "Community 3835"
-Cohesion: 0.10
-Nodes (13): DynamicVectorMaterialSlot, UnityEditor.ShaderGraph, IMaterialSlotSupportsLiteralMode, UnityEditor.ShaderGraph, bool, ConcreteSlotValueType, GenerationMode, List (+5 more)
+Cohesion: 0.04
+Nodes (28): Test, TestRequiresDotsDebugOrCollectionChecks, AllocatorHelper, bool, OneTimeSetUp, OneTimeTearDown, SetUp, string (+20 more)
 
 ### Community 3836 - "Community 3836"
 Cohesion: 0.20
@@ -34217,8 +34286,8 @@ Cohesion: 0.11
 Nodes (5): System.IO, FileAttributes, int, File, StreamReader
 
 ### Community 3848 - "Community 3848"
-Cohesion: 0.13
-Nodes (10): IPerFrameHistoryAccessTracker, BufferedRTHandleSystem, int, Item, Type, uint, Reset(), TypeId (+2 more)
+Cohesion: 0.08
+Nodes (15): ICameraHistoryReadAccess, ICameraHistoryWriteAccess, IPerFrameHistoryAccessTracker, UnityEngine.Rendering, IPerFrameHistoryAccessTracker, Type, BufferedRTHandleSystem, int (+7 more)
 
 ### Community 3850 - "Community 3850"
 Cohesion: 0.15
@@ -34245,24 +34314,24 @@ Cohesion: 0.18
 Nodes (4): T, Test, UnsafeQueue, UnsafeQueueTests
 
 ### Community 3856 - "Community 3856"
-Cohesion: 0.08
-Nodes (17): EnumType, FloatType, UnityEditor.ShaderGraph.Internal, Vector1ShaderProperty, AbstractMaterialNode, Action, bool, float (+9 more)
+Cohesion: 0.22
+Nodes (7): Brick, CellCounts, List, NativeArray, ProbeVolumeStreamableAsset, T, Add()
 
 ### Community 3857 - "Community 3857"
 Cohesion: 0.21
 Nodes (8): InputAction, InputActionMap, SteamController, SteamHandle, ISteamControllerAPI, UnityEngine.InputSystem.Steam, SteamAnalogActionData, SteamDigitalActionData
 
 ### Community 3858 - "Community 3858"
-Cohesion: 0.29
-Nodes (7): ExcludeFromDocs, List, MethodImpl, NativeMethod, Vector2, PolygonCollider2D, UnityEngine
+Cohesion: 0.13
+Nodes (12): Direction, Graphic, int, Material, MenuCommand, MenuItem, string, Vector2 (+4 more)
 
 ### Community 3859 - "Community 3859"
 Cohesion: 0.13
 Nodes (13): Action, CallbackContext, Canvas, CanvasScaler, CursorMode, double, float, Graphic (+5 more)
 
 ### Community 3860 - "Community 3860"
-Cohesion: 0.13
-Nodes (16): CallbackContext, IEnumerator, IGameplayActions, InputAction, InputActionMap, InputBinding, List, AddCallbacks() (+8 more)
+Cohesion: 0.16
+Nodes (14): IEnumerator, IGameplayActions, InputAction, InputActionMap, InputBinding, List, AddCallbacks(), Disable() (+6 more)
 
 ### Community 3861 - "Community 3861"
 Cohesion: 0.12
@@ -34321,8 +34390,8 @@ Cohesion: 0.12
 Nodes (14): bool, IEnumerator, List, PlaymodeTestsControllerSettings, RunFinishedEvent, RunStartedEvent, RuntimeInitializeOnLoadMethod, string (+6 more)
 
 ### Community 3875 - "Community 3875"
-Cohesion: 0.18
-Nodes (5): PotentialTarget, LegacyUnknownTypeNode, Target, Type, UnknownTargetType
+Cohesion: 0.12
+Nodes (12): AbstractShaderProperty, AssetCollection, GenerationMode, int, List, PreviewProperty, PropertyCollector, SerializableTextureArray (+4 more)
 
 ### Community 3876 - "Community 3876"
 Cohesion: 0.23
@@ -34373,8 +34442,8 @@ Cohesion: 0.10
 Nodes (14): ArgInfo, Exception, Identity, LogicalCallContext, MethodBase, MethodReturnDictionary, object, SecurityCritical (+6 more)
 
 ### Community 3888 - "Community 3888"
-Cohesion: 0.08
-Nodes (13): UnityEditor.ShaderGraph, VirtualTextureShaderProperty, AbstractMaterialNode, Action, GenerationMode, HLSLDeclaration, HLSLProperty, List (+5 more)
+Cohesion: 0.06
+Nodes (23): FileWebRequest, bool, CloseExState, FileAccess, int, long, SecurityPermission, SerializationInfo (+15 more)
 
 ### Community 3889 - "Community 3889"
 Cohesion: 0.09
@@ -34417,8 +34486,8 @@ Cohesion: 0.16
 Nodes (17): CancellationToken, Func, IEnumerable, IEqualityComparer, IPartitionedStreamRecipient, Pair, PartitionedStream, QueryResults (+9 more)
 
 ### Community 3899 - "Community 3899"
-Cohesion: 0.08
-Nodes (22): CancellationToken, Exception, ExcludeFromCodeCoverage, IEnumerable, IPartitionedStreamRecipient, PartitionedStream, QueryOperatorEnumerator, QueryResults (+14 more)
+Cohesion: 0.14
+Nodes (15): CancellationToken, Exception, ExcludeFromCodeCoverage, IEnumerable, IPartitionedStreamRecipient, PartitionedStream, QueryOperatorEnumerator, QueryResults (+7 more)
 
 ### Community 3900 - "Community 3900"
 Cohesion: 0.16
@@ -34473,8 +34542,8 @@ Cohesion: 0.16
 Nodes (18): Conditional, Stream, AddULong(), AdjustScale(), AssertValid(), ChFromDigit(), DivByULong(), FGt10_38() (+10 more)
 
 ### Community 3913 - "Community 3913"
-Cohesion: 0.15
-Nodes (7): XPathNodeIterator, XmlNode, XPathNodeIterator, DocumentXPathNodeIterator_AllElemChildren_AndSelf, System.Xml, DocumentXPathNodeIterator_AllElemChildren, System.Xml
+Cohesion: 0.10
+Nodes (12): XPathNodeIterator, XmlNode, XPathNodeIterator, DocumentXPathNavigator, int, XmlNode, DocumentXPathNodeIterator_AllElemChildren_AndSelf, System.Xml (+4 more)
 
 ### Community 3914 - "Community 3914"
 Cohesion: 0.16
@@ -34493,8 +34562,8 @@ Cohesion: 0.19
 Nodes (9): DateTime, IList, Type, XmlAtomicValue, XmlQueryType, XPathItem, XPathNavigator, System.Xml.Xsl.Runtime (+1 more)
 
 ### Community 3918 - "Community 3918"
-Cohesion: 0.13
-Nodes (10): BinaryWriter, int, string, TypeFlags, ulong, XmlQualifiedName, XmlTypeCode, BitMatrix (+2 more)
+Cohesion: 0.09
+Nodes (13): ColorShaderProperty, UnityEditor.ShaderGraph.Internal, AbstractMaterialNode, Action, bool, Color, ColorMode, GenerationMode (+5 more)
 
 ### Community 3919 - "Community 3919"
 Cohesion: 0.13
@@ -34521,24 +34590,28 @@ Cohesion: 0.22
 Nodes (7): FreeFunction, int, MethodImpl, Quaternion, Vector3, Gyroscope, UnityEngine
 
 ### Community 3925 - "Community 3925"
-Cohesion: 0.13
-Nodes (8): BackgroundWorker, System.ComponentModel, DoWorkEventArgs, AsyncOperation, bool, ProgressChangedEventArgs, SendOrPostCallback, RunWorkerCompletedEventArgs
+Cohesion: 0.03
+Nodes (40): IHasMetadata, UnityEditor.ShaderGraph, IRequiresData, UnityEditor.ShaderGraph, CanvasData, DefineCollection, GenerationMode, GUID (+32 more)
 
 ### Community 3926 - "Community 3926"
 Cohesion: 0.19
 Nodes (13): Enumerator, IDictionaryPropertyBag, IListPropertyBag, IPropertyBag, Property, TCollection, TContainer, TDictionary (+5 more)
+
+### Community 3927 - "Community 3927"
+Cohesion: 0.10
+Nodes (13): DynamicVectorMaterialSlot, UnityEditor.ShaderGraph, IMaterialSlotSupportsLiteralMode, UnityEditor.ShaderGraph, bool, ConcreteSlotValueType, GenerationMode, List (+5 more)
 
 ### Community 3928 - "Community 3928"
 Cohesion: 0.19
 Nodes (9): bool, Color32, List, Mesh, UIVertex, Vector3, Vector4, UnityEngine.UI (+1 more)
 
 ### Community 3929 - "Community 3929"
-Cohesion: 0.12
-Nodes (8): Test, TestRequiresCollectionChecks, Test, int, NativeParallelMultiHashMapTests_InJobs, Unity.Collections.Tests, NativeParallelMultiHashMapTests_JobDebugger, NativeParallelMultiHashMapTestsFixture
+Cohesion: 0.15
+Nodes (13): Color, EventType, IEnumerable, Int64, IntervalTree, List, Rect, T (+5 more)
 
 ### Community 3930 - "Community 3930"
-Cohesion: 0.15
-Nodes (7): MethodImpl, string, T, Type, EnumParameter, ObjectParameter, VolumeParameter
+Cohesion: 0.16
+Nodes (7): KeyOrValue, IEnumerator, KeyValuePair, StringDictionary, GenericAdapter, ICollectionToGenericCollectionAdapter, System.Collections.Specialized
 
 ### Community 3931 - "Community 3931"
 Cohesion: 0.15
@@ -34617,8 +34690,8 @@ Cohesion: 0.11
 Nodes (12): Aggregate, AggregateNode, System.Data, AggregateType, bool, DataColumn, DataRelation, DataRow (+4 more)
 
 ### Community 3950 - "Community 3950"
-Cohesion: 0.12
-Nodes (12): AbstractShaderProperty, AssetCollection, GenerationMode, int, List, PreviewProperty, PropertyCollector, SerializableTexture (+4 more)
+Cohesion: 0.11
+Nodes (12): Action, bool, GeometryChangedEvent, GraphView, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Vector2 (+4 more)
 
 ### Community 3951 - "Community 3951"
 Cohesion: 0.22
@@ -34825,8 +34898,8 @@ Cohesion: 0.12
 Nodes (11): BlockType, InflaterManaged, System.IO.Compression, HuffmanTree, InflaterState, bool, byte, IFileFormatReader (+3 more)
 
 ### Community 4007 - "Community 4007"
-Cohesion: 0.08
-Nodes (18): BuildTargetGroup, netstandard2.1, CheckForDefineSymbol(), GrassForce, InspectorSetPaintAction(), Render(), ToggleDefineSymbol(), ToggleHDRP() (+10 more)
+Cohesion: 0.16
+Nodes (12): BuildTargetGroup, CheckForDefineSymbol(), GrassForce, InspectorSetPaintAction(), Render(), ToggleDefineSymbol(), ToggleHDRP(), ToggleSRP() (+4 more)
 
 ### Community 4008 - "Community 4008"
 Cohesion: 0.13
@@ -34869,20 +34942,20 @@ Cohesion: 0.13
 Nodes (5): StringStorage, System.Data.Common, AggregateType, BitArray, string
 
 ### Community 4018 - "Community 4018"
-Cohesion: 0.13
-Nodes (5): System.Data.Common, TimeSpanStorage, AggregateType, BitArray, TimeSpan
+Cohesion: 0.12
+Nodes (6): System.Data.Common, TimeSpanStorage, DataStorage, AggregateType, BitArray, TimeSpan
 
 ### Community 4019 - "Community 4019"
-Cohesion: 0.11
-Nodes (8): CodeAttributeArgument, CodeAttributeDeclarationCollection, CodeDirectionExpression, CodeParameterDeclarationExpression, CodeTypeOfExpression, CodeTypeReference, CodeTypeReferenceExpression, FieldDirection
+Cohesion: 0.15
+Nodes (7): DataTable, DbColumn, MetaType, ReadOnlyCollection, SqlBuffer, _SqlMetaData, Type
 
 ### Community 4020 - "Community 4020"
 Cohesion: 0.13
 Nodes (11): LabelInfo, System.Linq.Expressions.Compiler, bool, HashSet, ILGenerator, Label, LabelScopeInfo, LabelTarget (+3 more)
 
 ### Community 4021 - "Community 4021"
-Cohesion: 0.18
-Nodes (7): Component, System.ComponentModel, IComponent, EventHandlerList, ISite, object, Type
+Cohesion: 0.10
+Nodes (13): Component, System.ComponentModel, MarshalByValueComponent, System.ComponentModel, IComponent, EventHandlerList, ISite, object (+5 more)
 
 ### Community 4022 - "Community 4022"
 Cohesion: 0.10
@@ -34941,12 +35014,12 @@ Cohesion: 0.11
 Nodes (14): ContentTransferEncoding, string, Dictionary, string, string, MimeHeader, ContentIDHeader, System.Xml (+6 more)
 
 ### Community 4036 - "Community 4036"
-Cohesion: 0.11
-Nodes (12): Action, bool, GeometryChangedEvent, GraphView, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Vector2 (+4 more)
+Cohesion: 0.12
+Nodes (17): bool, CommandBuffer, ContextContainer, DecalCachedChunk, DecalScreenSpaceSettings, DeferredLights, FilteringSettings, List (+9 more)
 
 ### Community 4037 - "Community 4037"
-Cohesion: 0.09
-Nodes (17): BuiltInToURP3DRenderSettingsConverter, UnityEditor.Rendering.Universal, LayerOverride, RenderingMode, RenderPipelineAsset, ScriptableRendererData, UniversalRendererData, Camera (+9 more)
+Cohesion: 0.13
+Nodes (11): UnityEditor.Rendering.Universal, LayerOverride, Camera, float, Light, SimpleLodSystem, EnforceCorrectValues(), RenderSettingsController (+3 more)
 
 ### Community 4038 - "Community 4038"
 Cohesion: 0.13
@@ -35060,10 +35133,6 @@ Nodes (11): Physics2DRaycasterTests, Color, EventSystem, GameObject, List, Rayca
 Cohesion: 0.22
 Nodes (7): AnimatedParameterExtensions, UnityEditor.Timeline, AnimationCurve, EditorCurveBinding, ICurvesOwner, IEnumerable, SerializedProperty
 
-### Community 4066 - "Community 4066"
-Cohesion: 0.12
-Nodes (6): UIBlueprintReformItem, int, RectTransform, Text, UIBlueprintInspector, UIButton
-
 ### Community 4067 - "Community 4067"
 Cohesion: 0.19
 Nodes (11): FullscreenShaderGUI, Styles, UnityEditor.Rendering.Fullscreen.ShaderGraph, bool, GUIContent, int, Material, MaterialEditor (+3 more)
@@ -35078,15 +35147,15 @@ Nodes (11): GlyphProxy, bool, Dictionary, GlyphMetrics, GlyphRect, Material, Ser
 
 ### Community 4070 - "Community 4070"
 Cohesion: 0.10
-Nodes (10): UIStarmapDFHive, bool, EnemyDFHiveSystem, GameHistoryData, GameObject, LineRenderer, Material, Text (+2 more)
+Nodes (10): CameraCallback, float, FreeFunction, int, RenderBuffer, RequiredByNativeCode, Shader, Vector4 (+2 more)
 
 ### Community 4071 - "Community 4071"
-Cohesion: 0.21
-Nodes (7): EnumResult, Array, CLSCompliant, ComVisible, TEnum, Type, Init()
+Cohesion: 0.13
+Nodes (5): Compiler, Key, QilExpression, Stylesheet, XslLoadException
 
 ### Community 4072 - "Community 4072"
-Cohesion: 0.10
-Nodes (11): Texture3DShaderProperty, UnityEditor.ShaderGraph.Internal, AbstractMaterialNode, Action, bool, GenerationMode, HLSLDeclaration, HLSLProperty (+3 more)
+Cohesion: 0.18
+Nodes (12): ComputePassData, ComputeShaderScreenInOutRenderFeature, HeatmapPass, BufferHandle, ComputeShader, ContextContainer, int, RenderGraph (+4 more)
 
 ### Community 4073 - "Community 4073"
 Cohesion: 0.14
@@ -35209,8 +35278,8 @@ Cohesion: 0.12
 Nodes (15): CommandBuffer, Ignore, Mesh, RayTracingBackend, RayTracingContext, RTHandle, SamplingResources, SetUp (+7 more)
 
 ### Community 4103 - "Community 4103"
-Cohesion: 0.16
-Nodes (11): EventBase, EventInterest, Hash128, string, UxmlTraits, Hash128Field, Hash128Input, UnityEngine.UIElements (+3 more)
+Cohesion: 0.03
+Nodes (48): CreationContext, IUxmlAttributes, TValueUxmlAttributeType, VisualElement, DeltaSpeed, string, UxmlTraits, Vector3 (+40 more)
 
 ### Community 4104 - "Community 4104"
 Cohesion: 0.20
@@ -35385,8 +35454,8 @@ Cohesion: 0.15
 Nodes (13): GenerateHelper, IList, MethodInfo, QilExpression, QilNode, TypeBuilder, XmlILCommand, XmlILModule (+5 more)
 
 ### Community 4147 - "Community 4147"
-Cohesion: 0.09
-Nodes (13): ColorShaderProperty, UnityEditor.ShaderGraph.Internal, AbstractMaterialNode, Action, bool, Color, ColorMode, GenerationMode (+5 more)
+Cohesion: 0.12
+Nodes (11): ILayerable, ISelectable, UnityEditor.Timeline, Event, LayerZOrder, Rect, TimelineClipGUI, TrimEdge (+3 more)
 
 ### Community 4148 - "Community 4148"
 Cohesion: 0.13
@@ -35492,10 +35561,6 @@ Nodes (13): IQcSuggestorTag, IQcSuggestorTag, IQcSuggestorTag, IQcSuggestorTag, 
 Cohesion: 0.15
 Nodes (12): Dictionary, Func, IDictionary, IEnumerable, IList, IReadOnlyList, T, TKey (+4 more)
 
-### Community 4174 - "Community 4174"
-Cohesion: 0.15
-Nodes (3): Color, List, Vector4
-
 ### Community 4175 - "Community 4175"
 Cohesion: 0.24
 Nodes (12): DiscretionaryAcl, System.Security.AccessControl, AccessControlType, AceQualifier, GenericAce, Guid, InheritanceFlags, MonoTODO (+4 more)
@@ -35506,7 +35571,7 @@ Nodes (13): ActionPropertiesView, BindingPropertiesView, SelectionType, Serializ
 
 ### Community 4177 - "Community 4177"
 Cohesion: 0.12
-Nodes (5): CharStorage, System.Data.Common, AggregateType, BitArray, char
+Nodes (8): Test, TestRequiresCollectionChecks, Test, int, NativeParallelMultiHashMapTests_InJobs, Unity.Collections.Tests, NativeParallelMultiHashMapTests_JobDebugger, NativeParallelMultiHashMapTestsFixture
 
 ### Community 4178 - "Community 4178"
 Cohesion: 0.19
@@ -35533,8 +35598,8 @@ Cohesion: 0.12
 Nodes (10): AndroidGyroscope, Gyroscope, Camera, float, InputDevice, TDevice, Text, Transform (+2 more)
 
 ### Community 4184 - "Community 4184"
-Cohesion: 0.20
-Nodes (12): AddOverrideTrackAction, ApplyAutoAction, ApplySceneOffsetAction, ApplyTransformOffsetAction, ConvertFromClipTrackAction, ConvertToClipModeAction, TrackOffsetBaseAction, UnityEditor.Timeline (+4 more)
+Cohesion: 0.21
+Nodes (11): AddOverrideTrackAction, ApplyAutoAction, ApplySceneOffsetAction, ApplyTransformOffsetAction, ConvertFromClipTrackAction, ConvertToClipModeAction, TrackOffsetBaseAction, UnityEditor.Timeline (+3 more)
 
 ### Community 4185 - "Community 4185"
 Cohesion: 0.25
@@ -35602,7 +35667,7 @@ Nodes (10): TrashContainer, BinaryReader, BinaryWriter, ComputeBuffer, int, Mate
 
 ### Community 4201 - "Community 4201"
 Cohesion: 0.16
-Nodes (11): AsyncCompletion, AsyncCompletionResult, AsyncEventArgs, AsyncEventArgsCallback, byte, IAsyncEventArgs, IAsyncResult, XmlNodeWriterWriteBase64TextArgs (+3 more)
+Nodes (11): isArray, Action, Func, IEnumerable, List, member, MemberInfo, Type (+3 more)
 
 ### Community 4202 - "Community 4202"
 Cohesion: 0.15
@@ -35614,7 +35679,7 @@ Nodes (10): UIInputField, bool, Func, GameObject, InputButton, InputField, Point
 
 ### Community 4204 - "Community 4204"
 Cohesion: 0.11
-Nodes (6): UIMechaMaterialPanel, double, RectTransform, Text, UIMechaEditor, UIMechaMaterialBall
+Nodes (15): Bounds, Camera, CommandBuffer, ComputeBuffer, ComputeShader, GrassDataPass, LayerMask, List (+7 more)
 
 ### Community 4205 - "Community 4205"
 Cohesion: 0.11
@@ -35697,8 +35762,8 @@ Cohesion: 0.23
 Nodes (9): CellSwizzle, GridLayout, FreeFunction, MethodImpl, SpecialName, Vector3, Vector3Int, Grid (+1 more)
 
 ### Community 4225 - "Community 4225"
-Cohesion: 0.15
-Nodes (4): DictionaryBase, System.Collections, Array, Hashtable
+Cohesion: 0.07
+Nodes (13): DictionaryBase, System.Collections, InstanceDataCollection, System.Diagnostics, InstanceDataCollectionCollection, System.Diagnostics, InstanceData, InstanceDataCollection (+5 more)
 
 ### Community 4226 - "Community 4226"
 Cohesion: 0.17
@@ -35717,8 +35782,8 @@ Cohesion: 0.10
 Nodes (19): dependencies, com.unity.modules.uielements, description, displayName, documentationUrl, _fingerprint, keywords, name (+11 more)
 
 ### Community 4230 - "Community 4230"
-Cohesion: 0.07
-Nodes (13): Decoder, Encoder, char, DecoderNLS, EncoderNLS, NormalizationForm, SecurityCritical, SerializationInfo (+5 more)
+Cohesion: 0.09
+Nodes (12): UIBeltBuildTip, Camera, Color, GameHistoryData, GameObject, Image, int, List (+4 more)
 
 ### Community 4231 - "Community 4231"
 Cohesion: 0.12
@@ -35821,8 +35886,8 @@ Cohesion: 0.12
 Nodes (14): CullingGroup, DecalCulledChunk, DecalUpdateCullingGroupSystem, UnityEngine.Rendering.Universal, Camera, DecalCachedChunk, DecalEntityManager, float (+6 more)
 
 ### Community 4256 - "Community 4256"
-Cohesion: 0.13
-Nodes (20): BitField, CustomEditor, DebugStateAttribute, DebugStateFlags, DebugStateInt, DebugUIDrawerAttribute, DebugUIDrawerBitField, DebugUIDrawerIntField (+12 more)
+Cohesion: 0.14
+Nodes (17): CustomEditor, DebugStateAttribute, DebugStateFloat, DebugStateInt, DebugUIDrawerAttribute, DebugUIDrawerFloatField, DebugUIDrawerIntField, DefaultVolumeProfileEditor (+9 more)
 
 ### Community 4257 - "Community 4257"
 Cohesion: 0.14
@@ -35861,8 +35926,8 @@ Cohesion: 0.16
 Nodes (12): DebugFinalValidationPassData, DebugSetupPassData, UnityEngine.Rendering.Universal, DebugDisplaySettingsLighting, DebugDisplaySettingsMaterial, DebugDisplaySettingsRendering, bool, CommandBuffer (+4 more)
 
 ### Community 4267 - "Community 4267"
-Cohesion: 0.13
-Nodes (12): Direction, Graphic, int, Material, MenuCommand, MenuItem, string, Vector2 (+4 more)
+Cohesion: 0.15
+Nodes (11): DbDataAdapter, DataRow, DataSet, DataTable, DataTableMapping, IDbCommand, RowUpdatedEventArgs, RowUpdatingEventArgs (+3 more)
 
 ### Community 4268 - "Community 4268"
 Cohesion: 0.13
@@ -35877,8 +35942,8 @@ Cohesion: 0.10
 Nodes (19): Additional resources, Array types, Built-in types, C#/.NET type support, Enum types, Generic types, Pointer types, Span types (+11 more)
 
 ### Community 4271 - "Community 4271"
-Cohesion: 0.15
-Nodes (13): Color, EventType, IEnumerable, Int64, IntervalTree, List, Rect, T (+5 more)
+Cohesion: 0.26
+Nodes (8): MatchOffsetsNextAction, MatchOffsetsPreviousAction, ResetOffsets, UnityEditor.Timeline, ActionValidity, IEnumerable, PlayableDirector, TimelineClip
 
 ### Community 4272 - "Community 4272"
 Cohesion: 0.21
@@ -35922,7 +35987,7 @@ Nodes (7): ArraySortHelper, System.Collections.Generic, Comparison, IComparer, T
 
 ### Community 4282 - "Community 4282"
 Cohesion: 0.11
-Nodes (9): MethodImpl, RequiredByNativeCode, StaticAccessor, BuiltinRuntimeReflectionSystem, UnityEngine.Experimental.Rendering, IScriptableRuntimeReflectionSystem, UnityEngine.Experimental.Rendering, ScriptableRuntimeReflectionSystem (+1 more)
+Nodes (8): CodeAttributeArgument, CodeAttributeDeclarationCollection, CodeDirectionExpression, CodeParameterDeclarationExpression, CodeTypeOfExpression, CodeTypeReference, CodeTypeReferenceExpression, FieldDirection
 
 ### Community 4283 - "Community 4283"
 Cohesion: 0.21
@@ -35941,8 +36006,8 @@ Cohesion: 0.18
 Nodes (15): Create(), Dispose(), Initialize(), Load(), LoadFromShaderGraph(), Resize(), ShaderDefs, UnityEngine.Rendering (+7 more)
 
 ### Community 4287 - "Community 4287"
-Cohesion: 0.17
-Nodes (12): PathTracingWorldResourcesStripper, RayTracingResourcesStripper, SurfaceCacheStripperUtility, UnityEditor.Rendering, UniversalSurfaceCacheCoreStripper, UniversalSurfaceCacheIntegrationStripper, List, Preserve (+4 more)
+Cohesion: 0.11
+Nodes (11): UIVariousPopupCard, CardType, Animation, AnimationState, bool, float, Image, PointerEventData (+3 more)
 
 ### Community 4288 - "Community 4288"
 Cohesion: 0.12
@@ -35961,8 +36026,8 @@ Cohesion: 0.10
 Nodes (13): IMayRequireCameraOpaqueTexture, MayRequireCameraOpaqueTextureExtensions, UnityEditor.ShaderGraph, MaterialSlot, ShaderStageCapability, int, MethodInfo, ShaderStageCapability (+5 more)
 
 ### Community 4292 - "Community 4292"
-Cohesion: 0.15
-Nodes (9): Action, CustomOrDefaultSetting, float, InputControl, Vector2, VisualElement, StickDeadzoneProcessor, StickDeadzoneProcessorEditor (+1 more)
+Cohesion: 0.12
+Nodes (8): ICustomAttributeProvider, CustomAttributeData, Guid, IList, IntPtr, Type, MemberInfo, System.Reflection
 
 ### Community 4293 - "Community 4293"
 Cohesion: 0.12
@@ -35989,8 +36054,8 @@ Cohesion: 0.13
 Nodes (8): IRailLeaderboard, IRailLeaderboardEntries, LeaderboardParameters, RailResult, SpaceWorkID, UploadLeaderboardParam, IRailLeaderboardImpl, rail
 
 ### Community 4299 - "Community 4299"
-Cohesion: 0.14
-Nodes (7): MultiColumnHeaderColumn, UnityEngine.UIElements.Internal, Column, ColumnDataType, IVisualElementScheduledItem, string, MultiColumnHeaderColumnSortIndicator
+Cohesion: 0.12
+Nodes (13): bool, FunctionRegistry, GenerationMode, int, List, PreviewProperty, PropertyCollector, ShaderStageCapability (+5 more)
 
 ### Community 4300 - "Community 4300"
 Cohesion: 0.13
@@ -36049,8 +36114,8 @@ Cohesion: 0.11
 Nodes (17): AnimationCurve, bool, Color, float, Gradient, int, LensFlareDataSRP, SRPLensFlareType (+9 more)
 
 ### Community 4314 - "Community 4314"
-Cohesion: 0.13
-Nodes (12): Allocation, BitArray, BlockAllocator, bool, CommandBuffer, ComputeBuffer, Func, int (+4 more)
+Cohesion: 0.15
+Nodes (11): Allocation, BitArray, BlockAllocator, bool, CommandBuffer, ComputeBuffer, int, NativeArray (+3 more)
 
 ### Community 4315 - "Community 4315"
 Cohesion: 0.17
@@ -36077,20 +36142,20 @@ Cohesion: 0.16
 Nodes (11): CommandBuffer, Event, GraphicsFormat, List, MaskSize, RasterCommandBuffer, RenderingMode, ScriptableRendererFeature (+3 more)
 
 ### Community 4321 - "Community 4321"
-Cohesion: 0.17
+Cohesion: 0.18
 Nodes (10): ContextContainer, Material, Rect, RenderGraph, RenderTextureDescriptor, TextureHandle, UniversalCameraData, CopyToDebugTexturePassData (+2 more)
 
 ### Community 4322 - "Community 4322"
-Cohesion: 0.13
-Nodes (10): FunctionRegistry, GenerationMode, HashType, int, ShaderStageCapability, ShaderStringBuilder, string, UVChannel (+2 more)
+Cohesion: 0.11
+Nodes (9): UIMilkyWayClusterName, ClusterPlayerData, Color, float, int, MilkyWayData, RectTransform, Text (+1 more)
 
 ### Community 4323 - "Community 4323"
-Cohesion: 0.12
-Nodes (12): AbstractShaderProperty, AssetCollection, GenerationMode, int, List, PreviewProperty, PropertyCollector, SerializableTextureArray (+4 more)
+Cohesion: 0.16
+Nodes (6): NameValueHeaderValue, System.Net.Http.Headers, Lexer, List, string, Token
 
 ### Community 4324 - "Community 4324"
-Cohesion: 0.12
-Nodes (12): RequiredByNativeCode, Bounds, MethodImpl, Renderer, BillboardRenderer, UnityEngine, MeshRenderer, UnityEngine (+4 more)
+Cohesion: 0.17
+Nodes (8): TaaHistory, UnityEngine.Rendering.Universal, Hash128, int, RenderTextureDescriptor, RTHandle, string, UniversalCameraData
 
 ### Community 4325 - "Community 4325"
 Cohesion: 0.12
@@ -36101,8 +36166,8 @@ Cohesion: 0.15
 Nodes (10): bool, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Rect, Resizer, Vector2, VisualElement (+2 more)
 
 ### Community 4327 - "Community 4327"
-Cohesion: 0.16
-Nodes (10): BindingTreeViewGUI, UnityEditor.Timeline, Color, CurveTreeViewNode, float, Rect, Texture, Texture2D (+2 more)
+Cohesion: 0.15
+Nodes (13): IGroupBox, CreationContext, IGroupBoxOption, IUxmlAttributes, Label, string, UxmlStringAttributeDescription, UxmlTraits (+5 more)
 
 ### Community 4328 - "Community 4328"
 Cohesion: 0.19
@@ -36193,8 +36258,8 @@ Cohesion: 0.15
 Nodes (14): CancellationToken, Func, IEnumerable, IEqualityComparer, OrdinalIndexState, Pair, PartitionedStream, T (+6 more)
 
 ### Community 4352 - "Community 4352"
-Cohesion: 0.14
-Nodes (13): Action, CancellationToken, ExcludeFromCodeCoverage, IEnumerable, IPartitionedStreamRecipient, PartitionedStream, QueryResults, QuerySettings (+5 more)
+Cohesion: 0.24
+Nodes (10): GroupState, IntPtr, MethodImpl, NativeArray, NativeMethod, PhysicsShape2D, PhysicsShapeGroup2D, Vector2 (+2 more)
 
 ### Community 4353 - "Community 4353"
 Cohesion: 0.13
@@ -36209,12 +36274,12 @@ Cohesion: 0.17
 Nodes (13): ClassDataContract, DataContract, DataMember, IEnumerable, int, MemberInfo, string, StringBuilder (+5 more)
 
 ### Community 4356 - "Community 4356"
-Cohesion: 0.11
-Nodes (11): UISpaceCommandGizmo, Camera, Color, float, GameData, LineRenderer, MeshRenderer, Player (+3 more)
+Cohesion: 0.14
+Nodes (11): bool, Canvas, InputField, int, List, PointerEventData, StringBuilder, Text (+3 more)
 
 ### Community 4357 - "Community 4357"
-Cohesion: 0.19
-Nodes (8): ColorHistory, UnityEngine.Rendering.Universal, Hash128, int, RenderTextureDescriptor, string, UniversalCameraData, Vector2
+Cohesion: 0.16
+Nodes (11): Canvas, ContextMenu, Graphic, int, Material, RectTransform, string, OnValidate() (+3 more)
 
 ### Community 4358 - "Community 4358"
 Cohesion: 0.17
@@ -36257,8 +36322,8 @@ Cohesion: 0.07
 Nodes (21): Exception, FacetsChecker, IXmlNamespaceResolver, Type, XmlNameTable, Exception, FacetsChecker, IXmlNamespaceResolver (+13 more)
 
 ### Community 4368 - "Community 4368"
-Cohesion: 0.14
-Nodes (11): FlipNode, UnityEditor.ShaderGraph, bool, FunctionRegistry, GenerationMode, int, List, PreviewProperty (+3 more)
+Cohesion: 0.12
+Nodes (10): UnityEditor.ShaderGraph, Vector2MaterialSlot, bool, GenerationMode, List, PreviewProperty, PropertyCollector, string (+2 more)
 
 ### Community 4369 - "Community 4369"
 Cohesion: 0.10
@@ -36321,8 +36386,8 @@ Cohesion: 0.19
 Nodes (8): int, ObjectPool, ProfilerMarker, RectInt, AreaNode, Row, UIRAtlasAllocator, UnityEngine.UIElements
 
 ### Community 4384 - "Community 4384"
-Cohesion: 0.12
-Nodes (11): ILayerable, ISelectable, UnityEditor.Timeline, Event, LayerZOrder, Rect, TimelineClipGUI, TrimEdge (+3 more)
+Cohesion: 0.14
+Nodes (3): DrawImageAbort, FontStyle, GraphicsUnit
 
 ### Community 4385 - "Community 4385"
 Cohesion: 0.11
@@ -36401,7 +36466,7 @@ Cohesion: 0.18
 Nodes (11): Action<TerrainInfo>, AsyncGPUReadbackRequest, ComputeBuffer, ComputeShader, Coordinate, RenderTexture, TerrainHeightSettings, TerrainInfo (+3 more)
 
 ### Community 4404 - "Community 4404"
-Cohesion: 0.15
+Cohesion: 0.16
 Nodes (8): SSAOHistory, UnityEngine.Rendering.Universal, Hash128, int, RenderTextureDescriptor, RTHandle, string, UniversalCameraData
 
 ### Community 4405 - "Community 4405"
@@ -36489,8 +36554,8 @@ Cohesion: 0.13
 Nodes (11): MiniBlockContainer, Camera, ComputeBuffer, int, Material, Quaternion, UIMinimap3DControl, uint (+3 more)
 
 ### Community 4426 - "Community 4426"
-Cohesion: 0.13
-Nodes (6): Builder, CraftData, DFGBaseComponent, DFRelayComponent, EnemyData, PrefabDesc
+Cohesion: 0.19
+Nodes (5): Builder, DFGBaseComponent, DFRelayComponent, EnemyData, PrefabDesc
 
 ### Community 4427 - "Community 4427"
 Cohesion: 0.12
@@ -36593,8 +36658,8 @@ Cohesion: 0.19
 Nodes (9): RequestCache, System.Net.Cache, bool, char, DateTime, Stream, StringCollection, TimeSpan (+1 more)
 
 ### Community 4452 - "Community 4452"
-Cohesion: 0.17
-Nodes (8): TaaHistory, UnityEngine.Rendering.Universal, Hash128, int, RenderTextureDescriptor, RTHandle, string, UniversalCameraData
+Cohesion: 0.12
+Nodes (5): UIDeepProfiler, RectTransform, UIDeepProfilerBarGraph, UIDeepProfilerTitleBanner, UIDeepProfilerBottomPanel
 
 ### Community 4453 - "Community 4453"
 Cohesion: 0.18
@@ -36617,12 +36682,12 @@ Cohesion: 0.12
 Nodes (5): ByteStorage, System.Data.Common, AggregateType, BitArray, byte
 
 ### Community 4458 - "Community 4458"
-Cohesion: 0.13
-Nodes (7): UIRandomTip, Button, CanvasGroup, float, int, RectTransform, Tweener
+Cohesion: 0.11
+Nodes (12): ColorNode, UnityEditor.ShaderGraph, UnityEditor.ShaderGraph.Internal, AbstractShaderProperty, Color, GenerationMode, int, List (+4 more)
 
 ### Community 4459 - "Community 4459"
 Cohesion: 0.13
-Nodes (6): DateTimeOffsetStorage, System.Data.Common, DataStorage, AggregateType, BitArray, DateTimeOffset
+Nodes (5): DateTimeOffsetStorage, System.Data.Common, AggregateType, BitArray, DateTimeOffset
 
 ### Community 4460 - "Community 4460"
 Cohesion: 0.13
@@ -36637,11 +36702,11 @@ Cohesion: 0.12
 Nodes (5): DoubleStorage, System.Data.Common, AggregateType, BitArray, double
 
 ### Community 4463 - "Community 4463"
-Cohesion: 0.09
+Cohesion: 0.12
 Nodes (5): Int16Storage, System.Data.Common, AggregateType, BitArray, short
 
 ### Community 4464 - "Community 4464"
-Cohesion: 0.09
+Cohesion: 0.12
 Nodes (5): SingleStorage, System.Data.Common, AggregateType, BitArray, float
 
 ### Community 4465 - "Community 4465"
@@ -36660,10 +36725,6 @@ Nodes (5): System.Data.Common, UInt16Storage, AggregateType, BitArray, ushort
 Cohesion: 0.15
 Nodes (9): CompilerCollection, System.CodeDom.Compiler, Compiler, CompilerInfo, ConfigurationElement, ConfigurationPropertyCollection, Dictionary, List (+1 more)
 
-### Community 4469 - "Community 4469"
-Cohesion: 0.06
-Nodes (17): UIScifiTip, UIStarmapStarObject, bool, Camera, Image, RectTransform, Text, Vector2 (+9 more)
-
 ### Community 4470 - "Community 4470"
 Cohesion: 0.14
 Nodes (14): CompositeBindingPropertiesView, CompositePartBindingPropertiesView, bool, Foldout, InputControlScheme, int, SerializedInputAction, SerializedInputBinding (+6 more)
@@ -36681,12 +36742,12 @@ Cohesion: 0.13
 Nodes (9): SectionInformation, System.Configuration, bool, ConfigurationAllowDefinition, ConfigurationAllowExeDefinition, ConfigurationSection, MonoTODO, ProtectedConfigurationProvider (+1 more)
 
 ### Community 4474 - "Community 4474"
-Cohesion: 0.04
-Nodes (51): ConservativeLightGrid, EnvironmentImportanceSampling, AccelStructAdapter, bool, Bounds, Color, CommandBuffer, ComputeBuffer (+43 more)
+Cohesion: 0.13
+Nodes (9): ConservativeLightGrid, EnvironmentImportanceSampling, AccelStructAdapter, CubemapRender, int, Material, RenderTexture, World (+1 more)
 
 ### Community 4475 - "Community 4475"
-Cohesion: 0.02
-Nodes (69): ExceptionFilterSink, System.Runtime.Remoting.Channels, ContextRestoreSink, CrossContextChannel, System.Runtime.Remoting.Contexts, SynchronizedClientContextSink, System.Runtime.Remoting.Contexts, SynchronizedContextReplySink (+61 more)
+Cohesion: 0.18
+Nodes (11): ContextRestoreSink, CrossContextChannel, System.Runtime.Remoting.Contexts, IMessageSink, Context, IMessage, IMessageCtrl, IMessage (+3 more)
 
 ### Community 4476 - "Community 4476"
 Cohesion: 0.16
@@ -36725,8 +36786,8 @@ Cohesion: 0.13
 Nodes (12): Dispose(), ProfilingSampler, TProfilingSampler, UnityEngine.Rendering, CommandBuffer, Conditional, Dictionary, MarkerFlags (+4 more)
 
 ### Community 4486 - "Community 4486"
-Cohesion: 0.12
-Nodes (11): MoonImage, ToggleTestImageHook, Image, MultiColumnHeaderColumnIcon, UnityEngine.UIElements.Internal, JPanel, Color, float (+3 more)
+Cohesion: 0.11
+Nodes (11): ToggleTestImageHook, Image, MultiColumnHeaderColumnIcon, UnityEngine.UIElements.Internal, EventBase, VisualElement, Color, float (+3 more)
 
 ### Community 4487 - "Community 4487"
 Cohesion: 0.16
@@ -36765,16 +36826,16 @@ Cohesion: 0.18
 Nodes (9): ColorComparer, ColorConverter, System.Drawing, CultureInfo, Hashtable, ITypeDescriptorContext, StandardValuesCollection, string (+1 more)
 
 ### Community 4496 - "Community 4496"
-Cohesion: 0.19
-Nodes (10): Func, IEnumerable, ITestAdaptor, ITestResultAdaptor, TContainer, TestMode, TSource, TAdaptor (+2 more)
+Cohesion: 0.07
+Nodes (18): MinimalTexture2DInputMaterialSlot, Texture2DInputMaterialSlot, UnityEditor.ShaderGraph, Texture2DMaterialSlot, UnityEditor.ShaderGraph, AssetCollection, DefaultType, GenerationMode (+10 more)
 
 ### Community 4497 - "Community 4497"
 Cohesion: 0.18
 Nodes (16): Ceiling(), Contains(), Equals(), FromLTRB(), Inflate(), Intersect(), IntersectsWith(), Offset() (+8 more)
 
 ### Community 4498 - "Community 4498"
-Cohesion: 0.12
-Nodes (11): bool, float, LineRenderer, Material, Mouse, Planet, SurfacePathOperation, SurfacePathShape (+3 more)
+Cohesion: 0.15
+Nodes (14): AnimationPlayableAsset, LiveLink(), UnityEngine.Timeline, AnimationClip, AppliedOffsetMode, bool, GameObject, IPropertyCollector (+6 more)
 
 ### Community 4499 - "Community 4499"
 Cohesion: 0.22
@@ -36799,10 +36860,6 @@ Nodes (11): RenderScaleTestCase, RenderTextureDescriptorDimensionsTests, UnityEd
 ### Community 4504 - "Community 4504"
 Cohesion: 0.14
 Nodes (13): Analytic, ShaderGraphAnalytics, ShaderGraphTemplateAnalytic, UnityEditor.ShaderGraph, bool, Dictionary, Exception, GraphData (+5 more)
-
-### Community 4505 - "Community 4505"
-Cohesion: 0.04
-Nodes (25): GetEnumerator(), JSON, JSONArray, JSONBool, JSONLazyCreator, JSONNode, JSONNull, JSONNumber (+17 more)
 
 ### Community 4506 - "Community 4506"
 Cohesion: 0.11
@@ -36857,28 +36914,28 @@ Cohesion: 0.18
 Nodes (9): QilNode, Conditional, QilNode, QilTypeChecker, SubstitutionList, QilScopedVisitor, System.Xml.Xsl.Qil, QilValidationVisitor (+1 more)
 
 ### Community 4520 - "Community 4520"
-Cohesion: 0.13
-Nodes (7): Ignore, T, Test, TestRequiresCollectionChecks, Timeout, IIndexable_Change_Length_Missing_Dependency(), Test_Change_Length_Missing_Dependency()
+Cohesion: 0.07
+Nodes (20): IOOperation, IThreadPoolWorkItem, ContextCallback, ExecutionContext, object, SecurityCritical, ThreadAbortException, WaitCallback (+12 more)
 
 ### Community 4521 - "Community 4521"
-Cohesion: 0.20
-Nodes (6): Texture2DMaterialSlot, UnityEditor.ShaderGraph, bool, GenerationMode, PropertyCollector, ShaderStringBuilder
+Cohesion: 0.12
+Nodes (11): UIDashboardTip, bool, float, List, PointerEventData, RectTransform, Settings, string (+3 more)
 
 ### Community 4522 - "Community 4522"
 Cohesion: 0.18
 Nodes (9): IClearableResult, UITestRunnerFilter, UnityEditor.TestTools.TestRunner.GUI, bool, Dictionary, HashSet, IClearableResult, IEnumerable (+1 more)
 
 ### Community 4523 - "Community 4523"
-Cohesion: 0.12
-Nodes (10): IntegerNode, UnityEditor.ShaderGraph, AbstractShaderProperty, GenerationMode, int, List, PreviewProperty, PropertyCollector (+2 more)
+Cohesion: 0.10
+Nodes (10): DbReferenceCollection, int, int, SqlCommand, SqlDataReader, TdsParserStateObject, OdbcReferenceCollection, System.Data.Odbc (+2 more)
 
 ### Community 4524 - "Community 4524"
 Cohesion: 0.20
 Nodes (7): HexCasing, MethodImpl, Span, StandardFormat, string, FormattingHelpers, System.Buffers.Text
 
 ### Community 4525 - "Community 4525"
-Cohesion: 0.01
-Nodes (181): AceEnumerator, System.Security.AccessControl, AsnEncodedDataCollection, AggregateEnumerator, System.Runtime.Remoting.Channels, EmptyReadOnlyDictionaryInternal, NodeEnumerator, System.Collections (+173 more)
+Cohesion: 0.07
+Nodes (14): KeyList, SortedList, SortedListKeyEnumerator, SortedListValueEnumerator, System.Collections.Generic, ValueList, Array, IComparer (+6 more)
 
 ### Community 4526 - "Community 4526"
 Cohesion: 0.12
@@ -36993,8 +37050,8 @@ Cohesion: 0.27
 Nodes (3): CallbackContext, InputControl, UIPointerType
 
 ### Community 4554 - "Community 4554"
-Cohesion: 0.11
-Nodes (9): NativeHashMap, NativeHashSet, NativeList, NativeParallelHashMap, NativeParallelHashSet, NativeText, UnsafeParallelHashMap, UnsafeParallelHashSet (+1 more)
+Cohesion: 0.10
+Nodes (13): UISailIndicator, GalaxyData, GameData, GameObject, int, Player, PlayerNavigation, SpaceSector (+5 more)
 
 ### Community 4555 - "Community 4555"
 Cohesion: 0.16
@@ -37005,8 +37062,8 @@ Cohesion: 0.15
 Nodes (13): Brick, Color, double, DrawGizmo, GizmoType, ProbeAdjustmentVolume, ProbeVolume, string (+5 more)
 
 ### Community 4557 - "Community 4557"
-Cohesion: 0.07
-Nodes (21): AssetsConverter, UnityEditor.Rendering.Converter, Action, IRenderPipelineConverterItem, List, Object, Status, StringBuilder (+13 more)
+Cohesion: 0.12
+Nodes (12): Dictionary, List, Material, Object, searchQuery, Status, StringBuilder, materialName (+4 more)
 
 ### Community 4558 - "Community 4558"
 Cohesion: 0.20
@@ -37045,8 +37102,8 @@ Cohesion: 0.15
 Nodes (13): Camera, GameObject, IEnumerator, Ignore, int, RenderPipelineAsset, SetUp, TearDown (+5 more)
 
 ### Community 4567 - "Community 4567"
-Cohesion: 0.18
-Nodes (5): MethodInfo, QilName, TriState, Type, XmlNodeKindFlags
+Cohesion: 0.22
+Nodes (3): Conditional, NodeCtor, Number
 
 ### Community 4568 - "Community 4568"
 Cohesion: 0.12
@@ -37073,8 +37130,8 @@ Cohesion: 0.15
 Nodes (11): Action, Assembly, IEnumerable, IList, ScrollView, T, Type, Vector2 (+3 more)
 
 ### Community 4574 - "Community 4574"
-Cohesion: 0.13
-Nodes (8): Matrix4MaterialSlot, UnityEditor.ShaderGraph, GenerationMode, List, Matrix4x4, PreviewProperty, PropertyCollector, VisualElement
+Cohesion: 0.10
+Nodes (11): CubemapShaderProperty, UnityEditor.ShaderGraph.Internal, AbstractMaterialNode, Action, bool, GenerationMode, HLSLDeclaration, HLSLProperty (+3 more)
 
 ### Community 4575 - "Community 4575"
 Cohesion: 0.20
@@ -37101,8 +37158,8 @@ Cohesion: 0.19
 Nodes (9): Color, GUIContent, GUIStyle, Rect, Texture, Vector3, WindowState, Graphics (+1 more)
 
 ### Community 4581 - "Community 4581"
-Cohesion: 0.14
-Nodes (11): bool, Canvas, InputField, int, List, PointerEventData, StringBuilder, Text (+3 more)
+Cohesion: 0.17
+Nodes (12): AudioPlayableAssetEditor, UnityEditor.Timeline, AudioClip, ClipBackgroundRegion, ClipDrawOptions, Color, ColorSpace, Dictionary (+4 more)
 
 ### Community 4582 - "Community 4582"
 Cohesion: 0.14
@@ -37121,8 +37178,8 @@ Cohesion: 0.11
 Nodes (4): HashSet, string, TMP_TextParsingUtilities, TMPro
 
 ### Community 4586 - "Community 4586"
-Cohesion: 0.21
-Nodes (9): LinkedPoolItem, T, Alloc, Page, uint, BasicNode, UnityEngine.UIElements.UIR, MeshHandle (+1 more)
+Cohesion: 0.13
+Nodes (14): LinkedPoolItem, T, Alloc, Page, uint, Alloc, GradientRemap, int (+6 more)
 
 ### Community 4587 - "Community 4587"
 Cohesion: 0.16
@@ -37306,7 +37363,7 @@ Nodes (9): Bounds, Camera, Matrix4x4, MethodImpl, NativeName, Plane, Vector3, Ge
 
 ### Community 4632 - "Community 4632"
 Cohesion: 0.11
-Nodes (6): UIStationRouteSearchEntry, RectTransform, string, Text, UIButton, UIStationRoutePanel
+Nodes (12): InputActionImporterEditor, UnityEngine.InputSystem.Editor, ShaderGraphImporterEditor, UnityEditor.ShaderGraph, ShaderSubGraphImporterEditor, UnityEditor.ShaderGraph, GUIContent, InputActionAsset (+4 more)
 
 ### Community 4633 - "Community 4633"
 Cohesion: 0.25
@@ -37409,12 +37466,12 @@ Cohesion: 0.12
 Nodes (12): ActualValueDelegate, AllocatingGCMemoryConstraint, AllocatingGCMemoryResult, UnityEngine.TestTools.Constraints, ActionEventPtr, ConstraintResult, List, Action (+4 more)
 
 ### Community 4658 - "Community 4658"
-Cohesion: 0.12
-Nodes (11): BooleanNode, UnityEditor.ShaderGraph, AbstractShaderProperty, bool, GenerationMode, int, List, PreviewProperty (+3 more)
+Cohesion: 0.16
+Nodes (11): AsyncCompletion, AsyncCompletionResult, AsyncEventArgs, AsyncEventArgsCallback, byte, IAsyncEventArgs, IAsyncResult, XmlNodeWriterWriteBase64TextArgs (+3 more)
 
 ### Community 4659 - "Community 4659"
-Cohesion: 0.16
-Nodes (10): DisplayStringOptions, InputActionChange, InputActionReference, List, string, Text, UpdateBindingUIEvent, ActionLabel (+2 more)
+Cohesion: 0.19
+Nodes (9): IRailRoomHelper, IRailRoom, List, RailResult, RoomInfoListFilter, RoomInfoListSorter, RoomOptions, IRailRoomHelperImpl (+1 more)
 
 ### Community 4660 - "Community 4660"
 Cohesion: 0.15
@@ -37537,8 +37594,8 @@ Cohesion: 0.11
 Nodes (12): UIControlPanelStorageItem, bool, CanvasGroup, float, Image, int, RectTransform, StationComponent (+4 more)
 
 ### Community 4690 - "Community 4690"
-Cohesion: 0.14
-Nodes (12): ShaderGraphImporter, AssetCollection, AssetImportContext, AssetImportErrorLog, bool, GraphData, Shader, string (+4 more)
+Cohesion: 0.13
+Nodes (12): BurstAuthorizedExternalMethod, Conditional, IntPtr, MethodImpl, RequiredMember, SharedStatic, T, ThreadSafe (+4 more)
 
 ### Community 4691 - "Community 4691"
 Cohesion: 0.14
@@ -37565,7 +37622,7 @@ Cohesion: 0.11
 Nodes (15): UIMechaBoneInspectorBase, BoneArmor, BoneArmorModel, float, int, Mecha, MechaAppearance, MechaArmor (+7 more)
 
 ### Community 4697 - "Community 4697"
-Cohesion: 0.23
+Cohesion: 0.22
 Nodes (6): SingleHistoryBase, UnityEngine.Rendering.Universal, Hash128, int, RenderTextureDescriptor, RTHandle
 
 ### Community 4698 - "Community 4698"
@@ -37581,12 +37638,12 @@ Cohesion: 0.14
 Nodes (9): UIPopupMenu, bool, Camera, float, List, RectOffset, RectTransform, string (+1 more)
 
 ### Community 4701 - "Community 4701"
-Cohesion: 0.10
-Nodes (11): CubemapShaderProperty, UnityEditor.ShaderGraph.Internal, AbstractMaterialNode, Action, bool, GenerationMode, HLSLDeclaration, HLSLProperty (+3 more)
+Cohesion: 0.14
+Nodes (11): bool, CommandBuffer, ComputeBuffer, Dictionary, EnvironmentCDF, float, IRayTracingShader, Texture (+3 more)
 
 ### Community 4702 - "Community 4702"
-Cohesion: 0.10
-Nodes (11): Texture2DArrayShaderProperty, UnityEditor.ShaderGraph.Internal, AbstractMaterialNode, Action, bool, GenerationMode, HLSLDeclaration, HLSLProperty (+3 more)
+Cohesion: 0.12
+Nodes (6): UISV_Cabinet, EUISVLayoutStyle, RectTransform, ScrollRect, UISectorView, UISV_PlanetEntry
 
 ### Community 4703 - "Community 4703"
 Cohesion: 0.18
@@ -37625,8 +37682,8 @@ Cohesion: 0.24
 Nodes (17): Create(), GetEvaluateOnSeek(), GetHandle(), GetTarget(), InternalGetEvaluateOnSeek(), InternalGetTarget(), InternalSetEvaluateOnSeek(), InternalSetTarget() (+9 more)
 
 ### Community 4712 - "Community 4712"
-Cohesion: 0.14
-Nodes (8): ShaderGraphImporterEditor, UnityEditor.ShaderGraph, ShaderSubGraphImporterEditor, UnityEditor.ShaderGraph, ScriptedImporterEditor, EntityId, MaterialEditor, OnOpenAsset
+Cohesion: 0.10
+Nodes (11): Texture2DArrayShaderProperty, UnityEditor.ShaderGraph.Internal, AbstractMaterialNode, Action, bool, GenerationMode, HLSLDeclaration, HLSLProperty (+3 more)
 
 ### Community 4713 - "Community 4713"
 Cohesion: 0.15
@@ -37665,12 +37722,12 @@ Cohesion: 0.16
 Nodes (10): BuildPlayerContext, BuildPlayerProcessor, BuildReport, BuildTarget, HashSet, ProbeVolumeSHBands, ProbeVolumeStreamableAsset, string (+2 more)
 
 ### Community 4722 - "Community 4722"
-Cohesion: 0.12
-Nodes (15): Camera, ProfilingSampler, RuntimeInitializeOnLoadMethod, string, UniversalRenderingData, VFXCameraXRSettings, XRPass, BeginXRPassData (+7 more)
+Cohesion: 0.14
+Nodes (14): GraphicRaycaster, UnityEngine.UI, BlockingObjects, bool, Camera, Canvas, Graphic, IList (+6 more)
 
 ### Community 4723 - "Community 4723"
-Cohesion: 0.28
-Nodes (8): OrderedDictionary, System.Runtime.Collections, Array, IDictionaryEnumerator, IEnumerator, KeyValuePair, TKey, TValue
+Cohesion: 0.18
+Nodes (5): MethodInfo, QilName, TriState, Type, XmlNodeKindFlags
 
 ### Community 4724 - "Community 4724"
 Cohesion: 0.25
@@ -37745,8 +37802,8 @@ Cohesion: 0.16
 Nodes (8): EmptyCustomTypeDescriptor, System.ComponentModel, TypeDescriptionProvider, ICustomTypeDescriptor, IDictionary, IExtenderProvider, IServiceProvider, Type
 
 ### Community 4742 - "Community 4742"
-Cohesion: 0.12
-Nodes (14): AudioSource, bool, Camera, double, ExposedReference, GameObject, Playable, PlayableGraph (+6 more)
+Cohesion: 0.11
+Nodes (7): UIDeepProfilerBarsSection, Color, Image, long, RectTransform, Text, UIDeepProfilerBarGraph
 
 ### Community 4743 - "Community 4743"
 Cohesion: 0.20
@@ -37757,12 +37814,12 @@ Cohesion: 0.13
 Nodes (9): DeflaterManaged, System.IO.Compression, CopyEncoder, DeflaterState, FastEncoder, DeflateInput, double, int (+1 more)
 
 ### Community 4745 - "Community 4745"
-Cohesion: 0.11
-Nodes (11): AbstractShaderProperty, GenerationMode, HLSLDeclaration, int, List, PreviewProperty, PropertyCollector, string (+3 more)
+Cohesion: 0.13
+Nodes (8): Mouse, UnityEngine.InputSystem, UnityEngine.InputSystem.LowLevel, WithButton(), InputEventPtr, Vector2, MouseButton, MouseState
 
 ### Community 4746 - "Community 4746"
-Cohesion: 0.18
-Nodes (12): ComputePassData, ComputeShaderScreenInOutRenderFeature, HeatmapPass, BufferHandle, ComputeShader, ContextContainer, int, RenderGraph (+4 more)
+Cohesion: 0.17
+Nodes (7): IRailHttpSession, List, RailHttpSessionMethod, RailKeyValue, RailResult, IRailHttpSessionImpl, rail
 
 ### Community 4747 - "Community 4747"
 Cohesion: 0.12
@@ -37781,8 +37838,8 @@ Cohesion: 0.24
 Nodes (9): GraphicRegistry, ResetStaticsOnLoad(), UnityEngine.UI, Canvas, Dictionary, Graphic, IList, List (+1 more)
 
 ### Community 4751 - "Community 4751"
-Cohesion: 0.20
-Nodes (6): ToggleGroup, UnityEngine.UI, bool, IEnumerable, List, Toggle
+Cohesion: 0.16
+Nodes (10): Action, EntityId, MenuItem, Scene, T, VolumeProfile, CreateVolumeProfileAction, CreateVolumeProfileWithCallbackAction (+2 more)
 
 ### Community 4752 - "Community 4752"
 Cohesion: 0.25
@@ -37793,8 +37850,8 @@ Cohesion: 0.16
 Nodes (7): DSAManaged, Mono.Security.Cryptography, BigInteger, bool, DSAParameters, int, RandomNumberGenerator
 
 ### Community 4754 - "Community 4754"
-Cohesion: 0.12
-Nodes (12): CustomTextureSubTarget, SubShaders, UnityEditor.Rendering.CustomRenderTexture.ShaderGraph, CustomRenderTextureTarget, Action, FieldDescriptor, string, SubShaderDescriptor (+4 more)
+Cohesion: 0.06
+Nodes (23): CustomTextureSubTarget, SubShaders, UnityEditor.Rendering.CustomRenderTexture.ShaderGraph, CustomRenderTextureTarget, BuiltInTarget, GraphDataReadOnly, GUID, PassDescriptor (+15 more)
 
 ### Community 4755 - "Community 4755"
 Cohesion: 0.16
@@ -37873,8 +37930,8 @@ Cohesion: 0.18
 Nodes (6): EditorTests, RTHandle, ShaderPathID, Test, TestCase, TextureDesc
 
 ### Community 4774 - "Community 4774"
-Cohesion: 0.22
-Nodes (7): Brick, CellCounts, List, NativeArray, ProbeVolumeStreamableAsset, T, Add()
+Cohesion: 0.17
+Nodes (7): ContentSizeFitter, OnValidate(), UnityEngine.UI, DrivenRectTransformTracker, DrivenTransformProperties, FitMode, RectTransform
 
 ### Community 4775 - "Community 4775"
 Cohesion: 0.18
@@ -37905,8 +37962,8 @@ Cohesion: 0.16
 Nodes (8): EventProvider, System.Diagnostics.Eventing, EventDescriptor, Guid, IntPtr, SecurityCritical, SecuritySafeCritical, WriteEventErrorCode
 
 ### Community 4782 - "Community 4782"
-Cohesion: 0.19
-Nodes (4): X509Certificate, Mono.Security.X509, X509CertificateCollection, X509CertificateEnumerator
+Cohesion: 0.17
+Nodes (13): bool, int, string, UsageFlags, LoadAction, PassTitleLabel, Classes, Names (+5 more)
 
 ### Community 4783 - "Community 4783"
 Cohesion: 0.16
@@ -37933,8 +37990,8 @@ Cohesion: 0.19
 Nodes (9): FileReference, FilePathMetaInfo, UnityEditor.TestRunner.TestLaunchers, Dictionary, IGuiHelper, ITest, PathType, PlayerLauncherBuildOptions (+1 more)
 
 ### Community 4790 - "Community 4790"
-Cohesion: 0.13
-Nodes (8): Evidence, int, PolicyLevel, SecurityElement, GacMembershipCondition, System.Security.Policy, IConstantMembershipCondition, System.Security.Policy
+Cohesion: 0.18
+Nodes (11): ContextContainer, LayerMask, List, RasterGraphContext, RendererListHandle, RenderGraph, RenderingData, ScriptableRenderer (+3 more)
 
 ### Community 4791 - "Community 4791"
 Cohesion: 0.22
@@ -37953,16 +38010,16 @@ Cohesion: 0.16
 Nodes (7): NavigationTests, UnityEngine.UI.Tests, GameObject, Selectable, SetUp, TearDown, Test
 
 ### Community 4795 - "Community 4795"
-Cohesion: 0.15
-Nodes (8): DriveInfo, System.IO, MethodImpl, MonoIOError, MonoTODO, SerializationInfo, StreamingContext, string
+Cohesion: 0.10
+Nodes (11): Texture3DShaderProperty, UnityEditor.ShaderGraph.Internal, AbstractMaterialNode, Action, bool, GenerationMode, HLSLDeclaration, HLSLProperty (+3 more)
 
 ### Community 4796 - "Community 4796"
-Cohesion: 0.12
-Nodes (11): MinimalTexture2DArrayInputMaterialSlot, Texture2DArrayInputMaterialSlot, UnityEditor.ShaderGraph, AssetCollection, GenerationMode, List, MaterialSlot, PreviewProperty (+3 more)
+Cohesion: 0.08
+Nodes (17): MinimalTexture2DArrayInputMaterialSlot, Texture2DArrayInputMaterialSlot, UnityEditor.ShaderGraph, Texture2DArrayMaterialSlot, UnityEditor.ShaderGraph, AssetCollection, GenerationMode, List (+9 more)
 
 ### Community 4797 - "Community 4797"
-Cohesion: 0.12
-Nodes (11): MinimalTexture3DInputMaterialSlot, Texture3DInputMaterialSlot, UnityEditor.ShaderGraph, AssetCollection, GenerationMode, List, MaterialSlot, PreviewProperty (+3 more)
+Cohesion: 0.08
+Nodes (17): MinimalTexture3DInputMaterialSlot, Texture3DInputMaterialSlot, UnityEditor.ShaderGraph, Texture3DMaterialSlot, UnityEditor.ShaderGraph, AssetCollection, GenerationMode, List (+9 more)
 
 ### Community 4798 - "Community 4798"
 Cohesion: 0.17
@@ -37973,8 +38030,8 @@ Cohesion: 0.18
 Nodes (15): FindOrAddReport(), GetPhysicalMax(), GetPhysicalMin(), GetUsage(), GetUsagePage(), HIDParser, Reset(), SetUsage() (+7 more)
 
 ### Community 4800 - "Community 4800"
-Cohesion: 0.13
-Nodes (12): BurstAuthorizedExternalMethod, Conditional, IntPtr, MethodImpl, RequiredMember, SharedStatic, T, ThreadSafe (+4 more)
+Cohesion: 0.17
+Nodes (10): ContextContainer, Material, RenderGraph, RenderingData, ScriptableRenderer, TextureHandle, CopyBackRefPass, TexRefData (+2 more)
 
 ### Community 4801 - "Community 4801"
 Cohesion: 0.16
@@ -37989,8 +38046,8 @@ Cohesion: 0.14
 Nodes (10): IgnoredByDeepProfiler, Conditional, Object, IntPtr, List, Recorder, CustomSampler, UnityEngine.Profiling (+2 more)
 
 ### Community 4804 - "Community 4804"
-Cohesion: 0.12
-Nodes (12): ContractBasedImportDefinition, ExportDefinition, ContractBasedImportDefinition, ExportDefinition, IPartCreatorImportDefinition, System.ComponentModel.Composition.Primitives, ReflectionMemberImportDefinition, PartCreatorMemberImportDefinition (+4 more)
+Cohesion: 0.14
+Nodes (13): DataColumnMapping, DataColumnMappingConverter, System.Data.Common, IColumnMapping, CultureInfo, DataColumn, DataColumnMappingCollection, DataTable (+5 more)
 
 ### Community 4805 - "Community 4805"
 Cohesion: 0.16
@@ -38029,16 +38086,12 @@ Cohesion: 0.18
 Nodes (7): StringReader, System.IO, ComVisible, int, string, Task, TextReader
 
 ### Community 4814 - "Community 4814"
-Cohesion: 0.19
-Nodes (9): BlitAndSwapColorPass, BlitAndSwapColorRendererFeature, ContextContainer, Material, RenderGraph, RenderingData, RenderPassEvent, ScriptableRenderer (+1 more)
+Cohesion: 0.16
+Nodes (10): DeltaSpeed, string, UxmlFloatAttributeDescription, UxmlTraits, Vector3, FloatField, FloatInput, UnityEngine.UIElements (+2 more)
 
 ### Community 4815 - "Community 4815"
 Cohesion: 0.12
 Nodes (6): Array, ArrayList, IEnumerator, XmlNode, CanonicalXmlNodeList, System.Security.Cryptography.Xml
-
-### Community 4816 - "Community 4816"
-Cohesion: 0.16
-Nodes (11): isArray, Action, Func, IEnumerable, List, member, MemberInfo, Type (+3 more)
 
 ### Community 4817 - "Community 4817"
 Cohesion: 0.19
@@ -38073,8 +38126,8 @@ Cohesion: 0.18
 Nodes (11): Allocator, BenchmarkAllocatorType, BenchmarkTestFootnote, Category, Performance, Test, Allocate(), CreateAllocator() (+3 more)
 
 ### Community 4825 - "Community 4825"
-Cohesion: 0.11
-Nodes (15): Bounds, Camera, CommandBuffer, ComputeBuffer, ComputeShader, GrassDataPass, LayerMask, List (+7 more)
+Cohesion: 0.15
+Nodes (6): JSONArray, JSONBool, JSONObject, bool, Dictionary, List
 
 ### Community 4826 - "Community 4826"
 Cohesion: 0.23
@@ -38111,10 +38164,6 @@ Nodes (13): CommandBuffer, ComputeShader, float4, GraphicsBuffer, int, Mesh, Nat
 ### Community 4834 - "Community 4834"
 Cohesion: 0.25
 Nodes (3): AccessFlags, Conditional, TextureHandle
-
-### Community 4835 - "Community 4835"
-Cohesion: 0.20
-Nodes (8): DebugDisplaySerializer, UNITY_EDITOR, UnityEngine.Rendering, ISerializedDebugDisplaySettings, List, SerializedDictionary, T, Type
 
 ### Community 4836 - "Community 4836"
 Cohesion: 0.20
@@ -38190,7 +38239,7 @@ Nodes (11): Action, bool, Material, OneTimeSetUp, OneTimeTearDown, SetUp, string
 
 ### Community 4854 - "Community 4854"
 Cohesion: 0.16
-Nodes (12): TextControlAttribute, TextControlView, UnityEditor.ShaderGraph.Drawing.Controls, AbstractMaterialNode, bool, int, MouseEventBase, PropertyInfo (+4 more)
+Nodes (9): MetaExpando, BindingRestrictions, DeleteMemberBinder, DynamicMetaObjectBinder, Expression, Func, GetMemberBinder, InvokeMemberBinder (+1 more)
 
 ### Community 4855 - "Community 4855"
 Cohesion: 0.21
@@ -38285,8 +38334,8 @@ Cohesion: 0.16
 Nodes (10): CancellationToken, HandleInheritability, int, PipeDirection, PipeOptions, string, Task, TokenImpersonationLevel (+2 more)
 
 ### Community 4878 - "Community 4878"
-Cohesion: 0.07
-Nodes (18): CancellationToken, CancellationTokenRegistration, int, MemoryHandle, NativeOverlapped, ThreadPoolBoundHandle, TResult, bool (+10 more)
+Cohesion: 0.16
+Nodes (9): CancellationToken, CancellationTokenRegistration, int, MemoryHandle, NativeOverlapped, ThreadPoolBoundHandle, TResult, PipeCompletionSource (+1 more)
 
 ### Community 4879 - "Community 4879"
 Cohesion: 0.20
@@ -38365,8 +38414,8 @@ Cohesion: 0.17
 Nodes (9): CodeGenerator, Lazy, MemberInfo, Regex, string, Type, TypeDesc, SourceInfo (+1 more)
 
 ### Community 4898 - "Community 4898"
-Cohesion: 0.19
-Nodes (8): DynamicExpression2, System.Linq.Expressions, System.Linq.Expressions, TypedDynamicExpression2, Expression, ICollection, object, ReadOnlyCollection
+Cohesion: 0.14
+Nodes (14): BlockingObjects, bool, Camera, Canvas, Graphic, IList, int, LayerMask (+6 more)
 
 ### Community 4899 - "Community 4899"
 Cohesion: 0.14
@@ -38437,12 +38486,12 @@ Cohesion: 0.15
 Nodes (13): bool, ColorWriteMask, CompareFunction, EditorBrowsable, int, List, Material, Object (+5 more)
 
 ### Community 4917 - "Community 4917"
-Cohesion: 0.06
-Nodes (17): BaseInput, UnityEngine.EventSystems, BaseInput, UnityEngine.EventSystems, Color, Graphic, Touch, Touch (+9 more)
+Cohesion: 0.20
+Nodes (6): bool, IEnumerable, List, Toggle, ToggleGroup, UnityEngine.UI
 
 ### Community 4918 - "Community 4918"
-Cohesion: 0.17
-Nodes (10): Background, Button, DetachFromPanelEvent, List, string, UxmlTraits, ButtonStripField, UnityEngine.UIElements (+2 more)
+Cohesion: 0.16
+Nodes (11): BaseField, Background, Button, DetachFromPanelEvent, List, string, UxmlTraits, ButtonStripField (+3 more)
 
 ### Community 4919 - "Community 4919"
 Cohesion: 0.20
@@ -38453,16 +38502,16 @@ Cohesion: 0.14
 Nodes (11): Event, string, T, CommandEventBase, UnityEngine.UIElements, ExecuteCommandEvent, UnityEngine.UIElements, ICommandEvent (+3 more)
 
 ### Community 4921 - "Community 4921"
-Cohesion: 0.05
-Nodes (24): Action, bool, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Action, WheelEvent, Action (+16 more)
+Cohesion: 0.07
+Nodes (15): Action, bool, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Action, WheelEvent, IMouseEvent (+7 more)
 
 ### Community 4922 - "Community 4922"
 Cohesion: 0.26
 Nodes (11): Color, Font, FontStyle, MethodImpl, Rect, TextAnchor, Texture, Vector4 (+3 more)
 
 ### Community 4923 - "Community 4923"
-Cohesion: 0.13
-Nodes (8): Mouse, UnityEngine.InputSystem, UnityEngine.InputSystem.LowLevel, WithButton(), InputEventPtr, Vector2, MouseButton, MouseState
+Cohesion: 0.12
+Nodes (10): ILayoutController, DrivenRectTransformTracker, FitMode, RectTransform, ContentSizeFitter, UnityEngine.UI, ILayoutGroup, UnityEngine.UI (+2 more)
 
 ### Community 4924 - "Community 4924"
 Cohesion: 0.12
@@ -38493,8 +38542,8 @@ Cohesion: 0.11
 Nodes (8): Action, Exception, IntPtr, IUIElementsUtility, List, ScriptableObject, UIEventRegistration, UnityEngine.UIElements
 
 ### Community 4931 - "Community 4931"
-Cohesion: 0.17
-Nodes (3): GateFitMode, GateFitParameters, Vector2
+Cohesion: 0.14
+Nodes (9): bool, Camera, Graphic, Material, Obsolete, RectTransform, Vector2, Mask (+1 more)
 
 ### Community 4932 - "Community 4932"
 Cohesion: 0.22
@@ -38581,12 +38630,12 @@ Cohesion: 0.28
 Nodes (12): AngleRangeInfo, FreeFunction, Mesh, MethodImpl, NativeThrows, Sprite, SpriteShapeParameters, ShapeControlPoint (+4 more)
 
 ### Community 4954 - "Community 4954"
-Cohesion: 0.14
-Nodes (9): System.Globalization, TextElementEnumerator, int, OnDeserialized, OnDeserializing, OnSerializing, StreamingContext, string (+1 more)
+Cohesion: 0.12
+Nodes (12): AbstractShaderProperty, AssetCollection, GenerationMode, int, List, PreviewProperty, PropertyCollector, SerializableTexture (+4 more)
 
 ### Community 4955 - "Community 4955"
-Cohesion: 0.12
-Nodes (9): UnityEditor.ShaderGraph, Vector4MaterialSlot, GenerationMode, List, PreviewProperty, PropertyCollector, string, Vector4 (+1 more)
+Cohesion: 0.14
+Nodes (9): Action, ContextualMenuPopulateEvent, EventBase, IMouseEvent, KeyUpEvent, MouseDownEvent, MouseUpEvent, ContextualMenuManipulator (+1 more)
 
 ### Community 4956 - "Community 4956"
 Cohesion: 0.26
@@ -38705,12 +38754,12 @@ Cohesion: 0.15
 Nodes (5): UIAffinityMaskBlocksPanel, CpuTopology, RectTransform, ThreadAffinityMask, UIAffinityMaskBlock
 
 ### Community 4985 - "Community 4985"
-Cohesion: 0.18
-Nodes (4): Obsolete, RectInt, Vector2Int, TerrainHeightmapSyncControl
+Cohesion: 0.17
+Nodes (12): BoundsInt, CreationContext, IUxmlAttributes, string, UxmlIntAttributeDescription, UxmlTraits, VisualElement, BoundsIntField (+4 more)
 
 ### Community 4986 - "Community 4986"
-Cohesion: 0.12
-Nodes (5): UIDeepProfiler, RectTransform, UIDeepProfilerBarGraph, UIDeepProfilerTitleBanner, UIDeepProfilerBottomPanel
+Cohesion: 0.16
+Nodes (4): BindingState, InputEvent, InputEventPtr, TriggerState
 
 ### Community 4987 - "Community 4987"
 Cohesion: 0.13
@@ -38721,8 +38770,8 @@ Cohesion: 0.18
 Nodes (12): UIItemTip, ItemTipType, bool, Color, Dictionary, Image, int, List (+4 more)
 
 ### Community 4989 - "Community 4989"
-Cohesion: 0.14
-Nodes (10): AggregateExportProvider, System.ComponentModel.Composition.Hosting, AtomicComposition, DebuggerStepThrough, Export, ExportsChangeEventArgs, IEnumerable, ImportDefinition (+2 more)
+Cohesion: 0.11
+Nodes (11): UISpaceCommandGizmo, Camera, Color, float, GameData, LineRenderer, MeshRenderer, Player (+3 more)
 
 ### Community 4990 - "Community 4990"
 Cohesion: 0.13
@@ -38753,16 +38802,16 @@ Cohesion: 0.15
 Nodes (10): AttributeEntry, AttributeCollection, System.ComponentModel, Array, Attribute, Hashtable, IEnumerator, int (+2 more)
 
 ### Community 4997 - "Community 4997"
-Cohesion: 0.11
-Nodes (10): SamplerStateShaderProperty, UnityEditor.ShaderGraph, AbstractMaterialNode, Action, GenerationMode, HLSLDeclaration, HLSLProperty, PreviewProperty (+2 more)
+Cohesion: 0.18
+Nodes (6): AnimationClipUpgradePathsCacheTests, IEnumerable, MaterialPropertyType, ShaderPropertyUsage, Test, TestCaseSource
 
 ### Community 4998 - "Community 4998"
 Cohesion: 0.14
 Nodes (10): BaseWriter, AsyncCallback, bool, byte, EventArgs, IAsyncResult, MultiAsyncResult, NameValueCollection (+2 more)
 
 ### Community 4999 - "Community 4999"
-Cohesion: 0.11
-Nodes (8): Action, Guid, int, string, T, JsonObject, UnityEditor.ShaderGraph.Serialization, VersionChange
+Cohesion: 0.12
+Nodes (5): UITurretFireSpot, float, RectTransform, Tweener, UITurretWindow
 
 ### Community 5000 - "Community 5000"
 Cohesion: 0.17
@@ -38821,12 +38870,12 @@ Cohesion: 0.14
 Nodes (9): ChangeRejectedException, CompositionTrace, System.ComponentModel.Composition.Diagnostics, DirectoryCatalog, ComposablePartDefinition, Exception, MemberInfo, ReflectionItem (+1 more)
 
 ### Community 5014 - "Community 5014"
-Cohesion: 0.15
-Nodes (5): ContentDispositionHeaderValue, System.Net.Http.Headers, DateTimeOffset, List, string
+Cohesion: 0.14
+Nodes (13): Action, CancellationToken, ExcludeFromCodeCoverage, IEnumerable, IPartitionedStreamRecipient, PartitionedStream, QueryResults, QuerySettings (+5 more)
 
 ### Community 5015 - "Community 5015"
-Cohesion: 0.07
-Nodes (28): IClientChannelSink, System.Runtime.Remoting.Channels, IClientFormatterSink, System.Runtime.Remoting.Channels, IServerChannelSink, System.Runtime.Remoting.Channels, ServerDispatchSink, System.Runtime.Remoting.Channels (+20 more)
+Cohesion: 0.17
+Nodes (12): IClientFormatterSink, System.Runtime.Remoting.Channels, IServerChannelSink, System.Runtime.Remoting.Channels, IChannelSinkBase, IClientChannelSink, IMessage, IServerChannelSinkStack (+4 more)
 
 ### Community 5016 - "Community 5016"
 Cohesion: 0.13
@@ -38873,8 +38922,8 @@ Cohesion: 0.19
 Nodes (8): BoundConstants, Equals(), System.Linq.Expressions.Compiler, Dictionary, LambdaCompiler, List, Type, TypedConstant
 
 ### Community 5027 - "Community 5027"
-Cohesion: 0.18
-Nodes (4): CodeCompileUnit, CodeNamespace, CodeNamespaceImport, CodeSnippetCompileUnit
+Cohesion: 0.12
+Nodes (6): Array, ArrayList, IEnumerator, StringCollection, System.Collections.Specialized, StringEnumerator
 
 ### Community 5028 - "Community 5028"
 Cohesion: 0.12
@@ -38934,7 +38983,7 @@ Nodes (9): TargetSetupContext, UnityEditor.ShaderGraph, Flags, GUID, KernelDescr
 
 ### Community 5042 - "Community 5042"
 Cohesion: 0.17
-Nodes (10): ContextContainer, Material, RenderGraph, RenderingData, ScriptableRenderer, TextureHandle, CopyBackRefPass, TexRefData (+2 more)
+Nodes (10): IValueTaskSource, Action, Exception, ExecutionContext, object, short, ValueTask, ValueTaskSourceOnCompletedFlags (+2 more)
 
 ### Community 5043 - "Community 5043"
 Cohesion: 0.19
@@ -38997,8 +39046,8 @@ Cohesion: 0.18
 Nodes (11): CheckByte(), Equals(), FromArgb(), FromKnownColor(), FromName(), MakeArgb(), System.Drawing, ToKnownColor() (+3 more)
 
 ### Community 5058 - "Community 5058"
-Cohesion: 0.14
-Nodes (3): DrawImageAbort, FontStyle, GraphicsUnit
+Cohesion: 0.12
+Nodes (11): BooleanNode, UnityEditor.ShaderGraph, AbstractShaderProperty, bool, GenerationMode, int, List, PreviewProperty (+3 more)
 
 ### Community 5059 - "Community 5059"
 Cohesion: 0.19
@@ -39061,12 +39110,12 @@ Cohesion: 0.13
 Nodes (10): ExportedDelegate, MethodInfo, Type, ReflectionMember, ReflectionMethod, System.ComponentModel.Composition.ReflectionModel, ReflectionType, System.ComponentModel.Composition.ReflectionModel (+2 more)
 
 ### Community 5074 - "Community 5074"
-Cohesion: 0.12
-Nodes (7): Color, ModificationScope, ShaderCompilerMessageSeverity, ShaderPort, SlotReference, IShaderNodeView, UnityEditor.ShaderGraph
+Cohesion: 0.25
+Nodes (11): CPUDrawInstanceDataBurst, UnityEngine.Rendering, BurstCompile, DrawBatch, DrawInstance, DrawKey, DrawRange, NativeArray (+3 more)
 
 ### Community 5075 - "Community 5075"
-Cohesion: 0.05
-Nodes (29): AnimBool, bool, GUIContent, Rect, SceneView, SerializedProperty, Transform, Vector4 (+21 more)
+Cohesion: 0.13
+Nodes (10): AnimBool, bool, GUIContent, Rect, SceneView, SerializedProperty, Transform, Vector4 (+2 more)
 
 ### Community 5076 - "Community 5076"
 Cohesion: 0.38
@@ -39089,8 +39138,8 @@ Cohesion: 0.14
 Nodes (13): HandleInputType, PathCreationEditor, PathHandle, bool, CapFunction, float, HandleColours, HashSet (+5 more)
 
 ### Community 5081 - "Community 5081"
-Cohesion: 0.16
-Nodes (6): NameValueHeaderValue, System.Net.Http.Headers, Lexer, List, string, Token
+Cohesion: 0.18
+Nodes (12): GradientControlAttribute, GradientControlView, GradientObject, UnityEditor.ShaderGraph.Drawing.Controls, AbstractMaterialNode, ChangeEvent, Gradient, GUIContent (+4 more)
 
 ### Community 5082 - "Community 5082"
 Cohesion: 0.19
@@ -39101,8 +39150,8 @@ Cohesion: 0.17
 Nodes (8): HIDDescriptorWindow, HIDDescriptorTreeView, bool, GUIContent, InputDeviceDescription, int, List, TreeViewState
 
 ### Community 5084 - "Community 5084"
-Cohesion: 0.29
-Nodes (6): Assembly, AssemblyName, Evidence, Hashtable, Type, XmlSerializerCompilerParameters
+Cohesion: 0.18
+Nodes (9): RemoteTestResultSender, float, IEnumerator, int, IRemoteTestResultDataFactory, ITest, ITestResult, object (+1 more)
 
 ### Community 5085 - "Community 5085"
 Cohesion: 0.12
@@ -39113,8 +39162,8 @@ Cohesion: 0.14
 Nodes (8): IEncodableStream, AsyncCallback, bool, IAsyncResult, Stream, WriteStateInfoBase, EightBitStream, System.Net.Mime
 
 ### Community 5087 - "Community 5087"
-Cohesion: 0.15
-Nodes (13): IGroupBox, CreationContext, IGroupBoxOption, IUxmlAttributes, Label, string, UxmlStringAttributeDescription, UxmlTraits (+5 more)
+Cohesion: 0.18
+Nodes (8): bool, CellData, CellDesc, int, ProbeVolumeSHBands, LogarithmicAttribute, PerScenarioDataInfo, UnityEngine.Rendering
 
 ### Community 5088 - "Community 5088"
 Cohesion: 0.12
@@ -39141,8 +39190,8 @@ Cohesion: 0.20
 Nodes (11): PropertyDrawerUtils, UnityEditor.ShaderGraph.Drawing.Inspector, AbstractMaterialNode, Action, BlockNode, FontStyle, Func, Label (+3 more)
 
 ### Community 5095 - "Community 5095"
-Cohesion: 0.17
-Nodes (13): bool, int, string, UsageFlags, LoadAction, PassTitleLabel, Classes, Names (+5 more)
+Cohesion: 0.15
+Nodes (9): BMPEncoding, System.Security.Cryptography.Asn1, SpanBasedEncoding, System.Security.Cryptography.Asn1, Encoding, ReadOnlySpan, Span, ReadOnlySpan (+1 more)
 
 ### Community 5096 - "Community 5096"
 Cohesion: 0.17
@@ -39161,8 +39210,8 @@ Cohesion: 0.18
 Nodes (9): RuntimeEnvironment, System.Runtime.InteropServices, Assembly, ComVisible, Guid, IntPtr, MethodImpl, SecurityCritical (+1 more)
 
 ### Community 5100 - "Community 5100"
-Cohesion: 0.18
-Nodes (10): InstanceHandle, InstanceHandleSet, LightHandleSet, MaterialHandle, MaterialHandleSet, Matrix4x4, Mesh, Terrain (+2 more)
+Cohesion: 0.17
+Nodes (7): Bounds, Dictionary, ProbeVolume, ProbeVolumeBakingSetWeakReference, Scene, Vector3, SceneToBakingSet
 
 ### Community 5101 - "Community 5101"
 Cohesion: 0.18
@@ -39177,8 +39226,8 @@ Cohesion: 0.16
 Nodes (10): IRailGameServerHelper, CreateGameServerOptions, GameServerListFilter, GameServerListSorter, IRailGameServer, List, RailID, RailResult (+2 more)
 
 ### Community 5104 - "Community 5104"
-Cohesion: 0.19
-Nodes (9): IRailRoomHelper, IRailRoom, List, RailResult, RoomInfoListFilter, RoomInfoListSorter, RoomOptions, IRailRoomHelperImpl (+1 more)
+Cohesion: 0.12
+Nodes (5): CharStorage, System.Data.Common, AggregateType, BitArray, char
 
 ### Community 5105 - "Community 5105"
 Cohesion: 0.22
@@ -39205,8 +39254,8 @@ Cohesion: 0.14
 Nodes (8): HorizontalLayoutGroupTests, LayoutTests, GameObject, OneTimeTearDown, SetUp, string, TearDown, Test
 
 ### Community 5111 - "Community 5111"
-Cohesion: 0.14
-Nodes (8): LayoutTests, VerticalLayoutGroupTests, GameObject, OneTimeTearDown, SetUp, string, TearDown, Test
+Cohesion: 0.11
+Nodes (10): SamplerStateShaderProperty, UnityEditor.ShaderGraph, AbstractMaterialNode, Action, GenerationMode, HLSLDeclaration, HLSLProperty, PreviewProperty (+2 more)
 
 ### Community 5112 - "Community 5112"
 Cohesion: 0.26
@@ -39281,8 +39330,8 @@ Cohesion: 0.12
 Nodes (8): JobHandle, NativeArray, ParallelBitArray, Dispose(), GetBitsArray(), GetSubArray(), Resize(), UnityEngine.Rendering
 
 ### Community 5130 - "Community 5130"
-Cohesion: 0.16
-Nodes (9): Cubemap, Texture, TextureDimension, CubemapParameter, NoInterpCubemapParameter, NoInterpTextureParameter, Texture2DParameter, Texture3DParameter (+1 more)
+Cohesion: 0.11
+Nodes (8): Action, Guid, int, string, T, JsonObject, UnityEditor.ShaderGraph.Serialization, VersionChange
 
 ### Community 5131 - "Community 5131"
 Cohesion: 0.21
@@ -39317,12 +39366,12 @@ Cohesion: 0.14
 Nodes (8): bool, CameraData, Event, MaskSize, RenderingData, ScriptableRenderer, ScriptableRendererFeature, UnityEngine.Rendering.Universal
 
 ### Community 5139 - "Community 5139"
-Cohesion: 0.18
-Nodes (11): ContextContainer, LayerMask, List, RasterGraphContext, RendererListHandle, RenderGraph, RenderingData, ScriptableRenderer (+3 more)
+Cohesion: 0.19
+Nodes (3): ActionMapIndices, InputAction, InputActionMap
 
 ### Community 5140 - "Community 5140"
-Cohesion: 0.13
-Nodes (10): FunctionRegistry, GenerationMode, HashType, int, ShaderStageCapability, ShaderStringBuilder, string, UVChannel (+2 more)
+Cohesion: 0.19
+Nodes (7): EventCacheKey, int, EventCacheKeyEqualityComparer, Pop(), Push(), System.Runtime.InteropServices.WindowsRuntime, TokenListCount
 
 ### Community 5141 - "Community 5141"
 Cohesion: 0.15
@@ -39333,16 +39382,16 @@ Cohesion: 0.15
 Nodes (8): bool, int, List, SearcherDatabaseBase, string, Texture2D, SearcherItem, UnityEditor.Searcher
 
 ### Community 5143 - "Community 5143"
-Cohesion: 0.17
-Nodes (10): ConcreteSlotValueType, GenerationMode, GraphData, GroupData, int, List, SlotReference, Vector2 (+2 more)
+Cohesion: 0.02
+Nodes (75): ConstantNode, UnityEditor.ShaderGraph, FlipNode, UnityEditor.ShaderGraph, SplitNode, UnityEditor.ShaderGraph, LegacySwizzleChannelData, SwizzleNode (+67 more)
 
 ### Community 5144 - "Community 5144"
 Cohesion: 0.14
 Nodes (13): Action, bool, ConcretePrecision, Dictionary, GraphPrecision, HashSet, IncludeCollection, int (+5 more)
 
 ### Community 5145 - "Community 5145"
-Cohesion: 0.03
-Nodes (51): IHasMetadata, UnityEditor.ShaderGraph, IRequiresData, UnityEditor.ShaderGraph, CanvasData, DefineCollection, GenerationMode, GUID (+43 more)
+Cohesion: 0.18
+Nodes (10): IList, object, OnDeserialized, RuntimeType, SecurityCritical, SerializationInfo, StreamingContext, string (+2 more)
 
 ### Community 5146 - "Community 5146"
 Cohesion: 0.18
@@ -39389,8 +39438,8 @@ Cohesion: 0.18
 Nodes (8): IExposedPropertyTable, int, ISequenceState, List, ObjectId, SequencePath, SequencePathSubElement, UnityEditor.Timeline
 
 ### Community 5157 - "Community 5157"
-Cohesion: 0.20
-Nodes (11): Color, GUIContent, PlayableAsset, Rect, ScriptableObject, Texture2D, WindowState, TimelineTrackBaseGUI (+3 more)
+Cohesion: 0.21
+Nodes (10): Color, GUIContent, PlayableAsset, Rect, ScriptableObject, Texture2D, WindowState, Styles (+2 more)
 
 ### Community 5158 - "Community 5158"
 Cohesion: 0.17
@@ -39401,8 +39450,8 @@ Cohesion: 0.21
 Nodes (10): AnimationCurve, bool, FrameData, Playable, Quaternion, Transform, Vector3, Timeline.Samples (+2 more)
 
 ### Community 5160 - "Community 5160"
-Cohesion: 0.12
-Nodes (9): UnityEditor.ShaderGraph, Vector3MaterialSlot, GenerationMode, List, PreviewProperty, PropertyCollector, string, Vector3 (+1 more)
+Cohesion: 0.13
+Nodes (7): Ignore, T, Test, TestRequiresCollectionChecks, Timeout, IIndexable_Change_Length_Missing_Dependency(), Test_Change_Length_Missing_Dependency()
 
 ### Community 5161 - "Community 5161"
 Cohesion: 0.15
@@ -39413,8 +39462,8 @@ Cohesion: 0.20
 Nodes (7): HashSet, ICanvasElement, List, RuntimeInitializeOnLoadMethod, ResetStaticsOnLoad(), TMP_UpdateRegistry, TMPro
 
 ### Community 5163 - "Community 5163"
-Cohesion: 0.12
-Nodes (10): GameObject, IEnumerator, OneTimeTearDown, SetUp, string, TearDown, Test, UnityTest (+2 more)
+Cohesion: 0.11
+Nodes (9): NativeHashMap, NativeHashSet, NativeList, NativeParallelHashMap, NativeParallelHashSet, NativeText, UnsafeParallelHashMap, UnsafeParallelHashSet (+1 more)
 
 ### Community 5164 - "Community 5164"
 Cohesion: 0.29
@@ -39449,8 +39498,8 @@ Cohesion: 0.12
 Nodes (13): AntialiasingModel, int, RenderTexture, int, Material, VignetteModel, FxaaComponent, Uniforms (+5 more)
 
 ### Community 5172 - "Community 5172"
-Cohesion: 0.15
-Nodes (10): Styles, TimelineProjectSettings, TimelineProjectSettingsProvider, double, float, GUIContent, SerializedObject, SerializedProperty (+2 more)
+Cohesion: 0.24
+Nodes (5): ITestAdaptor, ITestResultAdaptor, TestStatus, Packages.Rider.Editor.UnitTesting, TestsCallback
 
 ### Community 5173 - "Community 5173"
 Cohesion: 0.18
@@ -39513,8 +39562,8 @@ Cohesion: 0.16
 Nodes (6): bool, char, EncoderNLS, int, EncoderFallbackBuffer, System.Text
 
 ### Community 5188 - "Community 5188"
-Cohesion: 0.14
-Nodes (9): ArrayList, ComVisible, ContextCallback, MonoTODO, SecurityCritical, SerializationInfo, StreamingContext, CompressedStack (+1 more)
+Cohesion: 0.11
+Nodes (9): MethodImpl, RequiredByNativeCode, StaticAccessor, BuiltinRuntimeReflectionSystem, UnityEngine.Experimental.Rendering, IScriptableRuntimeReflectionSystem, UnityEngine.Experimental.Rendering, ScriptableRuntimeReflectionSystem (+1 more)
 
 ### Community 5189 - "Community 5189"
 Cohesion: 0.19
@@ -39557,8 +39606,8 @@ Cohesion: 0.16
 Nodes (17): EComparison, SqlBoolean, SqlDecimal, Add(), CompareNm(), CompareTo(), Divide(), Equals() (+9 more)
 
 ### Community 5199 - "Community 5199"
-Cohesion: 0.13
-Nodes (10): FunctionRegistry, GenerationMode, HashType, int, ShaderStageCapability, ShaderStringBuilder, string, UVChannel (+2 more)
+Cohesion: 0.18
+Nodes (9): Action, Edge, IEdgeConnectorListener, MaterialSlot, StyleSheet, Port, ShaderPort, ShaderPortExtensions (+1 more)
 
 ### Community 5200 - "Community 5200"
 Cohesion: 0.14
@@ -39589,8 +39638,8 @@ Cohesion: 0.16
 Nodes (6): Array, ArrayList, EncryptionProperty, IEnumerator, EncryptionPropertyCollection, System.Security.Cryptography.Xml
 
 ### Community 5207 - "Community 5207"
-Cohesion: 0.13
-Nodes (11): bool, LayerMask, Material, RenderingData, ScreenSpaceReflectionVolumeSettings, ScriptableRenderer, Shader, ScreenSpaceReflectionDepthNormalOnlyTransparentPass (+3 more)
+Cohesion: 0.15
+Nodes (10): DeltaSpeed, string, UxmlTraits, Vector3, UnityEngine.UIElements, UnsignedLongField, UnsignedLongInput, UxmlFactory (+2 more)
 
 ### Community 5208 - "Community 5208"
 Cohesion: 0.14
@@ -39653,8 +39702,8 @@ Cohesion: 0.22
 Nodes (9): ArrayList, Hashtable, StringCollection, XmlQualifiedName, XmlSchemaObject, XmlSchemas, SchemaObjectWriter, SchemaObjectCache (+1 more)
 
 ### Community 5224 - "Community 5224"
-Cohesion: 0.17
-Nodes (7): ContentSizeFitter, OnValidate(), UnityEngine.UI, DrivenRectTransformTracker, DrivenTransformProperties, FitMode, RectTransform
+Cohesion: 0.16
+Nodes (10): BindingTreeViewGUI, UnityEditor.Timeline, Color, CurveTreeViewNode, float, Rect, Texture, Texture2D (+2 more)
 
 ### Community 5225 - "Community 5225"
 Cohesion: 0.12
@@ -39673,8 +39722,8 @@ Cohesion: 0.18
 Nodes (9): float, FrameData, ParticleSystem, Playable, PlayableGraph, ScriptPlayable, uint, ParticleControlPlayable (+1 more)
 
 ### Community 5229 - "Community 5229"
-Cohesion: 0.28
-Nodes (6): DbConnectionInternal, Dictionary, int, Transaction, TransactedConnectionList, TransactedConnectionPool
+Cohesion: 0.14
+Nodes (9): ArrayList, ComVisible, ContextCallback, MonoTODO, SecurityCritical, SerializationInfo, StreamingContext, CompressedStack (+1 more)
 
 ### Community 5230 - "Community 5230"
 Cohesion: 0.19
@@ -39709,8 +39758,8 @@ Cohesion: 0.27
 Nodes (8): GUIStyle, MethodImpl, NativeConditional, NativeMethod, Rect, StaticAccessor, GUIDebugger, UnityEngine
 
 ### Community 5238 - "Community 5238"
-Cohesion: 0.12
-Nodes (6): Evidence, IPermission, MonoTODO, SecurityZone, System.Security.Policy, Zone
+Cohesion: 0.19
+Nodes (5): MultiColumnController, ReusableCollectionItem, VisualElement, MultiColumnListViewController, UnityEngine.UIElements
 
 ### Community 5239 - "Community 5239"
 Cohesion: 0.32
@@ -39805,8 +39854,8 @@ Cohesion: 0.13
 Nodes (13): bool, ComputeBuffer, float, SimpleNoiseSettings, bool, ComputeShader, float, int (+5 more)
 
 ### Community 5263 - "Community 5263"
-Cohesion: 0.20
-Nodes (10): dependencies, depth, source, version, dependencies, depth, source, version (+2 more)
+Cohesion: 0.12
+Nodes (17): dependencies, depth, source, url, version, dependencies, depth, source (+9 more)
 
 ### Community 5264 - "Community 5264"
 Cohesion: 0.12
@@ -39879,6 +39928,10 @@ Nodes (9): DecryptorPal, AlgorithmIdentifier, AlgorithmIdentifierAsn, CmsRecipie
 ### Community 5281 - "Community 5281"
 Cohesion: 0.28
 Nodes (5): FrameCapture, UnityEngine.Apple, FrameCaptureDestination, FreeFunction, MethodImpl
+
+### Community 5282 - "Community 5282"
+Cohesion: 0.21
+Nodes (8): bool, FullScreenPassRendererFeature, GUIContent, List, SerializedProperty, string, FullScreenPassRendererFeatureEditor, UnityEditor.Rendering.Universal
 
 ### Community 5283 - "Community 5283"
 Cohesion: 0.16
@@ -39973,8 +40026,8 @@ Cohesion: 0.15
 Nodes (10): UIResAmountEntry, bool, Color, Image, int, RectTransform, Sprite, string (+2 more)
 
 ### Community 5307 - "Community 5307"
-Cohesion: 0.04
-Nodes (24): EvidenceBase, ActivationArguments, System.Runtime.Hosting, ActivationContext, ApplicationIdentity, string, Evidence, IPermission (+16 more)
+Cohesion: 0.13
+Nodes (11): AudioTrack, UnityEngine.Timeline, AudioClip, AudioMixerProperties, GameObject, IList, IntervalTree, Playable (+3 more)
 
 ### Community 5308 - "Community 5308"
 Cohesion: 0.14
@@ -40121,8 +40174,8 @@ Cohesion: 0.23
 Nodes (15): ContactPairPoint, ContactPair, ContactPoint, List, MethodImpl, NativeArray, CopyToNativeArray(), ExtractContacts() (+7 more)
 
 ### Community 5344 - "Community 5344"
-Cohesion: 0.17
-Nodes (12): ColorControlAttribute, ColorControlView, UnityEditor.ShaderGraph.Drawing.Controls, AbstractMaterialNode, ChangeEvent, Color, ColorField, ColorMode (+4 more)
+Cohesion: 0.13
+Nodes (8): Matrix4MaterialSlot, UnityEditor.ShaderGraph, GenerationMode, List, Matrix4x4, PreviewProperty, PropertyCollector, VisualElement
 
 ### Community 5345 - "Community 5345"
 Cohesion: 0.17
@@ -40133,8 +40186,8 @@ Cohesion: 0.17
 Nodes (8): ConverterState, UnityEditor.Rendering.Converter, ConverterItemState, bool, DisplayFilter, IRenderPipelineConverter, List, Status
 
 ### Community 5347 - "Community 5347"
-Cohesion: 0.04
-Nodes (44): BaseRaycaster, GraphicRaycaster, UnityEngine.UI, IRuntimePanel, List, PointerEventData, RaycastResult, Camera (+36 more)
+Cohesion: 0.05
+Nodes (31): BaseRaycaster, bool, Canvas, ExtendedPointerEventData, float, InlinedArray, LayerMask, List (+23 more)
 
 ### Community 5348 - "Community 5348"
 Cohesion: 0.12
@@ -40194,7 +40247,7 @@ Nodes (10): DetailRenderMode, Color, float, FreeFunction, GameObject, int, Metho
 
 ### Community 5362 - "Community 5362"
 Cohesion: 0.16
-Nodes (10): PassData, StarRenderFeature, StarRenderPass, ContextContainer, Material, RenderGraph, RenderingData, ScriptableRenderer (+2 more)
+Nodes (5): XblPresenceFilter, XblRelationshipFilter, XblSocialManagerUser, XblSocialManagerUserGroupHandle, XblSocialUserGroupType
 
 ### Community 5363 - "Community 5363"
 Cohesion: 0.22
@@ -40249,8 +40302,8 @@ Cohesion: 0.16
 Nodes (10): RelativePropertiesDrawer, UnityEditor.Rendering, GUIContent, Rect, SerializedProperty, VisualElement, ShaderStrippingSettingPropertyDrawer, UnityEditor.Rendering (+2 more)
 
 ### Community 5376 - "Community 5376"
-Cohesion: 0.14
-Nodes (9): ConstructorInfo, ExportDefinition, IDictionary, IEnumerable, ImportDefinition, Lazy, Type, IReflectionPartCreationInfo (+1 more)
+Cohesion: 0.21
+Nodes (8): bool, CodeIdentifiers, XmlSchemaAnyAttribute, XmlSchemaAttributeGroup, XmlSchemaGroupBase, XmlSchemaObjectCollection, System.Xml.Serialization, TypeItems
 
 ### Community 5377 - "Community 5377"
 Cohesion: 0.14
@@ -40288,10 +40341,6 @@ Nodes (12): Physics2DRaycaster, UnityEngine.EventSystems, List, PointerEventData
 Cohesion: 0.23
 Nodes (6): BlockExpressionList, System.Linq.Expressions, BlockExpression, ExcludeFromCodeCoverage, Expression, IEnumerator
 
-### Community 5387 - "Community 5387"
-Cohesion: 0.12
-Nodes (7): InvocationExpressionProxy, BindingFlags, InvocationExpression, MethodBase, ParameterInfo, PropertyInfo, ReadOnlyCollection
-
 ### Community 5388 - "Community 5388"
 Cohesion: 0.16
 Nodes (10): ExpressionN, System.Linq.Expressions, FullExpression, System.Linq.Expressions, ICollection, IReadOnlyList, ParameterExpression, ReadOnlyCollection (+2 more)
@@ -40321,8 +40370,8 @@ Cohesion: 0.20
 Nodes (8): ForkJoinOperationType, Event, EventKeywords, EventTask, int, ParallelEtwProvider, System.Threading.Tasks, Tasks
 
 ### Community 5395 - "Community 5395"
-Cohesion: 0.21
-Nodes (8): InstanceMethodCallExpression2, System.Linq.Expressions, Expression, ICollection, IReadOnlyList, MethodCallExpression, object, ReadOnlyCollection
+Cohesion: 0.17
+Nodes (8): DelayedCallback, bool, BuildTarget, int, List, Message, MessageEventArgs, RemoteTestRunController
 
 ### Community 5396 - "Community 5396"
 Cohesion: 0.25
@@ -40341,8 +40390,8 @@ Cohesion: 0.21
 Nodes (8): MethodImpl, RequiredByNativeCode, SpecialName, SpriteAtlas, Vector3, Vector3Int, TilemapRenderer, UnityEngine.Tilemaps
 
 ### Community 5400 - "Community 5400"
-Cohesion: 0.16
-Nodes (10): Action, EntityId, MenuItem, Scene, T, VolumeProfile, CreateVolumeProfileAction, CreateVolumeProfileWithCallbackAction (+2 more)
+Cohesion: 0.23
+Nodes (8): AppDomainManagerInitializationOptions, ApplicationActivator, AppDomain, AppDomainSetup, Evidence, SecurityState, AppDomainManager, System
 
 ### Community 5401 - "Community 5401"
 Cohesion: 0.18
@@ -40361,8 +40410,8 @@ Cohesion: 0.18
 Nodes (10): System.Xml.Xsl.IlGen, XmlILElementAnalyzer, ArrayList, NameTable, QilBinary, QilLoop, QilNode, XmlILConstructInfo (+2 more)
 
 ### Community 5405 - "Community 5405"
-Cohesion: 0.18
-Nodes (5): ProductHeaderValue, System.Net.Http.Headers, Lexer, List, Token
+Cohesion: 0.11
+Nodes (13): UIMechaBrush, BoneArmorModel, Camera, Mecha, MechaAppearance, MechaArmor, MechaArmorModel, MechaEditorCamera (+5 more)
 
 ### Community 5406 - "Community 5406"
 Cohesion: 0.19
@@ -40425,12 +40474,16 @@ Cohesion: 0.17
 Nodes (7): IRailDlcHelper, List, RailDlcID, RailDlcInfo, RailResult, IRailDlcHelperImpl, rail
 
 ### Community 5421 - "Community 5421"
-Cohesion: 0.18
-Nodes (8): IRailFloatingWindow, EnumRailNotifyWindowType, EnumRailWindowType, RailResult, RailStoreOptions, RailWindowLayout, IRailFloatingWindowImpl, rail
+Cohesion: 0.11
+Nodes (6): UIStationRouteSearchEntry, RectTransform, string, Text, UIButton, UIStationRoutePanel
+
+### Community 5422 - "Community 5422"
+Cohesion: 0.20
+Nodes (9): Bounds, GraphicsBuffer, List, MaterialPool, Mesh, RenderedGameObjectsFilter, SamplingResources, ShadowCastingMode (+1 more)
 
 ### Community 5423 - "Community 5423"
 Cohesion: 0.15
-Nodes (7): IRailLeaderboardEntries, LeaderboardEntry, RailID, RailResult, RequestLeaderboardEntryParam, IRailLeaderboardEntriesImpl, rail
+Nodes (4): JSONLazyCreator, JSONString, string, T
 
 ### Community 5424 - "Community 5424"
 Cohesion: 0.12
@@ -40439,10 +40492,6 @@ Nodes (12): IXsltContextVariable, ActionFrame, Compiler, int, object, Processor,
 ### Community 5425 - "Community 5425"
 Cohesion: 0.22
 Nodes (9): Execute(), IJobExtensions, Initialize(), Unity.Jobs, BurstDiscard, IntPtr, JobHandle, JobRanges (+1 more)
-
-### Community 5426 - "Community 5426"
-Cohesion: 0.18
-Nodes (11): FrameBufferFetchPass, FrameBufferFetchRenderFeature, PassData, bool, ContextContainer, Material, RasterGraphContext, RenderGraph (+3 more)
 
 ### Community 5427 - "Community 5427"
 Cohesion: 0.21
@@ -40513,8 +40562,8 @@ Cohesion: 0.13
 Nodes (10): GameObject, MaterialFinalizer, GameObject, int, Material, MaterialSettingsCallbackAttribute, SpeedTree9MaterialUpgrader, UnityEditor.Rendering (+2 more)
 
 ### Community 5444 - "Community 5444"
-Cohesion: 0.13
-Nodes (9): Hashes, bool, Dictionary, int, List, StyleSelector, StyleSelectorPart, StyleComplexSelector (+1 more)
+Cohesion: 0.12
+Nodes (6): Evidence, IPermission, MonoTODO, SecurityZone, System.Security.Policy, Zone
 
 ### Community 5445 - "Community 5445"
 Cohesion: 0.28
@@ -40561,12 +40610,12 @@ Cohesion: 0.17
 Nodes (9): ProfilerModuleViewController, VisualElement, U2DGraphicProfilerModule, UnityEditor.U2D.Graphics.Profiler, U2DGraphicsProfilerViewController, UnityEditor.U2D.Graphics.Profiler, ProfilerCounterDescriptor, ProfilerModule (+1 more)
 
 ### Community 5457 - "Community 5457"
-Cohesion: 0.21
-Nodes (8): bool, FullScreenPassRendererFeature, GUIContent, List, SerializedProperty, string, FullScreenPassRendererFeatureEditor, UnityEditor.Rendering.Universal
+Cohesion: 0.18
+Nodes (7): AudioTrackInspector, Styles, UnityEngine.Timeline, PlayableDirector, SerializedProperty, string, StringBuilder
 
 ### Community 5458 - "Community 5458"
-Cohesion: 0.25
-Nodes (11): CPUDrawInstanceDataBurst, UnityEngine.Rendering, BurstCompile, DrawBatch, DrawInstance, DrawKey, DrawRange, NativeArray (+3 more)
+Cohesion: 0.13
+Nodes (11): bool, LayerMask, Material, RenderingData, ScreenSpaceReflectionVolumeSettings, ScriptableRenderer, Shader, ScreenSpaceReflectionDepthNormalOnlyTransparentPass (+3 more)
 
 ### Community 5459 - "Community 5459"
 Cohesion: 0.17
@@ -40605,24 +40654,24 @@ Cohesion: 0.13
 Nodes (11): bool, int, Light, RenderingLayerMask, UniversalAdditionalLightData, Vector2, Version, LightExtensions (+3 more)
 
 ### Community 5468 - "Community 5468"
-Cohesion: 0.27
+Cohesion: 0.23
 Nodes (3): Baselib_NetworkAddress, Baselib_NetworkAddress_AddressReuse, Baselib_RegisteredNetwork_Endpoint
 
 ### Community 5469 - "Community 5469"
-Cohesion: 0.14
-Nodes (9): bool, Camera, Graphic, Material, Obsolete, RectTransform, Vector2, Mask (+1 more)
+Cohesion: 0.23
+Nodes (7): TwoModifiersComposite, UnityEngine.InputSystem.Composites, bool, InputBindingCompositeContext, int, ModifiersOrder, Type
 
 ### Community 5470 - "Community 5470"
 Cohesion: 0.15
 Nodes (8): ContextFilterableAttribute, Dictionary, IEnumerable, T, Type, NodeClassCache, PostProcessor, UnityEditor.ShaderGraph
 
 ### Community 5471 - "Community 5471"
-Cohesion: 0.07
-Nodes (28): IObjectReference, Delegate, object, SerializationInfo, StreamingContext, string, MemberTypes, RuntimeType (+20 more)
+Cohesion: 0.11
+Nodes (13): DistortTunnelRendererFeature, TexRefData, DistortTunnelPass_CopyColor, DistortTunnelPass_Distort, DistortTunnelPass_Tunnel, Material, RenderingData, RenderPassEvent (+5 more)
 
 ### Community 5472 - "Community 5472"
 Cohesion: 0.13
-Nodes (8): Matrix3MaterialSlot, UnityEditor.ShaderGraph, GenerationMode, List, Matrix4x4, PreviewProperty, PropertyCollector, VisualElement
+Nodes (7): CodeBinaryOperatorExpression, CodeBinaryOperatorType, CodeDelegateInvokeExpression, CodeExpressionCollection, CodeMethodInvokeExpression, CodeMethodReferenceExpression, CodeObjectCreateExpression
 
 ### Community 5473 - "Community 5473"
 Cohesion: 0.23
@@ -40634,7 +40683,7 @@ Nodes (10): Dictionary, IEnumerable, JSONSerializedElement, List, T, Type, TypeS
 
 ### Community 5475 - "Community 5475"
 Cohesion: 0.18
-Nodes (12): GradientControlAttribute, GradientControlView, GradientObject, UnityEditor.ShaderGraph.Drawing.Controls, AbstractMaterialNode, ChangeEvent, Gradient, GUIContent (+4 more)
+Nodes (9): Func, IEnumerable, int, IProducerConsumerQueue, Task, ProcessingMode, ConcurrentExclusiveTaskScheduler, DebugView (+1 more)
 
 ### Community 5476 - "Community 5476"
 Cohesion: 0.22
@@ -40645,8 +40694,8 @@ Cohesion: 0.14
 Nodes (10): GraphData, int, OneTimeSetUp, PropertyNode, SetUp, Test, LiteralFloatNode, LiteralFloatNode (+2 more)
 
 ### Community 5478 - "Community 5478"
-Cohesion: 0.15
-Nodes (7): Evidence, int, PolicyLevel, SecurityElement, string, SiteMembershipCondition, System.Security.Policy
+Cohesion: 0.32
+Nodes (6): NavMeshObstacle, UnityEngine.AI, FreeFunction, MethodImpl, SpecialName, Vector3
 
 ### Community 5479 - "Community 5479"
 Cohesion: 0.12
@@ -40665,8 +40714,8 @@ Cohesion: 0.22
 Nodes (9): FrameData, GameObject, Playable, PlayableGraph, ScriptPlayable, Transform, OnPrefabUpdated(), PrefabControlPlayable (+1 more)
 
 ### Community 5483 - "Community 5483"
-Cohesion: 0.13
-Nodes (6): StringFormat, System.Drawing, CharacterRange, int, IntPtr, StringDigitSubstitute
+Cohesion: 0.25
+Nodes (4): CameraEvent, CommandBuffer, ComputeQueueType, NativeName
 
 ### Community 5484 - "Community 5484"
 Cohesion: 0.15
@@ -40677,8 +40726,8 @@ Cohesion: 0.22
 Nodes (10): GUIContent, Mode, PropertyField, Rect, SerializedProperty, string, VisualElement, NavigationDrawer (+2 more)
 
 ### Community 5486 - "Community 5486"
-Cohesion: 0.16
-Nodes (8): IEnumerator, OneTimeTearDown, Scene, SetUp, string, TearDown, UnityTest, SceneWithNestedLayoutElementsLoad
+Cohesion: 0.21
+Nodes (8): InstanceMethodCallExpression2, System.Linq.Expressions, Expression, ICollection, IReadOnlyList, MethodCallExpression, object, ReadOnlyCollection
 
 ### Community 5487 - "Community 5487"
 Cohesion: 0.22
@@ -40757,8 +40806,8 @@ Cohesion: 0.23
 Nodes (5): Header, LogicalCallContext, SecurityCritical, CallContext, System.Runtime.Remoting.Messaging
 
 ### Community 5506 - "Community 5506"
-Cohesion: 0.17
-Nodes (10): Equals(), Int128Mul(), IntersectNode, Maxima, MyIntersectNodeSort, Scanbeam, UnityEngine.Rendering.Universal, Int128 (+2 more)
+Cohesion: 0.16
+Nodes (12): GbufferVisualizationRendererFeature, GBufferVisualizationRenderPass, PassData, ContextContainer, int, Material, RasterGraphContext, RenderGraph (+4 more)
 
 ### Community 5507 - "Community 5507"
 Cohesion: 0.26
@@ -40777,8 +40826,8 @@ Cohesion: 0.18
 Nodes (5): IEnumerator, IPartitionedStreamRecipient, T, QueryResults, System.Linq.Parallel
 
 ### Community 5511 - "Community 5511"
-Cohesion: 0.13
-Nodes (10): ActivationMixerPlayable, GameObject, IPropertyCollector, Playable, PlayableDirector, PlayableGraph, PostPlaybackState, TimelineClip (+2 more)
+Cohesion: 0.19
+Nodes (6): CustomLineCap, System.Drawing.Drawing2D, bool, IntPtr, LineCap, SafeCustomLineCapHandle
 
 ### Community 5512 - "Community 5512"
 Cohesion: 0.17
@@ -40793,16 +40842,16 @@ Cohesion: 0.26
 Nodes (6): EventWaitHandleRights, IntPtr, MethodImpl, SafeWaitHandle, NativeEventCalls, System.Threading
 
 ### Community 5515 - "Community 5515"
-Cohesion: 0.07
-Nodes (25): bool, Conditional, Func, IEnumerable, int, IProducerConsumerQueue, List, Task (+17 more)
+Cohesion: 0.23
+Nodes (4): Conditional, TaskCreationOptions, ThreadLocal, ConcurrentExclusiveSchedulerPair
 
 ### Community 5516 - "Community 5516"
 Cohesion: 0.18
 Nodes (10): Action, Export, Func, MethodInfo, T, Tuple, Type, ExportFactoryCreator (+2 more)
 
 ### Community 5517 - "Community 5517"
-Cohesion: 0.15
-Nodes (8): bool, GUIContent, Object, SerializedObject, SerializedProperty, string, TMP_EditorPanel, TMPro.EditorUtilities
+Cohesion: 0.16
+Nodes (8): IEnumerator, OneTimeTearDown, Scene, SetUp, string, TearDown, UnityTest, SceneWithNestedLayoutElementsLoad
 
 ### Community 5518 - "Community 5518"
 Cohesion: 0.14
@@ -40889,8 +40938,8 @@ Cohesion: 0.20
 Nodes (7): ICollection, IContainer, MemberDescriptor, Stream, ComponentSerializationService, System.ComponentModel.Design.Serialization, SerializationStore
 
 ### Community 5540 - "Community 5540"
-Cohesion: 0.06
-Nodes (20): IMembershipCondition, SecurityElement, Evidence, int, PolicyLevel, SecurityElement, ActivationContext, ApplicationTrust (+12 more)
+Cohesion: 0.05
+Nodes (20): IMembershipCondition, Evidence, int, PolicyLevel, SecurityElement, Evidence, int, PolicyLevel (+12 more)
 
 ### Community 5541 - "Community 5541"
 Cohesion: 0.24
@@ -40961,8 +41010,8 @@ Cohesion: 0.17
 Nodes (9): ImportContext, MethodInfo, PrimitiveMapping, PrimitiveModel, SerializableMapping, SpecialMapping, TypeDesc, XmlQualifiedName (+1 more)
 
 ### Community 5558 - "Community 5558"
-Cohesion: 0.13
-Nodes (12): bool, float, IntPtr, Margins, MonoTODO, PaperSize, PaperSource, PrinterResolution (+4 more)
+Cohesion: 0.19
+Nodes (8): DynamicExpression2, System.Linq.Expressions, System.Linq.Expressions, TypedDynamicExpression2, Expression, ICollection, object, ReadOnlyCollection
 
 ### Community 5559 - "Community 5559"
 Cohesion: 0.17
@@ -41037,12 +41086,12 @@ Cohesion: 0.18
 Nodes (9): bool, float, int, Material, Shader, string, Vector4, TextShaderUtilities (+1 more)
 
 ### Community 5577 - "Community 5577"
-Cohesion: 0.17
-Nodes (6): IFormatProvider, IFormatProvider, FormattableString, System, IFormattable, System
+Cohesion: 0.15
+Nodes (10): Styles, TimelineProjectSettings, TimelineProjectSettingsProvider, double, float, GUIContent, SerializedObject, SerializedProperty (+2 more)
 
 ### Community 5578 - "Community 5578"
-Cohesion: 0.03
-Nodes (42): TestSlot, UnityEditor.ShaderGraph, CubemapMaterialSlot, UnityEditor.ShaderGraph, SamplerStateMaterialSlot, UnityEditor.ShaderGraph, Texture2DArrayMaterialSlot, UnityEditor.ShaderGraph (+34 more)
+Cohesion: 0.05
+Nodes (26): TestSlot, UnityEditor.ShaderGraph, GradientMaterialSlot, UnityEditor.ShaderGraph, PropertyConnectionStateMaterialSlot, UnityEditor.ShaderGraph, UnityEditor.ShaderGraph, Vector3MaterialSlot (+18 more)
 
 ### Community 5579 - "Community 5579"
 Cohesion: 0.28
@@ -41053,12 +41102,12 @@ Cohesion: 0.30
 Nodes (5): Func, ILayoutElement, RectTransform, LayoutUtility, UnityEngine.UI
 
 ### Community 5581 - "Community 5581"
-Cohesion: 0.18
-Nodes (5): IRailPlayerStats, RailID, RailResult, IRailPlayerStatsImpl, rail
+Cohesion: 0.16
+Nodes (10): DeltaSpeed, string, UxmlTraits, Vector3, UnityEngine.UIElements, UnsignedIntegerField, UnsignedIntegerInput, UxmlFactory (+2 more)
 
 ### Community 5582 - "Community 5582"
-Cohesion: 0.15
-Nodes (13): BaseField, BoundsInt, CreationContext, IUxmlAttributes, string, UxmlIntAttributeDescription, UxmlTraits, VisualElement (+5 more)
+Cohesion: 0.12
+Nodes (6): UIBlueprintReformItem, int, RectTransform, Text, UIBlueprintInspector, UIButton
 
 ### Community 5583 - "Community 5583"
 Cohesion: 0.21
@@ -41073,8 +41122,8 @@ Cohesion: 0.15
 Nodes (8): DragVisualMode, IEnumerable, ReusableCollectionItem, StartDragArgs, TArgs, Vector2, IDragAndDropController, UnityEngine.UIElements
 
 ### Community 5586 - "Community 5586"
-Cohesion: 0.12
-Nodes (18): AwaitableSocketAsyncEventArgs, Int32TaskSocketAsyncEventArgs, AsyncTaskMethodBuilder, bool, Exception, MonoLimitation, TResult, SendFileHandler (+10 more)
+Cohesion: 0.13
+Nodes (17): AwaitableSocketAsyncEventArgs, Int32TaskSocketAsyncEventArgs, AsyncTaskMethodBuilder, bool, MonoLimitation, TResult, SendFileHandler, SocketInformation (+9 more)
 
 ### Community 5587 - "Community 5587"
 Cohesion: 0.15
@@ -41101,12 +41150,12 @@ Cohesion: 0.15
 Nodes (13): CreationContext, FieldDescription, FloatField, IUxmlAttributes, string, UxmlFloatAttributeDescription, UxmlTraits, Vector3 (+5 more)
 
 ### Community 5593 - "Community 5593"
-Cohesion: 0.15
-Nodes (13): CreationContext, FieldDescription, IntegerField, IUxmlAttributes, string, UxmlIntAttributeDescription, UxmlTraits, Vector3Int (+5 more)
+Cohesion: 0.14
+Nodes (11): UIMechaCurvePoint, bool, Color, EAxis, Image, int, PointerEventData, RectTransform (+3 more)
 
 ### Community 5594 - "Community 5594"
-Cohesion: 0.12
-Nodes (6): Array, ArrayList, EncryptedReference, IEnumerator, ReferenceList, System.Security.Cryptography.Xml
+Cohesion: 0.14
+Nodes (9): UIToggle, AudioSettings, bool, GameObject, Image, PointerEventData, RectTransform, Sprite (+1 more)
 
 ### Community 5595 - "Community 5595"
 Cohesion: 0.17
@@ -41257,8 +41306,8 @@ Cohesion: 0.14
 Nodes (9): AnswerData, IOnboardingSection, ISectionDependingOnUserChoices, ISectionWithAnalytics, OnboardingSectionAttribute, Unity.Multiplayer.Center.Common, string, Preset (+1 more)
 
 ### Community 5632 - "Community 5632"
-Cohesion: 0.32
-Nodes (6): NavMeshObstacle, UnityEngine.AI, FreeFunction, MethodImpl, SpecialName, Vector3
+Cohesion: 0.15
+Nodes (7): GameObject, OneTimeTearDown, SetUp, string, TearDown, Test, ScrollBarClamp
 
 ### Community 5633 - "Community 5633"
 Cohesion: 0.18
@@ -41437,8 +41486,8 @@ Cohesion: 0.15
 Nodes (7): UILayoutParserManager, ImageParamParser, char, RectTransform, RectTransParamParser, TextParamParser, VideoParamParser
 
 ### Community 5679 - "Community 5679"
-Cohesion: 0.20
-Nodes (5): Test, TestRequiresCollectionChecks, int, NativeParallelHashMapTests_InJobs, NativeParallelHashMapTestsFixture
+Cohesion: 0.18
+Nodes (7): BatchCommandInfo, EditorBrowsable, Exception, IDataParameter, MissingMappingAction, MissingSchemaAction, RowUpdatedEventArgs
 
 ### Community 5680 - "Community 5680"
 Cohesion: 0.15
@@ -41481,12 +41530,12 @@ Cohesion: 0.15
 Nodes (11): AtmosphereSettings, bool, ComputeShader, float, int, Material, RenderTexture, Shader (+3 more)
 
 ### Community 5690 - "Community 5690"
-Cohesion: 0.17
-Nodes (7): bool, string, XmlLinkedNode, XmlNodeType, XmlWriter, System.Xml, XmlEntity
+Cohesion: 0.18
+Nodes (8): IRailFloatingWindow, EnumRailNotifyWindowType, EnumRailWindowType, RailResult, RailStoreOptions, RailWindowLayout, IRailFloatingWindowImpl, rail
 
 ### Community 5691 - "Community 5691"
 Cohesion: 0.15
-Nodes (9): AtmosphereRenderPass, Camera, IAtmosphereRuntime, int, Material, Plane, RenderingData, ScriptableRenderer (+1 more)
+Nodes (7): IRailLeaderboardEntries, LeaderboardEntry, RailID, RailResult, RequestLeaderboardEntryParam, IRailLeaderboardEntriesImpl, rail
 
 ### Community 5692 - "Community 5692"
 Cohesion: 0.13
@@ -41605,8 +41654,8 @@ Cohesion: 0.21
 Nodes (6): DefaultConfig, System.Configuration, ConfigurationData, IConfigurationSystem, MethodImpl, Obsolete
 
 ### Community 5721 - "Community 5721"
-Cohesion: 0.13
-Nodes (5): ListSortDescriptionCollection, System.ComponentModel, Array, ArrayList, IEnumerator
+Cohesion: 0.23
+Nodes (9): MemberTypes, RuntimeType, SecurityCritical, SerializationInfo, StreamingContext, string, Type, MemberInfoSerializationHolder (+1 more)
 
 ### Community 5722 - "Community 5722"
 Cohesion: 0.18
@@ -41617,12 +41666,12 @@ Cohesion: 0.15
 Nodes (10): TargetPropertyGUIContext, UnityEditor.ShaderGraph, Action, BaseField, ChangeEvent, EventCallback, int, MessageType (+2 more)
 
 ### Community 5724 - "Community 5724"
-Cohesion: 0.13
-Nodes (12): EventLogEntry, System.Diagnostics, byte, DateTime, EventLogEntryType, int, long, MonoTODO (+4 more)
+Cohesion: 0.19
+Nodes (9): Exception, Func, IDisposable, IObserver, TResult, TSource, Select, SelectObservable (+1 more)
 
 ### Community 5725 - "Community 5725"
-Cohesion: 0.20
-Nodes (8): AnimationPlayableAssetEditor, UnityEditor.Timeline, AnimationPlayableAsset, AnimationTrack, ClipDrawOptions, string, TimelineClip, TrackAsset
+Cohesion: 0.21
+Nodes (7): CallbacksHolder, Suppressor, UnityEditor.TestTools.TestRunner.Api, ICallbacksHolder, ICallbacks, IDisposable, List
 
 ### Community 5726 - "Community 5726"
 Cohesion: 0.14
@@ -41653,12 +41702,12 @@ Cohesion: 0.19
 Nodes (6): SHA1Internal, System.Security.Cryptography, byte, int, uint, ulong
 
 ### Community 5733 - "Community 5733"
-Cohesion: 0.13
-Nodes (7): CodeBinaryOperatorExpression, CodeBinaryOperatorType, CodeDelegateInvokeExpression, CodeExpressionCollection, CodeMethodInvokeExpression, CodeMethodReferenceExpression, CodeObjectCreateExpression
+Cohesion: 0.12
+Nodes (10): ContractBasedImportDefinition, ImportSourceImportDefinitionHelpers, NonImportSourceImportDefinition, System.ComponentModel.Composition.Hosting, ExportDefinition, IDictionary, ImportDefinition, ImportingItem (+2 more)
 
 ### Community 5734 - "Community 5734"
-Cohesion: 0.13
-Nodes (8): Matrix2MaterialSlot, UnityEditor.ShaderGraph, GenerationMode, List, Matrix4x4, PreviewProperty, PropertyCollector, VisualElement
+Cohesion: 0.41
+Nodes (3): EventWaitHandle, uint, MyReaderWriterLock
 
 ### Community 5735 - "Community 5735"
 Cohesion: 0.23
@@ -41691,6 +41740,10 @@ Nodes (13): Cycle diagnostic, Goal, Graph component, Init Graph design, Integrat
 ### Community 5742 - "Community 5742"
 Cohesion: 0.19
 Nodes (8): IEventBindingService, System.ComponentModel.Design, EventDescriptor, EventDescriptorCollection, ICollection, IComponent, PropertyDescriptor, PropertyDescriptorCollection
+
+### Community 5743 - "Community 5743"
+Cohesion: 0.19
+Nodes (9): char, CLSCompliant, EncoderNLS, int, Decoder, GetByteCount(), GetBytes(), GetCharCount() (+1 more)
 
 ### Community 5744 - "Community 5744"
 Cohesion: 0.26
@@ -41729,8 +41782,8 @@ Cohesion: 0.20
 Nodes (6): KnownColorTable, System.Drawing, Color, int, KnownColor, string
 
 ### Community 5754 - "Community 5754"
-Cohesion: 0.15
-Nodes (11): MaterialGraphPreviewGenerator, UnityEditor.ShaderGraph.Drawing, Camera, GameObject, GUIContent, Material, MaterialPropertyBlock, Mesh (+3 more)
+Cohesion: 0.18
+Nodes (11): FrameBufferFetchPass, FrameBufferFetchRenderFeature, PassData, bool, ContextContainer, Material, RasterGraphContext, RenderGraph (+3 more)
 
 ### Community 5755 - "Community 5755"
 Cohesion: 0.20
@@ -41753,8 +41806,8 @@ Cohesion: 0.13
 Nodes (8): SearcherExampleHostWindow, UnityEditor.Searcher, GeometryChangedEvent, KeyDownEvent, List, MenuItem, MouseDownEvent, VisualElement
 
 ### Community 5760 - "Community 5760"
-Cohesion: 0.13
-Nodes (4): List, RailResult, IRailHttpResponse, rail
+Cohesion: 0.12
+Nodes (9): Action, DbCommand, DbTransaction, IsolationLevel, SqlCommand, SqlException, SqlInternalConnectionTds, SqlTransaction (+1 more)
 
 ### Community 5761 - "Community 5761"
 Cohesion: 0.14
@@ -41829,8 +41882,8 @@ Cohesion: 0.17
 Nodes (10): GlobeDeliveryDisplay, DeliveryResult, float, GameObject, GlobeController, int, LineRenderer, QuestSystem (+2 more)
 
 ### Community 5779 - "Community 5779"
-Cohesion: 0.17
-Nodes (8): BufferedGraphics, BufferedGraphicsContext, System.Drawing, Graphics, IntPtr, MonoTODO, Rectangle, Size
+Cohesion: 0.26
+Nodes (5): IList, T, TreeViewItemData, IDefaultTreeViewController, UnityEngine.UIElements
 
 ### Community 5780 - "Community 5780"
 Cohesion: 0.26
@@ -41857,8 +41910,8 @@ Cohesion: 0.30
 Nodes (14): Current(), Global(), Local(), None(), Parameter(), Stack(), System.Xml.Xsl.IlGen, ToLocal() (+6 more)
 
 ### Community 5786 - "Community 5786"
-Cohesion: 0.15
-Nodes (9): DesktopInputFieldTests, InputfieldTests, IEnumerator, OneTimeTearDown, SetUp, string, TearDown, UnityPlatform (+1 more)
+Cohesion: 0.23
+Nodes (6): IGenericMenu, int, string, T, PopupField, UnityEngine.UIElements
 
 ### Community 5787 - "Community 5787"
 Cohesion: 0.16
@@ -41892,10 +41945,6 @@ Nodes (7): IPInterfaceStatistics, IPInterfaceProperties, IPv4InterfaceStatistics
 Cohesion: 0.13
 Nodes (13): IPlayableLookup, Dictionary, GameObject, ICurvesOwner, int, Playable, TimelineAsset, TimelineClip (+5 more)
 
-### Community 5796 - "Community 5796"
-Cohesion: 0.15
-Nodes (9): bool, byte, RSA, SerializationInfo, StreamingContext, string, StrongName, StrongNameKeyPair (+1 more)
-
 ### Community 5797 - "Community 5797"
 Cohesion: 0.17
 Nodes (9): ItemsPerTrack, bool, ITimelineItem, Rect, TrackAsset, Vector2, WindowState, MovingItems (+1 more)
@@ -41925,8 +41974,8 @@ Cohesion: 0.26
 Nodes (8): labelElement, float, Label, row, SerializedProperty, VisualElement, LayoutElementEditor, UnityEditor.UI
 
 ### Community 5804 - "Community 5804"
-Cohesion: 0.14
-Nodes (6): UISailPanel, float, GameData, Image, Player, Text
+Cohesion: 0.18
+Nodes (10): InputBuildAnalytic, ReportProcessor, TryGatherData(), UnityEngine.InputSystem.Editor, BuildReport, Exception, IData, IInputAnalyticData (+2 more)
 
 ### Community 5805 - "Community 5805"
 Cohesion: 0.13
@@ -41953,8 +42002,8 @@ Cohesion: 0.22
 Nodes (5): int, T, ConcurrentMask, ElementAt(), Unity.Collections
 
 ### Community 5811 - "Community 5811"
-Cohesion: 0.13
-Nodes (9): ImportingItem, LazyMemberInfo, ImportingItem, Lazy, ReflectionImportDefinition, ReflectionMemberImportDefinition, System.ComponentModel.Composition.ReflectionModel, ReflectionParameterImportDefinition (+1 more)
+Cohesion: 0.21
+Nodes (5): System.Globalization, TokenHashValue, int, string, TokenType
 
 ### Community 5813 - "Community 5813"
 Cohesion: 0.17
@@ -41978,7 +42027,7 @@ Nodes (10): Action, CallbackArray, Func, ProfilerMarker, TReturn, TValue, TValue
 
 ### Community 5818 - "Community 5818"
 Cohesion: 0.21
-Nodes (7): CallbacksHolder, Suppressor, UnityEditor.TestTools.TestRunner.Api, ICallbacksHolder, ICallbacks, IDisposable, List
+Nodes (8): FFTWindow, MethodImpl, NativeThrows, Obsolete, AudioBehaviour, UnityEngine, AudioListener, UnityEngine
 
 ### Community 5819 - "Community 5819"
 Cohesion: 0.16
@@ -41989,8 +42038,8 @@ Cohesion: 0.26
 Nodes (6): bool, T, BakingCompleteProfiling, BakingProfiling, BakingSetupProfiling, Stages
 
 ### Community 5821 - "Community 5821"
-Cohesion: 0.21
-Nodes (7): OnDeserialized, OnDeserializing, OnSerializing, SecurityCritical, SecurityPermission, SerializationInfo, StreamingContext
+Cohesion: 0.14
+Nodes (10): AbstractShaderProperty, GenerationMode, int, List, PreviewProperty, PropertyCollector, SerializableTexture, string (+2 more)
 
 ### Community 5822 - "Community 5822"
 Cohesion: 0.21
@@ -42013,8 +42062,8 @@ Cohesion: 0.23
 Nodes (9): CommandBuffer, ComputeShader, GraphicsBuffer, int, uint, LoadShader(), SegmentedReduction, ShaderProperties (+1 more)
 
 ### Community 5827 - "Community 5827"
-Cohesion: 0.25
-Nodes (4): CameraEvent, CommandBuffer, ComputeQueueType, NativeName
+Cohesion: 0.15
+Nodes (12): 2026-06-30 - Claude - Conceding both points; we've converged, 2026-06-30 - Claude - Feedback, 2026-06-30 - Codex - Requesting Claude feedback, 2026-06-30 - Codex - Response to Claude feedback, 2026-06-30 - Surface path wear field, Correct the premise first — blockiness was not resolution, Defer until a real footstep/locomotion depositor exists, One implementation note for whoever codes it (+4 more)
 
 ### Community 5828 - "Community 5828"
 Cohesion: 0.25
@@ -42045,8 +42094,8 @@ Cohesion: 0.17
 Nodes (11): int, Material, ProfilingSampler, RasterCommandBuffer, RenderGraph, RTHandle, ScriptableRenderContext, TextureHandle (+3 more)
 
 ### Community 5835 - "Community 5835"
-Cohesion: 0.16
-Nodes (4): HumanBodyBones, EditorBrowsable, NativeMethod, Transform
+Cohesion: 0.17
+Nodes (10): ConcreteSlotValueType, GenerationMode, GraphData, GroupData, int, List, SlotReference, Vector2 (+2 more)
 
 ### Community 5836 - "Community 5836"
 Cohesion: 0.17
@@ -42105,8 +42154,8 @@ Cohesion: 0.20
 Nodes (7): EnumRailNotifyWindowType, EnumRailWindowType, RailResult, RailStoreOptions, RailWindowLayout, IRailFloatingWindow, rail
 
 ### Community 5850 - "Community 5850"
-Cohesion: 0.29
-Nodes (7): DbMetaDataFactory, DataTable, DbConnection, SqlConnection, string, SqlMetaDataFactory, System.Data.SqlClient
+Cohesion: 0.12
+Nodes (10): GameObject, IEnumerator, OneTimeTearDown, SetUp, string, TearDown, Test, UnityTest (+2 more)
 
 ### Community 5852 - "Community 5852"
 Cohesion: 0.13
@@ -42178,11 +42227,11 @@ Nodes (6): MethodInfo, ParameterInfo, SignatureType, Type, SignatureTypeExtensio
 
 ### Community 5869 - "Community 5869"
 Cohesion: 0.19
-Nodes (5): DetailInstanceTransform, Bounds, Color, SpecialName, Vector3
+Nodes (6): LeaderboardEntry, RailID, RailResult, RequestLeaderboardEntryParam, IRailLeaderboardEntries, rail
 
 ### Community 5870 - "Community 5870"
-Cohesion: 0.15
-Nodes (7): PolicyLevel, SecurityElement, Evidence, IMembershipCondition, System.Security.Policy, ISecurityPolicyEncodable, System.Security
+Cohesion: 0.21
+Nodes (4): ParameterElementCollection, System.Runtime.Serialization.Configuration, ConfigurationElement, ParameterElement
 
 ### Community 5871 - "Community 5871"
 Cohesion: 0.22
@@ -42214,7 +42263,7 @@ Nodes (7): bool, CancellationToken, int, ManualResetEventSlim, TimeSpan, Countdo
 
 ### Community 5878 - "Community 5878"
 Cohesion: 0.18
-Nodes (5): BaseRaycaster, UnityEngine.EventSystems, List, PointerEventData, RaycastResult
+Nodes (4): EmptyPartition, System.Linq, List, TElement
 
 ### Community 5879 - "Community 5879"
 Cohesion: 0.22
@@ -42385,16 +42434,16 @@ Cohesion: 0.23
 Nodes (3): SchemaDeclBase, XmlSchemaDatatype, XmlSchemaSimpleType
 
 ### Community 5922 - "Community 5922"
-Cohesion: 0.17
-Nodes (11): bool, EventLogEntryType, FileIOPermission, MethodInfo, object, string, System.Xml.Serialization, TempAssembly (+3 more)
+Cohesion: 0.11
+Nodes (22): Assembly, AssemblyName, bool, EventLogEntryType, Evidence, FileIOPermission, Hashtable, MethodInfo (+14 more)
 
 ### Community 5923 - "Community 5923"
 Cohesion: 0.14
 Nodes (9): bool, ElementAccessor, string, Type, TypeScope, XmlMappingAccess, XmlRootAttribute, System.Xml.Serialization (+1 more)
 
 ### Community 5924 - "Community 5924"
-Cohesion: 0.12
-Nodes (14): Exception, FieldModel, Hashtable, int, ModelScope, string, StructMapping, StructModel (+6 more)
+Cohesion: 0.15
+Nodes (10): Exception, Hashtable, int, ModelScope, string, TypeScope, ValidationEventArgs, XmlAttributeOverrides (+2 more)
 
 ### Community 5925 - "Community 5925"
 Cohesion: 0.30
@@ -42405,8 +42454,8 @@ Cohesion: 0.15
 Nodes (9): IComparer, IXmlNamespaceResolver, XmlCaseOrder, XmlDataType, XmlNamespaceManager, XmlSortOrder, XmlWriter, System.Xml.XPath (+1 more)
 
 ### Community 5927 - "Community 5927"
-Cohesion: 0.21
-Nodes (7): MethodCallExpression1, System.Linq.Expressions, Expression, ICollection, IReadOnlyList, object, ReadOnlyCollection
+Cohesion: 0.15
+Nodes (8): CompiledXpathExpr, InputScopeManager, int, string, XPathExpression, XsltException, ErrorXPathExpression, System.Xml.Xsl.XsltOld
 
 ### Community 5928 - "Community 5928"
 Cohesion: 0.18
@@ -42451,10 +42500,6 @@ Nodes (8): FrameData, GameObject, Playable, PlayableGraph, ScriptPlayable, Trans
 ### Community 5939 - "Community 5939"
 Cohesion: 0.28
 Nodes (5): AudioClip, MethodImpl, NativeMethod, Microphone, UnityEngine
-
-### Community 5940 - "Community 5940"
-Cohesion: 0.20
-Nodes (8): IRailBrowserHelper, CreateBrowserOptions, CreateCustomerDrawBrowserOptions, IRailBrowser, IRailBrowserRender, RailResult, IRailBrowserHelperImpl, rail
 
 ### Community 5941 - "Community 5941"
 Cohesion: 0.20
@@ -42769,8 +42814,8 @@ Cohesion: 0.14
 Nodes (9): GenericAcl, System.Security.AccessControl, AceEnumerator, Array, byte, ControlFlags, GenericAce, IEnumerator (+1 more)
 
 ### Community 6021 - "Community 6021"
-Cohesion: 0.20
-Nodes (5): bool, OneTimeSetUp, Test, UnityPlatform, TargetTests
+Cohesion: 0.19
+Nodes (4): X509Certificate, Mono.Security.X509, X509CertificateCollection, X509CertificateEnumerator
 
 ### Community 6022 - "Community 6022"
 Cohesion: 0.14
@@ -42779,6 +42824,10 @@ Nodes (3): ReadValue(), UnityEngine.InputSystem, TValue
 ### Community 6023 - "Community 6023"
 Cohesion: 0.21
 Nodes (5): SchemaImporterExtensionCollection, System.Xml.Serialization.Advanced, Hashtable, SchemaImporterExtension, Type
+
+### Community 6024 - "Community 6024"
+Cohesion: 0.07
+Nodes (17): NoActiveCameraInSceneDoesNotCrashEditor, IPrebuildSetup, string, IEnumerator, Scene, SetUp, string, TearDown (+9 more)
 
 ### Community 6025 - "Community 6025"
 Cohesion: 0.30
@@ -42829,8 +42878,8 @@ Cohesion: 0.21
 Nodes (12): ApplyConfigs(), BombFactoryObjects(), DamageFunction(), Export(), HandleSkillTargetRemove(), Import(), TickSkillLogic(), BinaryReader (+4 more)
 
 ### Community 6040 - "Community 6040"
-Cohesion: 0.18
-Nodes (8): BlendStyle, FunctionRegistry, GenerationMode, int, PropertyCollector, string, LightTextureNode, UnityEngine.Experimental.Rendering.Universal
+Cohesion: 0.24
+Nodes (7): ILGenerator, OpCode, ParameterInfo, Type, TypeBuilder, ParametersArray, ProxyBuilder
 
 ### Community 6041 - "Community 6041"
 Cohesion: 0.14
@@ -42949,8 +42998,8 @@ Cohesion: 0.16
 Nodes (7): UIDysonNodeHoverGizmo, Color, DysonNode, DysonSphereLayer, float, MeshRenderer, Tweener
 
 ### Community 6072 - "Community 6072"
-Cohesion: 0.04
-Nodes (55): Component, ProcessModule, System.Diagnostics, ProcessThread, System.Diagnostics, FileVersionInfo, bool, PageSettings (+47 more)
+Cohesion: 0.03
+Nodes (67): Component, EventLogEntry, System.Diagnostics, ProcessModule, System.Diagnostics, ProcessThread, System.Diagnostics, FileVersionInfo (+59 more)
 
 ### Community 6073 - "Community 6073"
 Cohesion: 0.15
@@ -42974,7 +43023,7 @@ Nodes (6): UIPowerNetworkDesc, Color, Image, PowerNetwork, StringBuilder, Text
 
 ### Community 6078 - "Community 6078"
 Cohesion: 0.24
-Nodes (9): GrowingArray, IEnumerator, KeyValuePair, TElement, TGroupKey, TOrderKey, KeyAndValuesComparer, OrderedGroupByGrouping (+1 more)
+Nodes (6): Type, MembersMapping, SoapSchemaMember, XmlMembersMapping, XmlQualifiedName, XmlTypeMapping
 
 ### Community 6079 - "Community 6079"
 Cohesion: 0.18
@@ -43069,8 +43118,8 @@ Cohesion: 0.15
 Nodes (8): SerializationHeaderRecord, System.Runtime.Serialization.Formatters.Binary, BinaryHeaderEnum, __BinaryParser, __BinaryWriter, Conditional, int, SecurityCritical
 
 ### Community 6102 - "Community 6102"
-Cohesion: 0.19
-Nodes (9): Exception, Func, IDisposable, IObserver, TResult, TSource, Select, SelectManyObservable (+1 more)
+Cohesion: 0.10
+Nodes (18): IObservable, Exception, Func, IDisposable, IObserver, TResult, TSource, Exception (+10 more)
 
 ### Community 6103 - "Community 6103"
 Cohesion: 0.22
@@ -43106,7 +43155,7 @@ Nodes (8): BugObject, CoroutineObject, CoroutineWorksIfUIObjectIsAttached, GameO
 
 ### Community 6111 - "Community 6111"
 Cohesion: 0.14
-Nodes (13): [1.0.0-exp.3] - 2021-06-16, [1.1.3] - 2023-04-13, [2.0.0] - 2023-10-17, [2.0.12] - 2026-03-18, [2.0.1] - 2023-12-06, [2.0.2] - 2024-07-02, [2.0.8] - 2025-05-29, Changed (+5 more)
+Nodes (13): [1.1.3] - 2023-04-13, [2.0.0] - 2023-10-17, [2.0.12] - 2026-03-18, [2.0.13] - 2026-06-01, [2.0.1] - 2023-12-06, [2.0.2] - 2024-07-02, [2.0.8] - 2025-05-29, Changed (+5 more)
 
 ### Community 6112 - "Community 6112"
 Cohesion: 0.14
@@ -43189,16 +43238,16 @@ Cohesion: 0.24
 Nodes (11): Contribution2, Contribution3, Contribution4, byte, double, int, MethodImpl, Contribution2 (+3 more)
 
 ### Community 6132 - "Community 6132"
-Cohesion: 0.15
-Nodes (7): DynamicMatrixMaterialSlot, UnityEditor.ShaderGraph, ConcreteSlotValueType, GenerationMode, Matrix4x4, PropertyCollector, VisualElement
+Cohesion: 0.24
+Nodes (6): BooleanConverter, System.ComponentModel, CultureInfo, ITypeDescriptorContext, StandardValuesCollection, Type
 
 ### Community 6133 - "Community 6133"
 Cohesion: 0.14
 Nodes (10): BuiltInToURP2DReadonlyMaterialConverter, UnityEditor.Rendering.Universal, UnityEditor.Rendering.Universal, URP3DToURP2DReadonlyMaterialConverter, BuiltInToURP3DReadonlyMaterialConverter, UnityEditor.Rendering.Universal, bool, Dictionary (+2 more)
 
 ### Community 6134 - "Community 6134"
-Cohesion: 0.23
-Nodes (8): bool, IList, int, IPartitionedStreamRecipient, PartitionedStream, T, ListQueryResults, System.Linq.Parallel
+Cohesion: 0.21
+Nodes (9): TextureArrayControlAttribute, TextureArrayControlView, UnityEditor.ShaderGraph.Drawing.Controls, AbstractMaterialNode, ChangeEvent, Object, PropertyInfo, string (+1 more)
 
 ### Community 6135 - "Community 6135"
 Cohesion: 0.11
@@ -43221,8 +43270,8 @@ Cohesion: 0.15
 Nodes (10): Manager, Visualization, Camera, int, List, Material, MaterialPropertyBlock, Queue (+2 more)
 
 ### Community 6140 - "Community 6140"
-Cohesion: 0.15
-Nodes (10): FontData, UnityEngine.UI, bool, float, Font, FontStyle, HorizontalWrapMode, int (+2 more)
+Cohesion: 0.17
+Nodes (7): bool, string, XmlLinkedNode, XmlNodeType, XmlWriter, System.Xml, XmlEntity
 
 ### Community 6141 - "Community 6141"
 Cohesion: 0.16
@@ -43285,8 +43334,8 @@ Cohesion: 0.15
 Nodes (8): System.Data, XMLSchema, DataTable, Type, TypeConverter, XmlAttributeCollection, XmlElement, XmlNode
 
 ### Community 6156 - "Community 6156"
-Cohesion: 0.18
-Nodes (8): bool, CellData, CellDesc, int, ProbeVolumeSHBands, LogarithmicAttribute, PerScenarioDataInfo, UnityEngine.Rendering
+Cohesion: 0.23
+Nodes (6): UIHandTip, GameObject, Image, int, RectTransform, Text
 
 ### Community 6157 - "Community 6157"
 Cohesion: 0.25
@@ -43305,8 +43354,8 @@ Cohesion: 0.14
 Nodes (13): Application Scope, Goal, Implementation Slices, Locked Decisions, Slice 1: Fail-Fast Initialization, Slice 2: Application and World Scopes, Slice 3: World-Scoped Settings, Slice 4: Saved-World Load Request (+5 more)
 
 ### Community 6161 - "Community 6161"
-Cohesion: 0.17
-Nodes (7): Bounds, Dictionary, ProbeVolume, ProbeVolumeBakingSetWeakReference, Scene, Vector3, SceneToBakingSet
+Cohesion: 0.16
+Nodes (10): DisplayStringOptions, InputActionChange, InputActionReference, List, string, Text, UpdateBindingUIEvent, ActionLabel (+2 more)
 
 ### Community 6162 - "Community 6162"
 Cohesion: 0.15
@@ -43335,10 +43384,6 @@ Nodes (13): Capturing Events, Creating events, Device events, Input events, List
 ### Community 6168 - "Community 6168"
 Cohesion: 0.14
 Nodes (13): Animation Clip, Animation clip properties, Animation Extrapolation, Animation Playable Asset properties, Blend Curves, Clip Timing properties, Clip Transform Offsets, Common properties (+5 more)
-
-### Community 6169 - "Community 6169"
-Cohesion: 0.19
-Nodes (6): IDesignerHost, System.ComponentModel.Design, DesignerTransaction, IComponent, IDesigner, Type
 
 ### Community 6170 - "Community 6170"
 Cohesion: 0.20
@@ -43409,8 +43454,8 @@ Cohesion: 0.21
 Nodes (9): DelegateEnumerator, FileSystemEnumerable, System.IO.Enumeration, FindTransform, EnumerationOptions, FileSystemEntry, IEnumerator, string (+1 more)
 
 ### Community 6187 - "Community 6187"
-Cohesion: 0.14
-Nodes (8): UnityEditor.ShaderGraph.Internal, Vector2ShaderProperty, AbstractMaterialNode, Action, GenerationMode, HLSLProperty, PreviewProperty, ShaderInput
+Cohesion: 0.29
+Nodes (6): EventHandlerList, ListEntry, System.ComponentModel, Component, Delegate, object
 
 ### Community 6188 - "Community 6188"
 Cohesion: 0.16
@@ -43425,12 +43470,12 @@ Cohesion: 0.18
 Nodes (7): EventWrittenEventArgs, EventKeywords, EventLevel, EventSource, IDictionary, EventListener, System.Diagnostics.Tracing
 
 ### Community 6191 - "Community 6191"
-Cohesion: 0.32
-Nodes (3): IPAddress, IPEndPoint, SocketAsyncResult
+Cohesion: 0.21
+Nodes (4): System.Net.Configuration, WebRequestModuleElementCollection, ConfigurationElement, WebRequestModuleElement
 
 ### Community 6192 - "Community 6192"
-Cohesion: 0.31
-Nodes (6): AllocToUpdate, Alloc, List, MeshHandle, NativeSlice, Vertex
+Cohesion: 0.15
+Nodes (13): CreationContext, FieldDescription, FloatField, IUxmlAttributes, string, UxmlFloatAttributeDescription, UxmlTraits, Vector4 (+5 more)
 
 ### Community 6193 - "Community 6193"
 Cohesion: 0.26
@@ -43449,8 +43494,8 @@ Cohesion: 0.21
 Nodes (13): FieldPacking, FieldPrecision, bool, float, int, string, Type, PackingRules (+5 more)
 
 ### Community 6197 - "Community 6197"
-Cohesion: 0.15
-Nodes (13): CreationContext, FieldDescription, FloatField, IUxmlAttributes, Rect, string, UxmlFloatAttributeDescription, UxmlTraits (+5 more)
+Cohesion: 0.12
+Nodes (6): Array, ArrayList, EncryptedReference, IEnumerator, ReferenceList, System.Security.Cryptography.Xml
 
 ### Community 6198 - "Community 6198"
 Cohesion: 0.19
@@ -43481,8 +43526,8 @@ Cohesion: 0.31
 Nodes (5): ISOWeek, System.Globalization, DateTime, DayOfWeek, int
 
 ### Community 6205 - "Community 6205"
-Cohesion: 0.14
-Nodes (12): GPUResidentContext, UnityEngine.Rendering, DebugRendererBatcherStats, float, float4, GPUResidentDrawerResources, InstanceCuller, InstanceCullingBatcher (+4 more)
+Cohesion: 0.24
+Nodes (9): int, JobHandle, NativeArray, T, AtomicIncrement(), Execute(), JobIndexPrefixSum(), ParallelSortExtensions (+1 more)
 
 ### Community 6206 - "Community 6206"
 Cohesion: 0.19
@@ -43493,8 +43538,8 @@ Cohesion: 0.22
 Nodes (6): CategoryData, UnityEditor.ShaderGraph, HashSet, List, ShaderInput, string
 
 ### Community 6208 - "Community 6208"
-Cohesion: 0.22
-Nodes (11): LODGroupDataSystemBurst, UnityEngine.Rendering, BurstCompile, EntityId, GPUInstanceIndex, JaggedSpan, LODGroupCullingData, NativeArray (+3 more)
+Cohesion: 0.13
+Nodes (8): TranslucentImage, bool, float, int, Mesh, Shader, TranslucentImageSource, VertexHelper
 
 ### Community 6209 - "Community 6209"
 Cohesion: 0.20
@@ -43509,12 +43554,12 @@ Cohesion: 0.25
 Nodes (8): HashEntry, CompilerContextData, DynamicArray, int, SortComparer, Stack, T, RenderGraphCompilationCache
 
 ### Community 6213 - "Community 6213"
-Cohesion: 0.24
-Nodes (9): int, JobHandle, NativeArray, T, AtomicIncrement(), Execute(), JobIndexPrefixSum(), ParallelSortExtensions (+1 more)
+Cohesion: 0.21
+Nodes (6): InputActionMap, ISteamControllerAPI, SteamHandle, string, SteamController, UnityEngine.InputSystem.Steam
 
 ### Community 6214 - "Community 6214"
-Cohesion: 0.18
-Nodes (5): System.Net.Http.Headers, WarningHeaderValue, Lexer, List, Token
+Cohesion: 0.19
+Nodes (4): Awaitable, CancellationToken, IBiomeProvider, IProgressHandle
 
 ### Community 6215 - "Community 6215"
 Cohesion: 0.20
@@ -43525,8 +43570,8 @@ Cohesion: 0.18
 Nodes (9): StreamContent, System.Net.Http, bool, CancellationToken, int, long, Stream, Task (+1 more)
 
 ### Community 6217 - "Community 6217"
-Cohesion: 0.25
-Nodes (9): Func, ProviderKey, SearchCategory, SearchName, SearchTerms, UnityEditor.ShaderGraph.ProviderSystem.Hints, IProvider, IShaderFunction (+1 more)
+Cohesion: 0.31
+Nodes (6): AllocToUpdate, Alloc, List, MeshHandle, NativeSlice, Vertex
 
 ### Community 6218 - "Community 6218"
 Cohesion: 0.16
@@ -43549,8 +43594,8 @@ Cohesion: 0.14
 Nodes (12): Int32Pair, EarlyBoundInfo, IList, int, string, StringPair, Type, XmlCollation (+4 more)
 
 ### Community 6223 - "Community 6223"
-Cohesion: 0.15
-Nodes (9): InteriorNode, BitSet, BitSet, Positions, SymbolsDictionary, PlusNode, System.Xml.Schema, SequenceNode (+1 more)
+Cohesion: 0.25
+Nodes (5): BitSet, Positions, SymbolsDictionary, SequenceNode, System.Xml.Schema
 
 ### Community 6224 - "Community 6224"
 Cohesion: 0.25
@@ -43577,12 +43622,8 @@ Cohesion: 0.21
 Nodes (8): SequenceMarshal, System.Runtime.InteropServices, ArraySegment, ReadOnlyMemory, ReadOnlySequence, ReadOnlySequenceSegment, SequenceReader, T
 
 ### Community 6230 - "Community 6230"
-Cohesion: 0.17
-Nodes (7): EndPoint, IAsyncResult, int, IPAddress, Microsoft.Unity.VisualStudio.Editor.Messaging, UdpSocket, Socket
-
-### Community 6231 - "Community 6231"
 Cohesion: 0.14
-Nodes (8): IPostBuildCleanup, IEnumerator, string, TearDown, Test, UnitySetUp, PlayModeTests_12s, SceneTests
+Nodes (8): IOControlCode, EndPoint, IAsyncResult, int, IPAddress, Microsoft.Unity.VisualStudio.Editor.Messaging, UdpSocket, Socket
 
 ### Community 6232 - "Community 6232"
 Cohesion: 0.19
@@ -43597,8 +43638,8 @@ Cohesion: 0.18
 Nodes (4): IRailFile, RailResult, IRailFileImpl, rail
 
 ### Community 6235 - "Community 6235"
-Cohesion: 0.18
-Nodes (10): CancellationToken, IEnumerable, IEnumerator, OrdinalIndexState, ParallelMergeOptions, QueryResults, QuerySettings, TSource (+2 more)
+Cohesion: 0.06
+Nodes (30): CancellationToken, IEnumerable, IEnumerator, OrdinalIndexState, ParallelMergeOptions, QueryResults, QuerySettings, TSource (+22 more)
 
 ### Community 6236 - "Community 6236"
 Cohesion: 0.15
@@ -43618,7 +43659,7 @@ Nodes (6): ISymbolScope, ISymbolDocument, ISymbolNamespace, ISymbolVariable, ISy
 
 ### Community 6240 - "Community 6240"
 Cohesion: 0.13
-Nodes (7): SettingsPropertyValueCollection, System.Configuration, Array, bool, Hashtable, IEnumerator, SettingsPropertyValue
+Nodes (10): Conditional, GraphicsFormat, ImportResourceParams, RenderTargetIdentifier, RenderTargetInfo, ResType, RTHandle, TextureDesc (+2 more)
 
 ### Community 6241 - "Community 6241"
 Cohesion: 0.19
@@ -43672,9 +43713,13 @@ Nodes (13): IEnumerable, IList, List, NameAndParameters, NamedValue, Create(), P
 Cohesion: 0.21
 Nodes (9): Exception, IDisposable, InputDevice, InputEventPtr, IObserver, Type, ForDevice, ForDeviceEventObservable (+1 more)
 
+### Community 6254 - "Community 6254"
+Cohesion: 0.17
+Nodes (9): AssetsConverter, UnityEditor.Rendering.Converter, Action, IRenderPipelineConverterItem, List, Object, Status, StringBuilder (+1 more)
+
 ### Community 6255 - "Community 6255"
-Cohesion: 0.10
-Nodes (18): IObservable, Exception, Func, IDisposable, IObserver, TResult, TSource, Exception (+10 more)
+Cohesion: 0.16
+Nodes (10): PassData, StarRenderFeature, StarRenderPass, ContextContainer, Material, RenderGraph, RenderingData, ScriptableRenderer (+2 more)
 
 ### Community 6256 - "Community 6256"
 Cohesion: 0.16
@@ -43765,16 +43810,16 @@ Cohesion: 0.15
 Nodes (11): a, AbstractMaterialNode, Action, b, c, Rect, VisualElement, pad (+3 more)
 
 ### Community 6278 - "Community 6278"
-Cohesion: 0.19
-Nodes (9): EvaluationState, Exception, Material, MaterialPropertyBlock, MethodImpl, RenderChainCommand, Texture, Vector4 (+1 more)
+Cohesion: 0.15
+Nodes (10): ParametricToFreeformLightUpgrader, ParametricToFreeformLightUpgraderItem, UnityEditor.Rendering.Universal, Action, float, GameObject, IRenderPipelineConverterItem, Light2D (+2 more)
 
 ### Community 6279 - "Community 6279"
 Cohesion: 0.22
 Nodes (7): GenerationMode, MaterialSlot, PropertyCollector, string, ExternalMaterialSlot, INeedsExplicitCompatibilityTest, UnityEditor.ShaderGraph.ProviderSystem
 
 ### Community 6280 - "Community 6280"
-Cohesion: 0.17
-Nodes (8): HttpRequestMessage, System.Net.Http, bool, Dictionary, HttpMethod, HttpRequestHeaders, Uri, Version
+Cohesion: 0.18
+Nodes (8): bool, GUIContent, ReorderableList, SerializedProperty, string, Styles, TMP_SettingsEditor, TMPro.EditorUtilities
 
 ### Community 6281 - "Community 6281"
 Cohesion: 0.19
@@ -43817,8 +43862,8 @@ Cohesion: 0.23
 Nodes (12): FontStyles, T, TMP_TextProcessingStack, Add(), CurrentItem(), Peek(), Pop(), PreviousItem() (+4 more)
 
 ### Community 6291 - "Community 6291"
-Cohesion: 0.15
-Nodes (8): CompiledXpathExpr, InputScopeManager, int, string, XPathExpression, XsltException, ErrorXPathExpression, System.Xml.Xsl.XsltOld
+Cohesion: 0.17
+Nodes (11): bool, CancellationState, int, ParallelMergeOptions, PartitionedStream, TaskScheduler, TKey, TOutput (+3 more)
 
 ### Community 6292 - "Community 6292"
 Cohesion: 0.32
@@ -43917,8 +43962,8 @@ Cohesion: 0.20
 Nodes (6): ArrayList, IdentityReference, IEnumerator, Type, IdentityReferenceCollection, System.Security.Principal
 
 ### Community 6316 - "Community 6316"
-Cohesion: 0.18
-Nodes (10): ActionFrame, Avt, Compiler, InputScopeManager, int, PrefixQName, Processor, string (+2 more)
+Cohesion: 0.20
+Nodes (7): IEnumerable, SendOrPostCallback, SynchronizationContext, Task, SynchronizationContextTaskScheduler, System.Threading.Tasks, TaskScheduler
 
 ### Community 6317 - "Community 6317"
 Cohesion: 0.19
@@ -44177,8 +44222,8 @@ Cohesion: 0.33
 Nodes (5): FrameData, Playable, RequiredByNativeCode, IPlayableBehaviour, UnityEngine.Playables
 
 ### Community 6381 - "Community 6381"
-Cohesion: 0.10
-Nodes (17): char, CLSCompliant, EncoderNLS, int, CLSCompliant, EncoderNLS, int, Decoder (+9 more)
+Cohesion: 0.21
+Nodes (7): OnDeserialized, OnDeserializing, OnSerializing, SecurityCritical, SecurityPermission, SerializationInfo, StreamingContext
 
 ### Community 6382 - "Community 6382"
 Cohesion: 0.29
@@ -44253,8 +44298,8 @@ Cohesion: 0.10
 Nodes (15): AssetBundle, AudioClip, AudioType, CachedAssetBundle, Dictionary, EditorBrowsable, Encoding, Hash128 (+7 more)
 
 ### Community 6400 - "Community 6400"
-Cohesion: 0.19
-Nodes (5): MultiColumnController, ReusableCollectionItem, VisualElement, MultiColumnListViewController, UnityEngine.UIElements
+Cohesion: 0.14
+Nodes (7): CreateDevice(), CustomDevice, RemoveDevice(), IInputUpdateCallbackReceiver, UnityEngine.InputSystem.LowLevel, MenuItem, RuntimeInitializeOnLoadMethod
 
 ### Community 6401 - "Community 6401"
 Cohesion: 0.14
@@ -44353,8 +44398,8 @@ Cohesion: 0.21
 Nodes (12): Awake(), GetDefaultMaterial(), GetDefaultShader(), InitializeSpriteEditorPrefs(), RebuildBlendStyles(), ReloadAllNullProperties(), Renderer2DData, Reset() (+4 more)
 
 ### Community 6425 - "Community 6425"
-Cohesion: 0.16
-Nodes (5): XblPresenceFilter, XblRelationshipFilter, XblSocialManagerUser, XblSocialManagerUserGroupHandle, XblSocialUserGroupType
+Cohesion: 0.14
+Nodes (9): ConstructorInfo, ExportDefinition, IDictionary, IEnumerable, ImportDefinition, Lazy, Type, IReflectionPartCreationInfo (+1 more)
 
 ### Community 6426 - "Community 6426"
 Cohesion: 0.17
@@ -44377,16 +44422,16 @@ Cohesion: 0.15
 Nodes (9): AerialPerspectiveSimple, BlurEffect, Color, float, RenderTexture, Vector2, float, RenderTexture (+1 more)
 
 ### Community 6431 - "Community 6431"
-Cohesion: 0.24
-Nodes (6): BooleanConverter, System.ComponentModel, CultureInfo, ITypeDescriptorContext, StandardValuesCollection, Type
+Cohesion: 0.21
+Nodes (9): BurstCompile, float3, Vector3, NoiseData, Create(), Evaluate(), FastFloor(), Grad3Dot() (+1 more)
 
 ### Community 6432 - "Community 6432"
 Cohesion: 0.29
 Nodes (12): AnimationRemoveScalePlayable, Create(), CreateHandle(), CreateHandleInternal(), CreateHandleInternal_Injected(), Equals(), GetHandle(), UnityEngine.Animations (+4 more)
 
 ### Community 6433 - "Community 6433"
-Cohesion: 0.23
-Nodes (8): AppDomainManagerInitializationOptions, ApplicationActivator, AppDomain, AppDomainSetup, Evidence, SecurityState, AppDomainManager, System
+Cohesion: 0.09
+Nodes (17): AtmosphereRenderPass, PassData, BlitToRTHandlePass, ContextContainer, int, Material, ProfilingSampler, RenderGraph (+9 more)
 
 ### Community 6434 - "Community 6434"
 Cohesion: 0.29
@@ -44501,8 +44546,8 @@ Cohesion: 0.15
 Nodes (6): UIAffinityMaskBlock, Action, int, RectTransform, Text, UIButton
 
 ### Community 6466 - "Community 6466"
-Cohesion: 0.15
-Nodes (3): UIChartWarning, UIChart, WarningStatPlan
+Cohesion: 0.19
+Nodes (9): EvaluationState, Exception, Material, MaterialPropertyBlock, MethodImpl, RenderChainCommand, Texture, Vector4 (+1 more)
 
 ### Community 6467 - "Community 6467"
 Cohesion: 0.15
@@ -44523,10 +44568,6 @@ Nodes (8): UIMilkyWayClusterEntry, bool, int, long, RectTransform, string, Strin
 ### Community 6472 - "Community 6472"
 Cohesion: 0.15
 Nodes (5): UIOrbitPicker, GameObject, int, SailOrbit, UIButton
-
-### Community 6473 - "Community 6473"
-Cohesion: 0.07
-Nodes (15): BooleanMaterialSlot, UnityEditor.ShaderGraph, IMaterialSlotHasValue, UnityEditor.ShaderGraph, PropertyConnectionStateMaterialSlot, UnityEditor.ShaderGraph, bool, GenerationMode (+7 more)
 
 ### Community 6474 - "Community 6474"
 Cohesion: 0.19
@@ -44600,6 +44641,10 @@ Nodes (9): Mono.Btls, MonoBtlsStream, MobileTlsContext, MonoSslAuthenticationOpt
 Cohesion: 0.15
 Nodes (7): BuildSettingsMessage, PlayerSettingsMessage, PlayerSystemInfoMessage, QualitySettingsMessage, ScreenSettingsMessage, UnityEditor.TestTools.TestRunner.UnityTestProtocol, UtpMessageBuilder
 
+### Community 6492 - "Community 6492"
+Cohesion: 0.31
+Nodes (4): FAMConnection, DllImport, FAMRequest, IntPtr
+
 ### Community 6493 - "Community 6493"
 Cohesion: 0.17
 Nodes (8): C14NAncestralNamespaceContextManager, CanonicalXmlDocument, HashAlgorithm, XmlDocument, XmlNode, XmlNodeList, CanonicalXml, System.Security.Cryptography.Xml
@@ -44625,8 +44670,8 @@ Cohesion: 0.15
 Nodes (8): ChannelBinding, ContextAttribute, int, IntPtr, SafeDeleteContext, SecPkgContext_Bindings, SafeFreeContextBufferChannelBinding, System.Net.Security
 
 ### Community 6499 - "Community 6499"
-Cohesion: 0.18
-Nodes (8): ThreeDSMaterialDescriptionPreprocessor, UnityEditor.Rendering.Universal, AnimationClip, int, Material, MaterialDescription, TexturePropertyDescription, uint
+Cohesion: 0.14
+Nodes (9): System.Globalization, TextElementEnumerator, int, OnDeserialized, OnDeserializing, OnSerializing, StreamingContext, string (+1 more)
 
 ### Community 6500 - "Community 6500"
 Cohesion: 0.15
@@ -44677,8 +44722,8 @@ Cohesion: 0.28
 Nodes (5): NameValuePermission, System.Data.Common, ArrayList, DBConnectionString, string
 
 ### Community 6512 - "Community 6512"
-Cohesion: 0.19
-Nodes (5): EntityTagHeaderValue, System.Net.Http.Headers, Lexer, List, Token
+Cohesion: 0.23
+Nodes (8): AsyncCallback, bool, object, Task, System.Threading.Tasks, TaskToApm, TaskWrapperAsyncResult, TResult
 
 ### Community 6513 - "Community 6513"
 Cohesion: 0.22
@@ -44713,8 +44758,8 @@ Cohesion: 0.17
 Nodes (6): ConfigurationPropertyCollection, System.Configuration, Array, ConfigurationProperty, IEnumerator, List
 
 ### Community 6521 - "Community 6521"
-Cohesion: 0.18
-Nodes (7): ABN_MechaPosition, bool, double, int, PlanetData, Quaternion, VectorLF3
+Cohesion: 0.12
+Nodes (9): UnityEditor.ShaderGraph, Vector4MaterialSlot, GenerationMode, List, PreviewProperty, PropertyCollector, string, Vector4 (+1 more)
 
 ### Community 6522 - "Community 6522"
 Cohesion: 0.21
@@ -44726,7 +44771,7 @@ Nodes (7): DefaultSection, System.Configuration, ConfigurationElement, Configura
 
 ### Community 6524 - "Community 6524"
 Cohesion: 0.18
-Nodes (7): AudioTrackInspector, Styles, UnityEngine.Timeline, PlayableDirector, SerializedProperty, string, StringBuilder
+Nodes (4): IRailStreamFile, RailResult, IRailStreamFileImpl, rail
 
 ### Community 6525 - "Community 6525"
 Cohesion: 0.15
@@ -44809,8 +44854,8 @@ Cohesion: 0.26
 Nodes (9): DebugRendererLists, CullingResults, DebugRendererLists, DrawingSettings, FilteringSettings, IRasterRenderGraphBuilder, List, RenderGraph (+1 more)
 
 ### Community 6545 - "Community 6545"
-Cohesion: 0.23
-Nodes (7): RenderGraph, Conditional, RenderGraphPass, IComputeRenderGraphBuilder, IRasterRenderGraphBuilder, IUnsafeRenderGraphBuilder, PassData
+Cohesion: 0.14
+Nodes (12): RenderGraph, Conditional, RenderGraphPass, BaseRenderFunc, PassData, RenderGraphBuilder, RenderGraphContext, IComputeRenderGraphBuilder (+4 more)
 
 ### Community 6546 - "Community 6546"
 Cohesion: 0.21
@@ -45025,8 +45070,8 @@ Cohesion: 0.15
 Nodes (9): FieldExpression, System.Linq.Expressions, PropertyExpression, System.Linq.Expressions, FieldInfo, MemberInfo, MemberInfo, PropertyInfo (+1 more)
 
 ### Community 6599 - "Community 6599"
-Cohesion: 0.18
-Nodes (9): CustomComposite, CustomCompositeEditor, Action, float, GUIContent, InputBindingCompositeContext, int, Vector2 (+1 more)
+Cohesion: 0.17
+Nodes (8): DataViewSettingCollection, DataViewSettingsEnumerator, System.Data, DataViewSetting, Array, DataTable, DataViewManager, Hashtable
 
 ### Community 6600 - "Community 6600"
 Cohesion: 0.21
@@ -45101,24 +45146,24 @@ Cohesion: 0.24
 Nodes (8): GuiHelper, UnityEditor.TestTools.TestRunner.GUI, IGuiHelper, Func, IFileOpenInfo, MethodInfo, string, Type
 
 ### Community 6618 - "Community 6618"
-Cohesion: 0.21
-Nodes (13): GetManagedThunkForUnmanagedMethodPtr(), GetThreadFromFiberCookie(), GetTypeInfoName(), GetTypeLibGuid(), GetTypeLibLcid(), GetTypeLibName(), GetUnmanagedThunkForManagedMethodPtr(), ITypeInfo (+5 more)
+Cohesion: 0.18
+Nodes (7): bool, SecurityPermission, SerializationInfo, Stream, StreamingContext, System.Net, WebResponse
 
 ### Community 6619 - "Community 6619"
-Cohesion: 0.17
-Nodes (7): bool, ConcreteSlotValueType, List, MaterialSlot, string, SubGraphOutputNode, UnityEditor.ShaderGraph
+Cohesion: 0.23
+Nodes (8): AsyncCallback, bool, object, Task, System.Threading.Tasks, TaskToApm, TaskWrapperAsyncResult, TResult
 
 ### Community 6620 - "Community 6620"
 Cohesion: 0.15
 Nodes (10): EntityId, LensFlareDataSRP, MenuItem, Scene, string, Texture2D, Icons, LensFlareDataSRPCreator (+2 more)
 
 ### Community 6621 - "Community 6621"
-Cohesion: 0.18
-Nodes (5): StringWithQualityHeaderValue, System.Net.Http.Headers, Lexer, List, Token
+Cohesion: 0.23
+Nodes (8): AsyncCallback, bool, object, Task, System.Threading.Tasks, TaskToApm, TaskWrapperAsyncResult, TResult
 
 ### Community 6622 - "Community 6622"
-Cohesion: 0.41
-Nodes (4): LightDescriptor, Vector3, PunctualLight, LightSet
+Cohesion: 0.15
+Nodes (11): MaterialGraphPreviewGenerator, UnityEditor.ShaderGraph.Drawing, Camera, GameObject, GUIContent, Material, MaterialPropertyBlock, Mesh (+3 more)
 
 ### Community 6623 - "Community 6623"
 Cohesion: 0.18
@@ -45137,12 +45182,12 @@ Cohesion: 0.19
 Nodes (8): HtmlAttributeProps, bool, HtmlElementProps, int, string, XmlNodeType, BuilderInfo, System.Xml.Xsl.XsltOld
 
 ### Community 6627 - "Community 6627"
-Cohesion: 0.18
-Nodes (10): InputBuildAnalytic, ReportProcessor, TryGatherData(), UnityEngine.InputSystem.Editor, BuildReport, Exception, IData, IInputAnalyticData (+2 more)
+Cohesion: 0.19
+Nodes (8): FunctionRegistry, GenerationMode, int, ShaderStringBuilder, string, TextureChannel, ChannelMaskNode, UnityEditor.ShaderGraph
 
 ### Community 6628 - "Community 6628"
-Cohesion: 0.19
-Nodes (8): FunctionRegistry, GenerationMode, int, MatrixAxis, ShaderStringBuilder, string, MatrixConstructionNode, UnityEditor.ShaderGraph
+Cohesion: 0.11
+Nodes (10): BooleanMaterialSlot, UnityEditor.ShaderGraph, IMaterialSlotHasValue, UnityEditor.ShaderGraph, bool, GenerationMode, List, PreviewProperty (+2 more)
 
 ### Community 6629 - "Community 6629"
 Cohesion: 0.15
@@ -45154,7 +45199,7 @@ Nodes (4): MetafileHeader, System.Drawing.Imaging, MonoTODO, MonoMetafileHeader
 
 ### Community 6631 - "Community 6631"
 Cohesion: 0.18
-Nodes (7): ClaimsIdentity, string, string, HttpListenerBasicIdentity, System.Net, GenericIdentity, System.Security.Principal
+Nodes (7): NeutronStarHandler, GalaxyData, GameData, Material, MeshFilter, Renderer, StarData
 
 ### Community 6632 - "Community 6632"
 Cohesion: 0.19
@@ -45189,12 +45234,12 @@ Cohesion: 0.15
 Nodes (9): IQcScanRule, ScanRuleResult, T, ScanRuleResult, T, AssemblyExclusionScanRule, QFSW.QC.ScanRules, QcIgnoreScanRule (+1 more)
 
 ### Community 6640 - "Community 6640"
-Cohesion: 0.15
-Nodes (6): double, int, OnDeserialized, StreamingContext, Margins, System.Drawing.Printing
+Cohesion: 0.13
+Nodes (8): Matrix3MaterialSlot, UnityEditor.ShaderGraph, GenerationMode, List, Matrix4x4, PreviewProperty, PropertyCollector, VisualElement
 
 ### Community 6641 - "Community 6641"
-Cohesion: 0.18
-Nodes (4): IRailStreamFile, RailResult, IRailStreamFileImpl, rail
+Cohesion: 0.15
+Nodes (3): UIChartWarning, UIChart, WarningStatPlan
 
 ### Community 6642 - "Community 6642"
 Cohesion: 0.23
@@ -45289,8 +45334,8 @@ Cohesion: 0.21
 Nodes (3): Action, Func, SerializedBitArray
 
 ### Community 6667 - "Community 6667"
-Cohesion: 0.16
-Nodes (5): GraphicsPathIterator, System.Drawing.Drawing2D, GraphicsPath, IntPtr, PointF
+Cohesion: 0.26
+Nodes (6): Action, Func, ScheduledItem, TimerState, IScheduler, UnityEngine.UIElements
 
 ### Community 6668 - "Community 6668"
 Cohesion: 0.23
@@ -45324,6 +45369,10 @@ Nodes (6): Camera, List, XRPass, QuadViewState, UnityEngine.Experimental.Renderi
 Cohesion: 0.15
 Nodes (7): Editor, RenderPipelineAsset, SetUp, TearDown, Type, RenderPipelineTests, UnityEditor.Rendering.Tests
 
+### Community 6676 - "Community 6676"
+Cohesion: 0.13
+Nodes (11): Dictionary, DielectricMaterial, GenerationMode, int, List, PreviewProperty, PropertyCollector, ShaderStringBuilder (+3 more)
+
 ### Community 6677 - "Community 6677"
 Cohesion: 0.28
 Nodes (7): GUIContent, Material, MaterialEditor, SimpleLitProperties, SimpleLitGUI, Styles, UnityEditor.Rendering.Universal.ShaderGUI
@@ -45353,12 +45402,12 @@ Cohesion: 0.19
 Nodes (6): Action, List, SearcherItem, string, SearcherDatabaseBase, UnityEditor.Searcher
 
 ### Community 6684 - "Community 6684"
-Cohesion: 0.20
-Nodes (6): RunStateCallbacks, UnityEditor.TestTools.TestRunner.CommandLineTest, bool, IRunData, ITestAdaptor, ITestResultAdaptor
+Cohesion: 0.27
+Nodes (7): MethodImpl, SpecialName, Vector2, ConstantForce2D, UnityEngine, PhysicsUpdateBehaviour2D, UnityEngine
 
 ### Community 6685 - "Community 6685"
-Cohesion: 0.18
-Nodes (6): Dictionary, IEnumerator, TMP_SpriteAsset, TMP_Text, TMP_SpriteAnimator, TMPro
+Cohesion: 0.16
+Nodes (11): BuiltInPixelPerfectCameraConverter, PixelPerfectCameraConverterItem, UnityEditor.Rendering.Universal, UpgradeGameObject(), UpgradePixelPerfectCamera(), Action, GameObject, IRenderPipelineConverterItem (+3 more)
 
 ### Community 6686 - "Community 6686"
 Cohesion: 0.22
@@ -45405,8 +45454,8 @@ Cohesion: 0.19
 Nodes (4): bool, string, AndroidPlatformSetup, UnityEditor.TestTools.TestRunner
 
 ### Community 6697 - "Community 6697"
-Cohesion: 0.24
-Nodes (4): RailID, RailResult, IRailPlayerStats, rail
+Cohesion: 0.18
+Nodes (7): ABN_MechaPosition, bool, double, int, PlanetData, Quaternion, VectorLF3
 
 ### Community 6698 - "Community 6698"
 Cohesion: 0.15
@@ -45477,12 +45526,12 @@ Cohesion: 0.22
 Nodes (7): IRailInGamePurchase, List, RailProductItem, RailPurchaseProductInfo, RailResult, IRailInGamePurchaseImpl, rail
 
 ### Community 6715 - "Community 6715"
-Cohesion: 0.05
-Nodes (21): BridgeScriptForRetainingObjects, NestedCanvasMaintainsCorrectSize, NoActiveCameraInSceneDoesNotCrashEditor, RectTransformValidAfterEnable, IPrebuildSetup, string, SetUp, TearDown (+13 more)
+Cohesion: 0.14
+Nodes (8): LayoutTests, VerticalLayoutGroupTests, GameObject, OneTimeTearDown, SetUp, string, TearDown, Test
 
 ### Community 6716 - "Community 6716"
-Cohesion: 0.15
-Nodes (8): Description, GameObject, IEnumerator, SetUp, string, TearDown, UnityTest, ScrollRectScale
+Cohesion: 0.22
+Nodes (3): BinaryReader, PrefabDesc, StationComponent
 
 ### Community 6717 - "Community 6717"
 Cohesion: 0.19
@@ -45513,16 +45562,12 @@ Cohesion: 0.15
 Nodes (8): BinaryReader, BinaryWriter, bool, float, int, List, Node, PowerNetworkStructures
 
 ### Community 6724 - "Community 6724"
-Cohesion: 0.23
-Nodes (6): List, RailHttpSessionMethod, RailKeyValue, RailResult, IRailHttpSession, rail
+Cohesion: 0.14
+Nodes (9): AnimBool, bool, GUIContent, GUIStyle, Rect, SerializedProperty, ImageEditor, Styles (+1 more)
 
 ### Community 6725 - "Community 6725"
 Cohesion: 0.24
 Nodes (6): List, RailProductItem, RailPurchaseProductInfo, RailResult, IRailInGamePurchase, rail
-
-### Community 6726 - "Community 6726"
-Cohesion: 0.19
-Nodes (6): LeaderboardEntry, RailID, RailResult, RequestLeaderboardEntryParam, IRailLeaderboardEntries, rail
 
 ### Community 6727 - "Community 6727"
 Cohesion: 0.19
@@ -45549,8 +45594,8 @@ Cohesion: 0.18
 Nodes (8): Material, Mesh, Object, RenderTexture, Texture, Texture2D, GraphicsUtils, UnityEngine.PostProcessing
 
 ### Community 6733 - "Community 6733"
-Cohesion: 0.24
-Nodes (5): UnityEditor.ShaderGraph, ViewVectorNode, CoordinateSpace, MethodInfo, Vector3
+Cohesion: 0.17
+Nodes (10): DataRow, DataTableMapping, IDbCommand, object, OdbcCommand, RowUpdatedEventArgs, RowUpdatingEventArgs, StatementType (+2 more)
 
 ### Community 6734 - "Community 6734"
 Cohesion: 0.18
@@ -45601,8 +45646,8 @@ Cohesion: 0.21
 Nodes (8): int, long, ReliabilityContract, SecuritySafeCritical, string, StringMaker, SharedStatics, System
 
 ### Community 6747 - "Community 6747"
-Cohesion: 0.18
-Nodes (9): Action, Edge, IEdgeConnectorListener, MaterialSlot, StyleSheet, Port, ShaderPort, ShaderPortExtensions (+1 more)
+Cohesion: 0.15
+Nodes (10): FontData, UnityEngine.UI, bool, float, Font, FontStyle, HorizontalWrapMode, int (+2 more)
 
 ### Community 6748 - "Community 6748"
 Cohesion: 0.15
@@ -45713,8 +45758,8 @@ Cohesion: 0.18
 Nodes (8): CancellationToken, Exception, int, QueryOperatorEnumerator, TKey, NullableLongMinMaxAggregationOperator, NullableLongMinMaxAggregationOperatorEnumerator, System.Linq.Parallel
 
 ### Community 6775 - "Community 6775"
-Cohesion: 0.32
-Nodes (6): ContractBasedImportDefinition, Export, ImportType, Type, ImportingItem, System.ComponentModel.Composition.ReflectionModel
+Cohesion: 0.25
+Nodes (4): BaseEventData, UIStarmapDFHive, UIStarmapPlanet, UIStarmapStar
 
 ### Community 6776 - "Community 6776"
 Cohesion: 0.21
@@ -45741,8 +45786,8 @@ Cohesion: 0.19
 Nodes (13): XmlWriter, ChFromDigit(), DWL(), HI(), LO(), MpDiv(), MpDiv1(), MpMove() (+5 more)
 
 ### Community 6782 - "Community 6782"
-Cohesion: 0.29
-Nodes (6): ContextFlags, Endianness, SafeDeleteContext, SafeFreeCredentials, SecurityBuffer, SecurityContextTokenHandle
+Cohesion: 0.19
+Nodes (7): RenderSettingsConverter, RenderSettingsConverterItem, UnityEditor.Rendering.Converter, Action, List, RenderPipelineAsset, Status
 
 ### Community 6783 - "Community 6783"
 Cohesion: 0.23
@@ -45845,12 +45890,12 @@ Cohesion: 0.29
 Nodes (12): RegexCode, RegexNode, RegexTree, Dispose(), Emit(), EmitFragment(), MapCapnum(), PatchJump() (+4 more)
 
 ### Community 6808 - "Community 6808"
-Cohesion: 0.07
-Nodes (19): AsyncCallback, MonoTODO, object, SerializationInfo, StreamingContext, TransactionOptions, bool, MonoTODO (+11 more)
+Cohesion: 0.15
+Nodes (9): bool, MonoTODO, SerializationInfo, StreamingContext, Transaction, DependentTransaction, System.Transactions, SubordinateTransaction (+1 more)
 
 ### Community 6809 - "Community 6809"
-Cohesion: 0.20
-Nodes (8): ContextForm, ApplicationIdentity, bool, MonoTODO, SerializationInfo, StreamingContext, ActivationContext, System
+Cohesion: 0.18
+Nodes (4): InputAction, InputActionAsset, IInputMapService, InputMapService
 
 ### Community 6810 - "Community 6810"
 Cohesion: 0.18
@@ -45882,7 +45927,7 @@ Nodes (7): Exception, SchemaElementDecl, XmlSchema, XmlSchemaException, XmlSever
 
 ### Community 6817 - "Community 6817"
 Cohesion: 0.25
-Nodes (3): BinaryReader, BinaryWriter, Vector3Int
+Nodes (6): BuiltInToURP3DRenderSettingsConverter, RenderingMode, RenderPipelineAsset, ScriptableRendererData, UniversalRendererData, RenderingPath
 
 ### Community 6818 - "Community 6818"
 Cohesion: 0.28
@@ -45913,8 +45958,8 @@ Cohesion: 0.17
 Nodes (10): bool, CodeTypeDeclaration, CompilerInfo, Dictionary, Location, long, string, StringCollection (+2 more)
 
 ### Community 6826 - "Community 6826"
-Cohesion: 0.31
-Nodes (3): DbConnection, DbConnectionOptions, TaskCompletionSource
+Cohesion: 0.21
+Nodes (9): PopupControlAttribute, PopupControlView, UnityEditor.ShaderGraph.Drawing.Controls, AbstractMaterialNode, ChangeEvent, PopupField, PropertyInfo, string (+1 more)
 
 ### Community 6827 - "Community 6827"
 Cohesion: 0.17
@@ -45969,8 +46014,8 @@ Cohesion: 0.24
 Nodes (7): FreeFunction, MethodImpl, T, ThreadSafe, Type, JsonUtility, UnityEngine
 
 ### Community 6840 - "Community 6840"
-Cohesion: 0.24
-Nodes (6): SafeFreeContextBuffer, SecBufferDesc, SecurityPackageInfoClass, SSPIAuthType, System.Net, SSPIInterface
+Cohesion: 0.29
+Nodes (6): ContextFlags, Endianness, SafeDeleteContext, SafeFreeCredentials, SecurityBuffer, SecurityContextTokenHandle
 
 ### Community 6841 - "Community 6841"
 Cohesion: 0.24
@@ -45981,16 +46026,16 @@ Cohesion: 0.21
 Nodes (5): Action, IntPtr, NativeArray, RequiredByNativeCode, SyncTile
 
 ### Community 6843 - "Community 6843"
-Cohesion: 0.22
-Nodes (7): ActionFrame, Compiler, int, Processor, XmlQualifiedName, ApplyTemplatesAction, System.Xml.Xsl.XsltOld
+Cohesion: 0.13
+Nodes (10): ActivationMixerPlayable, GameObject, IPropertyCollector, Playable, PlayableDirector, PlayableGraph, PostPlaybackState, TimelineClip (+2 more)
 
 ### Community 6844 - "Community 6844"
 Cohesion: 0.32
 Nodes (6): HierarchyChangeType, State, VersionChangeType, VisualElement, BaseVisualTreeHierarchyTrackerUpdater, UnityEngine.UIElements
 
 ### Community 6845 - "Community 6845"
-Cohesion: 0.20
-Nodes (6): GroupTrackInspector, Styles, UnityEditor.Timeline, GUIContent, Rect, ReorderableList
+Cohesion: 0.15
+Nodes (13): CreationContext, FieldDescription, FloatField, IUxmlAttributes, Rect, string, UxmlFloatAttributeDescription, UxmlTraits (+5 more)
 
 ### Community 6846 - "Community 6846"
 Cohesion: 0.14
@@ -46013,20 +46058,20 @@ Cohesion: 0.21
 Nodes (4): HashSet, T, ILiveReloadAssetTracker, UnityEngine.UIElements
 
 ### Community 6851 - "Community 6851"
-Cohesion: 0.18
-Nodes (8): CreationContext, IUxmlAttributes, UxmlBoolAttributeDescription, UxmlEnumAttributeDescription, UxmlIntAttributeDescription, VisualElement, UnityEngine.UIElements, UxmlTraits
+Cohesion: 0.15
+Nodes (7): Evidence, int, PolicyLevel, SecurityElement, string, SiteMembershipCondition, System.Security.Policy
 
 ### Community 6852 - "Community 6852"
 Cohesion: 0.24
 Nodes (7): int, MethodImpl, NativeSlice, Rect, Vertex, MeshWriteData, UnityEngine.UIElements
 
 ### Community 6853 - "Community 6853"
-Cohesion: 0.25
-Nodes (6): IRailZoneServerHelper, IRailZoneServer, RailResult, RailZoneID, IRailZoneServerHelperImpl, rail
+Cohesion: 0.20
+Nodes (6): GetEnumerator(), JSONNull, MoveNext(), SimpleJSON, KeyEnumerator, ValueEnumerator
 
 ### Community 6854 - "Community 6854"
-Cohesion: 0.23
-Nodes (6): IGenericMenu, int, string, T, PopupField, UnityEngine.UIElements
+Cohesion: 0.13
+Nodes (5): UISV_TabLine, RectTransform, UISectorView, UISV_Cabinet, UISV_Hierarchy
 
 ### Community 6855 - "Community 6855"
 Cohesion: 0.22
@@ -46121,8 +46166,8 @@ Cohesion: 0.15
 Nodes (11): Collider, Collision, ContactPoint, float, GrassFlowRenderer, int, Ray, RaycastHit (+3 more)
 
 ### Community 6878 - "Community 6878"
-Cohesion: 0.17
-Nodes (8): bool, float, GrassFlowRenderer, IEnumerator, int, Texture2D, Vector4, ObstructionEraser
+Cohesion: 0.09
+Nodes (14): netstandard2.1, netstandard2.1, float, GrassFlowRenderer, bool, float, GrassFlowRenderer, IEnumerator (+6 more)
 
 ### Community 6879 - "Community 6879"
 Cohesion: 0.22
@@ -46197,20 +46242,24 @@ Cohesion: 0.29
 Nodes (10): AddDependency(), AddDependencyInternal(), AddDependencyInternal_Injected(), GetDefaultWorld(), GetDefaultWorld_Injected(), UnityEngine.Experimental.AI, IntPtr, JobHandle (+2 more)
 
 ### Community 6899 - "Community 6899"
-Cohesion: 0.26
-Nodes (5): IList, T, TreeViewItemData, IDefaultTreeViewController, UnityEngine.UIElements
+Cohesion: 0.13
+Nodes (5): ListSortDescriptionCollection, System.ComponentModel, Array, ArrayList, IEnumerator
 
 ### Community 6900 - "Community 6900"
 Cohesion: 0.23
 Nodes (8): MultiplayerCenterAnalyticsConstants, Unity.Multiplayer.Center.Editor.Analytics, AnalyticsEvent, Exception, IData, string, TData, TEvent
 
 ### Community 6901 - "Community 6901"
-Cohesion: 0.21
-Nodes (9): BurstCompile, float3, Vector3, NoiseData, Create(), Evaluate(), FastFloor(), Grad3Dot() (+1 more)
+Cohesion: 0.25
+Nodes (7): ExportFactory, System.ComponentModel.Composition, ExportLifetimeContext, ComposablePartDefinition, Func, T, TMetadata
+
+### Community 6902 - "Community 6902"
+Cohesion: 0.24
+Nodes (6): FunctionType, Query, XPathNodeIterator, XsltContext, BooleanFunctions, MS.Internal.Xml.XPath
 
 ### Community 6903 - "Community 6903"
-Cohesion: 0.24
-Nodes (5): BlockFieldDescriptor, OneTimeSetUp, Test, StackTests, UnityEditor.ShaderGraph.UnitTests
+Cohesion: 0.15
+Nodes (10): bool, float, Font, FontStyle, HorizontalWrapMode, int, TextAnchor, VerticalWrapMode (+2 more)
 
 ### Community 6904 - "Community 6904"
 Cohesion: 0.18
@@ -46237,8 +46286,8 @@ Cohesion: 0.24
 Nodes (7): ResultsWriter, UnityEditor.TestTools.TestRunner.Api, ITestResultAdaptor, StreamWriter, string, XmlWriter, XmlWriterSettings
 
 ### Community 6910 - "Community 6910"
-Cohesion: 0.18
-Nodes (6): NameValueWithParametersHeaderValue, System.Net.Http.Headers, Lexer, List, Token, NameValueHeaderValue
+Cohesion: 0.29
+Nodes (8): Common, DisplayName, Flag, Tooltip, UnityEditor.ShaderGraph.ProviderSystem.Hints, IProvider, string, T
 
 ### Community 6911 - "Community 6911"
 Cohesion: 0.17
@@ -46337,8 +46386,8 @@ Cohesion: 0.17
 Nodes (8): PlanetAtmoBlur, Camera, int, Material, Quaternion, Renderer, RenderTexture, Vector3
 
 ### Community 6940 - "Community 6940"
-Cohesion: 0.23
-Nodes (7): CameraHistoryItem, BufferedRTHandleSystem, FilterMode, RenderTextureDescriptor, RTHandle, uint, RTHandle
+Cohesion: 0.05
+Nodes (22): Matrix2ShaderProperty, UnityEditor.ShaderGraph, Matrix3ShaderProperty, UnityEditor.ShaderGraph, Matrix4ShaderProperty, UnityEditor.ShaderGraph, MatrixShaderProperty, UnityEditor.ShaderGraph (+14 more)
 
 ### Community 6941 - "Community 6941"
 Cohesion: 0.18
@@ -46389,8 +46438,8 @@ Cohesion: 0.21
 Nodes (6): UIChartAstroResourceMiscEntry, int, List, RectTransform, StatData, UIChartAstroResourceMiscSingleEntry
 
 ### Community 6955 - "Community 6955"
-Cohesion: 0.23
-Nodes (6): UIHandTip, GameObject, Image, int, RectTransform, Text
+Cohesion: 0.19
+Nodes (9): BlitAndSwapColorPass, BlitAndSwapColorRendererFeature, ContextContainer, Material, RenderGraph, RenderingData, RenderPassEvent, ScriptableRenderer (+1 more)
 
 ### Community 6956 - "Community 6956"
 Cohesion: 0.18
@@ -46413,12 +46462,12 @@ Cohesion: 0.18
 Nodes (8): UIMouseClickHighlight, bool, Camera, float, Image, KeyCode, RectTransform, UIMouseClickSign
 
 ### Community 6961 - "Community 6961"
-Cohesion: 0.29
-Nodes (6): EventHandlerList, ListEntry, System.ComponentModel, Component, Delegate, object
+Cohesion: 0.15
+Nodes (7): DynamicMatrixMaterialSlot, UnityEditor.ShaderGraph, ConcreteSlotValueType, GenerationMode, Matrix4x4, PropertyCollector, VisualElement
 
 ### Community 6962 - "Community 6962"
-Cohesion: 0.23
-Nodes (9): ObjectControlAttribute, ObjectControlView, UnityEditor.ShaderGraph.Drawing.Controls, AbstractMaterialNode, ChangeEvent, Object, PropertyInfo, string (+1 more)
+Cohesion: 0.24
+Nodes (4): SettingElementCollection, System.Configuration, ConfigurationElement, SettingElement
 
 ### Community 6963 - "Community 6963"
 Cohesion: 0.18
@@ -46455,6 +46504,10 @@ Nodes (7): Music, AudioClip, AudioSource, bool, float, int, RuntimeInitializeOnL
 ### Community 6971 - "Community 6971"
 Cohesion: 0.35
 Nodes (11): AvailableTrackingData, Quaternion, Vector3, TryGet(), TryGetAcceleration(), TryGetAngularAcceleration(), TryGetAngularVelocity(), TryGetPosition() (+3 more)
+
+### Community 6972 - "Community 6972"
+Cohesion: 0.24
+Nodes (4): RailID, RailResult, IRailPlayerStats, rail
 
 ### Community 6973 - "Community 6973"
 Cohesion: 0.17
@@ -46493,8 +46546,8 @@ Cohesion: 0.20
 Nodes (8): Mono.Btls, MonoBtlsX509LookupMonoCollection, long, MonoBtlsX509, MonoBtlsX509Name, MonoBtlsX509TrustKind, X509CertificateCollection, MonoBtlsX509LookupMono
 
 ### Community 6982 - "Community 6982"
-Cohesion: 0.21
-Nodes (9): PopupControlAttribute, PopupControlView, UnityEditor.ShaderGraph.Drawing.Controls, AbstractMaterialNode, ChangeEvent, PopupField, PropertyInfo, string (+1 more)
+Cohesion: 0.13
+Nodes (7): SettingsPropertyValueCollection, System.Configuration, Array, bool, Hashtable, IEnumerator, SettingsPropertyValue
 
 ### Community 6983 - "Community 6983"
 Cohesion: 0.30
@@ -46505,12 +46558,12 @@ Cohesion: 0.24
 Nodes (7): MS.Internal.Xml.Cache, XPathNodeInfoAtom, int, string, XPathDocument, XPathNode, XPathNodePageInfo
 
 ### Community 6985 - "Community 6985"
-Cohesion: 0.24
-Nodes (6): Op, Query, XPathNodeIterator, XsltContext, MS.Internal.Xml.XPath, NumericExpr
+Cohesion: 0.18
+Nodes (10): ActionFrame, Avt, Compiler, InputScopeManager, int, PrefixQName, Processor, string (+2 more)
 
 ### Community 6986 - "Community 6986"
-Cohesion: 0.18
-Nodes (6): Color, int, ProfilerMarker, RectInt, BaseShaderInfoStorage, UnityEngine.UIElements.UIR
+Cohesion: 0.32
+Nodes (6): ContractBasedImportDefinition, Export, ImportType, Type, ImportingItem, System.ComponentModel.Composition.ReflectionModel
 
 ### Community 6987 - "Community 6987"
 Cohesion: 0.17
@@ -46525,8 +46578,8 @@ Cohesion: 0.29
 Nodes (7): AddPoint(), CameraUtility, Camera, MeshFilter, MinMax3D, Renderer, Vector3
 
 ### Community 6990 - "Community 6990"
-Cohesion: 0.21
-Nodes (9): Texture3DControlAttribute, Texture3DControlView, UnityEditor.ShaderGraph.Drawing.Controls, AbstractMaterialNode, ChangeEvent, Object, PropertyInfo, string (+1 more)
+Cohesion: 0.24
+Nodes (7): Feature, GeoJSON.Net.Feature, Dictionary, IDictionary, IGeometryObject, TGeometry, TProps
 
 ### Community 6991 - "Community 6991"
 Cohesion: 0.18
@@ -46580,13 +46633,13 @@ Nodes (11): [0.1.6-preview.1] - 2020-06-18, [0.1.6-preview] - 2020-06-18, [0.1.6
 Cohesion: 0.17
 Nodes (11): dependencies, com.unity.render-pipelines.core, com.unity.render-pipelines.universal-config, com.unity.shadergraph, description, displayName, _fingerprint, keywords (+3 more)
 
-### Community 7004 - "Community 7004"
-Cohesion: 0.22
-Nodes (6): bool, ComputeBuffer, ComputeShader, float, int, CelestialBodyShape
-
 ### Community 7005 - "Community 7005"
 Cohesion: 0.17
 Nodes (6): RunSettings, UnityEditor.TestTools.TestRunner.CommandLineTest, ITestRunSettings, ITestSettings, PlayerLauncherTestRunSettings, UnityEditor.TestTools.TestRunner
+
+### Community 7006 - "Community 7006"
+Cohesion: 0.17
+Nodes (8): HttpRequestMessage, System.Net.Http, bool, Dictionary, HttpMethod, HttpRequestHeaders, Uri, Version
 
 ### Community 7007 - "Community 7007"
 Cohesion: 0.26
@@ -46629,8 +46682,8 @@ Cohesion: 0.18
 Nodes (7): TestReconstruct, bool, int, PlanetFactory, Player, PlayerController, UIBuildMenu
 
 ### Community 7018 - "Community 7018"
-Cohesion: 0.21
-Nodes (9): TextureArrayControlAttribute, TextureArrayControlView, UnityEditor.ShaderGraph.Drawing.Controls, AbstractMaterialNode, ChangeEvent, Object, PropertyInfo, string (+1 more)
+Cohesion: 0.22
+Nodes (8): EmbeddedTypeAwareTypeComparer, ServiceCollection, ServiceContainer, System.ComponentModel.Design, ServiceCreatorCallback, T, TraceSwitch, Type
 
 ### Community 7019 - "Community 7019"
 Cohesion: 0.27
@@ -46665,8 +46718,8 @@ Cohesion: 0.21
 Nodes (4): SchemaImporterExtensionElementCollection, System.Xml.Serialization.Configuration, ConfigurationElement, SchemaImporterExtensionElement
 
 ### Community 7027 - "Community 7027"
-Cohesion: 0.21
-Nodes (4): System.Net.Configuration, WebRequestModuleElementCollection, ConfigurationElement, WebRequestModuleElement
+Cohesion: 0.18
+Nodes (7): CancellationToken, Exception, QueryOperatorEnumerator, TKey, IntSumAggregationOperator, IntSumAggregationOperatorEnumerator, System.Linq.Parallel
 
 ### Community 7028 - "Community 7028"
 Cohesion: 0.21
@@ -46677,40 +46730,40 @@ Cohesion: 0.21
 Nodes (7): ContextualMenuManager, DropdownMenu, EventBase, IEventHandler, IPanel, ContextualMenuPopulateEvent, UnityEngine.UIElements
 
 ### Community 7030 - "Community 7030"
-Cohesion: 0.20
-Nodes (6): CityLightRenderer, ComputeBuffer, int, Material, Mesh, Shader
+Cohesion: 0.24
+Nodes (6): DecimalConverter, System.ComponentModel, CultureInfo, ITypeDescriptorContext, NumberFormatInfo, Type
 
 ### Community 7031 - "Community 7031"
-Cohesion: 0.33
-Nodes (5): GuidConverter, System.ComponentModel, CultureInfo, ITypeDescriptorContext, Type
+Cohesion: 0.13
+Nodes (6): StringFormat, System.Drawing, CharacterRange, int, IntPtr, StringDigitSubstitute
 
 ### Community 7032 - "Community 7032"
 Cohesion: 0.20
 Nodes (6): ITestAdaptor, ITestResultAdaptor, MenuItem, Callbacks, RunSceneValidation, Tests_17s
 
 ### Community 7033 - "Community 7033"
-Cohesion: 0.21
-Nodes (4): ParameterElementCollection, System.Runtime.Serialization.Configuration, ConfigurationElement, ParameterElement
+Cohesion: 0.13
+Nodes (8): Matrix2MaterialSlot, UnityEditor.ShaderGraph, GenerationMode, List, Matrix4x4, PreviewProperty, PropertyCollector, VisualElement
 
 ### Community 7034 - "Community 7034"
-Cohesion: 0.21
-Nodes (8): Execute(), InstanceDataSystem, UnityEngine.Rendering, AABB, float3, float4x4, NativeList, T
+Cohesion: 0.31
+Nodes (5): bool, Func, Type, ImportType, System.ComponentModel.Composition.ReflectionModel
 
 ### Community 7035 - "Community 7035"
 Cohesion: 0.20
 Nodes (8): GeoJSON.Net.Converters, LineStringEnumerableConverter, JsonConverter, JsonReader, JsonSerializer, JsonWriter, Type, PositionEnumerableConverter
 
 ### Community 7036 - "Community 7036"
-Cohesion: 0.18
-Nodes (8): bool, GUIContent, ReorderableList, SerializedProperty, string, Styles, TMP_SettingsEditor, TMPro.EditorUtilities
+Cohesion: 0.20
+Nodes (5): KeyValueConfigurationCollection, System.Configuration, KeyValueConfigurationElement, ConfigurationElement, ConfigurationPropertyCollection
 
 ### Community 7037 - "Community 7037"
 Cohesion: 0.20
 Nodes (5): ECDsaCng, System.Security.Cryptography, ECDsa, ECKeyXmlFormat, Stream
 
 ### Community 7038 - "Community 7038"
-Cohesion: 0.26
-Nodes (10): CT_PersistentLocalStorage, GameCoreSettings, Dictionary, GetGameCoreSettings(), GetTestSettings(), IsValidMsaAppId(), IsValidPersistentLocalStorage(), IsValidScidAndTitleId() (+2 more)
+Cohesion: 0.17
+Nodes (11): CT_PersistentLocalStorage, GameCoreSettings, Dictionary, GameCorePlatformSetup, GetGameCoreSettings(), GetTestSettings(), IsValidMsaAppId(), IsValidPersistentLocalStorage() (+3 more)
 
 ### Community 7039 - "Community 7039"
 Cohesion: 0.26
@@ -46725,8 +46778,8 @@ Cohesion: 0.30
 Nodes (5): DataRowComparer, System.Data, Array, TElem, TRow
 
 ### Community 7042 - "Community 7042"
-Cohesion: 0.29
-Nodes (8): Common, DisplayName, Flag, Tooltip, UnityEditor.ShaderGraph.ProviderSystem.Hints, IProvider, string, T
+Cohesion: 0.15
+Nodes (9): DesktopInputFieldTests, InputfieldTests, IEnumerator, OneTimeTearDown, SetUp, string, TearDown, UnityPlatform (+1 more)
 
 ### Community 7043 - "Community 7043"
 Cohesion: 0.21
@@ -46773,8 +46826,8 @@ Cohesion: 0.21
 Nodes (4): Debugger, System.Diagnostics, MethodImpl, string
 
 ### Community 7054 - "Community 7054"
-Cohesion: 0.41
-Nodes (3): Exception, StringBuilder, XmlTextWriter
+Cohesion: 0.29
+Nodes (5): Exception, StringBuilder, TraceEventType, TraceRecord, XmlTextWriter
 
 ### Community 7055 - "Community 7055"
 Cohesion: 0.23
@@ -46833,8 +46886,8 @@ Cohesion: 0.17
 Nodes (11): Add a marker and signal for first right footstep, Add a marker and signal for the first left footstep, Add an Audio Source for the left footstep, Add an Audio Source for the right footstep, Add Audio files to your project, Add files, assets, and components, Add markers and signals for additional footsteps, Decide where to add markers (+3 more)
 
 ### Community 7070 - "Community 7070"
-Cohesion: 0.19
-Nodes (11): TextureParameterHelper, Delegate, float, Func, GUIContent, ObjectFieldValidator, Rect, SerializedDataParameter (+3 more)
+Cohesion: 0.27
+Nodes (8): TextureParameterHelper, Delegate, float, Func, ObjectFieldValidator, Rect, SerializedProperty, Type
 
 ### Community 7071 - "Community 7071"
 Cohesion: 0.21
@@ -46889,8 +46942,8 @@ Cohesion: 0.26
 Nodes (8): StencilStateDataDrawer, Styles, UnityEditor.Rendering.Universal, GUIContent, int, List, Rect, SerializedProperty
 
 ### Community 7084 - "Community 7084"
-Cohesion: 0.20
-Nodes (8): ApplicationIdentity, bool, IList, object, PolicyStatement, SecurityElement, ApplicationTrust, System.Security.Policy
+Cohesion: 0.37
+Nodes (11): Allocator, JaggedJobRange, JaggedSpan, JobHandle, NativeList, T, ComputeRanges(), FromSpanWithMaxBatchSize() (+3 more)
 
 ### Community 7085 - "Community 7085"
 Cohesion: 0.18
@@ -46949,12 +47002,12 @@ Cohesion: 0.24
 Nodes (7): Expression3, System.Linq.Expressions, ICollection, object, ParameterExpression, ReadOnlyCollection, TDelegate
 
 ### Community 7099 - "Community 7099"
-Cohesion: 0.29
-Nodes (8): ControlDropdownItem, ControlUsageDropdownItem, DeviceDropdownItem, InputControlDropdownItem, OptionalControlDropdownItem, UnityEngine.InputSystem.Editor, bool, string
+Cohesion: 0.19
+Nodes (9): FunctionRegistry, GenerationMode, IEnumerable, int, ShaderStringBuilder, string, TextureType, TerrainTexture (+1 more)
 
 ### Community 7100 - "Community 7100"
-Cohesion: 0.18
-Nodes (5): AuthenticationHeaderValue, System.Net.Http.Headers, Lexer, List, Token
+Cohesion: 0.27
+Nodes (5): AnimationPlayableAsset, AnimationPlayableAssetUpgrade, UnityEngine.Timeline, int, Quaternion
 
 ### Community 7101 - "Community 7101"
 Cohesion: 0.23
@@ -46997,8 +47050,8 @@ Cohesion: 0.29
 Nodes (8): GetNext(), ParallelSortTests, UnityEngine.Rendering.Tests, int, NativeList, T, Test, RNG
 
 ### Community 7111 - "Community 7111"
-Cohesion: 0.21
-Nodes (8): BurstCompile, Category, Performance, Test, UnsafeStream, Pointers, Unity.Collections.PerformanceTests, UnsafeStreamPerformanceTests
+Cohesion: 0.24
+Nodes (5): BlockFieldDescriptor, OneTimeSetUp, Test, StackTests, UnityEditor.ShaderGraph.UnitTests
 
 ### Community 7112 - "Community 7112"
 Cohesion: 0.17
@@ -47011,6 +47064,10 @@ Nodes (7): InspectableAttribute, PropertyInfo, Texture, ValueChangedCallback, Vi
 ### Community 7114 - "Community 7114"
 Cohesion: 0.23
 Nodes (7): CollectionExtensions, System.Net.Http.Headers, List, NameValueHeaderValue, StringBuilder, T, TSource
+
+### Community 7115 - "Community 7115"
+Cohesion: 0.17
+Nodes (7): bool, ConcreteSlotValueType, List, MaterialSlot, string, SubGraphOutputNode, UnityEditor.ShaderGraph
 
 ### Community 7116 - "Community 7116"
 Cohesion: 0.20
@@ -47037,8 +47094,8 @@ Cohesion: 0.17
 Nodes (9): IMultipartFormSection, byte, string, byte, string, MultipartFormDataSection, UnityEngine.Networking, MultipartFormFileSection (+1 more)
 
 ### Community 7122 - "Community 7122"
-Cohesion: 0.18
-Nodes (5): System.Net.Http.Headers, ViaHeaderValue, Lexer, List, Token
+Cohesion: 0.25
+Nodes (6): IRailZoneServerHelper, IRailZoneServer, RailResult, RailZoneID, IRailZoneServerHelperImpl, rail
 
 ### Community 7124 - "Community 7124"
 Cohesion: 0.18
@@ -47101,8 +47158,8 @@ Cohesion: 0.17
 Nodes (9): IPAddressInformation, bool, IPAddress, MulticastIPAddressInformation, System.Net.NetworkInformation, System.Net.NetworkInformation, SystemIPAddressInformation, System.Net.NetworkInformation (+1 more)
 
 ### Community 7139 - "Community 7139"
-Cohesion: 0.24
-Nodes (6): FunctionType, Query, XPathNodeIterator, XsltContext, BooleanFunctions, MS.Internal.Xml.XPath
+Cohesion: 0.22
+Nodes (7): BufferedGraphics, System.Drawing, Bitmap, Graphics, IntPtr, MonoTODO, Rectangle
 
 ### Community 7140 - "Community 7140"
 Cohesion: 0.18
@@ -47169,8 +47226,8 @@ Cohesion: 0.32
 Nodes (8): Expression, Func, MemberExpression, PropertyInfo, TEntity, TProperty, ExpressionUtils, UnityEngine.InputSystem.Editor
 
 ### Community 7159 - "Community 7159"
-Cohesion: 0.20
-Nodes (5): ProviderSettingsCollection, System.Configuration, ConfigurationElement, ConfigurationPropertyCollection, ProviderSettings
+Cohesion: 0.23
+Nodes (7): Action, CustomFunctionNode, InspectableAttribute, PropertyInfo, VisualElement, CustomFunctionNodePropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 
 ### Community 7160 - "Community 7160"
 Cohesion: 0.20
@@ -47197,8 +47254,8 @@ Cohesion: 0.32
 Nodes (6): GUIContent, Rect, SerializedProperty, ProbeVolumeBakingProcessSettingsDrawer, Styles, UnityEngine.Rendering
 
 ### Community 7166 - "Community 7166"
-Cohesion: 0.17
-Nodes (7): Action, Color, Expandable, Func, GUIContent, Rect, T
+Cohesion: 0.25
+Nodes (4): Action, Color, Expandable, Rect
 
 ### Community 7167 - "Community 7167"
 Cohesion: 0.18
@@ -47217,8 +47274,8 @@ Cohesion: 0.32
 Nodes (6): Bounds, Vector2, Vector3, Volume, ProbeVolumePositioning, UnityEngine.Rendering
 
 ### Community 7171 - "Community 7171"
-Cohesion: 0.21
-Nodes (6): InputActionMap, ISteamControllerAPI, SteamHandle, string, SteamController, UnityEngine.InputSystem.Steam
+Cohesion: 0.24
+Nodes (7): GUIContent, Rect, SerializedProperty, string, VisualElement, SpriteStateDrawer, UnityEditor.UI
 
 ### Community 7172 - "Community 7172"
 Cohesion: 0.21
@@ -47265,8 +47322,8 @@ Cohesion: 0.23
 Nodes (11): Color, float, Vector2, BaseColorProperties, EmissiveColorProperties, SixWayParametricContrastProperties, SixWayRemapRangeProperties, SpecularColorProperties (+3 more)
 
 ### Community 7183 - "Community 7183"
-Cohesion: 0.22
-Nodes (7): BufferedGraphics, System.Drawing, Bitmap, Graphics, IntPtr, MonoTODO, Rectangle
+Cohesion: 0.24
+Nodes (9): ServerDispatchSink, System.Runtime.Remoting.Channels, IServerChannelSink, IMessage, IServerChannelSinkStack, IServerResponseChannelSinkStack, ITransportHeaders, ServerProcessing (+1 more)
 
 ### Community 7184 - "Community 7184"
 Cohesion: 0.17
@@ -47285,12 +47342,12 @@ Cohesion: 0.24
 Nodes (6): ConcretePrecision, GraphPrecision, Precision, string, PrecisionUtil, UnityEditor.ShaderGraph
 
 ### Community 7188 - "Community 7188"
-Cohesion: 0.23
-Nodes (7): Action, CustomFunctionNode, InspectableAttribute, PropertyInfo, VisualElement, CustomFunctionNodePropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
+Cohesion: 0.20
+Nodes (6): List, RailID, RailResult, SpaceWorkID, IRailScreenshot, rail
 
 ### Community 7189 - "Community 7189"
-Cohesion: 0.23
-Nodes (7): Action, InspectableAttribute, PropertyInfo, SubGraphOutputNode, VisualElement, SubGraphOutputNodePropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
+Cohesion: 0.17
+Nodes (7): GUIContent, GUIStyle, RawImage, Rect, SerializedProperty, RawImageEditor, UnityEditor.UI
 
 ### Community 7190 - "Community 7190"
 Cohesion: 0.20
@@ -47305,8 +47362,8 @@ Cohesion: 0.17
 Nodes (8): Dictionary, OneTimeSetUp, OneTimeTearDown, string, Test, ReflectedFunctionTests, UnityEditor.ShaderGraph.ProviderSystem.Tests, ShaderFunction
 
 ### Community 7193 - "Community 7193"
-Cohesion: 0.20
-Nodes (7): EnvironmentImportanceSampling, UnityEngine.PathTracing.Core, CommandBuffer, ComputeShader, EnvironmentCDF, int, Texture
+Cohesion: 0.13
+Nodes (4): List, RailResult, IRailHttpResponse, rail
 
 ### Community 7194 - "Community 7194"
 Cohesion: 0.21
@@ -47345,8 +47402,8 @@ Cohesion: 0.30
 Nodes (6): GlyphRenderMode, MenuItem, Object, CreateFontAssetColor(), TMP_FontAsset_CreationMenu, TMPro
 
 ### Community 7203 - "Community 7203"
-Cohesion: 0.24
-Nodes (9): bool, Dictionary, ITestAdaptor, List, TestRunnerResult, TestRunnerUIFilter, TreeViewItem, TestCount (+1 more)
+Cohesion: 0.29
+Nodes (3): LinqEnumerator, Enumerator, KeyValuePair
 
 ### Community 7204 - "Community 7204"
 Cohesion: 0.24
@@ -47461,8 +47518,8 @@ Cohesion: 0.26
 Nodes (7): MethodImpl, ResourceScope, SecuritySafeCritical, Type, SxSRequirements, System.Runtime.Versioning, VersioningHelper
 
 ### Community 7232 - "Community 7232"
-Cohesion: 0.17
-Nodes (9): IApplicationTrustManager, ActivationContext, ApplicationTrust, SecurityElement, SecurityPermission, string, TrustManagerContext, MonoTrustManager (+1 more)
+Cohesion: 0.06
+Nodes (19): IApplicationTrustManager, SecurityElement, ActivationContext, ApplicationTrust, TrustManagerContext, ActivationContext, ApplicationTrust, SecurityElement (+11 more)
 
 ### Community 7233 - "Community 7233"
 Cohesion: 0.21
@@ -47497,8 +47554,8 @@ Cohesion: 0.23
 Nodes (10): Action, CancellationToken, CancellationTokenRegistration, MethodImpl, Equals(), InternalRegisterWithoutEC(), Register(), System.Threading (+2 more)
 
 ### Community 7241 - "Community 7241"
-Cohesion: 0.14
-Nodes (10): IESEngine, IESMetaData, AssetImportContext, ScriptedImporter, AssetImportContext, string, IESImporter, UnityEditor.Rendering (+2 more)
+Cohesion: 0.22
+Nodes (7): MinimalTextureHelper, SerializableTexture, TextureHelper, UnityEditor.ShaderGraph.Internal, MinimalTextureRef, string, Texture
 
 ### Community 7242 - "Community 7242"
 Cohesion: 0.23
@@ -47516,17 +47573,13 @@ Nodes (9): bool, ExportDefinition, Expression, Func, IDictionary, ImportCardinal
 Cohesion: 0.30
 Nodes (6): ComposablePartDefinition, ExportDefinition, IEnumerable, ImportDefinition, PrimitivesServices, System.ComponentModel.Composition.Primitives
 
-### Community 7246 - "Community 7246"
-Cohesion: 0.18
-Nodes (5): List, PointerEventData, RaycastResult, BaseRaycaster, UnityEngine.EventSystems
-
 ### Community 7247 - "Community 7247"
 Cohesion: 0.21
 Nodes (8): BlockExpression, Expression, ExpressionVisitor, IArgumentProvider, IParameterProvider, ParameterExpression, ExpressionVisitorUtils, System.Dynamic.Utils
 
 ### Community 7248 - "Community 7248"
-Cohesion: 0.11
-Nodes (13): CancellationToken, Exception, QueryOperatorEnumerator, TKey, bool, CancellationToken, int, TIntermediate (+5 more)
+Cohesion: 0.18
+Nodes (7): CancellationToken, Exception, QueryOperatorEnumerator, TKey, DecimalSumAggregationOperator, DecimalSumAggregationOperatorEnumerator, System.Linq.Parallel
 
 ### Community 7249 - "Community 7249"
 Cohesion: 0.18
@@ -47537,12 +47590,12 @@ Cohesion: 0.18
 Nodes (7): CancellationToken, Exception, QueryOperatorEnumerator, TKey, FloatSumAggregationOperator, FloatSumAggregationOperatorEnumerator, System.Linq.Parallel
 
 ### Community 7251 - "Community 7251"
-Cohesion: 0.20
-Nodes (4): RangeHeaderValue, System.Net.Http.Headers, List, string
+Cohesion: 0.22
+Nodes (7): ActionFrame, Compiler, int, Processor, XmlQualifiedName, ApplyTemplatesAction, System.Xml.Xsl.XsltOld
 
 ### Community 7252 - "Community 7252"
-Cohesion: 0.20
-Nodes (5): IndexExpression, System.Linq.Expressions, ExpressionVisitor, IEnumerable, IReadOnlyList
+Cohesion: 0.07
+Nodes (25): IAnalytics, LightDataAnalytic, RenderAssetAnalytic, Renderer2DAnalytics, UnityEditor.Rendering.Universal.Analytics, BuildType, Counter, IAnalytic (+17 more)
 
 ### Community 7253 - "Community 7253"
 Cohesion: 0.18
@@ -47613,8 +47666,8 @@ Cohesion: 0.17
 Nodes (8): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, AsmxGuidDataContract, System.Runtime.Serialization, GuidDataContract, System.Runtime.Serialization
 
 ### Community 7270 - "Community 7270"
-Cohesion: 0.17
-Nodes (8): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, System.Runtime.Serialization, TimeSpanDataContract, System.Runtime.Serialization, XsDurationDataContract
+Cohesion: 0.06
+Nodes (16): Decoder, bool, Encoding, int, bool, int, SqlUnicodeDecoder, SqlUnicodeEncoding (+8 more)
 
 ### Community 7271 - "Community 7271"
 Cohesion: 0.30
@@ -47673,8 +47726,8 @@ Cohesion: 0.26
 Nodes (4): byte, int, System.Net.Mime, WriteStateInfoBase
 
 ### Community 7285 - "Community 7285"
-Cohesion: 0.18
-Nodes (7): bool, SecurityPermission, SerializationInfo, Stream, StreamingContext, System.Net, WebResponse
+Cohesion: 0.15
+Nodes (7): PolicyLevel, SecurityElement, Evidence, IMembershipCondition, System.Security.Policy, ISecurityPolicyEncodable, System.Security
 
 ### Community 7286 - "Community 7286"
 Cohesion: 0.27
@@ -47689,8 +47742,8 @@ Cohesion: 0.26
 Nodes (5): byte, string, X500DistinguishedNameFlags, System.Security.Cryptography.X509Certificates, X500DistinguishedName
 
 ### Community 7289 - "Community 7289"
-Cohesion: 0.17
-Nodes (6): MonoTODO, SecuritySafeCritical, X509Certificate2, X509ChainImpl, System.Security.Cryptography.X509Certificates, X509Chain
+Cohesion: 0.18
+Nodes (6): Color, int, ProfilerMarker, RectInt, BaseShaderInfoStorage, UnityEngine.UIElements.UIR
 
 ### Community 7290 - "Community 7290"
 Cohesion: 0.17
@@ -47725,8 +47778,8 @@ Cohesion: 0.29
 Nodes (6): ClonableStack, List, XPathNavigator, XPathNodeIterator, FollSiblingQuery, MS.Internal.Xml.XPath
 
 ### Community 7298 - "Community 7298"
-Cohesion: 0.23
-Nodes (7): FunctionType, Query, XPathNavigator, XPathNodeIterator, XsltContext, MS.Internal.Xml.XPath, NodeFunctions
+Cohesion: 0.18
+Nodes (10): CLSCompliant, int, GetByteCount(), GetBytes(), GetCharCount(), GetChars(), UTF8Decoder, UTF8Encoder (+2 more)
 
 ### Community 7299 - "Community 7299"
 Cohesion: 0.36
@@ -47821,8 +47874,8 @@ Cohesion: 0.21
 Nodes (7): bool, QilList, QilNode, StringBuilder, XPathQilFactory, QilStrConcatenator, System.Xml.Xsl.Xslt
 
 ### Community 7322 - "Community 7322"
-Cohesion: 0.15
-Nodes (7): GameObject, OneTimeTearDown, SetUp, string, TearDown, Test, ScrollBarClamp
+Cohesion: 0.24
+Nodes (6): bool, SNIHandle, SNIPacket, Stack, System.Data.SqlClient, WritePacketCache
 
 ### Community 7323 - "Community 7323"
 Cohesion: 0.30
@@ -47971,14 +48024,6 @@ Nodes (5): Action, MethodImpl, RequiredByNativeCode, UIElementsRuntimeUtilityNat
 ### Community 7359 - "Community 7359"
 Cohesion: 0.39
 Nodes (5): IntPtr, JobHandle, MethodImpl, JobProcessor, UnityEngine.UIElements.UIR
-
-### Community 7360 - "Community 7360"
-Cohesion: 0.18
-Nodes (8): Action, ActionFrame, bool, Compiler, int, Processor, System.Xml.Xsl.XsltOld, ValueOfAction
-
-### Community 7361 - "Community 7361"
-Cohesion: 0.22
-Nodes (7): CubemapHelper, MinimalCubemapHelper, SerializableCubemap, UnityEditor.ShaderGraph.Internal, Cubemap, MinimalTextureRef, string
 
 ### Community 7362 - "Community 7362"
 Cohesion: 0.23
@@ -48216,10 +48261,6 @@ Nodes (10): Args, CopyBuffer(), Dispatch(), DispatchStage(), DivRoundUp(), Unity
 Cohesion: 0.18
 Nodes (10): Array3, Array4, NativeArray, T, CreateNativeArray(), CreateNativeArray3(), CreateNativeArray4(), UnityEngine.ParticleSystemJobs (+2 more)
 
-### Community 7424 - "Community 7424"
-Cohesion: 0.40
-Nodes (5): Category, Performance, Test, Unity.Collections.PerformanceTests, UnsafeListPerformanceTests
-
 ### Community 7426 - "Community 7426"
 Cohesion: 0.20
 Nodes (6): AudioContainer, AudioData, EObjectType, int, PrefabDesc, Vector3
@@ -48313,8 +48354,8 @@ Cohesion: 0.22
 Nodes (6): MechaMaterial, BinaryReader, BinaryWriter, Color32, int, Material
 
 ### Community 7451 - "Community 7451"
-Cohesion: 0.18
-Nodes (7): NeutronStarHandler, GalaxyData, GameData, Material, MeshFilter, Renderer, StarData
+Cohesion: 0.25
+Nodes (3): BinaryReader, BinaryWriter, Vector3Int
 
 ### Community 7452 - "Community 7452"
 Cohesion: 0.18
@@ -48323,10 +48364,6 @@ Nodes (9): Export(), Import(), InternalUpdate(), SetPCState(), AnimData, BinaryR
 ### Community 7453 - "Community 7453"
 Cohesion: 0.22
 Nodes (5): PlanetAlgorithm12, EVeinType, int, List, Vector3
-
-### Community 7454 - "Community 7454"
-Cohesion: 0.20
-Nodes (4): GUIContent, SerializedProperty, TMP_EditorPanelUI, TMPro.EditorUtilities
 
 ### Community 7455 - "Community 7455"
 Cohesion: 0.18
@@ -48380,10 +48417,6 @@ Nodes (6): TrafficStat, BinaryReader, BinaryWriter, int, long, Stream
 Cohesion: 0.18
 Nodes (6): UIAchievementPopup, float, Image, int, RectTransform, Text
 
-### Community 7468 - "Community 7468"
-Cohesion: 0.17
-Nodes (11): ToCursorMode(), TryGatherData(), UnityEngine.InputSystem.Editor, VirtualMouseInputEditorAnalytic, CursorMode, Editor, Exception, IData (+3 more)
-
 ### Community 7469 - "Community 7469"
 Cohesion: 0.25
 Nodes (4): UIEventReceiver, bool, int, PointerEventData
@@ -48394,7 +48427,7 @@ Nodes (4): UIIllustrationObject, bool, Ray, Vector2
 
 ### Community 7471 - "Community 7471"
 Cohesion: 0.24
-Nodes (6): bool, SNIHandle, SNIPacket, Stack, System.Data.SqlClient, WritePacketCache
+Nodes (7): AncestralNamespaceContextManager, bool, DocPosition, HashAlgorithm, StringBuilder, CanonicalXmlCDataSection, System.Security.Cryptography.Xml
 
 ### Community 7473 - "Community 7473"
 Cohesion: 0.27
@@ -48437,8 +48470,8 @@ Cohesion: 0.22
 Nodes (6): Mono.Security.Authenticode, PrivateKey, bool, int, RSA, uint
 
 ### Community 7483 - "Community 7483"
-Cohesion: 0.19
-Nodes (6): CustomLineCap, System.Drawing.Drawing2D, bool, IntPtr, LineCap, SafeCustomLineCapHandle
+Cohesion: 0.24
+Nodes (7): AncestralNamespaceContextManager, bool, DocPosition, HashAlgorithm, StringBuilder, CanonicalXmlComment, System.Security.Cryptography.Xml
 
 ### Community 7484 - "Community 7484"
 Cohesion: 0.24
@@ -48485,8 +48518,8 @@ Cohesion: 0.24
 Nodes (7): UnityEditor.Rendering.Universal, URPBuildDataValidator, BuildReport, List, StringBuilder, UniversalRenderPipelineAsset, UniversalRenderPipelineGlobalSettings
 
 ### Community 7495 - "Community 7495"
-Cohesion: 0.20
-Nodes (5): KeyValueConfigurationCollection, System.Configuration, KeyValueConfigurationElement, ConfigurationElement, ConfigurationPropertyCollection
+Cohesion: 0.27
+Nodes (4): bool, CelestialBodyGenerator, GeneratorEditor, Object
 
 ### Community 7496 - "Community 7496"
 Cohesion: 0.31
@@ -48501,8 +48534,8 @@ Cohesion: 0.23
 Nodes (9): ASCIIEncoding, CLSCompliant, DecoderNLS, EncoderNLS, ASCIIEncodingSealed, GetByteCount(), GetBytes(), GetCharCount() (+1 more)
 
 ### Community 7499 - "Community 7499"
-Cohesion: 0.22
-Nodes (3): BinaryReader, PrefabDesc, StationComponent
+Cohesion: 0.20
+Nodes (7): CombineNode, UnityEditor.ShaderGraph, MethodInfo, Vector1, Vector2, Vector3, Vector4
 
 ### Community 7500 - "Community 7500"
 Cohesion: 0.29
@@ -48526,7 +48559,7 @@ Nodes (5): CADSerializer, System.Runtime.Remoting.Channels, IMessage, IMethodCal
 
 ### Community 7505 - "Community 7505"
 Cohesion: 0.18
-Nodes (8): CodeArgumentReferenceExpression, System.CodeDom, CodeBinaryOperatorExpression, System.CodeDom, CodeThisReferenceExpression, System.CodeDom, CodeExpression, string
+Nodes (8): CodeArgumentReferenceExpression, System.CodeDom, CodePrimitiveExpression, System.CodeDom, CodePropertySetValueReferenceExpression, System.CodeDom, CodeExpression, string
 
 ### Community 7506 - "Community 7506"
 Cohesion: 0.31
@@ -48650,7 +48683,7 @@ Nodes (5): RuleCache, System.Runtime.CompilerServices, int, object, T
 
 ### Community 7537 - "Community 7537"
 Cohesion: 0.20
-Nodes (5): ICameraHistoryReadAccess, ICameraHistoryWriteAccess, IPerFrameHistoryAccessTracker, UnityEngine.Rendering, Type
+Nodes (5): IndexExpression, System.Linq.Expressions, ExpressionVisitor, IEnumerable, IReadOnlyList
 
 ### Community 7538 - "Community 7538"
 Cohesion: 0.27
@@ -48673,8 +48706,8 @@ Cohesion: 0.25
 Nodes (8): ConcurrentPool, Pool, StringBuilder, ConcurrentStringBuilderPool, QFSW.QC.Pooling, StringBuilderPool, StringBuilderPool, TPool
 
 ### Community 7543 - "Community 7543"
-Cohesion: 0.18
-Nodes (5): BufferedRTHandleSystem, BufferedRTHandleSystem, BufferedRTHandleSystem, BufferedRTHandleSystem, BufferedRTHandleSystem
+Cohesion: 0.25
+Nodes (4): Test, TestRequiresDotsDebugOrCollectionChecks, Unity.Collections.Tests, UnsafeRingQueueTests
 
 ### Community 7544 - "Community 7544"
 Cohesion: 0.20
@@ -48689,8 +48722,8 @@ Cohesion: 0.06
 Nodes (29): AncestralNamespaceContextManager, bool, DocPosition, HashAlgorithm, StringBuilder, AncestralNamespaceContextManager, bool, DocPosition (+21 more)
 
 ### Community 7547 - "Community 7547"
-Cohesion: 0.22
-Nodes (7): MultilineStringConverter, System.ComponentModel, Attribute, CultureInfo, ITypeDescriptorContext, PropertyDescriptorCollection, Type
+Cohesion: 0.20
+Nodes (3): FactoryAudio, int, PlanetData
 
 ### Community 7548 - "Community 7548"
 Cohesion: 0.24
@@ -48769,16 +48802,16 @@ Cohesion: 0.20
 Nodes (5): IClippable, IClipper, UnityEngine.UI, Rect, Vector2
 
 ### Community 7568 - "Community 7568"
-Cohesion: 0.18
-Nodes (9): GetHashCode(), TryAdd(), TryAddSplits(), InstanceOcclusionEventType, BatchCullingViewType, EntityId, OcclusionCullingCommon, OcclusionTest (+1 more)
+Cohesion: 0.33
+Nodes (5): GetHashCode(), TryAdd(), InstanceOcclusionEventType, OcclusionTest, PerCameraInstanceData
 
 ### Community 7569 - "Community 7569"
-Cohesion: 0.22
-Nodes (4): bool, Rect, ImageHook, UnityEngine.UI.Tests
+Cohesion: 0.27
+Nodes (6): ScreenSpaceAmbientOcclusionBlueNoiseResourcesStripper, ScreenSpaceAmbientOcclusionCoreResourcesStripper, UnityEditor.Rendering, ScreenSpaceAmbientOcclusion, ScreenSpaceAmbientOcclusionBlueNoiseResources, ScreenSpaceAmbientOcclusionCoreResources
 
 ### Community 7570 - "Community 7570"
-Cohesion: 0.22
-Nodes (9): BufferHandle, ComputeShader, ContextContainer, RenderGraph, TextureHandle, Vector2, ProbeVolumeDebugPass, UnityEngine.Rendering.Universal (+1 more)
+Cohesion: 0.16
+Nodes (8): IDataAdapter, System.Data, IDbDataAdapter, System.Data, DataSet, DataTable, IDataParameter, SchemaType
 
 ### Community 7571 - "Community 7571"
 Cohesion: 0.18
@@ -48861,8 +48894,8 @@ Cohesion: 0.18
 Nodes (10): Additional Lights, Additional resources, Ambient, Component sub graph reference, Core Models, Debug, Diffuse, General (+2 more)
 
 ### Community 7591 - "Community 7591"
-Cohesion: 0.18
-Nodes (10): Blockout Grid, Clover, Details, Ferns, Grass, Ice, Miscellaneous shaders, Nettle (+2 more)
+Cohesion: 0.33
+Nodes (6): Clover, Details, Ferns, Grass, Nettle, Pebbles
 
 ### Community 7592 - "Community 7592"
 Cohesion: 0.18
@@ -48957,8 +48990,8 @@ Cohesion: 0.24
 Nodes (6): INodeValidationExtension, NodeValidation, UnityEditor.ShaderGraph, AbstractMaterialNode, List, Status
 
 ### Community 7615 - "Community 7615"
-Cohesion: 0.24
-Nodes (6): Query, XPathNavigator, XPathNodeIterator, XsltContext, MergeFilterQuery, MS.Internal.Xml.XPath
+Cohesion: 0.22
+Nodes (5): IEnumerable, List, V, Graph, System.Xml.Xsl.Xslt
 
 ### Community 7616 - "Community 7616"
 Cohesion: 0.24
@@ -48985,8 +49018,8 @@ Cohesion: 0.24
 Nodes (7): SharedPropertyGroupManager, System.EnterpriseServices, IEnumerator, MonoTODO, PropertyLockMode, PropertyReleaseMode, SharedPropertyGroup
 
 ### Community 7622 - "Community 7622"
-Cohesion: 0.18
-Nodes (6): GameObject, SetUp, string, TearDown, Test, ScrollBarTests
+Cohesion: 0.24
+Nodes (6): Color, FalloffType, LightDescriptor, LightHandle, MixedLightingMode, Span
 
 ### Community 7623 - "Community 7623"
 Cohesion: 0.22
@@ -49013,8 +49046,8 @@ Cohesion: 0.25
 Nodes (6): Expression0, System.Linq.Expressions, ICollection, ParameterExpression, ReadOnlyCollection, TDelegate
 
 ### Community 7629 - "Community 7629"
-Cohesion: 0.07
-Nodes (25): IAnalytics, LightDataAnalytic, RenderAssetAnalytic, Renderer2DAnalytics, UnityEditor.Rendering.Universal.Analytics, BuildType, Counter, IAnalytic (+17 more)
+Cohesion: 0.20
+Nodes (8): DebugDisplaySerializer, UNITY_EDITOR, UnityEngine.Rendering, ISerializedDebugDisplaySettings, List, SerializedDictionary, T, Type
 
 ### Community 7630 - "Community 7630"
 Cohesion: 0.18
@@ -49030,7 +49063,7 @@ Nodes (4): Vector3Extensions, Transform, Vector2, Vector3
 
 ### Community 7633 - "Community 7633"
 Cohesion: 0.22
-Nodes (7): Color, InspectableAttribute, PropertyInfo, ValueChangedCallback, VisualElement, ColorPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
+Nodes (4): IRailScreenshotHelper, IRailScreenshot, IRailScreenshotHelperImpl, rail
 
 ### Community 7634 - "Community 7634"
 Cohesion: 0.18
@@ -49058,7 +49091,7 @@ Nodes (10): GeneralNameType, IEnumerable, KeyValuePair, X500DistinguishedName, X
 
 ### Community 7640 - "Community 7640"
 Cohesion: 0.27
-Nodes (7): MethodImpl, SpecialName, Vector2, ConstantForce2D, UnityEngine, PhysicsUpdateBehaviour2D, UnityEngine
+Nodes (4): float3, InstanceHandle, Matrix4x4, UInt64
 
 ### Community 7641 - "Community 7641"
 Cohesion: 0.20
@@ -49149,8 +49182,8 @@ Cohesion: 0.22
 Nodes (9): GetUnityRemoteAPIMethod(), OnPlayModeStateChanged(), SendAnalytic(), SetUnityRemoteGyroEnabled(), SetUnityRemoteGyroUpdateInterval(), UnityEngine.InputSystem.LowLevel, IInputAnalytic, MethodInfo (+1 more)
 
 ### Community 7663 - "Community 7663"
-Cohesion: 0.19
-Nodes (10): Clickable, MeasureMode, NavigationSubmitEvent, string, UxmlTraits, Vector2, Button, UnityEngine.UIElements (+2 more)
+Cohesion: 0.12
+Nodes (7): Color, ModificationScope, ShaderCompilerMessageSeverity, ShaderPort, SlotReference, IShaderNodeView, UnityEditor.ShaderGraph
 
 ### Community 7664 - "Community 7664"
 Cohesion: 0.24
@@ -49209,8 +49242,8 @@ Cohesion: 0.25
 Nodes (5): IPAddressCollection, IntPtr, System.Net.NetworkInformation, Win32IPAddressCollection, Win32_SOCKET_ADDRESS
 
 ### Community 7679 - "Community 7679"
-Cohesion: 0.22
-Nodes (5): NameValueConfigurationCollection, System.Configuration, ConfigurationElement, ConfigurationPropertyCollection, NameValueConfigurationElement
+Cohesion: 0.27
+Nodes (7): Color, string, CollectionFormatter, PreserveAttribute, QFSW.QC, TypeColorFormatter, TypeFormatter
 
 ### Community 7680 - "Community 7680"
 Cohesion: 0.25
@@ -49249,8 +49282,8 @@ Cohesion: 0.29
 Nodes (7): ExcludeFromBurstCompatTesting, NativeHashSet, NativeList, NativeParallelHashSet, T, Extensions, Unity.Collections.NotBurstCompatible
 
 ### Community 7689 - "Community 7689"
-Cohesion: 0.20
-Nodes (3): FactoryAudio, int, PlanetData
+Cohesion: 0.23
+Nodes (8): Allocate(), AllocFromBlob(), Clone(), CopyDataFrom(), Dispose(), UnityEngine.InputSystem, ProfilerMarker, UnmanagedMemory
 
 ### Community 7690 - "Community 7690"
 Cohesion: 0.22
@@ -49312,6 +49345,10 @@ Nodes (5): List, MaterialUpgrader, MenuItem, MaterialUpgraderEditMenus, UnityEdi
 Cohesion: 0.20
 Nodes (7): CommandBuffer, ComputeBuffer, int, ProbeVolumesOptions, ProbeReferenceVolume, ShaderIDs, UnityEngine.Rendering
 
+### Community 7705 - "Community 7705"
+Cohesion: 0.18
+Nodes (6): NameValueWithParametersHeaderValue, System.Net.Http.Headers, Lexer, List, Token, NameValueHeaderValue
+
 ### Community 7706 - "Community 7706"
 Cohesion: 0.24
 Nodes (8): Dictionary, IEnumerable, IStripper, List, Type, Fetcher, RenderPipelineGraphicsSettingsStripper, UnityEngine.Rendering
@@ -49361,12 +49398,12 @@ Cohesion: 0.20
 Nodes (9): bool, float, IEnumerable, VFXNamedExpression, StripTilingMode, CustomUVInputProperties, NormalBendingProperties, UnityEditor.VFX.URP (+1 more)
 
 ### Community 7718 - "Community 7718"
-Cohesion: 0.24
-Nodes (7): AncestralNamespaceContextManager, bool, DocPosition, HashAlgorithm, StringBuilder, CanonicalXmlComment, System.Security.Cryptography.Xml
+Cohesion: 0.29
+Nodes (4): InputActionListener, CallbackArray, InputActionPhase, SuppressMessage
 
 ### Community 7719 - "Community 7719"
-Cohesion: 0.24
-Nodes (8): NativeArray, RuntimeInitializeOnLoadMethod, ShadowEdge, Vector3, EdgeComparer, GetOutsideEdges(), ResetStaticsOnLoad(), UnityEngine.Rendering.Universal
+Cohesion: 0.20
+Nodes (6): AttachToPanelEvent, DetachFromPanelEvent, GeometryChangedEvent, List, RecommendationsGrid, Unity.Multiplayer.Center.Editor
 
 ### Community 7720 - "Community 7720"
 Cohesion: 0.27
@@ -49457,32 +49494,28 @@ Cohesion: 0.22
 Nodes (7): Enum, InspectableAttribute, PropertyInfo, ValueChangedCallback, VisualElement, EnumPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 
 ### Community 7742 - "Community 7742"
-Cohesion: 0.22
-Nodes (7): Gradient, InspectableAttribute, PropertyInfo, ValueChangedCallback, VisualElement, GradientPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
+Cohesion: 0.16
+Nodes (4): HumanBodyBones, EditorBrowsable, NativeMethod, Transform
 
 ### Community 7743 - "Community 7743"
-Cohesion: 0.22
-Nodes (7): InspectableAttribute, PropertyInfo, Texture2DArray, ValueChangedCallback, VisualElement, Texture2DArrayPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
+Cohesion: 0.14
+Nodes (8): IPostBuildCleanup, IEnumerator, string, TearDown, Test, UnitySetUp, PlayModeTests_12s, SceneTests
 
 ### Community 7744 - "Community 7744"
-Cohesion: 0.22
-Nodes (7): InspectableAttribute, PropertyInfo, Texture, ValueChangedCallback, VisualElement, Texture2DPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
+Cohesion: 0.24
+Nodes (9): GrowingArray, IEnumerator, KeyValuePair, TElement, TGroupKey, TOrderKey, KeyAndValuesComparer, OrderedGroupByGrouping (+1 more)
 
 ### Community 7745 - "Community 7745"
-Cohesion: 0.27
-Nodes (3): MailAddress, MailAddressCollection, System.Net.Mail
+Cohesion: 0.22
+Nodes (4): bool, Rect, ImageHook, UnityEngine.UI.Tests
 
 ### Community 7746 - "Community 7746"
 Cohesion: 0.22
 Nodes (7): InspectableAttribute, PropertyInfo, ValueChangedCallback, VisualElement, ToggleDataPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers, ToggleData
 
-### Community 7747 - "Community 7747"
-Cohesion: 0.18
-Nodes (8): Analytic, BuildTargetAnalytic, UnityEditor.Rendering.Analytics, BuildReport, Exception, IData, MenuItem, MustUseReturnValue
-
 ### Community 7748 - "Community 7748"
-Cohesion: 0.24
-Nodes (5): LogNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo, LogBase
+Cohesion: 0.23
+Nodes (5): byte, SecuritySafeCritical, string, Base64Encoding, System.Text
 
 ### Community 7749 - "Community 7749"
 Cohesion: 0.18
@@ -49550,23 +49583,23 @@ Nodes (7): Dictionary, GUIContent, int, Rect, SerializedProperty, TMP_SpriteChar
 
 ### Community 7765 - "Community 7765"
 Cohesion: 0.24
-Nodes (7): GUIContent, Rect, SerializedProperty, string, VisualElement, AnimationTriggersDrawer, UnityEditor.UI
+Nodes (6): EncryptionOptions, IntPtr, uint, SqlAsyncCallbackDelegate, SNILoadHandle, System.Data.SqlClient
 
 ### Community 7766 - "Community 7766"
-Cohesion: 0.20
-Nodes (7): ExternalProcessConnection, AssetImportContext, BakeProgressState, CancellationToken, string, LightBakerWorkerProcessImporter, UnityEditor.PathTracing.LightBakerBridge
+Cohesion: 0.21
+Nodes (7): InstanceMethodCallExpression0, System.Linq.Expressions, Expression, ICollection, IReadOnlyList, MethodCallExpression, ReadOnlyCollection
 
 ### Community 7767 - "Community 7767"
-Cohesion: 0.24
-Nodes (7): GUIContent, Rect, SerializedProperty, string, VisualElement, SpriteStateDrawer, UnityEditor.UI
+Cohesion: 0.20
+Nodes (3): ELogisticStorage, Player, StorageComponent
 
 ### Community 7768 - "Community 7768"
 Cohesion: 0.18
 Nodes (7): VertexHelper, VertexHelper, Shadow, Outline, UnityEngine.UI, Outline, UnityEngine.UI
 
 ### Community 7769 - "Community 7769"
-Cohesion: 0.25
-Nodes (4): Test, TestRequiresDotsDebugOrCollectionChecks, Unity.Collections.Tests, UnsafeRingQueueTests
+Cohesion: 0.21
+Nodes (7): MethodCallExpression1, System.Linq.Expressions, Expression, ICollection, IReadOnlyList, object, ReadOnlyCollection
 
 ### Community 7770 - "Community 7770"
 Cohesion: 0.22
@@ -49601,12 +49634,12 @@ Cohesion: 0.22
 Nodes (8): AncestralNamespaceContextManager, bool, DocPosition, HashAlgorithm, StringBuilder, CanonicalXmlWhitespace, System.Security.Cryptography.Xml, XmlWhitespace
 
 ### Community 7778 - "Community 7778"
-Cohesion: 0.24
-Nodes (5): XmlDeserializationEvents, XmlMapping, XmlReader, XmlSerializerNamespaces, XmlWriter
+Cohesion: 0.26
+Nodes (10): BurstCompile, DllImport, BurstIntrinsicGetCSRFromManaged(), BurstIntrinsicSetCSRFromManaged(), DoGetCSRTrampoline(), DoSetCSRTrampoline(), getcsr_raw(), setcsr_raw() (+2 more)
 
 ### Community 7779 - "Community 7779"
-Cohesion: 0.22
-Nodes (4): ECDiffieHellmanPublicKey, System.Security.Cryptography, byte, ECParameters
+Cohesion: 0.27
+Nodes (4): FieldModel, StructMapping, StructModel, XmlChoiceIdentifierAttribute
 
 ### Community 7780 - "Community 7780"
 Cohesion: 0.22
@@ -49667,6 +49700,10 @@ Nodes (7): ContextCallback, Delegate, ExecutionContext, object, SecurityCritical
 ### Community 7795 - "Community 7795"
 Cohesion: 0.20
 Nodes (7): ComposablePart, ExportDefinition, IEnumerable, ImportDefinition, Tuple, ComposablePartDefinition, System.ComponentModel.Composition.Primitives
+
+### Community 7796 - "Community 7796"
+Cohesion: 0.22
+Nodes (8): BuildConditionConfig, bool, EAddonType, float, int, IntVector2, Vector2, Vector3
 
 ### Community 7797 - "Community 7797"
 Cohesion: 0.18
@@ -49745,24 +49782,20 @@ Cohesion: 0.18
 Nodes (10): BindingFlags, bool, int, object, string, Type, Uri, XmlQualifiedName (+2 more)
 
 ### Community 7817 - "Community 7817"
-Cohesion: 0.24
-Nodes (5): IntPtr, InteropHelp, SteamParamStringArray, Steamworks, UTF8StringHandle
+Cohesion: 0.21
+Nodes (8): BurstCompile, Category, Performance, Test, UnsafeStream, Pointers, Unity.Collections.PerformanceTests, UnsafeStreamPerformanceTests
 
 ### Community 7818 - "Community 7818"
 Cohesion: 0.18
 Nodes (8): bool, byte, DelimittedStreamReader, MimeHeaderReader, MimeHeaders, Stream, MimeMessageReader, System.Xml
-
-### Community 7819 - "Community 7819"
-Cohesion: 0.22
-Nodes (6): ReplaceColorNode, UnityEditor.ShaderGraph, ColorRGB, MethodInfo, Vector1, Vector3
 
 ### Community 7820 - "Community 7820"
 Cohesion: 0.22
 Nodes (8): AncestralNamespaceContextManager, bool, DocPosition, HashAlgorithm, StringBuilder, CanonicalXmlProcessingInstruction, System.Security.Cryptography.Xml, XmlProcessingInstruction
 
 ### Community 7821 - "Community 7821"
-Cohesion: 0.21
-Nodes (7): InstanceMethodCallExpression0, System.Linq.Expressions, Expression, ICollection, IReadOnlyList, MethodCallExpression, ReadOnlyCollection
+Cohesion: 0.18
+Nodes (7): bool, int, List, MeshWriteData, TempAllocator, DetachedAllocator, UnityEngine.UIElements.UIR
 
 ### Community 7822 - "Community 7822"
 Cohesion: 0.22
@@ -49814,7 +49847,7 @@ Nodes (5): int, XPathNavigator, XPathNodeIterator, DescendantOverDescendantQuery
 
 ### Community 7834 - "Community 7834"
 Cohesion: 0.11
-Nodes (14): IPropertyDrawer, InspectableAttribute, PropertyInfo, ValueChangedCallback, VisualElement, IEnumerable, InspectableAttribute, DropdownPropertyDrawer (+6 more)
+Nodes (14): IPropertyDrawer, InspectableAttribute, PropertyInfo, ValueChangedCallback, VisualElement, Cubemap, InspectableAttribute, PropertyInfo (+6 more)
 
 ### Community 7835 - "Community 7835"
 Cohesion: 0.29
@@ -49857,8 +49890,8 @@ Cohesion: 0.24
 Nodes (6): IXmlNamespaceResolver, Type, XmlSchemaType, XmlValueConverter, System.Xml.Schema, XmlBooleanConverter
 
 ### Community 7845 - "Community 7845"
-Cohesion: 0.25
-Nodes (7): Obsolete, SchemaInfo, ValidationEventHandler, XmlNameTable, XmlResolver, XmlSchemaCollection, XmlSchemaCompilationSettings
+Cohesion: 0.19
+Nodes (9): Obsolete, SchemaInfo, TextReader, ValidationEventHandler, XmlNameTable, XmlReader, XmlResolver, XmlSchemaCollection (+1 more)
 
 ### Community 7846 - "Community 7846"
 Cohesion: 0.18
@@ -49881,8 +49914,8 @@ Cohesion: 0.24
 Nodes (4): EnumMapping, XmlArrayItemAttribute, XmlAttributes, XmlSchemaForm
 
 ### Community 7852 - "Community 7852"
-Cohesion: 0.33
-Nodes (5): CreateShaderGraph, UnityEditor.ShaderGraph, Action, Material, MenuItem
+Cohesion: 0.22
+Nodes (6): bool, ComputeBuffer, ComputeShader, float, int, CelestialBodyShape
 
 ### Community 7853 - "Community 7853"
 Cohesion: 0.20
@@ -49957,8 +49990,8 @@ Cohesion: 0.29
 Nodes (10): float2, float2x2, IFormatProvider, MethodImpl, Equals(), GetHashCode(), Rotate(), Scale() (+2 more)
 
 ### Community 7873 - "Community 7873"
-Cohesion: 0.24
-Nodes (6): ActionFrame, Compiler, int, Processor, ForEachAction, System.Xml.Xsl.XsltOld
+Cohesion: 0.29
+Nodes (7): IClientChannelSink, System.Runtime.Remoting.Channels, IClientChannelSinkStack, IClientResponseChannelSinkStack, IMessage, ITransportHeaders, Stream
 
 ### Community 7874 - "Community 7874"
 Cohesion: 0.29
@@ -50064,6 +50097,10 @@ Nodes (7): EventBase, int, List, ObjectPool, VisualElement, PropagationPaths, Un
 Cohesion: 0.24
 Nodes (7): Quaternion, Rotate, Equals(), Initial(), None(), ToQuaternion(), UnityEngine.UIElements
 
+### Community 7902 - "Community 7902"
+Cohesion: 0.22
+Nodes (6): ShowMeshVerts, bool, float, Mesh, Vector3, Vector4
+
 ### Community 7903 - "Community 7903"
 Cohesion: 0.27
 Nodes (9): StyleSelectorPart, Type, CreateClass(), CreateId(), CreatePredicate(), CreatePseudoClass(), CreateType(), CreateWildCard() (+1 more)
@@ -50085,8 +50122,12 @@ Cohesion: 0.24
 Nodes (7): SortedDictionary, Transform, UIDocument, UIDocumentHierarchicalIndex, UIDocumentHierarchicalIndexComparer, UIDocumentHierarchyUtil, UnityEngine.UIElements
 
 ### Community 7908 - "Community 7908"
-Cohesion: 0.20
-Nodes (6): Cubemap, CubemapFace, NativeConditional, Object, RenderTexture, Texture
+Cohesion: 0.22
+Nodes (5): GeoJSON.Net.Geometry, IPosition, GeoJSON.Net.Geometry, Position, DoubleTenDecimalPlaceComparer
+
+### Community 7909 - "Community 7909"
+Cohesion: 0.23
+Nodes (9): Camera, Material, RasterCommandBuffer, RenderGraph, RTHandle, TextureHandle, PassData, UnityEngine.Rendering.Universal (+1 more)
 
 ### Community 7910 - "Community 7910"
 Cohesion: 0.25
@@ -50121,8 +50162,8 @@ Cohesion: 0.27
 Nodes (4): int, T, ResizableArray, UnityMeshSimplifier
 
 ### Community 7918 - "Community 7918"
-Cohesion: 0.25
-Nodes (4): CoreBuildData, UnityEditor.Rendering, BuildTarget, NamedBuildTarget
+Cohesion: 0.14
+Nodes (4): Array, IEnumerator, ReadOnlyList, System.Collections.Specialized
 
 ### Community 7919 - "Community 7919"
 Cohesion: 0.25
@@ -50177,8 +50218,8 @@ Cohesion: 0.31
 Nodes (5): SimpleMeshData, Vector2, Vector3, CubeSphere, Seb.Meshing
 
 ### Community 7932 - "Community 7932"
-Cohesion: 0.18
-Nodes (7): bool, int, List, MeshWriteData, TempAllocator, DetachedAllocator, UnityEngine.UIElements.UIR
+Cohesion: 0.20
+Nodes (4): Lock, Microsoft.Internal, int, ReaderWriterLockSlim
 
 ### Community 7933 - "Community 7933"
 Cohesion: 0.20
@@ -50253,8 +50294,8 @@ Cohesion: 0.29
 Nodes (4): float, Transform, Vector2, CameraController
 
 ### Community 7951 - "Community 7951"
-Cohesion: 0.11
-Nodes (18): dependencies, depth, source, url, version, dependencies, depth, source (+10 more)
+Cohesion: 0.18
+Nodes (11): dependencies, depth, source, url, version, depth, source, url (+3 more)
 
 ### Community 7952 - "Community 7952"
 Cohesion: 0.22
@@ -50316,6 +50357,10 @@ Nodes (3): FreeformPathPresets, UnityEditor.Rendering.Universal, Vector3
 Cohesion: 0.20
 Nodes (8): Choice, QFSW.QC.Actions, Action, Config, ICommandAction, IEnumerable, IEnumerator, T
 
+### Community 7972 - "Community 7972"
+Cohesion: 0.15
+Nodes (3): UIDeepProfilerBottomPanel, UIDeepProfilerInfos, UIDeepProfilerSettings
+
 ### Community 7973 - "Community 7973"
 Cohesion: 0.20
 Nodes (8): QFSW.QC.Actions, ReadValue, Action, ICommandAction, IEnumerator, QuantumParser, ResponseConfig, T
@@ -50330,15 +50375,11 @@ Nodes (7): AdditionalCommandDescriptor, AdditionalCommandCollection, Item, Unity
 
 ### Community 7976 - "Community 7976"
 Cohesion: 0.24
-Nodes (6): HueNode, UnityEditor.ShaderGraph, HueMode, MethodInfo, Vector1, Vector3
-
-### Community 7977 - "Community 7977"
-Cohesion: 0.42
-Nodes (5): ShaderGraphIndexerExtension, UnityEditor.ShaderGraph, CustomObjectIndexer, CustomObjectIndexerTarget, ObjectIndexer
+Nodes (7): GUIContent, Rect, SerializedProperty, string, VisualElement, AnimationTriggersDrawer, UnityEditor.UI
 
 ### Community 7978 - "Community 7978"
-Cohesion: 0.24
-Nodes (4): IRailGlobalAchievement, RailResult, IRailGlobalAchievementImpl, rail
+Cohesion: 0.33
+Nodes (5): GuidConverter, System.ComponentModel, CultureInfo, ITypeDescriptorContext, Type
 
 ### Community 7979 - "Community 7979"
 Cohesion: 0.24
@@ -50381,8 +50422,8 @@ Cohesion: 0.22
 Nodes (7): AudioProto, AudioClip, bool, float, int, IntRange, string
 
 ### Community 7989 - "Community 7989"
-Cohesion: 0.25
-Nodes (5): IRailTextInputHelper, RailResult, RailTextInputWindowOption, IRailTextInputHelperImpl, rail
+Cohesion: 0.22
+Nodes (7): CredentialUse, CredHandle, SafeSspiAuthDataHandle, SCHANNEL_CRED, SEC_WINNT_AUTH_IDENTITY_W, SafeFreeCredentials, System.Net.Security
 
 ### Community 7990 - "Community 7990"
 Cohesion: 0.22
@@ -50431,10 +50472,6 @@ Nodes (5): EditorAction, EditorModify, bool, List, string
 ### Community 8002 - "Community 8002"
 Cohesion: 0.20
 Nodes (6): ExtraInfoComponent, BinaryReader, BinaryWriter, EObjectType, int, string
-
-### Community 8003 - "Community 8003"
-Cohesion: 0.22
-Nodes (5): float, NavMeshAgent, Transform, Vector3, AgentSpeedController
 
 ### Community 8006 - "Community 8006"
 Cohesion: 0.24
@@ -50505,8 +50542,8 @@ Cohesion: 0.24
 Nodes (5): PlanetPoser, AnimationCurve, bool, float, Quaternion
 
 ### Community 8027 - "Community 8027"
-Cohesion: 0.39
-Nodes (5): ITestRunnerListener, PlaymodeTestsController, T, PlaymodeTestsControllerExtensions, UnityEditor.TestTools.TestRunner
+Cohesion: 0.21
+Nodes (6): EventOnTypeBuilderInst, System.Reflection.Emit, EventBuilder, MethodInfo, Type, TypeBuilderInstantiation
 
 ### Community 8028 - "Community 8028"
 Cohesion: 0.31
@@ -50544,13 +50581,17 @@ Nodes (6): TestLocateCosmicMessages, bool, ContextMenu, int, List, string
 Cohesion: 0.20
 Nodes (6): TestLogisticShipRoute, bool, ERemoteRoutePriority, int, long, SupplyDemandPair
 
+### Community 8038 - "Community 8038"
+Cohesion: 0.17
+Nodes (5): IDbCommand, System.Data, CommandBehavior, IDataReader, IDbDataParameter
+
 ### Community 8040 - "Community 8040"
 Cohesion: 0.20
 Nodes (7): UIReferenceSpeedSubTipEntry, float, Image, int, RectTransform, RefSpeedSubTipEntryData, Text
 
 ### Community 8043 - "Community 8043"
-Cohesion: 0.20
-Nodes (3): UITutorialStep, int, UITutorial
+Cohesion: 0.15
+Nodes (3): IRailBrowser, IRailBrowserImpl, rail
 
 ### Community 8044 - "Community 8044"
 Cohesion: 0.20
@@ -50577,8 +50618,8 @@ Cohesion: 0.20
 Nodes (7): BiomeDto, BiomeSettings, PlanetDto, PlanetSettings, DiagnosticGridBiomeLayout, DiagnosticTerrainLayout, PlanetRecipe
 
 ### Community 8050 - "Community 8050"
-Cohesion: 0.27
-Nodes (5): AnimationPlayableAsset, AnimationPlayableAssetUpgrade, UnityEngine.Timeline, int, Quaternion
+Cohesion: 0.22
+Nodes (8): Exception, Func, IDisposable, IObserver, TValue, UnityEngine.InputSystem.Utilities, Where, WhereObservable
 
 ### Community 8051 - "Community 8051"
 Cohesion: 0.33
@@ -50658,7 +50699,7 @@ Nodes (6): RenderTextureUtility, UnityStandardAssets.CinematicEffects, FilterMod
 
 ### Community 8070 - "Community 8070"
 Cohesion: 0.20
-Nodes (6): MarshalByValueComponent, System.ComponentModel, EventHandlerList, ISite, object, Type
+Nodes (6): CommandBuffer, GraphicsBuffer, Texture2D, uint, SamplingResources, UnityEngine.Rendering.Sampling
 
 ### Community 8071 - "Community 8071"
 Cohesion: 0.24
@@ -50691,6 +50732,10 @@ Nodes (7): FieldCollection, Item, UnityEditor.ShaderGraph, FieldDescriptor, IEnu
 ### Community 8078 - "Community 8078"
 Cohesion: 0.24
 Nodes (7): HopperCache, LastHolder, System.Runtime.Collections, bool, Hashtable, int, object
+
+### Community 8080 - "Community 8080"
+Cohesion: 0.20
+Nodes (5): object, IObjectHandle, System.Runtime.Remoting, ObjectHandle, System.Runtime.Remoting
 
 ### Community 8081 - "Community 8081"
 Cohesion: 0.20
@@ -50773,28 +50818,28 @@ Cohesion: 0.29
 Nodes (6): LabelScopeInfo, System.Linq.Expressions.Compiler, Dictionary, LabelInfo, LabelScopeKind, LabelTarget
 
 ### Community 8101 - "Community 8101"
-Cohesion: 0.20
-Nodes (9): InspectorPreviewData, OldGraphDataReadConcretePrecision, UnityEditor.ShaderGraph, bool, ConcretePrecision, Edge, float, Quaternion (+1 more)
+Cohesion: 0.22
+Nodes (6): bool, Query, XPathNodeIterator, XsltContext, BooleanExpr, MS.Internal.Xml.XPath
 
 ### Community 8102 - "Community 8102"
-Cohesion: 0.27
-Nodes (6): ScreenSpaceAmbientOcclusionBlueNoiseResourcesStripper, ScreenSpaceAmbientOcclusionCoreResourcesStripper, UnityEditor.Rendering, ScreenSpaceAmbientOcclusion, ScreenSpaceAmbientOcclusionBlueNoiseResources, ScreenSpaceAmbientOcclusionCoreResources
+Cohesion: 0.20
+Nodes (8): ApplicationIdentity, bool, IList, object, PolicyStatement, SecurityElement, ApplicationTrust, System.Security.Policy
 
 ### Community 8103 - "Community 8103"
-Cohesion: 0.20
-Nodes (4): ProductInfoHeaderValue, System.Net.Http.Headers, Lexer, List
+Cohesion: 0.24
+Nodes (6): HueNode, UnityEditor.ShaderGraph, HueMode, MethodInfo, Vector1, Vector3
 
 ### Community 8104 - "Community 8104"
 Cohesion: 0.20
 Nodes (5): ExtenderProvidedPropertyAttribute, System.ComponentModel, IExtenderProvider, PropertyDescriptor, Type
 
 ### Community 8105 - "Community 8105"
-Cohesion: 0.18
-Nodes (7): IntPtr, SerializationInfo, StreamingContext, Type, void, Pointer, System.Reflection
+Cohesion: 0.17
+Nodes (8): FunctionRegistry, GenerationMode, int, ShaderStageCapability, ShaderStringBuilder, string, SampleElementTextureNode, UnityEditor.ShaderGraph
 
 ### Community 8106 - "Community 8106"
-Cohesion: 0.26
-Nodes (10): BurstCompile, DllImport, BurstIntrinsicGetCSRFromManaged(), BurstIntrinsicSetCSRFromManaged(), DoGetCSRTrampoline(), DoSetCSRTrampoline(), getcsr_raw(), setcsr_raw() (+2 more)
+Cohesion: 0.18
+Nodes (6): Dictionary, IEnumerator, TMP_SpriteAsset, TMP_Text, TMP_SpriteAnimator, TMPro
 
 ### Community 8107 - "Community 8107"
 Cohesion: 0.38
@@ -50857,8 +50902,8 @@ Cohesion: 0.27
 Nodes (6): InputProcessor, UnityEngine.InputSystem, InputControl, TValue, Type, TypeTable
 
 ### Community 8122 - "Community 8122"
-Cohesion: 0.23
-Nodes (9): Camera, Material, RasterCommandBuffer, RenderGraph, RTHandle, TextureHandle, PassData, UnityEngine.Rendering.Universal (+1 more)
+Cohesion: 0.20
+Nodes (10): dependencies, depth, source, version, dependencies, depth, source, version (+2 more)
 
 ### Community 8123 - "Community 8123"
 Cohesion: 0.22
@@ -50889,20 +50934,20 @@ Cohesion: 0.33
 Nodes (5): TextureNode, TextureQuadTree, UnityEngine.PathTracing.Core, int, List
 
 ### Community 8130 - "Community 8130"
-Cohesion: 0.27
-Nodes (6): PropertyItemInternal, System.Drawing.Imaging, int, IntPtr, PropertyItem, short
+Cohesion: 0.38
+Nodes (9): FreeFunction, IntPtr, MethodImpl, Object, PropertyName, ResolveReferenceBindingsInternal(), ResolveReferenceBindingsInternal_Injected(), ResolveReferenceInternal() (+1 more)
 
 ### Community 8131 - "Community 8131"
 Cohesion: 0.31
 Nodes (5): TweenRunner, UnityEngine.UI.CoroutineTween, IEnumerator, MonoBehaviour, T
 
 ### Community 8132 - "Community 8132"
-Cohesion: 0.20
-Nodes (6): CommandBuffer, GraphicsBuffer, Texture2D, uint, SamplingResources, UnityEngine.Rendering.Sampling
+Cohesion: 0.24
+Nodes (10): ActionMapWarning(), ActionWarning(), GetAssetReference(), InputActionAssetVerifier, UnityEngine.InputSystem.Plugins.InputForUI, Verify(), IReportInputActionAssetVerificationErrors, InputActionAsset (+2 more)
 
 ### Community 8133 - "Community 8133"
-Cohesion: 0.28
-Nodes (8): Exception, ParseFailureKind, string, ulong, GetEnumParseException(), SetFailure(), System, ValuesAndNames
+Cohesion: 0.20
+Nodes (6): CityLightRenderer, ComputeBuffer, int, Material, Mesh, Shader
 
 ### Community 8134 - "Community 8134"
 Cohesion: 0.24
@@ -50913,8 +50958,8 @@ Cohesion: 0.24
 Nodes (6): ECDiffieHellmanCngPublicKey, System.Security.Cryptography, ECDiffieHellmanPublicKey, CngKey, CngKeyBlobFormat, SecuritySafeCritical
 
 ### Community 8136 - "Community 8136"
-Cohesion: 0.28
-Nodes (5): RetCode, SQL_HANDLE, StringBuilder, OdbcHandle, System.Data.Odbc
+Cohesion: 0.33
+Nodes (5): System.ComponentModel, TimeSpanConverter, CultureInfo, ITypeDescriptorContext, Type
 
 ### Community 8137 - "Community 8137"
 Cohesion: 0.20
@@ -50941,8 +50986,8 @@ Cohesion: 0.20
 Nodes (6): DataColumn, DataTable, List, DataColumn, DataTable, List
 
 ### Community 8143 - "Community 8143"
-Cohesion: 0.16
-Nodes (10): AsyncCallback, AsyncCompletion, Base64Encoding, byte, IAsyncResult, int, AsyncCallback, InternalWriteBase64TextAsyncResult (+2 more)
+Cohesion: 0.40
+Nodes (5): MethodImpl, SpecialName, Vector3, OcclusionArea, UnityEngine
 
 ### Community 8144 - "Community 8144"
 Cohesion: 0.17
@@ -51010,7 +51055,7 @@ Nodes (4): EventDescriptor, SecurityCritical, TracePayload, TraceChannel
 
 ### Community 8162 - "Community 8162"
 Cohesion: 0.31
-Nodes (3): ProcessThreadCollection, System.Diagnostics, ProcessThread
+Nodes (4): FloatComparer, UnityEngine.Assertions.Comparers, bool, float
 
 ### Community 8163 - "Community 8163"
 Cohesion: 0.24
@@ -51096,6 +51141,10 @@ Nodes (3): AtmosphereEffectEditor, GUIContent, SerializedProperty
 Cohesion: 0.31
 Nodes (5): CoreUtilsTests, UnityEditor.Rendering.Tests, TearDown, Test, TestCase
 
+### Community 8185 - "Community 8185"
+Cohesion: 0.22
+Nodes (6): ActionFrame, bool, Compiler, Processor, MessageAction, System.Xml.Xsl.XsltOld
+
 ### Community 8186 - "Community 8186"
 Cohesion: 0.22
 Nodes (5): GravityBodyEditor, bool, CelestialBody, GravityObject, Vector3
@@ -51113,8 +51162,8 @@ Cohesion: 0.27
 Nodes (5): NoLeaksOnEnterLeavePlaymode, Dictionary, IEnumerator, string, UnityTest
 
 ### Community 8190 - "Community 8190"
-Cohesion: 0.18
-Nodes (4): InputAction, InputActionAsset, IInputMapService, InputMapService
+Cohesion: 0.22
+Nodes (6): DebugGameData, FactoryInfo, bool, int, long, StarInfo
 
 ### Community 8191 - "Community 8191"
 Cohesion: 0.22
@@ -51154,7 +51203,7 @@ Nodes (7): EventDebuggerTrace, EventDebuggerCallTrace, UnityEngine.UIElements, E
 
 ### Community 8200 - "Community 8200"
 Cohesion: 0.22
-Nodes (8): LODModelDesc, bool, float, int, Material, Mesh, MeshDataAsset, string
+Nodes (7): DebugMonitor, DebugMonitorSetting, DebugSpeakerSetting, bool, int, MonitorInfos, SpeakerInfos
 
 ### Community 8201 - "Community 8201"
 Cohesion: 0.24
@@ -51165,8 +51214,8 @@ Cohesion: 0.20
 Nodes (8): Lerp, UnityEngine.UIElements.Experimental, Color, Quaternion, Rect, StyleValues, Vector2, Vector3
 
 ### Community 8203 - "Community 8203"
-Cohesion: 0.22
-Nodes (5): TestMeshData, Material, Mesh, MeshData, string
+Cohesion: 0.18
+Nodes (8): Action, ActionFrame, bool, Compiler, int, Processor, System.Xml.Xsl.XsltOld, ValueOfAction
 
 ### Community 8204 - "Community 8204"
 Cohesion: 0.20
@@ -51253,8 +51302,8 @@ Cohesion: 0.27
 Nodes (9): GPUResidentDrawer, IsGPUResidentDrawerSupportedBySRP(), IsProjectSupported(), LogMessage(), Strings, UnityEngine.Rendering, GPUResidentDrawerSettings, LogType (+1 more)
 
 ### Community 8225 - "Community 8225"
-Cohesion: 0.22
-Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, IntDataContract, System.Runtime.Serialization
+Cohesion: 0.25
+Nodes (7): LogisticsPairGizmoTest, Color, double, float, LogisticsPairGizmo, Material, Texture
 
 ### Community 8226 - "Community 8226"
 Cohesion: 0.36
@@ -51265,24 +51314,28 @@ Cohesion: 0.20
 Nodes (4): RawImageTestHook, bool, RawImage, TestRawImage
 
 ### Community 8228 - "Community 8228"
-Cohesion: 0.24
-Nodes (8): int, IRasterRenderGraphBuilder, ProfilingSampler, RTClearFlags, ClearTargetsPass, PassData, RenderGraphUtils, UnityEngine.Rendering.Universal
+Cohesion: 0.15
+Nodes (8): Description, GameObject, IEnumerator, SetUp, string, TearDown, UnityTest, ScrollRectScale
 
 ### Community 8229 - "Community 8229"
 Cohesion: 0.22
 Nodes (7): LightmappingShaderProperties, LightmapTextureArrayProperty, UnityEditor.ShaderGraph.Internal, Action, GenerationMode, HLSLProperty, Texture2DArrayShaderProperty
 
 ### Community 8230 - "Community 8230"
-Cohesion: 0.36
-Nodes (4): ScriptableObject, T, Type, StateMachineBehaviour
+Cohesion: 0.22
+Nodes (6): bool, Dictionary, MeshGenerationContext, ProfilerMarker, ImmediateModeElement, UnityEngine.UIElements
 
 ### Community 8231 - "Community 8231"
 Cohesion: 0.22
-Nodes (7): MinimalTextureHelper, SerializableTexture, TextureHelper, UnityEditor.ShaderGraph.Internal, MinimalTextureRef, string, Texture
+Nodes (7): DefaultVolumeProfileSettingsPropertyDrawer, UniversalRenderPipeline, URPDefaultVolumeProfileSettings, VisualElement, UnityEditor.Rendering.Universal, URPDefaultVolumeProfileSettingsContextMenu, URPDefaultVolumeProfileSettingsPropertyDrawer
 
 ### Community 8232 - "Community 8232"
-Cohesion: 0.22
-Nodes (7): IRailLeaderboardHelper, IRailLeaderboard, LeaderboardDisplayType, LeaderboardSortType, RailResult, IRailLeaderboardHelperImpl, rail
+Cohesion: 0.24
+Nodes (8): Delegate, object, SerializationInfo, StreamingContext, string, DelegateEntry, DelegateSerializationHolder, System
+
+### Community 8233 - "Community 8233"
+Cohesion: 0.25
+Nodes (5): MethodInfo, Vector3, NormalBlendNode, UnityEditor.ShaderGraph, NormalBlendMode
 
 ### Community 8234 - "Community 8234"
 Cohesion: 0.27
@@ -51302,7 +51355,7 @@ Nodes (5): CancellationHelper, System.Net.Http, CancellationToken, Exception, st
 
 ### Community 8238 - "Community 8238"
 Cohesion: 0.22
-Nodes (5): float, Rigidbody, SimpleBallController, Transform, Vector3
+Nodes (5): TestMeshData, Material, Mesh, MeshData, string
 
 ### Community 8239 - "Community 8239"
 Cohesion: 0.20
@@ -51313,16 +51366,12 @@ Cohesion: 0.22
 Nodes (7): IAchievementDescription, AchievementDescription, UnityEngine.SocialPlatforms.Impl, bool, int, string, Texture2D
 
 ### Community 8241 - "Community 8241"
-Cohesion: 0.22
+Cohesion: 0.20
 Nodes (3): IFileWatcher, NullFileWatcher, System.IO
 
 ### Community 8242 - "Community 8242"
 Cohesion: 0.31
 Nodes (5): PostEffectsHelper, UnityStandardAssets.ImageEffects, Camera, Material, RenderTexture
-
-### Community 8243 - "Community 8243"
-Cohesion: 0.22
-Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, ObjectDataContract, System.Runtime.Serialization
 
 ### Community 8244 - "Community 8244"
 Cohesion: 0.24
@@ -51376,17 +51425,13 @@ Nodes (5): ReadLinesIterator, System.IO, Encoding, StreamReader, string
 Cohesion: 0.24
 Nodes (6): IQcSerializer, Func, QuantumTheme, Type, GenericQcSerializer, QFSW.QC
 
-### Community 8257 - "Community 8257"
-Cohesion: 0.31
-Nodes (6): Dictionary, IEnumerable, IProvider, List, T, HintRegistry
-
 ### Community 8258 - "Community 8258"
-Cohesion: 0.22
-Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, System.Runtime.Serialization, UriDataContract
+Cohesion: 0.23
+Nodes (5): TElement, TKey, QueryOperatorClassicEnumerator, QueryOperatorEnumerator, System.Linq.Parallel
 
 ### Community 8259 - "Community 8259"
-Cohesion: 0.22
-Nodes (6): bool, Dictionary, int, List, SafeSocketHandle, System.Net.Sockets
+Cohesion: 0.20
+Nodes (7): GUIContent, InputControlPathEditor, InputControlPickerState, Rect, SerializedProperty, InputControlPathDrawer, UnityEngine.InputSystem.Editor
 
 ### Community 8260 - "Community 8260"
 Cohesion: 0.20
@@ -51409,12 +51454,12 @@ Cohesion: 0.20
 Nodes (5): NativeArrayOptions, ParseError, FixedStringUtils, IUTF8Bytes, Unity.Collections
 
 ### Community 8265 - "Community 8265"
-Cohesion: 0.20
-Nodes (7): GameObject, IPropertyCollector, Playable, PlayableDirector, PlayableGraph, TextTrack, Timeline.Samples
+Cohesion: 0.22
+Nodes (3): SeekOrigin, SqlFileStream, System.Data.SqlTypes
 
 ### Community 8266 - "Community 8266"
-Cohesion: 0.24
-Nodes (7): AncestralNamespaceContextManager, bool, DocPosition, HashAlgorithm, StringBuilder, CanonicalXmlCDataSection, System.Security.Cryptography.Xml
+Cohesion: 0.33
+Nodes (5): Comparer, System.Collections.Generic, Comparison, SecuritySafeCritical, T
 
 ### Community 8267 - "Community 8267"
 Cohesion: 0.27
@@ -51452,25 +51497,21 @@ Nodes (8): BindingContext, BindingResult, string, PackageInfoBinding, PackageInf
 Cohesion: 0.36
 Nodes (5): GUIContent, SerializedProperty, VisualElement, UnityEditor.Rendering, VrsLutDrawer
 
-### Community 8276 - "Community 8276"
-Cohesion: 0.20
-Nodes (7): EntityId, MenuItem, string, Texture2D, DoCreateUnifiedRayTracingShader, ShaderTemplates, UnityEditor.Rendering.UnifiedRayTracing
-
 ### Community 8277 - "Community 8277"
 Cohesion: 0.22
 Nodes (6): GUIContent, SerializedDataParameter, Type, UnityEditor.Rendering, VolumeParameterDrawer, VolumeParameterDrawerAttribute
 
 ### Community 8278 - "Community 8278"
-Cohesion: 0.20
-Nodes (5): char, int, string, CharEnumerator, System
+Cohesion: 0.18
+Nodes (8): Analytic, BuildTargetAnalytic, UnityEditor.Rendering.Analytics, BuildReport, Exception, IData, MenuItem, MustUseReturnValue
 
 ### Community 8279 - "Community 8279"
 Cohesion: 0.22
-Nodes (7): CredentialUse, CredHandle, SafeSspiAuthDataHandle, SCHANNEL_CRED, SEC_WINNT_AUTH_IDENTITY_W, SafeFreeCredentials, System.Net.Security
+Nodes (7): GUIContent, Rect, SearchContext, SerializedProperty, InputActionReferencePropertyDrawer, UnityEngine.InputSystem.Editor, Type, GUIContent, Object>
 
 ### Community 8280 - "Community 8280"
-Cohesion: 0.40
-Nodes (5): MethodImpl, SpecialName, Vector3, OcclusionArea, UnityEngine
+Cohesion: 0.33
+Nodes (5): CreateShaderGraph, UnityEditor.ShaderGraph, Action, Material, MenuItem
 
 ### Community 8281 - "Community 8281"
 Cohesion: 0.20
@@ -51479,6 +51520,10 @@ Nodes (6): DynamicArray, int, IRenderGraphResourcePool, RenderGraphResourcesData
 ### Community 8282 - "Community 8282"
 Cohesion: 0.25
 Nodes (7): CameraSelector, Field<int>, Field<Object>, Action, EnumField, Object, SettingsPanel
+
+### Community 8283 - "Community 8283"
+Cohesion: 0.17
+Nodes (11): ToCursorMode(), TryGatherData(), UnityEngine.InputSystem.Editor, VirtualMouseInputEditorAnalytic, CursorMode, Editor, Exception, IData (+3 more)
 
 ### Community 8284 - "Community 8284"
 Cohesion: 0.20
@@ -51537,8 +51582,8 @@ Cohesion: 0.24
 Nodes (6): Shader, ShaderPathID, string, GetShaderGUID(), ShaderUtils, UnityEngine.Rendering.Universal
 
 ### Community 8298 - "Community 8298"
-Cohesion: 0.24
-Nodes (6): UnityEditor.Rendering.Universal, URPPreprocessBuild, BuildReport, List, UniversalRenderPipelineAsset, URPBuildData
+Cohesion: 0.22
+Nodes (6): ColorRGB, MethodInfo, Vector2, Vector3, CheckerboardNode, UnityEditor.ShaderGraph
 
 ### Community 8299 - "Community 8299"
 Cohesion: 0.24
@@ -51557,12 +51602,16 @@ Cohesion: 0.24
 Nodes (6): InspectableAttribute, PropertyInfo, ValueChangedCallback, VisualElement, FloatPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 
 ### Community 8303 - "Community 8303"
-Cohesion: 0.24
-Nodes (6): InspectableAttribute, PropertyInfo, ValueChangedCallback, VisualElement, IntegerPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
+Cohesion: 0.28
+Nodes (3): Awaitable, CancellationToken, ILoadingOverlay
 
 ### Community 8304 - "Community 8304"
 Cohesion: 0.27
 Nodes (6): InspectableAttribute, PropertyInfo, VisualElement, SampleVirtualTextureNodePropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers, SampleVirtualTextureNode
+
+### Community 8305 - "Community 8305"
+Cohesion: 0.22
+Nodes (5): bool, int, PipeStream, ReadWriteCompletionSource, System.IO.Pipes
 
 ### Community 8306 - "Community 8306"
 Cohesion: 0.22
@@ -51661,8 +51710,8 @@ Cohesion: 0.20
 Nodes (6): GameObject, SetUp, Slider, TearDown, Test, SliderTests
 
 ### Community 8330 - "Community 8330"
-Cohesion: 0.22
-Nodes (6): DebugGameData, FactoryInfo, bool, int, long, StarInfo
+Cohesion: 0.29
+Nodes (5): Exception, MaterialDescriptor, MaterialHandle, Object, UVChannel
 
 ### Community 8331 - "Community 8331"
 Cohesion: 0.27
@@ -51705,8 +51754,8 @@ Cohesion: 0.20
 Nodes (7): GrainModel, int, Material, RenderTexture, GrainComponent, Uniforms, UnityEngine.PostProcessing
 
 ### Community 8342 - "Community 8342"
-Cohesion: 0.25
-Nodes (5): UnityEditor.ShaderGraph, WhiteBalanceNode, MethodInfo, Vector1, Vector3
+Cohesion: 0.18
+Nodes (7): HttpResponseMessage, System.Net.Http, HttpResponseHeaders, bool, HttpStatusCode, string, Version
 
 ### Community 8343 - "Community 8343"
 Cohesion: 0.24
@@ -51792,6 +51841,10 @@ Nodes (6): Export, ExportDefinition, IEnumerable, ImportDefinition, ComposablePa
 Cohesion: 0.33
 Nodes (6): int, TKey, TValue, CacheDict, Entry, System.Dynamic.Utils
 
+### Community 8364 - "Community 8364"
+Cohesion: 0.29
+Nodes (6): IMessage, IMessageCtrl, MarshalByRefObject, RealProxy, StackBuilderSink, System.Runtime.Remoting.Messaging
+
 ### Community 8365 - "Community 8365"
 Cohesion: 0.24
 Nodes (4): Queue, T, SynchronousChannel, System.Linq.Parallel
@@ -51837,12 +51890,16 @@ Cohesion: 0.24
 Nodes (6): Array, IEnumerator, SignerInfo, SignerInfoCollection, System.Security.Cryptography.Pkcs, SignerInfoEnumerator
 
 ### Community 8376 - "Community 8376"
-Cohesion: 0.32
-Nodes (4): LicenseContext, System.ComponentModel, Assembly, Type
+Cohesion: 0.24
+Nodes (6): IntPtr, long, MemoryMappedFileAccess, MemoryMappedView, System.IO.MemoryMappedFiles, SafeMemoryMappedViewHandle
+
+### Community 8377 - "Community 8377"
+Cohesion: 0.17
+Nodes (8): BufferedGraphics, BufferedGraphicsContext, System.Drawing, Graphics, IntPtr, MonoTODO, Rectangle, Size
 
 ### Community 8378 - "Community 8378"
-Cohesion: 0.22
-Nodes (6): MS.Internal.Xml.Cache, XPathDocumentElementDescendantIterator, bool, string, XPathDocumentNavigator, XPathNodeIterator
+Cohesion: 0.20
+Nodes (7): XmlDictionaryString, XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, QNameDataContract, System.Runtime.Serialization
 
 ### Community 8379 - "Community 8379"
 Cohesion: 0.47
@@ -51878,7 +51935,7 @@ Nodes (6): string, X509Certificate2, X509ChainStatus, X509ChainStatusFlags, Syst
 
 ### Community 8387 - "Community 8387"
 Cohesion: 0.22
-Nodes (6): MS.Internal.Xml.Cache, XPathDocumentKindDescendantIterator, bool, XPathDocumentNavigator, XPathNodeIterator, XPathNodeType
+Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, ByteArrayDataContract, System.Runtime.Serialization
 
 ### Community 8388 - "Community 8388"
 Cohesion: 0.27
@@ -51905,16 +51962,16 @@ Cohesion: 0.24
 Nodes (4): int, uint, BitStack, System.Xml
 
 ### Community 8394 - "Community 8394"
-Cohesion: 0.31
-Nodes (6): CompositionError, System.ComponentModel.Composition, CompositionErrorId, Exception, ICompositionElement, string
+Cohesion: 0.18
+Nodes (7): ClaimsIdentity, string, string, HttpListenerBasicIdentity, System.Net, GenericIdentity, System.Security.Principal
 
 ### Community 8395 - "Community 8395"
 Cohesion: 0.24
 Nodes (6): bool, DoubleLinkAxis, ForwardAxis, int, AxisElement, System.Xml.Schema
 
 ### Community 8396 - "Community 8396"
-Cohesion: 0.24
-Nodes (6): BitSet, Positions, SymbolsDictionary, SyntaxTreeNode, ChoiceNode, System.Xml.Schema
+Cohesion: 0.38
+Nodes (4): BitSet, SyntaxTreeNode, ChoiceNode, System.Xml.Schema
 
 ### Community 8397 - "Community 8397"
 Cohesion: 0.24
@@ -51949,8 +52006,8 @@ Cohesion: 0.24
 Nodes (7): ArrayModel, Hashtable, Type, TypeModel, TypeScope, ModelScope, System.Xml.Serialization
 
 ### Community 8405 - "Community 8405"
-Cohesion: 0.25
-Nodes (6): DistortTunnelPass_Distort, ContextContainer, Material, ProfilingSampler, RenderGraph, RTHandle
+Cohesion: 0.22
+Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, FloatDataContract, System.Runtime.Serialization
 
 ### Community 8406 - "Community 8406"
 Cohesion: 0.31
@@ -52001,8 +52058,8 @@ Cohesion: 0.27
 Nodes (6): ActionFrame, int, Processor, TextEvent, AvtEvent, System.Xml.Xsl.XsltOld
 
 ### Community 8419 - "Community 8419"
-Cohesion: 0.22
-Nodes (6): ActionFrame, bool, Compiler, Processor, MessageAction, System.Xml.Xsl.XsltOld
+Cohesion: 0.20
+Nodes (5): CameraPoser, DebugKeyCode, float, int, Transform
 
 ### Community 8420 - "Community 8420"
 Cohesion: 0.24
@@ -52081,8 +52138,8 @@ Cohesion: 0.24
 Nodes (9): Color32, IFormatProvider, MethodImpl, VisibleToOtherModules, InternalEquals(), Lerp(), LerpUnclamped(), ToString() (+1 more)
 
 ### Community 8439 - "Community 8439"
-Cohesion: 0.38
-Nodes (9): FreeFunction, IntPtr, MethodImpl, Object, PropertyName, ResolveReferenceBindingsInternal(), ResolveReferenceBindingsInternal_Injected(), ResolveReferenceInternal() (+1 more)
+Cohesion: 0.25
+Nodes (6): EncoderParameterValueType, EncoderParameter, System.Drawing.Imaging, Guid, int, IntPtr
 
 ### Community 8440 - "Community 8440"
 Cohesion: 0.20
@@ -52097,8 +52154,8 @@ Cohesion: 0.22
 Nodes (7): Object, PlayableBinding, PlayableGraph, PlayableOutput, Type, ScriptPlayableBinding, UnityEngine.Playables
 
 ### Community 8444 - "Community 8444"
-Cohesion: 0.22
-Nodes (6): AbstractShaderGraphDataExtension, UnityEditor.ShaderGraph, Action, GraphData, List, VisualElement
+Cohesion: 0.25
+Nodes (4): float, InputControl, NormalizeProcessor, UnityEngine.InputSystem.Processors
 
 ### Community 8445 - "Community 8445"
 Cohesion: 0.27
@@ -52182,7 +52239,7 @@ Nodes (4): IGroupBox, IGroupBoxOption, IGroupManager, UnityEngine.UIElements
 
 ### Community 8465 - "Community 8465"
 Cohesion: 0.22
-Nodes (6): bool, Dictionary, MeshGenerationContext, ProfilerMarker, ImmediateModeElement, UnityEngine.UIElements
+Nodes (6): DynamicDimensionVector, MethodInfo, Vector1, Vector2, PolygonNode, UnityEditor.ShaderGraph
 
 ### Community 8466 - "Community 8466"
 Cohesion: 0.29
@@ -52385,8 +52442,8 @@ Cohesion: 0.24
 Nodes (9): NoiseSettings, RidgidNoiseSettings, SimpleNoiseSettings, FilterType, float, int, RidgidNoiseSettings, SimpleNoiseSettings (+1 more)
 
 ### Community 8517 - "Community 8517"
-Cohesion: 0.29
-Nodes (3): BindingFlags, FieldInfo, FieldToken
+Cohesion: 0.31
+Nodes (4): Material, Shader, UnityEditor.Rendering.Universal.ShaderGUI, UnlitShader
 
 ### Community 8518 - "Community 8518"
 Cohesion: 0.27
@@ -52421,8 +52478,8 @@ Cohesion: 0.24
 Nodes (9): FilterType, float, int, RidgidNoiseSettings, SimpleNoiseSettings, Vector3, NoiseSettings, RidgidNoiseSettings (+1 more)
 
 ### Community 8526 - "Community 8526"
-Cohesion: 0.25
-Nodes (6): EncoderParameterValueType, EncoderParameter, System.Drawing.Imaging, Guid, int, IntPtr
+Cohesion: 0.18
+Nodes (8): System.ComponentModel, Win32Exception, DllImport, int, IntPtr, SecurityPermission, SerializationInfo, StreamingContext
 
 ### Community 8527 - "Community 8527"
 Cohesion: 0.27
@@ -52461,8 +52518,8 @@ Cohesion: 0.24
 Nodes (6): IEnumerable, IQcSuggestion, SuggestionContext, SuggestorOptions, QFSW.QC.Suggestors, SceneNameSuggestor
 
 ### Community 8536 - "Community 8536"
-Cohesion: 0.27
-Nodes (7): Color, string, CollectionFormatter, PreserveAttribute, QFSW.QC, TypeColorFormatter, TypeFormatter
+Cohesion: 0.20
+Nodes (8): ContextForm, ApplicationIdentity, bool, MonoTODO, SerializationInfo, StreamingContext, ActivationContext, System
 
 ### Community 8537 - "Community 8537"
 Cohesion: 0.20
@@ -52509,16 +52566,16 @@ Cohesion: 0.27
 Nodes (9): bool, int, Readme, Section, Section, string, Texture2D, ReadmeLink (+1 more)
 
 ### Community 8548 - "Community 8548"
-Cohesion: 0.22
-Nodes (8): BuildConditionConfig, bool, EAddonType, float, int, IntVector2, Vector2, Vector3
+Cohesion: 0.20
+Nodes (6): Cubemap, CubemapFace, NativeConditional, Object, RenderTexture, Texture
 
 ### Community 8549 - "Community 8549"
 Cohesion: 0.20
 Nodes (10): dependencies, depth, source, version, dependencies, depth, source, version (+2 more)
 
 ### Community 8550 - "Community 8550"
-Cohesion: 0.20
-Nodes (10): dependencies, depth, source, version, dependencies, depth, source, version (+2 more)
+Cohesion: 0.27
+Nodes (5): BuiltInToURP2DRenderSettingsConverter, UnityEditor.Rendering.Universal, Renderer2DData, RenderPipelineAsset, ScriptableRendererData
 
 ### Community 8551 - "Community 8551"
 Cohesion: 0.20
@@ -52553,8 +52610,8 @@ Cohesion: 0.31
 Nodes (3): System.Xml.Serialization, XmlAnyElementAttributes, XmlAnyElementAttribute
 
 ### Community 8559 - "Community 8559"
-Cohesion: 0.25
-Nodes (5): CounterData, SecurityCritical, SpecialName, CounterSetInstanceCounterDataSet, System.Diagnostics.PerformanceData
+Cohesion: 0.22
+Nodes (7): PhotoshopAssetsUpgrader, UnityEditor.Rendering.Universal, IRenderPipelineConverter, Action, IRenderPipelineConverterItem, List, Status
 
 ### Community 8560 - "Community 8560"
 Cohesion: 0.20
@@ -52574,19 +52631,19 @@ Nodes (5): GetKey, QFSW.QC.Actions, Action, ActionContext, KeyCode
 
 ### Community 8565 - "Community 8565"
 Cohesion: 0.22
-Nodes (6): ExtendedProtectionPolicy, System.Security.Authentication.ExtendedProtection, MonoTODO, SecurityPermission, SerializationInfo, StreamingContext
+Nodes (4): NamedPipeServerStream, ConnectionCompletionSource, System.IO.Pipes, VoidResult
 
 ### Community 8566 - "Community 8566"
-Cohesion: 0.22
-Nodes (6): TestEnemyGenerate, bool, float, int, Quaternion, VectorLF3
+Cohesion: 0.31
+Nodes (4): Compiler, XmlQualifiedName, AttributeSetAction, System.Xml.Xsl.XsltOld
 
 ### Community 8567 - "Community 8567"
 Cohesion: 0.33
 Nodes (5): AddInputModuleComponentDelegate, InputModuleComponentFactory, UnityEditor.EventSystems, BaseInputModule, GameObject
 
 ### Community 8568 - "Community 8568"
-Cohesion: 0.28
-Nodes (3): Awaitable, CancellationToken, ILoadingOverlay
+Cohesion: 0.22
+Nodes (6): ReplaceColorNode, UnityEditor.ShaderGraph, ColorRGB, MethodInfo, Vector1, Vector3
 
 ### Community 8569 - "Community 8569"
 Cohesion: 0.22
@@ -52632,6 +52689,14 @@ Nodes (6): TestResultAdaptor, UnityEditor.TestTools.TestRunner.Api, ITestResultA
 Cohesion: 0.28
 Nodes (5): Architecture, RuntimeInformation, System.Runtime.InteropServices, MethodImpl, OSPlatform
 
+### Community 8580 - "Community 8580"
+Cohesion: 0.25
+Nodes (5): SaturationNode, UnityEditor.ShaderGraph, MethodInfo, Vector1, Vector3
+
+### Community 8582 - "Community 8582"
+Cohesion: 0.21
+Nodes (9): CubemapControlAttribute, CubemapControlView, UnityEditor.ShaderGraph.Drawing.Controls, AbstractMaterialNode, ChangeEvent, Object, PropertyInfo, string (+1 more)
+
 ### Community 8588 - "Community 8588"
 Cohesion: 0.22
 Nodes (6): AsnEncodingRuleAttribute, System.Security.Cryptography.Asn1, DefaultValueAttribute, System.Security.Cryptography.Asn1, OptionalValueAttribute, System.Security.Cryptography.Asn1
@@ -52665,20 +52730,20 @@ Cohesion: 0.31
 Nodes (4): BlueprintBookHeader, EIconLayout, int, string
 
 ### Community 8601 - "Community 8601"
-Cohesion: 0.20
-Nodes (8): BuildFlags, CommandBuffer, GraphicsBuffer, IRayTracingAccelStruct, RayTracingContext, UVMesh, UnityEngine.PathTracing.Integration, UVAccelerationStructure
+Cohesion: 0.21
+Nodes (9): EnumControlAttribute, EnumControlView, UnityEditor.ShaderGraph.Drawing.Controls, AbstractMaterialNode, ChangeEvent, Enum, PropertyInfo, string (+1 more)
 
 ### Community 8602 - "Community 8602"
 Cohesion: 0.25
 Nodes (8): ChartPresets, Presets, EUsage, int, Sprite, string, UIChart, Vector2Int
 
 ### Community 8603 - "Community 8603"
-Cohesion: 0.22
-Nodes (8): TestPlanetIconCapture, bool, Camera, float, int, long, Renderer, Vector3
+Cohesion: 0.21
+Nodes (8): Execute(), InstanceDataSystem, UnityEngine.Rendering, AABB, float3, float4x4, NativeList, T
 
 ### Community 8604 - "Community 8604"
-Cohesion: 0.33
-Nodes (5): Comparer, System.Collections.Generic, Comparison, SecuritySafeCritical, T
+Cohesion: 0.22
+Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, SignedByteDataContract, System.Runtime.Serialization
 
 ### Community 8608 - "Community 8608"
 Cohesion: 0.22
@@ -52725,12 +52790,12 @@ Cohesion: 0.28
 Nodes (4): IllustrationRenderer, Camera, IllustrationRenderState, RenderTexture
 
 ### Community 8623 - "Community 8623"
-Cohesion: 0.22
-Nodes (6): HttpMessageHandler, System.Net.Http, CancellationToken, HttpRequestMessage, HttpResponseMessage, Task
+Cohesion: 0.21
+Nodes (3): ImmutableStringList, IEnumerator, string
 
 ### Community 8624 - "Community 8624"
-Cohesion: 0.25
-Nodes (7): LogisticsPairGizmoTest, Color, double, float, LogisticsPairGizmo, Material, Texture
+Cohesion: 0.22
+Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, System.Runtime.Serialization, UnsignedShortDataContract
 
 ### Community 8626 - "Community 8626"
 Cohesion: 0.25
@@ -52784,25 +52849,17 @@ Nodes (5): RendererSorting, LayerNames, bool, int, Renderer
 Cohesion: 0.25
 Nodes (3): ShakeFXPoser, float, Vector3
 
-### Community 8639 - "Community 8639"
-Cohesion: 0.22
-Nodes (6): ShowMeshVerts, bool, float, Mesh, Vector3, Vector4
-
-### Community 8641 - "Community 8641"
-Cohesion: 0.25
-Nodes (5): DesignerCollection, System.ComponentModel.Design, Array, IEnumerator, IList
-
 ### Community 8642 - "Community 8642"
-Cohesion: 0.29
-Nodes (4): InstanceDataCollection, System.Diagnostics, InstanceData, string
+Cohesion: 0.24
+Nodes (6): ActionFrame, Compiler, int, Processor, ForEachAction, System.Xml.Xsl.XsltOld
 
 ### Community 8643 - "Community 8643"
 Cohesion: 0.28
 Nodes (6): MilestoneDisplayData, TestMilestone, bool, int, long, string
 
 ### Community 8644 - "Community 8644"
-Cohesion: 0.28
-Nodes (7): IOnboardingGUIProvider, Dictionary, OnboardingSectionCategory, ScrollView, CategoriesContainer, PriorityComparer, Unity.Multiplayer.Center.Editor
+Cohesion: 0.29
+Nodes (7): DbMetaDataFactory, DataTable, DbConnection, SqlConnection, string, SqlMetaDataFactory, System.Data.SqlClient
 
 ### Community 8645 - "Community 8645"
 Cohesion: 0.28
@@ -52813,8 +52870,8 @@ Cohesion: 0.31
 Nodes (4): ThirdPersonPoser, AnimationCurve, bool, float
 
 ### Community 8647 - "Community 8647"
-Cohesion: 0.22
-Nodes (8): TurretDesc, byte, EAmmoType, ETurretType, float, int, Vector3, VSLayerMask
+Cohesion: 0.25
+Nodes (4): IEnumerator, XmlNode, System.Xml, XmlNodeList
 
 ### Community 8648 - "Community 8648"
 Cohesion: 0.31
@@ -52836,9 +52893,13 @@ Nodes (7): UIFileBrowserNode, bool, Image, Sprite, string, Text, UIFileBrowser
 Cohesion: 0.25
 Nodes (6): UIIconCountInc, Image, RectTransform, StringBuilder, Text, UIIncArrow
 
+### Community 8657 - "Community 8657"
+Cohesion: 0.18
+Nodes (6): SamplerStateMaterialSlot, UnityEditor.ShaderGraph, bool, GenerationMode, PropertyCollector, ShaderStringBuilder
+
 ### Community 8658 - "Community 8658"
-Cohesion: 0.25
-Nodes (5): System.Linq.Expressions, TryExpression, CatchBlock, ExpressionVisitor, IEnumerable
+Cohesion: 0.22
+Nodes (6): TestEnemyGenerate, bool, float, int, Quaternion, VectorLF3
 
 ### Community 8659 - "Community 8659"
 Cohesion: 0.39
@@ -52857,8 +52918,8 @@ Cohesion: 0.36
 Nodes (5): UISimpleGeneralTip, int, RectTransform, Text, TipSettings
 
 ### Community 8663 - "Community 8663"
-Cohesion: 0.25
-Nodes (4): float, InputControl, NormalizeProcessor, UnityEngine.InputSystem.Processors
+Cohesion: 0.31
+Nodes (4): SurfacePathOperation, SurfacePathShape, Vector3, ISurfacePathBrushService
 
 ### Community 8664 - "Community 8664"
 Cohesion: 0.22
@@ -52901,8 +52962,8 @@ Cohesion: 0.25
 Nodes (6): AudioPlayableBinding, UnityEngine.Audio, Object, PlayableBinding, PlayableGraph, PlayableOutput
 
 ### Community 8675 - "Community 8675"
-Cohesion: 0.42
-Nodes (3): Baselib_FileIO_AsyncFile, Baselib_FileIO_Priority, Baselib_FileIO_ReadRequest
+Cohesion: 0.25
+Nodes (4): ACH_SonicBoom, bool, double, float
 
 ### Community 8676 - "Community 8676"
 Cohesion: 0.22
@@ -53085,12 +53146,12 @@ Cohesion: 0.22
 Nodes (7): SwapCollectionExtensions, UnityEngine.Rendering, CollectionAccess, Exception, IList, MustUseReturnValue, TValue
 
 ### Community 8722 - "Community 8722"
-Cohesion: 0.31
-Nodes (4): FloatComparer, UnityEngine.Assertions.Comparers, bool, float
+Cohesion: 0.22
+Nodes (4): ECDiffieHellmanPublicKey, System.Security.Cryptography, byte, ECParameters
 
 ### Community 8723 - "Community 8723"
-Cohesion: 0.20
-Nodes (7): CombineNode, UnityEditor.ShaderGraph, MethodInfo, Vector1, Vector2, Vector3, Vector4
+Cohesion: 0.25
+Nodes (6): AudioPlayableGraphExtensions, UnityEngine.Audio, MethodImpl, NativeThrows, PlayableGraph, PlayableOutputHandle
 
 ### Community 8724 - "Community 8724"
 Cohesion: 0.22
@@ -53193,8 +53254,8 @@ Cohesion: 0.22
 Nodes (6): System.Runtime.Serialization.Configuration, TypeElement, ConfigurationPropertyCollection, string, Type, ParameterElementCollection
 
 ### Community 8749 - "Community 8749"
-Cohesion: 0.22
-Nodes (4): AnimBool, SerializedProperty, OnScreenStickEditor, UnityEngine.InputSystem.OnScreen
+Cohesion: 0.28
+Nodes (5): bool, ComputeShader, float, int, HeightMapGenerator
 
 ### Community 8750 - "Community 8750"
 Cohesion: 0.22
@@ -53285,8 +53346,8 @@ Cohesion: 0.31
 Nodes (6): DataContractResolver, Type, XmlDictionaryString, XmlObjectSerializerContext, KnownTypeDataContractResolver, System.Runtime.Serialization
 
 ### Community 8772 - "Community 8772"
-Cohesion: 0.29
-Nodes (5): IRailApps, RailGameID, RailResult, IRailAppsImpl, rail
+Cohesion: 0.31
+Nodes (5): IntPtr, MethodImpl, NativeMethod, ObjectGUIState, UnityEngine
 
 ### Community 8773 - "Community 8773"
 Cohesion: 0.36
@@ -53301,16 +53362,16 @@ Cohesion: 0.31
 Nodes (5): DebugExtra, Color, SimpleMeshData, Vector2, Vector3
 
 ### Community 8776 - "Community 8776"
-Cohesion: 0.22
-Nodes (7): DefaultVolumeProfileSettingsPropertyDrawer, UniversalRenderPipeline, URPDefaultVolumeProfileSettings, VisualElement, UnityEditor.Rendering.Universal, URPDefaultVolumeProfileSettingsContextMenu, URPDefaultVolumeProfileSettingsPropertyDrawer
+Cohesion: 0.20
+Nodes (8): IRailBrowserHelper, CreateBrowserOptions, CreateCustomerDrawBrowserOptions, IRailBrowser, IRailBrowserRender, RailResult, IRailBrowserHelperImpl, rail
 
 ### Community 8777 - "Community 8777"
-Cohesion: 0.22
-Nodes (4): CodeBinaryOperatorExpression, CodeBinaryOperatorType, CodeExpressionCollection, CodeParameterDeclarationExpressionCollection
+Cohesion: 0.23
+Nodes (7): Action, InspectableAttribute, PropertyInfo, SubGraphOutputNode, VisualElement, SubGraphOutputNodePropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 
 ### Community 8778 - "Community 8778"
-Cohesion: 0.28
-Nodes (5): DynamicDimensionVector, MethodInfo, Vector2, NoiseSineWaveNode, UnityEditor.ShaderGraph
+Cohesion: 0.25
+Nodes (4): TestAudio, AudioSource, int, Vector3
 
 ### Community 8779 - "Community 8779"
 Cohesion: 0.22
@@ -53424,10 +53485,6 @@ Nodes (8): Input System scripting, Introduction to the Unity Input System, Mobil
 Cohesion: 0.22
 Nodes (8): Example 1: Measure Frame Time For Scene, Example 2: Measure execution time to serialize simple object to JSON, Example 3: Measure execution time to create 5000 simple cubes, Example 4: Custom measurement to capture total allocated and reserved memory, Further examples, Improving test stability, Measure a Play Mode only method, Writing a simple test
 
-### Community 8807 - "Community 8807"
-Cohesion: 0.22
-Nodes (7): Cubemap, InspectableAttribute, PropertyInfo, ValueChangedCallback, VisualElement, CubemapPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
-
 ### Community 8808 - "Community 8808"
 Cohesion: 0.22
 Nodes (3): BitmapData, ImageLockMode, PixelFormat
@@ -53465,20 +53522,20 @@ Cohesion: 0.31
 Nodes (4): EditorPluginInterop, Packages.Rider.Editor, Assembly, string
 
 ### Community 8817 - "Community 8817"
-Cohesion: 0.42
-Nodes (3): Fragment, List, StringBuilder
+Cohesion: 0.22
+Nodes (8): TestPlanetIconCapture, bool, Camera, float, int, long, Renderer, Vector3
 
 ### Community 8818 - "Community 8818"
-Cohesion: 0.29
-Nodes (5): IRailInGameCoin, RailCoins, RailResult, IRailInGameCoinImpl, rail
+Cohesion: 0.24
+Nodes (9): bool, Dictionary, ITestAdaptor, List, TestRunnerResult, TestRunnerUIFilter, TreeViewItem, TestCount (+1 more)
 
 ### Community 8819 - "Community 8819"
 Cohesion: 0.22
 Nodes (6): Content, NavMeshModifierEditor, Unity.AI.Navigation.Editor, GUIContent, SerializedProperty, string
 
 ### Community 8820 - "Community 8820"
-Cohesion: 0.28
-Nodes (8): float, ClampedFloatParameter, FloatParameter, MaxFloatParameter, MinFloatParameter, NoInterpClampedFloatParameter, NoInterpMaxFloatParameter, NoInterpMinFloatParameter
+Cohesion: 0.42
+Nodes (3): Baselib_FileIO_AsyncFile, Baselib_FileIO_Priority, Baselib_FileIO_ReadRequest
 
 ### Community 8821 - "Community 8821"
 Cohesion: 0.31
@@ -53605,8 +53662,8 @@ Cohesion: 0.25
 Nodes (6): GeneratorStyle, LegacyStyleProjectGeneration, IGenerator, GeneratorFactory, Microsoft.Unity.VisualStudio.Editor, SdkStyleProjectGeneration
 
 ### Community 8853 - "Community 8853"
-Cohesion: 0.31
-Nodes (4): Compiler, XmlQualifiedName, AttributeSetAction, System.Xml.Xsl.XsltOld
+Cohesion: 0.27
+Nodes (6): SampleGradient, UnityEditor.ShaderGraph, Gradient, MethodInfo, Vector1, Vector4
 
 ### Community 8854 - "Community 8854"
 Cohesion: 0.42
@@ -53689,12 +53746,12 @@ Cohesion: 0.31
 Nodes (5): AtomicCompositionExtensions, System.ComponentModel.Composition.Hosting, Action, AtomicComposition, T
 
 ### Community 8874 - "Community 8874"
-Cohesion: 0.29
-Nodes (5): bool, List, UsedImplicitly, CallbackData, Packages.Rider.Editor.UnitTesting
+Cohesion: 0.25
+Nodes (6): UIMouseClickSign, bool, Camera, RectTransform, Text, Vector3
 
 ### Community 8875 - "Community 8875"
-Cohesion: 0.22
-Nodes (7): Mono.Http, NtlmSession, Authorization, ICredentials, MessageBase, WebRequest, ntlm
+Cohesion: 0.18
+Nodes (5): List, PointerEventData, RaycastResult, BaseRaycaster, UnityEngine.EventSystems
 
 ### Community 8876 - "Community 8876"
 Cohesion: 0.22
@@ -53741,16 +53798,16 @@ Cohesion: 0.28
 Nodes (5): RenderPipelineChangedCallback, UnityEditor.ShaderGraph, Hash128, InitializeOnLoadMethod, string
 
 ### Community 8887 - "Community 8887"
-Cohesion: 0.22
-Nodes (5): MethodInfo, Vector1, Vector3, ReflectionProbeNode, UnityEditor.ShaderGraph
+Cohesion: 0.25
+Nodes (6): MinMaxSliderDrawer, Unity.UI.Shaders.Sample.Editor, GUIContent, Rect, SerializedProperty, Vector2
 
 ### Community 8888 - "Community 8888"
 Cohesion: 0.22
 Nodes (7): IndexRange, bool, int, long, RangeWorker, RangeManager, System.Threading.Tasks
 
 ### Community 8889 - "Community 8889"
-Cohesion: 0.25
-Nodes (4): BaseEventData, UIStarmapDFHive, UIStarmapPlanet, UIStarmapStar
+Cohesion: 0.21
+Nodes (8): CLSCompliant, EncoderNLS, int, GetByteCount(), GetBytes(), GetCharCount(), GetChars(), UTF32Decoder
 
 ### Community 8890 - "Community 8890"
 Cohesion: 0.28
@@ -53921,16 +53978,16 @@ Cohesion: 0.22
 Nodes (7): IVFXMultiMeshOutput, bool, uint, VFXDeviceTarget, VFXExpressionMapper, UnityEditor.VFX.URP, VFXURPLitMeshOutput
 
 ### Community 8935 - "Community 8935"
-Cohesion: 0.25
-Nodes (5): MethodInfo, Texture2D, Vector2, SplitTextureTransformNode, UnityEditor.ShaderGraph
+Cohesion: 0.24
+Nodes (5): byte, SecuritySafeCritical, string, BinHexEncoding, System.Text
 
 ### Community 8936 - "Community 8936"
-Cohesion: 0.25
-Nodes (5): SaturationNode, UnityEditor.ShaderGraph, MethodInfo, Vector1, Vector3
+Cohesion: 0.24
+Nodes (6): SafeFreeContextBuffer, SecBufferDesc, SecurityPackageInfoClass, SSPIAuthType, System.Net, SSPIInterface
 
 ### Community 8937 - "Community 8937"
-Cohesion: 0.24
-Nodes (6): DecimalConverter, System.ComponentModel, CultureInfo, ITypeDescriptorContext, NumberFormatInfo, Type
+Cohesion: 0.25
+Nodes (5): BlackbodyNode, UnityEditor.ShaderGraph, MethodInfo, Vector1, Vector3
 
 ### Community 8938 - "Community 8938"
 Cohesion: 0.17
@@ -53941,12 +53998,12 @@ Cohesion: 0.22
 Nodes (8): JsonGlobals, System.Runtime.Serialization.Json, byte, char, int, long, string, XmlDictionaryString
 
 ### Community 8940 - "Community 8940"
-Cohesion: 0.25
-Nodes (6): KeyInfoClause, EncryptedKey, XmlDocument, XmlElement, KeyInfoEncryptedKey, System.Security.Cryptography.Xml
+Cohesion: 0.29
+Nodes (5): EncryptedKey, XmlDocument, XmlElement, KeyInfoEncryptedKey, System.Security.Cryptography.Xml
 
 ### Community 8941 - "Community 8941"
-Cohesion: 0.28
-Nodes (3): LinkedResource, LinkedResourceCollection, System.Net.Mail
+Cohesion: 0.17
+Nodes (6): MonoTODO, SecuritySafeCritical, X509Certificate2, X509ChainImpl, System.Security.Cryptography.X509Certificates, X509Chain
 
 ### Community 8942 - "Community 8942"
 Cohesion: 0.28
@@ -53993,8 +54050,8 @@ Cohesion: 0.31
 Nodes (4): SerializedProperty, TreeViewItem, InputActionMapDrawer, UnityEngine.InputSystem.Editor
 
 ### Community 8953 - "Community 8953"
-Cohesion: 0.22
-Nodes (4): InputDevice, InputUser, InputUserChange, OnUserChange()
+Cohesion: 0.21
+Nodes (5): bool, int, Enumerator, System.Xml.XPath, XPathNodeIterator
 
 ### Community 8954 - "Community 8954"
 Cohesion: 0.33
@@ -54017,8 +54074,8 @@ Cohesion: 0.22
 Nodes (6): PlayModeStateChange, Predicate, TearDown, CollectAnalytics(), OnPlayModeStateChange(), UnityEngine.InputSystem
 
 ### Community 8959 - "Community 8959"
-Cohesion: 0.17
-Nodes (3): DateTimeOffset, SqlInt16, SqlSingle
+Cohesion: 0.29
+Nodes (4): DebugRendererBatcherStats, UnityEngine.Rendering, InstanceOcclusionEventStats, NativeList
 
 ### Community 8960 - "Community 8960"
 Cohesion: 0.22
@@ -54057,8 +54114,8 @@ Cohesion: 0.25
 Nodes (6): bool, SerializedProperty, string, ScreenSpaceShadowsEditor, Styles, UnityEditor.Rendering.Universal
 
 ### Community 8969 - "Community 8969"
-Cohesion: 0.25
-Nodes (5): MethodInfo, Vector1, Vector3, NormalStrengthNode, UnityEditor.ShaderGraph
+Cohesion: 0.24
+Nodes (6): UnityEditor.Rendering.Universal, URPPreprocessBuild, BuildReport, List, UniversalRenderPipelineAsset, URPBuildData
 
 ### Community 8970 - "Community 8970"
 Cohesion: 0.25
@@ -54094,15 +54151,15 @@ Nodes (3): T, ClonableStack, MS.Internal.Xml.XPath
 
 ### Community 8978 - "Community 8978"
 Cohesion: 0.25
-Nodes (5): MethodInfo, Vector3, NormalBlendNode, UnityEditor.ShaderGraph, NormalBlendMode
+Nodes (5): DesignerCollection, System.ComponentModel.Design, Array, IEnumerator, IList
 
 ### Community 8979 - "Community 8979"
-Cohesion: 0.25
-Nodes (5): DynamicDimensionVector, MethodInfo, Vector1, DistanceNode, UnityEditor.ShaderGraph
+Cohesion: 0.22
+Nodes (5): NameValueConfigurationCollection, System.Configuration, ConfigurationElement, ConfigurationPropertyCollection, NameValueConfigurationElement
 
 ### Community 8980 - "Community 8980"
-Cohesion: 0.25
-Nodes (5): MethodInfo, Vector1, Vector3, FresnelNode, UnityEditor.ShaderGraph
+Cohesion: 0.28
+Nodes (7): IOnboardingGUIProvider, Dictionary, OnboardingSectionCategory, ScrollView, CategoriesContainer, PriorityComparer, Unity.Multiplayer.Center.Editor
 
 ### Community 8981 - "Community 8981"
 Cohesion: 0.22
@@ -54110,11 +54167,11 @@ Nodes (6): DistanceDisplay, JumpFloodTest, bool, float, MeshRenderer, Mode
 
 ### Community 8982 - "Community 8982"
 Cohesion: 0.22
-Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, ByteArrayDataContract, System.Runtime.Serialization
+Nodes (7): Mono.Http, NtlmSession, Authorization, ICredentials, MessageBase, WebRequest, ntlm
 
 ### Community 8983 - "Community 8983"
-Cohesion: 0.22
-Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, BooleanDataContract, System.Runtime.Serialization
+Cohesion: 0.42
+Nodes (5): ShaderGraphIndexerExtension, UnityEditor.ShaderGraph, CustomObjectIndexer, CustomObjectIndexerTarget, ObjectIndexer
 
 ### Community 8984 - "Community 8984"
 Cohesion: 0.33
@@ -54185,12 +54242,12 @@ Cohesion: 0.25
 Nodes (4): ScriptableObject, Type, IStateSerializer, UnityEngine.TestTools.NUnitExtensions
 
 ### Community 9001 - "Community 9001"
-Cohesion: 0.31
-Nodes (4): Material, Shader, UnityEditor.Rendering.Universal.ShaderGUI, UnlitShader
+Cohesion: 0.22
+Nodes (5): float, Rigidbody, SimpleBallController, Transform, Vector3
 
 ### Community 9002 - "Community 9002"
 Cohesion: 0.22
-Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, FloatDataContract, System.Runtime.Serialization
+Nodes (7): CubemapHelper, MinimalCubemapHelper, SerializableCubemap, UnityEditor.ShaderGraph.Internal, Cubemap, MinimalTextureRef, string
 
 ### Community 9003 - "Community 9003"
 Cohesion: 0.33
@@ -54258,7 +54315,7 @@ Nodes (4): float, Quaternion, QuaternionUtils, Timeline.Samples
 
 ### Community 9020 - "Community 9020"
 Cohesion: 0.25
-Nodes (5): Boolean, MethodInfo, Vector1, IsNanNode, UnityEditor.ShaderGraph
+Nodes (6): GUIContent, Rect, SearchContext, SerializedProperty, InputActionAssetDrawer, UnityEngine.InputSystem.Editor
 
 ### Community 9021 - "Community 9021"
 Cohesion: 0.39
@@ -54269,8 +54326,8 @@ Cohesion: 0.36
 Nodes (5): GUIContent, Rect, SerializedProperty, TMP_SpriteGlyphPropertyDrawer, TMPro.EditorUtilities
 
 ### Community 9023 - "Community 9023"
-Cohesion: 0.25
-Nodes (5): MethodInfo, Vector1, Vector2, PolarCoordinatesNode, UnityEditor.ShaderGraph
+Cohesion: 0.20
+Nodes (7): Dictionary, EventCallback, List, MouseUpEvent, Resizer, ResizableElement, UnityEditor.ShaderGraph.Drawing
 
 ### Community 9024 - "Community 9024"
 Cohesion: 0.28
@@ -54314,7 +54371,7 @@ Nodes (3): Vector3, NGPT, QuadraticSpline
 
 ### Community 9034 - "Community 9034"
 Cohesion: 0.22
-Nodes (5): IRailApps, IRailAssetsHelper, IRailIMEHelper, IRailInGameCoin, IRailFactory
+Nodes (5): IRailAchievementHelper, IRailApps, IRailAssetsHelper, IRailInGameCoin, IRailFactory
 
 ### Community 9035 - "Community 9035"
 Cohesion: 0.25
@@ -54357,8 +54414,8 @@ Cohesion: 0.22
 Nodes (5): byte, BlockProcessor, Mono.Security.Cryptography, ICryptoTransform, int
 
 ### Community 9045 - "Community 9045"
-Cohesion: 0.22
-Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, ShortDataContract, System.Runtime.Serialization
+Cohesion: 0.20
+Nodes (7): ResourceHandle, RuntimeInitializeOnLoadMethod, Equals(), IsNull(), IsValid(), ResetStaticsOnLoad(), UnityEngine.Rendering.RenderGraphModule
 
 ### Community 9046 - "Community 9046"
 Cohesion: 0.28
@@ -54517,12 +54574,16 @@ Cohesion: 0.22
 Nodes (5): bool, byte, BitHelper, System.Collections.Generic, int
 
 ### Community 9085 - "Community 9085"
-Cohesion: 0.10
-Nodes (15): AsyncResult, IAsyncResult, T, TResult, Action, IAsyncResult, IAsyncResult, T (+7 more)
+Cohesion: 0.17
+Nodes (10): IAsyncResult, T, TResult, IAsyncResult, T, CompletedAsyncResult, System.Runtime, System.Runtime (+2 more)
 
 ### Community 9086 - "Community 9086"
 Cohesion: 0.28
 Nodes (6): CancellationToken, CancellationTokenSource, int, Shared, CancellationState, System.Linq.Parallel
+
+### Community 9087 - "Community 9087"
+Cohesion: 0.28
+Nodes (5): DynamicDimensionVector, MethodInfo, Vector2, NoiseSineWaveNode, UnityEditor.ShaderGraph
 
 ### Community 9088 - "Community 9088"
 Cohesion: 0.28
@@ -54545,12 +54606,12 @@ Cohesion: 0.25
 Nodes (5): DataTable, OleDbDataReader, Type, OleDbEnumerator, System.Data.OleDb
 
 ### Community 9093 - "Community 9093"
-Cohesion: 0.22
-Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, SignedByteDataContract, System.Runtime.Serialization
+Cohesion: 0.25
+Nodes (5): MethodInfo, Vector1, Vector2, RoundedRectangleNode, UnityEditor.ShaderGraph
 
 ### Community 9094 - "Community 9094"
-Cohesion: 0.29
-Nodes (4): List, X509CertificateImpl, System.Security.Cryptography.X509Certificates, X509CertificateImplCollection
+Cohesion: 0.22
+Nodes (9): dependencies, depth, source, version, depth, source, version, com.unity.render-pipelines.core (+1 more)
 
 ### Community 9095 - "Community 9095"
 Cohesion: 0.20
@@ -54565,8 +54626,8 @@ Cohesion: 0.22
 Nodes (7): DataTable, int, ReadOnlyCollection, _SqlMetaData, ushort, _SqlMetaDataSet, System.Data.SqlClient
 
 ### Community 9098 - "Community 9098"
-Cohesion: 0.12
-Nodes (10): Collection, System.Runtime.Collections, ValidatingCollection, CngPropertyCollection, System.Security.Cryptography, CngProperty, T, AlternateView (+2 more)
+Cohesion: 0.07
+Nodes (13): Collection, CngPropertyCollection, System.Security.Cryptography, CngProperty, AlternateView, Attachment, MailAddress, AlternateViewCollection (+5 more)
 
 ### Community 9099 - "Community 9099"
 Cohesion: 0.25
@@ -54593,12 +54654,16 @@ Cohesion: 0.22
 Nodes (7): Configs, CombatConfig, FactoryConfig, GlobalConfig, GPGPUConfig, BuiltinConfig, ModeConfig
 
 ### Community 9105 - "Community 9105"
-Cohesion: 0.36
-Nodes (4): XPathNavigator, XPathNodeIterator, IDQuery, MS.Internal.Xml.XPath
+Cohesion: 0.32
+Nodes (4): AesCcm, System.Security.Cryptography, ReadOnlySpan, Span
 
 ### Community 9106 - "Community 9106"
 Cohesion: 0.22
 Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, DecimalDataContract, System.Runtime.Serialization
+
+### Community 9107 - "Community 9107"
+Cohesion: 0.32
+Nodes (4): AesGcm, System.Security.Cryptography, ReadOnlySpan, Span
 
 ### Community 9108 - "Community 9108"
 Cohesion: 0.22
@@ -54609,8 +54674,8 @@ Cohesion: 0.29
 Nodes (5): DebugManager, RegisterDebugInputs(), ToggleRuntimeUI(), UnityEngine.Rendering, string
 
 ### Community 9110 - "Community 9110"
-Cohesion: 0.33
-Nodes (5): System.ComponentModel, TimeSpanConverter, CultureInfo, ITypeDescriptorContext, Type
+Cohesion: 0.25
+Nodes (5): MethodInfo, Texture2D, Vector2, SplitTextureTransformNode, UnityEditor.ShaderGraph
 
 ### Community 9111 - "Community 9111"
 Cohesion: 0.22
@@ -54621,12 +54686,12 @@ Cohesion: 0.22
 Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, System.Runtime.Serialization, UnsignedLongDataContract
 
 ### Community 9113 - "Community 9113"
-Cohesion: 0.25
-Nodes (5): DocumentXPathNavigator, int, XmlNode, DocumentXPathNodeIterator_ElemDescendants, System.Xml
+Cohesion: 0.20
+Nodes (8): CustomRenderPipeline, Camera, List, RenderPipeline, ScriptableRenderContext, CustomRenderPipeline, CustomRenderPipelineAsset, UnityEngine.Rendering.Tests
 
 ### Community 9114 - "Community 9114"
-Cohesion: 0.36
-Nodes (5): IEnumerable, IEnumerator, T, ParallelEnumerableWrapper, System.Linq.Parallel
+Cohesion: 0.28
+Nodes (3): LinkedResource, LinkedResourceCollection, System.Net.Mail
 
 ### Community 9115 - "Community 9115"
 Cohesion: 0.33
@@ -54683,6 +54748,10 @@ Nodes (6): RSA, string, XmlDocument, XmlElement, RSAKeyValue, System.Security.Cr
 ### Community 9130 - "Community 9130"
 Cohesion: 0.25
 Nodes (6): SafeWaitHandle, System.Runtime, TimerGroup, TimerHelper, TimerQueue, WaitableTimer
+
+### Community 9131 - "Community 9131"
+Cohesion: 0.36
+Nodes (5): GUIContent, Rect, SerializedProperty, GlyphRectPropertyDrawer, TMPro.EditorUtilities
 
 ### Community 9132 - "Community 9132"
 Cohesion: 0.39
@@ -54770,7 +54839,7 @@ Nodes (4): XPathNavigator, XPathNodeIterator, ChildrenQuery, MS.Internal.Xml.XPa
 
 ### Community 9153 - "Community 9153"
 Cohesion: 0.20
-Nodes (7): GUIContent, InputControlPathEditor, InputControlPickerState, Rect, SerializedProperty, InputControlPathDrawer, UnityEngine.InputSystem.Editor
+Nodes (7): ExternalProcessConnection, AssetImportContext, BakeProgressState, CancellationToken, string, LightBakerWorkerProcessImporter, UnityEditor.PathTracing.LightBakerBridge
 
 ### Community 9154 - "Community 9154"
 Cohesion: 0.28
@@ -54869,8 +54938,8 @@ Cohesion: 0.22
 Nodes (6): WeakReference, XmlDocument, XmlNodeChangedEventArgs, XmlNodeChangedEventHandler, System.Xml, XmlElementListListener
 
 ### Community 9178 - "Community 9178"
-Cohesion: 0.27
-Nodes (4): bool, CelestialBodyGenerator, GeneratorEditor, Object
+Cohesion: 0.25
+Nodes (6): CultureInfo, XmlCaseOrder, XmlDataType, XmlSortOrder, MS.Internal.Xml.XPath, XPathComparerHelper
 
 ### Community 9179 - "Community 9179"
 Cohesion: 0.25
@@ -54893,16 +54962,16 @@ Cohesion: 0.36
 Nodes (8): IteratorResult, XmlNavigatorFilter, XPathNavigator, Create(), MoveFailed(), MoveFirst(), MoveNext(), System.Xml.Xsl.Runtime
 
 ### Community 9186 - "Community 9186"
-Cohesion: 0.25
-Nodes (6): CultureInfo, XmlCaseOrder, XmlDataType, XmlSortOrder, MS.Internal.Xml.XPath, XPathComparerHelper
+Cohesion: 0.22
+Nodes (6): CullingResults, ScriptableCullingParameters, ScriptableRenderContext, ShadowCastersCullingInfos, CullContextData, UnityEngine.Rendering.Universal
 
 ### Community 9187 - "Community 9187"
-Cohesion: 0.25
-Nodes (6): MethodImpl, RuntimeInitializeOnLoadMethod, StaticAccessor, ScriptableRuntimeReflectionSystemSettings, UnityEngine.Experimental.Rendering, ScriptableRuntimeReflectionSystemWrapper
+Cohesion: 0.28
+Nodes (8): else, Text, optionSettings, rpc, BuildRPC(), GetSetOptionsString(), if(), System.Data.SqlClient
 
 ### Community 9188 - "Community 9188"
-Cohesion: 0.25
-Nodes (6): bool, Color, float, MethodImpl, GUISettings, UnityEngine
+Cohesion: 0.22
+Nodes (7): Color, InspectableAttribute, PropertyInfo, ValueChangedCallback, VisualElement, ColorPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 
 ### Community 9189 - "Community 9189"
 Cohesion: 0.25
@@ -54925,8 +54994,8 @@ Cohesion: 0.28
 Nodes (8): bool, bool4, MethodImpl, DebuggerProxy, Equals(), GetHashCode(), ToString(), Unity.Mathematics
 
 ### Community 9195 - "Community 9195"
-Cohesion: 0.42
-Nodes (5): Create(), NoiseFilterEvaluator, float3, NoiseFilterData, NoiseSettings
+Cohesion: 0.25
+Nodes (5): int, JobHandle, NativeArray, JobMerger, UnityEngine.UIElements.UIR
 
 ### Community 9196 - "Community 9196"
 Cohesion: 0.33
@@ -54962,7 +55031,7 @@ Nodes (5): FilterMode, RenderTextureDescriptor, RenderTextureFormat, RenderTextu
 
 ### Community 9204 - "Community 9204"
 Cohesion: 0.22
-Nodes (5): int, XmlSchema, XmlSchemas, System.Xml.Serialization, XmlSchemaEnumerator
+Nodes (7): IEnumerable, InspectableAttribute, DropdownPropertyDrawer, PropertyInfo, ValueChangedCallback, VisualElement, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 
 ### Community 9205 - "Community 9205"
 Cohesion: 0.42
@@ -55023,6 +55092,10 @@ Nodes (8): BrushTransform, Rect, Vector2, FromBrushUV(), FromRect(), GetBrushXYB
 ### Community 9219 - "Community 9219"
 Cohesion: 0.28
 Nodes (8): Dictionary, FontAsset, Material, MaterialReference, SpriteAsset, AddMaterialReference(), Contains(), UnityEngine.TextCore.Text
+
+### Community 9220 - "Community 9220"
+Cohesion: 0.22
+Nodes (5): float, Rigidbody, SimpleBallController, Transform, Vector3
 
 ### Community 9221 - "Community 9221"
 Cohesion: 0.31
@@ -55089,8 +55162,8 @@ Cohesion: 0.31
 Nodes (3): VisualElement, TreeViewController, UnityEngine.UIElements
 
 ### Community 9237 - "Community 9237"
-Cohesion: 0.22
-Nodes (3): ContentRangeHeaderValue, System.Net.Http.Headers, string
+Cohesion: 0.29
+Nodes (5): bool, InputControl, Vector2, InvertVector2Processor, UnityEngine.InputSystem.Processors
 
 ### Community 9238 - "Community 9238"
 Cohesion: 0.31
@@ -55145,8 +55218,8 @@ Cohesion: 0.25
 Nodes (6): MethodImpl, Obsolete, RenderTextureDescriptor, SpecialName, UnityEngine.XR, XRSettings
 
 ### Community 9251 - "Community 9251"
-Cohesion: 0.28
-Nodes (5): bool, ComputeShader, float, int, HeightMapGenerator
+Cohesion: 0.25
+Nodes (5): MethodInfo, Vector1, Vector2, RandomRangeNode, UnityEditor.ShaderGraph
 
 ### Community 9252 - "Community 9252"
 Cohesion: 0.25
@@ -55186,7 +55259,7 @@ Nodes (5): bool, GlobalDisplaySettings, PathCreation, PathCreator, PathCreatorDa
 
 ### Community 9261 - "Community 9261"
 Cohesion: 0.25
-Nodes (5): int, JobHandle, NativeArray, JobMerger, UnityEngine.UIElements.UIR
+Nodes (5): MethodInfo, Vector1, Vector2, RoundedPolygonNode, UnityEditor.ShaderGraph
 
 ### Community 9262 - "Community 9262"
 Cohesion: 0.25
@@ -55209,8 +55282,8 @@ Cohesion: 0.25
 Nodes (7): float, int, Noise, Planet, Texture2D, Vector3, NoiseFilter
 
 ### Community 9267 - "Community 9267"
-Cohesion: 0.22
-Nodes (8): BiomeSettings, bool, Color, float, int, Material, PlanetSettings, PlanetResolution
+Cohesion: 0.25
+Nodes (5): Boolean, MethodInfo, Vector1, IsInfiniteNode, UnityEditor.ShaderGraph
 
 ### Community 9268 - "Community 9268"
 Cohesion: 0.28
@@ -55268,21 +55341,25 @@ Nodes (5): int, Material, MeshRenderer, Vector2, ColourTest
 Cohesion: 0.31
 Nodes (4): CelestialBodyGenerator, RenderTexture, Shader, OceanMaskRenderer
 
+### Community 9282 - "Community 9282"
+Cohesion: 0.29
+Nodes (4): ReciprocalSquareRootNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
+
 ### Community 9283 - "Community 9283"
 Cohesion: 0.22
-Nodes (9): dependencies, depth, source, version, depth, source, version, com.unity.render-pipelines.core (+1 more)
+Nodes (7): Gradient, InspectableAttribute, PropertyInfo, ValueChangedCallback, VisualElement, GradientPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 
 ### Community 9284 - "Community 9284"
-Cohesion: 0.25
-Nodes (5): ActivationTrackInspector, Styles, UnityEditor.Timeline, GUIContent, SerializedProperty
+Cohesion: 0.29
+Nodes (4): DysonSphereMaterialTuner, DysonSphere, float, UIDysonEditor
 
 ### Community 9286 - "Community 9286"
 Cohesion: 0.22
 Nodes (8): 4.1 — Latitude + Moisture Biome Placement, 4.2 — Biome Type Definitions, 4.3 — Biome Blending & Shader, Files Created, Files Modified, Known Bugs, Phase 4: Enhanced Biome System, Setup Instructions (in Unity)
 
 ### Community 9287 - "Community 9287"
-Cohesion: 0.25
-Nodes (3): GetIsPerformanceTestRun(), Switch2PlatformSetup, UnityEditor.TestTools.TestRunner
+Cohesion: 0.22
+Nodes (4): IPlatformSetup, GetIsPerformanceTestRun(), Switch2PlatformSetup, UnityEditor.TestTools.TestRunner
 
 ### Community 9288 - "Community 9288"
 Cohesion: 0.33
@@ -55294,7 +55371,7 @@ Nodes (4): ProceduralPlanets.Core, ProceduralPlanets.Editor, ProceduralPlanets.P
 
 ### Community 9291 - "Community 9291"
 Cohesion: 0.22
-Nodes (4): Uri, XmlTextReaderImpl, XPathDocument, NavigatorInput
+Nodes (7): InspectableAttribute, PropertyInfo, Texture2DArray, ValueChangedCallback, VisualElement, Texture2DArrayPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 
 ### Community 9292 - "Community 9292"
 Cohesion: 0.47
@@ -55317,8 +55394,8 @@ Cohesion: 0.29
 Nodes (5): Custom, QFSW.QC.Actions, Action, ActionContext, Func
 
 ### Community 9298 - "Community 9298"
-Cohesion: 0.25
-Nodes (6): UIMouseClickSign, bool, Camera, RectTransform, Text, Vector3
+Cohesion: 0.32
+Nodes (5): FilmGrainResourcesStripper, UnityEditor.Rendering.Universal, List, ScriptableRendererData, UniversalRenderPipelineFilmGrainResources
 
 ### Community 9299 - "Community 9299"
 Cohesion: 0.25
@@ -55333,12 +55410,12 @@ Cohesion: 0.25
 Nodes (6): ActionState, ActionExecuter, QFSW.QC, ActionContext, ICommandAction, IEnumerator
 
 ### Community 9302 - "Community 9302"
-Cohesion: 0.25
-Nodes (5): ContrastNode, UnityEditor.ShaderGraph, MethodInfo, Vector1, Vector3
+Cohesion: 0.22
+Nodes (7): InspectableAttribute, PropertyInfo, Texture, ValueChangedCallback, VisualElement, Texture2DPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 
 ### Community 9303 - "Community 9303"
-Cohesion: 0.25
-Nodes (5): LengthNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo, Vector1
+Cohesion: 0.29
+Nodes (4): GrassBladeBufferPool, GraphicsBuffer, int, Stack
 
 ### Community 9304 - "Community 9304"
 Cohesion: 0.31
@@ -55380,6 +55457,10 @@ Nodes (3): ICallbacksHolder, UnityEditor.TestTools.TestRunner.Api, ICallbacks
 Cohesion: 0.29
 Nodes (7): APVLeakReductionMode, BoolParameter, ClampedFloatParameter, APVLeakReductionModeParameter, ProbeVolumesOptions, UnityEngine.Rendering, Vector3Parameter
 
+### Community 9314 - "Community 9314"
+Cohesion: 0.24
+Nodes (6): Op, Query, XPathNodeIterator, XsltContext, MS.Internal.Xml.XPath, NumericExpr
+
 ### Community 9315 - "Community 9315"
 Cohesion: 0.29
 Nodes (6): ArraySingle, ArraySingleExtensions, GetEnumerator(), QFSW.QC.Containers, IEnumerator, T
@@ -55395,6 +55476,10 @@ Nodes (7): KeyAgreeRecipientInfoAsn, System.Security.Cryptography.Pkcs.Asn1, Alg
 ### Community 9318 - "Community 9318"
 Cohesion: 0.29
 Nodes (4): AssemblerType, GD_AssemblerItemProduction, int, long
+
+### Community 9319 - "Community 9319"
+Cohesion: 0.25
+Nodes (6): MethodImpl, RuntimeInitializeOnLoadMethod, StaticAccessor, ScriptableRuntimeReflectionSystemSettings, UnityEngine.Experimental.Rendering, ScriptableRuntimeReflectionSystemWrapper
 
 ### Community 9320 - "Community 9320"
 Cohesion: 0.25
@@ -55421,8 +55506,8 @@ Cohesion: 0.29
 Nodes (6): Export(), Import(), SetProgress(), Unlock(), BinaryReader, BinaryWriter
 
 ### Community 9331 - "Community 9331"
-Cohesion: 0.29
-Nodes (7): RunData, UnityEditor.TestTools.TestRunner.CommandLineTest, IRunData, bool, ExecutionSettings, string, TestRunState
+Cohesion: 0.22
+Nodes (6): bool, Dictionary, int, List, SafeSocketHandle, System.Net.Sockets
 
 ### Community 9332 - "Community 9332"
 Cohesion: 0.29
@@ -55550,15 +55635,19 @@ Nodes (3): RuntimeShieldTrack, int, long
 
 ### Community 9382 - "Community 9382"
 Cohesion: 0.25
-Nodes (4): TestAudio, AudioSource, int, Vector3
+Nodes (5): ExponentialNode, UnityEditor.ShaderGraph, ExponentialBase, DynamicDimensionVector, MethodInfo
+
+### Community 9383 - "Community 9383"
+Cohesion: 0.22
+Nodes (4): UIOptionChangedTips, bool, GameOption, List
 
 ### Community 9384 - "Community 9384"
 Cohesion: 0.29
 Nodes (5): TestMultithreadBusyWaiting, bool, float, int, ThreadAffinityMask
 
 ### Community 9385 - "Community 9385"
-Cohesion: 0.22
-Nodes (7): DebugMonitor, DebugMonitorSetting, DebugSpeakerSetting, bool, int, MonitorInfos, SpeakerInfos
+Cohesion: 0.29
+Nodes (5): UIMilestoneDesc, bool, int, RectTransform, UIMilestoneItem
 
 ### Community 9386 - "Community 9386"
 Cohesion: 0.25
@@ -55570,47 +55659,55 @@ Nodes (5): TestUIDot, ContextMenu, GameObject, int, Sprite
 
 ### Community 9388 - "Community 9388"
 Cohesion: 0.25
-Nodes (5): UICameraRotateTip, bool, CanvasGroup, float, Vector3
+Nodes (5): Focusable, FocusController, int, FocusChangeDirection, UnityEngine.UIElements
 
 ### Community 9389 - "Community 9389"
 Cohesion: 0.36
 Nodes (5): UIButtonTip, RectTransform, Text, Transform, Vector2
 
 ### Community 9390 - "Community 9390"
-Cohesion: 0.31
-Nodes (4): Test, TestRequiresCollectionChecks, Execute(), NativeQueueTests_InJobs
+Cohesion: 0.36
+Nodes (3): VisualElement, ListViewController, UnityEngine.UIElements
 
 ### Community 9391 - "Community 9391"
 Cohesion: 0.25
 Nodes (5): UIMiningUpgradeLabel, EMinerType, int, Text, UIMinerWindow
 
 ### Community 9392 - "Community 9392"
-Cohesion: 0.20
-Nodes (7): ResourceHandle, RuntimeInitializeOnLoadMethod, Equals(), IsNull(), IsValid(), ResetStaticsOnLoad(), UnityEngine.Rendering.RenderGraphModule
+Cohesion: 0.24
+Nodes (5): LogNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo, LogBase
 
-### Community 9395 - "Community 9395"
+### Community 9393 - "Community 9393"
 Cohesion: 0.25
-Nodes (6): AudioPlayableGraphExtensions, UnityEngine.Audio, MethodImpl, NativeThrows, PlayableGraph, PlayableOutputHandle
+Nodes (6): SynchronizedContextReplySink, System.Runtime.Remoting.Contexts, bool, IMessage, IMessageCtrl, SynchronizationAttribute
+
+### Community 9394 - "Community 9394"
+Cohesion: 0.25
+Nodes (3): XblPresenceRecordHandle, XblPresenceUserState, XblPresenceDeviceRecord
 
 ### Community 9396 - "Community 9396"
 Cohesion: 0.29
 Nodes (4): DebugCommandRequestedEvent, DebugCommandType, IDebugCommandProvider, DebugCommandProvider
+
+### Community 9397 - "Community 9397"
+Cohesion: 0.29
+Nodes (4): SquareRootNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
 
 ### Community 9398 - "Community 9398"
 Cohesion: 0.25
 Nodes (5): CountryIndexDisplay, FilterMode, int, MeshRenderer, RenderTexture
 
 ### Community 9399 - "Community 9399"
-Cohesion: 0.20
-Nodes (5): object, IObjectHandle, System.Runtime.Remoting, ObjectHandle, System.Runtime.Remoting
+Cohesion: 0.22
+Nodes (4): Uri, XmlTextReaderImpl, XPathDocument, NavigatorInput
 
 ### Community 9400 - "Community 9400"
-Cohesion: 0.25
-Nodes (3): IDataReader, System.Data, DataTable
+Cohesion: 0.20
+Nodes (5): BridgeScriptForRetainingObjects, NestedCanvasMaintainsCorrectSize, SetUp, TearDown, Test
 
 ### Community 9401 - "Community 9401"
-Cohesion: 0.32
-Nodes (4): AesGcm, System.Security.Cryptography, ReadOnlySpan, Span
+Cohesion: 0.22
+Nodes (4): PlanetEnvironment, bool, Color, float
 
 ### Community 9402 - "Community 9402"
 Cohesion: 0.25
@@ -55633,8 +55730,8 @@ Cohesion: 0.36
 Nodes (3): AssertionMessageUtil, UnityEngine.Assertions, string
 
 ### Community 9407 - "Community 9407"
-Cohesion: 0.36
-Nodes (4): GraphConcretization, GraphData, UnityEditor.ShaderGraph, AbstractMaterialNode
+Cohesion: 0.29
+Nodes (5): LoadAdapter, System.Data.Common, DataAdapter, DataTable, IDataReader
 
 ### Community 9408 - "Community 9408"
 Cohesion: 0.25
@@ -55677,8 +55774,8 @@ Cohesion: 0.25
 Nodes (5): IStreamable, System.Runtime.Serialization.Formatters.Binary, __BinaryParser, __BinaryWriter, SecurityCritical
 
 ### Community 9419 - "Community 9419"
-Cohesion: 0.29
-Nodes (5): MeshHelper, SerializableMesh, UnityEditor.ShaderGraph, Mesh, string
+Cohesion: 0.28
+Nodes (5): SafeEventLogWriteHandle, System.Runtime.Interop, DllImport, IntPtr, SecurityCritical
 
 ### Community 9420 - "Community 9420"
 Cohesion: 0.25
@@ -55741,16 +55838,16 @@ Cohesion: 0.25
 Nodes (5): AssetCollection, UnityEditor.ShaderGraph, Dictionary, Flags, GUID
 
 ### Community 9435 - "Community 9435"
-Cohesion: 0.29
-Nodes (4): GrassBladeBufferPool, GraphicsBuffer, int, Stack
+Cohesion: 0.31
+Nodes (6): Action, T, Asset(), Scoped, ScopedDisposable, UnityEngine.InputSystem
 
 ### Community 9436 - "Community 9436"
 Cohesion: 0.32
 Nodes (4): HashHelpers, System.Collections, ConditionalWeakTable, int
 
 ### Community 9437 - "Community 9437"
-Cohesion: 0.25
-Nodes (5): ReadOnlyCollectionBase, System.Collections, Array, ArrayList, IEnumerator
+Cohesion: 0.38
+Nodes (3): System.Runtime.Collections, ValidatingCollection, T
 
 ### Community 9438 - "Community 9438"
 Cohesion: 0.25
@@ -55851,14 +55948,6 @@ Nodes (7): dependencies, com.unity.render-pipelines.core, description, displayNa
 ### Community 9463 - "Community 9463"
 Cohesion: 0.25
 Nodes (6): CommandData, IEnumerable, MethodInfo, object, LambdaCommandData, QFSW.QC
-
-### Community 9464 - "Community 9464"
-Cohesion: 0.29
-Nodes (5): float, InputControl, Vector2, ScaleVector2Processor, UnityEngine.InputSystem.Processors
-
-### Community 9465 - "Community 9465"
-Cohesion: 0.20
-Nodes (6): AttachToPanelEvent, DetachFromPanelEvent, GeometryChangedEvent, List, RecommendationsGrid, Unity.Multiplayer.Center.Editor
 
 ### Community 9466 - "Community 9466"
 Cohesion: 0.32
@@ -55984,13 +56073,9 @@ Nodes (5): Constraint, DataSet, DataTable, DataSet, DataTable
 Cohesion: 0.32
 Nodes (5): ContextFlagMapping, ContextFlags, ContextFlagsPal, ContextFlagsAdapterPal, System.Net
 
-### Community 9497 - "Community 9497"
-Cohesion: 0.25
-Nodes (5): DynamicDimensionVector, MethodInfo, Vector2, RemapNode, UnityEditor.ShaderGraph
-
 ### Community 9498 - "Community 9498"
-Cohesion: 0.29
-Nodes (5): MenuCommand, MenuItem, AssignDefaultMaterial(), CreateToggleGameObject(), Unity.UI.Shaders.Sample
+Cohesion: 0.28
+Nodes (4): bool, byte, ChallengeResponse, Mono.Security.Protocol.Ntlm
 
 ### Community 9499 - "Community 9499"
 Cohesion: 0.25
@@ -56013,12 +56098,8 @@ Cohesion: 0.25
 Nodes (7): VisualElement, Visualization, Color, Mesh, Quaternion, Style, Vector3
 
 ### Community 9504 - "Community 9504"
-Cohesion: 0.29
-Nodes (4): int, Vector2, TimelineAssetViewModel, UnityEditor.Timeline
-
-### Community 9505 - "Community 9505"
-Cohesion: 0.29
-Nodes (4): int, ReflectionComposablePart, DisposableReflectionComposablePart, System.ComponentModel.Composition.ReflectionModel
+Cohesion: 0.25
+Nodes (4): MST_PlanningBelt, bool, float, int
 
 ### Community 9506 - "Community 9506"
 Cohesion: 0.29
@@ -56081,8 +56162,8 @@ Cohesion: 0.25
 Nodes (4): IXsltDebugger, System.Xml.Xsl.XsltOld.Debugger, IXsltProcessor, XPathNavigator
 
 ### Community 9521 - "Community 9521"
-Cohesion: 0.29
-Nodes (6): ManualResetEvent, WaitHandle, PendingGetConnection, PoolWaitHandles, System.Data.ProviderBase, Semaphore
+Cohesion: 0.22
+Nodes (4): CodeBinaryOperatorExpression, CodeBinaryOperatorType, CodeExpressionCollection, CodeParameterDeclarationExpressionCollection
 
 ### Community 9522 - "Community 9522"
 Cohesion: 0.29
@@ -56125,8 +56206,8 @@ Cohesion: 0.32
 Nodes (4): CorrelationManager, System.Diagnostics, Stack, string
 
 ### Community 9532 - "Community 9532"
-Cohesion: 0.25
-Nodes (4): bool, float, LODGroup, LODTest
+Cohesion: 0.33
+Nodes (5): DateTimeConverter, System.ComponentModel, CultureInfo, ITypeDescriptorContext, Type
 
 ### Community 9533 - "Community 9533"
 Cohesion: 0.25
@@ -56345,16 +56426,20 @@ Cohesion: 0.29
 Nodes (5): Binder, BindingFlags, CultureInfo, Guid, IntPtr
 
 ### Community 9587 - "Community 9587"
-Cohesion: 0.29
-Nodes (4): bool, int, System.Xml, UTF16Decoder
+Cohesion: 0.31
+Nodes (3): ProcessThreadCollection, System.Diagnostics, ProcessThread
 
 ### Community 9588 - "Community 9588"
-Cohesion: 0.25
-Nodes (5): ExponentialNode, UnityEditor.ShaderGraph, ExponentialBase, DynamicDimensionVector, MethodInfo
+Cohesion: 0.33
+Nodes (3): CngAlgorithmGroup, System.Security.Cryptography, string
 
 ### Community 9589 - "Community 9589"
 Cohesion: 0.25
 Nodes (6): System.Reflection.Emit, TokenGenerator, MemberInfo, MethodBase, SignatureHelper, Type
+
+### Community 9590 - "Community 9590"
+Cohesion: 0.42
+Nodes (3): Fragment, List, StringBuilder
 
 ### Community 9591 - "Community 9591"
 Cohesion: 0.25
@@ -56429,8 +56514,8 @@ Cohesion: 0.25
 Nodes (5): SwitchExpression, System.Linq.Expressions, ExpressionVisitor, IEnumerable, SwitchCase
 
 ### Community 9609 - "Community 9609"
-Cohesion: 0.29
-Nodes (5): ActionFrame, int, Processor, CopyNamespacesAction, System.Xml.Xsl.XsltOld
+Cohesion: 0.20
+Nodes (7): ArgumentCache, UnityEngine.Events, bool, float, int, Object, string
 
 ### Community 9610 - "Community 9610"
 Cohesion: 0.25
@@ -56453,8 +56538,8 @@ Cohesion: 0.32
 Nodes (5): FileCommands, QFSW.QC.Extras, Command, CommandDescription, Task
 
 ### Community 9615 - "Community 9615"
-Cohesion: 0.25
-Nodes (4): ILExceptionInfo, ILTokenInfo, ExceptionHandler, IEnumerable
+Cohesion: 0.29
+Nodes (4): TestSixwayLightmap, Light, Material, Renderer
 
 ### Community 9616 - "Community 9616"
 Cohesion: 0.32
@@ -56477,8 +56562,8 @@ Cohesion: 0.25
 Nodes (6): GatewayIPAddressInformation, GatewayIPAddressInformationCollection, IPAddress, IPAddressCollection, System.Net.NetworkInformation, SystemGatewayIPAddressInformation
 
 ### Community 9621 - "Community 9621"
-Cohesion: 0.36
-Nodes (7): MethodImpl, NativeMethod, Vector2, Vector3, CalculateRaycastTexCoord(), CalculateRaycastTexCoord_Injected(), UnityEngine
+Cohesion: 0.24
+Nodes (6): LongEnumEqualityComparer, System.Collections.Generic, SecurityCritical, SerializationInfo, StreamingContext, T
 
 ### Community 9622 - "Community 9622"
 Cohesion: 0.25
@@ -56496,6 +56581,10 @@ Nodes (8): PushLODGroupDeletionBatches(), PushLODGroupUpdateBatches(), PushMeshR
 Cohesion: 0.25
 Nodes (3): IGPUResidentRenderPipeline, UnityEngine.Rendering, LogType
 
+### Community 9626 - "Community 9626"
+Cohesion: 0.22
+Nodes (6): HttpMessageHandler, System.Net.Http, CancellationToken, HttpRequestMessage, HttpResponseMessage, Task
+
 ### Community 9627 - "Community 9627"
 Cohesion: 0.29
 Nodes (5): ExpressionBodyGrammar, QFSW.QC.Grammar, Func, Regex, Type
@@ -56508,13 +56597,17 @@ Nodes (5): GraphicsDeviceDebugSettings, MethodImpl, SpecialName, GraphicsDeviceD
 Cohesion: 0.25
 Nodes (6): IListPropertyVisitor, Property, TContainer, TList, IListPropertyAccept, Unity.Properties
 
+### Community 9630 - "Community 9630"
+Cohesion: 0.22
+Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, DateTimeDataContract, System.Runtime.Serialization
+
 ### Community 9631 - "Community 9631"
-Cohesion: 0.29
-Nodes (6): CreationContext, IUxmlAttributes, UxmlBoolAttributeDescription, VisualElement, UnityEngine.UIElements, UxmlTraits
+Cohesion: 0.27
+Nodes (6): PropertyItemInternal, System.Drawing.Imaging, int, IntPtr, PropertyItem, short
 
 ### Community 9632 - "Community 9632"
 Cohesion: 0.25
-Nodes (5): Focusable, FocusController, int, FocusChangeDirection, UnityEngine.UIElements
+Nodes (4): ILExceptionInfo, ILTokenInfo, ExceptionHandler, IEnumerable
 
 ### Community 9633 - "Community 9633"
 Cohesion: 0.43
@@ -56545,8 +56638,8 @@ Cohesion: 0.25
 Nodes (6): Identity, ObjRef, Type, WeakReference, ClientIdentity, System.Runtime.Remoting
 
 ### Community 9640 - "Community 9640"
-Cohesion: 0.29
-Nodes (5): IEventDispatchingStrategy, EventBase, IPanel, KeyboardEventDispatchingStrategy, UnityEngine.UIElements
+Cohesion: 0.33
+Nodes (4): EventBase, IPanel, KeyboardEventDispatchingStrategy, UnityEngine.UIElements
 
 ### Community 9641 - "Community 9641"
 Cohesion: 0.29
@@ -56555,6 +56648,10 @@ Nodes (5): System.Xml.Xsl.IlGen, UniqueList, Dictionary, List, T
 ### Community 9642 - "Community 9642"
 Cohesion: 0.32
 Nodes (5): List, Vector2, VisualElement, IPanel, UnityEngine.UIElements
+
+### Community 9643 - "Community 9643"
+Cohesion: 0.25
+Nodes (5): System.Linq.Expressions, TryExpression, CatchBlock, ExpressionVisitor, IEnumerable
 
 ### Community 9644 - "Community 9644"
 Cohesion: 0.29
@@ -56565,8 +56662,8 @@ Cohesion: 0.25
 Nodes (7): MetafileHeaderWmf, System.Drawing.Imaging, EmfPlusFlags, float, int, MetafileType, MetaHeader
 
 ### Community 9646 - "Community 9646"
-Cohesion: 0.25
-Nodes (5): DynamicDimensionVector, MethodInfo, Vector1, DotProductNode, UnityEditor.ShaderGraph
+Cohesion: 0.29
+Nodes (4): DivideNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
 
 ### Community 9647 - "Community 9647"
 Cohesion: 0.25
@@ -56701,8 +56798,8 @@ Cohesion: 0.25
 Nodes (3): IEnumerable, IGenerator, Packages.Rider.Editor.ProjectGeneration
 
 ### Community 9681 - "Community 9681"
-Cohesion: 0.36
-Nodes (3): VisualElement, ListViewController, UnityEngine.UIElements
+Cohesion: 0.29
+Nodes (5): QuaternionPropertyDrawer, UnityEditor.Rendering, GUIContent, Rect, SerializedProperty
 
 ### Community 9682 - "Community 9682"
 Cohesion: 0.36
@@ -56789,8 +56886,8 @@ Cohesion: 0.29
 Nodes (4): RenderGraph, RTHandle, RenderGraphDefaultResources, UnityEngine.Rendering.RenderGraphModule
 
 ### Community 9703 - "Community 9703"
-Cohesion: 0.25
-Nodes (5): Boolean, DynamicDimensionVector, MethodInfo, AnyNode, UnityEditor.ShaderGraph
+Cohesion: 0.20
+Nodes (3): BaseInput, UnityEngine.EventSystems, Touch
 
 ### Community 9704 - "Community 9704"
 Cohesion: 0.32
@@ -56799,6 +56896,10 @@ Nodes (5): NativeArray, T, TransformAccessArray, ArrayExtensions, UnityEngine.Re
 ### Community 9705 - "Community 9705"
 Cohesion: 0.29
 Nodes (5): FieldInfo, Lazy, VolumeParameter, UnityEngine.Rendering, VolumeDebugData
+
+### Community 9706 - "Community 9706"
+Cohesion: 0.28
+Nodes (6): IXPathNavigable, XNode, XPathNavigator, System.Xml.XPath, XDocumentExtensions, XDocumentNavigable
 
 ### Community 9707 - "Community 9707"
 Cohesion: 0.25
@@ -56809,8 +56910,8 @@ Cohesion: 0.25
 Nodes (6): Shader, Test, TestCaseData, TestCaseSource, ShaderExtensionsTests, UnityEditor.Rendering.Tests.ShaderStripping
 
 ### Community 9709 - "Community 9709"
-Cohesion: 0.25
-Nodes (3): XblPresenceRecordHandle, XblPresenceUserState, XblPresenceDeviceRecord
+Cohesion: 0.24
+Nodes (4): IRailGlobalAchievement, RailResult, IRailGlobalAchievementImpl, rail
 
 ### Community 9710 - "Community 9710"
 Cohesion: 0.29
@@ -56881,64 +56982,52 @@ Cohesion: 0.32
 Nodes (5): char, string, VisualElement, SearcherHighlighter, UnityEditor.Searcher
 
 ### Community 9727 - "Community 9727"
-Cohesion: 0.29
-Nodes (4): Action, PlanetEditor, Object, Planet
-
-### Community 9728 - "Community 9728"
-Cohesion: 0.29
-Nodes (4): ADV_PowerNetOverLoad, bool, float, int
+Cohesion: 0.40
+Nodes (5): Category, Performance, Test, Unity.Collections.PerformanceTests, UnsafeListPerformanceTests
 
 ### Community 9729 - "Community 9729"
-Cohesion: 0.25
-Nodes (4): IList, Uri, IWebProxyFinder, System.Net
+Cohesion: 0.20
+Nodes (7): EntityId, MenuItem, string, Texture2D, DoCreateUnifiedRayTracingShader, ShaderTemplates, UnityEditor.Rendering.UnifiedRayTracing
 
 ### Community 9730 - "Community 9730"
-Cohesion: 0.29
-Nodes (4): LerpNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
+Cohesion: 0.24
+Nodes (6): InspectableAttribute, PropertyInfo, ValueChangedCallback, VisualElement, IntegerPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 
 ### Community 9731 - "Community 9731"
-Cohesion: 0.31
-Nodes (5): IntPtr, MethodImpl, NativeMethod, ObjectGUIState, UnityEngine
+Cohesion: 0.33
+Nodes (4): ITypedList, System.ComponentModel, PropertyDescriptor, PropertyDescriptorCollection
 
 ### Community 9732 - "Community 9732"
 Cohesion: 0.25
 Nodes (6): MethodImpl, NativeMethod, Object, ResourceRequest, AssetBundleRequest, UnityEngine
 
 ### Community 9733 - "Community 9733"
-Cohesion: 0.22
-Nodes (6): ColorRGB, MethodInfo, Vector2, Vector3, CheckerboardNode, UnityEditor.ShaderGraph
-
-### Community 9734 - "Community 9734"
-Cohesion: 0.29
-Nodes (3): MST_StarTravelDistance, double, int
+Cohesion: 0.24
+Nodes (5): ITestAdaptor, ITestResultAdaptor, IUtpMessageReporter, UnityEditor.TestTools.TestRunner.UnityTestProtocol, UnityTestProtocolListener
 
 ### Community 9735 - "Community 9735"
-Cohesion: 0.25
-Nodes (6): MethodImpl, NativeThrows, PlayableGraph, PlayableOutputHandle, TexturePlayableGraphExtensions, UnityEngine.Experimental.Playables
-
-### Community 9736 - "Community 9736"
-Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, DegreesToRadiansNode, UnityEditor.ShaderGraph
+Cohesion: 0.33
+Nodes (4): CreateAnnotationAction, Timeline.Samples, ActionContext, ActionValidity
 
 ### Community 9737 - "Community 9737"
-Cohesion: 0.29
-Nodes (6): PowerDesc, bool, float, int, long, Vector3
+Cohesion: 0.43
+Nodes (3): NBodySimulation, CelestialBody, Vector3
 
 ### Community 9738 - "Community 9738"
-Cohesion: 0.29
-Nodes (5): AudioClipExtensionsInternal, UnityEngine.Experimental.Audio, AudioClip, MethodImpl, NativeMethod
+Cohesion: 0.22
+Nodes (4): IntPtr, SecureString, Microsoft.Win32.SafeHandles, SafePasswordHandle
 
 ### Community 9739 - "Community 9739"
-Cohesion: 0.22
-Nodes (6): DynamicDimensionVector, MethodInfo, Vector1, Vector2, PolygonNode, UnityEditor.ShaderGraph
+Cohesion: 0.36
+Nodes (7): MethodImpl, NativeMethod, Vector2, Vector3, CalculateRaycastTexCoord(), CalculateRaycastTexCoord_Injected(), UnityEngine
+
+### Community 9740 - "Community 9740"
+Cohesion: 0.33
+Nodes (3): HttpMethod, System.Net.Http, string
 
 ### Community 9741 - "Community 9741"
-Cohesion: 0.25
-Nodes (8): 3D Text GameObjects, Creating text, Other TextMesh Pro UI GameObjects, Properties Overview, Properties Overview, TextMesh Pro 3D Text GameObjects, TextMesh Pro UI Text GameObjects, UI Text GameObjects
-
-### Community 9742 - "Community 9742"
 Cohesion: 0.29
-Nodes (4): ModuloNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
+Nodes (7): CreationContext, IUxmlAttributes, UxmlBoolAttributeDescription, UxmlEnumAttributeDescription, UxmlFloatAttributeDescription, UxmlLongAttributeDescription, UxmlTraits
 
 ### Community 9743 - "Community 9743"
 Cohesion: 0.29
@@ -56953,8 +57042,8 @@ Cohesion: 0.32
 Nodes (5): ObjectPool, Stack, T, StackPool, UnityEditor.Graphing
 
 ### Community 9746 - "Community 9746"
-Cohesion: 0.25
-Nodes (5): ComputeShader, RenderTexture, TextAsset, Vector3, LoadSDF
+Cohesion: 0.20
+Nodes (7): bool, int, object, string, Type, SerializationInfoEnumerator, System.Runtime.Serialization
 
 ### Community 9747 - "Community 9747"
 Cohesion: 0.25
@@ -56965,8 +57054,8 @@ Cohesion: 0.25
 Nodes (4): JsonRef, T, Equals(), UnityEditor.ShaderGraph.Serialization
 
 ### Community 9749 - "Community 9749"
-Cohesion: 0.29
-Nodes (4): NormalizeNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
+Cohesion: 0.22
+Nodes (7): OdbcErrorCollection, RetCode, SecurityPermission, SerializationInfo, StreamingContext, OdbcException, System.Data.Odbc
 
 ### Community 9750 - "Community 9750"
 Cohesion: 0.25
@@ -57084,6 +57173,10 @@ Nodes (3): GameObject, AnimatedPropertyUtility, UnityEditor.Timeline
 Cohesion: 0.39
 Nodes (3): TimeFormat, TimeDisplayUnitExtensions, UnityEditor.Timeline
 
+### Community 9779 - "Community 9779"
+Cohesion: 0.33
+Nodes (4): InputControl, Vector2, NormalizeVector2Processor, UnityEngine.InputSystem.Processors
+
 ### Community 9780 - "Community 9780"
 Cohesion: 0.32
 Nodes (6): EntityId, ObjectId, AllocateNextLowestEntityId(), CompareTo(), Equals(), UnityEngine.Timeline
@@ -57101,8 +57194,8 @@ Cohesion: 0.36
 Nodes (5): GUIContent, Rect, SerializedProperty, GlyphMetricsPropertyDrawer, TMPro.EditorUtilities
 
 ### Community 9784 - "Community 9784"
-Cohesion: 0.36
-Nodes (5): GUIContent, Rect, SerializedProperty, GlyphRectPropertyDrawer, TMPro.EditorUtilities
+Cohesion: 0.31
+Nodes (6): bool, CancellationToken, int, TIntermediate, InlinedAggregationOperatorEnumerator, System.Linq.Parallel
 
 ### Community 9785 - "Community 9785"
 Cohesion: 0.36
@@ -57149,8 +57242,8 @@ Cohesion: 0.32
 Nodes (4): ILease, System.Runtime.Remoting.Lifetime, ISponsor, TimeSpan
 
 ### Community 9796 - "Community 9796"
-Cohesion: 0.29
-Nodes (4): PosterizeNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
+Cohesion: 0.20
+Nodes (6): Edge, EdgeIterator, TriangleNet.Meshing.Iterators, Osub, Otri, Vertex
 
 ### Community 9797 - "Community 9797"
 Cohesion: 0.36
@@ -57272,17 +57365,17 @@ Nodes (3): MemberFilter, MemberInfo, MemberTypes
 Cohesion: 0.25
 Nodes (5): int, NameOrId, Stream, System.Resources, Win32Resource
 
-### Community 9831 - "Community 9831"
-Cohesion: 0.29
-Nodes (4): ACH_UpgradeTechValue, double, ECompare, int
+### Community 9830 - "Community 9830"
+Cohesion: 0.20
+Nodes (6): Edge, EdgeIterator, TriangleNet.Meshing.Iterators, Osub, Otri, Vertex
 
 ### Community 9832 - "Community 9832"
-Cohesion: 0.29
-Nodes (6): AmbientDesc, Color, Cubemap, float, int, Texture2D
+Cohesion: 0.33
+Nodes (4): InputControl, Vector3, NormalizeVector3Processor, UnityEngine.InputSystem.Processors
 
 ### Community 9833 - "Community 9833"
-Cohesion: 0.29
-Nodes (3): MST_ItemProduction, int, long
+Cohesion: 0.22
+Nodes (8): TurretDesc, byte, EAmmoType, ETurretType, float, int, Vector3, VSLayerMask
 
 ### Community 9834 - "Community 9834"
 Cohesion: 0.25
@@ -57382,15 +57475,11 @@ Nodes (5): IEnumerator, int, TInputOutput, ListChunk, System.Linq.Parallel
 
 ### Community 9858 - "Community 9858"
 Cohesion: 0.05
-Nodes (42): OrderedParallelQuery, System.Linq, IEnumerator, QueryOperator, TSource, T, QueryOperatorEnumerator, T (+34 more)
+Nodes (37): T, QueryOperatorEnumerator, T, IEnumerable, IEnumerator, IList, int, object (+29 more)
 
 ### Community 9859 - "Community 9859"
 Cohesion: 0.29
 Nodes (5): CancellationState, int, Task, QueryTaskGroupState, System.Linq.Parallel
-
-### Community 9860 - "Community 9860"
-Cohesion: 0.32
-Nodes (5): Func, TInputOutput, SortQueryOperatorEnumerator, System.Linq.Parallel, TSortKey
 
 ### Community 9861 - "Community 9861"
 Cohesion: 0.39
@@ -57453,16 +57542,16 @@ Cohesion: 0.29
 Nodes (5): ConstructorInfo, IXmlSerializable, XmlDataContract, System.Runtime.Serialization, XmlDataContractInterpreter
 
 ### Community 9876 - "Community 9876"
-Cohesion: 0.36
-Nodes (5): XmlDictionaryReader, XmlDictionaryString, XmlDictionaryWriter, BooleanArrayHelperWithDictionaryString, System.Xml
+Cohesion: 0.25
+Nodes (5): BloomGraphDrawer, BloomEditor, Kino, GUIContent, SerializedProperty
 
 ### Community 9877 - "Community 9877"
 Cohesion: 0.36
 Nodes (5): DateTime, XmlDictionaryReader, XmlDictionaryWriter, DateTimeArrayHelperWithString, System.Xml
 
 ### Community 9878 - "Community 9878"
-Cohesion: 0.33
-Nodes (3): InstanceDataCollectionCollection, System.Diagnostics, InstanceDataCollection
+Cohesion: 0.22
+Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, DoubleDataContract, System.Runtime.Serialization
 
 ### Community 9879 - "Community 9879"
 Cohesion: 0.36
@@ -57505,8 +57594,8 @@ Cohesion: 0.32
 Nodes (5): string, XmlDocument, XmlElement, EncryptionProperty, System.Security.Cryptography.Xml
 
 ### Community 9890 - "Community 9890"
-Cohesion: 0.29
-Nodes (5): string, XmlDocument, XmlElement, KeyInfoName, System.Security.Cryptography.Xml
+Cohesion: 0.25
+Nodes (6): KeyInfoClause, string, XmlDocument, XmlElement, KeyInfoName, System.Security.Cryptography.Xml
 
 ### Community 9891 - "Community 9891"
 Cohesion: 0.29
@@ -57517,8 +57606,8 @@ Cohesion: 0.25
 Nodes (3): byte, SymmetricKeyWrap, System.Security.Cryptography.Xml
 
 ### Community 9894 - "Community 9894"
-Cohesion: 0.33
-Nodes (4): AnalyticsSessionInfo, UnityEngine.Analytics, AnalyticsSessionState, RequiredByNativeCode
+Cohesion: 0.29
+Nodes (4): PowerNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
 
 ### Community 9895 - "Community 9895"
 Cohesion: 0.32
@@ -57543,10 +57632,6 @@ Nodes (6): ReadOnlySpan, longestSequenceLength, longestSequenceStart, FindCompre
 ### Community 9900 - "Community 9900"
 Cohesion: 0.25
 Nodes (6): DllImport, IntPtr, string, StringBuilder, MonoToolsLocator, System
-
-### Community 9901 - "Community 9901"
-Cohesion: 0.29
-Nodes (3): MST_LaunchRocket, bool, int
 
 ### Community 9902 - "Community 9902"
 Cohesion: 0.25
@@ -57600,6 +57685,10 @@ Nodes (6): bool, byte, int, string, SendPacketsElement, System.Net.Sockets
 Cohesion: 0.29
 Nodes (5): bool, DllImport, IntPtr, Platform, System
 
+### Community 9915 - "Community 9915"
+Cohesion: 0.29
+Nodes (5): SynchronizedClientContextSink, System.Runtime.Remoting.Contexts, IMessage, IMessageCtrl, SynchronizationAttribute
+
 ### Community 9916 - "Community 9916"
 Cohesion: 0.25
 Nodes (5): bool, CultureInfo, RegexCharClass, RegexFC, System.Text.RegularExpressions
@@ -57621,8 +57710,8 @@ Cohesion: 0.39
 Nodes (4): int, StringBuilder, StringBuilderCache, System.Text
 
 ### Community 9921 - "Community 9921"
-Cohesion: 0.32
-Nodes (5): FilmGrainResourcesStripper, UnityEditor.Rendering.Universal, List, ScriptableRendererData, UniversalRenderPipelineFilmGrainResources
+Cohesion: 0.22
+Nodes (5): RectTransformValidAfterEnable, IEnumerator, string, TearDown, UnityTest
 
 ### Community 9922 - "Community 9922"
 Cohesion: 0.29
@@ -57677,8 +57766,8 @@ Cohesion: 0.32
 Nodes (5): ArrayList, Exception, XmlSchemaDatatype, System.Xml.Schema, UnionFacetsChecker
 
 ### Community 9935 - "Community 9935"
-Cohesion: 0.25
-Nodes (6): Stream, TextReader, TextWriter, XmlNamespaceManager, XmlReader, XmlWriter
+Cohesion: 0.40
+Nodes (4): Stream, TextWriter, XmlNamespaceManager, XmlWriter
 
 ### Community 9936 - "Community 9936"
 Cohesion: 0.32
@@ -57705,12 +57794,12 @@ Cohesion: 0.25
 Nodes (7): bool, SoapAttributes, string, Type, XmlAttributes, System.Xml.Serialization, XmlReflectionMember
 
 ### Community 9942 - "Community 9942"
-Cohesion: 0.38
-Nodes (3): AtmosphereProfileEditor, float, SerializedProperty
+Cohesion: 0.29
+Nodes (5): SynchronizedServerContextSink, System.Runtime.Remoting.Contexts, IMessage, IMessageCtrl, SynchronizationAttribute
 
 ### Community 9943 - "Community 9943"
-Cohesion: 0.29
-Nodes (4): TestCombatMusic, AudioSource, BGM_CombatController, bool
+Cohesion: 0.25
+Nodes (6): Comparer, System.Collections, CompareInfo, SecurityCritical, SerializationInfo, StreamingContext
 
 ### Community 9944 - "Community 9944"
 Cohesion: 0.29
@@ -57925,8 +58014,8 @@ Cohesion: 0.36
 Nodes (5): FreeFunction, GameObject, MethodImpl, AnimatorUtility, UnityEngine
 
 ### Community 9999 - "Community 9999"
-Cohesion: 0.22
-Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, DoubleDataContract, System.Runtime.Serialization
+Cohesion: 0.25
+Nodes (6): DepthBlitEdgePass, ContextContainer, Material, ProfilingSampler, RenderGraph, RTHandle
 
 ### Community 10000 - "Community 10000"
 Cohesion: 0.39
@@ -57942,7 +58031,7 @@ Nodes (6): bool, int, string, UsedByNativeCode, EnumInfo, UnityEngine
 
 ### Community 10003 - "Community 10003"
 Cohesion: 0.29
-Nodes (4): TestDFTinder, bool, float, int
+Nodes (3): TestRandomTip, int, UIRandomTip
 
 ### Community 10004 - "Community 10004"
 Cohesion: 0.39
@@ -57950,7 +58039,7 @@ Nodes (4): FreeFunction, MethodImpl, ExternalGPUProfiler, UnityEngine.Experiment
 
 ### Community 10005 - "Community 10005"
 Cohesion: 0.29
-Nodes (4): EventBase, VisualElement, ImageWithPlaceholderElement, Unity.Multiplayer.Center.Editor
+Nodes (4): MethodInfo, Vector3, MainLightDirectionNode, UnityEditor.ShaderGraph
 
 ### Community 10006 - "Community 10006"
 Cohesion: 0.29
@@ -58021,8 +58110,8 @@ Cohesion: 0.32
 Nodes (4): string, Texture, GUIContent, UnityEngine
 
 ### Community 10023 - "Community 10023"
-Cohesion: 0.22
-Nodes (5): float, Rigidbody, SimpleBallController, Transform, Vector3
+Cohesion: 0.25
+Nodes (6): DistortTunnelPass_Distort, ContextContainer, Material, ProfilingSampler, RenderGraph, RTHandle
 
 ### Community 10024 - "Community 10024"
 Cohesion: 0.29
@@ -58034,7 +58123,7 @@ Nodes (7): CharacterController, Collider, float, int, Vector3, ControllerCollide
 
 ### Community 10026 - "Community 10026"
 Cohesion: 0.29
-Nodes (4): Boolean, MethodInfo, OrNode, UnityEditor.ShaderGraph
+Nodes (4): DynamicDimensionMatrix, MethodInfo, MatrixTransposeNode, UnityEditor.ShaderGraph
 
 ### Community 10027 - "Community 10027"
 Cohesion: 0.25
@@ -58061,8 +58150,8 @@ Cohesion: 0.36
 Nodes (5): RectInt, RequiredByNativeCode, TerrainData, TerrainCallbacks, UnityEngine
 
 ### Community 10033 - "Community 10033"
-Cohesion: 0.38
-Nodes (5): EmptyEnumerator, IEnumerator, T, EmptyEnumerable, System.Linq.Parallel
+Cohesion: 0.29
+Nodes (4): DynamicDimensionVector, MethodInfo, OneMinusNode, UnityEditor.ShaderGraph
 
 ### Community 10034 - "Community 10034"
 Cohesion: 0.25
@@ -58097,8 +58186,8 @@ Cohesion: 0.32
 Nodes (7): Color, TextGenerationSettings, Vector2, CompareColors(), CompareVector2(), Equals(), UnityEngine
 
 ### Community 10043 - "Community 10043"
-Cohesion: 0.29
-Nodes (3): TestRandomTip, int, UIRandomTip
+Cohesion: 0.47
+Nodes (3): GUIContent, SerializedDataParameter, TextureDimension
 
 ### Community 10044 - "Community 10044"
 Cohesion: 0.25
@@ -58133,20 +58222,20 @@ Cohesion: 0.36
 Nodes (5): Func, IDragAndDrop, IPanel, DragAndDropUtility, UnityEngine.UIElements
 
 ### Community 10052 - "Community 10052"
-Cohesion: 0.29
-Nodes (4): TestSixwayLightmap, Light, Material, Renderer
+Cohesion: 0.25
+Nodes (5): DeprecatedOnboardingSections, Unity.Multiplayer.Center.Editor, IOnboardingSection, AttachToPanelEvent, DetachFromPanelEvent
 
 ### Community 10053 - "Community 10053"
 Cohesion: 0.29
 Nodes (3): EventBase, IEventHandler, UnityEngine.UIElements
 
 ### Community 10054 - "Community 10054"
-Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, MaximumNode, UnityEditor.ShaderGraph
+Cohesion: 0.33
+Nodes (4): AnalyticsSessionInfo, UnityEngine.Analytics, AnalyticsSessionState, RequiredByNativeCode
 
 ### Community 10055 - "Community 10055"
 Cohesion: 0.25
-Nodes (5): MethodInfo, Vector1, Vector2, RoundedPolygonNode, UnityEditor.ShaderGraph
+Nodes (5): UnityEditor.ShaderGraph, WhiteBalanceNode, MethodInfo, Vector1, Vector3
 
 ### Community 10056 - "Community 10056"
 Cohesion: 0.36
@@ -58167,10 +58256,6 @@ Nodes (4): Event, PointerMoveEvent, MouseMoveEvent, UnityEngine.UIElements
 ### Community 10060 - "Community 10060"
 Cohesion: 0.36
 Nodes (5): IPointerEvent, Vector2, VisualElement, PointerEventsHelper, UnityEngine.UIElements
-
-### Community 10061 - "Community 10061"
-Cohesion: 0.29
-Nodes (5): UIMechaBoneFilterButton, float, RectTransform, Text, UIButton
 
 ### Community 10062 - "Community 10062"
 Cohesion: 0.32
@@ -58249,8 +58334,8 @@ Cohesion: 0.25
 Nodes (3): XblAchievement, XblAchievementsResultGetNextResult, XblAchievementsResultHandle
 
 ### Community 10082 - "Community 10082"
-Cohesion: 0.22
-Nodes (9): Bevel, Bump Map, Debug Settings, Environment Map, Face, Glow, Outline, Properties (+1 more)
+Cohesion: 0.29
+Nodes (4): DynamicDimensionVector, MethodInfo, Arctangent2Node, UnityEditor.ShaderGraph
 
 ### Community 10083 - "Community 10083"
 Cohesion: 0.39
@@ -58262,7 +58347,7 @@ Nodes (6): Array, float, int, Vector2, SimplexNoiseSettings, NoiseSettings
 
 ### Community 10085 - "Community 10085"
 Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, SaturateNode, UnityEditor.ShaderGraph
+Nodes (3): RenderTextureToPNG, int, string
 
 ### Community 10086 - "Community 10086"
 Cohesion: 0.25
@@ -58346,19 +58431,19 @@ Nodes (3): Button, Menu, PauseMenu
 
 ### Community 10106 - "Community 10106"
 Cohesion: 0.29
-Nodes (3): TestRemoveSkillTargets, bool, int
+Nodes (4): DynamicDimensionVector, MethodInfo, HyperbolicSineNode, UnityEditor.ShaderGraph
 
 ### Community 10107 - "Community 10107"
 Cohesion: 0.29
-Nodes (4): TestShipPath2, double, int, Transform
+Nodes (4): DynamicDimensionVector, MethodInfo, ProjectionNode, UnityEditor.ShaderGraph
 
 ### Community 10108 - "Community 10108"
-Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, Arctangent2Node, UnityEditor.ShaderGraph
+Cohesion: 0.22
+Nodes (6): InputSystemObject, UnityEngine.InputSystem, bool, double, State, string
 
 ### Community 10109 - "Community 10109"
-Cohesion: 0.29
-Nodes (4): UIScrollZone, Camera, List, RectTransform
+Cohesion: 0.22
+Nodes (6): IRailAchievementHelper, IRailGlobalAchievement, IRailPlayerAchievement, RailID, IRailAchievementHelperImpl, rail
 
 ### Community 10110 - "Community 10110"
 Cohesion: 0.25
@@ -58381,8 +58466,8 @@ Cohesion: 0.29
 Nodes (4): bool, int, Vector3, Presets
 
 ### Community 10115 - "Community 10115"
-Cohesion: 0.25
-Nodes (3): ADV_ConfirmTechResult, bool, int
+Cohesion: 0.28
+Nodes (5): IRailSmallObjectServiceHelper, List, RailResult, IRailSmallObjectServiceHelperImpl, rail
 
 ### Community 10116 - "Community 10116"
 Cohesion: 0.29
@@ -58465,8 +58550,8 @@ Cohesion: 0.29
 Nodes (4): float, int, FPSTest, TMP_Text
 
 ### Community 10136 - "Community 10136"
-Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, HyperbolicCosineNode, UnityEditor.ShaderGraph
+Cohesion: 0.33
+Nodes (5): CubemapInputMaterialSlot, ChangeEvent, Object, CubemapSlotControlView, UnityEditor.ShaderGraph.Drawing.Slots
 
 ### Community 10137 - "Community 10137"
 Cohesion: 0.29
@@ -58482,7 +58567,7 @@ Nodes (7): Efficiency plan, Inputs / context to gather, Pitfalls and fixes, Proc
 
 ### Community 10143 - "Community 10143"
 Cohesion: 0.29
-Nodes (4): MethodInfo, Vector3, CrossProductNode, UnityEditor.ShaderGraph
+Nodes (4): MethodInfo, Vector2, RadialShearNode, UnityEditor.ShaderGraph
 
 ### Community 10144 - "Community 10144"
 Cohesion: 0.25
@@ -58536,10 +58621,6 @@ Nodes (4): QFSW.QC.Actions, Wait, ActionContext, float
 Cohesion: 0.33
 Nodes (4): QFSW.QC.Actions, WaitWhile, ActionContext, Func
 
-### Community 10161 - "Community 10161"
-Cohesion: 0.28
-Nodes (3): Attachment, AttachmentCollection, System.Net.Mail
-
 ### Community 10162 - "Community 10162"
 Cohesion: 0.29
 Nodes (6): AlphaMode, bool, ShaderID, SurfaceType, UnityEditor.Rendering.Universal.ShaderGraph, UniversalMetadata
@@ -58553,8 +58634,8 @@ Cohesion: 0.29
 Nodes (6): RunFinishedData, UnityEditor.TestTools.TestRunner.Api.Analytics, bool, double, int, string
 
 ### Community 10165 - "Community 10165"
-Cohesion: 0.25
-Nodes (4): IEnumerator, XmlNode, System.Xml, XmlNodeList
+Cohesion: 0.29
+Nodes (4): MouseDownEvent, MouseUpEvent, NodeSettingsView, UnityEditor.ShaderGraph.Drawing
 
 ### Community 10166 - "Community 10166"
 Cohesion: 0.29
@@ -58601,8 +58682,8 @@ Cohesion: 0.29
 Nodes (3): ACH_WalkWithLowEnergy, double, long
 
 ### Community 10180 - "Community 10180"
-Cohesion: 0.22
-Nodes (7): GUIContent, Rect, SearchContext, SerializedProperty, InputActionReferencePropertyDrawer, UnityEngine.InputSystem.Editor, Type, GUIContent, Object>
+Cohesion: 0.18
+Nodes (4): CodeCompileUnit, CodeNamespace, CodeNamespaceImport, CodeSnippetCompileUnit
 
 ### Community 10183 - "Community 10183"
 Cohesion: 0.29
@@ -58638,7 +58719,7 @@ Nodes (4): DoodadProto, double, int, string
 
 ### Community 10194 - "Community 10194"
 Cohesion: 0.29
-Nodes (5): Func, IEnumerator, TestJobData, StoreSceneSetupTask, UnityEditor.TestTools.TestRunner.TestRun.Tasks.Scene
+Nodes (5): ChangeEvent, Enum, UnityEditor.ShaderGraph.Drawing.Slots, UVSlotControlView, UVMaterialSlot
 
 ### Community 10197 - "Community 10197"
 Cohesion: 0.33
@@ -58665,8 +58746,8 @@ Cohesion: 0.29
 Nodes (4): Export(), Import(), BinaryReader, BinaryWriter
 
 ### Community 10214 - "Community 10214"
-Cohesion: 0.29
-Nodes (4): MethodInfo, Vector2, RadialShearNode, UnityEditor.ShaderGraph
+Cohesion: 0.43
+Nodes (4): float, Quaternion, QuaternionEqualityComparer, UnityEngine.TestTools.Utils
 
 ### Community 10215 - "Community 10215"
 Cohesion: 0.29
@@ -58677,8 +58758,8 @@ Cohesion: 0.33
 Nodes (3): PlayerAction, Player, PlayerController
 
 ### Community 10218 - "Community 10218"
-Cohesion: 0.29
-Nodes (4): Boolean, MethodInfo, AndNode, UnityEditor.ShaderGraph
+Cohesion: 0.43
+Nodes (4): float, Vector2, UnityEngine.TestTools.Utils, Vector2EqualityComparer
 
 ### Community 10220 - "Community 10220"
 Cohesion: 0.29
@@ -58733,12 +58814,12 @@ Cohesion: 0.43
 Nodes (3): PropertyInfo, Scene, SceneExtensions
 
 ### Community 10237 - "Community 10237"
-Cohesion: 0.22
-Nodes (4): Camera, Planet, Transform, FarCamera
+Cohesion: 0.25
+Nodes (5): IRailTextInputHelper, RailResult, RailTextInputWindowOption, IRailTextInputHelperImpl, rail
 
 ### Community 10238 - "Community 10238"
-Cohesion: 0.29
-Nodes (5): AudioMixerProperties, UnityEngine.Timeline, float, FrameData, Playable
+Cohesion: 0.22
+Nodes (5): MethodInfo, Vector1, Vector3, ReflectionProbeNode, UnityEditor.ShaderGraph
 
 ### Community 10240 - "Community 10240"
 Cohesion: 0.29
@@ -58753,12 +58834,12 @@ Cohesion: 0.29
 Nodes (3): UIKillEntryData, int, long
 
 ### Community 10243 - "Community 10243"
-Cohesion: 0.29
-Nodes (4): AddNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
+Cohesion: 0.22
+Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, IntDataContract, System.Runtime.Serialization
 
 ### Community 10244 - "Community 10244"
-Cohesion: 0.29
-Nodes (4): MS.Internal.Xml.Cache, XPathDocumentKindChildIterator, XPathNodeIterator, XPathNodeType
+Cohesion: 0.33
+Nodes (6): CreationContext, IUxmlAttributes, UxmlEnumAttributeDescription, UxmlIntAttributeDescription, UxmlStringAttributeDescription, UxmlTraits
 
 ### Community 10245 - "Community 10245"
 Cohesion: 0.29
@@ -58805,8 +58886,8 @@ Cohesion: 0.29
 Nodes (5): UnityEditor.Rendering.Universal, UniversalShaderGraphSaveContext, ShaderGraphMaterialsUpdater, bool, Shader
 
 ### Community 10256 - "Community 10256"
-Cohesion: 0.43
-Nodes (4): Color, float, ColorEqualityComparer, UnityEngine.TestTools.Utils
+Cohesion: 0.29
+Nodes (5): bool, InputControl, Vector3, InvertVector3Processor, UnityEngine.InputSystem.Processors
 
 ### Community 10257 - "Community 10257"
 Cohesion: 0.38
@@ -58825,16 +58906,20 @@ Cohesion: 0.29
 Nodes (5): ITestPlayerBuildModifier, ModifyOptions(), UnityEditor.TestTools, BuildPlayerOptions, BuildPlayerWithProfileOptions
 
 ### Community 10262 - "Community 10262"
-Cohesion: 0.29
-Nodes (4): EditorClipSelection, ICurvesOwnerInspectorWrapper, TrackCurvesWrapper, UnityEditor.Timeline
-
-### Community 10264 - "Community 10264"
-Cohesion: 0.43
-Nodes (4): float, Quaternion, QuaternionEqualityComparer, UnityEngine.TestTools.Utils
-
-### Community 10265 - "Community 10265"
 Cohesion: 0.38
 Nodes (3): AlphanumComparator, QFSW.QC.Comparators, int
+
+### Community 10263 - "Community 10263"
+Cohesion: 0.33
+Nodes (5): ModifierKeyComboEditor, QFSW.QC.Editor, GUIContent, Rect, SerializedProperty
+
+### Community 10264 - "Community 10264"
+Cohesion: 0.29
+Nodes (5): bool, float, Transform, Vector3, Orbit
+
+### Community 10265 - "Community 10265"
+Cohesion: 0.22
+Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, ShortDataContract, System.Runtime.Serialization
 
 ### Community 10266 - "Community 10266"
 Cohesion: 0.48
@@ -58861,8 +58946,8 @@ Cohesion: 0.29
 Nodes (6): SerObjectInfoCache, System.Runtime.Serialization.Formatters.Binary, bool, MemberInfo, string, Type
 
 ### Community 10273 - "Community 10273"
-Cohesion: 0.25
-Nodes (4): ACH_SonicBoom, bool, double, float
+Cohesion: 0.29
+Nodes (6): NoiseLayer, ShapeSettings, bool, float, NoiseLayer, NoiseSettings
 
 ### Community 10274 - "Community 10274"
 Cohesion: 0.33
@@ -59157,8 +59242,8 @@ Cohesion: 0.29
 Nodes (4): ClientConfigurationSystem, System.Configuration, IInternalConfigSystem, Configuration
 
 ### Community 10350 - "Community 10350"
-Cohesion: 0.38
-Nodes (3): ConfigurationLocationCollection, System.Configuration, ConfigurationLocation
+Cohesion: 0.29
+Nodes (3): BindingFlags, FieldInfo, FieldToken
 
 ### Community 10351 - "Community 10351"
 Cohesion: 0.29
@@ -59249,12 +59334,16 @@ Cohesion: 0.38
 Nodes (4): CrashReportHandler, UnityEngine.CrashReportHandler, MethodImpl, NativeThrows
 
 ### Community 10375 - "Community 10375"
-Cohesion: 0.33
-Nodes (3): CngAlgorithmGroup, System.Security.Cryptography, string
+Cohesion: 0.22
+Nodes (6): XmlObjectSerializerReadContext, XmlObjectSerializerWriteContext, XmlReaderDelegator, XmlWriterDelegator, System.Runtime.Serialization, UriDataContract
 
 ### Community 10376 - "Community 10376"
-Cohesion: 0.08
-Nodes (17): ArrayHelper, XmlDictionaryReader, XmlDictionaryWriter, XmlDictionaryReader, XmlDictionaryWriter, XmlDictionaryReader, XmlDictionaryWriter, XmlDictionaryReader (+9 more)
+Cohesion: 0.36
+Nodes (5): XmlDictionaryReader, XmlDictionaryString, XmlDictionaryWriter, BooleanArrayHelperWithDictionaryString, System.Xml
+
+### Community 10377 - "Community 10377"
+Cohesion: 0.33
+Nodes (3): DestroyTimer, bool, float
 
 ### Community 10378 - "Community 10378"
 Cohesion: 0.38
@@ -59265,8 +59354,8 @@ Cohesion: 0.33
 Nodes (4): RSACng, System.Security.Cryptography, RSAParameters, RSA
 
 ### Community 10380 - "Community 10380"
-Cohesion: 0.33
-Nodes (3): RSASignaturePadding, System.Security.Cryptography, RSASignaturePaddingMode
+Cohesion: 0.15
+Nodes (6): CngKeyBlobFormat, System.Security.Cryptography, RSASignaturePadding, System.Security.Cryptography, string, RSASignaturePaddingMode
 
 ### Community 10381 - "Community 10381"
 Cohesion: 0.32
@@ -59301,8 +59390,8 @@ Cohesion: 0.33
 Nodes (4): System.Data, XmlIgnoreNamespaceReader, List, XmlNodeReader
 
 ### Community 10389 - "Community 10389"
-Cohesion: 0.29
-Nodes (4): PowerNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
+Cohesion: 0.48
+Nodes (4): HashSetEqualityComparer, System.Collections.Generic, HashSet, T
 
 ### Community 10390 - "Community 10390"
 Cohesion: 0.33
@@ -59345,8 +59434,8 @@ Cohesion: 0.29
 Nodes (5): PropertyValueUIItem, System.Drawing.Design, Image, string, PropertyValueUIItemInvokeHandler
 
 ### Community 10400 - "Community 10400"
-Cohesion: 0.38
-Nodes (3): System.Drawing.Design, ToolboxItemCollection, ToolboxItem
+Cohesion: 0.36
+Nodes (4): XPathNavigator, XPathNodeIterator, IDQuery, MS.Internal.Xml.XPath
 
 ### Community 10401 - "Community 10401"
 Cohesion: 0.29
@@ -59365,8 +59454,8 @@ Cohesion: 0.29
 Nodes (5): EventLogPermissionEntry, System.Diagnostics, EventLogPermissionAccess, ResourcePermissionBaseEntry, string
 
 ### Community 10405 - "Community 10405"
-Cohesion: 0.33
-Nodes (4): XmlDictionaryReader, XmlDictionaryWriter, DoubleArrayHelperWithString, System.Xml
+Cohesion: 0.43
+Nodes (3): AttributeAccessor, XmlSchemaAttribute, XmlSchemaForm
 
 ### Community 10406 - "Community 10406"
 Cohesion: 0.29
@@ -59377,8 +59466,8 @@ Cohesion: 0.29
 Nodes (5): PerformanceCounterPermissionEntry, System.Diagnostics, PerformanceCounterPermissionAccess, ResourcePermissionBaseEntry, string
 
 ### Community 10408 - "Community 10408"
-Cohesion: 0.38
-Nodes (3): ProcessModuleCollection, System.Diagnostics, ProcessModule
+Cohesion: 0.36
+Nodes (4): GraphConcretization, GraphData, UnityEditor.ShaderGraph, AbstractMaterialNode
 
 ### Community 10409 - "Community 10409"
 Cohesion: 0.29
@@ -59601,8 +59690,8 @@ Cohesion: 0.33
 Nodes (4): ARM64InstructionInfo, BurstDisassembler, Unity.Burst.Editor, StringSlice
 
 ### Community 10467 - "Community 10467"
-Cohesion: 0.29
-Nodes (4): SquareRootNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
+Cohesion: 0.33
+Nodes (3): TestRenderCubemap, bool, Camera
 
 ### Community 10468 - "Community 10468"
 Cohesion: 0.38
@@ -59621,8 +59710,8 @@ Cohesion: 0.36
 Nodes (5): NoFoldOutPropertyDrawer, Timeline.Samples, GUIContent, Rect, SerializedProperty
 
 ### Community 10472 - "Community 10472"
-Cohesion: 0.43
-Nodes (4): Axis, GUIContent, Rect, SerializedProperty
+Cohesion: 0.48
+Nodes (4): CodeCompileUnit, CodeNamespace, SchemaImporterExtension, XmlSchemaObject
 
 ### Community 10473 - "Community 10473"
 Cohesion: 0.29
@@ -59701,8 +59790,8 @@ Cohesion: 0.29
 Nodes (5): EventWaitHandle, AutoResetEvent, System.Threading, ManualResetEvent, System.Threading
 
 ### Community 10492 - "Community 10492"
-Cohesion: 0.38
-Nodes (4): FlyCamera, bool, float, Vector3
+Cohesion: 0.33
+Nodes (5): UIChartProducerItemEntry, Image, int, RectTransform, Text
 
 ### Community 10493 - "Community 10493"
 Cohesion: 0.38
@@ -59741,8 +59830,8 @@ Cohesion: 0.29
 Nodes (5): DynamicExpressionVisitor, System.Linq.Expressions, ExpressionVisitor, DynamicExpression, Expression
 
 ### Community 10502 - "Community 10502"
-Cohesion: 0.33
-Nodes (3): CngProvider, System.Security.Cryptography, string
+Cohesion: 0.29
+Nodes (4): string, Toggle, U2DGraphicsStatisticView, UnityEditor.U2D.Graphics.Profiler.UI
 
 ### Community 10503 - "Community 10503"
 Cohesion: 0.29
@@ -59792,10 +59881,6 @@ Nodes (5): FloatKeyframeList<Camera>, Camera, MoveAlongPath, FieldOfViewKeyframe
 Cohesion: 0.33
 Nodes (4): CustomImageEffect, bool, Material, Shader
 
-### Community 10515 - "Community 10515"
-Cohesion: 0.43
-Nodes (3): NBodySimulation, CelestialBody, Vector3
-
 ### Community 10516 - "Community 10516"
 Cohesion: 0.29
 Nodes (6): GameServerListSorterKeyType, EnumRailPropertyValueType, EnumRailSortType, string, GameServerListSorter, rail
@@ -59805,8 +59890,8 @@ Cohesion: 0.29
 Nodes (6): Acknowledgements, Contributing, Getting Started, Godot Water Kart Demo, Installation, License
 
 ### Community 10518 - "Community 10518"
-Cohesion: 0.33
-Nodes (4): CreateAnnotationAction, Timeline.Samples, ActionContext, ActionValidity
+Cohesion: 0.39
+Nodes (4): LeaseSink, System.Runtime.Remoting.Lifetime, IMessage, IMessageCtrl
 
 ### Community 10519 - "Community 10519"
 Cohesion: 0.29
@@ -59814,7 +59899,7 @@ Nodes (5): IAsyncEnumerable, System.Collections.Generic, IAsyncEnumerator, Cance
 
 ### Community 10520 - "Community 10520"
 Cohesion: 0.29
-Nodes (5): FieldInfo, int, Normalizer, FieldInfoEx, Microsoft.SqlServer.Server
+Nodes (5): IDisposable, IMessage, IMessageCtrl, DisposerReplySink, System.Runtime.Remoting
 
 ### Community 10521 - "Community 10521"
 Cohesion: 0.29
@@ -59836,9 +59921,13 @@ Nodes (5): GlobalizationExtensions, System.Globalization, CompareInfo, CompareOp
 Cohesion: 0.38
 Nodes (4): MethodImpl, PoseData, TangoInputTracking, UnityEngine.XR.Tango
 
+### Community 10526 - "Community 10526"
+Cohesion: 0.29
+Nodes (4): List, Obsolete, RequestData, RenderRequest
+
 ### Community 10527 - "Community 10527"
-Cohesion: 0.33
-Nodes (4): FreeFunction, MethodImpl, Unity.IO.LowLevel.Unsafe, VirtualFileSystem
+Cohesion: 0.29
+Nodes (5): Context, IMessage, IMessageCtrl, ClientContextReplySink, System.Runtime.Remoting.Messaging
 
 ### Community 10528 - "Community 10528"
 Cohesion: 0.29
@@ -59858,7 +59947,7 @@ Nodes (4): FormUrlEncodedContent, System.Net.Http, IEnumerable, KeyValuePair
 
 ### Community 10532 - "Community 10532"
 Cohesion: 0.33
-Nodes (3): HttpMethod, System.Net.Http, string
+Nodes (5): UIMarkerIconEntry, Image, int, RectTransform, Text
 
 ### Community 10533 - "Community 10533"
 Cohesion: 0.29
@@ -59893,8 +59982,8 @@ Cohesion: 0.38
 Nodes (5): InheritedData, Copy(), CopyFrom(), Equals(), UnityEngine.UIElements
 
 ### Community 10542 - "Community 10542"
-Cohesion: 0.29
-Nodes (5): INoiseFilter, RidgidNoiseFilter, Noise, RidgidNoiseSettings, Vector3
+Cohesion: 0.33
+Nodes (4): RidgidNoiseFilter, Noise, RidgidNoiseSettings, Vector3
 
 ### Community 10543 - "Community 10543"
 Cohesion: 0.29
@@ -59933,12 +60022,12 @@ Cohesion: 0.33
 Nodes (4): Create(), Equals(), System.Runtime.InteropServices, OSPlatform
 
 ### Community 10552 - "Community 10552"
-Cohesion: 0.33
-Nodes (5): ModifierKeyComboEditor, QFSW.QC.Editor, GUIContent, Rect, SerializedProperty
+Cohesion: 0.29
+Nodes (5): Context, IMessage, IMessageCtrl, ClientContextTerminatorSink, System.Runtime.Remoting.Messaging
 
 ### Community 10553 - "Community 10553"
 Cohesion: 0.29
-Nodes (4): float, Plane, Transform, PlaneAnimation
+Nodes (5): IMessage, IMessageCtrl, ServerIdentity, ServerObjectReplySink, System.Runtime.Remoting.Messaging
 
 ### Community 10554 - "Community 10554"
 Cohesion: 0.29
@@ -60056,10 +60145,6 @@ Nodes (4): FourCC, Type, GetPrimitiveFormatFromType(), GetSizeOfPrimitiveFormatI
 Cohesion: 0.38
 Nodes (3): DllImport, INPUT, WinUserInput
 
-### Community 10583 - "Community 10583"
-Cohesion: 0.25
-Nodes (6): MinMaxSliderDrawer, Unity.UI.Shaders.Sample.Editor, GUIContent, Rect, SerializedProperty, Vector2
-
 ### Community 10584 - "Community 10584"
 Cohesion: 0.29
 Nodes (6): Color, GUIContent, string, ProbeVolumeUI, Styles, UnityEditor.Rendering
@@ -60088,10 +60173,6 @@ Nodes (4): SerializedObject, SerializedProperty, SerializedBitArrayAny, Serializ
 Cohesion: 0.38
 Nodes (4): Allocator, T, MemoryUtilities, UnityEngine.Rendering
 
-### Community 10591 - "Community 10591"
-Cohesion: 0.29
-Nodes (5): QuaternionPropertyDrawer, UnityEditor.Rendering, GUIContent, Rect, SerializedProperty
-
 ### Community 10592 - "Community 10592"
 Cohesion: 0.33
 Nodes (5): Object, Obsolete, SerializedDictionary, ProbeVolumeSceneData, UnityEngine.Rendering
@@ -60105,8 +60186,8 @@ Cohesion: 0.33
 Nodes (3): ResourceHandle, TextureDesc, TextureResource
 
 ### Community 10595 - "Community 10595"
-Cohesion: 0.29
-Nodes (4): EncoderParameter, EncoderParameters, System.Drawing.Imaging, IntPtr
+Cohesion: 0.36
+Nodes (4): ScriptableObject, T, Type, StateMachineBehaviour
 
 ### Community 10596 - "Community 10596"
 Cohesion: 0.33
@@ -60141,12 +60222,12 @@ Cohesion: 0.38
 Nodes (3): Test, ChartIdenticationTests, UnityEngine.PathTracing.Tests
 
 ### Community 10604 - "Community 10604"
-Cohesion: 0.38
-Nodes (5): Vector2, FloatRangeParameter, NoInterpFloatRangeParameter, NoInterpVector2Parameter, Vector2Parameter
+Cohesion: 0.39
+Nodes (3): RTHandle, TexturePool, RenderGraphResourcePool
 
 ### Community 10605 - "Community 10605"
 Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, ClampNode, UnityEditor.ShaderGraph
+Nodes (4): DynamicDimensionVector, MethodInfo, FloorNode, UnityEditor.ShaderGraph
 
 ### Community 10606 - "Community 10606"
 Cohesion: 0.29
@@ -60157,8 +60238,8 @@ Cohesion: 0.29
 Nodes (4): GUIContent, SerializedDataParameter, ScreenSpaceLensFlareEditor, UnityEditor.Rendering.Universal
 
 ### Community 10608 - "Community 10608"
-Cohesion: 0.25
-Nodes (5): Action, GenerationMode, HLSLProperty, KeywordCollector, PropertyCollector
+Cohesion: 0.22
+Nodes (4): Camera, Planet, Transform, FarCamera
 
 ### Community 10609 - "Community 10609"
 Cohesion: 0.33
@@ -60166,7 +60247,7 @@ Nodes (4): MenuItem, ScriptTemplates, string, UnityEditor.Rendering.Universal
 
 ### Community 10610 - "Community 10610"
 Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, MinimumNode, UnityEditor.ShaderGraph
+Nodes (4): DynamicDimensionVector, MethodInfo, SignNode, UnityEditor.ShaderGraph
 
 ### Community 10611 - "Community 10611"
 Cohesion: 0.33
@@ -60198,7 +60279,7 @@ Nodes (4): ClampedFloatParameter, Obsolete, UnityEngine.Rendering.Universal, Whi
 
 ### Community 10618 - "Community 10618"
 Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, FloorNode, UnityEditor.ShaderGraph
+Nodes (4): DynamicDimensionVector, MethodInfo, ArccosineNode, UnityEditor.ShaderGraph
 
 ### Community 10619 - "Community 10619"
 Cohesion: 0.29
@@ -60214,111 +60295,91 @@ Nodes (4): XRPassCreateInfo, UnityEngine.Rendering.Universal, XRPassUniversal, X
 
 ### Community 10622 - "Community 10622"
 Cohesion: 0.33
-Nodes (5): RenderingLayerField, NameAndTooltip, ObservableList, RenderingLayerMask, string
+Nodes (3): CodeDirectionExpression, CodeParameterDeclarationExpression, FieldDirection
 
 ### Community 10623 - "Community 10623"
-Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, StepNode, UnityEditor.ShaderGraph
-
-### Community 10624 - "Community 10624"
-Cohesion: 0.29
-Nodes (4): InverseLerpNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
+Cohesion: 0.42
+Nodes (5): Create(), NoiseFilterEvaluator, float3, NoiseFilterData, NoiseSettings
 
 ### Community 10625 - "Community 10625"
-Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, TruncateNode, UnityEditor.ShaderGraph
+Cohesion: 0.33
+Nodes (4): JsonStringDataContract, System.Runtime.Serialization.Json, XmlObjectSerializerReadContextComplexJson, XmlReaderDelegator
 
 ### Community 10626 - "Community 10626"
 Cohesion: 0.33
-Nodes (6): CreationContext, IUxmlAttributes, UxmlEnumAttributeDescription, UxmlIntAttributeDescription, UxmlStringAttributeDescription, UxmlTraits
-
-### Community 10627 - "Community 10627"
-Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, ArccosineNode, UnityEditor.ShaderGraph
+Nodes (4): ContextContainer, RenderGraph, IRenderGraphRecorder, UnityEngine.Rendering.RenderGraphModule
 
 ### Community 10628 - "Community 10628"
 Cohesion: 0.33
 Nodes (4): bool, SerializedProperty, DecalSettings, UnityEditor.Rendering.Universal
 
 ### Community 10629 - "Community 10629"
-Cohesion: 0.33
-Nodes (4): InputControl, Vector3, NormalizeVector3Processor, UnityEngine.InputSystem.Processors
+Cohesion: 0.25
+Nodes (5): Boolean, DynamicDimensionVector, MethodInfo, BranchNode, UnityEditor.ShaderGraph
 
 ### Community 10630 - "Community 10630"
 Cohesion: 0.36
 Nodes (4): TestCaseSource, MaterialUpgraderTests, MaterialUpgradeTestCase, UnityEditor.Rendering.Tools.Tests
 
 ### Community 10631 - "Community 10631"
-Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, RadiansToDegreesNode, UnityEditor.ShaderGraph
+Cohesion: 0.25
+Nodes (5): ContrastNode, UnityEditor.ShaderGraph, MethodInfo, Vector1, Vector3
 
 ### Community 10632 - "Community 10632"
 Cohesion: 0.29
-Nodes (4): GUIContent, SerializedProperty, ScriptableRendererFeature2DEditor, UnityEditor.Rendering.Universal
+Nodes (4): DynamicDimensionVector, MethodInfo, SaturateNode, UnityEditor.ShaderGraph
 
 ### Community 10633 - "Community 10633"
-Cohesion: 0.29
-Nodes (4): Camera, float, Vector3, SkyboxCamera
+Cohesion: 0.33
+Nodes (4): IEnumerator, TestJobData, DeleteBootstrapSceneTask, UnityEditor.TestTools.TestRunner.TestRun.Tasks
 
 ### Community 10634 - "Community 10634"
-Cohesion: 0.29
-Nodes (4): MethodInfo, Vector1, EyeIndexNode, UnityEditor.ShaderGraph
+Cohesion: 0.33
+Nodes (5): StationDesc, bool, int, long, Vector3
 
 ### Community 10636 - "Community 10636"
-Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, ProjectionNode, UnityEditor.ShaderGraph
+Cohesion: 0.33
+Nodes (4): IEnumerator, TestJobData, PlatformSpecificSuccessfulLaunchTask, UnityEditor.TestTools.TestRunner.TestRun.Tasks.Platform
 
 ### Community 10637 - "Community 10637"
-Cohesion: 0.29
-Nodes (4): AchievementStateDisplay, TestAchievement, bool, string
+Cohesion: 0.25
+Nodes (5): LengthNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo, Vector1
 
 ### Community 10638 - "Community 10638"
-Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, SquareWaveNode, UnityEditor.ShaderGraph
+Cohesion: 0.53
+Nodes (3): Vector4, UnityEngine.TestTools.Utils, Vector4ComparerWithEqualsOperator
 
 ### Community 10639 - "Community 10639"
-Cohesion: 0.33
-Nodes (5): FleetDesc, FleetPortDesc, float, int, Transform
+Cohesion: 0.25
+Nodes (3): ADV_ConfirmTechResult, bool, int
 
 ### Community 10640 - "Community 10640"
 Cohesion: 0.25
-Nodes (5): Boolean, DynamicDimensionVector, MethodInfo, AllNode, UnityEditor.ShaderGraph
+Nodes (5): UIBlockZone, bool, Camera, List, RectTransform
 
 ### Community 10641 - "Community 10641"
 Cohesion: 0.38
 Nodes (4): ShaderStage, ShaderStageCapability, ShaderStageExtensions, UnityEditor.ShaderGraph
 
 ### Community 10642 - "Community 10642"
-Cohesion: 0.25
-Nodes (6): GUIContent, Rect, SearchContext, SerializedProperty, InputActionAssetDrawer, UnityEngine.InputSystem.Editor
+Cohesion: 0.33
+Nodes (3): bool, ConfigNameValueCollection, System.Configuration
 
 ### Community 10643 - "Community 10643"
-Cohesion: 0.39
-Nodes (3): RTHandle, TexturePool, RenderGraphResourcePool
+Cohesion: 0.33
+Nodes (4): Uri, WebRequest, HttpRequestCreator, System.Net
 
 ### Community 10644 - "Community 10644"
-Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, SignNode, UnityEditor.ShaderGraph
+Cohesion: 0.25
+Nodes (5): UICameraRotateTip, bool, CanvasGroup, float, Vector3
 
 ### Community 10645 - "Community 10645"
-Cohesion: 0.40
-Nodes (3): TerrainGeneration.CustomEditors, GeneratorEditor, Generator
+Cohesion: 0.25
+Nodes (4): UICreationSystemNaive, GameObject, GUISkin, Rect
 
 ### Community 10646 - "Community 10646"
 Cohesion: 0.29
 Nodes (5): PostChangeValueCallback, PreChangeValueCallback, PropertySheet, IShaderPropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
-
-### Community 10647 - "Community 10647"
-Cohesion: 0.29
-Nodes (4): MethodInfo, Vector2, TilingAndOffsetNode, UnityEditor.ShaderGraph
-
-### Community 10649 - "Community 10649"
-Cohesion: 0.29
-Nodes (5): AbstractMaterialNode, Action, VisualElement, SamplerStateNodePropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
-
-### Community 10650 - "Community 10650"
-Cohesion: 0.29
-Nodes (5): AbstractMaterialNode, Action, VisualElement, SampleTexture2DArrayNodePropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 
 ### Community 10651 - "Community 10651"
 Cohesion: 0.29
@@ -60361,8 +60422,8 @@ Cohesion: 0.29
 Nodes (5): Func, IEnumerator, TestJobData, SaveUndoIndexTask, UnityEditor.TestTools.TestRunner.TestRun.Tasks
 
 ### Community 10661 - "Community 10661"
-Cohesion: 0.33
-Nodes (5): ChangeEvent, Object, Texture3DSlotControlView, UnityEditor.ShaderGraph.Drawing.Slots, Texture3DInputMaterialSlot
+Cohesion: 0.25
+Nodes (5): ReadOnlyCollectionBase, System.Collections, Array, ArrayList, IEnumerator
 
 ### Community 10662 - "Community 10662"
 Cohesion: 0.29
@@ -60377,12 +60438,12 @@ Cohesion: 0.29
 Nodes (5): Scene, ISceneWrapper, UnityEditor.TestTools.TestRunner.TestRun.Tasks.Scene, SceneWrapper, UnityEditor.TestTools.TestRunner.TestRun.Tasks.Scene
 
 ### Community 10665 - "Community 10665"
-Cohesion: 0.25
-Nodes (5): MethodInfo, Vector1, Vector2, RandomRangeNode, UnityEditor.ShaderGraph
+Cohesion: 0.29
+Nodes (4): Action, string, ToolbarWithSearch, Unity.PerformanceTesting.Editor.UIElements
 
 ### Community 10666 - "Community 10666"
 Cohesion: 0.25
-Nodes (5): MethodInfo, Vector1, Vector2, EllipseNode, UnityEditor.ShaderGraph
+Nodes (5): DbException, System.Data.Common, ExternalException, COMException, System.Runtime.InteropServices
 
 ### Community 10667 - "Community 10667"
 Cohesion: 0.29
@@ -60408,21 +60469,21 @@ Nodes (6): bool, int, string, RemoteTestData, UnityEngine.TestRunner.TestLaunche
 Cohesion: 0.38
 Nodes (4): IEnumerator, ITest, IOuterUnityTestAction, UnityEngine.TestTools
 
+### Community 10673 - "Community 10673"
+Cohesion: 0.32
+Nodes (4): MoonImage, JPanel, Graphics, Override
+
 ### Community 10674 - "Community 10674"
 Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, ArcsineNode, UnityEditor.ShaderGraph
-
-### Community 10675 - "Community 10675"
-Cohesion: 0.33
-Nodes (5): StationDesc, bool, int, long, Vector3
+Nodes (4): EncoderParameter, EncoderParameters, System.Drawing.Imaging, IntPtr
 
 ### Community 10676 - "Community 10676"
-Cohesion: 0.33
-Nodes (4): XmlDictionaryReader, XmlDictionaryWriter, Int16ArrayHelperWithString, System.Xml
+Cohesion: 0.43
+Nodes (4): Color, float, ColorEqualityComparer, UnityEngine.TestTools.Utils
 
 ### Community 10677 - "Community 10677"
-Cohesion: 0.25
-Nodes (5): MethodInfo, Vector1, Vector2, TwirlNode, UnityEditor.ShaderGraph
+Cohesion: 0.50
+Nodes (6): IEnumerable, Type, AllClipTypes(), IsConcreteAsset(), IsConcretePlayableAsset(), TimelineTypeComparer
 
 ### Community 10678 - "Community 10678"
 Cohesion: 0.29
@@ -60469,8 +60530,8 @@ Cohesion: 0.29
 Nodes (5): LineInfoAnnotation, System.Xml.Linq, LineInfoEndElementAnnotation, System.Xml.Linq, int
 
 ### Community 10690 - "Community 10690"
-Cohesion: 0.33
-Nodes (4): UICinematicBar, float, RectTransform, Text
+Cohesion: 0.46
+Nodes (3): GenericEqualityComparer, System.Collections.Generic, T
 
 ### Community 10691 - "Community 10691"
 Cohesion: 0.29
@@ -60817,8 +60878,8 @@ Cohesion: 0.29
 Nodes (5): ArrayList, Hashtable, string, ChannelData, System.Runtime.Remoting
 
 ### Community 10778 - "Community 10778"
-Cohesion: 0.29
-Nodes (4): int, XPathNodeIterator, MS.Internal.Xml.XPath, XPathDescendantIterator
+Cohesion: 0.46
+Nodes (3): NullableEqualityComparer, System.Collections.Generic, T
 
 ### Community 10779 - "Community 10779"
 Cohesion: 0.33
@@ -61045,8 +61106,8 @@ Cohesion: 0.29
 Nodes (5): CancellationToken, IEnumerable, TElement, CancellableEnumerable, System.Linq.Parallel
 
 ### Community 10835 - "Community 10835"
-Cohesion: 0.25
-Nodes (6): AbstractMaterialNode, Action, string, VisualElement, ProceduralVirtualTextureNodePropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
+Cohesion: 0.43
+Nodes (5): Pair, T, U, PairComparer, System.Linq.Parallel
 
 ### Community 10836 - "Community 10836"
 Cohesion: 0.29
@@ -61221,8 +61282,8 @@ Cohesion: 0.29
 Nodes (6): ConstructorInfo, FieldInfo, MethodInfo, PropertyInfo, System.Runtime.Serialization, XmlFormatGeneratorStatics
 
 ### Community 10879 - "Community 10879"
-Cohesion: 0.40
-Nodes (4): DrawBufferRange, GPUBuffer<I>, GPUBuffer<T>, Page
+Cohesion: 0.29
+Nodes (5): SGBlackboardRow, UnityEditor.ShaderGraph.Drawing, bool, Button, string
 
 ### Community 10880 - "Community 10880"
 Cohesion: 0.29
@@ -61429,12 +61490,12 @@ Cohesion: 0.29
 Nodes (6): int, object, string, XmlElement, System.Xml.Serialization, XmlElementEventArgs
 
 ### Community 10932 - "Community 10932"
-Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, HyperbolicSineNode, UnityEditor.ShaderGraph
+Cohesion: 0.33
+Nodes (4): XmlDictionaryReader, XmlDictionaryWriter, Int64ArrayHelperWithString, System.Xml
 
 ### Community 10933 - "Community 10933"
 Cohesion: 0.33
-Nodes (3): MonoTODO, SignatureHelper, SignatureToken
+Nodes (4): XmlDictionaryReader, XmlDictionaryWriter, DecimalArrayHelperWithString, System.Xml
 
 ### Community 10934 - "Community 10934"
 Cohesion: 0.29
@@ -61524,6 +61585,10 @@ Nodes (5): GameObject, Playable, PlayableGraph, ILayerable, UnityEngine.Timeline
 Cohesion: 0.38
 Nodes (4): GroupTrack, TrackAsset, TrackAssetExtensions, UnityEngine.Timeline
 
+### Community 10956 - "Community 10956"
+Cohesion: 0.32
+Nodes (5): Func, TInputOutput, SortQueryOperatorEnumerator, System.Linq.Parallel, TSortKey
+
 ### Community 10957 - "Community 10957"
 Cohesion: 0.33
 Nodes (4): IPermission, string, StrongNameIdentityPermissionAttribute, System.Security.Permissions
@@ -61533,8 +61598,8 @@ Cohesion: 0.29
 Nodes (5): AsyncInstantiateOperation, Object, RequiredByNativeCode, AsyncInstantiateOperationHelper, UnityEngine
 
 ### Community 10959 - "Community 10959"
-Cohesion: 0.33
-Nodes (4): UIStorageCountTipEntry, Image, RectTransform, Text
+Cohesion: 0.38
+Nodes (4): ExceptionFilterSink, System.Runtime.Remoting.Channels, IMessage, IMessageCtrl
 
 ### Community 10960 - "Community 10960"
 Cohesion: 0.29
@@ -61573,8 +61638,8 @@ Cohesion: 0.29
 Nodes (6): IFormatProvider, MethodImpl, Vector3, GetPoint(), ToString(), UnityEngine
 
 ### Community 10969 - "Community 10969"
-Cohesion: 0.50
-Nodes (6): IEnumerable, Type, AllClipTypes(), IsConcreteAsset(), IsConcretePlayableAsset(), TimelineTypeComparer
+Cohesion: 0.40
+Nodes (5): Assert(), Cleanup(), Prepare(), System.Data, Conditional
 
 ### Community 10970 - "Community 10970"
 Cohesion: 0.57
@@ -61721,8 +61786,8 @@ Cohesion: 0.38
 Nodes (3): PointerUpEvent, ClickEvent, UnityEngine.UIElements
 
 ### Community 11006 - "Community 11006"
-Cohesion: 0.33
-Nodes (4): EventBase, IPanel, CommandEventDispatchingStrategy, UnityEngine.UIElements
+Cohesion: 0.29
+Nodes (5): IEventDispatchingStrategy, EventBase, IPanel, CommandEventDispatchingStrategy, UnityEngine.UIElements
 
 ### Community 11007 - "Community 11007"
 Cohesion: 0.33
@@ -61876,17 +61941,13 @@ Nodes (5): CreationContext, IUxmlAttributes, T, UnityEngine.UIElements, UxmlObje
 Cohesion: 0.38
 Nodes (4): CreationContext, IUxmlAttributes, UnityEngine.UIElements, UxmlStringAttributeDescription
 
-### Community 11047 - "Community 11047"
-Cohesion: 0.29
-Nodes (4): List, Obsolete, RequestData, RenderRequest
-
 ### Community 11048 - "Community 11048"
-Cohesion: 0.09
-Nodes (17): CanvasUpdate, EntityId, Obsolete, ReadOnlySpan, RuntimeInitializeOnLoadMethod, Span, StringBuilder, T (+9 more)
+Cohesion: 0.25
+Nodes (4): CanvasUpdate, EntityId, Obsolete, ITextElement
 
 ### Community 11049 - "Community 11049"
-Cohesion: 0.29
-Nodes (5): bool, float, Transform, Vector3, Orbit
+Cohesion: 0.33
+Nodes (4): XmlDictionaryReader, XmlDictionaryWriter, SingleArrayHelperWithString, System.Xml
 
 ### Community 11050 - "Community 11050"
 Cohesion: 0.38
@@ -61913,8 +61974,8 @@ Cohesion: 0.29
 Nodes (3): IntPtr, XGamingRuntime, XUserHandle
 
 ### Community 11056 - "Community 11056"
-Cohesion: 0.29
-Nodes (6): NoiseLayer, ShapeSettings, bool, float, NoiseLayer, NoiseSettings
+Cohesion: 0.46
+Nodes (3): ObjectEqualityComparer, System.Collections.Generic, T
 
 ### Community 11057 - "Community 11057"
 Cohesion: 0.29
@@ -61980,13 +62041,13 @@ Nodes (7): 23. Recommended Implementation Order, Phase 1: Transparent Water, Pha
 Cohesion: 0.29
 Nodes (5): TerrainFace, int, Mesh, ShapeGenerator, Vector3
 
+### Community 11074 - "Community 11074"
+Cohesion: 0.33
+Nodes (5): GPUResidentDrawerResources, UnityEngine.Rendering, ComputeShader, Shader, Version
+
 ### Community 11075 - "Community 11075"
 Cohesion: 0.29
 Nodes (5): TerrainFace, int, Mesh, ShapeGenerator, Vector3
-
-### Community 11076 - "Community 11076"
-Cohesion: 0.47
-Nodes (5): Internal_AllocateAudioMemory(), Internal_FreeAudioMemory(), Unity.Audio, MethodImpl, NativeMethod
 
 ### Community 11077 - "Community 11077"
 Cohesion: 0.29
@@ -61997,8 +62058,8 @@ Cohesion: 0.29
 Nodes (5): TerrainFace, int, Mesh, ShapeGenerator, Vector3
 
 ### Community 11080 - "Community 11080"
-Cohesion: 0.06
-Nodes (22): Assert(), Cleanup(), Prepare(), System.Data, BitArray, Conditional, CultureInfo, DataRowState (+14 more)
+Cohesion: 0.33
+Nodes (4): bool, Camera, Transform, ScreenSpacePlacement
 
 ### Community 11081 - "Community 11081"
 Cohesion: 0.33
@@ -62069,8 +62130,8 @@ Cohesion: 0.33
 Nodes (4): Transform, Vector2, Vector3, RaySphereTest
 
 ### Community 11098 - "Community 11098"
-Cohesion: 0.29
-Nodes (4): Boolean, MethodInfo, NandNode, UnityEditor.ShaderGraph
+Cohesion: 0.33
+Nodes (4): IEnumerator, TestJobData, PlatformSpecificSuccessfulBuildTask, UnityEditor.TestTools.TestRunner.TestRun.Tasks.Platform
 
 ### Community 11099 - "Community 11099"
 Cohesion: 0.33
@@ -62132,6 +62193,10 @@ Nodes (5): Equals(), GetHexValue(), System.Net.Security, ToString(), SslApplicat
 Cohesion: 0.33
 Nodes (4): SiteId_t, CompareTo(), Equals(), Steamworks
 
+### Community 11124 - "Community 11124"
+Cohesion: 0.25
+Nodes (5): Action, GenerationMode, HLSLProperty, KeywordCollector, PropertyCollector
+
 ### Community 11125 - "Community 11125"
 Cohesion: 0.29
 Nodes (6): Debug Settings, Distance Field Masking Mobile Shader, Face, Outline, Properties, Underlay
@@ -62173,12 +62238,12 @@ Cohesion: 0.33
 Nodes (4): UnityEngine.Rendering.Universal, URP2D_Crc32, ReadOnlySpan, uint
 
 ### Community 11137 - "Community 11137"
-Cohesion: 0.40
-Nodes (3): AuthorizationRuleCollection, System.Security.AccessControl, AuthorizationRule
+Cohesion: 0.29
+Nodes (5): ActionFrame, int, Processor, CopyNamespacesAction, System.Xml.Xsl.XsltOld
 
 ### Community 11138 - "Community 11138"
-Cohesion: 0.40
-Nodes (3): BufferDesc, BufferHandle, GraphicsBuffer
+Cohesion: 0.25
+Nodes (5): IsolatedStorageFileEnumerator, System.IO.IsolatedStorage, int, IsolatedStorageScope, string
 
 ### Community 11139 - "Community 11139"
 Cohesion: 0.40
@@ -62205,8 +62270,8 @@ Cohesion: 0.33
 Nodes (4): AndFilter, AndFilterExtended, UnityEngine.TestRunner.NUnitExtensions.Filters, ITest
 
 ### Community 11145 - "Community 11145"
-Cohesion: 0.33
-Nodes (3): PostProcessDataEditor, UnityEditor.Rendering.Universal, SerializedProperty
+Cohesion: 0.40
+Nodes (3): DebugInfoExpression, System.Linq.Expressions, ExpressionVisitor
 
 ### Community 11146 - "Community 11146"
 Cohesion: 0.29
@@ -62248,9 +62313,13 @@ Nodes (5): FreeFunction, IntPtr, MethodImpl, UnityEngine, UnityEventQueueSystem
 Cohesion: 0.33
 Nodes (3): ACH_FeatureValueProgress, int, long
 
+### Community 11158 - "Community 11158"
+Cohesion: 0.25
+Nodes (4): Func, GUIContent, ReorderableList, T
+
 ### Community 11159 - "Community 11159"
-Cohesion: 0.33
-Nodes (4): ParserException, QFSW.QC, ParserInputException, QFSW.QC
+Cohesion: 0.25
+Nodes (5): MethodInfo, Vector2, Vector3, NormalReconstructZNode, UnityEditor.ShaderGraph
 
 ### Community 11160 - "Community 11160"
 Cohesion: 0.33
@@ -62297,20 +62366,24 @@ Cohesion: 0.40
 Nodes (4): ECraftProto, EnemyDFHiveSystem, Quaternion, VectorLF3
 
 ### Community 11172 - "Community 11172"
-Cohesion: 0.15
-Nodes (6): FeatureExtension, FederatedAuthenticationFeatureExtensionData, SessionData, SmiExtendedMetaData, SqlDecimal, SqlLogin
+Cohesion: 0.09
+Nodes (7): MultiPartTableName, SessionData, SmiExtendedMetaData, SmiParameterMetaData, SqlDecimal, SqlParameter, TdsParserStateObject
 
 ### Community 11173 - "Community 11173"
 Cohesion: 0.40
 Nodes (5): Export(), Import(), SetEmpty(), BinaryReader, BinaryWriter
 
+### Community 11175 - "Community 11175"
+Cohesion: 0.25
+Nodes (4): bool, float, LODGroup, LODTest
+
 ### Community 11176 - "Community 11176"
-Cohesion: 0.33
-Nodes (3): SerializedDataParameter, ProbeVolumesOptionsEditor, UnityEditor.Rendering
+Cohesion: 0.50
+Nodes (3): OnTilePostProcessResourceStripper, UnityEditor.Rendering, OnTilePostProcessResource
 
 ### Community 11177 - "Community 11177"
-Cohesion: 0.33
-Nodes (5): ComputeShader, int, RayTracingShader, SurfaceCacheRenderPipelineResourceSet, UnityEngine.Rendering
+Cohesion: 0.29
+Nodes (4): ModuloNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
 
 ### Community 11187 - "Community 11187"
 Cohesion: 0.33
@@ -62329,8 +62402,8 @@ Cohesion: 0.33
 Nodes (4): JournalPatternProto, EJournalDataType, int, string
 
 ### Community 11193 - "Community 11193"
-Cohesion: 0.29
-Nodes (6): NoiseLayer, ShapeSettings, bool, float, NoiseLayer, NoiseSettings
+Cohesion: 0.43
+Nodes (4): List, XPathNavigator, DocumentOrderComparer, System.Xml.Xsl.Runtime
 
 ### Community 11196 - "Community 11196"
 Cohesion: 0.33
@@ -62368,25 +62441,29 @@ Nodes (4): StarGraphNode, int, List, VectorLF3
 Cohesion: 0.33
 Nodes (3): BinaryReader, EntityData, PrefabDesc
 
+### Community 11207 - "Community 11207"
+Cohesion: 0.29
+Nodes (4): float, Plane, Transform, PlaneAnimation
+
 ### Community 11208 - "Community 11208"
-Cohesion: 0.33
-Nodes (3): SerializedDataParameter, BloomEditor, UnityEditor.Rendering.Universal
+Cohesion: 0.40
+Nodes (3): RawColorHistory, UnityEngine.Rendering.Universal, BufferedRTHandleSystem
 
 ### Community 11209 - "Community 11209"
-Cohesion: 0.33
-Nodes (3): StoreSampleLogic, GameObject, Transform
+Cohesion: 0.25
+Nodes (5): MethodInfo, Vector1, Vector3, NormalStrengthNode, UnityEditor.ShaderGraph
 
 ### Community 11210 - "Community 11210"
-Cohesion: 0.43
-Nodes (5): Pair, T, U, PairComparer, System.Linq.Parallel
+Cohesion: 0.25
+Nodes (5): DynamicDimensionVector, MethodInfo, Vector2, RemapNode, UnityEditor.ShaderGraph
 
 ### Community 11211 - "Community 11211"
 Cohesion: 0.33
 Nodes (4): TestUIEntryArrange, bool, ContextMenu, int
 
 ### Community 11212 - "Community 11212"
-Cohesion: 0.33
-Nodes (3): ACH_HashStat, int, long
+Cohesion: 0.25
+Nodes (5): DynamicDimensionVector, MethodInfo, Vector1, DistanceNode, UnityEditor.ShaderGraph
 
 ### Community 11213 - "Community 11213"
 Cohesion: 0.33
@@ -62401,36 +62478,36 @@ Cohesion: 0.33
 Nodes (4): Export(), Import(), BinaryReader, BinaryWriter
 
 ### Community 11217 - "Community 11217"
-Cohesion: 0.33
-Nodes (3): SerializedDataParameter, MotionBlurEditor, UnityEditor.Rendering.Universal
+Cohesion: 0.40
+Nodes (4): Microsoft.Internal, Strings, CultureInfo, ResourceManager
 
 ### Community 11218 - "Community 11218"
-Cohesion: 0.33
-Nodes (3): TestMilkyWayShowMode, int, UIMilkyWay
+Cohesion: 0.50
+Nodes (3): RuntimeResources, STPResourceStripper, UnityEditor.Rendering
 
 ### Community 11220 - "Community 11220"
 Cohesion: 0.33
-Nodes (3): CodeDirectionExpression, CodeParameterDeclarationExpression, FieldDirection
+Nodes (3): ACH_HashStat, int, long
+
+### Community 11221 - "Community 11221"
+Cohesion: 0.25
+Nodes (5): DynamicDimensionVector, MethodInfo, Vector1, DotProductNode, UnityEditor.ShaderGraph
 
 ### Community 11222 - "Community 11222"
 Cohesion: 0.33
-Nodes (3): SerializedProperty, GridLayoutGroupEditor, UnityEditor.UI
+Nodes (3): TestBroadcastVocalStyleOption, bool, int
 
 ### Community 11223 - "Community 11223"
-Cohesion: 0.33
-Nodes (4): DbTransaction, IsolationLevel, SqlInternalConnectionTds, SqlTransaction
-
-### Community 11225 - "Community 11225"
-Cohesion: 0.33
-Nodes (3): TestRenderCubemap, bool, Camera
+Cohesion: 0.25
+Nodes (5): MethodInfo, Vector1, Vector3, FresnelNode, UnityEditor.ShaderGraph
 
 ### Community 11226 - "Community 11226"
-Cohesion: 0.43
-Nodes (4): List, XPathNavigator, DocumentOrderComparer, System.Xml.Xsl.Runtime
+Cohesion: 0.25
+Nodes (5): MethodInfo, Vector1, Vector2, EllipseNode, UnityEditor.ShaderGraph
 
 ### Community 11227 - "Community 11227"
-Cohesion: 0.33
-Nodes (4): Uri, WebRequest, HttpRequestCreator, System.Net
+Cohesion: 0.25
+Nodes (5): Boolean, DynamicDimensionVector, MethodInfo, AnyNode, UnityEditor.ShaderGraph
 
 ### Community 11228 - "Community 11228"
 Cohesion: 0.33
@@ -62553,8 +62630,12 @@ Cohesion: 0.33
 Nodes (4): TestPlayerBuildModifierAttribute, UnityEditor.TestTools, ITestPlayerBuildModifier, Type
 
 ### Community 11262 - "Community 11262"
+Cohesion: 0.25
+Nodes (5): Boolean, MethodInfo, Vector1, IsNanNode, UnityEditor.ShaderGraph
+
+### Community 11263 - "Community 11263"
 Cohesion: 0.33
-Nodes (3): ACH_TotalPowerStat, int, long
+Nodes (4): IDynamicMetaObjectProvider, System.Dynamic, DynamicMetaObject, Expression
 
 ### Community 11264 - "Community 11264"
 Cohesion: 0.33
@@ -62876,6 +62957,10 @@ Nodes (6): [1.1.0-pre.6] - 2021-08-23, Actions, Actions, Added, Changed, Fixed
 Cohesion: 0.33
 Nodes (6): [12.0.0] - 2021-01-11, Added, Changed, Changed, Fixed, Removed
 
+### Community 11345 - "Community 11345"
+Cohesion: 0.25
+Nodes (5): MethodInfo, Vector1, Vector2, PolarCoordinatesNode, UnityEditor.ShaderGraph
+
 ### Community 11346 - "Community 11346"
 Cohesion: 0.33
 Nodes (6): [2.0.0-preview] - 2018-01-01, Added, Changed, Fixed, Pipeline, Shading Framework
@@ -62950,7 +63035,7 @@ Nodes (3): EditorBrowsableAttribute, System.ComponentModel, EditorBrowsableState
 
 ### Community 11374 - "Community 11374"
 Cohesion: 0.40
-Nodes (5): ExcludeFromDocs, GlyphAdjustmentRecord, Equals(), GetHashCode(), UnityEngine.TextCore.LowLevel
+Nodes (3): MethodImpl, MonoScriptData, UnitySourceGeneratedAssemblyMonoScriptTypes_v1
 
 ### Community 11376 - "Community 11376"
 Cohesion: 0.33
@@ -62961,8 +63046,8 @@ Cohesion: 0.33
 Nodes (4): InstanceCreationEditor, System.ComponentModel, ITypeDescriptorContext, Type
 
 ### Community 11384 - "Community 11384"
-Cohesion: 0.33
-Nodes (4): IEnumerator, TestJobData, GenerateContextTask, UnityEditor.TestTools.TestRunner.TestRun.Tasks
+Cohesion: 0.40
+Nodes (3): MethodImpl, MonoScriptData, UnitySourceGeneratedAssemblyMonoScriptTypes_v1
 
 ### Community 11386 - "Community 11386"
 Cohesion: 0.33
@@ -63113,8 +63198,8 @@ Cohesion: 0.33
 Nodes (4): RC2, System.Security.Cryptography, int, KeySizes
 
 ### Community 11427 - "Community 11427"
-Cohesion: 0.33
-Nodes (4): IEnumerator, TestJobData, UnityEditor.TestTools.TestRunner.TestRun, WaitForPlayerRunTask
+Cohesion: 0.25
+Nodes (6): AbstractMaterialNode, Action, ProviderNode, VisualElement, ProviderNodeNodePropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 
 ### Community 11428 - "Community 11428"
 Cohesion: 0.33
@@ -63613,8 +63698,8 @@ Cohesion: 0.40
 Nodes (3): GetMemberBinder, System.Dynamic, DynamicMetaObject
 
 ### Community 11557 - "Community 11557"
-Cohesion: 0.33
-Nodes (4): UIGoalDelLine, float, Image, RectTransform
+Cohesion: 0.25
+Nodes (5): ApplicationTrustCollection, int, SecuritySafeCritical, ApplicationTrustEnumerator, System.Security.Policy
 
 ### Community 11558 - "Community 11558"
 Cohesion: 0.40
@@ -63643,6 +63728,10 @@ Nodes (3): CoreRenderPipelinePreferencesTests, UnityEngine.Rendering, Test
 ### Community 11564 - "Community 11564"
 Cohesion: 0.33
 Nodes (4): IRemoveAdditionalDataContextualMenu, Component, IEnumerable, T
+
+### Community 11565 - "Community 11565"
+Cohesion: 0.33
+Nodes (5): InstanceHandleSet, LightHandleSet, MaterialHandleSet, GetHashCode(), UnityEngine.PathTracing.Core
 
 ### Community 11566 - "Community 11566"
 Cohesion: 0.33
@@ -63681,8 +63770,8 @@ Cohesion: 0.33
 Nodes (4): UnityEditor.Rendering.Universal, VignetteConverter, PostProcessEffectSettings, VolumeProfile
 
 ### Community 11575 - "Community 11575"
-Cohesion: 0.33
-Nodes (5): bool, string, Type, CodeGeneratorConversionException, System.Xml.Serialization
+Cohesion: 0.29
+Nodes (4): int, ReflectionComposablePart, DisposableReflectionComposablePart, System.ComponentModel.Composition.ReflectionModel
 
 ### Community 11576 - "Community 11576"
 Cohesion: 0.33
@@ -63732,13 +63821,17 @@ Nodes (5): EnumRoomOwnerChangeReason, RailID, ulong, NotifyRoomOwnerChange, rail
 Cohesion: 0.33
 Nodes (3): EventDispatcherGate, Equals(), UnityEngine.UIElements
 
+### Community 11589 - "Community 11589"
+Cohesion: 0.29
+Nodes (6): AmbientDesc, Color, Cubemap, float, int, Texture2D
+
 ### Community 11590 - "Community 11590"
 Cohesion: 0.39
 Nodes (3): RenderTexture, RenderTextureSubElement, Texture
 
 ### Community 11591 - "Community 11591"
-Cohesion: 0.33
-Nodes (4): IDynamicMetaObjectProvider, System.Dynamic, DynamicMetaObject, Expression
+Cohesion: 0.40
+Nodes (3): MethodImpl, MonoScriptData, UnitySourceGeneratedAssemblyMonoScriptTypes_v1
 
 ### Community 11592 - "Community 11592"
 Cohesion: 0.40
@@ -63845,12 +63938,12 @@ Cohesion: 0.33
 Nodes (4): InternalGlobalizationHelper, System.Globalization, int, long
 
 ### Community 11618 - "Community 11618"
-Cohesion: 0.40
-Nodes (3): MethodImpl, FrameDebugger, UnityEngine
+Cohesion: 0.36
+Nodes (5): IEnumerable, IEnumerator, T, ParallelEnumerableWrapper, System.Linq.Parallel
 
 ### Community 11619 - "Community 11619"
-Cohesion: 0.29
-Nodes (4): TestHatredList, bool, HatredList, HatredTarget
+Cohesion: 0.50
+Nodes (3): RenderGraphUtilsResourcesStripper, UnityEditor.Rendering.RenderGraphModule.Util, RenderGraphUtilsResources
 
 ### Community 11620 - "Community 11620"
 Cohesion: 0.40
@@ -64057,8 +64150,8 @@ Cohesion: 0.33
 Nodes (4): iOSPostProcessBuild, UnityEngine.InputSystem, BuildTarget, PostProcessBuild
 
 ### Community 11673 - "Community 11673"
-Cohesion: 0.40
-Nodes (3): ConstantExpression, System.Linq.Expressions, ExpressionVisitor
+Cohesion: 0.50
+Nodes (3): RenderingDebuggerRuntimeResources, RenderingDebuggerRuntimeResourcesStripper, UnityEditor.Rendering
 
 ### Community 11674 - "Community 11674"
 Cohesion: 0.33
@@ -64073,20 +64166,20 @@ Cohesion: 0.40
 Nodes (4): ISystemDependencyProvider, object, Mono, SystemDependencyProvider
 
 ### Community 11677 - "Community 11677"
-Cohesion: 0.33
-Nodes (5): GPUResidentDrawerResources, UnityEngine.Rendering, ComputeShader, Shader, Version
+Cohesion: 0.29
+Nodes (6): PowerDesc, bool, float, int, long, Vector3
 
 ### Community 11678 - "Community 11678"
-Cohesion: 0.33
-Nodes (3): DestroyTimer, bool, float
+Cohesion: 0.36
+Nodes (3): LocalBuilder, MethodBuilder, GenericArray
 
 ### Community 11679 - "Community 11679"
 Cohesion: 0.29
-Nodes (3): RenderTextureToPNG, int, string
+Nodes (4): TestHatredList, bool, HatredList, HatredTarget
 
 ### Community 11680 - "Community 11680"
-Cohesion: 0.33
-Nodes (3): TestBroadcastVocalStyleOption, bool, int
+Cohesion: 0.25
+Nodes (5): Array, IEnumerator, OleDbErrorCollection, System.Data.OleDb, OleDbError
 
 ### Community 11681 - "Community 11681"
 Cohesion: 0.33
@@ -64103,10 +64196,6 @@ Nodes (5): StickyNoteData0, UnityEditor.ShaderGraph.Legacy, int, Rect, string
 ### Community 11684 - "Community 11684"
 Cohesion: 0.33
 Nodes (4): Collider, string, DestroyOnTrigger, Unity.AI.Navigation.Samples
-
-### Community 11685 - "Community 11685"
-Cohesion: 0.33
-Nodes (4): IXmlJsonWriterInitializer, System.Runtime.Serialization.Json, Encoding, Stream
 
 ### Community 11686 - "Community 11686"
 Cohesion: 0.40
@@ -64157,8 +64246,8 @@ Cohesion: 0.33
 Nodes (5): Dictionary, GIContributors, List, ProbeSubdivisionResult, UnityEngine.Rendering
 
 ### Community 11698 - "Community 11698"
-Cohesion: 0.33
-Nodes (4): JsonStringDataContract, System.Runtime.Serialization.Json, XmlObjectSerializerReadContextComplexJson, XmlReaderDelegator
+Cohesion: 0.29
+Nodes (5): AssetBundleUtility, UnityEngine.Experimental.AssetBundlePatching, AssetBundle, FreeFunction, MethodImpl
 
 ### Community 11699 - "Community 11699"
 Cohesion: 0.33
@@ -64188,13 +64277,9 @@ Nodes (4): MaterialQuality, ShaderKeywordSet, EditorMaterialQualityUtilities, Un
 Cohesion: 0.33
 Nodes (4): bool, Version, ProbeVolume, UnityEngine.Rendering
 
-### Community 11706 - "Community 11706"
-Cohesion: 0.33
-Nodes (4): JsonNodeWriter, System.Runtime.Serialization.Json, SecurityCritical, XmlUTF8NodeWriter
-
 ### Community 11707 - "Community 11707"
 Cohesion: 0.33
-Nodes (4): ContextContainer, RenderGraph, IRenderGraphRecorder, UnityEngine.Rendering.RenderGraphModule
+Nodes (5): ComputeShader, int, RayTracingShader, SurfaceCacheRenderPipelineResourceSet, UnityEngine.Rendering
 
 ### Community 11708 - "Community 11708"
 Cohesion: 0.33
@@ -64205,8 +64290,8 @@ Cohesion: 0.33
 Nodes (4): RenderGraph, RenderGraphValidationLayer, InternalRenderGraphValidation, Unity.RenderPipelines.Core.Runtime.Shared
 
 ### Community 11710 - "Community 11710"
-Cohesion: 0.33
-Nodes (3): TestVocalPlay, GUISkin, WarningSystem
+Cohesion: 0.04
+Nodes (44): bool, Version, bool, string, Version, bool, int, bool (+36 more)
 
 ### Community 11711 - "Community 11711"
 Cohesion: 0.33
@@ -64242,7 +64327,11 @@ Nodes (5): GUIContent, int, Styles, UnityEditor.Rendering.Universal, UniversalRe
 
 ### Community 11720 - "Community 11720"
 Cohesion: 0.33
-Nodes (3): float, Transform, Moon
+Nodes (5): ChangeEvent, Object, TextureArraySlotControlView, UnityEditor.ShaderGraph.Drawing.Slots, Texture2DArrayInputMaterialSlot
+
+### Community 11721 - "Community 11721"
+Cohesion: 0.50
+Nodes (3): MonoTargetType, string, ConsoleCommandAttribute
 
 ### Community 11722 - "Community 11722"
 Cohesion: 0.33
@@ -64265,8 +64354,8 @@ Cohesion: 0.33
 Nodes (5): NativeArray, RuntimeInitializeOnLoadMethod, Vector3, GetIndexRemap(), ResetStaticsOnLoad()
 
 ### Community 11727 - "Community 11727"
-Cohesion: 0.33
-Nodes (3): float, int, PlayerMovement
+Cohesion: 0.32
+Nodes (3): byte, CaseInsensitiveAscii, System.Net
 
 ### Community 11728 - "Community 11728"
 Cohesion: 0.33
@@ -64332,17 +64421,13 @@ Nodes (4): IEnumerator, TestJobData, CleanUpContext, UnityEditor.TestTools.TestR
 Cohesion: 0.33
 Nodes (4): IEnumerator, TestJobData, CleanupTestControllerTask, UnityEditor.TestTools.TestRunner.TestRun.Tasks
 
-### Community 11744 - "Community 11744"
-Cohesion: 0.40
-Nodes (5): GameObject, DestroyGameObjectAndSave(), NavigationSampleInitializer, Start(), Unity.AI.Navigation.Samples
-
 ### Community 11745 - "Community 11745"
 Cohesion: 0.33
-Nodes (5): ComputeShader, Shader, UnityEngine.Rendering, VrsRenderPipelineRuntimeResources, VrsLut
+Nodes (5): ChangeEvent, Object, TextureSlotControlView, UnityEditor.ShaderGraph.Drawing.Slots, Texture2DInputMaterialSlot
 
 ### Community 11746 - "Community 11746"
-Cohesion: 0.33
-Nodes (3): SerializedProperty, ScreenSpaceReflectionRendererFeatureEditor, UnityEditor.Rendering.Universal
+Cohesion: 0.25
+Nodes (4): IList, Uri, IWebProxyFinder, System.Net
 
 ### Community 11747 - "Community 11747"
 Cohesion: 0.33
@@ -64361,8 +64446,8 @@ Cohesion: 0.33
 Nodes (4): IEnumerator, TestJobData, PlatformSpecificSetupTask, UnityEditor.TestTools.TestRunner.TestRun.Tasks.Platform
 
 ### Community 11751 - "Community 11751"
-Cohesion: 0.33
-Nodes (4): IEnumerator, TestJobData, PlatformSpecificSuccessfulBuildTask, UnityEditor.TestTools.TestRunner.TestRun.Tasks.Platform
+Cohesion: 0.25
+Nodes (5): int, XmlNode, System.Xml, XmlElementListEnumerator, XmlElementList
 
 ### Community 11752 - "Community 11752"
 Cohesion: 0.33
@@ -64373,12 +64458,16 @@ Cohesion: 0.33
 Nodes (4): IEnumerator, TestJobData, PreparePlayModeRunTask, UnityEditor.TestTools.TestRunner.TestRun.Tasks
 
 ### Community 11754 - "Community 11754"
-Cohesion: 0.53
-Nodes (3): Vector2, UnityEngine.TestTools.Utils, Vector2ComparerWithEqualsOperator
+Cohesion: 0.25
+Nodes (5): bool, int, System.Xml, XmlNodeListEnumerator, XPathNodeList
 
 ### Community 11755 - "Community 11755"
 Cohesion: 0.33
 Nodes (3): IReadOnlyList, UnityEditor.TestTools.TestRunner.UnityTestProtocol, UnityTestProtocolStarter
+
+### Community 11756 - "Community 11756"
+Cohesion: 0.25
+Nodes (6): MethodImpl, NativeThrows, PlayableGraph, PlayableOutputHandle, TexturePlayableGraphExtensions, UnityEngine.Experimental.Playables
 
 ### Community 11757 - "Community 11757"
 Cohesion: 0.33
@@ -64400,21 +64489,21 @@ Nodes (3): Type, AttributeHelper, UnityEngine.TestTools
 Cohesion: 0.33
 Nodes (4): ITestRunCallback, Type, TestRunCallbackAttribute, UnityEngine.TestRunner
 
-### Community 11762 - "Community 11762"
-Cohesion: 0.47
-Nodes (3): System.Xml.Linq, XNodeEqualityComparer, XNode
-
 ### Community 11763 - "Community 11763"
 Cohesion: 0.53
 Nodes (3): ReferenceEqualityComparer, System.Collections.Generic, T
+
+### Community 11764 - "Community 11764"
+Cohesion: 0.38
+Nodes (4): IMessage, IMessageCtrl, EnvoyTerminatorSink, System.Runtime.Remoting.Messaging
 
 ### Community 11765 - "Community 11765"
 Cohesion: 0.33
 Nodes (4): Tooltip, WindowState, TimeIndicator, UnityEditor.Timeline
 
 ### Community 11766 - "Community 11766"
-Cohesion: 0.53
-Nodes (3): Vector3, UnityEngine.TestTools.Utils, Vector3ComparerWithEqualsOperator
+Cohesion: 0.36
+Nodes (7): string, UxmlTraits, VisualElement, PopupWindow, UnityEngine.UIElements, UxmlFactory, UxmlTraits
 
 ### Community 11767 - "Community 11767"
 Cohesion: 0.47
@@ -64450,15 +64539,15 @@ Nodes (4): IPropertyCollector, PlayableDirector, IPropertyPreview, UnityEngine.T
 
 ### Community 11775 - "Community 11775"
 Cohesion: 0.33
-Nodes (3): XPathNodeIterator, MS.Internal.Xml.XPath, XPathChildIterator
-
-### Community 11776 - "Community 11776"
-Cohesion: 0.40
-Nodes (4): ComputeShader, Shader, MipGenRenderPipelineRuntimeResources, UnityEngine.Rendering
+Nodes (4): CodeDomProvider, MemberMapping, System.Xml.Serialization, XmlMemberMapping
 
 ### Community 11777 - "Community 11777"
 Cohesion: 0.33
 Nodes (4): MenuCommand, MenuItem, TMP_ColorGradientAssetMenu, TMPro.EditorUtilities
+
+### Community 11778 - "Community 11778"
+Cohesion: 0.38
+Nodes (4): FlyCamera, bool, float, Vector3
 
 ### Community 11779 - "Community 11779"
 Cohesion: 0.33
@@ -64473,8 +64562,8 @@ Cohesion: 0.33
 Nodes (3): MenuItem, TMP_ProjectTextSettings, TMPro
 
 ### Community 11782 - "Community 11782"
-Cohesion: 0.40
-Nodes (3): MethodImpl, NVUnityPlugin, UnityEngine.NVIDIA
+Cohesion: 0.25
+Nodes (5): ComputeShader, RenderTexture, TextAsset, Vector3, LoadSDF
 
 ### Community 11783 - "Community 11783"
 Cohesion: 0.33
@@ -64484,9 +64573,9 @@ Nodes (5): GUIContent, GUIStyle, Texture2D, TMP_UIStyleManager, TMPro.EditorUtil
 Cohesion: 0.33
 Nodes (3): SerializedProperty, DropdownEditor, UnityEditor.UI
 
-### Community 11785 - "Community 11785"
-Cohesion: 0.33
-Nodes (5): int, Material, string, TextAsset, UnityEngine.TextCore.Text
+### Community 11786 - "Community 11786"
+Cohesion: 0.40
+Nodes (5): ExcludeFromDocs, GlyphPairAdjustmentRecord, Equals(), GetHashCode(), UnityEngine.TextCore.LowLevel
 
 ### Community 11787 - "Community 11787"
 Cohesion: 0.33
@@ -64709,8 +64798,8 @@ Cohesion: 0.33
 Nodes (4): Assembly, CLSCompliant, AssemblyExtensions, System.Reflection.Metadata
 
 ### Community 11843 - "Community 11843"
-Cohesion: 0.48
-Nodes (5): DebugStateEnum, DebugUIDrawerEnumField, DebugUIDrawerHistoryEnumField, HistoryEnumField, EnumField
+Cohesion: 0.29
+Nodes (4): GotoExpression, System.Linq.Expressions, ExpressionVisitor, LabelTarget
 
 ### Community 11844 - "Community 11844"
 Cohesion: 0.33
@@ -64788,6 +64877,10 @@ Nodes (4): IPermission, SecurityPermissionFlag, SecurityPermissionAttribute, Sys
 Cohesion: 0.33
 Nodes (4): IPermission, string, SiteIdentityPermissionAttribute, System.Security.Permissions
 
+### Community 11863 - "Community 11863"
+Cohesion: 0.25
+Nodes (8): 3D Text GameObjects, Creating text, Other TextMesh Pro UI GameObjects, Properties Overview, Properties Overview, TextMesh Pro 3D Text GameObjects, TextMesh Pro UI Text GameObjects, UI Text GameObjects
+
 ### Community 11864 - "Community 11864"
 Cohesion: 0.33
 Nodes (4): IPermission, string, System.Security.Permissions, UrlIdentityPermissionAttribute
@@ -64799,10 +64892,6 @@ Nodes (4): IPermission, SecurityZone, System.Security.Permissions, ZoneIdentityP
 ### Community 11866 - "Community 11866"
 Cohesion: 0.33
 Nodes (5): ApplicationIdentity, bool, System.Security.Policy, TrustManagerContext, TrustManagerUIContext
-
-### Community 11867 - "Community 11867"
-Cohesion: 0.29
-Nodes (4): GotoExpression, System.Linq.Expressions, ExpressionVisitor, LabelTarget
 
 ### Community 11868 - "Community 11868"
 Cohesion: 0.40
@@ -64965,8 +65054,8 @@ Cohesion: 0.33
 Nodes (3): TraceSource, SerializationTrace, System.Runtime.Serialization
 
 ### Community 11911 - "Community 11911"
-Cohesion: 0.48
-Nodes (4): HashSetEqualityComparer, System.Collections.Generic, HashSet, T
+Cohesion: 0.40
+Nodes (4): DrawBufferRange, GPUBuffer<I>, GPUBuffer<T>, Page
 
 ### Community 11912 - "Community 11912"
 Cohesion: 0.40
@@ -65031,6 +65120,10 @@ Nodes (5): bool, HeaderParser, string, HeaderInfo, System.Net
 ### Community 11928 - "Community 11928"
 Cohesion: 0.40
 Nodes (3): DateTime, HttpProtocolUtils, System.Net
+
+### Community 11929 - "Community 11929"
+Cohesion: 0.29
+Nodes (4): AceEnumerator, System.Security.AccessControl, GenericAcl, int
 
 ### Community 11930 - "Community 11930"
 Cohesion: 0.33
@@ -65206,7 +65299,7 @@ Nodes (4): bool, CompilerParameters, System.Xml.Serialization, XmlSerializerComp
 
 ### Community 11979 - "Community 11979"
 Cohesion: 0.29
-Nodes (4): RayTracingAccelerationStructure, RayTracingAccelerationStructureDesc, RayTracingAccelerationStructureResource, UnityEngine.Rendering.RenderGraphModule
+Nodes (4): NormalizeNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
 
 ### Community 11980 - "Community 11980"
 Cohesion: 0.33
@@ -65276,6 +65369,10 @@ Nodes (4): MethodInfo, Type, System.Xml.Xsl.Runtime, XsltMethods
 Cohesion: 0.40
 Nodes (5): char, string, XmlQualifiedName, DecimalFormatDecl, System.Xml.Xsl.Xslt
 
+### Community 11998 - "Community 11998"
+Cohesion: 0.29
+Nodes (4): AsnEncodedDataCollection, AsnEncodedDataEnumerator, System.Security.Cryptography, int
+
 ### Community 11999 - "Community 11999"
 Cohesion: 0.47
 Nodes (4): VariableAction, XPathNavigator, DbgData, System.Xml.Xsl.XsltOld
@@ -65291,10 +65388,6 @@ Nodes (3): TextWriter, System.Xml.Xsl.XsltOld, TextOutput
 ### Community 12002 - "Community 12002"
 Cohesion: 0.33
 Nodes (4): ActionFrame, Processor, System.Xml.Xsl.XsltOld, WithParamAction
-
-### Community 12003 - "Community 12003"
-Cohesion: 0.33
-Nodes (5): bool, int, TempFileCollection, System.Xml.Xsl, XsltSettings
 
 ### Community 12004 - "Community 12004"
 Cohesion: 0.33
@@ -65337,8 +65430,8 @@ Cohesion: 0.33
 Nodes (3): VertexAttributeDescriptor, Equals(), UnityEngine.Rendering
 
 ### Community 12015 - "Community 12015"
-Cohesion: 0.33
-Nodes (5): Action, Func, SecuritySafeCritical, T, SafeAccessTokenHandle
+Cohesion: 0.29
+Nodes (4): RayTracingAccelerationStructure, RayTracingAccelerationStructureDesc, RayTracingAccelerationStructureResource, UnityEngine.Rendering.RenderGraphModule
 
 ### Community 12016 - "Community 12016"
 Cohesion: 0.33
@@ -65356,17 +65449,13 @@ Nodes (3): IntPtr, IJobParticleSystemParallelForBatchExtensions, UnityEngine.Par
 Cohesion: 0.33
 Nodes (3): IntPtr, IJobParticleSystemParallelForExtensions, UnityEngine.ParticleSystemJobs
 
-### Community 12021 - "Community 12021"
-Cohesion: 0.53
-Nodes (3): ReferenceEqualityComparer, System.Collections.Generic, T
-
 ### Community 12022 - "Community 12022"
 Cohesion: 0.47
 Nodes (3): TElement, ArrayPropertyBag, Unity.Properties
 
 ### Community 12023 - "Community 12023"
-Cohesion: 0.50
-Nodes (3): BoundaryValueType, StaticAccessor, ThreadSafe
+Cohesion: 0.29
+Nodes (6): NoiseLayer, ShapeSettings, bool, float, NoiseLayer, NoiseSettings
 
 ### Community 12024 - "Community 12024"
 Cohesion: 0.33
@@ -65387,10 +65476,6 @@ Nodes (4): RequiredByNativeCode, SubsystemDescriptor, Internal_SubsystemDescript
 ### Community 12028 - "Community 12028"
 Cohesion: 0.33
 Nodes (4): IntPtr, MethodImpl, SubsystemBindings, UnityEngine
-
-### Community 12029 - "Community 12029"
-Cohesion: 0.40
-Nodes (4): AssetList, bool, List, string
 
 ### Community 12030 - "Community 12030"
 Cohesion: 0.40
@@ -65541,8 +65626,8 @@ Cohesion: 0.33
 Nodes (4): UnityWebRequest, Uri, UnityEngine.Networking, UnityWebRequestTexture
 
 ### Community 12072 - "Community 12072"
-Cohesion: 0.40
-Nodes (4): DFSCoreDesc, EnemyBuilderDesc, float, int
+Cohesion: 0.29
+Nodes (6): NoiseLayer, ShapeSettings, bool, float, NoiseLayer, NoiseSettings
 
 ### Community 12073 - "Community 12073"
 Cohesion: 0.47
@@ -65584,6 +65669,10 @@ Nodes (5): int, string, ulong, XGameUiWebAuthenticationResultData, XGamingRuntim
 Cohesion: 0.33
 Nodes (3): IntPtr, XGamingRuntime, XPackageInstallationMonitorHandle
 
+### Community 12083 - "Community 12083"
+Cohesion: 0.29
+Nodes (4): ADV_PowerNetOverLoad, bool, float, int
+
 ### Community 12084 - "Community 12084"
 Cohesion: 0.33
 Nodes (6): dependencies, depth, source, url, version, com.unity.collab-proxy
@@ -65595,10 +65684,6 @@ Nodes (6): dependencies, depth, source, url, version, com.unity.ide.vscode
 ### Community 12086 - "Community 12086"
 Cohesion: 0.33
 Nodes (6): dependencies, depth, source, url, version, com.unity.timeline
-
-### Community 12087 - "Community 12087"
-Cohesion: 0.40
-Nodes (3): SampleAnimation, AnimationClip, float
 
 ### Community 12088 - "Community 12088"
 Cohesion: 0.33
@@ -65661,12 +65746,12 @@ Cohesion: 0.33
 Nodes (6): dependencies, depth, source, url, version, com.unity.textmeshpro
 
 ### Community 12104 - "Community 12104"
-Cohesion: 0.40
-Nodes (3): int, Vector3, Presets
+Cohesion: 0.67
+Nodes (3): BurstExecutionEnvironment, GetExecutionMode(), SetExecutionMode()
 
 ### Community 12105 - "Community 12105"
-Cohesion: 0.33
-Nodes (3): Assembly, AssemblyName, SqlMetaDataPriv
+Cohesion: 0.67
+Nodes (3): [2.5.1] - 2024-09-06, Changed, Fixed
 
 ### Community 12106 - "Community 12106"
 Cohesion: 0.33
@@ -65681,8 +65766,8 @@ Cohesion: 0.33
 Nodes (4): ShapeGenerator, NoiseFilter, ShapeSettings, Vector3
 
 ### Community 12109 - "Community 12109"
-Cohesion: 0.33
-Nodes (4): RidgidNoiseFilter, Noise, RidgidNoiseSettings, Vector3
+Cohesion: 0.29
+Nodes (5): INoiseFilter, RidgidNoiseFilter, Noise, RidgidNoiseSettings, Vector3
 
 ### Community 12110 - "Community 12110"
 Cohesion: 0.33
@@ -66008,33 +66093,33 @@ Nodes (4): OriginatorInfoAsn, System.Security.Cryptography.Pkcs.Asn1, Certificat
 Cohesion: 0.40
 Nodes (4): OriginatorPublicKeyAsn, System.Security.Cryptography.Pkcs.Asn1, AlgorithmIdentifierAsn, ReadOnlyMemory
 
-### Community 12223 - "Community 12223"
-Cohesion: 0.40
-Nodes (4): CanvasData, UnityEditor.Rendering.Canvas.ShaderGraph, bool, Version
-
 ### Community 12224 - "Community 12224"
-Cohesion: 0.33
-Nodes (4): MethodImpl, NativeMethod, PhysicsMaterial2D, UnityEngine
+Cohesion: 0.40
+Nodes (3): DefaultExpression, System.Linq.Expressions, ExpressionVisitor
 
 ### Community 12230 - "Community 12230"
-Cohesion: 0.40
-Nodes (3): GameSetUp, CelestialBody, StartCondition
+Cohesion: 0.67
+Nodes (3): [1.4.2] - 2022-08-12, Changed, Fixed
 
 ### Community 12231 - "Community 12231"
-Cohesion: 0.43
-Nodes (4): float, Vector2, UnityEngine.TestTools.Utils, Vector2EqualityComparer
+Cohesion: 0.29
+Nodes (3): MST_StarTravelDistance, double, int
 
 ### Community 12232 - "Community 12232"
 Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, RoundNode, UnityEditor.ShaderGraph
+Nodes (4): DynamicDimensionVector, MethodInfo, CosineNode, UnityEditor.ShaderGraph
+
+### Community 12233 - "Community 12233"
+Cohesion: 0.67
+Nodes (3): [14.0.2] - 2021-02-04, Added, Fixed
 
 ### Community 12234 - "Community 12234"
-Cohesion: 0.40
-Nodes (3): HIDSupport, UnityEngine.InputSystem.HID, HIDPageUsage
+Cohesion: 0.29
+Nodes (4): TestDFTinder, bool, float, int
 
 ### Community 12235 - "Community 12235"
-Cohesion: 0.33
-Nodes (4): XblAnonymousUserType, XblPermission, XblPrivacyBatchCheckPermissionCompleted, XblPrivacyCheckPermissionCompleted
+Cohesion: 0.29
+Nodes (5): UIMechaBoneFilterButton, float, RectTransform, Text, UIButton
 
 ### Community 12236 - "Community 12236"
 Cohesion: 0.40
@@ -66130,11 +66215,11 @@ Nodes (4): Export(), Import(), BinaryReader, BinaryWriter
 
 ### Community 12291 - "Community 12291"
 Cohesion: 0.29
-Nodes (4): DynamicDimensionVector, MethodInfo, ArctangentNode, UnityEditor.ShaderGraph
+Nodes (4): PlayerAudio, AudioSource, float, Player
 
 ### Community 12292 - "Community 12292"
 Cohesion: 0.40
-Nodes (3): SunLightHandler, Color, float
+Nodes (5): ExcludeFromDocs, GlyphAdjustmentRecord, Equals(), GetHashCode(), UnityEngine.TextCore.LowLevel
 
 ### Community 12293 - "Community 12293"
 Cohesion: 0.40
@@ -66149,24 +66234,24 @@ Cohesion: 0.29
 Nodes (3): PointerType, System.Reflection.Emit, Type
 
 ### Community 12298 - "Community 12298"
-Cohesion: 0.40
-Nodes (3): BeforeTransparentsColorHistory, UnityEngine.Rendering.Universal, BufferedRTHandleSystem
+Cohesion: 0.29
+Nodes (4): ArraySubsetEnumerator, System.ComponentModel, Array, int
 
 ### Community 12301 - "Community 12301"
-Cohesion: 0.33
-Nodes (4): float, int, Transform, LightConeTest
+Cohesion: 0.38
+Nodes (3): ConfigurationLocationCollection, System.Configuration, ConfigurationLocation
 
 ### Community 12302 - "Community 12302"
-Cohesion: 0.67
-Nodes (3): [7.0.1] - 2019-07-25, Changed, Fixed
+Cohesion: 0.33
+Nodes (3): CngProvider, System.Security.Cryptography, string
 
 ### Community 12304 - "Community 12304"
 Cohesion: 0.29
-Nodes (6): bool, float, NoiseLayer, NoiseSettings, NoiseLayer, ShapeSettings
+Nodes (4): CryptographicAttributeObjectEnumerator, System.Security.Cryptography, CryptographicAttributeObjectCollection, int
 
 ### Community 12305 - "Community 12305"
-Cohesion: 0.40
-Nodes (3): RawColorHistory, UnityEngine.Rendering.Universal, BufferedRTHandleSystem
+Cohesion: 0.29
+Nodes (5): RandomTest, bool, float, int, Weight
 
 ### Community 12306 - "Community 12306"
 Cohesion: 0.40
@@ -66271,10 +66356,6 @@ Nodes (3): BinaryUtil, System.Runtime.Serialization.Formatters.Binary, Condition
 ### Community 12332 - "Community 12332"
 Cohesion: 0.40
 Nodes (4): System.Runtime.Serialization.Formatters.Binary, TypeInformation, bool, string
-
-### Community 12333 - "Community 12333"
-Cohesion: 0.29
-Nodes (4): bool, float, Vector3, CamTest
 
 ### Community 12334 - "Community 12334"
 Cohesion: 0.40
@@ -66593,8 +66674,8 @@ Cohesion: 0.40
 Nodes (4): CompModSwitches, System.ComponentModel, BooleanSwitch, TraceSwitch
 
 ### Community 12421 - "Community 12421"
-Cohesion: 0.40
-Nodes (3): ComponentCollection, System.ComponentModel, IComponent
+Cohesion: 0.38
+Nodes (3): System.Drawing.Design, ToolboxItemCollection, ToolboxItem
 
 ### Community 12422 - "Community 12422"
 Cohesion: 0.40
@@ -67713,12 +67794,12 @@ Cohesion: 0.40
 Nodes (3): ConfigurationTest, UnityEngine.Rendering.Universal.Test, Test
 
 ### Community 12718 - "Community 12718"
-Cohesion: 0.80
-Nodes (4): DebugStateColor, DebugUIDrawerColorField, Color, ColorField
+Cohesion: 0.33
+Nodes (4): IMessage, IMessageCtrl, ServerObjectTerminatorSink, System.Runtime.Remoting.Messaging
 
 ### Community 12719 - "Community 12719"
 Cohesion: 0.40
-Nodes (3): RawDepthHistory, UnityEngine.Rendering.Universal, BufferedRTHandleSystem
+Nodes (4): Blockout Grid, Ice, Miscellaneous shaders, Production Ready Shaders
 
 ### Community 12720 - "Community 12720"
 Cohesion: 0.80
@@ -67732,9 +67813,17 @@ Nodes (4): DebugStateVector3, DebugUIDrawerVector3Field, Vector3, Vector3Field
 Cohesion: 0.80
 Nodes (4): DebugStateVector4, DebugUIDrawerVector4Field, Vector4, Vector4Field
 
+### Community 12723 - "Community 12723"
+Cohesion: 0.38
+Nodes (3): ProcessModuleCollection, System.Diagnostics, ProcessModule
+
 ### Community 12724 - "Community 12724"
 Cohesion: 0.40
 Nodes (3): ReadmeEditorStyles, GUIContent, GUIStyle
+
+### Community 12726 - "Community 12726"
+Cohesion: 0.38
+Nodes (3): AtmosphereProfileEditor, float, SerializedProperty
 
 ### Community 12727 - "Community 12727"
 Cohesion: 0.40
@@ -67771,6 +67860,10 @@ Nodes (3): Equals(), System.Reflection.Emit, Label
 ### Community 12736 - "Community 12736"
 Cohesion: 0.40
 Nodes (3): Equals(), System.Reflection.Emit, MethodToken
+
+### Community 12737 - "Community 12737"
+Cohesion: 0.48
+Nodes (5): DebugStateEnum, DebugUIDrawerEnumField, DebugUIDrawerHistoryEnumField, HistoryEnumField, EnumField
 
 ### Community 12738 - "Community 12738"
 Cohesion: 0.40
@@ -67924,10 +68017,6 @@ Nodes (4): FontFeatureLookupFlags, TMP_GlyphAdjustmentRecord, TMP_GlyphPairAdjus
 Cohesion: 0.40
 Nodes (4): ServerFault, System.Runtime.Serialization.Formatters, Exception, string
 
-### Community 12785 - "Community 12785"
-Cohesion: 0.40
-Nodes (4): Styles, UnityEditor.Timeline, GUIContent, string
-
 ### Community 12786 - "Community 12786"
 Cohesion: 0.40
 Nodes (3): IComparer, System.Collections.Generic, T
@@ -67948,17 +68037,25 @@ Nodes (4): BatchLayer, UnityEngine.Rendering, byte, uint
 Cohesion: 0.40
 Nodes (3): OcclusionTestMethods, UnityEngine.Rendering, OcclusionTest
 
-### Community 12792 - "Community 12792"
+### Community 12791 - "Community 12791"
 Cohesion: 0.40
-Nodes (3): UsedImplicitly, JetBrains.Rider.Unity.Editor, RiderMenu
+Nodes (3): BeforeTransparentsColorHistory, UnityEngine.Rendering.Universal, BufferedRTHandleSystem
+
+### Community 12792 - "Community 12792"
+Cohesion: 0.29
+Nodes (4): InverseLerpNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
 
 ### Community 12794 - "Community 12794"
-Cohesion: 0.40
-Nodes (4): Shader, Version, RenderGraphUtilsResources, UnityEngine.Rendering.RenderGraphModule.Util
+Cohesion: 0.29
+Nodes (4): LerpNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
+
+### Community 12795 - "Community 12795"
+Cohesion: 0.33
+Nodes (4): XmlDictionaryReader, XmlDictionaryWriter, DoubleArrayHelperWithString, System.Xml
 
 ### Community 12796 - "Community 12796"
-Cohesion: 0.60
-Nodes (4): bool, Color, ColorParameter, NoInterpColorParameter
+Cohesion: 0.33
+Nodes (4): FreeFunction, MethodImpl, Unity.IO.LowLevel.Unsafe, VirtualFileSystem
 
 ### Community 12797 - "Community 12797"
 Cohesion: 0.53
@@ -68192,6 +68289,10 @@ Nodes (4): DebugStateRenderingLayer, DebugUIDrawerRenderingLayerField, Rendering
 Cohesion: 0.40
 Nodes (3): InputAction, InputActionExtensions, UnityEngine.InputSystem.Samples.RebindUI
 
+### Community 12865 - "Community 12865"
+Cohesion: 0.12
+Nodes (12): RequiredByNativeCode, Bounds, MethodImpl, Renderer, BillboardRenderer, UnityEngine, MeshRenderer, UnityEngine (+4 more)
+
 ### Community 12866 - "Community 12866"
 Cohesion: 0.40
 Nodes (3): LightAnchor, LightAnchorHandles, UnityEditor
@@ -68201,8 +68302,8 @@ Cohesion: 0.40
 Nodes (3): Func, AssetReimportUtils, UnityEditor.Rendering
 
 ### Community 12868 - "Community 12868"
-Cohesion: 0.67
-Nodes (3): [2.5.1] - 2024-09-06, Changed, Fixed
+Cohesion: 0.40
+Nodes (3): RawDepthHistory, UnityEngine.Rendering.Universal, BufferedRTHandleSystem
 
 ### Community 12870 - "Community 12870"
 Cohesion: 0.40
@@ -68225,12 +68326,12 @@ Cohesion: 0.40
 Nodes (4): Matrix4x4, Vector2, ComputeEyeCenterUV(), UnityEngine.Experimental.Rendering
 
 ### Community 12875 - "Community 12875"
-Cohesion: 0.40
-Nodes (3): DefaultExpression, System.Linq.Expressions, ExpressionVisitor
+Cohesion: 0.29
+Nodes (4): SmoothstepNode, UnityEditor.ShaderGraph, DynamicDimensionVector, MethodInfo
 
 ### Community 12876 - "Community 12876"
-Cohesion: 0.40
-Nodes (3): DebugInfoExpression, System.Linq.Expressions, ExpressionVisitor
+Cohesion: 0.29
+Nodes (4): GUIContent, SerializedProperty, ScriptableRendererFeature2DEditor, UnityEditor.Rendering.Universal
 
 ### Community 12877 - "Community 12877"
 Cohesion: 0.40
@@ -68248,37 +68349,17 @@ Nodes (4): FieldDescriptor, string, UnityEditor.Rendering.Universal.ShaderGraph,
 Cohesion: 0.40
 Nodes (3): GameObject, IProvider2DCache, UnityEngine.Rendering.Universal
 
-### Community 12881 - "Community 12881"
-Cohesion: 0.40
-Nodes (3): RenderTexture, NoInterpRenderTextureParameter, RenderTextureParameter
-
-### Community 12882 - "Community 12882"
-Cohesion: 0.40
-Nodes (3): BufferedRTHandleSystem, ScreenSpaceReflectionColorHistory, UnityEngine.Rendering.Universal
-
-### Community 12883 - "Community 12883"
-Cohesion: 0.40
-Nodes (4): int, Shader, ScreenSpaceReflectionPersistentResources, UnityEngine.Rendering.Universal
+### Community 12884 - "Community 12884"
+Cohesion: 0.29
+Nodes (4): MethodInfo, Vector1, EyeIndexNode, UnityEditor.ShaderGraph
 
 ### Community 12885 - "Community 12885"
-Cohesion: 0.40
-Nodes (4): Microsoft.Internal, Strings, CultureInfo, ResourceManager
-
-### Community 12886 - "Community 12886"
-Cohesion: 0.40
-Nodes (4): int, Shader, Renderer2DResources, UnityEngine.Rendering.Universal
+Cohesion: 0.29
+Nodes (4): DynamicDimensionVector, MethodInfo, ClampNode, UnityEditor.ShaderGraph
 
 ### Community 12887 - "Community 12887"
-Cohesion: 0.40
-Nodes (4): int, Shader, OnTilePostProcessResource, UnityEngine.Rendering.Universal
-
-### Community 12888 - "Community 12888"
-Cohesion: 0.40
-Nodes (4): int, Shader, UnityEngine.Rendering.Universal, UniversalRenderPipelineRuntimeTerrainShaders
-
-### Community 12889 - "Community 12889"
-Cohesion: 0.40
-Nodes (3): MethodImpl, MonoScriptData, UnitySourceGeneratedAssemblyMonoScriptTypes_v1
+Cohesion: 0.29
+Nodes (4): DynamicDimensionVector, MethodInfo, MaximumNode, UnityEditor.ShaderGraph
 
 ### Community 12890 - "Community 12890"
 Cohesion: 0.40
@@ -69321,16 +69402,12 @@ Cohesion: 0.40
 Nodes (3): ArrayList, Positions, System.Xml.Schema
 
 ### Community 13162 - "Community 13162"
-Cohesion: 0.40
-Nodes (3): BitSet, QmarkNode, System.Xml.Schema
+Cohesion: 0.22
+Nodes (6): InteriorNode, Positions, SymbolsDictionary, BitSet, QmarkNode, System.Xml.Schema
 
 ### Community 13163 - "Community 13163"
 Cohesion: 0.40
 Nodes (4): XmlSchema, XmlSchemaRedefine, RedefineEntry, System.Xml.Schema
-
-### Community 13164 - "Community 13164"
-Cohesion: 0.40
-Nodes (3): MethodImpl, MonoScriptData, UnitySourceGeneratedAssemblyMonoScriptTypes_v1
 
 ### Community 13165 - "Community 13165"
 Cohesion: 0.40
@@ -69488,10 +69565,6 @@ Nodes (4): int, string, NamespaceInfo, System.Xml.Xsl.XsltOld
 Cohesion: 0.40
 Nodes (4): CompiledXpathExpr, InputScopeManager, System.Xml.Xsl.XsltOld, TheQuery
 
-### Community 13206 - "Community 13206"
-Cohesion: 0.40
-Nodes (4): int, Shader, UnityEngine.Rendering.Universal, UniversalRendererResources
-
 ### Community 13207 - "Community 13207"
 Cohesion: 0.40
 Nodes (3): TrackAsset, IMarker, UnityEngine.Timeline
@@ -69512,10 +69585,6 @@ Nodes (4): bool, Type, TrackClipTypeAttribute, UnityEngine.Timeline
 Cohesion: 0.40
 Nodes (3): Playable, UnityEngine.Timeline, WeightUtility
 
-### Community 13212 - "Community 13212"
-Cohesion: 0.40
-Nodes (3): Type, InvalidContainerTypeException, Unity.Properties
-
 ### Community 13213 - "Community 13213"
 Cohesion: 0.40
 Nodes (3): JobHandle, JobHandleUnsafeUtility, Unity.Jobs.LowLevel.Unsafe
@@ -69531,10 +69600,6 @@ Nodes (3): BoneWeight1, Equals(), UnityEngine
 ### Community 13216 - "Community 13216"
 Cohesion: 0.40
 Nodes (3): BoneWeight, Equals(), UnityEngine
-
-### Community 13217 - "Community 13217"
-Cohesion: 0.40
-Nodes (3): MethodImpl, MonoScriptData, UnitySourceGeneratedAssemblyMonoScriptTypes_v1
 
 ### Community 13218 - "Community 13218"
 Cohesion: 0.40
@@ -69628,10 +69693,6 @@ Nodes (4): int, string, UnassignedReferenceException, UnityEngine
 Cohesion: 0.40
 Nodes (4): int, string, UnityEngine, UnityException
 
-### Community 13241 - "Community 13241"
-Cohesion: 0.40
-Nodes (3): MethodImpl, MonoScriptData, UnitySourceGeneratedAssemblyMonoScriptTypes_v1
-
 ### Community 13242 - "Community 13242"
 Cohesion: 0.40
 Nodes (3): string, TypeInferenceRuleAttribute, UnityEngineInternal
@@ -69705,8 +69766,8 @@ Cohesion: 0.40
 Nodes (4): bool, string, CustomGridBrushAttribute, UnityEngine
 
 ### Community 13260 - "Community 13260"
-Cohesion: 0.18
-Nodes (6): UnitySourceGeneratedAssemblyMonoScriptTypes_v1, MethodImpl, MonoScriptData, MethodImpl, MonoScriptData, UnitySourceGeneratedAssemblyMonoScriptTypes_v1
+Cohesion: 0.29
+Nodes (4): DynamicDimensionVector, MethodInfo, CeilingNode, UnityEditor.ShaderGraph
 
 ### Community 13261 - "Community 13261"
 Cohesion: 0.40
@@ -69718,7 +69779,7 @@ Nodes (3): Material, IMaterialModifier, UnityEngine.UI
 
 ### Community 13263 - "Community 13263"
 Cohesion: 0.33
-Nodes (4): CodeDomProvider, MemberMapping, System.Xml.Serialization, XmlMemberMapping
+Nodes (4): SFXAmbController, AudioClip, AudioSource, float
 
 ### Community 13264 - "Community 13264"
 Cohesion: 0.40
@@ -69784,21 +69845,13 @@ Nodes (3): VisualElement, UnityEngine.UIElements, VisualElementDebugExtensions
 Cohesion: 0.40
 Nodes (3): YogaSize, MeasureOutput, UnityEngine.Yoga
 
-### Community 13280 - "Community 13280"
-Cohesion: 0.40
-Nodes (3): bool, Color, ContainerVis
-
 ### Community 13281 - "Community 13281"
-Cohesion: 0.40
-Nodes (3): Format, Type, SqlUdtInfo
+Cohesion: 0.29
+Nodes (4): DynamicDimensionVector, MethodInfo, StepNode, UnityEditor.ShaderGraph
 
 ### Community 13283 - "Community 13283"
 Cohesion: 0.40
 Nodes (3): int, HashCodeHelper, UnityEngine.XR
-
-### Community 13284 - "Community 13284"
-Cohesion: 0.40
-Nodes (3): Type, MissingPropertyBagException, Unity.Properties
 
 ### Community 13286 - "Community 13286"
 Cohesion: 0.40
@@ -70120,13 +70173,13 @@ Nodes (3): RasterState, Equals(), UnityEngine.Rendering
 Cohesion: 0.40
 Nodes (3): Equals(), UnityEngine.Rendering, RenderTargetBlendState
 
-### Community 13384 - "Community 13384"
-Cohesion: 0.40
-Nodes (3): XblMultiplayerSessionWriteMode, XblMultiplayerWriteSessionHandleResult, XblWriteSessionByHandleCallback
-
 ### Community 13385 - "Community 13385"
 Cohesion: 0.40
 Nodes (4): Code audit turned into startup/perf refactor on `code-refactor`, Task 1: Audit the refactor branch and assess current state, Task 2: Improve startup progress, initialization concurrency, and generation timing visibility, Task 3: Verify the branch and watch for stale runtime issues
+
+### Community 13386 - "Community 13386"
+Cohesion: 0.40
+Nodes (3): TerrainGeneration.CustomEditors, GeneratorEditor, Generator
 
 ### Community 13390 - "Community 13390"
 Cohesion: 0.40
@@ -70252,21 +70305,41 @@ Nodes (3): OverrideKey, CombineKey, int
 Cohesion: 0.50
 Nodes (3): RecipeExecuteData, bool, int
 
+### Community 13471 - "Community 13471"
+Cohesion: 0.33
+Nodes (3): MonoTODO, SignatureHelper, SignatureToken
+
+### Community 13472 - "Community 13472"
+Cohesion: 0.33
+Nodes (4): IXmlJsonWriterInitializer, System.Runtime.Serialization.Json, Encoding, Stream
+
 ### Community 13477 - "Community 13477"
 Cohesion: 0.50
-Nodes (3): Action, Color, Vector2
+Nodes (3): string, AsyncDeleteStreamFileResult, rail
 
 ### Community 13480 - "Community 13480"
-Cohesion: 0.50
-Nodes (3): MonoTargetType, string, ConsoleCommandAttribute
+Cohesion: 0.33
+Nodes (4): JsonNodeWriter, System.Runtime.Serialization.Json, SecurityCritical, XmlUTF8NodeWriter
+
+### Community 13481 - "Community 13481"
+Cohesion: 0.29
+Nodes (4): DynamicDimensionVector, MethodInfo, TruncateNode, UnityEditor.ShaderGraph
+
+### Community 13482 - "Community 13482"
+Cohesion: 0.40
+Nodes (5): GameObject, DestroyGameObjectAndSave(), NavigationSampleInitializer, Start(), Unity.AI.Navigation.Samples
+
+### Community 13484 - "Community 13484"
+Cohesion: 0.40
+Nodes (4): Shader, Version, RenderGraphUtilsResources, UnityEngine.Rendering.RenderGraphModule.Util
 
 ### Community 13488 - "Community 13488"
 Cohesion: 0.50
 Nodes (3): Styles, UnityEngine.InputSystem.Editor, GUIStyle
 
 ### Community 13490 - "Community 13490"
-Cohesion: 0.50
-Nodes (3): SecurityCritical, SerializationInfo, StreamingContext
+Cohesion: 0.53
+Nodes (3): Vector3, UnityEngine.TestTools.Utils, Vector3ComparerWithEqualsOperator
 
 ### Community 13491 - "Community 13491"
 Cohesion: 0.50
@@ -70291,6 +70364,10 @@ Nodes (3): TrackColorAttribute, UnityEngine.Timeline, Color
 ### Community 13496 - "Community 13496"
 Cohesion: 0.50
 Nodes (3): EnvironmentAugments, Internal.Runtime.Augments, string
+
+### Community 13498 - "Community 13498"
+Cohesion: 0.33
+Nodes (5): Color, int, string, TextPlayableBehaviour, Timeline.Samples
 
 ### Community 13499 - "Community 13499"
 Cohesion: 0.50
@@ -70557,8 +70634,8 @@ Cohesion: 0.50
 Nodes (4): [1.19.0] - 2026-02-24, Added, Changed, Fixed
 
 ### Community 13572 - "Community 13572"
-Cohesion: 0.50
-Nodes (4): [1.2.0] - 2021-10-22, Added, Changed, Fixed
+Cohesion: 0.29
+Nodes (4): DynamicDimensionVector, MethodInfo, ArcsineNode, UnityEditor.ShaderGraph
 
 ### Community 13573 - "Community 13573"
 Cohesion: 0.50
@@ -70844,6 +70921,10 @@ Nodes (4): [1.7.0] - 2022-02-21, Added, Changed, Fixed
 Cohesion: 0.50
 Nodes (3): ComInterfaceType, InterfaceTypeAttribute, System.Runtime.InteropServices
 
+### Community 13646 - "Community 13646"
+Cohesion: 0.40
+Nodes (5): bool, List, VoidTaskResult, TaskCompletionSource, CompletionState
+
 ### Community 13650 - "Community 13650"
 Cohesion: 0.50
 Nodes (3): ExecutionSettings, UnityEditor.TestTools.TestRunner.CommandLineTest, string
@@ -70951,6 +71032,10 @@ Nodes (3): ApplicationCrmEnabledAttribute, System.EnterpriseServices.Compensatin
 ### Community 13677 - "Community 13677"
 Cohesion: 0.50
 Nodes (3): AnalyzedTree, System.Linq.Expressions.Compiler, Dictionary
+
+### Community 13678 - "Community 13678"
+Cohesion: 0.33
+Nodes (3): Assembly, AssemblyName, SqlMetaDataPriv
 
 ### Community 13679 - "Community 13679"
 Cohesion: 0.50
@@ -72248,9 +72333,13 @@ Nodes (4): Vector2, ClosestPoint2Straight(), PointinTriangle(), VectorAxisymmetr
 Cohesion: 0.50
 Nodes (3): SpaceWorkID, AsyncRemoveSpaceWorkResult, rail
 
+### Community 14072 - "Community 14072"
+Cohesion: 0.29
+Nodes (4): DynamicDimensionVector, MethodInfo, ArctangentNode, UnityEditor.ShaderGraph
+
 ### Community 14073 - "Community 14073"
-Cohesion: 0.50
-Nodes (3): string, AsyncDeleteStreamFileResult, rail
+Cohesion: 0.29
+Nodes (4): DynamicDimensionVector, MethodInfo, SawtoothWaveNode, UnityEditor.ShaderGraph
 
 ### Community 14074 - "Community 14074"
 Cohesion: 0.50
@@ -72263,14 +72352,6 @@ Nodes (3): ulong, AsyncQueryQuotaResult, rail
 ### Community 14077 - "Community 14077"
 Cohesion: 0.50
 Nodes (3): RailID, AsyncRemoveFavoriteGameServerResult, rail
-
-### Community 14078 - "Community 14078"
-Cohesion: 0.67
-Nodes (3): Vector3, NoInterpVector3Parameter, Vector3Parameter
-
-### Community 14079 - "Community 14079"
-Cohesion: 0.67
-Nodes (3): Vector4, NoInterpVector4Parameter, Vector4Parameter
 
 ### Community 14080 - "Community 14080"
 Cohesion: 0.50
@@ -72771,6 +72852,10 @@ Nodes (3): SynchronizationContext, ProgressStatics, System
 ### Community 14207 - "Community 14207"
 Cohesion: 0.50
 Nodes (3): AssemblyNameFlags, AssemblyFlagsAttribute, System.Reflection
+
+### Community 14209 - "Community 14209"
+Cohesion: 0.47
+Nodes (3): XmlNamespaceManager, XmlNodeList, XPathNavigator
 
 ### Community 14210 - "Community 14210"
 Cohesion: 0.50
@@ -73300,6 +73385,10 @@ Nodes (3): Location, LessOrEqual(), System.Xml.Xsl
 Cohesion: 0.67
 Nodes (3): string, NsDecl, System.Xml.Xsl.Xslt
 
+### Community 14369 - "Community 14369"
+Cohesion: 0.29
+Nodes (5): AbstractMaterialNode, Action, VisualElement, SampleTexture2DArrayNodePropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
+
 ### Community 14373 - "Community 14373"
 Cohesion: 0.50
 Nodes (3): string, CustomStyleAttribute, UnityEngine.Timeline
@@ -73412,10 +73501,6 @@ Nodes (3): EventCategory, EventCategoryAttribute, UnityEngine.UIElements
 Cohesion: 0.50
 Nodes (3): List, EventDebuggerRecordList, UnityEngine.UIElements
 
-### Community 14407 - "Community 14407"
-Cohesion: 0.50
-Nodes (3): RailSessionTicket, AcquireSessionTicketResponse, rail
-
 ### Community 14408 - "Community 14408"
 Cohesion: 0.50
 Nodes (3): CreationContext, IUxmlAttributes, T
@@ -73452,6 +73537,14 @@ Nodes (3): string, UnityEngine.UIElements, UxmlGenericAttributeNames
 Cohesion: 0.50
 Nodes (3): CreationContext, IUxmlAttributes, TCreatedType
 
+### Community 14420 - "Community 14420"
+Cohesion: 0.29
+Nodes (5): AbstractMaterialNode, Action, VisualElement, SampleTexture2DNodePropertyDrawer, UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
+
+### Community 14421 - "Community 14421"
+Cohesion: 0.67
+Nodes (3): [2.5.7] - 2025-04-11, Changed, Fixed
+
 ### Community 14422 - "Community 14422"
 Cohesion: 0.50
 Nodes (3): InputFeatureUsage, CommonUsages, UnityEngine.XR
@@ -73479,6 +73572,10 @@ Nodes (4): 20. Planetary Adaptation, Phase 1: Local Patch Approximation, Phase 2
 ### Community 14434 - "Community 14434"
 Cohesion: 0.50
 Nodes (4): 21. Procedural Planet Receiver Options, Depth Buffer, Ocean Floor Sphere, Terrain Heightfield
+
+### Community 14437 - "Community 14437"
+Cohesion: 0.29
+Nodes (5): ChangeEvent, Enum, ScreenPositionMaterialSlot, ScreenPositionSlotControlView, UnityEditor.ShaderGraph.Drawing.Slots
 
 ### Community 14444 - "Community 14444"
 Cohesion: 0.50
@@ -73588,21 +73685,57 @@ Nodes (3): System.Xml, ToDecimal(), ToString()
 Cohesion: 0.50
 Nodes (3): CryptoSignedXmlRecursionException, System.Security.Cryptography.Xml, XmlException
 
-### Community 14618 - "Community 14618"
-Cohesion: 0.50
-Nodes (3): ScreenSpaceReflectionPersistentResourcesStripper, UnityEditor.Rendering, ScreenSpaceReflectionPersistentResources
+### Community 14552 - "Community 14552"
+Cohesion: 0.29
+Nodes (5): Func, IEnumerator, TestJobData, StoreSceneSetupTask, UnityEditor.TestTools.TestRunner.TestRun.Tasks.Scene
 
-### Community 14619 - "Community 14619"
-Cohesion: 0.50
-Nodes (3): UnityEditor.Rendering, UniversalDebugShaderStripper, UniversalRenderPipelineDebugShaders
+### Community 14553 - "Community 14553"
+Cohesion: 0.67
+Nodes (3): [10.1.0] - 2020-10-12, Changed, Fixed
+
+### Community 14555 - "Community 14555"
+Cohesion: 0.33
+Nodes (4): MethodImpl, NativeMethod, PhysicsMaterial2D, UnityEngine
+
+### Community 14557 - "Community 14557"
+Cohesion: 0.33
+Nodes (5): OrderedParallelQuery, System.Linq, IEnumerator, QueryOperator, TSource
+
+### Community 14558 - "Community 14558"
+Cohesion: 0.38
+Nodes (5): EmptyEnumerator, IEnumerator, T, EmptyEnumerable, System.Linq.Parallel
+
+### Community 14566 - "Community 14566"
+Cohesion: 0.29
+Nodes (5): SecurityPermission, SerializationInfo, StreamingContext, OleDbException, System.Data.OleDb
+
+### Community 14567 - "Community 14567"
+Cohesion: 0.29
+Nodes (4): CmsRecipientCollection, int, CmsRecipientEnumerator, System.Security.Cryptography.Pkcs
+
+### Community 14615 - "Community 14615"
+Cohesion: 0.29
+Nodes (4): int, SignerInfoCollection, SignerInfoEnumerator, System.Security.Cryptography.Pkcs
+
+### Community 14616 - "Community 14616"
+Cohesion: 0.43
+Nodes (6): string, UxmlTraits, Label, UnityEngine.UIElements, UxmlFactory, UxmlTraits
+
+### Community 14624 - "Community 14624"
+Cohesion: 0.29
+Nodes (4): bool, float, Vector3, CamTest
+
+### Community 14627 - "Community 14627"
+Cohesion: 0.40
+Nodes (3): AuthorizationRuleCollection, System.Security.AccessControl, AuthorizationRule
 
 ### Community 14630 - "Community 14630"
-Cohesion: 0.67
-Nodes (3): [1.8.0-pre.1] - 2023-09-04, Added, Fixed
+Cohesion: 0.33
+Nodes (3): ACH_TotalPowerStat, int, long
 
 ### Community 14639 - "Community 14639"
-Cohesion: 0.67
-Nodes (3): [2.3.0-exp.1] - 2023-09-18, Added, Fixed
+Cohesion: 0.33
+Nodes (3): ADV_NoAmmo, bool, int
 
 ### Community 14641 - "Community 14641"
 Cohesion: 0.38
@@ -73612,11 +73745,11 @@ Nodes (4): MethodImpl, StaticAccessor, SceneUtility, UnityEngine.SceneManagement
 Cohesion: 0.67
 Nodes (3): [2.2.0] - 2023-06-20, Changed, Fixed
 
-### Community 14649 - "Community 14649"
-Cohesion: 0.33
-Nodes (5): Color, int, string, TextPlayableBehaviour, Timeline.Samples
-
 ### Community 14653 - "Community 14653"
+Cohesion: 0.33
+Nodes (3): ADV_ResearchSlow, bool, int
+
+### Community 14661 - "Community 14661"
 Cohesion: 0.50
 Nodes (4): [1.4.3] - 2022-09-23, Changed, Changed, Fixed
 
@@ -73637,12 +73770,8 @@ Cohesion: 0.67
 Nodes (3): keywords, rollout_summary_files, Task 7: diagnose the low-camera far-shore contour with analytic sea-path debug modes, then stop matte tuning and pivot back to coverage/geometry
 
 ### Community 14669 - "Community 14669"
-Cohesion: 0.67
-Nodes (3): [1.18.0] - 2026-01-14, Changed, Fixed
-
-### Community 14673 - "Community 14673"
-Cohesion: 0.67
-Nodes (3): [1.6.2] - 2023-07-10, Added, Fixed
+Cohesion: 0.40
+Nodes (4): int, Texture2D, UnityEngine.Rendering.Universal, UniversalRenderPipelineRuntimeTextures
 
 ### Community 14674 - "Community 14674"
 Cohesion: 0.67
@@ -73710,27 +73839,31 @@ Nodes (3): [0.1.1] - 2019-08-06, Changes, Fixes
 
 ### Community 14690 - "Community 14690"
 Cohesion: 0.33
-Nodes (3): bool, ConfigNameValueCollection, System.Configuration
+Nodes (3): ADV_UIPanelViewState, ETargetPanel, int
 
 ### Community 14692 - "Community 14692"
 Cohesion: 0.67
 Nodes (3): [1.3.0] - 2022-05-16, Changed, Fixed
 
-### Community 14696 - "Community 14696"
-Cohesion: 0.50
-Nodes (3): BiomeLookupData, Color, IBiomeAssignmentField
+### Community 14693 - "Community 14693"
+Cohesion: 0.33
+Nodes (4): TestMarkerComp, bool, float, int
+
+### Community 14694 - "Community 14694"
+Cohesion: 0.80
+Nodes (4): DebugStateColor, DebugUIDrawerColorField, Color, ColorField
 
 ### Community 14697 - "Community 14697"
 Cohesion: 0.33
-Nodes (5): Alloc, GradientRemap, int, UnityEngine.UIElements.UIR, VectorImageRenderInfo
+Nodes (3): TestParticleSystem, float, ParticleSystem
 
 ### Community 14698 - "Community 14698"
 Cohesion: 0.67
 Nodes (3): [0.0.14-preview] - 2018-12-11, Changed, Fixed
 
 ### Community 14699 - "Community 14699"
-Cohesion: 0.67
-Nodes (3): [1.11.1] - 2024-09-26, Changed, Fixed
+Cohesion: 0.33
+Nodes (3): TestReform, bool, int
 
 ### Community 14700 - "Community 14700"
 Cohesion: 0.67
@@ -73792,6 +73925,14 @@ Nodes (3): [10.2.0] - 2020-10-19, Changed, Fixed
 Cohesion: 0.50
 Nodes (3): SpaceWorkID, AsyncRateSpaceWorkResult, rail
 
+### Community 14716 - "Community 14716"
+Cohesion: 0.40
+Nodes (3): ConstantExpression, System.Linq.Expressions, ExpressionVisitor
+
+### Community 14717 - "Community 14717"
+Cohesion: 0.33
+Nodes (4): TestShieldBurst, bool, float, Material
+
 ### Community 14718 - "Community 14718"
 Cohesion: 0.67
 Nodes (3): [16.0.2] - 2023-06-28, Changed, Fixed
@@ -73799,6 +73940,10 @@ Nodes (3): [16.0.2] - 2023-06-28, Changed, Fixed
 ### Community 14720 - "Community 14720"
 Cohesion: 0.67
 Nodes (3): [17.0.2] - 2024-04-02, Changed, Fixed
+
+### Community 14721 - "Community 14721"
+Cohesion: 0.50
+Nodes (3): RailSessionTicket, AsyncAcquireGameServerSessionTicketResponse, rail
 
 ### Community 14722 - "Community 14722"
 Cohesion: 0.67
@@ -73964,29 +74109,85 @@ Nodes (3): [1.8.7] - 2024-05-24, Added, Fixed
 Cohesion: 0.67
 Nodes (3): [1.8.9] - 2025-07-30, Added, Fixed
 
-### Community 14810 - "Community 14810"
-Cohesion: 0.67
-Nodes (3): [2.5.7] - 2025-04-11, Changed, Fixed
+### Community 14775 - "Community 14775"
+Cohesion: 0.33
+Nodes (4): UIStorageCountTipEntry, Image, RectTransform, Text
+
+### Community 14780 - "Community 14780"
+Cohesion: 0.33
+Nodes (3): ShipTest, bool, float
+
+### Community 14809 - "Community 14809"
+Cohesion: 0.40
+Nodes (3): Format, Type, SqlUdtInfo
+
+### Community 14811 - "Community 14811"
+Cohesion: 0.53
+Nodes (3): Font, SizeF, StringFormat
 
 ### Community 14814 - "Community 14814"
 Cohesion: 0.67
-Nodes (3): [10.1.0] - 2020-10-12, Changed, Fixed
+Nodes (3): [2.5.2] - 2025-01-16, Added, Fixed
+
+### Community 14817 - "Community 14817"
+Cohesion: 0.40
+Nodes (3): FeatureExtension, FederatedAuthenticationFeatureExtensionData, SqlLogin
+
+### Community 14819 - "Community 14819"
+Cohesion: 0.40
+Nodes (3): XblMultiplayerSessionWriteMode, XblMultiplayerWriteSessionHandleResult, XblWriteSessionByHandleCallback
+
+### Community 14822 - "Community 14822"
+Cohesion: 0.67
+Nodes (3): [1.11.1] - 2024-09-26, Changed, Fixed
 
 ### Community 14824 - "Community 14824"
 Cohesion: 0.40
 Nodes (3): BitSet, StarNode, System.Xml.Schema
 
+### Community 14827 - "Community 14827"
+Cohesion: 0.33
+Nodes (3): SerializedDataParameter, ProbeVolumesOptionsEditor, UnityEditor.Rendering
+
 ### Community 14832 - "Community 14832"
-Cohesion: 1.00
-Nodes (3): GetEmptyFilter(), GetFilterForCurrentCullingCallback(), Allocator
+Cohesion: 0.83
+Nodes (4): GetEmptyFilter(), GetFilterForCurrentCullingCallback(), IncludeExcludeListFilter, Allocator
+
+### Community 14844 - "Community 14844"
+Cohesion: 0.40
+Nodes (3): BufferDesc, BufferHandle, GraphicsBuffer
+
+### Community 14848 - "Community 14848"
+Cohesion: 0.33
+Nodes (3): SerializedDataParameter, BloomEditor, UnityEditor.Rendering.Universal
+
+### Community 14849 - "Community 14849"
+Cohesion: 0.33
+Nodes (3): SerializedDataParameter, MotionBlurEditor, UnityEditor.Rendering.Universal
+
+### Community 14853 - "Community 14853"
+Cohesion: 0.33
+Nodes (3): SerializedProperty, ScreenSpaceReflectionRendererFeatureEditor, UnityEditor.Rendering.Universal
 
 ### Community 14923 - "Community 14923"
 Cohesion: 0.67
 Nodes (3): Shader Graph Feature Examples, Subgraph Dropdown, Subgraph Port Defaults
 
-### Community 14951 - "Community 14951"
-Cohesion: 0.27
-Nodes (6): [14.0.0] - 2021-11-17, [1.1.4-preview] - 2018-01-01, Added, Added, Fixed, Fixed
+### Community 14945 - "Community 14945"
+Cohesion: 0.53
+Nodes (3): Vector2, UnityEngine.TestTools.Utils, Vector2ComparerWithEqualsOperator
+
+### Community 14959 - "Community 14959"
+Cohesion: 0.67
+Nodes (3): [1.1.2-preview] - 2018-01-01, Changed, Fixed
+
+### Community 14967 - "Community 14967"
+Cohesion: 0.67
+Nodes (3): [3.2.0-preview] - 2018-01-01, Changed, Fixed
+
+### Community 14976 - "Community 14976"
+Cohesion: 0.33
+Nodes (4): FrameData, Playable, Timeline.Samples, VideoSchedulerPlayableBehaviour
 
 ### Community 14979 - "Community 14979"
 Cohesion: 0.67
@@ -74000,9 +74201,25 @@ Nodes (3): OnPostCullBeginCameraRendering(), PostCullBeginCameraRendering(), Ren
 Cohesion: 0.67
 Nodes (3): ReadbackInstanceDataBuffer(), GPUInstanceDataBufferReadback, T
 
+### Community 15001 - "Community 15001"
+Cohesion: 0.33
+Nodes (3): SerializedProperty, GridLayoutGroupEditor, UnityEditor.UI
+
+### Community 15023 - "Community 15023"
+Cohesion: 0.47
+Nodes (3): System.Xml.Linq, XNodeEqualityComparer, XNode
+
+### Community 15058 - "Community 15058"
+Cohesion: 0.33
+Nodes (3): CustomAttributeData, IList, Type
+
+### Community 15062 - "Community 15062"
+Cohesion: 0.33
+Nodes (5): Action, Func, SecuritySafeCritical, T, SafeAccessTokenHandle
+
 ### Community 15083 - "Community 15083"
-Cohesion: 0.67
-Nodes (3): [2.5.2] - 2025-01-16, Added, Fixed
+Cohesion: 0.53
+Nodes (3): MethodInfo, TypeInfo, MethodInfoEqualityComparer
 
 ### Community 15095 - "Community 15095"
 Cohesion: 0.67
@@ -74011,6 +74228,30 @@ Nodes (3): SqlInt32, Sign(), ToSqlInt32()
 ### Community 15096 - "Community 15096"
 Cohesion: 0.67
 Nodes (3): XmlQualifiedName, XmlSchemaSet, GetXsdType()
+
+### Community 15136 - "Community 15136"
+Cohesion: 0.40
+Nodes (3): IntPtr, Microsoft.Win32.SafeHandles, SafeProcessHandle
+
+### Community 15147 - "Community 15147"
+Cohesion: 0.47
+Nodes (3): XmlSchemaInfo, System.Xml.Schema, XmlSchemaInfoEqualityComparer
+
+### Community 15154 - "Community 15154"
+Cohesion: 0.40
+Nodes (4): BatchMaterialID, CompareTo(), Equals(), UnityEngine.Rendering
+
+### Community 15155 - "Community 15155"
+Cohesion: 0.40
+Nodes (3): MethodImpl, NVUnityPlugin, UnityEngine.NVIDIA
+
+### Community 15178 - "Community 15178"
+Cohesion: 0.33
+Nodes (5): int, Material, string, TextAsset, UnityEngine.TextCore.Text
+
+### Community 15188 - "Community 15188"
+Cohesion: 0.40
+Nodes (3): int, Vector3, Presets
 
 ### Community 15264 - "Community 15264"
 Cohesion: 0.67
@@ -74032,6 +74273,10 @@ Nodes (3): 27. Coding Agent Task Brief, Goal, Required Deliverables
 Cohesion: 0.67
 Nodes (3): 4. Difference from Texture-Based Caustics, Evan Wallace Method, Texture-Based Caustics
 
+### Community 15358 - "Community 15358"
+Cohesion: 0.33
+Nodes (3): float, int, PlayerMovement
+
 ### Community 15362 - "Community 15362"
 Cohesion: 0.33
 Nodes (4): IEnumerator, TestJobData, PlayModeRunTask, UnityEditor.TestTools.TestRunner.TestRun.Tasks
@@ -74044,41 +74289,113 @@ Nodes (4): IEnumerator, TestJobData, RestoreProjectSettingsTask, UnityEditor.Tes
 Cohesion: 0.33
 Nodes (4): Toggle, TestableToggleGroup, ToggleTest, ToggleGroup
 
+### Community 15370 - "Community 15370"
+Cohesion: 0.33
+Nodes (4): NGPT, ScriptableAsset, NGPT, ScriptableAssetWithEditor
+
+### Community 15374 - "Community 15374"
+Cohesion: 0.33
+Nodes (6): Debug Settings, Distance Field Masking Mobile Shader, Face, Outline, Properties, Underlay
+
 ### Community 15404 - "Community 15404"
 Cohesion: 0.50
 Nodes (3): string, AsyncRenameStreamFileResult, rail
 
-### Community 15825 - "Community 15825"
+### Community 15450 - "Community 15450"
 Cohesion: 0.67
-Nodes (3): [14.0.2] - 2021-02-04, Added, Fixed
+Nodes (3): [0.3.0] - 2019-12-03, Changes, New Features
 
-### Community 16986 - "Community 16986"
-Cohesion: 0.09
-Nodes (8): DateTime, Exception, SmiParameterMetaData, SqlEnvChange, SqlParameter, TdsParserStateObject, TransactionManagerIsolationLevel, TransactionManagerRequestType
+### Community 15476 - "Community 15476"
+Cohesion: 0.67
+Nodes (3): [7.0.1] - 2019-07-25, Changed, Fixed
+
+### Community 15516 - "Community 15516"
+Cohesion: 0.40
+Nodes (4): InserterDesc, bool, float, int
+
+### Community 15517 - "Community 15517"
+Cohesion: 0.40
+Nodes (3): SunLightHandler, Color, float
+
+### Community 15531 - "Community 15531"
+Cohesion: 0.40
+Nodes (3): UIMinimapPlanetOrbit, Material, Renderer
+
+### Community 15535 - "Community 15535"
+Cohesion: 0.50
+Nodes (3): BiomeRegistry, BiomeDefinition, int
+
+### Community 15537 - "Community 15537"
+Cohesion: 0.80
+Nodes (4): BitField, DebugStateFlags, DebugUIDrawerBitField, Enum
+
+### Community 15544 - "Community 15544"
+Cohesion: 0.40
+Nodes (3): ComponentCollection, System.ComponentModel, IComponent
+
+### Community 15549 - "Community 15549"
+Cohesion: 0.40
+Nodes (3): GameSetUp, CelestialBody, StartCondition
+
+### Community 15808 - "Community 15808"
+Cohesion: 0.40
+Nodes (4): ComputeShader, Shader, MipGenRenderPipelineRuntimeResources, UnityEngine.Rendering
+
+### Community 15809 - "Community 15809"
+Cohesion: 0.40
+Nodes (4): ComputeShader, Shader, UnityEngine.Rendering.Universal, UniversalRenderPipelineDebugShaders
+
+### Community 15810 - "Community 15810"
+Cohesion: 0.40
+Nodes (4): int, Texture2D, UnityEngine.Rendering.Universal, UniversalRenderPipelineFilmGrainResources
+
+### Community 15813 - "Community 15813"
+Cohesion: 0.40
+Nodes (3): SerializedProperty, TextEditor, UnityEditor.UI
+
+### Community 15816 - "Community 15816"
+Cohesion: 0.40
+Nodes (3): BitSet, PlusNode, System.Xml.Schema
+
+### Community 15838 - "Community 15838"
+Cohesion: 0.50
+Nodes (3): BiomeLookupData, Color, IBiomeAssignmentField
+
+### Community 15944 - "Community 15944"
+Cohesion: 0.67
+Nodes (3): CheckoutException, System.ComponentModel.Design, int
+
+### Community 16035 - "Community 16035"
+Cohesion: 0.67
+Nodes (3): [1.10.0] - 2024-07-24, Added, Fixed
+
+### Community 16515 - "Community 16515"
+Cohesion: 0.67
+Nodes (3): [14.0.0] - 2021-11-17, Added, Fixed
 
 ### Community 19752 - "Community 19752"
 Cohesion: 0.67
 Nodes (3): EnterPlayModeOptions, OnEnteringPlaymode(), InitializeOnEnterPlayMode
 
 ## Knowledge Gaps
-- **81897 isolated node(s):** `netstandard2.1`, `netstandard2.1`, `netstandard2.1`, `netstandard2.1`, `netstandard2.1` (+81892 more)
+- **81913 isolated node(s):** `netstandard2.1`, `netstandard2.1`, `netstandard2.1`, `netstandard2.1`, `netstandard2.1` (+81908 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **5405 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **5407 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `ISerializationCallbackReceiver` connect `Community 531` to `Community 3328`, `Community 387`, `Community 4999`, `Community 1545`, `Community 1417`, `Community 395`, `Community 1035`, `Community 3863`, `Community 283`, `Community 545`, `Community 2085`, `Community 1958`, `Community 8231`, `Community 2216`, `Community 1449`, `Community 1584`, `Community 1714`, `Community 1587`, `Community 566`, `Community 6967`, `Community 3255`, `Community 4413`, `Community 4157`, `Community 9407`, `Community 7361`, `Community 579`, `Community 1476`, `Community 5444`, `Community 2502`, `Community 970`, `Community 9419`, `Community 4045`, `Community 1231`, `Community 5331`, `Community 5588`, `Community 6616`, `Community 985`, `Community 8536`, `Community 3803`, `Community 5083`, `Community 5467`, `Community 1115`, `Community 864`, `Community 6502`, `Community 2794`, `Community 1005`, `Community 8050`, `Community 6140`, `Community 1277`?**
-  _High betweenness centrality (0.061) - this node is a cross-community bridge._
-- **Why does `ManualBehaviour` connect `Community 246` to `Community 1547`, `Community 1548`, `Community 1549`, `Community 1550`, `Community 5804`, `Community 4632`, `Community 2586`, `Community 2587`, `Community 2588`, `Community 2589`, `Community 1055`, `Community 2591`, `Community 2592`, `Community 2593`, `Community 2594`, `Community 2595`, `Community 2596`, `Community 5677`, `Community 568`, `Community 2117`, `Community 1093`, `Community 2118`, `Community 1094`, `Community 1095`, `Community 2121`, `Community 2122`, `Community 2123`, `Community 2124`, `Community 1614`, `Community 4687`, `Community 1615`, `Community 1616`, `Community 1617`, `Community 4691`, `Community 2126`, `Community 1618`, `Community 2127`, `Community 3671`, `Community 4696`, `Community 2128`, `Community 4698`, `Community 3169`, `Community 4199`, `Community 3177`, `Community 3178`, `Community 3689`, `Community 3180`, `Community 4204`, `Community 4205`, `Community 3183`, `Community 3184`, `Community 3185`, `Community 4206`, `Community 3186`, `Community 1140`, `Community 1141`, `Community 1142`, `Community 1143`, `Community 2364`, `Community 3187`, `Community 3188`, `Community 3189`, `Planet Settings SO`, `Community 2876`, `Planet DTO`, `Community 2877`, `Console Anchor`, `Community 3726`, `Community 2878`, `Console Theme`, `Community 3733`, `Community 3739`, `Community 3740`, `Community 1693`, `Community 3741`, `Community 3742`, `Community 3743`, `Community 1694`, `Community 2722`, `Community 1695`, `Community 3744`, `Community 2727`, `Community 2729`, `Community 2730`, `Community 2731`, `Community 1194`, `Community 1195`, `Community 2734`, `Community 2735`, `Community 2224`, `Community 2736`, `Community 2226`, `Community 2737`, `Community 2228`, `Grass Near Field Stats`, `Community 5300`, `Community 2229`, `Community 5303`, `Community 3767`, `Community 2738`, `Community 2230`, `Community 2231`, `Community 5305`, `Community 2233`, `Community 716`, `Community 3282`, `Community 1746`, `Community 1238`, `Community 1239`, `Community 1240`, `Community 1241`, `Community 1244`, `Community 1245`, `Community 1776`, `Community 1779`, `Community 1780`, `Community 1781`, `Community 1782`, `Community 1783`, `Community 1784`, `Community 1786`, `Community 1787`, `Community 1788`, `Community 1789`, `Community 772`, `Community 773`, `Community 4356`, `Community 790`, `Community 279`, `Community 3355`, `Community 3357`, `Community 3358`, `Community 3359`, `Community 3360`, `Community 3361`, `Community 3362`, `Community 1312`, `Community 1313`, `Community 3365`, `Community 3366`, `Community 3367`, `Community 3368`, `Community 1314`, `Community 3370`, `Community 6955`, `Community 3371`, `Community 6957`, `Community 7470`, `Community 2865`, `Community 2355`, `Community 2356`, `Community 2867`, `Community 2357`, `Community 2358`, `Community 2869`, `Community 2870`, `Community 2871`, `Community 1851`, `Community 2873`, `Community 2874`, `Community 2360`, `Community 2361`, `Community 1856`, `Community 833`, `Community 834`, `Community 2362`, `Community 2363`, `Community 1861`, `Community 1862`, `Community 1863`, `Community 1864`, `Community 1865`, `Community 1866`, `Community 1867`, `Community 1868`, `Community 1869`, `Community 4434`, `Community 4435`, `Community 4436`, `Community 4437`, `Community 856`, `Community 4440`, `Community 4441`, `Community 4442`, `Community 857`, `Community 3935`, `Community 1376`, `Community 1377`, `Community 1378`, `Community 1379`, `Community 4458`, `Community 5484`, `Community 684`, `Community 4469`, `Community 685`, `Community 4984`, `Community 4986`, `Community 4990`, `Community 1196`, `Community 6531`, `Community 4208`, `Community 3978`, `Community 1931`, `Community 3979`, `Community 3980`, `Community 3982`, `Community 3983`, `Community 912`, `Community 1937`, `Community 1938`, `Community 3987`, `Community 1939`, `Community 3989`, `Community 1430`, `Community 1431`, `Community 1940`, `Community 3991`, `Community 1432`, `Community 3992`, `Community 3993`, `Community 413`, `Community 1942`, `Community 3995`, `Community 1952`, `Community 3997`, `Community 3998`, `Community 2467`, `Community 6052`, `Community 3999`, `Community 2470`, `Community 2471`, `Community 2472`, `Community 2473`, `Community 2474`, `Community 427`, `Community 2475`, `Community 2476`, `Community 2477`, `Community 6066`, `Community 947`, `Community 948`, `Community 949`, `Community 950`, `Community 6076`, `Community 3005`, `Community 6077`, `Community 3007`, `Community 3008`, `Community 3010`, `Community 6082`, `Community 3012`, `Community 3013`, `Community 1486`, `Community 1487`, `Community 976`, `Community 1488`, `Community 1489`, `Community 1490`, `Community 1491`, `Community 2739`, `Community 3544`, `Community 3545`, `Community 3546`, `Community 2740`, `Community 2012`, `Community 3548`, `Community 3549`, `Community 3550`, `Community 3551`, `Community 3553`, `Community 4066`, `Community 3554`, `Community 3555`, `Community 3556`, `Community 4070`, `Community 2023`, `Community 3557`, `Community 2025`, `Community 2026`, `Community 2027`, `Community 2028`, `Community 3558`, `Community 2029`, `Community 1012`, `Community 1014`?**
-  _High betweenness centrality (0.043) - this node is a cross-community bridge._
-- **Why does `Bindings` connect `Biome Lookup Data` to `Community 8223`, `Community 4150`, `Community 4151`, `Community 4152`, `Community 4153`, `Community 2106`, `Community 4154`, `Community 4156`, `Community 14397`, `Community 2112`, `Community 4165`, `Community 4166`, `Object Pool Utility`, `Community 8280`, `Community 4185`, `Community 2140`, `Atmosphere Render Pass`, `Community 4216`, `Community 4224`, `Community 2177`, `Community 2178`, `Community 2180`, `Community 2181`, `Community 10374`, `Community 8327`, `Community 2187`, `Community 18579`, `Community 2203`, `Community 2204`, `Community 2207`, `Community 2208`, `Community 2209`, `Community 4282`, `Community 2253`, `Community 4324`, `Community 6373`, `Community 10468`, `Community 6376`, `Community 6377`, `Community 6379`, `Community 6384`, `Community 6388`, `Community 8438`, `Community 8439`, `Community 8442`, `Community 250`, `Community 18683`, `Community 8446`, `Community 8447`, `Community 8449`, `Community 257`, `Community 8450`, `Community 8458`, `Community 15522`, `Community 10525`, `Community 10527`, `Community 6432`, `Community 2337`, `Community 290`, `Community 2346`, `Community 299`, `Community 14641`, `Community 305`, `Community 311`, `Community 4408`, `Community 4409`, `Community 312`, `Community 328`, `Community 329`, `Community 332`, `Community 2393`, `Community 2394`, `Community 356`, `Community 360`, `Community 371`, `Community 377`, `Community 2434`, `Community 2435`, `Community 388`, `Community 2436`, `Community 2437`, `Community 6542`, `Community 2453`, `Community 2454`, `Community 2455`, `Community 2456`, `Community 4513`, `Community 420`, `Community 2479`, `Community 2482`, `Community 434`, `Community 4537`, `Community 458`, `Community 6606`, `Community 469`, `Community 476`, `Community 485`, `Community 2535`, `Community 497`, `Community 8697`, `Community 511`, `Community 2560`, `Community 2561`, `Community 2562`, `Community 2563`, `Community 2564`, `Community 521`, `Community 2574`, `Community 527`, `Community 4628`, `Community 4629`, `Community 4631`, `Community 4633`, `Community 537`, `Community 540`, `Community 4636`, `Community 4646`, `Community 2601`, `Community 2602`, `Community 555`, `Community 598`, `Community 2653`, `Community 4711`, `Community 615`, `Community 4725`, `Community 638`, `Community 645`, `Community 2694`, `Community 2695`, `Community 2696`, `Community 2697`, `Community 2698`, `Community 2699`, `Community 4752`, `Community 2705`, `Community 683`, `Community 6833`, `Community 6834`, `Community 6835`, `Community 6838`, `Community 2743`, `Community 2744`, `Community 6839`, `Community 4800`, `Community 2754`, `Community 4803`, `Community 712`, `Community 713`, `Community 2765`, `Community 6861`, `Community 6862`, `Community 10960`, `Community 726`, `Community 10974`, `Community 740`, `Community 10993`, `Community 6898`, `Community 2812`, `Community 766`, `Community 779`, `Community 786`, `Community 787`, `Community 2839`, `Community 2844`, `Community 797`, `Community 2851`, `Community 805`, `Community 8998`, `Community 4905`, `Community 11050`, `Community 4908`, `Community 4909`, `Community 4910`, `Community 4911`, `Community 4912`, `Community 4913`, `Community 11052`, `Community 4915`, `Community 6969`, `Community 826`, `Community 4922`, `Community 11076`, `Community 6980`, `Community 4932`, `Community 4933`, `Community 844`, `Community 6988`, `Community 6994`, `Community 850`, `Community 853`, `Community 854`, `Community 4952`, `Community 4953`, `Community 7000`, `Community 4956`, `Community 867`, `Community 877`, `Community 879`, `Community 880`, `Community 890`, `Community 908`, `Community 911`, `Community 915`, `Community 11156`, `Community 2981`, `Community 2982`, `Community 936`, `Community 938`, `Community 2988`, `Community 942`, `Community 943`, `Community 5040`, `Community 9187`, `Community 9188`, `Community 9198`, `Community 9199`, `Community 1008`, `Community 9209`, `Community 9210`, `Community 9213`, `Community 1031`, `Community 9244`, `Community 9249`, `Community 9250`, `Community 15410`, `Community 3133`, `Community 3134`, `Community 3135`, `Community 3136`, `Community 1085`, `Community 3143`, `Community 3159`, `Community 9304`, `Community 9306`, `Community 3162`, `Community 15450`, `Community 9311`, `Community 1126`, `Community 1127`, `Community 1128`, `Community 1129`, `Community 1134`, `Community 11374`, `Community 5231`, `Community 5232`, `Community 5234`, `Community 5236`, `Community 5237`, `Community 1145`, `Community 13433`, `Community 3195`, `Community 5248`, `Community 5249`, `Community 3218`, `Community 15510`, `Community 7327`, `Community 5279`, `Community 5281`, `Community 1184`, `Community 7331`, `Community 1183`, `Community 3237`, `Community 7333`, `Community 7334`, `Community 7328`, `Community 7332`, `Community 7335`, `Community 7339`, `Community 7338`, `Community 3238`, `Community 7343`, `Community 7344`, `Community 7345`, `Community 7346`, `Community 9395`, `Community 7347`, `Community 7348`, `Community 7349`, `Community 7358`, `Community 7359`, `Community 5313`, `Community 7363`, `Community 7364`, `Community 9414`, `Community 1225`, `Community 1226`, `Community 1228`, `Community 1230`, `Community 3286`, `Community 3287`, `Community 3291`, `Community 3292`, `Community 3293`, `Community 3294`, `Community 5343`, `Community 1247`, `Community 3295`, `Community 5361`, `Community 7417`, `Community 3336`, `Community 1297`, `Community 1298`, `Community 5399`, `Community 1305`, `Community 1315`, `Community 1316`, `Community 5417`, `Community 7480`, `Community 7481`, `Community 19786`, `Community 3411`, `Community 1364`, `Community 1365`, `Community 1368`, `Community 11618`, `Community 9602`, `Community 7558`, `Community 1423`, `Community 9621`, `Community 9628`, `Community 7583`, `Community 3501`, `Community 3502`, `Community 3503`, `Community 3506`, `Community 3507`, `Community 3510`, `Community 5565`, `Community 5566`, `Community 5567`, `Community 5568`, `Community 1473`, `Community 5570`, `Community 1474`, `Community 1475`, `Community 1477`, `Community 7640`, `Community 5596`, `Community 1515`, `Community 3567`, `Community 3568`, `Community 3569`, `Community 5629`, `Community 1534`, `Community 5630`, `Community 5632`, `Community 9731`, `Community 9732`, `Community 11782`, `Community 1543`, `Community 1544`, `Community 9735`, `Community 9738`, `Community 3598`, `Community 3610`, `Community 3622`, `Community 3623`, `Community 7722`, `Community 1598`, `Community 1599`, `Community 3691`, `Community 3693`, `Community 1653`, `Community 3714`, `Community 16004`, `Community 1679`, `Community 5781`, `Community 1696`, `Community 3745`, `Community 1698`, `Community 1700`, `Community 9894`, `Community 7875`, `Community 7878`, `Community 7882`, `Community 7885`, `Community 7886`, `Community 7889`, `Community 1763`, `Community 1764`, `Community 1765`, `Community 1767`, `Community 12010`, `Community 7914`, `Community 3836`, `Community 3845`, `Community 9998`, `Community 3858`, `Community 10004`, `Community 10006`, `Community 10009`, `Community 10014`, `Community 10015`, `Community 10017`, `Community 10022`, `Community 7979`, `Community 7980`, `Community 1840`, `Community 1841`, `Community 5939`, `Community 1843`, `Community 1844`, `Community 5941`, `Community 5943`, `Community 5942`, `Community 5945`, `Community 5946`, `Community 5947`, `Community 1853`, `Community 1854`, `Community 5949`, `Community 5950`, `Community 5965`, `Community 5966`, `Community 5967`, `Community 3923`, `Community 3924`, `Community 1886`, `Community 10079`, `Community 3936`, `Community 3937`, `Community 10080`, `Community 3951`, `Community 1926`, `Community 6025`, `Community 1930`, `Community 6029`, `Community 6030`, `Community 4008`, `Community 6072`, `Community 12224`, `Community 6089`, `Community 1999`, `Community 2000`, `Community 2001`, `Community 2002`, `Community 2006`, `Community 2007`?**
+- **Why does `ISerializationCallbackReceiver` connect `Community 531` to `Community 3073`, `Community 387`, `Community 9609`, `Community 5130`, `Community 395`, `Community 1035`, `Community 1417`, `Community 1545`, `Community 3863`, `Community 283`, `Community 545`, `Community 2085`, `Community 1958`, `Community 2216`, `Community 10408`, `Community 9002`, `Community 1449`, `Community 1584`, `Community 1714`, `Community 1587`, `Community 1842`, `Community 566`, `Community 6967`, `Community 3255`, `Community 7100`, `Community 4413`, `Community 4157`, `Community 1476`, `Community 2502`, `Community 7241`, `Community 970`, `Community 4045`, `Community 1231`, `Community 5331`, `Community 5588`, `Community 6616`, `Community 985`, `Community 6747`, `Community 3803`, `Community 5083`, `Community 5467`, `Community 1115`, `Community 864`, `Community 6502`, `Community 2794`, `Community 1005`, `Community 6903`, `Community 9464`, `Community 10108`, `Community 1277`, `Community 7679`?**
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+- **Why does `ManualBehaviour` connect `Community 246` to `Community 1547`, `Community 1548`, `Community 6156`, `Community 1549`, `Community 1550`, `Community 2586`, `Community 2587`, `Community 2588`, `Community 2589`, `Community 1055`, `Community 2591`, `Community 2592`, `Community 2593`, `Community 2594`, `Community 2595`, `Community 2596`, `Community 5677`, `Community 568`, `Community 1087`, `Community 578`, `Community 2117`, `Community 1093`, `Community 2118`, `Community 1094`, `Community 1095`, `Community 2121`, `Community 2122`, `Community 2123`, `Community 2124`, `Community 1614`, `Community 4687`, `Community 1615`, `Community 1616`, `Community 1617`, `Community 4691`, `Community 2126`, `Community 3157`, `Community 1618`, `Community 2127`, `Community 4696`, `Community 2128`, `Community 4698`, `Community 4702`, `Community 3169`, `Community 4199`, `Community 3177`, `Community 3178`, `Community 3180`, `Community 4205`, `Community 4206`, `Community 3183`, `Community 3184`, `Community 3185`, `Community 3697`, `Community 3186`, `Community 1140`, `Community 1141`, `Community 1142`, `Community 1143`, `Community 3187`, `Community 3188`, `Community 3189`, `Planet Settings SO`, `Community 4230`, `Community 4742`, `Community 2877`, `Community 3726`, `Community 2702`, `Community 2878`, `Community 3733`, `Community 3739`, `Community 3740`, `Community 1693`, `Community 3741`, `Community 3742`, `Community 3743`, `Community 1694`, `Community 2722`, `Community 1695`, `Community 3744`, `Community 2727`, `Community 2729`, `Community 2730`, `Community 2731`, `Community 1194`, `Community 1195`, `Community 2734`, `Community 2735`, `Community 2224`, `Community 2736`, `Community 2226`, `Community 2737`, `Community 2228`, `Grass Near Field Stats`, `Community 5300`, `Community 2229`, `Community 2232`, `Community 5303`, `Community 2738`, `Community 2230`, `Community 2231`, `Community 5305`, `Community 2233`, `Community 4287`, `Community 6854`, `Community 716`, `Community 3285`, `Community 1238`, `Community 1239`, `Community 1240`, `Community 1241`, `Community 1244`, `Community 1245`, `Community 4322`, `Community 1776`, `Community 1779`, `Community 1780`, `Community 1781`, `Community 1782`, `Community 1783`, `Community 1784`, `Community 1786`, `Community 1787`, `Community 1788`, `Community 1789`, `Community 772`, `Community 773`, `Community 790`, `Community 279`, `Community 3355`, `Community 3357`, `Community 3358`, `Community 3359`, `Community 3360`, `Community 3361`, `Community 3362`, `Community 5405`, `Community 7972`, `Community 3365`, `Community 3366`, `Community 3367`, `Community 3368`, `Community 1312`, `Community 1313`, `Community 3370`, `Community 3371`, `Community 6957`, `Community 7470`, `Community 5421`, `Community 2865`, `Community 2355`, `Community 2356`, `Community 2867`, `Community 2357`, `Community 2358`, `Community 2869`, `Community 2870`, `Community 2873`, `Community 2874`, `Community 2360`, `Community 2361`, `Community 2362`, `Community 2363`, `Community 1856`, `Community 833`, `Community 834`, `Community 2364`, `Community 2876`, `Community 1861`, `Community 1862`, `Community 1863`, `Community 1864`, `Community 1865`, `Community 1866`, `Community 1867`, `Community 1868`, `Community 1869`, `Community 4434`, `Community 4435`, `Community 4436`, `Community 4437`, `Community 856`, `Community 4440`, `Community 4441`, `Community 4442`, `Community 857`, `Community 3935`, `Community 1376`, `Community 1377`, `Community 1378`, `Community 1379`, `Community 4452`, `Community 5484`, `Community 684`, `Community 685`, `Community 4984`, `Community 4989`, `Community 4990`, `Community 1196`, `Community 6531`, `Community 4999`, `Community 4208`, `Community 3978`, `Community 1931`, `Community 3979`, `Community 3980`, `Community 3982`, `Community 3983`, `Community 912`, `Community 1937`, `Community 1938`, `Community 3987`, `Community 1939`, `Community 3989`, `Community 1430`, `Community 1431`, `Community 1940`, `Community 3991`, `Community 1432`, `Community 3992`, `Community 3993`, `Community 413`, `Community 1942`, `Community 3995`, `Community 3997`, `Community 3998`, `Community 3999`, `Community 2467`, `Community 6052`, `Community 2470`, `Community 2471`, `Community 3495`, `Community 2472`, `Community 2473`, `Community 427`, `Community 2474`, `Community 2475`, `Community 2476`, `Community 2477`, `Community 6066`, `Community 947`, `Community 948`, `Community 949`, `Community 950`, `Community 6076`, `Community 3005`, `Community 6077`, `Community 3007`, `Community 3008`, `Community 3010`, `Community 6082`, `Community 3012`, `Community 3013`, `Community 4554`, `Community 5582`, `Community 1486`, `Community 1487`, `Community 976`, `Community 1488`, `Community 1489`, `Community 1490`, `Community 2739`, `Community 1491`, `Community 1314`, `Community 3544`, `Community 3545`, `Community 3546`, `Community 2740`, `Community 2012`, `Community 3548`, `Community 3549`, `Community 3550`, `Community 3551`, `Community 3553`, `Community 3554`, `Community 3555`, `Community 3556`, `Community 3557`, `Community 3558`, `Community 2023`, `Community 2025`, `Community 2026`, `Community 2027`, `Community 2028`, `Community 2029`, `Community 1012`, `Community 1014`?**
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+- **Why does `Bindings` connect `Biome Lookup Data` to `Community 12292`, `Community 8223`, `Community 4150`, `Community 4151`, `Community 4152`, `Community 4153`, `Community 2106`, `Community 4154`, `Community 4156`, `Community 14397`, `Community 2112`, `Community 4165`, `Community 4166`, `Object Pool Utility`, `Community 4185`, `Community 2140`, `Atmosphere Render Pass`, `Community 4216`, `Community 4224`, `Community 2178`, `Community 2180`, `Community 10374`, `Community 8327`, `Community 2187`, `Community 18579`, `Community 2203`, `Community 2204`, `Community 2207`, `Community 2208`, `Community 2209`, `Community 2253`, `Community 14555`, `Community 10468`, `Community 6373`, `Community 6376`, `Community 6377`, `Community 6379`, `Community 6384`, `Community 6388`, `Community 8438`, `Community 2296`, `Community 8442`, `Community 250`, `Community 18683`, `Community 8446`, `Community 8447`, `Community 4352`, `Community 8449`, `Community 257`, `Community 8450`, `Community 8458`, `Community 15522`, `Community 10525`, `Community 6432`, `Community 2337`, `Community 290`, `Community 2346`, `Community 299`, `Community 14641`, `Community 305`, `Community 311`, `Community 4408`, `Community 4409`, `Community 312`, `Community 328`, `Community 329`, `Community 332`, `Community 2393`, `Community 2394`, `Community 356`, `Community 360`, `Community 371`, `Community 377`, `Community 2434`, `Community 2435`, `Community 388`, `Community 2436`, `Community 2437`, `Community 6542`, `Community 2453`, `Community 2454`, `Community 2455`, `Community 2456`, `Community 4513`, `Community 420`, `Community 2479`, `Community 2482`, `Community 434`, `Community 4537`, `Community 458`, `Community 2509`, `Community 6606`, `Community 469`, `Community 476`, `Community 485`, `Community 2535`, `Community 497`, `Community 8697`, `Community 12796`, `Community 511`, `Community 2560`, `Community 2561`, `Community 2562`, `Community 2563`, `Community 2564`, `Community 521`, `Community 2574`, `Community 527`, `Community 8723`, `Community 4628`, `Community 4629`, `Community 4631`, `Community 4633`, `Community 537`, `Community 540`, `Community 6684`, `Community 4636`, `Community 4646`, `Community 2601`, `Community 2602`, `Community 555`, `Community 12865`, `Community 8772`, `Community 4690`, `Community 598`, `Community 2653`, `Community 4711`, `Community 615`, `Community 4725`, `Community 638`, `Community 645`, `Community 2694`, `Community 2695`, `Community 2697`, `Community 2698`, `Community 2699`, `Community 4752`, `Community 2705`, `Community 683`, `Community 6833`, `Community 6834`, `Community 6835`, `Community 6838`, `Community 2743`, `Community 2744`, `Community 6839`, `Community 2754`, `Community 4803`, `Community 712`, `Community 713`, `Community 2765`, `Community 6861`, `Community 6862`, `Community 10960`, `Community 726`, `Community 10974`, `Community 740`, `Community 10993`, `Community 6898`, `Community 2812`, `Community 766`, `Community 779`, `Community 786`, `Community 787`, `Community 2839`, `Community 2844`, `Community 797`, `Community 2851`, `Community 805`, `Community 8998`, `Community 4905`, `Community 11050`, `Community 4908`, `Community 4909`, `Community 4910`, `Community 4911`, `Community 4912`, `Community 4913`, `Community 15154`, `Community 15155`, `Community 4915`, `Community 11052`, `Community 6969`, `Community 826`, `Community 4922`, `Community 6980`, `Community 4932`, `Community 4933`, `Community 844`, `Community 6988`, `Community 6994`, `Community 850`, `Community 853`, `Community 854`, `Community 4952`, `Community 4953`, `Community 7000`, `Community 4956`, `Community 867`, `Community 877`, `Community 879`, `Community 880`, `Community 890`, `Community 908`, `Community 911`, `Community 915`, `Community 11156`, `Community 2981`, `Community 2982`, `Community 936`, `Community 938`, `Community 2988`, `Community 942`, `Community 943`, `Community 5040`, `Community 9198`, `Community 9199`, `Community 1008`, `Community 3061`, `Community 9209`, `Community 9210`, `Community 9213`, `Community 1024`, `Community 1031`, `Community 9244`, `Community 9249`, `Community 9250`, `Community 3133`, `Community 3134`, `Community 3135`, `Community 3136`, `Community 1085`, `Community 5188`, `Community 3143`, `Community 3159`, `Community 9304`, `Community 9306`, `Community 3162`, `Community 9311`, `Community 1126`, `Community 9319`, `Community 1127`, `Community 1129`, `Community 1128`, `Community 1134`, `Community 5231`, `Community 5232`, `Community 5234`, `Community 5236`, `Community 5237`, `Community 1145`, `Community 13433`, `Community 3195`, `Community 5248`, `Community 5249`, `Community 3218`, `Community 7327`, `Community 5279`, `Community 5281`, `Community 1184`, `Community 1183`, `Community 7328`, `Community 3237`, `Community 7333`, `Community 7334`, `Community 7331`, `Community 7332`, `Community 7335`, `Community 7339`, `Community 7338`, `Community 3238`, `Community 7343`, `Community 7344`, `Community 7345`, `Community 7346`, `Community 7347`, `Community 7348`, `Community 7349`, `Community 7358`, `Community 7359`, `Community 5313`, `Community 7363`, `Community 7364`, `Community 9414`, `Community 1225`, `Community 1226`, `Community 1228`, `Community 1230`, `Community 3286`, `Community 3287`, `Community 3291`, `Community 3292`, `Community 3293`, `Community 3294`, `Community 5343`, `Community 1247`, `Community 3295`, `Community 5361`, `Community 7417`, `Community 3336`, `Community 1297`, `Community 1298`, `Community 5399`, `Community 1305`, `Community 19737`, `Community 19738`, `Community 19739`, `Community 19742`, `Community 1315`, `Community 1316`, `Community 5417`, `Community 7480`, `Community 7481`, `Community 3411`, `Community 1364`, `Community 1365`, `Community 1368`, `Community 5478`, `Community 9602`, `Community 7558`, `Community 1423`, `Community 9628`, `Community 7583`, `Community 3501`, `Community 3502`, `Community 3503`, `Community 11698`, `Community 3507`, `Community 3506`, `Community 3510`, `Community 5565`, `Community 5566`, `Community 5567`, `Community 5568`, `Community 1473`, `Community 5570`, `Community 1474`, `Community 1475`, `Community 1477`, `Community 5596`, `Community 1515`, `Community 11756`, `Community 3567`, `Community 3568`, `Community 3569`, `Community 5629`, `Community 1534`, `Community 5630`, `Community 9732`, `Community 1543`, `Community 1544`, `Community 11786`, `Community 9739`, `Community 3598`, `Community 3610`, `Community 3622`, `Community 3623`, `Community 7722`, `Community 1598`, `Community 1599`, `Community 3691`, `Community 3693`, `Community 1653`, `Community 3714`, `Community 1679`, `Community 5781`, `Community 1696`, `Community 3745`, `Community 1698`, `Community 1700`, `Community 5818`, `Community 7875`, `Community 7878`, `Community 7882`, `Community 7885`, `Community 7886`, `Community 7889`, `Community 1763`, `Community 1764`, `Community 1765`, `Community 1767`, `Community 12010`, `Community 7914`, `Community 3836`, `Community 3845`, `Community 9998`, `Community 10004`, `Community 10006`, `Community 10009`, `Community 10014`, `Community 10015`, `Community 10017`, `Community 10022`, `Community 7979`, `Community 7980`, `Community 1840`, `Community 1841`, `Community 5939`, `Community 1843`, `Community 1844`, `Community 5942`, `Community 5943`, `Community 5941`, `Community 5945`, `Community 5946`, `Community 5947`, `Community 1846`, `Community 1853`, `Community 1854`, `Community 5949`, `Community 5950`, `Community 10054`, `Community 5965`, `Community 5966`, `Community 5967`, `Community 3923`, `Community 3924`, `Community 1886`, `Community 10079`, `Community 3936`, `Community 3937`, `Community 10080`, `Community 3951`, `Community 1926`, `Community 6025`, `Community 1930`, `Community 6029`, `Community 6030`, `Community 4008`, `Community 6072`, `Community 8130`, `Community 6089`, `Community 1999`, `Community 2000`, `Community 2001`, `Community 8143`, `Community 2002`, `Community 2006`, `Community 2007`, `Community 4070`?**
   _High betweenness centrality (0.030) - this node is a cross-community bridge._
 - **What connects `netstandard2.1`, `netstandard2.1`, `netstandard2.1` to the rest of the system?**
-  _81897 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _81913 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Debug Capture System` be split into smaller, more focused modules?**
   _Cohesion score 0.04915254237288136 - nodes in this community are weakly interconnected._
 - **Should `Biome Climate Pipeline` be split into smaller, more focused modules?**
-  _Cohesion score 0.07337526205450734 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07012987012987013 - nodes in this community are weakly interconnected._
 - **Should `Loading & Init Pipeline` be split into smaller, more focused modules?**
-  _Cohesion score 0.08627450980392157 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08051948051948052 - nodes in this community are weakly interconnected._

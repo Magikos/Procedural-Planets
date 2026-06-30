@@ -61,6 +61,12 @@ Texture2D<float4> _NearFieldSurfaceState_F2;
 Texture2D<float4> _NearFieldSurfaceState_F3;
 Texture2D<float4> _NearFieldSurfaceState_F4;
 Texture2D<float4> _NearFieldSurfaceState_F5;
+Texture2D<float> _NearFieldPathWear_F0;
+Texture2D<float> _NearFieldPathWear_F1;
+Texture2D<float> _NearFieldPathWear_F2;
+Texture2D<float> _NearFieldPathWear_F3;
+Texture2D<float> _NearFieldPathWear_F4;
+Texture2D<float> _NearFieldPathWear_F5;
 
 StructuredBuffer<BiomeGrassParams> _NearFieldBiomeGrassParams;
 RWStructuredBuffer<GrassBladeInstance> _NearFieldGrassInstances;
@@ -83,6 +89,7 @@ RWStructuredBuffer<uint> _NearFieldRangeCounts;
 int _NearFieldBiomeAtlasResolution;
 int _NearFieldSurfaceAtlasResolution;
 int _NearFieldSurfaceStateAtlasResolution;
+int _NearFieldPathWearAtlasResolution;
 int _NearFieldBiomeParamCount;
 int _NearFieldCapacity;
 int _NearFieldSeed;
@@ -283,9 +290,34 @@ float SurfaceStateReject(float4 state)
     return saturate(max(state.r, state.g));
 }
 
+float LoadPathWearTexel(int face, int2 ip)
+{
+    if (face == 0) return _NearFieldPathWear_F0.Load(int3(ip, 0));
+    if (face == 1) return _NearFieldPathWear_F1.Load(int3(ip, 0));
+    if (face == 2) return _NearFieldPathWear_F2.Load(int3(ip, 0));
+    if (face == 3) return _NearFieldPathWear_F3.Load(int3(ip, 0));
+    if (face == 4) return _NearFieldPathWear_F4.Load(int3(ip, 0));
+    return _NearFieldPathWear_F5.Load(int3(ip, 0));
+}
+
+float SamplePathWear(int face, float2 uv)
+{
+    int maxTexel = max(_NearFieldPathWearAtlasResolution - 1, 0);
+    float2 p = saturate(uv) * max(maxTexel, 1);
+    int2 p0 = clamp(int2(floor(p)), int2(0, 0), int2(maxTexel, maxTexel));
+    int2 p1 = min(p0 + 1, int2(maxTexel, maxTexel));
+    float2 f = saturate(p - p0);
+    float c00 = LoadPathWearTexel(face, p0);
+    float c10 = LoadPathWearTexel(face, int2(p1.x, p0.y));
+    float c01 = LoadPathWearTexel(face, int2(p0.x, p1.y));
+    float c11 = LoadPathWearTexel(face, p1);
+    return saturate(lerp(lerp(c00, c10, f.x), lerp(c01, c11, f.x), f.y));
+}
+
 float SamplePathMask(int face, float2 uv)
 {
-    return SurfaceStateReject(SampleSurfaceState(face, uv));
+    float surfaceReject = SurfaceStateReject(SampleSurfaceState(face, uv));
+    return saturate(max(surfaceReject, SamplePathWear(face, uv)));
 }
 
 BiomeGrassParams GetGrassParams(uint id)
@@ -443,8 +475,11 @@ void PlaceAndCullNearField(uint3 id : SV_DispatchThreadID)
         return;
     }
 
+    // Path mask thins grass probabilistically per cell (density drops toward the path) and
+    // survivors are shortened below (height *= grassScale). Stochastic rejection dithers the
+    // boundary so it follows the worn coverage, not the placement grid.
     float grassScale = saturate(1.0 - SamplePathMask(_NearFieldFaceIndex, faceUv));
-    if (grassScale <= 0.02)
+    if (Hash01(cellHash ^ 0x2545f491u) > grassScale)
     {
         AddStat(NF_STAT_DENSITY_REJECTED, 1u);
         return;

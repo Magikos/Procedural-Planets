@@ -35,8 +35,11 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     // MaxChunkDepth at construction time. Memory: ~14 MB total across 6 faces at depth 2.
     const int WaterAggregateDepth = 2;
     const int TextureAllocationBatchSize = 64;
+    const float HardDiscEdgePixels = 1.25f;
     static readonly Color32[] EmptySurfaceStatePixels =
         new Color32[PlanetChunkTextures.BiomeMapResolution * PlanetChunkTextures.BiomeMapResolution];
+    static readonly byte[] EmptyPathWearPixels =
+        new byte[PlanetChunkTextures.PathWearResolution * PlanetChunkTextures.PathWearResolution];
 
     readonly Transform _planetTransform;
     readonly ShapeGenerator _shapeGenerator;
@@ -56,6 +59,16 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     GrassSurfaceAtlasGpuData _grassSurfaceAtlases;
 
     readonly List<PlanetChunk> _allChunks = new();
+
+    // Working pixel arrays reused across one paint stroke so a drag doesn't allocate a fresh
+    // GetPixels32() copy per stamp per chunk. Flushed by EndSurfaceStateBatch() on stroke end.
+    readonly Dictionary<PlanetChunk, Color32[]> _surfaceStateBatch = new();
+
+    // Per-texel max coverage laid down by the current stroke. Overlapping stamps in one drag
+    // composite by max (a smooth soft-edged line) instead of summing into a hard core; the
+    // accumulated coverage is added to the persistent mask, so repeated drags still build up.
+    readonly Dictionary<PlanetChunk, byte[]> _strokeContribution = new();
+    readonly Dictionary<PlanetChunk, byte[]> _strokeBaseline = new();
 
     bool _initialized;
 
@@ -100,11 +113,14 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
     public void AppendMemoryReport(System.Text.StringBuilder sb)
     {
         long bytesPerTexture = (long)(PlanetChunkTextures.BiomeMapResolution * PlanetChunkTextures.BiomeMapResolution) * 4L;
+        long bytesPerPathWearTexture = PlanetChunkTextures.PathWearResolution * PlanetChunkTextures.PathWearResolution;
         sb.AppendLine($"Chunk texture sets (any): {PlanetChunkTextures.LiveTextureSets}");
         sb.AppendLine($"Chunk biome texture sets: {PlanetChunkTextures.LiveBiomeTextureSets} " +
             $"(raw pixels/copy={MemoryDebugModule.FormatBytes(PlanetChunkTextures.LiveBiomeTextureSets * 3 * bytesPerTexture)})");
         sb.AppendLine($"Chunk surface-state textures: {PlanetChunkTextures.LiveSurfaceStateTextures} " +
             $"(raw pixels/copy={MemoryDebugModule.FormatBytes(PlanetChunkTextures.LiveSurfaceStateTextures * bytesPerTexture)})");
+        sb.AppendLine($"Chunk path-wear textures: {PlanetChunkTextures.LivePathWearTextures} " +
+            $"(raw pixels/copy={MemoryDebugModule.FormatBytes(PlanetChunkTextures.LivePathWearTextures * bytesPerPathWearTexture)})");
 
         long retainedBytes = 0;
         for (int i = 0; i < _allChunks.Count; i++)
@@ -294,7 +310,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         float strength,
         out string summary)
         => TryPaintSurfaceStateBrush(localUnitDirection, radiusMeters, strength,
-            SurfacePathShape.SoftDisc, SurfacePathOperation.Paint, out summary);
+            SurfacePathShape.SoftDisc, SurfacePathOperation.Paint, batched: false, strokeCoverage: false, out summary);
 
     public bool TryPaintSurfaceStateBrush(
         Vector3 localUnitDirection,
@@ -302,39 +318,20 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         float strength,
         SurfacePathShape shape,
         SurfacePathOperation operation,
+        bool batched,
+        bool strokeCoverage,
         out string summary)
     {
-        summary = "surface-state paint unavailable";
+        summary = "path wear paint unavailable";
         if (!_initialized || _quadtrees == null || _allChunks.Count == 0)
             return false;
-        if (localUnitDirection.sqrMagnitude < 0.0001f)
+        if (!TryResolveBrushFootprint(localUnitDirection, out int face, out Vector2 faceUv, out float metersPerUv))
             return false;
 
-        Vector3 dir = localUnitDirection.normalized;
-        FaceSpaceCellRangeBuilder.DirectionToFaceUv(dir, out int face, out Vector2 faceUv);
-        if (face < 0 || face >= _quadtrees.Length || _quadtrees[face] == null)
-            return false;
-
-        PlanetChunk centerChunk = _quadtrees[face].FindLeafContaining(faceUv);
-        if (centerChunk == null)
-            return false;
-
-        float chunkSize = centerChunk.UvHalfExtent * 2f;
-        Vector2 centerLocalUv = new(
-            (faceUv.x - (centerChunk.UvCenter.x - centerChunk.UvHalfExtent)) / chunkSize,
-            (faceUv.y - (centerChunk.UvCenter.y - centerChunk.UvHalfExtent)) / chunkSize);
-        float localRadius = _shapeGenerator.Settings != null ? _shapeGenerator.Settings.PlanetRadius : 1f;
-        if (centerChunk.TrySampleRadius(centerLocalUv, out float sampledRadius) && sampledRadius > 0f)
-            localRadius = sampledRadius;
-
-        float worldScale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform);
-        float metersPerUv = FaceSpaceCellRangeBuilder.ComputeMetersPerUV(
-            face,
-            faceUv,
-            Mathf.Max(localRadius * worldScale, 0.001f));
         float radiusFaceUv = Mathf.Max(0.00001f, Mathf.Max(radiusMeters, 0.1f) / metersPerUv);
         byte pavedAlpha = (byte)Mathf.RoundToInt(Mathf.Clamp01(strength) * 255f);
 
+        int overlappedChunks = 0;
         int touchedChunks = 0;
         int changedPixels = 0;
         Vector2 minUv = faceUv - Vector2.one * radiusFaceUv;
@@ -342,23 +339,26 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         for (int i = 0; i < _allChunks.Count; i++)
         {
             PlanetChunk chunk = _allChunks[i];
-            if (chunk == null || !chunk.IsLeaf || chunk.FaceIndex != face || chunk.SurfaceStateTexture == null)
+            if (chunk == null || !chunk.IsLeaf || chunk.FaceIndex != face || chunk.PathWearTexture == null)
                 continue;
             if (!ChunkUvRectOverlaps(chunk, minUv, maxUv))
                 continue;
 
-            int changed = PaintChunkSurfaceState(chunk, faceUv, radiusFaceUv, pavedAlpha, shape, operation);
+            overlappedChunks++;
+            byte[] pixels = GetPathWearPixels(chunk);
+            byte[] contribution = GetStrokeContribution(chunk, pixels.Length, strokeCoverage);
+            byte[] baseline = GetStrokeBaseline(chunk, pixels, strokeCoverage);
+            int changed = PaintChunkPathWear(chunk, pixels, contribution, baseline, faceUv, radiusFaceUv, pavedAlpha, shape, operation);
             if (changed <= 0)
                 continue;
 
-            chunk.SurfaceStateTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
-            _biomeAtlas.UpdateSurfaceStateAtlasRegion(chunk);
+            ApplyPathWear(chunk);
             touchedChunks++;
             changedPixels += changed;
         }
 
         summary = $"{operation.ToString().ToLowerInvariant()} path {shape.ToString().ToLowerInvariant()} face={face} uv=({faceUv.x:F3},{faceUv.y:F3}) radius={radiusMeters:F1}m chunks={touchedChunks} pixels={changedPixels}";
-        return changedPixels > 0;
+        return overlappedChunks > 0;
     }
 
     public bool TryPaintSurfaceStateTestPattern(
@@ -367,34 +367,12 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         float strength,
         out string summary)
     {
-        summary = "surface-state pattern unavailable";
+        summary = "path wear pattern unavailable";
         if (!_initialized || _quadtrees == null || _allChunks.Count == 0)
             return false;
-        if (localUnitDirection.sqrMagnitude < 0.0001f)
+        if (!TryResolveBrushFootprint(localUnitDirection, out int face, out Vector2 faceUv, out float metersPerUv))
             return false;
 
-        Vector3 dir = localUnitDirection.normalized;
-        FaceSpaceCellRangeBuilder.DirectionToFaceUv(dir, out int face, out Vector2 faceUv);
-        if (face < 0 || face >= _quadtrees.Length || _quadtrees[face] == null)
-            return false;
-
-        PlanetChunk centerChunk = _quadtrees[face].FindLeafContaining(faceUv);
-        if (centerChunk == null)
-            return false;
-
-        float chunkSize = centerChunk.UvHalfExtent * 2f;
-        Vector2 centerLocalUv = new(
-            (faceUv.x - (centerChunk.UvCenter.x - centerChunk.UvHalfExtent)) / chunkSize,
-            (faceUv.y - (centerChunk.UvCenter.y - centerChunk.UvHalfExtent)) / chunkSize);
-        float localRadius = _shapeGenerator.Settings != null ? _shapeGenerator.Settings.PlanetRadius : 1f;
-        if (centerChunk.TrySampleRadius(centerLocalUv, out float sampledRadius) && sampledRadius > 0f)
-            localRadius = sampledRadius;
-
-        float worldScale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform);
-        float metersPerUv = FaceSpaceCellRangeBuilder.ComputeMetersPerUV(
-            face,
-            faceUv,
-            Mathf.Max(localRadius * worldScale, 0.001f));
         float halfSizeFaceUv = Mathf.Max(0.00001f, Mathf.Max(sizeMeters, 1f) * 0.5f / metersPerUv);
         byte pavedAlpha = (byte)Mathf.RoundToInt(Mathf.Clamp01(strength) * 255f);
 
@@ -405,17 +383,17 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         for (int i = 0; i < _allChunks.Count; i++)
         {
             PlanetChunk chunk = _allChunks[i];
-            if (chunk == null || !chunk.IsLeaf || chunk.FaceIndex != face || chunk.SurfaceStateTexture == null)
+            if (chunk == null || !chunk.IsLeaf || chunk.FaceIndex != face || chunk.PathWearTexture == null)
                 continue;
             if (!ChunkUvRectOverlaps(chunk, minUv, maxUv))
                 continue;
 
-            int changed = PaintChunkSurfaceStateTestPattern(chunk, faceUv, halfSizeFaceUv, pavedAlpha);
+            byte[] pixels = GetPathWearPixels(chunk);
+            int changed = PaintChunkPathWearTestPattern(chunk, pixels, faceUv, halfSizeFaceUv, pavedAlpha);
             if (changed <= 0)
                 continue;
 
-            chunk.SurfaceStateTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
-            _biomeAtlas.UpdateSurfaceStateAtlasRegion(chunk);
+            ApplyPathWear(chunk);
             touchedChunks++;
             changedPixels += changed;
         }
@@ -424,20 +402,276 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         return changedPixels > 0;
     }
 
-    public int ClearSurfaceStateMasks()
+    public int RebuildPathWearFromStamps(IReadOnlyList<SurfacePathEditStamp> stamps, long now)
+    {
+        EndSurfaceStateBatch();
+        ClearPathWearMasks();
+        if (!_initialized || stamps == null || stamps.Count == 0)
+            return 0;
+
+        var contribution = new Dictionary<PlanetChunk, byte[]>();
+        int currentStroke = int.MinValue;
+        SurfacePathOperation currentOperation = SurfacePathOperation.Paint;
+        bool hasGroup = false;
+        PathWearBakeStamp previous = default;
+        bool hasPrevious = false;
+        int baked = 0;
+
+        for (int i = 0; i < stamps.Count; i++)
+        {
+            SurfacePathEditStamp stamp = stamps[i];
+            if (stamp.kind != "path")
+                continue;
+            if (!TryCreateBakeStamp(stamp, now, out PathWearBakeStamp bake))
+                continue;
+
+            bool sameGroup = hasGroup
+                && bake.StrokeId == currentStroke
+                && bake.Operation == currentOperation;
+            if (!sameGroup)
+            {
+                ApplyPathWearContribution(contribution, currentOperation);
+                contribution.Clear();
+                currentStroke = bake.StrokeId;
+                currentOperation = bake.Operation;
+                hasGroup = true;
+                hasPrevious = false;
+            }
+
+            AccumulatePathWearElement(contribution, bake.Face, bake.FaceUv, bake.FaceUv,
+                bake.RadiusFaceUv, bake.Alpha, bake.Shape, segment: false);
+            if (hasPrevious
+                && previous.Face == bake.Face
+                && previous.Shape != SurfacePathShape.HardSquare
+                && bake.Shape != SurfacePathShape.HardSquare)
+            {
+                AccumulatePathWearElement(contribution, bake.Face, previous.FaceUv, bake.FaceUv,
+                    Mathf.Max(previous.RadiusFaceUv, bake.RadiusFaceUv),
+                    (byte)Mathf.Max(previous.Alpha, bake.Alpha),
+                    bake.Shape,
+                    segment: true);
+            }
+
+            previous = bake;
+            hasPrevious = true;
+            baked++;
+        }
+
+        ApplyPathWearContribution(contribution, currentOperation);
+        return baked;
+    }
+
+    // Resolves the cube face, face-space UV, and meters-per-UV scale at a local surface
+    // direction. Shared by every brush so the disc/pattern paths agree on footprint math.
+    bool TryResolveBrushFootprint(Vector3 localUnitDirection, out int face, out Vector2 faceUv, out float metersPerUv)
+    {
+        face = -1;
+        faceUv = default;
+        metersPerUv = 1f;
+        if (localUnitDirection.sqrMagnitude < 0.0001f)
+            return false;
+
+        Vector3 dir = localUnitDirection.normalized;
+        FaceSpaceCellRangeBuilder.DirectionToFaceUv(dir, out face, out faceUv);
+        if (face < 0 || face >= _quadtrees.Length || _quadtrees[face] == null)
+            return false;
+
+        PlanetChunk centerChunk = _quadtrees[face].FindLeafContaining(faceUv);
+        if (centerChunk == null)
+            return false;
+
+        float chunkSize = centerChunk.UvHalfExtent * 2f;
+        Vector2 centerLocalUv = new(
+            (faceUv.x - (centerChunk.UvCenter.x - centerChunk.UvHalfExtent)) / chunkSize,
+            (faceUv.y - (centerChunk.UvCenter.y - centerChunk.UvHalfExtent)) / chunkSize);
+        float localRadius = _shapeGenerator.Settings != null ? _shapeGenerator.Settings.PlanetRadius : 1f;
+        if (centerChunk.TrySampleRadius(centerLocalUv, out float sampledRadius) && sampledRadius > 0f)
+            localRadius = sampledRadius;
+
+        float worldScale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform);
+        metersPerUv = FaceSpaceCellRangeBuilder.ComputeMetersPerUV(
+            face, faceUv, Mathf.Max(localRadius * worldScale, 0.001f));
+        return true;
+    }
+
+    bool TryCreateBakeStamp(SurfacePathEditStamp stamp, long now, out PathWearBakeStamp bake)
+    {
+        bake = default;
+        float strength = EffectiveStampStrength(stamp, now);
+        if (strength <= 0f)
+            return false;
+        if (!TryResolveBrushFootprint(stamp.direction, out int face, out Vector2 faceUv, out float metersPerUv))
+            return false;
+
+        bake = new PathWearBakeStamp
+        {
+            Face = face,
+            FaceUv = faceUv,
+            RadiusFaceUv = Mathf.Max(0.00001f, Mathf.Max(stamp.radiusMeters, 0.1f) / metersPerUv),
+            Alpha = (byte)Mathf.RoundToInt(Mathf.Clamp01(strength) * 255f),
+            Shape = ParseStampShape(stamp.shape),
+            Operation = stamp.operation == "erase" ? SurfacePathOperation.Erase : SurfacePathOperation.Paint,
+            StrokeId = stamp.strokeId,
+        };
+        return bake.Alpha > 0;
+    }
+
+    Color32[] GetSurfaceStatePixels(PlanetChunk chunk, bool batched)
+    {
+        if (batched && _surfaceStateBatch.TryGetValue(chunk, out Color32[] cached))
+            return cached;
+
+        Color32[] pixels = chunk.SurfaceStateTexture.GetPixels32();
+        if (batched)
+            _surfaceStateBatch[chunk] = pixels;
+        return pixels;
+    }
+
+    byte[] GetStrokeContribution(PlanetChunk chunk, int pixelCount, bool strokeCoverage)
+    {
+        if (!strokeCoverage)
+            return null;
+        if (_strokeContribution.TryGetValue(chunk, out byte[] arr) && arr.Length == pixelCount)
+            return arr;
+
+        arr = new byte[pixelCount];
+        _strokeContribution[chunk] = arr;
+        return arr;
+    }
+
+    void ApplySurfaceState(PlanetChunk chunk, Color32[] pixels)
+    {
+        chunk.SurfaceStateTexture.SetPixels32(pixels);
+        chunk.SurfaceStateTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+        _biomeAtlas.UpdateSurfaceStateAtlasRegion(chunk);
+    }
+
+    static byte[] GetPathWearPixels(PlanetChunk chunk)
+    {
+        int pixelCount = PlanetChunkTextures.PathWearResolution * PlanetChunkTextures.PathWearResolution;
+        if (chunk.PathWearPixels == null || chunk.PathWearPixels.Length != pixelCount)
+            chunk.PathWearPixels = new byte[pixelCount];
+        return chunk.PathWearPixels;
+    }
+
+    byte[] GetStrokeBaseline(PlanetChunk chunk, byte[] pixels, bool strokeCoverage)
+    {
+        if (!strokeCoverage)
+            return null;
+        if (_strokeBaseline.TryGetValue(chunk, out byte[] arr) && arr.Length == pixels.Length)
+            return arr;
+
+        arr = new byte[pixels.Length];
+        System.Array.Copy(pixels, arr, pixels.Length);
+        _strokeBaseline[chunk] = arr;
+        return arr;
+    }
+
+    void ApplyPathWear(PlanetChunk chunk)
+    {
+        if (chunk.PathWearTexture == null || chunk.PathWearPixels == null)
+            return;
+        chunk.PathWearTexture.SetPixelData(chunk.PathWearPixels, 0);
+        chunk.PathWearTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+        _biomeAtlas.UpdatePathWearAtlasRegion(chunk);
+    }
+
+    int ClearPathWearMasks()
     {
         int cleared = 0;
         for (int i = 0; i < _allChunks.Count; i++)
         {
             PlanetChunk chunk = _allChunks[i];
-            Texture2D texture = chunk?.SurfaceStateTexture;
-            if (texture == null)
+            if (chunk?.PathWearTexture == null)
                 continue;
 
-            texture.SetPixels32(EmptySurfaceStatePixels);
-            texture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+            byte[] pathWear = GetPathWearPixels(chunk);
+            System.Array.Clear(pathWear, 0, pathWear.Length);
+            chunk.PathWearTexture.SetPixelData(EmptyPathWearPixels, 0);
+            chunk.PathWearTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
             if (chunk.IsLeaf)
+                _biomeAtlas.UpdatePathWearAtlasRegion(chunk);
+            cleared++;
+        }
+        return cleared;
+    }
+
+    void ApplyPathWearContribution(Dictionary<PlanetChunk, byte[]> contribution, SurfacePathOperation operation)
+    {
+        if (contribution == null || contribution.Count == 0)
+            return;
+
+        foreach (KeyValuePair<PlanetChunk, byte[]> pair in contribution)
+        {
+            PlanetChunk chunk = pair.Key;
+            byte[] values = pair.Value;
+            byte[] pixels = GetPathWearPixels(chunk);
+            bool changed = false;
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                byte value = values[i];
+                if (value == 0)
+                    continue;
+
+                byte next = operation == SurfacePathOperation.Erase
+                    ? (byte)Mathf.Max(0, pixels[i] - value)
+                    : SaturatingWear(pixels[i], value);
+                if (next == pixels[i])
+                    continue;
+
+                pixels[i] = next;
+                changed = true;
+            }
+
+            if (changed)
+                ApplyPathWear(chunk);
+        }
+    }
+
+    public void EndSurfaceStateBatch()
+    {
+        _surfaceStateBatch.Clear();
+        _strokeContribution.Clear();
+        _strokeBaseline.Clear();
+    }
+
+    // Drops the current stroke's max-coverage tracking without ending the batch, so replay can
+    // composite each saved stroke independently while reusing the cached pixel arrays.
+    public void ResetStrokeContribution()
+    {
+        _strokeContribution.Clear();
+        _strokeBaseline.Clear();
+    }
+
+    public int ClearSurfaceStateMasks()
+    {
+        EndSurfaceStateBatch();
+        int cleared = 0;
+        for (int i = 0; i < _allChunks.Count; i++)
+        {
+            PlanetChunk chunk = _allChunks[i];
+            Texture2D texture = chunk?.SurfaceStateTexture;
+            if (texture == null && chunk?.PathWearTexture == null)
+                continue;
+
+            if (texture != null)
+            {
+                texture.SetPixels32(EmptySurfaceStatePixels);
+                texture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+            }
+            if (chunk.PathWearTexture != null)
+            {
+                byte[] pathWear = GetPathWearPixels(chunk);
+                System.Array.Clear(pathWear, 0, pathWear.Length);
+                chunk.PathWearTexture.SetPixelData(EmptyPathWearPixels, 0);
+                chunk.PathWearTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+            }
+            if (chunk.IsLeaf)
+            {
                 _biomeAtlas.UpdateSurfaceStateAtlasRegion(chunk);
+                _biomeAtlas.UpdatePathWearAtlasRegion(chunk);
+            }
             cleared++;
         }
         return cleared;
@@ -445,6 +679,9 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
 
     public bool TryGetFaceSurfaceStateAtlas(int face, out Texture2D surfaceState)
         => _biomeAtlas.TryGetFaceSurfaceStateAtlas(face, out surfaceState);
+
+    public bool TryGetFacePathWearAtlas(int face, out Texture2D pathWear)
+        => _biomeAtlas.TryGetFacePathWearAtlas(face, out pathWear);
 
     public bool TryRaycastVisibleSurface(Ray localRay, float maxDistance,
         out Vector3 localPoint, out Vector3 localNormal, out float localDistance)
@@ -510,16 +747,136 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
             && maxUv.y >= cMinV && minUv.y <= cMaxV;
     }
 
-    static int PaintChunkSurfaceState(
+    void AccumulatePathWearElement(
+        Dictionary<PlanetChunk, byte[]> contribution,
+        int face,
+        Vector2 a,
+        Vector2 b,
+        float radiusFaceUv,
+        byte alpha,
+        SurfacePathShape shape,
+        bool segment)
+    {
+        if (alpha == 0 || radiusFaceUv <= 0f)
+            return;
+
+        Vector2 minUv = Vector2.Min(a, b) - Vector2.one * radiusFaceUv;
+        Vector2 maxUv = Vector2.Max(a, b) + Vector2.one * radiusFaceUv;
+        for (int i = 0; i < _allChunks.Count; i++)
+        {
+            PlanetChunk chunk = _allChunks[i];
+            if (chunk == null || !chunk.IsLeaf || chunk.FaceIndex != face || chunk.PathWearTexture == null)
+                continue;
+            if (!ChunkUvRectOverlaps(chunk, minUv, maxUv))
+                continue;
+
+            byte[] values = GetContribution(contribution, chunk);
+            AccumulatePathWearElement(chunk, values, a, b, radiusFaceUv, alpha, shape, segment);
+        }
+    }
+
+    static byte[] GetContribution(Dictionary<PlanetChunk, byte[]> contribution, PlanetChunk chunk)
+    {
+        int pixelCount = PlanetChunkTextures.PathWearResolution * PlanetChunkTextures.PathWearResolution;
+        if (contribution.TryGetValue(chunk, out byte[] values) && values.Length == pixelCount)
+            return values;
+
+        values = new byte[pixelCount];
+        contribution[chunk] = values;
+        return values;
+    }
+
+    static void AccumulatePathWearElement(
         PlanetChunk chunk,
+        byte[] values,
+        Vector2 a,
+        Vector2 b,
+        float radiusFaceUv,
+        byte alpha,
+        SurfacePathShape shape,
+        bool segment)
+    {
+        int resolution = PlanetChunkTextures.PathWearResolution;
+        float minU = chunk.UvCenter.x - chunk.UvHalfExtent;
+        float minV = chunk.UvCenter.y - chunk.UvHalfExtent;
+        float chunkSize = Mathf.Max(chunk.UvHalfExtent * 2f, 0.00001f);
+        Vector2 localA = new((a.x - minU) / chunkSize, (a.y - minV) / chunkSize);
+        Vector2 localB = new((b.x - minU) / chunkSize, (b.y - minV) / chunkSize);
+        float radiusLocal = radiusFaceUv / chunkSize;
+
+        float edgeLocal = shape == SurfacePathShape.HardDisc ? HardDiscEdgePixels / resolution : 0f;
+        Vector2 localMin = Vector2.Min(localA, localB) - Vector2.one * (radiusLocal + edgeLocal);
+        Vector2 localMax = Vector2.Max(localA, localB) + Vector2.one * (radiusLocal + edgeLocal);
+        int startX = Mathf.Clamp(Mathf.FloorToInt(localMin.x * resolution), 0, resolution - 1);
+        int endX = Mathf.Clamp(Mathf.CeilToInt(localMax.x * resolution), 0, resolution - 1);
+        int startY = Mathf.Clamp(Mathf.FloorToInt(localMin.y * resolution), 0, resolution - 1);
+        int endY = Mathf.Clamp(Mathf.CeilToInt(localMax.y * resolution), 0, resolution - 1);
+
+        for (int y = startY; y <= endY; y++)
+        {
+            float py = (y + 0.5f) / resolution;
+            for (int x = startX; x <= endX; x++)
+            {
+                float px = (x + 0.5f) / resolution;
+                float distance01 = shape == SurfacePathShape.HardSquare
+                    ? SquareDistance01(new Vector2(px, py), localA, radiusLocal)
+                    : CapsuleDistance01(new Vector2(px, py), localA, localB, radiusLocal, segment);
+                float mask = PathWearMask(shape, distance01, radiusLocal, resolution);
+                if (mask <= 0f)
+                    continue;
+
+                byte value = (byte)Mathf.RoundToInt(alpha * mask);
+                int index = y * resolution + x;
+                if (value > values[index])
+                    values[index] = value;
+            }
+        }
+    }
+
+    static float CapsuleDistance01(Vector2 p, Vector2 a, Vector2 b, float radius, bool segment)
+    {
+        Vector2 closest = a;
+        if (segment)
+        {
+            Vector2 ab = b - a;
+            float lenSq = ab.sqrMagnitude;
+            if (lenSq > 0.0000001f)
+                closest = a + ab * Mathf.Clamp01(Vector2.Dot(p - a, ab) / lenSq);
+        }
+        return Vector2.Distance(p, closest) / Mathf.Max(radius, 0.00001f);
+    }
+
+    static float SquareDistance01(Vector2 p, Vector2 center, float radius)
+    {
+        Vector2 d = new(Mathf.Abs(p.x - center.x), Mathf.Abs(p.y - center.y));
+        return Mathf.Max(d.x, d.y) / Mathf.Max(radius, 0.00001f);
+    }
+
+    static float PathWearMask(SurfacePathShape shape, float distance01, float radiusLocal, int resolution)
+    {
+        if (shape == SurfacePathShape.SoftDisc)
+            return distance01 < 1f ? 1f - Mathf.SmoothStep(0.35f, 1f, distance01) : 0f;
+        if (shape == SurfacePathShape.HardDisc)
+        {
+            float edge01 = HardDiscEdgePixels / Mathf.Max(radiusLocal * resolution, 1f);
+            return 1f - SmoothStep01(1f - edge01, 1f + edge01, distance01);
+        }
+
+        return distance01 < 1f ? 1f : 0f;
+    }
+
+    static int PaintChunkPathWear(
+        PlanetChunk chunk,
+        byte[] pixels,
+        byte[] contribution,
+        byte[] baseline,
         Vector2 centerFaceUv,
         float radiusFaceUv,
         byte pavedAlpha,
         SurfacePathShape shape,
         SurfacePathOperation operation)
     {
-        Texture2D texture = chunk.SurfaceStateTexture;
-        int resolution = texture.width;
+        int resolution = PlanetChunkTextures.PathWearResolution;
         if (resolution <= 0 || radiusFaceUv <= 0f || pavedAlpha == 0)
             return 0;
 
@@ -533,12 +890,12 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         if (radiusLocal <= 0f)
             return 0;
 
-        int startX = Mathf.Clamp(Mathf.FloorToInt((centerLocal.x - radiusLocal) * resolution), 0, resolution - 1);
-        int endX = Mathf.Clamp(Mathf.CeilToInt((centerLocal.x + radiusLocal) * resolution), 0, resolution - 1);
-        int startY = Mathf.Clamp(Mathf.FloorToInt((centerLocal.y - radiusLocal) * resolution), 0, resolution - 1);
-        int endY = Mathf.Clamp(Mathf.CeilToInt((centerLocal.y + radiusLocal) * resolution), 0, resolution - 1);
+        float edgeLocal = shape == SurfacePathShape.HardDisc ? HardDiscEdgePixels / resolution : 0f;
+        int startX = Mathf.Clamp(Mathf.FloorToInt((centerLocal.x - radiusLocal - edgeLocal) * resolution), 0, resolution - 1);
+        int endX = Mathf.Clamp(Mathf.CeilToInt((centerLocal.x + radiusLocal + edgeLocal) * resolution), 0, resolution - 1);
+        int startY = Mathf.Clamp(Mathf.FloorToInt((centerLocal.y - radiusLocal - edgeLocal) * resolution), 0, resolution - 1);
+        int endY = Mathf.Clamp(Mathf.CeilToInt((centerLocal.y + radiusLocal + edgeLocal) * resolution), 0, resolution - 1);
 
-        Color32[] pixels = texture.GetPixels32();
         int changed = 0;
         for (int y = startY; y <= endY; y++)
         {
@@ -546,51 +903,57 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
             for (int x = startX; x <= endX; x++)
             {
                 float px = (x + 0.5f) / resolution;
-                float mask = 1f;
-                if (shape != SurfacePathShape.HardSquare)
-                {
-                    float distance01 = Vector2.Distance(new Vector2(px, py), centerLocal) / radiusLocal;
-                    if (distance01 >= 1f)
-                        continue;
-                    mask = shape == SurfacePathShape.SoftDisc
-                        ? 1f - Mathf.SmoothStep(0.88f, 1f, distance01)
-                        : 1f;
-                }
+                float distance01 = shape == SurfacePathShape.HardSquare
+                    ? SquareDistance01(new Vector2(px, py), centerLocal, radiusLocal)
+                    : Vector2.Distance(new Vector2(px, py), centerLocal) / radiusLocal;
+                float mask = PathWearMask(shape, distance01, radiusLocal, resolution);
+                if (mask <= 0f)
+                    continue;
 
                 byte value = (byte)Mathf.RoundToInt(pavedAlpha * mask);
-                int index = y * resolution + x;
-                if (operation == SurfacePathOperation.Erase)
-                {
-                    byte target = (byte)Mathf.Clamp(255 - value, 0, 255);
-                    if (pixels[index].r <= target)
-                        continue;
-
-                    pixels[index].r = target;
-                    changed++;
+                if (value == 0)
                     continue;
+
+                int index = y * resolution + x;
+
+                // Within a stroke, only the incremental increase over what this stroke already
+                // laid down here is applied, so overlapping stamps in one drag compose by max
+                // (a smooth line) instead of stacking into a hard core. Across strokes (or for
+                // one-shot paints, contribution == null) it's plain additive buildup.
+                byte applied = value;
+                if (contribution != null)
+                {
+                    byte prev = contribution[index];
+                    if (value <= prev)
+                        continue;
+                    applied = (byte)(value - prev);
+                    contribution[index] = value;
                 }
 
-                if (value <= pixels[index].r)
+                byte current = pixels[index];
+                byte baseValue = baseline != null ? baseline[index] : current;
+                byte next = operation == SurfacePathOperation.Erase
+                    ? (byte)Mathf.Max(0, baseValue - applied)
+                    : SaturatingWear(baseValue, applied);
+                if (next == current)
                     continue;
 
-                pixels[index].r = value;
+                pixels[index] = next;
                 changed++;
             }
         }
 
-        if (changed > 0)
-            texture.SetPixels32(pixels);
         return changed;
     }
 
-    static int PaintChunkSurfaceStateTestPattern(
+    static int PaintChunkPathWearTestPattern(
         PlanetChunk chunk,
+        byte[] pixels,
         Vector2 centerFaceUv,
         float halfSizeFaceUv,
         byte pavedAlpha)
     {
-        Texture2D texture = chunk.SurfaceStateTexture;
-        int resolution = texture.width;
+        int resolution = PlanetChunkTextures.PathWearResolution;
         if (resolution <= 0 || halfSizeFaceUv <= 0f || pavedAlpha == 0)
             return 0;
 
@@ -605,7 +968,6 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         int startY = Mathf.Clamp(Mathf.FloorToInt(((patternMin.y - minV) / chunkSize) * resolution), 0, resolution - 1);
         int endY = Mathf.Clamp(Mathf.CeilToInt(((patternMin.y + patternSize - minV) / chunkSize) * resolution), 0, resolution - 1);
 
-        Color32[] pixels = texture.GetPixels32();
         int changed = 0;
         for (int y = startY; y <= endY; y++)
         {
@@ -622,17 +984,57 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
 
                 byte value = (byte)Mathf.RoundToInt(pavedAlpha * mask);
                 int index = y * resolution + x;
-                if (value <= pixels[index].r)
+                byte next = SaturatingWear(pixels[index], value);
+                if (next == pixels[index])
                     continue;
 
-                pixels[index].r = value;
+                pixels[index] = next;
                 changed++;
             }
         }
 
-        if (changed > 0)
-            texture.SetPixels32(pixels);
         return changed;
+    }
+
+    static byte SaturatingWear(byte current, byte deposit)
+    {
+        int remaining = (255 - current) * (255 - deposit);
+        return (byte)(255 - ((remaining + 127) / 255));
+    }
+
+    static float EffectiveStampStrength(SurfacePathEditStamp stamp, long now)
+    {
+        float strength = Mathf.Clamp01(stamp.strength);
+        if (stamp.regrowSeconds <= 0f)
+            return strength;
+
+        float elapsed = Mathf.Max(0f, now - stamp.createdUnixSeconds);
+        return strength * (1f - Mathf.Clamp01(elapsed / stamp.regrowSeconds));
+    }
+
+    static SurfacePathShape ParseStampShape(string shape)
+    {
+        switch (shape)
+        {
+            case "hard-disc":
+                return SurfacePathShape.HardDisc;
+            case "hard-square":
+            case "square":
+                return SurfacePathShape.HardSquare;
+            default:
+                return SurfacePathShape.SoftDisc;
+        }
+    }
+
+    struct PathWearBakeStamp
+    {
+        public int Face;
+        public Vector2 FaceUv;
+        public float RadiusFaceUv;
+        public byte Alpha;
+        public SurfacePathShape Shape;
+        public SurfacePathOperation Operation;
+        public int StrokeId;
     }
 
     static float EvaluateSurfaceStateTestPattern(Vector2 p)
@@ -903,6 +1305,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         int chunkTexturesBefore = PlanetChunkTextures.LiveTextureSets;
         int chunkBiomeTexturesBefore = PlanetChunkTextures.LiveBiomeTextureSets;
         int surfaceStateTexturesBefore = PlanetChunkTextures.LiveSurfaceStateTextures;
+        int pathWearTexturesBefore = PlanetChunkTextures.LivePathWearTextures;
         int chunkCount = _allChunks.Count;
         for (int i = 0; i < _allChunks.Count; i++)
             PlanetChunkTextures.Dispose(_allChunks[i]);
@@ -912,7 +1315,8 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
             $"Dispose: disposed {chunkCount} chunk texture sets. " +
             $"Any {chunkTexturesBefore} -> {PlanetChunkTextures.LiveTextureSets}, " +
             $"biome {chunkBiomeTexturesBefore} -> {PlanetChunkTextures.LiveBiomeTextureSets}, " +
-            $"surface-state {surfaceStateTexturesBefore} -> {PlanetChunkTextures.LiveSurfaceStateTextures}");
+            $"surface-state {surfaceStateTexturesBefore} -> {PlanetChunkTextures.LiveSurfaceStateTextures}, " +
+            $"path-wear {pathWearTexturesBefore} -> {PlanetChunkTextures.LivePathWearTextures}");
     }
 
     // ---- Initial gen helpers ----------------------------------------------------------------

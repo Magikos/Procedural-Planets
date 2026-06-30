@@ -33,6 +33,7 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
     bool _surfaceView;
     ICelestialTimeController _celestial;
     IPlanetSurfaceSampler _cachedPlanet;
+    ICameraLookBlocker _lookBlocker;
     Vector3 _sunOrbitAxis = Vector3.forward;
     Vector3 _lastSunDirectionToSun;
     Camera _camera;
@@ -206,7 +207,7 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
 
     void HandleLook(IInputMapService input)
     {
-        bool rightMousePressed = input.LookHold.IsPressed();
+        bool rightMousePressed = input.LookHold.IsPressed() && !CameraLookBlocked();
         if (rightMousePressed && !_looking)
             StartLooking();
         else if (!rightMousePressed && _looking)
@@ -230,6 +231,14 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
         float pitchAmount = -delta.y * LookSensitivity * 0.1f;
         transform.Rotate(Vector3.up, yawAmount, Space.Self);
         transform.Rotate(Vector3.right, pitchAmount, Space.Self);
+    }
+
+    bool CameraLookBlocked()
+    {
+        if (!ServiceLocator.IsAlive(_lookBlocker))
+            ServiceLocator.TryGet(out _lookBlocker);
+
+        return _lookBlocker != null && _lookBlocker.BlocksCameraLook;
     }
 
     void StartLooking()

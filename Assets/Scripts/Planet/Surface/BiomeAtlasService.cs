@@ -17,6 +17,8 @@ public interface IBiomeAtlasService
     bool TryGetFaceAtlases(int face, out Texture2D blended, out Texture2D ids, out Texture2D weights);
     bool HasCompleteAtlases();
     bool UpdateFaceAtlasRegion(PlanetChunk chunk);
+    bool TryGetFacePathWearAtlas(int face, out Texture2D pathWear);
+    bool UpdatePathWearAtlasRegion(PlanetChunk chunk);
     void ReleasePerChunkBiomeTextures(IReadOnlyList<PlanetChunk> chunks);
     void Dispose();
 }
@@ -29,6 +31,7 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
     Texture2D[] _faceIdAtlases;
     Texture2D[] _faceWeightAtlases;
     Texture2D[] _faceSurfaceStateAtlases;
+    Texture2D[] _facePathWearAtlases;
     Texture2D _blendedStaging;
     Texture2D _idStaging;
     Texture2D _weightStaging;
@@ -136,6 +139,7 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
 
         int leafsPerAxis = 1 << _maxChunkDepth;
         int leafStride = PlanetChunkTextures.BiomeMapResolution - 1;
+        int pathWearAtlasResolution = leafsPerAxis * (PlanetChunkTextures.PathWearResolution - 1) + 1;
         if (!CanBuildFaceAtlases(_maxChunkDepth, out int atlasResolution))
         {
             LoggerProvider.Log(LogLevel.Warning, "PhaseB",
@@ -143,11 +147,18 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
             progress?.Report(1f, "Biome atlases skipped.");
             return;
         }
+        bool canBuildPathWearAtlases = pathWearAtlasResolution <= SystemInfo.maxTextureSize;
+        if (!canBuildPathWearAtlases)
+        {
+            LoggerProvider.Log(LogLevel.Warning, "PhaseB",
+                $"Path wear atlas skipped: requested {pathWearAtlasResolution}x{pathWearAtlasResolution}, max texture size is {SystemInfo.maxTextureSize}.");
+        }
 
         _faceBlendedAtlases = new Texture2D[6];
         _faceIdAtlases = new Texture2D[6];
         _faceWeightAtlases = new Texture2D[6];
         _faceSurfaceStateAtlases = new Texture2D[6];
+        _facePathWearAtlases = new Texture2D[6];
 
         int expectedLeafCount = leafsPerAxis * leafsPerAxis;
         progress?.Report(0f, "Stitching biome atlases...");
@@ -194,6 +205,12 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
                 _faceSurfaceStateAtlases[face] = CreateAtlasTexture(
                     $"SurfaceStateAtlas_F{face}", atlasResolution,
                     new Color32[atlasResolution * atlasResolution], FilterMode.Bilinear, linear: true);
+                if (canBuildPathWearAtlases)
+                {
+                    _facePathWearAtlases[face] = CreateR8AtlasTexture(
+                        $"PathWearAtlas_F{face}", pathWearAtlasResolution,
+                        new byte[pathWearAtlasResolution * pathWearAtlasResolution]);
+                }
 
                 LoggerProvider.Log(LogLevel.Debug, "PhaseB",
                     $"Biome atlas face {face}: {atlasResolution}x{atlasResolution}, copied {pixels.CopiedLeaves}/{expectedLeafCount} max-depth leaves.");
@@ -305,6 +322,16 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
         return surfaceState != null;
     }
 
+    public bool TryGetFacePathWearAtlas(int face, out Texture2D pathWear)
+    {
+        pathWear = null;
+        if (face < 0 || face >= 6) return false;
+        if (_facePathWearAtlases == null) return false;
+
+        pathWear = _facePathWearAtlases[face];
+        return pathWear != null;
+    }
+
     public bool HasCompleteAtlases()
     {
         for (int face = 0; face < 6; face++)
@@ -327,6 +354,21 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
         GetLeafAtlasOrigin(chunk, leafsPerAxis, leafStride, out int dstX, out int dstY);
         CopyAtlasRegion(chunk.SurfaceStateTexture, surfaceStateAtlas,
             PlanetChunkTextures.BiomeMapResolution, dstX, dstY);
+        return true;
+    }
+
+    public bool UpdatePathWearAtlasRegion(PlanetChunk chunk)
+    {
+        if (chunk?.PathWearTexture == null)
+            return false;
+        if (!TryGetFacePathWearAtlas(chunk.FaceIndex, out Texture2D pathWearAtlas))
+            return false;
+
+        int leafsPerAxis = 1 << _maxChunkDepth;
+        int leafStride = PlanetChunkTextures.PathWearResolution - 1;
+        GetLeafAtlasOrigin(chunk, leafsPerAxis, leafStride, out int dstX, out int dstY);
+        CopyAtlasRegion(chunk.PathWearTexture, pathWearAtlas,
+            PlanetChunkTextures.PathWearResolution, dstX, dstY);
         return true;
     }
 
@@ -471,6 +513,7 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
         CountTextureArray(_faceIdAtlases, ref textureCount, ref rawBytes);
         CountTextureArray(_faceWeightAtlases, ref textureCount, ref rawBytes);
         CountTextureArray(_faceSurfaceStateAtlases, ref textureCount, ref rawBytes);
+        CountTextureArray(_facePathWearAtlases, ref textureCount, ref rawBytes, bytesPerPixel: 1);
         _reportedTextureCount = textureCount;
         _reportedRawBytes = rawBytes;
     }
@@ -481,6 +524,7 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
         DestroyTextureArray(ref _faceIdAtlases);
         DestroyTextureArray(ref _faceWeightAtlases);
         DestroyTextureArray(ref _faceSurfaceStateAtlases);
+        DestroyTextureArray(ref _facePathWearAtlases);
         DestroyTexture(ref _blendedStaging);
         DestroyTexture(ref _idStaging);
         DestroyTexture(ref _weightStaging);
@@ -497,6 +541,19 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
             wrapMode = TextureWrapMode.Clamp,
         };
         tex.SetPixels32(pixels);
+        tex.Apply(updateMipmaps: false, makeNoLongerReadable: true);
+        return tex;
+    }
+
+    static Texture2D CreateR8AtlasTexture(string name, int resolution, byte[] pixels)
+    {
+        var tex = new Texture2D(resolution, resolution, TextureFormat.R8, mipChain: false, linear: true)
+        {
+            name = name,
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+        tex.SetPixelData(pixels, 0);
         tex.Apply(updateMipmaps: false, makeNoLongerReadable: true);
         return tex;
     }
@@ -570,7 +627,7 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
         texture = null;
     }
 
-    static void CountTextureArray(Texture2D[] textures, ref int count, ref long rawBytes)
+    static void CountTextureArray(Texture2D[] textures, ref int count, ref long rawBytes, int bytesPerPixel = 4)
     {
         if (textures == null) return;
         for (int i = 0; i < textures.Length; i++)
@@ -578,7 +635,7 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
             Texture2D texture = textures[i];
             if (texture == null) continue;
             count++;
-            rawBytes += (long)texture.width * texture.height * 4L;
+            rawBytes += (long)texture.width * texture.height * bytesPerPixel;
         }
     }
 }

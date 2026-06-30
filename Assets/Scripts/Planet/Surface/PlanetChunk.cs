@@ -68,9 +68,12 @@ public sealed class PlanetChunk
     // sum to 255 per texel. Filter is Point because the step 6 shader does its own manual
     // 4-corner bilinear (slot weights cannot interpolate across texels with different ids).
     public Texture2D BiomeWeightsTexture;
-    // Surface state mask (RGBA8). Channels reserved for Phase E (paving/scorching/snow/wetness).
-    // Allocated empty in Phase B step 3 just to prove the lifecycle path; bound but unread.
+    // Surface state mask (RGBA8). Channels reserved for Phase E (scorching/snow/wetness/etc).
     public Texture2D SurfaceStateTexture;
+    // Dedicated high-resolution path wear field. R8 keeps 128x128 wear at the same raw size
+    // as the old 64x64 RGBA path channel, but avoids tying grass/path precision to biome maps.
+    public Texture2D PathWearTexture;
+    [System.NonSerialized] public byte[] PathWearPixels;
     // Transient per-bake pixel buffers — written on the background bake thread, uploaded +
     // nulled on the main thread. Re-allocated by the bake on each planet regen.
     [System.NonSerialized] public Color32[] PendingBiomeBlendedColorPixels;
@@ -212,14 +215,18 @@ public enum ChunkLifecycle
 public static class PlanetChunkTextures
 {
     public const int BiomeMapResolution = 64;
+    public const int PathWearResolution = 256;
     const int TexelCount = BiomeMapResolution * BiomeMapResolution;
+    const int PathWearTexelCount = PathWearResolution * PathWearResolution;
     const int BytesPerRgba32Texel = 4;
     const int BiomeTexturesPerSet = 3;
     static readonly Color32[] BlankPixels = new Color32[TexelCount];
+    static readonly byte[] BlankPathWearPixels = new byte[PathWearTexelCount];
 
     public static int LiveTextureSets { get; private set; }
     public static int LiveBiomeTextureSets { get; private set; }
     public static int LiveSurfaceStateTextures { get; private set; }
+    public static int LivePathWearTextures { get; private set; }
 
     // Top-K width: 4 biomes per texel, matching RGBA8 channel count. Pick any other K and
     // the textures change format / the shader's weighted sum loop has to change.
@@ -276,6 +283,14 @@ public static class PlanetChunkTextures
             filterMode = FilterMode.Bilinear,
             wrapMode = TextureWrapMode.Clamp,
         };
+        chunk.PathWearTexture = new Texture2D(PathWearResolution, PathWearResolution,
+            TextureFormat.R8, mipChain: false, linear: true)
+        {
+            name = $"PathWear_{suffix}",
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+        chunk.PathWearPixels = new byte[PathWearTexelCount];
 
         if (allocateBiomeTextures)
         {
@@ -288,11 +303,14 @@ public static class PlanetChunkTextures
         }
         chunk.SurfaceStateTexture.SetPixels32(BlankPixels);
         chunk.SurfaceStateTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+        chunk.PathWearTexture.SetPixelData(BlankPathWearPixels, 0);
+        chunk.PathWearTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
 
         LiveTextureSets++;
         if (allocateBiomeTextures)
             LiveBiomeTextureSets++;
         LiveSurfaceStateTextures++;
+        LivePathWearTextures++;
     }
 
     public static bool ReleaseBiomeTextures(PlanetChunk chunk)
@@ -320,12 +338,18 @@ public static class PlanetChunkTextures
         bool hadTextures = chunk.BiomeBlendedColorTexture != null
             || chunk.BiomeIdsTexture != null
             || chunk.BiomeWeightsTexture != null
-            || chunk.SurfaceStateTexture != null;
+            || chunk.SurfaceStateTexture != null
+            || chunk.PathWearTexture != null;
         ReleaseBiomeTextures(chunk);
         bool hadSurfaceState = chunk.SurfaceStateTexture != null;
+        bool hadPathWear = chunk.PathWearTexture != null;
         DestroyTexture(ref chunk.SurfaceStateTexture);
+        DestroyTexture(ref chunk.PathWearTexture);
+        chunk.PathWearPixels = null;
         if (hadSurfaceState && LiveSurfaceStateTextures > 0)
             LiveSurfaceStateTextures--;
+        if (hadPathWear && LivePathWearTextures > 0)
+            LivePathWearTextures--;
         if (hadTextures && LiveTextureSets > 0)
             LiveTextureSets--;
     }

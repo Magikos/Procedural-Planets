@@ -2,25 +2,13 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
-public enum SurfacePathShape
-{
-    SoftDisc,
-    HardDisc,
-    HardSquare,
-}
-
-public enum SurfacePathOperation
-{
-    Paint,
-    Erase,
-}
-
-public sealed class SurfacePathEditController
+public sealed class SurfacePathEditController : ISurfacePathBrushService
 {
     const int SaveVersion = 1;
     const float RegrowRefreshSeconds = 5f;
     static readonly int SurfacePathDebugId = Shader.PropertyToID("_SurfacePathDebug");
 
+    readonly Transform _planetTransform;
     readonly ILogger _logger;
     readonly System.Action _invalidateGrass;
     readonly List<SurfacePathEditStamp> _stamps = new();
@@ -31,9 +19,13 @@ public sealed class SurfacePathEditController
     int _loadedSeed = int.MinValue;
     float _nextRegrowRefreshTime;
     bool _saveDirty;
+    int _strokeCounter;
+    int _activeStrokeId;
+    bool _strokeOpen;
 
-    public SurfacePathEditController(ILogger logger, System.Action invalidateGrass)
+    public SurfacePathEditController(Transform planetTransform, ILogger logger, System.Action invalidateGrass)
     {
+        _planetTransform = planetTransform;
         _logger = logger;
         _invalidateGrass = invalidateGrass;
     }
@@ -68,6 +60,8 @@ public sealed class SurfacePathEditController
             alpha,
             shape,
             operation,
+            batched: !saveImmediately,
+            strokeCoverage: !saveImmediately,
             out summary);
         if (!painted)
             return false;
@@ -79,6 +73,7 @@ public sealed class SurfacePathEditController
                 kind = "path",
                 shape = ShapeId(shape),
                 operation = OperationId(operation),
+                strokeId = NextStrokeId(saveImmediately),
                 direction = localUnitDirection.normalized,
                 radiusMeters = radius,
                 strength = alpha,
@@ -86,6 +81,9 @@ public sealed class SurfacePathEditController
                 regrowSeconds = Mathf.Max(0f, regrowSeconds),
             };
             AddStamp(stamp, saveImmediately);
+            if (saveImmediately)
+                _provider.RebuildPathWearFromStamps(_stamps, NowUnixSeconds());
+
             summary += stamp.regrowSeconds > 0f
                 ? $"; saved {stamp.operation} stamp regrow={stamp.regrowSeconds:F0}s"
                 : $"; saved permanent {stamp.operation} stamp";
@@ -150,7 +148,7 @@ public sealed class SurfacePathEditController
         float debug = _terrainMaterial != null && _terrainMaterial.HasProperty(SurfacePathDebugId)
             ? _terrainMaterial.GetFloat(SurfacePathDebugId)
             : 0f;
-        return $"path mask ready: R=paved, G=scorched; debug={(debug > 0.5f ? "hot-pink" : "off")}, saved={_stamps.Count}, active={active}, file={Path.GetFileName(FilePath())}";
+        return $"path mask ready: wear={PlanetChunkTextures.PathWearResolution} R8 vector-baked, surface-state fallback=64 RGBA; debug={DebugName(debug)}, saved={_stamps.Count}, active={active}, file={Path.GetFileName(FilePath())}";
     }
 
     public string SetDebug(bool? enabled)
@@ -165,10 +163,131 @@ public sealed class SurfacePathEditController
         return $"path debug: {(active ? "hot-pink" : "off")}";
     }
 
+    public string SetDebugWear(bool? enabled)
+    {
+        if (_terrainMaterial == null || !_terrainMaterial.HasProperty(SurfacePathDebugId))
+            return "path debug unavailable: terrain material has no _SurfacePathDebug";
+
+        if (enabled.HasValue)
+            _terrainMaterial.SetFloat(SurfacePathDebugId, enabled.Value ? 2f : 0f);
+
+        return $"path debug: {DebugName(_terrainMaterial.GetFloat(SurfacePathDebugId))}";
+    }
+
     public void FlushPendingSave()
     {
+        bool hadOpenStroke = _strokeOpen;
+        _provider?.EndSurfaceStateBatch();
+        _strokeOpen = false;
+        if (hadOpenStroke && _provider != null)
+        {
+            EnsureLoaded();
+            _provider.RebuildPathWearFromStamps(_stamps, NowUnixSeconds());
+            _invalidateGrass?.Invoke();
+        }
         if (_saveDirty)
             Save();
+    }
+
+    public void FlushSurfacePathEdits() => FlushPendingSave();
+
+    public bool TryGetSurfacePathLocalDirection(Vector3 worldPoint, out Vector3 localUnitDirection)
+    {
+        localUnitDirection = default;
+        if (_planetTransform == null)
+            return false;
+
+        Vector3 localPoint = _planetTransform.InverseTransformPoint(worldPoint);
+        if (localPoint.sqrMagnitude < 0.0001f)
+            return false;
+
+        localUnitDirection = localPoint.normalized;
+        return true;
+    }
+
+    public bool TryPaintSurfacePathBrushAtLocalDirection(Vector3 localUnitDirection, float radiusMeters, float strength,
+        float regrowSeconds, SurfacePathShape shape, SurfacePathOperation operation, out string summary,
+        bool saveStamp = true, bool invalidateGrass = true, bool saveImmediately = true)
+    {
+        if (localUnitDirection.sqrMagnitude < 0.0001f)
+        {
+            summary = "path paint requires a non-zero local direction";
+            return false;
+        }
+
+        return TryPaintBrush(localUnitDirection.normalized, radiusMeters, strength, regrowSeconds,
+            shape, operation, saveStamp, out summary, invalidateGrass, saveImmediately);
+    }
+
+    public bool TryBuildSurfacePathBrushPreview(Vector3 localUnitDirection, float surfaceRadius,
+        float radiusMeters, SurfacePathShape shape, Vector3[] points, int segments, float liftMeters,
+        out int count)
+    {
+        count = 0;
+        if (_planetTransform == null || points == null || points.Length == 0 || localUnitDirection.sqrMagnitude < 0.0001f)
+            return false;
+
+        bool square = shape == SurfacePathShape.HardSquare;
+        int required = square ? 5 : Mathf.Clamp(segments, 8, points.Length - 1) + 1;
+        if (points.Length < required)
+            return false;
+
+        Vector3 direction = localUnitDirection.normalized;
+        FaceSpaceCellRangeBuilder.DirectionToFaceUv(direction, out int face, out Vector2 faceUv);
+        float metersPerUv = FaceSpaceCellRangeBuilder.ComputeMetersPerUV(face, faceUv, Mathf.Max(surfaceRadius, 0.001f));
+        float radiusUv = Mathf.Max(0.00001f, radiusMeters / metersPerUv);
+        float worldScale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform);
+        float localRadius = surfaceRadius / Mathf.Max(worldScale, 0.0001f);
+
+        if (square)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                int corner = i & 3;
+                float sx = (corner == 0 || corner == 3) ? -1f : 1f;
+                float sy = corner < 2 ? -1f : 1f;
+                points[i] = PreviewPoint(face, faceUv + new Vector2(sx, sy) * radiusUv, localRadius, liftMeters);
+            }
+
+            count = 5;
+            return true;
+        }
+
+        int discSegments = required - 1;
+        for (int i = 0; i <= discSegments; i++)
+        {
+            float angle = i / (float)discSegments * Mathf.PI * 2f;
+            Vector2 uv = faceUv + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radiusUv;
+            points[i] = PreviewPoint(face, uv, localRadius, liftMeters);
+        }
+
+        count = required;
+        return true;
+    }
+
+    Vector3 PreviewPoint(int face, Vector2 uv, float localRadius, float liftMeters)
+    {
+        Vector3 local = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(face, uv) * localRadius;
+        Vector3 world = _planetTransform.TransformPoint(local);
+        Vector3 normal = (world - _planetTransform.position).sqrMagnitude > 0.0001f
+            ? (world - _planetTransform.position).normalized
+            : _planetTransform.up;
+        return world + normal * Mathf.Max(0f, liftMeters);
+    }
+
+    // One-shot paints are their own stroke; a drag (saveImmediately == false) keeps the same id
+    // until FlushPendingSave closes it, so its stamps composite by max instead of stacking.
+    int NextStrokeId(bool immediate)
+    {
+        if (immediate)
+            return ++_strokeCounter;
+
+        if (!_strokeOpen)
+        {
+            _activeStrokeId = ++_strokeCounter;
+            _strokeOpen = true;
+        }
+        return _activeStrokeId;
     }
 
     public int ReplayStamps(bool clearFirst)
@@ -182,30 +301,7 @@ public sealed class SurfacePathEditController
         if (clearFirst)
             _provider.ClearSurfaceStateMasks();
 
-        int replayed = 0;
-        // ponytail: stamp replay is O(stamps * chunks); batch by chunk if saves get large.
-        for (int i = 0; i < _stamps.Count; i++)
-        {
-            SurfacePathEditStamp stamp = _stamps[i];
-            if (stamp.kind != "path")
-                continue;
-
-            float alpha = EffectiveStrength(stamp, now);
-            if (alpha <= 0f)
-                continue;
-
-            if (_provider.TryPaintSurfaceStateBrush(
-                    stamp.direction,
-                    Mathf.Max(stamp.radiusMeters, 0.1f),
-                    alpha,
-                    ParseShape(stamp.shape),
-                    ParseOperation(stamp.operation),
-                    out _))
-            {
-                replayed++;
-            }
-        }
-
+        int replayed = _provider.RebuildPathWearFromStamps(_stamps, now);
         if (removed > 0)
             Save();
         if (clearFirst || replayed > 0)
@@ -245,6 +341,9 @@ public sealed class SurfacePathEditController
 
         _loadedSeed = _seed;
         _stamps.Clear();
+        _strokeCounter = 0;
+        _activeStrokeId = 0;
+        _strokeOpen = false;
 
         string path = FilePath();
         if (!File.Exists(path))
@@ -254,11 +353,26 @@ public sealed class SurfacePathEditController
         {
             string json = File.ReadAllText(path);
             SurfacePathEditSaveData data = JsonUtility.FromJson<SurfacePathEditSaveData>(json);
-        if (data?.stamps == null || data.version != SaveVersion || data.planetSeed != _seed)
+            if (data?.stamps == null || data.version != SaveVersion || data.planetSeed != _seed)
                 return;
 
             _stamps.AddRange(data.stamps);
-            _saveDirty = false;
+            int maxStrokeId = 0;
+            for (int i = 0; i < _stamps.Count; i++)
+                maxStrokeId = Mathf.Max(maxStrokeId, _stamps[i].strokeId);
+
+            bool migrated = false;
+            for (int i = 0; i < _stamps.Count; i++)
+            {
+                if (_stamps[i].strokeId > 0)
+                    continue;
+
+                _stamps[i].strokeId = ++maxStrokeId;
+                migrated = true;
+            }
+
+            _strokeCounter = maxStrokeId;
+            _saveDirty = migrated;
         }
         catch (System.Exception ex)
         {
@@ -342,6 +456,13 @@ public sealed class SurfacePathEditController
         }
     }
 
+    static string DebugName(float value)
+    {
+        if (value > 1.5f)
+            return "wear-mask";
+        return value > 0.5f ? "hot-pink" : "off";
+    }
+
     static SurfacePathShape ParseShape(string shape)
     {
         switch (shape)
@@ -383,6 +504,7 @@ public sealed class SurfacePathEditStamp
     public string kind;
     public string shape;
     public string operation;
+    public int strokeId;
     public Vector3 direction;
     public float radiusMeters;
     public float strength;

@@ -10,13 +10,16 @@ public static class SurfacePathDebugCommands
     [ConsoleCommand("paint", "Paint and save a soft paved path mask where the camera is aimed. Args: radiusMeters strength01 regrowSeconds(0=permanent).", MonoTargetType.Static)]
     public static string PaintCmd(float? radiusMeters = null, float? strength = null, float? regrowSeconds = null)
     {
-        if (!TryGetPlanet(out Planet planet))
-            return "path paint requires an active Planet";
-        if (!TryGetCameraRay(out Ray ray, out string error))
+        if (!TryGetPathBrush(out ISurfacePathBrushService brush, out string error))
+            return error;
+        if (!TryGetCameraRay(out Ray ray, out error))
+            return error;
+        if (!TryGetSurfaceDirection(ray, out Vector3 direction, out _, out error))
             return error;
 
         NormalizePaintArgs(radiusMeters, strength, regrowSeconds, 5f, out float radius, out float alpha, out float regrow);
-        return planet.TryPaintSurfacePathFromCamera(ray, radius, alpha, regrow, out string summary)
+        return brush.TryPaintSurfacePathBrushAtLocalDirection(direction, radius, alpha, regrow,
+                SurfacePathShape.SoftDisc, SurfacePathOperation.Paint, out string summary)
             ? summary
             : summary;
     }
@@ -24,13 +27,16 @@ public static class SurfacePathDebugCommands
     [ConsoleCommand("paint-here", "Paint and save a soft paved path mask under the camera. Args: radiusMeters strength01 regrowSeconds(0=permanent).", MonoTargetType.Static)]
     public static string PaintHereCmd(float? radiusMeters = null, float? strength = null, float? regrowSeconds = null)
     {
-        if (!TryGetPlanet(out Planet planet))
-            return "path paint-here requires an active Planet";
-        if (!TryGetCameraTransform(out Transform cameraTransform, out string error))
+        if (!TryGetPathBrush(out ISurfacePathBrushService brush, out string error))
             return error;
+        if (!TryGetCameraTransform(out Transform cameraTransform, out error))
+            return error;
+        if (!brush.TryGetSurfacePathLocalDirection(cameraTransform.position, out Vector3 direction))
+            return "path paint-here requires a camera away from the planet center";
 
         NormalizePaintArgs(radiusMeters, strength, regrowSeconds, 8f, out float radius, out float alpha, out float regrow);
-        return planet.TryPaintSurfacePathAtWorldPosition(cameraTransform.position, radius, alpha, regrow, out string summary)
+        return brush.TryPaintSurfacePathBrushAtLocalDirection(direction, radius, alpha, regrow,
+                SurfacePathShape.SoftDisc, SurfacePathOperation.Paint, out string summary)
             ? summary
             : summary;
     }
@@ -38,14 +44,18 @@ public static class SurfacePathDebugCommands
     [ConsoleCommand("pattern-here", "Paint deterministic path test patterns under the camera. Args: sizeMeters strength01.", MonoTargetType.Static)]
     public static string PatternHereCmd(float? sizeMeters = null, float? strength = null)
     {
-        if (!TryGetPlanet(out Planet planet))
-            return "path pattern-here requires an active Planet";
-        if (!TryGetCameraTransform(out Transform cameraTransform, out string error))
+        if (!TryGetPathEdits(out SurfacePathEditController edits, out string error))
             return error;
+        if (!TryGetPathBrush(out ISurfacePathBrushService brush, out error))
+            return error;
+        if (!TryGetCameraTransform(out Transform cameraTransform, out error))
+            return error;
+        if (!brush.TryGetSurfacePathLocalDirection(cameraTransform.position, out Vector3 direction))
+            return "path pattern-here requires a camera away from the planet center";
 
         float size = Mathf.Clamp(sizeMeters ?? 220f, 16f, 1000f);
         float alpha = Mathf.Clamp01(strength ?? 1f);
-        return planet.TryPaintSurfacePathPatternAtWorldPosition(cameraTransform.position, size, alpha, out string summary)
+        return edits.TryPaintPattern(direction, size, alpha, out string summary)
             ? summary
             : summary;
     }
@@ -53,11 +63,9 @@ public static class SurfacePathDebugCommands
     [ConsoleCommand("stroke-start", "Start a saved path stroke at the terrain point under the camera aim.", MonoTargetType.Static)]
     public static string StrokeStartCmd()
     {
-        if (!TryGetPlanet(out Planet planet))
-            return "path stroke-start requires an active Planet";
         if (!TryGetCameraRay(out Ray ray, out string error))
             return error;
-        if (!TryGetSurfaceDirection(planet, ray, out _strokeDirection, out _strokeSurfaceRadius, out error))
+        if (!TryGetSurfaceDirection(ray, out _strokeDirection, out _strokeSurfaceRadius, out error))
             return error;
 
         _strokeActive = true;
@@ -69,11 +77,11 @@ public static class SurfacePathDebugCommands
     {
         if (!_strokeActive)
             return "path stroke-to requires path.stroke-start first";
-        if (!TryGetPlanet(out Planet planet))
-            return "path stroke-to requires an active Planet";
-        if (!TryGetCameraRay(out Ray ray, out string error))
+        if (!TryGetPathBrush(out ISurfacePathBrushService brush, out string error))
             return error;
-        if (!TryGetSurfaceDirection(planet, ray, out Vector3 endDirection, out float endSurfaceRadius, out error))
+        if (!TryGetCameraRay(out Ray ray, out error))
+            return error;
+        if (!TryGetSurfaceDirection(ray, out Vector3 endDirection, out float endSurfaceRadius, out error))
             return error;
 
         NormalizePaintArgs(radiusMeters, strength, regrowSeconds, 5f, out float radius, out float alpha, out float regrow);
@@ -87,7 +95,8 @@ public static class SurfacePathDebugCommands
         {
             float t = i / (float)segments;
             Vector3 direction = Vector3.Slerp(_strokeDirection, endDirection, t).normalized;
-            if (planet.TryPaintSurfacePathAtLocalDirection(direction, radius, alpha, regrow, out _))
+            if (brush.TryPaintSurfacePathBrushAtLocalDirection(direction, radius, alpha, regrow,
+                    SurfacePathShape.SoftDisc, SurfacePathOperation.Paint, out _))
                 painted++;
         }
 
@@ -111,42 +120,50 @@ public static class SurfacePathDebugCommands
     [ConsoleCommand("clear", "Clear runtime painted path masks without deleting saved path stamps.", MonoTargetType.Static)]
     public static string ClearCmd()
     {
-        if (!TryGetPlanet(out Planet planet))
-            return "path clear requires an active Planet";
+        if (!TryGetPathEdits(out SurfacePathEditController edits, out string error))
+            return error;
 
-        int cleared = planet.ClearSurfacePaths();
+        int cleared = edits.ClearRuntimeMasks();
         return $"cleared path masks on {cleared} chunks";
     }
 
     [ConsoleCommand("replay", "Clear runtime path masks, then replay saved path stamps.", MonoTargetType.Static)]
     public static string ReplayCmd()
     {
-        return TryGetPlanet(out Planet planet)
-            ? planet.ReplaySurfacePaths()
+        return TryGetPathEdits(out SurfacePathEditController edits, out _)
+            ? edits.ReplaySavedStamps()
             : "path replay requires an active Planet";
     }
 
     [ConsoleCommand("clear-saved", "Delete saved path stamps and clear runtime path masks.", MonoTargetType.Static)]
     public static string ClearSavedCmd()
     {
-        return TryGetPlanet(out Planet planet)
-            ? planet.ClearSavedSurfacePaths()
+        return TryGetPathEdits(out SurfacePathEditController edits, out _)
+            ? edits.ClearSavedStamps()
             : "path clear-saved requires an active Planet";
     }
 
     [ConsoleCommand("debug", "Toggle hot-pink path mask visualization.", MonoTargetType.Static)]
     public static string DebugCmd(bool? enabled = null)
     {
-        return TryGetPlanet(out Planet planet)
-            ? planet.SetSurfacePathDebug(enabled)
+        return TryGetPathEdits(out SurfacePathEditController edits, out _)
+            ? edits.SetDebug(enabled)
             : "path debug requires an active Planet";
+    }
+
+    [ConsoleCommand("debug-wear", "Toggle raw grayscale path-wear texture visualization.", MonoTargetType.Static)]
+    public static string DebugWearCmd(bool? enabled = null)
+    {
+        return TryGetPathEdits(out SurfacePathEditController edits, out _)
+            ? edits.SetDebugWear(enabled)
+            : "path debug-wear requires an active Planet";
     }
 
     [ConsoleCommand("status", "Show path mask runtime support status.", MonoTargetType.Static)]
     public static string StatusCmd()
     {
-        return TryGetPlanet(out Planet planet)
-            ? planet.SurfacePathStatus()
+        return TryGetPathEdits(out SurfacePathEditController edits, out _)
+            ? edits.Status()
             : "path mask unavailable: no active Planet";
     }
 
@@ -178,17 +195,37 @@ public static class SurfacePathDebugCommands
         return tool.Status();
     }
 
-    static bool TryGetPlanet(out Planet planet)
+    [ConsoleCommand("mouse-shape", "Get or set mouse path shape: soft-disc, hard-disc, square.", MonoTargetType.Static)]
+    public static string MouseShapeCmd(string shape = null)
     {
-        planet = null;
-        if (ServiceLocator.TryGet(out IPlanet servicePlanet) && servicePlanet is Planet concrete)
+        SurfacePathMousePainter tool = SurfacePathMousePainter.GetOrCreate();
+        if (!string.IsNullOrWhiteSpace(shape) && !tool.TrySetShape(shape))
+            return "path mouse-shape expects: soft-disc, hard-disc, square";
+        return tool.Status();
+    }
+
+    static bool TryGetPathBrush(out ISurfacePathBrushService brush, out string error)
+    {
+        if (ServiceLocator.TryGet(out brush))
         {
-            planet = concrete;
+            error = null;
             return true;
         }
 
-        planet = Object.FindAnyObjectByType<Planet>();
-        return planet != null;
+        error = "path paint requires an active surface path service";
+        return false;
+    }
+
+    static bool TryGetPathEdits(out SurfacePathEditController edits, out string error)
+    {
+        if (ServiceLocator.TryGet(out edits))
+        {
+            error = null;
+            return true;
+        }
+
+        error = "path edit controller requires an active Planet";
+        return false;
     }
 
     static void NormalizePaintArgs(float? radiusMeters, float? strength, float? regrowSeconds,
@@ -199,21 +236,43 @@ public static class SurfacePathDebugCommands
         regrow = Mathf.Max(0f, regrowSeconds ?? 0f);
     }
 
-    static bool TryGetSurfaceDirection(Planet planet, Ray ray, out Vector3 localDirection, out float surfaceRadius, out string error)
+    static bool TryGetSurfaceDirection(Ray ray, out Vector3 localDirection, out float surfaceRadius, out string error)
     {
         localDirection = default;
         surfaceRadius = 0f;
-        float maxDistance = Mathf.Max(planet.LastGeneratedRadius * 4f, 10000f);
-        if (!planet.TryRaycastSurface(ray, maxDistance, out PlanetSurfaceRaycastHit hit))
+        if (!TryGetPathBrush(out ISurfacePathBrushService brush, out error))
+            return false;
+        if (!ServiceLocator.TryGet(out IPlanetSurfaceRaycaster raycaster))
+        {
+            error = "path stroke requires an active planet surface raycaster";
+            return false;
+        }
+
+        float maxDistance = GetMaxRayDistance();
+        if (!raycaster.TryRaycastSurface(ray, maxDistance, out PlanetSurfaceRaycastHit hit))
         {
             error = "path stroke missed the visible planet surface";
             return false;
         }
 
-        localDirection = planet.transform.InverseTransformPoint(hit.Point).normalized;
+        if (!brush.TryGetSurfacePathLocalDirection(hit.Point, out localDirection))
+        {
+            error = "path stroke hit an invalid surface point";
+            return false;
+        }
+
         surfaceRadius = hit.SurfaceRadius;
         error = null;
         return true;
+    }
+
+    static float GetMaxRayDistance()
+    {
+        if (ServiceLocator.TryGet(out IPlanet planet) && planet.LastGeneratedRadius > 0f)
+            return Mathf.Max(planet.LastGeneratedRadius * 4f, 10000f);
+
+        Camera camera = Camera.main;
+        return camera != null ? Mathf.Max(camera.farClipPlane, 10000f) : 10000f;
     }
 
     static bool TryGetCameraRay(out Ray ray, out string error)

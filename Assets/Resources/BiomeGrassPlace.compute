@@ -19,6 +19,7 @@ struct GrassBladeInstance
 Texture2D<float4> _BiomeIds;
 Texture2D<float4> _BiomeWeights;
 Texture2D<float4> _SurfaceStateMask;
+Texture2D<float> _PathWearMask;
 Texture2D<float> _GrassSurfaceRadius;
 Texture2D<float4> _GrassSurfaceNormal;
 
@@ -47,6 +48,7 @@ RWStructuredBuffer<uint> _GrassStats;
 int _BiomeGrassParamCount;
 int _BiomeAtlasResolution;
 int _GrassSurfaceAtlasResolution;
+int _PathWearResolution;
 int _LaneResolution;
 int _MaxBladeInstances;
 int _MaxBladesPerLane;
@@ -142,9 +144,25 @@ float SurfaceStateReject(float4 state)
     return saturate(max(state.r, state.g));
 }
 
+float SampleAtlas1(Texture2D<float> tex, float2 uv, int resolution)
+{
+    int maxTexel = max(resolution - 1, 0);
+    float2 p = saturate(uv) * max(maxTexel, 1);
+    int2 p0 = clamp(int2(floor(p)), int2(0, 0), int2(maxTexel, maxTexel));
+    int2 p1 = min(p0 + 1, int2(maxTexel, maxTexel));
+    float2 f = saturate(p - p0);
+    float c00 = tex.Load(int3(p0, 0));
+    float c10 = tex.Load(int3(p1.x, p0.y, 0));
+    float c01 = tex.Load(int3(p0.x, p1.y, 0));
+    float c11 = tex.Load(int3(p1, 0));
+    return lerp(lerp(c00, c10, f.x), lerp(c01, c11, f.x), f.y);
+}
+
 float SamplePathMask(float2 uv)
 {
-    return SurfaceStateReject(SampleAtlas4(_SurfaceStateMask, uv, max(_LaneResolution, 1)));
+    float surfaceReject = SurfaceStateReject(SampleAtlas4(_SurfaceStateMask, uv, max(_LaneResolution, 1)));
+    float pathWear = SampleAtlas1(_PathWearMask, uv, max(_PathWearResolution, 1));
+    return saturate(max(surfaceReject, pathWear));
 }
 
 float LoadRadius(float2 uv)
@@ -439,9 +457,15 @@ void PlaceAndCull(uint3 id : SV_DispatchThreadID)
             Hash01(subHash ^ 0xbb67ae85u) - 0.5) * _LaneJitterMagnitude;
         float2 chunkUv = (float2(id.xy) + 0.5 + subJitter) / max((float)_LaneResolution, 1.0);
         float2 faceUv = _ChunkUvScaleOffset.zw + chunkUv * _ChunkUvScaleOffset.xy;
+        // Path mask thins grass probabilistically per blade (density drops toward the path)
+        // and the surviving blades are shortened below (height *= grassScale). Stochastic
+        // rejection dithers the boundary so it follows the worn coverage, not the lane grid.
         float grassScale = saturate(1.0 - SamplePathMask(chunkUv));
-        if (grassScale <= 0.02)
+        if (Hash01(subHash ^ 0x2545f491u) > grassScale)
+        {
+            AddStat(STAT_DENSITY_REJECTED_BLADES, 1u);
             continue;
+        }
 
         float radius = LoadRadius(faceUv);
         float3 sphereNormal = CubeFaceToUnitSphere(_FaceIndex, faceUv);

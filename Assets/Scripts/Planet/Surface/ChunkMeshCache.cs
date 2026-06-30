@@ -50,6 +50,7 @@ public sealed class ChunkMeshCache : IChunkMeshCache, IMemoryReporter
     static readonly int BiomeIdsShaderId = Shader.PropertyToID("_BiomeIds");
     static readonly int BiomeWeightsShaderId = Shader.PropertyToID("_BiomeWeights");
     static readonly int SurfaceStateMaskShaderId = Shader.PropertyToID("_SurfaceStateMask");
+    static readonly int PathWearMaskShaderId = Shader.PropertyToID("_PathWearMask");
     static readonly int BiomeMapTexelSizeShaderId = Shader.PropertyToID("_BiomeMap_TexelSize");
     static readonly int BiomeMapUvScaleShaderId = Shader.PropertyToID("_BiomeMapUvScale");
 
@@ -288,6 +289,8 @@ public sealed class ChunkMeshCache : IChunkMeshCache, IMemoryReporter
         // to Phase E â€” for now the binding just exercises the upload path.
         if (chunk.SurfaceStateTexture != null)
             _chunkPropertyBlock.SetTexture(SurfaceStateMaskShaderId, chunk.SurfaceStateTexture);
+        if (chunk.PathWearTexture != null)
+            _chunkPropertyBlock.SetTexture(PathWearMaskShaderId, chunk.PathWearTexture);
         // _TexelSize is (1/w, 1/h, w, h) â€” matches Unity's built-in texture layout so the
         // shader can do neighbor-texel lookups without external math.
         int res = Mathf.Max(blendedTexture.width, 1);

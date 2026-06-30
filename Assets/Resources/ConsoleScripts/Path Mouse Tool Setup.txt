@@ -6,6 +6,7 @@
 
 # Enables manual path drawing. Close the console, press P to toggle, mouse wheel changes radius, left-drag paints.
 path.debug true
-path.mouse-brush 14 1 0 4
+path.mouse-brush 14 1 0 2
+path.mouse-shape soft-disc
 path.mouse true
 path.status

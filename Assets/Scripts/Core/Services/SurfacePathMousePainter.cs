@@ -1,17 +1,21 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+[DefaultExecutionOrder(-100)]
 [DisallowMultipleComponent]
-public sealed class SurfacePathMousePainter : MonoBehaviour
+public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
 {
     const float RightDragPixels = 6f;
+    const int PreviewSegments = 64;
 
     public float RadiusMeters = 14f;
     public float Strength = 1f;
     public float RegrowSeconds;
-    public float SpacingMeters = 4f;
+    public float SpacingMeters = 2f;
     public bool BrushActive;
-    public SurfacePathShape Shape = SurfacePathShape.HardDisc;
+    public SurfacePathShape Shape = SurfacePathShape.SoftDisc;
+
+    readonly Vector3[] _previewPoints = new Vector3[PreviewSegments + 1];
 
     bool _dragging;
     bool _hasLastPoint;
@@ -21,13 +25,17 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
     LineRenderer _preview;
     Material _previewMaterial;
     bool _strokeDirty;
-    bool _lookHoldDisabled;
     bool _rightTapCandidate;
     bool _rightCameraDrag;
     Vector2 _rightStartPosition;
+    IPlanetSurfaceRaycaster _raycaster;
+    ISurfacePathBrushService _pathBrush;
+    Camera _camera;
 
     public static SurfacePathMousePainter Find() =>
         Object.FindAnyObjectByType<SurfacePathMousePainter>();
+
+    public bool BlocksCameraLook => BrushActive && _rightTapCandidate && !_rightCameraDrag;
 
     public static SurfacePathMousePainter GetOrCreate()
     {
@@ -36,15 +44,8 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
             return tool;
 
         GameObject go = new("Surface Path Mouse Painter");
+        DontDestroyOnLoad(go);
         return go.AddComponent<SurfacePathMousePainter>();
-    }
-
-    public static void EnsureAvailable()
-    {
-        if (Find() != null)
-            return;
-
-        GetOrCreate().BrushActive = false;
     }
 
     public void SetBrush(float? radiusMeters, float? strength, float? regrowSeconds, float? spacingMeters)
@@ -59,8 +60,30 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
             SpacingMeters = Mathf.Clamp(spacingMeters.Value, 0.25f, 100f);
     }
 
+    public bool TrySetShape(string shape)
+    {
+        switch ((shape ?? string.Empty).Trim().ToLowerInvariant())
+        {
+            case "soft":
+            case "soft-disc":
+            case "disc":
+                Shape = SurfacePathShape.SoftDisc;
+                return true;
+            case "hard":
+            case "hard-disc":
+                Shape = SurfacePathShape.HardDisc;
+                return true;
+            case "square":
+            case "hard-square":
+                Shape = SurfacePathShape.HardSquare;
+                return true;
+            default:
+                return false;
+        }
+    }
+
     public string Status() =>
-        $"path mouse: {(BrushActive ? "armed" : "off")}, shape={ShapeName(Shape)}, P toggles, right-click shape, wheel size, shift-wheel strength, left-drag paint, shift-drag erase, radius={RadiusMeters:F1}m, strength={Strength:F2}, regrow={RegrowSeconds:F0}s, spacing={SpacingMeters:F1}m";
+        $"path mouse: {(BrushActive ? "armed" : "off")}, shape={ShapeName(Shape)}, P toggles, right-click cycles shape, wheel size, shift-wheel strength, left-drag paint, shift-drag erase, radius={RadiusMeters:F1}m, strength={Strength:F2}, regrow={RegrowSeconds:F0}s, spacing={SpacingMeters:F1}m";
 
     void Update()
     {
@@ -68,6 +91,7 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
         if (mouse == null || !InputAllowed())
         {
             ResetDrag();
+            ResetRightMouseState();
             SetPreviewVisible(false);
             return;
         }
@@ -76,10 +100,10 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
         {
             BrushActive = !BrushActive;
             ResetDrag();
+            ResetRightMouseState();
         }
 
         HandleShapeOrCameraLook(mouse);
-        SetCameraLookBlocked(BrushActive && !_rightCameraDrag);
 
         if (!BrushActive)
         {
@@ -110,10 +134,29 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
             ResetDrag();
     }
 
+    void OnEnable()
+    {
+        if (ServiceLocator.TryGet(out ICameraLookBlocker existing)
+            && ServiceLocator.IsAlive(existing)
+            && !ReferenceEquals(existing, this))
+        {
+            return;
+        }
+
+        ServiceLocator.Register<ICameraLookBlocker>(this);
+    }
+
+    void OnDisable()
+    {
+        ResetDrag();
+        ResetRightMouseState();
+        SetPreviewVisible(false);
+        ServiceLocator.Unregister<ICameraLookBlocker>(this);
+    }
+
     void OnDestroy()
     {
         ResetDrag();
-        SetCameraLookBlocked(false);
         if (_previewMaterial != null)
             Destroy(_previewMaterial);
     }
@@ -129,12 +172,12 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
 
     void PaintAtMouse(Mouse mouse, SurfacePathOperation operation, bool force)
     {
-        if (!TryGetMouseHit(mouse, out Planet planet, out Vector3 direction, out float surfaceRadius, out _, out _))
+        if (!TryGetMouseHit(mouse, out Vector3 direction, out float surfaceRadius))
             return;
 
         if (!_hasLastPoint)
         {
-            Paint(planet, direction, operation);
+            Paint(direction, operation);
             Remember(direction, surfaceRadius);
             return;
         }
@@ -148,15 +191,15 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
 
         int segments = Mathf.Max(1, Mathf.CeilToInt(distance / step));
         for (int i = 1; i <= segments; i++)
-            Paint(planet, Vector3.Slerp(_lastDirection, direction, i / (float)segments).normalized, operation);
+            Paint(Vector3.Slerp(_lastDirection, direction, i / (float)segments).normalized, operation);
 
         Remember(direction, surfaceRadius);
     }
 
-    void Paint(Planet planet, Vector3 direction, SurfacePathOperation operation)
+    void Paint(Vector3 direction, SurfacePathOperation operation)
     {
-        if (planet.TryPaintSurfacePathBrushAtLocalDirection(direction, RadiusMeters, Strength, RegrowSeconds,
-                Shape, operation, out _, saveImmediately: false))
+        if (ResolvePathBrush()?.TryPaintSurfacePathBrushAtLocalDirection(direction, RadiusMeters, Strength,
+                RegrowSeconds, Shape, operation, out _, saveImmediately: false) == true)
         {
             _strokeDirty = true;
         }
@@ -175,15 +218,29 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
         _dragging = false;
         _hasLastPoint = false;
         if (flush)
-            ResolvePlanet()?.FlushSurfacePathEdits();
+            ResolvePathBrush()?.FlushSurfacePathEdits();
         _strokeDirty = false;
     }
 
-    static Planet ResolvePlanet()
+    IPlanetSurfaceRaycaster ResolveRaycaster()
     {
-        if (ServiceLocator.TryGet(out IPlanet servicePlanet) && servicePlanet is Planet planet)
-            return planet;
-        return Object.FindAnyObjectByType<Planet>();
+        if (!ServiceLocator.IsAlive(_raycaster))
+            ServiceLocator.TryGet(out _raycaster);
+        return _raycaster;
+    }
+
+    ISurfacePathBrushService ResolvePathBrush()
+    {
+        if (!ServiceLocator.IsAlive(_pathBrush))
+            ServiceLocator.TryGet(out _pathBrush);
+        return _pathBrush;
+    }
+
+    Camera ResolveCamera()
+    {
+        if (_camera == null || !_camera.isActiveAndEnabled)
+            _camera = Camera.main;
+        return _camera;
     }
 
     static bool ShiftHeld()
@@ -194,17 +251,19 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
 
     void CycleShape()
     {
-        Shape = Shape == SurfacePathShape.HardSquare
-            ? SurfacePathShape.HardDisc
-            : SurfacePathShape.HardSquare;
+        Shape = Shape switch
+        {
+            SurfacePathShape.SoftDisc => SurfacePathShape.HardDisc,
+            SurfacePathShape.HardDisc => SurfacePathShape.HardSquare,
+            _ => SurfacePathShape.SoftDisc,
+        };
     }
 
     void HandleShapeOrCameraLook(Mouse mouse)
     {
         if (!BrushActive)
         {
-            _rightTapCandidate = false;
-            _rightCameraDrag = false;
+            ResetRightMouseState();
             return;
         }
 
@@ -214,7 +273,6 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
             _rightCameraDrag = false;
             _rightStartPosition = mouse.position.ReadValue();
             ResetDrag();
-            SetCameraLookBlocked(true);
             return;
         }
 
@@ -225,7 +283,6 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
             {
                 _rightCameraDrag = true;
                 _rightTapCandidate = false;
-                SetCameraLookBlocked(false);
             }
         }
 
@@ -236,8 +293,13 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
 
             _rightTapCandidate = false;
             _rightCameraDrag = false;
-            SetCameraLookBlocked(true);
         }
+    }
+
+    void ResetRightMouseState()
+    {
+        _rightTapCandidate = false;
+        _rightCameraDrag = false;
     }
 
     void AdjustBrush(Mouse mouse, bool strengthMode)
@@ -254,7 +316,14 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
 
     void UpdatePreview(Mouse mouse, bool erasePreview)
     {
-        if (!TryGetMouseHit(mouse, out Planet planet, out Vector3 direction, out float surfaceRadius, out _, out Vector3 normal))
+        if (!TryGetMouseHit(mouse, out Vector3 direction, out float surfaceRadius))
+        {
+            SetPreviewVisible(false);
+            return;
+        }
+
+        ISurfacePathBrushService brush = ResolvePathBrush();
+        if (brush == null)
         {
             SetPreviewVisible(false);
             return;
@@ -263,9 +332,6 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
         EnsurePreview();
         SetPreviewVisible(true);
 
-        bool square = Shape == SurfacePathShape.HardSquare;
-        int segments = square ? 4 : 64;
-        _preview.positionCount = segments + 1;
         _preview.widthMultiplier = Mathf.Clamp(RadiusMeters * 0.035f, 0.05f, 1.5f);
         Color previewColor = erasePreview
             ? new Color(0.1f, 0.85f, 1f, Mathf.Lerp(0.35f, 0.9f, Strength))
@@ -275,83 +341,39 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
         if (_previewMaterial != null)
             _previewMaterial.color = previewColor;
 
-        if (square)
+        float lift = Mathf.Clamp(RadiusMeters * 0.12f, 1f, 5f);
+        if (!brush.TryBuildSurfacePathBrushPreview(direction, surfaceRadius, RadiusMeters, Shape,
+                _previewPoints, PreviewSegments, lift, out int count))
         {
-            UpdateSquarePreview(planet, direction, surfaceRadius, normal);
+            SetPreviewVisible(false);
             return;
         }
 
-        UpdateDiscPreview(planet, direction, surfaceRadius, normal, segments);
+        _preview.positionCount = count;
+        for (int i = 0; i < count; i++)
+            _preview.SetPosition(i, _previewPoints[i]);
     }
 
-    void UpdateDiscPreview(Planet planet, Vector3 direction, float surfaceRadius, Vector3 centerNormal, int segments)
+    bool TryGetMouseHit(Mouse mouse, out Vector3 direction, out float surfaceRadius)
     {
-        FaceSpaceCellRangeBuilder.DirectionToFaceUv(direction, out int face, out Vector2 faceUv);
-        float metersPerUv = FaceSpaceCellRangeBuilder.ComputeMetersPerUV(face, faceUv, Mathf.Max(surfaceRadius, 0.001f));
-        float radiusUv = Mathf.Max(0.00001f, RadiusMeters / metersPerUv);
-        float worldScale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(planet.transform);
-        float localRadius = surfaceRadius / Mathf.Max(worldScale, 0.0001f);
-        float lift = Mathf.Clamp(RadiusMeters * 0.12f, 1f, 5f);
-
-        for (int i = 0; i <= segments; i++)
-        {
-            float angle = i / (float)segments * Mathf.PI * 2f;
-            Vector2 uv = faceUv + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radiusUv;
-            Vector3 local = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(face, uv) * localRadius;
-            Vector3 world = planet.transform.TransformPoint(local);
-            Vector3 normal = (world - planet.transform.position).sqrMagnitude > 0.0001f
-                ? (world - planet.transform.position).normalized
-                : centerNormal;
-            _preview.SetPosition(i, world + normal * lift);
-        }
-    }
-
-    void UpdateSquarePreview(Planet planet, Vector3 direction, float surfaceRadius, Vector3 centerNormal)
-    {
-        FaceSpaceCellRangeBuilder.DirectionToFaceUv(direction, out int face, out Vector2 faceUv);
-        float metersPerUv = FaceSpaceCellRangeBuilder.ComputeMetersPerUV(face, faceUv, Mathf.Max(surfaceRadius, 0.001f));
-        float halfUv = Mathf.Max(0.00001f, RadiusMeters / metersPerUv);
-        float worldScale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(planet.transform);
-        float localRadius = surfaceRadius / Mathf.Max(worldScale, 0.0001f);
-        float lift = Mathf.Clamp(RadiusMeters * 0.12f, 1f, 5f);
-
-        for (int i = 0; i <= 4; i++)
-        {
-            int corner = i & 3;
-            float sx = (corner == 0 || corner == 3) ? -1f : 1f;
-            float sy = corner < 2 ? -1f : 1f;
-            Vector2 uv = faceUv + new Vector2(sx, sy) * halfUv;
-            Vector3 local = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(face, uv) * localRadius;
-            Vector3 world = planet.transform.TransformPoint(local);
-            Vector3 normal = (world - planet.transform.position).sqrMagnitude > 0.0001f
-                ? (world - planet.transform.position).normalized
-                : centerNormal;
-            _preview.SetPosition(i, world + normal * lift);
-        }
-    }
-
-    static bool TryGetMouseHit(Mouse mouse, out Planet planet, out Vector3 direction,
-        out float surfaceRadius, out Vector3 point, out Vector3 normal)
-    {
-        planet = ResolvePlanet();
         direction = default;
         surfaceRadius = 0f;
-        point = default;
-        normal = default;
-        Camera camera = Camera.main;
-        if (camera == null || planet == null)
+
+        Camera camera = ResolveCamera();
+        IPlanetSurfaceRaycaster raycaster = ResolveRaycaster();
+        ISurfacePathBrushService brush = ResolvePathBrush();
+        if (camera == null || raycaster == null || brush == null)
             return false;
 
         Ray ray = camera.ScreenPointToRay(mouse.position.ReadValue());
-        float maxDistance = Mathf.Max(planet.LastGeneratedRadius * 4f, 10000f);
-        if (!planet.TryRaycastSurface(ray, maxDistance, out PlanetSurfaceRaycastHit hit))
+        float maxDistance = Mathf.Max(camera.farClipPlane, 10000f);
+        if (!raycaster.TryRaycastSurface(ray, maxDistance, out PlanetSurfaceRaycastHit hit))
+            return false;
+        if (!brush.TryGetSurfacePathLocalDirection(hit.Point, out direction))
             return false;
 
-        point = hit.Point;
-        direction = planet.transform.InverseTransformPoint(point).normalized;
         surfaceRadius = hit.SurfaceRadius;
-        normal = (point - planet.transform.position).normalized;
-        return normal.sqrMagnitude > 0.0001f;
+        return true;
     }
 
     void EnsurePreview()
@@ -381,38 +403,16 @@ public sealed class SurfacePathMousePainter : MonoBehaviour
             _preview.enabled = visible;
     }
 
-    void SetCameraLookBlocked(bool blocked)
-    {
-        if (!ServiceLocator.TryGet(out IInputMapService input) || input.LookHold == null)
-            return;
-
-        if (blocked)
-        {
-            if (!_lookHoldDisabled && input.LookHold.enabled)
-            {
-                input.LookHold.Disable();
-                _lookHoldDisabled = true;
-            }
-            return;
-        }
-
-        if (_lookHoldDisabled)
-        {
-            input.LookHold.Enable();
-            _lookHoldDisabled = false;
-        }
-    }
-
     static string ShapeName(SurfacePathShape shape)
     {
         switch (shape)
         {
-            case SurfacePathShape.HardDisc:
-                return "disc";
             case SurfacePathShape.HardSquare:
                 return "square";
+            case SurfacePathShape.SoftDisc:
+                return "soft-disc";
             default:
-                return "disc";
+                return "hard-disc";
         }
     }
 }
