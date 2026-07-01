@@ -46,7 +46,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     PlanetGrassCoordinator _grass;
     PlanetWaterSurface _waterSurface;
     PlanetTerrainMaterial _terrainMaterial;
-    SurfacePathEditController _surfacePathEdits;
+    SurfaceEditController _surfaceEdits;
 
     static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
     static readonly int _seaLevelRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
@@ -80,8 +80,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         context.Register<IPlanet>(this);
         context.Register<IPlanetSurfaceSampler>(this);
         context.Register<IPlanetSurfaceRaycaster>(this);
-        context.Register<ISurfacePathBrushService>(_surfacePathEdits);
-        context.Register(_surfacePathEdits);
+        context.Register<ISurfacePathBrushService>(_surfaceEdits);
+        context.Register(_surfaceEdits);
         context.Register<IClimateSampler>(this);
         context.Register<IGrassRuntimeControl>(this);
         context.Register<IGrassNearFieldStatsProvider>(_grass);
@@ -92,7 +92,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         EnsureGrassCoordinator();
         _waterSurface ??= new PlanetWaterSurface(transform);
         _terrainMaterial ??= new PlanetTerrainMaterial(Logger);
-        _surfacePathEdits ??= new SurfacePathEditController(transform, Logger, () => _grass.InvalidateSurfaceMasks());
+        _surfaceEdits ??= new SurfaceEditController(transform, Logger, () => _grass.InvalidateSurfaceMasks());
     }
 
     void EnsureGrassCoordinator()
@@ -181,7 +181,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         if (_observerCamera == null) return;
         _surfaceProvider.Tick(_observerCamera.transform.position, _observerCamera);
         _grass.Tick(_observerCamera);
-        _surfacePathEdits?.TickRegrowth();
+        _surfaceEdits?.TickRegrowth();
     }
 
     async Awaitable InitializeAsync(IProgressHandle progress, CancellationToken ct)
@@ -311,8 +311,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             long waterMs = phaseTimer.ElapsedMilliseconds;
             _grass.Configure(_surfaceProvider as ChunkedSurfaceProvider,
                 _colorGenerator.SurfaceArrays, Seed, _observerCamera, _terrainMaterial.Material);
-            _surfacePathEdits.Configure(_surfaceProvider as ChunkedSurfaceProvider, _terrainMaterial.Material, Seed);
-            int replayedSurfaceEdits = _surfacePathEdits.ReplayStamps(clearFirst: false);
+            _surfaceEdits.Configure(_surfaceProvider as ChunkedSurfaceProvider, _terrainMaterial.Material, Seed);
+            int replayedSurfaceEdits = _surfaceEdits.ReplayStamps(clearFirst: false);
             if (replayedSurfaceEdits > 0)
                 Logger.Log(LogLevel.Debug, "Planet", $"Replayed {replayedSurfaceEdits} saved surface edit(s).");
             // Atmosphere is rendered by AtmosphereController + AtmosphereRenderFeature (post-process).

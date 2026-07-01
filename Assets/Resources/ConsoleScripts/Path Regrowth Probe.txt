@@ -1,0 +1,66 @@
+@name Path Regrowth Probe
+@timeout 240
+@defer debug.capture-set "Grass"
+@defer grass.enabled true
+@defer grass.layer near true
+@defer grass.layer chunk true
+@defer grass.layer blanket true
+@defer grass.overlay-strength 1
+@defer grass.surface-brightness 0.35
+@defer grass.debug-tint 0
+@defer grass.debug-layer-colors false
+@defer path.debug false
+@defer path.regrow-refresh 1
+@sidecar camera.position
+@sidecar debug.capture-set
+@sidecar planet.status
+@sidecar grass.status
+@sidecar path.status
+@sidecar scorch.status
+
+# Uses the same lush-field pose as Path Pattern Probe.
+# The third paint arg is regrowSeconds. Small values are for visual testing;
+# final gameplay can use game-day/month scale values.
+debug.capture-set "Grass Visual"
+camera.teleport "Path Pattern Field"
+camera.speed 8
+light.local-noon
+grass.enabled true
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+grass.overlay-strength 1
+grass.surface-brightness 0.35
+grass.debug-tint 0
+grass.debug-layer-colors false
+path.debug false
+path.regrow-refresh 1
+path.clear-saved
+@wait seconds 2
+debug.capture
+
+# Temporary path, fully regrown after about 12 seconds.
+path.paint-here 28 1 12
+@wait frames 30
+debug.capture
+@wait seconds 4
+debug.capture
+@wait seconds 4
+debug.capture
+@wait seconds 5
+debug.capture
+
+# Temporary scorch, same regrowth timing.
+path.clear-saved
+@wait seconds 2
+scorch.paint-here 30 1 12
+@wait frames 30
+debug.capture
+@wait seconds 4
+debug.capture
+@wait seconds 4
+debug.capture
+@wait seconds 5
+debug.capture
+
+path.regrow-refresh 5

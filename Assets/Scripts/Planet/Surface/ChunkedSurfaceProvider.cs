@@ -491,7 +491,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         return changedPixels > 0;
     }
 
-    public int RebuildPathWearFromStamps(IReadOnlyList<SurfacePathEditStamp> stamps, long now)
+    public int RebuildPathWearFromStamps(IReadOnlyList<SurfaceEditStamp> stamps, long now)
     {
         EndSurfaceStateBatch();
         ClearPathWearMasks();
@@ -508,7 +508,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
 
         for (int i = 0; i < stamps.Count; i++)
         {
-            SurfacePathEditStamp stamp = stamps[i];
+            SurfaceEditStamp stamp = stamps[i];
             if (stamp.kind != "path")
                 continue;
             if (!TryCreateBakeStamp(stamp, now, out PathWearBakeStamp bake))
@@ -550,7 +550,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         return baked;
     }
 
-    public int RebuildSurfaceStateFromStamps(IReadOnlyList<SurfacePathEditStamp> stamps, long now)
+    public int RebuildSurfaceStateFromStamps(IReadOnlyList<SurfaceEditStamp> stamps, long now)
     {
         EndSurfaceStateBatch();
         ClearSurfaceStateOnly();
@@ -560,7 +560,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         int replayed = 0;
         for (int i = 0; i < stamps.Count; i++)
         {
-            SurfacePathEditStamp stamp = stamps[i];
+            SurfaceEditStamp stamp = stamps[i];
             if (stamp.kind != "scorch")
                 continue;
 
@@ -618,7 +618,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         return true;
     }
 
-    bool TryCreateBakeStamp(SurfacePathEditStamp stamp, long now, out PathWearBakeStamp bake)
+    bool TryCreateBakeStamp(SurfaceEditStamp stamp, long now, out PathWearBakeStamp bake)
     {
         bake = default;
         float strength = EffectiveStampStrength(stamp, now);
@@ -1293,7 +1293,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         return (byte)(255 - ((remaining + 127) / 255));
     }
 
-    static float EffectiveStampStrength(SurfacePathEditStamp stamp, long now)
+    static float EffectiveStampStrength(SurfaceEditStamp stamp, long now)
     {
         float strength = Mathf.Clamp01(stamp.strength);
         if (stamp.regrowSeconds <= 0f)

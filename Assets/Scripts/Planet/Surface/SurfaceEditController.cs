@@ -2,16 +2,18 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
-public sealed class SurfacePathEditController : ISurfacePathBrushService
+// Saved edit stamps are the durable world state. Path wear, scorch, and future
+// surface textures are derived caches rebuilt from this stamp list.
+public sealed class SurfaceEditController : ISurfacePathBrushService
 {
     const int SaveVersion = 1;
-    const float RegrowRefreshSeconds = 5f;
+    const float DefaultRegrowRefreshSeconds = 5f;
     static readonly int SurfacePathDebugId = Shader.PropertyToID("_SurfacePathDebug");
 
     readonly Transform _planetTransform;
     readonly ILogger _logger;
     readonly System.Action _invalidateGrass;
-    readonly List<SurfacePathEditStamp> _stamps = new();
+    readonly List<SurfaceEditStamp> _stamps = new();
 
     ChunkedSurfaceProvider _provider;
     Material _terrainMaterial;
@@ -22,8 +24,9 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
     int _strokeCounter;
     int _activeStrokeId;
     bool _strokeOpen;
+    float _regrowRefreshSeconds = DefaultRegrowRefreshSeconds;
 
-    public SurfacePathEditController(Transform planetTransform, ILogger logger, System.Action invalidateGrass)
+    public SurfaceEditController(Transform planetTransform, ILogger logger, System.Action invalidateGrass)
     {
         _planetTransform = planetTransform;
         _logger = logger;
@@ -68,7 +71,7 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
 
         if (saveStamp)
         {
-            SurfacePathEditStamp stamp = new()
+            SurfaceEditStamp stamp = new()
             {
                 kind = "path",
                 shape = ShapeId(shape),
@@ -134,7 +137,7 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
 
         if (saveStamp)
         {
-            SurfacePathEditStamp stamp = new()
+            SurfaceEditStamp stamp = new()
             {
                 kind = "scorch",
                 shape = ShapeId(shape),
@@ -229,10 +232,11 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
         int active = CountActiveStamps(NowUnixSeconds());
         int pathCount = CountKind("path");
         int scorchCount = CountKind("scorch");
+        int regrowing = CountRegrowingStamps();
         float debug = _terrainMaterial != null && _terrainMaterial.HasProperty(SurfacePathDebugId)
             ? _terrainMaterial.GetFloat(SurfacePathDebugId)
             : 0f;
-        return $"path mask ready: wear={PlanetChunkTextures.PathWearResolution} R8 vector-baked, surface-state fallback=64 RGBA; debug={DebugName(debug)}, saved={_stamps.Count} (path={pathCount}, scorch={scorchCount}), active={active}, file={Path.GetFileName(FilePath())}";
+        return $"path mask ready: wear={PlanetChunkTextures.PathWearResolution} R8 vector-baked, surface-state fallback=64 RGBA; debug={DebugName(debug)}, saved={_stamps.Count} (path={pathCount}, scorch={scorchCount}, regrowing={regrowing}), active={active}, regrow-refresh={_regrowRefreshSeconds:F1}s, file={Path.GetFileName(FilePath())}";
     }
 
     public string SetDebug(bool? enabled)
@@ -256,6 +260,24 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
             _terrainMaterial.SetFloat(SurfacePathDebugId, enabled.Value ? 2f : 0f);
 
         return $"path debug: {DebugName(_terrainMaterial.GetFloat(SurfacePathDebugId))}";
+    }
+
+    public string SetRegrowRefresh(float? seconds)
+    {
+        if (seconds.HasValue)
+        {
+            _regrowRefreshSeconds = Mathf.Clamp(seconds.Value, 0.1f, 3600f);
+            _nextRegrowRefreshTime = Time.unscaledTime;
+        }
+
+        return $"path regrow-refresh: {_regrowRefreshSeconds:F1}s";
+    }
+
+    public string RefreshRegrowthNow()
+    {
+        int replayed = ReplayStamps(clearFirst: true);
+        _nextRegrowRefreshTime = Time.unscaledTime + _regrowRefreshSeconds;
+        return $"regrowth refreshed; replayed {replayed} saved surface edit(s)";
     }
 
     public void FlushPendingSave()
@@ -401,14 +423,17 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
 
         EnsureLoaded();
         if (!HasRegrowingStamps())
+        {
+            _nextRegrowRefreshTime = Time.unscaledTime + _regrowRefreshSeconds;
             return;
+        }
 
         // ponytail: coarse replay is enough for debug regrowth; shader-time fade if this needs to look smooth.
         ReplayStamps(clearFirst: true);
-        _nextRegrowRefreshTime = Time.unscaledTime + RegrowRefreshSeconds;
+        _nextRegrowRefreshTime = Time.unscaledTime + _regrowRefreshSeconds;
     }
 
-    void AddStamp(SurfacePathEditStamp stamp, bool saveImmediately)
+    void AddStamp(SurfaceEditStamp stamp, bool saveImmediately)
     {
         EnsureLoaded();
         _saveDirty |= PruneExpired(NowUnixSeconds()) > 0;
@@ -437,7 +462,7 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
         try
         {
             string json = File.ReadAllText(path);
-            SurfacePathEditSaveData data = JsonUtility.FromJson<SurfacePathEditSaveData>(json);
+            SurfaceEditSaveData data = JsonUtility.FromJson<SurfaceEditSaveData>(json);
             if (data?.stamps == null || data.version != SaveVersion || data.planetSeed != _seed)
                 return;
 
@@ -461,7 +486,7 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
         }
         catch (System.Exception ex)
         {
-            _logger.LogException("SurfacePath", ex);
+            _logger.LogException("SurfaceEdit", ex);
         }
     }
 
@@ -471,7 +496,7 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
         if (!string.IsNullOrEmpty(directory))
             Directory.CreateDirectory(directory);
 
-        SurfacePathEditSaveData data = new()
+        SurfaceEditSaveData data = new()
         {
             version = SaveVersion,
             planetSeed = _seed,
@@ -517,6 +542,17 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
         return count;
     }
 
+    int CountRegrowingStamps()
+    {
+        int count = 0;
+        for (int i = 0; i < _stamps.Count; i++)
+        {
+            if (_stamps[i].regrowSeconds > 0f)
+                count++;
+        }
+        return count;
+    }
+
     bool HasRegrowingStamps()
     {
         for (int i = 0; i < _stamps.Count; i++)
@@ -527,7 +563,7 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
         return false;
     }
 
-    static float EffectiveStrength(SurfacePathEditStamp stamp, long now)
+    static float EffectiveStrength(SurfaceEditStamp stamp, long now)
     {
         float strength = Mathf.Clamp01(stamp.strength);
         if (stamp.regrowSeconds <= 0f)
@@ -587,15 +623,15 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
 }
 
 [System.Serializable]
-public sealed class SurfacePathEditSaveData
+public sealed class SurfaceEditSaveData
 {
     public int version;
     public int planetSeed;
-    public List<SurfacePathEditStamp> stamps;
+    public List<SurfaceEditStamp> stamps;
 }
 
 [System.Serializable]
-public sealed class SurfacePathEditStamp
+public sealed class SurfaceEditStamp
 {
     public string kind;
     public string shape;

@@ -76,6 +76,10 @@ Search the Codex indexes before reopening these topics:
   support; jagged hard-disc edges were fixed by antialiasing the baked
   hard-disc mask edge in `ChunkedSurfaceProvider.PathWearMask` with
   `HardDiscEdgePixels` rather than removing hard-disc from the mouse tool.
+- Surface edits: saved `SurfaceEditStamp` records are the source of truth.
+  Path wear, scorch, and future terrain/edit textures are derived caches that
+  can be rebuilt from stamps. Keep `path.*` and `scorch.*` console commands as
+  wrappers over the shared `SurfaceEditController`.
 
 ## Updating Memory
 
