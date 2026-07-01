@@ -110,6 +110,69 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
         return painted;
     }
 
+    public bool TryPaintScorch(Vector3 localUnitDirection, float radiusMeters, float strength,
+        float regrowSeconds, SurfacePathShape shape, SurfacePathOperation operation, bool saveStamp,
+        out string summary, bool invalidateGrass = true, bool saveImmediately = true)
+    {
+        summary = "scorch paint requires a generated chunked planet";
+        if (_provider == null)
+            return false;
+
+        float radius = Mathf.Max(radiusMeters, 0.1f);
+        float alpha = Mathf.Clamp01(strength);
+        bool painted = _provider.TryPaintSurfaceStateChannel(
+            localUnitDirection.normalized,
+            radius,
+            alpha,
+            channel: 1,
+            shape,
+            operation,
+            batched: !saveImmediately,
+            out summary);
+        if (!painted)
+            return false;
+
+        if (saveStamp)
+        {
+            SurfacePathEditStamp stamp = new()
+            {
+                kind = "scorch",
+                shape = ShapeId(shape),
+                operation = OperationId(operation),
+                strokeId = NextStrokeId(saveImmediately),
+                direction = localUnitDirection.normalized,
+                radiusMeters = radius,
+                strength = alpha,
+                createdUnixSeconds = NowUnixSeconds(),
+                regrowSeconds = Mathf.Max(0f, regrowSeconds),
+            };
+            AddStamp(stamp, saveImmediately);
+            summary += stamp.regrowSeconds > 0f
+                ? $"; saved {stamp.operation} scorch regrow={stamp.regrowSeconds:F0}s"
+                : $"; saved permanent {stamp.operation} scorch";
+        }
+
+        if (invalidateGrass)
+            _invalidateGrass?.Invoke();
+        return true;
+    }
+
+    public bool TryPaintScorchPattern(Vector3 localUnitDirection, float sizeMeters, float strength, out string summary)
+    {
+        summary = "scorch pattern requires a generated chunked planet";
+        if (_provider == null)
+            return false;
+
+        bool painted = _provider.TryPaintScorchTestPattern(
+            localUnitDirection.normalized,
+            Mathf.Max(sizeMeters, 1f),
+            Mathf.Clamp01(strength),
+            out summary);
+        if (painted)
+            _invalidateGrass?.Invoke();
+        return painted;
+    }
+
     public int ClearRuntimeMasks()
     {
         int cleared = _provider != null ? _provider.ClearSurfaceStateMasks() : 0;
@@ -138,6 +201,25 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
         return $"cleared {stamps} saved path stamp(s), {chunks} runtime chunk mask(s)";
     }
 
+    public string ClearSavedScorchStamps()
+    {
+        EnsureLoaded();
+        int removed = 0;
+        for (int i = _stamps.Count - 1; i >= 0; i--)
+        {
+            if (_stamps[i].kind != "scorch")
+                continue;
+
+            _stamps.RemoveAt(i);
+            removed++;
+        }
+
+        if (removed > 0)
+            Save();
+        int replayed = ReplayStamps(clearFirst: true);
+        return $"cleared {removed} saved scorch stamp(s), replayed {replayed} remaining surface edit(s)";
+    }
+
     public string Status()
     {
         if (_provider == null)
@@ -145,10 +227,12 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
 
         EnsureLoaded();
         int active = CountActiveStamps(NowUnixSeconds());
+        int pathCount = CountKind("path");
+        int scorchCount = CountKind("scorch");
         float debug = _terrainMaterial != null && _terrainMaterial.HasProperty(SurfacePathDebugId)
             ? _terrainMaterial.GetFloat(SurfacePathDebugId)
             : 0f;
-        return $"path mask ready: wear={PlanetChunkTextures.PathWearResolution} R8 vector-baked, surface-state fallback=64 RGBA; debug={DebugName(debug)}, saved={_stamps.Count}, active={active}, file={Path.GetFileName(FilePath())}";
+        return $"path mask ready: wear={PlanetChunkTextures.PathWearResolution} R8 vector-baked, surface-state fallback=64 RGBA; debug={DebugName(debug)}, saved={_stamps.Count} (path={pathCount}, scorch={scorchCount}), active={active}, file={Path.GetFileName(FilePath())}";
     }
 
     public string SetDebug(bool? enabled)
@@ -301,7 +385,8 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
         if (clearFirst)
             _provider.ClearSurfaceStateMasks();
 
-        int replayed = _provider.RebuildPathWearFromStamps(_stamps, now);
+        int replayed = _provider.RebuildPathWearFromStamps(_stamps, now)
+            + _provider.RebuildSurfaceStateFromStamps(_stamps, now);
         if (removed > 0)
             Save();
         if (clearFirst || replayed > 0)
@@ -419,6 +504,17 @@ public sealed class SurfacePathEditController : ISurfacePathBrushService
                 active++;
         }
         return active;
+    }
+
+    int CountKind(string kind)
+    {
+        int count = 0;
+        for (int i = 0; i < _stamps.Count; i++)
+        {
+            if (_stamps[i].kind == kind)
+                count++;
+        }
+        return count;
     }
 
     bool HasRegrowingStamps()

@@ -1,0 +1,65 @@
+@name Scorch Pattern Probe
+@timeout 240
+@defer debug.capture-set "Grass"
+@defer grass.enabled true
+@defer grass.layer near true
+@defer grass.layer chunk true
+@defer grass.layer blanket true
+@defer grass.overlay-strength 1
+@defer grass.surface-brightness 0.35
+@defer grass.debug-tint 0
+@defer grass.debug-layer-colors false
+@defer path.debug false
+@defer camera.speed 20
+@sidecar camera.position
+@sidecar debug.capture-set
+@sidecar debug.mode
+@sidecar planet.status
+@sidecar light.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+@sidecar path.status
+@sidecar scorch.status
+
+# Uses the same lush-field pose as Path Pattern Probe.
+# Paints a non-saved scorch test pattern:
+# light burn, severe burn, and irregular mixed-strength burn.
+debug.capture-set "Grass Visual"
+camera.teleport "Path Pattern Field"
+camera.speed 8
+light.local-noon
+grass.enabled true
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+grass.overlay-strength 1
+grass.surface-brightness 0.35
+grass.debug-tint 0
+grass.debug-layer-colors false
+path.debug false
+path.clear
+@wait seconds 3
+debug.capture
+
+scorch.pattern-here 260 1
+@wait seconds 2
+debug.capture
+
+# Hot-pink mask view confirms the raw scorch coverage.
+path.debug true
+@wait frames 30
+debug.capture
+
+# Terrain-only view makes the burn strengths easier to judge.
+path.debug false
+grass.enabled false
+@wait frames 30
+debug.capture
+
+# Final normal view.
+grass.enabled true
+grass.layer near true
+grass.layer chunk true
+grass.layer blanket true
+@wait frames 30
+debug.capture

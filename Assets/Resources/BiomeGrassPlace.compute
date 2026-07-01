@@ -141,7 +141,8 @@ float4 SampleAtlas4(Texture2D<float4> tex, float2 uv, int resolution)
 
 float SurfaceStateReject(float4 state)
 {
-    return saturate(max(state.r, state.g));
+    float scorchReject = smoothstep(0.08, 0.72, state.g);
+    return saturate(max(state.r, scorchReject));
 }
 
 float SampleAtlas1(Texture2D<float> tex, float2 uv, int resolution)

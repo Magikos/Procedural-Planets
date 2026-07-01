@@ -756,11 +756,13 @@ Shader "Planet/VertexColor"
 
                 float paved = saturate(max(surfaceState.r, pathWear));
                 float scorched = saturate(surfaceState.g);
-                float pathMask = saturate(max(paved, scorched));
+                float scorchVisual = smoothstep(0.08, 0.72, scorched);
+                float pathMask = saturate(max(paved, scorchVisual));
                 if (_SurfacePathDebug > 0.5 && pathMask > 0.001)
                     return lerp(terrainAlbedo, float3(1.0, 0.0, 0.85), pathMask);
                 terrainAlbedo = lerp(terrainAlbedo, float3(0.32, 0.26, 0.18), paved);
-                terrainAlbedo = lerp(terrainAlbedo, float3(0.055, 0.050, 0.045), scorched);
+                float3 scorchColor = lerp(float3(0.035, 0.027, 0.020), float3(0.002, 0.002, 0.002), smoothstep(0.45, 1.0, scorched));
+                terrainAlbedo = lerp(terrainAlbedo, scorchColor, scorchVisual);
 
                 GrassOverlayEval eval = EvaluateGrassOverlay(chunkUv, positionWS, geometricNormalWS);
                 // Keep close ground free to show through blade gaps, then hand off to a full

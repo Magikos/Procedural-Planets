@@ -302,3 +302,164 @@ public static class SurfacePathDebugCommands
         return cameraTransform != null;
     }
 }
+
+[CommandPrefix("scorch")]
+public static class SurfaceScorchDebugCommands
+{
+    [ConsoleCommand("paint", "Paint and save a soft scorched mask where the camera is aimed. Args: radiusMeters strength01 regrowSeconds(0=permanent).", MonoTargetType.Static)]
+    public static string PaintCmd(float? radiusMeters = null, float? strength = null, float? regrowSeconds = null)
+    {
+        if (!TryGetPathEdits(out SurfacePathEditController edits, out string error))
+            return error;
+        if (!TryGetCameraRay(out Ray ray, out error))
+            return error;
+        if (!TryGetSurfaceDirection(edits, ray, out Vector3 direction, out error))
+            return error;
+
+        NormalizePaintArgs(radiusMeters, strength, regrowSeconds, 10f, out float radius, out float alpha, out float regrow);
+        return edits.TryPaintScorch(direction, radius, alpha, regrow,
+                SurfacePathShape.SoftDisc, SurfacePathOperation.Paint, saveStamp: true, out string summary)
+            ? summary
+            : summary;
+    }
+
+    [ConsoleCommand("paint-here", "Paint and save a soft scorched mask under the camera. Args: radiusMeters strength01 regrowSeconds(0=permanent).", MonoTargetType.Static)]
+    public static string PaintHereCmd(float? radiusMeters = null, float? strength = null, float? regrowSeconds = null)
+    {
+        if (!TryGetPathEdits(out SurfacePathEditController edits, out string error))
+            return error;
+        if (!TryGetCameraTransform(out Transform cameraTransform, out error))
+            return error;
+        if (!edits.TryGetSurfacePathLocalDirection(cameraTransform.position, out Vector3 direction))
+            return "scorch paint-here requires a camera away from the planet center";
+
+        NormalizePaintArgs(radiusMeters, strength, regrowSeconds, 16f, out float radius, out float alpha, out float regrow);
+        return edits.TryPaintScorch(direction, radius, alpha, regrow,
+                SurfacePathShape.SoftDisc, SurfacePathOperation.Paint, saveStamp: true, out string summary)
+            ? summary
+            : summary;
+    }
+
+    [ConsoleCommand("pattern-here", "Paint deterministic scorch test patterns under the camera. Args: sizeMeters strength01.", MonoTargetType.Static)]
+    public static string PatternHereCmd(float? sizeMeters = null, float? strength = null)
+    {
+        if (!TryGetPathEdits(out SurfacePathEditController edits, out string error))
+            return error;
+        if (!TryGetCameraTransform(out Transform cameraTransform, out error))
+            return error;
+        if (!edits.TryGetSurfacePathLocalDirection(cameraTransform.position, out Vector3 direction))
+            return "scorch pattern-here requires a camera away from the planet center";
+
+        float size = Mathf.Clamp(sizeMeters ?? 220f, 16f, 1000f);
+        float alpha = Mathf.Clamp01(strength ?? 1f);
+        return edits.TryPaintScorchPattern(direction, size, alpha, out string summary)
+            ? summary
+            : summary;
+    }
+
+    [ConsoleCommand("clear", "Delete saved scorch stamps and replay remaining surface edits.", MonoTargetType.Static)]
+    public static string ClearCmd()
+    {
+        return TryGetPathEdits(out SurfacePathEditController edits, out _)
+            ? edits.ClearSavedScorchStamps()
+            : "scorch clear requires an active Planet";
+    }
+
+    [ConsoleCommand("replay", "Replay saved path and scorch stamps.", MonoTargetType.Static)]
+    public static string ReplayCmd()
+    {
+        return TryGetPathEdits(out SurfacePathEditController edits, out _)
+            ? edits.ReplaySavedStamps()
+            : "scorch replay requires an active Planet";
+    }
+
+    [ConsoleCommand("status", "Show saved surface edit status, including scorch count.", MonoTargetType.Static)]
+    public static string StatusCmd()
+    {
+        return TryGetPathEdits(out SurfacePathEditController edits, out _)
+            ? edits.Status()
+            : "scorch status requires an active Planet";
+    }
+
+    static bool TryGetPathEdits(out SurfacePathEditController edits, out string error)
+    {
+        if (ServiceLocator.TryGet(out edits))
+        {
+            error = null;
+            return true;
+        }
+
+        error = "scorch requires an active Planet";
+        return false;
+    }
+
+    static void NormalizePaintArgs(float? radiusMeters, float? strength, float? regrowSeconds,
+        float defaultRadius, out float radius, out float alpha, out float regrow)
+    {
+        radius = Mathf.Clamp(radiusMeters ?? defaultRadius, 0.25f, 250f);
+        alpha = Mathf.Clamp01(strength ?? 1f);
+        regrow = Mathf.Max(0f, regrowSeconds ?? 0f);
+    }
+
+    static bool TryGetSurfaceDirection(SurfacePathEditController edits, Ray ray, out Vector3 localDirection, out string error)
+    {
+        localDirection = default;
+        if (!ServiceLocator.TryGet(out IPlanetSurfaceRaycaster raycaster))
+        {
+            error = "scorch paint requires an active planet surface raycaster";
+            return false;
+        }
+
+        float maxDistance = GetMaxRayDistance();
+        if (!raycaster.TryRaycastSurface(ray, maxDistance, out PlanetSurfaceRaycastHit hit))
+        {
+            error = "scorch paint missed the visible planet surface";
+            return false;
+        }
+
+        if (!edits.TryGetSurfacePathLocalDirection(hit.Point, out localDirection))
+        {
+            error = "scorch paint hit an invalid surface point";
+            return false;
+        }
+
+        error = null;
+        return true;
+    }
+
+    static float GetMaxRayDistance()
+    {
+        if (ServiceLocator.TryGet(out IPlanet planet) && planet.LastGeneratedRadius > 0f)
+            return Mathf.Max(planet.LastGeneratedRadius * 4f, 10000f);
+
+        Camera camera = Camera.main;
+        return camera != null ? Mathf.Max(camera.farClipPlane, 10000f) : 10000f;
+    }
+
+    static bool TryGetCameraRay(out Ray ray, out string error)
+    {
+        if (!TryGetCameraTransform(out Transform cameraTransform, out error))
+        {
+            ray = default;
+            return false;
+        }
+
+        ray = new Ray(cameraTransform.position, cameraTransform.forward);
+        error = null;
+        return true;
+    }
+
+    static bool TryGetCameraTransform(out Transform cameraTransform, out string error)
+    {
+        cameraTransform = null;
+        if (ServiceLocator.TryGet(out ICameraRigContext context) && context.CameraTransform != null)
+            cameraTransform = context.CameraTransform;
+
+        Camera camera = Camera.main;
+        if (cameraTransform == null && camera != null)
+            cameraTransform = camera.transform;
+
+        error = cameraTransform == null ? "scorch paint requires an active camera" : null;
+        return cameraTransform != null;
+    }
+}

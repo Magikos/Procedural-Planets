@@ -287,7 +287,8 @@ float4 SampleSurfaceState(int face, float2 uv)
 
 float SurfaceStateReject(float4 state)
 {
-    return saturate(max(state.r, state.g));
+    float scorchReject = smoothstep(0.08, 0.72, state.g);
+    return saturate(max(state.r, scorchReject));
 }
 
 float LoadPathWearTexel(int face, int2 ip)

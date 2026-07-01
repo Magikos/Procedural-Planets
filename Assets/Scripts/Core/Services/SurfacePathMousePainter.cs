@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -16,6 +17,7 @@ public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
     public SurfacePathShape Shape = SurfacePathShape.SoftDisc;
 
     readonly Vector3[] _previewPoints = new Vector3[PreviewSegments + 1];
+    readonly List<Vector3> _strokePreviewPoints = new();
 
     bool _dragging;
     bool _hasLastPoint;
@@ -23,6 +25,7 @@ public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
     Vector3 _lastDirection;
     float _lastSurfaceRadius;
     LineRenderer _preview;
+    LineRenderer _strokePreview;
     Material _previewMaterial;
     bool _strokeDirty;
     bool _rightTapCandidate;
@@ -93,6 +96,7 @@ public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
             ResetDrag();
             ResetRightMouseState();
             SetPreviewVisible(false);
+            ClearStrokePreview();
             return;
         }
 
@@ -108,6 +112,7 @@ public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
         if (!BrushActive)
         {
             SetPreviewVisible(false);
+            ClearStrokePreview();
             return;
         }
 
@@ -151,6 +156,7 @@ public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
         ResetDrag();
         ResetRightMouseState();
         SetPreviewVisible(false);
+        ClearStrokePreview();
         ServiceLocator.Unregister<ICameraLookBlocker>(this);
     }
 
@@ -172,12 +178,14 @@ public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
 
     void PaintAtMouse(Mouse mouse, SurfacePathOperation operation, bool force)
     {
-        if (!TryGetMouseHit(mouse, out Vector3 direction, out float surfaceRadius))
+        if (!TryGetMouseHit(mouse, out Vector3 direction, out float surfaceRadius,
+                out Vector3 hitPoint, out Vector3 hitNormal))
             return;
 
         if (!_hasLastPoint)
         {
-            Paint(direction, operation);
+            if (Paint(direction, operation))
+                AddStrokePreviewPoint(hitPoint, hitNormal, operation);
             Remember(direction, surfaceRadius);
             return;
         }
@@ -190,19 +198,25 @@ public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
             return;
 
         int segments = Mathf.Max(1, Mathf.CeilToInt(distance / step));
+        bool painted = false;
         for (int i = 1; i <= segments; i++)
-            Paint(Vector3.Slerp(_lastDirection, direction, i / (float)segments).normalized, operation);
+            painted |= Paint(Vector3.Slerp(_lastDirection, direction, i / (float)segments).normalized, operation);
+        if (painted)
+            AddStrokePreviewPoint(hitPoint, hitNormal, operation);
 
         Remember(direction, surfaceRadius);
     }
 
-    void Paint(Vector3 direction, SurfacePathOperation operation)
+    bool Paint(Vector3 direction, SurfacePathOperation operation)
     {
         if (ResolvePathBrush()?.TryPaintSurfacePathBrushAtLocalDirection(direction, RadiusMeters, Strength,
                 RegrowSeconds, Shape, operation, out _, saveImmediately: false) == true)
         {
             _strokeDirty = true;
+            return true;
         }
+
+        return false;
     }
 
     void Remember(Vector3 direction, float surfaceRadius)
@@ -220,6 +234,7 @@ public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
         if (flush)
             ResolvePathBrush()?.FlushSurfacePathEdits();
         _strokeDirty = false;
+        ClearStrokePreview();
     }
 
     IPlanetSurfaceRaycaster ResolveRaycaster()
@@ -316,7 +331,7 @@ public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
 
     void UpdatePreview(Mouse mouse, bool erasePreview)
     {
-        if (!TryGetMouseHit(mouse, out Vector3 direction, out float surfaceRadius))
+        if (!TryGetMouseHit(mouse, out Vector3 direction, out float surfaceRadius, out _, out _))
         {
             SetPreviewVisible(false);
             return;
@@ -354,10 +369,13 @@ public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
             _preview.SetPosition(i, _previewPoints[i]);
     }
 
-    bool TryGetMouseHit(Mouse mouse, out Vector3 direction, out float surfaceRadius)
+    bool TryGetMouseHit(Mouse mouse, out Vector3 direction, out float surfaceRadius,
+        out Vector3 hitPoint, out Vector3 hitNormal)
     {
         direction = default;
         surfaceRadius = 0f;
+        hitPoint = default;
+        hitNormal = default;
 
         Camera camera = ResolveCamera();
         IPlanetSurfaceRaycaster raycaster = ResolveRaycaster();
@@ -373,6 +391,8 @@ public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
             return false;
 
         surfaceRadius = hit.SurfaceRadius;
+        hitPoint = hit.Point;
+        hitNormal = hit.Normal.sqrMagnitude > 0.0001f ? hit.Normal.normalized : Vector3.up;
         return true;
     }
 
@@ -397,10 +417,59 @@ public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
         _preview.material = _previewMaterial;
     }
 
+    void EnsureStrokePreview()
+    {
+        if (_strokePreview != null)
+            return;
+
+        EnsurePreview();
+        GameObject go = new("Path Stroke Preview");
+        go.transform.SetParent(transform, false);
+        _strokePreview = go.AddComponent<LineRenderer>();
+        _strokePreview.useWorldSpace = true;
+        _strokePreview.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        _strokePreview.receiveShadows = false;
+        _strokePreview.numCornerVertices = 8;
+        _strokePreview.numCapVertices = 8;
+        _strokePreview.material = _previewMaterial;
+        _strokePreview.enabled = false;
+    }
+
+    void AddStrokePreviewPoint(Vector3 point, Vector3 normal, SurfacePathOperation operation)
+    {
+        EnsureStrokePreview();
+
+        Vector3 lifted = point + normal * Mathf.Clamp(RadiusMeters * 0.08f, 0.75f, 4f);
+        int last = _strokePreviewPoints.Count - 1;
+        if (last >= 0 && Vector3.Distance(_strokePreviewPoints[last], lifted) < 0.05f)
+            return;
+
+        _strokePreviewPoints.Add(lifted);
+        Color color = operation == SurfacePathOperation.Erase
+            ? new Color(0.1f, 0.85f, 1f, 0.35f)
+            : new Color(1f, 0.15f, 1f, 0.35f);
+        _strokePreview.startColor = color;
+        _strokePreview.endColor = color;
+        _strokePreview.widthMultiplier = Mathf.Clamp(RadiusMeters * 2f, 0.25f, 40f);
+        _strokePreview.positionCount = _strokePreviewPoints.Count;
+        _strokePreview.SetPosition(_strokePreviewPoints.Count - 1, lifted);
+        _strokePreview.enabled = _strokePreviewPoints.Count > 1;
+    }
+
     void SetPreviewVisible(bool visible)
     {
         if (_preview != null)
             _preview.enabled = visible;
+    }
+
+    void ClearStrokePreview()
+    {
+        _strokePreviewPoints.Clear();
+        if (_strokePreview == null)
+            return;
+
+        _strokePreview.positionCount = 0;
+        _strokePreview.enabled = false;
     }
 
     static string ShapeName(SurfacePathShape shape)
