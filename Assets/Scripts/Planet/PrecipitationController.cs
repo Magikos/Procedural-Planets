@@ -5,7 +5,7 @@ using UnityEngine.Serialization;
 public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl,
     IWorldServiceRegistrar, IWorldSettingsRegistrar
 {
-    static readonly System.Type[] RequiredSettings = { typeof(PrecipitationDto) };
+    static readonly System.Type[] RequiredSettings = { typeof(PrecipitationDto), typeof(CloudDto) };
 
     public enum DebugView
     {
@@ -80,16 +80,15 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     [Range(0.1f, 10f)] public float SnowTemperatureBlendCelsius = 2f;
     public Color SnowColor = new Color(0.88f, 0.92f, 0.96f, 1f);
 
-    [Header("Rain Streaks")]
-    [Range(0, 8000)] public int RainParticleCount = 1800;
-    [Range(0f, 1f)] public float RainOpacity = 0.55f;
-    [Range(0.002f, 0.2f)] public float RainStreakWidth = 0.018f;
-    [Range(0.1f, 2f)] public float RainStreakLength = 0.4f;
-    [Range(0f, 1f)] public float RainThreshold = 0.08f;
-
     const int CurrentLocalWeatherParticleSettingsVersion = 1;
     [SerializeField, HideInInspector]
     int _localWeatherParticleSettingsVersion;
+
+    [Header("Rain Fog")]
+    [Tooltip("Extinction fog from rain along the view ray: distant scenery grays out behind rain columns. 0 disables.")]
+    [Range(0f, 3f)] public float RainFogStrength = 1f;
+    [Tooltip("Screen haze when the camera itself is inside a raining cell, scaled by local rain rate. 0 disables.")]
+    [Range(0f, 3f)] public float RainHazeStrength = 1f;
 
     [Header("Lighting")]
     public Color RainColor = new Color(0.36f, 0.44f, 0.50f, 1f);
@@ -128,40 +127,53 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     static readonly int _weatherParticleDustColorId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleDustColor);
     static readonly int _weatherParticleSnowColorId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleSnowColor);
     static readonly int _weatherParticleProofId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleProof);
-    static readonly int _weatherParticleRainParamsId = Shader.PropertyToID(ShaderGlobalIds.WeatherParticleRainParams);
 
     public bool IsRenderingEnabled =>
-        _seaLevelRadius > 0f && (IsDistantPrecipitationEnabled || IsLocalParticleSystemEnabled);
+        TryResolveSettings()
+        && _seaLevelRadius > 0f
+        && (IsDistantPrecipitationEnabled || IsLocalParticleSystemEnabled || _settings.RenderLocalParticles);
 
     bool IsDistantPrecipitationEnabled =>
-        _settings.RenderPrecipitation && _settings.Intensity > 0f || _settings.DebugMode != DebugView.Off;
+        _settings != null && (_settings.RenderPrecipitation && _settings.Intensity > 0f || _settings.DebugMode != DebugView.Off);
 
     bool IsLocalParticleSystemEnabled =>
-        _settings.RenderLocalParticles && (_settings.DustParticleCount > 0 || _settings.SnowParticleCount > 0 || _settings.RainParticleCount > 0);
+        _settings != null && _settings.RenderLocalParticles && (_settings.DustParticleCount > 0 || _settings.SnowParticleCount > 0);
 
     public bool PrecipitationRenderingEnabled
     {
-        get => _settings.RenderPrecipitation;
-        set => SettingsProvider.Update(_settings with { RenderPrecipitation = value });
+        get => TryResolveSettings() && _settings.RenderPrecipitation;
+        set
+        {
+            if (TryResolveSettings())
+                SettingsProvider.Update(_settings with { RenderPrecipitation = value });
+        }
     }
 
     public bool LocalPrecipitationParticlesEnabled =>
-        _settings.RenderLocalParticles && (_settings.DustParticleCount > 0 || _settings.SnowParticleCount > 0 || _settings.RainParticleCount > 0);
+        TryResolveSettings() && _settings.RenderLocalParticles && (_settings.DustParticleCount > 0 || _settings.SnowParticleCount > 0);
 
-    float IPrecipitationDebugControl.StormThreshold => _settings.StormThreshold;
-    float IPrecipitationDebugControl.LocalParticleRadius => _settings.LocalParticleRadius;
-    float IPrecipitationDebugControl.LocalMaxCameraAltitude => _settings.LocalMaxCameraAltitude;
-    int IPrecipitationDebugControl.DustParticleCount => _settings.DustParticleCount;
-    int IPrecipitationDebugControl.SnowParticleCount => _settings.SnowParticleCount;
-    int IPrecipitationDebugControl.RainParticleCount => _settings.RainParticleCount;
-    int IPrecipitationDebugControl.WeatherParticleProofMode => (int)_settings.ParticleProof;
+    float IPrecipitationDebugControl.StormThreshold => TryResolveSettings() ? _settings.StormThreshold : 0f;
+    float IPrecipitationDebugControl.LocalParticleRadius => TryResolveSettings() ? _settings.LocalParticleRadius : 0f;
+    float IPrecipitationDebugControl.LocalMaxCameraAltitude => TryResolveSettings() ? _settings.LocalMaxCameraAltitude : 0f;
+    int IPrecipitationDebugControl.DustParticleCount => TryResolveSettings() ? _settings.DustParticleCount : 0;
+    int IPrecipitationDebugControl.SnowParticleCount => TryResolveSettings() ? _settings.SnowParticleCount : 0;
+    int IPrecipitationDebugControl.WeatherParticleProofMode => TryResolveSettings() ? (int)_settings.ParticleProof : 0;
     string IPrecipitationDebugControl.WeatherParticleSettingsSummary =>
-        $"dust={_settings.DustSize:F3}m/{_settings.DustStreakLength:F2}m";
+        TryResolveSettings() ? $"dust={_settings.DustSize:F3}m/{_settings.DustStreakLength:F2}m" : "uninitialized";
 
     public bool ShouldRenderLocalParticles(Camera camera)
     {
-        if (!IsRenderingEnabled || !IsLocalParticleSystemEnabled ||
-            _settings.DebugMode != DebugView.Off || camera == null)
+        return TryResolveSettings() && IsLocalParticleSystemEnabled && CameraInLocalParticleBand(camera);
+    }
+
+    public bool ShouldRenderRainParticles(Camera camera)
+    {
+        return TryResolveSettings() && _settings.RenderLocalParticles && CameraInLocalParticleBand(camera);
+    }
+
+    bool CameraInLocalParticleBand(Camera camera)
+    {
+        if (!IsRenderingEnabled || _settings.DebugMode != DebugView.Off || camera == null)
             return false;
 
         float cameraAltitude = Vector3.Distance(camera.transform.position, _planetCenter) - _seaLevelRadius;
@@ -175,10 +187,6 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     void Awake()
     {
         MigrateLocalWeatherParticleSettings();
-        EnsureSettingsRegistered();
-        CloudDto.EnsureRegistered();
-        _settings = SettingsProvider.GetSettings<PrecipitationDto>();
-        _cloudSettings = SettingsProvider.GetSettings<CloudDto>();
     }
 
     public void RegisterWorldServices(IWorldContext context)
@@ -192,11 +200,7 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
     {
         MigrateLocalWeatherParticleSettings();
         EnsureSettingsRegistered(settings);
-    }
-
-    void EnsureSettingsRegistered()
-    {
-        EnsureSettingsRegistered(SettingsProvider.Get());
+        CloudDto.EnsureRegistered(settings);
     }
 
     void EnsureSettingsRegistered(ISettingsService settings)
@@ -222,8 +226,6 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
         EventBus<SettingsChangedEvent>.Listen(OnSettingsChanged);
         _staticPropertiesDirty = true;
-        EnsureStaticPropertiesUploaded();
-        UpdatePerFrameProperties();
     }
 
     void OnDisable()
@@ -236,6 +238,9 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
 
     void Update()
     {
+        if (!TryResolveSettings())
+            return;
+
         EnsureStaticPropertiesUploaded();
         UpdatePerFrameProperties();
     }
@@ -264,6 +269,9 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
 
     void EnsureStaticPropertiesUploaded()
     {
+        if (!TryResolveSettings())
+            return;
+
         if (!_staticPropertiesDirty) return;
         _staticPropertiesDirty = false;
 
@@ -285,8 +293,8 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         Shader.SetGlobalVector(_precipitationFadeParamsId, new Vector4(
             _settings.BottomFeather,
             _settings.TopFeather,
-            0f,
-            0f));
+            _settings.RainFogStrength,
+            _settings.RainHazeStrength));
         Shader.SetGlobalVector(_precipitationVisualParamsId, new Vector4(
             _settings.CurtainScale,
             0f,
@@ -308,14 +316,9 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
             _settings.DustTurbulence));
         Shader.SetGlobalVector(_weatherParticleCountsId, new Vector4(
             Mathf.Max(1, _settings.DustParticleCount),
-            Mathf.Max(1, _settings.RainParticleCount),
+            0f,
             Mathf.Max(1, _settings.SnowParticleCount),
             0f));
-        Shader.SetGlobalVector(_weatherParticleRainParamsId, new Vector4(
-            _settings.RainThreshold,
-            _settings.RainOpacity,
-            _settings.RainStreakWidth,
-            _settings.RainStreakLength));
         Shader.SetGlobalVector(_weatherParticleDustParamsId, new Vector4(
             _settings.DustBaseDensity,
             _settings.DustStormDensity,
@@ -338,6 +341,9 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
 
     void UpdatePerFrameProperties()
     {
+        if (!TryResolveSettings())
+            return;
+
         if (!IsRenderingEnabled) return;
 
         int viewSteps = _settings.ViewSteps;
@@ -358,6 +364,19 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         }
     }
 
+    bool TryResolveSettings()
+    {
+        if (_settings != null && _cloudSettings != null)
+            return true;
+
+        if (!SettingsProvider.TryGetFrozen(out PrecipitationDto settings, out CloudDto cloudSettings))
+            return false;
+
+        _settings = settings;
+        _cloudSettings = cloudSettings;
+        return true;
+    }
+
     // --- Console commands -------------------------------------------------
 
     [ConsoleCommand("intensity", "Get or set precipitation intensity multiplier (range 0-2).", MonoTargetType.Single)]
@@ -375,6 +394,24 @@ public class PrecipitationController : MonoBehaviour, IPrecipitationDebugControl
         if (mode == null) return $"precipitation debug mode: {_settings.DebugMode}";
         SettingsProvider.Update(_settings with { DebugMode = mode.Value });
         return $"precipitation debug mode: {mode.Value}";
+    }
+
+    [ConsoleCommand("fog", "Get or set rain-volume extinction fog strength (0-3). 0 disables.", MonoTargetType.Single)]
+    string FogCmd(float? value = null)
+    {
+        if (value == null) return $"rain fog strength: {_settings.RainFogStrength:F2}";
+        float clamped = Mathf.Clamp(value.Value, 0f, 3f);
+        SettingsProvider.Update(_settings with { RainFogStrength = clamped });
+        return $"rain fog strength: {clamped:F2}";
+    }
+
+    [ConsoleCommand("haze", "Get or set camera-in-rain haze strength (0-3). 0 disables.", MonoTargetType.Single)]
+    string HazeCmd(float? value = null)
+    {
+        if (value == null) return $"rain haze strength: {_settings.RainHazeStrength:F2}";
+        float clamped = Mathf.Clamp(value.Value, 0f, 3f);
+        SettingsProvider.Update(_settings with { RainHazeStrength = clamped });
+        return $"rain haze strength: {clamped:F2}";
     }
 
     void MigrateLocalWeatherParticleSettings()

@@ -1,0 +1,37 @@
+@name Grass Debug View
+@timeout 60
+@defer grass.debug-layer-colors false
+@defer grass.render-mode Physical
+@sidecar camera.position
+@sidecar grass.status
+
+# Stand at ground level in the grass and aim along the surface BEFORE running. The camera is
+# not moved. This captures the same view under several representations so we can read what's
+# actually covering the ground. Set a neutral time (e.g. time.set-local 0.5) yourself first if
+# you want colour reads free of warm-sun cast - it's left out of the script because it needs
+# planet-center/camera state that isn't always ready when the script fires.
+
+# 1. Normal look, Hybrid (blades near + textured cards far - the intended runtime).
+grass.render-mode Hybrid
+@wait frames 5
+debug.screenshot grassdbg-1-hybrid
+
+# 2. Layer colours: near blades = GREEN, blanket = RED, chunk = BLUE. Wherever the ground
+#    reads RED between blades, the coarse far-blanket is showing through (needs denser blades
+#    or the blanket pushed further out). GREEN = near blades own that pixel.
+grass.debug-layer-colors true
+@wait frames 5
+debug.screenshot grassdbg-2-layercolors
+grass.debug-layer-colors false
+
+# 3. Physical (all real blades, no card LOD) for a density reference.
+grass.render-mode Physical
+@wait frames 5
+debug.screenshot grassdbg-3-physical
+
+# 4. Cluster (force cards everywhere) to see the textured tuft cards in isolation.
+grass.render-mode Cluster
+@wait frames 5
+debug.screenshot grassdbg-4-cluster-cards
+
+grass.render-mode Hybrid

@@ -21,6 +21,8 @@ public sealed class CloudDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     const int SilverLining = 5;
     const int MoistureSource = 6;
     const int CondensationChange = 7;
+    const int CloudPrecipitationSignal = 8;
+    const int WeatherPrecipitationSignal = 9;
 
     static readonly int _cloudDebugModeId = Shader.PropertyToID(ShaderGlobalIds.CloudDebugMode);
     static readonly int _cloudWeatherResolutionId = Shader.PropertyToID(ShaderGlobalIds.CloudWeatherResolution);
@@ -45,9 +47,12 @@ public sealed class CloudDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         RegisterMode(registry, SilverLining, "CloudSilverLining", "Clouds");
         RegisterMode(registry, MoistureSource, "CloudMoistureSource", "Clouds");
         RegisterMode(registry, CondensationChange, "CloudCondensationChange", "Clouds");
+        RegisterMode(registry, CloudPrecipitationSignal, "CloudPrecipitationSignal", "Clouds");
+        RegisterMode(registry, WeatherPrecipitationSignal, "WeatherPrecipitationSignal", "Clouds");
 
         registry.RegisterCaptureSet(CloudDebugIds.Diagnostics, "Cloud Diagnostics",
-            Modes(Off, Weather, Density, OpticalDepth, Storm, MoistureSource, CondensationChange));
+            Modes(Off, Weather, Density, OpticalDepth, Storm, MoistureSource, CondensationChange,
+                CloudPrecipitationSignal, WeatherPrecipitationSignal));
         registry.RegisterModeApplier(this);
         registry.RegisterMetadataProvider(this);
         registry.RegisterOverlayContributor(this);

@@ -1,4 +1,7 @@
 using System;
+using System.Globalization;
+using System.IO;
+using System.Text;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -111,6 +114,8 @@ public sealed class SphericalWeatherGrid : IDisposable
     static readonly int _deltaVisualizationScaleId = Shader.PropertyToID("_DeltaVisualizationScale");
     static readonly int _windDirectionId = Shader.PropertyToID(ShaderGlobalIds.WindDirection);
     static readonly int _stepAngleId = Shader.PropertyToID("_StepAngle");
+    static readonly int _forceWeatherValueId = Shader.PropertyToID("_ForceWeatherValue");
+    static readonly int _forceDynamicsValueId = Shader.PropertyToID("_ForceDynamicsValue");
 
     SphericalWeatherGrid(
         int resolution,
@@ -231,13 +236,15 @@ public sealed class SphericalWeatherGrid : IDisposable
         Quaternion sampleRotation,
         out float condensation,
         out float storm,
-        out float moistureSource)
+        out float moistureSource,
+        out float rainRate)
     {
         GetCell(worldPosition, planetCenter, sampleRotation, out int face, out int x, out int y);
         int index = GetIndex(face, x, y, Resolution);
         condensation = _condensation[index];
         storm = _storm[index];
         moistureSource = _moistureSource[index];
+        rainRate = _rainRate[index];
     }
 
     public void ApplyWeatherFaceReadback(int face, NativeArray<Color> pixels)
@@ -362,6 +369,48 @@ public sealed class SphericalWeatherGrid : IDisposable
             _moistureSource[bestIndex]);
     }
 
+    public void WriteCellsCsv(string path)
+    {
+        string directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory);
+
+        using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
+        writer.WriteLine("face,x,y,condensation,storm,moistureSource,humidity,precipitationWater,rainRate");
+
+        var culture = CultureInfo.InvariantCulture;
+        int faceCellCount = Resolution * Resolution;
+        for (int face = 0; face < 6; face++)
+        {
+            int faceBase = face * faceCellCount;
+            for (int y = 0; y < Resolution; y++)
+            {
+                int rowBase = faceBase + y * Resolution;
+                for (int x = 0; x < Resolution; x++)
+                {
+                    int index = rowBase + x;
+                    writer.Write(face);
+                    writer.Write(',');
+                    writer.Write(x);
+                    writer.Write(',');
+                    writer.Write(y);
+                    writer.Write(',');
+                    writer.Write(_condensation[index].ToString("0.######", culture));
+                    writer.Write(',');
+                    writer.Write(_storm[index].ToString("0.######", culture));
+                    writer.Write(',');
+                    writer.Write(_moistureSource[index].ToString("0.######", culture));
+                    writer.Write(',');
+                    writer.Write(_humidity[index].ToString("0.######", culture));
+                    writer.Write(',');
+                    writer.Write(_precipitationWater[index].ToString("0.######", culture));
+                    writer.Write(',');
+                    writer.WriteLine(_rainRate[index].ToString("0.######", culture));
+                }
+            }
+        }
+    }
+
     public bool Advance(ComputeShader compute, CloudDto settings, float deltaTime, Vector3 windDirection, float stepAngle)
     {
         if (compute == null || settings == null || !settings.EnableWeatherEvolution || deltaTime <= 0f)
@@ -398,6 +447,50 @@ public sealed class SphericalWeatherGrid : IDisposable
         compute.Dispatch(kernel, groups, groups, 6);
         (_activeTexture, _scratchTexture) = (_scratchTexture, _activeTexture);
         (_dynamicsActiveTexture, _dynamicsScratchTexture) = (_dynamicsScratchTexture, _dynamicsActiveTexture);
+        return true;
+    }
+
+    /// <summary>
+    /// Writes one uniform value to every cell on every face, in place (no ping-pong swap -
+    /// this is a hard overwrite of the active texture, not an evolution step). Deterministic
+    /// weather for scripted test scenes; pair with a caller-side evolution pause so the forced
+    /// state doesn't immediately drift again on the next scheduler tick.
+    /// weatherValue: r=condensation, g=storm, b=moistureSource, a=debug (0.5 = neutral).
+    /// dynamicsValue: r=humidity, g=precipitationWater, b=rainRate, a=moistureSupply.
+    /// </summary>
+    public bool ForceUniform(ComputeShader compute, Vector4 weatherValue, Vector4 dynamicsValue)
+    {
+        if (compute == null)
+            return false;
+
+        int kernel = compute.FindKernel("CSForceWeather");
+        compute.SetTexture(kernel, _weatherWriteId, _activeTexture);
+        compute.SetTexture(kernel, _dynamicsWriteId, _dynamicsActiveTexture);
+        compute.SetInt(_resolutionId, Resolution);
+        compute.SetVector(_forceWeatherValueId, weatherValue);
+        compute.SetVector(_forceDynamicsValueId, dynamicsValue);
+
+        int groups = Mathf.CeilToInt(Resolution / 8f);
+        compute.Dispatch(kernel, groups, groups, 6);
+        return true;
+    }
+
+    /// <summary>
+    /// Writes a deterministic three-band cloud-type test pattern (stratus/cumulus/cumulonimbus)
+    /// to every cube face, in place. Pair with weather.freeze true so it holds steady.
+    /// </summary>
+    public bool WriteTestPattern(ComputeShader compute)
+    {
+        if (compute == null)
+            return false;
+
+        int kernel = compute.FindKernel("CSTestPatternWeather");
+        compute.SetTexture(kernel, _weatherWriteId, _activeTexture);
+        compute.SetTexture(kernel, _dynamicsWriteId, _dynamicsActiveTexture);
+        compute.SetInt(_resolutionId, Resolution);
+
+        int groups = Mathf.CeilToInt(Resolution / 8f);
+        compute.Dispatch(kernel, groups, groups, 6);
         return true;
     }
 
@@ -456,17 +549,6 @@ public sealed class SphericalWeatherGrid : IDisposable
     static int GetIndex(int face, int x, int y, int resolution)
     {
         return face * resolution * resolution + x + y * resolution;
-    }
-
-    // For cells on a face edge, returns the exact cube-edge UV (0 or 1). For interior cells,
-    // returns the standard cell-centre UV. This makes the noise direction identical for the
-    // edge cells of two adjacent faces sharing that cube edge - so their generated values
-    // match, and the shader's bilinear filter doesn't have a value mismatch to amplify.
-    static float EdgeSnappedUv(int index, int resolution)
-    {
-        if (index == 0) return 0f;
-        if (index == resolution - 1) return 1f;
-        return (index + 0.5f) / resolution;
     }
 
     static RenderTexture CreateWeatherTexture(int resolution, string name)

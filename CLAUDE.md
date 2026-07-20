@@ -6,6 +6,10 @@ This file captures the agreed-upon rules for the ProceduralPlanets codebase. It 
 
 The 2026-06-10 audit lives at [docs/audit/2026-06-code-refactor/](docs/audit/2026-06-code-refactor/) and is the current source of refactor findings. The active perf-maintainability plan is [docs/design/2026-06-08-performance-maintainability-plan.md](docs/design/2026-06-08-performance-maintainability-plan.md).
 
+## Skill library
+
+The committed skill library is [.agent-skills/](.agent-skills/) (16 skills, built 2026-07-06). Before non-trivial work, route via [.agent-skills/README.md](.agent-skills/README.md) and load the matching skill(s); the `pp-*` skills in `.claude/skills/` are discovery stubs that point at the same sources. On conflict between a skill's date-stamped facts and the working tree, the tree wins — run the skill's "Provenance and maintenance" commands and update the skill. Stubs are generated; edit only `.agent-skills/`.
+
 ---
 
 ## Architecture

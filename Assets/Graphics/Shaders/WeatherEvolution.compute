@@ -4,9 +4,14 @@
 // CSInitWeather  – seeds the ping-pong RenderTextures directly from seeded simplex noise.
 //                  Eliminates the staging Texture2DArray + SetPixels/Apply upload path.
 // CSEvolveWeather – per-frame advection + reaction step (unchanged).
+// CSForceWeather  – writes one uniform value to every cell, in place (no ping-pong). Used
+//                   by weather.force for deterministic test scenes; pair with
+//                   weather.freeze true so evolution doesn't drift the forced state away.
 
 #pragma kernel CSInitWeather
 #pragma kernel CSEvolveWeather
+#pragma kernel CSForceWeather
+#pragma kernel CSTestPatternWeather
 
 Texture2DArray<float4> _WeatherRead;
 RWTexture2DArray<float4> _WeatherWrite;
@@ -185,6 +190,40 @@ void CSEvolveWeather(uint3 id : SV_DispatchThreadID)
     float deltaDebug = saturate(0.5 + condensationDelta * _DeltaVisualizationScale);
     _WeatherWrite[pixel] = float4(nextCondensation, nextStorm, localWeather.b, deltaDebug);
     _DynamicsWrite[pixel] = float4(nextHumidity, nextPrecipitationWater, rainRate, moistureSupply);
+}
+
+float4 _ForceWeatherValue;
+float4 _ForceDynamicsValue;
+
+[numthreads(8, 8, 1)]
+void CSForceWeather(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_Resolution || id.y >= (uint)_Resolution || id.z >= 6)
+        return;
+
+    int3 pixel = int3(id.x, id.y, id.z);
+    _WeatherWrite[pixel] = _ForceWeatherValue;
+    _DynamicsWrite[pixel] = _ForceDynamicsValue;
+}
+
+// Deterministic cloud-type test bed: three bands across every cube face along the u axis so a
+// single horizon pan shows stratus -> cumulus -> cumulonimbus side by side. Condensation is
+// constant so the only variable is cloud type (storm/moisture), isolating CloudVerticalProfile.
+[numthreads(8, 8, 1)]
+void CSTestPatternWeather(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_Resolution || id.y >= (uint)_Resolution || id.z >= 6)
+        return;
+
+    int3 pixel = int3(id.x, id.y, id.z);
+    float u = (id.x + 0.5) / (float)_Resolution;
+
+    float condensation = 0.7;
+    float storm = u >= 0.67 ? 0.9 : 0.0;                        // right band: cumulonimbus
+    float moisture = u < 0.34 ? 0.05 : 0.9;                     // left band: stratus, else cumulus/CB
+
+    _WeatherWrite[pixel] = float4(condensation, storm, moisture, 0.5);
+    _DynamicsWrite[pixel] = float4(condensation, 0.0, storm, condensation); // rainRate = storm
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

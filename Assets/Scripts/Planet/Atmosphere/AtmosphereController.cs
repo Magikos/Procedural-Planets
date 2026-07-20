@@ -37,6 +37,8 @@ public class AtmosphereController : MonoBehaviour, IAtmosphereRuntime, IWorldSer
     static readonly int _sunIntensityId = Shader.PropertyToID(ShaderGlobalIds.SunIntensity);
     static readonly int _sunDiscSizeId = Shader.PropertyToID(ShaderGlobalIds.SunDiscSize);
     static readonly int _sunDiscBlendId = Shader.PropertyToID(ShaderGlobalIds.SunDiscBlend);
+    static readonly int _sunDiscIntensityId = Shader.PropertyToID(ShaderGlobalIds.SunDiscIntensity);
+    static readonly int _sunAureoleParamsId = Shader.PropertyToID(ShaderGlobalIds.SunAureoleParams);
     static readonly int _lightShaftParamsId = Shader.PropertyToID(ShaderGlobalIds.LightShaftParams);
     static readonly int _lightShaftParams2Id = Shader.PropertyToID(ShaderGlobalIds.LightShaftParams2);
     static readonly int _lightShaftSamplesId = Shader.PropertyToID(ShaderGlobalIds.LightShaftSamples);
@@ -57,15 +59,8 @@ public class AtmosphereController : MonoBehaviour, IAtmosphereRuntime, IWorldSer
 
     void OnEnable()
     {
-        EnsureSettingsRegistered();
-        _settings = SettingsProvider.GetSettings<AtmosphereDto>();
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
         EventBus<SettingsChangedEvent>.Listen(OnSettingsChanged);
-    }
-
-    static void EnsureSettingsRegistered()
-    {
-        EnsureSettingsRegistered(SettingsProvider.Get());
     }
 
     static void EnsureSettingsRegistered(ISettingsService settings)
@@ -98,12 +93,16 @@ public class AtmosphereController : MonoBehaviour, IAtmosphereRuntime, IWorldSer
             Shader.SetGlobalVector(_sunParamsId, CelestialManager.SunDirection);
 
         if (_planetRadius <= 0f) return;
+        if (!TryResolveSettings()) return;
 
         EnsureStaticPropertiesUploaded();
     }
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
+        if (!TryResolveSettings())
+            return;
+
         _planetRadius = evt.PlanetRadius;
         _seaLevelRadius = evt.SeaLevelRadius > 0f ? evt.SeaLevelRadius : _planetRadius * 0.95f;
 
@@ -129,12 +128,18 @@ public class AtmosphereController : MonoBehaviour, IAtmosphereRuntime, IWorldSer
 
     void Initialize()
     {
+        if (!TryResolveSettings())
+            return;
+
         BakeOpticalDepth();
         EnsureStaticPropertiesUploaded();
     }
 
     void EnsureStaticPropertiesUploaded()
     {
+        if (!TryResolveSettings())
+            return;
+
         if (!_staticPropertiesDirty) return;
         _staticPropertiesDirty = false;
 
@@ -167,6 +172,9 @@ public class AtmosphereController : MonoBehaviour, IAtmosphereRuntime, IWorldSer
         Shader.SetGlobalFloat(_sunIntensityId, _settings.SunIntensity);
         Shader.SetGlobalFloat(_sunDiscSizeId, _settings.SunDiscSize);
         Shader.SetGlobalFloat(_sunDiscBlendId, _settings.SunDiscBlend);
+        Shader.SetGlobalFloat(_sunDiscIntensityId, _settings.SunDiscIntensity);
+        Shader.SetGlobalVector(_sunAureoleParamsId, new Vector4(
+            _settings.SunAureoleStrength, _settings.SunAureolePower, 0f, 0f));
         Shader.SetGlobalVector(_lightShaftParamsId, new Vector4(
             _settings.EnableLightShafts ? _settings.LightShaftStrength : 0f,
             _settings.LightShaftDensity,
@@ -192,6 +200,9 @@ public class AtmosphereController : MonoBehaviour, IAtmosphereRuntime, IWorldSer
 
     void BakeOpticalDepth()
     {
+        if (!TryResolveSettings())
+            return;
+
         if (OpticalDepthCompute == null || _seaLevelRadius <= 0f) return;
 
         float atmosphereRadius = _planetRadius * _settings.AtmosphereScale;
@@ -237,6 +248,11 @@ public class AtmosphereController : MonoBehaviour, IAtmosphereRuntime, IWorldSer
         _lastBakedSteps = _settings.BakeSteps;
     }
 
+    bool TryResolveSettings()
+    {
+        return _settings != null || SettingsProvider.TryGetFrozen(out _settings);
+    }
+
     [ConsoleCommand("sun-intensity", "Get or set scattering sun intensity (range 1-100).", MonoTargetType.Single)]
     string SunIntensityCmd(float? value = null)
     {
@@ -258,13 +274,25 @@ public class AtmosphereController : MonoBehaviour, IAtmosphereRuntime, IWorldSer
         return $"rayleigh scattering: ({value.Value.x:E3}, {value.Value.y:E3}, {value.Value.z:E3})";
     }
 
-    [ConsoleCommand("mie", "Get or set Mie scattering coefficient (haze; range 0-0.1).", MonoTargetType.Single)]
+    // Human 1.0 maps to this Mie coefficient; the 0.002 default therefore reads as 0.5.
+    const float MieHumanScaleMax = 0.004f;
+
+    [ConsoleCommand("mie", "Get or set sun-glow / haze strength, 0-1 (0=clear, 0.5=default, 1=heavy). Converts to the Mie scattering coefficient internally.", MonoTargetType.Single)]
     string MieCmd(float? value = null)
     {
-        if (value == null) return $"mie scattering: {_settings.MieScattering:E3}";
-        float clamped = Mathf.Clamp(value.Value, 0f, 0.1f);
-        SettingsProvider.Update(_settings with { MieScattering = clamped });
-        return $"mie scattering: {clamped:E3}";
+        if (value == null) return $"mie (glow/haze): {_settings.MieScattering / MieHumanScaleMax:F2} (0-1)";
+        float human = Mathf.Clamp01(value.Value);
+        SettingsProvider.Update(_settings with { MieScattering = human * MieHumanScaleMax });
+        return $"mie (glow/haze): {human:F2} (0-1)";
+    }
+
+    [ConsoleCommand("glow-tightness","Get or set sun glow tightness (Mie anisotropy, 0-0.99). Higher = smaller, more defined glow core; lower = broad washed-out halo. Default 0.76. Pair with 'mie' (glow strength).", MonoTargetType.Single)]
+    string GlowTightnessCmd(float? value = null)
+    {
+        if (value == null) return $"glow tightness: {_settings.MieAnisotropy:F3}";
+        float clamped = Mathf.Clamp(value.Value, 0f, 0.99f);
+        SettingsProvider.Update(_settings with { MieAnisotropy = clamped });
+        return $"glow tightness: {clamped:F3}";
     }
 
     [ConsoleCommand("scale", "Get or set atmosphere thickness scale (range 1.01-1.5).", MonoTargetType.Single)]
@@ -274,5 +302,50 @@ public class AtmosphereController : MonoBehaviour, IAtmosphereRuntime, IWorldSer
         float clamped = Mathf.Clamp(value.Value, 1.01f, 1.5f);
         SettingsProvider.Update(_settings with { AtmosphereScale = clamped });
         return $"atmosphere scale: {clamped:F3}";
+    }
+
+    [ConsoleCommand("shaft-strength", "Get or set god-ray (light shaft) strength. 0=off, ~1 default, up to 8. Enables shafts when >0.", MonoTargetType.Single)]
+    string ShaftStrengthCmd(float? value = null)
+    {
+        if (value == null) return $"light shaft strength: {_settings.LightShaftStrength:F2} (enabled: {_settings.EnableLightShafts})";
+        float clamped = Mathf.Clamp(value.Value, 0f, 8f);
+        SettingsProvider.Update(_settings with { LightShaftStrength = clamped, EnableLightShafts = clamped > 0f });
+        return $"light shaft strength: {clamped:F2} (enabled: {clamped > 0f})";
+    }
+
+    [ConsoleCommand("sun-disc-blend", "Get or set sun disc edge softness, 0-1 (0=hard circle, 1=soft glow). Higher = thin cloud in front reads as a diffuse glow instead of a hard circle. Converts to the internal edge-blend width.", MonoTargetType.Single)]
+    string SunDiscBlendCmd(float? value = null)
+    {
+        if (value == null) return $"sun disc blend: {Mathf.InverseLerp(AtmosphereSettings.SunDiscBlendMin, AtmosphereSettings.SunDiscBlendMax, _settings.SunDiscBlend):F2} (0-1)";
+        float human = Mathf.Clamp01(value.Value);
+        SettingsProvider.Update(_settings with { SunDiscBlend = Mathf.Lerp(AtmosphereSettings.SunDiscBlendMin, AtmosphereSettings.SunDiscBlendMax, human) });
+        return $"sun disc blend: {human:F2} (0-1)";
+    }
+
+    [ConsoleCommand("sun-disc-intensity", "Get or set the hard sun disc brightness, 0-2. 0 = no disc (sun is only the atmosphere glow + god rays; vanishes behind cloud instead of bleeding through as a hard circle). 1 = full. ~0.3-0.5 = dim soft disc that centres the clear-sky sun without the bleed-through. Default 1.", MonoTargetType.Single)]
+    string SunDiscIntensityCmd(float? value = null)
+    {
+        if (value == null) return $"sun disc intensity: {_settings.SunDiscIntensity:F2}";
+        float clamped = Mathf.Clamp(value.Value, 0f, 2f);
+        SettingsProvider.Update(_settings with { SunDiscIntensity = clamped });
+        return $"sun disc intensity: {clamped:F2}";
+    }
+
+    [ConsoleCommand("sun-aureole", "Get or set the low-sun bloom around the sun disc (0-4). Fills the soft 'fireball' halo at dawn/dusk where the Mie glow collapses and leaves a bare circle; auto-fades by midday. 0 = off. Default 0.", MonoTargetType.Single)]
+    string SunAureoleCmd(float? value = null)
+    {
+        if (value == null) return $"sun aureole: {_settings.SunAureoleStrength:F2}";
+        float clamped = Mathf.Clamp(value.Value, 0f, 4f);
+        SettingsProvider.Update(_settings with { SunAureoleStrength = clamped });
+        return $"sun aureole: {clamped:F2}";
+    }
+
+    [ConsoleCommand("sun-aureole-size", "Get or set the sun aureole bloom radius (1-200). Lower = larger, softer bloom; higher = tighter. Default 40 (~15 deg).", MonoTargetType.Single)]
+    string SunAureoleSizeCmd(float? value = null)
+    {
+        if (value == null) return $"sun aureole size (power): {_settings.SunAureolePower:F0}";
+        float clamped = Mathf.Clamp(value.Value, 1f, 200f);
+        SettingsProvider.Update(_settings with { SunAureolePower = clamped });
+        return $"sun aureole size (power): {clamped:F0}";
     }
 }

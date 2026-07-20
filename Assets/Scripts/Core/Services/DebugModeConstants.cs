@@ -163,8 +163,12 @@ public static class DebugModeConstants
     public const int PerformanceCloud72x4 = 104;
     public const int PerformanceCloud48x4 = 105;
 
+    // Atmosphere: light shaft isolation
+    public const int AtmosphereLightShafts = 106;
+    public const int GodRayStreaks = 107;
+
     /// <summary>Highest defined mode value. Update when adding new modes.</summary>
-    public const int Max = 105;
+    public const int Max = 107;
 
     public static bool SuppressesWeatherPasses(int mode)
     {

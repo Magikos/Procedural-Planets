@@ -170,8 +170,12 @@
 #define DEBUG_PERF_CLOUD_72X4                104
 #define DEBUG_PERF_CLOUD_48X4                105
 
+// --- Atmosphere: light shaft isolation ---
+#define DEBUG_ATMOSPHERE_LIGHT_SHAFTS        106
+#define DEBUG_GOD_RAY_STREAKS                107
+
 // Convenience: last defined mode. Update when adding new modes.
-#define DEBUG_MODE_MAX                    105
+#define DEBUG_MODE_MAX                    107
 
 bool IsProductionEquivalentDebugMode(int mode)
 {

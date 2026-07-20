@@ -25,9 +25,12 @@ MonoBehaviour:
   TerrainAtmosphereDistance: 1600
   SunDiscSize: 0.9995
   SunDiscBlend: 0.002
+  SunDiscIntensity: 0.25
+  SunAureoleStrength: 2
+  SunAureolePower: 200
   EnableLightShafts: 1
   LightShaftSamples: 20
-  LightShaftStrength: 0.32
+  LightShaftStrength: 1.5
   LightShaftDensity: 0.78
   LightShaftDecay: 0.95
   LightShaftWeight: 0.09

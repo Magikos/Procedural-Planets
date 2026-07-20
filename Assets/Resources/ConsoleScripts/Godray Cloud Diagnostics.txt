@@ -1,0 +1,200 @@
+@name Godray Cloud Diagnostics
+@timeout 60
+@defer weather.freeze false
+@defer time.freeze false
+@defer cloud.bottom-feather 0.06
+@defer cloud.godray-reach 1.5
+@defer cloud.godray-threshold 0.55
+@defer cloud.godray-dawn-boost 2
+@defer atmosphere.sun-disc-blend 0.002
+@defer atmosphere.sun-disc-intensity 0.25
+@defer cloud.backlit-glow 0.6
+@sidecar camera.position
+@sidecar debug.mode
+@sidecar weather.freeze
+@sidecar cloud.godray-strength
+@sidecar cloud.godray-reach
+@sidecar cloud.godray-threshold
+@sidecar cloud.godray-dawn-boost
+@sidecar cloud.bottom-feather
+@sidecar atmosphere.sun-disc-blend
+@sidecar atmosphere.sun-disc-intensity
+@sidecar cloud.backlit-glow
+
+# Diagnostic sweep for the god-ray / cloud-consistency feedback round (2026-07-11).
+# Every screenshot's .txt sidecar records the exact knob values active for that shot
+# (via @sidecar above) - no need to cross-reference this script to know what was tested.
+#
+# History (2026-07-11):
+# - Run 1 (natural weather): scenario A and C landed on whatever cloud coverage happened
+#   to exist at run time - inconclusive when re-run later, since weather kept evolving.
+# - Run 2: added weather.force for scenario A/C so coverage is guaranteed and repeatable
+#   regardless of when the script runs. Also revealed forcing UNIFORM coverage removes the
+#   PATCHINESS that likely caused the original altitude complaint - a real, useful finding,
+#   but it means scenario A tests "does feather matter at uniform density" (subtle effect),
+#   not the original patchy-coverage symptom. To reproduce THAT, catch it live and use
+#   weather.freeze true (no force) to lock the actual natural pattern before it drifts.
+# - Run 2/3: scenario B's off-center shots used a hardcoded camera Forward vector computed
+#   from an old reference screenshot, assuming the sun would still be roughly where it was
+#   in that reference. It wasn't - sun position drifts with real elapsed session time even
+#   with time.freeze (freeze holds wherever the sun CURRENTLY is, not a specific historical
+#   position), so the hardcoded aim silently went stale and pointed at empty sky.
+# - Run 4 (current): replaced all hardcoded "aim at the sun" vectors with
+#   camera.look-at (position only) -> time.set-local (sun placed deterministically RELATIVE
+#   TO that camera position, immune to real-time drift) -> camera.face-sun (exact aim at
+#   wherever the sun actually ends up). This is fully deterministic regardless of when the
+#   script runs. Scenario B's off-center shot now works by changing time.set-local a second
+#   time WITHOUT re-calling face-sun - the sun moves in the sky, the camera doesn't follow,
+#   so it lands off-center by a known, controlled amount instead of a hand-computed guess.
+#
+# IMPORTANT: weather.force is PLANET-WIDE (all 6 cube faces, uniformly) - not scoped to the
+# camera. Each scenario sets the weather state IT needs at the start of its own block;
+# nothing resets automatically between scenarios.
+
+time.freeze true
+
+# --- Isolate sanity check: confirm the god-ray pass is producing signal at all before
+# --- judging any blended screenshot below.
+camera.look-at -468.12,-4856.80,-1702.04 -1444.62,-5072.40,-1698.64
+time.set-local 0.3
+camera.face-sun
+debug.mode GodRayStreaks
+@wait frames 5
+debug.screenshot isolate-sanity-check
+debug.mode Off
+
+# --- Scenario A: cloud-base transition consistency. Two real altitudes ~19m and ~47m
+# --- above terrain (cloud base sits ~36.5m up) - the exact pair that showed clear-sky-
+# --- with-visible-sun vs solid-gray-ceiling from just a 27m altitude change originally.
+# --- weather.force gives dense, UNIFORM coverage at both altitudes so the only variable
+# --- across A1 vs A2 is camera height, not noise-pattern luck (see history note above on
+# --- what this does and doesn't prove). time.set-local 0.5 (noon) pins lighting so it's
+# --- not an extra variable either.
+weather.force 0.85 0.0
+camera.look-at 4202.98,-2979.88,-1295.53 3591.38,-3705.38,-1611.03
+time.set-local 0.5
+cloud.bottom-feather 0.06
+@wait frames 5
+debug.screenshot sceneA1-lowalt-19m-feather-default
+cloud.bottom-feather 0.15
+@wait frames 5
+debug.screenshot sceneA1-lowalt-19m-feather-015
+cloud.bottom-feather 0.30
+@wait frames 5
+debug.screenshot sceneA1-lowalt-19m-feather-030
+
+camera.look-at 4224.90,-2995.42,-1302.29 3613.30,-3720.92,-1617.79
+time.set-local 0.5
+cloud.bottom-feather 0.06
+@wait frames 5
+debug.screenshot sceneA2-highalt-47m-feather-default
+cloud.bottom-feather 0.15
+@wait frames 5
+debug.screenshot sceneA2-highalt-47m-feather-015
+cloud.bottom-feather 0.30
+@wait frames 5
+debug.screenshot sceneA2-highalt-47m-feather-030
+cloud.bottom-feather 0.06
+
+# --- Scenario B: god-ray reach, sun dead-center vs shifted off-center in the same frame.
+# --- Tests whether "reach" fixes the glow shrinking away from the sun complaint.
+# --- Forced fully clear so the sun-glow geometry test is isolated from cloud interaction
+# --- entirely (a forced uniform value has no noise-based shape/gaps of its own).
+# --- Center: face-sun at local noon (0.5) - guaranteed correct regardless of real time.
+# --- Off-center: shift local time by +0.12 (about 43 degrees of sky motion) WITHOUT
+# --- re-facing, so the camera keeps its noon aim while the sun has moved - a known,
+# --- controlled, repeatable off-center amount instead of a hand-computed guess.
+weather.force 0.0 0.0
+camera.look-at -468.12,-4856.80,-1702.04 -1444.62,-5072.40,-1698.64
+time.set-local 0.5
+camera.face-sun
+cloud.godray-reach 0.86
+@wait frames 5
+debug.screenshot sceneB-center-reach-086-default
+cloud.godray-reach 1.50
+@wait frames 5
+debug.screenshot sceneB-center-reach-150
+cloud.godray-reach 2.50
+@wait frames 5
+debug.screenshot sceneB-center-reach-250
+
+time.set-local 0.62
+cloud.godray-reach 0.86
+@wait frames 5
+debug.screenshot sceneB-offcenter-reach-086-default
+cloud.godray-reach 1.50
+@wait frames 5
+debug.screenshot sceneB-offcenter-reach-150
+cloud.godray-reach 2.50
+@wait frames 5
+debug.screenshot sceneB-offcenter-reach-250
+cloud.godray-reach 0.86
+
+# --- Scenario C: sun low + partially behind cloud. Tests disc-blend (softens the hard
+# --- circle silhouette), backlit-glow (cloud's own inner glow), and dawn-boost together.
+# --- weather.force guarantees moderate coverage (some cloud, sun still gets through).
+# --- time.set-local 0.28 (just past sunrise) + face-sun guarantees the sun is actually
+# --- IN FRAME and low - the earlier runs sometimes had it stuck behind terrain instead
+# --- of behind cloud, because the hardcoded aim didn't track the drifted sun position.
+weather.force 0.55 0.15
+camera.look-at 1608.66,-4454.28,-1936.75 659.36,-4742.58,-2062.15
+time.set-local 0.28
+camera.face-sun
+atmosphere.sun-disc-blend 0.002
+cloud.backlit-glow 0.6
+cloud.godray-dawn-boost 2
+@wait frames 5
+debug.screenshot sceneC-lowsun-defaults
+atmosphere.sun-disc-blend 0.02
+@wait frames 5
+debug.screenshot sceneC-lowsun-blend-wide
+cloud.backlit-glow 1.2
+@wait frames 5
+debug.screenshot sceneC-lowsun-blend-wide-backlit-high
+cloud.godray-dawn-boost 4
+@wait frames 5
+debug.screenshot sceneC-lowsun-blend-wide-backlit-high-dawnboost-4
+atmosphere.sun-disc-blend 0.002
+cloud.backlit-glow 0.6
+cloud.godray-dawn-boost 2
+
+# --- Scenario D: brightness-threshold sweep for the new radial-blur god rays. Lower
+# --- threshold = more of the bright sky feeds the beams (softer/broader); higher = only
+# --- the very brightest sun/rim pixels beam (crisper, more selective, cleaner gaps).
+# --- Same dawn view as C. This is the main knob for dialing the reference look.
+cloud.godray-threshold 0.40
+@wait frames 5
+debug.screenshot sceneD-threshold-040-broad
+cloud.godray-threshold 0.55
+@wait frames 5
+debug.screenshot sceneD-threshold-055-default
+cloud.godray-threshold 0.70
+@wait frames 5
+debug.screenshot sceneD-threshold-070-crisp
+cloud.godray-threshold 0.85
+@wait frames 5
+debug.screenshot sceneD-threshold-085-selective
+cloud.godray-threshold 0.55
+
+# --- Scenario E: sun-disc-intensity sweep at Bryan's actual "Dawn" camera position, but
+# --- with proper dawn conditions his manual shot lacked (it had ~3% cloud + sun below the
+# --- horizon, so no rays were possible). Force moderate cloud + set the sun just above the
+# --- horizon so there is actually something to make dawn rays from. Sweeps the disc from
+# --- fully-off (glow only) to full, to lock the "faint or occluded behind cloud" decision.
+weather.force 0.55 0.10
+camera.look-at 172.39,-4831.57,-1946.20 -827.11,-4861.87,-1959.40
+time.set-local 0.29
+camera.face-sun
+atmosphere.sun-disc-intensity 0.0
+@wait frames 5
+debug.screenshot sceneE-dawn-disc-000-off
+atmosphere.sun-disc-intensity 0.25
+@wait frames 5
+debug.screenshot sceneE-dawn-disc-025-default
+atmosphere.sun-disc-intensity 0.5
+@wait frames 5
+debug.screenshot sceneE-dawn-disc-050
+atmosphere.sun-disc-intensity 1.0
+@wait frames 5
+debug.screenshot sceneE-dawn-disc-100-full
+atmosphere.sun-disc-intensity 0.25

@@ -236,20 +236,54 @@ sealed class WeatherDiagnostics
 
         float invCellCount = stats.CellCount > 0 ? 1f / stats.CellCount : 0f;
         int queryCacheFaces = _owner.QueryCacheFaceCount;
+        int queryCacheDynamicsFaces = _owner.QueryCacheDynamicsFaceCount;
         string summary = $"[WeatherDiagnostics] cells={stats.CellCount}, " +
             $"avgCloud={stats.AverageCondensation:F3}, cloudy={stats.CloudyCellCount * invCellCount:P1}, " +
             $"avgPotential={stats.AverageMoistureSource:F3}, maxCloud={stats.MaxCondensation:F3}, " +
             $"avgStorm={stats.AverageStorm:F3}, storm={stats.StormCellCount * invCellCount:P1}, maxStorm={stats.MaxStorm:F3}, " +
             $"avgRain={stats.AverageRainRate:F3}, raining={stats.RainingCellCount * invCellCount:P1}, maxRain={stats.MaxRainRate:F3}, " +
             $"rainCandidates={stats.RainCandidateCellCount}, rainRender={(precipitationRenderEnabled ? "on" : "off")}, " +
-            $"queryCacheFaces={queryCacheFaces}/6";
-        if (queryCacheFaces < 6)
+            $"queryCacheFaces={queryCacheFaces}/6, dynamicsFaces={queryCacheDynamicsFaces}/6";
+        if (queryCacheFaces < 6 || queryCacheDynamicsFaces < 6)
             summary += ", cache=warming";
         if (!string.IsNullOrEmpty(path))
             summary += $", file={path}";
 
         Logger.Log(LogLevel.Info, "Weather", summary);
         return report;
+    }
+
+    public string ExportGrid(string reason, bool forcedFullReadback)
+    {
+        var grid = _owner.Grid;
+        if (grid == null)
+        {
+            const string noGrid = "[WeatherDiagnostics] No weather grid generated.";
+            Logger.Log(LogLevel.Info, "Weather", noGrid);
+            return noGrid;
+        }
+
+        var precipitationController = _owner.PrecipitationDebugControl;
+        float rainThreshold = precipitationController != null
+            ? precipitationController.StormThreshold
+            : _owner.PrecipitationStormThreshold;
+        var stats = grid.CalculateStats(_owner.CloudyThreshold, _owner.PrecipitationStormThreshold, rainThreshold);
+        _owner.TryFindStrongestPrecipitation(out Vector3 strongestPosition, out WeatherSample strongestSample);
+
+        string directory = Path.Combine(Application.persistentDataPath, $"weather-grid-{DateTime.Now:yyyyMMdd-HHmmss}");
+        Directory.CreateDirectory(directory);
+
+        string summaryPath = Path.Combine(directory, "summary.json");
+        string cellsPath = Path.Combine(directory, "cells.csv");
+        File.WriteAllText(summaryPath,
+            BuildJson(reason, stats, strongestPosition, strongestSample, precipitationController, forcedFullReadback));
+        grid.WriteCellsCsv(cellsPath);
+
+        float invCellCount = stats.CellCount > 0 ? 1f / stats.CellCount : 0f;
+        string summary = $"[WeatherDiagnostics] export summary={summaryPath}, cells={cellsPath}, " +
+            $"raining={stats.RainingCellCount * invCellCount:P1}, avgRain={stats.AverageRainRate:F3}, maxRain={stats.MaxRainRate:F3}";
+        Logger.Log(LogLevel.Info, "Weather", summary);
+        return summary;
     }
 
     public void DrawOverlay()
@@ -300,7 +334,8 @@ sealed class WeatherDiagnostics
         WeatherGridStats stats,
         Vector3 strongestPosition,
         WeatherSample strongestSample,
-        IPrecipitationDebugControl precipitationController)
+        IPrecipitationDebugControl precipitationController,
+        bool forcedFullReadback = false)
     {
         var culture = CultureInfo.InvariantCulture;
         var sb = new StringBuilder(2048);
@@ -311,6 +346,10 @@ sealed class WeatherDiagnostics
         int queryCacheFaces = _owner.QueryCacheFaceCount;
         AppendJsonNumber(sb, "queryCacheFaces", queryCacheFaces, 1, true);
         AppendJsonBool(sb, "queryCacheComplete", queryCacheFaces >= 6, 1, true);
+        int queryCacheDynamicsFaces = _owner.QueryCacheDynamicsFaceCount;
+        AppendJsonNumber(sb, "queryCacheDynamicsFaces", queryCacheDynamicsFaces, 1, true);
+        AppendJsonBool(sb, "queryCacheDynamicsComplete", queryCacheDynamicsFaces >= 6, 1, true);
+        AppendJsonBool(sb, "forcedFullReadback", forcedFullReadback, 1, true);
         AppendJsonNumber(sb, "evolutionDispatches", _evolutionDispatchCount, 1, true);
         AppendJsonNumber(sb, "lastEvolutionDelta", _lastEvolutionDelta, 1, true);
         AppendJsonBool(sb, "precipitationRenderEnabled",

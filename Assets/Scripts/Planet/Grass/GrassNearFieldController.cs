@@ -10,7 +10,7 @@ using UnityEngine.Rendering;
 //  - Fixed face-space cell width derived from planet scale. Roots stay stable across
 //    dispatch pages; local cube-face distortion is handled as density variation for now.
 //  - Range paging at ~4m world equivalent: re-dispatch only when the page origin moves,
-//    not every sub-cell camera motion. Should drop dispatchesTotal from ~843 to ~5-20.
+//    not every sub-cell camera motion.
 //  - Explicit slot allocation via InterlockedAdd on the indirect args buffer. Real
 //    overflow accounting; no CopyCount needed.
 //  - Stable per-root distance thinning crossfades the dense near path into chunk grass
@@ -34,17 +34,15 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     const int StatRangeBudgetRejected = 10;
     const int ThreadGroupSize = 8;
 
-    // Keep the dense field fully populated through 144m, then use a broad stochastic
-    // overlap with chunk grass. The previous 16m handoff exposed a visible density ring.
-    const float DefaultSpacing = 0.35f;
-    const float DefaultFullDensityDistance = 144f;
-    const float DefaultDrawDistance = 200f;
-    const float DefaultFadeBand = DefaultDrawDistance - DefaultFullDensityDistance;
+    // Keep the dense field fully populated through the configured full-density range,
+    // then fade geometry and coverage across the draw band.
+    const float DefaultSpacing = 0.25f;
     const float DefaultPageSizeMeters = 4f;     // re-dispatch only when page origin moves
+    const float BoundsSlackMeters = 256f;
     // Chunk-center suppression creates coarse ownership shapes. Keep chunk grass under
     // the near path and let stable per-root thinning perform the visual crossfade.
     const float SuppressionRadiusFraction = 0f;
-    const int DefaultCapacityInstances = 1_000_000; // ~48 MB at 48 bytes per blade
+    const int DefaultCapacityInstances = 1_500_000; // ~72 MB at 48 bytes per blade
     const bool EnableMultiFaceDispatch = true;
 
     static readonly int[] BiomeIdsIds = new int[6];
@@ -64,6 +62,8 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     static readonly int SurfaceStateAtlasResolutionId = Shader.PropertyToID("_NearFieldSurfaceStateAtlasResolution");
     static readonly int PathWearAtlasResolutionId = Shader.PropertyToID("_NearFieldPathWearAtlasResolution");
     static readonly int BiomeParamCountId = Shader.PropertyToID("_NearFieldBiomeParamCount");
+    static readonly int GrassCardTexId = Shader.PropertyToID("_GrassCardTex");
+    static readonly int GrassCardStrengthId = Shader.PropertyToID("_GrassCardStrength");
     static readonly int CapacityId = Shader.PropertyToID("_NearFieldCapacity");
     static readonly int SeedId = Shader.PropertyToID("_NearFieldSeed");
     static readonly int FaceIndexId = Shader.PropertyToID("_NearFieldFaceIndex");
@@ -91,6 +91,12 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     static readonly int VisualFadeEndId = Shader.PropertyToID("_GrassVisualFadeEnd");
     static readonly int ChunkFadeId = Shader.PropertyToID("_GrassChunkFade");
     static readonly int LayerDebugTintId = Shader.PropertyToID("_GrassLayerDebugTint");
+    static readonly int WidthInflateStartId = Shader.PropertyToID("_GrassWidthInflateStart");
+    static readonly int WidthInflateEndId = Shader.PropertyToID("_GrassWidthInflateEnd");
+    static readonly int BillboardStartId = Shader.PropertyToID("_GrassBillboardStart");
+    static readonly int BillboardEndId = Shader.PropertyToID("_GrassBillboardEnd");
+    static readonly int CanopyColorStartId = Shader.PropertyToID("_GrassCanopyColorStart");
+    static readonly int CanopyColorEndId = Shader.PropertyToID("_GrassCanopyColorEnd");
 
     static GrassNearFieldController()
     {
@@ -171,11 +177,12 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         _planetRadius = planetRadius;
         _seed = seed;
         _logger = logger ?? LoggerProvider.Get();
+        var quality = ServiceLocator.Get<IGrassQualitySettings>();
         _capacity = DefaultCapacityInstances;
         _spacing = DefaultSpacing;
-        _fullDensityDistance = DefaultFullDensityDistance;
-        _drawDistance = DefaultDrawDistance;
-        _fadeBand = DefaultFadeBand;
+        _fullDensityDistance = quality.NearFieldFullDensityDistance;
+        _drawDistance = Mathf.Max(quality.NearFieldDrawDistance, _fullDensityDistance + 1f);
+        _fadeBand = _drawDistance - _fullDensityDistance;
         float referenceMetersPerUv = Mathf.Max(0.0001f, 2f * _planetRadius * FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform));
         _cellUvWidth = Mathf.Max(1e-8f, _spacing / referenceMetersPerUv);
         _pageCellSize = Mathf.Max(1, Mathf.CeilToInt(DefaultPageSizeMeters / _spacing));
@@ -197,6 +204,18 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         _material.SetFloat(VisualFadeEndId, _drawDistance);
         _material.SetFloat(ChunkFadeId, 1f);
         _material.SetColor(LayerDebugTintId, Color.green);
+        // Perceptual compensation ramps finish at the draw distance before the last blade disappears.
+        _material.SetFloat(WidthInflateStartId, _fullDensityDistance * 0.7f);
+        _material.SetFloat(WidthInflateEndId, _drawDistance);
+        _material.SetFloat(BillboardStartId, _fullDensityDistance * 0.7f);
+        _material.SetFloat(BillboardEndId, _drawDistance);
+        _material.SetFloat(CanopyColorStartId, _fullDensityDistance * 0.8f);
+        _material.SetFloat(CanopyColorEndId, _drawDistance);
+        // Procedural carved-blade cards for the distant cluster-card LOD. The Synty grass assets
+        // are meshes, not billboard alpha cutouts, so there is no valid grass-tuft texture to map
+        // onto the cards; the textured-card path (_GrassCardStrength > 0 in Grass.shader) stays
+        // available for a proper grass-billboard alpha if we add one later.
+        _material.SetFloat(GrassCardStrengthId, 0f);
 
         if (!SystemInfo.supportsComputeShaders)
         {
@@ -497,7 +516,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     void Render(Camera camera)
     {
         if (_argsBuffer == null) return;
-        var bounds = new Bounds(camera.transform.position, Vector3.one * (_drawDistance * 2f + 256f));
+        var bounds = new Bounds(camera.transform.position, Vector3.one * (_drawDistance * 2f + BoundsSlackMeters));
         var renderParams = new RenderParams(_material)
         {
             camera = camera,
@@ -552,6 +571,19 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     }
 
     public void RequestRedispatch() => _hasLastDispatch = false;
+
+    float _lastAltitudeFade = 1f;
+
+    // Altitude-driven coverage fade lets the coordinator fade the whole layer out
+    // before disposing it.
+    public void SetAltitudeFade(float alpha01)
+    {
+        if (_material == null) return;
+        alpha01 = Mathf.Clamp01(alpha01);
+        if (Mathf.Approximately(alpha01, _lastAltitudeFade)) return;
+        _lastAltitudeFade = alpha01;
+        _material.SetFloat(ChunkFadeId, alpha01);
+    }
 
     // Helpers moved to FaceSpaceCellRangeBuilder (slice 4b) - public statics:
     //   FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(face, uv)

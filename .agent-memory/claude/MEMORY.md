@@ -1,5 +1,9 @@
 # Memory Index
 
+- [Grass layering arc](project_grass_layering_arc.md) — 2026-07-16/17: far-field blanket revived (linear-coverage fix) + blade clump identity + scale/width fixes shipped; textured cards & ground-darkening reverted; Synty clump scatter PARKED (determinism/pivot/material); verify grass on REAL planet not the grid test scene
+- [Cloud/weather visual arc](project_cloud_weather_arc.md) — 2026-07-14: cloud-type profiles + climate-temp driver + coverage 0.30 baked + rain-shaft/aureole/sun-bleed fix shipped; clouds parked needing polish; weather.force flattens source map (use weather.regenerate)
+- [Skill library](project_skill_library.md) — 2026-07-06: 16-skill library at .agent-skills/ (README router); load skills for project work; CLAUDE.md drift it surfaced
+- [Human-readable console params](project_human_readable_console_params.md) — DONE 2026-07-17: swept cloud/atmo/precip/weather cmds; converted cloud.density, cloud.debug-threshold/saturation, atmosphere.sun-disc-blend to 0-1; convention promoted into pp-change-control §4
 - [No coroutines, use Awaitable](feedback_async_no_coroutines.md) — all async work must use Awaitable, never Unity coroutines
 - [Testing stance](project_testing_stance.md) — no tests designed yet; don't push a test framework as near-term work
 - [Audit & review workflow](feedback_audit_workflow.md) — how Bryan wants audits done and reviewed before fixing

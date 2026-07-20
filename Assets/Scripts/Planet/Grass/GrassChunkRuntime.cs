@@ -67,6 +67,7 @@ sealed class GrassChunkRuntime : System.IDisposable
 
         var props = new MaterialPropertyBlock();
         props.SetBuffer(bladeInstancesId, bladeBuffer);
+        props.SetFloat(ChunkFadeId, ChunkPeakCoverage);
 
         var runtime = new GrassChunkRuntime(bladePool, bladeBuffer, argsBuffer, statsBuffer, props, capacity, worldBounds);
         runtime.ResetArgsAndStats(vertexCount);
@@ -126,8 +127,6 @@ sealed class GrassChunkRuntime : System.IDisposable
     public void Render(Material material, Camera camera, int layer)
     {
         if (_disposed || _argsBuffer == null) return;
-
-        _props.SetFloat(ChunkFadeId, ChunkPeakCoverage);
 
         var renderParams = new RenderParams(material)
         {

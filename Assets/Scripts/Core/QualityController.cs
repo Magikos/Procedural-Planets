@@ -12,6 +12,9 @@ public interface IGrassQualitySettings
     bool EnableScreenSpaceShadows { get; }
     float FarOverlayAltitudeStart { get; }
     float FarOverlayAltitudeEnd { get; }
+    float NearFieldFullDensityDistance { get; }
+    float NearFieldDrawDistance { get; }
+    float NearFieldFadeAltitudeStart { get; }
     float NearFieldActivationAltitude { get; }
     float NearFieldDeactivationAltitude { get; }
 }
@@ -32,8 +35,16 @@ public sealed class DefaultGrassQualitySettings : IGrassQualitySettings
     public bool EnableScreenSpaceShadows => true;
     public float FarOverlayAltitudeStart => 750f;
     public float FarOverlayAltitudeEnd => 2600f;
-    public float NearFieldActivationAltitude => 350f;
-    public float NearFieldDeactivationAltitude => 500f;
+    // Single source of truth for the near-field blade LOD band. The terrain grass
+    // overlay's distance window and the blade shader's perceptual ramps (width
+    // inflation, billboard turn, canopy color) all derive from these two values.
+    public float NearFieldFullDensityDistance => 144f;
+    public float NearFieldDrawDistance => 200f;
+    // Blades fade to zero alpha over FadeAltitudeStart..ActivationAltitude, so the
+    // controller can be created/disposed at the (in)activation gates without a pop.
+    public float NearFieldFadeAltitudeStart => 350f;
+    public float NearFieldActivationAltitude => 500f;
+    public float NearFieldDeactivationAltitude => 550f;
 }
 
 /// <summary>

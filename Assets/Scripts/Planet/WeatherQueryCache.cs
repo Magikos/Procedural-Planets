@@ -9,6 +9,7 @@ sealed class WeatherQueryCache
     int _nextFace;
     int _lastFace = -1;
     int _faceMask;
+    int _dynamicsFaceMask;
 
     public bool Error => _error;
     public int LastFace => _lastFace;
@@ -16,12 +17,10 @@ sealed class WeatherQueryCache
     {
         get
         {
-            int count = 0;
-            int mask = _faceMask;
-            while (mask != 0) { count += mask & 1; mask >>= 1; }
-            return count;
+            return CountBits(_faceMask);
         }
     }
+    public int DynamicsFaceCount => CountBits(_dynamicsFaceMask);
 
     public void Reset()
     {
@@ -31,6 +30,7 @@ sealed class WeatherQueryCache
         _nextFace = 0;
         _lastFace = -1;
         _faceMask = 0;
+        _dynamicsFaceMask = 0;
     }
 
     public void Tick(SphericalWeatherGrid grid, bool enabled, float interval,
@@ -91,5 +91,13 @@ sealed class WeatherQueryCache
             return;
 
         grid?.ApplyDynamicsFaceReadback(face, request.GetData<Color>());
+        _dynamicsFaceMask |= 1 << face;
+    }
+
+    static int CountBits(int mask)
+    {
+        int count = 0;
+        while (mask != 0) { count += mask & 1; mask >>= 1; }
+        return count;
     }
 }

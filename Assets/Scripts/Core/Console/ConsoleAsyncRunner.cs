@@ -246,6 +246,7 @@ public sealed class ConsoleAsyncRunner
         catch (Exception ex)
         {
             error = ex.Message ?? ex.GetType().Name;
+            LoggerProvider.Get().LogException("Console", ex);
         }
 
         bool abandoned = !_pending.HasValue || _pending.Value.LineId != p.LineId;

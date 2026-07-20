@@ -33,12 +33,25 @@ public class AtmosphereSettings : ScriptableObject
 
     [Header("Sun Disc")]
     [Range(0.99f, 0.9999f)] public float SunDiscSize = 0.9995f;
-    [Range(0.0001f, 0.01f)] public float SunDiscBlend = 0.002f;
+    public const float SunDiscBlendMin = 0.0001f;
+    public const float SunDiscBlendMax = 0.05f;
+    [Range(SunDiscBlendMin, SunDiscBlendMax)] public float SunDiscBlend = 0.002f;
+    // 0 = no hard disc (sun represented only by atmosphere glow + god rays; behind cloud it
+    // vanishes instead of bleeding through as a hard circle). 1 = full disc. Middle = a dim
+    // soft disc that still centres the clear-sky sun without the bad cloud bleed-through.
+    [Range(0f, 2f)] public float SunDiscIntensity = 0.25f;
+
+    [Header("Sun Aureole (low-sun bloom)")]
+    // Soft radial glow around the sun that fills in at low sun angles, where single-scatter
+    // Mie collapses from sun extinction and leaves the disc a bare circle. Weighted by low-sun
+    // factor so it fades out by midday (Mie already blooms there). 0 = off.
+    [Range(0f, 4f)] public float SunAureoleStrength = 2f;
+    [Range(1f, 200f)] public float SunAureolePower = 200f;
 
     [Header("Light Shafts")]
     public bool EnableLightShafts = true;
     [Range(0, 32)] public int LightShaftSamples = 20;
-    [Range(0f, 1f)] public float LightShaftStrength = 0.32f;
+    [Range(0f, 3f)] public float LightShaftStrength = 1.5f;
     [Range(0.1f, 2f)] public float LightShaftDensity = 0.78f;
     [Range(0.7f, 0.99f)] public float LightShaftDecay = 0.95f;
     [Range(0f, 0.5f)] public float LightShaftWeight = 0.09f;

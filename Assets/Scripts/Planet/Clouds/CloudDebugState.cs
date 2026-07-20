@@ -10,8 +10,12 @@ public static class CloudDebugState
         SilverLining = 5,
         MoistureSource = 6,
         CondensationChange = 7,
-        PrecipitationSignal = 8
+        CloudPrecipitationSignal = 8,
+        WeatherPrecipitationSignal = 9
     }
+
+    public const float CondensationChangeThresholdMax = 0.01f;
+    public const float CondensationChangeSaturationMax = 0.02f;
 
     public static View Mode = View.Off;
     public static float CondensationChangeThreshold = 0.0002f;

@@ -5,6 +5,9 @@ public interface IPrecipitationDebugControl
     bool PrecipitationRenderingEnabled { get; set; }
     bool LocalPrecipitationParticlesEnabled { get; }
     bool ShouldRenderLocalParticles(Camera camera);
+    // World-anchored raindrop streaks (RainParticleController) gate independently of
+    // the dust/snow particle counts — rain is its own system.
+    bool ShouldRenderRainParticles(Camera camera);
 
     // Diagnostic surface so WeatherManager can publish precipitation state through
     // the registered service instead of FindAnyObjectByType<PrecipitationController>.
@@ -14,7 +17,6 @@ public interface IPrecipitationDebugControl
     float LocalMaxCameraAltitude { get; }
     int DustParticleCount { get; }
     int SnowParticleCount { get; }
-    int RainParticleCount { get; }
     int WeatherParticleProofMode { get; }
     string WeatherParticleSettingsSummary { get; }
 }

@@ -2,6 +2,14 @@
 Assets/Plugins/Wingman/
 Packages/com.singularitygroup.hotreload/
 
+# Unity/generated/local artifacts - keep graphify focused on project source
+Library/
+Temp/
+Obj/
+Logs/
+UserSettings/
+local-only/
+
 # Graphify's own output directory (project root canonical location)
 graphify-out/
 # Guard against graphify writing inside Assets/Scripts when run with that scope

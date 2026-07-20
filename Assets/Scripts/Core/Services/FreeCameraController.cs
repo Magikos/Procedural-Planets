@@ -276,7 +276,6 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
         float rollAxis = input.Roll.ReadValue<float>();
         if (Mathf.Abs(rollAxis) > 0.0001f)
             transform.Rotate(Vector3.forward, 60f * rollAxis * Time.deltaTime, Space.Self);
-
     }
 
     void FaceSun()
@@ -376,7 +375,10 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
 
     float GetSurfaceClearance(float radius)
     {
-        return Mathf.Max(SurfaceHeight, Mathf.Max(4f, radius * 0.0012f));
+        // The surface sampler reads the base heightfield; the rendered chunk mesh adds finer
+        // detail on top, so the camera must clear more than the sampled radius or it spawns
+        // under the mesh on slopes/bumps (the "teleport lands inside the planet" case).
+        return Mathf.Max(SurfaceHeight, Mathf.Max(20f, radius * 0.005f));
     }
 
     // --- Console commands -------------------------------------------------
@@ -434,6 +436,19 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
         _skipNextDelta = true;
 
         return $"camera look-at: position=({position.x:F2}, {position.y:F2}, {position.z:F2}) target=({target.x:F2}, {target.y:F2}, {target.z:F2})";
+    }
+
+    [ConsoleCommand("face-sun", "Rotate the camera in place to face the sun's current direction, without moving it. Same as the Backspace key. Useful in scripts after camera.look-at + time.set-local to aim at wherever the sun ends up, instead of a hardcoded direction that goes stale as time passes.", MonoTargetType.Single)]
+    string FaceSunCmd()
+    {
+        if (_celestial == null)
+            ServiceLocator.TryGet(out _celestial);
+        if (_celestial == null)
+            return "camera face-sun: no celestial controller available";
+
+        FaceSun();
+        Vector3 f = transform.forward;
+        return $"camera face-sun: forward=({f.x:F3}, {f.y:F3}, {f.z:F3})";
     }
 
     [ConsoleCommand("surface-view", "Get or toggle surface-following view (vs orbit view).", MonoTargetType.Single)]

@@ -14,7 +14,6 @@ int _WeatherParticlesEnabled;
 int _WeatherParticleProof;
 float3 _PrecipitationPlanetCenter;
 float4 _PrecipitationRadii;
-float4 _PrecipitationParams;
 float4 _PrecipitationColor;
 float4 _PrecipitationStormColor;
 float4 _WeatherParticleCommon;
@@ -22,7 +21,6 @@ float4 _WeatherParticleCounts;
 float4 _WeatherParticleDustParams;
 float4 _WeatherParticleSnowParams;
 float4 _WeatherParticlePhaseParams;
-float4 _WeatherParticleRainParams;
 float4 _WeatherParticleDustColor;
 float4 _WeatherParticleSnowColor;
 float4 _PrecipitationVisualParams;
@@ -76,10 +74,7 @@ void RibbonCorner(uint corner, out float along, out float side)
 
 float ProfileCount(int profile)
 {
-    if (profile == 0) return _WeatherParticleCounts.x;
-    if (profile == 1) return _WeatherParticleCounts.y;
-    if (profile == 2) return _WeatherParticleCounts.z;
-    return _WeatherParticleCounts.w;
+    return profile == 0 ? _WeatherParticleCounts.x : _WeatherParticleCounts.z;
 }
 
 float ProfileProofVisibility(int profile)
@@ -88,10 +83,9 @@ float ProfileProofVisibility(int profile)
         return -1.0;
     if (_WeatherParticleProof == 4)
         return 1.0;
-    // Proof slots 1=Dust, 2=Rain, 3=Snow. Distant rain (profile 3) follows
-    // close rain's proof slot — they share a "Rain" visual category.
-    int proofProfile = profile == 3 ? 1 : profile;
-    return _WeatherParticleProof == proofProfile + 1 ? 1.0 : 0.0;
+    // Proof slots 1=Dust, 2=Rain, 3=Snow. Rain streaks live in RainParticles.shader;
+    // this shader only draws dust (profile 0) and snow (profile 2).
+    return _WeatherParticleProof == profile + 1 ? 1.0 : 0.0;
 }
 
 float3 SafeParticleNormalize(float3 value, float3 fallback)
@@ -178,12 +172,9 @@ ParticleVaryings WeatherParticleVertex(
     float2 climate = SampleClimate01(normal);
     float temperatureCelsius = ClimateTemperatureCelsius(climate.x);
     float storm = saturate(weather.g);
-    // Rain shows wherever there is actual local rain (dynamics.b). The previous
-    // smoothstep(0.52, 0.88, weather.r) compounded on cloud cover, but typical world
-    // cloud values cluster around 0.5 — barely crossing the threshold — so rain
-    // visibility collapsed to near-zero even during heavy storms. Direct gating on
-    // the rain signal matches the design intent: "rain drops during rain."
-    float rainSignal = saturate(dynamics.b);
+    float stormGate = smoothstep(_PrecipitationParams.y,
+        min(1.0, _PrecipitationParams.y + _PrecipitationParams.z), storm);
+    float rainSignal = saturate(dynamics.b) * stormGate;
     float snowBlend = max(_WeatherParticlePhaseParams.y, 0.1);
     float snowPhase = 1.0 - smoothstep(
         _WeatherParticlePhaseParams.x - snowBlend,
@@ -219,17 +210,6 @@ ParticleVaryings WeatherParticleVertex(
             (1.0 + storm * 1.2);
         color = _WeatherParticleDustColor.rgb;
         profileOpacity = _WeatherParticleDustParams.z;
-    }
-    else if (profile == 1 || profile == 3)
-    {
-        float threshold = _WeatherParticleRainParams.x;
-        visibility = saturate((rainSignal - threshold) / max(1.0 - threshold, 0.001));
-        width = _WeatherParticleRainParams.z;
-        streakLength = _WeatherParticleRainParams.w;
-        fallSpeed = _PrecipitationVisualParams.w;
-        turbulence = 0.04 + _WindStrength01 * 0.1;
-        color = _PrecipitationColor.rgb;
-        profileOpacity = _WeatherParticleRainParams.y;
     }
     else
     {
@@ -268,30 +248,6 @@ ParticleVaryings WeatherParticleVertex(
             _GameTime * (0.35 + _WindStrength01) +
             tileSeed * 0.00037) * turbulence;
         particleRadius = cameraRadius + dustHeight;
-    }
-    else if (profile == 1 || profile == 3)
-    {
-        // Naming convention to be aware of: _PrecipitationRadii.x is the BOTTOM of
-        // the precipitation column (sea + ~25m, where drops "land"), and .y is the
-        // TOP (cloud base, ~sea + 375m, where drops "form"). Drops spawn at top,
-        // fall to bottom, recycle. Per-pixel depth test handles terrain occlusion
-        // automatically — a drop falling over a mountain is depth-culled when it
-        // enters terrain; a drop falling over water continues to sea level then
-        // recycles. The recycle happens at the geometric column floor (sea level),
-        // so visually drops appear to land on ground/water before being replaced.
-        float rainTop = precipitationTopRadius;
-        float rainBottom = max(seaRadius, 1.0);
-        float rainThickness = max(rainTop - rainBottom, 1.0);
-        float layerPosition01 = frac(
-            verticalPhase -
-            _GameTime * max(fallSpeed, 0.1) / rainThickness);
-        particleRadius = lerp(rainBottom, rainTop, layerPosition01);
-        // Narrow 2% fade bands at top (drops "form" out of cloud base) and bottom
-        // (drops "land") hide the wrap discontinuity without visibly trimming the
-        // column's usable height.
-        precipitationLayerFade =
-            smoothstep(0.0, 0.02, layerPosition01) *
-            (1.0 - smoothstep(0.98, 1.0, layerPosition01));
     }
     else
     {
@@ -375,11 +331,6 @@ ParticleVaryings VertSnow(uint vertexID : SV_VertexID, uint instanceID : SV_Inst
     return WeatherParticleVertex(vertexID, instanceID, 2);
 }
 
-ParticleVaryings VertRain(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
-{
-    return WeatherParticleVertex(vertexID, instanceID, 1);
-}
-
 float4 FragParticle(ParticleVaryings input) : SV_Target
 {
     if (input.alpha <= 0.0001)
@@ -442,16 +393,6 @@ ENDHLSL
             HLSLPROGRAM
             #pragma target 4.5
             #pragma vertex VertSnow
-            #pragma fragment FragParticle
-            ENDHLSL
-        }
-
-        Pass
-        {
-            Name "Rain"
-            HLSLPROGRAM
-            #pragma target 4.5
-            #pragma vertex VertRain
             #pragma fragment FragParticle
             ENDHLSL
         }

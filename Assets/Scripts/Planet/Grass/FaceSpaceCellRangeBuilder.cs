@@ -10,9 +10,8 @@ using UnityEngine;
 //   - outRanges[1..N] = adjacent faces (only when the disc overflows an edge)
 //
 // Corner straddling (3 simultaneous faces from a cube corner) is intentionally NOT
-// handled in this slice. With a 120m disc on a 5293m planet, the camera must be within
-// ~1.3 degrees of a cube corner to straddle three faces - extremely rare. Surfaced via
-// `SeamRisk` field on the primary range when uncovered straddling is detected.
+// handled in this slice. It is surfaced via `SeamRisk` on the primary range when
+// uncovered straddling is detected.
 public readonly struct FaceSpaceCell
 {
     public readonly int FaceIndex;

@@ -6,6 +6,8 @@ HLSLINCLUDE
 #include "Includes/Math.hlsl"
 #include "Includes/DebugModes.hlsl"
 #include "Includes/WeatherSampling.hlsl"
+#include "Includes/CloudDensity.hlsl"
+#include "Includes/ClimateSampling.hlsl"
 
 TEXTURE2D(_CameraDepthTexture);
 SAMPLER(sampler_CameraDepthTexture);
@@ -16,6 +18,9 @@ TEXTURE3D(_CloudShapeNoise);
 SAMPLER(sampler_CloudShapeNoise);
 TEXTURE3D(_CloudDetailNoise);
 SAMPLER(sampler_CloudDetailNoise);
+TEXTURE2D(_CloudBlueNoise);
+SAMPLER(sampler_CloudBlueNoise);
+float4 _CloudBlueNoise_TexelSize;
 
 float3 _CloudPlanetCenter;
 float _SeaLevelRadius;
@@ -43,7 +48,14 @@ float4 _CloudColor;
 float4 _CloudStormColor;
 float _CloudAmbientStrength;
 float _CloudStormDarkening;
+float _CloudPowderStrength;
+float4 _CloudMultiScatterParams;
+float4 _CloudAmbientSky;
+float4 _CloudAmbientGround;
+float _CloudAerialDensity;
+float4 _CloudBacklitParams;
 float4 _CloudSilverLiningParams;
+float4 _CloudRainShaftParams; // x=strength (0=off), y=length metres below cloud base
 float4 _WeatherLightningColor;
 
 // Animation
@@ -93,16 +105,40 @@ float HG(float cosAngle, float g)
     return (1.0 - g2) / (4.0 * MATH_PI * pow(abs(1.0 + g2 - 2.0 * g * cosAngle), 1.5));
 }
 
-float CloudPhase(float cosAngle)
+float CloudPhaseOctave(float cosAngle, float phaseScale)
 {
-    float forward = HG(cosAngle, _CloudPhaseParams.x);
-    float back = HG(cosAngle, -_CloudPhaseParams.y);
+    float forward = HG(cosAngle, _CloudPhaseParams.x * phaseScale);
+    float back = HG(cosAngle, -_CloudPhaseParams.y * phaseScale);
     return _CloudPhaseParams.z + lerp(back, forward, 0.5) * _CloudPhaseParams.w;
 }
 
-float InterleavedGradientNoise(float2 pixel)
+float CloudBeerPowder(float lightDensity, float cosAngle)
 {
-    return frac(52.9829189 * frac(dot(pixel, float2(0.06711056, 0.00583715))));
+    float beer = exp(-lightDensity * _CloudLightAbsorption);
+    float powder = 1.0 - exp(-lightDensity * 2.0);
+    float powderMix = saturate(_CloudPowderStrength * saturate(cosAngle));
+    return _CloudDarknessThreshold + beer * lerp(1.0, powder, powderMix) * (1.0 - _CloudDarknessThreshold);
+}
+
+float CloudMultiScatter(float lightDensity, float cosAngle, float directLight, float sunVisibility)
+{
+    float scatter = directLight * CloudPhaseOctave(cosAngle, 1.0);
+    float attenuation = _CloudMultiScatterParams.x;
+    float contribution = _CloudMultiScatterParams.y;
+    float phaseScale = _CloudMultiScatterParams.z;
+    float strength = _CloudMultiScatterParams.w;
+
+    [unroll]
+    for (int octave = 1; octave < 3; octave++)
+    {
+        float octaveTransmittance = exp(-lightDensity * _CloudLightAbsorption * attenuation) * sunVisibility;
+        scatter += strength * contribution * octaveTransmittance * CloudPhaseOctave(cosAngle, phaseScale);
+        attenuation *= _CloudMultiScatterParams.x;
+        contribution *= _CloudMultiScatterParams.y;
+        phaseScale *= _CloudMultiScatterParams.z;
+    }
+
+    return scatter;
 }
 
 float WeightedNoise(float4 noise, float4 weights)
@@ -129,6 +165,7 @@ CloudSample SampleCloud(float3 worldPos)
         return sampleData;
 
     float3 direction = fromCenter / max(radius, 0.0001);
+    sampleData.height01 = height01;
     float4 weather = SampleWeather(direction);
     float condensation = weather.r;
     float storm = weather.g;
@@ -151,6 +188,18 @@ CloudSample SampleCloud(float3 worldPos)
         : worldPos;
     float3 shapePos = advectedPos * _CloudNoiseScale;
     float shapeFBM = WeightedNoise(SAMPLE_TEXTURE3D_LOD(_CloudShapeNoise, sampler_CloudShapeNoise, shapePos, 0), _CloudShapeWeights);
+
+    // Cloud type is chosen by climate temperature (independent of density): warm air builds
+    // cumulus, cold air layers into stratus. Storm still drives cumulonimbus.
+    float convectivity = smoothstep(0.2, 0.6, SampleClimate01(direction).x);
+    float verticalProfile = CloudVerticalProfile(height01, convectivity, storm,
+        _CloudBottomFeather, _CloudTopFeather, _CloudTopDensityBias);
+
+    float cloudShape = shapeFBM * condensation * verticalProfile;
+    float density = saturate((cloudShape - _CloudDensityThreshold) * _CloudShapeSharpness);
+    if (density <= 0.0001)
+        return sampleData;
+
 #ifdef CLOUD_QUALITY_LOW
     float detailFBM = 0.5; // skip detail noise sample on low-quality path
 #else
@@ -159,28 +208,41 @@ CloudSample SampleCloud(float3 worldPos)
         float3(0.5, 0.35, 0.15));
 #endif
 
-    float bottomFade = smoothstep(0.0, max(_CloudBottomFeather, 0.0001), height01);
-    float topFade = 1.0 - smoothstep(1.0 - saturate(_CloudTopFeather), 1.0, height01);
-    float verticalShape = bottomFade * topFade;
-    float topBias = lerp(1.0, pow(saturate(height01), max(_CloudTopDensityBias, 0.001)), 0.35);
-
-    float frontShape = condensation * verticalShape;
-    float cloudShape = shapeFBM * frontShape * topBias;
-    float density = saturate((cloudShape - _CloudDensityThreshold) * _CloudShapeSharpness);
-
     float edgeErosion = (1.0 - detailFBM) * (1.0 - density) * _CloudDetailWeight;
     density = saturate(density - edgeErosion) * _CloudDensityMultiplier;
 
     sampleData.density = density;
-    sampleData.height01 = height01;
     return sampleData;
 }
 
-float LightMarch(float3 pos, float lightStepSize, float2 pixel, int viewStep)
+struct v2f
+{
+    float4 pos : SV_POSITION;
+    float2 uv : TEXCOORD0;
+    float3 viewVector : TEXCOORD1;
+};
+
+v2f vert(uint vertexID : SV_VertexID)
+{
+    v2f output;
+    output.pos = GetFullScreenTriangleVertexPosition(vertexID);
+    float2 uv = GetFullScreenTriangleTexCoord(vertexID);
+    output.uv = uv;
+    #if UNITY_UV_STARTS_AT_TOP
+        float2 ndc = float2(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0);
+    #else
+        float2 ndc = float2(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
+    #endif
+    float3 viewVector = mul(unity_CameraInvProjection, float4(ndc, 0, -1)).xyz;
+    output.viewVector = mul(unity_CameraToWorld, float4(viewVector, 0)).xyz;
+    return output;
+}
+
+float LightMarch(float3 pos, float lightStepSize, float2 pixel, int viewStep, float cosAngle, out float lightDensity)
 {
     float3 surfaceNormal = normalize(pos - _CloudPlanetCenter);
     float sunDot = dot(surfaceNormal, _SunParams.xyz);
-    float sunVisibility = saturate((sunDot + 0.08) * 6.0);
+    float sunVisibility = smoothstep(-0.55, 0.35, sunDot);
 
     float totalDensity = 0;
     float jitterStrength = saturate(_CloudRayOffsetStrength);
@@ -190,7 +252,8 @@ float LightMarch(float3 pos, float lightStepSize, float2 pixel, int viewStep)
         * jitterStrength;
     float3 lightPos = pos + _SunParams.xyz * lightStartJitter;
 
-    for (int i = 0; i < min(_CloudLightSteps, CLOUD_LIGHT_STEPS_MAX); i++)
+    int lightSteps = min(_CloudLightSteps, CLOUD_LIGHT_STEPS_MAX);
+    for (int i = 0; i < lightSteps; i++)
     {
         float lightStepF = (float)i;
         float perStepJitter = (Hash12(pixel + float2(viewStepF * 19.31 + lightStepF * 7.11, lightStepF * 43.17)) - 0.5)
@@ -201,9 +264,18 @@ float LightMarch(float3 pos, float lightStepSize, float2 pixel, int viewStep)
         totalDensity += SampleCloud(lightPos + _SunParams.xyz * perStepJitter).density * lightStepSize;
     }
 
-    float transmittance = exp(-totalDensity * _CloudLightAbsorption);
-    float lit = _CloudDarknessThreshold + transmittance * (1.0 - _CloudDarknessThreshold);
-    return lit * sunVisibility;
+    lightDensity = totalDensity;
+    return CloudBeerPowder(lightDensity, cosAngle) * sunVisibility;
+}
+
+float3 PrecipitationDebugColor(float value)
+{
+    float3 low = float3(0.05, 0.25, 1.0);
+    float3 mid = float3(0.15, 1.0, 0.35);
+    float3 high = float3(1.0, 0.12, 0.02);
+    return value < 0.5
+        ? lerp(low, mid, value * 2.0)
+        : lerp(mid, high, (value - 0.5) * 2.0);
 }
 
 ENDHLSL
@@ -221,29 +293,6 @@ ENDHLSL
             #pragma fragment frag
             #pragma target 4.5
             #pragma multi_compile _ CLOUD_QUALITY_LOW
-
-            struct v2f
-            {
-                float4 pos : SV_POSITION;
-                float2 uv : TEXCOORD0;
-                float3 viewVector : TEXCOORD1;
-            };
-
-            v2f vert(uint vertexID : SV_VertexID)
-            {
-                v2f output;
-                output.pos = GetFullScreenTriangleVertexPosition(vertexID);
-                float2 uv = GetFullScreenTriangleTexCoord(vertexID);
-                output.uv = uv;
-                #if UNITY_UV_STARTS_AT_TOP
-                    float2 ndc = float2(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0);
-                #else
-                    float2 ndc = float2(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
-                #endif
-                float3 viewVector = mul(unity_CameraInvProjection, float4(ndc, 0, -1)).xyz;
-                output.viewVector = mul(unity_CameraToWorld, float4(viewVector, 0)).xyz;
-                return output;
-            }
 
             float4 frag(v2f i) : SV_Target
             {
@@ -271,12 +320,23 @@ ENDHLSL
 
                 float startDistance = outerHit.x;
                 float endDistance = min(outerHit.x + outerHit.y, sceneDepth);
+                // Distance to the cloud layer itself, used for the aerial-perspective fade. Kept
+                // separate from the march start so extending the march down into the sub-cloud air
+                // for the rain shaft doesn't collapse the aerial fade to zero.
+                float cloudStartDistance = startDistance;
 
                 float cameraRadius = length(rayOrigin - _CloudPlanetCenter);
                 if (cameraRadius < _CloudInnerRadius)
                 {
                     float2 innerHit = RaySphere(_CloudPlanetCenter, _CloudInnerRadius, rayOrigin, rayDir);
-                    startDistance = max(startDistance, innerHit.x + innerHit.y);
+                    cloudStartDistance = max(startDistance, innerHit.x + innerHit.y);
+                    // Normally skip the empty sub-cloud air and start at the inner-shell exit. With
+                    // the rain shaft on, keep that segment so virga renders when viewed from below
+                    // (standing on the ground looking at a distant storm).
+                    if (_CloudRainShaftParams.x > 0.0)
+                        startDistance = max(startDistance, 0.0);
+                    else
+                        startDistance = cloudStartDistance;
                 }
 
                 if (endDistance <= startDistance)
@@ -285,14 +345,11 @@ ENDHLSL
                 int viewSteps = min(max(_CloudViewSteps, 1), CLOUD_MAX_STEPS);
                 float stepSize = (endDistance - startDistance) / viewSteps;
                 float2 pixel = floor(i.uv * _ScreenParams.xy);
-                float pixelJitter = lerp(
-                    InterleavedGradientNoise(i.uv * _ScreenParams.xy),
-                    Hash12(pixel),
-                    0.7);
+                float pixelJitter = SAMPLE_TEXTURE2D_LOD(_CloudBlueNoise, sampler_CloudBlueNoise,
+                    (pixel + 0.5) * _CloudBlueNoise_TexelSize.xy, 0).r;
                 float jitterStrength = saturate(_CloudRayOffsetStrength);
 
                 float cosAngle = dot(rayDir, _SunParams.xyz);
-                float phase = CloudPhase(cosAngle);
                 float lightStepSize = max((_CloudOuterRadius - _CloudInnerRadius) / max(min(_CloudLightSteps, CLOUD_LIGHT_STEPS_MAX), 1), 1.0);
 
                 float transmittance = 1.0;
@@ -305,6 +362,7 @@ ENDHLSL
                 float debugCondensationChange = 0.0;
                 float debugCondensationSign = 0.0;
                 float debugRainRate = 0.0;
+                float debugWeatherRainRate = 0.0;
 
                 UNITY_LOOP
                 for (int s = 0; s < viewSteps; s++)
@@ -315,6 +373,13 @@ ENDHLSL
                     float marchDistance = min(startDistance + stepSize * (stepF + withinStep), endDistance);
                     float3 jitteredSamplePos = rayOrigin + rayDir * marchDistance;
                     CloudSample cloud = SampleCloud(jitteredSamplePos);
+                    float3 sampleNormal = normalize(jitteredSamplePos - _CloudPlanetCenter);
+                    float weatherRainRate = 0.0;
+                    if (_CloudDebugMode == 9)
+                    {
+                        weatherRainRate = WeatherPrecipitationSignal(sampleNormal, cloud.storm);
+                        debugWeatherRainRate = max(debugWeatherRainRate, weatherRainRate);
+                    }
                     debugWeather = max(debugWeather, cloud.condensation);
                     debugStorm = max(debugStorm, cloud.storm);
                     debugMoistureSource = max(debugMoistureSource, cloud.moistureSource);
@@ -327,23 +392,50 @@ ENDHLSL
 
                     if (cloud.density > 0.0001)
                     {
-                        float lightTransmittance = LightMarch(jitteredSamplePos, lightStepSize, pixel, s);
-                        float3 surfaceNormal = normalize(jitteredSamplePos - _CloudPlanetCenter);
-                        float localSun = saturate((dot(surfaceNormal, _SunParams.xyz) + 0.12) * 2.5);
-                        float3 cloudAlbedo = lerp(_CloudColor.rgb, _CloudStormColor.rgb, cloud.storm);
-                        float stormLight = lerp(1.0, 1.0 - _CloudStormDarkening, cloud.storm);
-                        float ambientStrength = lerp(_CloudAmbientStrength * 0.12, _CloudAmbientStrength, localSun);
-                        float ambient = (_NightAmbientIntensity * 0.25 + ambientStrength) * (0.35 + 0.65 * cloud.height01);
-                        float3 lighting = cloudAlbedo * (lightTransmittance * phase * stormLight + ambient);
+                        float lightDensity = 0.0;
+                        float lightTransmittance = LightMarch(jitteredSamplePos, lightStepSize, pixel, s, cosAngle, lightDensity);
+                        float3 surfaceNormal = sampleNormal;
+                        float sunFacing = dot(surfaceNormal, _SunParams.xyz);
+                        float localSun = smoothstep(-0.55, 0.35, sunFacing);
+
+                        if (_CloudDebugMode != 9)
+                            weatherRainRate = WeatherPrecipitationSignal(sampleNormal, cloud.storm);
+                        float rainRate = weatherRainRate;
+                        float gloom = WeatherCloudGloomFromRain(cloud.storm, rainRate);
+
+                        float3 cloudAlbedo = lerp(_CloudColor.rgb, _CloudStormColor.rgb, gloom);
+                        float stormLight = lerp(1.0, 1.0 - _CloudStormDarkening, gloom);
+                        float ambientStrength = lerp(_CloudAmbientStrength * 0.22, _CloudAmbientStrength, localSun);
+                        float3 ambient = lerp(_CloudAmbientGround.rgb, _CloudAmbientSky.rgb, cloud.height01)
+                            * (_NightAmbientIntensity * 0.25 + ambientStrength);
+                        float multiScatter = CloudMultiScatter(lightDensity, cosAngle, lightTransmittance, localSun);
+                        float3 lighting = cloudAlbedo
+                            * (multiScatter * stormLight + ambient);
 
                         float density01 = saturate(cloud.density / max(_CloudDensityMultiplier, 0.0001));
                         float thinEdge = pow(saturate(1.0 - density01), max(_CloudSilverLiningParams.z, 0.001));
                         float forwardSun = pow(saturate(cosAngle), max(_CloudSilverLiningParams.y, 1.0));
                         float horizonSun = saturate((dot(surfaceNormal, _SunParams.xyz) + 0.35) * 1.6);
-                        float stormSuppression = saturate(1.0 - cloud.storm * _CloudSilverLiningParams.w);
+                        // Dim the rim on gloomy clouds, never kill it: dark storm clouds keep a
+                        // silver lining where they are optically thin.
+                        float rimKeep = saturate(1.0 - gloom * _CloudSilverLiningParams.w);
+                        // Backlit rim/glow visibility: light wrapping a cloud edge stays bright
+                        // even when the cloud body blocks DIRECT transmission - which is exactly
+                        // the sun-behind-cloud case. Gating the rim on raw lightTransmittance
+                        // suppressed it in the very situation it should appear (flat grey cloud,
+                        // no silver lining). Blend toward 1 so thin backlit edges glow; thick
+                        // cloud still dims it somewhat.
+                        float backlitVisibility = lerp(lightTransmittance, 1.0, 0.6);
+
                         float silverLining = _CloudSilverLiningParams.x * forwardSun * thinEdge
-                            * lightTransmittance * horizonSun * stormSuppression;
+                            * backlitVisibility * horizonSun * rimKeep;
                         lighting += _CloudColor.rgb * silverLining;
+
+                        // Backlit inner glow: forward-scattered sun bleeding through the cloud body
+                        // when lit from behind (view looking toward the sun).
+                        float backGlow = pow(saturate(cosAngle), max(_CloudBacklitParams.y, 1.0))
+                            * backlitVisibility * _CloudBacklitParams.x * rimKeep;
+                        lighting += _CloudColor.rgb * backGlow;
 
                         float lightning = WeatherLightning(surfaceNormal, cloud.storm);
                         lighting += _WeatherLightningColor.rgb * lightning * lerp(0.75, 1.2, cloud.height01)
@@ -351,13 +443,44 @@ ENDHLSL
 
                         debugDensity = max(debugDensity, density01);
                         debugSilverLining = max(debugSilverLining, saturate(silverLining));
-                        debugRainRate = max(debugRainRate, SampleDynamics(surfaceNormal).b);
+                        debugRainRate = max(debugRainRate, rainRate);
 
                         lightEnergy += cloud.density * stepSize * transmittance * lighting;
                         transmittance *= exp(-cloud.density * stepSize * _CloudLightAbsorption);
 
                         if (transmittance < 0.01)
                             break;
+                    }
+                    else if (_CloudRainShaftParams.x > 0.0)
+                    {
+                        // Virga / rain shaft: below the cloud base SampleCloud is zero, so read the
+                        // weather column directly and hang a faint grey veil under gloomy (raining)
+                        // cells. Fades downward from the base like a curtain and hazes the background
+                        // behind it. Reuses the cloud density scale so opacity tracks cloud opacity.
+                        float sampleRadius = length(jitteredSamplePos - _CloudPlanetCenter);
+                        float belowBase = _CloudInnerRadius - sampleRadius;
+                        if (belowBase > 0.0)
+                        {
+                            float4 weatherColumn = SampleWeather(sampleNormal);
+                            float rainSignal = WeatherPrecipitationSignal(sampleNormal, weatherColumn.g);
+                            float rainAmount = WeatherCloudGloomFromRain(weatherColumn.g, rainSignal)
+                                * smoothstep(0.02, 0.25, weatherColumn.r);
+                            if (rainAmount > 0.001)
+                            {
+                                float vfade = saturate(1.0 - belowBase / max(_CloudRainShaftParams.y, 1.0));
+                                float rainSigma = rainAmount * vfade * _CloudRainShaftParams.x * _CloudDensityMultiplier;
+                                // Cap per-step optical depth so a long high-altitude step (edge-on
+                                // through the whole veil) can't wall off to opaque white; keep it a
+                                // translucent grey curtain.
+                                float veilOD = min(rainSigma * stepSize, 0.25);
+                                float rainLocalSun = smoothstep(-0.55, 0.35, dot(sampleNormal, _SunParams.xyz));
+                                float3 rainColor = _CloudAmbientSky.rgb * 0.28 * lerp(0.5, 1.0, rainLocalSun);
+                                lightEnergy += rainColor * veilOD * transmittance;
+                                transmittance *= exp(-veilOD);
+                                if (transmittance < 0.01)
+                                    break;
+                            }
+                        }
                     }
 
                 }
@@ -388,12 +511,11 @@ ENDHLSL
                     }
                     if (_CloudDebugMode == 8)
                     {
-                        float3 noRain    = float3(0.02, 0.08, 0.04);
-                        float3 lightRain = float3(0.15, 1.0,  0.25);
-                        float3 heavyRain = float3(1.0,  0.55, 0.02);
-                        debugColor = debugRainRate < 0.5
-                            ? lerp(noRain, lightRain, debugRainRate * 2.0)
-                            : lerp(lightRain, heavyRain, (debugRainRate - 0.5) * 2.0);
+                        debugColor = PrecipitationDebugColor(debugRainRate);
+                    }
+                    if (_CloudDebugMode == 9)
+                    {
+                        debugColor = PrecipitationDebugColor(debugWeatherRainRate);
                     }
 
                     float debugMask = max(max(max(debugWeather, debugStorm), max(debugDensity, opticalDepth)),
@@ -407,12 +529,25 @@ ENDHLSL
                         debugMask = smoothstep(changeThreshold, changeSaturation, debugCondensationChange);
                     }
                     if (_CloudDebugMode == 8)
+                        debugMask = debugDensity;
+                    if (_CloudDebugMode == 9)
                         debugMask = debugWeather;
                     return float4(baseScene + debugColor * saturate(debugMask), sceneColor.a);
                 }
 
                 float3 result = sceneColor.rgb * transmittance + lightEnergy;
-                return float4(result, sceneColor.a);
+
+                // Aerial perspective: clouds render after the atmosphere, so sceneColor already
+                // holds the atmosphere-lit sky behind this pixel. Fade the cloud toward it with
+                // view distance so distant clouds haze into the sky instead of pasting on it.
+                float aerial = 1.0 - exp(-cloudStartDistance * _CloudAerialDensity);
+                result = lerp(result, sceneColor.rgb, aerial);
+
+                // Screen-space cloud opacity for the god-ray streak pass to occlude on (distant
+                // hazed clouds block less). The pass reads this back from alpha, then restores
+                // alpha to 1 so downstream post-processing is unaffected.
+                float cloudOpacity = (1.0 - transmittance) * (1.0 - aerial);
+                return float4(result, cloudOpacity);
             }
             ENDHLSL
         }

@@ -17,7 +17,6 @@ int _CloudWeatherResolution;
 int _PrecipitationEnabled;
 float3 _PrecipitationPlanetCenter;
 float4 _PrecipitationRadii;
-float4 _PrecipitationParams;
 float4 _PrecipitationFadeParams;
 float4 _PrecipitationVisualParams;
 float4 _PrecipitationColor;
@@ -140,18 +139,17 @@ float SamplePrecipitationSignal(float3 worldPos, out float storm, out float rain
 
     float4 weather = SampleWeather(normal);
     float4 dynamics = SampleDynamics(normal);
-    rainRate = saturate(dynamics.b);
     storm = saturate(weather.g);
     float stormGate = smoothstep(_PrecipitationParams.y,
         min(1.0, _PrecipitationParams.y + _PrecipitationParams.z), storm);
     float cloudSupport = smoothstep(0.58, 0.9, weather.r);
-    return rainRate * stormGate * cloudSupport * _PrecipitationParams.x;
+    rainRate = saturate(dynamics.b) * stormGate;
+    return rainRate * cloudSupport * _PrecipitationParams.x;
 }
 
-float SamplePrecipitationDensity(float3 worldPos)
+float SamplePrecipitationDensity(float3 worldPos, out float rainRate)
 {
     float storm;
-    float rainRate;
     float height01;
     float precipitation = SamplePrecipitationSignal(worldPos, storm, rainRate, height01);
     if (precipitation <= 0.0001)
@@ -188,7 +186,12 @@ float SamplePrecipitationDensity(float3 worldPos)
     float large = ValueNoise(local / curtainScale);
     large = lerp(large, ValueNoise(local / (curtainScale * 0.43) + 19.7), 0.35);
     float curtain = smoothstep(0.22, 0.88, large);
-    float fineBreakup = ValueNoise(local / max(curtainScale * 0.18, 8.0) + float2(_GameTime * 0.21, -_GameTime * 0.13));
+    // Anisotropic: low horizontal frequency, high vertical frequency scrolling downward
+    // with fall speed, so shafts streak vertically instead of reading as isotropic fog.
+    float2 streakUv = float2(
+        dot(local, float2(1.0, 0.37)) / max(curtainScale * 0.16, 8.0),
+        height01 * 2.2 - _GameTime * _PrecipitationVisualParams.w * 0.02);
+    float fineBreakup = ValueNoise(streakUv);
     float heightBreakup = ValueNoise(float2(height01 * 43.0 + faceOffset * 0.007, dot(local, float2(0.013, 0.019))));
 
     float stormWeight = lerp(0.6, 1.15, saturate(storm));
@@ -298,6 +301,12 @@ ENDHLSL
                 float weightedStorm = 0.0;
                 float weightedLightning = 0.0;
                 float debugMask = 0.0;
+                float peakRain = 0.0;
+                float rainOpticalDepth = 0.0;
+
+                // Heaviness raises the opacity ceiling: drizzle stays a faint veil while a
+                // downpour builds toward a solid curtain instead of both capping at .w.
+                float opacityCap = _PrecipitationParams.w;
 
                 UNITY_LOOP
                 for (int s = 0; s < 48; s++)
@@ -307,21 +316,26 @@ ENDHLSL
 
                     float stepJitter = (Hash12(pixel + float2(s * 19.19, s * 47.23)) - 0.5) * stepSize * 0.52;
                     float3 jitteredSamplePos = samplePos + rayDir * stepJitter;
-                    float density = SamplePrecipitationDensity(jitteredSamplePos);
+                    float rainRate;
+                    float density = SamplePrecipitationDensity(jitteredSamplePos, rainRate);
                     debugMask = max(debugMask, density);
                     if (density > 0.0001)
                     {
+                        peakRain = max(peakRain, rainRate);
+                        opacityCap = saturate(_PrecipitationParams.w * lerp(0.6, 1.9, peakRain));
+                        rainOpticalDepth += density * stepSize;
+
                         float3 normal = normalize(jitteredSamplePos - _PrecipitationPlanetCenter);
                         float storm = SampleWeather(normal).g;
                         float lightning = WeatherLightning(normal, storm);
                         float distanceFade = saturate(1.0 - (length(jitteredSamplePos - rayOrigin) / max(_PrecipitationRadii.z, 1.0)) * 0.35);
-                        float sampleAlpha = saturate(density * stepSize * 0.0048 * distanceFade);
+                        float sampleAlpha = saturate(density * stepSize * 0.0048 * lerp(0.5, 1.6, rainRate) * distanceFade);
                         sampleAlpha *= 1.0 - alpha;
                         alpha += sampleAlpha;
                         weightedStorm += storm * sampleAlpha;
                         weightedLightning += lightning * sampleAlpha;
 
-                        if (alpha > _PrecipitationParams.w)
+                        if (alpha > opacityCap)
                             break;
                     }
 
@@ -334,9 +348,9 @@ ENDHLSL
                     return float4(sceneColor.rgb * 0.35 + debugColor * saturate(debugMask), sceneColor.a);
                 }
 
-                alpha = min(alpha, _PrecipitationParams.w);
+                alpha = min(alpha, opacityCap);
                 alpha *= cameraAboveSea;
-                if (alpha <= 0.0001)
+                if (alpha <= 0.0001 && rainOpticalDepth <= 0.0001)
                     return NoPrecipitationContribution(sceneColor);
 
                 float averageStorm = weightedStorm / max(alpha, 0.0001);
@@ -347,7 +361,30 @@ ENDHLSL
                 float stormDim = lerp(1.0, 0.28, saturate(averageStorm));
                 float light = _NightAmbientIntensity * 0.45 + localSun * 0.85 * stormDim + 0.12 + rainLightning * 0.65;
                 float3 rainColor = lerp(_PrecipitationColor.rgb, _PrecipitationStormColor.rgb, saturate(averageStorm));
-                float3 result = lerp(sceneColor.rgb, rainColor * light + _WeatherLightningColor.rgb * rainLightning * 0.28, alpha);
+                float3 fogColor = rainColor * light;
+
+                // Rain-volume fog, applied to the scene BEFORE the curtain composite so
+                // shafts stay legible inside the fog. _PrecipitationFadeParams.z scales
+                // through-the-volume extinction; .w scales camera-in-rain haze driven by
+                // the LOCAL rain rate under the camera (the "heaviness" signal).
+                float fogAmount = 1.0 - exp(-rainOpticalDepth * 0.0009 * _PrecipitationFadeParams.z);
+                sceneColor.rgb = lerp(sceneColor.rgb, fogColor, fogAmount * cameraAboveSea);
+
+                float cameraRadius = length(rayOrigin - _PrecipitationPlanetCenter);
+                float inColumn = step(bottomRadius, cameraRadius) * step(cameraRadius, topRadius);
+                float localStorm = saturate(SampleWeather(toCamera).g);
+                float localStormGate = smoothstep(_PrecipitationParams.y,
+                    min(1.0, _PrecipitationParams.y + _PrecipitationParams.z), localStorm);
+                float localRain = SampleDynamics(toCamera).b * localStormGate * inColumn;
+                float hazeStrength = smoothstep(0.15, 0.9, localRain) * 0.22 * _PrecipitationFadeParams.w;
+                float hazeByDepth = 1.0 - exp(-min(sceneDepth, 800.0) * 0.004);
+                sceneColor.rgb = lerp(sceneColor.rgb, fogColor, hazeStrength * hazeByDepth * cameraAboveSea);
+
+                // Extinction contrast: heavy curtains darken what is behind them so distant
+                // rain reads as a veil against terrain and sky, not a flat gray tint.
+                sceneColor.rgb *= lerp(1.0, 0.72, alpha * saturate(averageStorm + peakRain * 0.6));
+
+                float3 result = lerp(sceneColor.rgb, fogColor + _WeatherLightningColor.rgb * rainLightning * 0.28, alpha);
 
                 if (_OceanDebugMode == DEBUG_PRECIPITATION_CONTRIBUTION)
                     return float4(ContributionHeat(result - sceneColor.rgb, 10.0, float3(0.55, 0.20, 1.0), float3(1.0, 0.30, 0.55)), 1.0);

@@ -9,9 +9,10 @@ public enum WorldServiceValidationProfile
     TerrainGrassBiome,
 }
 
-[DefaultExecutionOrder(-10000)]
 public class SceneBootstrap : MonoBehaviour, IEarlyInitialize
 {
+    static readonly Type[] EarlyDeps = { typeof(GameBootstrap) };
+
     static readonly Type[] RequiredWorldServices =
     {
         typeof(ISettingsService),
@@ -61,6 +62,7 @@ public class SceneBootstrap : MonoBehaviour, IEarlyInitialize
     readonly HashSet<Type> _requiredSettings = new();
 
     public int EarlyPriority => 50;
+    public IReadOnlyList<Type> EarlyDependencies => EarlyDeps;
 
     void Awake()
     {

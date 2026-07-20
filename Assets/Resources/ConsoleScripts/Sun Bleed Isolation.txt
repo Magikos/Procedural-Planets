@@ -1,0 +1,42 @@
+@name Sun Bleed Isolation
+@timeout 60
+
+# Isolates which pass draws the sun glow that bleeds through the planet body from space.
+# POSITION THE CAMERA FIRST: in space, planet centered, sun directly behind it (the bleed
+# visible), then run this. The camera is never moved by this script - it toggles one suspect
+# at a time and screenshots, so whichever "-off" shot loses the central glow is the source.
+# Each @sidecar records the live knob values for that shot.
+@sidecar camera.position
+@sidecar atmosphere.sun-disc-intensity
+@sidecar atmosphere.sun-aureole
+@sidecar atmosphere.mie
+
+time.freeze true
+
+# Baseline: everything on (should show the bleed).
+@wait frames 5
+debug.screenshot bleed-baseline
+
+# Suspect 1: hard sun disc (Star.shader). If the glow dies here, the disc is leaking through.
+atmosphere.sun-disc-intensity 0
+@wait frames 5
+debug.screenshot bleed-disc-off
+atmosphere.sun-disc-intensity 0.25
+
+# Suspect 2: sun aureole (atmosphere low-sun bloom). If the glow dies here, the aureole is not
+# depth-masked from this view.
+atmosphere.sun-aureole 0
+@wait frames 5
+debug.screenshot bleed-aureole-off
+atmosphere.sun-aureole 2
+
+# Suspect 3: atmosphere Mie in-scatter (the term my planet-shadow fix targets). If the glow
+# dies here, the fix isn't shadowing this sample set.
+atmosphere.mie 0
+@wait frames 5
+debug.screenshot bleed-mie-off
+atmosphere.mie 0.5
+
+# Restore-all reference (should match baseline).
+@wait frames 5
+debug.screenshot bleed-restored

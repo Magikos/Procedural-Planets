@@ -595,25 +595,8 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
         return value > 0.5f ? "hot-pink" : "off";
     }
 
-    static SurfacePathShape ParseShape(string shape)
-    {
-        switch (shape)
-        {
-            case "hard-disc":
-                return SurfacePathShape.HardDisc;
-            case "hard-square":
-            case "square":
-                return SurfacePathShape.HardSquare;
-            default:
-                return SurfacePathShape.SoftDisc;
-        }
-    }
-
     static string OperationId(SurfacePathOperation operation) =>
         operation == SurfacePathOperation.Erase ? "erase" : "paint";
-
-    static SurfacePathOperation ParseOperation(string operation) =>
-        operation == "erase" ? SurfacePathOperation.Erase : SurfacePathOperation.Paint;
 
     string FilePath()
     {

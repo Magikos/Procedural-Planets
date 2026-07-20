@@ -37,6 +37,7 @@ GraphicsSettings:
   - {fileID: 4800000, guid: 112353088ac121f4e9fba1bc53a36d61, type: 3}
   - {fileID: 4800000, guid: f2008ccaea02c0d4ab9848beb08aa549, type: 3}
   - {fileID: 4800000, guid: 9b1db8670795c104da28c3d6fa296f01, type: 3}
+  - {fileID: 4800000, guid: 3be27002048cfed48b8b1d0101d92a54, type: 3}
   m_PreloadedShaders: []
   m_PreloadShadersBatchTimeLimit: -1
   m_GraphicsStateCollection: {fileID: 0}
@@ -76,6 +77,7 @@ GraphicsSettings:
     keywordDeclarationOverrides: []
     numInternalDefines: 0
     defines: []
+    compilerSettings: []
   m_LightsUseLinearIntensity: 1
   m_LightsUseColorTemperature: 1
   m_LogWhenShaderIsCompiled: 0

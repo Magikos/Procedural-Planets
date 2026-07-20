@@ -12,6 +12,7 @@ float3 _SunParams;
 float _SunIntensity;
 float _SunDiscSize;
 float _SunDiscBlend;
+float _SunDiscIntensity;
 float3 _PlanetCenter;
 float _SeaLevelRadius;
 float _AtmosphereRadius;
@@ -83,7 +84,8 @@ float3 SunDisc(float3 dir)
     float discBlend = _SunDiscBlend > 0.0 ? _SunDiscBlend : 0.002;
     float3 sunDir = dot(_SunParams.xyz, _SunParams.xyz) > 0.0001 ? normalize(_SunParams.xyz) : float3(0.0, 1.0, 0.0);
     float sunDot = dot(dir, sunDir);
-    float sunDisc = smoothstep(discSize - discBlend, discSize, sunDot);
+    float discIntensity = _SunDiscIntensity >= 0.0 ? _SunDiscIntensity : 1.0;
+    float sunDisc = smoothstep(discSize - discBlend, discSize, sunDot) * discIntensity;
     float3 sunColor = sunDisc * float3(1.2, 1.1, 0.9) * _SunIntensity;
     return sunColor / (1.0 + sunColor);
 }

@@ -344,4 +344,30 @@ public class DebugCaptureController : MonoBehaviour, IDebugCaptureModeContext
         if (_pipeline == null) return;
         await _pipeline.CaptureCurrentSetAsync(ct);
     }
+
+    [ConsoleCommand("screenshot", "Capture a screenshot of only the current debug mode (set via debug.mode), ignoring the active capture set. Optional label is inserted into the filename to help track what a batch of captures was testing. Closes console during capture, then reopens.", MonoTargetType.Single)]
+    async Awaitable ScreenshotCmd(string label = null, CancellationToken ct = default)
+    {
+        bool reopenConsole = false;
+        ServiceLocator.TryGet<IConsoleService>(out var console);
+
+        try
+        {
+            if (console != null && console.IsOpen)
+            {
+                reopenConsole = true;
+                console.Close();
+                float endTime = Time.unscaledTime + 0.2f;
+                while (Time.unscaledTime < endTime)
+                    await Awaitable.NextFrameAsync(ct);
+            }
+
+            if (_pipeline != null)
+                await _pipeline.CaptureCurrentModeAsync(ct, label);
+        }
+        finally
+        {
+            if (reopenConsole && console != null) console.Open();
+        }
+    }
 }

@@ -14,6 +14,8 @@ public static partial class ShaderGlobalIds
     public const string SunIntensity = "_SunIntensity";
     public const string SunDiscSize = "_SunDiscSize";
     public const string SunDiscBlend = "_SunDiscBlend";
+    public const string SunDiscIntensity = "_SunDiscIntensity";
+    public const string SunAureoleParams = "_SunAureoleParams";
     public const string LightShaftParams = "_LightShaftParams";
     public const string LightShaftParams2 = "_LightShaftParams2";
     public const string LightShaftSamples = "_LightShaftSamples";

@@ -1,0 +1,48 @@
+@name Grass Edge Strip Probe
+@timeout 300
+@defer grass.layer blanket true
+@defer grass.overlay-strength 1
+@defer grass.surface-brightness 0.46
+@sidecar camera.position
+@sidecar grass.status
+@sidecar grass.overlay-status
+@sidecar planet.status
+
+# Aim the camera at the biome-edge strip artifact BEFORE running this script.
+# The camera is not moved. Each state below captures the full Grass F10 set
+# (normal, biome blend weight, grass LOD coverage, albedo views) so the strip's
+# source term can be identified by diffing captures across states:
+#   - strips in GrassLodCoverage view  -> coverage/density term (EvaluateGrassOverlay)
+#   - strips in BiomeMapBlend view     -> biome atlas blend, not grass
+#   - strips gone with blanket off     -> painted overlay (ApplyGrassSurfaceAlbedo)
+#   - strips scale with brightness     -> tint/brightness glow, not coverage
+debug.capture-set "Grass"
+
+# 1. Current state - baseline with the artifact visible.
+@wait frames 5
+debug.capture
+
+# 2. Blanket off - if strips vanish, they are painted overlay, not terrain blend.
+grass.layer blanket false
+@wait frames 5
+debug.capture
+
+# 3. Blanket on at zero strength - coverage debug still renders, paint does not.
+grass.layer blanket true
+grass.overlay-strength 0
+@wait frames 5
+debug.capture
+
+# 4-6. Brightness ladder at full strength - separates coverage banding from tint glow.
+grass.overlay-strength 1
+grass.surface-brightness 0.35
+@wait frames 5
+debug.capture
+
+grass.surface-brightness 0.7
+@wait frames 5
+debug.capture
+
+grass.surface-brightness 1.0
+@wait frames 5
+debug.capture

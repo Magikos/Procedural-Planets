@@ -54,6 +54,8 @@ static class WaterDebugRegistration
         RegisterMode(registry, DebugModeConstants.AtmosphereBypass, "AtmosphereBypass", "Atmosphere");
         RegisterMode(registry, DebugModeConstants.VolumeAfterAtmosphere, "VolumeAfterAtmosphere", "Water Atmosphere");
         RegisterMode(registry, DebugModeConstants.AtmosphereWaterCut, "AtmosphereWaterCut", "Atmosphere");
+        RegisterMode(registry, DebugModeConstants.AtmosphereLightShafts, "AtmosphereLightShafts", "Atmosphere");
+        RegisterMode(registry, DebugModeConstants.GodRayStreaks, "GodRayStreaks", "Atmosphere");
         RegisterMode(registry, DebugModeConstants.VolumeContribution, "VolumeContribution", "Water Volume");
         RegisterMode(registry, DebugModeConstants.AtmosphereContribution, "AtmosphereContribution", "Atmosphere");
         RegisterMode(registry, DebugModeConstants.PrecipitationContribution, "PrecipitationContribution", "Precipitation");

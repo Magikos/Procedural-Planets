@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Serialization;
+using UnityEngine.Rendering;
 
 /// <summary>
 /// Owns planet-scale weather state. The CPU seeds the initial cube-sphere weather
@@ -10,13 +12,25 @@ using UnityEngine.Serialization;
 /// </summary>
 [CommandPrefix("weather")]
 public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigurator, ILateInitialize,
-    IProgressReporter, IWorldServiceRegistrar, IWorldTeardown
+    IProgressReporter, IWorldServiceRegistrar, IWorldSettingsRegistrar, IWorldTeardown
 {
+    static readonly Type[] RequiredSettings = { typeof(CloudDto) };
     CloudDto _settings;
 
     [ConsoleCommand("diagnostics", "Write weather diagnostics file (F9 equivalent).")]
     static void DiagnosticsCmd()
         => EventBus<DebugCommandRequestedEvent>.Raise(new DebugCommandRequestedEvent(DebugCommandType.DumpWeatherDiagnostics));
+
+    [ConsoleCommand("export-grid", "Force-read and write full weather grid summary JSON plus raw cell CSV.", MonoTargetType.Single)]
+    async Awaitable<string> ExportGridCmd(CancellationToken ct = default)
+    {
+        if (_grid == null)
+            return "[WeatherDiagnostics] No weather grid generated.";
+
+        bool readbackOk = await ReadbackAllGridFacesAsync(ct);
+        string result = _diagnostics.ExportGrid("console", readbackOk);
+        return readbackOk ? result : result + " (readback incomplete; check log)";
+    }
 
     [ConsoleCommand("frame-storm", "Reposition the camera to frame the strongest active storm.", MonoTargetType.Single)]
     string FrameStormCmd()
@@ -50,6 +64,67 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         if (value == null) return $"wind direction: ({WindDir.x:F2}, {WindDir.y:F2}, {WindDir.z:F2})";
         WindDir = value.Value;
         return $"wind direction: ({WindDir.x:F2}, {WindDir.y:F2}, {WindDir.z:F2})";
+    }
+
+    [ConsoleCommand("freeze", "Get or set whether weather evolution is paused. True holds the current condensation/storm state steady (no drift); false resumes normal evolution. Independent of time.freeze (sun).", MonoTargetType.Single)]
+    string FreezeCmd(bool? value = null)
+    {
+        if (value == null) return $"weather evolution frozen: {!_settings.EnableWeatherEvolution}";
+        SettingsProvider.Update(_settings with { EnableWeatherEvolution = !value.Value });
+        return $"weather evolution frozen: {value.Value}";
+    }
+
+    [ConsoleCommand("force", "Force the ENTIRE weather grid to one uniform condensation/storm value (each 0-1), for deterministic test scenes - removes noise-pattern coverage variance. Also freezes evolution (weather.freeze true) so the forced state holds steady; weather.freeze false resumes normal drift. Storm defaults to 0.", MonoTargetType.Single)]
+    string ForceCmd(float condensation, float? storm = null)
+    {
+        if (_grid == null) return "weather grid not ready";
+
+        float c = Mathf.Clamp01(condensation);
+        float s = Mathf.Clamp01(storm ?? 0f);
+        var weatherValue = new Vector4(c, s, c, 0.5f);
+        var dynamicsValue = new Vector4(c, 0f, 0f, c);
+        if (!_grid.ForceUniform(WeatherCompute, weatherValue, dynamicsValue))
+            return "weather force failed: WeatherCompute is not assigned";
+
+        SettingsProvider.Update(_settings with { EnableWeatherEvolution = false });
+        return $"weather forced: condensation={c:F2} storm={s:F2} (evolution frozen)";
+    }
+
+    [ConsoleCommand("coverage", "Get or set overall cloud coverage, 0-1 (the InitialCoverage seed). Lower = clearer skies with scattered clouds and only occasional storms; higher = overcast with storms everywhere. Changing it reseeds the whole grid. Default 0.48.", MonoTargetType.Single)]
+    string CoverageCmd(float? value = null)
+    {
+        if (value == null) return $"cloud coverage: {_settings.InitialCoverage:F2}";
+        float clamped = Mathf.Clamp01(value.Value);
+        SettingsProvider.Update(_settings with { InitialCoverage = clamped });
+        return $"cloud coverage: {clamped:F2} (grid reseeding)";
+    }
+
+    [ConsoleCommand("regenerate", "Reseed the weather grid from noise, restoring the natural varied moisture-source map, and resume evolution. Use this to undo weather.force / weather.test-pattern, which overwrite the source (b) channel with uniform/patterned values - after which evolution can only relax toward that flattened source, so the planet stays uniform until regenerated.", MonoTargetType.Single)]
+    async Awaitable<string> RegenerateCmd(CancellationToken ct = default)
+    {
+        await GenerateWeatherGridAsync(ct);
+        SettingsProvider.Update(_settings with { EnableWeatherEvolution = true });
+        return "weather grid regenerated (natural source map restored, evolution resumed)";
+    }
+
+    [ConsoleCommand("storm-threshold", "Get or set the condensation level above which storms (cumulonimbus) form, 0-1. Lower = storms form in more, less-saturated cells, so storms actually develop during normal evolution instead of almost never. Takes effect on the next evolution step. Default 0.86.", MonoTargetType.Single)]
+    string StormThresholdCmd(float? value = null)
+    {
+        if (value == null) return $"storm threshold: {_settings.StormThreshold:F2}";
+        float clamped = Mathf.Clamp01(value.Value);
+        SettingsProvider.Update(_settings with { StormThreshold = clamped });
+        return $"storm threshold: {clamped:F2}";
+    }
+
+    [ConsoleCommand("test-pattern", "Write a deterministic 3-band cloud-type test bed to every cube face (stratus | cumulus | cumulonimbus along the u axis) and freeze evolution. Pan the horizon on any face to see all three cloud shapes side by side - isolates the vertical profile from the sim.", MonoTargetType.Single)]
+    string TestPatternCmd()
+    {
+        if (_grid == null) return "weather grid not ready";
+        if (!_grid.WriteTestPattern(WeatherCompute))
+            return "weather test-pattern failed: WeatherCompute is not assigned";
+
+        SettingsProvider.Update(_settings with { EnableWeatherEvolution = false });
+        return "weather test pattern written: stratus | cumulus | cumulonimbus bands (evolution frozen)";
     }
 
     [Header("References")]
@@ -104,10 +179,11 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     // Resolved through ServiceLocator (PrecipitationController self-registers in Awake/OnEnable).
     // Returns null if no precipitation system is wired up.
     internal IPrecipitationDebugControl PrecipitationDebugControl =>
-        ServiceLocator.Get<IPrecipitationDebugControl>();
+        ServiceLocator.TryGet(out IPrecipitationDebugControl control) ? control : null;
 
     internal SphericalWeatherGrid Grid => _grid;
     internal int QueryCacheFaceCount => _queryCache.FaceCount;
+    internal int QueryCacheDynamicsFaceCount => _queryCache.DynamicsFaceCount;
     internal int QueryCacheLastFace => _queryCache.LastFace;
     internal bool QueryCacheError => _queryCache.Error;
 
@@ -131,7 +207,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     public IReadOnlyList<Type> LateDependencies => _lateDeps;
     public async Awaitable LateInitialize(CancellationToken cancellationToken)
     {
-        if (_seaLevelRadius <= 0f) return;   // no planet in this scene
+        if (_seaLevelRadius <= 0f || !TryResolveSettings()) return;   // no planet in this scene
 
         _progressHandle.Report(0f, "Generating clouds...");
         await GenerateWeatherGridAsync(cancellationToken);
@@ -144,8 +220,6 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     void Awake()
     {
         MigrateWindUnits();
-        CloudDto.EnsureRegistered();
-        _settings = SettingsProvider.GetSettings<CloudDto>();
         _diagnostics = new WeatherDiagnostics(this);
         _evolutionScheduler = new WeatherEvolutionScheduler(Logger);
         _queryCache = new WeatherQueryCache();
@@ -157,6 +231,13 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     {
         context.Register<IWeatherProvider>(this);
         context.Register<IWeatherConfigurator>(this);
+    }
+
+    public IReadOnlyList<Type> RequiredSettingsTypes => RequiredSettings;
+
+    public void RegisterWorldSettings(ISettingsService settings)
+    {
+        CloudDto.EnsureRegistered(settings);
     }
 
     void OnValidate()
@@ -183,8 +264,11 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     {
         if (evt.DtoType != typeof(CloudDto)) return;
         var prev = _settings;
-        _settings = SettingsProvider.GetSettings<CloudDto>();
-        if (_seaLevelRadius > 0f && (_settings.WeatherResolution != prev.WeatherResolution
+        _settings = null;
+        if (!TryResolveSettings())
+            return;
+
+        if (_seaLevelRadius > 0f && prev != null && (_settings.WeatherResolution != prev.WeatherResolution
             || _settings.InitialCoverage != prev.InitialCoverage))
         {
             _ = GenerateWeatherGridAsync();
@@ -211,6 +295,9 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     void Update()
     {
+        if (!TryResolveSettings())
+            return;
+
         _evolutionScheduler.Tick(_grid, _settings, WeatherCompute, WindDirection,
             WindSpeedMetersPerSecond, _seaLevelRadius, _diagnostics);
         _queryCache.Tick(_grid, EnableWeatherQueryCache, WeatherQueryCacheInterval,
@@ -242,15 +329,13 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     {
         if (_grid == null)
         {
-            float fallbackCoverage = _settings.InitialCoverage;
+            float fallbackCoverage = TryResolveSettings() ? _settings.InitialCoverage : 0f;
             return new WeatherSample(fallbackCoverage, 0f, 0f, GetTemperature(worldPosition), 0f,
                 fallbackCoverage >= CloudyThreshold ? WeatherCellState.Cloudy : WeatherCellState.Clear);
         }
 
         _grid.GetWeatherCell(worldPosition, _planetCenter, Quaternion.identity,
-            out float cloudCoverage, out float stormIntensity, out float moistureSource);
-
-        float precipitation = CalculatePrecipitation(stormIntensity);
+            out float cloudCoverage, out float stormIntensity, out float moistureSource, out float precipitation);
 
         WeatherCellState state = stormIntensity >= PrecipitationStormThreshold
             ? WeatherCellState.Storm
@@ -342,6 +427,9 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     async Awaitable GenerateWeatherGridAsync(CancellationToken externalToken = default)
     {
+        if (!TryResolveSettings())
+            return;
+
         // Cancel any in-flight generation before starting a new one.
         _generateCts?.Cancel();
         _generateCts?.Dispose();
@@ -359,7 +447,11 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
             var newGrid = await SphericalWeatherGrid.GenerateComputeAsync(WeatherCompute, _settings, seed, linked.Token);
 
-            if (this == null) return;
+            if (this == null)
+            {
+                newGrid.Dispose();
+                return;
+            }
             _progressHandle.Report(0.85f, "Uploading weather...");
             _grid?.Dispose();
             _grid = newGrid;
@@ -377,11 +469,54 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     void OnGUI() => _diagnostics.DrawOverlay();
 
+    async Awaitable<bool> ReadbackAllGridFacesAsync(CancellationToken ct)
+    {
+        if (_grid?.Texture == null || _grid.DynamicsTexture == null)
+            return false;
+
+        bool ok = true;
+        for (int face = 0; face < 6; face++)
+        {
+            ok &= await ReadbackGridFaceAsync(_grid.Texture, face, _grid.ApplyWeatherFaceReadback, ct);
+            ok &= await ReadbackGridFaceAsync(_grid.DynamicsTexture, face, _grid.ApplyDynamicsFaceReadback, ct);
+        }
+        return ok;
+    }
+
+    async Awaitable<bool> ReadbackGridFaceAsync(
+        Texture texture,
+        int face,
+        Action<int, NativeArray<Color>> apply,
+        CancellationToken ct)
+    {
+        var request = AsyncGPUReadback.Request(texture, 0,
+            0, _grid.Resolution,
+            0, _grid.Resolution,
+            face, 1,
+            TextureFormat.RGBAFloat);
+
+        while (!request.done)
+        {
+            ct.ThrowIfCancellationRequested();
+            await Awaitable.NextFrameAsync(ct);
+        }
+
+        if (request.hasError)
+            return false;
+
+        apply(face, request.GetData<Color>());
+        return true;
+    }
+
     internal float CalculatePrecipitation(float stormIntensity)
     {
-        return Precipitation * Mathf.SmoothStep(
-            PrecipitationStormThreshold,
-            Mathf.Min(1f, PrecipitationStormThreshold + PrecipitationStormSoftness),
-            stormIntensity);
+        float end = Mathf.Min(1f, PrecipitationStormThreshold + PrecipitationStormSoftness);
+        float t = Mathf.InverseLerp(PrecipitationStormThreshold, end, stormIntensity);
+        return Precipitation * Mathf.SmoothStep(0f, 1f, t);
+    }
+
+    bool TryResolveSettings()
+    {
+        return _settings != null || SettingsProvider.TryGetFrozen(out _settings);
     }
 }

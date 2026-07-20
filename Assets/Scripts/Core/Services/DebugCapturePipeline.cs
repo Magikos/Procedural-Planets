@@ -212,7 +212,19 @@ sealed class DebugCapturePipeline
         }
     }
 
-    async Awaitable CaptureScreenshotAsync(DebugModeId modeId, string modeName, CancellationToken ct)
+    public async Awaitable CaptureCurrentModeAsync(CancellationToken ct, string label = null)
+    {
+        if (_ctx.Registry == null || !_ctx.IsActive) return;
+        if (_running)
+            throw new InvalidOperationException("A debug capture is already running.");
+
+        await CaptureScreenshotAsync(
+            _ctx.CurrentModeId,
+            _ctx.Registry.GetModeName(_ctx.CurrentModeId),
+            ct, label);
+    }
+
+    async Awaitable CaptureScreenshotAsync(DebugModeId modeId, string modeName, CancellationToken ct, string label = null)
     {
         _running = true;
         DebugScreenshotFiles.RecordLastCaptureCamera();
@@ -221,7 +233,7 @@ sealed class DebugCapturePipeline
         {
             await WaitForModeRenderAsync(ct);
             ct.ThrowIfCancellationRequested();
-            SaveScreenshot(modeId, modeName);
+            SaveScreenshot(modeId, modeName, label);
         }
         catch (OperationCanceledException)
         {
@@ -237,7 +249,7 @@ sealed class DebugCapturePipeline
         }
     }
 
-    void SaveScreenshot(DebugModeId modeId, string modeName)
+    void SaveScreenshot(DebugModeId modeId, string modeName, string label = null)
     {
         Texture2D source = null;
         Texture2D resized = null;
@@ -254,9 +266,12 @@ sealed class DebugCapturePipeline
             string safeModeName = DebugScreenshotFiles.SanitizeFilePart(modeName);
             string safeModeId = DebugScreenshotFiles.SanitizeFilePart(modeId.ToString());
             string scriptPrefix = ConsoleScriptRuntime.GetCaptureFilePrefix();
+            string safeLabel = string.IsNullOrWhiteSpace(label)
+                ? ""
+                : "-" + DebugScreenshotFiles.SanitizeFilePart(label.Trim());
             string baseName = string.IsNullOrEmpty(scriptPrefix)
-                ? $"F10-{safeModeId}-{safeModeName}-{timestamp}"
-                : $"F10-{scriptPrefix}-{safeModeId}-{safeModeName}-{timestamp}";
+                ? $"F10-{safeModeId}-{safeModeName}{safeLabel}-{timestamp}"
+                : $"F10-{scriptPrefix}-{safeModeId}-{safeModeName}{safeLabel}-{timestamp}";
             string imagePath = System.IO.Path.Combine(directory, baseName + ".png");
             string metadataPath = System.IO.Path.Combine(directory, baseName + ".txt");
 

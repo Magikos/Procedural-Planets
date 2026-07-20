@@ -194,7 +194,6 @@ public static class GrassInteractorRegistry
         if (gpuCount > 0)
             _gpuBuffer.SetData(CpuBuffer, 0, 0, gpuCount);
 
-        Shader.SetGlobalBuffer(InteractorsBufferId, _gpuBuffer);
         Shader.SetGlobalInt(InteractorCountId, gpuCount);
         _lastActiveCount = gpuCount;
         _lastActiveSourceCount = activeSources;
@@ -224,6 +223,7 @@ public static class GrassInteractorRegistry
 
         // 32 bytes per element (two float4s) matches the HLSL struct.
         _gpuBuffer = new ComputeBuffer(MaxInteractors, sizeof(float) * 8);
+        Shader.SetGlobalBuffer(InteractorsBufferId, _gpuBuffer);
     }
 
     static void UpdateReleaseTrail(

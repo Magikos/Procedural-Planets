@@ -8,6 +8,7 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
 
     [Header("References")]
     public ComputeShader NoiseCompute;
+    public Texture2D BlueNoiseTexture;
 
     CloudDto _settings;
     float _planetRadius;
@@ -18,6 +19,18 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
     IWeatherConfigurator _weather;
 
     bool _staticPropertiesDirty = true;
+    float _aerialFade = CloudConstants.AerialFade;
+    float _backlitStrength = CloudConstants.BacklitStrength;
+    float _godRayStrength = CloudConstants.GodRayStreakStrength;
+    float _godRayDawnBoost = CloudConstants.GodRayStreakDawnBoost;
+    // Human "how far the glow reaches" (UV-ish units, aspect-corrected); converted to the
+    // shader's exponential decay rate on upload. Bigger reach = decay rate gets smaller = glow
+    // extends further from the sun before fading to ~5%.
+    float _godRayReach = 3.0f / CloudConstants.GodRayStreakRadialFalloff;
+    float _godRayThreshold = CloudConstants.GodRayStreakBrightThreshold;
+    float _bottomFeather = CloudConstants.BottomFeather;
+    float _rainShaftStrength = CloudConstants.RainShaftStrength;
+    float _rainShaftLength = CloudConstants.RainShaftLength;
     Texture _lastWeatherTexture;
     Texture _lastDynamicsTexture;
     int _lastWeatherResolution = -1;
@@ -39,6 +52,7 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
     static readonly int _cloudDensityThresholdId = Shader.PropertyToID(ShaderGlobalIds.CloudDensityThreshold);
     static readonly int _cloudShapeSharpnessId = Shader.PropertyToID(ShaderGlobalIds.CloudShapeSharpness);
     static readonly int _cloudBottomFeatherId = Shader.PropertyToID(ShaderGlobalIds.CloudBottomFeather);
+    static readonly int _cloudRainShaftParamsId = Shader.PropertyToID(ShaderGlobalIds.CloudRainShaftParams);
     static readonly int _cloudTopFeatherId = Shader.PropertyToID(ShaderGlobalIds.CloudTopFeather);
     static readonly int _cloudTopDensityBiasId = Shader.PropertyToID(ShaderGlobalIds.CloudTopDensityBias);
     static readonly int _cloudLightAbsorptionId = Shader.PropertyToID(ShaderGlobalIds.CloudLightAbsorption);
@@ -48,6 +62,16 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
     static readonly int _cloudStormColorId = Shader.PropertyToID(ShaderGlobalIds.CloudStormColor);
     static readonly int _cloudAmbientStrengthId = Shader.PropertyToID(ShaderGlobalIds.CloudAmbientStrength);
     static readonly int _cloudStormDarkeningId = Shader.PropertyToID(ShaderGlobalIds.CloudStormDarkening);
+    static readonly int _cloudPowderStrengthId = Shader.PropertyToID(ShaderGlobalIds.CloudPowderStrength);
+    static readonly int _cloudMultiScatterParamsId = Shader.PropertyToID(ShaderGlobalIds.CloudMultiScatterParams);
+    static readonly int _cloudAmbientSkyId = Shader.PropertyToID(ShaderGlobalIds.CloudAmbientSky);
+    static readonly int _cloudAmbientGroundId = Shader.PropertyToID(ShaderGlobalIds.CloudAmbientGround);
+    static readonly int _cloudAerialDensityId = Shader.PropertyToID(ShaderGlobalIds.CloudAerialDensity);
+    static readonly int _cloudBacklitParamsId = Shader.PropertyToID(ShaderGlobalIds.CloudBacklitParams);
+    static readonly int _godRayStreakParamsId = Shader.PropertyToID(ShaderGlobalIds.GodRayStreakParams);
+    static readonly int _godRayStreakRadialFalloffId = Shader.PropertyToID(ShaderGlobalIds.GodRayStreakRadialFalloff);
+    static readonly int _godRayStreakDawnBoostId = Shader.PropertyToID(ShaderGlobalIds.GodRayStreakDawnBoost);
+    static readonly int _godRayStreakBrightThresholdId = Shader.PropertyToID(ShaderGlobalIds.GodRayStreakBrightThreshold);
     static readonly int _cloudSilverLiningParamsId = Shader.PropertyToID(ShaderGlobalIds.CloudSilverLiningParams);
     static readonly int _cloudShadowParamsId = Shader.PropertyToID(ShaderGlobalIds.CloudShadowParams);
     static readonly int _cloudViewStepsId = Shader.PropertyToID(ShaderGlobalIds.CloudViewSteps);
@@ -57,6 +81,8 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
     static readonly int _cloudDebugParamsId = Shader.PropertyToID(ShaderGlobalIds.CloudDebugParams);
     static readonly int _cloudShapeNoiseId = Shader.PropertyToID(ShaderGlobalIds.CloudShapeNoise);
     static readonly int _cloudDetailNoiseId = Shader.PropertyToID(ShaderGlobalIds.CloudDetailNoise);
+    static readonly int _cloudBlueNoiseId = Shader.PropertyToID(ShaderGlobalIds.CloudBlueNoise);
+    static readonly int _cloudBlueNoiseTexelSizeId = Shader.PropertyToID(ShaderGlobalIds.CloudBlueNoiseTexelSize);
 
     public System.Collections.Generic.IReadOnlyList<System.Type> RequiredSettingsTypes => RequiredSettings;
 
@@ -72,8 +98,6 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
 
     void OnEnable()
     {
-        CloudDto.EnsureRegistered();
-        _settings = SettingsProvider.GetSettings<CloudDto>();
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
         EventBus<SettingsChangedEvent>.Listen(OnSettingsChanged);
     }
@@ -91,6 +115,9 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
+        if (!TryResolveSettings())
+            return;
+
         _planetRadius = evt.PlanetRadius;
         _seaLevelRadius = evt.SeaLevelRadius > 0f ? evt.SeaLevelRadius : evt.PlanetRadius;
         _planetCenter = evt.PlanetCenter;
@@ -116,6 +143,9 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
 
     void Update()
     {
+        if (!TryResolveSettings())
+            return;
+
         if (_planetRadius <= 0f)
         {
             if (_lastWeatherResolution != 0)
@@ -136,11 +166,14 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
     void Initialize()
     {
         if (_weather == null)
-            _weather = ServiceLocator.Get<IWeatherConfigurator>();
+            ServiceLocator.TryGet(out _weather);
     }
 
     void GenerateNoiseTextures()
     {
+        if (!TryResolveSettings())
+            return;
+
         if (NoiseCompute == null) return;
 
         int seed = ServiceLocator.Get<ISeedProvider>().GetSeedForSystem("CloudNoise");
@@ -155,6 +188,9 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
 
     void EnsureStaticPropertiesUploaded()
     {
+        if (!TryResolveSettings())
+            return;
+
         if (!_staticPropertiesDirty) return;
         _staticPropertiesDirty = false;
 
@@ -171,7 +207,7 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
         Shader.SetGlobalFloat(_cloudDensityMultiplierId, _settings.DensityMultiplier);
         Shader.SetGlobalFloat(_cloudDensityThresholdId, CloudConstants.DensityThreshold);
         Shader.SetGlobalFloat(_cloudShapeSharpnessId, CloudConstants.ShapeSharpness);
-        Shader.SetGlobalFloat(_cloudBottomFeatherId, CloudConstants.BottomFeather);
+        Shader.SetGlobalFloat(_cloudBottomFeatherId, _bottomFeather);
         Shader.SetGlobalFloat(_cloudTopFeatherId, CloudConstants.TopFeather);
         Shader.SetGlobalFloat(_cloudTopDensityBiasId, CloudConstants.TopDensityBias);
         Shader.SetGlobalFloat(_cloudLightAbsorptionId, CloudConstants.LightAbsorption);
@@ -182,11 +218,37 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
         Shader.SetGlobalColor(_cloudStormColorId, _settings.StormColor);
         Shader.SetGlobalFloat(_cloudAmbientStrengthId, CloudConstants.AmbientStrength);
         Shader.SetGlobalFloat(_cloudStormDarkeningId, CloudConstants.StormDarkening);
+        Shader.SetGlobalFloat(_cloudPowderStrengthId, CloudConstants.PowderStrength);
+        Shader.SetGlobalVector(_cloudMultiScatterParamsId, new Vector4(
+            CloudConstants.MultiScatterAttenuation,
+            CloudConstants.MultiScatterContribution,
+            CloudConstants.MultiScatterPhaseScale,
+            CloudConstants.MultiScatterStrength));
+        Shader.SetGlobalColor(_cloudAmbientSkyId, CloudConstants.AmbientSky);
+        Shader.SetGlobalColor(_cloudAmbientGroundId, CloudConstants.AmbientGround);
+        float aerialFade = Mathf.Clamp(_aerialFade, 0f, 0.999f);
+        float aerialDensity = aerialFade <= 0f
+            ? 0f
+            : -Mathf.Log(1f - aerialFade) / CloudConstants.AerialReferenceDistance;
+        Shader.SetGlobalFloat(_cloudAerialDensityId, aerialDensity);
+        Shader.SetGlobalVector(_cloudBacklitParamsId, new Vector4(
+            _backlitStrength, CloudConstants.BacklitPower, 0f, 0f));
+        Shader.SetGlobalVector(_godRayStreakParamsId, new Vector4(
+            _godRayStrength,
+            CloudConstants.GodRayStreakSampleCount,
+            CloudConstants.GodRayStreakDecay,
+            CloudConstants.GodRayStreakMarchLength));
+        float godRayReach = Mathf.Max(_godRayReach, 0.05f);
+        Shader.SetGlobalFloat(_godRayStreakRadialFalloffId, 3.0f / godRayReach);
+        Shader.SetGlobalFloat(_godRayStreakDawnBoostId, _godRayDawnBoost);
+        Shader.SetGlobalFloat(_godRayStreakBrightThresholdId, _godRayThreshold);
         Shader.SetGlobalVector(_cloudSilverLiningParamsId, new Vector4(
             CloudConstants.SilverLiningStrength,
             CloudConstants.SilverLiningPower,
             CloudConstants.SilverLiningEdgePower,
             CloudConstants.SilverLiningStormSuppression));
+        Shader.SetGlobalVector(_cloudRainShaftParamsId, new Vector4(
+            _rainShaftStrength, _rainShaftLength, 0f, 0f));
         Shader.SetGlobalVector(_cloudShadowParamsId, new Vector4(
             CloudConstants.ShadowStrength,
             CloudConstants.ShadowSoftness,
@@ -205,6 +267,15 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
             Shader.SetGlobalTexture(_cloudShapeNoiseId, _shapeNoise);
         if (_detailNoise != null)
             Shader.SetGlobalTexture(_cloudDetailNoiseId, _detailNoise);
+        if (BlueNoiseTexture != null)
+        {
+            Shader.SetGlobalTexture(_cloudBlueNoiseId, BlueNoiseTexture);
+            Shader.SetGlobalVector(_cloudBlueNoiseTexelSizeId, new Vector4(
+                1f / BlueNoiseTexture.width,
+                1f / BlueNoiseTexture.height,
+                BlueNoiseTexture.width,
+                BlueNoiseTexture.height));
+        }
 
         _lastWeatherTexture = null;
         _lastDynamicsTexture = null;
@@ -275,18 +346,23 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
         }
     }
 
+    bool TryResolveSettings()
+    {
+        return _settings != null || SettingsProvider.TryGetFrozen(out _settings);
+    }
+
     void OnDestroy()
     {
         ReleaseTextures();
     }
 
-    [ConsoleCommand("density", "Get or set cloud density multiplier (range 0-0.08).", MonoTargetType.Single)]
+    [ConsoleCommand("density", "Get or set cloud density, 0-1 (0=none, 1=thickest). Converts to the internal density multiplier.", MonoTargetType.Single)]
     string DensityCmd(float? value = null)
     {
-        if (value == null) return $"cloud density: {_settings.DensityMultiplier:F4}";
-        float clamped = Mathf.Clamp(value.Value, 0f, 0.08f);
-        SettingsProvider.Update(_settings with { DensityMultiplier = clamped });
-        return $"cloud density: {clamped:F4}";
+        if (value == null) return $"cloud density: {_settings.DensityMultiplier / CloudSettings.DensityMax:F2} (0-1)";
+        float human = Mathf.Clamp01(value.Value);
+        SettingsProvider.Update(_settings with { DensityMultiplier = human * CloudSettings.DensityMax });
+        return $"cloud density: {human:F2} (0-1)";
     }
 
     [ConsoleCommand("altitude", "Get or set cloud base altitude in meters (range 20-1000).", MonoTargetType.Single)]
@@ -316,21 +392,104 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
         return $"cloud debug mode: {CloudDebugState.Mode}";
     }
 
-    [ConsoleCommand("debug-threshold", "Get or set condensation-change debug threshold (range 0-0.01).", MonoTargetType.Single)]
+    [ConsoleCommand("debug-threshold", "Get or set condensation-change debug threshold, 0-1. Converts to the internal condensation delta.", MonoTargetType.Single)]
     string DebugThresholdCmd(float? value = null)
     {
-        if (value == null) return $"cloud debug threshold: {CloudDebugState.CondensationChangeThreshold:F4}";
-        CloudDebugState.CondensationChangeThreshold = Mathf.Clamp(value.Value, 0f, 0.01f);
+        if (value == null) return $"cloud debug threshold: {CloudDebugState.CondensationChangeThreshold / CloudDebugState.CondensationChangeThresholdMax:F2} (0-1)";
+        float human = Mathf.Clamp01(value.Value);
+        CloudDebugState.CondensationChangeThreshold = human * CloudDebugState.CondensationChangeThresholdMax;
         _staticPropertiesDirty = true;
-        return $"cloud debug threshold: {CloudDebugState.CondensationChangeThreshold:F4}";
+        return $"cloud debug threshold: {human:F2} (0-1)";
     }
 
-    [ConsoleCommand("debug-saturation", "Get or set condensation-change debug saturation (range 0.0005-0.02).", MonoTargetType.Single)]
+    [ConsoleCommand("debug-saturation", "Get or set condensation-change debug saturation, 0-1. Converts to the internal condensation delta.", MonoTargetType.Single)]
     string DebugSaturationCmd(float? value = null)
     {
-        if (value == null) return $"cloud debug saturation: {CloudDebugState.CondensationChangeSaturation:F4}";
-        CloudDebugState.CondensationChangeSaturation = Mathf.Clamp(value.Value, 0.0005f, 0.02f);
+        if (value == null) return $"cloud debug saturation: {CloudDebugState.CondensationChangeSaturation / CloudDebugState.CondensationChangeSaturationMax:F2} (0-1)";
+        float human = Mathf.Clamp01(value.Value);
+        CloudDebugState.CondensationChangeSaturation = human * CloudDebugState.CondensationChangeSaturationMax;
         _staticPropertiesDirty = true;
-        return $"cloud debug saturation: {CloudDebugState.CondensationChangeSaturation:F4}";
+        return $"cloud debug saturation: {human:F2} (0-1)";
+    }
+
+    [ConsoleCommand("aerial-fade", "Get or set how much distant clouds haze into the sky, 0-1 (0=off, 0.5=half, 1=full at the reference distance).", MonoTargetType.Single)]
+    string AerialFadeCmd(float? value = null)
+    {
+        if (value == null) return $"cloud aerial fade: {_aerialFade:P0} (0-1)";
+        _aerialFade = Mathf.Clamp01(value.Value);
+        _staticPropertiesDirty = true;
+        return $"cloud aerial fade: {_aerialFade:P0} (0-1)";
+    }
+
+    [ConsoleCommand("backlit-glow", "Get or set backlit inner-glow strength (sun behind cloud), 0-2. 0=off, ~0.6 default.", MonoTargetType.Single)]
+    string BacklitGlowCmd(float? value = null)
+    {
+        if (value == null) return $"cloud backlit glow: {_backlitStrength:F2} (0-2)";
+        _backlitStrength = Mathf.Clamp(value.Value, 0f, 2f);
+        _staticPropertiesDirty = true;
+        return $"cloud backlit glow: {_backlitStrength:F2} (0-2)";
+    }
+
+    [ConsoleCommand("godray-strength", "Get or set god-ray streak strength (crepuscular rays through cloud gaps), 0-2. 0=off, 1=default.", MonoTargetType.Single)]
+    string GodRayStrengthCmd(float? value = null)
+    {
+        if (value == null) return $"cloud god-ray streak strength: {_godRayStrength:F2} (0-2)";
+        _godRayStrength = Mathf.Clamp(value.Value, 0f, 2f);
+        _staticPropertiesDirty = true;
+        return $"cloud god-ray streak strength: {_godRayStrength:F2} (0-2)";
+    }
+
+    [ConsoleCommand("godray-dawn-boost", "Get or set extra god-ray strength multiplier near the horizon (dawn/dusk), 0-5. 1=no boost, 2=default (double near horizon).", MonoTargetType.Single)]
+    string GodRayDawnBoostCmd(float? value = null)
+    {
+        if (value == null) return $"cloud god-ray dawn boost: {_godRayDawnBoost:F2} (0-5)";
+        _godRayDawnBoost = Mathf.Clamp(value.Value, 0f, 5f);
+        _staticPropertiesDirty = true;
+        return $"cloud god-ray dawn boost: {_godRayDawnBoost:F2} (0-5)";
+    }
+
+    [ConsoleCommand("godray-reach", "Get or set how far the god-ray glow reaches from the sun before fading to ~5%, 0.1-3. Bigger = larger glow. ~1.5 default.", MonoTargetType.Single)]
+    string GodRayReachCmd(float? value = null)
+    {
+        if (value == null) return $"cloud god-ray reach: {_godRayReach:F2}";
+        _godRayReach = Mathf.Clamp(value.Value, 0.1f, 3f);
+        _staticPropertiesDirty = true;
+        return $"cloud god-ray reach: {_godRayReach:F2}";
+    }
+
+    [ConsoleCommand("godray-threshold", "Get or set scene brightness above which a pixel becomes a god-ray source, 0-1. Lower = more of the bright sky beams (softer/broader); higher = only the very brightest sun/cloud-rim pixels beam (crisper). Default 0.55.", MonoTargetType.Single)]
+    string GodRayThresholdCmd(float? value = null)
+    {
+        if (value == null) return $"cloud god-ray threshold: {_godRayThreshold:F2} (0-1)";
+        _godRayThreshold = Mathf.Clamp01(value.Value);
+        _staticPropertiesDirty = true;
+        return $"cloud god-ray threshold: {_godRayThreshold:F2} (0-1)";
+    }
+
+    [ConsoleCommand("bottom-feather", "Get or set cloud base softness, fraction of layer thickness (range 0.01-0.5). Higher = more gradual transition flying in/out of the cloud base. Default 0.06.", MonoTargetType.Single)]
+    string BottomFeatherCmd(float? value = null)
+    {
+        if (value == null) return $"cloud bottom feather: {_bottomFeather:F3}";
+        _bottomFeather = Mathf.Clamp(value.Value, 0.01f, 0.5f);
+        _staticPropertiesDirty = true;
+        return $"cloud bottom feather: {_bottomFeather:F3}";
+    }
+
+    [ConsoleCommand("rain-shaft", "Get or set the virga / rain-shaft veil hung under raining cloud cells, 0-2. 0=off, ~0.5-1 typical. Makes storm cells read as storms (curtain of rain to the horizon).", MonoTargetType.Single)]
+    string RainShaftCmd(float? value = null)
+    {
+        if (value == null) return $"cloud rain shaft: {_rainShaftStrength:F2} (0-2)";
+        _rainShaftStrength = Mathf.Clamp(value.Value, 0f, 2f);
+        _staticPropertiesDirty = true;
+        return $"cloud rain shaft: {_rainShaftStrength:F2} (0-2)";
+    }
+
+    [ConsoleCommand("rain-shaft-length", "Get or set how far (metres) the rain shaft reaches below the cloud base before fading, 50-1000. Default 300. Larger = rain reaches the ground.", MonoTargetType.Single)]
+    string RainShaftLengthCmd(float? value = null)
+    {
+        if (value == null) return $"cloud rain shaft length: {_rainShaftLength:F0} m";
+        _rainShaftLength = Mathf.Clamp(value.Value, 50f, 1000f);
+        _staticPropertiesDirty = true;
+        return $"cloud rain shaft length: {_rainShaftLength:F0} m";
     }
 }

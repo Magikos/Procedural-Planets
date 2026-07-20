@@ -25,12 +25,13 @@ using UnityEngine;
 /// </para>
 /// </summary>
 [CommandPrefix("rain-particles")]
-[DefaultExecutionOrder(-50)]
 public sealed class RainParticleController : MonoBehaviour, IRainParticleRenderer, IWorldServiceRegistrar
 {
+    const int MaxParticleCount = 100000;
+
     [Header("Particle Budget")]
     [Tooltip("Total raindrop instances in the persistent buffer.")]
-    [Range(0, 100000)] public int ParticleCountSetting = 30000;
+    [Range(0, MaxParticleCount)] public int ParticleCountSetting = 30000;
 
     [Header("Spawn / Respawn")]
     [Tooltip("Horizontal radius around the camera within which particles are kept active. Smaller radius packs the same particle count denser around the camera — better for human-scale rain where you mostly see drops close in.")]
@@ -139,12 +140,22 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
         _planetCenter = evt.PlanetCenter;
         _seaLevelRadius = evt.SeaLevelRadius > 0f ? evt.SeaLevelRadius : evt.PlanetRadius;
 
-        // Cloud bottom altitude comes from CloudSettings; PrecipitationController
-        // exposes the precipitation top radius via the existing _PrecipitationRadii
-        // global, so we read it from there to stay in lockstep without taking a
-        // direct dependency on CloudSettings or PrecipitationController.
-        Vector4 precipRadii = Shader.GetGlobalVector(Shader.PropertyToID(ShaderGlobalIds.PrecipitationRadii));
-        _cloudBottomRadius = precipRadii.y > 0f ? precipRadii.y : _seaLevelRadius + 375f;
+        // Same formula PrecipitationController uses for _PrecipitationRadii.y, computed
+        // from the DTOs directly: reading the shader global back raced its own
+        // PlanetGeneratedEvent handler (listener order is not guaranteed).
+        float cloudBase = 330f;
+        float bottomAltitude = 25f;
+        float cloudBaseOverlap = 45f;
+        if (SettingsProvider.IsRegistered<CloudDto>())
+            cloudBase = SettingsProvider.GetSettings<CloudDto>().BaseAltitude;
+        if (SettingsProvider.IsRegistered<PrecipitationDto>())
+        {
+            var precip = SettingsProvider.GetSettings<PrecipitationDto>();
+            bottomAltitude = precip.BottomAltitude;
+            cloudBaseOverlap = precip.CloudBaseOverlap;
+        }
+        _cloudBottomRadius = _seaLevelRadius
+            + Mathf.Max(bottomAltitude + 1f, cloudBase + cloudBaseOverlap);
         _cloudTopRadius = _cloudBottomRadius + 60f;
         _ready = true;
     }
@@ -242,20 +253,35 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
         _altitudeFadeAlpha = 1f - Mathf.Clamp01(Mathf.InverseLerp(maxAlt - AltitudeFadeBand, maxAlt, altitude));
     }
 
+    float _uploadedStreakWidth = float.NaN;
+    float _uploadedStreakLength = float.NaN;
+    float _uploadedVisibilityThreshold = float.NaN;
+    float _uploadedDensityScale = float.NaN;
+    float _uploadedSeaRadius = float.NaN;
+    Color _uploadedFadeColor = new Color(float.NaN, 0f, 0f, 0f);
+    Vector3 _uploadedPlanetCenter = new Vector3(float.NaN, 0f, 0f);
+
     void UploadMaterialParams()
     {
         if (_runtimeMaterial == null)
             return;
         _runtimeMaterial.SetBuffer(_rainParticlesId, _particleBuffer);
-        _runtimeMaterial.SetFloat(_rainStreakWidthId, StreakWidth);
-        _runtimeMaterial.SetFloat(_rainStreakLengthId, StreakLength);
+        if (StreakWidth != _uploadedStreakWidth)
+            _runtimeMaterial.SetFloat(_rainStreakWidthId, _uploadedStreakWidth = StreakWidth);
+        if (StreakLength != _uploadedStreakLength)
+            _runtimeMaterial.SetFloat(_rainStreakLengthId, _uploadedStreakLength = StreakLength);
         Color fadeColor = RainColor;
         fadeColor.a *= _altitudeFadeAlpha;
-        _runtimeMaterial.SetColor(_rainColorId, fadeColor);
-        _runtimeMaterial.SetFloat(_rainVisibilityThresholdId, VisibilityThreshold);
-        _runtimeMaterial.SetFloat(_rainDensityScaleId, DensityScale);
-        _runtimeMaterial.SetVector(_rainPlanetCenterId, _planetCenter);
-        _runtimeMaterial.SetFloat(_rainSeaRadiusId, _seaLevelRadius);
+        if (fadeColor != _uploadedFadeColor)
+            _runtimeMaterial.SetColor(_rainColorId, _uploadedFadeColor = fadeColor);
+        if (VisibilityThreshold != _uploadedVisibilityThreshold)
+            _runtimeMaterial.SetFloat(_rainVisibilityThresholdId, _uploadedVisibilityThreshold = VisibilityThreshold);
+        if (DensityScale != _uploadedDensityScale)
+            _runtimeMaterial.SetFloat(_rainDensityScaleId, _uploadedDensityScale = DensityScale);
+        if (_planetCenter != _uploadedPlanetCenter)
+            _runtimeMaterial.SetVector(_rainPlanetCenterId, _uploadedPlanetCenter = _planetCenter);
+        if (_seaLevelRadius != _uploadedSeaRadius)
+            _runtimeMaterial.SetFloat(_rainSeaRadiusId, _uploadedSeaRadius = _seaLevelRadius);
     }
 
     void DispatchUpdate()
@@ -294,7 +320,7 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
     [ConsoleCommand("count", "Get or set the rain particle count.", MonoTargetType.Single)]
     string CountCmd(int? value = null)
     {
-        if (value.HasValue) ParticleCountSetting = Mathf.Clamp(value.Value, 0, 50000);
+        if (value.HasValue) ParticleCountSetting = Mathf.Clamp(value.Value, 0, MaxParticleCount);
         return $"rain particles: {ParticleCountSetting}";
     }
 

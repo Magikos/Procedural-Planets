@@ -55,8 +55,8 @@ MonoBehaviour:
   GrassTintBase: {r: 0.3, g: 0.55, b: 0.35, a: 1}
   GrassTintDryShift: {r: 1, g: 1, b: 1, a: 1}
   GrassTintLushShift: {r: 1, g: 1, b: 1, a: 1}
-  GrassHeight: 0.5
-  GrassWidth: 0.08
+  GrassHeight: 0.2
+  GrassWidth: 0.02
   GrassClumpStrength: 0.55
   GrassMaxSlopeDegrees: 35
   GrassSlopeFadeDegrees: 5

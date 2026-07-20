@@ -42,6 +42,13 @@ Shader "Planet/Grass"
 
             StructuredBuffer<BladeInstance> _GrassBladeInstances;
 
+            // Grass tuft cutout for the distant cluster-card LOD (Synty Grass_01): the card samples
+            // this alpha for its silhouette instead of carving procedural blades. 0 strength keeps
+            // the old procedural look; 1 shows the textured tuft shading.
+            TEXTURE2D(_GrassCardTex);
+            SAMPLER(sampler_GrassCardTex);
+            float _GrassCardStrength;
+
             // Wind globals are declared by CloudShadows.hlsl and populated by WeatherManager.
             float3 _SunParams;
             float _NightAmbientIntensity;
@@ -54,6 +61,12 @@ Shader "Planet/Grass"
             float _GrassVisualFadeStart;
             float _GrassVisualFadeEnd;
             float _GrassChunkFade;
+            float _GrassWidthInflateStart;
+            float _GrassWidthInflateEnd;
+            float _GrassBillboardStart;
+            float _GrassBillboardEnd;
+            float _GrassCanopyColorStart;
+            float _GrassCanopyColorEnd;
             float4 _GrassDebugBladeTint;
             float _GrassDebugLayerColors;
             float4 _GrassLayerDebugTint;
@@ -201,6 +214,16 @@ Shader "Planet/Grass"
                 float patchHeightNoise = SmoothPatchNoise(relRoot, 14.0, 1.37);
                 float patchWidthNoise = SmoothPatchNoise(relRoot, 18.0, 4.11);
                 float patchTintNoise = SmoothPatchNoise(relRoot, 24.0, 7.53);
+                // Clump identity: blades sharing a ~1 m cell get one coherent height + colour so the
+                // field reads as patchy meadow tufts, not a uniform lawn. Independent per-blade
+                // variation alone averages to golf-course green past arm's reach; the clump is the
+                // dominant identity, per-blade jitter below only adds fine detail on top.
+                float clumpSize = 1.1;
+                int3 clumpCell = (int3)floor(relRoot / clumpSize);
+                uint clumpSeed = HashUint((uint)(clumpCell.x * 73856093)
+                    ^ (uint)(clumpCell.y * 19349663) ^ (uint)(clumpCell.z * 83492791));
+                float clumpHeightRand = Hash01(clumpSeed);
+                float clumpDryRand = Hash01(clumpSeed ^ 0x68bc21ebu);
                 float3 tangentWS = AnyTangent(upWS);
                 float3 bitangentWS = normalize(cross(upWS, tangentWS));
 
@@ -209,6 +232,8 @@ Shader "Planet/Grass"
                 float yawCos = cos(yaw);
                 float3 sideWS = normalize(tangentWS * yawCos + bitangentWS * yawSin);
                 float viewDistance = length(_WorldSpaceCameraPos - rootWS);
+                // visualEdgeFade shrinks, dims, and dithers blades at layer boundaries.
+                // Density fading is still owned by placement thinning in the compute.
                 float visualEdgeFade = 1.0;
                 if (_GrassVisualNearFadeEnd > _GrassVisualNearFadeStart + 0.01)
                     visualEdgeFade *= smoothstep(_GrassVisualNearFadeStart, _GrassVisualNearFadeEnd, viewDistance);
@@ -224,7 +249,7 @@ Shader "Planet/Grass"
                     float3 billboardSideWS = normalize(cross(upWS, toCameraTangent));
                     if (dot(billboardSideWS, sideWS) < 0.0)
                         billboardSideWS = -billboardSideWS;
-                    float billboardWeight = smoothstep(150.0, 420.0, viewDistance) * 0.78;
+                    float billboardWeight = smoothstep(_GrassBillboardStart, _GrassBillboardEnd, viewDistance) * 0.78;
                     sideWS = normalize(lerp(sideWS, billboardSideWS, billboardWeight));
                 }
                 float3 leanWS = normalize(cross(sideWS, upWS));
@@ -237,16 +262,19 @@ Shader "Planet/Grass"
 
                 float patchHeight = lerp(0.76, 1.24, patchHeightNoise);
                 float patchWidth = lerp(0.88, 1.16, patchWidthNoise);
-                height *= patchHeight * lerp(0.42, 1.68, Hash01(seed ^ 0xa54ff53au));
-                width *= patchWidth * lerp(0.96, 1.68, Hash01(seed ^ 0x510e527fu));
+                // Clump drives the big height difference (tall tufts vs short patches); per-blade
+                // hash is narrowed to fine jitter so tufts stay coherent instead of fuzzing out.
+                float clumpHeight = lerp(0.5, 1.55, clumpHeightRand);
+                height *= patchHeight * clumpHeight * lerp(0.72, 1.28, Hash01(seed ^ 0xa54ff53au));
+                width *= patchWidth * lerp(0.7, 1.25, Hash01(seed ^ 0x510e527fu));
                 // Preserve projected coverage as physical density thins. This is cheaper
                 // than adding more roots and works with the billboard turn above.
-                width *= lerp(1.0, 1.42, smoothstep(160.0, 500.0, viewDistance));
+                width *= lerp(1.0, 1.42, smoothstep(_GrassWidthInflateStart, _GrassWidthInflateEnd, viewDistance));
                 float geometryFade = smoothstep(0.0, 1.0, saturate(visualEdgeFade));
                 height *= geometryFade;
                 width *= geometryFade;
 
-                float bend = t * t * height * lerp(0.16, 0.34, Hash01(seed ^ 0x9b05688cu));
+                float bend = t * t * height * lerp(0.24, 0.5, Hash01(seed ^ 0x9b05688cu));
                 float lateralCurl = (Hash01(seed ^ 0x1f83d9abu) - 0.5) * width * t * (1.0 - t) * 0.8;
 
                 // Close grass must remain physical geometry because the camera can enter it.
@@ -278,17 +306,19 @@ Shader "Planet/Grass"
                 float3 positionWS = spineWS + sideWS * (side * widthAtT);
 
                 float brightness = lerp(0.56, 1.04, Hash01(seed ^ 0x5be0cd19u));
-                float tintHash = saturate(lerp(Hash01(seed ^ 0xc2b2ae35u), patchTintNoise, 0.18));
+                // Clump-dominant dry/lush colour: whole tufts read green or golden, per-blade jitter
+                // adds fine variation on top - the key break from uniform lawn green.
+                float tintHash = saturate(lerp(Hash01(seed ^ 0xc2b2ae35u), clumpDryRand, 0.65));
                 float patchTint = lerp(0.86, 1.06, patchTintNoise);
                 float colorJitter = Hash01(seed ^ 0x27d4eb2fu);
-                float3 baseTint = lerp(float3(0.70, 0.88, 0.64), float3(1.04, 0.96, 0.72), tintHash);
+                float3 baseTint = lerp(float3(0.62, 0.86, 0.5), float3(0.92, 0.9, 0.54), tintHash);
                 float3 bladeTintJitter = lerp(float3(0.82, 1.03, 0.86), float3(1.05, 0.91, 0.78), colorJitter);
                 float3 tint = baseTint * bladeTintJitter * patchTint;
                 float heightShade = lerp(0.42, 0.94, smoothstep(0.0, 1.0, t));
                 float3 biomeTint = GradeGrassTint(blade.Color.rgb, 0.76, 0.88);
                 float3 bladeAlbedo = saturate(biomeTint * tint * brightness) * heightShade;
-                float3 canopyAlbedo = GradeGrassTint(blade.Color.rgb, 0.82, 0.98) * 0.76;
-                float canopyHandoff = smoothstep(120.0, 240.0, viewDistance);
+                float3 canopyAlbedo = GrassCanopyAlbedo(blade.Color.rgb);
+                float canopyHandoff = smoothstep(_GrassCanopyColorStart, _GrassCanopyColorEnd, viewDistance);
 
                 Varyings output;
                 output.positionCS = TransformWorldToHClip(positionWS);
@@ -308,20 +338,37 @@ Shader "Planet/Grass"
             {
                 clip(input.fadeAlpha - SampleGrassDither(input.positionCS.xy) - 0.001);
 
+                float cardShade = 1.0;
                 if (input.clusterMode > 0.5)
                 {
-                    float bladeCoord = min(input.clusterUv.x, 0.99999) * CLUSTER_BLADE_COLUMNS;
-                    float bladeIndex = floor(bladeCoord);
-                    float bladeLocalX = frac(bladeCoord) - 0.5;
-                    float bladeHash = HashFloat(bladeIndex + input.clusterSeed * 97.0);
-                    float bladeHeight = lerp(0.68, 1.02, bladeHash);
-                    clip(bladeHeight - input.clusterUv.y);
+                    if (_GrassCardStrength > 0.001)
+                    {
+                        // Textured tuft card: the Synty cutout provides the silhouette (alpha) and
+                        // within-tuft shading (luminance), while OUR grass colour (input.color) is
+                        // kept so cards match the near blades. A per-card UV flip via clusterSeed
+                        // keeps neighbouring cards from looking stamped-identical.
+                        float2 cardUv = float2(input.clusterSeed > 0.5 ? 1.0 - input.clusterUv.x : input.clusterUv.x,
+                            input.clusterUv.y);
+                        float4 card = SAMPLE_TEXTURE2D(_GrassCardTex, sampler_GrassCardTex, cardUv);
+                        clip(card.a - 0.35);
+                        float cardLuma = dot(card.rgb, float3(0.299, 0.587, 0.114));
+                        cardShade = lerp(1.0, cardLuma * 1.55, saturate(_GrassCardStrength));
+                    }
+                    else
+                    {
+                        float bladeCoord = min(input.clusterUv.x, 0.99999) * CLUSTER_BLADE_COLUMNS;
+                        float bladeIndex = floor(bladeCoord);
+                        float bladeLocalX = frac(bladeCoord) - 0.5;
+                        float bladeHash = HashFloat(bladeIndex + input.clusterSeed * 97.0);
+                        float bladeHeight = lerp(0.68, 1.02, bladeHash);
+                        clip(bladeHeight - input.clusterUv.y);
 
-                    float bladeT = saturate(input.clusterUv.y / max(bladeHeight, 0.001));
-                    float bladeLean = (HashFloat(bladeIndex + input.clusterSeed * 173.0) - 0.5)
-                        * bladeT * (1.0 - bladeT) * 0.24;
-                    float bladeHalfWidth = lerp(0.35, 0.018, pow(bladeT, 0.82));
-                    clip(bladeHalfWidth - abs(bladeLocalX - bladeLean));
+                        float bladeT = saturate(input.clusterUv.y / max(bladeHeight, 0.001));
+                        float bladeLean = (HashFloat(bladeIndex + input.clusterSeed * 173.0) - 0.5)
+                            * bladeT * (1.0 - bladeT) * 0.24;
+                        float bladeHalfWidth = lerp(0.35, 0.018, pow(bladeT, 0.82));
+                        clip(bladeHalfWidth - abs(bladeLocalX - bladeLean));
+                    }
                 }
 
                 float3 viewDir = GetWorldSpaceNormalizeViewDir(input.positionWS);
@@ -335,7 +382,7 @@ Shader "Planet/Grass"
                 float edgeShade = lerp(0.55, 1.0, saturate(input.fadeAlpha));
                 float3 sourceAlbedo = saturate(input.color.rgb)
                     * lerp(0.45, 1.0, saturate(_GrassChunkFade))
-                    * edgeShade;
+                    * edgeShade * cardShade;
                 float3 albedo = lerp(
                     sourceAlbedo,
                     debugTint,

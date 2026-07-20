@@ -201,7 +201,7 @@ sealed class GrassChunkDispatcher : System.IDisposable
         _placementCompute.SetInt(ChunkHashId, unchecked((int)chunk.HashValue));
         _placementCompute.SetVector(ChunkUvScaleOffsetId, _surfaceProvider.GrassSurfaceAtlases.GetUvScaleOffset(chunk));
         _placementCompute.SetMatrix(PlanetLocalToWorldId, _planetTransform.localToWorldMatrix);
-        _placementCompute.SetFloat(PlanetWorldScaleId, GetUniformWorldScale(_planetTransform));
+        _placementCompute.SetFloat(PlanetWorldScaleId, FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform));
         _placementCompute.SetFloat(WaterRadiusId, _waterRadius);
         _placementCompute.SetInt(SeedId, _seed);
         // Camera position falls back to planet origin so initial placement before first Tick produces blades.
@@ -243,13 +243,6 @@ sealed class GrassChunkDispatcher : System.IDisposable
             _neutralClimateMap.Apply(false, true);
         }
         return _neutralClimateMap;
-    }
-
-    static float GetUniformWorldScale(Transform transform)
-    {
-        if (transform == null) return 1f;
-        Vector3 scale = transform.lossyScale;
-        return Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
     }
 
     public void Dispose()

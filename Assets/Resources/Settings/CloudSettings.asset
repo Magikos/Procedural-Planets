@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Cloud Settings
   m_EditorClassIdentifier: ProceduralPlanets.Planet::CloudSettings
   WeatherResolution: 256
-  InitialCoverage: 0.48
+  InitialCoverage: 0.30
   FrontScale: 4
   FrontSharpness: 18
   StormThreshold: 0.86

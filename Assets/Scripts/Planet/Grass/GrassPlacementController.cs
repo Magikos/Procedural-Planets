@@ -15,6 +15,12 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     static readonly int VisualFadeEndId = Shader.PropertyToID("_GrassVisualFadeEnd");
     static readonly int ChunkFadeId = Shader.PropertyToID("_GrassChunkFade");
     static readonly int LayerDebugTintId = Shader.PropertyToID("_GrassLayerDebugTint");
+    static readonly int WidthInflateStartId = Shader.PropertyToID("_GrassWidthInflateStart");
+    static readonly int WidthInflateEndId = Shader.PropertyToID("_GrassWidthInflateEnd");
+    static readonly int BillboardStartId = Shader.PropertyToID("_GrassBillboardStart");
+    static readonly int BillboardEndId = Shader.PropertyToID("_GrassBillboardEnd");
+    static readonly int CanopyColorStartId = Shader.PropertyToID("_GrassCanopyColorStart");
+    static readonly int CanopyColorEndId = Shader.PropertyToID("_GrassCanopyColorEnd");
 
     readonly Transform _planetTransform;
     readonly IGrassNearFieldStatsProvider _nearFieldStatsProvider;
@@ -37,10 +43,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     readonly float _grassDensityMultiplier;
     readonly GrassPlacementStats _stats = new();
 
-    Camera _lastTickCamera;
     Vector3 _lastDispatchCameraPosition;
-    float _chunkInnerFadeStart;
-    float _chunkInnerFadeEnd;
     bool _redispatchRequested;
     bool _disposed;
 
@@ -89,10 +92,18 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             name = "Runtime Grass Material",
             hideFlags = HideFlags.HideAndDontSave,
         };
+        _material.SetFloat(VisualNearFadeStartId, ChunkFadeInStart);
+        _material.SetFloat(VisualNearFadeEndId, ChunkPeakDistance);
         _material.SetFloat(VisualFadeStartId, _distanceFadeStart);
         _material.SetFloat(VisualFadeEndId, _maxRenderDistance);
         _material.SetFloat(ChunkFadeId, 1f);
         _material.SetColor(LayerDebugTintId, Color.blue);
+        _material.SetFloat(WidthInflateStartId, _distanceFadeStart * 0.7f);
+        _material.SetFloat(WidthInflateEndId, _maxRenderDistance);
+        _material.SetFloat(BillboardStartId, _distanceFadeStart * 0.7f);
+        _material.SetFloat(BillboardEndId, _maxRenderDistance);
+        _material.SetFloat(CanopyColorStartId, _distanceFadeStart * 0.8f);
+        _material.SetFloat(CanopyColorEndId, _maxRenderDistance);
 
         _logger.Log(LogLevel.Debug, "Grass",
             $"Initialized placement renderer: chunks={_chunks.Count}, minDepth={_minChunkDepthForBlades}, residencyPadding={_residencyFrustumPaddingDegrees:F1}deg, seed={seed}, waterRadius={waterRadius:F2}, surfaceAtlas={_surfaceAtlasResolution}.");
@@ -101,7 +112,6 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     public void Tick(Camera camera)
     {
         if (_disposed || _material == null || camera == null) return;
-        _lastTickCamera = camera;
         _dispatcher.SetTickCamera(camera);
         _resolver.Refresh(camera);
         _stats.VisibleChunks = _resolver.VisibleChunks;
@@ -109,25 +119,16 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         ReconcileRuntimeAllocations(camera.transform.position);
         GeometryUtility.CalculateFrustumPlanes(camera, _renderFrustumPlanes);
 
-        ResolveChunkInnerFade(out float innerFadeStart, out float innerFadeEnd);
-        bool transitionChanged = !Mathf.Approximately(_chunkInnerFadeStart, innerFadeStart)
-            || !Mathf.Approximately(_chunkInnerFadeEnd, innerFadeEnd);
-        _chunkInnerFadeStart = innerFadeStart;
-        _chunkInnerFadeEnd = innerFadeEnd;
-        _material.SetFloat(VisualNearFadeStartId, innerFadeStart);
-        _material.SetFloat(VisualNearFadeEndId, innerFadeEnd);
-
         // Re-dispatch placement on any chunk whose distance-LOD result may have changed
         // because the camera moved enough to materially shift which chunks are in range.
         // Cheap heuristic: if camera moved >25m, re-run placement on all tracked chunks.
         if (_redispatchRequested
-            || transitionChanged
             || (camera.transform.position - _lastDispatchCameraPosition).sqrMagnitude
                 > CameraRedispatchDistance * CameraRedispatchDistance)
         {
             _redispatchRequested = false;
             _lastDispatchCameraPosition = camera.transform.position;
-            _stats.PlacementDispatches = _dispatcher.RedispatchAll(_chunks, innerFadeStart, innerFadeEnd);
+            _stats.PlacementDispatches = _dispatcher.RedispatchAll(_chunks, ChunkFadeInStart, ChunkPeakDistance);
         }
 
         _stats.ResetPerTick();
@@ -155,8 +156,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
                 _stats.CoarseTrackedChunks++;
 
             bool suppress = false;
-            if (suppressionRadiusSq > 0f && chunk != null
-                && chunk.CpuVertices != null && chunk.CpuVertices.Length > 0)
+            if (suppressionRadiusSq > 0f && chunk.CpuVertices != null && chunk.CpuVertices.Length > 0)
             {
                 Vector3 chunkCenterWs = _planetTransform.TransformPoint(chunk.CpuLocalBounds.center);
                 if ((chunkCenterWs - cameraPos).sqrMagnitude < suppressionRadiusSq)
@@ -211,7 +211,6 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             pair.Value?.Dispose();
         _chunks.Clear();
         _dispatcher.Dispose();
-        _resolver.Chunks.Clear();
 
         if (_material != null)
         {
@@ -244,7 +243,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
             }
             else if (distanceSq <= allocationDistanceSq)
             {
-                GrassChunkRuntime runtime = _dispatcher.CreateAndDispatch(chunk, bounds, _chunkInnerFadeStart, _chunkInnerFadeEnd);
+                GrassChunkRuntime runtime = _dispatcher.CreateAndDispatch(chunk, bounds, ChunkFadeInStart, ChunkPeakDistance);
                 if (runtime != null)
                 {
                     _chunks.Add(chunk, runtime);
@@ -335,12 +334,6 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
         };
     }
 
-    void ResolveChunkInnerFade(out float start, out float end)
-    {
-        start = ChunkFadeInStart;
-        end = ChunkPeakDistance;
-    }
-
     Bounds EstimateGrassWorldBounds(PlanetChunk chunk)
     {
         if (chunk == null || chunk.CpuVertices == null || chunk.CpuVertices.Length == 0)
@@ -348,15 +341,9 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
 
         Bounds local = chunk.CpuLocalBounds;
         Vector3 center = _planetTransform.TransformPoint(local.center);
-        float scale = GetUniformWorldScale(_planetTransform);
+        float scale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform);
         float radius = Mathf.Max(local.extents.magnitude * scale + GrassBoundsPaddingMeters * scale, 1f);
         return new Bounds(center, Vector3.one * (radius * 2f));
     }
 
-    static float GetUniformWorldScale(Transform transform)
-    {
-        if (transform == null) return 1f;
-        Vector3 scale = transform.lossyScale;
-        return Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
-    }
 }

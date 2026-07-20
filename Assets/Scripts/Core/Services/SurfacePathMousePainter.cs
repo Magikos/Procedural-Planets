@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-[DefaultExecutionOrder(-100)]
 [DisallowMultipleComponent]
 public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
 {

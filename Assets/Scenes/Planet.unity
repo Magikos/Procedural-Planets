@@ -556,6 +556,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::CloudController
   Settings: {fileID: 11400000, guid: 56063495781899a48b6950662b793742, type: 2}
   NoiseCompute: {fileID: 7200000, guid: 1be320de9e6d5d44fa5195e6b23bd4a6, type: 3}
+  BlueNoiseTexture: {fileID: 2800000, guid: 626acd0223e41844ba8f9fb37d733e31, type: 3}
 --- !u!114 &540153375
 MonoBehaviour:
   m_ObjectHideFlags: 0

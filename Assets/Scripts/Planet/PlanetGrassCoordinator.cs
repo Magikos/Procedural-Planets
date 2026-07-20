@@ -13,9 +13,13 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
 
     GrassPlacementController _grassController;
     GrassNearFieldController _grassNearFieldController;
+    GrassClumpScatter _grassClumpScatter;
     bool _grassEnabled = true;
     bool _nearFieldGrassEnabled = true;
     bool _chunkGrassEnabled = false;
+    // Blanket on: the far grass-surface pass now uses linear coverage + toe cut (matching the
+    // biome density blend) so it no longer stripes at biome borders. It is the base layer the
+    // near blades and future tuft layers match to (single-source GrassCanopyAlbedo).
     bool _grassBlanketEnabled = true;
 
     ChunkedSurfaceProvider _chunkedProvider;
@@ -46,12 +50,25 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     const float GrassFarOverlayFiberStrength = 0.65f;
     const float GrassFarOverlayOrbitStrength = 0.42f;
 
+    // Resolved lazily on first use: the coordinator is constructed in Planet.Awake,
+    // before GameBootstrap.EarlyInitialize registers IGrassQualitySettings.
+    IGrassQualitySettings _quality;
+    IGrassQualitySettings Quality => _quality ??= ServiceLocator.Get<IGrassQualitySettings>();
+    PlanetDto _planetDto;
+
     public PlanetGrassCoordinator(Transform planetTransform, IPlanetSurfaceSampler surfaceSampler, ILogger logger)
     {
         _planetTransform = planetTransform;
         _surfaceSampler = surfaceSampler;
         _logger = logger;
+        EventBus<SettingsChangedEvent>.Listen(OnSettingsChanged);
         ConsoleRegistry.RegisterInstance(this);
+    }
+
+    void OnSettingsChanged(SettingsChangedEvent evt)
+    {
+        if (evt.DtoType != typeof(PlanetDto)) return;
+        _planetDto = SettingsProvider.GetSettings<PlanetDto>();
     }
 
     public void Configure(ChunkedSurfaceProvider provider, BiomeSurfaceTextureArrays surfaceArrays,
@@ -66,8 +83,8 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
         if (provider == null)
             return;
 
-        var planet = SettingsProvider.GetSettings<PlanetDto>();
-        float waterRadius = ComputeWaterRadius(planet);
+        _planetDto = SettingsProvider.GetSettings<PlanetDto>();
+        float waterRadius = ComputeWaterRadius(_planetDto);
         if (_grassEnabled && _nearFieldGrassEnabled
             && observerCamera != null
             && ShouldActivateNearFieldGrass(observerCamera.transform.position, false))
@@ -78,7 +95,8 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
         if (_grassEnabled && _chunkGrassEnabled)
             CreateChunkGrassController(waterRadius);
 
-        ApplyBlanketState(_terrainMaterial);
+        if (_terrainMaterial != null)
+            ApplyTerrainOverlay(_terrainMaterial);
     }
 
     public void Tick(Camera camera)
@@ -88,6 +106,7 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
             _grassController?.Tick(camera);
         using (FrameTimingCounters.Measure(FrameTimingSection.NearGrass))
             _grassNearFieldController?.Tick(camera);
+        _grassClumpScatter?.Tick(camera);
     }
 
     void UpdateControllerActivation(Camera camera)
@@ -95,8 +114,7 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
         if (_chunkedProvider == null || camera == null)
             return;
 
-        var planet = SettingsProvider.GetSettings<PlanetDto>();
-        float waterRadius = ComputeWaterRadius(planet);
+        float waterRadius = ComputeWaterRadius(_planetDto);
 
         if (_grassEnabled && _chunkGrassEnabled)
         {
@@ -122,37 +140,50 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
             _grassNearFieldController.Dispose();
             _grassNearFieldController = null;
         }
+
+        // Blades fade to zero alpha across the altitude band below the activation gate,
+        // so the create/dispose above never pops a visible layer in or out.
+        if (_grassNearFieldController != null
+            && TryGetCameraAltitude(camera.transform.position, out float altitude))
+        {
+            float fade = 1f - Mathf.InverseLerp(
+                Quality.NearFieldFadeAltitudeStart,
+                Mathf.Max(Quality.NearFieldActivationAltitude, Quality.NearFieldFadeAltitudeStart + 1f),
+                altitude);
+            _grassNearFieldController.SetAltitudeFade(Mathf.SmoothStep(0f, 1f, fade));
+        }
     }
 
     static float ComputeWaterRadius(PlanetDto planet)
     {
-        return planet.HasOceans
+        return planet != null && planet.HasOceans
             ? planet.PlanetRadius * (1f + planet.OceanLevel)
             : -1f;
     }
 
     bool ShouldActivateNearFieldGrass(Vector3 cameraPosition, bool currentlyActive)
     {
-        var quality = ServiceLocator.Get<IGrassQualitySettings>();
-        return ShouldActivateGrassLayer(cameraPosition, currentlyActive,
-            quality.NearFieldActivationAltitude, quality.NearFieldDeactivationAltitude);
+        if (!TryGetCameraAltitude(cameraPosition, out float altitude))
+            return currentlyActive;
+
+        float threshold = currentlyActive
+            ? Quality.NearFieldDeactivationAltitude
+            : Quality.NearFieldActivationAltitude;
+        return altitude <= threshold;
     }
 
-    bool ShouldActivateGrassLayer(Vector3 cameraPosition, bool currentlyActive,
-        float activationAltitude, float deactivationAltitude)
+    bool TryGetCameraAltitude(Vector3 cameraPosition, out float altitude)
     {
+        altitude = 0f;
         Vector3 fromCenter = cameraPosition - _planetTransform.position;
         if (fromCenter.sqrMagnitude < 0.0001f)
             return true;
 
         if (!_surfaceSampler.TryGetSurfaceRadius(fromCenter.normalized, out float surfaceRadius))
-            return currentlyActive;
+            return false;
 
-        float altitude = Mathf.Max(0f, fromCenter.magnitude - surfaceRadius);
-        float threshold = currentlyActive
-            ? deactivationAltitude
-            : activationAltitude;
-        return altitude <= threshold;
+        altitude = Mathf.Max(0f, fromCenter.magnitude - surfaceRadius);
+        return true;
     }
 
     void CreateChunkGrassController(float waterRadius)
@@ -164,9 +195,13 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
 
     void CreateNearFieldGrassController(float waterRadius)
     {
+        if (_planetDto == null)
+            return;
+
         _grassNearFieldController = new GrassNearFieldController(_planetTransform, _chunkedProvider,
             _surfaceArrays.GrassParamsBuffer, _surfaceArrays.SliceCount,
-            waterRadius, SettingsProvider.GetSettings<PlanetDto>().PlanetRadius, _seed, _logger);
+            waterRadius, _planetDto.PlanetRadius, _seed, _logger);
+        _grassClumpScatter = new GrassClumpScatter(_planetTransform, _planetTransform.position, _logger);
     }
 
     public GrassNearFieldStats GetGrassNearFieldStats()
@@ -184,12 +219,11 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
         SetMaterialFloatIfPresent(mat, _grassFarOverlayEndId, GrassFarOverlayEnd);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayNoiseScaleId, GrassFarOverlayNoiseScale);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayOrbitStrengthId, GrassFarOverlayOrbitStrength);
-        var quality = ServiceLocator.Get<IGrassQualitySettings>();
-        SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeStartId, quality.FarOverlayAltitudeStart);
-        SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeEndId, quality.FarOverlayAltitudeEnd);
+        SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeStartId, Quality.FarOverlayAltitudeStart);
+        SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeEndId, Quality.FarOverlayAltitudeEnd);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayFiberStrengthId, GrassFarOverlayFiberStrength);
         SetMaterialFloatIfPresent(mat, _grassSurfaceBrightnessId, _grassSurfaceBrightness);
-        SetMaterialFloatIfPresent(mat, _grassWaterRadiusId, ComputeWaterRadius(SettingsProvider.GetSettings<PlanetDto>()));
+        SetMaterialFloatIfPresent(mat, _grassWaterRadiusId, ComputeWaterRadius(_planetDto));
     }
 
     void ApplyBlanketState(Material mat)
@@ -279,6 +313,7 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     public void Dispose()
     {
         DisposeControllers();
+        EventBus<SettingsChangedEvent>.Unlisten(OnSettingsChanged);
         ConsoleRegistry.UnregisterInstance(typeof(PlanetGrassCoordinator));
     }
 

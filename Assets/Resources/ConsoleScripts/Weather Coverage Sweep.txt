@@ -1,0 +1,74 @@
+@name Weather Coverage Sweep
+@timeout 120
+
+# One-shot coverage sweep. Press play, run this, wait (~5 min), done. Finds the InitialCoverage
+# that gives Earth-like variety: clear skies + scattered clouds + only occasional storms, instead
+# of the near-total overcast + planet-wide storms the default (0.48) produces. Planet center is
+# world origin; false-colour overlays are lighting-independent so a fixed space vantage works.
+#   cloud.debug-mode 1 = condensation (coverage), 2 = storm, 0 = real clouds.
+@sidecar camera.position
+@sidecar weather.coverage
+@sidecar weather.storm-threshold
+@sidecar cloud.debug-mode
+
+time.set-local 0.35
+time.freeze true
+weather.wind-preset Windy
+weather.storm-threshold 0.86
+
+camera.look-at 3551,7584,3297 0,0,0
+@wait frames 10
+
+# --- coverage 0.40
+weather.coverage 0.40
+@wait seconds 60
+cloud.debug-mode 1
+@wait frames 5
+debug.screenshot cov040-condensation
+cloud.debug-mode 2
+@wait frames 5
+debug.screenshot cov040-storm
+cloud.debug-mode 0
+@wait frames 5
+debug.screenshot cov040-clouds
+
+# --- coverage 0.30
+weather.coverage 0.30
+@wait seconds 60
+cloud.debug-mode 1
+@wait frames 5
+debug.screenshot cov030-condensation
+cloud.debug-mode 2
+@wait frames 5
+debug.screenshot cov030-storm
+cloud.debug-mode 0
+@wait frames 5
+debug.screenshot cov030-clouds
+
+# --- coverage 0.20
+weather.coverage 0.20
+@wait seconds 60
+cloud.debug-mode 1
+@wait frames 5
+debug.screenshot cov020-condensation
+cloud.debug-mode 2
+@wait frames 5
+debug.screenshot cov020-storm
+cloud.debug-mode 0
+@wait frames 5
+debug.screenshot cov020-clouds
+
+# --- coverage 0.10
+weather.coverage 0.10
+@wait seconds 60
+cloud.debug-mode 1
+@wait frames 5
+debug.screenshot cov010-condensation
+cloud.debug-mode 2
+@wait frames 5
+debug.screenshot cov010-storm
+cloud.debug-mode 0
+@wait frames 5
+debug.screenshot cov010-clouds
+
+cloud.debug-mode 0

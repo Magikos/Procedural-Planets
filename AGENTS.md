@@ -11,6 +11,16 @@ Rules:
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
 
+## Project skill library
+
+The committed skill library root is `.agent-skills/` (16 skills, built 2026-07-06).
+
+Rules:
+- Before non-trivial project work, read `.agent-skills/README.md` and load the skill(s) its routing table matches to your task. Read the matched `.agent-skills/<name>/SKILL.md` in full and follow it.
+- Frontmatter `description` fields say when to load each skill; the README table routes by symptom/task.
+- Each skill ends with a "Provenance and maintenance" section of re-verification commands. Date-stamped facts can drift — on any conflict, the working tree wins over the skill; update the skill.
+- `.claude/skills/pp-*` are discovery stubs for Claude Code only. Never edit them; edit the source under `.agent-skills/`. If a source skill's frontmatter changes, regenerate its stub to match.
+
 ## Shared project memory
 
 The committed cross-agent memory root is `.agent-memory/`.

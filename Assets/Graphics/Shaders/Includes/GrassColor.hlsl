@@ -21,4 +21,14 @@ float3 MatchGrassTintLuminance(float3 tint, float targetLuminance)
     return saturate(tint * (max(targetLuminance, 0.0) / sourceLuminance));
 }
 
+// Single source for the distant-canopy albedo. Grass.shader's blades converge to this
+// color at the far end of the fade band, and the terrain grass overlay paints with the
+// same color, so the 3D canopy and the painted surface meet at one brightness.
+#define GRASS_CANOPY_ALBEDO_SCALE 0.76
+
+float3 GrassCanopyAlbedo(float3 bladeTint)
+{
+    return GradeGrassTint(bladeTint, 0.82, 0.98) * GRASS_CANOPY_ALBEDO_SCALE;
+}
+
 #endif

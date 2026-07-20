@@ -2,10 +2,10 @@
 #define CLOUD_SHADOWS_INCLUDED
 
 #include "Math.hlsl"
-#include "WeatherCubeFace.hlsl"
+#include "WeatherSampling.hlsl"
+#include "CloudDensity.hlsl"
+#include "ClimateSampling.hlsl"
 
-TEXTURE2D_ARRAY(_CloudWeatherMap);
-SAMPLER(sampler_CloudWeatherMap);
 TEXTURE3D(_CloudShapeNoise);
 SAMPLER(sampler_CloudShapeNoise);
 
@@ -13,12 +13,14 @@ float3 _CloudPlanetCenter;
 float _CloudInnerRadius;
 float _CloudOuterRadius;
 int _CloudWeatherResolution;
-float4x4 _CloudWeatherRotation;
 float _CloudNoiseScale;
 float _CloudWindAngle;
 float4 _CloudShapeWeights;
 float _CloudDensityThreshold;
 float _CloudShapeSharpness;
+float _CloudBottomFeather;
+float _CloudTopFeather;
+float _CloudTopDensityBias;
 float4 _CloudShadowParams;
 float3 _WindDirection;
 float _WindSpeedMps;
@@ -27,13 +29,7 @@ float _WaterFocusMode;
 
 float4 SampleCloudShadowWeather(float3 direction)
 {
-    float3 weatherDirection = mul((float3x3)_CloudWeatherRotation, direction);
-    direction = dot(weatherDirection, weatherDirection) > 0.0001 ? normalize(weatherDirection) : direction;
-
-    int face;
-    float2 uv;
-    CubeFaceUv(direction, face, uv);
-    return SAMPLE_TEXTURE2D_ARRAY_LOD(_CloudWeatherMap, sampler_CloudWeatherMap, uv, face, 0);
+    return SampleWeather(direction);
 }
 
 float WeightedCloudShadowNoise(float4 noise, float4 weights)
@@ -62,9 +58,17 @@ float SampleCloudShadowDensity(float3 worldPos)
     float3 shapePos = advectedPos * _CloudNoiseScale;
     float shapeFBM = WeightedCloudShadowNoise(SAMPLE_TEXTURE3D_LOD(_CloudShapeNoise, sampler_CloudShapeNoise, shapePos, 0), _CloudShapeWeights);
 
-    float cloudShape = shapeFBM * condensation;
+    // Same vertical profile as the sky march so shadow darkness tracks cloud height/type (D2):
+    // identical climate-temperature convectivity + storm inputs.
+    float height01 = saturate((radius - _CloudInnerRadius) / max(_CloudOuterRadius - _CloudInnerRadius, 0.0001));
+    float convectivity = smoothstep(0.2, 0.6, SampleClimate01(direction).x);
+    float verticalProfile = CloudVerticalProfile(height01, convectivity, weather.g,
+        _CloudBottomFeather, _CloudTopFeather, _CloudTopDensityBias);
+
+    float cloudShape = shapeFBM * condensation * verticalProfile;
     float density = saturate((cloudShape - _CloudDensityThreshold) * _CloudShapeSharpness);
-    float stormBoost = lerp(1.0, max(_CloudShadowParams.z, 0.5), weather.g);
+    float gloom = WeatherCloudGloom(direction, weather.g);
+    float stormBoost = lerp(1.0, max(_CloudShadowParams.z, 0.5), gloom);
     return density * condensation * stormBoost;
 }
 

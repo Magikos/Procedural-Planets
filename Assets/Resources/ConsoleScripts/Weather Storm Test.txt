@@ -1,0 +1,79 @@
+@name Weather Storm Test
+@timeout 120
+
+# One-shot storm-formation test. Bryan presses play, runs this, waits (~4-5 min), done.
+# Goal: does natural evolution produce storms (cumulonimbus) and cloud-type variety, and how
+# does weather.storm-threshold change that? Planet center is world origin.
+#
+# The false-colour weather overlays are lighting-independent, so the storm/source/condensation
+# data is read from a fixed space vantage that shows a whole hemisphere of the grid at once:
+#   cloud.debug-mode 1 = condensation (cloud coverage), 2 = storm, 6 = moisture source.
+# mode 0 = the real clouds (lit side only, secondary).
+#
+# Each screenshot's sidecar records the live storm threshold / wind / mode via @sidecar below.
+@sidecar camera.position
+@sidecar weather.storm-threshold
+@sidecar weather.wind-speed
+@sidecar cloud.debug-mode
+
+# --- Deterministic setup ------------------------------------------------------------------
+# Freeze the SUN only (weather still evolves on Time.deltaTime) so lighting is constant across
+# the whole run; mid-morning so the lit hemisphere reads well.
+time.set-local 0.35
+time.freeze true
+# Moving air so fronts advect while we watch.
+weather.wind-preset Windy
+
+# Reseed the natural varied moisture-source map and resume evolution (undoes any earlier
+# weather.force / weather.test-pattern, which flatten the source channel).
+weather.regenerate
+
+# Space vantage: ~9000 m out along the old surface bearing, looking at planet centre (origin).
+camera.look-at 3551,7584,3297 0,0,0
+@wait frames 10
+
+# --- Context (one-time): the stationary source map (where storms CAN form) and the freshly
+# --- reseeded condensation, before much evolution.
+cloud.debug-mode 6
+@wait frames 5
+debug.screenshot source-map
+cloud.debug-mode 1
+@wait frames 5
+debug.screenshot condensation-initial
+
+# --- Threshold 0.86 (default). Let evolution settle ~75 s, then capture. Prediction: storms
+# --- are rare/absent because condensation seldom clears 0.86.
+weather.storm-threshold 0.86
+@wait seconds 75
+cloud.debug-mode 2
+@wait frames 5
+debug.screenshot t086-storm
+cloud.debug-mode 1
+@wait frames 5
+debug.screenshot t086-condensation
+cloud.debug-mode 0
+@wait frames 5
+debug.screenshot t086-clouds
+
+# --- Threshold 0.65. Storms should begin forming where source is 0.65-0.86.
+weather.storm-threshold 0.65
+@wait seconds 75
+cloud.debug-mode 2
+@wait frames 5
+debug.screenshot t065-storm
+cloud.debug-mode 0
+@wait frames 5
+debug.screenshot t065-clouds
+
+# --- Threshold 0.45. More/broader storms.
+weather.storm-threshold 0.45
+@wait seconds 75
+cloud.debug-mode 2
+@wait frames 5
+debug.screenshot t045-storm
+cloud.debug-mode 0
+@wait frames 5
+debug.screenshot t045-clouds
+
+# Leave clouds visible at the end.
+cloud.debug-mode 0

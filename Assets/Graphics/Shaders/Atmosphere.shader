@@ -13,6 +13,7 @@ SAMPLER(sampler_WaterInterfaceTexture);
 
 float4 _LightShaftParams;
 float4 _LightShaftParams2;
+float4 _SunAureoleParams; // x=strength, y=power(radius)
 float2 _TerrainAerialPerspectiveDistances;
 int _LightShaftSamples;
 int _PrecipitationDebugMode;
@@ -202,7 +203,13 @@ ENDHLSL
                     float3 sampleColor = SAMPLE_TEXTURE2D(_Source, sampler_Source, sampleUv).rgb;
                     float luminance = dot(sampleColor, float3(0.2126, 0.7152, 0.0722));
                     float brightMask = smoothstep(_LightShaftParams2.y, _LightShaftParams2.y + _LightShaftParams2.z, luminance);
-                    float sunDistance = length(sampleUv - sunUv);
+                    // Aspect-corrected UV distance: raw length(sampleUv - sunUv) treats a
+                    // non-square screen as a square, so equal-UV-distance renders as an oval
+                    // (wide on this project's wide capture aspect). Scaling the horizontal
+                    // delta by the screen aspect makes the glow round in screen pixels.
+                    float2 sunDelta = sampleUv - sunUv;
+                    sunDelta.x *= _ScreenParams.x / max(_ScreenParams.y, 1.0);
+                    float sunDistance = length(sunDelta);
                     float sunProximity = 1.0 - smoothstep(0.04, 0.72, sunDistance);
                     float directSunMask = 1.0 - smoothstep(0.0, 0.22, sunDistance);
                     float shaftMask = saturate(brightMask * sunProximity + directSunMask * 0.45);
@@ -269,7 +276,14 @@ ENDHLSL
                 float sceneDepth = CompositeDepthScaled(i.uv, viewLength);
                 float3 color = CalculateScattering(_WorldSpaceCameraPos.xyz, viewDir,
                     sceneDepth, originalCol.xyz);
-                color += CalculateLightShafts(i.uv);
+                float3 shaftColor = CalculateLightShafts(i.uv);
+                color += shaftColor;
+
+                // Raw shaft signal only, amplified so a faint contribution is still visible.
+                // Isolates whether CalculateLightShafts is producing anything at all, independent
+                // of how it blends into the sky.
+                if (_OceanDebugMode == DEBUG_ATMOSPHERE_LIGHT_SHAFTS)
+                    return float4(shaftColor * 4.0, 1.0);
 
                 // Water and near terrain own high-frequency local detail. Atmosphere should
                 // haze those pixels, but not replace all of their surface variation.
@@ -296,6 +310,22 @@ ENDHLSL
                 float highlightPreserve = waterSurfaceMask * smoothstep(0.32, 0.82, sourceLuma) * 0.24;
                 color = lerp(color, originalCol.rgb, detailPreserve);
                 color = lerp(color, max(color, originalCol.rgb), highlightPreserve);
+
+                // Sun aureole: soft radial bloom around the sun that fills in the "fireball" halo
+                // at low sun, where single-scatter Mie is killed by sun extinction and leaves a bare
+                // disc. Extinction-independent and weighted by lowSun01 so it fades out by midday.
+                float sunViewCos = dot(viewDir, sunDirNorm);
+                // Confine the bloom to the true sunrise/sunset band (gone by ~6 deg) so mid-morning
+                // and late-dusk don't inherit a sky-filling blob - steeper than the shared lowSun01.
+                float aureoleElev = 1.0 - smoothstep(-0.05, 0.10, sunElevation);
+                // SkyDepthMask misclassifies the planet as sky from orbit (its reversed-Z depth is
+                // below the mask's threshold), so the aureole bled through the planet body. Gate it
+                // with an explicit planet-sphere hit test: no bloom where the view ray hits the planet.
+                float2 aurPlanetHit = RaySphere(_PlanetCenter, _SeaLevelRadius, _WorldSpaceCameraPos.xyz, viewDir);
+                float aurSeesSky = 1.0 - step(0.0001, aurPlanetHit.y) * step(0.0, aurPlanetHit.x);
+                float aureole = pow(saturate(sunViewCos), max(_SunAureoleParams.y, 1.0))
+                    * _SunAureoleParams.x * aureoleElev * SkyDepthMask(i.uv) * aurSeesSky;
+                color += float3(1.0, 0.55, 0.28) * aureole;
 
                 float sceneMask = 1.0 - SkyDepthMask(i.uv);
                 float nonWaterSceneMask = sceneMask * (1.0 - waterSurfaceMask);

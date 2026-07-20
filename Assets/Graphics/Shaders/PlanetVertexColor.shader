@@ -727,7 +727,13 @@ Shader "Planet/VertexColor"
                     max(_GrassFarOverlayAltitudeEnd, _GrassFarOverlayAltitudeStart + 1.0), cameraAltitude);
                 float approachWeight = lerp(saturate(_GrassFarOverlayOrbitStrength), 1.0, nearSurface);
 
-                float envCoverage = pow(saturate(grass.density * slopeKeep * waterKeep), 0.62);
+                // Linear coverage with a toe cut, NOT a pow-lift: coverage must track biome grass
+                // density directly. The old pow(.,0.62) is concave, so it lifts the low-density
+                // fringe at biome borders faster than the biome colour blends - that mismatch is
+                // the historical stripe. The toe drops the near-zero-density fringe entirely.
+                float rawCoverage = saturate(grass.density * slopeKeep * waterKeep);
+                float coverageToe = 0.12;
+                float envCoverage = saturate((rawCoverage - coverageToe) / (1.0 - coverageToe));
                 float nearWeight = 1.0 - smoothstep(144.0, 200.0, viewDistance);
                 float midWeight = smoothstep(144.0, 200.0, viewDistance)
                     * (1.0 - smoothstep(200.0, 600.0, viewDistance));
@@ -767,7 +773,9 @@ Shader "Planet/VertexColor"
                 GrassOverlayEval eval = EvaluateGrassOverlay(chunkUv, positionWS, geometricNormalWS);
                 // Keep close ground free to show through blade gaps, then hand off to a full
                 // grass-surface material where physical blades thin out near their draw limit.
-                float grassCoverage = smoothstep(0.05, 0.55, eval.farWeight);
+                // Wide, gentle coverage ramp: a narrow ramp reads as a bright ring at biome borders
+                // (the soft biome blend maps a thin farWeight band to a visible spatial stripe).
+                float grassCoverage = smoothstep(0.0, 0.9, eval.farWeight);
                 grassCoverage *= 1.0 - pathMask;
                 if (grassCoverage <= 0.001)
                     return terrainAlbedo;

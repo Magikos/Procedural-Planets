@@ -23,7 +23,18 @@ public static partial class ShaderGlobalIds
     public const string CloudStormColor = "_CloudStormColor";
     public const string CloudAmbientStrength = "_CloudAmbientStrength";
     public const string CloudStormDarkening = "_CloudStormDarkening";
+    public const string CloudPowderStrength = "_CloudPowderStrength";
+    public const string CloudMultiScatterParams = "_CloudMultiScatterParams";
+    public const string CloudAmbientSky = "_CloudAmbientSky";
+    public const string CloudAmbientGround = "_CloudAmbientGround";
+    public const string CloudAerialDensity = "_CloudAerialDensity";
+    public const string CloudBacklitParams = "_CloudBacklitParams";
+    public const string GodRayStreakParams = "_GodRayStreakParams";
+    public const string GodRayStreakRadialFalloff = "_GodRayStreakRadialFalloff";
+    public const string GodRayStreakDawnBoost = "_GodRayStreakDawnBoost";
+    public const string GodRayStreakBrightThreshold = "_GodRayStreakBrightThreshold";
     public const string CloudSilverLiningParams = "_CloudSilverLiningParams";
+    public const string CloudRainShaftParams = "_CloudRainShaftParams";
     public const string CloudShadowParams = "_CloudShadowParams";
     public const string CloudViewSteps = "_CloudViewSteps";
     public const string CloudLightSteps = "_CloudLightSteps";
@@ -32,6 +43,8 @@ public static partial class ShaderGlobalIds
     public const string CloudDebugParams = "_CloudDebugParams";
     public const string CloudShapeNoise = "_CloudShapeNoise";
     public const string CloudDetailNoise = "_CloudDetailNoise";
+    public const string CloudBlueNoise = "_CloudBlueNoise";
+    public const string CloudBlueNoiseTexelSize = "_CloudBlueNoise_TexelSize";
 
     public const string WindDirection = "_WindDirection";
     public const string WindSpeedMps = "_WindSpeedMps";

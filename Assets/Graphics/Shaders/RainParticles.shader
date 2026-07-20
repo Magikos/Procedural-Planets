@@ -45,6 +45,7 @@ Shader "Hidden/RainParticles"
             float  _RainDensityScale;          // multiplier on dynamics.b for the density gate. Higher = more drops visible at the same rain rate; saturates at 1.
             float3 _PlanetCenter;
             float  _SeaRadius;
+            float4 _WeatherLightningColor;
 
             uint HashUint(uint x)
             {
@@ -68,6 +69,7 @@ Shader "Hidden/RainParticles"
                 float  viewDepth : TEXCOORD1;
                 float  alpha : TEXCOORD2;
                 float2 stripUv : TEXCOORD3;
+                float  lightning : TEXCOORD4;
             };
 
             // 6-vertex quad: two triangles forming a stretched rectangle in
@@ -118,12 +120,14 @@ Shader "Hidden/RainParticles"
                 o.viewDepth = -TransformWorldToView(worldPos).z;
                 o.stripUv = float2(side * 0.5 + 0.5, along);
 
-                // Visibility gate. Sample the weather dynamics map at the
-                // particle's surface-normal direction. Drops only render where
-                // there is actual rain — dynamics.b carries local rain rate.
+                // Drops only render where raw rain overlaps a storm cell.
                 float3 normal = normalize(r.Position - _PlanetCenter);
                 float4 dynamics = SampleDynamics(normal);
-                float rainSignal = saturate(dynamics.b);
+                float storm = saturate(SampleWeather(normal).g);
+                float stormGate = smoothstep(_PrecipitationParams.y,
+                    min(1.0, _PrecipitationParams.y + _PrecipitationParams.z), storm);
+                float rainSignal = saturate(dynamics.b) * stormGate;
+                o.lightning = WeatherLightning(normal, storm) * _WeatherLightningColor.a;
 
                 // Per-particle DENSITY gate. Each particle has a stable per-id
                 // "rank" in [0,1]. A drop is visible when its rank is below the
@@ -175,7 +179,11 @@ Shader "Hidden/RainParticles"
                 if (alpha <= 0.001)
                     discard;
 
-                return float4(_RainColor.rgb, alpha);
+                // Lightning flash: drops brighten and pick up the strike color while a
+                // nearby lightning cell is active (same signal as clouds and curtains).
+                float3 color = _RainColor.rgb * (1.0 + i.lightning * 0.55)
+                    + _WeatherLightningColor.rgb * i.lightning * 0.25;
+                return float4(color, alpha);
             }
             ENDHLSL
         }

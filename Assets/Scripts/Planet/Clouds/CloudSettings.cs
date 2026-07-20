@@ -5,7 +5,7 @@ public class CloudSettings : ScriptableObject
 {
     [Header("Weather Grid")]
     [Range(32, 512)] public int WeatherResolution = 256;
-    [Range(0f, 1f)] public float InitialCoverage = 0.48f;
+    [Range(0f, 1f)] public float InitialCoverage = 0.30f;
     [Range(0f, 1f)] public float StormThreshold = 0.86f;
 
     [Header("Weather Evolution")]
@@ -17,7 +17,9 @@ public class CloudSettings : ScriptableObject
     [Range(50f, 1000f)] public float LayerThickness = 300f;
 
     [Header("Shape")]
-    [Range(0f, 0.08f)] public float DensityMultiplier = 0.018f;
+    public const float DensityMin = 0f;
+    public const float DensityMax = 0.08f;
+    [Range(DensityMin, DensityMax)] public float DensityMultiplier = 0.018f;
 
     [Header("Lighting")]
     public Color CloudColor = new Color(1f, 0.98f, 0.92f, 1f);
