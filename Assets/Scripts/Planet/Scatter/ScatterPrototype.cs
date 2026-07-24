@@ -36,4 +36,13 @@ public sealed class ScatterPrototype : ScriptableObject
 
     [Header("Interaction (SP5)")]
     public ScatterInteraction Interaction = ScatterInteraction.None;
+
+    [Header("Rendering (SP2 — optional; no mesh/material = placed but not drawn)")]
+    public Material Material;
+    [Tooltip("LOD meshes near->far. Element i is drawn out to LodEndDistances[i].")]
+    public Mesh[] LodMeshes = System.Array.Empty<Mesh>();
+    [Tooltip("Ascending metres. Instance farther than the last entry is culled. Must match LodMeshes length.")]
+    public float[] LodEndDistances = System.Array.Empty<float>();
+    public bool CastShadows = true;
+    public bool ReceiveShadows = true;
 }

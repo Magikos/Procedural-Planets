@@ -46,6 +46,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     PerFaceSurfaceProvider _perFaceProvider;
     PlanetGrassCoordinator _grass;
     ScatterField _scatter;
+    ScatterRenderer _scatterRenderer;
     PlanetWaterSurface _waterSurface;
     PlanetTerrainMaterial _terrainMaterial;
     SurfaceEditController _surfaceEdits;
@@ -93,6 +94,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     {
         EnsureGrassCoordinator();
         _scatter ??= new ScatterField(transform, this, _colorGenerator);
+        _scatterRenderer ??= new ScatterRenderer(_scatter, transform);
         _waterSurface ??= new PlanetWaterSurface(transform);
         _terrainMaterial ??= new PlanetTerrainMaterial(Logger);
         _surfaceEdits ??= new SurfaceEditController(transform, Logger, () => _grass.InvalidateSurfaceMasks());
@@ -170,6 +172,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _cts?.Dispose();
         _cts = null;
         _grass?.Dispose();
+        _scatterRenderer?.Dispose();
+        _scatterRenderer = null;
         _scatter?.Dispose();
         _scatter = null;
         _climateMapGpuData?.Dispose();
@@ -201,6 +205,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         if (_observerCamera == null) return;
         _surfaceProvider.Tick(_observerCamera.transform.position, _observerCamera);
         _grass.Tick(_observerCamera);
+        _scatterRenderer?.Render(_observerCamera);
         _surfaceEdits?.TickRegrowth();
     }
 
@@ -209,6 +214,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         progress?.Report(0f, "Resetting planet...");
         _grass.DisposeControllers();
         _scatter?.Reset();
+        _scatterRenderer?.Reset();
         _climateMapGpuData?.Dispose();
         _climateMapGpuData = null;
         DestroyChildren();
@@ -349,6 +355,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             // After the last cancellable await: a cancelled generation never publishes readiness,
             // so scatter is only configured for a generation that actually reached this point.
             _scatter.Configure(Seed, planet.PlanetRadius, seaLevelRadius, planet.HasOceans);
+            _scatterRenderer.Configure();
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _shapeGenerator.ElevationMin, _shapeGenerator.ElevationMax));
             Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, mode {planet.Resolution}, perFaceResolution {PerFaceResolution}, radius {scaledRadius:F1}");
             Logger.Log(

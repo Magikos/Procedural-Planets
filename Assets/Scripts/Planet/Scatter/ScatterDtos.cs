@@ -15,14 +15,25 @@ public sealed record ScatterPrototypeDto(
     float MinWaterClearanceMeters,
     Vector2 ScaleRange,
     bool RandomYaw,
-    ScatterInteraction Interaction)
+    ScatterInteraction Interaction,
+    Material Material,
+    Mesh[] LodMeshes,
+    float[] LodEndDistances,
+    bool CastShadows,
+    bool ReceiveShadows)
 {
     // Raw map only; ScatterLibraryDto.EnsureValid is the single validator (assets + overrides).
     public static ScatterPrototypeDto From(ScatterPrototype p) => new(
         p.DisplayName, p.SlotId, p.SpacingMeters, p.Biome, p.BiomeBlendPower, p.Weight,
         p.MaxSlopeDegrees, p.SlopeFadeDegrees,
         p.HasMinAltitude, p.MinAltitudeMeters, p.HasMaxAltitude, p.MaxAltitudeMeters,
-        p.MinWaterClearanceMeters, p.ScaleRange, p.RandomYaw, p.Interaction);
+        p.MinWaterClearanceMeters, p.ScaleRange, p.RandomYaw, p.Interaction,
+        p.Material, p.LodMeshes ?? System.Array.Empty<Mesh>(),
+        p.LodEndDistances ?? System.Array.Empty<float>(), p.CastShadows, p.ReceiveShadows);
+
+    // True when this prototype has enough to draw. Render data is optional — a prototype with no
+    // mesh/material is still placed (SP1), just not rendered (SP2).
+    public bool CanRender => Material != null && LodMeshes.Length > 0 && LodMeshes[0] != null;
 }
 
 public sealed record ScatterLibraryDto(ScatterPrototypeDto[] Prototypes)
@@ -83,6 +94,20 @@ public sealed record ScatterLibraryDto(ScatterPrototypeDto[] Prototypes)
                 Fail($"ScaleRange {p.ScaleRange} must be positive and non-inverted.");
             if (!System.Enum.IsDefined(typeof(BiomeType), p.Biome)) Fail($"undefined biome {(int)p.Biome}.");
             if (!System.Enum.IsDefined(typeof(ScatterInteraction), p.Interaction)) Fail($"undefined interaction {(int)p.Interaction}.");
+
+            // Render data is optional; validate its shape only when meshes are assigned.
+            if (p.LodMeshes.Length > 0)
+            {
+                if (p.LodEndDistances.Length != p.LodMeshes.Length)
+                    Fail($"LodMeshes ({p.LodMeshes.Length}) and LodEndDistances ({p.LodEndDistances.Length}) length mismatch.");
+                float prev = 0f;
+                for (int m = 0; m < p.LodEndDistances.Length; m++)
+                {
+                    float d = p.LodEndDistances[m];
+                    if (!Finite(d) || d <= prev) Fail($"LodEndDistances must be finite and strictly ascending; entry {m} = {d}.");
+                    prev = d;
+                }
+            }
         }
     }
 }
