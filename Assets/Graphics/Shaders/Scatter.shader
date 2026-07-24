@@ -121,6 +121,10 @@ Shader "Scatter/VertexColorLit"
                 inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(IN.positionWS);
                 inputData.shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
                 inputData.fogCoord = IN.fogFactor;
+                // Ambient / indirect: without bakedGI, surfaces facing away from the sun render black.
+                inputData.bakedGI = SampleSH(inputData.normalWS);
+                inputData.normalizedScreenSpaceUV = IN.positionHCS.xy / max(_ScreenParams.xy, 1.0);
+                inputData.shadowMask = half4(1, 1, 1, 1);
 
                 SurfaceData surf = (SurfaceData)0;
                 surf.albedo = albedo;
