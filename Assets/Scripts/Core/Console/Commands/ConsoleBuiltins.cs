@@ -64,6 +64,29 @@ public static class ConsoleBuiltins
         return $"scrollback capacity set to {size.Value} lines";
     }
 
+    [ConsoleCommand("console.dump", "Write the console scrollback to local-only/console-dumps/<name>.txt (default: timestamped).")]
+    public static string Dump(
+        [ParamDescription("optional file name (without path); reused/overwritten if it exists")] string name = "")
+    {
+        if (!ServiceLocator.TryGet<IConsoleService>(out var console)) return "";
+
+        string root = System.IO.Directory.GetParent(Application.dataPath)?.FullName;
+        if (string.IsNullOrEmpty(root)) return "console.dump: could not resolve project root";
+        string dir = System.IO.Path.Combine(root, "local-only", "console-dumps");
+        System.IO.Directory.CreateDirectory(dir);
+
+        string file = string.IsNullOrWhiteSpace(name)
+            ? $"console-{System.DateTime.Now:yyyyMMdd-HHmmss}.txt"
+            : (name.EndsWith(".txt") ? name : name + ".txt");
+        string path = System.IO.Path.Combine(dir, file);
+
+        var sb = new System.Text.StringBuilder();
+        foreach (var line in console.ScrollbackLines)
+            sb.AppendLine(line.Text);
+        System.IO.File.WriteAllText(path, sb.ToString());
+        return $"console dumped ({console.ScrollbackLines.Count} lines) to {path}";
+    }
+
     [ConsoleCommand("help", "List all commands, or describe one by name.")]
     public static void Help(
         [ParamDescription("optional command name to describe")]

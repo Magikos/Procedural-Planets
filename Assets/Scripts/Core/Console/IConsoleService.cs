@@ -47,6 +47,9 @@ public interface IConsoleService
     /// <summary>Scrollback capacity in lines. Setting to a smaller value trims oldest entries.</summary>
     int ScrollbackCapacity { get; set; }
 
+    /// <summary>Current scrollback lines, oldest first. For <c>console.dump</c> / external inspection.</summary>
+    System.Collections.Generic.IReadOnlyList<ConsoleMessage> ScrollbackLines { get; }
+
     /// <summary>Snapshot of console state for F10 diagnostics / external inspection.</summary>
     ConsoleDiagnostics GetDiagnostics();
 }

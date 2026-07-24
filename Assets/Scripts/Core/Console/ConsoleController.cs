@@ -27,6 +27,7 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
     public bool IsOpen => _isOpen;
     public ConsoleAnchor Anchor { get; set; } = ConsoleAnchor.Top;
     public ConsoleScrollback Scrollback => _scrollback;
+    public System.Collections.Generic.IReadOnlyList<ConsoleMessage> ScrollbackLines => _scrollback.Lines;
     public int ScrollbackCapacity
     {
         get => _scrollback.Capacity;
