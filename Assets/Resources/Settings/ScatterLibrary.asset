@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19c314f6f997a144fbea12b317e2b9de, type: 3}
+  m_Name: ScatterLibrary
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterLibrary
+  Prototypes:
+  - {fileID: 11400000, guid: ff8944f69d40eec4fba1ac55a892c4be, type: 2}
+  - {fileID: 11400000, guid: 23ff5ab809205e44fbadc5c88b853b89, type: 2}

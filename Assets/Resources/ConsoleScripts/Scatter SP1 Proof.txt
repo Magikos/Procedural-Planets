@@ -1,0 +1,19 @@
+@name Scatter SP1 Proof
+# Headless placement-core proof (SP1). No captures — the output is written to a file.
+# Self-positioning: scatter.goto moves the camera, so just run it from anywhere.
+#   script.run "Scatter SP1 Proof"
+# Result file: local-only/console-dumps/scatter-sp1-proof.txt (overwritten each run).
+#
+# Reading it: the two goto/count pairs prove biome SELECTION discriminates —
+# Grassland Bush should dominate at the Grassland stop and drop to ~0 at the Forest stop,
+# and Forest Tree the reverse. verify proves determinism; profile proves density uniformity
+# across cube-face distortion (accepted should stay flat while candidates rise).
+@timeout 120
+clear
+scatter.goto Grassland
+scatter.count
+scatter.goto Forest
+scatter.count
+scatter.verify
+scatter.profile
+console.dump "scatter-sp1-proof"

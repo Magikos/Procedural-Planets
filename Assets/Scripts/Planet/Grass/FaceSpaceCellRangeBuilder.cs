@@ -120,6 +120,68 @@ public static class FaceSpaceCellRangeBuilder
         return new FaceSpaceRangeResult(count, uncoveredCornerStraddle);
     }
 
+    // Scatter's entry point. Deliberately a self-contained copy of BuildRanges rather than a shared
+    // helper, so the grass Camera overload above stays byte-identical (grass placement is hand-tuned;
+    // an extraction that touched its path would need a before/after grass capture gate). The only
+    // difference: the observer direction is mapped into the PLANET-LOCAL frame before DirectionToFaceUv,
+    // so a rotated planet enumerates the correct face. Unifying the two is a later cleanup, not SP1.
+    public static FaceSpaceRangeResult BuildRangesLocal(
+        Vector3 cameraPos,
+        Transform planetTransform,
+        float planetRadius,
+        float worldRadius,
+        float cellUvWidth,
+        int pageCellSize,
+        FaceSpaceCell[] outRanges)
+    {
+        int count = 0;
+        bool uncoveredCornerStraddle = false;
+
+        Vector3 planetCenter = planetTransform.position;
+        Vector3 toCamera = cameraPos - planetCenter;
+        if (toCamera.sqrMagnitude < 1e-4f)
+            return new FaceSpaceRangeResult(0, false);
+        Vector3 localDir = planetTransform.InverseTransformDirection(toCamera).normalized;
+
+        DirectionToFaceUv(localDir, out int primaryFace, out Vector2 primaryFaceUv);
+
+        float planetWorldRadius = planetRadius * GetUniformWorldScale(planetTransform);
+        float metersPerUV = ComputeMetersPerUV(primaryFace, primaryFaceUv, planetWorldRadius);
+        float discRadiusUV = worldRadius / metersPerUV;
+        pageCellSize = Mathf.Max(1, pageCellSize);
+
+        int centerCellU = Mathf.FloorToInt(primaryFaceUv.x / cellUvWidth);
+        int centerCellV = Mathf.FloorToInt(primaryFaceUv.y / cellUvWidth);
+        int halfExtent = Mathf.Max(1, Mathf.CeilToInt(discRadiusUV / cellUvWidth));
+        outRanges[count++] = BuildPagedCell(primaryFace, cellUvWidth, pageCellSize,
+            centerCellU - halfExtent, centerCellV - halfExtent,
+            centerCellU + halfExtent, centerCellV + halfExtent);
+
+        int edgesOverflowing = 0;
+        for (int edgeIdx = 0; edgeIdx < 4; edgeIdx++)
+        {
+            CubeEdge edge = (CubeEdge)edgeIdx;
+            float distToEdge = DistanceFromUvToEdge(primaryFaceUv, edge);
+            if (distToEdge >= discRadiusUV) continue;
+            edgesOverflowing++;
+            if (count >= outRanges.Length) continue;
+
+            float overflowAmount = discRadiusUV - distToEdge;
+            Vector2 edgeAnchorSrc = ClosestPointOnEdge(primaryFaceUv, edge);
+            if (!CubeFaceTopology.TryMirrorUv(edgeAnchorSrc, primaryFace, edge,
+                    out int neighborFace, out Vector2 edgeAnchorN))
+                continue;
+
+            var nNeighbor = CubeFaceTopology.GetNeighbor(primaryFace, edge);
+            outRanges[count++] = BuildNeighborRange(neighborFace, edgeAnchorN, nNeighbor.NeighborEdge,
+                discRadiusUV, overflowAmount, cellUvWidth, pageCellSize);
+        }
+
+        uncoveredCornerStraddle = edgesOverflowing >= 2 && IsCornerStraddle(primaryFaceUv, discRadiusUV);
+
+        return new FaceSpaceRangeResult(count, uncoveredCornerStraddle);
+    }
+
     static FaceSpaceCell BuildPagedCell(int face, float cellUvWidth, int pageCellSize,
         int rawStartU, int rawStartV, int rawEndU, int rawEndV)
     {

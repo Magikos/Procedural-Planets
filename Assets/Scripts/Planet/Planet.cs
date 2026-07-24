@@ -11,6 +11,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     {
         typeof(PlanetDto),
         typeof(BiomeDto),
+        typeof(ScatterLibraryDto),
     };
 
     public enum FaceRenderMask { All, Top, Bottom, Left, Right, Front, Back }
@@ -44,6 +45,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     // Null when running under chunked or GPU surface providers.
     PerFaceSurfaceProvider _perFaceProvider;
     PlanetGrassCoordinator _grass;
+    ScatterField _scatter;
     PlanetWaterSurface _waterSurface;
     PlanetTerrainMaterial _terrainMaterial;
     SurfaceEditController _surfaceEdits;
@@ -90,6 +92,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     void EnsureRuntimeOwners()
     {
         EnsureGrassCoordinator();
+        _scatter ??= new ScatterField(transform, this, _colorGenerator);
         _waterSurface ??= new PlanetWaterSurface(transform);
         _terrainMaterial ??= new PlanetTerrainMaterial(Logger);
         _surfaceEdits ??= new SurfaceEditController(transform, Logger, () => _grass.InvalidateSurfaceMasks());
@@ -123,6 +126,21 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             settings.Register(_recipe != null ? _recipe.ToPlanetDto() : PlanetDto.From(planetSource));
         if (!settings.IsRegistered<BiomeDto>())
             settings.Register(_recipe != null ? _recipe.ToBiomeDto() : BiomeDto.From(biomeSource));
+        if (!settings.IsRegistered<ScatterLibraryDto>())
+        {
+            var scatterLib = Resources.Load<ScatterLibrary>("Settings/ScatterLibrary");
+            if (scatterLib != null)
+            {
+                settings.Register(ScatterLibraryDto.From(scatterLib));
+            }
+            else
+            {
+                // Scatter is optional decoration: a missing library is a valid world with no props,
+                // so boot with an empty DTO instead of failing the whole scene.
+                Logger.Log(LogLevel.Info, "Scatter", "No Resources/Settings/ScatterLibrary asset; scatter disabled.");
+                settings.Register(new ScatterLibraryDto(System.Array.Empty<ScatterPrototypeDto>()));
+            }
+        }
     }
 
     public async Awaitable EarlyInitialize(CancellationToken cancellationToken)
@@ -152,6 +170,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _cts?.Dispose();
         _cts = null;
         _grass?.Dispose();
+        _scatter?.Dispose();
+        _scatter = null;
         _climateMapGpuData?.Dispose();
         _climateMapGpuData = null;
         _surfaceProvider?.Dispose();
@@ -188,6 +208,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     {
         progress?.Report(0f, "Resetting planet...");
         _grass.DisposeControllers();
+        _scatter?.Reset();
         _climateMapGpuData?.Dispose();
         _climateMapGpuData = null;
         DestroyChildren();
@@ -325,6 +346,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             UploadCorePlanetShaderGlobals(seaLevelRadius);
             _progressHandle.Report(1f, "Planet ready");
             await Awaitable.NextFrameAsync(ct);
+            // After the last cancellable await: a cancelled generation never publishes readiness,
+            // so scatter is only configured for a generation that actually reached this point.
+            _scatter.Configure(Seed, planet.PlanetRadius, seaLevelRadius, planet.HasOceans);
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _shapeGenerator.ElevationMin, _shapeGenerator.ElevationMax));
             Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, mode {planet.Resolution}, perFaceResolution {PerFaceResolution}, radius {scaledRadius:F1}");
             Logger.Log(
