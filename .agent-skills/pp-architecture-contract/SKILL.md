@@ -272,7 +272,8 @@ new surface-edit features add a stamp type, not a new persistence path.
    in-progress (it landed), and names `DependencyManager.WhenReady<T>()` (never built).
    Follow the *rules*; treat these three references as stale.
 6. **Open audit findings that touch architecture** (from
-   `docs/audit/2026-07-03-general-code-audit.md`; G1 TryGet, G2 grid-leak dispose, and
+   `docs/audit/2026-07-22-consolidated-code-audit.md`; former G1 TryGet, G2 grid-leak
+   disposal, and
    G5 execution-order attributes are already **fixed in the working tree** — verified
    2026-07-06):
    - G6 RULE (open): `SurfacePathMousePainter.InputAllowed` does per-frame

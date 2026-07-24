@@ -62,7 +62,7 @@ no phase introduces cloud state that the sim doesn't drive. Snow is a surface/pa
 concern (temperature gate in WeatherParticles); the cloud layer's job for snow weather is
 the same as rain weather: overcast gloom + correct shadows.
 
-Source docs: [grass/cloud line audit](../audit/2026-07-03-grass-cloud-line-audit.md)
+Source docs: [consolidated audit](../audit/2026-07-22-consolidated-code-audit.md)
 (defects A2, A3, B1, E1-E3), [reference recommendations](../research/2026-07-04-grass-cloud-reference-recommendations.md)
 (R1, R2, R7), [cloud visual research](../research/2026-07-04-cloud-visual-research.md)
 (techniques 1-7). This plan sequences them; the detailed code sketches live there.

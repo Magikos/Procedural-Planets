@@ -1,6 +1,8 @@
 # Scatter Placement System — Design
 
-Status: design, approved to write (2026-07-20). Branch `code-refactor`.
+Status: design (2026-07-20; amended 2026-07-22 after a Codex plan audit — stable
+prototype id, underwater-aware altitude/water model, fixed-level-per-world
+clarification, and CPU/GPU biome-parity decision). Branch `scatter-placement`.
 
 A world-object placement system for discrete props on the procedural planet:
 trees, boulders, bushes, rocks, flowers, seaweed, and the parked Synty grass
@@ -68,6 +70,15 @@ query**:
   as camera distance warrants. Far → shallow (heroes only, few instances);
   near → deep (everything). **Distance density-thinning and LOD selection are
   the same depth cutoff.**
+- **Placement level is a world property, not a query property.** A prototype's
+  `spacingMeters` fixes its quadtree level *once per generated world* (from a
+  canonical metric — the grass reference `2·planetWorldRadius`), so a given area
+  always uses the same cells and therefore the same ids. "LOD = depth" means only
+  *which fixed levels a query draws* changes with distance — the placement math
+  never re-derives a level from the camera position (that would make ids move as
+  you walk). Because a fixed UV level maps to varying world spacing across a cube
+  face, density is evened out with the existing grass cube-face area-keep
+  probability (`GrassNearFieldPlace.compute`), not by re-choosing the level.
 
 ## Scope boundary (important)
 
@@ -129,16 +140,35 @@ Each is its own spec + plan before building.
 `ScatterPrototype` (authoring `ScriptableObject`; runtime reads an immutable DTO
 per the settings pattern):
 
-- `spacingMeters` — human unit; mapped to a quadtree level via the existing
-  `FaceSpaceCellRangeBuilder.ComputeMetersPerUV` so spacing is ~uniform in world
-  space despite cube-face distortion. (Consistent with the console human-unit
-  convention.)
-- target biome(s) + `biomeBlendPower` — density falloff toward biome borders
-  (mirrors `BiomeDefinition.GrassBiomeBlendPower`, "density response to top-K
-  blend weights").
-- slope range, altitude range, min water clearance — placement gate.
-- `weight` — relative pick weight when multiple prototypes occupy a level.
-- scale-jitter and yaw-jitter ranges.
+- **`slotId` — an explicit, immutable small integer (0–15) that identifies this
+  prototype in the id scheme.** This is *not* the library array index. It is
+  hashed into `nodeSeed`/`slotSeed` and packed into the stable id, so it is a
+  **persistence key** (see §Stable id): once assigned it is never reused or
+  reordered, or saved chop/collect overrides would rebind to the wrong prototype
+  and chopped objects would resurrect. Boot validates `slotId`s are non-null,
+  in-range, and unique; it **fails loud** rather than truncating an oversized
+  library. The runtime array index stays only a lookup (`prototypeIndex`).
+- `spacingMeters` — human unit; fixed to one quadtree level per generated world
+  via the canonical metric (spine rule above), not per query.
+- target biome + `biomeBlendPower` — density falloff toward biome borders
+  (mirrors `BiomeDefinition.GrassBiomeBlendPower`). **SP1 simplification: one
+  biome per prototype**; a weighted biome list is deferred until a prototype
+  actually needs it (YAGNI).
+- **Altitude band as an explicit bounded range** `minAltitudeMeters` /
+  `maxAltitudeMeters`, each with its own `hasMin` / `hasMax` flag. Metres are
+  **signed** — negative = below sea — so an underwater ceiling (seaweed only
+  below the waterline) is expressible. No "≤0 means infinity" sentinel; absence
+  of a bound is the explicit flag, so any real value, negative included, is a
+  bound.
+- `minWaterClearanceMeters` — placement gate; land props must sit at least this
+  far above the waterline. Applied only when the world has oceans.
+- slope range (`maxSlopeDegrees` + soft `slopeFadeDegrees`) — placement gate.
+- `weight` — for SP1, an **independent per-prototype density multiplier** (not
+  mutually-exclusive selection): each prototype rolls its own acceptance. If
+  weighted exclusive selection among same-slot prototypes is ever needed, it gets
+  its own spec.
+- scale-jitter range and yaw-jitter (SP1: full random yaw on/off; a yaw *range*
+  is deferred until needed).
 - `interaction` verb `none | collect | chop` — metadata only in SP1; SP5
   consumes.
 - child-scatter table — empty in SP1; SP6 consumes.
@@ -166,13 +196,20 @@ engineering risk and gets a dedicated equivalence check when SP3 lands.
 
 `Gather(regionOfInterest, maxLevelForDistance, buffer)`:
 
-1. Descend the quadtree of each cube face overlapping the region. Edge straddle
-   pulls in the neighbor face's tree; reuse `FaceSpaceCellRangeBuilder` topology
-   (corner straddle is already flagged there). Descend only to
-   `maxLevelForDistance` (LOD = depth).
-2. Per node, per prototype registered at that node's level: derive the slot,
-   compute a jittered UV in the node's square, project to the unit-sphere
-   direction.
+1. Enumerate the cube-face cells overlapping the region via
+   `FaceSpaceCellRangeBuilder`, whose ranges are a **conservative square**, then
+   **clip every candidate to the exact circular ROI** before any expensive
+   sampling — so a region query never emits outside its promised disc and counts
+   from different spots are comparable. Edge straddle pulls in the neighbor face;
+   the builder's `UncoveredCornerStraddle` flag is **surfaced, not discarded** —
+   `scatter.verify` fails on it so incomplete cube-corner coverage can't be
+   called deterministic. (Solving 3-face corner straddle in the shared builder is
+   a separate infra improvement that also benefits grass; SP1 fails loud instead
+   of silently under-covering.) Only fixed levels ≤ `maxLevelForDistance` are drawn.
+2. Per node, per prototype at that level: derive `slotSeed` from `nodeSeed` +
+   the prototype's `slotId`, compute a **slot-seeded** jittered UV in the node's
+   square (so two same-level prototypes never land at the same point), project to
+   the unit-sphere direction.
 3. Sample `IPlanetSurfaceSampler.TryGetSurfaceRadius` (height) and
    `IBiomeProvider.EvaluateBiome` (primary/secondary biome + blend weight).
 4. Call `TryPlace`. Gate rejects on slope / altitude / water clearance / biome
@@ -190,12 +227,16 @@ needs no SP1 change.
 
 ### Stable id
 
-`id = pack(face, level, nodeX, nodeY, slot)` → `ulong`. This is the persistence
-key SP5 writes chop/collect overrides against, and the identity that lets a GPU
-far-drawn tree and a CPU near-spawned GameObject agree they are the same object.
-One id bit is reserved to distinguish **base** ids (derivable from the hash)
-from **player-placed** ids (additions with a stored transform), so the two
-namespaces never collide.
+`id = pack(face, level, nodeX, nodeY, slot, playerBit)` → `ulong`, where **`slot`
+is the prototype's immutable `slotId`, never the library array index.** This is
+the persistence key SP5 writes chop/collect overrides against, and the identity
+that lets a GPU far-drawn tree and a CPU near-spawned GameObject agree they are
+the same object. Because `slot` is the stable `slotId`, **reordering or inserting
+prototypes in the library does not move any existing id** — a saved chop stays
+bound to the same prototype. One `playerBit` distinguishes **base** ids
+(derivable from the hash) from **player-placed** ids (additions with a stored
+transform), so the two namespaces never collide. Bit budget (u64): face 3, level
+5, x 24, y 24, slot 4, player 1 = 61 bits.
 
 ### Dependencies
 
@@ -207,14 +248,26 @@ visual tiers, not Burst-ifying SP1.
 
 ### Verification (project idiom — no test framework)
 
-`scatter.verify` console command:
+`scatter.verify` console command — a proof that cannot pass on an empty or
+duplicate-emitting gather:
 
-- Gathers a fixed region twice from different query origins / descent orders and
-  asserts identical instance sets and ids (order-independence → determinism).
-- Asserts a single node's emitted instances are independent of the path taken to
-  reach it.
-- Reports counts per prototype and a biome-border density profile so the
-  cross-bleed falloff is inspectable.
+- Gathers **one explicit fixed ROI** twice, enumerating cells in forward and
+  reverse order, and asserts: nonzero output, unique ids (no duplicates), exact
+  id-set equality, and identical prototype/position/rotation/scale for every id
+  (order-independence → determinism).
+- Proves region independence by comparing a smaller gather against the larger
+  gather filtered to the smaller ROI (not two different regions).
+- Round-trips id pack/unpack and the player bit.
+- Reports candidate-vs-accepted counts at face **center, edge, and corner** to
+  validate density uniformity across cube-face distortion. Corner straddle is a
+  **deliberately-accepted SP1 gap** (Bryan's scope call 2026-07-22): the proof
+  **reports** it (e.g. `PASS_WITH_KNOWN_CORNER_GAP`) rather than failing, and never
+  claims complete cube-corner coverage. The shared 3-face-corner fix is its own
+  later slice. (Per-membership-bin histograms are a deferred diagnostic nicety —
+  biome-border falloff is already shown by `scatter.count` mid-biome vs at a border.)
+- Prints candidate count + elapsed ms and honors a proof-radius ceiling **plus a
+  candidate-budget preflight**, so the diagnostic itself can't hitch (measure
+  before optimizing — no jobs/Burst until a real number demands them).
 
 ### Explicitly NOT in SP1
 
@@ -262,13 +315,23 @@ math those all depend on.
 ## Risks / open questions
 
 - **CPU↔GPU placement parity** (SP3): the one real correctness risk. Mitigated by
-  the single shared `TryPlace` function + a dedicated equivalence check.
-- **Cube-face distortion**: spacing/level mapping uses `ComputeMetersPerUV`;
-  validate uniformity near face edges/corners in `scatter.verify`.
+  the single shared `TryPlace` function + a dedicated equivalence check. **Design
+  decision (long-term):** the CPU authority and the GPU mirror must sample **one
+  shared biome field** — the baked biome map (`BiomeMapBaker` output) — *not* one
+  analytic (`ColorGenerator.EvaluateBiome`) and one baked. Sampling different
+  biome sources would let placement diverge at borders (CPU near vs GPU far), so
+  the near band and the far band would disagree about where a forest ends. SP1's
+  CPU authority may call `EvaluateBiome` to bootstrap, but SP3 moves *both* onto
+  the baked field so they cannot drift. (Track: confirm the baked map's resolution
+  resolves the border falloff the CPU authority produces.)
+- **Cube-face distortion**: a fixed UV level maps to varying world spacing across
+  a face; density is evened with the grass cube-face **area-keep probability**
+  (decision made above), not by re-choosing levels per query. `scatter.verify`
+  runs its density profile at face center, edge, and corner to validate uniformity.
+- **Cube-corner straddle** (shared infra): `FaceSpaceCellRangeBuilder` does not
+  cover 3-face corners today (a known limitation that also thins grass at corners).
+  SP1 surfaces the flag and fails loud; a proper fix is a shared-infra improvement
+  benefiting both systems, scheduled on its own, not inside SP1.
 - **Impostor bake fidelity** (SP4): lighting/depth correctness of the view-blend
   is its own investigation; MVP fallback is mesh-LOD-only, added later without
   redesign since instances are LOD-agnostic.
-- **Density authority vs biome map resolution**: the CPU core uses analytic
-  `EvaluateBiome`; the GPU mirror uses the baked biome map. Confirm the baked
-  map's resolution is fine enough that the border falloff matches the CPU
-  authority within tolerance.

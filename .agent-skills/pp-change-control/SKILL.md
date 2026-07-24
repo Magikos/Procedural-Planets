@@ -29,8 +29,8 @@ pp-validation-and-evidence and pp-run-and-operate.
 ## 2. The audit workflow (findings-first, always)
 
 - Audits are **read-only**. Every audit doc opens with the boundary line — literally
-  "**Findings only — no code changed.**" (see `docs/audit/2026-07-03-grass-cloud-line-audit.md`
-  and `2026-07-03-general-code-audit.md` preambles). Do not roll from audit into edits.
+  "**Findings only — no code changed.**" (see
+  `docs/audit/2026-07-22-consolidated-code-audit.md`). Do not roll from audit into edits.
 - Deliverable: a dated file `docs/audit/YYYY-MM-DD-<topic>.md` with severity-tagged
   findings (`BUG`, `RISK`, `PERF`, `DEAD`, `STYLE/BP`, `SUGG`; the general audit adds
   `RULE`, `ARCH`, `META`). Cross-reference prior audit findings instead of re-listing
@@ -38,7 +38,8 @@ pp-validation-and-evidence and pp-run-and-operate.
   stating your own agreement or disagreement — Bryan explicitly wants independent
   judgment, not a rubber stamp.
 - Bryan reviews and marks each finding **fix / defer / wontfix**. Only then does
-  implementation start. Real lifecycle example: `docs/audit/2026-07-01-grass-lod-audit.md`
+  implementation start. Real lifecycle example: the former grass-LOD findings reconciled
+  in `docs/audit/2026-07-22-consolidated-code-audit.md`
   status line — "IMPLEMENTED 2026-07-01 (Bryan approved; Codex feedback amendments
   applied) ... G6 deliberately not executed — Bryan's call ... Needs in-Unity visual
   verification." Approval is per-finding, amendments from a second reviewer get folded
@@ -185,9 +186,9 @@ history of this and other reverts: pp-failure-archaeology.
 ## Provenance and maintenance
 
 Sources: `CLAUDE.md` (Audit workflow, Don't touch, Dead code, Comments sections);
-`docs/audit/2026-07-03-grass-cloud-line-audit.md` + `2026-07-03-general-code-audit.md`
-preambles; `docs/audit/2026-07-01-grass-lod-audit.md` + `2026-07-01-cloud-rain-audit.md`
-status lines; `docs/design/2026-07-04-cloud-visual-migration-plan.md` (gates) and
+`docs/audit/2026-07-22-consolidated-code-audit.md` preamble and prior-audit
+reconciliation status lines; `docs/design/2026-07-04-cloud-visual-migration-plan.md`
+(gates) and
 `...-grass-visual-migration-plan.md` (biome-stripe aftermath); git history; the
 2026-07-06 authoring brief (Bryan's Phase-1 answers: visual-tuning rule, caustics-origin,
 costliest failures). UNVERIFIED: the specific commits/sessions where caustics were

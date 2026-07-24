@@ -1,8 +1,8 @@
 {
   "Assets/Scripts/Core/Console/Commands/ConsoleBuiltins.cs": {
-    "mtime": 1781104109.0642514,
-    "ast_hash": "7e4d9970851fc6bc179bd63de1282651",
-    "semantic_hash": "7e4d9970851fc6bc179bd63de1282651"
+    "mtime": 1784891107.312816,
+    "ast_hash": "09426075402a4d1611a4e1f9d5ed2d9f",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Console/Commands/TestConsoleCommands.cs": {
     "mtime": 1781104109.0673068,
@@ -15,14 +15,14 @@
     "semantic_hash": "fffbf4f28568fc2e0ba77fb9ca4c39ed"
   },
   "Assets/Scripts/Core/Console/ConsoleAsyncRunner.cs": {
-    "mtime": 1783159879.5219088,
-    "ast_hash": "5fe9a2712ee80b509fe36cb1a7fbd11d",
+    "mtime": 1784564708.5296338,
+    "ast_hash": "2ea8600a298f8208d0e241771e3b3802",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Console/ConsoleController.cs": {
-    "mtime": 1781390025.0200448,
-    "ast_hash": "577927e740cf8a5728e0e102bb9325b4",
-    "semantic_hash": "577927e740cf8a5728e0e102bb9325b4"
+    "mtime": 1784891096.764105,
+    "ast_hash": "c579e0a9dd974048c6f9c6f1f4448147",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Console/ConsoleDebugModule.cs": {
     "mtime": 1781104109.0783682,
@@ -45,14 +45,14 @@
     "semantic_hash": "0f1403134c06c81a3ff57d54f7ec56e9"
   },
   "Assets/Scripts/Core/Console/ConsoleInputController.cs": {
-    "mtime": 1781389903.886518,
-    "ast_hash": "1fb61b860884d5ff9af9de73a2224473",
-    "semantic_hash": "1fb61b860884d5ff9af9de73a2224473"
+    "mtime": 1784564708.5357165,
+    "ast_hash": "700852a7b86959c0535f365186348d01",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Console/ConsoleInputLineFormatter.cs": {
-    "mtime": 1781385817.4931514,
-    "ast_hash": "6d12a51e35dfa2e877cfb7893da10f4d",
-    "semantic_hash": "6d12a51e35dfa2e877cfb7893da10f4d"
+    "mtime": 1784564708.537434,
+    "ast_hash": "a26a31d19e110f9e92b831468c268ef2",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Console/ConsoleRenderer.cs": {
     "mtime": 1781104109.0940022,
@@ -75,9 +75,9 @@
     "semantic_hash": "1ebf375399724390eb4db8f6b1182fe8"
   },
   "Assets/Scripts/Core/Console/IConsoleService.cs": {
-    "mtime": 1781104109.1077533,
-    "ast_hash": "07ab405b08d8e4ed18a7bc244a22ab18",
-    "semantic_hash": "07ab405b08d8e4ed18a7bc244a22ab18"
+    "mtime": 1784891090.974779,
+    "ast_hash": "0c004303b068970010d45ed4be1f5125",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Console/Intellisense/BoolCompletionProvider.cs": {
     "mtime": 1781104109.115839,
@@ -125,13 +125,13 @@
     "semantic_hash": "2c4477391457f2bd28949263cfd44fd0"
   },
   "Assets/Scripts/Core/Console/Registry/CommandData.cs": {
-    "mtime": 1781568754.579913,
+    "mtime": 1784564708.5409296,
     "ast_hash": "a1b327ea4c6777fb67106c928cc30564",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Console/Registry/CommandExecutor.cs": {
-    "mtime": 1782148658.3052251,
-    "ast_hash": "a9d2e9ee8a6091ff0890b81a16215c9c",
+    "mtime": 1784564708.576501,
+    "ast_hash": "97ac8f5f19efd6c18a7ddf44e1efee36",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Console/Registry/CommandParser.cs": {
@@ -160,8 +160,8 @@
     "semantic_hash": "18f5c1f7c311da0d165d2fb6bc70dcad"
   },
   "Assets/Scripts/Core/Console/Registry/ConsoleRegistry.cs": {
-    "mtime": 1781791570.33754,
-    "ast_hash": "fcb63d1bf9c7286c22f54ee1cae50be2",
+    "mtime": 1784564708.6132946,
+    "ast_hash": "c3755a0917f9442522b4d31b4eb76922",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Console/Registry/ExpressionEvaluator.cs": {
@@ -225,12 +225,12 @@
     "semantic_hash": "80f344379e17b5e2166523df16a836aa"
   },
   "Assets/Scripts/Core/Events/DebugActionEvents.cs": {
-    "mtime": 1781381631.3017292,
+    "mtime": 1784564708.6318989,
     "ast_hash": "1e149e888dd9d4f41c5de1cbe5c1b337",
     "semantic_hash": "1e149e888dd9d4f41c5de1cbe5c1b337"
   },
   "Assets/Scripts/Core/Events/DebugCommandRequestedEvent.cs": {
-    "mtime": 1781553338.3383012,
+    "mtime": 1784564708.6364565,
     "ast_hash": "d6c787b283c58994c1bcb7dd95346ed9",
     "semantic_hash": ""
   },
@@ -240,9 +240,9 @@
     "semantic_hash": "e4defa30f98d86e51a6dfb0995de9bb8"
   },
   "Assets/Scripts/Core/Events/EventBusProcessor.cs": {
-    "mtime": 1781401117.7764826,
-    "ast_hash": "a7e09f56305dda163be829e4988d1518",
-    "semantic_hash": "a7e09f56305dda163be829e4988d1518"
+    "mtime": 1784564708.6430254,
+    "ast_hash": "8de5144ca21ab8f5ab61b28ba26cb560",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Events/EventBusRegistry.cs": {
     "mtime": 1781104109.2527747,
@@ -275,9 +275,9 @@
     "semantic_hash": "c7cca073589555c214bb2aee4618f15d"
   },
   "Assets/Scripts/Core/Events/SettingsChangedEvent.cs": {
-    "mtime": 1781146367.5714598,
-    "ast_hash": "8b9b87460f6fe37d83f54772f2b46c68",
-    "semantic_hash": "8b9b87460f6fe37d83f54772f2b46c68"
+    "mtime": 1784564708.6445441,
+    "ast_hash": "164a4ba4971ff73cad93e2212d23afc4",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Events/WeatherEvents.cs": {
     "mtime": 1781104109.2750146,
@@ -285,17 +285,17 @@
     "semantic_hash": "c70d91dbe12289491e86e5827270474d"
   },
   "Assets/Scripts/Core/Interfaces/IBiomeProvider.cs": {
-    "mtime": 1781791346.759959,
-    "ast_hash": "5a01ffef78b57d8a8416d6f6ae0cd675",
+    "mtime": 1784564708.7395463,
+    "ast_hash": "8ef7563e01c5660ca8961f7ae287b6ee",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Interfaces/ICelestialTimeController.cs": {
-    "mtime": 1781470198.143609,
-    "ast_hash": "04705f887f1260e44b08823e4831b717",
+    "mtime": 1784564708.8197546,
+    "ast_hash": "a86340bb170d34e1fc39399daf984592",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Interfaces/IEarlyInitialize.cs": {
-    "mtime": 1781145677.2159598,
+    "mtime": 1784564708.8247068,
     "ast_hash": "b6afb048d3db3c7588a65132dabf16fa",
     "semantic_hash": "b6afb048d3db3c7588a65132dabf16fa"
   },
@@ -305,7 +305,7 @@
     "semantic_hash": "543248f1c69ca550fa88b27b6fc4a493"
   },
   "Assets/Scripts/Core/Interfaces/IGrassDebugStatsProvider.cs": {
-    "mtime": 1781320022.9338408,
+    "mtime": 1784564708.8338091,
     "ast_hash": "2f79310425093edd5fe5f0dde411f65e",
     "semantic_hash": "2f79310425093edd5fe5f0dde411f65e"
   },
@@ -315,24 +315,24 @@
     "semantic_hash": "2ca57dfd90dd60fb88d47ae294aa9dbe"
   },
   "Assets/Scripts/Core/Interfaces/IGrassNearFieldStatsProvider.cs": {
-    "mtime": 1781319613.1475077,
+    "mtime": 1784564708.8359764,
     "ast_hash": "66551302f526ae098882c4a4480f60ac",
     "semantic_hash": "66551302f526ae098882c4a4480f60ac"
   },
   "Assets/Scripts/Core/Interfaces/IInputMapService.cs": {
-    "mtime": 1781562721.8977695,
+    "mtime": 1784564708.8406405,
     "ast_hash": "0c852583aa05b96c43920c27a3d3b735",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Interfaces/ILateInitialize.cs": {
-    "mtime": 1781145679.8179185,
+    "mtime": 1784564708.841659,
     "ast_hash": "0c33541a5d97c8b3cbab40b60cb600f5",
     "semantic_hash": "0c33541a5d97c8b3cbab40b60cb600f5"
   },
   "Assets/Scripts/Core/Interfaces/ILoadingManager.cs": {
-    "mtime": 1781379935.7242362,
-    "ast_hash": "342ed5b95081dc663e502a53dddae7d0",
-    "semantic_hash": "342ed5b95081dc663e502a53dddae7d0"
+    "mtime": 1784564708.8443508,
+    "ast_hash": "726e9a54a92fbc1eb0896fa3b68825a6",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Interfaces/ILogger.cs": {
     "mtime": 1779392861.275449,
@@ -360,7 +360,7 @@
     "semantic_hash": "32e3e6e425d2a8fa655e99a43a65bd98"
   },
   "Assets/Scripts/Core/Interfaces/IPrecipitationDebugControl.cs": {
-    "mtime": 1782955543.8808408,
+    "mtime": 1784564708.8551252,
     "ast_hash": "ca5c972ef2f104dda1c7a867f5ac4e26",
     "semantic_hash": ""
   },
@@ -385,9 +385,9 @@
     "semantic_hash": "eb5d35308536f70241fda9277fd44ef0"
   },
   "Assets/Scripts/Core/Interfaces/ISettingsService.cs": {
-    "mtime": 1781379857.1911614,
-    "ast_hash": "cb927906ca3d8945a3176682710bc27b",
-    "semantic_hash": "cb927906ca3d8945a3176682710bc27b"
+    "mtime": 1784564708.8576744,
+    "ast_hash": "09426641e77fa41c25def2e184d94f18",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Interfaces/ITemperatureProvider.cs": {
     "mtime": 1781104109.3631678,
@@ -415,28 +415,28 @@
     "semantic_hash": "08facfb9b7b1ca920f0ae2fe9712c159"
   },
   "Assets/Scripts/Core/QualityController.cs": {
-    "mtime": 1782954976.3066661,
+    "mtime": 1784564708.958288,
     "ast_hash": "e71869c2071e017e31aa5d84644a7c53",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/AtmosphereDebugModule.cs": {
-    "mtime": 1781363729.4156382,
-    "ast_hash": "f6f6818e56290aa07bdd864ea18a32fb",
-    "semantic_hash": "f6f6818e56290aa07bdd864ea18a32fb"
+    "mtime": 1784564708.9602923,
+    "ast_hash": "5be70d67261d56a6e44e3c0518d2788a",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/BiomeDebugModule.cs": {
-    "mtime": 1781367926.244325,
-    "ast_hash": "b6febe1dd0e69a28f14456b2d959cc90",
-    "semantic_hash": "b6febe1dd0e69a28f14456b2d959cc90"
+    "mtime": 1784564708.9637983,
+    "ast_hash": "050e4530ca21cf6d76c2222f5e5e3fbf",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/CameraTeleportStore.cs": {
-    "mtime": 1781376178.4216385,
-    "ast_hash": "d79e9fd04ab433d726ffd50b61db855d",
-    "semantic_hash": "d79e9fd04ab433d726ffd50b61db855d"
+    "mtime": 1784564708.970864,
+    "ast_hash": "a3b5812661bc96e086e8afe46cd23e98",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/CloudDebugModule.cs": {
-    "mtime": 1783091358.6969357,
-    "ast_hash": "f72cd0f225f1d8dd1b401754d62a1fc5",
+    "mtime": 1784564708.9742746,
+    "ast_hash": "4262168edc4a8422a5800653b306ff54",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/Commands/ActionCommands.cs": {
@@ -445,58 +445,58 @@
     "semantic_hash": "d5d7140998b0e42fdfc1c66785d4630c"
   },
   "Assets/Scripts/Core/Services/DebugCaptureController.cs": {
-    "mtime": 1783774979.9989066,
-    "ast_hash": "f0ea4d1f5fb5a98542b051d935f26189",
+    "mtime": 1784564708.978413,
+    "ast_hash": "f36f236b8ea1f9b548ed7256639f4872",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/DebugCaptureMetadataBuilder.cs": {
-    "mtime": 1782148741.0389602,
-    "ast_hash": "2427fdbcf9c8905b83d2478a0feef09c",
+    "mtime": 1784564708.983354,
+    "ast_hash": "68fa0fa308b9e436873dd143a488882e",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/DebugCommandProvider.cs": {
-    "mtime": 1781381658.3447628,
+    "mtime": 1784564708.9965458,
     "ast_hash": "b3e06ebdc616f897b68d9d3087613d07",
     "semantic_hash": "b3e06ebdc616f897b68d9d3087613d07"
   },
   "Assets/Scripts/Core/Services/DebugInputRelay.cs": {
-    "mtime": 1783681054.4415588,
+    "mtime": 1784564708.9985607,
     "ast_hash": "c4b5dacd47a107b1b828066df337a4df",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/DebugModeConstants.cs": {
-    "mtime": 1783682315.4137506,
+    "mtime": 1784564709.003153,
     "ast_hash": "7a85becfd035d2ba49d54675bad13089",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/DebugRegistry.cs": {
-    "mtime": 1781399856.5724816,
-    "ast_hash": "74f8680ce1472b984fa44058ad4719a8",
-    "semantic_hash": "74f8680ce1472b984fa44058ad4719a8"
+    "mtime": 1784564709.0097134,
+    "ast_hash": "12455861424cc60679b9a9cc7834d13b",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/DebugScreenshotFiles.cs": {
-    "mtime": 1781226369.2409208,
-    "ast_hash": "a1f4da05bc1f4c073fb3351fecb9fe8c",
-    "semantic_hash": "a1f4da05bc1f4c073fb3351fecb9fe8c"
+    "mtime": 1784564709.0117257,
+    "ast_hash": "3116d5fe4c37f0ade7df5e4209d57d82",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/FrameTimingModule.cs": {
-    "mtime": 1781398658.8255074,
-    "ast_hash": "d38c21d1ebcde5de9bb6e23a64cfacb0",
-    "semantic_hash": "d38c21d1ebcde5de9bb6e23a64cfacb0"
+    "mtime": 1784564709.0140839,
+    "ast_hash": "6bb1ac1619520bdd4366803c9b29445f",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/FreeCameraController.cs": {
-    "mtime": 1783883524.277521,
+    "mtime": 1784564709.0228047,
     "ast_hash": "d46d01017b79052747a9ac6989cf8c59",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/GameBootstrap.cs": {
-    "mtime": 1783162138.1684556,
-    "ast_hash": "99842f81697071677cd9ffb7fb579e2f",
+    "mtime": 1784564709.0279222,
+    "ast_hash": "1967be8cd28f7a1229d96b31cce7f1ac",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/GrassDebugModule.cs": {
-    "mtime": 1782581410.951986,
-    "ast_hash": "a2b398133e192dd353bf190a689159a7",
+    "mtime": 1784564709.0315082,
+    "ast_hash": "bc559c3ae5861f084c11a0f8a080476f",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/ICameraRigContext.cs": {
@@ -510,53 +510,53 @@
     "semantic_hash": "f058fbee7f3edd24f0a74df36721fa76"
   },
   "Assets/Scripts/Core/Services/InitGraph.cs": {
-    "mtime": 1781145673.851881,
-    "ast_hash": "4d3b21294388ca01fba961eec22e4f3c",
-    "semantic_hash": "4d3b21294388ca01fba961eec22e4f3c"
+    "mtime": 1784564709.034078,
+    "ast_hash": "f7669e7c1b3d998b60edc9ab105a3e8a",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/InputMapService.cs": {
-    "mtime": 1782680172.1725068,
-    "ast_hash": "2ea547c64948f5c7f0b846a336bc70ed",
+    "mtime": 1784564709.042411,
+    "ast_hash": "c45496eb629af326d2a859428ece5a6c",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/LoadingManager.cs": {
-    "mtime": 1783681076.5148764,
-    "ast_hash": "55820049704ef34a81203398bc4f2d43",
+    "mtime": 1784890340.8565543,
+    "ast_hash": "83d89644c66f38fa85cabff45aa5baf4",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/MemoryDebugModule.cs": {
-    "mtime": 1781568909.309386,
-    "ast_hash": "8a24b418bf3caec0d9e1f19ee9071736",
+    "mtime": 1784564709.0525472,
+    "ast_hash": "2b08993fa05db8fcacb7505caf340085",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/OceanDebugModeWriter.cs": {
-    "mtime": 1781223601.723294,
-    "ast_hash": "1042f18494f598f1ea153050f607fd93",
-    "semantic_hash": "1042f18494f598f1ea153050f607fd93"
+    "mtime": 1784564709.0555637,
+    "ast_hash": "2d54a0385dab0bd74bb3b5b9f24a21f8",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/ProgressHandle.cs": {
-    "mtime": 1781412198.583079,
-    "ast_hash": "082f1aa40a0803154b85714173fb0be6",
-    "semantic_hash": "082f1aa40a0803154b85714173fb0be6"
+    "mtime": 1784564709.061142,
+    "ast_hash": "bc6958da37bf86536505e46ece514fa3",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/ProgressTracker.cs": {
-    "mtime": 1781374597.4964876,
-    "ast_hash": "f02b746b366f2061f02ed22a243cd12f",
-    "semantic_hash": "f02b746b366f2061f02ed22a243cd12f"
+    "mtime": 1784564709.0636597,
+    "ast_hash": "63b3d8071bedcb20a0c5563ec56c8421",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/ScaleReferenceDebugModule.cs": {
-    "mtime": 1781321576.864197,
-    "ast_hash": "a5dbcbec62ed55c00320d8e2d3f7eeae",
-    "semantic_hash": "a5dbcbec62ed55c00320d8e2d3f7eeae"
+    "mtime": 1784564709.0671916,
+    "ast_hash": "f5dfaae2b2d3eb27e1530a1fdc8956a5",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/ScaleReferenceMarkers.cs": {
-    "mtime": 1781376387.1425304,
-    "ast_hash": "82c162818dcc7781579c1511781f2942",
-    "semantic_hash": "82c162818dcc7781579c1511781f2942"
+    "mtime": 1784564709.0808768,
+    "ast_hash": "eeb8a2315e6ad1294379677dcf140476",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/SceneBootstrap.cs": {
-    "mtime": 1783162138.1699872,
-    "ast_hash": "2b2f36f5b116b93282a2a15c77d2fc5a",
+    "mtime": 1784564709.0843928,
+    "ast_hash": "36d353802727a1825088feb15ff99c1c",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/SeedProvider.cs": {
@@ -565,74 +565,74 @@
     "semantic_hash": "951f8f5378a555c0c09b5f771e9f28b0"
   },
   "Assets/Scripts/Core/Services/ServiceLocator.cs": {
-    "mtime": 1781791401.370803,
-    "ast_hash": "49d42957b1a15c52e6583ba976a6ab70",
+    "mtime": 1784564709.0884058,
+    "ast_hash": "e67080d39f18194fcda9369661d175ac",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/SettingsProvider.cs": {
-    "mtime": 1783164813.79135,
-    "ast_hash": "dfebcfae2ec764899c8e9c9c31e43d92",
+    "mtime": 1784564709.092927,
+    "ast_hash": "b1bce16cf58963155c9af345c37dd6e8",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/SettingsService.cs": {
-    "mtime": 1781379857.1911614,
-    "ast_hash": "4a813a6da0e4725617ad31df180942d8",
-    "semantic_hash": "4a813a6da0e4725617ad31df180942d8"
+    "mtime": 1784564709.0955813,
+    "ast_hash": "8ac430d56b2f2d4989bd896bfdf209c3",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/ShaderGlobalIds.Atmosphere.cs": {
-    "mtime": 1783882457.2468243,
-    "ast_hash": "d7a6e187f1ab97d6c14b8f2e7432b017",
+    "mtime": 1784564709.1073537,
+    "ast_hash": "12658d908d41ad7a068d3f9912e7b7d6",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/ShaderGlobalIds.Biome.cs": {
-    "mtime": 1781367822.8117766,
-    "ast_hash": "f0d09329adfcd49d1781225082017461",
-    "semantic_hash": "f0d09329adfcd49d1781225082017461"
+    "mtime": 1784564709.1094534,
+    "ast_hash": "38417f0acd2fd51cdf715910b82705de",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/ShaderGlobalIds.Celestial.cs": {
-    "mtime": 1781368539.4785264,
-    "ast_hash": "0b099368320553d942bfb6c8850eb330",
-    "semantic_hash": "0b099368320553d942bfb6c8850eb330"
+    "mtime": 1784564709.111479,
+    "ast_hash": "dd0d8e245ba4c722e2dbdc1e3ee4d665",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/ShaderGlobalIds.Cloud.cs": {
-    "mtime": 1783887354.0654075,
-    "ast_hash": "15aaab5127167b15eefa269eea3f0e0e",
+    "mtime": 1784564709.115029,
+    "ast_hash": "364b03fccd254aaf9fbfc7c07e92e227",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/ShaderGlobalIds.Core.cs": {
-    "mtime": 1781363307.251282,
-    "ast_hash": "d2e949a7436505037ffa9161593a6b20",
-    "semantic_hash": "d2e949a7436505037ffa9161593a6b20"
+    "mtime": 1784564709.1196048,
+    "ast_hash": "6549ba82be48794214f8a8f72c606ccc",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/ShaderGlobalIds.Grass.cs": {
-    "mtime": 1782581410.9475532,
-    "ast_hash": "f28b3d52c1f15b5cf265b76e79ba91ab",
+    "mtime": 1784564709.1237166,
+    "ast_hash": "2b8fbe5af9bc07791f6f69448a6303a1",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/ShaderGlobalIds.Precipitation.cs": {
-    "mtime": 1782955604.620685,
-    "ast_hash": "263380db0c42950e8ae840111678b23a",
+    "mtime": 1784564709.17373,
+    "ast_hash": "8562176c31bec0e01eca2a0d1f16241e",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/ShaderGlobalIds.Terrain.cs": {
-    "mtime": 1781367812.981333,
-    "ast_hash": "bc9ede15cf1e1504356d821597b99084",
-    "semantic_hash": "bc9ede15cf1e1504356d821597b99084"
+    "mtime": 1784564709.17677,
+    "ast_hash": "79bd46d91d971310fba27792248626c9",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/ShaderGlobalIds.Water.cs": {
-    "mtime": 1781398112.2126386,
+    "mtime": 1784564709.179307,
     "ast_hash": "2acf6665f6b9d20c2744a088680375c2",
     "semantic_hash": "2acf6665f6b9d20c2744a088680375c2"
   },
   "Assets/Scripts/Core/Services/ShaderGlobalsController.cs": {
-    "mtime": 1781398112.2136462,
+    "mtime": 1784564709.1858325,
     "ast_hash": "8d23eea4929a5d6d6de76ee234fc1305",
     "semantic_hash": "8d23eea4929a5d6d6de76ee234fc1305"
   },
   "Assets/Scripts/Core/Services/TerrainDebugModule.cs": {
-    "mtime": 1781367876.9189308,
-    "ast_hash": "1bbe2e87753f25b487104bb5b62ba060",
-    "semantic_hash": "1bbe2e87753f25b487104bb5b62ba060"
+    "mtime": 1784564709.2252595,
+    "ast_hash": "f64513f9a6d7cf9e4348014fef313a38",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/UnityLogger.cs": {
     "mtime": 1781104109.4812896,
@@ -640,22 +640,22 @@
     "semantic_hash": "8d0c629f7af653c60b96453ea57d0b09"
   },
   "Assets/Scripts/Core/Services/WaterDebugModule.cs": {
-    "mtime": 1781364485.6887417,
+    "mtime": 1784564709.2303789,
     "ast_hash": "076eba92e47b37ee85021c59876f72b5",
     "semantic_hash": "076eba92e47b37ee85021c59876f72b5"
   },
   "Assets/Scripts/Core/Services/WaterDebugRegistration.cs": {
-    "mtime": 1783682324.7510362,
-    "ast_hash": "57d12c0b63ad1c221d4eebe0994a87ce",
+    "mtime": 1784564709.2319012,
+    "ast_hash": "9d704044cf9df59f30e26751f2ac48f3",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/WaterMeshAnalysis.cs": {
-    "mtime": 1781361520.587263,
-    "ast_hash": "666f5bf0149bf8f5edfb1aec5db4261c",
-    "semantic_hash": "666f5bf0149bf8f5edfb1aec5db4261c"
+    "mtime": 1784564709.2411053,
+    "ast_hash": "7476a7854f9cf67a962f9221ee087f38",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/WaterWakeController.cs": {
-    "mtime": 1781376578.543172,
+    "mtime": 1784564709.2453904,
     "ast_hash": "a7b841fa21b2ead56c52f9b66438a89d",
     "semantic_hash": "a7b841fa21b2ead56c52f9b66438a89d"
   },
@@ -665,12 +665,12 @@
     "semantic_hash": "dfdf4d21b99e22696c9f720f3b9debb1"
   },
   "Assets/Scripts/Core/Services/WorldActionManager.cs": {
-    "mtime": 1781376178.4276614,
-    "ast_hash": "09d567cbbdcea05f012786cdc23a739f",
-    "semantic_hash": "09d567cbbdcea05f012786cdc23a739f"
+    "mtime": 1784564709.247404,
+    "ast_hash": "be2dc4a027b874848dfbdd3d08d92032",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Core/Text/SDFFontAsset.cs": {
-    "mtime": 1781498045.1994421,
+    "mtime": 1784564709.2489107,
     "ast_hash": "6b38aefa0d0ed1893c692f67282e4eb8",
     "semantic_hash": ""
   },
@@ -685,17 +685,17 @@
     "semantic_hash": "fea4fdb69c9f81c030fca31df16b77a5"
   },
   "Assets/Scripts/Core/Text/SDFTextRenderer.cs": {
-    "mtime": 1781498037.6217067,
+    "mtime": 1784564709.252609,
     "ast_hash": "bb4f1d6d75b2ef8889f796fff77b4b3d",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Utilities/CoordinateConverter.cs": {
-    "mtime": 1782228221.6705353,
-    "ast_hash": "cd1f72d430da625c109d20f5d2d90a16",
+    "mtime": 1784564709.2612648,
+    "ast_hash": "ea93bd111793f110afea88a4605e26ad",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Utilities/CubeFaceTopology.cs": {
-    "mtime": 1781321105.8278308,
+    "mtime": 1784564709.2648091,
     "ast_hash": "0e1c71f4154255a8c97f059c183f076b",
     "semantic_hash": "0e1c71f4154255a8c97f059c183f076b"
   },
@@ -710,32 +710,32 @@
     "semantic_hash": "c5fc911ee7d2c463891d3adc2f18985b"
   },
   "Assets/Scripts/Planet/Atmosphere/AtmosphereController.cs": {
-    "mtime": 1784351576.8506544,
-    "ast_hash": "7f7e8f76b6051887977c7bc454e5bfc8",
+    "mtime": 1784564709.269605,
+    "ast_hash": "edf90204243c66d845b6c15f9802187a",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Atmosphere/AtmosphereDiagnostics.cs": {
-    "mtime": 1781553362.912367,
+    "mtime": 1784564709.2711253,
     "ast_hash": "87645a3e4cfa4f0b24abc4432f0862a9",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Atmosphere/AtmosphereDto.cs": {
-    "mtime": 1783882475.281912,
-    "ast_hash": "c4b8ced95e537a949b45129266f42053",
+    "mtime": 1784564709.2737925,
+    "ast_hash": "4a992785c0071fd0364920e914ce0c17",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Atmosphere/AtmosphereRenderFeature.cs": {
-    "mtime": 1781791412.4462774,
-    "ast_hash": "bb267fccf18ce6d62125a7b63c125d04",
+    "mtime": 1784564709.2778463,
+    "ast_hash": "eee6aa00197a8c6427fa46d761e62313",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Atmosphere/AtmosphereRenderPass.cs": {
-    "mtime": 1781364544.0322282,
+    "mtime": 1784564709.279406,
     "ast_hash": "060f86c16962ef59521244c37de59a9b",
     "semantic_hash": "060f86c16962ef59521244c37de59a9b"
   },
   "Assets/Scripts/Planet/Atmosphere/AtmosphereSettings.cs": {
-    "mtime": 1784351527.8633976,
+    "mtime": 1784564709.2849898,
     "ast_hash": "1a68268b140416662de903e8dee4d0d9",
     "semantic_hash": ""
   },
@@ -745,9 +745,9 @@
     "semantic_hash": "f8d49ab826f75b3c452acdac505e2419"
   },
   "Assets/Scripts/Planet/Biomes/BiomeConstants.cs": {
-    "mtime": 1781211743.634401,
-    "ast_hash": "b8927610c4260926622f3b13738bc40e",
-    "semantic_hash": "b8927610c4260926622f3b13738bc40e"
+    "mtime": 1784564709.2958276,
+    "ast_hash": "094edd29d2adb73c84141f0f350f76f2",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/BiomeDefinition.cs": {
     "mtime": 1781104109.564897,
@@ -755,54 +755,54 @@
     "semantic_hash": "6010ba7255649e6d73df340892424aa6"
   },
   "Assets/Scripts/Planet/Biomes/BiomeDefinitionDto.cs": {
-    "mtime": 1781212888.6405494,
-    "ast_hash": "54add1d8244cf0f4e4f6eb41500a33e6",
-    "semantic_hash": "54add1d8244cf0f4e4f6eb41500a33e6"
+    "mtime": 1784564709.2973387,
+    "ast_hash": "3b91db1863f25611fb3831ce73769636",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/BiomeDto.cs": {
-    "mtime": 1782228180.3790174,
-    "ast_hash": "6692ffa915bec91f1fc4c540dba64487",
+    "mtime": 1784564709.309528,
+    "ast_hash": "00507906c904deccb2c1475c993882c0",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/BiomeLookupData.cs": {
-    "mtime": 1781215320.854713,
+    "mtime": 1784564709.3206012,
     "ast_hash": "8c9f1e05f206e17515e48d26fb2dae4f",
     "semantic_hash": "8c9f1e05f206e17515e48d26fb2dae4f"
   },
   "Assets/Scripts/Planet/Biomes/BiomeMapBaker.cs": {
-    "mtime": 1782228314.0986125,
-    "ast_hash": "04a12866d5db66d4f6761b091e90b989",
+    "mtime": 1784564709.3236825,
+    "ast_hash": "d2d92346ef7cfbe703d228d8ec76e5c7",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/BiomeRegistry.cs": {
-    "mtime": 1781214649.6917934,
-    "ast_hash": "70bf4402720049c70fa0b8cb760894d4",
-    "semantic_hash": "70bf4402720049c70fa0b8cb760894d4"
+    "mtime": 1784564709.3252523,
+    "ast_hash": "e5dd444823b3585a3b41474d803bbb73",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/BiomeRegistryDto.cs": {
-    "mtime": 1781214325.4850814,
-    "ast_hash": "d23f6b0132fe944323e6bc5637d1bff7",
-    "semantic_hash": "d23f6b0132fe944323e6bc5637d1bff7"
+    "mtime": 1784564709.3272805,
+    "ast_hash": "990c6f804ef1ec9c829a0e7419eddc27",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/BiomeSettings.cs": {
-    "mtime": 1781216942.3436563,
-    "ast_hash": "81ed1756080dbd793d5698ac2c236545",
-    "semantic_hash": "81ed1756080dbd793d5698ac2c236545"
+    "mtime": 1784564709.334396,
+    "ast_hash": "f57a909774f47570817a36dc5ac791d1",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/BiomeSurfaceTextureArrays.cs": {
-    "mtime": 1781791426.475779,
-    "ast_hash": "462ea37d73c7c0b7516d1f4bb1b2fe88",
+    "mtime": 1784564709.3379612,
+    "ast_hash": "9a3fc024676f20175380285259848ade",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/ClimateCommands.cs": {
-    "mtime": 1781216907.6632793,
-    "ast_hash": "bbde34d7d0524b69dad3dc929855f277",
-    "semantic_hash": "bbde34d7d0524b69dad3dc929855f277"
+    "mtime": 1784564709.3404946,
+    "ast_hash": "b895dc9842a372a5c872fdefef32284b",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/ClimateCurves.cs": {
-    "mtime": 1781216812.4334576,
-    "ast_hash": "ee4aed5296554d73d017760dcf765324",
-    "semantic_hash": "ee4aed5296554d73d017760dcf765324"
+    "mtime": 1784564709.3476214,
+    "ast_hash": "7fdb617189fce638f467eb658ca66787",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/MoistureProvider.cs": {
     "mtime": 1781104109.5969925,
@@ -810,34 +810,34 @@
     "semantic_hash": "a3dc1238f5a016ec7a9beb803143114e"
   },
   "Assets/Scripts/Planet/Biomes/TemperatureProvider.cs": {
-    "mtime": 1781471951.8787954,
-    "ast_hash": "d821d4691730beae5d02c30b7e2ba315",
+    "mtime": 1784564709.5202663,
+    "ast_hash": "299282a33da955f9e220bf0a320667ff",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/CelestialManager.cs": {
-    "mtime": 1781395130.073657,
-    "ast_hash": "633ecf8beff1222f50d747a230ee15ba",
-    "semantic_hash": "633ecf8beff1222f50d747a230ee15ba"
+    "mtime": 1784564709.5369675,
+    "ast_hash": "d5ca638ed18657a3bcaf5e15e8170332",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Clouds/CloudConstants.cs": {
-    "mtime": 1783887348.5594406,
-    "ast_hash": "c736dd2a83f6f64bfce4d71e9bf6bc04",
+    "mtime": 1784564709.539483,
+    "ast_hash": "a9422953db89862c3c639e12aa250e1e",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Clouds/CloudController.cs": {
-    "mtime": 1784351559.8085742,
-    "ast_hash": "6b6c5b9d09358ecdcb920051fe861028",
+    "mtime": 1784564709.5434928,
+    "ast_hash": "d5922c16034a3442311a3cd13be600c8",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Clouds/CloudDebugState.cs": {
-    "mtime": 1784351536.266436,
-    "ast_hash": "ed43581ad6223e4b0f57b5e8696a97de",
+    "mtime": 1784564709.545596,
+    "ast_hash": "05dd5c0ba2bca4f91864a882c4eae7b5",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Clouds/CloudDto.cs": {
-    "mtime": 1781379309.5216277,
-    "ast_hash": "f32c707ac7026e865da4e9d454be2c2c",
-    "semantic_hash": "f32c707ac7026e865da4e9d454be2c2c"
+    "mtime": 1784564709.548152,
+    "ast_hash": "3083efc7aa6be783b07d23c6e81dd6e1",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Clouds/CloudNoiseGenerator.cs": {
     "mtime": 1781104109.616752,
@@ -845,27 +845,27 @@
     "semantic_hash": "b89316a28ca6b4f7ea775f71bad2e38d"
   },
   "Assets/Scripts/Planet/Clouds/CloudRenderFeature.cs": {
-    "mtime": 1783682226.3608294,
-    "ast_hash": "91149625ae18d9a69c6341b00f0d1e39",
+    "mtime": 1784564709.5502,
+    "ast_hash": "cd3dec11f2380689ecf5d3f33c9e5b20",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Clouds/CloudSettings.cs": {
-    "mtime": 1784351519.8203814,
-    "ast_hash": "bd62ce3571c0824128fc847d9b108a0f",
+    "mtime": 1784564709.5559592,
+    "ast_hash": "ca2df0379e7cd004182e412d1742a684",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Clouds/SphericalWeatherGrid.cs": {
-    "mtime": 1783974512.1483498,
+    "mtime": 1784564709.5584655,
     "ast_hash": "3c54ce3fe1d03feee98ff2eac9391e9f",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/ColorGenerator.cs": {
-    "mtime": 1782228292.0766003,
-    "ast_hash": "a79c3fdd78e8844a0d52893bf6261d7d",
+    "mtime": 1784564709.5609949,
+    "ast_hash": "af0f84c9634293ffdfaed016dba6140f",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/CameraFollowGrassInteractor.cs": {
-    "mtime": 1781219058.7877407,
+    "mtime": 1784564709.5689352,
     "ast_hash": "ea7424d922448875c23ca61e237e67e0",
     "semantic_hash": "ea7424d922448875c23ca61e237e67e0"
   },
@@ -875,18 +875,18 @@
     "semantic_hash": "d3c5e57f55b56b8720b53ee604c10ac9"
   },
   "Assets/Scripts/Planet/Grass/FaceSpaceCellRangeBuilder.cs": {
-    "mtime": 1783181094.925727,
-    "ast_hash": "d0d3c1fe0edc27c50d63fc4410b66da4",
+    "mtime": 1784776671.4675663,
+    "ast_hash": "5b5f83a275d26acc71ad04ad2420436f",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassBladeBufferPool.cs": {
-    "mtime": 1781404977.0299077,
-    "ast_hash": "675238858f85db1833d7728fc65ab54e",
-    "semantic_hash": "675238858f85db1833d7728fc65ab54e"
+    "mtime": 1784564709.5725105,
+    "ast_hash": "fe14128060c82fb73ab5ad261e5946a9",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassChunkRuntime.cs": {
-    "mtime": 1783178050.5669825,
-    "ast_hash": "f3a029b032fcde5ae11b058562ada339",
+    "mtime": 1784564709.594112,
+    "ast_hash": "03ffaeaac3d9f2ec6f6f25b0c8860989",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassInteractorCommands.cs": {
@@ -900,39 +900,39 @@
     "semantic_hash": "e9aaca853ee362a71a90725bc14fff9c"
   },
   "Assets/Scripts/Planet/Grass/GrassInteractorRegistry.cs": {
-    "mtime": 1783181094.9219387,
-    "ast_hash": "8fa52e3044cb1d2866ae062e806a98c0",
+    "mtime": 1784564709.600624,
+    "ast_hash": "7964e195dd6314161a38625eb5c04a59",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassNearFieldController.cs": {
-    "mtime": 1784229232.4153657,
+    "mtime": 1784564709.6031342,
     "ast_hash": "4bcc2eba57201bb65089da3e5bcee465",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassPlacementController.cs": {
-    "mtime": 1783182024.852301,
-    "ast_hash": "73e8209214d8347e8f594731251f487f",
+    "mtime": 1784564709.6056657,
+    "ast_hash": "44edef786c6570d9335bb5305e8b7781",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassPlacementDtos.cs": {
-    "mtime": 1781214376.3460243,
-    "ast_hash": "17d9acdfc7c8d593e03e610cab73e027",
-    "semantic_hash": "17d9acdfc7c8d593e03e610cab73e027"
+    "mtime": 1784564709.6076689,
+    "ast_hash": "91c7d24776b416a5d313b55a6b65b2bd",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassPlacementStats.cs": {
-    "mtime": 1781359930.560783,
-    "ast_hash": "470285685c4c641f058fc175d11b5fc7",
-    "semantic_hash": "470285685c4c641f058fc175d11b5fc7"
+    "mtime": 1784564709.6086674,
+    "ast_hash": "9807963710c0f95f54219a6353d9b53c",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/IWeatherConfigurator.cs": {
-    "mtime": 1781202361.102893,
-    "ast_hash": "5235ae402134b2ce9ad3d811c3782808",
-    "semantic_hash": "5235ae402134b2ce9ad3d811c3782808"
+    "mtime": 1784564709.611192,
+    "ast_hash": "1356bc7a76111328c6407178ccb9442b",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/IsExternalInit.cs": {
-    "mtime": 1781181953.1263041,
-    "ast_hash": "3b44ae777c51a0f3de0ad3d186289dc8",
-    "semantic_hash": "3b44ae777c51a0f3de0ad3d186289dc8"
+    "mtime": 1784564709.626717,
+    "ast_hash": "8e5a2c2f96062169d8a357a9736e4733",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/MinMax.cs": {
     "mtime": 1781104109.6920612,
@@ -940,7 +940,7 @@
     "semantic_hash": "93ddf6ee5798609ad869eee02fc1dba6"
   },
   "Assets/Scripts/Planet/Noise.cs": {
-    "mtime": 1781485024.684549,
+    "mtime": 1784564709.6416588,
     "ast_hash": "1cf85b933c7bd1abfc5e93f3756b216c",
     "semantic_hash": ""
   },
@@ -975,89 +975,89 @@
     "semantic_hash": "e77c7677daa162802cfbb33d8df0b24a"
   },
   "Assets/Scripts/Planet/Planet.cs": {
-    "mtime": 1782909522.183746,
-    "ast_hash": "1150168a24a61d31d241c5d77d2f0fd3",
+    "mtime": 1784889096.667016,
+    "ast_hash": "b1782dbe1f083933be522ffddfbeb387",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PlanetConstants.cs": {
-    "mtime": 1781207280.978421,
-    "ast_hash": "3b4dca4f7a07c5b15f212b16e3bc0d13",
-    "semantic_hash": "3b4dca4f7a07c5b15f212b16e3bc0d13"
+    "mtime": 1784564710.031371,
+    "ast_hash": "9b20a5d33e75e6bfb2dd95459bfd3090",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PlanetDto.cs": {
-    "mtime": 1782505464.997304,
-    "ast_hash": "23ffbd5f5155b6887bdbeedf8a805a64",
+    "mtime": 1784564710.0557861,
+    "ast_hash": "037552e0ba3ecb9bf175349cf7c2792c",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PlanetGrassCoordinator.cs": {
-    "mtime": 1784224663.388601,
-    "ast_hash": "8e69d8b90f2e02edba2ba23765a86d44",
+    "mtime": 1784564710.0606725,
+    "ast_hash": "d0380ec8cc238163a36c0e0a6bdc271a",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PlanetSettings.cs": {
-    "mtime": 1781219136.7952347,
-    "ast_hash": "8b648a91f73f352d279405b90bf088cb",
-    "semantic_hash": "8b648a91f73f352d279405b90bf088cb"
+    "mtime": 1784564710.0702548,
+    "ast_hash": "3009ea71937bcd57ac63babb73f042fb",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PlanetTerrainMaterial.cs": {
-    "mtime": 1781367839.806943,
-    "ast_hash": "17e49f8c2ad03ad9a777b696ba87185c",
-    "semantic_hash": "17e49f8c2ad03ad9a777b696ba87185c"
+    "mtime": 1784564710.075524,
+    "ast_hash": "8726d65bc156db796a91060f24e4fc6f",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PlanetWaterSurface.cs": {
-    "mtime": 1781412227.1140332,
-    "ast_hash": "7841b7f561075e3df1e09ee588990265",
-    "semantic_hash": "7841b7f561075e3df1e09ee588990265"
+    "mtime": 1784564710.095489,
+    "ast_hash": "5f13efd5e1c609eca23e2b40d122d804",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PrecipitationController.cs": {
-    "mtime": 1783164813.7998445,
-    "ast_hash": "ab455ca6499f5347799c5bf7fd396f9e",
+    "mtime": 1784564710.1053398,
+    "ast_hash": "78bd9c2a5ffe292681972769e47ca848",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PrecipitationDto.cs": {
-    "mtime": 1782955615.9815533,
-    "ast_hash": "9decd8f89a05323a802a41c608599a75",
+    "mtime": 1784564710.1074955,
+    "ast_hash": "8f12d0d523a55589afa9752681ae4791",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PrecipitationRenderFeature.cs": {
-    "mtime": 1782955532.2640142,
+    "mtime": 1784564710.1104105,
     "ast_hash": "7053966285f98233d48294a41023ef8a",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Precipitation/RainParticleController.cs": {
-    "mtime": 1783162138.1741257,
-    "ast_hash": "4675bdaa8f56dc14dacd63d8e2e57611",
+    "mtime": 1784564710.1023035,
+    "ast_hash": "31d275bc6b70316a6d82effd010128c0",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/ShapeGenerator.cs": {
-    "mtime": 1782505465.001758,
-    "ast_hash": "a6c569535d2b6d2a0c63f388cbaf3482",
+    "mtime": 1784564710.1155314,
+    "ast_hash": "639ba74ee2a7bb453fb05563da97e6b7",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/ShapeSettings.cs": {
-    "mtime": 1782505464.9957047,
-    "ast_hash": "9f17271d56778455c8d6e53f805c5b4c",
+    "mtime": 1784564710.119604,
+    "ast_hash": "7e12d94c52817c0ff2675c9cca2956b9",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/BiomeAtlasService.cs": {
-    "mtime": 1782841542.5766861,
-    "ast_hash": "ad50997d15d4e0f1d774d6ada9f91b5d",
+    "mtime": 1784564710.1219542,
+    "ast_hash": "ea2948768d8a5ac802f4f1804683a90d",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/ChunkMeshCache.cs": {
-    "mtime": 1782841682.0705454,
-    "ast_hash": "731915f6cf060bd302de7205e32760b0",
+    "mtime": 1784564710.1286602,
+    "ast_hash": "86a2f0ec0743a5917db257079b335309",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/ChunkSurfaceGenerator.cs": {
-    "mtime": 1782505595.6735716,
-    "ast_hash": "7f68d27fed68d29e415935add011926a",
+    "mtime": 1784564710.133191,
+    "ast_hash": "d54b0cd36e743127c52bde0558d51ab2",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/ChunkSurfaceQueries.cs": {
-    "mtime": 1781295135.769473,
-    "ast_hash": "9d7de0a1429b577677c1612456bb353e",
-    "semantic_hash": "9d7de0a1429b577677c1612456bb353e"
+    "mtime": 1784564710.1342003,
+    "ast_hash": "ddcdd24d7ed37d76f20667966ae4bb10",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/ChunkTriangleTemplate.cs": {
     "mtime": 1781104109.7407868,
@@ -1070,8 +1070,8 @@
     "semantic_hash": "827f384e00cb4fb6bb0eeab35dbfef24"
   },
   "Assets/Scripts/Planet/Surface/ChunkVisibilitySelector.cs": {
-    "mtime": 1781566574.9828503,
-    "ast_hash": "3f906bae25a1f6ab100d57a8f631a664",
+    "mtime": 1784564710.161364,
+    "ast_hash": "efe3949064f2c1a18a95c67855b38028",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/ChunkedFaceMeshSampler.cs": {
@@ -1080,33 +1080,33 @@
     "semantic_hash": "132e3aff18704d10382cc858240ff47e"
   },
   "Assets/Scripts/Planet/Surface/ChunkedSurfaceProvider.cs": {
-    "mtime": 1782909641.1135068,
-    "ast_hash": "8488c5f4980b5a7f310009b347faa6d8",
+    "mtime": 1784564710.1849978,
+    "ast_hash": "df4791844a4531d409de0a23bbc82952",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/GrassSurfaceAtlasBuilder.cs": {
-    "mtime": 1781412425.1335018,
-    "ast_hash": "6debed05c3aff97bbf4154219d0a3a85",
-    "semantic_hash": "6debed05c3aff97bbf4154219d0a3a85"
+    "mtime": 1784564710.1885476,
+    "ast_hash": "a55919c24a406f998035bb31a9e4b3cd",
+    "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/GrassSurfaceAtlasGpuData.cs": {
-    "mtime": 1781366620.5395806,
+    "mtime": 1784564710.1922464,
     "ast_hash": "88e71247a2914d95e8de7fbb1f85dbd3",
     "semantic_hash": "88e71247a2914d95e8de7fbb1f85dbd3"
   },
   "Assets/Scripts/Planet/Surface/PerFaceSurfaceProvider.cs": {
-    "mtime": 1782505692.46535,
-    "ast_hash": "627d74159aec1f81e4270b738787e3b1",
+    "mtime": 1784564710.1954942,
+    "ast_hash": "cd0196e47e24a6b0aa945865b2dc64ff",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/PlanetChunk.cs": {
-    "mtime": 1782853586.9646492,
-    "ast_hash": "f0025a6c082197ebe73d588278f540a4",
+    "mtime": 1784564710.1983125,
+    "ast_hash": "e6bc3021ed47b85706786f4a71657822",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/PlanetChunkMeshJob.cs": {
-    "mtime": 1782505595.6714766,
-    "ast_hash": "422bf7a71a99dbd875ad2b0e3615bd7b",
+    "mtime": 1784564710.2023702,
+    "ast_hash": "69884b4fa8be9c4fdc2d21a112abd7da",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/TerrainQuadtree.cs": {
@@ -1115,8 +1115,8 @@
     "semantic_hash": "c56fd72a71e785119df0ff136b3fd885"
   },
   "Assets/Scripts/Planet/TerrainFace.cs": {
-    "mtime": 1782505692.4623103,
-    "ast_hash": "80fc0dfafff16aa92c8b8b910283a983",
+    "mtime": 1784564710.269742,
+    "ast_hash": "80da9e0a6e81d862aba1851d378cf5de",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/WaterMeshBuilder.cs": {
@@ -1125,23 +1125,23 @@
     "semantic_hash": "d3c35a8d675a97e716d0408faf14389e"
   },
   "Assets/Scripts/Planet/WaterVolumeRenderFeature.cs": {
-    "mtime": 1781364516.2449296,
+    "mtime": 1784564710.271753,
     "ast_hash": "709b5aa3326a39c034928f81bb6b4ee9",
     "semantic_hash": "709b5aa3326a39c034928f81bb6b4ee9"
   },
   "Assets/Scripts/Planet/WeatherDiagnostics.cs": {
-    "mtime": 1783094034.0550635,
-    "ast_hash": "e37bb030960be3e5db02ea96fda4d3ac",
+    "mtime": 1784564710.2742746,
+    "ast_hash": "09418e44855353750e20c4e106810c9f",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/WeatherLightningController.cs": {
-    "mtime": 1781365376.4596786,
+    "mtime": 1784564710.281184,
     "ast_hash": "de7374e2931de9a60d1561ead813282c",
     "semantic_hash": "de7374e2931de9a60d1561ead813282c"
   },
   "Assets/Scripts/Planet/WeatherManager.cs": {
-    "mtime": 1784045852.384856,
-    "ast_hash": "973d914f95d6e528e16560275fec4c68",
+    "mtime": 1784564710.286237,
+    "ast_hash": "260b1b986b8fdb1f9d69209e9255c1cb",
     "semantic_hash": ""
   },
   "Assets/Scripts/PoissonDiscSampling.cs": {
@@ -1155,7 +1155,7 @@
     "semantic_hash": "727a03dd288d6da55564373146e2f895"
   },
   ".claude/settings.json": {
-    "mtime": 1781468096.9052234,
+    "mtime": 1784564707.0084865,
     "ast_hash": "6d36f2ef620af8e7b3322a02a2bf9163",
     "semantic_hash": ""
   },
@@ -1165,12 +1165,12 @@
     "semantic_hash": ""
   },
   ".codex/hooks.json": {
-    "mtime": 1781461218.1521854,
+    "mtime": 1784564707.0950093,
     "ast_hash": "db4b25a9805ba57a918190c5248bef8d",
     "semantic_hash": ""
   },
   ".gemini/settings.json": {
-    "mtime": 1781462962.5703087,
+    "mtime": 1784564707.1315942,
     "ast_hash": "ddc6069a85a1acc06096e06bcd8087ac",
     "semantic_hash": ""
   },
@@ -1215,12 +1215,12 @@
     "semantic_hash": ""
   },
   "Assets/Editor/BiomeRegistryEditor.cs": {
-    "mtime": 1781211110.199,
+    "mtime": 1784564707.16078,
     "ast_hash": "c670cc41f5cd317d345882493d3040ae",
     "semantic_hash": ""
   },
   "Assets/Editor/PlanetEditor.cs": {
-    "mtime": 1781562693.0070941,
+    "mtime": 1784564707.1628132,
     "ast_hash": "b93655760df85d6b5d507013ea0c64be",
     "semantic_hash": ""
   },
@@ -1230,28 +1230,28 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Interfaces/IFreeCameraService.cs": {
-    "mtime": 1781469791.8384855,
-    "ast_hash": "993fc3328ccf8ac200245f1e9d5aca8e",
+    "mtime": 1784564708.8272305,
+    "ast_hash": "e8d87436c57aece4c868c09ccd486a79",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/ClimateCurveLut.cs": {
-    "mtime": 1781471817.5458615,
-    "ast_hash": "5d5364b49181e15cd38cc391ce53fa40",
+    "mtime": 1784564709.3425589,
+    "ast_hash": "3402fdbc16e9221fb7bb098c5083a6d3",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/ClimateMapGpuData.cs": {
-    "mtime": 1781471863.0778692,
-    "ast_hash": "0f48ea4535809891f141f69f3a254a0e",
+    "mtime": 1784564709.454582,
+    "ast_hash": "6e78d82b9db37b4a93cda441f60133b5",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/ClimateProvider.cs": {
-    "mtime": 1781471831.407256,
-    "ast_hash": "0633bb43c5ffeedbf53c827d506d9b55",
+    "mtime": 1784564709.5075123,
+    "ast_hash": "d723c80dcd2970d2cfb8540e344cfa53",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/VoronoiBiomeField.cs": {
-    "mtime": 1782228250.8169246,
-    "ast_hash": "9b98c8d7087883eb8e2ab1e91acd99d5",
+    "mtime": 1784564709.5332973,
+    "ast_hash": "64d5ef069b06019b7b9d2b03741c75d4",
     "semantic_hash": ""
   },
   "AudioTool.Editor.csproj": {
@@ -23995,13 +23995,13 @@
     "semantic_hash": ""
   },
   "Packages/manifest.json": {
-    "mtime": 1781449366.7998044,
-    "ast_hash": "06d98fd8a1f29f4240c80f77698377bd",
+    "mtime": 1784564711.8745437,
+    "ast_hash": "cf82c41092a39576a4c179763d645513",
     "semantic_hash": ""
   },
   "Packages/packages-lock.json": {
-    "mtime": 1781449366.8155737,
-    "ast_hash": "28603817b31e1c60a54270e1925eabc0",
+    "mtime": 1784564711.878432,
+    "ast_hash": "2f75faa8d456b49866499dfea6550b57",
     "semantic_hash": ""
   },
   "ProceduralPlanets.Core.csproj": {
@@ -24015,8 +24015,8 @@
     "semantic_hash": ""
   },
   "ProceduralPlanets.Planet.csproj": {
-    "mtime": 1784228188.9345958,
-    "ast_hash": "9e52bf986ba06a549e3e3495405e290b",
+    "mtime": 1784888346.0260332,
+    "ast_hash": "f7015cea60bac99672e97b63f6d4a85d",
     "semantic_hash": ""
   },
   "ProceduralPlanets.Sampling.csproj": {
@@ -24030,7 +24030,7 @@
     "semantic_hash": ""
   },
   "ProceduralPlanets.slnx": {
-    "mtime": 1781448032.1333382,
+    "mtime": 1784564711.8832166,
     "ast_hash": "a8c4e3109ceb242880d003a9d32d3772",
     "semantic_hash": ""
   },
@@ -24119,16 +24119,6 @@
     "ast_hash": "6a74be967eb6140f94f1fe8e62892bbc",
     "semantic_hash": ""
   },
-  "Temp/obj/ProceduralPlanets.Core/ProceduralPlanets.Core.csproj.nuget.dgspec.json": {
-    "mtime": 1782663385.588152,
-    "ast_hash": "a6ddc1bc3ada15d26662e20cfb8343ba",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ProceduralPlanets.Core/project.assets.json": {
-    "mtime": 1782663385.5217028,
-    "ast_hash": "d33283da7a0513205fa0964e14fc6ea4",
-    "semantic_hash": ""
-  },
   "Temp/obj/ProceduralPlanets.Editor/.NETStandard,Version=v2.1.AssemblyAttributes.cs": {
     "mtime": 1782662331.4023163,
     "ast_hash": "6a74be967eb6140f94f1fe8e62892bbc",
@@ -24137,16 +24127,6 @@
   "Temp/obj/ProceduralPlanets.Planet/.NETStandard,Version=v2.1.AssemblyAttributes.cs": {
     "mtime": 1782662330.785009,
     "ast_hash": "6a74be967eb6140f94f1fe8e62892bbc",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ProceduralPlanets.Planet/ProceduralPlanets.Planet.csproj.nuget.dgspec.json": {
-    "mtime": 1782663385.588658,
-    "ast_hash": "c9e87cb4e0448e7610ebd7fc365853b0",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ProceduralPlanets.Planet/project.assets.json": {
-    "mtime": 1782663385.5227122,
-    "ast_hash": "cab0c9bdcb03c4255ce88832c5f99f62",
     "semantic_hash": ""
   },
   "Temp/obj/ProceduralPlanets.Sampling/.NETStandard,Version=v2.1.AssemblyAttributes.cs": {
@@ -117775,298 +117755,298 @@
     "semantic_hash": ""
   },
   ".agent-memory/MEMORY.md": {
-    "mtime": 1782909712.9538012,
-    "ast_hash": "b1d194e19b6eef6f09c1701e29b07a2e",
+    "mtime": 1784564706.5390232,
+    "ast_hash": "9d60b5ab31dbae66a1785d0d8b45996c",
     "semantic_hash": ""
   },
   ".agent-memory/README.md": {
-    "mtime": 1781464209.6380756,
-    "ast_hash": "badf1faf5b8a7b1246d12a61782a3a9c",
+    "mtime": 1784564706.5426648,
+    "ast_hash": "3d7e87ae9cb92bb7763701bc8dbdefca",
     "semantic_hash": ""
   },
   ".agent-memory/claude/MEMORY.md": {
-    "mtime": 1784346991.9956167,
-    "ast_hash": "75195065eae2c50d0a704dacee09a5c9",
+    "mtime": 1784564706.554912,
+    "ast_hash": "cdd98a154cbe050cadab5f58fada04f5",
     "semantic_hash": ""
   },
   ".agent-memory/claude/feedback_async_no_coroutines.md": {
-    "mtime": 1781464593.4830837,
-    "ast_hash": "2df91e01f5fddc9a690fe1b3fc1f5fcf",
+    "mtime": 1784564706.5572145,
+    "ast_hash": "da026a979252711e9cc7453333eb78a1",
     "semantic_hash": ""
   },
   ".agent-memory/claude/feedback_audit_workflow.md": {
-    "mtime": 1781464593.484662,
-    "ast_hash": "40193faecaf486ae04db7193da67501d",
+    "mtime": 1784564706.5593421,
+    "ast_hash": "031f344c277fc47429491c96ecb17053",
     "semantic_hash": ""
   },
   ".agent-memory/claude/feedback_settings_dto_pattern.md": {
-    "mtime": 1781464593.486237,
-    "ast_hash": "fb9da08666b01d1191b849e8e9131788",
+    "mtime": 1784564706.5617476,
+    "ast_hash": "9ba26531166a816f076205ed9e76fd7d",
     "semantic_hash": ""
   },
   ".agent-memory/claude/feedback_subsystem_decomposition_wiring.md": {
-    "mtime": 1781464593.4872818,
-    "ast_hash": "2d89c089c010c0641206f85a8c798afd",
+    "mtime": 1784564706.5663514,
+    "ast_hash": "9aea1bded4f3d8c64e78100cc63a7afb",
     "semantic_hash": ""
   },
   ".agent-memory/claude/project_chunk_biome_seam.md": {
-    "mtime": 1780252259.5379856,
-    "ast_hash": "3ca254a72cfa09f01e6cae6156876d22",
+    "mtime": 1784564706.567871,
+    "ast_hash": "83bf1e6ba698a0b522f175cbeded12c6",
     "semantic_hash": ""
   },
   ".agent-memory/claude/project_code_refactor_arc.md": {
-    "mtime": 1781570428.1601832,
-    "ast_hash": "178f6fd687e5141075f60b5e00b828d8",
+    "mtime": 1784564706.5733447,
+    "ast_hash": "9dc13b5e4c5da6474e9ff2f3bd722afe",
     "semantic_hash": ""
   },
   ".agent-memory/claude/project_console_arc.md": {
-    "mtime": 1781464593.4920783,
-    "ast_hash": "36541db68cd0d21d9725f08f023d967f",
+    "mtime": 1784564706.575009,
+    "ast_hash": "011d3c4d883255814b009f1050b518ef",
     "semantic_hash": ""
   },
   ".agent-memory/claude/project_current_focus.md": {
-    "mtime": 1781570415.7096102,
-    "ast_hash": "477e8f2cd8e01feda8d90a613687583b",
+    "mtime": 1784564706.5770364,
+    "ast_hash": "15167657a25747349173c7cf6b86a5a6",
     "semantic_hash": ""
   },
   ".agent-memory/claude/project_grass_chunks_research.md": {
-    "mtime": 1780206791.7759676,
-    "ast_hash": "ddae8de03df4d733a4266db4d6e434c0",
+    "mtime": 1784564706.5796008,
+    "ast_hash": "241e784ef5344b7a66f8e6991e825e78",
     "semantic_hash": ""
   },
   ".agent-memory/claude/project_normal_mapping_flat.md": {
-    "mtime": 1780270229.5986032,
-    "ast_hash": "ba22a11dba155180b572c2ebcfc95917",
+    "mtime": 1784564706.5885527,
+    "ast_hash": "42e321418aafd34320eba2f2883057d3",
     "semantic_hash": ""
   },
   ".agent-memory/claude/project_ocean_wave_approach.md": {
-    "mtime": 1781464593.4964287,
-    "ast_hash": "d4f51d098ba0ace2371196ee9292b78a",
+    "mtime": 1784564706.5900755,
+    "ast_hash": "dc7694f5daabf73105ba8e23aa32e9e0",
     "semantic_hash": ""
   },
   ".agent-memory/claude/project_testing_stance.md": {
-    "mtime": 1781464593.4969437,
-    "ast_hash": "e2e8aabc735d021dcd6e229df123298a",
+    "mtime": 1784564706.598794,
+    "ast_hash": "41436868d4bff581f54e4d18ca72e6ef",
     "semantic_hash": ""
   },
   ".agent-memory/claude/reference_agent_conversation.md": {
-    "mtime": 1780360881.513902,
-    "ast_hash": "0884a8f8dc04bac0aa974149299d510a",
+    "mtime": 1784564706.6017294,
+    "ast_hash": "c83b4a0b5c723012f9b0fdcbe3da1651",
     "semantic_hash": ""
   },
   ".agent-memory/claude/reference_local_only.md": {
-    "mtime": 1781464593.4984682,
-    "ast_hash": "9f6d49e51dc1fa658a245e9dfec7a2d6",
+    "mtime": 1784564706.6028564,
+    "ast_hash": "ffc9d57e6e2c36ba6d4f94f700dddfac",
     "semantic_hash": ""
   },
   ".agent-memory/claude/reference_planet_architect.md": {
-    "mtime": 1781464593.500487,
-    "ast_hash": "e714a8ad2e23fa78b396f6fbde7fc6f9",
+    "mtime": 1784564706.6587214,
+    "ast_hash": "a57fe23154f55aa3429cf3ec9651108f",
     "semantic_hash": ""
   },
   ".agent-memory/codex/MEMORY.md": {
-    "mtime": 1781463956.6160498,
-    "ast_hash": "420f7a605e01d9fe4da3ae0ef6e76950",
+    "mtime": 1784564706.6616995,
+    "ast_hash": "dec5d6942457ae77e20741d627e6da14",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/instructions.md": {
-    "mtime": 1781464593.5109649,
-    "ast_hash": "c2363b786b3aca66169b115ceadc80ef",
+    "mtime": 1784564706.664255,
+    "ast_hash": "3d74425398bfd4eb0a8f6c7acb765937",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/2026-05-24T17-05-33-hard-isolation-before-tuning.md": {
-    "mtime": 1781464593.513061,
-    "ast_hash": "215c0bece6d2152977518898ef0267b4",
+    "mtime": 1784564706.665766,
+    "ast_hash": "ec12297623abce8c13ca32dded903eef",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260520-2340-water-shoreline-retention.md": {
-    "mtime": 1779339054.0257826,
-    "ast_hash": "2b69a3b4935d8d94a0584a7cd9fd02dc",
+    "mtime": 1784564706.6718225,
+    "ast_hash": "baddbd40ad913ef3148d8e6efa135e60",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260520-2352-f10-targeted-water-debug.md": {
-    "mtime": 1779339130.56668,
-    "ast_hash": "258f8a48b887a96232ea6d02ca17f38a",
+    "mtime": 1784564706.6723316,
+    "ast_hash": "975c7672717572c0fd530b790721a951",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-0004-water-artifact-diagnosis.md": {
-    "mtime": 1779339707.50548,
-    "ast_hash": "a9502d51b7f11392b6815483f3035f22",
+    "mtime": 1784564706.6738508,
+    "ast_hash": "1e9d09fc4678fc0a3110ca45d6966901",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-0013-water-volume-interior-mask.md": {
-    "mtime": 1779340172.411777,
-    "ast_hash": "a4add76329ec40abfa648244e00d0a05",
+    "mtime": 1784564706.675391,
+    "ast_hash": "5c777e73b8a5606361ae3373f87b6a3c",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-0023-water-shelf-regression-overlap.md": {
-    "mtime": 1779340741.7922375,
-    "ast_hash": "54447080e6a31892108ed0ba8097c56d",
+    "mtime": 1784564706.6774082,
+    "ast_hash": "f37aa7d4094861e011dc0ff9c0dedbeb",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-0034-shore-foam-edge.md": {
-    "mtime": 1779341323.4129312,
-    "ast_hash": "391f0d3ca9f29cbe540ea1c3661bba37",
+    "mtime": 1784564706.6794336,
+    "ast_hash": "115b8f0b5d8cdc903246db75e55c7b22",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-0044-water-depth-contact.md": {
-    "mtime": 1779341774.949432,
-    "ast_hash": "674a7ad6c7e1a7e6c04ce9758ea702e0",
+    "mtime": 1784564706.681472,
+    "ast_hash": "c5a6030e2c6abe69f81b06868ebb4c22",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-0047-surface-contact-debug.md": {
-    "mtime": 1779342468.3479035,
-    "ast_hash": "7606e5b3f2aa630b7f764f9296382e7b",
+    "mtime": 1784564706.6824853,
+    "ast_hash": "8a94d06fe641ea886ac4d2709a3818a3",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-0721-volume-edge-fresnel.md": {
-    "mtime": 1779366091.7693422,
-    "ast_hash": "11675647b8b8cf345dbf70b24ba7ab53",
+    "mtime": 1784564706.6865284,
+    "ast_hash": "f77e944a1d309c5c82204dba5782c546",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-0734-near-surface-silhouette.md": {
-    "mtime": 1779366905.6741042,
-    "ast_hash": "d8620d0361bf41ea624477b361986bb0",
+    "mtime": 1784564706.6903527,
+    "ast_hash": "d5efa4ab97764e9d9e6dc5e5a6871921",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-0941-water-binary-isolation.md": {
-    "mtime": 1779374531.0867846,
-    "ast_hash": "388921a4a420dbada6b1aa15bf6e7043",
+    "mtime": 1784564706.6913526,
+    "ast_hash": "2ccdae6d13e88b2341fc865700072e8e",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-0955-volume-only-confirmed.md": {
-    "mtime": 1779375338.6694345,
-    "ast_hash": "4725eae666081d9df7cea5644b5cda7b",
+    "mtime": 1784564706.6928594,
+    "ast_hash": "560b605721f29bc8afb210c7d646dc16",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-1124-volume-edge-dilation.md": {
-    "mtime": 1779380688.821144,
-    "ast_hash": "370b93e3cd3d176829710d7608b8dc35",
+    "mtime": 1784564706.6933675,
+    "ast_hash": "ecd5174d4821e0bb1966ebc6e761a10f",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-1150-volume-refraction-isolation.md": {
-    "mtime": 1779382275.7617452,
-    "ast_hash": "80b37f108faa4e84b1f7ea19e2c53d49",
+    "mtime": 1784564706.694993,
+    "ast_hash": "1df46ecdf071a1dab84359249a7c37ba",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-1223-volume-source-occlusion.md": {
-    "mtime": 1779384248.804821,
-    "ast_hash": "294a79b7d3256a7969d989fd7f6e30ae",
+    "mtime": 1784564706.7040637,
+    "ast_hash": "498876fd0c2a7a5b06613ac022004da0",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-125937-terrain-source-pink.md": {
-    "mtime": 1779386392.99357,
-    "ast_hash": "0b4d8169fe40285db2319b88a3817a7d",
+    "mtime": 1784564706.7086115,
+    "ast_hash": "f7a518f991a2f4b164337eefe966d5cd",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-132053-source-matte.md": {
-    "mtime": 1779387695.6700854,
-    "ast_hash": "e9f94585b48c8097acc4c736aebc0c18",
+    "mtime": 1784564706.709122,
+    "ast_hash": "04eb929dbd91f239b2a4af08647ccc7d",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-140752-shoreline-coverage-seam.md": {
-    "mtime": 1779390516.571024,
-    "ast_hash": "769f441a6d780c2377cccd8460c07f69",
+    "mtime": 1784564706.710133,
+    "ast_hash": "38df50ed3475f69aef6f5286059b2a34",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-142207-square-face-boundary.md": {
-    "mtime": 1779391372.6121938,
-    "ast_hash": "2b64d2ea9622218cafe325ee063e9057",
+    "mtime": 1784564706.7111342,
+    "ast_hash": "13da075e51c86da86adf0b0a68e205d3",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-143404-global-water-graph.md": {
-    "mtime": 1779392069.5193975,
-    "ast_hash": "8187acffd0331ade533a7b0535389237",
+    "mtime": 1784564706.744296,
+    "ast_hash": "460e6764c7419a506a722fb5fbc6ffa1",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-174545-curved-sea-ray-diagnostic.md": {
-    "mtime": 1779403574.2129636,
-    "ast_hash": "6b305340f617b0086703f986f356711c",
+    "mtime": 1784564706.7472665,
+    "ast_hash": "2822a391a0a1b3d454ac0895b3c7b247",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-175403-shore-sea-path-override.md": {
-    "mtime": 1779404074.1970792,
-    "ast_hash": "53004193d8ba263c3f6c7221ff799994",
+    "mtime": 1784564706.7497911,
+    "ast_hash": "482a323c79c53eaaf3203cfd93ad4f88",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-180157-analytic-sea-occlusion-gate.md": {
-    "mtime": 1779404548.1483054,
-    "ast_hash": "bb2b11fbd549c3f8666972e7564ba5b2",
+    "mtime": 1784564706.7513142,
+    "ast_hash": "fd67336c8af72b2a3b77ab3ebe77f51e",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-181300-sea-matte-diagnostic.md": {
-    "mtime": 1779405193.5474901,
-    "ast_hash": "d6002283c0cb7bc676cbb61b0e6b2044",
+    "mtime": 1784564706.753337,
+    "ast_hash": "955799596f7a6646c03916b41aec922f",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-182338-long-sea-source-matte.md": {
-    "mtime": 1779405831.9345586,
-    "ast_hash": "67c7134ab6068e8d3293ac32a513179e",
+    "mtime": 1784564706.7564125,
+    "ast_hash": "23fe3556236d311eb6b53ff091cbf821",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-183348-horizon-contact-matte.md": {
-    "mtime": 1779406444.200188,
-    "ast_hash": "3824ec8dacba84ea02847c00d917749c",
+    "mtime": 1784564706.7584097,
+    "ast_hash": "c6a52a1e84c8d27ec1751c511cdfb896",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260521-184117-stop-matte-tuning-pivot.md": {
-    "mtime": 1779406898.8622262,
-    "ast_hash": "66b112261c09ee8466f5ffd1fd2db581",
+    "mtime": 1784564706.7604098,
+    "ast_hash": "242b57454519f86785d9a4a9424bb87f",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260522-190957-proceduralplanets-water-handoff.md": {
-    "mtime": 1779495036.331378,
-    "ast_hash": "390aafeb86a7253444e2e0895671799f",
+    "mtime": 1784564706.7634506,
+    "ast_hash": "2d1e147a797cbda349153b8f10351a51",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260524-012649-performance-water-priority.md": {
-    "mtime": 1779604137.1455836,
-    "ast_hash": "d6047ca060a9c4053dd1dcd1441018b0",
+    "mtime": 1784564706.7716,
+    "ast_hash": "c0f2d28bf5bf6d345c1599fe9b648fdf",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260524-224518-water-layer-reset-plan.md": {
-    "mtime": 1779680736.6711679,
-    "ast_hash": "a582e2a941e0e9827c93bda144767c18",
+    "mtime": 1784564706.7777,
+    "ast_hash": "3840581dce2199abed66cdbf4a46c192",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260526-094524-water-surface-resume-state.md": {
-    "mtime": 1779806879.1823535,
-    "ast_hash": "40084f12d5e1f082fb5dfb0fd8089c69",
+    "mtime": 1784564706.7787113,
+    "ast_hash": "7f35406d4fcf75ea1d5d0b966390f0fe",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260531-094908-cloud-cubeface-seam.md": {
-    "mtime": 1780238962.6227324,
-    "ast_hash": "a42f566e65184be9615ba173570fbf6c",
+    "mtime": 1784564706.7797263,
+    "ast_hash": "8283173aa3774d56dc1013a52c41c0b0",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260602-proceduralplanets-grass-scale-f10.md": {
-    "mtime": 1780373189.8554935,
-    "ast_hash": "5fd37ea1e2676a47535ae1fb4a7b7401",
+    "mtime": 1784564706.78046,
+    "ast_hash": "26171aed3102e8777b8150d68731ef9a",
     "semantic_hash": ""
   },
   ".agent-memory/codex/extensions/ad_hoc/notes/20260614-shared-project-memory.md": {
-    "mtime": 1781464225.321797,
-    "ast_hash": "6d5e9768bc71ca2f96579c424a8253d8",
+    "mtime": 1784564706.7850194,
+    "ast_hash": "9c8f1e27090e1fc610173516ebb896b3",
     "semantic_hash": ""
   },
   ".agent-memory/codex/memory_summary.md": {
-    "mtime": 1781464511.222314,
-    "ast_hash": "184c11b145ea860be32299c095d6f8de",
+    "mtime": 1784564706.7860856,
+    "ast_hash": "558379e3d9acfb7dcf1538d2ba02dfdb",
     "semantic_hash": ""
   },
   ".agent-memory/codex/raw_memories.md": {
-    "mtime": 1781464593.508613,
-    "ast_hash": "400d30e2fbdcc62dd584153e2bd77fa7",
+    "mtime": 1784564706.7896252,
+    "ast_hash": "266eb27a16304752e8fb4dbafd3b5dd3",
     "semantic_hash": ""
   },
   ".agent-memory/codex/rollout_summaries/2026-06-13T16-56-33-3amJ-code_refactor_audit_and_startup_perf_refactor.md": {
-    "mtime": 1781464593.5321856,
-    "ast_hash": "3b4727572f03b44535159c59e7fde188",
+    "mtime": 1784564706.7921329,
+    "ast_hash": "9a4daf8398c618f114e2e012dd801737",
     "semantic_hash": ""
   },
   ".agent-memory/codex/skills/proceduralplanets-water-artifact-debug/SKILL.md": {
-    "mtime": 1779714423.626356,
-    "ast_hash": "22934303b9ff693ffe864e64475c9a98",
+    "mtime": 1784564706.7946644,
+    "ast_hash": "5c70a35a5fcc64df9cf1835d7bee9247",
     "semantic_hash": ""
   },
   ".amazonq/rules/memory-bank/atmosphere-reference.md": {
@@ -118105,17 +118085,17 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1783375526.2371633,
-    "ast_hash": "a8a86eb754255df800fe8157cdf312ba",
+    "mtime": 1784564707.1588929,
+    "ast_hash": "76ed084d49462371f9447119e3a17ab1",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1783375547.6434138,
+    "mtime": 1784564710.408551,
     "ast_hash": "e62bfb73dadbcde63b88b912abff72d9",
     "semantic_hash": ""
   },
   "GEMINI.md": {
-    "mtime": 1781462962.567803,
+    "mtime": 1784564710.4143944,
     "ast_hash": "8a6643a420fdad6bfb583523bc6cef16",
     "semantic_hash": ""
   },
@@ -123220,8 +123200,8 @@
     "semantic_hash": ""
   },
   "ProjectSettings/ProjectVersion.txt": {
-    "mtime": 1781448694.6348019,
-    "ast_hash": "4568aaf60a85160415dda25b6545b53b",
+    "mtime": 1784564711.9073076,
+    "ast_hash": "bbb4cd704eb66d0c215de4d17813136f",
     "semantic_hash": ""
   },
   "README.md": {
@@ -123240,7 +123220,7 @@
     "semantic_hash": ""
   },
   "docs/agent-conversation/README.md": {
-    "mtime": 1782218607.8583908,
+    "mtime": 1784564711.919462,
     "ast_hash": "5082cd806a1253ec7a431b823c8cb9b4",
     "semantic_hash": ""
   },
@@ -123310,7 +123290,7 @@
     "semantic_hash": ""
   },
   "docs/design/2026-06-08-performance-maintainability-plan.md": {
-    "mtime": 1781315470.5686758,
+    "mtime": 1784564711.9359157,
     "ast_hash": "846a3395755e44bc54698a5cfa612967",
     "semantic_hash": ""
   },
@@ -123320,23 +123300,23 @@
     "semantic_hash": ""
   },
   "docs/design/2026-06-10-init-graph.md": {
-    "mtime": 1781379460.434927,
-    "ast_hash": "e6635d9672db92793ce48efe50ff87f9",
+    "mtime": 1784564711.939555,
+    "ast_hash": "04d9dcc43ffb9bbb57185a0cdbf15f22",
     "semantic_hash": ""
   },
   "docs/design/2026-06-10-settings-service.md": {
-    "mtime": 1781379364.781832,
-    "ast_hash": "4e35bfc201bd8484ad4b1eaf3da49574",
+    "mtime": 1784564711.9405737,
+    "ast_hash": "a7b9d0069330a4a65963397d78ebef0f",
     "semantic_hash": ""
   },
   "docs/design/2026-06-12-chunked-surface-provider-restructure.md": {
-    "mtime": 1781315075.8919995,
-    "ast_hash": "d43575068c665e08a57cd6c48914f718",
+    "mtime": 1784564711.943131,
+    "ast_hash": "f0923c98132f413f20b53edf891a2e70",
     "semantic_hash": ""
   },
   "docs/design/2026-06-13-world-lifecycle.md": {
-    "mtime": 1781379900.1519334,
-    "ast_hash": "981f1bf8f99182db2317a017eaa7a29f",
+    "mtime": 1784564711.9446692,
+    "ast_hash": "d95630cdbaf1d06a17c10da7e6e5414e",
     "semantic_hash": ""
   },
   "docs/phases/00-architecture.md": {
@@ -168900,153 +168880,123 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/DebugCapturePipeline.cs": {
-    "mtime": 1783774963.5955188,
-    "ast_hash": "960f11daa0b3d682ac73cbe09ae87478",
+    "mtime": 1784564708.9894717,
+    "ast_hash": "5247c68fe5319f31fe32951e04c7cb50",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/DebugOverlayHud.cs": {
-    "mtime": 1781478538.0053976,
-    "ast_hash": "0813c53b9c92491a564b9d015e1ed16d",
+    "mtime": 1784564709.0056932,
+    "ast_hash": "f0c186605c63fd9d5a564e4598e04091",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Interfaces/ILoadingOverlay.cs": {
-    "mtime": 1781481182.3622994,
-    "ast_hash": "d1a21c1dc20754ba41d459fdab9ecbc5",
+    "mtime": 1784564708.8473954,
+    "ast_hash": "4892b717f4eed7b4661c480ca1868960",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/LoadingProgressBarOverlay.cs": {
-    "mtime": 1781481199.7359164,
-    "ast_hash": "1047925b7ad837d6c83a8e0d70e88ba0",
+    "mtime": 1784564709.046497,
+    "ast_hash": "608faebab434b1b9f3a8e19a1b7b79e6",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Console/Registry/ConsoleAwaitableUtility.cs": {
-    "mtime": 1782148578.24695,
-    "ast_hash": "29a4f9472419a007d98314b74969b0a1",
+    "mtime": 1784564708.5796974,
+    "ast_hash": "d4050656373a85681c2c0acacd3e7400",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Console/Registry/ConsoleCommandResult.cs": {
-    "mtime": 1782148578.244405,
-    "ast_hash": "4b2f47a580919a8da27c35d6fe0f750d",
+    "mtime": 1784564708.586391,
+    "ast_hash": "6ef94213612fb3f484ed9a1ebc3ad390",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Console/Scripting/ConsoleScriptRunner.cs": {
-    "mtime": 1782148843.7406623,
-    "ast_hash": "3c62ffcb76386cdf921136dd07ab3a89",
+    "mtime": 1784564708.624382,
+    "ast_hash": "1f00d430ec85f8630d33ee34d2724d4f",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Console/Scripting/ConsoleScriptRuntime.cs": {
-    "mtime": 1782148578.2535186,
-    "ast_hash": "f8cc68cecfc04be93af8a03f78a8ceb1",
+    "mtime": 1784564708.6274061,
+    "ast_hash": "44c47f3402495ee242762770edf9119c",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Interfaces/IMemoryReporter.cs": {
-    "mtime": 1781568887.5673285,
-    "ast_hash": "60e389f163a3fa389a6a764e5ca3460a",
+    "mtime": 1784564708.849427,
+    "ast_hash": "28c9a1e2b38e043c3e904790f82b07a9",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/BiomeAssignmentField.cs": {
-    "mtime": 1782228180.3800316,
-    "ast_hash": "34eb427a5a6e497620a18e324d47196e",
+    "mtime": 1784564709.2922962,
+    "ast_hash": "c497e13029394abaa482f980937a42c0",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/DiagnosticGridBiomeField.cs": {
-    "mtime": 1782228221.67161,
-    "ast_hash": "b3a6249fcf8fb6622eda42f73be34140",
+    "mtime": 1784564709.5123725,
+    "ast_hash": "fe606cd4e402d7f2f4701a74fee675fa",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/DiagnosticGridBiomeLayout.cs": {
-    "mtime": 1782228440.0127118,
-    "ast_hash": "521cbce24d4df99ad8980b6c8501b227",
+    "mtime": 1784564709.5169883,
+    "ast_hash": "04e993db7b67ee657966f163215324d9",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/DiagnosticTerrainLayout.cs": {
-    "mtime": 1782505434.9372032,
-    "ast_hash": "b3aab5013c2ebbd27901999900b80cd0",
+    "mtime": 1784564709.5640347,
+    "ast_hash": "341a306ad4c5c72382c7228e3d784e0a",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassChunkDispatcher.cs": {
-    "mtime": 1783182024.8492255,
-    "ast_hash": "103ad17c35b7b6b591511805302b0e6f",
+    "mtime": 1784564709.5893223,
+    "ast_hash": "8075e479d85cf224e44943197f067505",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassChunkResidencyResolver.cs": {
-    "mtime": 1781564301.9963863,
-    "ast_hash": "6e52cc31ac13613642ef41dfea035a35",
+    "mtime": 1784564709.591359,
+    "ast_hash": "4d66d2e42d6bd80ca1e4ce65f32ec346",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/LightingDebugCommands.cs": {
-    "mtime": 1782511307.058292,
-    "ast_hash": "a3713b3810962cfed726967c582a6b25",
+    "mtime": 1784564709.6355605,
+    "ast_hash": "dfa9fffc70f575646f9140ffb9922a89",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PlanetRecipe.cs": {
-    "mtime": 1782505464.9994776,
-    "ast_hash": "1af84d00170233213425c78bbc868930",
+    "mtime": 1784564710.065652,
+    "ast_hash": "6a8034894cb4bb49178dfbd8cf51dec7",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/WeatherEvolutionScheduler.cs": {
-    "mtime": 1781553683.7395794,
-    "ast_hash": "9b1e33c04fe792a59fac5bc821515074",
+    "mtime": 1784564710.276641,
+    "ast_hash": "b47cd18a94095807b68c864450e52804",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/WeatherQueryCache.cs": {
-    "mtime": 1783093813.644468,
-    "ast_hash": "257ef08313c47fc530000b4655594bee",
-    "semantic_hash": ""
-  },
-  "Temp/bin/Debug/ProceduralPlanets.Core.deps.json": {
-    "mtime": 1782842365.696448,
-    "ast_hash": "03b1a2716058747ae5ffbd941ede4028",
-    "semantic_hash": ""
-  },
-  "Temp/bin/Debug/ProceduralPlanets.Planet.deps.json": {
-    "mtime": 1782955834.2034414,
-    "ast_hash": "f8db30885644fb27eb29e7112d7525cd",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ProceduralPlanets.Core/ProceduralPlanets.Core.sourcelink.json": {
-    "mtime": 1782955827.952539,
-    "ast_hash": "b0dd42b000451f9faeda0df22d6d3dbc",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ProceduralPlanets.Planet/ProceduralPlanets.Planet.sourcelink.json": {
-    "mtime": 1782955832.0165806,
-    "ast_hash": "b0dd42b000451f9faeda0df22d6d3dbc",
+    "mtime": 1784564710.2897632,
+    "ast_hash": "c7c843fbe0ce6692909004b5812c71e3",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Biome Dot Probe.txt": {
-    "mtime": 1782511441.5525236,
-    "ast_hash": "520225d2ff896c2dec1a2787226340bd",
+    "mtime": 1784564707.583956,
+    "ast_hash": "3e4228c7ccb49d14ffcce545ed9eb304",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Blanket Toggle Test.txt": {
-    "mtime": 1782511441.605971,
-    "ast_hash": "6d42524a6c606ba156ca90fe0cd1eaa3",
+    "mtime": 1784564707.5930188,
+    "ast_hash": "573f7c45f96c2f4843402be02915bf71",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Brightness Sweep.txt": {
-    "mtime": 1782511441.56152,
-    "ast_hash": "609b05b848ff0e3650d73793a883ccd9",
+    "mtime": 1784564707.6008022,
+    "ast_hash": "01ec8585dffbdd44367c3f98e822a26e",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Layer Isolation.txt": {
-    "mtime": 1782511441.5726273,
-    "ast_hash": "dfff257da144f1eb291b3d126f5657f6",
+    "mtime": 1784564707.6264708,
+    "ast_hash": "44d68140f5021b92e06078091039e197",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Terrain Only.txt": {
-    "mtime": 1782511441.5838552,
-    "ast_hash": "6da07e36f7e5ecc0d8af8370b32e3266",
-    "semantic_hash": ""
-  },
-  "Library/com.singularitygroup.hotreload/logs/log20260616.txt": {
-    "mtime": 1781623987.9624212,
-    "ast_hash": "3ca1916cd61e17e02ef94f5b492772f4",
-    "semantic_hash": ""
-  },
-  "Library/com.singularitygroup.hotreload/logs/log20260617.txt": {
-    "mtime": 1781736734.798278,
-    "ast_hash": "9531b2a078f9d84975bfeb75bddf413f",
+    "mtime": 1784564707.6372766,
+    "ast_hash": "fe5bf8acb5953c8b498f2df96a29bb84",
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/logs/log20260618.txt": {
@@ -169089,54 +169039,44 @@
     "ast_hash": "27506b45eb8c38e34d5049aa1cb09554",
     "semantic_hash": ""
   },
-  "Temp/obj/ProceduralPlanets.Core/ProceduralPlanets.Core.csproj.FileListAbsolute.txt": {
-    "mtime": 1782663394.043751,
-    "ast_hash": "358e59419640950a043743cdc25af78f",
-    "semantic_hash": ""
-  },
-  "Temp/obj/ProceduralPlanets.Planet/ProceduralPlanets.Planet.csproj.FileListAbsolute.txt": {
-    "mtime": 1782663396.7856512,
-    "ast_hash": "7166dae357ff3cd3c35abc4b7bb70db8",
-    "semantic_hash": ""
-  },
   "docs/agent-conversation/2026-06-23-planet-recipe-diagnostic-generation.md": {
     "mtime": 1782227221.2607255,
     "ast_hash": "f36c5ae282ad8c7f9a58056f87a6e532",
     "semantic_hash": ""
   },
   "procedural-planets-architecture.drawio.png": {
-    "mtime": 1782157119.8079832,
+    "mtime": 1784564730.651462,
     "ast_hash": "756fa1114a5edabfaf7db034cc6aa674",
     "semantic_hash": ""
   },
   "procedural-planets-architecture.png": {
-    "mtime": 1782157081.571525,
+    "mtime": 1784564730.6609805,
     "ast_hash": "475042c0be34fcaecb62cba9f533c46e",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Baseline Sweep.txt": {
-    "mtime": 1782511441.6144996,
-    "ast_hash": "2016cb80c3e82108d72c0ea23e23f7c9",
+    "mtime": 1784564707.577368,
+    "ast_hash": "a5ae955f16ab43461469522bbdaf1bf9",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Blade Tint Compare.txt": {
-    "mtime": 1782572447.8812575,
-    "ast_hash": "41876081eb45e3ec1e49b480f6ce319c",
+    "mtime": 1784564707.587562,
+    "ast_hash": "e3779ba6702e46c49e647aa0d432666e",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Location Scout.txt": {
-    "mtime": 1782515038.5886748,
-    "ast_hash": "b15d3b1fbd9878747850924625ff2a6f",
+    "mtime": 1784564707.6311178,
+    "ast_hash": "0e2851e87a5c69a3585e1b8b2e131ca6",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Pop-in Edge Probe.txt": {
-    "mtime": 1782583752.0493565,
-    "ast_hash": "17ec84e18ac56e9b6ddcffd86ec782cd",
+    "mtime": 1784564707.6347234,
+    "ast_hash": "13da99c8b093d84b0d5a24abc99a44c5",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Transition Sequence.txt": {
-    "mtime": 1782574351.655869,
-    "ast_hash": "988c57a89a4ed029a63434cf96e21c78",
+    "mtime": 1784564707.6454668,
+    "ast_hash": "cdc75da3a910530b1e9a18ee75760719",
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/logs/log20260627.txt": {
@@ -169145,43 +169085,43 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/SurfacePathDebugCommands.cs": {
-    "mtime": 1782909572.073504,
-    "ast_hash": "9a408b62886bd07e8f541c456ad80175",
+    "mtime": 1784564710.2255888,
+    "ast_hash": "8ccd1e920d96f89df059a449741d755b",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Color Match Sweep.txt": {
-    "mtime": 1782623622.1291375,
-    "ast_hash": "654df6ae7075a95b8684e78d39fa1d0b",
+    "mtime": 1784564707.607638,
+    "ast_hash": "969917824e4a6891280cf7b0603ce90b",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Handoff Compare.txt": {
-    "mtime": 1782585832.6798797,
-    "ast_hash": "3ee4046f5a7c805f858b2d4b54ae6ebd",
+    "mtime": 1784564707.6223707,
+    "ast_hash": "19d091e33fcd515dd71aa3a1ad9ab12e",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Path Paint Probe.txt": {
-    "mtime": 1782662229.732834,
-    "ast_hash": "4a6ce90d12081298ff9b0dd8f2d56a3e",
+    "mtime": 1784564707.657533,
+    "ast_hash": "3008059d5a461426105fe4385135997c",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Path Pattern Probe.txt": {
-    "mtime": 1782682940.038506,
-    "ast_hash": "34095c2ebae900d9a8e1bda951ecc159",
+    "mtime": 1784564707.668916,
+    "ast_hash": "34467770a66b4b1acbd402740dc26cd4",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Path Persistence Probe.txt": {
-    "mtime": 1782671886.0447638,
-    "ast_hash": "69b5fc13e99a1e2d8a1d6af735133bf5",
+    "mtime": 1784564707.673432,
+    "ast_hash": "7a20a05e6b2733e5255de8ef44e528aa",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Path Stroke Reload Check.txt": {
-    "mtime": 1782677259.9154718,
-    "ast_hash": "8d768360ffaff93c9abc80ad4a907f5c",
+    "mtime": 1784564707.7048967,
+    "ast_hash": "647f2681977fbb41ab8fbbbdc94406ff",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Path Stroke Save Probe.txt": {
-    "mtime": 1782677259.9106483,
-    "ast_hash": "20ead4a7816c4f56ee8f4b2211e0cee4",
+    "mtime": 1784564707.7084632,
+    "ast_hash": "633fa5f231cbb5850508614c097dc786",
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/logs/log20260628.txt": {
@@ -169190,8 +169130,8 @@
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Path Mouse Tool Setup.txt": {
-    "mtime": 1782854089.4675527,
-    "ast_hash": "4a53afd1242861390b7bf780728a495d",
+    "mtime": 1784564707.6519716,
+    "ast_hash": "20924fe30395c20bf2f11c215e0371a0",
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/logs/log20260629.txt": {
@@ -169200,18 +169140,18 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Interfaces/ISurfacePathBrushService.cs": {
-    "mtime": 1782749972.3487122,
-    "ast_hash": "b5283c5f2a6867c94e76bf3ed2460536",
+    "mtime": 1784564708.8612268,
+    "ast_hash": "a008c802f2cf2057363d7bce30b37b3e",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/SurfacePathMousePainter.cs": {
-    "mtime": 1783162138.172077,
-    "ast_hash": "d6848496b81379cb233d00e429383efd",
+    "mtime": 1784564709.1904364,
+    "ast_hash": "a59347c16e47f697cb84b74c1cb973bf",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Interfaces/ICameraLookBlocker.cs": {
-    "mtime": 1782835769.60578,
-    "ast_hash": "13aca9460e8c4ef0ceb96fb2859d6acc",
+    "mtime": 1784564708.7424622,
+    "ast_hash": "0e86dc95394766656e92278fba29e267",
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/logs/log20260630.txt": {
@@ -169225,28 +169165,28 @@
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Path Wear Mask Proof.txt": {
-    "mtime": 1782856552.5618045,
-    "ast_hash": "8e5ba68b379bacef63547674e33e7ced",
+    "mtime": 1784564707.711514,
+    "ast_hash": "02aa0088391302db349dec8967bd5534",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Surface/SurfaceEditController.cs": {
-    "mtime": 1783159864.9809296,
-    "ast_hash": "500683f38e0b479a361ef91757c7e7d5",
+    "mtime": 1784564710.2079687,
+    "ast_hash": "aa4d37c441087c224fae22d26f7a2156",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Path Regrowth Probe.txt": {
-    "mtime": 1782868404.9946923,
-    "ast_hash": "5a0ee765b3461614ea0b0a7afb37ee68",
+    "mtime": 1784564707.7011878,
+    "ast_hash": "98b58c2948da7fc4aac0c1a71acfc353",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Scorch Paint Probe.txt": {
-    "mtime": 1782863078.1217246,
-    "ast_hash": "980a3bf1aaab59e13acfd0f36beb4422",
+    "mtime": 1784564707.7181544,
+    "ast_hash": "bfba96411be9da76ba9f26307607b504",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Scorch Pattern Probe.txt": {
-    "mtime": 1782864528.9715266,
-    "ast_hash": "04c8807891001c4eb601d69cac141f1b",
+    "mtime": 1784564707.721168,
+    "ast_hash": "84943229a9501769fe620a7e4ef41155",
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/logs/log20260701.txt": {
@@ -169254,19 +169194,9 @@
     "ast_hash": "4b4c97df2069db4c5f569a51bb31a547",
     "semantic_hash": ""
   },
-  "docs/audit/2026-07-01-cloud-rain-audit.md": {
-    "mtime": 1782956284.6872432,
-    "ast_hash": "4e653b3e26c0afdd1e92110b7faff93a",
-    "semantic_hash": ""
-  },
-  "docs/audit/2026-07-01-grass-lod-audit.md": {
-    "mtime": 1782994728.1766975,
-    "ast_hash": "dd2a3dd412082df927634d111b86a42d",
-    "semantic_hash": ""
-  },
   "Assets/Resources/ConsoleScripts/Grass Edge Strip Probe.txt": {
-    "mtime": 1782996308.9763868,
-    "ast_hash": "f193f0f9470dace69908d36fbe197404",
+    "mtime": 1784564707.6183054,
+    "ast_hash": "afd543898919b5a607bb368114df7e01",
     "semantic_hash": ""
   },
   "Library/com.singularitygroup.hotreload/logs/log20260702.txt": {
@@ -169274,334 +169204,404 @@
     "ast_hash": "2b8e8f1fed7e5e123b17822198db6450",
     "semantic_hash": ""
   },
-  "docs/audit/2026-07-03-general-code-audit.md": {
-    "mtime": 1783108708.5889027,
-    "ast_hash": "0ca1e054e0c5faf568b812ecc0383c9f",
-    "semantic_hash": ""
-  },
-  "docs/audit/2026-07-03-grass-cloud-line-audit.md": {
-    "mtime": 1783108726.8601553,
-    "ast_hash": "15ed15d3d13e24cbf0a1b878001132e0",
-    "semantic_hash": ""
-  },
   "Assets/Scripts/Core/Events/EventBusAutoBinder.cs": {
-    "mtime": 1783160563.5148678,
+    "mtime": 1784564708.6405005,
     "ast_hash": "aadf1247cc895a360f2d836c08807750",
     "semantic_hash": ""
   },
   "docs/research/2026-07-04-grass-cloud-reference-recommendations.md": {
-    "mtime": 1783164562.825122,
-    "ast_hash": "d5aef19508e4674411abb9d307e08c17",
+    "mtime": 1784564711.9717078,
+    "ast_hash": "9f0e50353a30d6512c9e277b12a1f830",
     "semantic_hash": ""
   },
   "docs/design/2026-07-04-solid-composition-recommendations.md": {
-    "mtime": 1783169284.5558567,
-    "ast_hash": "a3e37dcbc8dedc40570a0f5c08238611",
+    "mtime": 1784724593.4822977,
+    "ast_hash": "7146aed56adc53c0dff89a2762154f44",
     "semantic_hash": ""
   },
   "docs/design/2026-07-04-cloud-visual-migration-plan.md": {
-    "mtime": 1783428062.8744695,
-    "ast_hash": "73ccefe2440f0769ee6ab89a134f0645",
+    "mtime": 1784724593.4852736,
+    "ast_hash": "7f9b9b2a073ce41c4d310d0a5433841a",
     "semantic_hash": ""
   },
   "docs/design/2026-07-04-grass-visual-migration-plan.md": {
-    "mtime": 1783270187.9795966,
-    "ast_hash": "bc860c030150e7be34dfb5ce4c5535a3",
+    "mtime": 1784724593.483272,
+    "ast_hash": "1643e344c552fa08866ed0a0cfe51701",
     "semantic_hash": ""
   },
   "docs/research/2026-07-04-cloud-visual-research.md": {
-    "mtime": 1783268366.6527674,
-    "ast_hash": "07792a2f3b8bf3c3d719adee871e9391",
+    "mtime": 1784564711.9662564,
+    "ast_hash": "a490f354e60deb805ba309f228882a46",
     "semantic_hash": ""
   },
   ".agent-skills/pp-diagnostics-and-tooling/scripts/Compare-CaptureSidecars.ps1": {
-    "mtime": 1783333374.0776794,
-    "ast_hash": "284a74adda26b2fb7f65bbe227690d6d",
+    "mtime": 1784564706.8471377,
+    "ast_hash": "43df0ff60ee84e948174437d072e2600",
     "semantic_hash": ""
   },
   ".agent-skills/pp-diagnostics-and-tooling/scripts/Find-DebugModes.ps1": {
-    "mtime": 1783333560.8697617,
-    "ast_hash": "32ef2d2421a5b19aeed55408f0e1ca0b",
+    "mtime": 1784564706.8486588,
+    "ast_hash": "19315a7a578005e7693443f3936cb4b7",
     "semantic_hash": ""
   },
   ".agent-skills/pp-diagnostics-and-tooling/scripts/Get-LatestCaptureBundle.ps1": {
-    "mtime": 1783333494.8025858,
-    "ast_hash": "b8064202232022deead461a7f4311006",
+    "mtime": 1784564706.8532844,
+    "ast_hash": "b5d5e6bb2729a5533beb251466d2a832",
     "semantic_hash": ""
   },
   ".agent-memory/claude/project_human_readable_console_params.md": {
-    "mtime": 1784351622.2690644,
-    "ast_hash": "b3808d320a0fb16a6e79daf1d4a93e31",
+    "mtime": 1784564706.587533,
+    "ast_hash": "c86925706ed4db93013da6a9df2ae496",
     "semantic_hash": ""
   },
   ".agent-memory/claude/project_skill_library.md": {
-    "mtime": 1783375558.490203,
-    "ast_hash": "1dafcbd4d679f39fa681b7820276e6ac",
+    "mtime": 1784564706.5931888,
+    "ast_hash": "46a3f3acd7252a556f75e30635535f5e",
     "semantic_hash": ""
   },
   ".agent-skills/README.md": {
-    "mtime": 1783375567.8489993,
-    "ast_hash": "91cbf24c5d28acaf107b60e3875a67df",
+    "mtime": 1784723666.342713,
+    "ast_hash": "c686a81b48fe211c16992e44481af445",
     "semantic_hash": ""
   },
   ".agent-skills/pp-architecture-contract/SKILL.md": {
-    "mtime": 1783597167.5660775,
-    "ast_hash": "cc0dc896fddff507ba928c44ee05e785",
+    "mtime": 1784724593.4993205,
+    "ast_hash": "4809ada45c4b7359b63120ee8dbb1600",
     "semantic_hash": ""
   },
   ".agent-skills/pp-build-and-env/SKILL.md": {
-    "mtime": 1783597205.3226092,
-    "ast_hash": "2593fc6a06fb715c53151e88ee4a86d8",
+    "mtime": 1784724593.4958022,
+    "ast_hash": "26f419b435852911c3bd566d6348b966",
     "semantic_hash": ""
   },
   ".agent-skills/pp-change-control/SKILL.md": {
-    "mtime": 1784351612.0026615,
-    "ast_hash": "38154a197b9c31810b44764d13be6e7e",
+    "mtime": 1784724675.953007,
+    "ast_hash": "0fcb7f0fe870f496699ebc9d807981f0",
     "semantic_hash": ""
   },
   ".agent-skills/pp-debugging-playbook/SKILL.md": {
-    "mtime": 1783353483.8922336,
-    "ast_hash": "f1fc77c4008b950f8c2aeb97b7decba2",
+    "mtime": 1784724593.5103717,
+    "ast_hash": "f66f9488c3f7b3b4909590f0a022f729",
     "semantic_hash": ""
   },
   ".agent-skills/pp-diagnostics-and-tooling/SKILL.md": {
-    "mtime": 1783597205.3144314,
-    "ast_hash": "18fad4a85b2e368e7e4d6916594946dc",
+    "mtime": 1784724675.9510171,
+    "ast_hash": "334a31f7ba4d13fa0adffec0104c1dc8",
     "semantic_hash": ""
   },
   ".agent-skills/pp-docs-and-memory/SKILL.md": {
-    "mtime": 1783597205.3256576,
-    "ast_hash": "38cd6689b9517db93b2b586bbb83d381",
+    "mtime": 1784724593.5048425,
+    "ast_hash": "5bf9ae2ffafca46664eb0d3761bb9d10",
     "semantic_hash": ""
   },
   ".agent-skills/pp-docs-and-memory/templates/agent-conversation-entry.md": {
-    "mtime": 1783597338.8725505,
-    "ast_hash": "b757d8e28fb1b1a70118f7e0cef3cfc3",
+    "mtime": 1784564706.8596995,
+    "ast_hash": "8109d02756a2eda4deef8987d7050c4d",
     "semantic_hash": ""
   },
   ".agent-skills/pp-docs-and-memory/templates/audit.md": {
-    "mtime": 1783333377.132697,
-    "ast_hash": "e5c90d4fafa4400415fa1e3587d6e47a",
+    "mtime": 1784724593.5028424,
+    "ast_hash": "f380b7161a6b4f0132447d8dfa115a4b",
     "semantic_hash": ""
   },
   ".agent-skills/pp-docs-and-memory/templates/design-doc.md": {
-    "mtime": 1783333358.1158743,
-    "ast_hash": "a6adf224cbf6af47b6f679e7831c5976",
+    "mtime": 1784564706.8617282,
+    "ast_hash": "ae0548430077af558f2523f88bf18f1a",
     "semantic_hash": ""
   },
   ".agent-skills/pp-failure-archaeology/SKILL.md": {
-    "mtime": 1783597205.3174736,
-    "ast_hash": "82ac14f7709a8a6a8182a2aa4a4f62bd",
+    "mtime": 1784724593.493801,
+    "ast_hash": "c25de7d6def4f5c6fd2585d964cb789f",
     "semantic_hash": ""
   },
   ".agent-skills/pp-gpu-rendering-reference/SKILL.md": {
-    "mtime": 1783597299.1558602,
-    "ast_hash": "7aef368c67f40760cc14577188ea9c63",
+    "mtime": 1784564706.9016001,
+    "ast_hash": "f8c72fff420133333be76a6c96c4b8c4",
     "semantic_hash": ""
   },
   ".agent-skills/pp-gpu-rendering-reference/clouds.md": {
-    "mtime": 1783333565.4698765,
-    "ast_hash": "dac6d2d324336e4d20b7c8ce3cb54dec",
+    "mtime": 1784564706.9057863,
+    "ast_hash": "56ffe89311f3477ce105fc24d73235ba",
     "semantic_hash": ""
   },
   ".agent-skills/pp-gpu-rendering-reference/cube-sphere.md": {
-    "mtime": 1783333483.2877927,
-    "ast_hash": "4cfcf17f2b03c452eae24c1ab1e2f184",
+    "mtime": 1784564706.9065857,
+    "ast_hash": "4e9e4d08ee8cff3a265ba81e3208b9e5",
     "semantic_hash": ""
   },
   ".agent-skills/pp-gpu-rendering-reference/grass.md": {
-    "mtime": 1783351062.847806,
-    "ast_hash": "775b07f35f7ef8f1639105e0985e3398",
+    "mtime": 1784564706.909168,
+    "ast_hash": "1ba360099f5a971164de294b6c8a9af4",
     "semantic_hash": ""
   },
   ".agent-skills/pp-gpu-rendering-reference/water-atmosphere-precipitation.md": {
-    "mtime": 1783351146.720542,
-    "ast_hash": "510df79fd721b28091f4695ad48b70e0",
+    "mtime": 1784564706.9111257,
+    "ast_hash": "60aab7dc708597bd02fd6b11b3804c07",
     "semantic_hash": ""
   },
   ".agent-skills/pp-proof-and-analysis-toolkit/SKILL.md": {
-    "mtime": 1783597205.3205764,
-    "ast_hash": "6d7b650cfb7af3caf8b4fc1d9583d411",
+    "mtime": 1784724593.4908023,
+    "ast_hash": "0588879cec2b51cb008c714ba98a4ab6",
     "semantic_hash": ""
   },
   ".agent-skills/pp-research-frontier/SKILL.md": {
-    "mtime": 1783353630.3577397,
-    "ast_hash": "33255f3232466328e0917a6d018b3b5d",
+    "mtime": 1784564706.927016,
+    "ast_hash": "f22b454a7fba0e392e401a4c44653728",
     "semantic_hash": ""
   },
   ".agent-skills/pp-research-methodology/SKILL.md": {
-    "mtime": 1783333379.0809665,
-    "ast_hash": "adf6edab6714e00c8b20304d263a0bc4",
+    "mtime": 1784724593.4887938,
+    "ast_hash": "480016beded2e7be3d0f9fec95140858",
     "semantic_hash": ""
   },
   ".agent-skills/pp-run-and-operate/SKILL.md": {
-    "mtime": 1783369657.770647,
-    "ast_hash": "7ff8071f4cb31655f7b34e29f3b433dd",
+    "mtime": 1784564706.9407885,
+    "ast_hash": "7167ba1514908191afc7b63ae57daaea",
     "semantic_hash": ""
   },
   ".agent-skills/pp-settings-and-flags/SKILL.md": {
-    "mtime": 1783353131.7407572,
-    "ast_hash": "20a5f780a1d374325e56cfbcd5083009",
+    "mtime": 1784564706.9463558,
+    "ast_hash": "0871579250b1de45b52b23440eb2bc84",
     "semantic_hash": ""
   },
   ".agent-skills/pp-validation-and-evidence/SKILL.md": {
-    "mtime": 1783353233.9960122,
-    "ast_hash": "de1fff45aaab0a75bc7179702ccae323",
+    "mtime": 1784564706.9565184,
+    "ast_hash": "2ebc64cc7b29002d1ffc9597dd8cadff",
     "semantic_hash": ""
   },
   ".agent-skills/pp-visual-migration-campaign/SKILL.md": {
-    "mtime": 1783353442.3245716,
-    "ast_hash": "b4af5d6c2e81f4bdb7928a9139c48bbb",
+    "mtime": 1784564706.9580536,
+    "ast_hash": "a0e45bc2d841ab19f1ade006ef9454b2",
     "semantic_hash": ""
   },
   ".agent-skills/pp-visual-migration-campaign/cloud-phases.md": {
-    "mtime": 1783333599.880311,
-    "ast_hash": "6874f730f55735468f142022db53e808",
+    "mtime": 1784564706.9988651,
+    "ast_hash": "34a68dceb02fe5924bf6f39f2b83dbaf",
     "semantic_hash": ""
   },
   ".agent-skills/pp-visual-migration-campaign/grass-phases.md": {
-    "mtime": 1783353733.2771375,
-    "ast_hash": "a19ecab1913f2aba720d59e75e4e118d",
+    "mtime": 1784564707.0008645,
+    "ast_hash": "8ceb49f653382b00c349aa664e17d53d",
     "semantic_hash": ""
   },
   ".agent-skills/pp-weather-sim-reference/SKILL.md": {
-    "mtime": 1783353391.7658148,
-    "ast_hash": "ab337a6f5adad9f97d4b9d0da5ff3c53",
+    "mtime": 1784724593.486276,
+    "ast_hash": "d809876450a8761075bfb5608da18118",
     "semantic_hash": ""
   },
   ".claude/skills/pp-architecture-contract/SKILL.md": {
-    "mtime": 1783375495.6139035,
-    "ast_hash": "a16ae2371237602d132ba6a70c7ae70a",
+    "mtime": 1784564707.0201406,
+    "ast_hash": "5dbb18118fe1f1dca6f31d0648c1846a",
     "semantic_hash": ""
   },
   ".claude/skills/pp-build-and-env/SKILL.md": {
-    "mtime": 1783375495.7679038,
-    "ast_hash": "1a1a1eef723c71bb9d9018d2cda7ec62",
+    "mtime": 1784564707.0227122,
+    "ast_hash": "e90706e18a9129e6987e25618a4277ec",
     "semantic_hash": ""
   },
   ".claude/skills/pp-change-control/SKILL.md": {
-    "mtime": 1783597167.563533,
-    "ast_hash": "1cb67d8ee9e2c055d3355a5caa80c58a",
+    "mtime": 1784564707.0271013,
+    "ast_hash": "9a24824fbb6d701f5bd619b2e0d00399",
     "semantic_hash": ""
   },
   ".claude/skills/pp-debugging-playbook/SKILL.md": {
-    "mtime": 1783375496.083808,
-    "ast_hash": "7d3b236c8d5be60a3d00ab2c84edc2a1",
+    "mtime": 1784564707.0316832,
+    "ast_hash": "22cb156f4ea2142b119a1ece93ef5148",
     "semantic_hash": ""
   },
   ".claude/skills/pp-diagnostics-and-tooling/SKILL.md": {
-    "mtime": 1783375496.2427378,
-    "ast_hash": "74ab0133413a77163ca6bba7f1b57a82",
+    "mtime": 1784564707.0393057,
+    "ast_hash": "3c43d314b3efc00334251e25f7dd1d86",
     "semantic_hash": ""
   },
   ".claude/skills/pp-docs-and-memory/SKILL.md": {
-    "mtime": 1783375496.3998299,
-    "ast_hash": "8ef6c1555954e89eb850accaca03777d",
+    "mtime": 1784564707.044605,
+    "ast_hash": "c6dda0545d4358ba892e4f7fa7bacbf5",
     "semantic_hash": ""
   },
   ".claude/skills/pp-failure-archaeology/SKILL.md": {
-    "mtime": 1783375496.5548334,
-    "ast_hash": "d02ee0044de7c59bd0f87610831683d5",
+    "mtime": 1784564707.0477452,
+    "ast_hash": "155dd6e937cbbcd27433eb766aee2bc1",
     "semantic_hash": ""
   },
   ".claude/skills/pp-gpu-rendering-reference/SKILL.md": {
-    "mtime": 1783375496.690121,
-    "ast_hash": "addba6caa6ef47af7f44bcb0b523a1f1",
+    "mtime": 1784564707.0516462,
+    "ast_hash": "63d681dc079b7d7c7c69c6305c9b0251",
     "semantic_hash": ""
   },
   ".claude/skills/pp-proof-and-analysis-toolkit/SKILL.md": {
-    "mtime": 1783375496.8196633,
-    "ast_hash": "6d190692c2bec64c8757c16bf860c8c2",
+    "mtime": 1784564707.062421,
+    "ast_hash": "a2305b7a05bab1121a15465bc55d88e0",
     "semantic_hash": ""
   },
   ".claude/skills/pp-research-frontier/SKILL.md": {
-    "mtime": 1783375497.0946174,
-    "ast_hash": "5bf246163458525abac3b57a37037a8d",
+    "mtime": 1784564707.0664797,
+    "ast_hash": "cbceb2f802762729536f33c19392abb6",
     "semantic_hash": ""
   },
   ".claude/skills/pp-research-methodology/SKILL.md": {
-    "mtime": 1783375497.2264333,
-    "ast_hash": "d6ccae46ed2b5a72054342ec546fbc20",
+    "mtime": 1784564707.0695226,
+    "ast_hash": "2e7c1f6d450d40d83b6d0763445e7e3b",
     "semantic_hash": ""
   },
   ".claude/skills/pp-run-and-operate/SKILL.md": {
-    "mtime": 1783375497.36089,
-    "ast_hash": "ae6654e3795aa2006e380eca031a32cd",
+    "mtime": 1784564707.0727232,
+    "ast_hash": "e4a2f48fe672bf4cc236fbff1a98780d",
     "semantic_hash": ""
   },
   ".claude/skills/pp-settings-and-flags/SKILL.md": {
-    "mtime": 1783375497.4968557,
-    "ast_hash": "48bdb409a66dcf30b21386ac5719785f",
+    "mtime": 1784564707.075276,
+    "ast_hash": "15378915c8cf344e0ebfac4e1f27488d",
     "semantic_hash": ""
   },
   ".claude/skills/pp-validation-and-evidence/SKILL.md": {
-    "mtime": 1783375497.6525824,
-    "ast_hash": "260c76f3d69c6c3ad902eb3cb51bef58",
+    "mtime": 1784564707.0773182,
+    "ast_hash": "4e884bf82771c4420bdf6fe6465340ed",
     "semantic_hash": ""
   },
   ".claude/skills/pp-visual-migration-campaign/SKILL.md": {
-    "mtime": 1783375497.9688022,
-    "ast_hash": "1c25e263326470c7460eae1cec8c2f35",
+    "mtime": 1784564707.0814283,
+    "ast_hash": "00b9bd6804ec09d37add63614d60e579",
     "semantic_hash": ""
   },
   ".claude/skills/pp-weather-sim-reference/SKILL.md": {
-    "mtime": 1783375498.101795,
-    "ast_hash": "4bb710a833e381c38d644f016fc7a4de",
+    "mtime": 1784564707.086066,
+    "ast_hash": "f33fdcf92997fffcb0da84c0ce6e54ec",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Godray Cloud Diagnostics.txt": {
-    "mtime": 1783786429.5324376,
-    "ast_hash": "9d33a61f7c381572e75eb3f566131e55",
+    "mtime": 1784564707.573203,
+    "ast_hash": "2654a2a32fe63e57440ab58ab223f3b9",
     "semantic_hash": ""
   },
   "docs/plans/README.md": {
-    "mtime": 1783777095.4928048,
-    "ast_hash": "1882a0bc4893f5b1460448b760bec06e",
+    "mtime": 1784564711.9636889,
+    "ast_hash": "1558d3b3173d50dc32c6dab5676f3308",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Sun Bleed Isolation.txt": {
-    "mtime": 1784031865.7497132,
-    "ast_hash": "b21739ca5f3d9ead6ab571c2231914c6",
+    "mtime": 1784564707.7252612,
+    "ast_hash": "e324ecaf001d6046bf0498943ce92b1b",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Weather Coverage Sweep.txt": {
-    "mtime": 1784045886.862861,
-    "ast_hash": "5453d92fb63e0874754ca78f76ad21d7",
+    "mtime": 1784564707.7273667,
+    "ast_hash": "5a5c1072ffcd2d1b8d6c6af96574633a",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Weather Storm Test.txt": {
-    "mtime": 1784043195.1411524,
-    "ast_hash": "7786e69b35e953b607d2a6ef44a244fe",
+    "mtime": 1784564707.7319949,
+    "ast_hash": "ff50afadd15b04cfcb4bebcaf833ea0e",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassClumpScatter.cs": {
-    "mtime": 1784314538.5165956,
-    "ast_hash": "5238694f95b63dc7646557bea5465fff",
+    "mtime": 1784564709.596315,
+    "ast_hash": "636452a391f6ef84dc2681ae3d1e370c",
     "semantic_hash": ""
   },
   ".agent-memory/claude/project_cloud_weather_arc.md": {
-    "mtime": 1784053554.8443809,
-    "ast_hash": "e268cc424c04d2a3dd5c07feab490228",
+    "mtime": 1784564706.570303,
+    "ast_hash": "20982dc271663778bc53a55bed0db591",
     "semantic_hash": ""
   },
   ".agent-memory/claude/project_grass_layering_arc.md": {
-    "mtime": 1784314588.2296834,
-    "ast_hash": "3545a4f04fbe2348acb5455cc05b91fb",
+    "mtime": 1784564706.5859594,
+    "ast_hash": "a552f9beaa6fe1c35bb8f5da32c8896c",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Debug View.txt": {
-    "mtime": 1784223718.7234335,
-    "ast_hash": "8fa68c9fbc8af51626c07695f3d52c26",
+    "mtime": 1784564707.6135106,
+    "ast_hash": "4fded38f8f59e4242cbf9ef903a12498",
     "semantic_hash": ""
   },
   "docs/research/2026-07-14-grass-far-field-research.md": {
-    "mtime": 1784056126.870444,
-    "ast_hash": "8993f4a88a96aa91d0dc520549ba9626",
+    "mtime": 1784564711.9741893,
+    "ast_hash": "2e2a6d0f7a40c04f3d1b34e3c4e44699",
     "semantic_hash": ""
   },
   "Assets/Resources/Grass/PolygonNatureBiomes_Meadow_Texture_01.png": {
-    "mtime": 1784224430.168504,
+    "mtime": 1784564708.0054336,
     "ast_hash": "b4fe05b3ca8c8b5c1137e5c47b73e5a0",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterDtos.cs": {
+    "mtime": 1784776346.3663468,
+    "ast_hash": "dc73ba97b8d28c0d35e06aeca35cfd64",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterField.cs": {
+    "mtime": 1784776775.8632965,
+    "ast_hash": "8fe6abfe8f48b4b57a2b81dedbb14fb9",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterHash.cs": {
+    "mtime": 1784776259.9656012,
+    "ast_hash": "f25a6092b775e87b824624b86c7b2c1b",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterId.cs": {
+    "mtime": 1784776251.2647016,
+    "ast_hash": "6d96d6db0a7d831468cc92614202557c",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterInstance.cs": {
+    "mtime": 1784776235.0066392,
+    "ast_hash": "fbac679258862d150dcaf60db7f7823f",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterInteraction.cs": {
+    "mtime": 1784776232.439998,
+    "ast_hash": "33bfcc763e0ddec7009962ce3f57f828",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterLibrary.cs": {
+    "mtime": 1784776320.1076703,
+    "ast_hash": "e885fe9e55976953e2cae9d3af21330a",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterPlacementMath.cs": {
+    "mtime": 1784776377.738173,
+    "ast_hash": "91a4ab39742a3e93b36819ce117ad906",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterPrototype.cs": {
+    "mtime": 1784776315.380339,
+    "ast_hash": "0023ba6a5b6e71e9b12959ebcc49e88c",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterQuadtree.cs": {
+    "mtime": 1784776361.7989986,
+    "ast_hash": "1acef2894d9090d1bf209666ca223d52",
+    "semantic_hash": ""
+  },
+  ".agent-skills/pp-code-audit/SKILL.md": {
+    "mtime": 1784723641.9017766,
+    "ast_hash": "b754d2e241a7795777603ec017eeed2d",
+    "semantic_hash": ""
+  },
+  ".agent-skills/pp-code-audit/agents/openai.yaml": {
+    "mtime": 1784723438.8410978,
+    "ast_hash": "5b7c33d4287fee275d9c6dd1363342a4",
+    "semantic_hash": ""
+  },
+  "docs/audit/2026-07-22-consolidated-code-audit.md": {
+    "mtime": 1784724460.4332728,
+    "ast_hash": "9fc3640bc95bd84e16f45e1dfa822974",
+    "semantic_hash": ""
+  },
+  "docs/design/2026-07-20-scatter-placement-system.md": {
+    "mtime": 1784772187.2129352,
+    "ast_hash": "01d8a83fd2bc7e227af091a4613989bc",
+    "semantic_hash": ""
+  },
+  "docs/plans/2026-07-20-scatter-placement-sp1.md": {
+    "mtime": 1784775598.9910426,
+    "ast_hash": "746e30706ee8350acfe2c1026781b785",
+    "semantic_hash": ""
+  },
+  "Assets/Resources/ConsoleScripts/Scatter SP1 Proof.txt": {
+    "mtime": 1784891123.0227096,
+    "ast_hash": "35b72adb8ea12c354cab415262869ccc",
     "semantic_hash": ""
   }
 }

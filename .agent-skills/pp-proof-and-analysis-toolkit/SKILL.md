@@ -485,8 +485,8 @@ in one week.
 
 All claims verified against the working tree on **2026-07-06** (branch `code-refactor`,
 dirty on top of `ec0b1cd` — dirty is normal here). Worked-example history is restated
-from `docs/audit/2026-07-03-grass-cloud-line-audit.md` (A1, A2, A6, B1),
-`docs/audit/2026-07-03-general-code-audit.md` (G1),
+from the former grass/cloud A1, A2, A6, B1 and general G1 findings reconciled in
+`docs/audit/2026-07-22-consolidated-code-audit.md`,
 `docs/research/2026-07-04-grass-cloud-reference-recommendations.md` (R3),
 `docs/design/2026-07-04-grass-visual-migration-plan.md` (Phase 0/1 exit checks), and the
 cloud-seam / water-saga records in `.agent-memory/codex/` (additional background only).

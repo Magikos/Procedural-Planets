@@ -1,6 +1,6 @@
 <!-- Template: docs/audit/YYYY-MM-DD-scope-audit.md
-     Modeled on docs/audit/2026-07-03-grass-cloud-line-audit.md and
-     2026-07-03-general-code-audit.md. Delete comment blocks when instantiating.
+     Modeled on docs/audit/2026-07-22-consolidated-code-audit.md.
+     Delete comment blocks when instantiating.
      THE ONE RULE: findings only. No code changes, no "quick fixes while I'm here".
      Bryan marks each finding fix / defer / wontfix before anything is touched. -->
 

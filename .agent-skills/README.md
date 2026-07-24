@@ -1,6 +1,6 @@
 # ProceduralPlanets Skill Library
 
-Sixteen skills for working on this repo at senior standard with zero prior context.
+Seventeen skills for working on this repo at senior standard with zero prior context.
 Each skill is self-contained: `<name>/SKILL.md`, frontmatter description = when to load
 it, body = the runbook. This page is a router only — every fact lives in a skill.
 
@@ -43,6 +43,7 @@ table below.
 | Turning a hunch into an accepted (or retired) result | pp-research-methodology |
 | What to build next; roadmap toward the full-planet 3rd-person vision | pp-research-frontier |
 | Writing a design doc/audit/research note; updating .agent-memory | pp-docs-and-memory |
+| Audit code; validate/consolidate prior findings; propose behavior-preserving refactors | pp-code-audit |
 
 ## Skill inventory
 
@@ -64,3 +65,4 @@ table below.
 | pp-proof-and-analysis-toolkit | First-principles recipes with worked examples from this repo's history |
 | pp-research-frontier | Open problems toward the vision: SOTA gap, our asset, first three steps, falsifiable milestone each |
 | pp-research-methodology | Hunch→accepted result: predict numbers first, adversarial refutation, adopt-or-retire lifecycle |
+| pp-code-audit | Findings-only whole-repo audit, prior-finding reconciliation, complexity reduction, and refactoring handoff |

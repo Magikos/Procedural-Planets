@@ -182,7 +182,8 @@ resolve turns static grain into crawling grain**.
 
 **What happened:** a temporal-accumulation experiment was built anyway, then **reverted
 by Bryan before the 2026-07-03 line audit**. Per that audit's preamble
-(`docs/audit/2026-07-03-grass-cloud-line-audit.md`, lines 4-6): the single-pass march was
+(`docs/audit/2026-07-22-consolidated-code-audit.md`, prior-audit reconciliation): the
+single-pass march was
 kept; the **pass-ordering and per-step jitter changes were retained**. Also skipped in
 the same wave: `_CloudMaxDistance` march cap — measured irrelevant here because the max
 shell chord is ≈3.7 km on this planet, so a 30 km-style cap never engages.
@@ -287,7 +288,8 @@ checked against camera clip planes. Verify with `git show --stat 55814e3`.
 
 ## 8. Grass LOD G-series — SETTLED with reverts recorded; G6 OPEN
 
-The 2026-07-01 grass-LOD audit (`docs/audit/2026-07-01-grass-lod-audit.md`) diagnosed the
+The former 2026-07-01 grass-LOD audit (reconciled in
+`docs/audit/2026-07-22-consolidated-code-audit.md`) diagnosed the
 "sharp visible lines" in the near→mid→far grass handoff. Status per finding (from the
 audit's own status line plus the 07-04 plan, which calls the series "partially
 shipped/reverted"):
@@ -471,9 +473,9 @@ grep -n "_grassBlanketEnabled\|_chunkGrassEnabled" Assets/Scripts/Planet/PlanetG
 # Entry 7 — atmosphere revert commit
 git show --stat 55814e3
 # Entry 8 — G-series status line (reverts recorded in the doc of record)
-head -6 docs/audit/2026-07-01-grass-lod-audit.md
+grep -n "Former.*grass-lod" docs/audit/2026-07-22-consolidated-code-audit.md
 # Entry 4 — temporal-accumulation revert record
-head -8 docs/audit/2026-07-03-grass-cloud-line-audit.md
+grep -n "Former.*grass-cloud" docs/audit/2026-07-22-consolidated-code-audit.md
 # Entry 11 — hard-disc antialias constant + R8 wear texture
 grep -n "HardDiscEdgePixels" Assets/Scripts/Planet/Surface/ChunkedSurfaceProvider.cs
 grep -n "TextureFormat.R8" Assets/Scripts/Planet/Surface/PlanetChunk.cs

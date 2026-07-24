@@ -29,6 +29,15 @@ Synty PolygonNatureBiomes at `D:\Unity\Explore Assets\Assets\Synty`. Research do
   grid test scene (`Scenes/Tests/Grass.unity`, `DiagnosticGridBiomeField`) does NOT populate
   the terrain biome-density map, so ground/colour reads there are misleading - always verify
   on the real planet.
+  **Scope of that caveat (clarified 2026-07-24):** it applies ONLY to the terrain
+  biome-density map / ground-colour texture the blanket shader samples. It does NOT mean the
+  scene lacks biome data. `ColorGenerator.ResolveBiome` (`ColorGenerator.cs:328`) evaluates
+  `_biomeAssignmentField`, which in that scene IS the `DiagnosticGridBiomeField` — so
+  `IBiomeProvider.EvaluateBiome` returns real Primary/Secondary/BlendWeight there. Any CPU
+  consumer of `EvaluateBiome` (e.g. scatter placement) works fine in the grass scene, and its
+  deterministic 5x5 grid of known borders is actually a BETTER bed for biome-border tests.
+  Layout: `Game Data/Planet Settings/Tests/GrassDiagnosticBiomeGrid.asset` — face 5, 5x5,
+  BlendWidth 0.01 (tight), contains Grassland x10 and Forest x2 among others.
 
 **Reverted / dead ends:**
 - Textured tuft cards (Synty `Grass_01.tga` on the cluster-card LOD): reverted. Synty is

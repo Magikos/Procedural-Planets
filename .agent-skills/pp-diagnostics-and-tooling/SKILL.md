@@ -354,13 +354,13 @@ interactively; use sidecars when you need the number as evidence.
 `graphify-out/` answers structural questions (what calls X, how do A and B connect) with a
 scoped subgraph — CLAUDE.md says to prefer it for codebase questions.
 
-**Caveat (2026-07-06):** audit G19 (`docs/audit/2026-07-03-general-code-audit.md:357-359`)
-reports `graphify query` and `graphify update` **hang with no output in this checkout** —
-the graph ingested `Library/PackageCache` and `local-only/` (24,665 files), drowning
-project signal. Until the excludes land: set a timeout when you try graphify, and fall back
-to `Grep`/`Glob` + `graphify-out/wiki/index.md` (if present) without burning time. Re-test
-before relying on it; if it works again, `graphify update .` after code changes remains the
-rule.
+**Caveat (2026-07-22):** audit F05
+(`docs/audit/2026-07-22-consolidated-code-audit.md`) confirms that the tracked graph is
+stale and its manifest still includes `Library/`; historic queries also hung when generated
+content overwhelmed the graph. A scoped query completed during the 2026-07-22 audit, so
+try graphify with a timeout and verify every result in the live tree. Fall back to
+`rg`/`rg --files` without burning time. `graphify update .` after code changes remains the
+rule until F05 is resolved.
 
 ---
 
@@ -439,7 +439,8 @@ regenerates all mode/set/console catalogs from source. Targeted one-liners (git-
 - Console commands for capture: `grep -n "ConsoleCommand" Assets/Scripts/Core/Services/DebugCaptureController.cs`
 - Generation timings: `grep -n "Generation timings" Assets/Scripts/Planet/Planet.cs`
 - LastDebugCapture teleport: `grep -n "LastDebugCapture\|F10-\*.txt" Assets/Scripts/Core/Services/CameraTeleportStore.cs`
-- graphify hang status: `grep -n "G19" docs/audit/2026-07-03-general-code-audit.md` — and just try `graphify query "test"` with a timeout.
+- graphify state: `grep -n "F05" docs/audit/2026-07-22-consolidated-code-audit.md` — and
+  try `graphify query "test"` with a timeout.
 
 Volatile facts date-stamped 2026-07-06 in-text: capture-set count (27), console census
 (159/20), disabled grass layers, the graphify hang, and every file:line. Line numbers drift

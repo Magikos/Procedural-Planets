@@ -194,7 +194,7 @@ Three verified retirements, showing the full range of outcomes:
 
 | Experiment | Verdict | What was kept | Where the record lives |
 |---|---|---|---|
-| Cloud temporal accumulation (multi-frame march amortization) | Retired — reverted to single-pass march | **Partial keeps**: pass ordering + per-step jitter changes | Preamble of `docs/audit/2026-07-03-grass-cloud-line-audit.md`; `docs/research/2026-07-04-cloud-visual-research.md` states "no temporal accumulation (tried, reverted)" so no later plan re-proposes it blind |
+| Cloud temporal accumulation (multi-frame march amortization) | Retired — reverted to single-pass march | **Partial keeps**: pass ordering + per-step jitter changes | Prior history reconciled in `docs/audit/2026-07-22-consolidated-code-audit.md`; `docs/research/2026-07-04-cloud-visual-research.md` states "no temporal accumulation (tried, reverted)" so no later plan re-proposes it blind |
 | Grass terrain-paint blanket (far-field coverage) | Retired pending the biome-stripe / far-field decision — `_grassBlanketEnabled = false` (`Assets/Scripts/Planet/PlanetGrassCoordinator.cs:21`, as of 2026-07-06), `PlanetVertexColor.shader` reverted to HEAD | The **diagnosis** survived: the stripe root cause (linear coverage + toe cut) is recorded as known-good in grass plan Phase 3(a), with `run "Grass Edge Strip Probe"` (`Assets/Resources/ConsoleScripts/Grass Edge Strip Probe.txt`) as the re-landing regression harness | Audit preamble + `docs/design/2026-07-04-grass-visual-migration-plan.md` Phase 3 |
 | Water-volume lip prepass (underwater shoreline gap) | Retired **as a global pass** (global `ZTest Always` lip caused above-water/through-planet regressions) | Kept **as a conditional**: relaxed lip drawn only when `IsCameraInsideWaterMesh` (`Assets/Scripts/Planet/WaterVolumeRenderFeature.cs:87,188`) | Codex memory rule: "do not re-enable a global ZTest Always lip pass" |
 
@@ -298,7 +298,7 @@ grep -n "_grassBlanketEnabled\|_chunkGrassEnabled" Assets/Scripts/Planet/PlanetG
 grep -n "IsCameraInsideWaterMesh" Assets/Scripts/Planet/WaterVolumeRenderFeature.cs
 
 # Temporal-accumulation revert + blanket disable still stated in the audit preamble
-head -12 docs/audit/2026-07-03-grass-cloud-line-audit.md
+grep -n "Prior Audit Reconciliation\|Former.*grass-cloud" docs/audit/2026-07-22-consolidated-code-audit.md
 
 # Migration-plan predicted gates still current (tracker status drifts fastest)
 head -25 docs/design/2026-07-04-cloud-visual-migration-plan.md

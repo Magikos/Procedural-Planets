@@ -31,9 +31,10 @@ is off (`_chunkGrassEnabled = false`); the terrain-paint blanket is off
 **bare terrain beyond 200 m** — the biggest open visual problem is the far-field story,
 and it's a decision, not just code.
 
-Source docs: [grass/cloud line audit](../audit/2026-07-03-grass-cloud-line-audit.md)
+Source docs: [consolidated audit](../audit/2026-07-22-consolidated-code-audit.md)
 (A1, A5, B2, C1-C5), [reference recommendations](../research/2026-07-04-grass-cloud-reference-recommendations.md)
-(R3, R4, R5, R6, R8), original [grass LOD audit](../audit/2026-07-01-grass-lod-audit.md)
+(R3, R4, R5, R6, R8), original grass LOD findings reconciled in the
+[consolidated audit](../audit/2026-07-22-consolidated-code-audit.md#former-2026-07-01-grass-lod-auditmd)
 (G-series, partially shipped/reverted).
 
 Files: `Grass.shader`, `GrassNearFieldPlace.compute`, `BiomeGrassPlace.compute`,

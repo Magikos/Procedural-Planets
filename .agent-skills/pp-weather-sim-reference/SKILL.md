@@ -186,7 +186,8 @@ helpers proper span 47-55; the trio including the signal spans 40-55). Sibling s
 cite the helpers by name and point here.
 
 As of 2026-07-06 the working tree has **unified** the gloom
-formula that audit A2 (`docs/audit/2026-07-03-grass-cloud-line-audit.md:61`) found
+formula that former audit A2 (reconciled in
+`docs/audit/2026-07-22-consolidated-code-audit.md`) found
 diverged (sky used storm-gated rain + plain max; ground shadow used raw rain + a
 steepening smoothstep, under a false "same formula" comment):
 

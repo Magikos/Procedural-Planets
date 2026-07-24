@@ -235,7 +235,8 @@ Facts verified against the working tree on branch `code-refactor` (dirty, on top
 `memory_summary.md` (water saga, cloud seam, evidence-led routing),
 `.agent-memory/codex/skills/proceduralplanets-water-artifact-debug/SKILL.md` (absorbed,
 mode names re-verified), `.agent-memory/claude/project_chunk_biome_seam.md` and
-`project_normal_mapping_flat.md`, `docs/audit/2026-07-03-grass-cloud-line-audit.md`.
+`project_normal_mapping_flat.md`, and the former grass/cloud findings reconciled in
+`docs/audit/2026-07-22-consolidated-code-audit.md`.
 `.agent-memory/` paths are background only; every load-bearing fact is restated above.
 
 Re-verify before trusting (git-bash, repo root):

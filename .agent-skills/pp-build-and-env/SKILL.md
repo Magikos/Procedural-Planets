@@ -151,7 +151,10 @@ Memory can be stale; revalidate dates/branches before acting on it. It is backgr
 4. **"It compiles" declared as "it works"** — the costliest historical failures (water artifact saga, grass-blanket fight) involved changes that compiled fine and looked wrong. Compile is step zero; see **pp-validation-and-evidence**.
 5. **Editing generated csprojs or third-party dirs** — Unity overwrites the former; the latter are not ours (and the caustics don't-touch rule in CLAUDE.md is the precedent for how badly "harmless" touches go).
 6. **Treating the dirty working tree as mess to clean** — uncommitted changes on `code-refactor` ARE the active work. No `git reset`, `git clean`, `git checkout --` without Bryan's explicit instruction.
-7. **graphify query/update previously hung in this checkout** — audit G19 (`docs/audit/2026-07-03-general-code-audit.md:357-359`) called it "an operational blocker" on 2026-07-06 after the graph ingested `Library/` and `local-only/`. It completed again on 2026-07-09. Keep timeouts on graphify commands; on hang, fall back to `rg`/`rg --files` without burning session time.
+7. **graphify query/update previously hung in this checkout** — prior G19, now F05 in
+   `docs/audit/2026-07-22-consolidated-code-audit.md`, records the generated-content
+   ingestion. It completed again on 2026-07-09. Keep timeouts on graphify commands; on
+   hang, fall back to `rg`/`rg --files` without burning session time.
 
 ## Provenance and maintenance
 

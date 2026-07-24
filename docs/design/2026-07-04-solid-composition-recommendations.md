@@ -2,8 +2,8 @@
 
 Assessment of where the codebase stands against SOLID + composition-over-inheritance, and
 the specific changes that would raise the floor. Grounded in the 2026-07-03 audits
-([grass/cloud](../audit/2026-07-03-grass-cloud-line-audit.md),
-[general](../audit/2026-07-03-general-code-audit.md)) — every claim has a file behind it.
+([consolidated audit](../audit/2026-07-22-consolidated-code-audit.md)) — every claim has a
+current-tree finding or prior-audit reconciliation behind it.
 
 **Honest baseline first:** this codebase is already better than most Unity projects on
 these axes. Composition over inheritance is near-total (no deep hierarchies anywhere —

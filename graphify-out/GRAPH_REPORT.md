@@ -1,16 +1,16 @@
-# Graph Report - ProceduralPlanets  (2026-07-18)
+# Graph Report - ProceduralPlanets  (2026-07-24)
 
 ## Corpus Check
-- 488 files · ~10,042,499 words
+- 498 files · ~10,058,490 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 6107 nodes · 8527 edges · 482 communities (378 shown, 104 thin omitted)
+- 6226 nodes · 8681 edges · 500 communities (395 shown, 105 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ec0b1cd2`
+- Built from commit: `d39e50f4`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -303,6 +303,24 @@
 - [[_COMMUNITY_Community 304|Community 304]]
 - [[_COMMUNITY_Community 305|Community 305]]
 - [[_COMMUNITY_Community 307|Community 307]]
+- [[_COMMUNITY_Community 309|Community 309]]
+- [[_COMMUNITY_Community 311|Community 311]]
+- [[_COMMUNITY_Community 312|Community 312]]
+- [[_COMMUNITY_Community 313|Community 313]]
+- [[_COMMUNITY_Community 314|Community 314]]
+- [[_COMMUNITY_Community 315|Community 315]]
+- [[_COMMUNITY_Community 317|Community 317]]
+- [[_COMMUNITY_Community 318|Community 318]]
+- [[_COMMUNITY_Community 319|Community 319]]
+- [[_COMMUNITY_Community 320|Community 320]]
+- [[_COMMUNITY_Community 321|Community 321]]
+- [[_COMMUNITY_Community 322|Community 322]]
+- [[_COMMUNITY_Community 323|Community 323]]
+- [[_COMMUNITY_Community 324|Community 324]]
+- [[_COMMUNITY_Community 325|Community 325]]
+- [[_COMMUNITY_Community 326|Community 326]]
+- [[_COMMUNITY_Community 327|Community 327]]
+- [[_COMMUNITY_Community 328|Community 328]]
 - [[_COMMUNITY_Community 361|Community 361]]
 - [[_COMMUNITY_Community 1050|Community 1050]]
 - [[_COMMUNITY_Community 1065|Community 1065]]
@@ -312,7 +330,6 @@
 - [[_COMMUNITY_Community 1753|Community 1753]]
 - [[_COMMUNITY_Community 1882|Community 1882]]
 - [[_COMMUNITY_Community 2367|Community 2367]]
-- [[_COMMUNITY_Community 2423|Community 2423]]
 - [[_COMMUNITY_Community 2623|Community 2623]]
 - [[_COMMUNITY_Community 2763|Community 2763]]
 - [[_COMMUNITY_Community 2847|Community 2847]]
@@ -331,7 +348,6 @@
 - [[_COMMUNITY_Community 4994|Community 4994]]
 - [[_COMMUNITY_Community 5311|Community 5311]]
 - [[_COMMUNITY_Community 5327|Community 5327]]
-- [[_COMMUNITY_Community 5405|Community 5405]]
 - [[_COMMUNITY_Community 5621|Community 5621]]
 - [[_COMMUNITY_Community 5627|Community 5627]]
 - [[_COMMUNITY_Community 5741|Community 5741]]
@@ -465,7 +481,7 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `ChunkedSurfaceProvider` - 90 edges
-2. `Planet` - 69 edges
+2. `Planet` - 70 edges
 3. `WeatherManager` - 61 edges
 4. `FreeCameraController` - 53 edges
 5. `DebugCaptureController` - 52 edges
@@ -476,29 +492,29 @@
 10. `AtmosphereController` - 42 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Planet` --implements--> `IEarlyInitialize`  [EXTRACTED]
-  Assets/Scripts/Planet/Planet.cs → Core/Interfaces/IEarlyInitialize.cs
-- `SceneBootstrap` --implements--> `IEarlyInitialize`  [EXTRACTED]
-  Assets/Scripts/Core/Services/SceneBootstrap.cs → Core/Interfaces/IEarlyInitialize.cs
-- `Planet` --implements--> `ILateInitialize`  [EXTRACTED]
-  Assets/Scripts/Planet/Planet.cs → Core/Interfaces/ILateInitialize.cs
-- `WeatherManager` --implements--> `ILateInitialize`  [EXTRACTED]
-  Assets/Scripts/Planet/WeatherManager.cs → Core/Interfaces/ILateInitialize.cs
+- `ConsoleDebugModule` --implements--> `IDebugCaptureMetadataProvider`  [EXTRACTED]
+  Core/Console/ConsoleDebugModule.cs → Assets/Scripts/Core/Services/DebugRegistry.cs
 - `Planet` --implements--> `IPlanetSurfaceRaycaster`  [EXTRACTED]
   Assets/Scripts/Planet/Planet.cs → Core/Interfaces/IPlanetSurfaceSampler.cs
+- `ConsoleDebugModule` --implements--> `IDebugModule`  [EXTRACTED]
+  Core/Console/ConsoleDebugModule.cs → Assets/Scripts/Core/Services/DebugRegistry.cs
+- `MoistureProvider` --implements--> `IMoistureProvider`  [EXTRACTED]
+  Planet/Biomes/MoistureProvider.cs → Core/Interfaces/IMoistureProvider.cs
+- `TemperatureProvider` --implements--> `ITemperatureProvider`  [EXTRACTED]
+  Assets/Scripts/Planet/Biomes/TemperatureProvider.cs → Core/Interfaces/ITemperatureProvider.cs
 
 ## Import Cycles
 - None detected.
 
-## Communities (482 total, 104 thin omitted)
+## Communities (500 total, 105 thin omitted)
 
 ### Community 0 - "Debug Capture System"
 Cohesion: 0.08
-Nodes (18): bool, CancellationTokenSource, CloudDto, ComputeShader, float, IClimateSampler, int, ProgressHandle (+10 more)
+Nodes (18): bool, CancellationTokenSource, CloudDto, ComputeShader, float, IClimateSampler, int, IWorldContext (+10 more)
 
 ### Community 1 - "Biome Climate Pipeline"
 Cohesion: 0.07
-Nodes (17): bool, Camera, CameraTeleportLocation, ConsoleCommand, float, ICameraLookBlocker, ICelestialTimeController, IInputMapService (+9 more)
+Nodes (17): Vector3, bool, Camera, CameraTeleportLocation, ConsoleCommand, float, ICameraLookBlocker, ICelestialTimeController (+9 more)
 
 ### Community 2 - "Loading & Init Pipeline"
 Cohesion: 0.07
@@ -518,7 +534,7 @@ Nodes (19): bool, Bounds, Camera, float, HashSet, IChunkMeshCache, int, IReadOnl
 
 ### Community 6 - "Terrain Surface Chunks"
 Cohesion: 0.06
-Nodes (24): bool, Bounds, Camera, Dictionary, float, GrassDebugStats, IGrassNearFieldStatsProvider, ILogger (+16 more)
+Nodes (24): GrassDebugStats, GrassRenderLayer, GrassRuntimeState, bool, Bounds, Camera, Dictionary, float (+16 more)
 
 ### Community 7 - "Chunk Visibility LOD"
 Cohesion: 0.07
@@ -526,7 +542,7 @@ Nodes (21): bool, Dictionary, GameObject, int, Material, MaterialPropertyBlock, 
 
 ### Community 8 - "Grass Placement GPU"
 Cohesion: 0.08
-Nodes (20): Awaitable, bool, CancellationToken, CancellationTokenSource, Exception, ILoadingOverlay, IWorldContext, Awaitable (+12 more)
+Nodes (20): Awaitable, CancellationToken, int, IReadOnlyList, Awaitable, bool, CancellationToken, CancellationTokenSource (+12 more)
 
 ### Community 9 - "Chunk Mesh Cache"
 Cohesion: 0.09
@@ -534,15 +550,15 @@ Nodes (17): bool, ConsoleCommand, float, int, IPlanetSurfaceSampler, IWorldConte
 
 ### Community 10 - "Debug Scale Markers"
 Cohesion: 0.10
-Nodes (20): BuiltInTeleport, bool, CameraTeleportLocation, ConsoleCommand, float, int, IReadOnlyList, List (+12 more)
+Nodes (20): bool, CameraTeleportLocation, ConsoleCommand, float, int, IReadOnlyList, List, Quaternion (+12 more)
 
 ### Community 11 - "Water Volume Rendering"
-Cohesion: 0.08
-Nodes (18): bool, Camera, CloudDto, Color, ConsoleCommand, float, int, ISettingsService (+10 more)
+Cohesion: 0.11
+Nodes (15): bool, CloudDto, Color, ConsoleCommand, float, int, IWorldContext, PrecipitationDto (+7 more)
 
 ### Community 12 - "Camera Teleport System"
 Cohesion: 0.09
-Nodes (16): ConfirmContext, ConsoleInputController, KeyRepeat, ConsoleHistory, ConsoleInputBuffer, Action, bool, ConsoleAsyncRunner (+8 more)
+Nodes (16): Action, bool, ConsoleAsyncRunner, ConsoleScrollback, float, IInputMapService, int, IReadOnlyList (+8 more)
 
 ### Community 13 - "Grass Coordination"
 Cohesion: 0.08
@@ -550,19 +566,19 @@ Nodes (21): BiomeAssignmentSample, DiagnosticGridBiomeLayoutDto, float, Vector2,
 
 ### Community 14 - "Precipitation System"
 Cohesion: 0.09
-Nodes (13): ICelestialTimeController, CelestialManager, bool, Camera, ConsoleCommand, float, int, IWorldContext (+5 more)
+Nodes (13): bool, Camera, ConsoleCommand, float, int, IWorldContext, Light, PlanetGeneratedEvent (+5 more)
 
 ### Community 15 - "Console Input"
 Cohesion: 0.06
-Nodes (16): ConsoleController, ConsoleInputController, ConsoleInputLineFormatter, ConsoleRenderer, Action, bool, Camera, ConsoleAsyncRunner (+8 more)
+Nodes (16): Action, bool, Camera, ConsoleAsyncRunner, ConsoleDiagnostics, ConsoleScrollback, float, IInputMapService (+8 more)
 
 ### Community 16 - "Celestial Management"
 Cohesion: 0.07
 Nodes (19): bool, CloudDto, ComputeShader, ConsoleCommand, float, int, ISettingsService, IWeatherConfigurator (+11 more)
 
 ### Community 17 - "Console UI"
-Cohesion: 0.21
-Nodes (8): int, long, double, FrameTiming, FrameTimingSection, FrameTimingStats, Scope, FrameTimingCounters
+Cohesion: 0.10
+Nodes (17): DebugCaptureContext, DebugModuleId, DebugRegistry, DebugRuntimeState, float, int, long, string (+9 more)
 
 ### Community 18 - "Frame Timing Debug"
 Cohesion: 0.12
@@ -577,8 +593,8 @@ Cohesion: 0.09
 Nodes (19): Color, ConsoleCommand, DebugCaptureContext, DebugCaptureSetId, DebugModuleId, DebugRegistry, DebugRuntimeState, float (+11 more)
 
 ### Community 21 - "Event Bus"
-Cohesion: 0.11
-Nodes (15): AtmosphereDto, bool, CelestialManager, ComputeShader, ConsoleCommand, float, int, IPlanet (+7 more)
+Cohesion: 0.08
+Nodes (17): AtmosphereDto, bool, CelestialManager, ComputeShader, ConsoleCommand, float, int, IPlanet (+9 more)
 
 ### Community 22 - "Grass Debug"
 Cohesion: 0.07
@@ -594,15 +610,15 @@ Nodes (15): bool, Color, ComputeBuffer, ComputeShader, ConsoleCommand, float, in
 
 ### Community 25 - "Rain Particles GPU"
 Cohesion: 0.15
-Nodes (10): ClimateCommands, TemperatureUnitPreferences, ClimateLatitudePreset, Awaitable, BiomeDto, CancellationToken, ConsoleCommand, Planet (+2 more)
+Nodes (10): Awaitable, BiomeDto, CancellationToken, ConsoleCommand, Planet, string, TemperatureUnit, ClimateCommands (+2 more)
 
 ### Community 26 - "Climate Console Commands"
-Cohesion: 0.05
-Nodes (39): A1. BUG — chunk grass overflow inflates the indirect draw count, A2. BUG — sky gloom and ground-shadow gloom use different formulas, and the comment claims they match, A3. BUG — `cloud.debug-mode` cannot select mode 9 (WeatherPrecipitationSignal), A4. RISK — `CloudController.Initialize` hard-resolves a service in `Start()`, A5. RISK — 1×1 fallback radius texture can be read out of bounds, A6. BUG (stats only) — off-face near-field cells counted as "distance rejected", B1. PERF — Cloud.shader samples the dynamics map every march step, even in empty air, B2. PERF — per-chunk MPB float set with a compile-time constant, every frame (+31 more)
+Cohesion: 0.10
+Nodes (19): BiomeType, bool, ConsoleCommand, FaceSpaceCell, float, IBiomeProvider, int, IPlanetSurfaceSampler (+11 more)
 
 ### Community 27 - "Console Attributes"
 Cohesion: 0.12
-Nodes (18): GrassAtlasPixels, Action, Action<float>, Awaitable, CancellationToken, Color32, CubeEdge, float (+10 more)
+Nodes (18): Action, Action<float>, Awaitable, CancellationToken, Color32, CubeEdge, float, GrassSurfaceAtlasGpuData (+10 more)
 
 ### Community 28 - "Biome Color Generation"
 Cohesion: 0.11
@@ -625,8 +641,8 @@ Cohesion: 0.14
 Nodes (18): ConfirmRenderData, ConsoleRenderer, ConsoleRenderState, bool, Color, CommandBuffer, ConsoleAnchor, ConsoleMessage (+10 more)
 
 ### Community 33 - "Precipitation Debug"
-Cohesion: 0.09
-Nodes (20): DebugCaptureContext, DebugCaptureSetId, DebugModeDefinition, DebugModeId, DebugModuleId, DebugRegistry, DebugRuntimeState, float (+12 more)
+Cohesion: 0.12
+Nodes (16): DebugCaptureContext, DebugModeDefinition, DebugRegistry, DebugRuntimeState, float, ICameraRigContext, int, IWeatherProvider (+8 more)
 
 ### Community 34 - "Community 34"
 Cohesion: 0.07
@@ -641,8 +657,8 @@ Cohesion: 0.15
 Nodes (16): BuildStats, DirectionKey, FaceWaterData, Action<float>, Color, Dictionary, float, IFaceMeshSampler (+8 more)
 
 ### Community 37 - "Face Render Masking"
-Cohesion: 0.07
-Nodes (24): bool, Camera, CancellationTokenSource, FaceRenderMask, float, int, IPlanetSurfaceProvider, PlanetGrassCoordinator (+16 more)
+Cohesion: 0.06
+Nodes (26): bool, Camera, CancellationTokenSource, FaceRenderMask, float, int, IPlanetSurfaceProvider, PlanetGrassCoordinator (+18 more)
 
 ### Community 38 - "Face Mesh Sampler"
 Cohesion: 0.15
@@ -673,8 +689,8 @@ Cohesion: 0.13
 Nodes (9): bool, Color, ConsoleCommand, float, int, IWeatherProvider, PlanetGeneratedEvent, Vector3 (+1 more)
 
 ### Community 45 - "Weather Console Commands"
-Cohesion: 0.11
-Nodes (18): Camera, ContextContainer, ICloudRuntime, int, Material, MaterialPropertyBlock, Plane, RenderGraph (+10 more)
+Cohesion: 0.12
+Nodes (17): Camera, ContextContainer, ICloudRuntime, int, Material, MaterialPropertyBlock, Plane, RenderGraph (+9 more)
 
 ### Community 46 - "Cloud Climate Sampler"
 Cohesion: 0.10
@@ -690,22 +706,22 @@ Nodes (23): BiomeSurfaceTextureArrays, bool, Camera, ChunkedSurfaceProvider, Con
 
 ### Community 49 - "World Service Locator"
 Cohesion: 0.13
-Nodes (13): Bounds, Camera, float, Material, MeshFilter, MeshRenderer, Renderer, RenderingData (+5 more)
+Nodes (12): Bounds, Camera, float, MeshFilter, MeshRenderer, Renderer, RenderingData, ScriptableRenderer (+4 more)
 
 ### Community 50 - "Biome Registry Core"
 Cohesion: 0.17
-Nodes (22): ApplyBoundaryBlend(), BoundaryBlendWeight(), BuildLookupData(), From(), GetBiomeAt(), GetDefinition(), GetDefinitionByIndex(), GetGridIndex() (+14 more)
+Nodes (22): Allocator, BiomeDefinitionDto, BiomeLookupData, BiomeRegistry, BiomeRegistryDto, BiomeResult, BiomeType, ApplyBoundaryBlend() (+14 more)
 
 ### Community 51 - "Face Space Geometry"
 Cohesion: 0.11
-Nodes (12): TemperatureProvider, ClimateSample, Vector3, IClimateProvider, IClimateSampler, ITemperatureProvider, ClimateCurveLut, float (+4 more)
+Nodes (12): ClimateCurveLut, float, INoiseFilter, NoiseSettings, Vector3, TemperatureProvider, ClimateSample, Vector3 (+4 more)
 
 ### Community 52 - "Camera Rig Context"
-Cohesion: 0.16
+Cohesion: 0.17
 Nodes (3): T, IWorldContext, ServiceLocator
 
 ### Community 53 - "Init Progress Handles"
-Cohesion: 0.19
+Cohesion: 0.23
 Nodes (9): Camera, CubeEdge, FaceSpaceCell, int, Transform, Vector2, Vector3, FaceSpaceRangeResult (+1 more)
 
 ### Community 54 - "Quality Settings"
@@ -726,7 +742,7 @@ Nodes (11): DebugCaptureContext, DebugCaptureSetId, DebugModeDefinition, DebugMo
 
 ### Community 58 - "Debug Capture Sets"
 Cohesion: 0.06
-Nodes (30): Codex feedback, G10. ARCH — `ChunkedSurfaceProvider` is the codebase's largest file and just absorbed another subsystem, G11. ARCH — three different settings patterns inside one weather subsystem, G12. ARCH — weather render-feature gate boilerplate is triplicated, G13. ARCH — duplicated cloud-band math and magic fallbacks in the rain path, G14. ARCH (minor) — duplicate property in `PrecipitationController`, G15. PERF — path regrowth rebuilds every chunk's masks every 5 seconds, G16. PERF (minor) — `WeatherManager.OnGUI` exists unconditionally (+22 more)
+Nodes (31): Audit Summary, F01 — Rain update dispatch overruns non-aligned particle buffers, F02 — Optical-depth bake dispatch overruns arbitrary inspector sizes, F03 — Surface-edit recovery can overwrite durable edits, F04 — Canceled weather generation leaks pre-owner textures, F05 — Tracked Graphify output is 1.70 GiB, stale, and polluted, F06 — Water mesh cancellation does not cancel the heavy work, F07 — Old weather readbacks can mutate a replacement cache (+23 more)
 
 ### Community 59 - "World Context Validation"
 Cohesion: 0.11
@@ -754,7 +770,7 @@ Nodes (13): Allocator, byte, DiagnosticTerrainSettingsData, float, INoiseFilter,
 
 ### Community 65 - "Terrain Quad Tree"
 Cohesion: 0.16
-Nodes (12): ClimateMapGpuData, Action, Awaitable, CancellationToken, Color, IClimateProvider, IFaceMeshSampler, ILogger (+4 more)
+Nodes (12): Action, Awaitable, CancellationToken, Color, IClimateProvider, IFaceMeshSampler, ILogger, int (+4 more)
 
 ### Community 66 - "Star Render Feature"
 Cohesion: 0.21
@@ -762,7 +778,7 @@ Nodes (7): TestConsoleCommands, Awaitable, CancellationToken, Color, ConsoleComm
 
 ### Community 67 - "Biome Map Baker"
 Cohesion: 0.11
-Nodes (3): IConsoleService, Action, ConsoleDiagnostics
+Nodes (3): Action, ConsoleDiagnostics, IConsoleService
 
 ### Community 68 - "Grass Chunk Runtime"
 Cohesion: 0.13
@@ -782,7 +798,7 @@ Nodes (8): BiomeLookupData, Color, Color32, IBiomeAssignmentField, int, PlanetCh
 
 ### Community 72 - "Settings Service Interface"
 Cohesion: 0.12
-Nodes (10): Awaitable, bool, CancellationToken, IDebugCommandProvider, IGrassQualitySettings, IInputMapService, Awaitable, CancellationToken (+2 more)
+Nodes (10): Awaitable, CancellationToken, Awaitable, bool, CancellationToken, IDebugCommandProvider, IGrassQualitySettings, IInputMapService (+2 more)
 
 ### Community 73 - "Debug Registry Strings"
 Cohesion: 0.13
@@ -873,12 +889,12 @@ Cohesion: 0.22
 Nodes (6): Action, Func, Stack, T, IObjectPool, ObjectPool
 
 ### Community 95 - "Atmosphere Render Pass"
-Cohesion: 0.18
+Cohesion: 0.16
 Nodes (7): bool, CancellationTokenSource, Dictionary, IReadOnlyList, List, Type, WorldContext
 
 ### Community 96 - "Grass Surface Atlas"
-Cohesion: 0.21
-Nodes (13): CompositeData, bool, ContextContainer, int, MaterialPropertyBlock, Matrix4x4, Mesh, RenderGraph (+5 more)
+Cohesion: 0.23
+Nodes (14): bool, ContextContainer, int, Material, MaterialPropertyBlock, Matrix4x4, Mesh, RenderGraph (+6 more)
 
 ### Community 97 - "Weather Manager"
 Cohesion: 0.24
@@ -889,12 +905,12 @@ Cohesion: 0.22
 Nodes (3): Ray, SurfacePathOperation, Vector3
 
 ### Community 99 - "Unity Logger"
-Cohesion: 0.27
-Nodes (3): ConsoleBuiltins, ConsoleAnchor, ConsoleCommand
+Cohesion: 0.26
+Nodes (3): ConsoleAnchor, ConsoleCommand, ConsoleBuiltins
 
 ### Community 100 - "Cloud Noise Generator"
-Cohesion: 0.10
-Nodes (13): ConsoleDebugModule, DebugCaptureContext, DebugModuleId, DebugRegistry, StringBuilder, DebugRegistry, DebugCaptureContext, DebugModuleId (+5 more)
+Cohesion: 0.18
+Nodes (7): DebugRegistry, ConsoleDebugModule, DebugCaptureContext, DebugModuleId, DebugRegistry, StringBuilder, IDebugModule
 
 ### Community 101 - "Planet Noise Functions"
 Cohesion: 0.18
@@ -902,7 +918,7 @@ Nodes (5): ConsoleHistory, SerializableHistory, int, List, string
 
 ### Community 102 - "Noise Filters"
 Cohesion: 0.35
-Nodes (7): ConsoleInputLineFormatter, ConsoleTheme, Color, IReadOnlyList, List, Suggestion, TextSpan
+Nodes (7): Color, IReadOnlyList, List, Suggestion, TextSpan, ConsoleInputLineFormatter, ConsoleTheme
 
 ### Community 103 - "Poisson Disc Sphere"
 Cohesion: 0.39
@@ -954,11 +970,11 @@ Nodes (7): INoiseFilter, RigidNoiseFilter, SimpleNoiseFilter, Vector3, Noise, No
 
 ### Community 115 - "Event Bus Processor"
 Cohesion: 0.38
-Nodes (3): ClimateCurves, AnimationCurve, Vector2
+Nodes (3): AnimationCurve, Vector2, ClimateCurves
 
 ### Community 116 - "Biome Provider Interface"
 Cohesion: 0.20
-Nodes (7): ClimateProvider, IClimateProvider, MoistureProvider, ClimateSample, float, Vector3, TemperatureProvider
+Nodes (7): ClimateSample, float, Vector3, ClimateProvider, IClimateProvider, MoistureProvider, TemperatureProvider
 
 ### Community 117 - "World Action Interface"
 Cohesion: 0.12
@@ -982,7 +998,7 @@ Nodes (5): Dictionary, float, Texture2D, SDFGlyph, SDFFontAsset
 
 ### Community 123 - "Shader Globals Controller"
 Cohesion: 0.28
-Nodes (5): BiomeSettings, AnimationCurve, BiomeRegistry, float, int
+Nodes (5): AnimationCurve, BiomeRegistry, float, int, BiomeSettings
 
 ### Community 124 - "Water Debug Registration"
 Cohesion: 0.36
@@ -998,7 +1014,7 @@ Nodes (4): Color, List, TextSpan, ConsoleColorTagParser
 
 ### Community 127 - "Debug Grass Interactor"
 Cohesion: 0.15
-Nodes (6): IInputMapService, Action, List, EventBusProcessor, MonoBehaviour, DebugInputRelay
+Nodes (6): Action, List, IInputMapService, EventBusProcessor, MonoBehaviour, DebugInputRelay
 
 ### Community 128 - "Noise Filter Data"
 Cohesion: 0.31
@@ -1038,7 +1054,7 @@ Nodes (3): DebugModeId, DebugRegistry, WaterDebugRegistration
 
 ### Community 137 - "Biome Definition"
 Cohesion: 0.28
-Nodes (5): CameraFollowGrassInteractor, Camera, float, IInputMapService, Planet
+Nodes (5): Camera, float, IInputMapService, Planet, CameraFollowGrassInteractor
 
 ### Community 138 - "Grass Blade Buffer Pool"
 Cohesion: 0.25
@@ -1102,7 +1118,7 @@ Nodes (4): CubeEdge, Vector2, CubeFaceEdgeNeighbor, CubeFaceTopology
 
 ### Community 154 - "Ocean Debug Writer"
 Cohesion: 0.29
-Nodes (4): GrassPlacementStats, GrassChunkRuntime, int, long
+Nodes (4): GrassChunkRuntime, int, long, GrassPlacementStats
 
 ### Community 155 - "Water Debug Module"
 Cohesion: 0.25
@@ -1122,11 +1138,11 @@ Nodes (13): Camera, float, IClimateSampler, ILogger, int, IPlanetSurfaceSampler,
 
 ### Community 159 - "Noise Settings SO"
 Cohesion: 0.33
-Nodes (3): ClimateCurveLut, AnimationCurve, float
+Nodes (3): AnimationCurve, float, ClimateCurveLut
 
 ### Community 160 - "Chunk Triangle Template"
 Cohesion: 0.40
-Nodes (5): EnsureRegistered(), From(), CloudSettings, CloudDto, ISettingsService
+Nodes (5): CloudDto, ISettingsService, EnsureRegistered(), From(), CloudSettings
 
 ### Community 161 - "Chunk Mesh Job"
 Cohesion: 0.18
@@ -1166,7 +1182,7 @@ Nodes (3): List, Vector2, PoissonDiscSampling
 
 ### Community 174 - "Biome Registry"
 Cohesion: 0.40
-Nodes (4): BiomeConstants, float, int, NoiseSettings
+Nodes (4): float, int, NoiseSettings, BiomeConstants
 
 ### Community 175 - "Grass Placement DTOs"
 Cohesion: 0.40
@@ -1190,7 +1206,7 @@ Nodes (3): Mesh, Vector3, CubeSphereMeshBuilder
 
 ### Community 183 - "Debug Command Provider"
 Cohesion: 0.40
-Nodes (4): From(), BiomeDefinitionDto, GrassBiomePlacementConfig, GrassBiomeTintConfig
+Nodes (4): BiomeDefinitionDto, GrassBiomePlacementConfig, GrassBiomeTintConfig, From()
 
 ### Community 184 - "Atmosphere DTO"
 Cohesion: 0.40
@@ -1214,7 +1230,7 @@ Nodes (3): AtmosphereDto, From(), AtmosphereSettings
 
 ### Community 190 - "Planet Surface Raycast"
 Cohesion: 0.50
-Nodes (3): From(), BiomeDefinition, BiomeDefinitionDto
+Nodes (3): BiomeDefinition, BiomeDefinitionDto, From()
 
 ### Community 191 - "Precipitation DTO"
 Cohesion: 0.40
@@ -1233,8 +1249,8 @@ Cohesion: 0.50
 Nodes (3): From(), GrassInteractorSnapshot, IGrassInteractor
 
 ### Community 201 - "Shader Global IDs Precipitation"
-Cohesion: 0.14
-Nodes (9): DebugCaptureContext, DebugModuleId, DebugRegistry, DebugRuntimeState, float, string, StringBuilder, FrameTimingIds (+1 more)
+Cohesion: 0.13
+Nodes (14): Data model, Decomposition, Dependencies, Explicitly NOT in SP1, Gather (the query), Later-slice seams (captured, not built), Risks / open questions, Scatter Placement System — Design (+6 more)
 
 ### Community 202 - "Shader Global IDs Terrain"
 Cohesion: 0.50
@@ -1269,8 +1285,8 @@ Cohesion: 0.17
 Nodes (9): Awaitable, CancellationToken, HashSet, int, ISeedProvider, IWorldActionManager, Type, SceneBootstrap (+1 more)
 
 ### Community 248 - "Community 248"
-Cohesion: 0.12
-Nodes (16): dependencies, depth, source, url, version, depth, source, version (+8 more)
+Cohesion: 0.33
+Nodes (6): dependencies, dependencies, depth, source, version, com.unity.mathematics
 
 ### Community 249 - "Community 249"
 Cohesion: 0.11
@@ -1293,8 +1309,8 @@ Cohesion: 0.11
 Nodes (17): .agent-memory reading order, Assembly layout (asmdefs), Build and environment: recreate the working setup from scratch, Build success is not proof, Code-health builds (dotnet), Exact versions (as of 2026-07-06), From-scratch checklist, Generated / untracked directories — what NOT to touch (+9 more)
 
 ### Community 256 - "Community 256"
-Cohesion: 0.09
-Nodes (23): dependencies, dependencies, depth, source, url, version, dependencies, depth (+15 more)
+Cohesion: 0.08
+Nodes (27): depth, source, url, version, dependencies, depth, source, version (+19 more)
 
 ### Community 257 - "Community 257"
 Cohesion: 0.11
@@ -1394,11 +1410,79 @@ Nodes (8): 1. The real problem (reframed), 2. Why the past attempts failed (so w
 
 ### Community 303 - "Community 303"
 Cohesion: 0.29
-Nodes (4): GrassBladeBufferPool, GraphicsBuffer, int, Stack
+Nodes (4): GraphicsBuffer, int, Stack, GrassBladeBufferPool
 
 ### Community 304 - "Community 304"
-Cohesion: 0.40
-Nodes (3): ConsoleTheme, Color, float
+Cohesion: 0.22
+Nodes (6): ScatterPrototype, ConsoleTheme, Color, float, ScatterLibrary, ScriptableObject
+
+### Community 309 - "Community 309"
+Cohesion: 0.33
+Nodes (6): dependencies, depth, source, url, version, com.unity.ide.visualstudio
+
+### Community 311 - "Community 311"
+Cohesion: 0.15
+Nodes (13): Audit Summary, Codex Re-review — 2026-07-22 (v4), Findings, Prior Audit Reconciliation, Questions for the User, R4-01 — Reconcile the chosen corner gap with the proof contract, R4-02 — Bound diagnostic work by candidates, not radius alone, R4-03 — Validate the final DTO after world overrides (+5 more)
+
+### Community 312 - "Community 312"
+Cohesion: 0.15
+Nodes (12): 1. Reconcile prior findings, 2. Sweep every material category, 3. Apply the project architecture contract, 4. Vet each candidate, Audit document format, Load context, Non-negotiable boundary, ProceduralPlanets code audit (+4 more)
+
+### Community 313 - "Community 313"
+Cohesion: 0.17
+Nodes (12): Audit Summary, Codex Re-review — 2026-07-22 (v5), Findings, Prior Audit Reconciliation, Questions for the User, R5-01 — Finish reconciling the accepted corner-gap policy, R5-02 — Replace the approximate diagnostic guard with one exact service budget, R5-03 — Make DTO validation complete and actually single-source (+4 more)
+
+### Community 314 - "Community 314"
+Cohesion: 0.17
+Nodes (12): Audit Summary, Codex Re-review — 2026-07-22 (v5 unchanged follow-up), Findings, Prior Audit Reconciliation, Questions for the User, R6-01 — The accepted corner gap still has mutually exclusive proof rules, R6-02 — Gather work is still not bounded by the ranges it will enumerate, R6-03 — Final DTO validation is still incomplete and duplicated (+4 more)
+
+### Community 315 - "Community 315"
+Cohesion: 0.18
+Nodes (11): F01 — Task 1's required implementation is absent, F02 — Ocean presence is derived from the wrong setting, F03 — The local-frame contract is broken at both query and emission, F04 — A valid zero slope fade rejects every candidate, F05 — The ID bit budget and quadtree level limit can diverge silently, F06 — `scatter.verify` does not implement the amended proof contract, F07 — Per-task builds can report false success for new Unity scripts, F08 — DTO conversion permits invalid ranges and transforms (+3 more)
+
+### Community 317 - "Community 317"
+Cohesion: 0.20
+Nodes (9): Audit Summary, Codex Re-audit — 2026-07-22, Global constraints (verbatim, every task), Questions for the User, Refactoring Plan, Review record, Scatter Placement SP1 — Implementation Plan (v5), Self-review (coverage) (+1 more)
+
+### Community 318 - "Community 318"
+Cohesion: 0.22
+Nodes (6): DebugCaptureContext, DebugModuleId, DebugRegistry, StringBuilder, ScaleReferenceDebugIds, ScaleReferenceDebugModule
+
+### Community 319 - "Community 319"
+Cohesion: 0.22
+Nodes (8): BiomeType, bool, float, int, string, Vector2, ScatterPrototype, ScatterInteraction
+
+### Community 320 - "Community 320"
+Cohesion: 0.22
+Nodes (9): Findings, R3-01 — Configure scatter only after the last cancellable generation step, R3-02 — Mirror the grass area formula and choose a level that can meet spacing, R3-03 — Resolve the corner contradiction before calling Task 6 a proof, R3-04 — Stable-ID validation disappears from release builds, R3-05 — Tasks 2-4 still build before their new scripts are imported, R3-06 — DTO validation still permits non-finite runtime values, R3-07 — The public gather API accepts contradictory geometry inputs (+1 more)
+
+### Community 321 - "Community 321"
+Cohesion: 0.29
+Nodes (3): float, Vector2, ScatterQuadtree
+
+### Community 322 - "Community 322"
+Cohesion: 0.33
+Nodes (6): ScatterLibraryDto, ScatterPrototype, ScatterPrototypeDto, EnsureValid(), From(), ScatterLibrary
+
+### Community 323 - "Community 323"
+Cohesion: 0.29
+Nodes (3): int, ScatterId, ulong
+
+### Community 324 - "Community 324"
+Cohesion: 0.33
+Nodes (4): PlacementRules, Quaternion, Vector3, ScatterPlacementMath
+
+### Community 325 - "Community 325"
+Cohesion: 0.29
+Nodes (7): Coordinate contract (resolved — no "confirm on read"), Task 1: Scatter primitives (embedded — the plan is self-contained here), Task 2: Prototype + Library SOs and DTOs — stable slotId, signed altitude, water, pre-freeze registration, Task 3: Quadtree math — fixed level per world, slot-seeded jitter, area-keep, Task 4: Placement math (`TryPlace`) — add water clearance + area-keep + signed altitude, Task 5: `ScatterField` + local-frame gather + Planet wiring, Task 6: `scatter.verify` + `scatter.count` — real proof (registry commands)
+
+### Community 326 - "Community 326"
+Cohesion: 0.33
+Nodes (4): DebugCaptureSetId, DebugModeId, DebugModuleId, WaterDebugIds
+
+### Community 327 - "Community 327"
+Cohesion: 0.33
+Nodes (6): Audit Summary, Codex Re-review — 2026-07-22 (v3), Prior Audit Reconciliation, Questions for the User, Refactoring Plan, What Came Back Clean
 
 ### Community 361 - "Community 361"
 Cohesion: 0.15
@@ -1426,7 +1510,7 @@ Nodes (38): 2026-06-03 — Debug Console Design, Acceptance Criteria, Approvals 
 
 ### Community 1753 - "Community 1753"
 Cohesion: 0.08
-Nodes (20): Action, bool, ChunkedSurfaceProvider, float, ILogger, int, List, long (+12 more)
+Nodes (19): Action, bool, ChunkedSurfaceProvider, float, ILogger, int, List, long (+11 more)
 
 ### Community 1882 - "Community 1882"
 Cohesion: 0.06
@@ -1435,10 +1519,6 @@ Nodes (35): 2026-06-02 — Grass Mid-Field Card Experiment (Rejected), Acceptanc
 ### Community 2367 - "Community 2367"
 Cohesion: 0.12
 Nodes (10): bool, ConsoleCommand, float, ISurfacePathBrushService, Ray, SurfaceEditController, Transform, Vector3 (+2 more)
-
-### Community 2423 - "Community 2423"
-Cohesion: 0.08
-Nodes (23): [ARCH-1] Four `[DefaultExecutionOrder]` attributes vs the boot-path rule, Audit 2026-07-01 — Grass near→mid→far transitions + general findings, Codex feedback, Considered and rejected, [DEBT-1] `ChunkedSurfaceProvider` at 1,764 lines, [DEBT-2] Empty catch-all in `Planet.TryGetSettings`, Direction (options, not defects), [DOC-1] CLAUDE.md points at a deleted audit directory (+15 more)
 
 ### Community 2623 - "Community 2623"
 Cohesion: 0.07
@@ -1512,10 +1592,6 @@ Nodes (6): bool, List, Stack, StringBuilder, ConsoleScriptRunContext, ConsoleScr
 Cohesion: 0.12
 Nodes (16): Failures and how to do differently, keywords, keywords, keywords, keywords, Reusable knowledge, rollout_summary_files, rollout_summary_files (+8 more)
 
-### Community 5405 - "Community 5405"
-Cohesion: 0.15
-Nodes (12): Audit 2026-07-01 — Clouds & rain: dither, storm look, rain read, Codex feedback, Part 0 — The weather rendering stack as it ships, Part 1 — Findings, Part 2 — Direction: making rain *feel* better (options, not defects), Recommended execution order, [W1] The dithered cloud look: full-strength white-noise jitter at every level, with no resolve, [W2] Rain clouds don't darken with rain, and the silver lining is explicitly suppressed on exactly the clouds that should keep it (+4 more)
-
 ### Community 5621 - "Community 5621"
 Cohesion: 0.12
 Nodes (15): Architecture Decisions, Async & Multi-Core Architecture (Unity 6 Awaitable), Awaitable Pattern, Continental Generation, Distant Object Rendering, Loot Table System, Networking: Mirror (Planned), Persistence: Seed + Delta Saves (+7 more)
@@ -1557,8 +1633,8 @@ Cohesion: 0.15
 Nodes (11): PassData, StarRenderFeature, StarRenderPass, ContextContainer, Material, RenderGraph, RenderingData, ScriptableRenderer (+3 more)
 
 ### Community 6291 - "Community 6291"
-Cohesion: 0.20
-Nodes (9): AtmosphereRenderPass, PassData, bool, ContextContainer, int, Material, MaterialPropertyBlock, RenderGraph (+1 more)
+Cohesion: 0.18
+Nodes (10): bool, ContextContainer, int, Material, MaterialPropertyBlock, RenderGraph, TextureHandle, AtmosphereRenderPass (+2 more)
 
 ### Community 6421 - "Community 6421"
 Cohesion: 0.14
@@ -1685,8 +1761,8 @@ Cohesion: 0.22
 Nodes (8): 4.1 — Latitude + Moisture Biome Placement, 4.2 — Biome Type Definitions, 4.3 — Biome Blending & Shader, Files Created, Files Modified, Known Bugs, Phase 4: Enhanced Biome System, Setup Instructions (in Unity)
 
 ### Community 9433 - "Community 9433"
-Cohesion: 0.25
-Nodes (7): Agent Memory Handbook, Failures and how to do differently, keywords, Reusable knowledge, rollout_summary_files, Task 1: prove a sharp cloud seam is upstream in `CloudWeather`, then fix mismatched cube-face UV mapping across shader and CPU sampling paths, Task Group: ProceduralPlanets cloud seam diagnosis and cube-face sampling fix
+Cohesion: 0.33
+Nodes (6): Failures and how to do differently, keywords, Reusable knowledge, rollout_summary_files, Task 1: prove a sharp cloud seam is upstream in `CloudWeather`, then fix mismatched cube-face UV mapping across shader and CPU sampling paths, Task Group: ProceduralPlanets cloud seam diagnosis and cube-face sampling fix
 
 ### Community 9524 - "Community 9524"
 Cohesion: 0.25
@@ -1741,8 +1817,8 @@ Cohesion: 0.40
 Nodes (3): BiomeAssignmentSample, Vector3, IBiomeAssignmentField
 
 ### Community 11295 - "Community 11295"
-Cohesion: 0.33
-Nodes (6): Failures and how to do differently, keywords, Reusable knowledge, rollout_summary_files, Task 1: hand off the active underwater gap workflow after the global lip prepass caused an above-water through-planet regression, Task Group: ProceduralPlanets underwater shoreline-gap lip prepass and water ownership handoff
+Cohesion: 0.25
+Nodes (7): Agent Memory Handbook, Failures and how to do differently, keywords, Reusable knowledge, rollout_summary_files, Task 1: hand off the active underwater gap workflow after the global lip prepass caused an above-water through-planet regression, Task Group: ProceduralPlanets underwater shoreline-gap lip prepass and water ownership handoff
 
 ### Community 11296 - "Community 11296"
 Cohesion: 0.33
@@ -1861,25 +1937,25 @@ Cohesion: 0.67
 Nodes (3): keywords, rollout_summary_files, Task 7: diagnose the low-camera far-shore contour with analytic sea-path debug modes, then stop matte tuning and pivot back to coverage/geometry
 
 ### Community 15535 - "Community 15535"
-Cohesion: 0.40
-Nodes (4): BiomeRegistry, BiomeDefinition, int, ScriptableObject
+Cohesion: 0.50
+Nodes (3): BiomeDefinition, int, BiomeRegistry
 
 ## Knowledge Gaps
-- **2580 isolated node(s):** `netstandard2.1`, `netstandard2.1`, `netstandard2.1`, `netstandard2.1`, `netstandard2.1` (+2575 more)
+- **2644 isolated node(s):** `netstandard2.1`, `netstandard2.1`, `netstandard2.1`, `netstandard2.1`, `netstandard2.1` (+2639 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **104 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **105 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Planet` connect `Face Render Masking` to `Debug Capture System`, `Progress Event`, `Console Command Data`, `Settings Changed Event`, `Settings Service Interface`, `Planet DTO`, `Shader Global IDs Water`, `Shape Settings SO`, `Community 243`, `Community 244`, `Grass Near Field Stats`, `Planet Interface`, `Community 1753`, `Cloud DTO`, `Debug Grass Interactor`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
-- **Why does `IWorldContext` connect `Camera Rig Context` to `Community 8580`, `Cloud DTO`, `Atmosphere Render Pass`?**
-  _High betweenness centrality (0.012) - this node is a cross-community bridge._
+- **Why does `Planet` connect `Face Render Masking` to `Debug Capture System`, `Progress Event`, `Console Command Data`, `Settings Changed Event`, `Settings Service Interface`, `Planet DTO`, `Shader Global IDs Water`, `Shape Settings SO`, `Community 243`, `Community 244`, `Grass Near Field Stats`, `Planet Interface`, `Cloud DTO`, `Debug Grass Interactor`?**
+  _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **Why does `FreeCameraController` connect `Biome Climate Pipeline` to `Debug Scale Markers`, `Cloud DTO`, `Debug Grass Interactor`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
+- **Why does `IWorldContext` connect `Camera Rig Context` to `Community 8580`, `Cloud DTO`, `Atmosphere Render Pass`?**
+  _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **What connects `netstandard2.1`, `netstandard2.1`, `netstandard2.1` to the rest of the system?**
-  _2580 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2644 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Debug Capture System` be split into smaller, more focused modules?**
   _Cohesion score 0.07936507936507936 - nodes in this community are weakly interconnected._
 - **Should `Biome Climate Pipeline` be split into smaller, more focused modules?**

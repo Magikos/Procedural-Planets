@@ -1,0 +1,4 @@
+interface:
+  display_name: "ProceduralPlanets Code Audit"
+  short_description: "Consolidate evidence-backed project code audits"
+  default_prompt: "Use $pp-code-audit to audit the current ProceduralPlanets tree and consolidate validated findings."

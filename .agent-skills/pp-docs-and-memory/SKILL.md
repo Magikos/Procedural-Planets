@@ -69,7 +69,18 @@ From CLAUDE.md, operative:
 - **Never** explain what code does — names do that.
 - **Prune** existing change-history comments whenever you touch a file for another reason.
 
-Why this is a correctness rule, not taste — the **audit-A2 incident** (`docs/audit/2026-07-03-grass-cloud-line-audit.md`, finding A2): `CloudShadows.hlsl` carried the comment `// Same gloom term as Cloud.shader` above a gloom formula that had drifted to be *different* from Cloud.shader's (smoothstep steepening + ungated rain rate vs gated linear). The false comment actively hid a sky-vs-ground visual inconsistency. A comment that describes another file's code is a synchronization promise no compiler checks. Resolution (verified 2026-07-06): the formula was unified into shared helpers `WeatherCloudGloomFromRain` / `WeatherCloudGloom` in `Assets/Graphics/Shaders/Includes/WeatherSampling.hlsl:47-55` (formula home: pp-weather-sim-reference), now called from `Cloud.shader:388` and `CloudShadows.hlsl:58` — **a shared function is the correct fix for "keep these in sync" comments; the comment was deleted.**
+Why this is a correctness rule, not taste — the **former audit-A2 incident** (reconciled in
+`docs/audit/2026-07-22-consolidated-code-audit.md`): `CloudShadows.hlsl` carried the comment
+`// Same gloom term as Cloud.shader` above a gloom formula that had drifted to be
+*different* from `Cloud.shader` (smoothstep steepening + ungated rain rate vs gated
+linear). The false comment actively hid a sky-vs-ground visual inconsistency. A comment
+that describes another file's code is a synchronization promise no compiler checks.
+Resolution (verified 2026-07-06): the formula was unified into shared helpers
+`WeatherCloudGloomFromRain` / `WeatherCloudGloom` in
+`Assets/Graphics/Shaders/Includes/WeatherSampling.hlsl:47-55` (formula home:
+pp-weather-sim-reference), now called from `Cloud.shader:388` and
+`CloudShadows.hlsl:58` — **a shared function is the correct fix for "keep these in sync"
+comments; the comment was deleted.**
 
 ## Logger doctrine
 
@@ -117,7 +128,11 @@ Update rules (from `AGENTS.md` + `.agent-memory/README.md`):
 
 ## Graphify upkeep
 
-After modifying code, run `graphify update .` (AST-only, no API cost) so `graphify-out/` stays current. Dirty `graphify-out/` files are expected and are not a reason to skip graphify (AGENTS.md). Caveat, date-stamped: finding G19 in `docs/audit/2026-07-03-general-code-audit.md` reported `graphify query`/`graphify update` hanging in this checkout until `Library/`, `local-only/`, and `graphify-out/` history are excluded — if a graphify command hangs, that's the known cause; see pp-build-and-env for environment traps.
+After modifying code, run `graphify update .` (AST-only, no API cost) so `graphify-out/`
+stays current. Dirty `graphify-out/` files are expected and are not a reason to skip
+graphify (AGENTS.md). Caveat, date-stamped: F05 in
+`docs/audit/2026-07-22-consolidated-code-audit.md` records the generated-content and stale
+output problem — if a graphify command hangs, see pp-build-and-env for environment traps.
 
 ## When NOT to use this
 
