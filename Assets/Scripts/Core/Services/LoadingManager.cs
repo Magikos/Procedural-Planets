@@ -13,6 +13,13 @@ public class LoadingManager : MonoBehaviour, ILoadingManager
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void CreateInstance()
     {
+        // Self-heal global time at the earliest boot point: a prior session's fatal failure freezes
+        // timeScale (EnterFatalFailure, intentionally — a half-built world must not keep ticking),
+        // and in the editor that 0 can serialize into TimeManager.asset and brick every later play.
+        // Resetting here means a new session always starts unfrozen regardless of what was persisted;
+        // the in-load freeze/restore and the fatal freeze are unaffected within a session.
+        Time.timeScale = 1f;
+
         if (FindAnyObjectByType<LoadingManager>() != null) return;
 
         var go = new GameObject("[LoadingManager]");
