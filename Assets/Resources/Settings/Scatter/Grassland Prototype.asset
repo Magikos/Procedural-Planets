@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Grassland Bush
   SlotId: 1
-  SpacingMeters: 30
+  SpacingMeters: 5
   Biome: 6
   BiomeBlendPower: 1
   Weight: 1
@@ -25,17 +25,13 @@ MonoBehaviour:
   HasMaxAltitude: 0
   MaxAltitudeMeters: 0
   MinWaterClearanceMeters: 0.05
-  ScaleRange: {x: 0.85, y: 1.1}
+  ScaleRange: {x: 0.8, y: 1.1}
   RandomYaw: 1
   Interaction: 0
-  Material: {fileID: 2100000, guid: dc71e828656e70846b0aa482e14ee521, type: 2}
+  Material: {fileID: 2100000, guid: 50cb739c1d9e47e48b292d6eb257fbe1, type: 2}
   LodMeshes:
-  - {fileID: -4027806780831730344, guid: ffa001780e4c26b4c8ecd6d9f780d254, type: 3}
-  - {fileID: -4217378541599227075, guid: ffa001780e4c26b4c8ecd6d9f780d254, type: 3}
-  - {fileID: -1806803246509419628, guid: ffa001780e4c26b4c8ecd6d9f780d254, type: 3}
+  - {fileID: 2110500866625123348, guid: 4b95a169ea8f0b04b972ae95bab5f3b4, type: 3}
   LodEndDistances:
-  - 60
-  - 110
-  - 150
+  - 120
   CastShadows: 1
   ReceiveShadows: 1
