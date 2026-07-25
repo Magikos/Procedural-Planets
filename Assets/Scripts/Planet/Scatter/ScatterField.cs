@@ -453,5 +453,64 @@ public sealed class ScatterField : IDisposable
         return (anyCorner ? "scatter.profile (corner straddle = expected SP1 gap, not a failure):\n" : "scatter.profile:\n") + sb.ToString().TrimEnd();
     }
 
+    [ConsoleCommand("density", "Density readout + ASCII heatmap around the camera; compares actual vs target spacing.", MonoTargetType.Registry)]
+    string DensityCmd(float? regionMeters = null, int? gridCells = null)
+    {
+        var cam = Camera.main; if (cam == null) return "scatter: no main camera";
+        if (!_configured) return "scatter: not configured (generate a planet first)";
+        if (!TryPrepDiagnostic(regionMeters, 150f, 20f, 400f, ScatterId.MaxLevel, out float region, out string err)) return err;
+        int cells = Mathf.Clamp(gridCells ?? 25, 5, 41);
+
+        var buf = new List<ScatterInstance>(16384);
+        GatherCoreSync(cam.transform.position, region, ScatterId.MaxLevel, buf, false, out _);
+        if (buf.Count == 0) return $"scatter.density: 0 instances in {region:F0} m\n  {DescribeBiomeAt(cam.transform.position)}";
+
+        var snap = PlanetTransformSnapshot.Capture(_planetTransform);
+        if (!TryResolveSurfaceAnchor(snap, cam.transform.position, out Vector3 anchor)) return "scatter.density: no surface anchor";
+        Vector3 up = (anchor - _planetTransform.position).normalized;
+        Vector3 t1 = Vector3.Cross(up, Mathf.Abs(up.y) < 0.9f ? Vector3.up : Vector3.right).normalized;
+        Vector3 t2 = Vector3.Cross(up, t1);
+
+        int[,] grid = new int[cells, cells];
+        float half = region, cellSize = 2f * half / cells;
+        int peak = 0;
+        foreach (var inst in buf)
+        {
+            Vector3 off = inst.PositionWS - anchor;
+            int gx = Mathf.FloorToInt((Vector3.Dot(off, t1) + half) / cellSize);
+            int gy = Mathf.FloorToInt((Vector3.Dot(off, t2) + half) / cellSize);
+            if (gx < 0 || gx >= cells || gy < 0 || gy >= cells) continue;
+            if (++grid[gx, gy] > peak) peak = grid[gx, gy];
+        }
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"scatter.density: {buf.Count} instances in {region:F0} m disc ({cellSize:F0} m/cell, peak {peak})");
+        sb.AppendLine("  " + DescribeBiomeAt(cam.transform.position));
+        float discArea = Mathf.PI * region * region;
+        var per = new int[_library.Prototypes.Length];
+        foreach (var inst in buf) per[inst.PrototypeIndex]++;
+        for (int i = 0; i < per.Length; i++)
+        {
+            var p = _library.Prototypes[i];
+            if (per[i] == 0) { sb.AppendLine($"  [{i}] {p.DisplayName}: 0 (target spacing {p.SpacingMeters:F0} m)"); continue; }
+            float impliedSpacing = Mathf.Sqrt(discArea / per[i]);
+            sb.AppendLine($"  [{i}] {p.DisplayName}: {per[i]} | ~{impliedSpacing:F1} m apart (target {p.SpacingMeters:F0} m) | {per[i] / discArea * 10000f:F1}/ha");
+        }
+        const string ramp = " .:-=+*#%@";
+        sb.AppendLine("  heatmap (N up, camera centre):");
+        for (int gy = cells - 1; gy >= 0; gy--)
+        {
+            var row = new System.Text.StringBuilder("  ");
+            for (int gx = 0; gx < cells; gx++)
+            {
+                int c = grid[gx, gy];
+                int r = peak > 0 ? Mathf.Clamp(Mathf.CeilToInt((float)c / peak * (ramp.Length - 1)), 0, ramp.Length - 1) : 0;
+                row.Append(ramp[r]);
+            }
+            sb.AppendLine(row.ToString());
+        }
+        return sb.ToString().TrimEnd();
+    }
+
     public void Dispose() => ConsoleRegistry.UnregisterInstance(typeof(ScatterField));
 }
