@@ -63,42 +63,89 @@ public sealed class ScatterField : IDisposable
             throw new ArgumentOutOfRangeException(nameof(regionRadiusMeters), regionRadiusMeters, "must be finite and positive");
         if (maxLevel < 0 || maxLevel > ScatterId.MaxLevel)
             throw new ArgumentOutOfRangeException(nameof(maxLevel), maxLevel, $"must be 0..{ScatterId.MaxLevel}");
-        if (_configured && EstimateCandidates(regionRadiusMeters, maxLevel) > CandidateBudget)
+        if (TryCaptureGatherContext(out var ctx) &&
+            EstimateCandidates(ctx, regionRadiusMeters, maxLevel, FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform)) > CandidateBudget)
             throw new InvalidOperationException("scatter: region/spacing exceeds the candidate budget; tile the ROI into smaller queries.");
-        return GatherCore(cameraPos, regionRadiusMeters, maxLevel, buffer, reversed: false, out _);
+        return GatherCoreSync(cameraPos, regionRadiusMeters, maxLevel, buffer, reversed: false, out _);
     }
 
-    // One core for both public gather and the diagnostic reverse traversal. `reversed` flips
-    // prototype/cell/candidate order so scatter.verify can prove order-independence.
-    internal int GatherCore(Vector3 cameraPos, float region, int maxLevel, List<ScatterInstance> buffer,
+    // Immutable snapshot of the per-generation config the gather reads. Captured on the main thread so
+    // a background gather never observes a half-applied Configure: the DTO and levels array are
+    // replaced wholesale on regen, so holding the old references stays internally consistent.
+    public readonly struct GatherContext
+    {
+        public readonly ScatterLibraryDto Library;
+        public readonly int[] Levels;
+        public readonly int WorldSeed;
+        public readonly float BaseRadiusLocal;
+        public readonly float SeaRadiusLocal;
+        public readonly bool HasOcean;
+
+        public GatherContext(ScatterLibraryDto library, int[] levels, int worldSeed,
+            float baseRadiusLocal, float seaRadiusLocal, bool hasOcean)
+        {
+            Library = library; Levels = levels; WorldSeed = worldSeed;
+            BaseRadiusLocal = baseRadiusLocal; SeaRadiusLocal = seaRadiusLocal; HasOcean = hasOcean;
+        }
+
+        public bool IsValid => Library != null && Levels != null && Levels.Length == Library.Prototypes.Length;
+    }
+
+    // Main thread only. Bundles the config a gather needs; invalid until the first Configure.
+    public bool TryCaptureGatherContext(out GatherContext context)
+    {
+        context = default;
+        if (!_configured || _library == null || _levels == null) return false;
+        context = new GatherContext(_library, _levels, _worldSeed, _baseRadiusLocal, _seaRadiusLocal, _hasOcean);
+        return true;
+    }
+
+    // Main-thread entry for diagnostics and the public Gather: captures config + transform, then runs
+    // the gather synchronously against the shared ranges buffer. The render path captures both on the
+    // main thread and calls GatherCore on a background thread (see GatherOffThread).
+    int GatherCoreSync(Vector3 cameraPos, float region, int maxLevel, List<ScatterInstance> buffer,
         bool reversed, out ScatterGatherStats stats)
     {
         stats = default;
-        if (!_configured || _library == null) return 0;
-        Transform t = _planetTransform;
-        float scale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(t);
+        if (!TryCaptureGatherContext(out GatherContext ctx)) return 0;
+        return GatherCore(ctx, PlanetTransformSnapshot.Capture(_planetTransform), cameraPos, region, maxLevel,
+            buffer, reversed, _ranges, out stats);
+    }
+
+    // One core for both public gather and the diagnostic reverse traversal. `reversed` flips
+    // prototype/cell/candidate order so scatter.verify can prove order-independence. Transform- and
+    // config-free: everything Configure mutates arrives via the pre-captured context + snapshot and the
+    // caller-owned ranges buffer, so this may run on a background thread (the ground sampler and biome
+    // eval are both pure).
+    internal int GatherCore(in GatherContext ctx, in PlanetTransformSnapshot snap, Vector3 cameraPos,
+        float region, int maxLevel, List<ScatterInstance> buffer, bool reversed, FaceSpaceCell[] ranges,
+        out ScatterGatherStats stats)
+    {
+        stats = default;
+        if (!ctx.IsValid) return 0;
+        float scale = snap.UniformScale;
         // Clip against the observer's surface anchor (the point under the camera), not the camera's
         // 3D position — otherwise altitude shrinks the footprint and empties the gather.
-        if (!TryResolveSurfaceAnchor(cameraPos, out Vector3 anchorWS)) return 0;
+        if (!TryResolveSurfaceAnchor(snap, cameraPos, out Vector3 anchorWS)) return 0;
         float r2 = region * region;
-        int protoCount = _library.Prototypes.Length;
+        int protoCount = ctx.Library.Prototypes.Length;
         int emitted = 0;
 
         for (int pk = 0; pk < protoCount; pk++)
         {
             int pi = reversed ? protoCount - 1 - pk : pk;
-            var proto = _library.Prototypes[pi];
-            int level = _levels[pi];
+            var proto = ctx.Library.Prototypes[pi];
+            int level = ctx.Levels[pi];
             if (level > maxLevel) continue;
             float cellUv = ScatterQuadtree.CellUvWidth(level);
 
-            var result = FaceSpaceCellRangeBuilder.BuildRangesLocal(cameraPos, t, _baseRadiusLocal, region, cellUv, 1, _ranges);
+            var result = FaceSpaceCellRangeBuilder.BuildRangesLocal(cameraPos, snap, ctx.BaseRadiusLocal, region, cellUv, 1, ranges);
             stats.CornerStraddle |= result.UncoveredCornerStraddle;
             PlacementRules rules = BuildRules(proto);
 
             for (int rk = 0; rk < result.Count; rk++)
             {
-                FaceSpaceCell cell = _ranges[reversed ? result.Count - 1 - rk : rk];
+                FaceSpaceCell cell = ranges[reversed ? result.Count - 1 - rk : rk];
                 int gx = cell.GridSize.x, gy = cell.GridSize.y;
                 // Nested loops (no gx*gy product) so an extreme range never overflows an int.
                 for (int dyi = 0; dyi < gy; dyi++)
@@ -109,7 +156,7 @@ public sealed class ScatterField : IDisposable
                         int dx = reversed ? gx - 1 - dxi : dxi;
                         int x = cell.PageOriginCellUV.x + dx, y = cell.PageOriginCellUV.y + dy;
 
-                        uint nodeSeed = ScatterHash.Node(_worldSeed, cell.FaceIndex, level, x, y);
+                        uint nodeSeed = ScatterHash.Node(ctx.WorldSeed, cell.FaceIndex, level, x, y);
                         uint slotSeed = ScatterHash.Slot(nodeSeed, proto.SlotId);
                         Vector2 uv = ScatterQuadtree.CandidateUv(x, y, cellUv, slotSeed);
                         Vector3 dir = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(cell.FaceIndex, uv);
@@ -120,23 +167,23 @@ public sealed class ScatterField : IDisposable
                         // no chunk sample — so the gather can move off the main thread.
                         if (!_ground.TrySampleGround(dir, out float localRadius, out Vector3 localNormal) || localRadius <= 0f) continue;
 
-                        Vector3 worldPos = t.TransformPoint(dir * localRadius);
+                        Vector3 worldPos = snap.TransformPoint(dir * localRadius);
                         if ((worldPos - anchorWS).sqrMagnitude > r2) continue;
                         stats.Candidates++;
 
-                        float membership = Membership(dir, localRadius, proto.Biome);
+                        float membership = Membership(dir, localRadius, proto.Biome, ctx.BaseRadiusLocal);
                         if (membership <= 0f) continue;
 
                         float slopeCos = Mathf.Clamp01(Vector3.Dot(localNormal, dir));
-                        float altitudeMeters = (localRadius - _seaRadiusLocal) * scale;
-                        float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, proto.SpacingMeters, _baseRadiusLocal * scale)
+                        float altitudeMeters = (localRadius - ctx.SeaRadiusLocal) * scale;
+                        float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, proto.SpacingMeters, ctx.BaseRadiusLocal * scale)
                                             * Mathf.Pow(membership, proto.BiomeBlendPower);
 
                         if (ScatterPlacementMath.TryPlace(slotSeed, dir, localRadius, altitudeMeters, slopeCos,
-                                densityKeep, _hasOcean, rules, out Vector3 posLocal, out Quaternion rot, out float sc))
+                                densityKeep, ctx.HasOcean, rules, out Vector3 posLocal, out Quaternion rot, out float sc))
                         {
                             ulong id = ScatterId.Pack(cell.FaceIndex, level, x, y, proto.SlotId);
-                            buffer.Add(new ScatterInstance(id, t.TransformPoint(posLocal), t.rotation * rot, sc, pi));
+                            buffer.Add(new ScatterInstance(id, snap.TransformPoint(posLocal), snap.Rotation * rot, sc, pi));
                             emitted++; stats.Accepted++;
                         }
                     }
@@ -146,15 +193,27 @@ public sealed class ScatterField : IDisposable
         return emitted;
     }
 
-    bool TryResolveSurfaceAnchor(Vector3 observerWS, out Vector3 anchorWS)
+    bool TryResolveSurfaceAnchor(in PlanetTransformSnapshot snap, Vector3 observerWS, out Vector3 anchorWS)
     {
         anchorWS = default;
-        Vector3 toObs = observerWS - _planetTransform.position;
+        Vector3 toObs = observerWS - snap.Center;
         if (toObs.sqrMagnitude < 1e-6f) return false;
-        Vector3 localDir = _planetTransform.InverseTransformDirection(toObs.normalized).normalized;
+        Vector3 localDir = snap.InverseTransformDirection(toObs.normalized).normalized;
         if (!_ground.TrySampleGround(localDir, out float localRadius, out _) || localRadius <= 0f) return false;
-        anchorWS = _planetTransform.TransformPoint(localDir * localRadius);
+        anchorWS = snap.TransformPoint(localDir * localRadius);
         return true;
+    }
+
+    // Background-thread gather for the renderer. The caller captures the transform on the main thread,
+    // then invokes this from Awaitable.BackgroundThreadAsync with its own ranges buffer (so it never
+    // races the diagnostics' shared buffer). Budget-guards against a runaway fine-spacing gather.
+    public int GatherOffThread(in GatherContext ctx, in PlanetTransformSnapshot snap, Vector3 cameraPos,
+        float region, int maxLevel, List<ScatterInstance> buffer, FaceSpaceCell[] ranges)
+    {
+        if (buffer == null || ranges == null || !ctx.IsValid) return 0;
+        if (region <= 0f || float.IsInfinity(region) || maxLevel < 0 || maxLevel > ScatterId.MaxLevel) return 0;
+        if (EstimateCandidates(ctx, region, maxLevel, snap.UniformScale) > CandidateBudget) return 0;
+        return GatherCore(ctx, snap, cameraPos, region, maxLevel, buffer, reversed: false, ranges, out _);
     }
 
     // World-facing wrapper for the diagnostic/anchor helpers: convert to local, sample the analytic
@@ -171,16 +230,15 @@ public sealed class ScatterField : IDisposable
 
     // Conservative candidate estimate (one square per prototype at its fixed level) for preflighting
     // diagnostic and public work before allocating or sampling. `long` to avoid overflow.
-    long EstimateCandidates(float region, int maxLevel)
+    long EstimateCandidates(in GatherContext ctx, float region, int maxLevel, float uniformScale)
     {
-        if (_levels == null) return 0;
-        float scale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform);
-        float worldRadius = _baseRadiusLocal * scale;
+        if (!ctx.IsValid) return 0;
+        float worldRadius = ctx.BaseRadiusLocal * uniformScale;
         long total = 0;
-        for (int i = 0; i < _library.Prototypes.Length; i++)
+        for (int i = 0; i < ctx.Library.Prototypes.Length; i++)
         {
-            if (_levels[i] > maxLevel) continue;
-            float cellWorld = 2f * worldRadius * ScatterQuadtree.CellUvWidth(_levels[i]);
+            if (ctx.Levels[i] > maxLevel) continue;
+            float cellWorld = 2f * worldRadius * ScatterQuadtree.CellUvWidth(ctx.Levels[i]);
             long side = (long)(2f * region / Mathf.Max(cellWorld, 1e-4f)) + 2;
             total += side * side;
             if (total > CandidateBudget) return total;
@@ -195,8 +253,11 @@ public sealed class ScatterField : IDisposable
         if (float.IsNaN(region) || float.IsInfinity(region)) { error = "scatter: region must be finite"; return false; }
         region = Mathf.Clamp(region, lo, hi);
         if (maxLevel < 0 || maxLevel > ScatterId.MaxLevel) { error = $"scatter: maxLevel must be 0..{ScatterId.MaxLevel}"; return false; }
-        long est = EstimateCandidates(region, maxLevel);
-        if (est > CandidateBudget) { error = $"scatter: candidate budget exceeded (~{est:N0}); reduce region or coarsen spacing"; return false; }
+        if (TryCaptureGatherContext(out var ctx))
+        {
+            long est = EstimateCandidates(ctx, region, maxLevel, FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform));
+            if (est > CandidateBudget) { error = $"scatter: candidate budget exceeded (~{est:N0}); reduce region or coarsen spacing"; return false; }
+        }
         return true;
     }
 
@@ -211,9 +272,9 @@ public sealed class ScatterField : IDisposable
         ScaleRange = p.ScaleRange, RandomYaw = p.RandomYaw,
     };
 
-    float Membership(Vector3 dir, float localRadius, BiomeType biome)
+    float Membership(Vector3 dir, float localRadius, BiomeType biome, float baseRadiusLocal)
     {
-        float elevation = localRadius / _baseRadiusLocal - 1f;
+        float elevation = localRadius / baseRadiusLocal - 1f;
         BiomeResult r = _biome.EvaluateBiome(dir, elevation);
         if (r.PrimaryBiome == biome) return 1f - r.BlendWeight;
         if (r.SecondaryBiome == biome) return r.BlendWeight;
@@ -247,7 +308,7 @@ public sealed class ScatterField : IDisposable
         if (!TryPrepDiagnostic(regionMeters, 80f, 5f, 400f, lvl, out float region, out string err)) return err;
         var buf = new List<ScatterInstance>(8192);
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        GatherCore(cam.transform.position, region, lvl, buf, false, out var stats);
+        GatherCoreSync(cam.transform.position, region, lvl, buf, false, out var stats);
         sw.Stop();
         var per = new int[_library.Prototypes.Length];
         foreach (var inst in buf) per[inst.PrototypeIndex]++;
@@ -272,8 +333,8 @@ public sealed class ScatterField : IDisposable
 
         var fwd = new List<ScatterInstance>(8192);
         var rev = new List<ScatterInstance>(8192);
-        GatherCore(c, region, ScatterId.MaxLevel, fwd, false, out var statsF);
-        GatherCore(c, region, ScatterId.MaxLevel, rev, true, out _);
+        GatherCoreSync(c, region, ScatterId.MaxLevel, fwd, false, out var statsF);
+        GatherCoreSync(c, region, ScatterId.MaxLevel, rev, true, out _);
         // Corner straddle is a deliberately-unscoped SP1 gap; covered cells are still deterministic,
         // so it is reported (PASS_WITH_KNOWN_CORNER_GAP), not failed.
         if (fwd.Count == 0) return "scatter.verify INCONCLUSIVE: no instances in view (move to a populated biome)";
@@ -295,10 +356,10 @@ public sealed class ScatterField : IDisposable
         if (drift > 0) return $"scatter.verify FAIL: {drift} transform drifts across orders";
 
         // Region independence: a smaller ROI equals the larger gather filtered to the small disc.
-        if (!TryResolveSurfaceAnchor(c, out Vector3 anchor)) return "scatter.verify INCONCLUSIVE: no surface anchor";
+        if (!TryResolveSurfaceAnchor(PlanetTransformSnapshot.Capture(_planetTransform), c, out Vector3 anchor)) return "scatter.verify INCONCLUSIVE: no surface anchor";
         float small = region * 0.5f, s2 = small * small;
         var smallList = new List<ScatterInstance>(4096);
-        GatherCore(c, small, ScatterId.MaxLevel, smallList, false, out _);
+        GatherCoreSync(c, small, ScatterId.MaxLevel, smallList, false, out _);
         var smallSet = new HashSet<ulong>(); foreach (var i in smallList) smallSet.Add(i.Id);
         var filtered = new HashSet<ulong>(); foreach (var i in fwd) if ((i.PositionWS - anchor).sqrMagnitude <= s2) filtered.Add(i.Id);
         if (!smallSet.SetEquals(filtered)) return $"scatter.verify FAIL: region-independence ({smallSet.Count} small vs {filtered.Count} filtered)";
@@ -385,7 +446,7 @@ public sealed class ScatterField : IDisposable
             if (!TryGroundRadiusWorld(worldDir, out float wr) || wr <= 0f) { sb.AppendLine($"  {a.name}: no surface"); continue; }
             Vector3 obs = _planetTransform.TransformPoint(dir * (wr / Mathf.Max(scale, 1e-4f)) * 1.001f);
             buf.Clear();
-            GatherCore(obs, region, ScatterId.MaxLevel, buf, false, out var st);
+            GatherCoreSync(obs, region, ScatterId.MaxLevel, buf, false, out var st);
             anyCorner |= st.CornerStraddle;
             sb.AppendLine($"  {a.name}: candidates {st.Candidates}, accepted {st.Accepted}{(st.CornerStraddle ? " [corner straddle]" : "")}");
         }

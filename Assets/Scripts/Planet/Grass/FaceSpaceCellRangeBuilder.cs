@@ -124,10 +124,12 @@ public static class FaceSpaceCellRangeBuilder
     // helper, so the grass Camera overload above stays byte-identical (grass placement is hand-tuned;
     // an extraction that touched its path would need a before/after grass capture gate). The only
     // difference: the observer direction is mapped into the PLANET-LOCAL frame before DirectionToFaceUv,
-    // so a rotated planet enumerates the correct face. Unifying the two is a later cleanup, not SP1.
+    // so a rotated planet enumerates the correct face. Takes a PlanetTransformSnapshot rather than the
+    // live Transform so scatter can build ranges on a background thread. Unifying the two is a later
+    // cleanup, not SP1.
     public static FaceSpaceRangeResult BuildRangesLocal(
         Vector3 cameraPos,
-        Transform planetTransform,
+        in PlanetTransformSnapshot planet,
         float planetRadius,
         float worldRadius,
         float cellUvWidth,
@@ -137,15 +139,14 @@ public static class FaceSpaceCellRangeBuilder
         int count = 0;
         bool uncoveredCornerStraddle = false;
 
-        Vector3 planetCenter = planetTransform.position;
-        Vector3 toCamera = cameraPos - planetCenter;
+        Vector3 toCamera = cameraPos - planet.Center;
         if (toCamera.sqrMagnitude < 1e-4f)
             return new FaceSpaceRangeResult(0, false);
-        Vector3 localDir = planetTransform.InverseTransformDirection(toCamera).normalized;
+        Vector3 localDir = planet.InverseTransformDirection(toCamera).normalized;
 
         DirectionToFaceUv(localDir, out int primaryFace, out Vector2 primaryFaceUv);
 
-        float planetWorldRadius = planetRadius * GetUniformWorldScale(planetTransform);
+        float planetWorldRadius = planetRadius * planet.UniformScale;
         float metersPerUV = ComputeMetersPerUV(primaryFace, primaryFaceUv, planetWorldRadius);
         float discRadiusUV = worldRadius / metersPerUV;
         pageCellSize = Mathf.Max(1, pageCellSize);
