@@ -93,7 +93,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     void EnsureRuntimeOwners()
     {
         EnsureGrassCoordinator();
-        _scatter ??= new ScatterField(transform, this, _colorGenerator);
+        _scatter ??= new ScatterField(transform, new AnalyticGroundSampler(_shapeGenerator), _colorGenerator);
         _scatterRenderer ??= new ScatterRenderer(_scatter, transform);
         _waterSurface ??= new PlanetWaterSurface(transform);
         _terrainMaterial ??= new PlanetTerrainMaterial(Logger);

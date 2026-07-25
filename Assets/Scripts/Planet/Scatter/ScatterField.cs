@@ -15,7 +15,7 @@ public sealed class ScatterField : IDisposable
     public struct ScatterGatherStats { public int Candidates; public int Accepted; public bool CornerStraddle; }
 
     readonly Transform _planetTransform;
-    readonly IPlanetSurfaceSampler _surface;
+    readonly ISurfaceGroundSampler _ground;
     readonly IBiomeProvider _biome;
     readonly FaceSpaceCell[] _ranges = new FaceSpaceCell[FaceSpaceCellRangeBuilder.MaxRanges];
 
@@ -27,10 +27,10 @@ public sealed class ScatterField : IDisposable
     bool _configured;
     int[] _levels; // fixed per prototype per generated world
 
-    public ScatterField(Transform planetTransform, IPlanetSurfaceSampler surface, IBiomeProvider biome)
+    public ScatterField(Transform planetTransform, ISurfaceGroundSampler ground, IBiomeProvider biome)
     {
         _planetTransform = planetTransform;
-        _surface = surface;
+        _ground = ground;
         _biome = biome;
         ConsoleRegistry.RegisterInstance(this);
     }
@@ -79,7 +79,7 @@ public sealed class ScatterField : IDisposable
         float scale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(t);
         // Clip against the observer's surface anchor (the point under the camera), not the camera's
         // 3D position — otherwise altitude shrinks the footprint and empties the gather.
-        if (!TryResolveSurfaceAnchor(cameraPos, scale, out Vector3 anchorWS)) return 0;
+        if (!TryResolveSurfaceAnchor(cameraPos, out Vector3 anchorWS)) return 0;
         float r2 = region * region;
         int protoCount = _library.Prototypes.Length;
         int emitted = 0;
@@ -114,9 +114,11 @@ public sealed class ScatterField : IDisposable
                         Vector2 uv = ScatterQuadtree.CandidateUv(x, y, cellUv, slotSeed);
                         Vector3 dir = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(cell.FaceIndex, uv);
 
-                        Vector3 worldDir = t.TransformDirection(dir).normalized;
-                        if (!_surface.TryGetSurfaceRadius(worldDir, out float worldRadius) || worldRadius <= 0f) continue;
-                        float localRadius = worldRadius / Mathf.Max(scale, 1e-4f);
+                        // Analytic surface (radius + normal in one query): LOD-independent and
+                        // deterministic, so props snap to the surface the mesh converges to instead
+                        // of whatever streaming chunk is resident, and it is pure math — no Transform,
+                        // no chunk sample — so the gather can move off the main thread.
+                        if (!_ground.TrySampleGround(dir, out float localRadius, out Vector3 localNormal) || localRadius <= 0f) continue;
 
                         Vector3 worldPos = t.TransformPoint(dir * localRadius);
                         if ((worldPos - anchorWS).sqrMagnitude > r2) continue;
@@ -125,7 +127,7 @@ public sealed class ScatterField : IDisposable
                         float membership = Membership(dir, localRadius, proto.Biome);
                         if (membership <= 0f) continue;
 
-                        float slopeCos = SlopeCos(cell.FaceIndex, uv, dir, localRadius, cellUv, scale);
+                        float slopeCos = Mathf.Clamp01(Vector3.Dot(localNormal, dir));
                         float altitudeMeters = (localRadius - _seaRadiusLocal) * scale;
                         float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, proto.SpacingMeters, _baseRadiusLocal * scale)
                                             * Mathf.Pow(membership, proto.BiomeBlendPower);
@@ -144,16 +146,27 @@ public sealed class ScatterField : IDisposable
         return emitted;
     }
 
-    bool TryResolveSurfaceAnchor(Vector3 observerWS, float scale, out Vector3 anchorWS)
+    bool TryResolveSurfaceAnchor(Vector3 observerWS, out Vector3 anchorWS)
     {
         anchorWS = default;
         Vector3 toObs = observerWS - _planetTransform.position;
         if (toObs.sqrMagnitude < 1e-6f) return false;
-        Vector3 worldDir = toObs.normalized;
-        if (!_surface.TryGetSurfaceRadius(worldDir, out float wr) || wr <= 0f) return false;
-        Vector3 localDir = _planetTransform.InverseTransformDirection(worldDir).normalized;
-        anchorWS = _planetTransform.TransformPoint(localDir * (wr / Mathf.Max(scale, 1e-4f)));
+        Vector3 localDir = _planetTransform.InverseTransformDirection(toObs.normalized).normalized;
+        if (!_ground.TrySampleGround(localDir, out float localRadius, out _) || localRadius <= 0f) return false;
+        anchorWS = _planetTransform.TransformPoint(localDir * localRadius);
         return true;
+    }
+
+    // World-facing wrapper for the diagnostic/anchor helpers: convert to local, sample the analytic
+    // ground, scale back to a world radius. The gather hot path calls _ground directly (local dir).
+    bool TryGroundRadiusWorld(Vector3 worldDir, out float worldRadius)
+    {
+        worldRadius = 0f;
+        Vector3 localDir = _planetTransform.InverseTransformDirection(worldDir).normalized;
+        if (!_ground.TrySampleGround(localDir, out float localRadius, out _)) return false;
+        float scale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform);
+        worldRadius = localRadius * scale;
+        return worldRadius > 0f;
     }
 
     // Conservative candidate estimate (one square per prototype at its fixed level) for preflighting
@@ -207,25 +220,6 @@ public sealed class ScatterField : IDisposable
         return 0f;
     }
 
-    float SlopeCos(int face, Vector2 uv, Vector3 dir, float localRadius, float cellUv, float scale)
-    {
-        float e = cellUv * 0.5f;
-        Vector3 du = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(face, uv + new Vector2(e, 0f));
-        Vector3 dv = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(face, uv + new Vector2(0f, e));
-        float ru = SampleLocal(du, localRadius, scale);
-        float rv = SampleLocal(dv, localRadius, scale);
-        Vector3 p0 = dir * localRadius, pu = du * ru, pv = dv * rv;
-        Vector3 n = Vector3.Cross(pu - p0, pv - p0).normalized;
-        if (Vector3.Dot(n, dir) < 0f) n = -n;
-        return Mathf.Clamp01(Vector3.Dot(n, dir));
-    }
-
-    float SampleLocal(Vector3 localDir, float fallbackLocal, float scale)
-    {
-        Vector3 wd = _planetTransform.TransformDirection(localDir).normalized;
-        return _surface.TryGetSurfaceRadius(wd, out float wr) ? wr / Mathf.Max(scale, 1e-4f) : fallbackLocal;
-    }
-
     // Reported by scatter.count so a zero result is self-diagnosing: without it you cannot tell
     // "placement is broken" from "you are standing in a biome no prototype targets".
     string DescribeBiomeAt(Vector3 observerWS)
@@ -234,7 +228,7 @@ public sealed class ScatterField : IDisposable
         Vector3 toObs = observerWS - _planetTransform.position;
         if (toObs.sqrMagnitude < 1e-6f) return "biome here: n/a (at planet centre)";
         Vector3 worldDir = toObs.normalized;
-        if (!_surface.TryGetSurfaceRadius(worldDir, out float wr) || wr <= 0f) return "biome here: no surface";
+        if (!TryGroundRadiusWorld(worldDir, out float wr) || wr <= 0f) return "biome here: no surface";
         float localRadius = wr / Mathf.Max(scale, 1e-4f);
         Vector3 localDir = _planetTransform.InverseTransformDirection(worldDir).normalized;
         BiomeResult r = _biome.EvaluateBiome(localDir, localRadius / _baseRadiusLocal - 1f);
@@ -301,8 +295,7 @@ public sealed class ScatterField : IDisposable
         if (drift > 0) return $"scatter.verify FAIL: {drift} transform drifts across orders";
 
         // Region independence: a smaller ROI equals the larger gather filtered to the small disc.
-        float scale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform);
-        if (!TryResolveSurfaceAnchor(c, scale, out Vector3 anchor)) return "scatter.verify INCONCLUSIVE: no surface anchor";
+        if (!TryResolveSurfaceAnchor(c, out Vector3 anchor)) return "scatter.verify INCONCLUSIVE: no surface anchor";
         float small = region * 0.5f, s2 = small * small;
         var smallList = new List<ScatterInstance>(4096);
         GatherCore(c, small, ScatterId.MaxLevel, smallList, false, out _);
@@ -354,7 +347,7 @@ public sealed class ScatterField : IDisposable
         {
             Vector3 d = FibonacciDirection(i, Samples);
             Vector3 wd = _planetTransform.TransformDirection(d).normalized;
-            if (!_surface.TryGetSurfaceRadius(wd, out float wr) || wr <= 0f) continue;
+            if (!TryGroundRadiusWorld(wd, out float wr) || wr <= 0f) continue;
             if (_biome.EvaluateBiome(d, wr / Mathf.Max(scale, 1e-4f) / _baseRadiusLocal - 1f).PrimaryBiome != biome)
                 continue;
             float dot = Vector3.Dot(d, fromLocal); // nearest to where the camera already is
@@ -364,7 +357,7 @@ public sealed class ScatterField : IDisposable
         if (!found) return $"scatter.goto: no surface point found with biome {biome}";
 
         Vector3 bestWorldDir = _planetTransform.TransformDirection(bestLocal).normalized;
-        if (!_surface.TryGetSurfaceRadius(bestWorldDir, out float bestRadius) || bestRadius <= 0f)
+        if (!TryGroundRadiusWorld(bestWorldDir, out float bestRadius) || bestRadius <= 0f)
             return "scatter.goto: surface sample failed at target";
 
         float height = Mathf.Clamp(heightMeters ?? 15f, 1f, 500f);
@@ -389,7 +382,7 @@ public sealed class ScatterField : IDisposable
         {
             Vector3 dir = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(0, a.uv);
             Vector3 worldDir = _planetTransform.TransformDirection(dir).normalized;
-            if (!_surface.TryGetSurfaceRadius(worldDir, out float wr) || wr <= 0f) { sb.AppendLine($"  {a.name}: no surface"); continue; }
+            if (!TryGroundRadiusWorld(worldDir, out float wr) || wr <= 0f) { sb.AppendLine($"  {a.name}: no surface"); continue; }
             Vector3 obs = _planetTransform.TransformPoint(dir * (wr / Mathf.Max(scale, 1e-4f)) * 1.001f);
             buf.Clear();
             GatherCore(obs, region, ScatterId.MaxLevel, buf, false, out var st);

@@ -45,15 +45,22 @@ public class ShapeGenerator : ITerrainProvider
 
     public float EvaluateElevation(Vector3 pointOnUnitSphere)
     {
+        float elevation = SampleElevation(pointOnUnitSphere);
+        _workingMinMax.AddValue(elevation);
+        return elevation;
+    }
+
+    // Side-effect-free elevation, safe to call off the main thread and without perturbing the
+    // min/max envelope. Reads only data frozen at Initialize (noise filters, diagnostic layout),
+    // so consumers like scatter placement get the same LOD-independent surface the meshes are
+    // built from without touching a streaming chunk or the elevation range.
+    public float SampleElevation(Vector3 pointOnUnitSphere)
+    {
         if (_diagnosticTerrain.Enabled != 0)
-        {
-            float diagnosticElevation = DiagnosticTerrainEvaluator.Evaluate(
+            return DiagnosticTerrainEvaluator.Evaluate(
                 new Unity.Mathematics.float3(pointOnUnitSphere.x, pointOnUnitSphere.y, pointOnUnitSphere.z),
                 _diagnosticTerrain,
                 _diagnosticTerrainCells);
-            _workingMinMax.AddValue(diagnosticElevation);
-            return diagnosticElevation;
-        }
 
         float elevation = 0;
         float firstLayerValue = 0;
@@ -71,7 +78,6 @@ public class ShapeGenerator : ITerrainProvider
             elevation += _noiseFilters[i].Evaluate(pointOnUnitSphere) * mask;
         }
 
-        _workingMinMax.AddValue(elevation);
         return elevation;
     }
 
