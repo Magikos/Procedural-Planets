@@ -32,6 +32,6 @@ MonoBehaviour:
   LodMeshes:
   - {fileID: -2763038995239707894, guid: 53af0a003d5277d49925791066fdcd1e, type: 3}
   LodEndDistances:
-  - 120
+  - 400
   CastShadows: 1
   ReceiveShadows: 1

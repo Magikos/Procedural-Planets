@@ -15,7 +15,7 @@ using UnityEngine.Rendering;
 // dropped instead of swapped in.
 public sealed class ScatterRenderer : IDisposable
 {
-    const float RegionMeters = 150f;     // gather radius; caps far draw distance (banded gathers are an SP2 refinement)
+    const float DefaultRegionMeters = 150f; // fallback when no prototype declares a cull distance
     const float ReGatherMoveMeters = 10f;
     const int BatchCap = 1023;           // Graphics.RenderMeshInstanced hard cap
 
@@ -32,12 +32,16 @@ public sealed class ScatterRenderer : IDisposable
 
     ScatterLibraryDto _library;
     RenderParams[] _renderParams;
+    float _gatherRegion = DefaultRegionMeters; // = the farthest prototype cull; each prototype bands to its own
     bool _configured;
     Vector3 _lastGatherPos = FarAway;
     volatile bool _gathering;
     CancellationTokenSource _cts = new CancellationTokenSource();
 
     static readonly Vector3 FarAway = new Vector3(1e9f, 1e9f, 1e9f);
+    // Material-scoped (per-Material) fade properties on Scatter.shader — not shader globals.
+    static readonly int _fadeStartId = Shader.PropertyToID("_FadeStart");
+    static readonly int _fadeEndId = Shader.PropertyToID("_FadeEnd");
 
     public ScatterRenderer(ScatterField field, Transform planetTransform)
     {
@@ -50,19 +54,29 @@ public sealed class ScatterRenderer : IDisposable
         _library = SettingsProvider.GetSettings<ScatterLibraryDto>();
         var bounds = new Bounds(_planetTransform.position, Vector3.one * 100000f);
         _renderParams = new RenderParams[_library.Prototypes.Length];
+        float region = DefaultRegionMeters;
         for (int i = 0; i < _library.Prototypes.Length; i++)
         {
             var p = _library.Prototypes[i];
             if (!p.CanRender) continue;
+            if (p.LodEndDistances.Length > 0)
+                region = Mathf.Max(region, p.LodEndDistances[p.LodEndDistances.Length - 1]);
             // RenderMeshInstanced throws every frame if the material lacks GPU instancing. Enable it
             // so a correct authoring mistake can't spam the log; the material asset carries the flag.
             if (!p.Material.enableInstancing)
                 p.Material.enableInstancing = true;
+            // Per-prototype dither fade band tied to this prototype's own cull, so each fades out at
+            // its own far edge over the shared material rather than the material's baked fade values.
+            float cull = p.LodEndDistances.Length > 0 ? p.LodEndDistances[p.LodEndDistances.Length - 1] : DefaultRegionMeters;
+            var fadeProps = new MaterialPropertyBlock();
+            fadeProps.SetFloat(_fadeStartId, cull * 0.85f);
+            fadeProps.SetFloat(_fadeEndId, cull);
             _renderParams[i] = new RenderParams(p.Material)
             {
                 shadowCastingMode = p.CastShadows ? ShadowCastingMode.On : ShadowCastingMode.Off,
                 receiveShadows = p.ReceiveShadows,
                 worldBounds = bounds,
+                matProps = fadeProps,
             };
         }
         // Cancel any gather from a previous world and force a fresh one. The front buffers are only
@@ -71,6 +85,7 @@ public sealed class ScatterRenderer : IDisposable
         _cts.Cancel();
         _cts.Dispose();
         _cts = new CancellationTokenSource();
+        _gatherRegion = region;
         _instances.Clear();
         _matrices.Clear();
         _lastGatherPos = FarAway;
@@ -112,7 +127,7 @@ public sealed class ScatterRenderer : IDisposable
                 await Awaitable.BackgroundThreadAsync();
                 if (!token.IsCancellationRequested)
                 {
-                    _field.GatherOffThread(ctx, snap, camPos, RegionMeters, ScatterId.MaxLevel, _back, _asyncRanges);
+                    _field.GatherOffThread(ctx, snap, camPos, _gatherRegion, ScatterId.MaxLevel, _back, _asyncRanges);
                     haveResult = true;
                 }
                 await Awaitable.MainThreadAsync(); // always return to the main thread before the finally

@@ -64,7 +64,7 @@ public sealed class ScatterField : IDisposable
         if (maxLevel < 0 || maxLevel > ScatterId.MaxLevel)
             throw new ArgumentOutOfRangeException(nameof(maxLevel), maxLevel, $"must be 0..{ScatterId.MaxLevel}");
         if (TryCaptureGatherContext(out var ctx) &&
-            EstimateCandidates(ctx, regionRadiusMeters, maxLevel, FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform)) > CandidateBudget)
+            EstimateCandidates(ctx, regionRadiusMeters, maxLevel, FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform), perPrototypeCull: false) > CandidateBudget)
             throw new InvalidOperationException("scatter: region/spacing exceeds the candidate budget; tile the ROI into smaller queries.");
         return GatherCoreSync(cameraPos, regionRadiusMeters, maxLevel, buffer, reversed: false, out _);
     }
@@ -109,8 +109,15 @@ public sealed class ScatterField : IDisposable
         stats = default;
         if (!TryCaptureGatherContext(out GatherContext ctx)) return 0;
         return GatherCore(ctx, PlanetTransformSnapshot.Capture(_planetTransform), cameraPos, region, maxLevel,
-            buffer, reversed, _ranges, out stats);
+            buffer, reversed, perPrototypeCull: false, _ranges, out stats);
     }
+
+    // A prototype's far-cull distance: the last LOD end distance, i.e. how far the renderer draws it.
+    // Falls back to the caller's region for placement-only prototypes (no render data).
+    static float ProtoGatherRadius(ScatterPrototypeDto p, float fallback) =>
+        p.LodEndDistances != null && p.LodEndDistances.Length > 0
+            ? p.LodEndDistances[p.LodEndDistances.Length - 1]
+            : fallback;
 
     // One core for both public gather and the diagnostic reverse traversal. `reversed` flips
     // prototype/cell/candidate order so scatter.verify can prove order-independence. Transform- and
@@ -118,8 +125,8 @@ public sealed class ScatterField : IDisposable
     // caller-owned ranges buffer, so this may run on a background thread (the ground sampler and biome
     // eval are both pure).
     internal int GatherCore(in GatherContext ctx, in PlanetTransformSnapshot snap, Vector3 cameraPos,
-        float region, int maxLevel, List<ScatterInstance> buffer, bool reversed, FaceSpaceCell[] ranges,
-        out ScatterGatherStats stats)
+        float region, int maxLevel, List<ScatterInstance> buffer, bool reversed, bool perPrototypeCull,
+        FaceSpaceCell[] ranges, out ScatterGatherStats stats)
     {
         stats = default;
         if (!ctx.IsValid) return 0;
@@ -127,7 +134,6 @@ public sealed class ScatterField : IDisposable
         // Clip against the observer's surface anchor (the point under the camera), not the camera's
         // 3D position — otherwise altitude shrinks the footprint and empties the gather.
         if (!TryResolveSurfaceAnchor(snap, cameraPos, out Vector3 anchorWS)) return 0;
-        float r2 = region * region;
         int protoCount = ctx.Library.Prototypes.Length;
         int emitted = 0;
 
@@ -139,7 +145,13 @@ public sealed class ScatterField : IDisposable
             if (level > maxLevel) continue;
             float cellUv = ScatterQuadtree.CellUvWidth(level);
 
-            var result = FaceSpaceCellRangeBuilder.BuildRangesLocal(cameraPos, snap, ctx.BaseRadiusLocal, region, cellUv, 1, ranges);
+            // Render banding: each prototype gathers only out to its own far-cull distance, so a
+            // fine-spacing prototype (dense bushes) never enumerates the far ring a coarse one (sparse
+            // trees) needs. Diagnostics gather uniformly, so a count query means "everything within R".
+            float protoRegion = perPrototypeCull ? Mathf.Min(region, ProtoGatherRadius(proto, region)) : region;
+            float pr2 = protoRegion * protoRegion;
+
+            var result = FaceSpaceCellRangeBuilder.BuildRangesLocal(cameraPos, snap, ctx.BaseRadiusLocal, protoRegion, cellUv, 1, ranges);
             stats.CornerStraddle |= result.UncoveredCornerStraddle;
             PlacementRules rules = BuildRules(proto);
 
@@ -168,7 +180,7 @@ public sealed class ScatterField : IDisposable
                         if (!_ground.TrySampleGround(dir, out float localRadius, out Vector3 localNormal) || localRadius <= 0f) continue;
 
                         Vector3 worldPos = snap.TransformPoint(dir * localRadius);
-                        if ((worldPos - anchorWS).sqrMagnitude > r2) continue;
+                        if ((worldPos - anchorWS).sqrMagnitude > pr2) continue;
                         stats.Candidates++;
 
                         float membership = Membership(dir, localRadius, proto.Biome, ctx.BaseRadiusLocal);
@@ -212,8 +224,8 @@ public sealed class ScatterField : IDisposable
     {
         if (buffer == null || ranges == null || !ctx.IsValid) return 0;
         if (region <= 0f || float.IsInfinity(region) || maxLevel < 0 || maxLevel > ScatterId.MaxLevel) return 0;
-        if (EstimateCandidates(ctx, region, maxLevel, snap.UniformScale) > CandidateBudget) return 0;
-        return GatherCore(ctx, snap, cameraPos, region, maxLevel, buffer, reversed: false, ranges, out _);
+        if (EstimateCandidates(ctx, region, maxLevel, snap.UniformScale, perPrototypeCull: true) > CandidateBudget) return 0;
+        return GatherCore(ctx, snap, cameraPos, region, maxLevel, buffer, reversed: false, perPrototypeCull: true, ranges, out _);
     }
 
     // World-facing wrapper for the diagnostic/anchor helpers: convert to local, sample the analytic
@@ -230,7 +242,7 @@ public sealed class ScatterField : IDisposable
 
     // Conservative candidate estimate (one square per prototype at its fixed level) for preflighting
     // diagnostic and public work before allocating or sampling. `long` to avoid overflow.
-    long EstimateCandidates(in GatherContext ctx, float region, int maxLevel, float uniformScale)
+    long EstimateCandidates(in GatherContext ctx, float region, int maxLevel, float uniformScale, bool perPrototypeCull)
     {
         if (!ctx.IsValid) return 0;
         float worldRadius = ctx.BaseRadiusLocal * uniformScale;
@@ -238,8 +250,9 @@ public sealed class ScatterField : IDisposable
         for (int i = 0; i < ctx.Library.Prototypes.Length; i++)
         {
             if (ctx.Levels[i] > maxLevel) continue;
+            float protoRegion = perPrototypeCull ? Mathf.Min(region, ProtoGatherRadius(ctx.Library.Prototypes[i], region)) : region;
             float cellWorld = 2f * worldRadius * ScatterQuadtree.CellUvWidth(ctx.Levels[i]);
-            long side = (long)(2f * region / Mathf.Max(cellWorld, 1e-4f)) + 2;
+            long side = (long)(2f * protoRegion / Mathf.Max(cellWorld, 1e-4f)) + 2;
             total += side * side;
             if (total > CandidateBudget) return total;
         }
@@ -255,7 +268,7 @@ public sealed class ScatterField : IDisposable
         if (maxLevel < 0 || maxLevel > ScatterId.MaxLevel) { error = $"scatter: maxLevel must be 0..{ScatterId.MaxLevel}"; return false; }
         if (TryCaptureGatherContext(out var ctx))
         {
-            long est = EstimateCandidates(ctx, region, maxLevel, FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform));
+            long est = EstimateCandidates(ctx, region, maxLevel, FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform), perPrototypeCull: false);
             if (est > CandidateBudget) { error = $"scatter: candidate budget exceeded (~{est:N0}); reduce region or coarsen spacing"; return false; }
         }
         return true;
