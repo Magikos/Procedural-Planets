@@ -34,14 +34,15 @@ Milestone tag: `scatter-surface-async-v1` (commit `939250d`).
   `Awaitable.BackgroundThreadAsync` and swaps on the main thread. One gather in flight; regen/
   teardown cancels via token. Main thread now only kicks + draws. Validated in the live loop.
 
-## F3 — Props render dark  ·  Needs Review (aesthetic)
+## F3 — Props render dark  ·  Confirmed: scene lighting, not the assets
 
-- **Category:** Style · **Severity:** Low · **Status:** Needs Review
-- **Description:** trees/rocks/bushes read darker than the lit terrain.
-- **Evidence:** ruled out a gamma bug — `Generic_01_A` atlas imports sRGB=True. Cause is Synty's
-  dark low-poly art plus the diagnostic grid scene's low ambient (~0.21) and a low test-sun.
-- **Recommendation:** verify brightness on the real planet (atmosphere-lit sky) before tuning;
-  if still dark, raise `_BaseColor` tint on `SyntyProps.mat` or the scene ambient. Not a code fix.
+- **Category:** Style · **Severity:** Low · **Status:** Root cause confirmed; no asset/code change
+- **Description:** trees/rocks/bushes read darker than the lit terrain on the planet.
+- **Evidence:** ruled out a gamma bug (`Generic_01_A` imports sRGB=True). The asset workbench
+  (`Scenes/Tests/ScatterAssets`) renders every prop under neutral flat ambient — they come out
+  correctly coloured (green foliage, grey rock, orange flowers), so the darkness is purely the
+  planet scene's low ambient (~0.21) + raking sun, not the meshes/material/atlas.
+- **Recommendation:** a planet-lighting/ambient tuning call, if wanted at all — not a scatter fix.
 
 ## F4 — Empty far field (150 m gather cap; no impostors)  ·  Partially Fixed
 
@@ -51,12 +52,12 @@ Milestone tag: `scatter-surface-async-v1` (commit `939250d`).
   400 m and rocks 250 m without the dense bush enumerating that ring (render buffer ~1305 vs ~10400
   if uniform). Per-prototype dither fade via `MaterialPropertyBlock`. Far field now fills to the
   horizon with full-detail meshes.
-- **Slice 2 (open):** far LOD is still the full-detail mesh. Two options, in cost order:
-  (a) wire the Synty **LOD1/LOD2** sub-meshes as the mid/far tiers (cheap, no bake pipeline — the
-  `LodMeshes`/`LodEndDistances` arrays already support it; only LOD0 is wired today); (b) **octahedral
-  impostors** baked on a background thread for the farthest tier + longer range (the original design
-  target; big, visually finicky). Perf is currently fine with meshes at 400 m, so this is
-  scale/polish, not urgent.
+- **Slice 2 (open):** far LOD is still the full-detail mesh. The asset workbench showed the prop
+  FBXs are **single-mesh with no source LOD chain**, so wiring Synty LODs is not an option. Remaining
+  paths for the far tier: (a) **runtime/offline mesh decimation** to synthesize LOD1/2; (b)
+  **octahedral impostors** baked on a background thread (the original design target; big, visually
+  finicky) — also the enabler for the "chop a forest, see it from a distant hill" feature. Perf is
+  currently fine with full meshes at 400 m, so this is scale/polish, not urgent.
 
 ## F5 — Far-horizon dither stipple at the cull ring  ·  Open
 
