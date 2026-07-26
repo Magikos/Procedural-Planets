@@ -43,19 +43,28 @@ Milestone tag: `scatter-surface-async-v1` (commit `939250d`).
 - **Recommendation:** verify brightness on the real planet (atmosphere-lit sky) before tuning;
   if still dark, raise `_BaseColor` tint on `SyntyProps.mat` or the scene ambient. Not a code fix.
 
-## F4 — No impostors; 150 m gather hard cap (empty far field)  ·  Open
+## F4 — Empty far field (150 m gather cap; no impostors)  ·  Partially Fixed
 
-- **Category:** Architecture · **Severity:** Medium · **Status:** Open (SP3)
-- **Description:** `ScatterRenderer.RegionMeters = 150` caps draw distance, and octahedral impostors
-  (the SP3 design target) are unbuilt, so past ~150 m nothing fills in — trees just dither out.
-- **Recommendation:** the planned SP3 work — banded gathers to extend range + impostors baked on a
-  background thread. Sizeable; own design pass.
+- **Category:** Architecture · **Severity:** Medium · **Status:** Slice 1 fixed (`19bf7c2`); impostors open
+- **Description:** the gather was capped at a uniform 150 m, so nothing drew past it.
+- **Slice 1 (done):** banded gather — each prototype gathers only to its own cull, so trees now reach
+  400 m and rocks 250 m without the dense bush enumerating that ring (render buffer ~1305 vs ~10400
+  if uniform). Per-prototype dither fade via `MaterialPropertyBlock`. Far field now fills to the
+  horizon with full-detail meshes.
+- **Slice 2 (open):** far LOD is still the full-detail mesh. Two options, in cost order:
+  (a) wire the Synty **LOD1/LOD2** sub-meshes as the mid/far tiers (cheap, no bake pipeline — the
+  `LodMeshes`/`LodEndDistances` arrays already support it; only LOD0 is wired today); (b) **octahedral
+  impostors** baked on a background thread for the farthest tier + longer range (the original design
+  target; big, visually finicky). Perf is currently fine with meshes at 400 m, so this is
+  scale/polish, not urgent.
 
 ## F5 — Far-horizon dither stipple at the cull ring  ·  Open
 
 - **Category:** Style · **Severity:** Low · **Status:** Open
-- **Description:** the screen-space dither fade shows as stippled canopies at the cull distance.
-- **Recommendation:** fold into the F4 banded-gather work (smooth the fade band).
+- **Description:** the screen-space dither fade shows as stippled canopies at the cull distance; now
+  per-prototype (each fades at its own cull) but still a screen-space stipple.
+- **Recommendation:** acceptable for now; revisit with the impostor transition (cross-fade mesh->
+  impostor) in F4 slice 2.
 
 ## F6 — Only 3 prototypes wired  ·  Needs Review (aesthetic)
 
