@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
+  m_Name: Birch Tree Prototype
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
+  DisplayName: Birch Tree
+  SlotId: 4
+  SpacingMeters: 22
+  Biome: 7
+  BiomeBlendPower: 1
+  Weight: 1
+  MaxSlopeDegrees: 32
+  SlopeFadeDegrees: 6
+  HasMinAltitude: 0
+  MinAltitudeMeters: 0
+  HasMaxAltitude: 0
+  MaxAltitudeMeters: 0
+  MinWaterClearanceMeters: 0.05
+  ScaleRange: {x: 0.85, y: 1.25}
+  RandomYaw: 1
+  Interaction: 0
+  Parts:
+  - Name: Trunk
+    Material: {fileID: 2100000, guid: f282f63ec7691604f890bfa94b32dbca, type: 2}
+    LodMeshes:
+    - {fileID: -690327605573071574, guid: 60b800de2a1ea8946ae7a4459f77df5e, type: 3}
+    - {fileID: -8845455799164928018, guid: 60b800de2a1ea8946ae7a4459f77df5e, type: 3}
+    - {fileID: 1523107069563882075, guid: 60b800de2a1ea8946ae7a4459f77df5e, type: 3}
+    LodEndDistances:
+    - 50
+    - 120
+    - 300
+    CastShadows: 1
+    ReceiveShadows: 1
+  - Name: Foliage
+    Material: {fileID: 2100000, guid: dcf4cc46631fe8844a0b83be2e643e43, type: 2}
+    LodMeshes:
+    - {fileID: -3219971147150429191, guid: 60b800de2a1ea8946ae7a4459f77df5e, type: 3}
+    - {fileID: 2159902512445262830, guid: 60b800de2a1ea8946ae7a4459f77df5e, type: 3}
+    - {fileID: -9144021924749721874, guid: 60b800de2a1ea8946ae7a4459f77df5e, type: 3}
+    LodEndDistances:
+    - 50
+    - 120
+    - 300
+    CastShadows: 1
+    ReceiveShadows: 1
+  Material: {fileID: 0}
+  LodMeshes: []
+  LodEndDistances: []
+  CastShadows: 1
+  ReceiveShadows: 1
