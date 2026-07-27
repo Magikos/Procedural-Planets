@@ -6,6 +6,39 @@ This is a **design for Bryan to approve before implementation** — it touches c
 (`ScatterField` gather radius, `ScatterRenderer`, the DTOs, prototype authoring) and has real
 aesthetic calls, so it was not built blind.
 
+## Implementation status — 2026-07-27
+
+**Option B is built and verified as a prototype tier in the lightweight `ScatterLodStrip`
+scene** (not yet wired into the planet's `ScatterRenderer` — that integration is the part below
+that still needs approval + play-verify). Committed `f6ef526`.
+
+Built:
+- `Assets/Graphics/Shaders/ScatterImpostor.shader` — cylindrical billboard around the instance
+  surface-up axis, alpha cutout, distance dither cross-fade (fade-in over the mesh-LOD cull band,
+  fade-out at its own far cull). Unlit; lighting is baked into the card.
+- `ScatterImpostorBaker.cs` — bakes a prototype's LOD0 to an RGBA card at load time (runtime-capable;
+  the planet would call the same baker at build). Returns card + world W/H for the quad.
+- `ScatterLodBatcher.Impostor` — the distance-banded draw tier (already shared with the mesh LODs).
+- `ScatterLodStripHarness` — bakes on Build, passes the impostor through; strip shows a continuous
+  near→mid→far transition with no popping or black cards, clean billboard past 800 m.
+
+Two engineering gotchas worth keeping (both cost real debugging time):
+1. **Instanced billboards must read the matrix via `GetObjectToWorldMatrix()`**, not raw
+   `unity_ObjectToWorld._m03` field access. Under `RenderMeshInstanced` the raw field access does not
+   resolve the per-instance matrix and the quad draws nothing (or at the origin). Single
+   non-instanced `RenderMesh` hides the bug because there it *is* the passed matrix.
+2. **A URP camera clears a manual `Camera.Render()`-to-RenderTexture to opaque black and ignores
+   `backgroundColor`.** No transparent clear, so the silhouette can't come from the clear alpha.
+   The baker keys alpha off luminance (bg is reliably pure black) with an ambient floor under the bake
+   so shadowed geometry stays above the key threshold. Also note `Mathf.SmoothStep(from,to,t)` is a
+   smoothed lerp *between from and to* — NOT HLSL `smoothstep(edge0,edge1,x)`; use an explicit
+   `t=saturate((x-e0)/(e1-e0)); t*t*(3-2t)` for an edge remap.
+
+Remaining for planet integration (still pending approval, needs on-planet play-verify — blocked this
+session by the generation wedge): steps 2–5 below (DTO `Impostor` authoring, gather-radius extension,
+the `ScatterRenderer` far pass on the shared batcher, shadow decision). The bake currently runs at
+load; for the planet, decide bake-at-build vs bake-at-load and where cards are cached.
+
 ## Problem
 
 Today each prototype draws full-detail mesh LODs out to its cull distance (trees ~400 m) then hard-
