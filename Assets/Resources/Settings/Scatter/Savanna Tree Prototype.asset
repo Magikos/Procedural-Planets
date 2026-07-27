@@ -30,7 +30,7 @@ MonoBehaviour:
   Interaction: 0
   Parts:
   - Name: Canopy
-    Material: {fileID: 2100000, guid: f5ed9a687248662408b7d2fe5229d62f, type: 2}
+    Material: {fileID: 2100000, guid: ff6404d628bbf224c9bb914d89bebd12, type: 2}
     LodMeshes:
     - {fileID: 2142436318779114554, guid: f9860d658bb47974b81fd2c006901fa0, type: 3}
     - {fileID: 2077005393848555372, guid: f9860d658bb47974b81fd2c006901fa0, type: 3}

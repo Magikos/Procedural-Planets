@@ -42,7 +42,7 @@ MonoBehaviour:
     CastShadows: 1
     ReceiveShadows: 1
   - Name: Foliage
-    Material: {fileID: 2100000, guid: 8e80d26fd7d13844ba77dbbcdcd87a97, type: 2}
+    Material: {fileID: 2100000, guid: cc1950cb4e8fb2649bde6b4918c23998, type: 2}
     LodMeshes:
     - {fileID: -3219971147150429191, guid: 60b800de2a1ea8946ae7a4459f77df5e, type: 3}
     - {fileID: 2159902512445262830, guid: 60b800de2a1ea8946ae7a4459f77df5e, type: 3}
