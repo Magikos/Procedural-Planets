@@ -30,7 +30,7 @@ MonoBehaviour:
   Interaction: 0
   Parts:
   - Name: Trunk
-    Material: {fileID: 2100000, guid: f282f63ec7691604f890bfa94b32dbca, type: 2}
+    Material: {fileID: 2100000, guid: dcf4cc46631fe8844a0b83be2e643e43, type: 2}
     LodMeshes:
     - {fileID: -690327605573071574, guid: 60b800de2a1ea8946ae7a4459f77df5e, type: 3}
     - {fileID: -8845455799164928018, guid: 60b800de2a1ea8946ae7a4459f77df5e, type: 3}
