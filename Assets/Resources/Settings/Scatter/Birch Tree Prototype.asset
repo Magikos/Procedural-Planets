@@ -30,7 +30,7 @@ MonoBehaviour:
   Interaction: 0
   Parts:
   - Name: Trunk
-    Material: {fileID: 2100000, guid: dcf4cc46631fe8844a0b83be2e643e43, type: 2}
+    Material: {fileID: 2100000, guid: 74254a319bf04e64183d1d2e897405a5, type: 2}
     LodMeshes:
     - {fileID: -690327605573071574, guid: 60b800de2a1ea8946ae7a4459f77df5e, type: 3}
     - {fileID: -8845455799164928018, guid: 60b800de2a1ea8946ae7a4459f77df5e, type: 3}
@@ -42,7 +42,7 @@ MonoBehaviour:
     CastShadows: 1
     ReceiveShadows: 1
   - Name: Foliage
-    Material: {fileID: 2100000, guid: dcf4cc46631fe8844a0b83be2e643e43, type: 2}
+    Material: {fileID: 2100000, guid: 7c8ab26200f9e5d4197bea883e304766, type: 2}
     LodMeshes:
     - {fileID: -3219971147150429191, guid: 60b800de2a1ea8946ae7a4459f77df5e, type: 3}
     - {fileID: 2159902512445262830, guid: 60b800de2a1ea8946ae7a4459f77df5e, type: 3}
