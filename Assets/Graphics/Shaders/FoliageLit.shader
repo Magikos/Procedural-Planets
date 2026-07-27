@@ -84,6 +84,7 @@ Shader "Scatter/FoliageLit"
         {
             Name "ForwardLit"
             Tags { "LightMode"="UniversalForward" }
+            Cull Off // foliage cards are single quads: draw both sides so they don't vanish edge-on / from behind
 
             HLSLPROGRAM
             #pragma vertex vert
@@ -139,7 +140,7 @@ Shader "Scatter/FoliageLit"
                 return OUT;
             }
 
-            half4 frag(Varyings IN) : SV_Target
+            half4 frag(Varyings IN, FRONT_FACE_TYPE cullFace : FRONT_FACE_SEMANTIC) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
                 DistanceDither(IN.positionWS, IN.screenPos);
@@ -155,9 +156,13 @@ Shader "Scatter/FoliageLit"
 
                 half3 albedo = lerp(trunk, leaf.rgb * _SeasonColor.rgb, lm);
 
+                // Double-sided: flip the normal on back faces so a leaf lit from either side reads correctly
+                // instead of the back face going black (which made the canopy merge into dark clumps).
+                float faceSign = IS_FRONT_VFACE(cullFace, 1.0, -1.0);
+
                 InputData inputData = (InputData)0;
                 inputData.positionWS = IN.positionWS;
-                inputData.normalWS = normalize(IN.normalWS);
+                inputData.normalWS = normalize(IN.normalWS) * faceSign;
                 inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(IN.positionWS);
                 inputData.shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
                 inputData.fogCoord = IN.fogFactor;
@@ -183,6 +188,7 @@ Shader "Scatter/FoliageLit"
             Name "ShadowCaster"
             Tags { "LightMode"="ShadowCaster" }
             ColorMask 0
+            Cull Off
 
             HLSLPROGRAM
             #pragma vertex shadowVert
