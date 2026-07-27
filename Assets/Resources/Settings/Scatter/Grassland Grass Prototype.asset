@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Grassland Grass Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Grassland Grass
-  SlotId: 4
+  SlotId: 34
   SpacingMeters: 3.5
   Biome: 6
   BiomeBlendPower: 1

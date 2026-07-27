@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Grassland Wildflowers Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Grassland Wildflowers
-  SlotId: 5
+  SlotId: 37
   SpacingMeters: 6
   Biome: 6
   BiomeBlendPower: 1

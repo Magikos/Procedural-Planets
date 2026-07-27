@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Tropical Fern Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Tropical Fern
-  SlotId: 4
+  SlotId: 38
   SpacingMeters: 5
   Biome: 4
   BiomeBlendPower: 1

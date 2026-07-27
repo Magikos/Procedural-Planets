@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Beach Palm Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Beach Palm
-  SlotId: 3
+  SlotId: 7
   SpacingMeters: 24
   Biome: 1
   BiomeBlendPower: 1

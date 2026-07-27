@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Mountain Pine Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Mountain Pine
-  SlotId: 3
+  SlotId: 16
   SpacingMeters: 34
   Biome: 14
   BiomeBlendPower: 1

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Steppe Bush Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Steppe Bush
-  SlotId: 1
+  SlotId: 32
   SpacingMeters: 9
   Biome: 8
   BiomeBlendPower: 1
@@ -28,6 +28,7 @@ MonoBehaviour:
   ScaleRange: {x: 0.8, y: 1.2}
   RandomYaw: 1
   Interaction: 0
+  Parts: []
   Material: {fileID: 2100000, guid: 50cb739c1d9e47e48b292d6eb257fbe1, type: 2}
   LodMeshes:
   - {fileID: 2110500866625123348, guid: 4b95a169ea8f0b04b972ae95bab5f3b4, type: 3}

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Savanna Tree Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Savanna Tree
-  SlotId: 3
+  SlotId: 9
   SpacingMeters: 38
   Biome: 3
   BiomeBlendPower: 1

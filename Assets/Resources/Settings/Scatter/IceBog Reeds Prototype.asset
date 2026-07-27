@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: IceBog Reeds Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: IceBog Reeds
-  SlotId: 4
+  SlotId: 41
   SpacingMeters: 5
   Biome: 13
   BiomeBlendPower: 1

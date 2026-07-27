@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Steppe Pine Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Steppe Pine
-  SlotId: 3
+  SlotId: 11
   SpacingMeters: 42
   Biome: 8
   BiomeBlendPower: 1

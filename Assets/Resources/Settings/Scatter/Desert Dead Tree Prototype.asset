@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Desert Dead Tree Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Desert Dead Tree
-  SlotId: 3
+  SlotId: 8
   SpacingMeters: 48
   Biome: 2
   BiomeBlendPower: 1

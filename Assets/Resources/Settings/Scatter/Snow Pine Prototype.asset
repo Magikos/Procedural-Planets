@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Snow Pine Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Snow Pine
-  SlotId: 3
+  SlotId: 14
   SpacingMeters: 32
   Biome: 12
   BiomeBlendPower: 1

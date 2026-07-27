@@ -6,12 +6,12 @@ using System;
 // SlotId, never the library array index, so reordering the library never moves an id.
 public static class ScatterId
 {
-    const int FaceBits = 3, LevelBits = 5, CoordBits = 24, SlotBits = 4;
+    const int FaceBits = 3, LevelBits = 5, CoordBits = 24, SlotBits = 6;
     const int LevelShift = FaceBits;                 // 3
     const int XShift = LevelShift + LevelBits;       // 8
     const int YShift = XShift + CoordBits;           // 32
     const int SlotShift = YShift + CoordBits;        // 56
-    const int PlayerShift = SlotShift + SlotBits;    // 60
+    const int PlayerShift = SlotShift + SlotBits;    // 62 (63 bits used; bit 63 spare)
 
     const ulong FaceMask = (1UL << FaceBits) - 1;
     const ulong LevelMask = (1UL << LevelBits) - 1;
@@ -21,7 +21,7 @@ public static class ScatterId
     // Operational max placement level = coordinate-bit count: at level L, cell coords span
     // 0..2^L-1, which must fit CoordBits. Also fits LevelBits (max 31). Single source of truth.
     public const int MaxLevel = CoordBits;           // 24
-    public const int MaxSlot = (1 << SlotBits) - 1;  // 15
+    public const int MaxSlot = (1 << SlotBits) - 1;  // 63
     public const int FaceCount = 6;
 
     // Unconditional validation (not #if): the id is a persistence key — a masked-in invalid value

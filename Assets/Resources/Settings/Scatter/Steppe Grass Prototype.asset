@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Steppe Grass Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Steppe Grass
-  SlotId: 4
+  SlotId: 35
   SpacingMeters: 4
   Biome: 8
   BiomeBlendPower: 1

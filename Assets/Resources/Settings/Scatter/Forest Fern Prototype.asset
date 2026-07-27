@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Forest Fern Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Forest Fern
-  SlotId: 5
+  SlotId: 39
   SpacingMeters: 6
   Biome: 7
   BiomeBlendPower: 1

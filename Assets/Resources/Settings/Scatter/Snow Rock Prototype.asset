@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Snow Rock Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Snow Rock
-  SlotId: 2
+  SlotId: 27
   SpacingMeters: 26
   Biome: 12
   BiomeBlendPower: 1
@@ -28,6 +28,7 @@ MonoBehaviour:
   ScaleRange: {x: 0.6, y: 1.9}
   RandomYaw: 1
   Interaction: 0
+  Parts: []
   Material: {fileID: 2100000, guid: 50cb739c1d9e47e48b292d6eb257fbe1, type: 2}
   LodMeshes:
   - {fileID: -498289647395715129, guid: dd8da99aec1a49947b47530a378233f1, type: 3}
