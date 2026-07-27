@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
+  m_Name: Savanna Tree Prototype
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
+  DisplayName: Savanna Tree
+  SlotId: 3
+  SpacingMeters: 38
+  Biome: 3
+  BiomeBlendPower: 1
+  Weight: 1
+  MaxSlopeDegrees: 28
+  SlopeFadeDegrees: 6
+  HasMinAltitude: 0
+  MinAltitudeMeters: 0
+  HasMaxAltitude: 0
+  MaxAltitudeMeters: 0
+  MinWaterClearanceMeters: 0.05
+  ScaleRange: {x: 0.9, y: 1.4}
+  RandomYaw: 1
+  Interaction: 0
+  Parts:
+  - Name: Canopy
+    Material: {fileID: 2100000, guid: f5ed9a687248662408b7d2fe5229d62f, type: 2}
+    LodMeshes:
+    - {fileID: 2142436318779114554, guid: f9860d658bb47974b81fd2c006901fa0, type: 3}
+    - {fileID: 2077005393848555372, guid: f9860d658bb47974b81fd2c006901fa0, type: 3}
+    LodEndDistances:
+    - 90
+    - 400
+    CastShadows: 1
+    ReceiveShadows: 1
+  - Name: Branches
+    Material: {fileID: 2100000, guid: f5ed9a687248662408b7d2fe5229d62f, type: 2}
+    LodMeshes:
+    - {fileID: 7413558654161418249, guid: f9860d658bb47974b81fd2c006901fa0, type: 3}
+    - {fileID: 276114067924089942, guid: f9860d658bb47974b81fd2c006901fa0, type: 3}
+    LodEndDistances:
+    - 90
+    - 400
+    CastShadows: 1
+    ReceiveShadows: 1
+  Material: {fileID: 0}
+  LodMeshes: []
+  LodEndDistances: []
+  CastShadows: 1
+  ReceiveShadows: 1

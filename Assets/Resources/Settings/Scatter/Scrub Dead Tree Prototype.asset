@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
+  m_Name: Scrub Dead Tree Prototype
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
+  DisplayName: Scrub Dead Tree
+  SlotId: 3
+  SpacingMeters: 40
+  Biome: 5
+  BiomeBlendPower: 1
+  Weight: 1
+  MaxSlopeDegrees: 35
+  SlopeFadeDegrees: 6
+  HasMinAltitude: 0
+  MinAltitudeMeters: 0
+  HasMaxAltitude: 0
+  MaxAltitudeMeters: 0
+  MinWaterClearanceMeters: 0.05
+  ScaleRange: {x: 0.6, y: 0.95}
+  RandomYaw: 1
+  Interaction: 0
+  Parts:
+  - Name: Trunk
+    Material: {fileID: 2100000, guid: 0b22fc0712ab9354a9ac7cf309c48e86, type: 2}
+    LodMeshes:
+    - {fileID: -8397841209921950655, guid: 04c6f51a8c8083149bbf680c73d52003, type: 3}
+    LodEndDistances:
+    - 400
+    CastShadows: 1
+    ReceiveShadows: 1
+  Material: {fileID: 0}
+  LodMeshes: []
+  LodEndDistances: []
+  CastShadows: 1
+  ReceiveShadows: 1
