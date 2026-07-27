@@ -1,5 +1,6 @@
 # Memory Index
 
+- [Scatter biome buildout](project_scatter_biome_buildout.md) — 2026-07-26: all 14 land biomes have scatter (42 prototypes); FoliageLit rules (never atlas as _TrunkMap, _ForceLeaf, Cull Off, _LeafNormalUp); per-biome slot convention (Birch=slot4)
 - [Grass layering arc](project_grass_layering_arc.md) — 2026-07-16/17: far-field blanket revived (linear-coverage fix) + blade clump identity + scale/width fixes shipped; textured cards & ground-darkening reverted; Synty clump scatter PARKED (determinism/pivot/material); verify grass on REAL planet not the grid test scene
 - [Cloud/weather visual arc](project_cloud_weather_arc.md) — 2026-07-14: cloud-type profiles + climate-temp driver + coverage 0.30 baked + rain-shaft/aureole/sun-bleed fix shipped; clouds parked needing polish; weather.force flattens source map (use weather.regenerate)
 - [Skill library](project_skill_library.md) — 2026-07-06: 16-skill library at .agent-skills/ (README router); load skills for project work; CLAUDE.md drift it surfaced
