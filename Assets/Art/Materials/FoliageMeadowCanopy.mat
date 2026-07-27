@@ -46,5 +46,6 @@ Material:
     - _WindStrength: 0
     m_Colors:
     - _SeasonColor: {r: 1, g: 1, b: 1, a: 1}
+    - _TrunkTint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

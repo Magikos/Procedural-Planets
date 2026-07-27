@@ -13,6 +13,7 @@ Shader "Scatter/FoliageLit"
     {
         _BaseMap ("Leaf Albedo (RGB) Alpha (A)", 2D) = "white" {}
         _TrunkMap ("Trunk / Bark Albedo", 2D) = "white" {}
+        _TrunkTint ("Trunk / Core Tint", Color) = (1,1,1,1)
         _SeasonColor ("Season Leaf Tint", Color) = (1,1,1,1)
         _Smoothness ("Smoothness", Range(0,1)) = 0.08
         _Cutoff ("Leaf Alpha Cutoff", Range(0,1)) = 0.4
@@ -36,6 +37,7 @@ Shader "Scatter/FoliageLit"
 
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
+            float4 _TrunkTint;
             float4 _SeasonColor;
             float _Smoothness;
             float _Cutoff;
@@ -150,7 +152,7 @@ Shader "Scatter/FoliageLit"
                 DistanceDither(IN.positionWS, IN.screenPos);
 
                 half4 leaf = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
-                half3 trunk = SAMPLE_TEXTURE2D(_TrunkMap, sampler_TrunkMap, IN.uv).rgb;
+                half3 trunk = SAMPLE_TEXTURE2D(_TrunkMap, sampler_TrunkMap, IN.uv).rgb * _TrunkTint.rgb;
                 float lm = IN.leafMask;
 
                 // Trunk stays opaque; leaves cut out, and leaf-fall raises their cutoff toward bare.

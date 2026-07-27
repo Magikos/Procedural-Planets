@@ -20,7 +20,7 @@ RenderSettings:
   m_FogDensity: 0.01
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0.55, g: 0.6, b: 0.66, a: 1}
+  m_AmbientSkyColor: {r: 0.55, g: 0.6, b: 0.62, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
   m_AmbientIntensity: 1
@@ -16632,6 +16632,7 @@ GameObject:
   m_Component:
   - component: {fileID: 936241481}
   - component: {fileID: 936241480}
+  - component: {fileID: 936241482}
   m_Layer: 0
   m_Name: FlyCamera
   m_TagString: MainCamera
@@ -16705,6 +16706,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &936241482
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 936241479}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d55386ca4535d174fb68f498d4b5e811, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ProceduralPlanets.Core::WorkbenchFlyCamera
+  MoveSpeed: 12
+  SprintMultiplier: 4
+  LookSensitivity: 0.12
 --- !u!1 &936930960
 GameObject:
   m_ObjectHideFlags: 0
@@ -20782,6 +20798,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1155036649}
   - component: {fileID: 1155036648}
+  - component: {fileID: 1155036650}
   m_Layer: 0
   m_Name: Sun
   m_TagString: Untagged
@@ -20869,6 +20886,35 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1155036650
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1155036647}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_CustomShadowLayers: 0
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
 --- !u!1 &1157199502
 GameObject:
   m_ObjectHideFlags: 0
