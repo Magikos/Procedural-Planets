@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
+  m_Name: Swamp Tree Prototype
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
+  DisplayName: Swamp Tree
+  SlotId: 3
+  SpacingMeters: 34
+  Biome: 10
+  BiomeBlendPower: 1
+  Weight: 1
+  MaxSlopeDegrees: 28
+  SlopeFadeDegrees: 6
+  HasMinAltitude: 0
+  MinAltitudeMeters: 0
+  HasMaxAltitude: 0
+  MaxAltitudeMeters: 0
+  MinWaterClearanceMeters: 0
+  ScaleRange: {x: 0.85, y: 1.2}
+  RandomYaw: 1
+  Interaction: 0
+  Parts:
+  - Name: Tree
+    Material: {fileID: 2100000, guid: ae6336466d63c974c889b51fc35520c7, type: 2}
+    LodMeshes:
+    - {fileID: 5816280904591672442, guid: 16fe5b9d2acae4b4b84fe93ac404f4d5, type: 3}
+    - {fileID: -3114054710266534573, guid: 16fe5b9d2acae4b4b84fe93ac404f4d5, type: 3}
+    - {fileID: -6020692842825829312, guid: 16fe5b9d2acae4b4b84fe93ac404f4d5, type: 3}
+    LodEndDistances:
+    - 60
+    - 150
+    - 400
+    CastShadows: 1
+    ReceiveShadows: 1
+  - Name: Beard
+    Material: {fileID: 2100000, guid: a7b2c9d64d71f6049995fb73466283ef, type: 2}
+    LodMeshes:
+    - {fileID: -7405459336116556553, guid: 16fe5b9d2acae4b4b84fe93ac404f4d5, type: 3}
+    - {fileID: 9046453788274980907, guid: 16fe5b9d2acae4b4b84fe93ac404f4d5, type: 3}
+    - {fileID: -8525924846918389339, guid: 16fe5b9d2acae4b4b84fe93ac404f4d5, type: 3}
+    LodEndDistances:
+    - 60
+    - 150
+    - 400
+    CastShadows: 1
+    ReceiveShadows: 1
+  Material: {fileID: 0}
+  LodMeshes: []
+  LodEndDistances: []
+  CastShadows: 1
+  ReceiveShadows: 1

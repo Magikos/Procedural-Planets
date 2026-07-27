@@ -20,6 +20,7 @@ Shader "Scatter/FoliageLit"
         _LeafMaskLo ("Leaf Mask Low (vtx.B)", Range(0,1)) = 0.6
         _LeafMaskHi ("Leaf Mask High (vtx.B)", Range(0,1)) = 0.85
         _LeafNormalUp ("Leaf Normal Up-Blend (canopy softness)", Range(0,1)) = 0.6
+        [Toggle] _ForceLeaf ("Force Leaf (moss / hanging beards)", Float) = 0
         _WindStrength ("Wind Strength (m)", Float) = 0
         _WindFreq ("Wind Frequency", Float) = 1.6
         _FadeStart ("Fade Start Distance", Float) = 120
@@ -44,6 +45,7 @@ Shader "Scatter/FoliageLit"
             float _LeafNormalUp;
             float _WindStrength;
             float _WindFreq;
+            float _ForceLeaf;
             float _FadeStart;
             float _FadeEnd;
         CBUFFER_END
@@ -129,7 +131,7 @@ Shader "Scatter/FoliageLit"
                 Varyings OUT = (Varyings)0;
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
-                float leafMask = LeafMask(IN.color.b);
+                float leafMask = max(LeafMask(IN.color.b), _ForceLeaf);
                 VertexPositionInputs pos = GetVertexPositionInputs(IN.positionOS.xyz);
                 float3 wsp = ApplyWind(pos.positionWS, leafMask);
                 OUT.positionWS = wsp;
@@ -229,7 +231,7 @@ Shader "Scatter/FoliageLit"
             {
                 SVaryings OUT = (SVaryings)0;
                 UNITY_SETUP_INSTANCE_ID(IN);
-                float leafMask = LeafMask(IN.color.b);
+                float leafMask = max(LeafMask(IN.color.b), _ForceLeaf);
                 float3 posWS = ApplyWind(TransformObjectToWorld(IN.positionOS.xyz), leafMask);
                 float3 nrmWS = TransformObjectToWorldNormal(IN.normalOS);
                 float4 hcs = TransformWorldToHClip(ApplyShadowBias(posWS, nrmWS, _LightDirection));
