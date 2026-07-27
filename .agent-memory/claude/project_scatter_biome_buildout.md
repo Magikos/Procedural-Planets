@@ -17,4 +17,8 @@ Scatter placement now covers **all 14 land biomes** (branch `scatter-placement`,
 
 **Import workflow**: copy FBX + its `.meta` and textures + their `.meta` from `D:\Downloads\!3D Sources\Extras\Synty` (preserves guid + `useFileScale=1`). PolygonGeneric props share one atlas material (`50cb739c…`) — reuse it for rocks/bushes with the legacy single-Material prototype path (no Parts).
 
+Two-part trees (meadow/birch/pohutukawa): canopy part uses its own material with `_TrunkMap`=leaf + a dark-green `_TrunkTint` so the interior fill blob (vertex-B=0) reads as canopy shadow, not brown clumps or green "bark"; trunk/branches part keeps bark. `BiomeShowcase.unity` (Scenes/Tests) is a static LOD0 lineup of all biomes with WorkbenchFlyCamera. URP `PC_RPAsset` shadow distance raised 50→250.
+
+**Open docs**: audit addendum `docs/audit/2026-07-26-scatter-audit.md` (N1 = `ScatterRenderer.Draw` rescans all instances per prototype×part×LOD — worth fixing; N2 = runtime enableInstancing write on shared material asset). Far-field impostor design awaiting Bryan's approval: `docs/design/2026-07-26-scatter-impostor-design.md` (recommends single cylindrical billboard first tier; needs distances + single-vs-octahedral call).
+
 **Gaps / future**: no cactus (Desert = dead tree + rock), no snow-specific trees (Snow = pine), `PNB_Enchanted_Forest` pack unused, mushrooms/lilypads not wired, snow/autumn `_SeasonColor` tinting not applied. Foliage still reads dark under backlight — a diffuse wrap / lit underside is the next polish lever if wanted. Related: [[project-grass-layering-arc]].
