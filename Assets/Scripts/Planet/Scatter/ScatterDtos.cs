@@ -1,6 +1,19 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// Immutable snapshot of one renderable part (material + LOD mesh chain). CastShadows/ReceiveShadows
+// are per part so a trunk can cast while its cutout foliage does not.
+public sealed record ScatterPartDto(
+    Material Material,
+    Mesh[] LodMeshes,
+    float[] LodEndDistances,
+    bool CastShadows,
+    bool ReceiveShadows)
+{
+    public bool CanRender => Material != null && LodMeshes.Length > 0 && LodMeshes[0] != null;
+    public float MaxCullDistance => LodEndDistances.Length > 0 ? LodEndDistances[LodEndDistances.Length - 1] : 0f;
+}
+
 public sealed record ScatterPrototypeDto(
     string DisplayName,
     int SlotId,
@@ -16,11 +29,7 @@ public sealed record ScatterPrototypeDto(
     Vector2 ScaleRange,
     bool RandomYaw,
     ScatterInteraction Interaction,
-    Material Material,
-    Mesh[] LodMeshes,
-    float[] LodEndDistances,
-    bool CastShadows,
-    bool ReceiveShadows)
+    ScatterPartDto[] Parts)
 {
     // Raw map only; ScatterLibraryDto.EnsureValid is the single validator (assets + overrides).
     public static ScatterPrototypeDto From(ScatterPrototype p) => new(
@@ -28,12 +37,50 @@ public sealed record ScatterPrototypeDto(
         p.MaxSlopeDegrees, p.SlopeFadeDegrees,
         p.HasMinAltitude, p.MinAltitudeMeters, p.HasMaxAltitude, p.MaxAltitudeMeters,
         p.MinWaterClearanceMeters, p.ScaleRange, p.RandomYaw, p.Interaction,
-        p.Material, p.LodMeshes ?? System.Array.Empty<Mesh>(),
-        p.LodEndDistances ?? System.Array.Empty<float>(), p.CastShadows, p.ReceiveShadows);
+        BuildParts(p));
 
-    // True when this prototype has enough to draw. Render data is optional — a prototype with no
-    // mesh/material is still placed (SP1), just not rendered (SP2).
-    public bool CanRender => Material != null && LodMeshes.Length > 0 && LodMeshes[0] != null;
+    static ScatterPartDto[] BuildParts(ScatterPrototype p)
+    {
+        if (p.Parts != null && p.Parts.Length > 0)
+        {
+            var parts = new ScatterPartDto[p.Parts.Length];
+            for (int i = 0; i < p.Parts.Length; i++)
+            {
+                var sp = p.Parts[i];
+                parts[i] = new ScatterPartDto(
+                    sp?.Material,
+                    sp?.LodMeshes ?? System.Array.Empty<Mesh>(),
+                    sp?.LodEndDistances ?? System.Array.Empty<float>(),
+                    sp?.CastShadows ?? true,
+                    sp?.ReceiveShadows ?? true);
+            }
+            return parts;
+        }
+        // Legacy single-material fallback for prototype assets authored before Parts existed.
+        if (p.Material != null || (p.LodMeshes != null && p.LodMeshes.Length > 0))
+            return new[]
+            {
+                new ScatterPartDto(
+                    p.Material,
+                    p.LodMeshes ?? System.Array.Empty<Mesh>(),
+                    p.LodEndDistances ?? System.Array.Empty<float>(),
+                    p.CastShadows, p.ReceiveShadows)
+            };
+        return System.Array.Empty<ScatterPartDto>();
+    }
+
+    // True when any part has enough to draw. Render data is optional — a prototype with no drawable
+    // part is still placed (SP1), just not rendered (SP2).
+    public bool CanRender
+    {
+        get { foreach (var part in Parts) if (part.CanRender) return true; return false; }
+    }
+
+    // Farthest cull across drawable parts — the prototype's gather/draw radius.
+    public float MaxCullDistance
+    {
+        get { float m = 0f; foreach (var part in Parts) if (part.CanRender && part.MaxCullDistance > m) m = part.MaxCullDistance; return m; }
+    }
 }
 
 public sealed record ScatterLibraryDto(ScatterPrototypeDto[] Prototypes)
@@ -94,17 +141,21 @@ public sealed record ScatterLibraryDto(ScatterPrototypeDto[] Prototypes)
                 Fail($"ScaleRange {p.ScaleRange} must be positive and non-inverted.");
             if (!System.Enum.IsDefined(typeof(BiomeType), p.Biome)) Fail($"undefined biome {(int)p.Biome}.");
             if (!System.Enum.IsDefined(typeof(ScatterInteraction), p.Interaction)) Fail($"undefined interaction {(int)p.Interaction}.");
+            if (p.Parts == null) Fail("Parts array is null.");
 
-            // Render data is optional; validate its shape only when meshes are assigned.
-            if (p.LodMeshes.Length > 0)
+            // Render data is optional; validate the LOD shape of each part that has meshes assigned.
+            for (int k = 0; k < p.Parts.Length; k++)
             {
-                if (p.LodEndDistances.Length != p.LodMeshes.Length)
-                    Fail($"LodMeshes ({p.LodMeshes.Length}) and LodEndDistances ({p.LodEndDistances.Length}) length mismatch.");
+                var part = p.Parts[k];
+                if (part == null) Fail($"part {k} is null.");
+                if (part.LodMeshes.Length == 0) continue;
+                if (part.LodEndDistances.Length != part.LodMeshes.Length)
+                    Fail($"part {k}: LodMeshes ({part.LodMeshes.Length}) and LodEndDistances ({part.LodEndDistances.Length}) length mismatch.");
                 float prev = 0f;
-                for (int m = 0; m < p.LodEndDistances.Length; m++)
+                for (int m = 0; m < part.LodEndDistances.Length; m++)
                 {
-                    float d = p.LodEndDistances[m];
-                    if (!Finite(d) || d <= prev) Fail($"LodEndDistances must be finite and strictly ascending; entry {m} = {d}.");
+                    float d = part.LodEndDistances[m];
+                    if (!Finite(d) || d <= prev) Fail($"part {k}: LodEndDistances must be finite and strictly ascending; entry {m} = {d}.");
                     prev = d;
                 }
             }

@@ -31,7 +31,7 @@ public sealed class ScatterRenderer : IDisposable
     readonly List<Matrix4x4> _matrices = new List<Matrix4x4>(16384);
 
     ScatterLibraryDto _library;
-    RenderParams[] _renderParams;
+    RenderParams[][] _renderParams; // [prototype][part]
     float _gatherRegion = DefaultRegionMeters; // = the farthest prototype cull; each prototype bands to its own
     bool _configured;
     Vector3 _lastGatherPos = FarAway;
@@ -53,31 +53,36 @@ public sealed class ScatterRenderer : IDisposable
     {
         _library = SettingsProvider.GetSettings<ScatterLibraryDto>();
         var bounds = new Bounds(_planetTransform.position, Vector3.one * 100000f);
-        _renderParams = new RenderParams[_library.Prototypes.Length];
+        _renderParams = new RenderParams[_library.Prototypes.Length][];
         float region = DefaultRegionMeters;
         for (int i = 0; i < _library.Prototypes.Length; i++)
         {
             var p = _library.Prototypes[i];
+            _renderParams[i] = new RenderParams[p.Parts.Length];
             if (!p.CanRender) continue;
-            if (p.LodEndDistances.Length > 0)
-                region = Mathf.Max(region, p.LodEndDistances[p.LodEndDistances.Length - 1]);
-            // RenderMeshInstanced throws every frame if the material lacks GPU instancing. Enable it
-            // so a correct authoring mistake can't spam the log; the material asset carries the flag.
-            if (!p.Material.enableInstancing)
-                p.Material.enableInstancing = true;
-            // Per-prototype dither fade band tied to this prototype's own cull, so each fades out at
-            // its own far edge over the shared material rather than the material's baked fade values.
-            float cull = p.LodEndDistances.Length > 0 ? p.LodEndDistances[p.LodEndDistances.Length - 1] : DefaultRegionMeters;
-            var fadeProps = new MaterialPropertyBlock();
-            fadeProps.SetFloat(_fadeStartId, cull * 0.85f);
-            fadeProps.SetFloat(_fadeEndId, cull);
-            _renderParams[i] = new RenderParams(p.Material)
+            region = Mathf.Max(region, p.MaxCullDistance);
+            for (int j = 0; j < p.Parts.Length; j++)
             {
-                shadowCastingMode = p.CastShadows ? ShadowCastingMode.On : ShadowCastingMode.Off,
-                receiveShadows = p.ReceiveShadows,
-                worldBounds = bounds,
-                matProps = fadeProps,
-            };
+                var part = p.Parts[j];
+                if (!part.CanRender) continue;
+                // RenderMeshInstanced throws every frame if the material lacks GPU instancing. Enable it
+                // so a correct authoring mistake can't spam the log; the material asset carries the flag.
+                if (!part.Material.enableInstancing)
+                    part.Material.enableInstancing = true;
+                // Per-part dither fade band tied to that part's own cull, so each fades at its far edge
+                // over the shared material rather than the material's baked fade values.
+                float cull = part.MaxCullDistance;
+                var fadeProps = new MaterialPropertyBlock();
+                fadeProps.SetFloat(_fadeStartId, cull * 0.85f);
+                fadeProps.SetFloat(_fadeEndId, cull);
+                _renderParams[i][j] = new RenderParams(part.Material)
+                {
+                    shadowCastingMode = part.CastShadows ? ShadowCastingMode.On : ShadowCastingMode.Off,
+                    receiveShadows = part.ReceiveShadows,
+                    worldBounds = bounds,
+                    matProps = fadeProps,
+                };
+            }
         }
         // Cancel any gather from a previous world and force a fresh one. The front buffers are only
         // written on the main thread (here + the swap), so clearing them here cannot race the gather,
@@ -167,32 +172,38 @@ public sealed class ScatterRenderer : IDisposable
         {
             var proto = _library.Prototypes[p];
             if (!proto.CanRender) continue;
-            RenderParams rp = _renderParams[p];
 
-            int lodCount = Mathf.Min(proto.LodMeshes.Length, proto.LodEndDistances.Length);
-            for (int lod = 0; lod < lodCount; lod++)
+            for (int part = 0; part < proto.Parts.Length; part++)
             {
-                Mesh mesh = proto.LodMeshes[lod];
-                if (mesh == null) continue;
-                float near = lod == 0 ? 0f : proto.LodEndDistances[lod - 1];
-                float far = proto.LodEndDistances[lod];
-                float near2 = near * near, far2 = far * far;
+                var pd = proto.Parts[part];
+                if (!pd.CanRender) continue;
+                RenderParams rp = _renderParams[p][part];
 
-                int n = 0;
-                for (int i = 0; i < _instances.Count; i++)
+                int lodCount = Mathf.Min(pd.LodMeshes.Length, pd.LodEndDistances.Length);
+                for (int lod = 0; lod < lodCount; lod++)
                 {
-                    if (_instances[i].PrototypeIndex != p) continue;
-                    float d2 = (_instances[i].PositionWS - camPos).sqrMagnitude;
-                    if (d2 < near2 || d2 >= far2) continue;
-                    _batch[n++] = _matrices[i];
-                    if (n == BatchCap)
+                    Mesh mesh = pd.LodMeshes[lod];
+                    if (mesh == null) continue;
+                    float near = lod == 0 ? 0f : pd.LodEndDistances[lod - 1];
+                    float far = pd.LodEndDistances[lod];
+                    float near2 = near * near, far2 = far * far;
+
+                    int n = 0;
+                    for (int i = 0; i < _instances.Count; i++)
                     {
-                        Graphics.RenderMeshInstanced(rp, mesh, 0, _batch, n);
-                        n = 0;
+                        if (_instances[i].PrototypeIndex != p) continue;
+                        float d2 = (_instances[i].PositionWS - camPos).sqrMagnitude;
+                        if (d2 < near2 || d2 >= far2) continue;
+                        _batch[n++] = _matrices[i];
+                        if (n == BatchCap)
+                        {
+                            Graphics.RenderMeshInstanced(rp, mesh, 0, _batch, n);
+                            n = 0;
+                        }
                     }
+                    if (n > 0)
+                        Graphics.RenderMeshInstanced(rp, mesh, 0, _batch, n);
                 }
-                if (n > 0)
-                    Graphics.RenderMeshInstanced(rp, mesh, 0, _batch, n);
             }
         }
     }

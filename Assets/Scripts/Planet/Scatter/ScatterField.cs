@@ -112,12 +112,10 @@ public sealed class ScatterField : IDisposable
             buffer, reversed, perPrototypeCull: false, _ranges, out stats);
     }
 
-    // A prototype's far-cull distance: the last LOD end distance, i.e. how far the renderer draws it.
-    // Falls back to the caller's region for placement-only prototypes (no render data).
+    // A prototype's far-cull distance: the farthest cull across its drawable parts, i.e. how far the
+    // renderer draws it. Falls back to the caller's region for placement-only prototypes (no render data).
     static float ProtoGatherRadius(ScatterPrototypeDto p, float fallback) =>
-        p.LodEndDistances != null && p.LodEndDistances.Length > 0
-            ? p.LodEndDistances[p.LodEndDistances.Length - 1]
-            : fallback;
+        p.MaxCullDistance > 0f ? p.MaxCullDistance : fallback;
 
     // One core for both public gather and the diagnostic reverse traversal. `reversed` flips
     // prototype/cell/candidate order so scatter.verify can prove order-independence. Transform- and

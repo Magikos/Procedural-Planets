@@ -37,7 +37,11 @@ public sealed class ScatterPrototype : ScriptableObject
     [Header("Interaction (SP5)")]
     public ScatterInteraction Interaction = ScatterInteraction.None;
 
-    [Header("Rendering (SP2 — optional; no mesh/material = placed but not drawn)")]
+    [Header("Rendering (SP2 — optional; no drawable part = placed but not drawn)")]
+    [Tooltip("Renderable parts, each a material + LOD mesh chain, drawn together at the instance. A simple prop is one part; a composite prop (tree = opaque trunk + cutout foliage) is several.")]
+    public ScatterPart[] Parts = System.Array.Empty<ScatterPart>();
+
+    [Header("Rendering (legacy single-part — used only when Parts is empty)")]
     public Material Material;
     [Tooltip("LOD meshes near->far. Element i is drawn out to LodEndDistances[i].")]
     public Mesh[] LodMeshes = System.Array.Empty<Mesh>();
