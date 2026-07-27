@@ -1,0 +1,114 @@
+Shader "Scatter/Impostor"
+{
+    // Far-field scatter impostor: one camera-facing quad per instance, textured with a baked front-view
+    // card (RGBA, alpha = silhouette). Billboards around the instance's surface-up axis (cylindrical, so
+    // trees stay upright on the sphere), alpha-cuts the card, and dither cross-fades in over the mesh-LOD
+    // cull band and out at its own far cull. Unlit — the card already has lighting baked from the bake.
+    Properties
+    {
+        _BaseMap ("Card (RGB) Silhouette (A)", 2D) = "white" {}
+        _Cutoff ("Alpha Cutoff", Range(0,1)) = 0.5
+        _FadeInStart ("Fade-in start (m)", Float) = 340
+        _FadeInEnd ("Fade-in end (m)", Float) = 400
+        _FadeOutStart ("Fade-out start (m)", Float) = 1100
+        _FadeOutEnd ("Fade-out end (m)", Float) = 1200
+    }
+
+    SubShader
+    {
+        Tags { "RenderType"="TransparentCutout" "Queue"="AlphaTest" "RenderPipeline"="UniversalPipeline" }
+
+        Pass
+        {
+            Name "ForwardUnlit"
+            Tags { "LightMode"="UniversalForward" }
+            Cull Off
+
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_instancing
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
+
+            CBUFFER_START(UnityPerMaterial)
+                float4 _BaseMap_ST;
+                float _Cutoff;
+                float _FadeInStart;
+                float _FadeInEnd;
+                float _FadeOutStart;
+                float _FadeOutEnd;
+            CBUFFER_END
+
+            static const float _Bayer4x4[16] = {
+                0.0/16, 8.0/16, 2.0/16, 10.0/16,
+                12.0/16, 4.0/16, 14.0/16, 6.0/16,
+                3.0/16, 11.0/16, 1.0/16, 9.0/16,
+                15.0/16, 7.0/16, 13.0/16, 5.0/16
+            };
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION; // quad: x in [-w/2,w/2], y in [0,h], z=0
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct Varyings
+            {
+                float4 positionHCS : SV_POSITION;
+                float2 uv : TEXCOORD0;
+                float dist : TEXCOORD1;
+                float4 screenPos : TEXCOORD2;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            Varyings vert(Attributes IN)
+            {
+                Varyings OUT = (Varyings)0;
+                UNITY_SETUP_INSTANCE_ID(IN);
+
+                // Per-instance world basis from the instance-aware object->world matrix (GetObjectToWorld
+                // resolves the per-instance matrix under GPU instancing; raw unity_ObjectToWorld field
+                // access does not). Origin at the pivot (tree base), up = the y-column (surface normal on
+                // the sphere), uniform scale from the x-column.
+                float4x4 m = GetObjectToWorldMatrix();
+                float3 origin = float3(m._m03, m._m13, m._m23);
+                float3 up = normalize(float3(m._m01, m._m11, m._m21));
+                float scale = length(float3(m._m00, m._m10, m._m20));
+
+                float3 toCam = _WorldSpaceCameraPos - origin;
+                float3 fwd = toCam - up * dot(toCam, up); // cylindrical: face the camera around the up axis
+                fwd = normalize(fwd);
+                float3 right = normalize(cross(up, fwd));
+
+                float3 local = IN.positionOS.xyz * scale;
+                float3 world = origin + right * local.x + up * local.y;
+
+                OUT.positionHCS = TransformWorldToHClip(world);
+                OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
+                OUT.dist = distance(_WorldSpaceCameraPos, origin);
+                OUT.screenPos = ComputeScreenPos(OUT.positionHCS);
+                return OUT;
+            }
+
+            half4 frag(Varyings IN) : SV_Target
+            {
+                half4 card = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
+                clip(card.a - _Cutoff);
+
+                float fadeIn = saturate((IN.dist - _FadeInStart) / max(1e-3, _FadeInEnd - _FadeInStart));
+                float fadeOut = 1.0 - saturate((IN.dist - _FadeOutStart) / max(1e-3, _FadeOutEnd - _FadeOutStart));
+                float coverage = fadeIn * fadeOut;
+
+                float2 sp = (IN.screenPos.xy / max(IN.screenPos.w, 1e-4)) * _ScreenParams.xy;
+                int2 pix = int2(fmod(sp, 4.0));
+                clip(coverage - _Bayer4x4[pix.y * 4 + pix.x]);
+
+                return half4(card.rgb, 1);
+            }
+            ENDHLSL
+        }
+    }
+}
