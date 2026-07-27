@@ -631,16 +631,20 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     static bool TryGetSettings<T>(out T settings)
     {
-        try
+        if (SettingsProvider.IsRegistered<T>())
         {
-            if (SettingsProvider.IsRegistered<T>())
+            try
             {
                 settings = SettingsProvider.GetSettings<T>();
                 return true;
             }
-        }
-        catch (System.Exception)
-        {
+            catch (System.Exception e)
+            {
+                // Registered but failed to resolve is a real lifecycle fault (disposed / misregistered
+                // service), not the ordinary "no such setting" case the IsRegistered check already covers.
+                LoggerProvider.Log(LogLevel.Warning, "Planet",
+                    $"settings {typeof(T).Name} is registered but failed to resolve: {e.Message}");
+            }
         }
 
         settings = default;

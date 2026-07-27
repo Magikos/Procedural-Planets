@@ -13,7 +13,6 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
 
     GrassPlacementController _grassController;
     GrassNearFieldController _grassNearFieldController;
-    GrassClumpScatter _grassClumpScatter;
     bool _grassEnabled = true;
     bool _nearFieldGrassEnabled = true;
     bool _chunkGrassEnabled = false;
@@ -106,7 +105,6 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
             _grassController?.Tick(camera);
         using (FrameTimingCounters.Measure(FrameTimingSection.NearGrass))
             _grassNearFieldController?.Tick(camera);
-        _grassClumpScatter?.Tick(camera);
     }
 
     void UpdateControllerActivation(Camera camera)
@@ -201,7 +199,6 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
         _grassNearFieldController = new GrassNearFieldController(_planetTransform, _chunkedProvider,
             _surfaceArrays.GrassParamsBuffer, _surfaceArrays.SliceCount,
             waterRadius, _planetDto.PlanetRadius, _seed, _logger);
-        _grassClumpScatter = new GrassClumpScatter(_planetTransform, _planetTransform.position, _logger);
     }
 
     public GrassNearFieldStats GetGrassNearFieldStats()

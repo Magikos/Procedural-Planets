@@ -166,12 +166,27 @@ public sealed class SurfacePathMousePainter : MonoBehaviour, ICameraLookBlocker
             Destroy(_previewMaterial);
     }
 
+    IConsoleService _cachedConsole;
+    IInputMapService _cachedInput;
+
     bool InputAllowed()
     {
-        if (ServiceLocator.TryGet(out IConsoleService console) && console.IsOpen)
+        if (!ServiceLocator.IsAlive(_cachedConsole))
+        {
+            _cachedConsole = null;
+            ServiceLocator.TryGet(out _cachedConsole);
+        }
+        if (_cachedConsole != null && _cachedConsole.IsOpen)
             return false;
-        if (ServiceLocator.TryGet(out IInputMapService input) && !input.GameplayEnabled)
+
+        if (!ServiceLocator.IsAlive(_cachedInput))
+        {
+            _cachedInput = null;
+            ServiceLocator.TryGet(out _cachedInput);
+        }
+        if (_cachedInput != null && !_cachedInput.GameplayEnabled)
             return false;
+
         return true;
     }
 

@@ -25,6 +25,40 @@ The preferred direction is deliberately small: add bounds guards, make resource 
 explicit, make persistence atomic, delete unused code, and extract only one proven
 collaborator from the surface provider. No new framework is recommended.
 
+## Agent autofix session — 2026-07-26 (branch `agent/autofix`)
+
+Bryan directed working the findings. Worked only the low-risk, behavior-preserving,
+build + Unity-recompile-verifiable subset — one atomic commit each (see per-finding
+**Status:** lines):
+
+- **FIXED (8):** F01 + F02 (`c63117a`) · F04 (`3d49195`) · F07 (`83b5273`) · F16 (`51a7711`) ·
+  F12 batch 1 (`12e4e99`) · F19 (`d6418ac`) · F09 (`e1b5448`).
+- **Assessed this session, then deferred** (read the code, judged unsafe to do blind): **F17** — the
+  suppression/frustum removal cascades through `GrassNearFieldStats.SuppressionRadius` +
+  `OldChunkSuppressedCount` stats across 4 files for a Low finding on visual grass that can't be
+  capture-verified. **F06** — the safe part (cancellable poll) is only partial (the background
+  `WaterMeshBuilder.Compute` CPU work still runs to completion, the actual complaint); the full fix
+  threads `ct` through a large cohesive compute pipeline and its whole point (cancellation behavior)
+  can't be runtime-verified from here.
+
+Deliberately **NOT** touched — still findings-first, awaiting Bryan's fix/defer/wontfix,
+runtime/visual proof, or because they exceed a safe autonomous edit:
+
+- **Data-integrity / behavior:** F03 (atomic surface-edit save), F06 (water cancel token),
+  F08 (disabled-weather render gating — needs "disabled means no render" confirmation),
+  F10 (regrowth replay — profile first), F14 (loading-transition commit boundary),
+  F19 (settings `catch` — changes error visibility).
+- **Architecture / large:** F11 (`ChunkedSurfaceProvider` extract), F13 (precipitation DTO ownership).
+- **Repo / packages / docs (Bryan- or Unity-gated):** F05 (untrack ~1.7 GiB graphify — repo op),
+  F15 (stale `CLAUDE.md` — CLAUDE.md edits gated), F20 (remove 7 packages — per-package Unity check),
+  F12 batch 2 (wake/action scaffolding).
+- **Grass / visual (measure- or capture-gated):** F09 (delete `GrassClumpScatter` — dead but touches
+  coordinator wiring), F17 (dead grass branches — visual overlay caveat), F18, F21.
+
+Runtime-only behavior (cancellation, readback races, GPU out-of-bounds) is build + recompile-clean
+but not exercised in play mode; the commit bodies state this. MCP was down for the first part of the
+session (dropped mid-work), then restored — earlier work was `dotnet build`-only until it returned.
+
 ## What came back clean
 
 - The only `RuntimeInitializeOnLoadMethod` is the sanctioned
@@ -48,6 +82,8 @@ collaborator from the surface provider. No new framework is recommended.
 
 ## F01 — Rain update dispatch overruns non-aligned particle buffers
 
+**Status:** FIXED — commit `c63117a` (branch `agent/autofix`). Compute-scoped `_ActiveCount` uniform + `id.x >= _ActiveCount` kernel guard + skip dispatch at zero. Unity reimport 0 errors; GPU OOB not directly observable without a graphics debugger.
+
 **Category:** Bug  
 **Severity:** High  
 **Description:** The controller allocates exactly the requested particle count but rounds
@@ -70,6 +106,8 @@ allocated capacity semantics unchanged.
 **Behavior note:** Preserving; only invalid worker lanes stop executing.
 
 ## F02 — Optical-depth bake dispatch overruns arbitrary inspector sizes
+
+**Status:** FIXED — commit `c63117a` (branch `agent/autofix`). Added `id.x/id.y >= _TextureSize` guard at the top of the OpticalDepth kernel. Unity reimport 0 errors.
 
 **Category:** Bug  
 **Severity:** High  
@@ -122,6 +160,8 @@ framework for this single consumer.
 must remain byte-semantically equivalent after a round trip.
 
 ## F04 — Canceled weather generation leaks pre-owner textures
+
+**Status:** FIXED — commit `3d49195` (branch `agent/autofix`). Pre-allocation cancellation check + release the four textures via `ReleaseTexture` if the cancellable await throws, then rethrow. Build + Unity clean; runtime cancel/teardown path needs in-editor confirmation.
 
 **Category:** Bug  
 **Severity:** High  
@@ -196,6 +236,8 @@ and emits no generated event.
 
 ## F07 — Old weather readbacks can mutate a replacement cache
 
+**Status:** FIXED — commit `83b5273` (branch `agent/autofix`). Epoch bumped on `Reset`, captured per readback request; each callback ignores itself on epoch mismatch, so only the current cache clears `_pending` / updates masks. Build + Unity clean; runtime regenerate-during-readback race not exercised.
+
 **Category:** Bug  
 **Severity:** Medium  
 **Description:** `WeatherQueryCache.Reset` clears shared fields but cannot invalidate GPU
@@ -247,6 +289,8 @@ feature base-class hierarchy.
 approval should confirm that “disabled means no render” is intended.
 
 ## F09 — Disabled grass-clump code eagerly allocates and leaks materials
+
+**Status:** FIXED — commit `e1b5448` (branch `agent/autofix`). Deleted `GrassClumpScatter` (Enabled=false, never set true; ctor still built a leaked "Runtime Grass Clump" material) and removed its field, per-frame `Tick`, and construction from `PlanetGrassCoordinator` — all no-ops while disabled. Unity recompiled clean.
 
 **Category:** Bug  
 **Severity:** Medium  
@@ -315,6 +359,8 @@ until a second implementation or real test seam exists.
 **Behavior note:** Preserving; exact mask output and command order are load-bearing.
 
 ## F12 — About 811 lines of first-party infrastructure have no product consumer
+
+**Status:** PARTIAL — batch 1 FIXED, commit `12e4e99` (branch `agent/autofix`). Deleted the five unreferenced types (`ObjectPool`, `CubeSphereMeshBuilder`, `PoissonDiscSampling`, `PoissonDiscSphereSampling`, `EventBusAutoBinder`); grep-confirmed no consumers, Unity recompiled clean. The wake/action scaffolding + bootstrap/console-surface removal (batch 2) is left Bryan-gated per the finding and was NOT touched.
 
 **Category:** Maintainability  
 **Severity:** Medium  
@@ -427,6 +473,8 @@ approval under project change control.
 
 ## F16 — Two frame loops still resolve world services repeatedly
 
+**Status:** FIXED — commit `51a7711` (branch `agent/autofix`). `PrecipitationRenderFeature` caches `IRainParticleRenderer` and `SurfacePathMousePainter.InputAllowed` caches `IConsoleService`/`IInputMapService`, both via the existing `ServiceLocator.IsAlive` invalidation pattern. Build + Unity clean.
+
 **Category:** Architecture  
 **Severity:** Low  
 **Description:** The path painter resolves two services from `Update`, and the precipitation
@@ -497,6 +545,8 @@ collection architecture is needed.
 approval.
 
 ## F19 — `Planet.TryGetSettings` suppresses every exception
+
+**Status:** FIXED — commit `d6418ac` (branch `agent/autofix`). Scoped the try to `GetSettings` (the absent case already returns false via `IsRegistered`) and log a Warning on a registered-but-broken resolve instead of swallowing it. Healthy/absent paths unchanged. Build + Unity clean.
 
 **Category:** Maintainability  
 **Severity:** Low  

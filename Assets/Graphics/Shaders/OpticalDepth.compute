@@ -18,6 +18,11 @@ float _MieScaleHeight;
 [numthreads(8, 8, 1)]
 void Main(uint2 id : SV_DispatchThreadID)
 {
+    // BakeTextureSize (64-512) need not align to the 8x8 group size; guard the padded lanes so an
+    // unaligned size never writes outside _Result (F02).
+    if (id.x >= (uint)_TextureSize || id.y >= (uint)_TextureSize)
+        return;
+
     float2 uv = (id + 0.5) / (float)_TextureSize;
     float height01 = uv.y;
 

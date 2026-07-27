@@ -104,6 +104,7 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
     static readonly int _fallSpeedId = Shader.PropertyToID("_FallSpeedMps");
     static readonly int _deltaTimeId = Shader.PropertyToID("_DeltaTime");
     static readonly int _frameSeedId = Shader.PropertyToID("_FrameSeed");
+    static readonly int _activeCountId = Shader.PropertyToID("_ActiveCount");
 
     // --- Render material property IDs (set on shared material) -----------------------
     static readonly int _rainStreakWidthId = Shader.PropertyToID("_RainStreakWidth");
@@ -311,8 +312,10 @@ public sealed class RainParticleController : MonoBehaviour, IRainParticleRendere
         _updateCompute.SetFloat(_deltaTimeId, Time.deltaTime);
         _updateCompute.SetInt(_frameSeedId, (int)(Time.frameCount * 2654435761u));
 
+        _updateCompute.SetInt(_activeCountId, ParticleCount);
+        if (ParticleCount <= 0) return;
         int groups = (ParticleCount + 63) / 64;
-        _updateCompute.Dispatch(_updateKernel, Mathf.Max(1, groups), 1, 1);
+        _updateCompute.Dispatch(_updateKernel, groups, 1, 1);
     }
 
     // --- Console commands -------------------------------------------------------------
