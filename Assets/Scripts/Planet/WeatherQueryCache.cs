@@ -10,6 +10,7 @@ sealed class WeatherQueryCache
     int _lastFace = -1;
     int _faceMask;
     int _dynamicsFaceMask;
+    int _epoch; // bumped on Reset; readbacks captured against an older epoch are ignored
 
     public bool Error => _error;
     public int LastFace => _lastFace;
@@ -31,6 +32,7 @@ sealed class WeatherQueryCache
         _lastFace = -1;
         _faceMask = 0;
         _dynamicsFaceMask = 0;
+        _epoch++;
     }
 
     public void Tick(SphericalWeatherGrid grid, bool enabled, float interval,
@@ -49,17 +51,23 @@ sealed class WeatherQueryCache
         _error = false;
         _nextTime = Time.unscaledTime + Mathf.Max(interval, 0.05f);
         int resolution = grid.Resolution;
+        int epoch = _epoch;
         AsyncGPUReadback.Request(grid.Texture, 0,
             0, resolution,
             0, resolution,
             face, 1,
             TextureFormat.RGBAFloat,
-            request => OnReadback(request, face, grid, showDiagnostics, diagnostics));
+            request => OnReadback(request, face, epoch, grid, showDiagnostics, diagnostics));
     }
 
-    void OnReadback(AsyncGPUReadbackRequest request, int face, SphericalWeatherGrid grid,
+    void OnReadback(AsyncGPUReadbackRequest request, int face, int epoch, SphericalWeatherGrid grid,
                     bool showDiagnostics, WeatherDiagnostics diagnostics)
     {
+        // A reset (new weather grid) bumps the epoch; ignore readbacks issued against the old grid so
+        // a stale callback can't clear _pending or mark a face cached on the replacement cache (F07).
+        if (epoch != _epoch)
+            return;
+
         _pending = false;
 
         if (request.hasError)
@@ -77,7 +85,7 @@ sealed class WeatherQueryCache
                 0, grid.Resolution,
                 face, 1,
                 TextureFormat.RGBAFloat,
-                req => OnDynamicsReadback(req, face, grid));
+                req => OnDynamicsReadback(req, face, epoch, grid));
         }
         _faceMask |= 1 << face;
 
@@ -85,8 +93,10 @@ sealed class WeatherQueryCache
             diagnostics.OnQueryCacheFaceData(face, data);
     }
 
-    void OnDynamicsReadback(AsyncGPUReadbackRequest request, int face, SphericalWeatherGrid grid)
+    void OnDynamicsReadback(AsyncGPUReadbackRequest request, int face, int epoch, SphericalWeatherGrid grid)
     {
+        if (epoch != _epoch)
+            return;
         if (request.hasError)
             return;
 
