@@ -19,6 +19,7 @@ Shader "Scatter/FoliageLit"
         _LeafFall ("Leaf Fall (0 full .. 1 bare)", Range(0,1)) = 0
         _LeafMaskLo ("Leaf Mask Low (vtx.B)", Range(0,1)) = 0.6
         _LeafMaskHi ("Leaf Mask High (vtx.B)", Range(0,1)) = 0.85
+        _LeafNormalUp ("Leaf Normal Up-Blend (canopy softness)", Range(0,1)) = 0.6
         _WindStrength ("Wind Strength (m)", Float) = 0
         _WindFreq ("Wind Frequency", Float) = 1.6
         _FadeStart ("Fade Start Distance", Float) = 120
@@ -40,6 +41,7 @@ Shader "Scatter/FoliageLit"
             float _LeafFall;
             float _LeafMaskLo;
             float _LeafMaskHi;
+            float _LeafNormalUp;
             float _WindStrength;
             float _WindFreq;
             float _FadeStart;
@@ -159,10 +161,15 @@ Shader "Scatter/FoliageLit"
                 // Double-sided: flip the normal on back faces so a leaf lit from either side reads correctly
                 // instead of the back face going black (which made the canopy merge into dark clumps).
                 float faceSign = IS_FRONT_VFACE(cullFace, 1.0, -1.0);
+                float3 nrmWS = normalize(IN.normalWS) * faceSign;
+                // Canopy softening: blend leaf normals toward world up so a dense canopy lights like a soft
+                // volume (bright crown, gently lit sides/underside) instead of dark per-card faces. Trunk
+                // (lm=0) keeps its true normal.
+                nrmWS = normalize(lerp(nrmWS, float3(0.0, 1.0, 0.0), _LeafNormalUp * lm));
 
                 InputData inputData = (InputData)0;
                 inputData.positionWS = IN.positionWS;
-                inputData.normalWS = normalize(IN.normalWS) * faceSign;
+                inputData.normalWS = nrmWS;
                 inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(IN.positionWS);
                 inputData.shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
                 inputData.fogCoord = IN.fogFactor;
