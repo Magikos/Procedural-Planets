@@ -39,6 +39,13 @@ session by the generation wedge): steps 2–5 below (DTO `Impostor` authoring, g
 the `ScatterRenderer` far pass on the shared batcher, shadow decision). The bake currently runs at
 load; for the planet, decide bake-at-build vs bake-at-load and where cards are cached.
 
+**Verification finding — bake lighting must match scene lighting.** In the strip, the impostor card
+comes out brighter/greener than the mesh LOD (the bake uses its own sun + a flat 0.32 ambient floor,
+which differs from the scene's sun/ambient), so the cross-fade would show a brightness pop. For the
+planet the baker's `lightEuler` (and ambient) must be driven from the planet's actual sun direction
+and ambient at bake time, or the card tone-matched to the mesh under that lighting. The geometry,
+silhouette, billboard, and cross-fade timing are all correct; only the tone match remains.
+
 ## Problem
 
 Today each prototype draws full-detail mesh LODs out to its cull distance (trees ~400 m) then hard-
