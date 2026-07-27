@@ -154,6 +154,7 @@ public sealed class SphericalWeatherGrid : IDisposable
     {
         int resolution = Mathf.ClosestPowerOfTwo(Mathf.Clamp(settings.WeatherResolution, 32, 512));
         int cellCount  = resolution * resolution * 6;
+        ct.ThrowIfCancellationRequested();
 
         var activeTexture          = CreateWeatherTexture(resolution, $"CloudWeatherActive_{resolution}_{seed}");
         var scratchTexture         = CreateWeatherTexture(resolution, $"CloudWeatherScratch_{resolution}_{seed}");
@@ -199,7 +200,20 @@ public sealed class SphericalWeatherGrid : IDisposable
         Graphics.CopyTexture(activeTexture,         scratchTexture);
         Graphics.CopyTexture(dynamicsActiveTexture, dynamicsScratchTexture);
 
-        await Awaitable.NextFrameAsync(ct);
+        // Until ownership transfers to the grid below, this method owns the four textures and must
+        // release them if the cancellable wait throws (F04 — cancelled/torn-down generation leaked them).
+        try
+        {
+            await Awaitable.NextFrameAsync(ct);
+        }
+        catch
+        {
+            ReleaseTexture(ref activeTexture);
+            ReleaseTexture(ref scratchTexture);
+            ReleaseTexture(ref dynamicsActiveTexture);
+            ReleaseTexture(ref dynamicsScratchTexture);
+            throw;
+        }
 
         // CPU cell arrays start empty. WeatherManager's async GPU readback populates them
         // progressively (one face per WeatherQueryCacheInterval). SampleWeather falls back
