@@ -34,6 +34,7 @@ float   _WindCoupling;         // 0..1, fraction of wind speed added as horizont
 float   _FallSpeedMps;         // constant downward speed (no gravity ramp).
 float   _DeltaTime;
 uint    _FrameSeed;            // perturbed per frame so respawn locations vary over time.
+uint    _ActiveCount;          // live particle count; dispatch rounds up to 64, so guard the pad lanes.
 
 uint HashUint(uint x)
 {
@@ -122,6 +123,9 @@ void Respawn(inout Raindrop r, uint id, bool randomAltitude)
 [numthreads(64, 1, 1)]
 void RainUpdate(uint3 id : SV_DispatchThreadID)
 {
+    if (id.x >= _ActiveCount)
+        return;
+
     Raindrop r = _RainParticles[id.x];
 
     bool needsInitialSpawn = r.Life01 <= 0.0001;
