@@ -14,6 +14,7 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
     Material _material;
     Material _weatherParticleMaterial;
     IPrecipitationDebugControl _cachedController;
+    IRainParticleRenderer _cachedRainRenderer;
     static readonly int _waterFocusModeId = Shader.PropertyToID(ShaderGlobalIds.WaterFocusMode);
     static readonly int _oceanDebugModeId = Shader.PropertyToID(ShaderGlobalIds.OceanDebugMode);
     static readonly int _debugSuppressWeatherPassesId = Shader.PropertyToID(ShaderGlobalIds.DebugSuppressWeatherPasses);
@@ -78,8 +79,8 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
         // drops near the horizon get washed out by sunset/sunrise scattering
         // because they were drawn before the atmosphere overlay.
         // Gated independently of dust/snow counts: rain is its own system.
-        ServiceLocator.TryGet(out IRainParticleRenderer rainRenderer);
-        if (rainRenderer != null && rainRenderer.IsReadyToDraw
+        if (TryGetLiveRainRenderer(out IRainParticleRenderer rainRenderer)
+            && rainRenderer.IsReadyToDraw
             && controller.ShouldRenderRainParticles(renderingData.cameraData.camera))
         {
             _rainPass.Setup(rainRenderer);
@@ -94,6 +95,7 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
         CoreUtils.Destroy(_weatherParticleMaterial);
         _weatherParticleMaterial = null;
         _cachedController = null;
+        _cachedRainRenderer = null;
     }
 
     bool TryGetLiveController(out IPrecipitationDebugControl controller)
@@ -110,6 +112,23 @@ public class PrecipitationRenderFeature : ScriptableRendererFeature
 
         _cachedController = null;
         controller = null;
+        return false;
+    }
+
+    bool TryGetLiveRainRenderer(out IRainParticleRenderer rainRenderer)
+    {
+        if (!ServiceLocator.IsAlive(_cachedRainRenderer))
+            _cachedRainRenderer = null;
+        if (_cachedRainRenderer == null)
+            ServiceLocator.TryGet(out _cachedRainRenderer);
+        if (ServiceLocator.IsAlive(_cachedRainRenderer))
+        {
+            rainRenderer = _cachedRainRenderer;
+            return true;
+        }
+
+        _cachedRainRenderer = null;
+        rainRenderer = null;
         return false;
     }
 
