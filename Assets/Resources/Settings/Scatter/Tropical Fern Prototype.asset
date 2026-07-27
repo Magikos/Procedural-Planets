@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
+  m_Name: Tropical Fern Prototype
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
+  DisplayName: Tropical Fern
+  SlotId: 4
+  SpacingMeters: 5
+  Biome: 4
+  BiomeBlendPower: 1
+  Weight: 1
+  MaxSlopeDegrees: 34
+  SlopeFadeDegrees: 6
+  HasMinAltitude: 0
+  MinAltitudeMeters: 0
+  HasMaxAltitude: 0
+  MaxAltitudeMeters: 0
+  MinWaterClearanceMeters: 0.05
+  ScaleRange: {x: 0.8, y: 1.4}
+  RandomYaw: 1
+  Interaction: 0
+  Parts:
+  - Name: Fern
+    Material: {fileID: 2100000, guid: a50200f02043be647969bac3e3d13d1b, type: 2}
+    LodMeshes:
+    - {fileID: 5446026037954465900, guid: 5082371b26483ea4eb694bf6d6245ba6, type: 3}
+    - {fileID: -3279080032447445959, guid: 5082371b26483ea4eb694bf6d6245ba6, type: 3}
+    - {fileID: -4262072294287126499, guid: 5082371b26483ea4eb694bf6d6245ba6, type: 3}
+    LodEndDistances:
+    - 50
+    - 120
+    - 300
+    CastShadows: 1
+    ReceiveShadows: 1
+  Material: {fileID: 0}
+  LodMeshes: []
+  LodEndDistances: []
+  CastShadows: 1
+  ReceiveShadows: 1
