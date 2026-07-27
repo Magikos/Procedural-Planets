@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
+  m_Name: Grassland Rock Prototype
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
+  DisplayName: Grassland Rock
+  SlotId: 2
+  SpacingMeters: 40
+  Biome: 6
+  BiomeBlendPower: 1
+  Weight: 0.6
+  MaxSlopeDegrees: 55
+  SlopeFadeDegrees: 10
+  HasMinAltitude: 0
+  MinAltitudeMeters: 0
+  HasMaxAltitude: 0
+  MaxAltitudeMeters: 0
+  MinWaterClearanceMeters: 0.05
+  ScaleRange: {x: 0.5, y: 1.5}
+  RandomYaw: 1
+  Interaction: 0
+  Material: {fileID: 2100000, guid: 50cb739c1d9e47e48b292d6eb257fbe1, type: 2}
+  LodMeshes:
+  - {fileID: -498289647395715129, guid: dd8da99aec1a49947b47530a378233f1, type: 3}
+  LodEndDistances:
+  - 250
+  CastShadows: 1
+  ReceiveShadows: 1
