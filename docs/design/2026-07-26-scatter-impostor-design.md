@@ -15,9 +15,12 @@ that still needs approval + play-verify). Committed `f6ef526`.
 Built:
 - `Assets/Graphics/Shaders/ScatterImpostor.shader` — cylindrical billboard around the instance
   surface-up axis, alpha cutout, distance dither cross-fade (fade-in over the mesh-LOD cull band,
-  fade-out at its own far cull). Unlit; lighting is baked into the card.
-- `ScatterImpostorBaker.cs` — bakes a prototype's LOD0 to an RGBA card at load time (runtime-capable;
-  the planet would call the same baker at build). Returns card + world W/H for the quad.
+  fade-out at its own far cull). **Dynamically lit** from the URP main light + ambient SH (the same
+  lighting the foliage mesh uses), with a synthesized spherical canopy normal, so impostors track the
+  day/night sun instead of freezing a bake-time light.
+- `ScatterImpostorBaker.cs` — bakes a prototype's LOD0 to an RGBA card of **unlit albedo** (flat white
+  ambient, no directional light) at load time (runtime-capable; the planet would call the same baker at
+  build). Returns card + world W/H for the quad.
 - `ScatterLodBatcher.Impostor` — the distance-banded draw tier (already shared with the mesh LODs).
 - `ScatterLodStripHarness` — bakes on Build, passes the impostor through; strip shows a continuous
   near→mid→far transition with no popping or black cards, clean billboard past 800 m.
@@ -39,12 +42,16 @@ session by the generation wedge): steps 2–5 below (DTO `Impostor` authoring, g
 the `ScatterRenderer` far pass on the shared batcher, shadow decision). The bake currently runs at
 load; for the planet, decide bake-at-build vs bake-at-load and where cards are cached.
 
-**Verification finding — bake lighting must match scene lighting.** In the strip, the impostor card
-comes out brighter/greener than the mesh LOD (the bake uses its own sun + a flat 0.32 ambient floor,
-which differs from the scene's sun/ambient), so the cross-fade would show a brightness pop. For the
-planet the baker's `lightEuler` (and ambient) must be driven from the planet's actual sun direction
-and ambient at bake time, or the card tone-matched to the mesh under that lighting. The geometry,
-silhouette, billboard, and cross-fade timing are all correct; only the tone match remains.
+**Day/night — resolved by dynamic lighting (2026-07-28).** The first cut baked lighting into the card,
+which froze it: the mesh re-lights as the sun moves but a baked card would not (wrong sun direction by
+day, bright at night). Fixed by baking *unlit albedo* and lighting the card at runtime from the same
+URP main light + ambient SH the mesh reads (`CelestialManager` rotates that main directional light for
+day/night, and `FoliageLit` lights through it via `UniversalFragmentPBR`). Verified in the strip by
+sweeping the sun high→low→below-horizon with a mesh tree beside its impostor: both brighten at noon,
+dim at a low sun, and go dark at night, in the same tone band. This also retires the earlier
+brightness-pop finding — the impostor and mesh now share the same albedo + runtime light, so there is
+nothing to tone-match. A per-pixel baked normal map is a later upgrade over the synthesized spherical
+normal if far canopies need more form.
 
 ## Problem
 

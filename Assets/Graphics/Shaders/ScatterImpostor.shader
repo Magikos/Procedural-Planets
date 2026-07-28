@@ -1,13 +1,17 @@
 Shader "Scatter/Impostor"
 {
     // Far-field scatter impostor: one camera-facing quad per instance, textured with a baked front-view
-    // card (RGBA, alpha = silhouette). Billboards around the instance's surface-up axis (cylindrical, so
-    // trees stay upright on the sphere), alpha-cuts the card, and dither cross-fades in over the mesh-LOD
-    // cull band and out at its own far cull. Unlit — the card already has lighting baked from the bake.
+    // card (RGB = UNLIT albedo, A = silhouette). Billboards cylindrically around the instance's surface-up
+    // axis (trees stay upright on the sphere), alpha-cuts the card, and dither cross-fades in over the
+    // mesh-LOD cull band and out at its own far cull. Lighting is applied here at runtime from the same
+    // URP main light + ambient SH the foliage mesh uses, so impostors track the day/night sun (bright by
+    // day, dark at night) instead of freezing a bake-time light. A synthesized spherical normal shades the
+    // card like a soft canopy blob so the sun-facing side lights regardless of view angle.
     Properties
     {
-        _BaseMap ("Card (RGB) Silhouette (A)", 2D) = "white" {}
+        _BaseMap ("Card Albedo (RGB) Silhouette (A)", 2D) = "white" {}
         _Cutoff ("Alpha Cutoff", Range(0,1)) = 0.5
+        _NormalBulge ("Canopy Normal Bulge", Range(0.2,2)) = 1.3
         _FadeInStart ("Fade-in start (m)", Float) = 340
         _FadeInEnd ("Fade-in end (m)", Float) = 400
         _FadeOutStart ("Fade-out start (m)", Float) = 1100
@@ -20,7 +24,7 @@ Shader "Scatter/Impostor"
 
         Pass
         {
-            Name "ForwardUnlit"
+            Name "ForwardLit"
             Tags { "LightMode"="UniversalForward" }
             Cull Off
 
@@ -28,13 +32,14 @@ Shader "Scatter/Impostor"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 float _Cutoff;
+                float _NormalBulge;
                 float _FadeInStart;
                 float _FadeInEnd;
                 float _FadeOutStart;
@@ -61,6 +66,9 @@ Shader "Scatter/Impostor"
                 float2 uv : TEXCOORD0;
                 float dist : TEXCOORD1;
                 float4 screenPos : TEXCOORD2;
+                float3 billRight : TEXCOORD3; // billboard basis, world space
+                float3 billUp : TEXCOORD4;
+                float3 billFwd : TEXCOORD5;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -90,6 +98,9 @@ Shader "Scatter/Impostor"
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.dist = distance(_WorldSpaceCameraPos, origin);
                 OUT.screenPos = ComputeScreenPos(OUT.positionHCS);
+                OUT.billRight = right;
+                OUT.billUp = up;
+                OUT.billFwd = fwd;
                 return OUT;
             }
 
@@ -106,7 +117,18 @@ Shader "Scatter/Impostor"
                 int2 pix = int2(fmod(sp, 4.0));
                 clip(coverage - _Bayer4x4[pix.y * 4 + pix.x]);
 
-                return half4(card.rgb, 1);
+                // Synthesized canopy normal: treat the card as a hemisphere bulging toward the viewer so
+                // the sun-facing side lights and the far side falls into shade, regardless of camera angle.
+                float cx = IN.uv.x * 2.0 - 1.0;
+                float cy = IN.uv.y * 2.0 - 1.0;
+                float nz = sqrt(saturate(_NormalBulge - cx * cx - cy * cy));
+                float3 N = normalize(IN.billRight * cx + IN.billUp * cy + IN.billFwd * nz);
+
+                Light mainLight = GetMainLight();
+                half ndl = saturate(dot(N, mainLight.direction));
+                half3 ambient = SampleSH(N);
+                half3 lit = card.rgb * (mainLight.color.rgb * ndl + ambient);
+                return half4(lit, 1);
             }
             ENDHLSL
         }

@@ -17,7 +17,6 @@ public sealed class ScatterLodStripHarness : MonoBehaviour
 
     [Header("Impostor (far-field billboard tier)")]
     public bool DrawImpostor = true;
-    public Vector3 ImpostorLightEuler = new Vector3(35f, 150f, 0f);
     public float ImpostorEndDistance = 1400f;
 
     ScatterPrototypeDto _proto;
@@ -97,7 +96,7 @@ public sealed class ScatterLodStripHarness : MonoBehaviour
         }
         if (meshes.Count == 0) return;
 
-        ScatterImpostorBaker.Card card = ScatterImpostorBaker.Bake(meshes, materials, ImpostorLightEuler);
+        ScatterImpostorBaker.Card card = ScatterImpostorBaker.Bake(meshes, materials);
 
         // Cross-fade in over the mesh-LOD's own dither-out band so the two tiers hand off cleanly.
         float fadeInStart = meshCull * 0.85f;

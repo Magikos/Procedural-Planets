@@ -2,11 +2,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// Bakes a scatter prototype's near mesh into one front-view billboard card (RGB = lit colour,
-// A = silhouette) for the far-field impostor tier. A URP camera clears a manual render-to-texture to
-// opaque black and ignores backgroundColor, so the silhouette is keyed off luminance: the background
-// is reliably pure black, and a modest ambient floor keeps even shadowed geometry well above the key
-// threshold. Runtime-capable: the LOD strip bakes on load; the planet bakes the same way at build.
+// Bakes a scatter prototype's near mesh into one front-view billboard card (RGB = UNLIT albedo,
+// A = silhouette) for the far-field impostor tier. Lighting is applied at runtime in the impostor
+// shader from the same main light + ambient the mesh uses, so impostors track the day/night sun instead
+// of freezing a bake-time light. The card is therefore baked flat (white ambient, no directional): the
+// background is reliably pure black (a URP camera clears a manual render-to-texture to opaque black and
+// ignores backgroundColor), so the silhouette is keyed off luminance. Runtime-capable: the LOD strip
+// bakes on load; the planet bakes the same way at build.
 public static class ScatterImpostorBaker
 {
     public struct Card
@@ -19,7 +21,7 @@ public static class ScatterImpostorBaker
     const int CardHeightPx = 256;
     const int BakeLayer = 31; // isolate the bake rig from the rest of the scene
 
-    public static Card Bake(IReadOnlyList<Mesh> meshes, IReadOnlyList<Material> materials, Vector3 lightEuler)
+    public static Card Bake(IReadOnlyList<Mesh> meshes, IReadOnlyList<Material> materials)
     {
         Bounds b = meshes[0].bounds;
         for (int i = 1; i < meshes.Count; i++) b.Encapsulate(meshes[i].bounds);
@@ -36,13 +38,6 @@ public static class ScatterImpostorBaker
             g.AddComponent<MeshFilter>().sharedMesh = meshes[i];
             g.AddComponent<MeshRenderer>().sharedMaterial = materials[i];
         }
-        var lightGO = new GameObject("l");
-        lightGO.transform.SetParent(root.transform, false);
-        Light light = lightGO.AddComponent<Light>();
-        light.type = LightType.Directional;
-        light.intensity = 1.6f;
-        lightGO.transform.rotation = Quaternion.Euler(lightEuler);
-
         var camGO = new GameObject("c");
         camGO.transform.SetParent(root.transform, false);
         Camera cam = camGO.AddComponent<Camera>();
@@ -56,26 +51,28 @@ public static class ScatterImpostorBaker
         camGO.transform.position = ctr + new Vector3(0f, 0f, -Mathf.Max(w, h) * 2f);
         camGO.transform.LookAt(ctr);
 
+        // Flat white ambient + no directional light -> the mesh renders as ~unlit albedo (runtime
+        // lights it). Against the pure-black background this keeps the luminance key clean.
         AmbientMode savedMode = RenderSettings.ambientMode;
         Color savedAmbient = RenderSettings.ambientLight;
         RenderSettings.ambientMode = AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(0.32f, 0.33f, 0.35f);
+        RenderSettings.ambientLight = Color.white;
 
         var rt = new RenderTexture(px, CardHeightPx, 16, RenderTextureFormat.ARGB32);
-        Texture2D lit = RenderTo(cam, rt, Color.black);
+        Texture2D albedo = RenderTo(cam, rt, Color.black);
 
         RenderSettings.ambientMode = savedMode;
         RenderSettings.ambientLight = savedAmbient;
 
         var card = new Texture2D(px, CardHeightPx, TextureFormat.ARGB32, false);
-        Color[] lp = lit.GetPixels();
-        var outPx = new Color[lp.Length];
-        for (int i = 0; i < lp.Length; i++)
+        Color[] ap = albedo.GetPixels();
+        var outPx = new Color[ap.Length];
+        for (int i = 0; i < ap.Length; i++)
         {
-            float lum = lp[i].r * 0.299f + lp[i].g * 0.587f + lp[i].b * 0.114f;
+            float lum = ap[i].r * 0.299f + ap[i].g * 0.587f + ap[i].b * 0.114f;
             float t = Mathf.Clamp01((lum - 0.012f) / (0.05f - 0.012f));
-            float a = t * t * (3f - 2f * t); // pure-black bg -> 0, lit geometry -> 1 (real smoothstep)
-            outPx[i] = new Color(lp[i].r, lp[i].g, lp[i].b, a);
+            float a = t * t * (3f - 2f * t); // pure-black bg -> 0, geometry -> 1 (real smoothstep)
+            outPx[i] = new Color(ap[i].r, ap[i].g, ap[i].b, a);
         }
         card.SetPixels(outPx);
         card.Apply();
@@ -83,7 +80,7 @@ public static class ScatterImpostorBaker
         cam.targetTexture = null;
         RenderTexture.active = null;
         Object.DestroyImmediate(rt);
-        Object.DestroyImmediate(lit);
+        Object.DestroyImmediate(albedo);
         Object.DestroyImmediate(root);
 
         return new Card { Texture = card, Width = w, Height = h };
