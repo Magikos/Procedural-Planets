@@ -97,6 +97,7 @@ public sealed class ScatterLodStripHarness : MonoBehaviour
         if (meshes.Count == 0) return;
 
         ScatterImpostorBaker.Card card = ScatterImpostorBaker.Bake(meshes, materials);
+        if (!card.Valid) return; // near-empty bake (e.g. thin reeds) -> mesh-only, hard cull at mesh range
 
         // Cross-fade in over the mesh-LOD's own dither-out band so the two tiers hand off cleanly.
         float fadeInStart = meshCull * 0.85f;

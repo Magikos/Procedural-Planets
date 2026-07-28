@@ -16,10 +16,16 @@ public static class ScatterImpostorBaker
         public Texture2D Texture;
         public float Width;  // world metres — the billboard quad width
         public float Height; // world metres
+        public bool Valid;   // false when the bake produced almost no silhouette (see MinSilhouetteAlpha)
     }
 
     const int CardHeightPx = 256;
     const int BakeLayer = 31; // isolate the bake rig from the rest of the scene
+
+    // A bake that keys almost no coverage (thin _ForceLeaf blades like reeds, or a prototype whose front
+    // view is nearly empty) yields an invisible card. Callers should skip the impostor tier for these and
+    // let the prototype hard-cull at its mesh range instead of drawing nothing.
+    const float MinSilhouetteAlpha = 0.2f;
 
     public static Card Bake(IReadOnlyList<Mesh> meshes, IReadOnlyList<Material> materials)
     {
@@ -67,11 +73,13 @@ public static class ScatterImpostorBaker
         var card = new Texture2D(px, CardHeightPx, TextureFormat.ARGB32, false);
         Color[] ap = albedo.GetPixels();
         var outPx = new Color[ap.Length];
+        float maxAlpha = 0f;
         for (int i = 0; i < ap.Length; i++)
         {
             float lum = ap[i].r * 0.299f + ap[i].g * 0.587f + ap[i].b * 0.114f;
             float t = Mathf.Clamp01((lum - 0.012f) / (0.05f - 0.012f));
             float a = t * t * (3f - 2f * t); // pure-black bg -> 0, geometry -> 1 (real smoothstep)
+            if (a > maxAlpha) maxAlpha = a;
             outPx[i] = new Color(ap[i].r, ap[i].g, ap[i].b, a);
         }
         card.SetPixels(outPx);
@@ -83,7 +91,7 @@ public static class ScatterImpostorBaker
         Object.DestroyImmediate(albedo);
         Object.DestroyImmediate(root);
 
-        return new Card { Texture = card, Width = w, Height = h };
+        return new Card { Texture = card, Width = w, Height = h, Valid = maxAlpha >= MinSilhouetteAlpha };
     }
 
     static Texture2D RenderTo(Camera cam, RenderTexture rt, Color bg)
