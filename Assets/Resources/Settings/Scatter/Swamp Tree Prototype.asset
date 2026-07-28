@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Swamp Tree
   SlotId: 6
-  SpacingMeters: 34
+  SpacingMeters: 24
   Biome: 10
   BiomeBlendPower: 1
   Weight: 1

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Forest Tree
   SlotId: 0
-  SpacingMeters: 18
+  SpacingMeters: 13
   Biome: 7
   BiomeBlendPower: 1
   Weight: 1

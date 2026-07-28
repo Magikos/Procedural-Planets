@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Scrub Dead Tree
   SlotId: 10
-  SpacingMeters: 40
+  SpacingMeters: 30
   Biome: 5
   BiomeBlendPower: 1
   Weight: 1

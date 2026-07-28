@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Meadow Tree
   SlotId: 3
-  SpacingMeters: 30
+  SpacingMeters: 18
   Biome: 6
   BiomeBlendPower: 1
   Weight: 1

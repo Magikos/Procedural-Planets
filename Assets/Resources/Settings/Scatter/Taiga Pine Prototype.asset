@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Taiga Pine
   SlotId: 12
-  SpacingMeters: 18
+  SpacingMeters: 14
   Biome: 9
   BiomeBlendPower: 1
   Weight: 1

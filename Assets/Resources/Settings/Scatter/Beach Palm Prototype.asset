@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Beach Palm
   SlotId: 7
-  SpacingMeters: 24
+  SpacingMeters: 18
   Biome: 1
   BiomeBlendPower: 1
   Weight: 1

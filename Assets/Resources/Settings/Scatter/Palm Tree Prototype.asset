@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Palm Tree
   SlotId: 5
-  SpacingMeters: 32
+  SpacingMeters: 22
   Biome: 4
   BiomeBlendPower: 1
   Weight: 1

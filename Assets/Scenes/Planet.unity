@@ -20,7 +20,7 @@ RenderSettings:
   m_FogDensity: 0.01
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
+  m_AmbientSkyColor: {r: 0.55, g: 0.57, b: 0.62, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
   m_AmbientIntensity: 1
@@ -346,7 +346,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   MoveSpeed: 10
   FastMultiplier: 3
-  ScrollSpeed: 50
   OrbitSpeedMultiplier: 0.5
   SurfaceSpeedMultiplier: 0.02
   LookSensitivity: 2
@@ -378,7 +377,7 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
+  m_RenderPostProcessing: 1
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
@@ -459,6 +458,7 @@ MonoBehaviour:
   PerFaceResolution: 256
   RenderMask: 0
   _planetSettings: {fileID: 11400000, guid: bc899ec661438814291d1c98085f7ef5, type: 2}
+  _recipe: {fileID: 0}
   _settingsFoldout: 1
   _lastGeneratedRadius: 5257.269
   _lastSeaLevelRadius: 5000
@@ -521,6 +521,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: ProceduralPlanets.Core::SceneBootstrap
   WorldSeed: 12345
+  _validationProfile: 0
 --- !u!1 &540153373
 GameObject:
   m_ObjectHideFlags: 0
@@ -554,7 +555,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b48845adfa353a743812378e3ea312eb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ProceduralPlanets.Planet::CloudController
-  Settings: {fileID: 11400000, guid: 56063495781899a48b6950662b793742, type: 2}
   NoiseCompute: {fileID: 7200000, guid: 1be320de9e6d5d44fa5195e6b23bd4a6, type: 3}
   BlueNoiseTexture: {fileID: 2800000, guid: 626acd0223e41844ba8f9fb37d733e31, type: 3}
 --- !u!114 &540153375
@@ -569,7 +569,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a15aa7e551bd0b04ca3aaac84ce4fafc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ProceduralPlanets.Planet::WeatherManager
-  Settings: {fileID: 11400000, guid: 56063495781899a48b6950662b793742, type: 2}
   WeatherCompute: {fileID: 7200000, guid: dad0bca9e4f640bb929c0eb4dcae406b, type: 3}
   WindDir: {x: 1, y: 0, z: 0.3}
   WindSpeedMetersPerSecond: 2.5
@@ -611,7 +610,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e343d018c4b4bb6aa968725db6e7af2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ProceduralPlanets.Planet::PrecipitationController
-  CloudSettings: {fileID: 11400000, guid: 56063495781899a48b6950662b793742, type: 2}
   RenderPrecipitation: 1
   Intensity: 1.15
   StormThreshold: 0.55
@@ -651,6 +649,8 @@ MonoBehaviour:
   SnowTemperatureBlendCelsius: 2
   SnowColor: {r: 0.88, g: 0.92, b: 0.96, a: 1}
   _localWeatherParticleSettingsVersion: 1
+  RainFogStrength: 1
+  RainHazeStrength: 1
   RainColor: {r: 0.36, g: 0.44, b: 0.5, a: 1}
   StormRainColor: {r: 0.24, g: 0.28, b: 0.32, a: 1}
   DebugMode: 0
@@ -702,6 +702,7 @@ MonoBehaviour:
   ForwardConeBias: 0.35
   FallSpeedMps: 200
   WindCoupling: 0.2
+  AltitudeFadeBand: 200
   StreakWidth: 0.012
   StreakLength: 0.4
   VisibilityThreshold: 0.05
@@ -743,6 +744,55 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1105297411}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1204484379
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1204484381}
+  - component: {fileID: 1204484380}
+  m_Layer: 0
+  m_Name: Global Volume
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1204484380
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1204484379}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+  m_IsGlobal: 1
+  priority: 1
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: 4b25d08b29a0354458304ec40180df3a, type: 2}
+--- !u!4 &1204484381
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1204484379}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -965,3 +1015,4 @@ SceneRoots:
   - {fileID: 100000001}
   - {fileID: 1954488840}
   - {fileID: 300000001}
+  - {fileID: 1204484381}

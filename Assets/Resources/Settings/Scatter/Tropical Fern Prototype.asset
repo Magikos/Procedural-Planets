@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Tropical Fern
   SlotId: 38
-  SpacingMeters: 5
+  SpacingMeters: 3.5
   Biome: 4
   BiomeBlendPower: 1
-  Weight: 1
+  Weight: 1.3
   MaxSlopeDegrees: 34
   SlopeFadeDegrees: 6
   HasMinAltitude: 0

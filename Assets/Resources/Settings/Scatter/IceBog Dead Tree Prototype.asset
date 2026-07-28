@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: IceBog Dead Tree
   SlotId: 15
-  SpacingMeters: 30
+  SpacingMeters: 24
   Biome: 13
   BiomeBlendPower: 1
   Weight: 1

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Scrub Bush
   SlotId: 31
-  SpacingMeters: 5
+  SpacingMeters: 3.5
   Biome: 5
   BiomeBlendPower: 1
   Weight: 1

@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Forest Fern
   SlotId: 39
-  SpacingMeters: 6
+  SpacingMeters: 4
   Biome: 7
   BiomeBlendPower: 1
-  Weight: 1
+  Weight: 1.3
   MaxSlopeDegrees: 34
   SlopeFadeDegrees: 6
   HasMinAltitude: 0

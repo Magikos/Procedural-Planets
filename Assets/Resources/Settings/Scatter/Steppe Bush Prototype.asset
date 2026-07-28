@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Steppe Bush
   SlotId: 32
-  SpacingMeters: 9
+  SpacingMeters: 6
   Biome: 8
   BiomeBlendPower: 1
   Weight: 1

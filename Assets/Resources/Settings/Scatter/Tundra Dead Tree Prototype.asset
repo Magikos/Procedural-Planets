@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Tundra Dead Tree
   SlotId: 13
-  SpacingMeters: 44
+  SpacingMeters: 36
   Biome: 11
   BiomeBlendPower: 1
   Weight: 1
