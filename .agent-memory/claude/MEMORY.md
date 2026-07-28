@@ -1,5 +1,7 @@
 # Memory Index
 
+- [Planet look-dev](project_planet_look_dev.md) — 2026-07-28: Synty-look pass (post was OFF→enabled+graded PlanetLookProfile, ambient lifted, scatter densified, grass=compute-blanket per-biome params raised); commits 29f1b6a+d75144d; grass follow-ups (far-field coverage, flowers need mesh, bush brightness, day/night ambient)
+
 - [Test harness](project_test_harness.md) — 2026-07-27: first tests (EditMode, 49 green: ScatterId/DTO-validation/ScatterHash-golden/PlacementMath); Bryan requested TDD → overrides CLAUDE.md "no test framework" rule (UTF 1.8.0 was already in manifest); reconcile CLAUDE.md + testing-stance when confirmed
 - [Scatter LOD + impostor](project_scatter_lod_impostor.md) — 2026-07-27/28: shared ScatterLodBatcher (mesh LODs + far-field impostor tier, f6ef526); impostors now DYNAMICALLY LIT/day-night-correct (91daf1f: unlit-albedo bake + runtime URP main-light+SH); empty-bake guard (e566e2d); contact-sheet validator tool (de8abc5); ScatterLodStrip workbench; gotchas: instanced billboards need GetObjectToWorldMatrix, URP manual-render RT clears black + Mathf.SmoothStep≠HLSL smoothstep
 - [Scatter biome buildout](project_scatter_biome_buildout.md) — 2026-07-26: all 14 land biomes have scatter (42 prototypes); FoliageLit rules (never atlas as _TrunkMap, _ForceLeaf, Cull Off, _LeafNormalUp); per-biome slot convention (Birch=slot4)
