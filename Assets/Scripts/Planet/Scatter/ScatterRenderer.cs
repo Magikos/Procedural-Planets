@@ -17,18 +17,20 @@ public sealed class ScatterRenderer : IDisposable
 {
     const float DefaultRegionMeters = 150f; // fallback when no prototype declares a cull distance
     const float ReGatherMoveMeters = 10f;
-    const int BatchCap = 1023;           // Graphics.RenderMeshInstanced hard cap
 
     readonly ScatterField _field;
     readonly Transform _planetTransform;
     readonly ILogger _log = LoggerProvider.Get();
-    readonly Matrix4x4[] _batch = new Matrix4x4[BatchCap];
+    readonly ScatterLodBatcher _batcher = new ScatterLodBatcher();
     readonly FaceSpaceCell[] _asyncRanges = new FaceSpaceCell[FaceSpaceCellRangeBuilder.MaxRanges];
 
-    // Double buffer: _instances/_matrices are the drawn (front) set; _back is filled off-thread.
+    // Double buffer: _instances is the drawn (front) set; _back is filled off-thread.
     List<ScatterInstance> _instances = new List<ScatterInstance>(16384);
     List<ScatterInstance> _back = new List<ScatterInstance>(16384);
-    readonly List<Matrix4x4> _matrices = new List<Matrix4x4>(16384);
+    // Per-prototype instance buckets rebuilt on swap (N1): the draw bands each prototype's own list
+    // instead of scanning the whole instance stream once per prototype/part/LOD band every frame.
+    List<Matrix4x4>[] _protoMatrices;
+    List<Vector3>[] _protoPositions;
 
     ScatterLibraryDto _library;
     RenderParams[][] _renderParams; // [prototype][part]
@@ -53,7 +55,15 @@ public sealed class ScatterRenderer : IDisposable
     {
         _library = SettingsProvider.GetSettings<ScatterLibraryDto>();
         var bounds = new Bounds(_planetTransform.position, Vector3.one * 100000f);
-        _renderParams = new RenderParams[_library.Prototypes.Length][];
+        int protoCount = _library.Prototypes.Length;
+        _renderParams = new RenderParams[protoCount][];
+        _protoMatrices = new List<Matrix4x4>[protoCount];
+        _protoPositions = new List<Vector3>[protoCount];
+        for (int i = 0; i < protoCount; i++)
+        {
+            _protoMatrices[i] = new List<Matrix4x4>();
+            _protoPositions[i] = new List<Vector3>();
+        }
         float region = DefaultRegionMeters;
         for (int i = 0; i < _library.Prototypes.Length; i++)
         {
@@ -92,7 +102,7 @@ public sealed class ScatterRenderer : IDisposable
         _cts = new CancellationTokenSource();
         _gatherRegion = region;
         _instances.Clear();
-        _matrices.Clear();
+        for (int i = 0; i < protoCount; i++) { _protoMatrices[i].Clear(); _protoPositions[i].Clear(); }
         _lastGatherPos = FarAway;
         _configured = true;
     }
@@ -158,11 +168,18 @@ public sealed class ScatterRenderer : IDisposable
     void SwapAndBuildMatrices()
     {
         (_instances, _back) = (_back, _instances);
-        _matrices.Clear();
+        for (int i = 0; i < _protoMatrices.Length; i++)
+        {
+            _protoMatrices[i].Clear();
+            _protoPositions[i].Clear();
+        }
         for (int i = 0; i < _instances.Count; i++)
         {
             var inst = _instances[i];
-            _matrices.Add(Matrix4x4.TRS(inst.PositionWS, inst.Rotation, Vector3.one * inst.Scale));
+            int p = inst.PrototypeIndex;
+            if ((uint)p >= (uint)_protoMatrices.Length) continue;
+            _protoMatrices[p].Add(Matrix4x4.TRS(inst.PositionWS, inst.Rotation, Vector3.one * inst.Scale));
+            _protoPositions[p].Add(inst.PositionWS);
         }
     }
 
@@ -171,40 +188,8 @@ public sealed class ScatterRenderer : IDisposable
         for (int p = 0; p < _library.Prototypes.Length; p++)
         {
             var proto = _library.Prototypes[p];
-            if (!proto.CanRender) continue;
-
-            for (int part = 0; part < proto.Parts.Length; part++)
-            {
-                var pd = proto.Parts[part];
-                if (!pd.CanRender) continue;
-                RenderParams rp = _renderParams[p][part];
-
-                int lodCount = Mathf.Min(pd.LodMeshes.Length, pd.LodEndDistances.Length);
-                for (int lod = 0; lod < lodCount; lod++)
-                {
-                    Mesh mesh = pd.LodMeshes[lod];
-                    if (mesh == null) continue;
-                    float near = lod == 0 ? 0f : pd.LodEndDistances[lod - 1];
-                    float far = pd.LodEndDistances[lod];
-                    float near2 = near * near, far2 = far * far;
-
-                    int n = 0;
-                    for (int i = 0; i < _instances.Count; i++)
-                    {
-                        if (_instances[i].PrototypeIndex != p) continue;
-                        float d2 = (_instances[i].PositionWS - camPos).sqrMagnitude;
-                        if (d2 < near2 || d2 >= far2) continue;
-                        _batch[n++] = _matrices[i];
-                        if (n == BatchCap)
-                        {
-                            Graphics.RenderMeshInstanced(rp, mesh, 0, _batch, n);
-                            n = 0;
-                        }
-                    }
-                    if (n > 0)
-                        Graphics.RenderMeshInstanced(rp, mesh, 0, _batch, n);
-                }
-            }
+            if (!proto.CanRender || _protoMatrices[p].Count == 0) continue;
+            _batcher.Draw(proto, _renderParams[p], _protoMatrices[p], _protoPositions[p], camPos);
         }
     }
 
@@ -215,6 +200,7 @@ public sealed class ScatterRenderer : IDisposable
         _cts.Dispose();
         _instances.Clear();
         _back.Clear();
-        _matrices.Clear();
+        if (_protoMatrices != null)
+            for (int i = 0; i < _protoMatrices.Length; i++) { _protoMatrices[i].Clear(); _protoPositions[i].Clear(); }
     }
 }
