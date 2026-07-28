@@ -12,7 +12,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _FORCELEAF_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -40,11 +41,12 @@ Material:
     - _LeafFall: 0
     - _LeafMaskHi: 0.85
     - _LeafMaskLo: 0.6
-    - _LeafNormalUp: 0.75
+    - _LeafNormalUp: 0.85
     - _Smoothness: 0.08
     - _WindFreq: 1.6
     - _WindStrength: 0
     m_Colors:
     - _SeasonColor: {r: 1, g: 1, b: 1, a: 1}
+    - _TrunkTint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

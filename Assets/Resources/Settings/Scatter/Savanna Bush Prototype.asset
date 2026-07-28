@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Savanna Bush
   SlotId: 30
-  SpacingMeters: 4
+  SpacingMeters: 6
   Biome: 3
   BiomeBlendPower: 1
   Weight: 1

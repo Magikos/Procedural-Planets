@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Taiga Bush
   SlotId: 33
-  SpacingMeters: 5
+  SpacingMeters: 8
   Biome: 9
   BiomeBlendPower: 1
   Weight: 1

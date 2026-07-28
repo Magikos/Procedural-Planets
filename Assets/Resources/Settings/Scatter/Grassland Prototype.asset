@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Grassland Bush
   SlotId: 1
-  SpacingMeters: 3
+  SpacingMeters: 6
   Biome: 6
   BiomeBlendPower: 1
-  Weight: 1.4
+  Weight: 1
   MaxSlopeDegrees: 35
   SlopeFadeDegrees: 5
   HasMinAltitude: 0

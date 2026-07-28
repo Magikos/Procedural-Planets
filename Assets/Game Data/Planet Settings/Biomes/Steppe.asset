@@ -51,12 +51,12 @@ MonoBehaviour:
   SurfaceNormal: {fileID: 2800000, guid: 53b21d5eb8e74684da5123a7fa273842, type: 3}
   SurfaceARM: {fileID: 2800000, guid: 69d483f26a196694c9525755681afdc1, type: 3}
   SurfaceTiling: 1
-  GrassDensity: 0.55
+  GrassDensity: 0.8
   GrassTintBase: {r: 0.55, g: 0.62, b: 0.3, a: 1}
   GrassTintDryShift: {r: 1, g: 1, b: 1, a: 1}
   GrassTintLushShift: {r: 1, g: 1, b: 1, a: 1}
-  GrassHeight: 0.35
-  GrassWidth: 0.02
+  GrassHeight: 0.595
+  GrassWidth: 0.045
   GrassClumpStrength: 0.55
   GrassMaxSlopeDegrees: 35
   GrassSlopeFadeDegrees: 5
