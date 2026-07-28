@@ -1,5 +1,6 @@
 # Memory Index
 
+- [Test harness](project_test_harness.md) — 2026-07-27: first tests (EditMode, 49 green: ScatterId/DTO-validation/ScatterHash-golden/PlacementMath); Bryan requested TDD → overrides CLAUDE.md "no test framework" rule (UTF 1.8.0 was already in manifest); reconcile CLAUDE.md + testing-stance when confirmed
 - [Scatter LOD + impostor](project_scatter_lod_impostor.md) — 2026-07-27: shared ScatterLodBatcher (mesh LODs + far-field impostor billboard tier, committed f6ef526); ScatterLodStrip test scene; gotchas: instanced billboards need GetObjectToWorldMatrix, URP manual-render RT clears black + Mathf.SmoothStep≠HLSL smoothstep
 - [Scatter biome buildout](project_scatter_biome_buildout.md) — 2026-07-26: all 14 land biomes have scatter (42 prototypes); FoliageLit rules (never atlas as _TrunkMap, _ForceLeaf, Cull Off, _LeafNormalUp); per-biome slot convention (Birch=slot4)
 - [Grass layering arc](project_grass_layering_arc.md) — 2026-07-16/17: far-field blanket revived (linear-coverage fix) + blade clump identity + scale/width fixes shipped; textured cards & ground-darkening reverted; Synty clump scatter PARKED (determinism/pivot/material); verify grass on REAL planet not the grid test scene
