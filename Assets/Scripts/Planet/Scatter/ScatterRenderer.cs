@@ -31,6 +31,7 @@ public sealed class ScatterRenderer : IDisposable
     // instead of scanning the whole instance stream once per prototype/part/LOD band every frame.
     List<Matrix4x4>[] _protoMatrices;
     List<Vector3>[] _protoPositions;
+    ScatterLodBatcher.Impostor[] _impostors; // per prototype; default (Valid=false) = mesh-only
 
     ScatterLibraryDto _library;
     RenderParams[][] _renderParams; // [prototype][part]
@@ -44,6 +45,7 @@ public sealed class ScatterRenderer : IDisposable
     // Material-scoped (per-Material) fade properties on Scatter.shader — not shader globals.
     static readonly int _fadeStartId = Shader.PropertyToID("_FadeStart");
     static readonly int _fadeEndId = Shader.PropertyToID("_FadeEnd");
+    static readonly int _impostorBaseMapId = Shader.PropertyToID("_BaseMap");
 
     public ScatterRenderer(ScatterField field, Transform planetTransform)
     {
@@ -53,12 +55,14 @@ public sealed class ScatterRenderer : IDisposable
 
     public void Configure()
     {
+        DestroyImpostors(); // a previous world's baked cards/materials/quads
         _library = SettingsProvider.GetSettings<ScatterLibraryDto>();
         var bounds = new Bounds(_planetTransform.position, Vector3.one * 100000f);
         int protoCount = _library.Prototypes.Length;
         _renderParams = new RenderParams[protoCount][];
         _protoMatrices = new List<Matrix4x4>[protoCount];
         _protoPositions = new List<Vector3>[protoCount];
+        _impostors = new ScatterLodBatcher.Impostor[protoCount];
         for (int i = 0; i < protoCount; i++)
         {
             _protoMatrices[i] = new List<Matrix4x4>();
@@ -70,7 +74,10 @@ public sealed class ScatterRenderer : IDisposable
             var p = _library.Prototypes[i];
             _renderParams[i] = new RenderParams[p.Parts.Length];
             if (!p.CanRender) continue;
-            region = Mathf.Max(region, p.MaxCullDistance);
+            region = Mathf.Max(region, p.FarGatherRadius);
+            // Bake the far-field billboard for coarse prototypes (trees); default for the rest. One-shot
+            // at Configure (loading), so the per-frame draw just bands the prebuilt impostor.
+            _impostors[i] = ScatterImpostorFactory.TryBuild(p, bounds);
             for (int j = 0; j < p.Parts.Length; j++)
             {
                 var part = p.Parts[j];
@@ -189,7 +196,7 @@ public sealed class ScatterRenderer : IDisposable
         {
             var proto = _library.Prototypes[p];
             if (!proto.CanRender || _protoMatrices[p].Count == 0) continue;
-            _batcher.Draw(proto, _renderParams[p], _protoMatrices[p], _protoPositions[p], camPos);
+            _batcher.Draw(proto, _renderParams[p], _protoMatrices[p], _protoPositions[p], camPos, _impostors[p]);
         }
     }
 
@@ -202,5 +209,27 @@ public sealed class ScatterRenderer : IDisposable
         _back.Clear();
         if (_protoMatrices != null)
             for (int i = 0; i < _protoMatrices.Length; i++) { _protoMatrices[i].Clear(); _protoPositions[i].Clear(); }
+        DestroyImpostors();
+    }
+
+    // Impostors bake a Texture2D + Material + quad Mesh per prototype; free them on regen/teardown so
+    // repeated world generation doesn't leak one set per bake.
+    void DestroyImpostors()
+    {
+        if (_impostors == null) return;
+        for (int i = 0; i < _impostors.Length; i++)
+        {
+            ScatterLodBatcher.Impostor imp = _impostors[i];
+            if (!imp.Valid) continue;
+            Material m = imp.Params.material;
+            if (m != null)
+            {
+                Texture card = m.GetTexture(_impostorBaseMapId);
+                if (card != null) UnityEngine.Object.Destroy(card);
+                UnityEngine.Object.Destroy(m);
+            }
+            if (imp.Quad != null) UnityEngine.Object.Destroy(imp.Quad);
+        }
+        _impostors = null;
     }
 }

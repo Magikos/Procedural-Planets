@@ -76,11 +76,26 @@ public sealed record ScatterPrototypeDto(
         get { foreach (var part in Parts) if (part.CanRender) return true; return false; }
     }
 
-    // Farthest cull across drawable parts — the prototype's gather/draw radius.
+    // Farthest cull across drawable parts — the prototype's mesh-LOD draw radius.
     public float MaxCullDistance
     {
         get { float m = 0f; foreach (var part in Parts) if (part.CanRender && part.MaxCullDistance > m) m = part.MaxCullDistance; return m; }
     }
+
+    // Far-field impostor policy, derived (not authored): a coarse-enough prototype (trees, mesh cull
+    // >= ImpostorMinMeshCull) gets a billboard tier past its mesh cull out to ImpostorRangeMultiplier x
+    // that cull. Rocks/bushes/grass keep their short range. Kept here so gather (ScatterField) and draw
+    // (ScatterRenderer) agree on which prototypes reach far and how far.
+    const float ImpostorMinMeshCull = 300f;
+    const float ImpostorRangeMultiplier = 1.75f;
+
+    public bool HasImpostor => CanRender && MaxCullDistance >= ImpostorMinMeshCull;
+    public float ImpostorStartDistance => MaxCullDistance * 0.85f; // cross-fade in over the mesh dither-out band
+    public float ImpostorEndDistance => HasImpostor ? MaxCullDistance * ImpostorRangeMultiplier : 0f;
+
+    // How far the placement gather must reach for this prototype: its impostor end if it has one, else
+    // its mesh cull. 0 for placement-only prototypes (no drawable part).
+    public float FarGatherRadius => HasImpostor ? ImpostorEndDistance : MaxCullDistance;
 }
 
 public sealed record ScatterLibraryDto(ScatterPrototypeDto[] Prototypes)
