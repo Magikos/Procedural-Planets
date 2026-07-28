@@ -11,9 +11,19 @@ Scatter LOD system on branch `scatter-placement` (2026-07-27, updated 2026-07-28
 - `ScatterLodBatcher` (Assets/Scripts/Planet/Scatter/) is the single shared per-prototype LOD draw:
   distance-banded mesh LODs (LOD i drawn in `[LodEndDistances[i-1], LodEndDistances[i])` by squared
   distance, batched into `RenderMeshInstanced`), then an optional far-field `Impostor` tier. Both the
-  planet's `ScatterRenderer` and the test harness are meant to draw through it so LOD/impostor tuning
-  in the fast scene is exactly what the planet renders. Unification of `ScatterRenderer` onto the
-  batcher is still pending (needs on-planet play-verify).
+  planet's `ScatterRenderer` and the strip harness draw through it (unified b0fc0c0), so LOD/impostor
+  tuning in the fast scene is exactly what the planet renders. `ScatterRenderer` buckets instances by
+  prototype on swap (N1) then bands each bucket through the batcher.
+- **Impostors run on the real planet (f662b76, play-verified).** `ScatterPrototypeDto` has a DERIVED
+  impostor policy (computed props, no SO authoring, DTO tests unchanged): `HasImpostor` = mesh cull >=
+  300 m (trees + ferns; rocks/bushes/grass excluded), `ImpostorEndDistance` = 1.75x mesh cull,
+  `FarGatherRadius` = that end. `ScatterImpostorFactory.TryBuild(proto, bounds)` bakes + assembles the
+  Impostor; both renderer and harness use it. `ScatterField` gathers each prototype to `FarGatherRadius`
+  (per-prototype cull already existed) so trees are placed past their mesh cull for the far ring.
+  `ScatterRenderer` bakes impostors at Configure, frees them on regen/teardown. Verified: 17 impostors
+  (15 trees + 2 ferns), 4615 instances in a forest (budget not tripped), trees drew past 400 m cull.
+  Follow-ups: extended tree gather raises candidate counts (watch budget); Scatter/Impostor shader must
+  be in Always Included Shaders for a player build (Configure uses `Shader.Find`, editor-only-safe).
 - Far-field impostor tier (f6ef526): `ScatterImpostor.shader` (cylindrical billboard around the instance
   surface-up axis, alpha cutout, distance dither cross-fade) + `ScatterImpostorBaker.cs` + the
   `ScatterLodBatcher.Impostor` draw band. Cross-fade band matches the mesh-LOD dither-out so
