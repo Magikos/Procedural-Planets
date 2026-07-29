@@ -36,5 +36,20 @@ solve a good daytime angle by sweeping tod for `dot≈0.8`. Do NOT rotate the su
 desyncs from the atmosphere's `_SunParams` and the sky goes black. Post/lighting/material tweaks are
 live in play mode (no regen); density/grass params need a regen (~3 min).
 
-Remaining toward the reference: far-field grass coverage; wildflowers (need mesh); bush brightness;
-day/night-driven ambient; hero trees + landmark props. See [[project-scatter-biome-buildout]].
+**CRITICAL lighting fact (commit 7f78d34): the planet is lit by the custom `_SunParams` sun, NOT the
+URP main light.** Terrain (`PlanetVertexColor`) and grass shade from `_SunParams` via
+`Includes/PlanetSunLighting.hlsl`. The URP main directional light does not effectively drive the scene,
+so any shader using `GetMainLight`/`UniversalFragmentPBR` gets NO directional light — only ambient →
+flat/near-black regardless of sun intensity or shadows. This was the "trees not lighting correctly"
+bug: all scatter (FoliageLit trees, Scatter.shader bushes/rocks, ScatterImpostor) used URP lighting.
+Fixed by shading them from `_SunParams`: `albedo * lerp(0.32, 1.18, ndl)` where
+`ndl = dot(surfaceNormal, PlanetSunDirection(_SunParams, planetNormal))`, blended to night by
+`PlanetDaylightFromLocalSun(dot(planetNormal, sunDir))`. **Any new prop/foliage shader that must match
+the world MUST light from `_SunParams` + PlanetSunLighting, never GetMainLight.** planetNormal =
+`normalize(posWS - _PlanetCenter)` (mesh) or the billboard up (impostor). Diagnose lighting-source bugs
+by killing ambient + cranking the sun: what stays lit uses `_SunParams`, what goes black uses URP.
+
+Remaining toward the reference: grass far-field render distance is 240m (`DefaultGrassQualitySettings`
+in QualityController.cs) → bare-ish beyond; grass base a bit dark; wildflowers need a mesh (LMHPOLY
+`FlowerBush` fbx in Extras is a candidate); day/night-driven ambient; far impostors carry heavy
+atmospheric blue; hero trees + landmark props. See [[project-scatter-biome-buildout]].
