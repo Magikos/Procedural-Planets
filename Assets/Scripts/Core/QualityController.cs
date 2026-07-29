@@ -25,8 +25,8 @@ public sealed class DefaultGrassQualitySettings : IGrassQualitySettings
     // but defaults to authored biome density until F10 counters justify a stronger tier.
     public int MaxBladesPerLane => 24;
     public float DensityMultiplier => 1.0f;
-    public float MaxRenderDistance => 240f;
-    public float LowLodDistance => 200f;
+    public float MaxRenderDistance => 380f;
+    public float LowLodDistance => 320f;
     public float CullDistanceJitter01 => 0.6f;
     // Keep physical coverage across the first terrain LOD transition. Farther
     // terrain remains represented by the blanket rather than per-chunk buffers.

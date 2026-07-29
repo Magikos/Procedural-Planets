@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Grassland Wildflowers
   SlotId: 37
-  SpacingMeters: 6
+  SpacingMeters: 4
   Biome: 6
   BiomeBlendPower: 1
-  Weight: 1
+  Weight: 1.2
   MaxSlopeDegrees: 30
   SlopeFadeDegrees: 6
   HasMinAltitude: 0
@@ -39,8 +39,12 @@ MonoBehaviour:
     - 90
     CastShadows: 0
     ReceiveShadows: 1
-  Material: {fileID: 0}
-  LodMeshes: []
-  LodEndDistances: []
-  CastShadows: 1
+  Material: {fileID: 2100000, guid: 5dd04ad837e3073478fdbd82fe0620ca, type: 2}
+  LodMeshes:
+  - {fileID: -8997839490480631815, guid: 65b952eae7ce10949be7dadf43a46971, type: 3}
+  - {fileID: -5626108534554733894, guid: 65b952eae7ce10949be7dadf43a46971, type: 3}
+  LodEndDistances:
+  - 45
+  - 90
+  CastShadows: 0
   ReceiveShadows: 1
