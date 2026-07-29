@@ -186,7 +186,7 @@ Shader "Scatter/FoliageLit"
                 float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
                 float daylight = PlanetDaylightFromLocalSun(dot(planetNormal, sunDir));
                 float ndl = saturate(dot(nrmWS, sunDir));
-                half3 dayColor = albedo * lerp(0.32, 1.18, ndl);
+                half3 dayColor = albedo * lerp(0.32, 1.0, ndl);
                 float nightAmbient = PlanetNightAmbient(_NightAmbientIntensity);
                 half3 nightColor = albedo * nightAmbient * 0.6;
                 half3 col = lerp(nightColor, dayColor, daylight);

@@ -129,7 +129,7 @@ Shader "Scatter/VertexColorLit"
                 float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
                 float daylight = PlanetDaylightFromLocalSun(dot(planetNormal, sunDir));
                 float ndl = saturate(dot(nrmWS, sunDir));
-                half3 dayColor = albedo * lerp(0.32, 1.18, ndl);
+                half3 dayColor = albedo * lerp(0.32, 1.0, ndl);
                 half3 nightColor = albedo * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
                 half3 col = lerp(nightColor, dayColor, daylight);
                 col = MixFog(col, IN.fogFactor);

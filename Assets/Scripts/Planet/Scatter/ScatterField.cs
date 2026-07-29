@@ -484,6 +484,77 @@ public sealed class ScatterField : IDisposable
                $"region-independent, id+player round-trip (candidates {statsF.Candidates}, {sw.ElapsedMilliseconds} ms)";
     }
 
+    // Partition proof for the incremental tile gather: the whole-disc gather at the camera must equal the
+    // union of the covering tiles' payloads, draw-filtered back to the disc. Confirms GatherTilePrototype
+    // over ParentTile blocks reproduces GatherCore exactly. Run at a mid-face pose; cube-corner straddle
+    // is a known retained gap (both paths use the same range builder, so they still agree there).
+    [ConsoleCommand("tilecheck", "Verify the tile-union gather equals the whole-disc gather at the camera.", MonoTargetType.Registry)]
+    string TileCheckCmd(float? regionMeters = null)
+    {
+        var cam = Camera.main; if (cam == null) return "scatter.tilecheck: no main camera";
+        if (!_configured || !TryCaptureGatherContext(out var ctx)) return "scatter.tilecheck: not configured";
+        Vector3 c = cam.transform.position;
+        var snap = PlanetTransformSnapshot.Capture(_planetTransform);
+        if (!TryResolveSurfaceAnchor(snap, c, out Vector3 anchor)) return "scatter.tilecheck: no surface anchor";
+        float region = Mathf.Clamp(regionMeters ?? 250f, 60f, 500f);
+        float r2 = region * region;
+
+        var disc = new List<ScatterInstance>(8192);
+        GatherCoreSync(c, region, ScatterId.MaxLevel, disc, false, out _);
+        var discMap = new Dictionary<ulong, ScatterInstance>(disc.Count);
+        foreach (var i in disc) discMap[i.Id] = i;
+
+        int minLevel = int.MaxValue;
+        for (int p = 0; p < ctx.Levels.Length; p++) minLevel = Mathf.Min(minLevel, ctx.Levels[p]);
+        int tileLevel = Mathf.Clamp(Mathf.Min(7, minLevel), 0, 7);
+        float cellUvLt = ScatterQuadtree.CellUvWidth(tileLevel);
+        float worldScale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform);
+        float tileWorld = 2f * ctx.BaseRadiusLocal * worldScale * cellUvLt;
+
+        var ranges = new FaceSpaceCell[FaceSpaceCellRangeBuilder.MaxRanges];
+        var res = FaceSpaceCellRangeBuilder.BuildRangesLocal(c, snap, ctx.BaseRadiusLocal, region + 2f * tileWorld, cellUvLt, 1, ranges);
+        var uni = new Dictionary<ulong, ScatterInstance>(disc.Count);
+        var tileBuf = new List<ScatterInstance>(1024);
+        var seenTiles = new HashSet<long>();
+        int n = 1 << tileLevel;
+        for (int rk = 0; rk < res.Count; rk++)
+        {
+            FaceSpaceCell cell = ranges[rk];
+            for (int dy = 0; dy < cell.GridSize.y; dy++)
+            for (int dx = 0; dx < cell.GridSize.x; dx++)
+            {
+                int tx = cell.PageOriginCellUV.x + dx, ty = cell.PageOriginCellUV.y + dy;
+                if ((uint)tx >= (uint)n || (uint)ty >= (uint)n) continue;
+                long tileId = ((long)cell.FaceIndex << 20) | ((long)tx << 10) | (uint)ty;
+                if (!seenTiles.Add(tileId)) continue;
+                for (int p = 0; p < ctx.Library.Prototypes.Length; p++)
+                {
+                    tileBuf.Clear();
+                    GatherTilePrototype(ctx, snap, cell.FaceIndex, tx, ty, tileLevel, p, tileBuf, out _);
+                    for (int k = 0; k < tileBuf.Count; k++)
+                    {
+                        var inst = tileBuf[k];
+                        if ((inst.PositionWS - anchor).sqrMagnitude <= r2) uni[inst.Id] = inst;
+                    }
+                }
+            }
+        }
+
+        int missing = 0, extra = 0, drift = 0;
+        foreach (var kv in discMap) if (!uni.ContainsKey(kv.Key)) missing++;
+        foreach (var kv in uni)
+        {
+            if (!discMap.TryGetValue(kv.Key, out var d)) { extra++; continue; }
+            if ((d.PositionWS - kv.Value.PositionWS).sqrMagnitude > 1e-6f
+                || Mathf.Abs(d.Scale - kv.Value.Scale) > 1e-4f
+                || Quaternion.Angle(d.Rotation, kv.Value.Rotation) > 0.01f) drift++;
+        }
+        if (missing == 0 && extra == 0 && drift == 0)
+            return $"scatter.tilecheck PASS: tile union == whole disc, {discMap.Count} instances (region {region:F0} m, Lt {tileLevel})";
+        return $"scatter.tilecheck FAIL: {missing} missing, {extra} extra, {drift} drift of {discMap.Count} (region {region:F0} m, Lt {tileLevel}); " +
+               "cube-corner straddle is a known retained gap — retry at a mid-face pose.";
+    }
+
     // Evenly-distributed direction i of n (Fibonacci sphere) — used to hunt for a biome without
     // assuming any particular biome-field layout, so this works on the grid test scene and the
     // real planet alike.
