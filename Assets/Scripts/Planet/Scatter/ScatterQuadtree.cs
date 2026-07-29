@@ -6,6 +6,16 @@ public static class ScatterQuadtree
 
     public static float CellUvWidth(int level) => 1f / (1 << Mathf.Clamp(level, 0, ScatterId.MaxLevel));
 
+    // The tile (a cell at the coarser tileLevel) that owns a candidate cell at (level, x, y). tileLevel
+    // must be <= level, so the mapping is a pure right-shift — every finer cell has exactly one parent
+    // tile. This is the fixed partition the incremental gather caches by; because it is position- and
+    // camera-independent, a tile's payload is stable regardless of where the camera first loaded it.
+    public static Vector2Int ParentTile(int level, int x, int y, int tileLevel)
+    {
+        int shift = Mathf.Max(0, level - tileLevel);
+        return new Vector2Int(x >> shift, y >> shift);
+    }
+
     // Fixed per generated world from the canonical face span (2 * planetWorldRadius), independent
     // of the query origin, so a prototype's cells never move as the camera moves. Ceil so the chosen
     // cell is never LARGER than the target spacing (rounding down would be permanently under-dense —

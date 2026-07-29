@@ -179,66 +179,123 @@ public sealed class ScatterField : IDisposable
                     {
                         int dx = reversed ? gx - 1 - dxi : dxi;
                         int x = cell.PageOriginCellUV.x + dx, y = cell.PageOriginCellUV.y + dy;
-
-                        uint nodeSeed = ScatterHash.Node(ctx.WorldSeed, cell.FaceIndex, level, x, y);
-                        uint slotSeed = ScatterHash.Slot(nodeSeed, proto.SlotId);
-                        Vector2 uv = ScatterQuadtree.CandidateUv(x, y, cellUv, slotSeed);
-                        Vector3 dir = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(cell.FaceIndex, uv);
-
-                        // Analytic surface, LOD-independent + deterministic (pure math — no Transform, no
-                        // chunk sample — so this runs off the main thread). Sample the RADIUS first; the
-                        // slope normal (2 more elevation samples) is deferred past the ROI/biome/altitude
-                        // gates below so rejected candidates never pay for it. TryPlace re-checks
-                        // altitude/water via the same PassesAltitudeWater predicate, so the result is
-                        // identical to computing the normal up front.
-                        if (!_ground.TrySampleRadius(dir, out float localRadius)) continue;
-
-                        Vector3 worldPos = snap.TransformPoint(dir * localRadius);
-                        if ((worldPos - anchorWS).sqrMagnitude > pr2) continue;
-                        stats.Candidates++;
-
-                        // Biome via the coarse-cell memo. sampleLevel = min(level, BiomeSampleLevel) so
-                        // a prototype coarser than the biome grid samples at its own level (never a
-                        // negative shift), and the key includes sampleLevel so different levels never
-                        // alias. Value is EvaluateBiome at the coarse cell CENTER -> order-independent.
-                        int sampleLevel = level < BiomeSampleLevel ? level : BiomeSampleLevel;
-                        int shift = level - sampleLevel;
-                        int xb = x >> shift, yb = y >> shift;
-                        long biomeKey = ((long)cell.FaceIndex << 58) | ((long)sampleLevel << 50)
-                                        | ((long)xb << 25) | (long)yb;
-                        if (biomeKey != biomeMemoKey)
+                        if (TryGatherCandidate(ctx, snap, cell.FaceIndex, level, x, y, proto, pi, rules,
+                                cellUv, scale, anchorWS, pr2, ref biomeMemoKey, ref biomeMemo, ref stats,
+                                out ScatterInstance inst))
                         {
-                            float cellUvB = ScatterQuadtree.CellUvWidth(sampleLevel);
-                            Vector2 cuv = new Vector2((xb + 0.5f) * cellUvB, (yb + 0.5f) * cellUvB);
-                            Vector3 cdir = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(cell.FaceIndex, cuv);
-                            float celev = _ground.TrySampleRadius(cdir, out float crad)
-                                ? crad / ctx.BaseRadiusLocal - 1f : -1f;
-                            biomeMemo = _biome.EvaluateBiome(cdir, celev);
-                            biomeMemoKey = biomeKey;
-                        }
-                        float membership = MembershipFor(biomeMemo, proto.Biome);
-                        if (membership <= 0f) continue;
-
-                        float altitudeMeters = (localRadius - ctx.SeaRadiusLocal) * scale;
-                        if (!ScatterPlacementMath.PassesAltitudeWater(altitudeMeters, ctx.HasOcean, rules)) continue;
-
-                        Vector3 localNormal = _ground.SampleNormalAt(dir, localRadius);
-                        float slopeCos = Mathf.Clamp01(Vector3.Dot(localNormal, dir));
-                        float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, proto.SpacingMeters, ctx.BaseRadiusLocal * scale)
-                                            * Mathf.Pow(membership, proto.BiomeBlendPower);
-
-                        if (ScatterPlacementMath.TryPlace(slotSeed, dir, localRadius, altitudeMeters, slopeCos,
-                                densityKeep, ctx.HasOcean, rules, out Vector3 posLocal, out Quaternion rot, out float sc))
-                        {
-                            ulong id = ScatterId.Pack(cell.FaceIndex, level, x, y, proto.SlotId);
-                            buffer.Add(new ScatterInstance(id, snap.TransformPoint(posLocal), snap.Rotation * rot, sc, pi));
-                            emitted++; stats.Accepted++;
+                            buffer.Add(inst);
+                            emitted++;
                         }
                     }
                 }
             }
         }
         return emitted;
+    }
+
+    // One prototype's whole payload for one tile: every cell of that prototype whose fixed parent
+    // (ScatterQuadtree.ParentTile at tileLevel) is (face, tileX, tileY). No camera ROI clip and no range
+    // builder — the tile is a fixed child-cell block, so the payload is a pure function of (tile, seed),
+    // stable regardless of where the camera first loaded it (the property the tile cache relies on). The
+    // per-candidate decision is the same TryGatherCandidate the whole-disc gather uses, so the draw-
+    // filtered union of tiles equals the whole-disc gather. tileLevel must be <= the prototype level
+    // (guaranteed by Configure choosing Lt <= min prototype level).
+    public int GatherTilePrototype(in GatherContext ctx, in PlanetTransformSnapshot snap,
+        int face, int tileX, int tileY, int tileLevel, int protoIndex, List<ScatterInstance> buffer,
+        out ScatterGatherStats stats)
+    {
+        stats = default;
+        if (!ctx.IsValid || buffer == null) return 0;
+        if ((uint)protoIndex >= (uint)ctx.Library.Prototypes.Length) return 0;
+        var proto = ctx.Library.Prototypes[protoIndex];
+        int level = ctx.Levels[protoIndex];
+        if (level < tileLevel) return 0;
+        float cellUv = ScatterQuadtree.CellUvWidth(level);
+        float scale = snap.UniformScale;
+        PlacementRules rules = BuildRules(proto);
+
+        int shift = level - tileLevel;
+        int span = 1 << shift;
+        int x0 = tileX << shift, y0 = tileY << shift;
+
+        long biomeMemoKey = -1;
+        BiomeResult biomeMemo = default;
+        int emitted = 0;
+        for (int dy = 0; dy < span; dy++)
+        {
+            for (int dx = 0; dx < span; dx++)
+            {
+                int x = x0 + dx, y = y0 + dy;
+                if (TryGatherCandidate(ctx, snap, face, level, x, y, proto, protoIndex, rules, cellUv,
+                        scale, default, float.PositiveInfinity, ref biomeMemoKey, ref biomeMemo, ref stats,
+                        out ScatterInstance inst))
+                {
+                    buffer.Add(inst);
+                    emitted++;
+                }
+            }
+        }
+        return emitted;
+    }
+
+    // Shared per-candidate placement: seed -> uv/dir -> radius -> ROI -> biome (coarse memo) -> altitude
+    // -> normal/slope -> TryPlace -> instance. Both the whole-disc GatherCore (ROI-clipped) and
+    // GatherTilePrototype (whole tile, roiSqr = +inf disables the clip) call this, so their placement
+    // decisions are byte-identical. The biome memo is caller-owned (invocation-local) so this stays
+    // order-independent and safe on a background thread. Sampling the radius first lets rejected
+    // candidates skip the slope normal (2 extra ground samples).
+    bool TryGatherCandidate(in GatherContext ctx, in PlanetTransformSnapshot snap, int faceIndex,
+        int level, int x, int y, ScatterPrototypeDto proto, int protoIndex, in PlacementRules rules,
+        float cellUv, float scale, Vector3 anchorWS, float roiSqr,
+        ref long biomeMemoKey, ref BiomeResult biomeMemo, ref ScatterGatherStats stats, out ScatterInstance inst)
+    {
+        inst = default;
+        uint nodeSeed = ScatterHash.Node(ctx.WorldSeed, faceIndex, level, x, y);
+        uint slotSeed = ScatterHash.Slot(nodeSeed, proto.SlotId);
+        Vector2 uv = ScatterQuadtree.CandidateUv(x, y, cellUv, slotSeed);
+        Vector3 dir = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(faceIndex, uv);
+
+        if (!_ground.TrySampleRadius(dir, out float localRadius)) return false;
+
+        Vector3 worldPos = snap.TransformPoint(dir * localRadius);
+        if ((worldPos - anchorWS).sqrMagnitude > roiSqr) return false;
+        stats.Candidates++;
+
+        // sampleLevel = min(level, BiomeSampleLevel) so a prototype coarser than the biome grid samples at
+        // its own level (never a negative shift); the key includes sampleLevel so different levels never
+        // alias. Value is EvaluateBiome at the coarse cell CENTER -> order-independent.
+        int sampleLevel = level < BiomeSampleLevel ? level : BiomeSampleLevel;
+        int bshift = level - sampleLevel;
+        int xb = x >> bshift, yb = y >> bshift;
+        long biomeKey = ((long)faceIndex << 58) | ((long)sampleLevel << 50) | ((long)xb << 25) | (long)yb;
+        if (biomeKey != biomeMemoKey)
+        {
+            float cellUvB = ScatterQuadtree.CellUvWidth(sampleLevel);
+            Vector2 cuv = new Vector2((xb + 0.5f) * cellUvB, (yb + 0.5f) * cellUvB);
+            Vector3 cdir = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(faceIndex, cuv);
+            float celev = _ground.TrySampleRadius(cdir, out float crad) ? crad / ctx.BaseRadiusLocal - 1f : -1f;
+            biomeMemo = _biome.EvaluateBiome(cdir, celev);
+            biomeMemoKey = biomeKey;
+        }
+        float membership = MembershipFor(biomeMemo, proto.Biome);
+        if (membership <= 0f) return false;
+
+        float altitudeMeters = (localRadius - ctx.SeaRadiusLocal) * scale;
+        if (!ScatterPlacementMath.PassesAltitudeWater(altitudeMeters, ctx.HasOcean, rules)) return false;
+
+        Vector3 localNormal = _ground.SampleNormalAt(dir, localRadius);
+        float slopeCos = Mathf.Clamp01(Vector3.Dot(localNormal, dir));
+        float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, proto.SpacingMeters, ctx.BaseRadiusLocal * scale)
+                            * Mathf.Pow(membership, proto.BiomeBlendPower);
+
+        if (!ScatterPlacementMath.TryPlace(slotSeed, dir, localRadius, altitudeMeters, slopeCos,
+                densityKeep, ctx.HasOcean, rules, out Vector3 posLocal, out Quaternion rot, out float sc))
+            return false;
+
+        ulong id = ScatterId.Pack(faceIndex, level, x, y, proto.SlotId);
+        inst = new ScatterInstance(id, snap.TransformPoint(posLocal), snap.Rotation * rot, sc, protoIndex);
+        stats.Accepted++;
+        return true;
     }
 
     bool TryResolveSurfaceAnchor(in PlanetTransformSnapshot snap, Vector3 observerWS, out Vector3 anchorWS)
