@@ -33,6 +33,12 @@ Shader "Scatter/Impostor"
             #pragma fragment frag
             #pragma multi_compile_instancing
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Includes/PlanetSunLighting.hlsl"
+
+            // Light from the planet _SunParams sun (like FoliageLit + terrain), not the URP main light,
+            // so impostors match the near mesh trees and track day/night.
+            float3 _SunParams;
+            float _NightAmbientIntensity;
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
 
@@ -124,11 +130,14 @@ Shader "Scatter/Impostor"
                 float nz = sqrt(saturate(_NormalBulge - cx * cx - cy * cy));
                 float3 N = normalize(IN.billRight * cx + IN.billUp * cy + IN.billFwd * nz);
 
-                Light mainLight = GetMainLight();
-                half ndl = saturate(dot(N, mainLight.direction));
-                half3 ambient = SampleSH(N);
-                half3 lit = card.rgb * (mainLight.color.rgb * ndl + ambient);
-                return half4(lit, 1);
+                // Planet sun (matches FoliageLit): billUp is the surface normal at the instance.
+                float3 planetNormal = normalize(IN.billUp);
+                float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
+                float daylight = PlanetDaylightFromLocalSun(dot(planetNormal, sunDir));
+                half ndl = saturate(dot(N, sunDir));
+                half3 dayColor = card.rgb * lerp(0.32, 1.18, ndl);
+                half3 nightColor = card.rgb * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
+                return half4(lerp(nightColor, dayColor, daylight), 1);
             }
             ENDHLSL
         }

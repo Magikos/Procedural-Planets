@@ -63,6 +63,13 @@ Shader "Scatter/VertexColorLit"
             #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Includes/PlanetSunLighting.hlsl"
+
+            // Light from the planet _SunParams sun (like the terrain/foliage), not the URP main light
+            // which does not drive the planet — that left props ambient-only and dark.
+            float3 _SunParams;
+            float3 _PlanetCenter;
+            float _NightAmbientIntensity;
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
 
@@ -115,26 +122,18 @@ Shader "Scatter/VertexColorLit"
                 half3 tex = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).rgb;
                 half3 albedo = _BaseColor.rgb * tex;
 
-                InputData inputData = (InputData)0;
-                inputData.positionWS = IN.positionWS;
-                inputData.normalWS = normalize(IN.normalWS);
-                inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(IN.positionWS);
-                inputData.shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
-                inputData.fogCoord = IN.fogFactor;
-                // Ambient / indirect: without bakedGI, surfaces facing away from the sun render black.
-                inputData.bakedGI = SampleSH(inputData.normalWS);
-                inputData.normalizedScreenSpaceUV = IN.positionHCS.xy / max(_ScreenParams.xy, 1.0);
-                inputData.shadowMask = half4(1, 1, 1, 1);
-
-                SurfaceData surf = (SurfaceData)0;
-                surf.albedo = albedo;
-                surf.smoothness = _Smoothness;
-                surf.occlusion = 1.0;
-                surf.alpha = 1.0;
-
-                half4 color = UniversalFragmentPBR(inputData, surf);
-                color.rgb = MixFog(color.rgb, IN.fogFactor);
-                return half4(color.rgb, 1.0);
+                // Planet sun lighting (matches terrain/foliage via _SunParams): diffuse albedo ramped by
+                // the surface normal facing the sun, blended to a cool night ambient by daylight.
+                float3 nrmWS = normalize(IN.normalWS);
+                float3 planetNormal = normalize(IN.positionWS - _PlanetCenter);
+                float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
+                float daylight = PlanetDaylightFromLocalSun(dot(planetNormal, sunDir));
+                float ndl = saturate(dot(nrmWS, sunDir));
+                half3 dayColor = albedo * lerp(0.32, 1.18, ndl);
+                half3 nightColor = albedo * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
+                half3 col = lerp(nightColor, dayColor, daylight);
+                col = MixFog(col, IN.fogFactor);
+                return half4(col, 1.0);
             }
             ENDHLSL
         }

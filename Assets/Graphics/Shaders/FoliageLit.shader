@@ -103,6 +103,14 @@ Shader "Scatter/FoliageLit"
             #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Includes/PlanetSunLighting.hlsl"
+
+            // The planet is lit by the custom _SunParams sun (terrain + grass use it); the URP main
+            // light does not drive it, so lighting foliage via GetMainLight left it ambient-only and
+            // dark. Light foliage from _SunParams too so trees match the world and track day/night.
+            float3 _SunParams;
+            float3 _PlanetCenter;
+            float _NightAmbientIntensity;
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
             TEXTURE2D(_TrunkMap); SAMPLER(sampler_TrunkMap);
@@ -171,25 +179,19 @@ Shader "Scatter/FoliageLit"
                 // (lm=0) keeps its true normal.
                 nrmWS = normalize(lerp(nrmWS, float3(0.0, 1.0, 0.0), _LeafNormalUp * lm));
 
-                InputData inputData = (InputData)0;
-                inputData.positionWS = IN.positionWS;
-                inputData.normalWS = nrmWS;
-                inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(IN.positionWS);
-                inputData.shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
-                inputData.fogCoord = IN.fogFactor;
-                inputData.bakedGI = SampleSH(inputData.normalWS);
-                inputData.normalizedScreenSpaceUV = IN.positionHCS.xy / max(_ScreenParams.xy, 1.0);
-                inputData.shadowMask = half4(1, 1, 1, 1);
-
-                SurfaceData surf = (SurfaceData)0;
-                surf.albedo = albedo;
-                surf.smoothness = _Smoothness;
-                surf.occlusion = 1.0;
-                surf.alpha = 1.0;
-
-                half4 color = UniversalFragmentPBR(inputData, surf);
-                color.rgb = MixFog(color.rgb, IN.fogFactor);
-                return half4(color.rgb, 1.0);
+                // Planet sun lighting (matches the terrain/grass, which shade from _SunParams). Diffuse
+                // only: albedo * a day level that ramps with the leaf normal facing the sun, blended to
+                // a cool night ambient by the daylight factor at this point on the sphere.
+                float3 planetNormal = normalize(IN.positionWS - _PlanetCenter);
+                float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
+                float daylight = PlanetDaylightFromLocalSun(dot(planetNormal, sunDir));
+                float ndl = saturate(dot(nrmWS, sunDir));
+                half3 dayColor = albedo * lerp(0.32, 1.18, ndl);
+                float nightAmbient = PlanetNightAmbient(_NightAmbientIntensity);
+                half3 nightColor = albedo * nightAmbient * 0.6;
+                half3 col = lerp(nightColor, dayColor, daylight);
+                col = MixFog(col, IN.fogFactor);
+                return half4(col, 1.0);
             }
             ENDHLSL
         }
