@@ -9,10 +9,11 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
     public float MoveSpeed = 10f;
     public float FastMultiplier = 3f;
     public float OrbitSpeedMultiplier = 0.5f;
-    // Surface fly speed is capped so the camera can't out-run the async scatter gather (which takes a
-    // few seconds): travel per gather must stay inside the gather region or scatter never catches up
-    // and appears to vanish while flying. Raise once the gather is incremental/faster.
-    public float SurfaceSpeedMultiplier = 0.006f;
+    // Surface fly speed as a fraction of planet radius. The scatter gather is now incremental (a camera
+    // move only gathers the frontier tile ring, not the whole disc), so the old ~32 m/s stopgap is
+    // lifted to ~106 m/s at the default radius. Sprint (FastMultiplier) rides on top; if it out-runs the
+    // frontier, lower this rather than re-capping.
+    public float SurfaceSpeedMultiplier = 0.02f;
 
     [Header("Look")]
     public float LookSensitivity = 2f;
