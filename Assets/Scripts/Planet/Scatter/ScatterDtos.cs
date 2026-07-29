@@ -87,7 +87,10 @@ public sealed record ScatterPrototypeDto(
     // that cull. Rocks/bushes/grass keep their short range. Kept here so gather (ScatterField) and draw
     // (ScatterRenderer) agree on which prototypes reach far and how far.
     const float ImpostorMinMeshCull = 300f;
-    const float ImpostorRangeMultiplier = 1.3f;
+    // Impostors reach this multiple of the mesh cull. Kept small (1.3) while the gather re-scanned the
+    // whole disc every move; the incremental tile cache makes far tiles cheap, so the tree line can push
+    // much farther toward the horizon.
+    const float ImpostorRangeMultiplier = 2.0f;
 
     public bool HasImpostor => CanRender && MaxCullDistance >= ImpostorMinMeshCull;
     public float ImpostorStartDistance => MaxCullDistance * 0.85f; // cross-fade in over the mesh dither-out band

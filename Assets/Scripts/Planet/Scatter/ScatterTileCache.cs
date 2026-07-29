@@ -15,6 +15,7 @@ using UnityEngine;
 // Threading mirrors the old renderer: one sequential background worker gathers into worker-local lists
 // from an immutable context + transform snapshot; the cache (tiles + draw buckets) is only ever mutated
 // on the main thread. An epoch guards commits so a result produced for a previous world is dropped.
+[CommandPrefix("scatter")]
 public sealed class ScatterTileCache
 {
     // A (tile, prototype) unit of work / readiness.
@@ -41,7 +42,7 @@ public sealed class ScatterTileCache
     }
 
     const float ReevalMoveMeters = 40f;    // re-plan the required tile set only after this much camera travel
-    const int MaxPairsPerTick = 12;        // (tile, prototype) gathers committed per background excursion
+    const int MaxPairsPerTick = 48;        // (tile, prototype) gathers committed per background excursion
 
     readonly ScatterField _field;
     readonly Transform _planetTransform;
@@ -60,6 +61,7 @@ public sealed class ScatterTileCache
     int _tileLevel;
     float[] _protoRadius = Array.Empty<float>(); // far draw end + prefetch lead; <0 = never gathered
     float _globalMaxRadius;
+    float _tileWorld;                            // one tile's world size; eviction hysteresis
     bool _configured;
     int _epoch;
     bool _working;
@@ -71,7 +73,13 @@ public sealed class ScatterTileCache
     {
         _field = field;
         _planetTransform = planetTransform;
+        ConsoleRegistry.RegisterInstance(this);
     }
+
+    [ConsoleCommand("tiles", "Report the scatter tile cache: live tiles, instances, queue depth, tile level.", MonoTargetType.Registry)]
+    string TilesCmd() => _configured
+        ? $"scatter tiles: Lt={_tileLevel}, {LiveTileCount} live tiles, {LiveInstanceCount} instances, {_work.Count} queued, {_inFlight.Count} in-flight, far radius {_globalMaxRadius:F0} m"
+        : "scatter tiles: not configured (generate a planet first)";
 
     public int TileLevel => _tileLevel;
     public IReadOnlyList<Matrix4x4> Matrices(int proto) => _matrices[proto];
@@ -103,8 +111,8 @@ public sealed class ScatterTileCache
         _protoRadius = new float[_protoCount];
         _globalMaxRadius = 0f;
         float worldScale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform);
-        float tileWorld = 2f * ctx.BaseRadiusLocal * worldScale * ScatterQuadtree.CellUvWidth(_tileLevel);
-        float prefetch = Mathf.Max(tileWorld, 40f);
+        _tileWorld = 2f * ctx.BaseRadiusLocal * worldScale * ScatterQuadtree.CellUvWidth(_tileLevel);
+        float prefetch = Mathf.Max(_tileWorld, 40f);
         for (int p = 0; p < _protoCount; p++)
         {
             _matrices[p] = new List<Matrix4x4>();
@@ -151,7 +159,7 @@ public sealed class ScatterTileCache
 
         // Evict tiles that left range (distance-based, with hysteresis). Batch the affected prototypes and
         // rebuild only those draw buckets once — never a full O(all instances) rebuild (I5).
-        float evictBeyond = _globalMaxRadius + _globalMaxRadius; // 2x = generous hysteresis; rebuild is the cost
+        float evictBeyond = _globalMaxRadius + _tileWorld; // keep one tile of hysteresis past the farthest draw
         ulong affected = 0;
         _scratchEvict.Clear();
         foreach (var kv in _tiles)
