@@ -314,7 +314,7 @@ Shader "Planet/Grass"
                 float3 baseTint = lerp(float3(0.62, 0.86, 0.5), float3(0.92, 0.9, 0.54), tintHash);
                 float3 bladeTintJitter = lerp(float3(0.82, 1.03, 0.86), float3(1.05, 0.91, 0.78), colorJitter);
                 float3 tint = baseTint * bladeTintJitter * patchTint;
-                float heightShade = lerp(0.42, 0.94, smoothstep(0.0, 1.0, t));
+                float heightShade = lerp(0.62, 1.0, smoothstep(0.0, 1.0, t));
                 float3 biomeTint = GradeGrassTint(blade.Color.rgb, 0.76, 0.88);
                 float3 bladeAlbedo = saturate(biomeTint * tint * brightness) * heightShade;
                 float3 canopyAlbedo = GrassCanopyAlbedo(blade.Color.rgb);
