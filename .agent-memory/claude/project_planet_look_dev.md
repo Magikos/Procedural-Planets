@@ -49,7 +49,16 @@ the world MUST light from `_SunParams` + PlanetSunLighting, never GetMainLight.*
 `normalize(posWS - _PlanetCenter)` (mesh) or the billboard up (impostor). Diagnose lighting-source bugs
 by killing ambient + cranking the sun: what stays lit uses `_SunParams`, what goes black uses URP.
 
-Remaining toward the reference: grass far-field render distance is 240m (`DefaultGrassQualitySettings`
-in QualityController.cs) → bare-ish beyond; grass base a bit dark; wildflowers need a mesh (LMHPOLY
-`FlowerBush` fbx in Extras is a candidate); day/night-driven ambient; far impostors carry heavy
-atmospheric blue; hero trees + landmark props. See [[project-scatter-biome-buildout]].
+Grass/flower progress (commits 07d979d, 761be68): grass render distance 240→380m
+(`DefaultGrassQualitySettings` in QualityController.cs) so the blanket reaches the hills; grass base
+brightened (Grass.shader `heightShade` root 0.42→0.62); wildflowers wired — the project already has
+`SM_Env_Wildflowers_01.fbx` + `FoliageWildflowers.mat` (FoliageLit), so the Grassland Wildflowers
+prototype now renders 1300+ instances, but they stay SUBTLE (green, texture not a bold bloom, buried
+in tall grass even at ScaleRange 1.6–2.6). For distinct meadow flowers, use a more colourful flower
+mesh (LMHPOLY `FlowerBush` in Extras, or Synty `SM_Gen_Env_Flowers_01`) and/or a shorter grass patch.
+
+State after look-dev: STRONG — lit consistent scatter+terrain, lush tall grass to the horizon, warm
+graded daylight, good density. Remaining polish: distinct flowers; far impostors carry heavy
+atmospheric blue; grass slope-gates to bare dirt on steep ridges; day/night-driven ambient; more tree
+species variety + hero trees + landmark props (Toon Fantasy Nature / LMHPOLY packs in Extras).
+See [[project-scatter-biome-buildout]].
