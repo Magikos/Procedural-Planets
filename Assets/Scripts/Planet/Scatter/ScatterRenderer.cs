@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 // gathered once on a background thread and cached, so camera travel only gathers the frontier instead of
 // re-scanning the whole disc every move. This renderer owns the draw side: per-part RenderParams, the
 // far-field impostor bake, and the LOD banding, drawing from the cache's per-prototype buckets.
-public sealed class ScatterRenderer : IDisposable
+public sealed class ScatterRenderer : IDisposable, IScatterDrawRuntime
 {
     readonly Transform _planetTransform;
     readonly ScatterLodBatcher _batcher = new ScatterLodBatcher();
@@ -80,25 +80,30 @@ public sealed class ScatterRenderer : IDisposable
         _cache.Reset();
     }
 
+    // Drives the incremental gather each frame (main thread). Drawing is NOT done here: it runs in
+    // ScatterRenderPass during the opaque phase so the scatter writes camera colour+depth and lands in
+    // _CameraDepthTexture. Immediate-mode Graphics.RenderMeshInstanced never reached that depth, so the
+    // atmosphere's sky mask painted over tree canopies that rose above the terrain horizon.
     public void Render(Camera camera)
     {
         if (!_configured || _library == null || camera == null) return;
         if (_library.Prototypes.Length == 0) return;
-
-        Vector3 camPos = camera.transform.position;
-        _cache.Update(camPos);
-        Draw(camPos);
+        _cache.Update(camera.transform.position);
     }
 
-    void Draw(Vector3 camPos)
+    public bool HasDrawData => _configured && _library != null && _library.Prototypes.Length > 0;
+
+    // Called by ScatterRenderPass inside its RenderGraph render func, targeting the camera colour+depth.
+    public void RecordDraws(RasterCommandBuffer cmd, Vector3 camPos)
     {
+        if (!_configured || _library == null) return;
         for (int p = 0; p < _library.Prototypes.Length; p++)
         {
             var proto = _library.Prototypes[p];
             if (!proto.CanRender) continue;
             var matrices = _cache.Matrices(p);
             if (matrices.Count == 0) continue;
-            _batcher.Draw(proto, _renderParams[p], matrices, _cache.Positions(p), camPos, _impostors[p]);
+            _batcher.Draw(cmd, proto, _renderParams[p], matrices, _cache.Positions(p), camPos, _impostors[p]);
         }
     }
 

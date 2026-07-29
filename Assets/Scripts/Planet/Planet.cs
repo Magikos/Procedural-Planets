@@ -88,6 +88,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         context.Register<IClimateSampler>(this);
         context.Register<IGrassRuntimeControl>(this);
         context.Register<IGrassNearFieldStatsProvider>(_grass);
+        context.Register<IScatterDrawRuntime>(_scatterRenderer);
     }
 
     void EnsureRuntimeOwners()

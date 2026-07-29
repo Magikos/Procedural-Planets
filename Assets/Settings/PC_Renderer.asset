@@ -57,7 +57,8 @@ MonoBehaviour:
   - {fileID: 6196829647305519302}
   - {fileID: 2718603805820192743}
   - {fileID: -8895330461592241436}
-  m_RendererFeatureMap: ad6b866f10d7b46c5a89b1425724ebbc11d3f0631b218115c6304165bb8fff55e707f0f2c16bba25e43a151d13708d84l
+  - {fileID: 5020205983212589066}
+  m_RendererFeatureMap: ad6b866f10d7b46c5a89b1425724ebbc11d3f0631b218115c6304165bb8fff55e707f0f2c16bba25e43a151d13708d840a50ad58be5aab45l
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   m_AssetVersion: 3
@@ -111,6 +112,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b4f0c0d9d13c4b98a2a4e5f6818c0a57, type: 3}
   m_Name: WaterVolumeRenderFeature
   m_EditorClassIdentifier: ProceduralPlanets.Planet::WaterVolumeRenderFeature
+  m_Active: 1
+--- !u!114 &5020205983212589066
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cdd5c43ff8731b8439eeec9b6bc2c983, type: 3}
+  m_Name: ScatterRenderFeature
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterRenderFeature
   m_Active: 1
 --- !u!114 &6196829647305519302
 MonoBehaviour:
