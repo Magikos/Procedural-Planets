@@ -1,5 +1,7 @@
 # Memory Index
 
+- [Scatter gather perf](project_scatter_gather_perf.md) — 2026-07-29: scatter IS deterministic (verify PASS, seed-based) but camera-centric + gather is SLOW (~9-14s, per-candidate biome eval); "missing scatter" = altitude (spacebar drops to surface) or gather can't keep up while flying (4564b76 capped fly speed + gather cost); real fix = faster/incremental gather
+
 - [Planet look-dev](project_planet_look_dev.md) — 2026-07-28: Synty-look pass (post was OFF→enabled+graded PlanetLookProfile, ambient lifted, scatter densified, grass=compute-blanket per-biome params raised); commits 29f1b6a+d75144d; grass follow-ups (far-field coverage, flowers need mesh, bush brightness, day/night ambient)
 
 - [Test harness](project_test_harness.md) — 2026-07-27: first tests (EditMode, 49 green: ScatterId/DTO-validation/ScatterHash-golden/PlacementMath); Bryan requested TDD → overrides CLAUDE.md "no test framework" rule (UTF 1.8.0 was already in manifest); reconcile CLAUDE.md + testing-stance when confirmed
