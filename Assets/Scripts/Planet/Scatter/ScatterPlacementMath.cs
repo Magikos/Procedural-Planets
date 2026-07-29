@@ -26,6 +26,17 @@ public static class ScatterPlacementMath
         return Mathf.InverseLerp(maxSlopeCos, minSlopeCos, slopeCos);
     }
 
+    // Altitude + water-clearance gate, split out so the gather can reject a candidate BEFORE it pays
+    // for the slope normal (2 extra ground samples). TryPlace is the sole owner and calls the same
+    // predicate, so the fast-path pre-check can never drift from the final placement decision.
+    public static bool PassesAltitudeWater(float altitudeMeters, bool hasOcean, in PlacementRules rules)
+    {
+        if (rules.HasMinAltitude && altitudeMeters < rules.MinAltitude) return false;
+        if (rules.HasMaxAltitude && altitudeMeters > rules.MaxAltitude) return false;
+        if (hasOcean && rules.MinWaterClearance > 0f && altitudeMeters < rules.MinWaterClearance) return false;
+        return true;
+    }
+
     // dir/radius are LOCAL (caller converts to world). slopeCos = dot(surfaceNormal, dir).
     // altitudeMeters = signed metres above sea. densityKeep = areaKeep * membership^blendPower,
     // folded in by the caller so this function stays free of biome types.
@@ -35,9 +46,7 @@ public static class ScatterPlacementMath
     {
         posLocal = default; rot = Quaternion.identity; scale = 0f;
 
-        if (rules.HasMinAltitude && altitudeMeters < rules.MinAltitude) return false;
-        if (rules.HasMaxAltitude && altitudeMeters > rules.MaxAltitude) return false;
-        if (hasOcean && rules.MinWaterClearance > 0f && altitudeMeters < rules.MinWaterClearance) return false;
+        if (!PassesAltitudeWater(altitudeMeters, hasOcean, rules)) return false;
 
         float slopeKeep = SlopeKeep(rules.MaxSlopeCos, rules.MinSlopeCos, slopeCos);
         if (slopeKeep <= 0f) return false;

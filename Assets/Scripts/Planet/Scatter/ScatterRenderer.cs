@@ -140,6 +140,8 @@ public sealed class ScatterRenderer : IDisposable
         _gathering = true;
         CancellationToken token = _cts.Token;
         bool haveResult = false;
+        long gatherMs = 0;
+        int gatherEmitted = 0;
         try
         {
             if (_field.TryCaptureGatherContext(out var ctx))
@@ -149,10 +151,15 @@ public sealed class ScatterRenderer : IDisposable
                 await Awaitable.BackgroundThreadAsync();
                 if (!token.IsCancellationRequested)
                 {
-                    _field.GatherOffThread(ctx, snap, camPos, _gatherRegion, ScatterId.MaxLevel, _back, _asyncRanges);
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    gatherEmitted = _field.GatherOffThread(ctx, snap, camPos, _gatherRegion, ScatterId.MaxLevel, _back, _asyncRanges);
+                    sw.Stop();
+                    gatherMs = sw.ElapsedMilliseconds;
                     haveResult = true;
                 }
                 await Awaitable.MainThreadAsync(); // always return to the main thread before the finally
+                if (haveResult)
+                    _log.Log(LogLevel.Debug, "Scatter", $"gather {gatherMs} ms, region {_gatherRegion:F0} m, {gatherEmitted} instances");
             }
         }
         catch (OperationCanceledException) { /* teardown mid-await; expected */ }

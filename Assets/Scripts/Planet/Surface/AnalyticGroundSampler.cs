@@ -18,32 +18,43 @@ public sealed class AnalyticGroundSampler : ISurfaceGroundSampler
         _shape = shape ?? throw new System.ArgumentNullException(nameof(shape));
     }
 
+    // Reference composition: radius (1 elevation sample) + normal (2 more). TrySampleRadius +
+    // SampleNormalAt are the two stages the scatter hot path uses to skip the normal for rejected
+    // candidates; keeping this as their composition guarantees identical results to the split path.
     public bool TrySampleGround(Vector3 localUnitDirection, out float localRadius, out Vector3 localNormal)
     {
-        localRadius = 0f;
         localNormal = localUnitDirection;
+        if (!TrySampleRadius(localUnitDirection, out localRadius)) return false;
+        localNormal = SampleNormalAt(localUnitDirection, localRadius);
+        return true;
+    }
+
+    public bool TrySampleRadius(Vector3 localUnitDirection, out float localRadius)
+    {
+        localRadius = 0f;
         if (localUnitDirection.sqrMagnitude < 1e-8f) return false;
-
-        Vector3 dir = localUnitDirection.normalized;
-        float r0 = RadiusAt(dir);
+        float r0 = RadiusAt(localUnitDirection.normalized);
         if (!(r0 > 0f)) return false;
+        localRadius = r0;
+        return true;
+    }
 
-        // Two tangent probes -> surface triangle -> outward normal.
-        float arc = NormalProbeMeters / r0;
+    // Outward normal at the already-selected hit (localRadius): two tangent probes -> surface triangle.
+    public Vector3 SampleNormalAt(Vector3 localUnitDirection, float localRadius)
+    {
+        Vector3 dir = localUnitDirection.normalized;
+        float arc = NormalProbeMeters / localRadius;
         Vector3 t1 = Vector3.Cross(dir, Mathf.Abs(dir.y) < 0.99f ? Vector3.up : Vector3.right).normalized;
         Vector3 t2 = Vector3.Cross(dir, t1);
         Vector3 dA = (dir + t1 * arc).normalized;
         Vector3 dB = (dir + t2 * arc).normalized;
 
-        Vector3 p0 = dir * r0;
+        Vector3 p0 = dir * localRadius;
         Vector3 pA = dA * RadiusAt(dA);
         Vector3 pB = dB * RadiusAt(dB);
         Vector3 n = Vector3.Cross(pA - p0, pB - p0).normalized;
         if (Vector3.Dot(n, dir) < 0f) n = -n;
-
-        localRadius = r0;
-        localNormal = n;
-        return true;
+        return n;
     }
 
     float RadiusAt(Vector3 dir) => _shape.GetScaledElevation(_shape.SampleElevation(dir));

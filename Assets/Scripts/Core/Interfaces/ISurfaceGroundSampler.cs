@@ -10,4 +10,11 @@ using UnityEngine;
 public interface ISurfaceGroundSampler
 {
     bool TrySampleGround(Vector3 localUnitDirection, out float localRadius, out Vector3 localNormal);
+
+    // Two-stage form for hot paths (scatter gather): sample the primary hit's radius first (cheap),
+    // let the caller run the biome/altitude gates, then compute the outward normal ONLY for survivors,
+    // passing the already-selected radius/hit back so the normal is taken at the same surface point.
+    // TrySampleGround is the reference composition of these two; results are identical.
+    bool TrySampleRadius(Vector3 localUnitDirection, out float localRadius);
+    Vector3 SampleNormalAt(Vector3 localUnitDirection, float localRadius);
 }

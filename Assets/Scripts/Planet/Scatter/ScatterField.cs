@@ -11,6 +11,7 @@ using UnityEngine;
 public sealed class ScatterField : IDisposable
 {
     const long CandidateBudget = 2_000_000; // preflight cap: bail before a fine-spacing prototype hangs the main thread
+    const int BiomeSampleLevel = 9; // coarse quadtree level the biome eval is memoized at during gather
 
     public struct ScatterGatherStats { public int Candidates; public int Accepted; public bool CornerStraddle; }
 
@@ -140,6 +141,14 @@ public sealed class ScatterField : IDisposable
         int protoCount = ctx.Library.Prototypes.Length;
         int emitted = 0;
 
+        // Coarse-cell biome memo (invocation-local, single entry). The live biome eval (climate noise +
+        // resolve) is ~50 us and dominates the gather; biomes are large, so sampling it per fine
+        // candidate is wasteful. Sample it once per coarse cell CENTER (deterministic point, so the
+        // result is order-independent) and reuse for the finer candidates inside. This is a deliberate,
+        // approved layout change: membership near a biome border now snaps to the coarse cell.
+        long biomeMemoKey = -1;
+        BiomeResult biomeMemo = default;
+
         for (int pk = 0; pk < protoCount; pk++)
         {
             int pi = reversed ? protoCount - 1 - pk : pk;
@@ -176,21 +185,45 @@ public sealed class ScatterField : IDisposable
                         Vector2 uv = ScatterQuadtree.CandidateUv(x, y, cellUv, slotSeed);
                         Vector3 dir = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(cell.FaceIndex, uv);
 
-                        // Analytic surface (radius + normal in one query): LOD-independent and
-                        // deterministic, so props snap to the surface the mesh converges to instead
-                        // of whatever streaming chunk is resident, and it is pure math — no Transform,
-                        // no chunk sample — so the gather can move off the main thread.
-                        if (!_ground.TrySampleGround(dir, out float localRadius, out Vector3 localNormal) || localRadius <= 0f) continue;
+                        // Analytic surface, LOD-independent + deterministic (pure math — no Transform, no
+                        // chunk sample — so this runs off the main thread). Sample the RADIUS first; the
+                        // slope normal (2 more elevation samples) is deferred past the ROI/biome/altitude
+                        // gates below so rejected candidates never pay for it. TryPlace re-checks
+                        // altitude/water via the same PassesAltitudeWater predicate, so the result is
+                        // identical to computing the normal up front.
+                        if (!_ground.TrySampleRadius(dir, out float localRadius)) continue;
 
                         Vector3 worldPos = snap.TransformPoint(dir * localRadius);
                         if ((worldPos - anchorWS).sqrMagnitude > pr2) continue;
                         stats.Candidates++;
 
-                        float membership = Membership(dir, localRadius, proto.Biome, ctx.BaseRadiusLocal);
+                        // Biome via the coarse-cell memo. sampleLevel = min(level, BiomeSampleLevel) so
+                        // a prototype coarser than the biome grid samples at its own level (never a
+                        // negative shift), and the key includes sampleLevel so different levels never
+                        // alias. Value is EvaluateBiome at the coarse cell CENTER -> order-independent.
+                        int sampleLevel = level < BiomeSampleLevel ? level : BiomeSampleLevel;
+                        int shift = level - sampleLevel;
+                        int xb = x >> shift, yb = y >> shift;
+                        long biomeKey = ((long)cell.FaceIndex << 58) | ((long)sampleLevel << 50)
+                                        | ((long)xb << 25) | (long)yb;
+                        if (biomeKey != biomeMemoKey)
+                        {
+                            float cellUvB = ScatterQuadtree.CellUvWidth(sampleLevel);
+                            Vector2 cuv = new Vector2((xb + 0.5f) * cellUvB, (yb + 0.5f) * cellUvB);
+                            Vector3 cdir = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(cell.FaceIndex, cuv);
+                            float celev = _ground.TrySampleRadius(cdir, out float crad)
+                                ? crad / ctx.BaseRadiusLocal - 1f : -1f;
+                            biomeMemo = _biome.EvaluateBiome(cdir, celev);
+                            biomeMemoKey = biomeKey;
+                        }
+                        float membership = MembershipFor(biomeMemo, proto.Biome);
                         if (membership <= 0f) continue;
 
-                        float slopeCos = Mathf.Clamp01(Vector3.Dot(localNormal, dir));
                         float altitudeMeters = (localRadius - ctx.SeaRadiusLocal) * scale;
+                        if (!ScatterPlacementMath.PassesAltitudeWater(altitudeMeters, ctx.HasOcean, rules)) continue;
+
+                        Vector3 localNormal = _ground.SampleNormalAt(dir, localRadius);
+                        float slopeCos = Mathf.Clamp01(Vector3.Dot(localNormal, dir));
                         float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, proto.SpacingMeters, ctx.BaseRadiusLocal * scale)
                                             * Mathf.Pow(membership, proto.BiomeBlendPower);
 
@@ -288,10 +321,10 @@ public sealed class ScatterField : IDisposable
         ScaleRange = p.ScaleRange, RandomYaw = p.RandomYaw,
     };
 
-    float Membership(Vector3 dir, float localRadius, BiomeType biome, float baseRadiusLocal)
+    // Membership of a prototype's biome in an already-resolved BiomeResult (no eval — the gather
+    // memoizes the eval per coarse cell and passes the result in).
+    static float MembershipFor(in BiomeResult r, BiomeType biome)
     {
-        float elevation = localRadius / baseRadiusLocal - 1f;
-        BiomeResult r = _biome.EvaluateBiome(dir, elevation);
         if (r.PrimaryBiome == biome) return 1f - r.BlendWeight;
         if (r.SecondaryBiome == biome) return r.BlendWeight;
         return 0f;

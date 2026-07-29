@@ -86,7 +86,11 @@ public static class FaceSpaceCellRangeBuilder
         // 1. Primary face range — square centered on camera projection.
         int centerCellU = Mathf.FloorToInt(primaryFaceUv.x / cellUvWidth);
         int centerCellV = Mathf.FloorToInt(primaryFaceUv.y / cellUvWidth);
-        int halfExtent = Mathf.Max(1, Mathf.CeilToInt(discRadiusUV / cellUvWidth));
+        // +1 cell: the square is symmetric in CELL COUNT around the floored centre cell, but the
+        // camera sits at a fractional offset inside that cell, so the +U/+V world reach falls short
+        // of the disc by up to one cell. The extra ring guarantees the whole disc is enumerated
+        // regardless of sub-cell camera offset (downstream culling still clips to the exact radius).
+        int halfExtent = Mathf.Max(1, Mathf.CeilToInt(discRadiusUV / cellUvWidth)) + 1;
         outRanges[count++] = BuildPagedCell(primaryFace, cellUvWidth, pageCellSize,
             centerCellU - halfExtent, centerCellV - halfExtent,
             centerCellU + halfExtent, centerCellV + halfExtent);
@@ -153,7 +157,11 @@ public static class FaceSpaceCellRangeBuilder
 
         int centerCellU = Mathf.FloorToInt(primaryFaceUv.x / cellUvWidth);
         int centerCellV = Mathf.FloorToInt(primaryFaceUv.y / cellUvWidth);
-        int halfExtent = Mathf.Max(1, Mathf.CeilToInt(discRadiusUV / cellUvWidth));
+        // +1 cell: the square is symmetric in CELL COUNT around the floored centre cell, but the
+        // camera sits at a fractional offset inside that cell, so the +U/+V world reach falls short
+        // of the disc by up to one cell. The extra ring guarantees the whole disc is enumerated
+        // regardless of sub-cell camera offset (downstream culling still clips to the exact radius).
+        int halfExtent = Mathf.Max(1, Mathf.CeilToInt(discRadiusUV / cellUvWidth)) + 1;
         outRanges[count++] = BuildPagedCell(primaryFace, cellUvWidth, pageCellSize,
             centerCellU - halfExtent, centerCellV - halfExtent,
             centerCellU + halfExtent, centerCellV + halfExtent);
