@@ -62,6 +62,17 @@ if it out-runs the frontier. **ImpostorRangeMultiplier 1.3→2.0** (ScatterDtos)
 ScatterImpostor) — the 1.18 over-brightened above albedo ("too bright, doesn't fit"); clamped to full
 albedo, settles into the terrain palette.
 
+**Scatter now draws in a URP opaque render pass (commit f2615c0), NOT Graphics.RenderMeshInstanced.**
+`ScatterRenderFeature`/`ScatterRenderPass` (RenderGraph, AfterRenderingOpaques) draw the scatter into
+camera colour+depth via `ScatterRenderer.RecordDraws(RasterCommandBuffer, camPos)` +
+`ScatterLodBatcher.Draw(cmd, ...)` (cmd.DrawMeshInstanced of each part's forward pass). Wired onto
+PC_Renderer + Mobile_Renderer; resolves `IScatterDrawRuntime` (registered by Planet). WHY: the old
+immediate `Graphics.RenderMeshInstanced` never landed in `_CameraDepthTexture` (URP CopyDepth AfterOpaques
+only captures the scene opaque pass), so the atmosphere's depth sky-mask painted sky over tree canopies
+that rose above the terrain horizon (transparent tree-tops). Now scatter is real opaque depth → every
+depth-dependent effect (atmosphere; future SSAO/DoF/fog) sees it. `ScatterRenderer.Render()` is now
+gather-only; the pass owns drawing. `ScatterLodBatcher` keeps the Graphics path for the LodStrip workbench.
+
 **Remaining (not blocking):** (1) true-horizon far-field = bake low-res tree-density tint into terrain
 beyond impostor range (AAA method, cheaper than more billboards); (2) initial fill still "chunky" (~5300
 mostly-empty wrong-biome pairs) — biome pre-filter per tile would cut it ~16× but risks the partition
