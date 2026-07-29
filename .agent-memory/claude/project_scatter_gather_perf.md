@@ -1,6 +1,6 @@
 ---
 name: project-scatter-gather-perf
-description: 2026-07-29 — scatter IS deterministic (verify PASS); gather was ~21s, Tier 1a coarse-biome memo cut it to ~6s (committed 4354691); if scatter "looks missing" it's gather-speed/altitude, NOT placement
+description: 2026-07-29 — scatter deterministic (verify PASS). Tier 1a coarse-biome memo cut gather 21s→6s (4354691); then Lever B incremental TILE CACHE replaced whole-disc gather entirely (frontier-only per move) — fly cap raised 0.006→0.02 (~106 m/s); if scatter "looks missing" it's altitude/orbit, NOT placement or speed
 metadata:
   type: project
 ---
@@ -40,12 +40,32 @@ sub-cell camera offset, failing verify region-independence by 2 disc-edge instan
 surfaced a pre-existing gap). Tier 1a is an approved one-time re-layout (biome snaps to ~19.5m cells near
 borders; interior byte-identical). Surface screenshot confirms lush trees/rocks/bushes.
 
-**Still not enough for 100 m/s.** At capped 32 m/s the tree fresh-margin (region 520 − cull 400 = 120m)
-is crossed in ~4s < 6s gather, so trees still pop in ~210m out while flying (fine slow, laggy fast).
-**Next lever (design doc §Results): retain the baked per-face surface-radius atlas grass already builds**
-(`GrassSurfaceAtlasBuilder` makes a 1009²/face RFloat atlas from `chunk.CpuVertexRadii`, then discards the
-CPU copy). Retaining that float[6][] (~24 MiB) makes `TrySampleRadius` a bilinear lookup (~0.1µs) vs live
-noise (~6µs) → projected ~6s → ~1-2s. Caveat: atlas is ~8m/texel (coarser than the mesh) → use a
-fidelity-preserving hybrid (atlas for gates, analytic radius for the final accepted position) if trees
-float on steep terrain. Distinct from dropped Tier 1c (biome atlas 47 MiB). Then region tuning / Tier 2
-(GPU gather) for the sprint case. See [[project-planet-look-dev]].
+**LEVER B SHIPPED — incremental tile cache replaced the whole-disc gather (Valheim ZoneSystem model).**
+Design + Codex review: [docs/design/2026-07-29-scatter-incremental-gather.md]. `ScatterTileCache`
+partitions the surface into fixed cube-face tiles at `Lt = min(7, minLevel)` (~82m). Each
+`(tile, prototype)` payload is gathered ONCE via `ScatterField.GatherTilePrototype` (pure fn of tile+seed,
+enumerates the prototype cells whose `ScatterQuadtree.ParentTile` is that tile) and cached; readiness is
+per-`(tile,proto)` (`ulong ReadyMask`) so a far tile that entered "trees only" re-fills bushes as the
+camera closes. One sequential background worker (batch 48/excursion), epoch-guarded commits, in-flight set
+released in `finally` (retryable), evict beyond `maxRadius + 1 tile`, append-on-commit draw buckets +
+affected-only rebuild on evict. A camera move gathers ONLY the frontier ring — validated: 200m move =
+417→519 tiles in fast 6-9ms batches, no whole-disc re-scan. Commits: slice1 7f34bc0 (shared
+`TryGatherCandidate` + `GatherTilePrototype` + `ParentTile`, verify PASS), slice2+3 9da9e34, hardening
+b5433c4, partition guard + foliage tone 81f3dfd. **`scatter.tilecheck` PASS: tile union == whole disc,
+1650 inst** (partition proof). New commands: `scatter.tiles` (cache counters), `scatter.tilecheck`
+(partition proof, heavy → small region). 53 EditMode tests (added ParentTile partition tests).
+
+**Fly cap raised 0.006→0.02 (~32→~106 m/s)** in FreeCameraController.cs + Planet.unity (2588b62) — the
+stopgap is lifted because the gather is now frontier-only. Sprint (3×=~318 m/s) untested; lower the mult
+if it out-runs the frontier. **ImpostorRangeMultiplier 1.3→2.0** (ScatterDtos) pushes the tree line to
+~878m (was ~520) — horizon cutoff much softer. **Foliage lit shade 1.18→1.0** (FoliageLit/Scatter/
+ScatterImpostor) — the 1.18 over-brightened above albedo ("too bright, doesn't fit"); clamped to full
+albedo, settles into the terrain palette.
+
+**Remaining (not blocking):** (1) true-horizon far-field = bake low-res tree-density tint into terrain
+beyond impostor range (AAA method, cheaper than more billboards); (2) initial fill still "chunky" (~5300
+mostly-empty wrong-biome pairs) — biome pre-filter per tile would cut it ~16× but risks the partition
+(tile-center biome ≠ per-candidate) so needs a conservative multi-sample design; editor low-FPS
+exaggerates it, a build fills far faster; (3) user to fly-test the raised cap (I can't drive input).
+The baked surface-radius atlas idea (Lever A) is now OPTIONAL — the incremental cache made the per-move
+gather cheap enough without it; revisit only if the frontier cost bites. See [[project-planet-look-dev]].

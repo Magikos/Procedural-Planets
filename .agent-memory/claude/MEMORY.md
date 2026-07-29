@@ -1,6 +1,6 @@
 # Memory Index
 
-- [Scatter gather perf](project_scatter_gather_perf.md) — 2026-07-29: scatter IS deterministic (verify PASS, seed-based). Gather was ~21s (biome eval dominates, NOT normal — Tier 1b lazy-normal did nothing); Tier 1a coarse-biome memo cut it to ~6s + range-builder +1 margin fix, verify PASS, committed 4354691. Surface = lush. Still laggy at 100 m/s → next lever = retain grass's baked surface-radius atlas (~6s→~1-2s)
+- [Scatter gather perf](project_scatter_gather_perf.md) — 2026-07-29: scatter deterministic (verify PASS). Tier 1a coarse-biome memo cut gather 21s→6s (4354691); then **Lever B incremental TILE CACHE** (`ScatterTileCache`, Valheim ZoneSystem) replaced the whole-disc gather — camera move gathers only the frontier ring; `scatter.tilecheck` PASS (tile union == whole disc). Fly cap raised 0.006→0.02 (~106 m/s), impostor range→2.0 (tree line ~878m), foliage lit 1.18→1.0 (toned). Commits 7f34bc0/9da9e34/b5433c4/2588b62/81f3dfd. Remaining: true-horizon far-field tint, fill still chunky (biome pre-filter risks partition), user fly-test cap
 
 - [Planet look-dev](project_planet_look_dev.md) — 2026-07-28: Synty-look pass (post was OFF→enabled+graded PlanetLookProfile, ambient lifted, scatter densified, grass=compute-blanket per-biome params raised); commits 29f1b6a+d75144d; grass follow-ups (far-field coverage, flowers need mesh, bush brightness, day/night ambient)
 
