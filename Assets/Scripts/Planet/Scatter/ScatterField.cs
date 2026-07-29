@@ -112,10 +112,15 @@ public sealed class ScatterField : IDisposable
             buffer, reversed, perPrototypeCull: false, _ranges, out stats);
     }
 
+    // Placement-only prototypes (no drawable mesh) still get gathered for SP1/persistence near the
+    // observer, but must NOT scan the full render region at fine spacing — that dominated the candidate
+    // count (e.g. 2.5 m grass over 700 m) and made the gather take seconds. Cap them tight.
+    const float PlacementOnlyGatherMeters = 80f;
+
     // How far to gather this prototype: its far draw radius (impostor end if it has an impostor tier,
-    // else its mesh cull). Falls back to the caller's region for placement-only prototypes (no render data).
+    // else its mesh cull), or a tight cap for placement-only prototypes.
     static float ProtoGatherRadius(ScatterPrototypeDto p, float fallback) =>
-        p.FarGatherRadius > 0f ? p.FarGatherRadius : fallback;
+        p.FarGatherRadius > 0f ? p.FarGatherRadius : Mathf.Min(fallback, PlacementOnlyGatherMeters);
 
     // One core for both public gather and the diagnostic reverse traversal. `reversed` flips
     // prototype/cell/candidate order so scatter.verify can prove order-independence. Transform- and

@@ -87,7 +87,7 @@ public sealed record ScatterPrototypeDto(
     // that cull. Rocks/bushes/grass keep their short range. Kept here so gather (ScatterField) and draw
     // (ScatterRenderer) agree on which prototypes reach far and how far.
     const float ImpostorMinMeshCull = 300f;
-    const float ImpostorRangeMultiplier = 1.75f;
+    const float ImpostorRangeMultiplier = 1.3f;
 
     public bool HasImpostor => CanRender && MaxCullDistance >= ImpostorMinMeshCull;
     public float ImpostorStartDistance => MaxCullDistance * 0.85f; // cross-fade in over the mesh dither-out band

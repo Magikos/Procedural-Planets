@@ -347,7 +347,7 @@ MonoBehaviour:
   MoveSpeed: 10
   FastMultiplier: 3
   OrbitSpeedMultiplier: 0.5
-  SurfaceSpeedMultiplier: 0.02
+  SurfaceSpeedMultiplier: 0.006
   LookSensitivity: 2
   ViewDistanceMultiplier: 2.5
   SurfaceHeight: 2

@@ -9,7 +9,10 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
     public float MoveSpeed = 10f;
     public float FastMultiplier = 3f;
     public float OrbitSpeedMultiplier = 0.5f;
-    public float SurfaceSpeedMultiplier = 0.02f;
+    // Surface fly speed is capped so the camera can't out-run the async scatter gather (which takes a
+    // few seconds): travel per gather must stay inside the gather region or scatter never catches up
+    // and appears to vanish while flying. Raise once the gather is incremental/faster.
+    public float SurfaceSpeedMultiplier = 0.006f;
 
     [Header("Look")]
     public float LookSensitivity = 2f;
