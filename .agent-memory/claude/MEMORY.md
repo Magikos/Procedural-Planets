@@ -1,6 +1,6 @@
 # Memory Index
 
-- [Scatter gather perf](project_scatter_gather_perf.md) — 2026-07-29: scatter IS deterministic (verify PASS, seed-based) but camera-centric + gather is SLOW (~9-14s, per-candidate biome eval); "missing scatter" = altitude (spacebar drops to surface) or gather can't keep up while flying (4564b76 capped fly speed + gather cost); real fix = faster/incremental gather
+- [Scatter gather perf](project_scatter_gather_perf.md) — 2026-07-29: scatter IS deterministic (verify PASS, seed-based). Gather was ~21s (biome eval dominates, NOT normal — Tier 1b lazy-normal did nothing); Tier 1a coarse-biome memo cut it to ~6s + range-builder +1 margin fix, verify PASS, committed 4354691. Surface = lush. Still laggy at 100 m/s → next lever = retain grass's baked surface-radius atlas (~6s→~1-2s)
 
 - [Planet look-dev](project_planet_look_dev.md) — 2026-07-28: Synty-look pass (post was OFF→enabled+graded PlanetLookProfile, ambient lifted, scatter densified, grass=compute-blanket per-biome params raised); commits 29f1b6a+d75144d; grass follow-ups (far-field coverage, flowers need mesh, bush brightness, day/night ambient)
 
