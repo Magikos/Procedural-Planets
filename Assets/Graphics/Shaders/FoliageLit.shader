@@ -36,6 +36,9 @@ Shader "Scatter/FoliageLit"
 
         [Header(Leaf AO (baked in vertex colour G))]
         _LeafAOIntensity ("Leaf AO Intensity", Range(0,1)) = 0.5
+
+        [Header(Player interaction (small plants only))]
+        _InteractiveBend ("Interactive Bend Height (m, 0 = rigid)", Float) = 0
     }
 
     SubShader
@@ -45,6 +48,7 @@ Shader "Scatter/FoliageLit"
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Includes/PlanetWind.hlsl"
+        #include "Includes/GrassInteractors.hlsl" // same global _GrassInteractors buffer the grass uses
 
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
@@ -67,6 +71,7 @@ Shader "Scatter/FoliageLit"
             float4 _ColorNoiseWarm;
             float4 _ColorNoiseCool;
             float _LeafAOIntensity;
+            float _InteractiveBend;
         CBUFFER_END
 
         static const float _Bayer4x4[16] = {
@@ -125,12 +130,27 @@ Shader "Scatter/FoliageLit"
             return lerp(albedo, albedo * tint, _ColorNoiseStrength);
         }
 
+        // Player/creature/projectile push on SMALL plants only (flowers, ferns), reusing the exact
+        // global interactor buffer the grass reads. _InteractiveBend is the plant's height in metres and
+        // doubles as the on/off gate: 0 (trees, rocks) => rigid, no buffer read. Roots stay planted and
+        // the bend grows toward the top (height fraction squared), so the plant folds instead of sliding.
+        float3 ApplyInteractorBend(float3 positionWS)
+        {
+            if (_InteractiveBend <= 1e-3) return positionWS;
+            float3 rootWS = mul(unity_ObjectToWorld, float4(0.0, 0.0, 0.0, 1.0)).xyz; // instance origin = base
+            float3 upWS = normalize(mul((float3x3)unity_ObjectToWorld, float3(0.0, 1.0, 0.0))); // plant up
+            float heightFrac = saturate(dot(positionWS - rootWS, upWS) / _InteractiveBend);
+            float3 bend = SampleGrassInteractorBend(rootWS, upWS, _InteractiveBend * 0.6);
+            return positionWS + bend * (heightFrac * heightFrac);
+        }
+
         // Wind comes entirely from the shared wind system (PlanetWind globals): calm => zero motion (no
         // animation without a wind provider), otherwise it follows the weather wind direction + strength.
         // _WindStrength is this plant's per-material flex (sway metres at full wind); the trunk (leafMask
         // ~0, or _WindStrength 0) stays rigid. High spatial frequency decorrelates neighbours (no unison).
         float3 ApplyWind(float3 positionWS, float leafMask)
         {
+            positionWS = ApplyInteractorBend(positionWS); // push before wind; both add on the tangent plane
             float swayMeters = leafMask * _WindStrength;
             float strength = saturate(max(_WindStrength01, _WindSpeedMps * 0.06));
             if (strength <= 1e-4 || swayMeters <= 1e-5) return positionWS;
