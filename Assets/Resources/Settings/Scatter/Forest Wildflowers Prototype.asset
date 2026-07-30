@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
-  m_Name: Grassland Wildflowers Prototype
+  m_Name: Forest Wildflowers Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
-  DisplayName: Grassland Wildflowers
-  SlotId: 50
+  DisplayName: Forest Wildflowers
+  SlotId: 51
   SpacingMeters: 2.5
-  Biome: 6
+  Biome: 7
   BiomeBlendPower: 1
   Weight: 1.5
   MaxSlopeDegrees: 28
