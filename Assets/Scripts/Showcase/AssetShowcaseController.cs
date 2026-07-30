@@ -21,8 +21,31 @@ public sealed class AssetShowcaseController : MonoBehaviour
     static readonly int WindDirectionId = Shader.PropertyToID("_WindDirection");
     static readonly int WindStrength01Id = Shader.PropertyToID("_WindStrength01");
     static readonly int WindSpeedMpsId = Shader.PropertyToID("_WindSpeedMps");
+    static readonly int InteractorsId = Shader.PropertyToID("_GrassInteractors");
+    static readonly int InteractorCountId = Shader.PropertyToID("_GrassInteractorCount");
 
-    void OnEnable() => Publish();
+    ComputeBuffer _dummyInteractors;
+
+    void OnEnable()
+    {
+        // FoliageLit (and grass) declare the global _GrassInteractors StructuredBuffer. On the planet the
+        // GrassInteractorRegistry binds it at init; here there is no registry, and an UNBOUND StructuredBuffer
+        // makes the driver silently drop every FoliageLit draw (invisible foliage). Bind a 1-element dummy so
+        // the SRV is always valid; count 0 means the shader loop never reads it.
+        // ponytail: any future non-planet scene that renders FoliageLit needs this too. If that spreads,
+        // promote to an app-scope global fallback binding instead of per-scene.
+        _dummyInteractors ??= new ComputeBuffer(1, sizeof(float) * 8, ComputeBufferType.Structured);
+        Shader.SetGlobalBuffer(InteractorsId, _dummyInteractors);
+        Shader.SetGlobalInt(InteractorCountId, 0);
+        Publish();
+    }
+
+    void OnDisable()
+    {
+        _dummyInteractors?.Release();
+        _dummyInteractors = null;
+    }
+
     void Update() => Publish();
 
     void Publish()
