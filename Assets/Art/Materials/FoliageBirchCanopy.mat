@@ -36,7 +36,7 @@ Material:
     - _Cutoff: 0.4
     - _FadeEnd: 150
     - _FadeStart: 120
-    - _ForceLeaf: 0
+    - _ForceLeaf: 1
     - _LeafFall: 0
     - _LeafMaskHi: 0.85
     - _LeafMaskLo: 0.6
