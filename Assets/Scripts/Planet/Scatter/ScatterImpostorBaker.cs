@@ -5,10 +5,11 @@ using UnityEngine.Rendering;
 // Bakes a scatter prototype's near mesh into one front-view billboard card (RGB = UNLIT albedo,
 // A = silhouette) for the far-field impostor tier. Lighting is applied at runtime in the impostor
 // shader from the same main light + ambient the mesh uses, so impostors track the day/night sun instead
-// of freezing a bake-time light. The card is therefore baked flat (white ambient, no directional): the
-// background is reliably pure black (a URP camera clears a manual render-to-texture to opaque black and
-// ignores backgroundColor), so the silhouette is keyed off luminance. Runtime-capable: the LOD strip
-// bakes on load; the planet bakes the same way at build.
+// of freezing a bake-time light. The card is baked flat (white ambient, no directional) against a pure
+// black background, so the silhouette is keyed off luminance. That black background depends on the bake
+// camera being a Preview camera (below): the sky/atmosphere/cloud render features all skip Preview, so
+// none of them paint sky into the background. Runtime-capable: the LOD strip bakes on load; the planet
+// bakes the same way at build.
 public static class ScatterImpostorBaker
 {
     public struct Card
@@ -47,6 +48,11 @@ public static class ScatterImpostorBaker
         var camGO = new GameObject("c");
         camGO.transform.SetParent(root.transform, false);
         Camera cam = camGO.AddComponent<Camera>();
+        // Preview camera type: every sky/atmosphere/cloud/star/scatter render feature skips Preview and
+        // Reflection cameras, so none of them paint the sky into the bake's background. Without this the
+        // atmosphere feature fills the background with sky blue (opaque), the luminance key reads that as
+        // geometry, and the whole card bakes as an opaque blue box instead of a clean tree silhouette.
+        cam.cameraType = CameraType.Preview;
         cam.orthographic = true;
         cam.orthographicSize = h * 0.52f;
         cam.aspect = (float)px / CardHeightPx;
