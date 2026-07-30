@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 // gathered once on a background thread and cached, so camera travel only gathers the frontier instead of
 // re-scanning the whole disc every move. This renderer owns the draw side: per-part RenderParams, the
 // far-field impostor bake, and the LOD banding, drawing from the cache's per-prototype buckets.
-public sealed class ScatterRenderer : IDisposable, IScatterDrawRuntime
+public sealed class ScatterRenderer : IDisposable
 {
     readonly Transform _planetTransform;
     readonly ScatterLodBatcher _batcher = new ScatterLodBatcher();
@@ -80,36 +80,25 @@ public sealed class ScatterRenderer : IDisposable, IScatterDrawRuntime
         _cache.Reset();
     }
 
-    // Drives the incremental gather each frame (main thread). Drawing is NOT done here: it runs in
-    // ScatterRenderPass during the opaque phase so the scatter writes camera colour+depth and lands in
-    // _CameraDepthTexture. Immediate-mode Graphics.RenderMeshInstanced never reached that depth, so the
-    // atmosphere's sky mask painted over tree canopies that rose above the terrain horizon.
+    // Drives the incremental gather, then draws each prototype's cached instances via
+    // Graphics.RenderMeshInstanced (main thread). This is the standard instanced-renderer path: the scatter
+    // shaders carry ForwardLit + ShadowCaster + DepthNormals passes, so the instances participate in every
+    // URP pass automatically — the shadow-caster pass (cast shadows), the depth-normals prepass (land in
+    // _CameraDepthTexture so canopies occlude sky/clouds), SSAO, and forward — the same path a MeshRenderer
+    // character or structure uses. No bespoke render feature per object type.
     public void Render(Camera camera)
     {
         if (!_configured || _library == null || camera == null) return;
         if (_library.Prototypes.Length == 0) return;
-        _cache.Update(camera.transform.position);
-    }
-
-    public bool HasDrawData => _configured && _library != null && _library.Prototypes.Length > 0;
-
-    // Called by ScatterRenderPass inside its RenderGraph render func, targeting the camera colour+depth.
-    public void RecordDraws(RasterCommandBuffer cmd, Vector3 camPos) => Record(cmd, camPos, "ForwardLit");
-
-    // Called by ScatterDepthNormalsPass in the depth-normals prepass (writes depth + normals so the
-    // scatter is in _CameraDepthTexture / _CameraNormalsTexture).
-    public void RecordDepthNormalsDraws(RasterCommandBuffer cmd, Vector3 camPos) => Record(cmd, camPos, "DepthNormals");
-
-    void Record(RasterCommandBuffer cmd, Vector3 camPos, string passName)
-    {
-        if (!_configured || _library == null) return;
+        Vector3 camPos = camera.transform.position;
+        _cache.Update(camPos);
         for (int p = 0; p < _library.Prototypes.Length; p++)
         {
             var proto = _library.Prototypes[p];
             if (!proto.CanRender) continue;
             var matrices = _cache.Matrices(p);
             if (matrices.Count == 0) continue;
-            _batcher.Draw(cmd, proto, _renderParams[p], matrices, _cache.Positions(p), camPos, _impostors[p], passName);
+            _batcher.Draw(proto, _renderParams[p], matrices, _cache.Positions(p), camPos, _impostors[p]);
         }
     }
 

@@ -262,8 +262,8 @@ Shader "Scatter/FoliageLit"
         }
 
         // Writes depth + world normal so the scatter lands in the URP depth-normals prepass (and thus
-        // _CameraDepthTexture / _CameraNormalsTexture). Drawn by ScatterDepthNormalsPass at the prepass
-        // event. Clip matches ForwardLit exactly (same leaf cutoff + DistanceDither + wind) so the depth
+        // _CameraDepthTexture / _CameraNormalsTexture) — URP runs this pass automatically for the instanced
+        // draw. Clip matches ForwardLit exactly (same leaf cutoff + DistanceDither + wind) so the depth
         // silhouette equals the drawn canopy — otherwise clouds/atmosphere/SSAO composite over the trees.
         Pass
         {
