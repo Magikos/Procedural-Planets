@@ -25,8 +25,11 @@ Shader "Planet/Grass"
             #pragma vertex GrassVertex
             #pragma fragment GrassFragment
             #pragma multi_compile_fog
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             #include "Includes/PlanetSunLighting.hlsl"
             #include "Includes/CloudShadows.hlsl"
             #include "Includes/GrassColor.hlsl"
@@ -393,6 +396,10 @@ Shader "Planet/Grass"
                 float localSun = dot(planetNormal, sunDir);
                 float daylight = PlanetDaylightFromLocalSun(localSun);
                 float surfaceDirect = PlanetSurfaceDirect(rootUpWS, sunDir);
+                // Receive the Sun cast shadow so trees/terrain darken the grass beneath them (the main
+                // light tracks _SunParams). Folded into the direct term so shadowed grass falls to the
+                // 0.12 ambient floor, matching how the foliage/prop shaders take the shadow.
+                surfaceDirect *= MainLightRealtimeShadow(TransformWorldToShadowCoord(input.positionWS));
                 float cloudShadow = CloudShadowFactor(input.positionWS, sunDir, localSun);
 
                 // Grass ribbons are intentionally double-sided. Using a camera-facing
