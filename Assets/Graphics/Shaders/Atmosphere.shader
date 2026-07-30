@@ -11,6 +11,9 @@ SAMPLER(sampler_CameraDepthTexture);
 TEXTURE2D(_WaterInterfaceTexture);
 SAMPLER(sampler_WaterInterfaceTexture);
 
+float _SceneDepthDebug;       // DEBUG: 1 = show _CameraDepthTexture (red=sky/no-geometry, gray=geometry)
+float _SceneDepthDebugRange;  // DEBUG: metres mapped to white in the grayscale depth view
+
 float4 _LightShaftParams;
 float4 _LightShaftParams2;
 float4 _SunAureoleParams; // x=strength, y=power(radius)
@@ -258,6 +261,23 @@ ENDHLSL
             float4 AtmosphereFragment(v2f i) : SV_Target
             {
                 float4 originalCol = SAMPLE_TEXTURE2D(_Source, sampler_Source, i.uv);
+
+                // DEBUG (global _SceneDepthDebug): visualize _CameraDepthTexture — the exact depth the
+                // atmosphere + clouds read. RED = classified as sky (no geometry written here); GRAY =
+                // geometry by distance. If tree canopies show RED, the scatter is missing from this depth
+                // and the atmosphere/clouds composite over it. Off by default.
+                if (_SceneDepthDebug > 0.5)
+                {
+                    float rd = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, i.uv).r;
+                    #if UNITY_REVERSED_Z
+                        float isSky = 1.0 - step(0.0001, rd);
+                    #else
+                        float isSky = step(0.9999, rd);
+                    #endif
+                    float g = saturate(LinearEyeDepth(rd, _ZBufferParams) / max(_SceneDepthDebugRange, 1.0));
+                    return isSky > 0.5 ? float4(1, 0, 0, 1) : float4(g, g, g, 1);
+                }
+
                 if (ShouldBypassAtmosphereForWaterDebug())
                     return originalCol;
 
