@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
+  m_Name: Autumn Meadow Tree Prototype
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
+  DisplayName: Autumn Meadow Tree
+  SlotId: 55
+  SpacingMeters: 17
+  Biome: 6
+  BiomeBlendPower: 1
+  Weight: 0.45
+  MaxSlopeDegrees: 32
+  SlopeFadeDegrees: 6
+  HasMinAltitude: 0
+  MinAltitudeMeters: 0
+  HasMaxAltitude: 0
+  MaxAltitudeMeters: 0
+  MinWaterClearanceMeters: 0.05
+  ScaleRange: {x: 0.8, y: 1.15}
+  RandomYaw: 1
+  Interaction: 0
+  Parts:
+  - Name: Trunk
+    Material: {fileID: 2100000, guid: b9cda82b4f6445a4d971eaa29d284ebe, type: 2}
+    LodMeshes:
+    - {fileID: -5123603244328910611, guid: d3aabde52cac58e4492b50752c6278cf, type: 3}
+    - {fileID: -104613518971163659, guid: d3aabde52cac58e4492b50752c6278cf, type: 3}
+    - {fileID: -7564238946171924237, guid: d3aabde52cac58e4492b50752c6278cf, type: 3}
+    LodEndDistances:
+    - 60
+    - 150
+    - 400
+    CastShadows: 1
+    ReceiveShadows: 1
+  - Name: Foliage
+    Material: {fileID: 2100000, guid: fa9b190df870d2849ad569db50118525, type: 2}
+    LodMeshes:
+    - {fileID: 1051292751120441113, guid: d3aabde52cac58e4492b50752c6278cf, type: 3}
+    - {fileID: -5618302304695358953, guid: d3aabde52cac58e4492b50752c6278cf, type: 3}
+    - {fileID: -5811494009701849975, guid: d3aabde52cac58e4492b50752c6278cf, type: 3}
+    LodEndDistances:
+    - 60
+    - 150
+    - 400
+    CastShadows: 1
+    ReceiveShadows: 1
+  Material: {fileID: 0}
+  LodMeshes: []
+  LodEndDistances: []
+  CastShadows: 1
+  ReceiveShadows: 1
