@@ -34,6 +34,7 @@ Shader "Scatter/FoliageLit"
 
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+        #include "Includes/PlanetWind.hlsl"
 
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
@@ -74,18 +75,20 @@ Shader "Scatter/FoliageLit"
             return smoothstep(_LeafMaskLo, _LeafMaskHi, vtxBlue);
         }
 
-        // Leaves sway; the trunk stays put. World-space breeze scaled by the leaf mask. The spatial
-        // phase runs at a high frequency (period ~4 m) so neighbouring plants are out of step instead of
-        // "breathing" in unison, and a slower second octave keeps the sway from looking mechanical.
+        // Wind comes entirely from the shared wind system (PlanetWind globals): calm => zero motion (no
+        // animation without a wind provider), otherwise it follows the weather wind direction + strength.
+        // _WindStrength is this plant's per-material flex (sway metres at full wind); the trunk (leafMask
+        // ~0, or _WindStrength 0) stays rigid. High spatial frequency decorrelates neighbours (no unison).
         float3 ApplyWind(float3 positionWS, float leafMask)
         {
-            if (_WindStrength <= 0.0) return positionWS;
-            float t = _Time.y * _WindFreq;
+            float swayMeters = leafMask * _WindStrength;
+            float strength = saturate(max(_WindStrength01, _WindSpeedMps * 0.06));
+            if (strength <= 1e-4 || swayMeters <= 1e-5) return positionWS;
+            float3 dir = dot(_WindDirection, _WindDirection) > 1e-6 ? normalize(_WindDirection) : float3(1.0, 0.0, 0.0);
+            float t = _Time.y * 1.6;
             float ph = dot(positionWS, float3(1.6, 0.4, 1.35));
-            float sway = (sin(t + ph) * 0.7 + sin(t * 0.53 + ph * 2.3) * 0.3) * _WindStrength * leafMask;
-            positionWS.x += sway;
-            positionWS.z += sway * 0.6;
-            return positionWS;
+            float gust = sin(t + ph) * 0.7 + sin(t * 0.53 + ph * 2.3) * 0.3;
+            return positionWS + dir * (gust * swayMeters * strength);
         }
         ENDHLSL
 

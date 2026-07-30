@@ -22,9 +22,7 @@ float _CloudBottomFeather;
 float _CloudTopFeather;
 float _CloudTopDensityBias;
 float4 _CloudShadowParams;
-float3 _WindDirection;
-float _WindSpeedMps;
-float _WindStrength01;
+#include "PlanetWind.hlsl" // _WindDirection / _WindSpeedMps / _WindStrength01 (single shared declaration)
 float _WaterFocusMode;
 
 float4 SampleCloudShadowWeather(float3 direction)
