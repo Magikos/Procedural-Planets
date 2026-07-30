@@ -87,14 +87,15 @@ public sealed class ScatterLodBatcher
     // needed. RenderMeshInstanced (immediate) never reached _CameraDepthTexture; this does.
     public void Draw(RasterCommandBuffer cmd, ScatterPrototypeDto proto, RenderParams[] partParams,
                      IReadOnlyList<Matrix4x4> matrices, IReadOnlyList<Vector3> positionsWS, Vector3 camPos,
-                     in Impostor impostor = default)
+                     in Impostor impostor = default, string passName = "ForwardLit")
     {
         for (int part = 0; part < proto.Parts.Length; part++)
         {
             ScatterPartDto pd = proto.Parts[part];
             if (!pd.CanRender) continue;
             RenderParams rp = partParams[part];
-            int pass = ResolveForwardPass(rp.material);
+            int pass = ResolvePass(rp.material, passName);
+            if (pass < 0) continue;
 
             int lodCount = Mathf.Min(pd.LodMeshes.Length, pd.LodEndDistances.Length);
             for (int lod = 0; lod < lodCount; lod++)
@@ -108,7 +109,7 @@ public sealed class ScatterLodBatcher
         }
 
         if (impostor.Valid)
-            DrawBand(cmd, impostor.Params.material, ResolveForwardPass(impostor.Params.material), impostor.Params.matProps,
+            DrawBand(cmd, impostor.Params.material, ResolvePass(impostor.Params.material, passName), impostor.Params.matProps,
                      impostor.Quad, impostor.StartDistance * impostor.StartDistance,
                      impostor.EndDistance * impostor.EndDistance, matrices, positionsWS, camPos);
     }
@@ -133,16 +134,18 @@ public sealed class ScatterLodBatcher
             cmd.DrawMeshInstanced(mesh, 0, material, pass, _batch, n, props);
     }
 
-    // The forward pass index per material (all scatter shaders declare it first; FindPass by name, cached).
-    readonly Dictionary<Material, int> _forwardPass = new Dictionary<Material, int>();
-    int ResolveForwardPass(Material m)
+    // Pass index per (material, passName), cached. "ForwardLit" falls back to pass 0 (the forward pass is
+    // first in every scatter shader); "DepthNormals" falls back to -1 so a material without it is skipped.
+    readonly Dictionary<(Material, string), int> _passCache = new Dictionary<(Material, string), int>();
+    int ResolvePass(Material m, string passName)
     {
         if (m == null) return -1;
-        if (_forwardPass.TryGetValue(m, out int p)) return p;
-        p = m.FindPass("ForwardLit");
-        if (p < 0) p = m.FindPass("UniversalForward");
-        if (p < 0) p = 0;
-        _forwardPass[m] = p;
+        var key = (m, passName);
+        if (_passCache.TryGetValue(key, out int p)) return p;
+        p = m.FindPass(passName);
+        if (p < 0 && passName == "ForwardLit") p = m.FindPass("UniversalForward");
+        if (p < 0 && passName == "ForwardLit") p = 0;
+        _passCache[key] = p;
         return p;
     }
 }

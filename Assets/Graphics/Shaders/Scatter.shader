@@ -186,5 +186,58 @@ Shader "Scatter/VertexColorLit"
             half4 shadowFrag(SVaryings IN) : SV_Target { return 0; }
             ENDHLSL
         }
+
+        // Writes the prop into the depth-normals prepass so it lands in _CameraDepthTexture /
+        // _CameraNormalsTexture (clouds/atmosphere/SSAO read those). Reuses the shared DistanceDither so
+        // the depth footprint matches the ForwardLit cull fade exactly.
+        Pass
+        {
+            Name "DepthNormals"
+            Tags { "LightMode"="DepthNormals" }
+            ZWrite On
+
+            HLSLPROGRAM
+            #pragma vertex dnVert
+            #pragma fragment dnFrag
+            #pragma multi_compile_instancing
+
+            struct DNAttributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct DNVaryings
+            {
+                float4 positionHCS : SV_POSITION;
+                float3 positionWS : TEXCOORD0;
+                float3 normalWS : TEXCOORD1;
+                float4 screenPos : TEXCOORD2;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            DNVaryings dnVert(DNAttributes IN)
+            {
+                DNVaryings OUT = (DNVaryings)0;
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
+                VertexPositionInputs pos = GetVertexPositionInputs(IN.positionOS.xyz);
+                VertexNormalInputs nrm = GetVertexNormalInputs(IN.normalOS);
+                OUT.positionHCS = pos.positionCS;
+                OUT.positionWS = pos.positionWS;
+                OUT.normalWS = nrm.normalWS;
+                OUT.screenPos = ComputeScreenPos(pos.positionCS);
+                return OUT;
+            }
+
+            half4 dnFrag(DNVaryings IN) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+                DistanceDither(IN.positionWS, IN.screenPos);
+                return half4(normalize(IN.normalWS), 0);
+            }
+            ENDHLSL
+        }
     }
 }

@@ -14,11 +14,13 @@ using UnityEngine.Rendering.RenderGraphModule;
 public class ScatterRenderFeature : ScriptableRendererFeature
 {
     ScatterRenderPass _pass;
+    ScatterDepthNormalsPass _depthPass;
     IScatterDrawRuntime _cached;
 
     public override void Create()
     {
         _pass = new ScatterRenderPass();
+        _depthPass = new ScatterDepthNormalsPass();
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
@@ -30,6 +32,10 @@ public class ScatterRenderFeature : ScriptableRendererFeature
         if (!TryGetRuntime() || !_cached.HasDrawData)
             return;
 
+        // Prepass depth+normals so the scatter is in _CameraDepthTexture / _CameraNormalsTexture (clouds,
+        // atmosphere, SSAO all read those). Then the opaque colour pass.
+        _depthPass.Setup(_cached);
+        renderer.EnqueuePass(_depthPass);
         _pass.Setup(_cached);
         renderer.EnqueuePass(_pass);
     }
@@ -88,6 +94,61 @@ public class ScatterRenderPass : ScriptableRenderPass
 
             builder.SetRenderFunc(static (PassData data, RasterGraphContext ctx) =>
                 data.runtime.RecordDraws(ctx.cmd, data.camPos));
+        }
+    }
+}
+
+/// <summary>
+/// Appends the scatter to URP's depth-normals prepass (AfterRenderingPrePasses), so the scatter's depth
+/// and normals land in _CameraDepthTexture / _CameraNormalsTexture. Without this the scatter (drawn by
+/// immediate/opaque-phase means) is absent from that prepass, and clouds/atmosphere/SSAO composite over
+/// tree canopies (see-through canopy against sky/clouds). No-ops when no prepass ran this frame.
+/// </summary>
+public class ScatterDepthNormalsPass : ScriptableRenderPass
+{
+    IScatterDrawRuntime _runtime;
+
+    public ScatterDepthNormalsPass()
+    {
+        renderPassEvent = RenderPassEvent.AfterRenderingPrePasses;
+    }
+
+    public void Setup(IScatterDrawRuntime runtime) => _runtime = runtime;
+
+    private class PassData
+    {
+        internal IScatterDrawRuntime runtime;
+        internal Vector3 camPos;
+    }
+
+    public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
+    {
+        if (_runtime == null || !_runtime.HasDrawData) return;
+
+        var resourceData = frameData.Get<UniversalResourceData>();
+        var cameraData = frameData.Get<UniversalCameraData>();
+
+        var camType = cameraData.camera.cameraType;
+        if (camType == CameraType.Preview || camType == CameraType.Reflection)
+            return;
+
+        // Only append when URP actually produced a depth prepass this frame; the depth target the prepass
+        // wrote is what _CameraDepthTexture is taken from.
+        if (!resourceData.cameraDepthTexture.IsValid())
+            return;
+
+        using (var builder = renderGraph.AddRasterRenderPass<PassData>("ScatterDepthNormals", out var passData))
+        {
+            passData.runtime = _runtime;
+            passData.camPos = cameraData.camera.transform.position;
+
+            if (resourceData.cameraNormalsTexture.IsValid())
+                builder.SetRenderAttachment(resourceData.cameraNormalsTexture, 0, AccessFlags.Write);
+            builder.SetRenderAttachmentDepth(resourceData.cameraDepthTexture, AccessFlags.ReadWrite);
+            builder.AllowPassCulling(false);
+
+            builder.SetRenderFunc(static (PassData data, RasterGraphContext ctx) =>
+                data.runtime.RecordDepthNormalsDraws(ctx.cmd, data.camPos));
         }
     }
 }

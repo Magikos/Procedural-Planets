@@ -8,4 +8,7 @@ public interface IScatterDrawRuntime
 {
     bool HasDrawData { get; }
     void RecordDraws(RasterCommandBuffer cmd, Vector3 camPos);
+    // Depth+normal draw for the depth-normals prepass, so the scatter lands in _CameraDepthTexture /
+    // _CameraNormalsTexture (else clouds/atmosphere/SSAO composite over the canopy).
+    void RecordDepthNormalsDraws(RasterCommandBuffer cmd, Vector3 camPos);
 }

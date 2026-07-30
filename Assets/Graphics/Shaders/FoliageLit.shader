@@ -260,5 +260,74 @@ Shader "Scatter/FoliageLit"
             }
             ENDHLSL
         }
+
+        // Writes depth + world normal so the scatter lands in the URP depth-normals prepass (and thus
+        // _CameraDepthTexture / _CameraNormalsTexture). Drawn by ScatterDepthNormalsPass at the prepass
+        // event. Clip matches ForwardLit exactly (same leaf cutoff + DistanceDither + wind) so the depth
+        // silhouette equals the drawn canopy — otherwise clouds/atmosphere/SSAO composite over the trees.
+        Pass
+        {
+            Name "DepthNormals"
+            Tags { "LightMode"="DepthNormals" }
+            ZWrite On
+            Cull Off
+
+            HLSLPROGRAM
+            #pragma vertex dnVert
+            #pragma fragment dnFrag
+            #pragma multi_compile_instancing
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+
+            TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
+
+            struct DNAttributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+                float4 color : COLOR;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct DNVaryings
+            {
+                float4 positionHCS : SV_POSITION;
+                float3 positionWS : TEXCOORD0;
+                float3 normalWS : TEXCOORD1;
+                float2 uv : TEXCOORD2;
+                float leafMask : TEXCOORD3;
+                float4 screenPos : TEXCOORD4;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            DNVaryings dnVert(DNAttributes IN)
+            {
+                DNVaryings OUT = (DNVaryings)0;
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
+                float leafMask = max(LeafMask(IN.color.b), _ForceLeaf);
+                float3 wsp = ApplyWind(TransformObjectToWorld(IN.positionOS.xyz), leafMask);
+                OUT.positionWS = wsp;
+                OUT.positionHCS = TransformWorldToHClip(wsp);
+                OUT.normalWS = TransformObjectToWorldNormal(IN.normalOS);
+                OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
+                OUT.leafMask = leafMask;
+                OUT.screenPos = ComputeScreenPos(OUT.positionHCS);
+                return OUT;
+            }
+
+            half4 dnFrag(DNVaryings IN) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+                DistanceDither(IN.positionWS, IN.screenPos);
+                half4 leaf = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
+                float lm = IN.leafMask;
+                float cutoff = lerp(0.0, _Cutoff + _LeafFall, lm);
+                clip(lerp(1.0, leaf.a, lm) - cutoff);
+                return half4(normalize(IN.normalWS), 0.0);
+            }
+            ENDHLSL
+        }
     }
 }

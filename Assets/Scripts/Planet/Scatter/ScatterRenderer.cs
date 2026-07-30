@@ -94,7 +94,13 @@ public sealed class ScatterRenderer : IDisposable, IScatterDrawRuntime
     public bool HasDrawData => _configured && _library != null && _library.Prototypes.Length > 0;
 
     // Called by ScatterRenderPass inside its RenderGraph render func, targeting the camera colour+depth.
-    public void RecordDraws(RasterCommandBuffer cmd, Vector3 camPos)
+    public void RecordDraws(RasterCommandBuffer cmd, Vector3 camPos) => Record(cmd, camPos, "ForwardLit");
+
+    // Called by ScatterDepthNormalsPass in the depth-normals prepass (writes depth + normals so the
+    // scatter is in _CameraDepthTexture / _CameraNormalsTexture).
+    public void RecordDepthNormalsDraws(RasterCommandBuffer cmd, Vector3 camPos) => Record(cmd, camPos, "DepthNormals");
+
+    void Record(RasterCommandBuffer cmd, Vector3 camPos, string passName)
     {
         if (!_configured || _library == null) return;
         for (int p = 0; p < _library.Prototypes.Length; p++)
@@ -103,7 +109,7 @@ public sealed class ScatterRenderer : IDisposable, IScatterDrawRuntime
             if (!proto.CanRender) continue;
             var matrices = _cache.Matrices(p);
             if (matrices.Count == 0) continue;
-            _batcher.Draw(cmd, proto, _renderParams[p], matrices, _cache.Positions(p), camPos, _impostors[p]);
+            _batcher.Draw(cmd, proto, _renderParams[p], matrices, _cache.Positions(p), camPos, _impostors[p], passName);
         }
     }
 
