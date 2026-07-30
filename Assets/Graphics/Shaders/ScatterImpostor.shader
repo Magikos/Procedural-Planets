@@ -135,7 +135,9 @@ Shader "Scatter/Impostor"
                 float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
                 float daylight = PlanetDaylightFromLocalSun(dot(planetNormal, sunDir));
                 half ndl = saturate(dot(N, sunDir));
-                half3 dayColor = card.rgb * lerp(0.32, 1.0, ndl);
+                // Match the near-tree canopy floor so the far tree line reads at the same brightness as the
+                // mesh trees it fades into (both are lush, not a dark band).
+                half3 dayColor = card.rgb * lerp(0.6, 1.12, ndl);
                 half3 nightColor = card.rgb * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
                 return half4(lerp(nightColor, dayColor, daylight), 1);
             }

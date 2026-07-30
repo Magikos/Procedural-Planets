@@ -139,7 +139,10 @@ Shader "Scatter/VertexColorLit"
                 float4 shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
                 half shadowAtten = MainLightRealtimeShadow(shadowCoord);
                 float cloudShadow = CloudShadowFactor(IN.positionWS, sunDir, localSun);
-                half3 dayColor = albedo * lerp(0.32, 1.0, ndl * shadowAtten * cloudShadow);
+                // Softer self-shadow + higher floor so dense bushes/props aren't dark side-on, matching the
+                // brightened tree canopies.
+                float shade = lerp(0.5, 1.0, shadowAtten * cloudShadow);
+                half3 dayColor = albedo * lerp(0.55, 1.1, ndl * shade);
                 half3 nightColor = albedo * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
                 half3 col = lerp(nightColor, dayColor, daylight);
 
