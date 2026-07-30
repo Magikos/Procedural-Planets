@@ -42,7 +42,8 @@ public sealed class ScatterTileCache
     }
 
     const float ReevalMoveMeters = 40f;    // re-plan the required tile set only after this much camera travel
-    const int MaxPairsPerTick = 48;        // (tile, prototype) gathers committed per background excursion
+    const int MaxPairsPerTick = 256;       // (tile, prototype) gathers per background hop / main-thread commit
+    const long DrainBudgetMs = 200;        // one worker invocation keeps draining batches up to this wall time
 
     readonly ScatterField _field;
     readonly Transform _planetTransform;
@@ -218,33 +219,45 @@ public sealed class ScatterTileCache
         {
             if (!_field.TryCaptureGatherContext(out ScatterField.GatherContext ctx) || !ctx.IsValid) return;
             var snap = PlanetTransformSnapshot.Capture(_planetTransform);
-
-            _batch.Clear();
-            int take = Mathf.Min(MaxPairsPerTick, _work.Count);
-            for (int i = 0; i < take; i++) { _batch.Add(_work[i].key); _inFlight.Add(_work[i].key); }
-            _work.RemoveRange(0, take);
-            if (_batch.Count == 0) return;
-
-            while (_batchResults.Count < _batch.Count) _batchResults.Add(new List<ScatterInstance>(256));
-            for (int i = 0; i < _batch.Count; i++) _batchResults[i].Clear();
-
             int tileLevel = _tileLevel;
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            await Awaitable.BackgroundThreadAsync();
-            for (int i = 0; i < _batch.Count; i++)
-            {
-                UnpackTile(_batch[i].Tile, out int face, out int tx, out int ty);
-                _field.GatherTilePrototype(ctx, snap, face, tx, ty, tileLevel, _batch[i].Proto, _batchResults[i], out _);
-            }
-            sw.Stop();
-            await Awaitable.MainThreadAsync();
+            var wall = System.Diagnostics.Stopwatch.StartNew();
+            int totalPairs = 0;
 
-            if (epoch == _epoch && _configured)
+            // Keep draining batches within one invocation instead of one batch per frame: the heavy
+            // GatherTilePrototype runs on the background thread (main thread free during that await), so a
+            // cold cache of thousands of pairs fills in well under a second regardless of editor frame
+            // rate, killing the load pop-in. Bounded by wall time so a moving camera's reeval/eviction —
+            // which runs from Update each frame regardless of _working — isn't starved for long.
+            do
             {
+                _batch.Clear();
+                int take = Mathf.Min(MaxPairsPerTick, _work.Count);
+                for (int i = 0; i < take; i++) { _batch.Add(_work[i].key); _inFlight.Add(_work[i].key); }
+                _work.RemoveRange(0, take);
+                if (_batch.Count == 0) break;
+
+                while (_batchResults.Count < _batch.Count) _batchResults.Add(new List<ScatterInstance>(256));
+                for (int i = 0; i < _batch.Count; i++) _batchResults[i].Clear();
+
+                await Awaitable.BackgroundThreadAsync();
+                for (int i = 0; i < _batch.Count; i++)
+                {
+                    UnpackTile(_batch[i].Tile, out int face, out int tx, out int ty);
+                    _field.GatherTilePrototype(ctx, snap, face, tx, ty, tileLevel, _batch[i].Proto, _batchResults[i], out _);
+                }
+                await Awaitable.MainThreadAsync();
+
+                if (epoch != _epoch || !_configured) return; // world changed under us; finally releases in-flight
                 for (int i = 0; i < _batch.Count; i++) Commit(_batch[i], _batchResults[i]);
-                _log.Log(LogLevel.Debug, "Scatter",
-                    $"tiles +{_batch.Count} pairs {sw.ElapsedMilliseconds} ms | live {LiveTileCount} tiles {LiveInstanceCount} inst, {_work.Count} queued {_inFlight.Count} inflight");
+                for (int i = 0; i < _batch.Count; i++) _inFlight.Remove(_batch[i]);
+                totalPairs += _batch.Count;
+                _batch.Clear();
             }
+            while (_work.Count > 0 && wall.ElapsedMilliseconds < DrainBudgetMs);
+
+            if (totalPairs > 0)
+                _log.Log(LogLevel.Debug, "Scatter",
+                    $"tiles +{totalPairs} pairs {wall.ElapsedMilliseconds} ms | live {LiveTileCount} tiles {LiveInstanceCount} inst, {_work.Count} queued {_inFlight.Count} inflight");
         }
         catch (OperationCanceledException) { /* teardown mid-await */ }
         catch (Exception e)
@@ -253,8 +266,8 @@ public sealed class ScatterTileCache
         }
         finally
         {
-            // Always release the in-flight keys so a failed/stale/cancelled pair is retried on the next
-            // reeval (a still-required pair reappears in _work; a done pair is skipped via ReadyMask).
+            // Release any batch still in-flight (early return / exception) so those pairs are retried on the
+            // next reeval; committed batches already cleared themselves out of _inFlight and _batch above.
             for (int i = 0; i < _batch.Count; i++) _inFlight.Remove(_batch[i]);
             _working = false;
         }
