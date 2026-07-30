@@ -33,6 +33,9 @@ Shader "Scatter/FoliageLit"
         _ColorNoiseSmallFreq ("Colour Noise Small Freq", Float) = 4.44
         _ColorNoiseWarm ("Colour Noise Warm Tint", Color) = (1.18, 1.0, 0.62, 1)
         _ColorNoiseCool ("Colour Noise Cool Tint", Color) = (0.82, 1.0, 0.88, 1)
+
+        [Header(Leaf AO (baked in vertex colour G))]
+        _LeafAOIntensity ("Leaf AO Intensity", Range(0,1)) = 0.5
     }
 
     SubShader
@@ -63,6 +66,7 @@ Shader "Scatter/FoliageLit"
             float _ColorNoiseSmallFreq;
             float4 _ColorNoiseWarm;
             float4 _ColorNoiseCool;
+            float _LeafAOIntensity;
         CBUFFER_END
 
         static const float _Bayer4x4[16] = {
@@ -187,6 +191,7 @@ Shader "Scatter/FoliageLit"
                 float leafMask : TEXCOORD3;
                 float fogFactor : TEXCOORD4;
                 float4 screenPos : TEXCOORD5;
+                float leafAO : TEXCOORD6; // Synty baked leaf AO (vertex colour G)
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -203,6 +208,7 @@ Shader "Scatter/FoliageLit"
                 OUT.normalWS = GetVertexNormalInputs(IN.normalOS).normalWS;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.leafMask = leafMask;
+                OUT.leafAO = IN.color.g; // Synty bakes leaf AO into vertex colour G (0 occluded .. 1 exposed)
                 OUT.fogFactor = ComputeFogFactor(OUT.positionHCS.z);
                 OUT.screenPos = ComputeScreenPos(OUT.positionHCS);
                 return OUT;
@@ -226,6 +232,10 @@ Shader "Scatter/FoliageLit"
                 // Per-leaf/region colour variation (Synty-style noise) on the leaves only, so the canopy
                 // reads as many subtly different leaves instead of one flat green mass.
                 albedo = lerp(albedo, LeafColourVariation(albedo, IN.positionWS), lm);
+                // Synty baked leaf AO (vertex colour G): darken occluded interior leaves toward the
+                // bright exposed crown. Leaf-only (lm) so the trunk (G=0) is not blackened.
+                float leafAO = lerp(1.0 - _LeafAOIntensity, 1.0, IN.leafAO);
+                albedo *= lerp(1.0, leafAO, lm);
 
                 // Double-sided: flip the normal on back faces so a leaf lit from either side reads correctly
                 // instead of the back face going black (which made the canopy merge into dark clumps).
