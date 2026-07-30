@@ -60,6 +60,7 @@ Shader "Scatter/VertexColorLit"
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
             #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -129,9 +130,21 @@ Shader "Scatter/VertexColorLit"
                 float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
                 float daylight = PlanetDaylightFromLocalSun(dot(planetNormal, sunDir));
                 float ndl = saturate(dot(nrmWS, sunDir));
-                half3 dayColor = albedo * lerp(0.32, 1.0, ndl);
+
+                // Receive the Sun's cast shadow (main light tracks _SunParams): shadow pulls the lit term
+                // toward the ambient floor so tree/terrain shadows darken props too.
+                float4 shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
+                half shadowAtten = MainLightRealtimeShadow(shadowCoord);
+                half3 dayColor = albedo * lerp(0.32, 1.0, ndl * shadowAtten);
                 half3 nightColor = albedo * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
                 half3 col = lerp(nightColor, dayColor, daylight);
+
+                #if defined(_SCREEN_SPACE_OCCLUSION)
+                    float2 aoUV = IN.screenPos.xy / max(IN.screenPos.w, 1e-4);
+                    AmbientOcclusionFactor aoFactor = GetScreenSpaceAmbientOcclusion(aoUV);
+                    col *= aoFactor.indirectAmbientOcclusion;
+                #endif
+
                 col = MixFog(col, IN.fogFactor);
                 return half4(col, 1.0);
             }
