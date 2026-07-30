@@ -147,18 +147,31 @@ Shader "Scatter/FoliageLit"
         // Wind comes entirely from the shared wind system (PlanetWind globals): calm => zero motion (no
         // animation without a wind provider), otherwise it follows the weather wind direction + strength.
         // _WindStrength is this plant's per-material flex (sway metres at full wind); the trunk (leafMask
-        // ~0, or _WindStrength 0) stays rigid. High spatial frequency decorrelates neighbours (no unison).
+        // ~0, or _WindStrength 0) stays rigid. Three Synty-style layers on top of a steady downwind lean:
+        //   lean    - slow whole-canopy push downwind (net-positive, never blows back upwind),
+        //   branch  - medium per-branch sway (low spatial freq),
+        //   flutter - fast small per-leaf shimmer (high spatial freq), thrown cross-wind for liveliness.
+        // Spatial phases decorrelate neighbours so nothing sways in unison.
         float3 ApplyWind(float3 positionWS, float leafMask)
         {
             positionWS = ApplyInteractorBend(positionWS); // push before wind; both add on the tangent plane
-            float swayMeters = leafMask * _WindStrength;
+            float flex = leafMask * _WindStrength;
             float strength = saturate(max(_WindStrength01, _WindSpeedMps * 0.06));
-            if (strength <= 1e-4 || swayMeters <= 1e-5) return positionWS;
+            if (strength <= 1e-4 || flex <= 1e-5) return positionWS;
+
             float3 dir = dot(_WindDirection, _WindDirection) > 1e-6 ? normalize(_WindDirection) : float3(1.0, 0.0, 0.0);
-            float t = _Time.y * 1.6;
-            float ph = dot(positionWS, float3(1.6, 0.4, 1.35));
-            float gust = sin(t + ph) * 0.7 + sin(t * 0.53 + ph * 2.3) * 0.3;
-            return positionWS + dir * (gust * swayMeters * strength);
+            float3 side = normalize(cross(dir, float3(0.0, 1.0, 0.0)) + float3(1e-4, 0.0, 0.0));
+            float t = _Time.y * _WindFreq;
+            float ph  = dot(positionWS, float3(1.6, 0.4, 1.35)); // branch-scale spatial phase
+            float phF = dot(positionWS, float3(9.3, 7.1, 11.7)); // leaf-scale spatial phase
+
+            float lean    = 0.55 + 0.45 * sin(t * 0.4 + ph * 0.6); // 0.1..1.0: always downwind
+            float branch  = sin(t * 1.1 + ph * 2.1) * 0.30;
+            float flutter = sin(t * 2.9 + phF) * 0.16;
+
+            float along = (lean + branch) * flex * strength;
+            float crossAmt = flutter * flex * strength;
+            return positionWS + dir * along + side * crossAmt;
         }
         ENDHLSL
 
