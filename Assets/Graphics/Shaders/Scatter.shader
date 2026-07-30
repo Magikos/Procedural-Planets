@@ -65,6 +65,7 @@ Shader "Scatter/VertexColorLit"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Includes/PlanetSunLighting.hlsl"
+            #include "Includes/CloudShadows.hlsl"
 
             // Light from the planet _SunParams sun (like the terrain/foliage), not the URP main light
             // which does not drive the planet — that left props ambient-only and dark.
@@ -128,14 +129,17 @@ Shader "Scatter/VertexColorLit"
                 float3 nrmWS = normalize(IN.normalWS);
                 float3 planetNormal = normalize(IN.positionWS - _PlanetCenter);
                 float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
-                float daylight = PlanetDaylightFromLocalSun(dot(planetNormal, sunDir));
+                float localSun = dot(planetNormal, sunDir);
+                float daylight = PlanetDaylightFromLocalSun(localSun);
                 float ndl = saturate(dot(nrmWS, sunDir));
 
-                // Receive the Sun's cast shadow (main light tracks _SunParams): shadow pulls the lit term
-                // toward the ambient floor so tree/terrain shadows darken props too.
+                // Receive the Sun's cast shadow (main light tracks _SunParams) and the shared cloud-shadow
+                // factor terrain/grass/water use, so tree/terrain shadows and drifting clouds both darken
+                // props.
                 float4 shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
                 half shadowAtten = MainLightRealtimeShadow(shadowCoord);
-                half3 dayColor = albedo * lerp(0.32, 1.0, ndl * shadowAtten);
+                float cloudShadow = CloudShadowFactor(IN.positionWS, sunDir, localSun);
+                half3 dayColor = albedo * lerp(0.32, 1.0, ndl * shadowAtten * cloudShadow);
                 half3 nightColor = albedo * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
                 half3 col = lerp(nightColor, dayColor, daylight);
 

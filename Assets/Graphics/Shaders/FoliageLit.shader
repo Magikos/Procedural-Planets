@@ -105,6 +105,7 @@ Shader "Scatter/FoliageLit"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Includes/PlanetSunLighting.hlsl"
+            #include "Includes/CloudShadows.hlsl"
 
             // The planet is lit by the custom _SunParams sun (terrain + grass use it); the URP main
             // light does not drive it, so lighting foliage via GetMainLight left it ambient-only and
@@ -185,15 +186,18 @@ Shader "Scatter/FoliageLit"
                 // a cool night ambient by the daylight factor at this point on the sphere.
                 float3 planetNormal = normalize(IN.positionWS - _PlanetCenter);
                 float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
-                float daylight = PlanetDaylightFromLocalSun(dot(planetNormal, sunDir));
+                float localSun = dot(planetNormal, sunDir);
+                float daylight = PlanetDaylightFromLocalSun(localSun);
                 float ndl = saturate(dot(nrmWS, sunDir));
 
                 // Receive the Sun's cast shadow (the URP main light tracks _SunParams): the shadow pulls
                 // the lit term toward the ambient floor, so canopy/terrain shadows darken the trees rather
-                // than only being cast off them.
+                // than only being cast off them. cloudShadow is the same shared factor terrain/grass/water
+                // use, so drifting clouds darken the trees along with the rest of the world.
                 float4 shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
                 half shadowAtten = MainLightRealtimeShadow(shadowCoord);
-                half3 dayColor = albedo * lerp(0.32, 1.0, ndl * shadowAtten);
+                float cloudShadow = CloudShadowFactor(IN.positionWS, sunDir, localSun);
+                half3 dayColor = albedo * lerp(0.32, 1.0, ndl * shadowAtten * cloudShadow);
                 float nightAmbient = PlanetNightAmbient(_NightAmbientIntensity);
                 half3 nightColor = albedo * nightAmbient * 0.6;
                 half3 col = lerp(nightColor, dayColor, daylight);
