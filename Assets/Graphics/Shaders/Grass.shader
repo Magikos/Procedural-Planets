@@ -317,9 +317,13 @@ Shader "Planet/Grass"
                 float3 baseTint = lerp(float3(0.62, 0.86, 0.5), float3(0.92, 0.9, 0.54), tintHash);
                 float3 bladeTintJitter = lerp(float3(0.82, 1.03, 0.86), float3(1.05, 0.91, 0.78), colorJitter);
                 float3 tint = baseTint * bladeTintJitter * patchTint;
-                float heightShade = lerp(0.62, 1.0, smoothstep(0.0, 1.0, t));
+                // BOTW-style vertical ramp: a deep, slightly cool green at the root rising to a
+                // bright, warm (yellow-green) tip, so each blade reads as a lit gradient instead of
+                // a flat brightness fade. Tip pushes above 1 for a subtle sunlit-edge glow.
+                float g = smoothstep(0.0, 1.0, t);
+                float3 heightRamp = lerp(float3(0.40, 0.52, 0.32), float3(1.16, 1.15, 0.74), g);
                 float3 biomeTint = GradeGrassTint(blade.Color.rgb, 0.76, 0.88);
-                float3 bladeAlbedo = saturate(biomeTint * tint * brightness) * heightShade;
+                float3 bladeAlbedo = saturate(biomeTint * tint * brightness) * heightRamp;
                 float3 canopyAlbedo = GrassCanopyAlbedo(blade.Color.rgb);
                 float canopyHandoff = smoothstep(_GrassCanopyColorStart, _GrassCanopyColorEnd, viewDistance);
 
