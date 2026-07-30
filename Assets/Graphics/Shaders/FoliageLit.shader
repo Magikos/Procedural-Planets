@@ -74,12 +74,15 @@ Shader "Scatter/FoliageLit"
             return smoothstep(_LeafMaskLo, _LeafMaskHi, vtxBlue);
         }
 
-        // Leaves sway; the trunk stays put. Simple world-space breeze scaled by the leaf mask.
+        // Leaves sway; the trunk stays put. World-space breeze scaled by the leaf mask. The spatial
+        // phase runs at a high frequency (period ~4 m) so neighbouring plants are out of step instead of
+        // "breathing" in unison, and a slower second octave keeps the sway from looking mechanical.
         float3 ApplyWind(float3 positionWS, float leafMask)
         {
             if (_WindStrength <= 0.0) return positionWS;
-            float phase = _Time.y * _WindFreq + positionWS.x * 0.15 + positionWS.z * 0.13;
-            float sway = sin(phase) * _WindStrength * leafMask;
+            float t = _Time.y * _WindFreq;
+            float ph = dot(positionWS, float3(1.6, 0.4, 1.35));
+            float sway = (sin(t + ph) * 0.7 + sin(t * 0.53 + ph * 2.3) * 0.3) * _WindStrength * leafMask;
             positionWS.x += sway;
             positionWS.z += sway * 0.6;
             return positionWS;
