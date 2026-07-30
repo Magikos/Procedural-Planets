@@ -197,17 +197,28 @@ Shader "Scatter/FoliageLit"
                 float4 shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
                 half shadowAtten = MainLightRealtimeShadow(shadowCoord);
                 float cloudShadow = CloudShadowFactor(IN.positionWS, sunDir, localSun);
-                half3 dayColor = albedo * lerp(0.32, 1.0, ndl * shadowAtten * cloudShadow);
+                // Leaves take only a soft self-shadow (never below ~0.5) so a dense canopy stays lush at
+                // eye level instead of collapsing to black where it shadows its own sides; the trunk keeps
+                // the full cast shadow so it still grounds. Higher ambient floor keeps shaded foliage green.
+                float leafShade = lerp(0.5, 1.0, shadowAtten * cloudShadow);
+                float trunkShade = shadowAtten * cloudShadow;
+                float direct = ndl * lerp(trunkShade, leafShade, lm);
+                half3 dayColor = albedo * lerp(0.62, 1.15, direct);
+                // Leaf backlight: the canopy glows where the sun is behind the leaves (lm = leaf mask, so
+                // the trunk is excluded). This is what gives Synty foliage its luminous, translucent look.
+                float3 viewDir = normalize(_WorldSpaceCameraPos - IN.positionWS);
+                float back = pow(saturate(dot(viewDir, -sunDir)), 3.0);
+                dayColor += albedo * back * 0.35 * daylight * cloudShadow * lm;
                 float nightAmbient = PlanetNightAmbient(_NightAmbientIntensity);
                 half3 nightColor = albedo * nightAmbient * 0.6;
                 half3 col = lerp(nightColor, dayColor, daylight);
 
-                // Screen-space AO (built from the depth-normals prepass the scatter now writes into)
-                // darkens canopy interiors and where trees meet the ground.
+                // Screen-space AO — applied gently so it seats trees on the ground and shades interiors
+                // without crushing the dense canopy to black.
                 #if defined(_SCREEN_SPACE_OCCLUSION)
                     float2 aoUV = IN.screenPos.xy / max(IN.screenPos.w, 1e-4);
                     AmbientOcclusionFactor aoFactor = GetScreenSpaceAmbientOcclusion(aoUV);
-                    col *= aoFactor.indirectAmbientOcclusion;
+                    col *= lerp(1.0, aoFactor.indirectAmbientOcclusion, 0.25);
                 #endif
 
                 col = MixFog(col, IN.fogFactor);
