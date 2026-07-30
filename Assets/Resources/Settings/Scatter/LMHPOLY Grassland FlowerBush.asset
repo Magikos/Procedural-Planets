@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
+  m_Name: LMHPOLY Grassland FlowerBush
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
+  DisplayName: LMHPOLY Grassland FlowerBush
+  SlotId: 56
+  SpacingMeters: 10
+  Biome: 6
+  BiomeBlendPower: 1
+  Weight: 0.5
+  MaxSlopeDegrees: 30
+  SlopeFadeDegrees: 5
+  HasMinAltitude: 0
+  MinAltitudeMeters: 0
+  HasMaxAltitude: 0
+  MaxAltitudeMeters: 0
+  MinWaterClearanceMeters: 0.05
+  ScaleRange: {x: 0.8, y: 1.3}
+  RandomYaw: 1
+  Interaction: 0
+  Parts:
+  - Name: Plant
+    Material: {fileID: 2100000, guid: 2df40ea90694bea4490e6e4861ba4187, type: 2}
+    LodMeshes:
+    - {fileID: 4300002, guid: 059ec21c81481784ca7a1e8fbb793d60, type: 3}
+    LodEndDistances:
+    - 110
+    CastShadows: 1
+    ReceiveShadows: 1
+  Material: {fileID: 0}
+  LodMeshes: []
+  LodEndDistances: []
+  CastShadows: 1
+  ReceiveShadows: 1

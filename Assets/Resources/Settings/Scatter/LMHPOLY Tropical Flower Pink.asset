@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
+  m_Name: LMHPOLY Tropical Flower Pink
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
+  DisplayName: LMHPOLY Tropical Flower Pink
+  SlotId: 47
+  SpacingMeters: 4
+  Biome: 4
+  BiomeBlendPower: 1
+  Weight: 1
+  MaxSlopeDegrees: 30
+  SlopeFadeDegrees: 5
+  HasMinAltitude: 0
+  MinAltitudeMeters: 0
+  HasMaxAltitude: 0
+  MaxAltitudeMeters: 0
+  MinWaterClearanceMeters: 0.05
+  ScaleRange: {x: 0.6, y: 1.2}
+  RandomYaw: 1
+  Interaction: 0
+  Parts:
+  - Name: Plant
+    Material: {fileID: 2100000, guid: 730f368a336ff6e4084a30f962780fc7, type: 2}
+    LodMeshes:
+    - {fileID: 4300000, guid: 8df84b062b3f75c41aba17945c4c69bc, type: 3}
+    LodEndDistances:
+    - 50
+    CastShadows: 1
+    ReceiveShadows: 1
+  Material: {fileID: 0}
+  LodMeshes: []
+  LodEndDistances: []
+  CastShadows: 1
+  ReceiveShadows: 1
