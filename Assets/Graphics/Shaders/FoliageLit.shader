@@ -26,6 +26,13 @@ Shader "Scatter/FoliageLit"
         _WindFreq ("Wind Frequency", Float) = 1.6
         _FadeStart ("Fade Start Distance", Float) = 120
         _FadeEnd ("Fade End Distance", Float) = 150
+
+        [Header(Leaf Colour Noise (Synty style))]
+        _ColorNoiseStrength ("Colour Noise Strength", Range(0,1)) = 0.35
+        _ColorNoiseLargeFreq ("Colour Noise Large Freq", Float) = 0.59
+        _ColorNoiseSmallFreq ("Colour Noise Small Freq", Float) = 4.44
+        _ColorNoiseWarm ("Colour Noise Warm Tint", Color) = (1.18, 1.0, 0.62, 1)
+        _ColorNoiseCool ("Colour Noise Cool Tint", Color) = (0.82, 1.0, 0.88, 1)
     }
 
     SubShader
@@ -51,6 +58,11 @@ Shader "Scatter/FoliageLit"
             float _ForceLeaf;
             float _FadeStart;
             float _FadeEnd;
+            float _ColorNoiseStrength;
+            float _ColorNoiseLargeFreq;
+            float _ColorNoiseSmallFreq;
+            float4 _ColorNoiseWarm;
+            float4 _ColorNoiseCool;
         CBUFFER_END
 
         static const float _Bayer4x4[16] = {
@@ -73,6 +85,40 @@ Shader "Scatter/FoliageLit"
         float LeafMask(float vtxBlue)
         {
             return smoothstep(_LeafMaskLo, _LeafMaskHi, vtxBlue);
+        }
+
+        // Cheap 3D value noise (hash-based, smooth-interpolated) for per-leaf/per-region colour variation.
+        float FoliageHash(float3 p)
+        {
+            p = frac(p * 0.1031);
+            p += dot(p, p.yzx + 33.33);
+            return frac((p.x + p.y) * p.z);
+        }
+        float FoliageNoise(float3 x)
+        {
+            float3 i = floor(x);
+            float3 f = frac(x);
+            f = f * f * (3.0 - 2.0 * f);
+            float n000 = FoliageHash(i + float3(0,0,0)), n100 = FoliageHash(i + float3(1,0,0));
+            float n010 = FoliageHash(i + float3(0,1,0)), n110 = FoliageHash(i + float3(1,1,0));
+            float n001 = FoliageHash(i + float3(0,0,1)), n101 = FoliageHash(i + float3(1,0,1));
+            float n011 = FoliageHash(i + float3(0,1,1)), n111 = FoliageHash(i + float3(1,1,1));
+            float nx00 = lerp(n000,n100,f.x), nx10 = lerp(n010,n110,f.x);
+            float nx01 = lerp(n001,n101,f.x), nx11 = lerp(n011,n111,f.x);
+            return lerp(lerp(nx00,nx10,f.y), lerp(nx01,nx11,f.y), f.z);
+        }
+
+        // Synty-style leaf colour variation: a large-frequency noise pushes whole regions warm/cool, a
+        // small-frequency noise varies per-leaf brightness. Applied to leaves only (via leafMask outside),
+        // so a canopy reads as many subtly different leaves instead of one flat colour.
+        half3 LeafColourVariation(half3 albedo, float3 positionWS)
+        {
+            if (_ColorNoiseStrength <= 0.001) return albedo;
+            float nL = FoliageNoise(positionWS * _ColorNoiseLargeFreq);
+            float nS = FoliageNoise(positionWS * _ColorNoiseSmallFreq);
+            half3 tint = lerp(_ColorNoiseCool.rgb, _ColorNoiseWarm.rgb, nL); // warm/cool patches
+            tint *= lerp(0.85, 1.15, nS);                                    // per-leaf brightness
+            return lerp(albedo, albedo * tint, _ColorNoiseStrength);
         }
 
         // Wind comes entirely from the shared wind system (PlanetWind globals): calm => zero motion (no
@@ -177,6 +223,9 @@ Shader "Scatter/FoliageLit"
                 clip(alpha - cutoff);
 
                 half3 albedo = lerp(trunk, leaf.rgb * _SeasonColor.rgb, lm);
+                // Per-leaf/region colour variation (Synty-style noise) on the leaves only, so the canopy
+                // reads as many subtly different leaves instead of one flat green mass.
+                albedo = lerp(albedo, LeafColourVariation(albedo, IN.positionWS), lm);
 
                 // Double-sided: flip the normal on back faces so a leaf lit from either side reads correctly
                 // instead of the back face going black (which made the canopy merge into dark clumps).
