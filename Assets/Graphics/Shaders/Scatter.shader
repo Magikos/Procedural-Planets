@@ -25,6 +25,7 @@ Shader "Scatter/VertexColorLit"
             float _Smoothness;
             float _FadeStart;
             float _FadeEnd;
+            float4 _LodDebugTint;
         CBUFFER_END
 
         // 4x4 Bayer matrix, normalised 0..1.
@@ -152,6 +153,7 @@ Shader "Scatter/VertexColorLit"
                     col *= aoFactor.indirectAmbientOcclusion;
                 #endif
 
+                col = lerp(col, _LodDebugTint.rgb, _LodDebugTint.a); // scatter.lodview: LOD-band colour
                 col = MixFog(col, IN.fogFactor);
                 return half4(col, 1.0);
             }

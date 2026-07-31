@@ -12,6 +12,20 @@ public sealed class ScatterLodBatcher
 
     readonly Matrix4x4[] _batch = new Matrix4x4[BatchCap];
 
+    // Debug view (scatter.lodview): tint every instance by which LOD band it draws in, so LOD transitions
+    // and pop-in are visible. LOD0 green, LOD1 yellow, LOD2 orange, LOD3+ red, impostor magenta. Consumers
+    // (FoliageLit / Scatter) lerp albedo toward _LodDebugTint.rgb by its alpha; alpha 0 (default) = no tint.
+    public static bool LodTintDebug;
+    static readonly int _lodTintId = Shader.PropertyToID("_LodDebugTint");
+    static readonly Color[] _lodColors =
+    {
+        new Color(0.2f, 1f, 0.2f, 1f),   // LOD0
+        new Color(1f, 0.95f, 0.2f, 1f),  // LOD1
+        new Color(1f, 0.55f, 0.1f, 1f),  // LOD2
+        new Color(1f, 0.15f, 0.15f, 1f), // LOD3+
+    };
+    static readonly Color _impostorColor = new Color(1f, 0.2f, 1f, 1f);
+
     // One camera-facing quad (billboarded in the impostor shader), drawn beyond the mesh-LOD range out
     // to EndDistance. Valid is false when there is no baked card, which skips the tier (mesh-LOD only).
     public readonly struct Impostor
@@ -50,15 +64,25 @@ public sealed class ScatterLodBatcher
                 if (mesh == null) continue;
                 float near = lod == 0 ? 0f : pd.LodEndDistances[lod - 1];
                 float far = pd.LodEndDistances[lod];
+                if (LodTintDebug) SetLodTint(rp, _lodColors[Mathf.Min(lod, _lodColors.Length - 1)]);
                 DrawBand(rp, mesh, near * near, far * far, matrices, positionsWS, camPos);
             }
         }
 
         if (impostor.Valid)
+        {
+            if (LodTintDebug) SetLodTint(impostor.Params, _impostorColor);
             DrawBand(impostor.Params, impostor.Quad,
                      impostor.StartDistance * impostor.StartDistance,
                      impostor.EndDistance * impostor.EndDistance,
                      matrices, positionsWS, camPos);
+        }
+    }
+
+    static void SetLodTint(RenderParams rp, Color c)
+    {
+        if (rp.matProps == null) return; // no property block on this part; skip the debug tint
+        rp.matProps.SetColor(_lodTintId, c);
     }
 
     void DrawBand(RenderParams rp, Mesh mesh, float near2, float far2,

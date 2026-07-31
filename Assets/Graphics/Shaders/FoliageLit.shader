@@ -72,6 +72,7 @@ Shader "Scatter/FoliageLit"
             float4 _ColorNoiseCool;
             float _LeafAOIntensity;
             float _InteractiveBend;
+            float4 _LodDebugTint;
         CBUFFER_END
 
         static const float _Bayer4x4[16] = {
@@ -319,6 +320,7 @@ Shader "Scatter/FoliageLit"
                     col *= lerp(1.0, aoFactor.indirectAmbientOcclusion, 0.25);
                 #endif
 
+                col = lerp(col, _LodDebugTint.rgb, _LodDebugTint.a); // scatter.lodview: LOD-band colour
                 col = MixFog(col, IN.fogFactor);
                 return half4(col, 1.0);
             }
