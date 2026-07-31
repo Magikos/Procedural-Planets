@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 5a0ee82f-d367-47b6-bbee-397761463f85
-  modified: 2026-07-31T04:48:33.886Z
+  modified: 2026-07-31T13:08:02.512Z
 ---
 
 ## 2026-07-30 — perf/LOD/seam diagnosis + dev tooling (Bryan flagged: slow load, LOD blink, hard grass edge)
@@ -19,8 +19,27 @@ math to native/Burst-compatible; fits the "Burst for hot work" rule; ~Ncores+SIM
 ECS/DOTS anyway** — respect it, but scope it carefully (it's a weeks-long rewrite of scatter/render/
 persistence; consider an incremental hybrid). Priority he set: **bugs now, perf (ECS) after.**
 
-**Dev tooling I built (commit `e5ea644`, compiles clean, NOT yet run — Unity MCP bridge dropped before I
-could test):**
+**RESULTS (2026-07-31, bench actually run after Unity restart):** flew 15s at each speed from a loaded
+grassland start. **150 m/s: OUTRUN** — backlog grew 0 -> 32,233 pending pairs (never caught up), live tiles
+COLLAPSED 1415 -> 110, instances 44k-115k (the pop-in). **60 m/s: still OUTRUN** — persistent ~10k backlog
+(avg 10,564) but the visible region held (189k-213k instances). Worst frames 159-186 ms (main-thread
+commit/evict stalls, separate issue). The background worker ALREADY runs every frame with a 200 ms budget
+(ScatterTileCache.Update line 152) — it's maxed; only PARALLELISM raises throughput. Confirms the fix is
+Burst-jobify the gather or the ECS rewrite Bryan chose (deferred, "perf after bugs").
+
+**LOD blink FIXED** (commit `3913c4a`, verified with the LOD debug view): the debug view showed HARD colour
+bands (green LOD0 | yellow LOD1 | orange LOD2) with razor boundary lines = instant mesh swaps = the blink.
+Fix in `ScatterLodBatcher`: overlap adjacent bands by `TransitionWidth`=15 m and set the material's existing
+`_FadeStart/_FadeEnd` per band so the OUTGOING LOD dithers out over its last 15 m while the INCOMING LOD is
+already drawn solid underneath (one-sided screen-door crossfade, no shader change). Debug view after shows
+soft dithered overlaps; real view clean.
+
+**Grass hard edge FIXED** (`3913c4a`): `GrassNearFieldPlace.compute` replaced the binary `density <= 0.001`
+cutoff with stochastic thinning `keep if Hash01 <= smoothstep(0, 0.5, density)` — grass feathers out with a
+dithered edge across a biome boundary instead of a line. (If still too abrupt, widen the 0.5 or add noise;
+the far-field blanket may need the same if its edge is separate.)
+
+**Dev tooling I built (commit `e5ea644`, RAN successfully):**
 - `ScatterFlyBench` MonoBehaviour ([Assets/Scripts/Planet/Scatter/ScatterFlyBench.cs]): `StartBench(speedMps,
   seconds)` flies Camera.main along a great circle at fixed speed, logs load-lag (`ScatterTileCache.
   PendingPairCount` / `LiveInstanceCount`) + worst frame ms + a CSV, verdict "OUTRUN" if backlog stays >0.
