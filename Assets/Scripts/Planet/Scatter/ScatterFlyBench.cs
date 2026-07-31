@@ -43,6 +43,14 @@ public sealed class ScatterFlyBench : MonoBehaviour
     int _samples, _maxPending, _sumPending, _minLive, _maxLive;
     float _worstFrameMs;
 
+    // Inspector convenience: add this component to any GameObject in a generated planet's play session,
+    // set SpeedMps / DurationSec, then right-click the component header -> "Start Bench".
+    [ContextMenu("Start Bench")]
+    void StartFromInspector() => StartBench(SpeedMps, DurationSec);
+
+    [ContextMenu("Stop Bench")]
+    void StopFromInspector() => StopBench();
+
     public void StartBench(float speedMps, float seconds)
     {
         var cam = Camera.main;
