@@ -22,8 +22,8 @@ MonoBehaviour:
   SlopeFadeDegrees: 6
   HasMinAltitude: 0
   MinAltitudeMeters: 0
-  HasMaxAltitude: 0
-  MaxAltitudeMeters: 0
+  HasMaxAltitude: 1
+  MaxAltitudeMeters: 3
   MinWaterClearanceMeters: 0
   ScaleRange: {x: 0.8, y: 1.4}
   RandomYaw: 1
