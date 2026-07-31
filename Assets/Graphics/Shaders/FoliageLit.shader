@@ -308,6 +308,10 @@ Shader "Scatter/FoliageLit"
                 float3 viewDir = normalize(_WorldSpaceCameraPos - IN.positionWS);
                 float back = pow(saturate(dot(viewDir, -sunDir)), 3.0);
                 dayColor += albedo * back * 0.35 * daylight * cloudShadow * lm;
+                // Cast shadow on the WHOLE plant so understory foliage under a tree visibly darkens — the
+                // soft leafShade above only gives canopy interior depth. Sunlit crowns (shadowAtten≈1) are
+                // untouched; the 0.4 floor keeps shaded plants coloured, matching the ground shadow.
+                dayColor *= lerp(0.4, 1.0, lerp(1.0, shadowAtten, daylight));
                 float nightAmbient = PlanetNightAmbient(_NightAmbientIntensity);
                 half3 nightColor = albedo * nightAmbient * 0.6;
                 half3 col = lerp(nightColor, dayColor, daylight);
