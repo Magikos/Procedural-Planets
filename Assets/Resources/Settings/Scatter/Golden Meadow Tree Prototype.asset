@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Golden Meadow Tree
   SlotId: 54
-  SpacingMeters: 45
+  SpacingMeters: 32
   Biome: 6
   BiomeBlendPower: 1
   Weight: 0.45

@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: LMHPOLY Beach Reed
   SlotId: 61
-  SpacingMeters: 2.6
+  SpacingMeters: 7
   Biome: 1
   BiomeBlendPower: 1
-  Weight: 1.5
+  Weight: 0.6
   MaxSlopeDegrees: 30
   SlopeFadeDegrees: 5
   HasMinAltitude: 0
@@ -34,7 +34,7 @@ MonoBehaviour:
     LodMeshes:
     - {fileID: 4300000, guid: 625c242710b5cfd40a032324f439ede8, type: 3}
     LodEndDistances:
-    - 70
+    - 130
     CastShadows: 1
     ReceiveShadows: 1
   Material: {fileID: 0}

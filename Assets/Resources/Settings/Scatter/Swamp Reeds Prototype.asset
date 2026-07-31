@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Swamp Reeds
   SlotId: 40
-  SpacingMeters: 2.6
+  SpacingMeters: 9
   Biome: 10
   BiomeBlendPower: 1
-  Weight: 1.5
+  Weight: 0.6
   MaxSlopeDegrees: 20
   SlopeFadeDegrees: 6
   HasMinAltitude: 0
