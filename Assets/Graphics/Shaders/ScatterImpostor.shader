@@ -32,6 +32,8 @@ Shader "Scatter/Impostor"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma target 4.5
+            #pragma instancing_options procedural:setup
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Includes/PlanetSunLighting.hlsl"
 
@@ -51,6 +53,20 @@ Shader "Scatter/Impostor"
                 float _FadeOutStart;
                 float _FadeOutEnd;
             CBUFFER_END
+
+            // GPU-driven indirect draw: setup() feeds unity_ObjectToWorld (which GetObjectToWorldMatrix reads)
+            // from the buffer under procedural instancing; the RenderMeshInstanced path is untouched.
+            #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+                StructuredBuffer<float4x4> _ScatterMatrices;
+                StructuredBuffer<float4x4> _ScatterMatricesInv;
+            #endif
+            void setup()
+            {
+            #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+                unity_ObjectToWorld = _ScatterMatrices[unity_InstanceID];
+                unity_WorldToObject = _ScatterMatricesInv[unity_InstanceID];
+            #endif
+            }
 
             static const float _Bayer4x4[16] = {
                 0.0/16, 8.0/16, 2.0/16, 10.0/16,
@@ -158,6 +174,8 @@ Shader "Scatter/Impostor"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma target 4.5
+            #pragma instancing_options procedural:setup
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
@@ -171,6 +189,20 @@ Shader "Scatter/Impostor"
                 float _FadeOutStart;
                 float _FadeOutEnd;
             CBUFFER_END
+
+            // GPU-driven indirect draw: setup() feeds unity_ObjectToWorld (which GetObjectToWorldMatrix reads)
+            // from the buffer under procedural instancing; the RenderMeshInstanced path is untouched.
+            #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+                StructuredBuffer<float4x4> _ScatterMatrices;
+                StructuredBuffer<float4x4> _ScatterMatricesInv;
+            #endif
+            void setup()
+            {
+            #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+                unity_ObjectToWorld = _ScatterMatrices[unity_InstanceID];
+                unity_WorldToObject = _ScatterMatricesInv[unity_InstanceID];
+            #endif
+            }
 
             static const float _Bayer4x4[16] = {
                 0.0/16, 8.0/16, 2.0/16, 10.0/16,

@@ -11,6 +11,7 @@ public sealed class ScatterRenderer : IDisposable
 {
     readonly Transform _planetTransform;
     readonly ScatterLodBatcher _batcher = new ScatterLodBatcher();
+    readonly ScatterGpuDraw _gpu = new ScatterGpuDraw();
     readonly ScatterTileCache _cache;
 
     ScatterLibraryDto _library;
@@ -30,6 +31,13 @@ public sealed class ScatterRenderer : IDisposable
     }
 
     public ScatterTileCache Cache => _cache;
+
+    // Debug/measurement: skip only the draw (gather still runs) to isolate the batcher's per-frame cost.
+    public static bool DrawEnabled = true;
+
+    // Route the draw through the GPU-indirect path (ScatterGpuDraw) instead of the CPU RenderMeshInstanced
+    // batcher. Off by default while the indirect path is staged in.
+    public static bool UseGpuDraw = false;
 
     public void Configure()
     {
@@ -71,6 +79,7 @@ public sealed class ScatterRenderer : IDisposable
             }
         }
         _cache.Configure();
+        _gpu.Configure(protoCount);
         _configured = true;
     }
 
@@ -92,13 +101,15 @@ public sealed class ScatterRenderer : IDisposable
         if (_library.Prototypes.Length == 0) return;
         Vector3 camPos = camera.transform.position;
         _cache.Update(camPos);
+        if (!DrawEnabled) return;
         for (int p = 0; p < _library.Prototypes.Length; p++)
         {
             var proto = _library.Prototypes[p];
             if (!proto.CanRender) continue;
             var matrices = _cache.Matrices(p);
             if (matrices.Count == 0) continue;
-            _batcher.Draw(proto, _renderParams[p], matrices, _cache.Positions(p), camPos, _impostors[p]);
+            if (UseGpuDraw) _gpu.DrawProtoLod0(p, matrices, proto, _renderParams[p]);
+            else _batcher.Draw(proto, _renderParams[p], matrices, _cache.Positions(p), camPos, _impostors[p]);
         }
     }
 
@@ -106,6 +117,7 @@ public sealed class ScatterRenderer : IDisposable
     {
         _configured = false;
         _cache.Dispose();
+        _gpu.Dispose();
         DestroyImpostors();
     }
 

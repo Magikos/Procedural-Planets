@@ -28,6 +28,24 @@ Shader "Scatter/VertexColorLit"
             float4 _LodDebugTint;
         CBUFFER_END
 
+        // GPU-driven indirect draw: when rendered via Graphics.RenderMeshIndirect with procedural
+        // instancing, the per-instance transform comes from these buffers instead of unity_ObjectToWorld
+        // (which Graphics.RenderMeshInstanced fills). The UNITY_PROCEDURAL_INSTANCING_ENABLED guard leaves
+        // the plain RenderMeshInstanced path (CPU fallback + transitional draws) untouched. setup() runs in
+        // every pass, so the ShadowCaster and DepthNormals passes get the buffer transform too. The inverse
+        // is stored (not computed per-vertex) so normals stay correct without a 4x4 inverse in the shader.
+        #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+            StructuredBuffer<float4x4> _ScatterMatrices;
+            StructuredBuffer<float4x4> _ScatterMatricesInv;
+        #endif
+        void setup()
+        {
+        #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+            unity_ObjectToWorld = _ScatterMatrices[unity_InstanceID];
+            unity_WorldToObject = _ScatterMatricesInv[unity_InstanceID];
+        #endif
+        }
+
         // 4x4 Bayer matrix, normalised 0..1.
         static const float _Bayer4x4[16] = {
             0.0/16, 8.0/16, 2.0/16, 10.0/16,
@@ -57,6 +75,8 @@ Shader "Scatter/VertexColorLit"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma target 4.5
+            #pragma instancing_options procedural:setup
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
@@ -170,6 +190,8 @@ Shader "Scatter/VertexColorLit"
             #pragma vertex shadowVert
             #pragma fragment shadowFrag
             #pragma multi_compile_instancing
+            #pragma target 4.5
+            #pragma instancing_options procedural:setup
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
@@ -222,6 +244,8 @@ Shader "Scatter/VertexColorLit"
             #pragma vertex dnVert
             #pragma fragment dnFrag
             #pragma multi_compile_instancing
+            #pragma target 4.5
+            #pragma instancing_options procedural:setup
 
             struct DNAttributes
             {

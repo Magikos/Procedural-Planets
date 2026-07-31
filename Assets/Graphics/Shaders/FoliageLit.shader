@@ -75,6 +75,22 @@ Shader "Scatter/FoliageLit"
             float4 _LodDebugTint;
         CBUFFER_END
 
+        // GPU-driven indirect draw: setup() feeds the per-instance transform from these buffers when drawn
+        // via Graphics.RenderMeshIndirect (procedural instancing), leaving the RenderMeshInstanced path
+        // untouched. It runs before every vert (all passes), so wind + ApplyInteractorBend (which read
+        // unity_ObjectToWorld) and the ShadowCaster/DepthNormals passes all see the buffer transform.
+        #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+            StructuredBuffer<float4x4> _ScatterMatrices;
+            StructuredBuffer<float4x4> _ScatterMatricesInv;
+        #endif
+        void setup()
+        {
+        #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+            unity_ObjectToWorld = _ScatterMatrices[unity_InstanceID];
+            unity_WorldToObject = _ScatterMatricesInv[unity_InstanceID];
+        #endif
+        }
+
         static const float _Bayer4x4[16] = {
             0.0/16, 8.0/16, 2.0/16, 10.0/16,
             12.0/16, 4.0/16, 14.0/16, 6.0/16,
@@ -186,6 +202,8 @@ Shader "Scatter/FoliageLit"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma target 4.5
+            #pragma instancing_options procedural:setup
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
@@ -342,6 +360,8 @@ Shader "Scatter/FoliageLit"
             #pragma vertex shadowVert
             #pragma fragment shadowFrag
             #pragma multi_compile_instancing
+            #pragma target 4.5
+            #pragma instancing_options procedural:setup
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
@@ -411,6 +431,8 @@ Shader "Scatter/FoliageLit"
             #pragma vertex dnVert
             #pragma fragment dnFrag
             #pragma multi_compile_instancing
+            #pragma target 4.5
+            #pragma instancing_options procedural:setup
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
