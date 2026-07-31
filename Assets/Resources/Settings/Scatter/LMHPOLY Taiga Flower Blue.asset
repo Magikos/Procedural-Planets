@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: LMHPOLY Taiga Flower Blue
   SlotId: 49
-  SpacingMeters: 6
+  SpacingMeters: 3.2
   Biome: 9
   BiomeBlendPower: 1
-  Weight: 0.8
+  Weight: 1.3
   MaxSlopeDegrees: 30
   SlopeFadeDegrees: 5
   HasMinAltitude: 0

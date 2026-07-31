@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: LMHPOLY Steppe Flower White
   SlotId: 45
-  SpacingMeters: 4.5
+  SpacingMeters: 3.2
   Biome: 8
   BiomeBlendPower: 1
-  Weight: 1
+  Weight: 1.3
   MaxSlopeDegrees: 30
   SlopeFadeDegrees: 5
   HasMinAltitude: 0

@@ -34,10 +34,15 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _ColorNoiseLargeFreq: 0.59
+    - _ColorNoiseSmallFreq: 4.44
+    - _ColorNoiseStrength: 0.35
     - _Cutoff: 0.4
     - _FadeEnd: 150
     - _FadeStart: 120
     - _ForceLeaf: 1
+    - _InteractiveBend: 0
+    - _LeafAOIntensity: 0.5
     - _LeafFall: 0
     - _LeafMaskHi: 0.85
     - _LeafMaskLo: 0.6
@@ -46,7 +51,9 @@ Material:
     - _WindFreq: 1.6
     - _WindStrength: 0
     m_Colors:
-    - _SeasonColor: {r: 1, g: 1, b: 1, a: 1}
+    - _ColorNoiseCool: {r: 0.82, g: 1, b: 0.88, a: 1}
+    - _ColorNoiseWarm: {r: 1.18, g: 1, b: 0.62, a: 1}
+    - _SeasonColor: {r: 1.5, g: 0.55, b: 0.3, a: 1}
     - _TrunkTint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

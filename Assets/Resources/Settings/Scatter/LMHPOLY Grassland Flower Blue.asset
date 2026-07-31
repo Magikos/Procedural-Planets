@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: LMHPOLY Grassland Flower Blue
   SlotId: 37
-  SpacingMeters: 3.5
+  SpacingMeters: 3.2
   Biome: 6
   BiomeBlendPower: 1
-  Weight: 1.2
+  Weight: 1.3
   MaxSlopeDegrees: 30
   SlopeFadeDegrees: 5
   HasMinAltitude: 0

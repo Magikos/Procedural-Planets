@@ -53,7 +53,7 @@ Material:
     m_Colors:
     - _ColorNoiseCool: {r: 0.82, g: 1, b: 0.88, a: 1}
     - _ColorNoiseWarm: {r: 1.18, g: 1, b: 0.62, a: 1}
-    - _SeasonColor: {r: 1, g: 1, b: 1, a: 1}
+    - _SeasonColor: {r: 1.25, g: 1.18, b: 0.8, a: 1}
     - _TrunkTint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

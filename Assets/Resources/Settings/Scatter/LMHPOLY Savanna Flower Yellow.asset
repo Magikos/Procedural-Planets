@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: LMHPOLY Savanna Flower Yellow
   SlotId: 44
-  SpacingMeters: 4.5
+  SpacingMeters: 3.2
   Biome: 3
   BiomeBlendPower: 1
-  Weight: 1
+  Weight: 1.3
   MaxSlopeDegrees: 30
   SlopeFadeDegrees: 5
   HasMinAltitude: 0

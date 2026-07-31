@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Autumn Meadow Tree
   SlotId: 55
-  SpacingMeters: 17
+  SpacingMeters: 45
   Biome: 6
   BiomeBlendPower: 1
   Weight: 0.45

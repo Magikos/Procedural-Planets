@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: LMHPOLY Tropical Flower Pink
   SlotId: 47
-  SpacingMeters: 4
+  SpacingMeters: 3.2
   Biome: 4
   BiomeBlendPower: 1
-  Weight: 1
+  Weight: 1.3
   MaxSlopeDegrees: 30
   SlopeFadeDegrees: 5
   HasMinAltitude: 0
