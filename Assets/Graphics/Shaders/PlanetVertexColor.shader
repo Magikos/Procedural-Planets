@@ -1117,11 +1117,18 @@ Shader "Planet/VertexColor"
                 // Roughness from ARM.g drives a Blinn specular term (sharp on ice/rock,
                 // smeared on sand/grass). Metallic from ARM.b stays at 0 for natural surfaces
                 // — we route that through anyway for future metal biomes.
-                // Custom analytic sun stays — URP's PBR + cascaded shadows isn't stable at
-                // this planet scale.
+                // The custom analytic sun owns the shading (URP's PBR isn't stable at this
+                // planet scale); we sample only the cascade shadowmap for cast shadows below.
                 float geometricDiffuse = saturate(dot(normalize(input.normalWS), sunDir));
                 float terrainDiffuse = saturate(dot(surfaceNormalWS, sunDir));
                 float cloudShadow = CloudShadowFactor(input.positionWS, sunDir, localSun);
+                // Receive the sun's realtime cast shadows (trees, foliage, terrain relief) so props are
+                // rooted in the world instead of floating on the surface. The custom analytic sun still
+                // owns the shading; this only gates the DIRECT term, so shadowed ground falls to the same
+                // ambient floor grass/foliage use (never crushed to black), fading out at night.
+                float mainShadow = MainLightRealtimeShadow(TransformWorldToShadowCoord(input.positionWS));
+                float sunShadow = lerp(1.0, mainShadow, daylight);
+                float litDiffuse = terrainDiffuse * sunShadow;
                 float ao = surfaceArm.r;
                 float roughness = surfaceArm.g;
                 float smoothness = 1.0 - roughness;
@@ -1129,7 +1136,8 @@ Shader "Planet/VertexColor"
 
                 float normalTurnsAwayFromSun = saturate((geometricDiffuse - terrainDiffuse) * 3.0);
                 float reliefShadow = 1.0 - normalTurnsAwayFromSun * saturate(_BiomeNormalReliefShadow) * daylight;
-                float dayLight = lerp(0.24, 1.12, terrainDiffuse) * lerp(0.36, 1.0, ao) * reliefShadow;
+                float dayLight = lerp(0.24, 1.12, litDiffuse) * lerp(0.36, 1.0, ao) * reliefShadow;
+                dayLight *= lerp(0.45, 1.0, sunShadow);
                 float3 dayColor = surfaceAlbedo * dayLight * lerp(1.0, cloudShadow, daylight);
 
                 // Blinn specular: F0 = 0.04 dielectric / albedo metallic. Exponent scales with
@@ -1141,7 +1149,7 @@ Shader "Planet/VertexColor"
                 float specExp = lerp(2.0, 256.0, smoothness * smoothness);
                 float specMagnitude = pow(NoH, specExp) * smoothness;
                 float3 specF0 = lerp(float3(0.04, 0.04, 0.04), surfaceAlbedo, metallic);
-                float3 specular = specF0 * specMagnitude * daylight * cloudShadow;
+                float3 specular = specF0 * specMagnitude * daylight * cloudShadow * mainShadow;
                 dayColor += specular;
 
                 float3 coolNightAlbedo = lerp(surfaceAlbedo, float3(0.12, 0.16, 0.22), 0.65);
