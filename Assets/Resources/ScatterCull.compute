@@ -1,4 +1,5 @@
 #pragma kernel CullBand
+#pragma kernel BuildInverse
 
 // Per LOD band of one prototype: scan the master instance matrices, and for each instance whose camera
 // distance falls in this band's [near, far) range, append its master index to _Visible and bump the
@@ -34,4 +35,50 @@ void CullBand(uint3 id : SV_DispatchThreadID)
         _Visible[slot] = i;
     else
         InterlockedAdd(_Args[1], 0xFFFFFFFFu); // capacity == _Count, so this cannot actually happen
+}
+
+// Computes the world->object matrix per instance on the GPU (dispatched only when the master list changes),
+// so the CPU never runs Matrix4x4.inverse. The scatter matrices are affine (TRS), so this is the affine
+// inverse [ A^-1 | -A^-1 t ; 0 1 ] — mathematically identical to a full 4x4 inverse for affine input.
+RWStructuredBuffer<float4x4> _MasterInv;
+
+[numthreads(64, 1, 1)]
+void BuildInverse(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= _Count) return;
+    float4x4 m = _Master[i];
+
+    float a00 = m._m00, a01 = m._m01, a02 = m._m02;
+    float a10 = m._m10, a11 = m._m11, a12 = m._m12;
+    float a20 = m._m20, a21 = m._m21, a22 = m._m22;
+
+    float b00 = a11 * a22 - a12 * a21;
+    float b01 = a02 * a21 - a01 * a22;
+    float b02 = a01 * a12 - a02 * a11;
+    float b10 = a12 * a20 - a10 * a22;
+    float b11 = a00 * a22 - a02 * a20;
+    float b12 = a02 * a10 - a00 * a12;
+    float b20 = a10 * a21 - a11 * a20;
+    float b21 = a01 * a20 - a00 * a21;
+    float b22 = a00 * a11 - a01 * a10;
+
+    float det = a00 * b00 + a01 * b10 + a02 * b20;
+    float invDet = 1.0 / det;
+
+    float i00 = b00 * invDet, i01 = b01 * invDet, i02 = b02 * invDet;
+    float i10 = b10 * invDet, i11 = b11 * invDet, i12 = b12 * invDet;
+    float i20 = b20 * invDet, i21 = b21 * invDet, i22 = b22 * invDet;
+
+    float3 t = float3(m._m03, m._m13, m._m23);
+    float it0 = -(i00 * t.x + i01 * t.y + i02 * t.z);
+    float it1 = -(i10 * t.x + i11 * t.y + i12 * t.z);
+    float it2 = -(i20 * t.x + i21 * t.y + i22 * t.z);
+
+    float4x4 r;
+    r._m00 = i00; r._m01 = i01; r._m02 = i02; r._m03 = it0;
+    r._m10 = i10; r._m11 = i11; r._m12 = i12; r._m13 = it1;
+    r._m20 = i20; r._m21 = i21; r._m22 = i22; r._m23 = it2;
+    r._m30 = 0;   r._m31 = 0;   r._m32 = 0;   r._m33 = 1;
+    _MasterInv[i] = r;
 }

@@ -21,6 +21,7 @@ public sealed class ScatterGpuDraw : IDisposable
     static readonly int _fadeEndId = Shader.PropertyToID("_FadeEnd");
 
     static readonly int _cMaster = Shader.PropertyToID("_Master");
+    static readonly int _cMasterInv = Shader.PropertyToID("_MasterInv");
     static readonly int _cVisible = Shader.PropertyToID("_Visible");
     static readonly int _cArgs = Shader.PropertyToID("_Args");
     static readonly int _cCount = Shader.PropertyToID("_Count");
@@ -45,6 +46,7 @@ public sealed class ScatterGpuDraw : IDisposable
     {
         public GraphicsBuffer Master, MasterInv;
         public int Capacity;
+        public int LastCount = -1; // last uploaded instance count; -1 forces the first upload
         public Band[] Bands;
         public void Dispose()
         {
@@ -56,10 +58,10 @@ public sealed class ScatterGpuDraw : IDisposable
 
     ComputeShader _cull;
     int _kernel;
+    int _kernelInv;
     bool _supported;
     ProtoGpu[] _protos = Array.Empty<ProtoGpu>();
     Matrix4x4[] _m = Array.Empty<Matrix4x4>();
-    Matrix4x4[] _inv = Array.Empty<Matrix4x4>();
     readonly uint[] _argScratch = new uint[5];
 
     public bool Supported => _supported;
@@ -71,6 +73,7 @@ public sealed class ScatterGpuDraw : IDisposable
         _supported = _cull != null && SystemInfo.supportsComputeShaders && SystemInfo.graphicsShaderLevel >= 45;
         if (!_supported) return;
         _kernel = _cull.FindKernel("CullBand");
+        _kernelInv = _cull.FindKernel("BuildInverse");
 
         int protoCount = library.Prototypes.Length;
         _protos = new ProtoGpu[protoCount];
@@ -127,24 +130,35 @@ public sealed class ScatterGpuDraw : IDisposable
         return new Band { Mesh = imp.Quad, Near2 = start * start, Far2 = imp.EndDistance * imp.EndDistance, Rp = rp, Mpb = mpb };
     }
 
-    public void DrawProto(int p, IReadOnlyList<Matrix4x4> matrices, Vector3 camPos)
+    public void DrawProto(int p, IReadOnlyList<Matrix4x4> matrices, Vector3 camPos, bool dirty)
     {
         if (!_supported) return;
         var g = _protos[p];
         if (g == null || g.Bands.Length == 0) return;
         int count = matrices.Count;
         if (count == 0) return;
-        EnsureCapacity(g, count);
+        bool grew = EnsureCapacity(g, count);
 
-        // Stage 2: full master upload + CPU inverse every frame (dirty-only + GPU inverse come in stage 3).
-        if (_m.Length < count) { _m = new Matrix4x4[count]; _inv = new Matrix4x4[count]; }
-        for (int i = 0; i < count; i++) { Matrix4x4 mm = matrices[i]; _m[i] = mm; _inv[i] = mm.inverse; }
-        g.Master.SetData(_m, 0, 0, count);
-        g.MasterInv.SetData(_inv, 0, 0, count);
-
+        // Upload the master transforms only when the instance list actually changed (gather churn), not
+        // every frame — instance transforms don't change with camera motion. A reallocated buffer (grew) or
+        // a count change also forces it. The world->object inverse is then rebuilt on the GPU (BuildInverse),
+        // so churn while flying costs a SetData + a cheap dispatch, never a CPU Matrix4x4.inverse.
         int groups = Mathf.Max(1, Mathf.CeilToInt(count / 64f));
-        _cull.SetBuffer(_kernel, _cMaster, g.Master);
         _cull.SetInt(_cCount, count);
+
+        if (dirty || grew || count != g.LastCount)
+        {
+            if (_m.Length < count) _m = new Matrix4x4[count];
+            for (int i = 0; i < count; i++) _m[i] = matrices[i];
+            g.Master.SetData(_m, 0, 0, count);
+            // world->object on the GPU — no CPU Matrix4x4.inverse, so churn while flying stays cheap.
+            _cull.SetBuffer(_kernelInv, _cMaster, g.Master);
+            _cull.SetBuffer(_kernelInv, _cMasterInv, g.MasterInv);
+            _cull.Dispatch(_kernelInv, groups, 1, 1);
+            g.LastCount = count;
+        }
+
+        _cull.SetBuffer(_kernel, _cMaster, g.Master);
         _cull.SetInt(_cVisCap, g.Capacity);
         _cull.SetVector(_cCamPos, camPos);
 
@@ -172,9 +186,9 @@ public sealed class ScatterGpuDraw : IDisposable
         }
     }
 
-    void EnsureCapacity(ProtoGpu g, int count)
+    bool EnsureCapacity(ProtoGpu g, int count)
     {
-        if (g.Master != null && g.Capacity >= count) return;
+        if (g.Master != null && g.Capacity >= count) return false;
         g.Master?.Dispose(); g.MasterInv?.Dispose();
         int cap = Mathf.NextPowerOfTwo(Mathf.Max(count, 256));
         g.Master = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cap, 64);      // sizeof(float4x4)
@@ -186,6 +200,7 @@ public sealed class ScatterGpuDraw : IDisposable
             b.Args ??= new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments | GraphicsBuffer.Target.Structured, 5, sizeof(uint));
         }
         g.Capacity = cap;
+        return true;
     }
 
     public void Dispose()

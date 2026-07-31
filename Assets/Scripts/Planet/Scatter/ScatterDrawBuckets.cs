@@ -18,6 +18,9 @@ public sealed class ScatterDrawBuckets
     readonly List<int>[] _ownerSlot;    // parallel: index of this slot within its tile's per-proto index list
     // tileId -> per-prototype list of packed indices this tile occupies (its slots in _matrices[proto]).
     readonly Dictionary<long, List<int>[]> _tileIdx = new();
+    // Per-prototype: this frame the packed matrix list changed (add/remove). The GPU draw re-uploads +
+    // re-inverts only dirty prototypes; a static camera (no gather churn) uploads nothing.
+    readonly bool[] _dirty;
 
     public ScatterDrawBuckets(int protoCount)
     {
@@ -26,6 +29,7 @@ public sealed class ScatterDrawBuckets
         _positions = new List<Vector3>[protoCount];
         _ownerTile = new List<long>[protoCount];
         _ownerSlot = new List<int>[protoCount];
+        _dirty = new bool[protoCount];
         for (int p = 0; p < protoCount; p++)
         {
             _matrices[p] = new List<Matrix4x4>();
@@ -33,6 +37,14 @@ public sealed class ScatterDrawBuckets
             _ownerTile[p] = new List<long>();
             _ownerSlot[p] = new List<int>();
         }
+    }
+
+    // Returns whether prototype `proto`'s matrix list changed since the last call, clearing the flag.
+    public bool ConsumeDirty(int proto)
+    {
+        bool d = _dirty[proto];
+        _dirty[proto] = false;
+        return d;
     }
 
     public IReadOnlyList<Matrix4x4> Matrices(int proto) => _matrices[proto];
@@ -57,6 +69,7 @@ public sealed class ScatterDrawBuckets
         _ownerTile[proto].Add(tileId);
         _ownerSlot[proto].Add(idx.Count);
         idx.Add(packed);
+        _dirty[proto] = true;
     }
 
     public void RemoveTile(long tileId)
@@ -65,7 +78,7 @@ public sealed class ScatterDrawBuckets
         for (int p = 0; p < _protoCount; p++)
         {
             var idx = perProto[p];
-            if (idx != null) RemoveBlock(p, idx);
+            if (idx != null && idx.Count > 0) { RemoveBlock(p, idx); _dirty[p] = true; }
         }
         _tileIdx.Remove(tileId);
     }

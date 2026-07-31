@@ -98,6 +98,8 @@ public sealed class ScatterTileCache
     public int TileLevel => _tileLevel;
     public IReadOnlyList<Matrix4x4> Matrices(int proto) => _buckets.Matrices(proto);
     public IReadOnlyList<Vector3> Positions(int proto) => _buckets.Positions(proto);
+    // Whether this prototype's matrix list changed since the last call (for the GPU draw's dirty upload).
+    public bool ConsumeDrawDirty(int proto) => _buckets.ConsumeDirty(proto);
 
     // Live diagnostics for the scatter.* counters (I2/I4): resident state + outstanding work.
     public int LiveTileCount => _tiles.Count;

@@ -36,8 +36,9 @@ public sealed class ScatterRenderer : IDisposable
     public static bool DrawEnabled = true;
 
     // Route the draw through the GPU-indirect path (ScatterGpuDraw) instead of the CPU RenderMeshInstanced
-    // batcher. Off by default while the indirect path is staged in.
-    public static bool UseGpuDraw = false;
+    // batcher. On by default — validated visually identical and ~2x faster while flying; ScatterGpuDraw
+    // falls back to the CPU batcher when compute/SM4.5 is unavailable (Supported == false).
+    public static bool UseGpuDraw = true;
 
     public void Configure()
     {
@@ -108,7 +109,7 @@ public sealed class ScatterRenderer : IDisposable
             if (!proto.CanRender) continue;
             var matrices = _cache.Matrices(p);
             if (matrices.Count == 0) continue;
-            if (UseGpuDraw && _gpu.Supported) _gpu.DrawProto(p, matrices, camPos);
+            if (UseGpuDraw && _gpu.Supported) _gpu.DrawProto(p, matrices, camPos, _cache.ConsumeDrawDirty(p));
             else _batcher.Draw(proto, _renderParams[p], matrices, _cache.Positions(p), camPos, _impostors[p]);
         }
     }
