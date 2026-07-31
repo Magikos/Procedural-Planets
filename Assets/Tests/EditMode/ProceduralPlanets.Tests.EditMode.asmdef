@@ -5,7 +5,11 @@
         "ProceduralPlanets.Planet",
         "ProceduralPlanets.Core",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "Unity.Burst",
+        "Unity.Collections",
+        "Unity.Mathematics",
+        "Unity.Jobs"
     ],
     "includePlatforms": [
         "Editor"
