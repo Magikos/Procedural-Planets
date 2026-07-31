@@ -34,15 +34,20 @@ Shader "Scatter/VertexColorLit"
         // the plain RenderMeshInstanced path (CPU fallback + transitional draws) untouched. setup() runs in
         // every pass, so the ShadowCaster and DepthNormals passes get the buffer transform too. The inverse
         // is stored (not computed per-vertex) so normals stay correct without a 4x4 inverse in the shader.
+        // _ScatterVisible holds this LOD band's list of indices into the per-prototype master matrix
+        // buffers (the cull compute fills it). Double-indexing means the master is uploaded once and each
+        // band's draw reads only its own culled subset.
         #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
             StructuredBuffer<float4x4> _ScatterMatrices;
             StructuredBuffer<float4x4> _ScatterMatricesInv;
+            StructuredBuffer<uint> _ScatterVisible;
         #endif
         void setup()
         {
         #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
-            unity_ObjectToWorld = _ScatterMatrices[unity_InstanceID];
-            unity_WorldToObject = _ScatterMatricesInv[unity_InstanceID];
+            uint idx = _ScatterVisible[unity_InstanceID];
+            unity_ObjectToWorld = _ScatterMatrices[idx];
+            unity_WorldToObject = _ScatterMatricesInv[idx];
         #endif
         }
 

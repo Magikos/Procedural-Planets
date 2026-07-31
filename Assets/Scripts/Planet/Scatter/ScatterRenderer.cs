@@ -79,7 +79,7 @@ public sealed class ScatterRenderer : IDisposable
             }
         }
         _cache.Configure();
-        _gpu.Configure(protoCount);
+        _gpu.Configure(_library, bounds, _impostors);
         _configured = true;
     }
 
@@ -108,7 +108,7 @@ public sealed class ScatterRenderer : IDisposable
             if (!proto.CanRender) continue;
             var matrices = _cache.Matrices(p);
             if (matrices.Count == 0) continue;
-            if (UseGpuDraw) _gpu.DrawProtoLod0(p, matrices, proto, _renderParams[p]);
+            if (UseGpuDraw && _gpu.Supported) _gpu.DrawProto(p, matrices, camPos);
             else _batcher.Draw(proto, _renderParams[p], matrices, _cache.Positions(p), camPos, _impostors[p]);
         }
     }

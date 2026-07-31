@@ -1,0 +1,37 @@
+#pragma kernel CullBand
+
+// Per LOD band of one prototype: scan the master instance matrices, and for each instance whose camera
+// distance falls in this band's [near, far) range, append its master index to _Visible and bump the
+// indirect draw's instanceCount. Distance-only, no frustum cull (off-camera casters must stay for shadows),
+// matching the grass placement stance. One dispatch per band; the band's args are reset on the CPU each
+// frame (indexCount + instanceCount=0) before dispatch.
+
+StructuredBuffer<float4x4> _Master;   // per-prototype object->world matrices (translation = world position)
+RWStructuredBuffer<uint> _Visible;    // output: master indices in this band
+RWStructuredBuffer<uint> _Args;       // IndirectDrawIndexedArgs as 5 uints; [1] = instanceCount
+
+uint _Count;                          // instances in _Master
+uint _VisibleCapacity;                // length of _Visible
+float3 _CamPos;
+float _Near2;                         // band near distance squared
+float _Far2;                          // band far distance squared
+
+[numthreads(64, 1, 1)]
+void CullBand(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= _Count) return;
+
+    float4x4 m = _Master[i];
+    float3 pos = float3(m._m03, m._m13, m._m23);
+    float3 d = pos - _CamPos;
+    float d2 = dot(d, d);
+    if (d2 < _Near2 || d2 >= _Far2) return;
+
+    uint slot;
+    InterlockedAdd(_Args[1], 1u, slot);
+    if (slot < _VisibleCapacity)
+        _Visible[slot] = i;
+    else
+        InterlockedAdd(_Args[1], 0xFFFFFFFFu); // capacity == _Count, so this cannot actually happen
+}

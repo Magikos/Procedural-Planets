@@ -59,12 +59,14 @@ Shader "Scatter/Impostor"
             #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
                 StructuredBuffer<float4x4> _ScatterMatrices;
                 StructuredBuffer<float4x4> _ScatterMatricesInv;
+                StructuredBuffer<uint> _ScatterVisible; // this band's indices into the master matrix buffers
             #endif
             void setup()
             {
             #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
-                unity_ObjectToWorld = _ScatterMatrices[unity_InstanceID];
-                unity_WorldToObject = _ScatterMatricesInv[unity_InstanceID];
+                uint idx = _ScatterVisible[unity_InstanceID];
+                unity_ObjectToWorld = _ScatterMatrices[idx];
+                unity_WorldToObject = _ScatterMatricesInv[idx];
             #endif
             }
 
@@ -195,12 +197,14 @@ Shader "Scatter/Impostor"
             #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
                 StructuredBuffer<float4x4> _ScatterMatrices;
                 StructuredBuffer<float4x4> _ScatterMatricesInv;
+                StructuredBuffer<uint> _ScatterVisible; // this band's indices into the master matrix buffers
             #endif
             void setup()
             {
             #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
-                unity_ObjectToWorld = _ScatterMatrices[unity_InstanceID];
-                unity_WorldToObject = _ScatterMatricesInv[unity_InstanceID];
+                uint idx = _ScatterVisible[unity_InstanceID];
+                unity_ObjectToWorld = _ScatterMatrices[idx];
+                unity_WorldToObject = _ScatterMatricesInv[idx];
             #endif
             }
 
