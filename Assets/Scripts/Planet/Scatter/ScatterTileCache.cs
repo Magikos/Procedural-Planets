@@ -42,6 +42,7 @@ public sealed class ScatterTileCache
     const int MaxPairsPerTick = 256;       // serial-fallback: (tile, prototype) gathers per background hop
     const int MaxPairsPerBatch = 1024;     // Burst path: pairs per parallel dispatch (larger amortises schedule/await)
     const int JobInnerBatch = 4;           // IJobParallelFor inner batch size
+    const int CommitInstancesPerFrame = 20000; // Burst path: cap main-thread commit per frame; spread the rest
     const long DrainBudgetMs = 200;        // one worker invocation keeps draining batches up to this wall time
 
     readonly ScatterField _field;
@@ -381,7 +382,11 @@ public sealed class ScatterTileCache
 
             if (epoch != _epoch || !_configured) return false; // Configure/Reset ran during the poll
 
+            // Committing baked matrices for a whole batch (up to ~100k instances in dense biomes) in one
+            // frame is the remaining spike. Spread it: yield a frame each time the committed instance count
+            // crosses the cap, so the main thread never commits more than ~CommitInstancesPerFrame at once.
             var reader = stream.AsReader();
+            int sinceYield = 0;
             for (int i = 0; i < take; i++)
             {
                 var list = _batchResults[i];
@@ -390,6 +395,13 @@ public sealed class ScatterTileCache
                 for (int k = 0; k < nItems; k++) list.Add(reader.Read<ScatterInstance>());
                 reader.EndForEachIndex();
                 Commit(_batch[i], list);
+                sinceYield += list.Count;
+                if (sinceYield >= CommitInstancesPerFrame && i + 1 < take)
+                {
+                    sinceYield = 0;
+                    await Awaitable.NextFrameAsync();
+                    if (epoch != _epoch || !_configured) return false;
+                }
             }
             return true;
         }
