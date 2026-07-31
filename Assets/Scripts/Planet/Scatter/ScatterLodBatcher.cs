@@ -11,6 +11,10 @@ public sealed class ScatterLodBatcher
     const int BatchCap = 1023; // Graphics.RenderMeshInstanced hard cap
 
     readonly Matrix4x4[] _batch = new Matrix4x4[BatchCap];
+    // Per-instance camera distance², computed ONCE per prototype per frame and reused across every LOD
+    // band + impostor pass — the vector distance was the batcher's dominant per-frame cost and it was being
+    // recomputed once per band (5x). Grows to the largest prototype instance count seen.
+    float[] _dist = System.Array.Empty<float>();
 
     // Debug view (scatter.lodview): tint every instance by which LOD band it draws in, so LOD transitions
     // and pop-in are visible. LOD0 green, LOD1 yellow, LOD2 orange, LOD3+ red, impostor magenta. Consumers
@@ -59,6 +63,11 @@ public sealed class ScatterLodBatcher
                      IReadOnlyList<Matrix4x4> matrices, IReadOnlyList<Vector3> positionsWS, Vector3 camPos,
                      in Impostor impostor = default)
     {
+        // One distance pass for the whole prototype; every band below reads _dist instead of recomputing.
+        int count = matrices.Count;
+        if (_dist.Length < count) _dist = new float[Mathf.NextPowerOfTwo(count)];
+        for (int i = 0; i < count; i++) _dist[i] = (positionsWS[i] - camPos).sqrMagnitude;
+
         for (int part = 0; part < proto.Parts.Length; part++)
         {
             ScatterPartDto pd = proto.Parts[part];
@@ -76,7 +85,7 @@ public sealed class ScatterLodBatcher
                 float near = lod == 0 ? 0f : Mathf.Max(0f, pd.LodEndDistances[lod - 1] - TransitionWidth);
                 SetFade(rp, far - TransitionWidth, far);
                 SetLodTint(rp, LodTintDebug ? _lodColors[Mathf.Min(lod, _lodColors.Length - 1)] : _tintOff);
-                DrawBand(rp, mesh, near * near, far * far, matrices, positionsWS, camPos);
+                DrawBand(rp, mesh, near * near, far * far, matrices, count);
             }
         }
 
@@ -90,7 +99,7 @@ public sealed class ScatterLodBatcher
             DrawBand(impostor.Params, impostor.Quad,
                      start * start,
                      impostor.EndDistance * impostor.EndDistance,
-                     matrices, positionsWS, camPos);
+                     matrices, count);
         }
     }
 
@@ -107,13 +116,12 @@ public sealed class ScatterLodBatcher
         rp.matProps.SetFloat(_fadeEndId, end);
     }
 
-    void DrawBand(RenderParams rp, Mesh mesh, float near2, float far2,
-                  IReadOnlyList<Matrix4x4> matrices, IReadOnlyList<Vector3> positionsWS, Vector3 camPos)
+    void DrawBand(RenderParams rp, Mesh mesh, float near2, float far2, IReadOnlyList<Matrix4x4> matrices, int count)
     {
         int n = 0;
-        for (int i = 0; i < matrices.Count; i++)
+        for (int i = 0; i < count; i++)
         {
-            float d2 = (positionsWS[i] - camPos).sqrMagnitude;
+            float d2 = _dist[i];
             if (d2 < near2 || d2 >= far2) continue;
             _batch[n++] = matrices[i];
             if (n == BatchCap)
