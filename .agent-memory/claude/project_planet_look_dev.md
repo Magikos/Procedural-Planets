@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 5a0ee82f-d367-47b6-bbee-397761463f85
-  modified: 2026-07-31T00:10:43.560Z
+  modified: 2026-07-31T04:10:24.175Z
 ---
 
 Look-dev arc on branch `scatter-placement` (2026-07-28), goal = planet surface views like the Synty
@@ -107,10 +107,13 @@ POLYGON Meadow/Forest marketing render (lush, warm, dense). Bryan's Synty source
   flat-veg atlases; no custom toon shader.
 - **Golden-meadow look-dev pass toward `local-only/Target Example.png`** (2026-07-30, commit `cc2917d`).
   Target = Synty sunset meadow: open rolling grass, sparse trees, dense red reeds by water, warm/pink sky.
-  - **BIGGEST WIN = thin the trees.** Grassland/Savanna/Steppe read as dense FOREST because tree prototypes
-    sat at 17-30 m spacing with ~9 m canopies (overlap into a wall from ground level). Raised open-biome
-    tree spacing to **45 m**, bushes to 10 m -> reads as an open meadow with scattered trees like the target.
-    Tree density is the single biggest lever for the meadow-vs-forest feel. (Forest biome left dense.)
+  - **Tree density is the biggest meadow-vs-forest lever** - but 45 m was an OVER-correction (commit
+    `f3b9da2` fixes it): Bryan said 45 m read barren / "lost the oaks". IMPORTANT: Grassland has THREE
+    stacked oak prototypes (Meadow green + Golden + Autumn, all `SM_Env_Tree_Meadow_01`), so the EFFECTIVE
+    spacing is ~each/1.4, much denser than the per-prototype number. 17/19/19 -> ~12 m effective = a wall;
+    45/45/45 -> ~33 m effective = barren. Landed on **28/32/32 -> ~20 m effective = lush but open**, matching
+    the single-prototype Swamp Tree at 24 m which reads lush+walkable. Savanna 28, Steppe 32, bushes 6-7.
+    (Forest biome stays dense at 13-17 m - correct.) When judging density account for stacked prototypes.
   - **Red reeds**: `FoliageReeds.mat` `_SeasonColor` -> warm red (1.5,0.55,0.30); reed prototypes densified
     (spacing 2.6, weight 1.5). Verified: dense crimson reed clusters in swamp = the target's red reeds.
   - **Warm/dreamy grade** (`Assets/Settings/PlanetLookProfile.asset`): WhiteBalance temp 14->22 +tint 4,
