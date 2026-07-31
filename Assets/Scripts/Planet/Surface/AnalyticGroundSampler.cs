@@ -5,7 +5,7 @@ using UnityEngine;
 // streamed), and pure — no Transform, no chunk lookup — so a gather using it can run off the main
 // thread. This is the fast path for pure-heightfield terrain; the marching-cubes/SDF path will be a
 // separate ISurfaceGroundSampler that raymarches a density field behind the same seam.
-public sealed class AnalyticGroundSampler : ISurfaceGroundSampler
+public sealed class AnalyticGroundSampler : ISurfaceGroundSampler, IBurstElevationSource
 {
     // Tangent offset used to estimate the surface normal, in metres of ground distance. Small
     // enough to read local slope, large enough not to alias high-frequency noise.
@@ -58,4 +58,16 @@ public sealed class AnalyticGroundSampler : ISurfaceGroundSampler
     }
 
     float RadiusAt(Vector3 dir) => _shape.GetScaledElevation(_shape.SampleElevation(dir));
+
+    // IBurstElevationSource: hand the analytic noise stack to a Burst gather job. The blittable layers
+    // funnel through the same NoiseData.Evaluate the managed RadiusAt uses (golden-tested parity).
+    public Unity.Collections.NativeArray<NoiseFilterData> BuildNoiseFilterData(Unity.Collections.Allocator allocator)
+        => _shape.BuildNoiseFilterData(allocator);
+
+    public Unity.Collections.NativeArray<byte> BuildDiagnosticCells(Unity.Collections.Allocator allocator)
+        => _shape.BuildDiagnosticTerrainCells(allocator);
+
+    public DiagnosticTerrainSettingsData DiagnosticData => _shape.DiagnosticTerrainData;
+
+    public float PlanetRadius => _shape.Settings.PlanetRadius;
 }

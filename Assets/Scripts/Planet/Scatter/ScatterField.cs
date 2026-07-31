@@ -36,6 +36,12 @@ public sealed class ScatterField : IDisposable
         ConsoleRegistry.RegisterInstance(this);
     }
 
+    // Same-assembly access for the tile cache's Burst gather: the biome precompute evaluates these off
+    // the main thread (both are pure/LOD-independent, as the gather already relies on). The Burst path
+    // reads elevation directly via IBurstElevationSource; biome still runs managed through this.
+    internal ISurfaceGroundSampler Ground => _ground;
+    internal IBiomeProvider Biome => _biome;
+
     // Called after every successful generation (beside _grass.Configure), i.e. after the last
     // cancellable await. Radii are LOCAL. Re-validates the final (possibly overridden) DTO.
     public void Configure(int worldSeed, float baseRadiusLocal, float seaRadiusLocal, bool hasOcean)
