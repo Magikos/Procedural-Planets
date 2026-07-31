@@ -17,6 +17,13 @@ public sealed class ScatterLodBatcher
     // (FoliageLit / Scatter) lerp albedo toward _LodDebugTint.rgb by its alpha; alpha 0 (default) = no tint.
     public static bool LodTintDebug;
     static readonly int _lodTintId = Shader.PropertyToID("_LodDebugTint");
+
+    // LOD crossfade: overlap adjacent bands by this width and dither the OUTGOING LOD out over its last
+    // TransitionWidth metres (via the material's existing _FadeStart/_FadeEnd screen-door), while the
+    // INCOMING LOD is already drawn solid underneath. Kills the hard mesh-swap pop at each band boundary.
+    const float TransitionWidth = 15f;
+    static readonly int _fadeStartId = Shader.PropertyToID("_FadeStart");
+    static readonly int _fadeEndId = Shader.PropertyToID("_FadeEnd");
     static readonly Color[] _lodColors =
     {
         new Color(0.2f, 1f, 0.2f, 1f),   // LOD0
@@ -25,6 +32,7 @@ public sealed class ScatterLodBatcher
         new Color(1f, 0.15f, 0.15f, 1f), // LOD3+
     };
     static readonly Color _impostorColor = new Color(1f, 0.2f, 1f, 1f);
+    static readonly Color _tintOff = new Color(0f, 0f, 0f, 0f); // alpha 0 => shader lerp is a no-op
 
     // One camera-facing quad (billboarded in the impostor shader), drawn beyond the mesh-LOD range out
     // to EndDistance. Valid is false when there is no baked card, which skips the tier (mesh-LOD only).
@@ -62,18 +70,25 @@ public sealed class ScatterLodBatcher
             {
                 Mesh mesh = pd.LodMeshes[lod];
                 if (mesh == null) continue;
-                float near = lod == 0 ? 0f : pd.LodEndDistances[lod - 1];
                 float far = pd.LodEndDistances[lod];
-                if (LodTintDebug) SetLodTint(rp, _lodColors[Mathf.Min(lod, _lodColors.Length - 1)]);
+                // Pull this band's start back into the previous band so both draw across the transition;
+                // the previous LOD is dithering out there while this one is solid (it fades at its own far).
+                float near = lod == 0 ? 0f : Mathf.Max(0f, pd.LodEndDistances[lod - 1] - TransitionWidth);
+                SetFade(rp, far - TransitionWidth, far);
+                SetLodTint(rp, LodTintDebug ? _lodColors[Mathf.Min(lod, _lodColors.Length - 1)] : _tintOff);
                 DrawBand(rp, mesh, near * near, far * far, matrices, positionsWS, camPos);
             }
         }
 
         if (impostor.Valid)
         {
-            if (LodTintDebug) SetLodTint(impostor.Params, _impostorColor);
+            // Impostor takes over at the last mesh LOD's cull (StartDistance); overlap so the mesh dithers
+            // out over the last TransitionWidth while the card is already solid underneath.
+            float start = Mathf.Max(0f, impostor.StartDistance - TransitionWidth);
+            SetFade(impostor.Params, impostor.EndDistance - TransitionWidth, impostor.EndDistance);
+            SetLodTint(impostor.Params, LodTintDebug ? _impostorColor : _tintOff);
             DrawBand(impostor.Params, impostor.Quad,
-                     impostor.StartDistance * impostor.StartDistance,
+                     start * start,
                      impostor.EndDistance * impostor.EndDistance,
                      matrices, positionsWS, camPos);
         }
@@ -83,6 +98,13 @@ public sealed class ScatterLodBatcher
     {
         if (rp.matProps == null) return; // no property block on this part; skip the debug tint
         rp.matProps.SetColor(_lodTintId, c);
+    }
+
+    static void SetFade(RenderParams rp, float start, float end)
+    {
+        if (rp.matProps == null) return;
+        rp.matProps.SetFloat(_fadeStartId, start);
+        rp.matProps.SetFloat(_fadeEndId, end);
     }
 
     void DrawBand(RenderParams rp, Mesh mesh, float near2, float far2,

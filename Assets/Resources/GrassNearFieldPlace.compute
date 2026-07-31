@@ -358,10 +358,18 @@ void PlaceAndCullNearField(uint3 id : SV_DispatchThreadID)
         return;
     }
 
-    // Biome density gate.
+    // Biome density gate. Feather the biome boundary instead of a hard cutoff: keep each cell with a
+    // probability that ramps up with blended density, so grass thins out with a dithered edge across the
+    // biome transition rather than stopping on a razor line.
     float density;
     BiomeGrassParams biome = SampleGrassParamsBilinear(_NearFieldFaceIndex, faceUv, density);
     if (density <= 0.001)
+    {
+        AddStat(NF_STAT_DENSITY_REJECTED, 1u);
+        return;
+    }
+    float densityKeep = smoothstep(0.0, 0.5, density);
+    if (Hash01(cellHash ^ 0x9e3779b9u) > densityKeep)
     {
         AddStat(NF_STAT_DENSITY_REJECTED, 1u);
         return;
