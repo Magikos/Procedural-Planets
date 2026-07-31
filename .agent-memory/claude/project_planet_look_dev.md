@@ -5,8 +5,18 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 5a0ee82f-d367-47b6-bbee-397761463f85
-  modified: 2026-07-31T04:10:24.175Z
+  modified: 2026-07-31T16:00:37.538Z
 ---
+
+**2026-07-31 cohesion pass** (commit `34ed07c`): Bryan — "assets look plopped, colors clash, stand out
+too much." Fix = UNIFY the palette, not add groundcover (savanna stays open). Grade
+(`PlanetLookProfile`): saturation 46->30 (pull vivid greens toward the ground), contrast 8->4 (LIFT the
+crushed near-black shadows/rock undersides — the black blobs were half the clash), bloom 2.2->1.75 +
+threshold 0.85->1.0 (less washout), colourFilter (1,0.94,0.83) slightly warmer to tie foliage/ground/rock
+into one warm family. Rocks: `ScatterProps.mat` (`Scatter/VertexColorLit`, shared by all rock prototypes)
+`_BaseColor` white->warm (1.55,1.42,1.15) — rocks are dark because the Synty mesh VERTEX COLOURS are dark;
+`_BaseColor` multiplies them, lifting to warm mid-gray. All hot-reload live (no regen). Aerial before/after
+confirmed softer/harmonized; ground-level rock verify was blocked by the usual TryGetSurfaceRadius mis-sample.
 
 Look-dev arc on branch `scatter-placement` (2026-07-28), goal = planet surface views like the Synty
 POLYGON Meadow/Forest marketing render (lush, warm, dense). Bryan's Synty source (incl the exact
