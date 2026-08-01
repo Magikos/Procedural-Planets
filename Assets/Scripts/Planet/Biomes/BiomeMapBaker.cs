@@ -25,7 +25,7 @@ public static class BiomeMapBaker
     // and a wider sample window gives biome boundaries enough distance to read as gradual
     // transitions instead of thin dark lines in DEBUG_BIOME_MAP_BLEND.
     const int HighResolution = MapResolution * 2;       // 128 at MapResolution=64
-    const int KernelRadius = 6;                          // window = (2*r + 1)^2 = 13x13 = 169 samples
+    const int KernelRadius = 12;                         // window = (2*r + 1)^2 = 25x25 = 625 samples (wider = softer biome borders)
     const int KernelSamples = (KernelRadius * 2 + 1) * (KernelRadius * 2 + 1);
     const int PaddedResolution = HighResolution + KernelRadius * 2;
     const int TexelCount = MapResolution * MapResolution;

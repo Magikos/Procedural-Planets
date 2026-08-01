@@ -375,14 +375,17 @@ public sealed class ScatterTileCache
                 HasOcean = ctx.HasOcean ? (byte)1 : (byte)0,
                 Out = stream.AsWriter(),
             };
+            // Complete on the main thread (Unity forbids completing a job from a worker thread). Doing it
+            // inline instead of yielding a full frame per batch drains at job speed (~7x faster), which keeps
+            // the stream from being outrun; the short job wait is the main-thread cost, and the commit below
+            // spreads across frames.
             _pending = job.Schedule(take, JobInnerBatch);
             _hasPending = true;
             JobHandle.ScheduleBatchedJobs();
-            while (!_pending.IsCompleted) await Awaitable.NextFrameAsync();
             _pending.Complete();
             _hasPending = false;
 
-            if (epoch != _epoch || !_configured) return false; // Configure/Reset ran during the poll
+            if (epoch != _epoch || !_configured) return false; // Configure/Reset ran while completing
 
             // Committing baked matrices for a whole batch (up to ~100k instances in dense biomes) in one
             // frame is the remaining spike. Spread it: yield a frame each time the committed instance count
