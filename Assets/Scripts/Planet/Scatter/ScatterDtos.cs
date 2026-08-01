@@ -82,11 +82,12 @@ public sealed record ScatterPrototypeDto(
         get { float m = 0f; foreach (var part in Parts) if (part.CanRender && part.MaxCullDistance > m) m = part.MaxCullDistance; return m; }
     }
 
-    // Far-field impostor policy, derived (not authored): a coarse-enough prototype (trees, mesh cull
-    // >= ImpostorMinMeshCull) gets a billboard tier past its mesh cull out to ImpostorRangeMultiplier x
-    // that cull. Rocks/bushes/grass keep their short range. Kept here so gather (ScatterField) and draw
-    // (ScatterRenderer) agree on which prototypes reach far and how far.
-    const float ImpostorMinMeshCull = 300f;
+    // Far-field impostor policy, derived (not authored): a prototype whose mesh cull reaches
+    // >= ImpostorMinMeshCull gets a billboard tier past its mesh cull out to ImpostorRangeMultiplier x
+    // that cull. The cutoff sits just below the bush/rock cull band (120/250) so mid-size props reach far
+    // like trees; tiny ground clutter (flowers, mushrooms, grass at <=90) stays short-range. Kept here so
+    // gather (ScatterField) and draw (ScatterRenderer) agree on which prototypes reach far and how far.
+    const float ImpostorMinMeshCull = 120f;
     // Impostors reach this multiple of the mesh cull. The incremental tile cache makes far tiles cheap to
     // draw, so the tree line pushes well toward the horizon. Cost is the gather: FarGatherRadius scales
     // with this, so the gathered disc area grows as the square — higher = a farther tree line but a slower
