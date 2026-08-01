@@ -34,8 +34,11 @@ Shader "Scatter/Impostor"
             #pragma multi_compile_instancing
             #pragma target 4.5
             #pragma instancing_options procedural:setup
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Includes/PlanetSunLighting.hlsl"
+            #include "Includes/CloudShadows.hlsl"
 
             // Light from the planet _SunParams sun (like FoliageLit + terrain), not the URP main light,
             // so impostors match the near mesh trees and track day/night.
@@ -93,6 +96,7 @@ Shader "Scatter/Impostor"
                 float3 billRight : TEXCOORD3; // billboard basis, world space
                 float3 billUp : TEXCOORD4;
                 float3 billFwd : TEXCOORD5;
+                float3 positionWS : TEXCOORD6;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -119,6 +123,7 @@ Shader "Scatter/Impostor"
                 float3 world = origin + right * local.x + up * local.y;
 
                 OUT.positionHCS = TransformWorldToHClip(world);
+                OUT.positionWS = world;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.dist = distance(_WorldSpaceCameraPos, origin);
                 OUT.screenPos = ComputeScreenPos(OUT.positionHCS);
@@ -151,11 +156,18 @@ Shader "Scatter/Impostor"
                 // Planet sun (matches FoliageLit): billUp is the surface normal at the instance.
                 float3 planetNormal = normalize(IN.billUp);
                 float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
-                float daylight = PlanetDaylightFromLocalSun(dot(planetNormal, sunDir));
+                float localSun = dot(planetNormal, sunDir);
+                float daylight = PlanetDaylightFromLocalSun(localSun);
                 half ndl = saturate(dot(N, sunDir));
+                // Receive the same cast + cloud shadow the mesh foliage does, so a distant billboard darkens
+                // under a hillside or a drifting cloud instead of glowing while the world around it shades.
+                // Floored like the leaf shade so the far tree line dims but never collapses to black.
+                half shadowAtten = MainLightRealtimeShadow(TransformWorldToShadowCoord(IN.positionWS));
+                float cloudShadow = CloudShadowFactor(IN.positionWS, sunDir, localSun);
+                half shade = lerp(0.5, 1.0, shadowAtten * cloudShadow);
                 // Match the near-tree canopy floor so the far tree line reads at the same brightness as the
                 // mesh trees it fades into (both are lush, not a dark band).
-                half3 dayColor = card.rgb * lerp(0.6, 1.12, ndl);
+                half3 dayColor = card.rgb * lerp(0.6, 1.12, ndl * shade);
                 half3 nightColor = card.rgb * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
                 return half4(lerp(nightColor, dayColor, daylight), 1);
             }
@@ -231,6 +243,7 @@ Shader "Scatter/Impostor"
                 float3 billRight : TEXCOORD3;
                 float3 billUp : TEXCOORD4;
                 float3 billFwd : TEXCOORD5;
+                float3 positionWS : TEXCOORD6;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -253,6 +266,7 @@ Shader "Scatter/Impostor"
                 float3 world = origin + right * local.x + up * local.y;
 
                 OUT.positionHCS = TransformWorldToHClip(world);
+                OUT.positionWS = world;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.dist = distance(_WorldSpaceCameraPos, origin);
                 OUT.screenPos = ComputeScreenPos(OUT.positionHCS);

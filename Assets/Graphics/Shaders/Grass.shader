@@ -386,9 +386,14 @@ Shader "Planet/Grass"
                     saturate(_GrassDebugBladeTint.rgb),
                     saturate(_GrassLayerDebugTint.rgb),
                     layerDebugStrength);
-                float edgeShade = lerp(0.55, 1.0, saturate(input.fadeAlpha));
+                // Near blades and the far blanket are the same shader; the far blanket is the cheap fake of
+                // the near grass, so it must read at the same brightness. These two floors were low enough to
+                // leave a visible ring where the bright near field meets the dimmer blanket. Kept as albedo
+                // multipliers (below the shadow-attenuated day term) so matching brightness never makes the
+                // blanket glow in a terrain or cloud shadow.
+                float edgeShade = lerp(0.80, 1.0, saturate(input.fadeAlpha));
                 float3 sourceAlbedo = saturate(input.color.rgb)
-                    * lerp(0.45, 1.0, saturate(_GrassChunkFade))
+                    * lerp(0.85, 1.0, saturate(_GrassChunkFade))
                     * edgeShade * cardShade;
                 float3 albedo = lerp(
                     sourceAlbedo,
