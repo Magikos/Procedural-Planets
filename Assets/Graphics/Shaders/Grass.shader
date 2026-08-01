@@ -321,7 +321,7 @@ Shader "Planet/Grass"
                 // bright, warm (yellow-green) tip, so each blade reads as a lit gradient instead of
                 // a flat brightness fade. Tip pushes above 1 for a subtle sunlit-edge glow.
                 float g = smoothstep(0.0, 1.0, t);
-                float3 heightRamp = lerp(float3(0.40, 0.52, 0.32), float3(1.16, 1.15, 0.74), g);
+                float3 heightRamp = lerp(float3(0.40, 0.52, 0.32), float3(1.0, 0.99, 0.64), g);
                 float3 biomeTint = GradeGrassTint(blade.Color.rgb, 0.76, 0.88);
                 float3 bladeAlbedo = saturate(biomeTint * tint * brightness) * heightRamp;
                 float3 canopyAlbedo = GrassCanopyAlbedo(blade.Color.rgb);
@@ -412,7 +412,9 @@ Shader "Planet/Grass"
                 // normal sign receives sunlight.
                 float bladeDiffuse = saturate(abs(dot(normalWS, sunDir)));
                 float wrapDiffuse = saturate(bladeDiffuse * 0.72 + 0.28);
-                float3 dayColor = albedo * (0.12 + wrapDiffuse * surfaceDirect * 0.82);
+                // Lower ambient floor so grass darkens WITH the sun instead of staying lit and blowing out
+                // next to the dim terrain/trees at sunrise (the direct term still carries the lit look).
+                float3 dayColor = albedo * (0.07 + wrapDiffuse * surfaceDirect * 0.86);
                 dayColor *= lerp(1.0, cloudShadow, daylight);
 
                 float horizonFactor = saturate(1.0 - abs(localSun) * 3.0);
