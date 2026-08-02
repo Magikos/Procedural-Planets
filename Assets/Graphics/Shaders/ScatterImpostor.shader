@@ -152,6 +152,10 @@ Shader "Scatter/Impostor"
                 float cy = IN.uv.y * 2.0 - 1.0;
                 float nz = sqrt(saturate(_NormalBulge - cx * cx - cy * cy));
                 float3 N = normalize(IN.billRight * cx + IN.billUp * cy + IN.billFwd * nz);
+                // Tilt the canopy normal toward the surface-up (billUp), the way FoliageLit tilts leaf
+                // normals up: a camera-facing normal misses a near-overhead (noon) sun, so the whole far
+                // tree line and the rock/bush billboards collapsed to the shade floor and read grey/black.
+                N = normalize(lerp(N, IN.billUp, 0.6));
 
                 // Planet sun (matches FoliageLit): billUp is the surface normal at the instance.
                 float3 planetNormal = normalize(IN.billUp);

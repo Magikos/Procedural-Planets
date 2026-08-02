@@ -322,7 +322,7 @@ Shader "Scatter/FoliageLit"
                 float leafShade = lerp(0.5, 1.0, shadowAtten * cloudShadow);
                 float trunkShade = lerp(0.45, 1.0, shadowAtten * cloudShadow);
                 float direct = ndl * lerp(trunkShade, leafShade, lm);
-                half3 dayColor = albedo * lerp(0.68, 1.15, direct);
+                half3 dayColor = albedo * lerp(0.82, 1.25, direct);
                 // Leaf backlight: the canopy glows where the sun is behind the leaves (lm = leaf mask, so
                 // the trunk is excluded). This is what gives Synty foliage its luminous, translucent look.
                 float3 viewDir = normalize(_WorldSpaceCameraPos - IN.positionWS);

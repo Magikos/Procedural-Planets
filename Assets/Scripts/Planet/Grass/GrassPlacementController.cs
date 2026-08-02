@@ -7,7 +7,7 @@ sealed class GrassPlacementController : System.IDisposable, IGrassDebugStatsProv
     const float AllocationReleasePaddingMeters = 50f;
     const float CameraRedispatchDistance = 25f; // re-place when camera moves > 25m
     const float ChunkFadeInStart = 128f;
-    const float ChunkPeakDistance = 220f;
+    const float ChunkPeakDistance = 190f;
 
     static readonly int VisualNearFadeStartId = Shader.PropertyToID("_GrassVisualNearFadeStart");
     static readonly int VisualNearFadeEndId = Shader.PropertyToID("_GrassVisualNearFadeEnd");
