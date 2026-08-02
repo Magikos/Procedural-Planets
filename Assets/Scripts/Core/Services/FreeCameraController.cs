@@ -442,6 +442,27 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
         return $"camera look-at: position=({position.x:F2}, {position.y:F2}, {position.z:F2}) target=({target.x:F2}, {target.y:F2}, {target.z:F2})";
     }
 
+    [ConsoleCommand("step", "Move the camera forward by N metres along the surface tangent, keeping altitude and aim. Reproducible step-through for capture scripts: camera.step 10.", MonoTargetType.Single)]
+    string StepCmd(float meters)
+    {
+        Vector3 center = TargetCenter != null ? TargetCenter.position : Vector3.zero;
+        Vector3 toCam = transform.position - center;
+        float radius = toCam.magnitude;
+        if (radius < 0.0001f)
+            return "camera step: undefined at planet center";
+
+        Vector3 up = toCam / radius;
+        Vector3 forward = Vector3.ProjectOnPlane(transform.forward, up);
+        if (forward.sqrMagnitude < 1e-6f)
+            forward = Vector3.ProjectOnPlane(transform.up, up); // looking straight up/down: fall back to view-up
+        forward.Normalize();
+
+        Vector3 stepped = transform.position + forward * meters;
+        transform.position = center + (stepped - center).normalized * radius; // walk the sphere, hold altitude
+        _skipNextDelta = true;
+        return $"camera stepped {meters:F1}m along the surface";
+    }
+
     [ConsoleCommand("face-sun", "Rotate the camera in place to face the sun's current direction, without moving it. Same as the Backspace key. Useful in scripts after camera.look-at + time.set-local to aim at wherever the sun ends up, instead of a hardcoded direction that goes stale as time passes.", MonoTargetType.Single)]
     string FaceSunCmd()
     {

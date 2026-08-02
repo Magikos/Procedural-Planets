@@ -1,0 +1,61 @@
+@name Step Test
+@timeout 180
+@sidecar camera.position
+@sidecar debug.mode
+@sidecar light.status
+@sidecar grass.status
+@sidecar grass.overlay-status
+@defer time.freeze false
+
+# Reproducible step-through capture harness.
+#   1. Fly to the spot, aim the shot, then in the console:  camera.save-teleport "Step Test"
+#   2. Run:  script.run "Step Test"
+# Teleports to that saved pose, fixes the sun at noon, then screenshots + walks forward 10 m, six times.
+# Frames land in local-only/debug-screenshots as  F10-Step Test-<runid>-stepNNN-<mode>-...  (png + txt
+# sidecar; every sidecar carries the camera pose + grass/light state so runs are reproducible & comparable).
+#
+# debug.screenshot captures ONLY the current debug.mode (one image, ignores capture sets). Change the
+# debug.mode line below to pick what each step shoots:
+#   debug.mode Off                     normal lit view (line up the shot / see the real issue)
+#   debug.mode TerrainSelectedAlbedo   terrain colour incl. grass overlay (the biome-edge line lives here)
+#   debug.mode BiomeMapFlatColor       biome colour only (smooth baseline to compare against)
+#   debug.mode GrassLodCoverage        grass coverage / LOD banding
+#   debug.mode BiomeMapPrimaryId       which biome per texel
+# Time of day: change time.set-local (0.25 sunrise, 0.5 noon, 0.75 sunset) to probe the bright-grass case.
+
+camera.teleport "Step Test"
+time.set-local 0.5
+time.freeze true
+
+# --- CONFIG: what each step captures ---
+debug.mode Off
+# ---------------------------------------
+
+# step 0 (0 m)
+@wait seconds 2.5
+debug.screenshot
+
+# step 1 (10 m)
+camera.step 10
+@wait seconds 2.5
+debug.screenshot
+
+# step 2 (20 m)
+camera.step 10
+@wait seconds 2.5
+debug.screenshot
+
+# step 3 (30 m)
+camera.step 10
+@wait seconds 2.5
+debug.screenshot
+
+# step 4 (40 m)
+camera.step 10
+@wait seconds 2.5
+debug.screenshot
+
+# step 5 (50 m)
+camera.step 10
+@wait seconds 2.5
+debug.screenshot
