@@ -777,6 +777,11 @@ Shader "Planet/VertexColor"
                 // (the soft biome blend maps a thin farWeight band to a visible spatial stripe).
                 float grassCoverage = smoothstep(0.0, 0.9, eval.farWeight);
                 grassCoverage *= 1.0 - pathMask;
+                // The vivid overlay green over bright arid (tan) ground on the far side of a biome border
+                // reads as a bright line. Gate the overlay by terrain greenness so it paints grassy interiors
+                // (green ground) and recedes onto arid ground, letting the biome colour blend carry the border.
+                float terrGreen = terrainAlbedo.g - max(terrainAlbedo.r, terrainAlbedo.b);
+                grassCoverage *= saturate(terrGreen * 8.0 + 0.45);
                 if (grassCoverage <= 0.001)
                     return terrainAlbedo;
                 if (_GrassDebugLayerColors > 0.5)
