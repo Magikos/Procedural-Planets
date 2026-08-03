@@ -777,11 +777,6 @@ Shader "Planet/VertexColor"
                 // (the soft biome blend maps a thin farWeight band to a visible spatial stripe).
                 float grassCoverage = smoothstep(0.0, 0.9, eval.farWeight);
                 grassCoverage *= 1.0 - pathMask;
-                // The vivid overlay green over bright arid (tan) ground on the far side of a biome border
-                // reads as a bright line. Gate the overlay by terrain greenness so it paints grassy interiors
-                // (green ground) and recedes onto arid ground, letting the biome colour blend carry the border.
-                float terrGreen = terrainAlbedo.g - max(terrainAlbedo.r, terrainAlbedo.b);
-                grassCoverage *= saturate(terrGreen * 8.0 + 0.45);
                 if (grassCoverage <= 0.001)
                     return terrainAlbedo;
                 if (_GrassDebugLayerColors > 0.5)
@@ -811,7 +806,10 @@ Shader "Planet/VertexColor"
 
                 // Match the authored blade color pipeline so geometry and surface LOD share
                 // one material identity. Variation comes from grass fibers, never dirt albedo.
-                float3 grassSurface = GradeGrassTint(eval.tint, 0.82, 0.98);
+                // Saturation trimmed from 0.82 so the overlay reads as grass on every ground colour
+                // (incl. tan savanna, which must not look barren at distance) without the vivid green
+                // popping as a bright line where a grassy biome meets an arid one.
+                float3 grassSurface = GradeGrassTint(eval.tint, 0.72, 0.98);
                 float surfaceVariation = lerp(0.82, 1.04, breakup)
                     * lerp(0.98, 1.06, fiber)
                     * lerp(0.84, 1.16, patch)
