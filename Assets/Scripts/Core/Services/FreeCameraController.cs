@@ -53,6 +53,8 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
     public float ElevationMin => _lastElevationMin;
     public float ElevationMax => _lastElevationMax;
 
+    public bool InputSuspended { get; set; }
+
     void Awake()
     {
         _camera = GetComponent<Camera>();
@@ -129,6 +131,10 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
 
         var input = GetInput();
         if (input == null)
+            return;
+
+        // Another owner (character third-person follow) drives the camera; don't consume input or fight it.
+        if (InputSuspended)
             return;
 
         HandleLook(input);
