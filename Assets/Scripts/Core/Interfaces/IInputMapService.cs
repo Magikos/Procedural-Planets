@@ -20,6 +20,8 @@ public interface IInputMapService
     InputAction Scroll { get; }
     InputAction LookHold { get; }
     InputAction Sprint { get; }
+    InputAction Jump { get; }
+    InputAction Crouch { get; }
     InputAction ToggleOrbit { get; }
     InputAction FaceSun { get; }
     InputAction FrameStorm { get; }

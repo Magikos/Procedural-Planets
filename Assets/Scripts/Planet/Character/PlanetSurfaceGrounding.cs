@@ -10,11 +10,15 @@ public sealed class PlanetSurfaceGrounding : IGroundingProvider
 {
     readonly IPlanetSurfaceSampler _sampler;
     readonly Vector3 _center;
+    readonly float _seaLevelRadius;
 
-    public PlanetSurfaceGrounding(IPlanetSurfaceSampler sampler, Vector3 center)
+    /// <param name="seaLevelRadius">If &gt; 0, the character never grounds below this radius — over ocean it
+    /// walks on the water surface instead of the sea floor (placeholder until swimming exists). 0 disables.</param>
+    public PlanetSurfaceGrounding(IPlanetSurfaceSampler sampler, Vector3 center, float seaLevelRadius = 0f)
     {
         _sampler = sampler;
         _center = center;
+        _seaLevelRadius = seaLevelRadius;
     }
 
     public bool TryGround(Vector3 worldPos, Vector3 downDir, float footOffset, out GroundResult result)
@@ -31,7 +35,8 @@ public sealed class PlanetSurfaceGrounding : IGroundingProvider
         if (!_sampler.TryGetSurfaceRadius(radial, out float surfaceRadius))
             return false;
 
-        result = new GroundResult(_center + radial * (surfaceRadius + footOffset), radial);
+        float groundedRadius = Mathf.Max(surfaceRadius, _seaLevelRadius);
+        result = new GroundResult(_center + radial * (groundedRadius + footOffset), radial);
         return true;
     }
 }

@@ -19,6 +19,8 @@ public sealed class InputMapService : IInputMapService, IDisposable
     public InputAction Scroll { get; }
     public InputAction LookHold { get; }
     public InputAction Sprint { get; }
+    public InputAction Jump { get; }
+    public InputAction Crouch { get; }
     public InputAction ToggleOrbit { get; }
     public InputAction FaceSun { get; }
     public InputAction FrameStorm { get; }
@@ -93,6 +95,13 @@ public sealed class InputMapService : IInputMapService, IDisposable
         Sprint = GameplayMap.AddAction("Sprint", InputActionType.Button);
         Sprint.AddBinding("<Keyboard>/leftShift");
         Sprint.AddBinding("<Keyboard>/rightShift");
+
+        Jump = GameplayMap.AddAction("Jump", InputActionType.Button);
+        Jump.AddBinding("<Keyboard>/space");
+
+        Crouch = GameplayMap.AddAction("Crouch", InputActionType.Button);
+        Crouch.AddBinding("<Keyboard>/leftCtrl");
+        Crouch.AddBinding("<Keyboard>/rightCtrl");
 
         ToggleOrbit = AddButton("ToggleOrbit", "<Keyboard>/space");
         FaceSun = AddButton("FaceSun", "<Keyboard>/backspace");
