@@ -38,6 +38,7 @@ Shader "Planet/VertexColor"
         _GrassFarOverlayAltitudeEnd ("Grass Far Overlay Altitude End", Float) = 2600.0
         _GrassFarOverlayFiberStrength ("Grass Far Overlay Fiber Strength", Range(0.0, 1.0)) = 0.65
         _GrassSurfaceBrightness ("Grass Surface Brightness", Range(0.3, 1.5)) = 0.4
+        _GrassSurfaceSaturation ("Grass Surface Saturation", Range(0.0, 1.0)) = 0.72
         [HideInInspector] _GrassWaterRadius ("Grass Water Radius", Float) = -1.0
         [HideInInspector] _SurfacePathDebug ("Surface Path Debug", Float) = 0.0
         [HideInInspector] _PathWearMask ("Path Wear Mask", 2D) = "black" {}
@@ -129,6 +130,7 @@ Shader "Planet/VertexColor"
                 float _GrassFarOverlayAltitudeEnd;
                 float _GrassFarOverlayFiberStrength;
                 float _GrassSurfaceBrightness;
+                float _GrassSurfaceSaturation;
                 float _GrassWaterRadius;
                 float _SurfacePathDebug;
             CBUFFER_END
@@ -806,10 +808,10 @@ Shader "Planet/VertexColor"
 
                 // Match the authored blade color pipeline so geometry and surface LOD share
                 // one material identity. Variation comes from grass fibers, never dirt albedo.
-                // Saturation trimmed from 0.82 so the overlay reads as grass on every ground colour
-                // (incl. tan savanna, which must not look barren at distance) without the vivid green
-                // popping as a bright line where a grassy biome meets an arid one.
-                float3 grassSurface = GradeGrassTint(eval.tint, 0.72, 0.98);
+                // Overlay saturation is live-tunable (grass.surface-saturation): lower trims the vivid
+                // green that pops as a bright line where a grassy biome meets an arid (tan) one, without
+                // making tan-ground savanna read as barren at distance. Default 0.72.
+                float3 grassSurface = GradeGrassTint(eval.tint, _GrassSurfaceSaturation, 0.98);
                 float surfaceVariation = lerp(0.82, 1.04, breakup)
                     * lerp(0.98, 1.06, fiber)
                     * lerp(0.84, 1.16, patch)

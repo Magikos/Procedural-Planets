@@ -35,6 +35,7 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     static readonly int _grassFarOverlayAltitudeEndId = Shader.PropertyToID("_GrassFarOverlayAltitudeEnd");
     static readonly int _grassFarOverlayFiberStrengthId = Shader.PropertyToID("_GrassFarOverlayFiberStrength");
     static readonly int _grassSurfaceBrightnessId = Shader.PropertyToID("_GrassSurfaceBrightness");
+    static readonly int _grassSurfaceSaturationId = Shader.PropertyToID("_GrassSurfaceSaturation");
     static readonly int _grassWaterRadiusId = Shader.PropertyToID("_GrassWaterRadius");
     static readonly int _biomeGrassParamCountId = Shader.PropertyToID(ShaderGlobalIds.BiomeGrassParamCount);
 
@@ -42,6 +43,7 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     // painted surface at the aggregate blade canopy; close blade gaps still expose terrain.
     float _farOverlayStrength = 1.0f;
     float _grassSurfaceBrightness = 0.35f;
+    float _grassSurfaceSaturation = 0.72f; // green-over-tan biome-edge line lever; lower trims the vivid pop
 
     const float GrassFarOverlayStart = 24f;
     const float GrassFarOverlayEnd = 120f;
@@ -220,6 +222,7 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
         SetMaterialFloatIfPresent(mat, _grassFarOverlayAltitudeEndId, Quality.FarOverlayAltitudeEnd);
         SetMaterialFloatIfPresent(mat, _grassFarOverlayFiberStrengthId, GrassFarOverlayFiberStrength);
         SetMaterialFloatIfPresent(mat, _grassSurfaceBrightnessId, _grassSurfaceBrightness);
+        SetMaterialFloatIfPresent(mat, _grassSurfaceSaturationId, _grassSurfaceSaturation);
         SetMaterialFloatIfPresent(mat, _grassWaterRadiusId, ComputeWaterRadius(_planetDto));
     }
 
@@ -339,11 +342,18 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
         return $"grass surface-brightness: {_grassSurfaceBrightness:F3}";
     }
 
+    [ConsoleCommand("surface-saturation", "Painted grass-surface saturation (0-1). Lower to trim the vivid green biome-edge line over tan ground.", MonoTargetType.Registry)]
+    string SurfaceSaturationCmd(float? value = null)
+    {
+        if (value.HasValue) { _grassSurfaceSaturation = Mathf.Clamp01(value.Value); ReapplyOverlay(); }
+        return $"grass surface-saturation: {_grassSurfaceSaturation:F3}";
+    }
+
     [ConsoleCommand("overlay-status", "Print the live grass-line overlay tuning values.", MonoTargetType.Registry)]
     string OverlayStatusCmd()
     {
         if (_terrainMaterial == null)
-            return $"strength={_farOverlayStrength:F3} surface-brightness={_grassSurfaceBrightness:F3} material=<none>";
+            return $"strength={_farOverlayStrength:F3} surface-brightness={_grassSurfaceBrightness:F3} surface-saturation={_grassSurfaceSaturation:F3} material=<none>";
 
         bool hasStrength = _terrainMaterial.HasProperty(_grassFarOverlayStrengthId);
         bool hasBrightness = _terrainMaterial.HasProperty(_grassSurfaceBrightnessId);
@@ -358,6 +368,10 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
         string waterRadius = _terrainMaterial.HasProperty(_grassWaterRadiusId)
             ? _terrainMaterial.GetFloat(_grassWaterRadiusId).ToString("F2")
             : "missing";
-        return $"strength={_farOverlayStrength:F3} surface-brightness={_grassSurfaceBrightness:F3} materialStrength={materialStrength} materialBrightness={materialBrightness} textureMode={textureMode} grassParamCount={grassParamCount} waterRadius={waterRadius}";
+        bool hasSaturation = _terrainMaterial.HasProperty(_grassSurfaceSaturationId);
+        string materialSaturation = hasSaturation
+            ? _terrainMaterial.GetFloat(_grassSurfaceSaturationId).ToString("F3")
+            : "missing";
+        return $"strength={_farOverlayStrength:F3} surface-brightness={_grassSurfaceBrightness:F3} surface-saturation={_grassSurfaceSaturation:F3} materialStrength={materialStrength} materialBrightness={materialBrightness} materialSaturation={materialSaturation} textureMode={textureMode} grassParamCount={grassParamCount} waterRadius={waterRadius}";
     }
 }
