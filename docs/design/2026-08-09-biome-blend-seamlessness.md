@@ -312,3 +312,49 @@ overlay off), before vs after **`KernelRadius 12 → 20`**:
 Both are **contrast/art** levers (a genuine vibrancy-vs-seamlessness tradeoff), not a blend-width code fix.
 Recommended next: a production **per-biome tint** (in-engine, live-tunable, defaults to identity) so Bryan
 equalizes biome brightness/hue toward each other to taste — or a direct `SurfaceAlbedo` texture retune.
+
+## Round 2 — question for Codex: reconcile vibrant biomes with seamless borders
+
+**Setup (verified this session):** the biome map is a per-face atlas (LOD-independent), the weight blend is
+smooth and already wide, and **widening the kernel does nothing visible while costing +85% bake** (measured).
+The border reads drastic purely because the production `SurfaceAlbedo` textures are **far apart in brightness
+and hue** (dark-green grass vs bright-grey rock vs tan), linearly cross-faded by `CornerTriplanarWeightedPbr`
+([PlanetVertexColor.shader:480-519](../../Assets/Graphics/Shaders/PlanetVertexColor.shader#L480)). A **linear**
+crossfade of two very different textures reads as a muddy, abrupt midline — which is what we see.
+
+**The tension:** Bryan wants **vibrant Synty biomes AND seamless borders**. Reducing contrast (Option D)
+sacrifices vibrancy; widening the blend (C/F/B) is refuted. So the interesting question is whether a better
+**blend *operator*** reconciles both.
+
+### Candidate approaches (for Codex to rank / correct)
+
+- **D1. Global biome-albedo contrast/saturation knob** — production `lerp(luma, albedo, vibrance)` (+ optional
+  brightness-flatten), live-tunable, default = no change. Fast, but desaturates the whole planet globally.
+- **D2. Per-biome tint** — one color/brightness multiply per biome slot (default identity) so only the
+  worst-contrast biomes are nudged (e.g. lift grass value, drop rock value), keeping the rest vibrant. More
+  authoring; keeps identity better than D1.
+- **D3. Retune the authored `SurfaceAlbedo` textures** — fix the contrast at the art source. Full vibrancy,
+  no shader knob; pure art.
+- **G. Height/noise-based texture blend at the boundary (the operator change).** Replace the *linear* weighted
+  crossfade with a **height-blend** (a.k.a. heightlerp / smooth-max over per-texel height × weight) or a
+  noise/dither-masked transition, so two high-contrast biome textures **interlock** at the border (rock poking
+  through grass, grass fringing into sand) instead of muddy-averaging. This is the standard "advanced terrain
+  splatting" technique — it can make very different textures read as a natural transition **without
+  desaturating** and **without widening** the weight band. **This is the option Claude under-weighted.**
+- **E (shipped, orthogonal).** Grass-overlay `grass.surface-saturation` still trims the in-game vivid-green
+  contribution on top of the terrain.
+
+### Questions for Codex (round 2)
+
+1. **Is G (height/noise-blend operator) the right fix** — i.e. the way to keep vibrant biomes AND seamless
+   borders — or is contrast reduction (D) unavoidable? Is there a known better operator?
+2. Does G fit the existing path cleanly? `CornerTriplanarWeightedPbr` already samples each biome's albedo +
+   ARM (which may carry a **height**/AO channel) per corner and sums by weight — can a height-blend reuse that
+   ARM/height, or does it need a new per-biome height input? Any triplanar/top-K interaction traps?
+3. G still consumes the same top-4 `_BiomeWeights`, so does it perturb **grass** (BB5) the way C/B would, or is
+   it terrain-albedo-only (grass reads weights, not the albedo operator)?
+4. Perf: a height-blend is per-fragment (shader), not per-bake — is that free relative to the bake, and does it
+   avoid the C bake-cost problem entirely?
+5. If G is right, where does it slot — inside `CornerTriplanarWeightedPbr` (per-corner) or after the 4-corner
+   bilinear? And should the height source be the ARM texture, a dedicated height map, or noise?
+6. If G is NOT worth it, which of D1/D2/D3 do you recommend, and is the vibrancy loss simply unavoidable?
