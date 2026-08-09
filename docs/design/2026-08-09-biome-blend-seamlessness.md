@@ -288,3 +288,27 @@ the corrected decision of record.
    don't touch the biome color step.
 
 All of the above are visual → grass-scene + main-planet capture-diff and **Bryan's F10 sign-off** before landing.
+
+## Empirical result — 2026-08-09 (C REFUTED as a lever; the drama is albedo contrast, not blend width)
+
+Ran the width experiment on the diagnostic (grass) scene at production settings (`TerrainSelectedAlbedo`,
+overlay off), before vs after **`KernelRadius 12 → 20`**:
+
+- **Cost:** `mapBake` 1961 ms → 3621 ms (+85% on the diagnostic; the main planet, 4× leaves, would be far worse).
+- **Result:** the biome border was **visibly unchanged** — the green→grey transition measured **2 / 7 / 23 px
+  identical** before and after; the two renders are indistinguishable.
+- **Why:** `BiomeMapBlend` (dominant-weight debug) shows the weights **already blend over a broad band**; the
+  kernel was never the bottleneck. The border reads "drastic" because the biome **albedo textures themselves
+  are very different** (dark-green grass ≈ (0.17,0.21,0.04) vs bright-grey rock ≈ (0.38,0.35,0.34) vs tan) — a
+  **brightness + hue jump** that no weight-blend width can hide.
+
+**Conclusion:** **C (and by extension F/B — anything that widens the weight ramp) is NOT the lever.** Reverted
+`KernelRadius` to 12. The seamlessness problem is **biome albedo contrast (Option D)**, split into:
+1. the vivid grass **overlay** green painted over the muted production terrain (tune `grass.surface-saturation`
+   — knob exists), and
+2. the **production `SurfaceAlbedo` texture** brightness/hue contrast between biomes (Codex BB4: retune the
+   authored textures, or add a production per-biome tint; capture with `TerrainSelectedAlbedo`).
+
+Both are **contrast/art** levers (a genuine vibrancy-vs-seamlessness tradeoff), not a blend-width code fix.
+Recommended next: a production **per-biome tint** (in-engine, live-tunable, defaults to identity) so Bryan
+equalizes biome brightness/hue toward each other to taste — or a direct `SurfaceAlbedo` texture retune.
