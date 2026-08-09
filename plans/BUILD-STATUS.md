@@ -52,3 +52,38 @@ Branch **`character-controller-mvp`** (off `main` @ `c54fc72`). Three commits, *
 Play-test the walk; if it feels right, I'll tune camera/speed to your taste, add the foot-trail, and we run
 002. If the assembly-boundary/static-command deviation bugs you, I'll switch the host to a scene-placed
 component instead.
+
+---
+
+## Round 2 — play-test fixes (commit `97f00e8`, 2026-08-09)
+
+Fixed the two issues from your first play-test, all **runtime-verified in play-mode**:
+- **Underground spawn → fixed.** Root cause: it grounded on the *solid* surface, which over ocean is the
+  sea floor (below sea level 5000, verified at 4974 = underwater). Now: spawn **raycasts along the camera
+  forward** (spawn where you look) and grounding is **floored at sea level** — over ocean the character walks
+  on the water surface (placeholder until swimming), never underwater. Verified: spawn dist **5001** (sea 5000).
+- **A/D spin → fixed.** The driver faced the *travel* direction, so strafing turned it. Now the character
+  **faces the look direction**; W/S walk along it, A/D strafe sideways. Verified: strafe `facing_dot = 1.0000`
+  (no rotation), forward moves along facing.
+- **Controls now fly-cam style + jump/crouch/sprint:** mouse looks (yaw + pitch), third-person camera follows,
+  **W/S** fwd/back, **A/D** strafe, **Space** jump (verified airborne→land), **LeftShift** sprint (2×),
+  **LeftCtrl** crouch (0.45× speed). Cursor locks while active, releases when the console is open.
+
+**Try it now:** fly near land, `character.spawn`, then WASD + mouse. `character.despawn` to exit.
+
+### Still yours to judge (feel/tuning — my constants are guesses)
+`WalkSpeed=5`, `SprintMult=2`, `CrouchMult=0.45`, `LookSensitivity=0.12`, `CamDistance=5.5`, `MinPitch=-70`,
+`MaxPitch=75`, `JumpHeight=1.6` (in `PlanetCharacterController.cs` / `SurfaceCharacterController.cs`). Tell me
+what feels off and I'll dial it.
+
+### Minor known items
+- Crouch is speed-only (no capsule squash/height change yet).
+- Host is created on first `spawn`, so it misses the *first* `PlanetGeneratedEvent`; it falls back to the
+  camera-rig radius (works). A tidier version reads `IPlanet.LastGeneratedRadius` directly — low priority.
+
+## Console-command overhaul (your other ask — separate task, noted)
+You want the console reorganized **function-based** (not dev-feature-based) — e.g. `scatter.goto` really
+"move the view to a location," so it belongs under `teleport`/`camera`, not `scatter`. That's a good cleanup
+but a **separate focused pass** (touching many command classes + `[CommandPrefix]`s). I did NOT start it —
+say the word and I'll survey all ~193 commands, propose a function-based taxonomy for your review, then move
+them (keeping the old names as aliases during transition).

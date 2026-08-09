@@ -121,5 +121,21 @@ CameraDistance=6/Height=3/MoveSpeed=6 constants), optional foot-trail (Step 5). 
 surface under camera aim → over ocean = ocean floor (underwater); aim at land / scatter.goto first. 002
 (terrain-relief) NOT started — entirely interactive/visual, needs Bryan. See plans/BUILD-STATUS.md.
 
-**State:** 001 BUILT + runtime-verified, awaiting Bryan's play-test/tuning; not pushed. 002 ready when Bryan is.
-GOTCHA: DTO/const/shader changes need clean stop→play, shader-CODE edits need force-import (don't hot-reload).
+### Play-test round 1 fixes (commit 97f00e8, 2026-08-09)
+Bryan tested, 2 issues fixed + runtime-verified in play-mode: (1) SPAWN UNDERGROUND — grounded on solid
+surface = ocean floor below sea level (4974 < sea 5000); fixed via raycast-along-camera-forward spawn +
+sea-level clamp in PlanetSurfaceGrounding (walk on water surface over ocean, never underwater); verified
+spawn dist 5001. (2) A/D SPIN — driver faced TRAVEL dir; changed to face LOOK dir (viewForward); verified
+strafe facing_dot=1.0000 no spin. Controls now FLY-CAM style: mouse look (yaw+pitch 3rd-person cam), W/S
+fwd/back, A/D strafe, Space jump (added Jump/Crouch input actions; verified airborne→land), LeftShift sprint
+2x, LeftCtrl crouch 0.45x; cursor locks (gated by ICameraLookBlocker for console). 78/78 EditMode still green.
+Tunable constants (Bryan's feel call): WalkSpeed=5, SprintMult=2, CrouchMult=0.45, LookSensitivity=0.12,
+CamDistance=5.5, JumpHeight=1.6.
+
+**BRYAN WANTS (noted, NOT started): console-command OVERHAUL** — reorganize all ~193 commands FUNCTION-based
+not dev-feature-based (e.g. scatter.goto is really "move view to location" → belongs under teleport/camera).
+Separate focused pass: survey commands → propose function-based taxonomy for review → move w/ old-name aliases.
+
+**State:** 001 BUILT + runtime-verified (spawn/walk/strafe/jump/camera all work), awaiting Bryan's play-test +
+feel-tuning; NOT pushed (branch character-controller-mvp, 6 commits). 002 (terrain-relief) ready when Bryan is.
+Console overhaul queued. GOTCHA: DTO/const/shader changes need clean stop→play; shader-CODE needs force-import.
