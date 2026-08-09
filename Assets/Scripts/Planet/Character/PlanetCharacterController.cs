@@ -27,6 +27,7 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
     const float GrassBendStrength = 0.8f;
     const float GrassReleaseSeconds = 0.6f;
 
+    IPlanet _planet;
     IPlanetSurfaceSampler _sampler;
     IPlanetSurfaceRaycaster _raycaster;
     IInputMapService _input;
@@ -74,6 +75,12 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
             Destroy(_child.gameObject);
     }
 
+    void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus)
+            SetCursorLocked(false); // never keep the cursor captured when the window loses focus
+    }
+
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
         _center = evt.PlanetCenter;
@@ -93,9 +100,11 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
 
         Vector3 up = _driver.Pose.Up;
 
-        bool lookActive = !LookBlocked();
-        SetCursorLocked(lookActive);
-        if (lookActive && _input != null)
+        // Look only while HOLDING right-mouse (like the free camera) — the cursor is captured only during the
+        // hold and released the instant you let go, so it can never trap the mouse (e.g. to open the console).
+        bool looking = _input != null && _input.LookHold.IsPressed() && _input.GameplayEnabled && !LookBlocked();
+        SetCursorLocked(looking);
+        if (looking)
         {
             Vector2 look = _input.Look.ReadValue<Vector2>();
             if (look.sqrMagnitude > 0.0001f)
@@ -151,7 +160,7 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         _child.gameObject.SetActive(true);
         _spawned = true;
         SuspendFreeCamera(true);
-        return "character spawned; WASD to walk, mouse to look, Space jump, Shift sprint, Ctrl crouch; `character.despawn` to exit";
+        return "character spawned; WASD walk, HOLD right-mouse to look, Space jump, Shift sprint, Ctrl crouch; `character.despawn` to exit";
     }
 
     public string Despawn()
@@ -171,33 +180,37 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
     void RebuildDriver(CharacterPose seed)
     {
         var gravity = new RadialGravityProvider(_center);
-        var grounding = new PlanetSurfaceGrounding(_sampler, _center, SeaLevel());
+        // Ground on the VISIBLE mesh (raycast), falling back to the analytic surface if a ray misses — the
+        // analytic radius can sit below the rendered terrain, which is why the capsule fell through.
+        var samplerGround = new PlanetSurfaceGrounding(_sampler, _center, SeaLevel());
+        IGroundingProvider grounding = ResolveRaycaster() != null
+            ? new PlanetRaycastGrounding(_raycaster, _center, SeaLevel(), samplerGround)
+            : samplerGround;
         _driver = new SurfaceCharacterController(gravity, grounding, FootOffset, seed);
         _child.SetPositionAndRotation(seed.Position, Quaternion.LookRotation(seed.Forward, seed.Up));
     }
 
-    float SeaLevel() => ResolveCameraRig() != null ? _cameraRig.SeaLevelRadius : 0f;
+    float SeaLevel() => _planet != null ? _planet.LastSeaLevelRadius : 0f;
 
     bool EnsurePlanet(out string err)
     {
         err = null;
         if (_sampler == null) ServiceLocator.TryGet(out _sampler);
-        if (_sampler == null)
+        if (_planet == null) ServiceLocator.TryGet(out _planet);
+        if (_sampler == null || _planet == null)
         {
-            err = "no surface sampler — generate a planet first";
+            err = "no planet services — generate a planet first";
             return false;
         }
-        if (!_hasPlanet && ResolveCameraRig() != null && _cameraRig.PlanetRadius > 0f)
-        {
-            _center = _cameraRig.PlanetCenter;
-            _radius = _cameraRig.PlanetRadius;
-            _hasPlanet = true;
-        }
-        if (!_hasPlanet)
+        if (_planet.LastGeneratedRadius <= 0f)
         {
             err = "planet not generated yet";
             return false;
         }
+        // IPlanet is the reliable source (the camera rig's radius can lag the generation event by a frame).
+        if (_planet.Transform != null) _center = _planet.Transform.position;
+        _radius = _planet.LastGeneratedRadius;
+        _hasPlanet = true;
         ResolveInput();
         ResolveCameraRig();
         ResolveRaycaster();
