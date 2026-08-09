@@ -101,6 +101,25 @@ even with weather frozen → also `weather.wind-speed 0`), T23 (`scatter.count`�
 missing code snippet + wind confound). Design settled. I recommended Bryan APPROVE rather than loop further —
 remaining risk is dry-run-surfaceable, not design debt.
 
-**State:** both REVISED (5 rounds) — recommend approve → promote 001 to docs/design/, execute 002 then 001
-serially (one Unity editor; restore play/shader/capture state between). Not executed yet. GOTCHA: DTO/const/
-shader changes need clean stop→play, and shader-CODE edits need force-import (don't hot-reload).
+### BUILT 001 autonomously (2026-08-09, Bryan approved + asleep)
+Branch `character-controller-mvp` (off main c54fc72), 3 commits NOT PUSHED: 2a50425 (reusable core + 15
+EditMode tests), 874208e (plans+memory), 75a9367 (host + static command + free-cam suspend). Compiles clean,
+78/78 EditMode green. **Runtime-smoked in play-mode on a real planet (radius 5293):** spawn works, capsule
+grounded (up·radial=1.0000, no lean), collider stripped, walked 6.00m fwd at 6m/s staying grounded, grass
+registers boot-safe (grassRegistered=1, C21 live), free-cam suspended, camera follows, ZERO exceptions in
+Update/LateUpdate. Files: Assets/Scripts/Planet/Character/{CharacterPose,CharacterMotor,IGravityProvider,
+RadialGravityProvider,IGroundingProvider,PlanetSurfaceGrounding,SurfaceCharacterController,
+PlanetCharacterController,CharacterCommands}.cs + Assets/Tests/EditMode/{CharacterMotorTests,
+CharacterTestDoubles}.cs + edits to FreeCameraController/IFreeCameraService (InputSuspended).
+
+**KEY DEVIATION:** plan said Single command + SceneBootstrap.EnsureComponent at boot — IMPOSSIBLE (SceneBootstrap
+is Core assembly, can't ref Planet-assembly host). Used STATIC `character.spawn` find-or-create instead
+(Codex's other sanctioned option). Host created on first spawn, not boot.
+
+**REMAINING (Bryan's, needs human):** visual play-test (WASD feel, grass bend look, camera feel + tune
+CameraDistance=6/Height=3/MoveSpeed=6 constants), optional foot-trail (Step 5). QUIRK: spawn grounds on solid
+surface under camera aim → over ocean = ocean floor (underwater); aim at land / scatter.goto first. 002
+(terrain-relief) NOT started — entirely interactive/visual, needs Bryan. See plans/BUILD-STATUS.md.
+
+**State:** 001 BUILT + runtime-verified, awaiting Bryan's play-test/tuning; not pushed. 002 ready when Bryan is.
+GOTCHA: DTO/const/shader changes need clean stop→play, shader-CODE edits need force-import (don't hot-reload).

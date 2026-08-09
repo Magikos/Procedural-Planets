@@ -28,7 +28,7 @@ natural warm-up; 001 is the larger investment.
 
 | # | Status | Notes |
 |---|--------|-------|
-| 001 | REVISED (5 rounds) — **recommend approve** | Codex C1-C24 folded. **HYBRID**: pure `CharacterMotor` + injected `IGravityProvider`/`IGroundingProvider` + a **grounded** `SurfaceCharacterController` driver (seeded `CharacterPose`) + thin player host. Grounded actors reuse the driver; flight = a future *airborne* driver reusing the shared tools (C23). MVP wires radial+analytic only. Design converged; not yet executed. |
+| 001 | **BUILT** (branch `character-controller-mvp`, not pushed) — awaiting play-test | Code written + committed autonomously 2026-08-09. Compiles clean, 78/78 EditMode green, **runtime-smoked on a real planet** (spawn → walk 6 m → grounded, up·radial=1.0, grass registers, camera follows, no exceptions). See [BUILD-STATUS.md](BUILD-STATUS.md). Remaining = human visual/WASD verification + camera-feel tuning + optional foot-trail. Deviation: static `character.spawn` command (assembly boundary), not `EnsureComponent`. |
 | 002 | REVISED (5 rounds) — **recommend approve** | Codex T1-T23 folded; tiling control + drift check, oblique sun, weather + wind + foliage-shadow freeze, negative-control/2×2, paste-ready MCP material helper, archive-before-prune, `scatter.count`/`goto` biome ID, result → promoted `docs/design/`. Not yet executed. |
 
 Executor updates the Status cell (TODO / IN-PROGRESS / DONE / BLOCKED) as work lands.
