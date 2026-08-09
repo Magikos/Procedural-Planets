@@ -40,20 +40,23 @@ downhill edge → gap + shadow.
 - **Height float** (noise vs coarse render triangle) deferred — sub-pixel except far/impostor range; only
   revisit if a pixel threshold is exceeded (surface-unification doc SU4/SU5).
 
-### 2. Mushrooms render a solid/flat color — LEAD (unconfirmed)
-Likely the mushroom scatter prototype's material is a flat albedo (no texture/normal/lighting variation), or
-it's showing the unlit impostor up close. **Diagnose:** find the mushroom prototype's material + LOD/impostor
-setup; compare to a good prop (e.g. a bush) under `FoliageLit`. Check whether it's the impostor tier at close
-range or a genuinely flat material. Effort: S once located.
+### 2. Mushrooms render a solid/flat color — DONE (2026-08-09, pending F10 sign-off)
+CAUSE PINNED + fixed. Mushrooms (solid meshes) wore the shared `LMHPOLY_Vegetation` FoliageLit material, which
+is a flat leaf/flower-CARD config: `_ForceLeaf=1` forces `leafMask=1` on every vertex → `_LeafNormalUp=0.6`
+blends all shading normals toward up → the solid cap/stalk normals flatten to near-uniform → solid-colour blob.
+Fixed with a new `LMHPOLY_Mushroom.mat` (`_ForceLeaf=0`, `_LeafNormalUp=0` → real mesh normals), assigned to
+Forest/Swamp/Taiga Mushroom; flowers/reeds keep the shared card material. Verified: shading variance ~30× (sd
+0.009→0.275), stalk + shaded cap render. Commit `51ba3e2`. Bryan's F10 sign-off pending.
 
-### 3. Far biome edge lines — RECURRING (known)
-Visible biome-boundary lines at distance. History (see `claude/project_grass_terrain_lighting_arc.md`): the
-bright-green edge line was the terrain **grass surface-overlay** (green-over-tan reads luminant at borders);
-`BiomeMapBaker.KernelRadius` 6→12 softened terrain/grass; overlay saturation trimmed. If it's back at distance
-it's likely the far grass overlay or the biome colour blend at the shared-atlas kernel edge. **Diagnose (F10):**
-`debug.mode TerrainSelectedAlbedo` (has the line?) vs `BiomeMapFlatColor` (biome colour only) vs
-`GrassLodCoverage`; zero `_GrassSurfaceBrightness` on the runtime terrain material to test if it's the overlay.
-Effort: M (recurring look-tuning, needs captures).
+### 3. Far biome edge lines — knob exposed for Bryan to tune (2026-08-09)
+The green-over-tan biome-edge line is a hue/saturation pop from the far grass surface-overlay. It's Bryan's own
+look-tension: `150a482` added a greenness gate (killed the line) → `17707e3` dropped it (the gate wrongly made
+tan-ground savanna barren at distance) and trimmed overlay saturation `0.82→0.72` instead, noting "iterate on
+the saturation if the line is still visible." So the lever is saturation, and it was a hardcoded literal.
+**Promoted to a live knob** `grass.surface-saturation` (default 0.72 = no change), mirroring
+`grass.surface-brightness`; commit `0e9be87`. Bryan tunes it from the distant viewpoint (lower trims the line
+without the barren-savanna regression) and bakes the number. Structural alternative if a single global value
+can't win both: fade saturation by biome-blend proximity so interiors stay vivid but borders don't pop.
 
 ### 4. Character capsule lit from under the planet (planet doesn't block the sun) — DONE (2026-08-09)
 FIXED (commit on `character-controller-mvp`). New **`Planet/PropLit`** shader
