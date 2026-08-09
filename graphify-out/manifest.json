@@ -415,8 +415,8 @@
     "semantic_hash": "08facfb9b7b1ca920f0ae2fe9712c159"
   },
   "Assets/Scripts/Core/QualityController.cs": {
-    "mtime": 1784564708.958288,
-    "ast_hash": "e71869c2071e017e31aa5d84644a7c53",
+    "mtime": 1785295839.9799845,
+    "ast_hash": "5997b5ccf0b05af432ac0fa1eaa95989",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/AtmosphereDebugModule.cs": {
@@ -485,8 +485,8 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/FreeCameraController.cs": {
-    "mtime": 1784564709.0228047,
-    "ast_hash": "d46d01017b79052747a9ac6989cf8c59",
+    "mtime": 1785677331.0980854,
+    "ast_hash": "224adf9f6974089c3bf600c963273f68",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/GameBootstrap.cs": {
@@ -699,16 +699,6 @@
     "ast_hash": "0e1c71f4154255a8c97f059c183f076b",
     "semantic_hash": "0e1c71f4154255a8c97f059c183f076b"
   },
-  "Assets/Scripts/Core/Utilities/CubeSphereMeshBuilder.cs": {
-    "mtime": 1781104109.5283296,
-    "ast_hash": "f8a6f9602e2c5199c177344808746ed9",
-    "semantic_hash": "f8a6f9602e2c5199c177344808746ed9"
-  },
-  "Assets/Scripts/Core/Utilities/ObjectPool.cs": {
-    "mtime": 1781104109.5339491,
-    "ast_hash": "c5fc911ee7d2c463891d3adc2f18985b",
-    "semantic_hash": "c5fc911ee7d2c463891d3adc2f18985b"
-  },
   "Assets/Scripts/Planet/Atmosphere/AtmosphereController.cs": {
     "mtime": 1784564709.269605,
     "ast_hash": "edf90204243c66d845b6c15f9802187a",
@@ -770,8 +760,8 @@
     "semantic_hash": "8c9f1e05f206e17515e48d26fb2dae4f"
   },
   "Assets/Scripts/Planet/Biomes/BiomeMapBaker.cs": {
-    "mtime": 1784564709.3236825,
-    "ast_hash": "d2d92346ef7cfbe703d228d8ec76e5c7",
+    "mtime": 1785594550.216013,
+    "ast_hash": "7de829f99f835cb8f93ba00960ac83b4",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Biomes/BiomeRegistry.cs": {
@@ -855,8 +845,8 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Clouds/SphericalWeatherGrid.cs": {
-    "mtime": 1784564709.5584655,
-    "ast_hash": "3c54ce3fe1d03feee98ff2eac9391e9f",
+    "mtime": 1785185966.845891,
+    "ast_hash": "edd6fdd50bed56c60790da5cf7efd149",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/ColorGenerator.cs": {
@@ -875,8 +865,8 @@
     "semantic_hash": "d3c5e57f55b56b8720b53ee604c10ac9"
   },
   "Assets/Scripts/Planet/Grass/FaceSpaceCellRangeBuilder.cs": {
-    "mtime": 1784776671.4675663,
-    "ast_hash": "5b5f83a275d26acc71ad04ad2420436f",
+    "mtime": 1785344326.9406564,
+    "ast_hash": "0e40927760d8aaa9f43275e0610d4987",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassBladeBufferPool.cs": {
@@ -910,8 +900,8 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassPlacementController.cs": {
-    "mtime": 1784564709.6056657,
-    "ast_hash": "44edef786c6570d9335bb5305e8b7781",
+    "mtime": 1785683124.700077,
+    "ast_hash": "1be436672509c75d1bc07752791d01c7",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Grass/GrassPlacementDtos.cs": {
@@ -975,8 +965,8 @@
     "semantic_hash": "e77c7677daa162802cfbb33d8df0b24a"
   },
   "Assets/Scripts/Planet/Planet.cs": {
-    "mtime": 1784889096.667016,
-    "ast_hash": "b1782dbe1f083933be522ffddfbeb387",
+    "mtime": 1785375153.9301648,
+    "ast_hash": "d54cd9247cb766169dc05199017426f1",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PlanetConstants.cs": {
@@ -990,8 +980,8 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PlanetGrassCoordinator.cs": {
-    "mtime": 1784564710.0606725,
-    "ast_hash": "d0380ec8cc238163a36c0e0a6bdc271a",
+    "mtime": 1785185966.8499324,
+    "ast_hash": "bc006f41dfdce1e05af4a222e42e82a0",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PlanetSettings.cs": {
@@ -1020,18 +1010,18 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/PrecipitationRenderFeature.cs": {
-    "mtime": 1784564710.1104105,
-    "ast_hash": "7053966285f98233d48294a41023ef8a",
+    "mtime": 1785185966.8535082,
+    "ast_hash": "895fc66f34bc9f25cf1abd9c6997df3b",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Precipitation/RainParticleController.cs": {
-    "mtime": 1784564710.1023035,
-    "ast_hash": "31d275bc6b70316a6d82effd010128c0",
+    "mtime": 1785185966.8519561,
+    "ast_hash": "613764c3f3295cb111ee0e34a1f0ee11",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/ShapeGenerator.cs": {
-    "mtime": 1784564710.1155314,
-    "ast_hash": "639ba74ee2a7bb453fb05563da97e6b7",
+    "mtime": 1784998760.20997,
+    "ast_hash": "7d85a876ce753632eaa04d603a501dc8",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/ShapeSettings.cs": {
@@ -1143,16 +1133,6 @@
     "mtime": 1784564710.286237,
     "ast_hash": "260b1b986b8fdb1f9d69209e9255c1cb",
     "semantic_hash": ""
-  },
-  "Assets/Scripts/PoissonDiscSampling.cs": {
-    "mtime": 1779392861.472162,
-    "ast_hash": "8f5e0eaab61deffbe89577e975b5db3d",
-    "semantic_hash": "8f5e0eaab61deffbe89577e975b5db3d"
-  },
-  "Assets/Scripts/PoissonDiscSphereSampling.cs": {
-    "mtime": 1779392861.475698,
-    "ast_hash": "727a03dd288d6da55564373146e2f895",
-    "semantic_hash": "727a03dd288d6da55564373146e2f895"
   },
   ".claude/settings.json": {
     "mtime": 1784564707.0084865,
@@ -23995,33 +23975,33 @@
     "semantic_hash": ""
   },
   "Packages/manifest.json": {
-    "mtime": 1784564711.8745437,
-    "ast_hash": "cf82c41092a39576a4c179763d645513",
+    "mtime": 1784892350.150944,
+    "ast_hash": "8e590e745db9dd6d77a96005a460c27d",
     "semantic_hash": ""
   },
   "Packages/packages-lock.json": {
-    "mtime": 1784564711.878432,
-    "ast_hash": "2f75faa8d456b49866499dfea6550b57",
+    "mtime": 1784892350.1635222,
+    "ast_hash": "b073d40d55f012b0e068f4c662ef4cb1",
     "semantic_hash": ""
   },
   "ProceduralPlanets.Core.csproj": {
-    "mtime": 1783246034.9993336,
-    "ast_hash": "7be2919e4afc5c9bae809c043de7e908",
+    "mtime": 1785186006.1310706,
+    "ast_hash": "2cf303fd4710066080ad771be996a488",
     "semantic_hash": ""
   },
   "ProceduralPlanets.Editor.csproj": {
-    "mtime": 1781448697.756772,
-    "ast_hash": "fde800adf28e680475cfe13117c80a29",
+    "mtime": 1785256369.0999217,
+    "ast_hash": "fb4172372860aba290e2f6cb7b76ec5f",
     "semantic_hash": ""
   },
   "ProceduralPlanets.Planet.csproj": {
-    "mtime": 1784888346.0260332,
-    "ast_hash": "f7015cea60bac99672e97b63f6d4a85d",
+    "mtime": 1785538391.4495904,
+    "ast_hash": "4428cf71d4810c03f92fc385ae75bedb",
     "semantic_hash": ""
   },
   "ProceduralPlanets.Sampling.csproj": {
-    "mtime": 1781448697.729977,
-    "ast_hash": "ff841f87e75bdf30f3e86ba046c03031",
+    "mtime": 1785421010.3633788,
+    "ast_hash": "180fd33424cd7c8939cd5329baa20147",
     "semantic_hash": ""
   },
   "ProceduralPlanets.sln": {
@@ -24030,8 +24010,8 @@
     "semantic_hash": ""
   },
   "ProceduralPlanets.slnx": {
-    "mtime": 1784564711.8832166,
-    "ast_hash": "a8c4e3109ceb242880d003a9d32d3772",
+    "mtime": 1785421010.2554305,
+    "ast_hash": "8f0787013526b21858a466d0ce282865",
     "semantic_hash": ""
   },
   "ProjectSettings/SceneTemplateSettings.json": {
@@ -117765,8 +117745,8 @@
     "semantic_hash": ""
   },
   ".agent-memory/claude/MEMORY.md": {
-    "mtime": 1784564706.554912,
-    "ast_hash": "cdd98a154cbe050cadab5f58fada04f5",
+    "mtime": 1785630655.9970472,
+    "ast_hash": "d5188144fc71ac1c5fb45e9d434c5417",
     "semantic_hash": ""
   },
   ".agent-memory/claude/feedback_async_no_coroutines.md": {
@@ -117825,8 +117805,8 @@
     "semantic_hash": ""
   },
   ".agent-memory/claude/project_testing_stance.md": {
-    "mtime": 1784564706.598794,
-    "ast_hash": "41436868d4bff581f54e4d18ca72e6ef",
+    "mtime": 1785210925.791939,
+    "ast_hash": "211325534c22b2d6486fe0396a490186",
     "semantic_hash": ""
   },
   ".agent-memory/claude/reference_agent_conversation.md": {
@@ -168970,8 +168950,8 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/WeatherQueryCache.cs": {
-    "mtime": 1784564710.2897632,
-    "ast_hash": "c7c843fbe0ce6692909004b5812c71e3",
+    "mtime": 1785185966.8546445,
+    "ast_hash": "8f23928b73699c7431bfb425f8e96ad7",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Biome Dot Probe.txt": {
@@ -168997,46 +168977,6 @@
   "Assets/Resources/ConsoleScripts/Grass Terrain Only.txt": {
     "mtime": 1784564707.6372766,
     "ast_hash": "fe5bf8acb5953c8b498f2df96a29bb84",
-    "semantic_hash": ""
-  },
-  "Library/com.singularitygroup.hotreload/logs/log20260618.txt": {
-    "mtime": 1781829230.4719307,
-    "ast_hash": "c234b37fa91c7d721e2d42033cf9e8d0",
-    "semantic_hash": ""
-  },
-  "Library/com.singularitygroup.hotreload/logs/log20260619.txt": {
-    "mtime": 1781892318.9145935,
-    "ast_hash": "6fd9e31f8746cf5ef58316991a596434",
-    "semantic_hash": ""
-  },
-  "Library/com.singularitygroup.hotreload/logs/log20260620.txt": {
-    "mtime": 1781959747.21492,
-    "ast_hash": "cabd7fde63aff19bfdf701bd211912d8",
-    "semantic_hash": ""
-  },
-  "Library/com.singularitygroup.hotreload/logs/log20260622.txt": {
-    "mtime": 1782163587.5872264,
-    "ast_hash": "1972cac03593bae7503f827692e1f405",
-    "semantic_hash": ""
-  },
-  "Library/com.singularitygroup.hotreload/logs/log20260623.txt": {
-    "mtime": 1782246711.763834,
-    "ast_hash": "dfcd71db2ac0cd90a50df7ce4c635596",
-    "semantic_hash": ""
-  },
-  "Library/com.singularitygroup.hotreload/logs/log20260624.txt": {
-    "mtime": 1782353354.3400867,
-    "ast_hash": "20a7e4bcb72415b3fa6cd4f3f6c138c4",
-    "semantic_hash": ""
-  },
-  "Library/com.singularitygroup.hotreload/logs/log20260625.txt": {
-    "mtime": 1782418212.4587634,
-    "ast_hash": "9821e602483032b86db0ca0431c86a0f",
-    "semantic_hash": ""
-  },
-  "Library/com.singularitygroup.hotreload/logs/log20260626.txt": {
-    "mtime": 1782515038.5891817,
-    "ast_hash": "27506b45eb8c38e34d5049aa1cb09554",
     "semantic_hash": ""
   },
   "docs/agent-conversation/2026-06-23-planet-recipe-diagnostic-generation.md": {
@@ -169079,11 +169019,6 @@
     "ast_hash": "cdc75da3a910530b1e9a18ee75760719",
     "semantic_hash": ""
   },
-  "Library/com.singularitygroup.hotreload/logs/log20260627.txt": {
-    "mtime": 1782622600.3213756,
-    "ast_hash": "dfeabaac29900438e7daf12e1a22ccf2",
-    "semantic_hash": ""
-  },
   "Assets/Scripts/Planet/SurfacePathDebugCommands.cs": {
     "mtime": 1784564710.2255888,
     "ast_hash": "8ccd1e920d96f89df059a449741d755b",
@@ -169124,11 +169059,6 @@
     "ast_hash": "633fa5f231cbb5850508614c097dc786",
     "semantic_hash": ""
   },
-  "Library/com.singularitygroup.hotreload/logs/log20260628.txt": {
-    "mtime": 1782705965.973818,
-    "ast_hash": "e161d2dfa4f835a0cb1636a49b008fb0",
-    "semantic_hash": ""
-  },
   "Assets/Resources/ConsoleScripts/Path Mouse Tool Setup.txt": {
     "mtime": 1784564707.6519716,
     "ast_hash": "20924fe30395c20bf2f11c215e0371a0",
@@ -169145,8 +169075,8 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Services/SurfacePathMousePainter.cs": {
-    "mtime": 1784564709.1904364,
-    "ast_hash": "a59347c16e47f697cb84b74c1cb973bf",
+    "mtime": 1785185966.8448813,
+    "ast_hash": "844cdebd956751a39f5d2af8f5dac478",
     "semantic_hash": ""
   },
   "Assets/Scripts/Core/Interfaces/ICameraLookBlocker.cs": {
@@ -169202,11 +169132,6 @@
   "Library/com.singularitygroup.hotreload/logs/log20260702.txt": {
     "mtime": 1783009484.8110054,
     "ast_hash": "2b8e8f1fed7e5e123b17822198db6450",
-    "semantic_hash": ""
-  },
-  "Assets/Scripts/Core/Events/EventBusAutoBinder.cs": {
-    "mtime": 1784564708.6405005,
-    "ast_hash": "aadf1247cc895a360f2d836c08807750",
     "semantic_hash": ""
   },
   "docs/research/2026-07-04-grass-cloud-reference-recommendations.md": {
@@ -169494,19 +169419,14 @@
     "ast_hash": "ff50afadd15b04cfcb4bebcaf833ea0e",
     "semantic_hash": ""
   },
-  "Assets/Scripts/Planet/Grass/GrassClumpScatter.cs": {
-    "mtime": 1784564709.596315,
-    "ast_hash": "636452a391f6ef84dc2681ae3d1e370c",
-    "semantic_hash": ""
-  },
   ".agent-memory/claude/project_cloud_weather_arc.md": {
     "mtime": 1784564706.570303,
     "ast_hash": "20982dc271663778bc53a55bed0db591",
     "semantic_hash": ""
   },
   ".agent-memory/claude/project_grass_layering_arc.md": {
-    "mtime": 1784564706.5859594,
-    "ast_hash": "a552f9beaa6fe1c35bb8f5da32c8896c",
+    "mtime": 1784896830.8924031,
+    "ast_hash": "6ea94c42c8925312e3fc8b2005aa5613",
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Grass Debug View.txt": {
@@ -169525,13 +169445,13 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Scatter/ScatterDtos.cs": {
-    "mtime": 1784776346.3663468,
-    "ast_hash": "dc73ba97b8d28c0d35e06aeca35cfd64",
+    "mtime": 1785596319.6510062,
+    "ast_hash": "f4e9f6010501eb64dcaea18eec0c6387",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Scatter/ScatterField.cs": {
-    "mtime": 1784776775.8632965,
-    "ast_hash": "8fe6abfe8f48b4b57a2b81dedbb14fb9",
+    "mtime": 1785527026.2562737,
+    "ast_hash": "8028a3a1df4ff36313f3f58ddf90276b",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Scatter/ScatterHash.cs": {
@@ -169540,8 +169460,8 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Scatter/ScatterId.cs": {
-    "mtime": 1784776251.2647016,
-    "ast_hash": "6d96d6db0a7d831468cc92614202557c",
+    "mtime": 1785185976.4544537,
+    "ast_hash": "aad29d1f2571ad740164a70c674caeda",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Scatter/ScatterInstance.cs": {
@@ -169560,18 +169480,18 @@
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Scatter/ScatterPlacementMath.cs": {
-    "mtime": 1784776377.738173,
-    "ast_hash": "91a4ab39742a3e93b36819ce117ad906",
+    "mtime": 1785342722.557,
+    "ast_hash": "0206bd1e7a95162dbd76d34b255dbce9",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Scatter/ScatterPrototype.cs": {
-    "mtime": 1784776315.380339,
-    "ast_hash": "0023ba6a5b6e71e9b12959ebcc49e88c",
+    "mtime": 1785185976.455552,
+    "ast_hash": "0765f0e05b0e5d5c4f47ff776a83d3a8",
     "semantic_hash": ""
   },
   "Assets/Scripts/Planet/Scatter/ScatterQuadtree.cs": {
-    "mtime": 1784776361.7989986,
-    "ast_hash": "1acef2894d9090d1bf209666ca223d52",
+    "mtime": 1785349513.167675,
+    "ast_hash": "8f42a19ce016e2c090997d70f215d1ea",
     "semantic_hash": ""
   },
   ".agent-skills/pp-code-audit/SKILL.md": {
@@ -169585,8 +169505,8 @@
     "semantic_hash": ""
   },
   "docs/audit/2026-07-22-consolidated-code-audit.md": {
-    "mtime": 1784724460.4332728,
-    "ast_hash": "9fc3640bc95bd84e16f45e1dfa822974",
+    "mtime": 1785185966.8566957,
+    "ast_hash": "450e3508c2556983f17f60382f672428",
     "semantic_hash": ""
   },
   "docs/design/2026-07-20-scatter-placement-system.md": {
@@ -169600,8 +169520,763 @@
     "semantic_hash": ""
   },
   "Assets/Resources/ConsoleScripts/Scatter SP1 Proof.txt": {
-    "mtime": 1784891123.0227096,
-    "ast_hash": "35b72adb8ea12c354cab415262869ccc",
+    "mtime": 1784915786.002309,
+    "ast_hash": "09185ae772cc9c2679398aac83938303",
+    "semantic_hash": ""
+  },
+  ".mcp.json": {
+    "mtime": 1784893573.6657119,
+    "ast_hash": "6c2ccb2256a8750c9fd21760b3f3a379",
+    "semantic_hash": ""
+  },
+  "Assets/Editor/ScatterImpostorContactSheetTool.cs": {
+    "mtime": 1785256368.52,
+    "ast_hash": "0c6e5c8731a05b8e602960de29f391c6",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Core/Interfaces/ISurfaceGroundSampler.cs": {
+    "mtime": 1785342722.429,
+    "ast_hash": "1aa810c324c052b914134abf570dee6a",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Core/Services/WorkbenchFlyCamera.cs": {
+    "mtime": 1785113061.1867132,
+    "ast_hash": "760c2a3edd4e9f4a97a8203761abeee5",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterBiomePrecompute.cs": {
+    "mtime": 1785526367.526592,
+    "ast_hash": "049044cb9ce56c364a9057b7e69ed2de",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterDrawBuckets.cs": {
+    "mtime": 1785540377.1703842,
+    "ast_hash": "90fca3af74ed345ec1daf287fce3cfdf",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterFlyBench.cs": {
+    "mtime": 1785473380.6133728,
+    "ast_hash": "374093e080078ad1a1381ecc484ca12d",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterGatherBurst.cs": {
+    "mtime": 1785526214.8021748,
+    "ast_hash": "b92f1c2f1c7bf3f039cd4c82c8774e44",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterGatherJob.cs": {
+    "mtime": 1785526350.751568,
+    "ast_hash": "1d85f1c3ee090d424869f2011a66a738",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterGpuDraw.cs": {
+    "mtime": 1785541059.6813436,
+    "ast_hash": "dbe7514d7eb801b6a31d98d332b54606",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterImpostorBaker.cs": {
+    "mtime": 1785377034.140468,
+    "ast_hash": "b26fbbcc8da2beff98359c87a49f780d",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterImpostorFactory.cs": {
+    "mtime": 1785267744.867,
+    "ast_hash": "2d74fd42e14946836a1c86128143d8a2",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterLodBatcher.cs": {
+    "mtime": 1785530921.688695,
+    "ast_hash": "3363ad0dc79645aace5b7a94008639a7",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterLodStripHarness.cs": {
+    "mtime": 1785267698.658,
+    "ast_hash": "70a694ee01537a3bde16689da5b26ba8",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterPart.cs": {
+    "mtime": 1785110819.4276507,
+    "ast_hash": "e8ca0706b53d59f452905489c73df922",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterRenderer.cs": {
+    "mtime": 1785541479.0738938,
+    "ast_hash": "0b52187dd6429b6c3b09c56dc6e6ed49",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Scatter/ScatterTileCache.cs": {
+    "mtime": 1785594916.591143,
+    "ast_hash": "f32670c8e72176bd17cd022fb9cfdbf5",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Surface/AnalyticGroundSampler.cs": {
+    "mtime": 1785527015.1829813,
+    "ast_hash": "03399dfa55bfb411f66566966c92c591",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Surface/IBurstElevationSource.cs": {
+    "mtime": 1785526992.844224,
+    "ast_hash": "9bf876253af2da55c4b0b71c60d0b93b",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Planet/Surface/PlanetTransformSnapshot.cs": {
+    "mtime": 1784999728.9609003,
+    "ast_hash": "29e5b024d4c2e1f8eee253e9e469bb81",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Showcase/AssetShowcaseController.cs": {
+    "mtime": 1785448325.9854968,
+    "ast_hash": "6674067335eaabea7c0e2739f09dcb9d",
+    "semantic_hash": ""
+  },
+  "Assets/Scripts/Showcase/AssetShowcaseSpawner.cs": {
+    "mtime": 1785420962.567241,
+    "ast_hash": "7bbb746147aae81c42b9149c0d4f850e",
+    "semantic_hash": ""
+  },
+  "Assets/Tests/EditMode/NoiseFilterEvaluatorGoldenTests.cs": {
+    "mtime": 1785525687.777604,
+    "ast_hash": "6ec9af0b008c8489a9f5512d5a66863b",
+    "semantic_hash": ""
+  },
+  "Assets/Tests/EditMode/ScatterDrawBucketsTests.cs": {
+    "mtime": 1785529410.4539578,
+    "ast_hash": "6950f7825ffaa75ae4bbfb0fc516e48a",
+    "semantic_hash": ""
+  },
+  "Assets/Tests/EditMode/ScatterGatherParityTests.cs": {
+    "mtime": 1785527439.2171626,
+    "ast_hash": "972edf615f5fbc21e11014f20988ccc8",
+    "semantic_hash": ""
+  },
+  "Assets/Tests/EditMode/ScatterHashTests.cs": {
+    "mtime": 1785210828.553,
+    "ast_hash": "62122bf9d016e213b1798d236fdbc7d9",
+    "semantic_hash": ""
+  },
+  "Assets/Tests/EditMode/ScatterIdTests.cs": {
+    "mtime": 1785210458.662,
+    "ast_hash": "0c4ed4cf28477fd0c5cf829b4cdfe7ac",
+    "semantic_hash": ""
+  },
+  "Assets/Tests/EditMode/ScatterLibraryDtoValidationTests.cs": {
+    "mtime": 1785210633.591,
+    "ast_hash": "733d27d0fa6aa4296a6941068322a04a",
+    "semantic_hash": ""
+  },
+  "Assets/Tests/EditMode/ScatterPlacementMathTests.cs": {
+    "mtime": 1785210829.058,
+    "ast_hash": "de07a4fe530db011205dafde3c9138cd",
+    "semantic_hash": ""
+  },
+  "Assets/Tests/EditMode/ScatterQuadtreeParentTileTests.cs": {
+    "mtime": 1785349662.231,
+    "ast_hash": "f9e8df0170da66e0812a0a68a299abfe",
+    "semantic_hash": ""
+  },
+  "ProceduralPlanets.Tests.EditMode.csproj": {
+    "mtime": 1785529560.839716,
+    "ast_hash": "1a2aa4939ac82271bdb2ed86dcda3eee",
+    "semantic_hash": ""
+  },
+  ".agent-memory/claude/project_planet_look_dev.md": {
+    "mtime": 1785520858.809969,
+    "ast_hash": "49ce9fb48df03ff3f9bbb92ed8fbdd44",
+    "semantic_hash": ""
+  },
+  ".agent-memory/claude/project_scatter_biome_buildout.md": {
+    "mtime": 1785126287.979086,
+    "ast_hash": "b1e8fc5e5f3eb1cc31dc99df367ab119",
+    "semantic_hash": ""
+  },
+  ".agent-memory/claude/project_scatter_gather_perf.md": {
+    "mtime": 1785597028.6370897,
+    "ast_hash": "c201bb37d0127436c1cc1a6ddaebdb4d",
+    "semantic_hash": ""
+  },
+  ".agent-memory/claude/project_scatter_lod_impostor.md": {
+    "mtime": 1785268495.1841507,
+    "ast_hash": "9eb9871872cb349343387f11edd4c38d",
+    "semantic_hash": ""
+  },
+  ".agent-memory/claude/project_test_harness.md": {
+    "mtime": 1785210904.5934823,
+    "ast_hash": "24675b89a560256b89facff19818330f",
+    "semantic_hash": ""
+  },
+  "docs/audit/2026-07-25-scatter-audit.md": {
+    "mtime": 1785078608.453696,
+    "ast_hash": "d674695238e2899c8b5d994d4fc53ca7",
+    "semantic_hash": ""
+  },
+  "docs/audit/2026-07-26-scatter-audit.md": {
+    "mtime": 1785126146.6416752,
+    "ast_hash": "f1ac61829d25a44f17b792e853dc1744",
+    "semantic_hash": ""
+  },
+  "docs/design/2026-07-26-scatter-impostor-design.md": {
+    "mtime": 1785243782.6019225,
+    "ast_hash": "4429bd214680f49d0ce0ee1fb699fd5b",
+    "semantic_hash": ""
+  },
+  "docs/design/2026-07-29-scatter-gather-perf.md": {
+    "mtime": 1785344698.2538598,
+    "ast_hash": "adb5df4feeb1eef0827ab9d1983c6188",
+    "semantic_hash": ""
+  },
+  "docs/design/2026-07-29-scatter-incremental-gather.md": {
+    "mtime": 1785349375.0707057,
+    "ast_hash": "33eae78eb910e82ea5d34c1b98131d6a",
+    "semantic_hash": ""
+  },
+  "Assets/AssetPacks/LMHPOLY_Vegetation/Textures/Vegetation_Texture_Atlas.png": {
+    "mtime": 1785449535.0554154,
+    "ast_hash": "c4e5b9e5622722a03b36c720946d220a",
+    "semantic_hash": ""
+  },
+  "Assets/AssetPacks/PolygonGeneric/Generic_01_A.png": {
+    "mtime": 1784934043.2853103,
+    "ast_hash": "6a70038f9b3ad62318a985ed7a45a9db",
+    "semantic_hash": ""
+  },
+  "Assets/AssetPacks/PolygonGeneric/Textures/Generic_01_A.png": {
+    "mtime": 1785122085.0551934,
+    "ast_hash": "6a70038f9b3ad62318a985ed7a45a9db",
+    "semantic_hash": ""
+  },
+  "Assets/AssetPacks/PolygonNatureBiomes/PNB_Meadow_Forest/Textures/Birch_Trunk_Texture.png": {
+    "mtime": 1785115568.5272155,
+    "ast_hash": "5a387db0ee5dc5025cb75943e0738883",
+    "semantic_hash": ""
+  },
+  "Assets/AssetPacks/PolygonNatureBiomes/PNB_Meadow_Forest/Textures/PolygonNatureBiomes_Meadow_Texture_01.png": {
+    "mtime": 1785110083.6765325,
+    "ast_hash": "b4fe05b3ca8c8b5c1137e5c47b73e5a0",
+    "semantic_hash": ""
+  },
+  "Assets/AssetPacks/PolygonNatureBiomes/PNB_Swamp_Marshland/Textures/PolygonNatureBiomes_Swamp_Texture_01.png": {
+    "mtime": 1785121364.387593,
+    "ast_hash": "ad73b0bbcb072ee762098eaa563611b7",
+    "semantic_hash": ""
+  },
+  "Assets/AssetPacks/PolygonNatureBiomes/PNB_Swamp_Marshland/Textures/PolygonNatureBiomes_Swamp_Texture_02.png": {
+    "mtime": 1785122083.6949928,
+    "ast_hash": "ef60cbdff3ffbb04175884d0031d70ed",
+    "semantic_hash": ""
+  },
+  "Assets/AssetPacks/PolygonNatureBiomes/PNB_Tropical_Jungle/Textures/Plants/Palm_Bark_01.png": {
+    "mtime": 1785121075.4280856,
+    "ast_hash": "5bd7ea96def9af29f70e4c6f4231d7ee",
+    "semantic_hash": ""
+  },
+  "Assets/AssetPacks/TEM_Vegetation/Textures/TEM_Atlas_Vegetation_1A.png": {
+    "mtime": 1785453904.0680206,
+    "ast_hash": "409a8b64fd66d8e3759acf2d46b0576d",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/baseline_meadow.png": {
+    "mtime": 1785455824.9471123,
+    "ast_hash": "e9c29a93ccaabf88dbe3b696a3652885",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/burst-grassland.png": {
+    "mtime": 1785528003.107613,
+    "ast_hash": "b61049bd48a221c730739fdaf852545d",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/cohesion_after.png": {
+    "mtime": 1785513401.6948147,
+    "ast_hash": "3bdfbc5f9d898682dfa164f87adf8342",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/cohesion_before.png": {
+    "mtime": 1785513272.304761,
+    "ast_hash": "e81786c014dca5fff409e32ccb430f23",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/cohesion_before2.png": {
+    "mtime": 1785513306.198693,
+    "ast_hash": "13f5e4771204a979159ed251ee7acc3b",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/cohesion_ground.png": {
+    "mtime": 1785513466.3941066,
+    "ast_hash": "85ae734a7b7ce790b821d71c5eedfc58",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/cohesion_ground2.png": {
+    "mtime": 1785513548.9599695,
+    "ast_hash": "337c4650ba87308deaf115973006f800",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/cube-test.png": {
+    "mtime": 1785517510.9997654,
+    "ast_hash": "6c969ca4709a7b01693da9f912535ad8",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/cube-test2.png": {
+    "mtime": 1785517539.0175667,
+    "ast_hash": "49589bd9b5e411b4a78d502cc2f3b8b1",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/deepened.png": {
+    "mtime": 1785517848.7813125,
+    "ast_hash": "e4fb28c52b38a79c5720bd10c871a344",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/drawopt-grassland.png": {
+    "mtime": 1785531394.7078247,
+    "ast_hash": "0174a1eac9d15d9651b72e899727a401",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/frozen-OFF.png": {
+    "mtime": 1785517397.9065423,
+    "ast_hash": "3b818c400a9c057b3fd19b8d36fdac3b",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/frozen-ON.png": {
+    "mtime": 1785517387.924392,
+    "ast_hash": "2bf6517a36b8bb481f06fe3a7d901dd6",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/gpu-cpu-ref.png": {
+    "mtime": 1785538646.8873713,
+    "ast_hash": "f113ad4a956b4dfe0136eaa62f3c7467",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/gpu-cpu-ref2.png": {
+    "mtime": 1785538683.2585008,
+    "ast_hash": "2f0c81a28395c25400ea9f6cc5a362c0",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/gpu-path.png": {
+    "mtime": 1785538700.8833718,
+    "ast_hash": "55d3d6139a089e4c9a061cb2dfa50f36",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/gpu-shadow.png": {
+    "mtime": 1785538739.906489,
+    "ast_hash": "2969c82b7652363a8fa7d265ffa428d0",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass-tuned.png": {
+    "mtime": 1785592827.1947293,
+    "ast_hash": "2d37d84fa339e1f895a99920150283df",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass-tuned2.png": {
+    "mtime": 1785592857.9109745,
+    "ast_hash": "8dc873bc1612b624cf0e749a17b73c65",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass_closeup.png": {
+    "mtime": 1785444228.0882232,
+    "ast_hash": "5ed4dbb56bbf0dcc18a883a962bfdea1",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass_feather_reeds.png": {
+    "mtime": 1785503212.646843,
+    "ast_hash": "84cd0eb406581f78adf9e002f8900a7d",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass_gradient_check.png": {
+    "mtime": 1785443216.3424897,
+    "ast_hash": "d2978cdeab7b20fbe797ca0cb76d7de8",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass_gradient_check2.png": {
+    "mtime": 1785443332.100105,
+    "ast_hash": "06ad645a4f060112bc5932119f8ebb72",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass_gradient_check3.png": {
+    "mtime": 1785443405.3005753,
+    "ast_hash": "e524b00da1b8626780aa0af63a17fd72",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass_gradient_check4.png": {
+    "mtime": 1785443526.0223484,
+    "ast_hash": "601c554db62e1f1af3f81d5dd78409ae",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass_gradient_check5.png": {
+    "mtime": 1785443603.1129253,
+    "ast_hash": "3a1150efa3ae561a0dbec43da8a9a41a",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass_gradient_check6.png": {
+    "mtime": 1785443697.8163817,
+    "ast_hash": "b4173662d2eb28b8cc5c382ad825e081",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass_gradient_check7.png": {
+    "mtime": 1785443782.2052782,
+    "ast_hash": "1c19c7e70f9e0a0724f29adc580f471a",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass_gradient_check8.png": {
+    "mtime": 1785443888.3346977,
+    "ast_hash": "51281645f81b798d02c6e088e16f690f",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass_gradient_check9.png": {
+    "mtime": 1785444049.6470728,
+    "ast_hash": "fb8849b6daa21880e234a2c555644035",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass_nadir.png": {
+    "mtime": 1785444100.2018547,
+    "ast_hash": "c451777f77a8c36938e1e110693e9fce",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grass_sidelit.png": {
+    "mtime": 1785444191.980353,
+    "ast_hash": "4c7cead735ded1175a875ae44ac53239",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/grassland-eye.png": {
+    "mtime": 1785517929.2664216,
+    "ast_hash": "32457ed801358f7d92e989dbf7df472b",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/lmhpoly_flowers_close.png": {
+    "mtime": 1785449732.045349,
+    "ast_hash": "261f085d7c38f6d436da85f2c586e1b7",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/lmhpoly_flowers_colors.png": {
+    "mtime": 1785450824.1571991,
+    "ast_hash": "f11698dd460664f30c2ee339cb9f6560",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/lmhpoly_preview.png": {
+    "mtime": 1785449687.3061206,
+    "ast_hash": "7a040a738e87634d5e7bb84f8ccdc85a",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/lmhpoly_preview2.png": {
+    "mtime": 1785449702.337474,
+    "ast_hash": "a663a31e8ae3cbcb15389253292702ca",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/lmhpoly_variants.png": {
+    "mtime": 1785450808.9368744,
+    "ast_hash": "af1fd13973da363574383a2ccc7bac2a",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/lod_crossfade.png": {
+    "mtime": 1785502688.9772704,
+    "ast_hash": "1bd6a8b0ad8dbd2bc6498161a7791873",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/lod_debug.png": {
+    "mtime": 1785502219.983634,
+    "ast_hash": "a5ae2c2f07f0c5134e9496904f4ac60e",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/lod_real.png": {
+    "mtime": 1785502716.3395112,
+    "ast_hash": "145fcdb13fb68c6e6dc81ee79d0922c0",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/lod_real2.png": {
+    "mtime": 1785503143.690001,
+    "ast_hash": "2d405015e780dfa4749ca5ec87cd4865",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/meadow_aerial.png": {
+    "mtime": 1785470897.3211203,
+    "ast_hash": "efa4522af85360b4ccebfca159620393",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/meadow_final.png": {
+    "mtime": 1785470862.7045586,
+    "ast_hash": "319ef8a60a6ba77a7b86de125e2c80d4",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/meadow_fixed.png": {
+    "mtime": 1785470481.055529,
+    "ast_hash": "7b473b57a04eba95fe7959f651b949dc",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/meadow_floor.png": {
+    "mtime": 1785470943.4144785,
+    "ast_hash": "20e59fe54bb9825109697ac5f9d93bcc",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/meadow_ground1.png": {
+    "mtime": 1785456050.2733438,
+    "ast_hash": "a3f72cc98c15cef35611aeefa5de2652",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/meadow_ground_fixed.png": {
+    "mtime": 1785470517.5443363,
+    "ast_hash": "8a005d6ae04e2575031e6126a7f47694",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/meadow_pass1.png": {
+    "mtime": 1785456014.659616,
+    "ast_hash": "0af7d9d7e101d99842ec60a331805132",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/meadow_thinned.png": {
+    "mtime": 1785456376.4383864,
+    "ast_hash": "84965de78d4f67e256d855850958d3b7",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/planet_grassland_flowers.png": {
+    "mtime": 1785451519.6794589,
+    "ast_hash": "9dfb0e409369936a96f05548c5a88e7d",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/planet_lmhpoly_flowers.png": {
+    "mtime": 1785451165.6841943,
+    "ast_hash": "f1a21ee38a289daf59a925f6b8bc6f09",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/planet_lmhpoly_flowers2.png": {
+    "mtime": 1785451257.1420417,
+    "ast_hash": "f5ecb522843cdfc3c6466681dcf6e871",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/planet_lmhpoly_flowers3.png": {
+    "mtime": 1785451284.7154584,
+    "ast_hash": "c7bb4bff5911dbcee47ca9636889ea2f",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/planet_lmhpoly_flowers4.png": {
+    "mtime": 1785451355.27046,
+    "ast_hash": "0035b229394cb8a11a1ae0e6d4d6a5b8",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/planet_lmhpoly_flowers5.png": {
+    "mtime": 1785451387.2960427,
+    "ast_hash": "c29abb360290874e1c6856ff1facc348",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/planet_tem_grass.png": {
+    "mtime": 1785453747.9272597,
+    "ast_hash": "d5c215ec29c79e2e1aeea742aea993a9",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/planet_tem_grass2.png": {
+    "mtime": 1785453771.4115071,
+    "ast_hash": "7829b5325751628f04fcf7468aa95a30",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/post-cleanup.png": {
+    "mtime": 1785518027.409971,
+    "ast_hash": "6c1fa33391c1fd01515066eb353a880c",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/reeds_toned.png": {
+    "mtime": 1785470629.2451754,
+    "ast_hash": "213bfb72ab176f4ba2cffb626eb74dd7",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/s2-cpu.png": {
+    "mtime": 1785540068.1721559,
+    "ast_hash": "d651f2f13135543c14c2ce0a71bb99b8",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/s2-cpu2.png": {
+    "mtime": 1785540187.067298,
+    "ast_hash": "b565df595c2e58908a3760b02f0dcdb5",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/s2-gpu.png": {
+    "mtime": 1785540153.248065,
+    "ast_hash": "9e1ab87e4848e19c84943a958bc2aa89",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/s2-gpu2.png": {
+    "mtime": 1785540201.696388,
+    "ast_hash": "5626b3a21bab0984e1a1d465b14b3435",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/s3-cpu.png": {
+    "mtime": 1785541456.9130557,
+    "ast_hash": "eca56f4ca53b122c0132cae7ca1176cc",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/s3-gpu.png": {
+    "mtime": 1785541437.9409893,
+    "ast_hash": "243b5fc762c2fefc40d0bb21c2704761",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/savanna-rake.png": {
+    "mtime": 1785517453.472551,
+    "ast_hash": "4b54baf2cca109882f81545d00804f1a",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/savanna-shadows-OFF.png": {
+    "mtime": 1785517337.9001186,
+    "ast_hash": "aaf61313708cf37fa4652a896b9ef8a9",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/savanna-shadows-ON.png": {
+    "mtime": 1785517298.569508,
+    "ast_hash": "6f0df033490ad6f25f5e0cf2d04d339d",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/screenshot-20260731-120017.png": {
+    "mtime": 1785517218.2066286,
+    "ast_hash": "9c6eb518c335bf9c163629f9391fda5f",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/screenshot-20260731-120053.png": {
+    "mtime": 1785517253.9666893,
+    "ast_hash": "ef6fddb09b10fe844b811c674caa5cc5",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/screenshot-20260731-145408.png": {
+    "mtime": 1785527648.2391267,
+    "ast_hash": "46b418d12fcb9279baed3dfcd42440b5",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/shadow-debug.png": {
+    "mtime": 1785517711.3939598,
+    "ast_hash": "0f2b8524d29b7bade27113733f19c0a5",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/swamp_reeds.png": {
+    "mtime": 1785456480.5203476,
+    "ast_hash": "3aae499af307d13f34fe50cd8286af74",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/sweep-forest.png": {
+    "mtime": 1785521742.8985891,
+    "ast_hash": "3f5c0f61fcc4c925ffd69fa39300e9e2",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/sweep-scrub.png": {
+    "mtime": 1785521850.0575578,
+    "ast_hash": "a5cb80e619d529f3f417d878f6e34a30",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/sweep-swamp.png": {
+    "mtime": 1785521802.2905605,
+    "ast_hash": "cdf8052f3dcc09facde7ab819942fc70",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/sweep-taiga.png": {
+    "mtime": 1785521825.7516918,
+    "ast_hash": "5bdf0c88e39d562048a5ba977a9251e3",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/sweep-tropical.png": {
+    "mtime": 1785521766.8958786,
+    "ast_hash": "1c109515b65e7bb554a26be402e713d4",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/tem_flowers_close.png": {
+    "mtime": 1785453413.831981,
+    "ast_hash": "e7b9ce373dc793587a33410a8114cedf",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/tem_grid.png": {
+    "mtime": 1785453367.91901,
+    "ast_hash": "d1496817bcdf73cdea3f89f82a688cd5",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/tem_veg_close.png": {
+    "mtime": 1785453100.7043188,
+    "ast_hash": "c8da14880afe500094ae1f87f6a39d7b",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/tem_veg_test.png": {
+    "mtime": 1785453066.5656676,
+    "ast_hash": "ff1d13271bd50c1bfb96c903579d9b16",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/tff_trees_point.png": {
+    "mtime": 1785450005.701151,
+    "ast_hash": "d5ce132db0c5583dabcca09ebb151e74",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/tff_trees_test.png": {
+    "mtime": 1785449973.3321397,
+    "ast_hash": "2454f7cc6183115127bf76542a352156",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/tree_dummybuf.png": {
+    "mtime": 1785448241.0620103,
+    "ast_hash": "ff9454da0c4392cfa1c27a03b8c7e307",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/tree_frame.png": {
+    "mtime": 1785448125.2104182,
+    "ast_hash": "608e4907498a63f0d99aed61519d868e",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/trees_fixed.png": {
+    "mtime": 1785448449.4861574,
+    "ast_hash": "d7d1cbaac4a5627b7bf30ffe4c307622",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/understory-OFF.png": {
+    "mtime": 1785520782.1841228,
+    "ast_hash": "0896227c4d3bc12ae75fb5140d3f1135",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/understory-ON.png": {
+    "mtime": 1785520769.4687443,
+    "ast_hash": "83bd93f7e6921612337a4bd8122500bd",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/understory-final.png": {
+    "mtime": 1785520814.3421307,
+    "ast_hash": "a8b26da530eef2a06c321e70f73f77db",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/understory-shadow.png": {
+    "mtime": 1785520716.5035312,
+    "ast_hash": "17a68f21305b7db142ccfd47c73c30f7",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/understory2.png": {
+    "mtime": 1785520753.0694432,
+    "ast_hash": "8d168695bae5c0f33a0de926cf8bc8d5",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/wind_calm_meadow.png": {
+    "mtime": 1785448541.4743216,
+    "ast_hash": "18064a4f6d3387afb88bb809db39e012",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/wind_exaggerated.png": {
+    "mtime": 1785448570.6550064,
+    "ast_hash": "efa2a5b0ccb310d58997156041f7e931",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/wind_off.png": {
+    "mtime": 1785448072.8345046,
+    "ast_hash": "8d37c20d28f54e072b0072a5fa9e3ac9",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/wind_on_meadow.png": {
+    "mtime": 1785448501.594283,
+    "ast_hash": "4339ac11646325c96ddd3f2a3d4e6d1f",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/wind_strong.png": {
+    "mtime": 1785448005.5088682,
+    "ast_hash": "2b3e8dfbe1e36f157d203c5d32f3c267",
+    "semantic_hash": ""
+  },
+  "Assets/Screenshots/wind_strong2.png": {
+    "mtime": 1785448030.7271347,
+    "ast_hash": "8d37c20d28f54e072b0072a5fa9e3ac9",
+    "semantic_hash": ""
+  },
+  ".agent-memory/claude/project_grass_terrain_lighting_arc.md": {
+    "mtime": 1785766183.1677377,
+    "ast_hash": "5e5c466f751d347a478d2b06d0ec1419",
+    "semantic_hash": ""
+  },
+  "Assets/Resources/ConsoleScripts/Step Test.txt": {
+    "mtime": 1785678246.005497,
+    "ast_hash": "8e8d3d252f1edea2fe088a18e640671b",
     "semantic_hash": ""
   }
 }
