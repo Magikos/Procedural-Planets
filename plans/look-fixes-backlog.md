@@ -13,21 +13,29 @@ The planet exposes **two surfaces that disagree by ~3–24 units** (measured):
 Anything placed/grounded on the **analytic** surface floats above or sinks below the **rendered** terrain.
 This one mismatch drove **the character fall-through** (fixed by moving grounding to the raycast) **and** the
 **floating scatter** (below), and will bite **collision** ([docs/design/2026-08-09-collision-strategy.md](../docs/design/2026-08-09-collision-strategy.md))
-if not unified. **Highest-leverage fix: make the analytic surface match the rendered mesh** (or route every
-surface consumer through the raycast/mesh) so one ground truth serves character, scatter, collision, water.
+if not unified.
+
+**DECIDED 2026-08-09** — see [docs/design/2026-08-09-surface-unification.md](../docs/design/2026-08-09-surface-unification.md).
+The naive "make analytic follow the visible mesh" fix is a trap: the visible raycast is a **camera-scoped**
+query (it misses where the camera has no selected leaf — measured), and coupling the deterministic scatter
+gather to it would break placement determinism. Resolution: **render mesh = ground truth for on-surface
+camera-local things** (character grounding — done; future collision), **analytic = deterministic approximation**
+for camera-independent producers (scatter/AI/spawn). The reported up-close scatter float was mostly the
+**orientation** bug (now fixed); residual near-camera height gap is a max-LOD sagitta (cm). A real
+height-unify, if ever needed, places props on the **max-depth leaf mesh triangle** (deterministic), not the
+camera raycast — plan in the design doc, review before code.
 
 ## The list
 
-### 1. Rocks not oriented to terrain + parts float — CAUSE PINNED
-`ScatterPlacementMath.TryPlace` (`ScatterPlacementMath.cs:57,59`):
-- **Orientation:** `align = FromToRotation(Vector3.up, dir)` aligns the prop's up to the **radial** `dir`, not
-  the local surface normal — so rocks stand perpendicular to the sphere, not the slope. The surface normal is
-  already known upstream (`slopeCos = dot(surfaceNormal, dir)`, line 40) but unused for rotation. **Fix:** for
-  ground-hugging props (rocks), align up to the **surface normal** (or blend radial↔normal by a per-prototype
-  "conform" weight). Tall props (trees) may want to stay radial — make it a per-prototype flag.
-- **Floating:** `posLocal = dir * localRadius` places on the **analytic** surface (the root mismatch above) →
-  props hover above / sink below the visible mesh. **Fix:** place on the visible mesh, or unify the surface.
-- Effort: S (orientation) + shares the root-surface fix (floating). Watch: don't regress tree placement.
+### 1. Rocks not oriented to terrain + parts float — ORIENTATION DONE (2026-08-09)
+- **Orientation — FIXED (commit on `character-controller-mvp`).** Added per-prototype `ConformToSlope [0..1]`:
+  `up = normalize(lerp(dir, surfaceNormal, conform))`, threaded through the DTO/rules and both `TryPlace`
+  bodies (managed + Burst, parity 0.0000°). 0 keeps up == dir (trees/mushrooms unchanged, golden placements
+  intact); the 14 rock prototypes are set to 1. Verified: 78/78 green + runtime check (rock up aligns to the
+  normal on a 25° slope, tree stays radial).
+- **Floating — deferred to surface unification** (the root mismatch). `posLocal = dir * localRadius` still
+  places on the analytic surface. Near camera (max LOD) the residual gap is cm-scale; the metres-scale gap is
+  distance-only + sub-pixel. See [docs/design/2026-08-09-surface-unification.md](../docs/design/2026-08-09-surface-unification.md).
 
 ### 2. Mushrooms render a solid/flat color — LEAD (unconfirmed)
 Likely the mushroom scatter prototype's material is a flat albedo (no texture/normal/lighting variation), or
@@ -44,14 +52,15 @@ it's likely the far grass overlay or the biome colour blend at the shared-atlas 
 `GrassLodCoverage`; zero `_GrassSurfaceBrightness` on the runtime terrain material to test if it's the overlay.
 Effort: M (recurring look-tuning, needs captures).
 
-### 4. Character capsule lit from under the planet (planet doesn't block the sun) — character follow-up
-The placeholder capsule uses the **default URP lit** material, so the directional sun lights it regardless of
-the night side — the planet body casts no shadow at that scale. The terrain uses a **custom analytic sun**
-(day/night from `surfaceNormal · sunDir`). **Fix:** give the character a **planet-aware** lit material that
-darkens on the night side using the same daylight factor as the terrain (`dot(radialUp, sunDir)`), rather than
-raw URP directional lighting. This will apply to real character/NPC art too. Cheapest MVP version: a small
-character shader/material sampling the local sun; or multiply albedo by the terrain's daylight term. Effort: S–M.
-(Same class of issue for any surface prop that uses standard lighting vs the analytic sun.)
+### 4. Character capsule lit from under the planet (planet doesn't block the sun) — DONE (2026-08-09)
+FIXED (commit on `character-controller-mvp`). New **`Planet/PropLit`** shader
+([Assets/Graphics/Shaders/PropLit.shader](../Assets/Graphics/Shaders/PropLit.shader)) shades from the shared
+analytic planet sun (`Includes/PlanetSunLighting.hlsl`) like terrain/scatter: `lerp(nightColor, dayColor,
+daylight)` where `daylight = smoothstep(planetNormal · sun)` is 0 on the night side. Any object wearing it
+darkens with the planet, zero per-object wiring (globals are scene-wide). `PlanetCharacterController` assigns a
+runtime PropLit material to the capsule. Verified in play: capsule luminance day 0.69 → night 0.29. **Reusable
+for all future surface props/NPCs** — this was Bryan's explicit ask ("fix the planet not blocking light so new
+things don't suffer the bleeding-light issue").
 
 ## Suggested sequencing
 1. **Unify the surface** (root) — retires the floating scatter + prevents collision drift; the biggest win.
