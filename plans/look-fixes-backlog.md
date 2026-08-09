@@ -15,27 +15,30 @@ This one mismatch drove **the character fall-through** (fixed by moving groundin
 **floating scatter** (below), and will bite **collision** ([docs/design/2026-08-09-collision-strategy.md](../docs/design/2026-08-09-collision-strategy.md))
 if not unified.
 
-**DECIDED 2026-08-09** — see [docs/design/2026-08-09-surface-unification.md](../docs/design/2026-08-09-surface-unification.md).
-The naive "make analytic follow the visible mesh" fix is a trap: the visible raycast is a **camera-scoped**
-query (it misses where the camera has no selected leaf — measured), and coupling the deterministic scatter
-gather to it would break placement determinism. Resolution: **render mesh = ground truth for on-surface
-camera-local things** (character grounding — done; future collision), **analytic = deterministic approximation**
-for camera-independent producers (scatter/AI/spawn). The reported up-close scatter float was mostly the
-**orientation** bug (now fixed); residual near-camera height gap is a max-LOD sagitta (cm). A real
-height-unify, if ever needed, places props on the **max-depth leaf mesh triangle** (deterministic), not the
-camera raycast — plan in the design doc, review before code.
+**DECIDED 2026-08-09 (rev 2)** — see [docs/design/2026-08-09-surface-unification.md](../docs/design/2026-08-09-surface-unification.md)
+(corrected after a Codex review + independent code trace). The planet has **several** height representations,
+all derived from the same noise and fixed at generation. **Scatter places on the raw analytic noise; the
+rendered mesh samples the same noise at its vertices** — they agree at vertices and differ only by the triangle
+chord (measured: ~0 near the camera / max LOD, sub-pixel at distance). So the near-visible float is **not**
+height — it is **orientation** (a radial prop lifts its downhill edge on a slope). Policy: **per-consumer
+authority + error budget**, no unification service. Character grounding uses the camera-scoped visible raycast
+with an analytic fallback — "fixed" is a runtime observation until a **land** test proves it.
 
 ## The list
 
-### 1. Rocks not oriented to terrain + parts float — ORIENTATION DONE (2026-08-09)
-- **Orientation — FIXED (commit on `character-controller-mvp`).** Added per-prototype `ConformToSlope [0..1]`:
-  `up = normalize(lerp(dir, surfaceNormal, conform))`, threaded through the DTO/rules and both `TryPlace`
-  bodies (managed + Burst, parity 0.0000°). 0 keeps up == dir (trees/mushrooms unchanged, golden placements
-  intact); the 14 rock prototypes are set to 1. Verified: 78/78 green + runtime check (rock up aligns to the
-  normal on a 25° slope, tree stays radial).
-- **Floating — deferred to surface unification** (the root mismatch). `posLocal = dir * localRadius` still
-  places on the analytic surface. Near camera (max LOD) the residual gap is cm-scale; the metres-scale gap is
-  distance-only + sub-pixel. See [docs/design/2026-08-09-surface-unification.md](../docs/design/2026-08-09-surface-unification.md).
+### 1. Rocks/bushes not oriented to terrain + parts float — FIXED via orientation (2026-08-09)
+Root cause of the near-visible float: **orientation, not height** (mesh-pivot + height-sag both ruled out by
+measurement — pivots sit at base; noise-vs-render sag ~0 at max LOD). A radial prop on a slope lifts its
+downhill edge → gap + shadow.
+- **`ConformToSlope [0..1]`** added: `up = normalize(lerp(dir, surfaceNormal, conform))`, threaded through
+  DTO/rules + both `TryPlace` bodies (managed + Burst, parity 0.0000°). 0 = radial (up == dir exactly, golden
+  placements intact); 1 = lies on the surface normal.
+- **Per Bryan's rule** ("rocks etc. fit the terrain; trees/flowers grow up"): **rocks = 1** (14 assets);
+  **bushes + flowerbushes = 0.6** (7 assets — beds without lying flat); trees/pines/palms/dead-trees/grass/
+  reeds/ferns/flowers = **0** (radial). **Mushrooms left at 0** (grow up on a stalk) — flagged for review.
+- Verified: 78/78 green; runtime — rock up = normal on a 25° slope, bush tilts 15° (0.6×25°), tree radial.
+- **Height float** (noise vs coarse render triangle) deferred — sub-pixel except far/impostor range; only
+  revisit if a pixel threshold is exceeded (surface-unification doc SU4/SU5).
 
 ### 2. Mushrooms render a solid/flat color — LEAD (unconfirmed)
 Likely the mushroom scatter prototype's material is a flat albedo (no texture/normal/lighting variation), or

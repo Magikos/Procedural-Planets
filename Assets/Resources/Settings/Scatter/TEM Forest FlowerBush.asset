@@ -20,6 +20,7 @@ MonoBehaviour:
   Weight: 0.4
   MaxSlopeDegrees: 32
   SlopeFadeDegrees: 5
+  ConformToSlope: 0.6
   HasMinAltitude: 0
   MinAltitudeMeters: 0
   HasMaxAltitude: 0

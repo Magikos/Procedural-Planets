@@ -18,7 +18,14 @@ where does collision come from?
 
 ## Decision
 
-**Two surfaces of need, two mechanisms — and one ground-truth surface under both.**
+**Two surfaces of need, two mechanisms — over a single fixed-LOD reference surface (camera-independent), not
+the camera-selected visible set.**
+
+> Note (2026-08-09): the planet actually exposes several representations, all derived from the same noise and
+> fixed at generation — see [2026-08-09-surface-unification.md](2026-08-09-surface-unification.md). "One
+> ground-truth surface" here means **one fixed-LOD reference** that grounding and collision both agree with to
+> a bounded error; it is NOT the camera-selected visible mesh (off-screen bodies still need collision). The
+> analytic sampler stays an approximate query.
 
 1. **Ubiquitous cheap ground queries** (character grounding, spawn, prop placement, AI walk-height, camera,
    simple projectiles that only need "did I hit the ground") → **analytic raycast** against the visible
@@ -34,7 +41,10 @@ where does collision come from?
    (`TryGetSurfaceRadius`) and the rendered mesh differed by 3–24 units, which dropped the character through
    the terrain. The character now grounds on the **render-mesh raycast**; physics colliders come from the
    **render mesh** too. The analytic sampler is relegated to approximate queries where exact agreement
-   doesn't matter.
+   doesn't matter. **Collision must cook from a fixed collision LOD (camera-independent)**, not the
+   camera-selected visible leaf set — a thrown rock resting off-screen still needs its collider. Character
+   grounding "fixed" is so far a runtime observation: the raycast falls back to the analytic sampler on a
+   miss, so a **land** test is still owed to prove mesh-grounding (see the surface-unification doc, SU3).
 
 ### Collision streaming shape
 - Attach a `MeshCollider` to each chunk **within a physics radius** of the player + each active dynamic
