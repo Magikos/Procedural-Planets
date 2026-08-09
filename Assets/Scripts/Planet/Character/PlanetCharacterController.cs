@@ -37,6 +37,7 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
 
     SurfaceCharacterController _driver;
     Transform _child;
+    Material _propMaterial;
 
     Vector3 _center;
     float _radius;
@@ -73,6 +74,8 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
     {
         if (_child != null)
             Destroy(_child.gameObject);
+        if (_propMaterial != null)
+            Destroy(_propMaterial);
     }
 
     void OnApplicationFocus(bool hasFocus)
@@ -268,6 +271,17 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         Collider col = go.GetComponent<Collider>();
         if (col != null)
             Destroy(col);
+
+        // Planet-aware lit material so the capsule darkens on the night side (the planet body occludes the
+        // sun). Default URP Lit takes the raw directional sun and stays bright on the far hemisphere.
+        Shader propShader = Shader.Find("Planet/PropLit");
+        if (propShader != null)
+        {
+            _propMaterial = new Material(propShader) { name = "PropLit (runtime)" };
+            var renderer = go.GetComponent<Renderer>();
+            if (renderer != null)
+                renderer.sharedMaterial = _propMaterial;
+        }
         _child = go.transform;
     }
 
