@@ -5,8 +5,40 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 5a0ee82f-d367-47b6-bbee-397761463f85
-  modified: 2026-07-31T16:00:37.538Z
+  modified: 2026-07-31T18:00:58.786Z
 ---
+
+**2026-07-31 foliage "painted-on" = terrain didn't RECEIVE shadows** (commit `b4720b8`): Bryan — foliage
+looked painted-on / floating. Root cause (proven, not guessed): `PlanetVertexColor` (terrain) lit from
+`_SunParams` and sampled only CLOUD shadows, NEVER the main-light shadowmap — so foliage CAST into the
+shadowmap (FoliageLit has a ShadowCaster pass w/ instancing+wind) but the ground never READ it → no prop
+shadows on the ground. FoliageLit ALREADY received main-light shadows (frag lines ~296-304, leafShade floor
+0.5 / trunkShade 0.45) — terrain was the missing half. FIX: terrain now
+`mainShadow = MainLightRealtimeShadow(TransformWorldToShadowCoord(posWS))`; `sunShadow = lerp(1,mainShadow,
+daylight)` gates the direct diffuse (`litDiffuse = terrainDiffuse*sunShadow`) AND specular; plus
+`dayLight *= lerp(0.45,1,sunShadow)` DEEPENS cast shadows below the 0.24 terminator floor so they survive
+the +0.5 exposure/bloom/tonemap grade (at 0.45→lit shadow was ~30%, read as "barely there"). Terminator/night
+untouched (sunShadow==1 off day side). Verified eye-level grassland: trees throw bold directional shadows,
+understory in real shade = rooted, not painted. Tune knob = the `0.45` (lower=darker shadows).
+- **DEBUG TECHNIQUE (reusable):** the planet scene has moving confounds (clouds drift → CloudShadowFactor,
+  sun rotates, scatter streams) that INVALIDATE an A/B. `Time.timeScale = 0` freezes all three (rendering
+  still runs) → clean before/after. To prove a shadow SAMPLE reaches a custom-lit shader, add a temp global
+  `float _TerrainShadowDebug; ... if(_TerrainShadowDebug>0.5) return mainShadow.xxxx;` and
+  `Shader.SetGlobalFloat` it — grayscale shadow term is unambiguous vs guessing from a graded frame. Removed
+  after. Also: drop a plain URP cube (known caster) to isolate cast-vs-receive.
+- **GOTCHA:** `refresh_unity mode=force` DURING play mode spams "PlayerLoop called recursively" + drops/
+  recovers the MCP bridge each time — harmless (no compile error) but noisy; avoid force-reimport in play.
+- **FOLLOW-UP: understory foliage didn't receive it** (commit `d8e0306`): Bryan — tree casts a ground
+  shadow but the ferns/bushes/flowers STANDING in it stay bright. Cause: FoliageLit folded the shadow only
+  into the soft `leafShade`(0.5)/`trunkShade`(0.45) direct term + a 0.68 dayColor floor → a shadowed leaf
+  only fell to ~87% (invisible). Those floors exist to keep dense CANOPIES from going black, but they also
+  make UNDERSTORY ignore cast shadows. FIX: explicit whole-plant multiply AFTER all day terms:
+  `dayColor *= lerp(0.4, 1.0, lerp(1.0, shadowAtten, daylight))` — sunlit crowns (shadowAtten≈1) untouched,
+  understory in a tree's shadow drops to ~33-40% (reads), canopy interior gets depth not black. Tune = the
+  `0.4`. GRASS (`Grass.shader` line ~406) ALREADY receives (`surfaceDirect *= MainLightRealtimeShadow`,
+  shadowed grass ~17%); frozen A/B confirmed grass+understory+canopy all darken with shadows ON vs OFF.
+  THREE shaders receive main-light shadows independently now: terrain (`PlanetVertexColor`), foliage
+  (`FoliageLit`), grass (`Grass.shader`) — any new world surface that must ground needs its own sample.
 
 **2026-07-31 cohesion pass** (commit `34ed07c`): Bryan — "assets look plopped, colors clash, stand out
 too much." Fix = UNIFY the palette, not add groundcover (savanna stays open). Grade

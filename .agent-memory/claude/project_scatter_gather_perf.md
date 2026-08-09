@@ -1,12 +1,125 @@
 ---
 name: project-scatter-gather-perf
-description: "2026-07-29 — scatter deterministic (verify PASS). Tier 1a coarse-biome memo cut gather 21s→6s (4354691); then Lever B incremental TILE CACHE replaced whole-disc gather entirely (frontier-only per move) — fly cap raised 0.006→0.02 (~106 m/s); if scatter \"looks missing\" it's altitude/orbit, NOT placement or speed"
+description: "2026-08-01 — scatter fly-feedback round: gather now drains at job speed (sync Complete, backlog median 0 @fly-cap), biome borders softened (KernelRadius 6→12), and bushes/rocks/reeds got the impostor far-tier (gate 300→120) killing mid-prop pop-in. Earlier: incremental TILE CACHE, coarse-biome memo, parallel Burst gather. If scatter \"looks missing\" it's altitude/orbit, NOT placement or speed"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 5a0ee82f-d367-47b6-bbee-397761463f85
-  modified: 2026-07-31T13:08:02.512Z
+  modified: 2026-08-01T15:10:28.618Z
 ---
+
+## 2026-08-01 — fly-around feedback round (5 items; all shipped)
+
+User flew the real planet and gave 5 items. Fixes (all committed on branch `scatter-placement`):
+
+1+2. **Grass too bright at sunrise + shadows pop** — `6bb3302`: Grass.shader tip ramp dimmed
+   (`0.40,0.52,0.32`→`1.0,0.99,0.64`, was brighter), day floor 0.12→0.07 / coeff 0.82→0.86;
+   PC_RPAsset `m_CascadeBorder` 0.107→0.25 (wider shadow-cascade fade). User to eyeball at real sunrise.
+
+3. **Bush/rock pop-in (no far-LOD)** — `3605ce0`: **the impostor gate is the knob** —
+   `ScatterDtos.cs` `ImpostorMinMeshCull` **300f→120f**. `HasImpostor => MaxCullDistance >= gate`;
+   impostor reaches `ImpostorRangeMultiplier`(3.0)×cull. So bushes(120→360m), rocks(250→750m),
+   reeds/wildflowers now billboard past mesh cull like trees; flowers/mushrooms/grass(≤90) stay short.
+   Derived policy, no per-asset authoring. Impostor disc sits INSIDE the tree gather radius → no disc
+   expansion, just more billboards. Verified: bakes clean, savanna reads to the shore w/ no cull line.
+
+4. **Can still outrun gather at speed** — `91c5d75`: `ScatterTileCache.GatherBatchBurst` was yielding a
+   **whole frame per batch** (`while(!IsCompleted) await NextFrameAsync`) while the parallel Burst job
+   finishes in ~ms → ~7× throttle. Now `_pending.Complete()` inline on main. Backlog **avg ~5000→median 0**
+   @150. NOTE: **off-main Complete THROWS** "Job control thread mismatch" — Unity forbids completing a job
+   from a worker thread; `Awaitable.BackgroundThreadAsync()+Complete()` is NOT allowed. Must be main-thread.
+
+5. **Biome lines (hard green→dirt)** — `91c5d75`: `BiomeMapBaker.cs` `KernelRadius` **6→12** (13×13→25×25
+   counting window). Terrain color AND grass density both read the same baked `_BiomeIds/_BiomeWeights`
+   atlas, so one widen softens both. NOT the Voronoi SecondaryWeight (legacy path). Ceiling ~HighResolution=128.
+
+**Perf note (impostor trade):** far-LOD adds gather/commit load. @fly-cap 106 m/s backlog median 0 (fine);
+@150 (beyond cap) densest biome builds ~1300 backlog. Acceptable — camera can't exceed the cap in play.
+**Editor-cycle gotcha:** a settings-DTO const (ImpostorMinMeshCull) or a compile-time const (KernelRadius)
+needs a **clean stop→play**; a `refresh_unity` hot-reload keeps the OLD world/DTO and won't re-derive.
+
+## 2026-07-31 — DONE: parallel Burst gather (the pop-in fix) shipped, verified byte-identical
+
+Replaced the single-thread serial gather with a `[BurstCompile] IJobParallelFor` over the batch's
+(tile, prototype) pairs. Commits: `dc47284` (stage 1: golden noise test), `568ddb9` (stage 2: Burst core
++ parity test), `90e6900` (stage 3+4: wired into the cache). **NOT full ECS/Entities** — Bryan re-picked
+"Full ECS/DOTS" twice, but exploration proved Entities is unnecessary (draw path already fine) AND both
+Entities/Burst need the SAME noise port, which is MOSTLY ALREADY DONE. So this is DOTS Jobs+Burst on the
+GATHER only; the RenderMeshInstanced draw is untouched.
+
+**Key architecture facts (reuse these):**
+- Elevation noise is ALREADY blittable + `[BurstCompile]` + byte-identical: `NoiseData`,
+  `NoiseFilterData`/`NoiseFilterEvaluator` (Noise.cs, NoiseFilters/NoiseFilterData.cs);
+  `ShapeGenerator.BuildNoiseFilterData(Allocator)` emits the NativeArray. Placement math
+  (`ScatterPlacementMath`) is already a pure "CPU<->GPU parity surface".
+- The large managed piece (VoronoiBiomeField kd-tree + climate) is NOT ported — SIDESTEPPED. The gather
+  memoizes biome per coarse `(face, min(level,9), cell)` center, so `ScatterBiomePrecompute` (managed, off
+  main thread) evaluates `EvaluateBiome` for exactly those cells into a `NativeParallelHashMap` the job
+  reads — byte-identical, no Voronoi port.
+- New files: `ScatterGatherBurst.cs` (per-candidate mirror), `ScatterGatherJob.cs` (job + PairInput/
+  ProtoParams/BiomeSample + NativeStream output grouped per pair), `ScatterBiomePrecompute.cs`,
+  `IBurstElevationSource.cs` (AnalyticGroundSampler implements it; non-analytic samplers fall back to the
+  serial path). Persistent per-world native buffers built at `Configure`, freed after `_pending.Complete()`.
+- Awaitable-compatible completion (NO Task.Run): schedule on main, `while(!_pending.IsCompleted) await
+  Awaitable.NextFrameAsync(); _pending.Complete();`.
+
+**Determinism: two tiers.** Threshold math (elevation/normal/AreaKeep-sqrt/membership-pow → accept gate)
+must be bit-identical → reuse shared pure helpers. Post-acceptance transforms (pos/rot/scale) only need
+epsilon (the 2 native Quaternion ctors are re-derived in Unity.Mathematics). Burst-compiled noise differs
+from managed-IL noise by ~1-2 ULP → ~1mm position at 5000m radius (harmless; parity-test position epsilon
+is scale-aware 0.05m; the ID SET is exact). Guards added: `NoiseFilterEvaluatorGoldenTests` +
+`ScatterGatherParityTests` (schedules the real job). **LIVE proof in a generated world: managed==burst
+4287==4287 ids, 0 missing/extra, across all 64 protos, levels 8-13 (incl below-9), real Voronoi.**
+
+**Measured (`ScatterFlyBench`):** @60 m/s backlog avg **234** pairs (was ~10,564 serial = ~45x less),
+world holds 340k instances; @150 m/s world STAYS populated 332k-471k (serial collapsed to 110 tiles).
+Pop-in fixed.
+
+**Frame-spike follow-ups DONE same session (commits `9bba922`, `287a725`):**
+- **Incremental eviction** (`9bba922`): `RebuildBuckets` (O(all live instances) rebuild on every eviction)
+  replaced by `ScatterDrawBuckets` — per-proto packed matrices+positions keyed by tile, a departed tile
+  swap-removed in O(its own instances). Renderer iterates buckets by index/order-agnostically so
+  swap-remove is safe. `ScatterDrawBucketsTests` guards it. @150 worst frame 405->215ms, samples 65->105.
+- **Commit-spread** (`287a725`): committing a whole batch's baked matrices (~100k inst) in one frame was
+  the last spike; now yield a frame each `CommitInstancesPerFrame`=20k committed. @150 samples 105->150.
+
+**Final measured (editor, grassland fly):** @60 m/s (normal) frame **median 25ms (~40fps)**, p90 45ms,
+worst 93ms AT STARTUP (0.6s) — steady play is smooth, pop-in gone, world stays full. @150 m/s (beyond the
+~106 m/s fly cap) median 103ms — that steady cost was the **per-frame DRAW-SCAN**: `ScatterLodBatcher`
+scanned ALL of each proto's instances 5x/frame (4 LOD bands + impostor) RECOMPUTING the camera distance
+each pass.
+
+**Draw fix DONE (commit `ad20210`):** compute each instance's camera distance ONCE per proto per frame into
+a reused scratch array; every band reads it. Behaviour-identical. @150 frame median 103->28ms (per-instance
+draw cost ~-34%); static dense grassland 69k inst = 31ms/frame full-scene (editor). Profiled the residual
+scatter draw via a `ScatterRenderer.DrawEnabled` toggle (frame ON vs draw-off): **12ms, 610 instanced draw
+calls, 68M tris** — it was DRAW-CALL bound (ScatterLodBatcher chunks every proto x part x LOD band into
+<=1023-instance RenderMeshInstanced calls, inflated ~1.56x by the crossfade double-draws), NOT scan-bound.
+
+**GPU-DRIVEN INDIRECT DRAW — DONE (commits `a3c0dd7`/`05d0754`/`a1e92b0`, default ON).** Replaced the CPU
+RenderMeshInstanced batcher with Graphics.RenderMeshIndirect + a GPU cull compute (reused the grass
+GPU-draw scaffolding: GraphicsBuffer + IndirectArguments + Resources.Load compute). Key techniques:
+- **Shader `procedural:setup` dual-path** (all 3 scatter shaders FoliageLit/Scatter/ScatterImpostor): add
+  `#pragma instancing_options procedural:setup` + `StructuredBuffer<float4x4> _ScatterMatrices/_ScatterMatricesInv`
+  + `StructuredBuffer<uint> _ScatterVisible` + a `setup()` that (under UNITY_PROCEDURAL_INSTANCING_ENABLED)
+  writes `unity_ObjectToWorld = _ScatterMatrices[_ScatterVisible[unity_InstanceID]]`. Because setup() fills
+  unity_ObjectToWorld, ALL existing vertex/wind/interactor/ShadowCaster/DepthNormals code works UNCHANGED.
+  The UNITY_PROCEDURAL_INSTANCING_ENABLED guard leaves the RenderMeshInstanced fallback untouched (dual-path).
+- **`ScatterCull.compute`**: per LOD band, distance-only cull (NO frustum — off-camera shadow casters must
+  stay), appends master-indices to a per-band _Visible buffer + fills IndirectDrawIndexedArgs.instanceCount.
+  Mirrors ScatterLodBatcher's [near2,far2) bands + 15m crossfade + impostor tier exactly. Second kernel
+  `BuildInverse` computes the world->object AFFINE inverse on the GPU (so NO CPU Matrix4x4.inverse).
+- **Dirty-only upload** (`ScatterDrawBuckets` per-proto dirty flag -> `ScatterTileCache.ConsumeDrawDirty`):
+  re-upload+re-invert a proto's master ONLY on gather churn, never per-frame (static camera uploads nothing).
+- `ScatterGpuDraw` owns per-proto master/inv buffers + per-band visible/args buffers, one dispatch + one
+  RenderMeshIndirect per band. Falls back to the CPU batcher if `!Supported` (no compute/SM4.5).
+MEASURED: static dense scatter draw 11.4ms GPU vs 14.2ms CPU; flythrough @60 frame median **37ms vs 73ms
+CPU (~2x)**, p90 55 vs 97ms — the GPU advantage GROWS under load (cull/scan on GPU, only churned protos
+re-upload). Verified visually identical (LODs/impostors/crossfade/positions/normals) + correct shadows;
+EditMode 63 green. GOTCHAS: RenderMeshIndirect wants IndirectDrawIndexedArgs (5-uint indexed args, vs grass's
+4-uint RenderPrimitivesIndirect); the CPU inverse on churn was the flying-spike (GPU inverse fixed it);
+per-band dispatch/args-reset overhead caps the static win (a per-proto single-dispatch would widen it -
+future). Scatter-perf arc COMPLETE (7 gather/eviction commits + 4 draw commits: distance-precompute + GPU 1-3).
 
 ## 2026-07-30 — perf/LOD/seam diagnosis + dev tooling (Bryan flagged: slow load, LOD blink, hard grass edge)
 
