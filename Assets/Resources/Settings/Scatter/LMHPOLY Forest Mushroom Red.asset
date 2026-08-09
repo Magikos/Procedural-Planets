@@ -20,6 +20,7 @@ MonoBehaviour:
   Weight: 1
   MaxSlopeDegrees: 30
   SlopeFadeDegrees: 5
+  ConformToSlope: 0
   HasMinAltitude: 0
   MinAltitudeMeters: 0
   HasMaxAltitude: 0
@@ -30,7 +31,7 @@ MonoBehaviour:
   Interaction: 0
   Parts:
   - Name: Plant
-    Material: {fileID: 2100000, guid: 730f368a336ff6e4084a30f962780fc7, type: 2}
+    Material: {fileID: 2100000, guid: 2918e8f0e001df849bd8094695013da1, type: 2}
     LodMeshes:
     - {fileID: 4300000, guid: a2636a1eb60a76c41bf081fa4a3f7955, type: 3}
     LodEndDistances:
