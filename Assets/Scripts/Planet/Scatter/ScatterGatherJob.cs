@@ -39,6 +39,7 @@ public struct ScatterProtoParams
             MinWaterClearance = p.MinWaterClearanceMeters,
             ScaleRange = new float2(p.ScaleRange.x, p.ScaleRange.y),
             RandomYaw = p.RandomYaw ? (byte)1 : (byte)0,
+            ConformToSlope = p.ConformToSlope,
         },
     };
 }
@@ -126,7 +127,7 @@ public struct ScatterGatherJob : IJobParallelFor
         float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, pp.SpacingMeters, BaseRadiusLocal * Scale)
                             * Mathf.Pow(membership, pp.BiomeBlendPower);
 
-        if (!ScatterGatherBurst.TryPlace(slotSeed, dir, localRadius, altitudeMeters, slopeCos,
+        if (!ScatterGatherBurst.TryPlace(slotSeed, dir, localNormal, localRadius, altitudeMeters, slopeCos,
                 densityKeep, HasOcean != 0, pp.Rules, out Vector3 posLocal, out Quaternion rot, out float sc))
             return false;
 

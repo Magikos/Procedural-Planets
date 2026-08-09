@@ -23,6 +23,7 @@ public struct PlacementRulesBurst
     public float MinWaterClearance;
     public float2 ScaleRange;
     public byte RandomYaw;
+    public float ConformToSlope;   // 0 = up stays radial (trees); 1 = up lies on the surface normal (rocks)
 }
 
 // The only biome fields the gather's membership test reads, promoted to blittable ints.
@@ -113,7 +114,7 @@ public static class ScatterGatherBurst
         return true;
     }
 
-    public static bool TryPlace(uint slotSeed, Vector3 dir, float localRadius,
+    public static bool TryPlace(uint slotSeed, Vector3 dir, Vector3 surfaceNormal, float localRadius,
         float altitudeMeters, float slopeCos, float densityKeep, bool hasOcean, in PlacementRulesBurst rules,
         out Vector3 posLocal, out Quaternion rot, out float scale)
     {
@@ -131,9 +132,16 @@ public static class ScatterGatherBurst
         scale = Mathf.Lerp(rules.ScaleRange.x, rules.ScaleRange.y, ScatterHash.To01(ScatterHash.Slot(slotSeed, 7)));
         float yaw = rules.RandomYaw != 0 ? ScatterHash.To01(ScatterHash.Slot(slotSeed, 9)) * 360f : 0f;
 
+        // Mirror ScatterPlacementMath: conform=0 keeps up == dir (radial); conform=1 lies on the surface normal.
         float3 dirF = new float3(dir.x, dir.y, dir.z);
-        quaternion align = FromUpTo(dirF);
-        quaternion yawQ = quaternion.AxisAngle(dirF, math.radians(yaw));
+        float3 upF = dirF;
+        if (rules.ConformToSlope > 0f)
+        {
+            float3 nF = new float3(surfaceNormal.x, surfaceNormal.y, surfaceNormal.z);
+            upF = math.normalize(math.lerp(dirF, nF, rules.ConformToSlope));
+        }
+        quaternion align = FromUpTo(upF);
+        quaternion yawQ = quaternion.AxisAngle(upF, math.radians(yaw));
         quaternion q = math.mul(yawQ, align);
         rot = new Quaternion(q.value.x, q.value.y, q.value.z, q.value.w);
         return true;

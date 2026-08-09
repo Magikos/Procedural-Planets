@@ -23,6 +23,7 @@ public sealed record ScatterPrototypeDto(
     float Weight,
     float MaxSlopeDegrees,
     float SlopeFadeDegrees,
+    float ConformToSlope,
     bool HasMinAltitude, float MinAltitudeMeters,
     bool HasMaxAltitude, float MaxAltitudeMeters,
     float MinWaterClearanceMeters,
@@ -34,7 +35,7 @@ public sealed record ScatterPrototypeDto(
     // Raw map only; ScatterLibraryDto.EnsureValid is the single validator (assets + overrides).
     public static ScatterPrototypeDto From(ScatterPrototype p) => new(
         p.DisplayName, p.SlotId, p.SpacingMeters, p.Biome, p.BiomeBlendPower, p.Weight,
-        p.MaxSlopeDegrees, p.SlopeFadeDegrees,
+        p.MaxSlopeDegrees, p.SlopeFadeDegrees, p.ConformToSlope,
         p.HasMinAltitude, p.MinAltitudeMeters, p.HasMaxAltitude, p.MaxAltitudeMeters,
         p.MinWaterClearanceMeters, p.ScaleRange, p.RandomYaw, p.Interaction,
         BuildParts(p));
@@ -153,6 +154,7 @@ public sealed record ScatterLibraryDto(ScatterPrototypeDto[] Prototypes)
             if (!Finite(p.MaxSlopeDegrees) || p.MaxSlopeDegrees < 0f) Fail("MaxSlopeDegrees must be finite and non-negative.");
             if (!Finite(p.SlopeFadeDegrees) || p.SlopeFadeDegrees < 0f) Fail("SlopeFadeDegrees must be finite and non-negative.");
             if (p.MaxSlopeDegrees + p.SlopeFadeDegrees > 90f) Fail($"MaxSlope + fade ({p.MaxSlopeDegrees}+{p.SlopeFadeDegrees}) exceeds 90 deg.");
+            if (!Finite(p.ConformToSlope) || p.ConformToSlope < 0f || p.ConformToSlope > 1f) Fail($"ConformToSlope {p.ConformToSlope} must be in 0..1.");
             if (!Finite(p.MinAltitudeMeters) || !Finite(p.MaxAltitudeMeters)) Fail("altitude bounds must be finite.");
             if (p.HasMinAltitude && p.HasMaxAltitude && p.MinAltitudeMeters > p.MaxAltitudeMeters)
                 Fail($"min altitude {p.MinAltitudeMeters} > max {p.MaxAltitudeMeters}.");

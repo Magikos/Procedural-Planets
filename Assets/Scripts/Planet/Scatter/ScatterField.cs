@@ -294,7 +294,7 @@ public sealed class ScatterField : IDisposable
         float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, proto.SpacingMeters, ctx.BaseRadiusLocal * scale)
                             * Mathf.Pow(membership, proto.BiomeBlendPower);
 
-        if (!ScatterPlacementMath.TryPlace(slotSeed, dir, localRadius, altitudeMeters, slopeCos,
+        if (!ScatterPlacementMath.TryPlace(slotSeed, dir, localNormal, localRadius, altitudeMeters, slopeCos,
                 densityKeep, ctx.HasOcean, rules, out Vector3 posLocal, out Quaternion rot, out float sc))
             return false;
 
@@ -382,6 +382,7 @@ public sealed class ScatterField : IDisposable
         HasMaxAltitude = p.HasMaxAltitude, MaxAltitude = p.MaxAltitudeMeters,
         MinWaterClearance = p.MinWaterClearanceMeters,
         ScaleRange = p.ScaleRange, RandomYaw = p.RandomYaw,
+        ConformToSlope = p.ConformToSlope,
     };
 
     // Membership of a prototype's biome in an already-resolved BiomeResult (no eval — the gather

@@ -21,6 +21,8 @@ public sealed class ScatterPrototype : ScriptableObject
     [Header("Slope gate")]
     [Range(0f, 90f)] public float MaxSlopeDegrees = 35f;
     [Range(0f, 15f)] public float SlopeFadeDegrees = 5f;
+    [Tooltip("How much the prop tilts to lie on the terrain surface. 0 = stands radially upright (trees, mushrooms); 1 = lies flat on the slope (rocks, logs).")]
+    [Range(0f, 1f)] public float ConformToSlope = 0f;
 
     [Header("Altitude gate (metres above sea; negative = underwater)")]
     public bool HasMinAltitude = false;

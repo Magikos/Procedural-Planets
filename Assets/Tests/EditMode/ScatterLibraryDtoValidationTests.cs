@@ -38,6 +38,7 @@ namespace ProceduralPlanets.Tests
             Weight: 1f,
             MaxSlopeDegrees: 35f,
             SlopeFadeDegrees: 5f,
+            ConformToSlope: 0f,
             HasMinAltitude: false, MinAltitudeMeters: 0f,
             HasMaxAltitude: false, MaxAltitudeMeters: 0f,
             MinWaterClearanceMeters: 0.05f,

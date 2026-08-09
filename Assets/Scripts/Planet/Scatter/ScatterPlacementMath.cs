@@ -10,6 +10,7 @@ public struct PlacementRules
     public float MinWaterClearance;
     public Vector2 ScaleRange;
     public bool RandomYaw;
+    public float ConformToSlope;   // 0 = up stays radial (trees); 1 = up lies on the surface normal (rocks)
 }
 
 // The single HLSL-portable placement decision: no managed sampler calls. Surface height, biome
@@ -40,7 +41,7 @@ public static class ScatterPlacementMath
     // dir/radius are LOCAL (caller converts to world). slopeCos = dot(surfaceNormal, dir).
     // altitudeMeters = signed metres above sea. densityKeep = areaKeep * membership^blendPower,
     // folded in by the caller so this function stays free of biome types.
-    public static bool TryPlace(uint slotSeed, Vector3 dir, float localRadius,
+    public static bool TryPlace(uint slotSeed, Vector3 dir, Vector3 surfaceNormal, float localRadius,
         float altitudeMeters, float slopeCos, float densityKeep, bool hasOcean, in PlacementRules rules,
         out Vector3 posLocal, out Quaternion rot, out float scale)
     {
@@ -56,9 +57,14 @@ public static class ScatterPlacementMath
 
         posLocal = dir * localRadius;
         scale = Mathf.Lerp(rules.ScaleRange.x, rules.ScaleRange.y, ScatterHash.To01(ScatterHash.Slot(slotSeed, 7)));
-        Quaternion align = Quaternion.FromToRotation(Vector3.up, dir);
+        // Ground-hugging props (rocks, conform=1) stand on the local surface normal; tall props (trees,
+        // conform=0) stay radial. conform=0 keeps up == dir exactly, so trees/golden placements don't drift.
+        Vector3 up = rules.ConformToSlope > 0f
+            ? Vector3.Normalize(Vector3.Lerp(dir, surfaceNormal, rules.ConformToSlope))
+            : dir;
+        Quaternion align = Quaternion.FromToRotation(Vector3.up, up);
         float yaw = rules.RandomYaw ? ScatterHash.To01(ScatterHash.Slot(slotSeed, 9)) * 360f : 0f;
-        rot = Quaternion.AngleAxis(yaw, dir) * align; // LOCAL rotation; caller applies planet rotation
+        rot = Quaternion.AngleAxis(yaw, up) * align; // LOCAL rotation; caller applies planet rotation
         return true;
     }
 }

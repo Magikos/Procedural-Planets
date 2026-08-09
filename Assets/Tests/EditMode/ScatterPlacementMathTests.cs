@@ -24,7 +24,7 @@ namespace ProceduralPlanets.Tests
 
         static bool Place(uint seed, PlacementRules rules, float altitude, float slopeCos, float densityKeep,
             bool hasOcean, out Vector3 pos, out Quaternion rot, out float scale)
-            => ScatterPlacementMath.TryPlace(seed, Vector3.up, 10f, altitude, slopeCos, densityKeep, hasOcean,
+            => ScatterPlacementMath.TryPlace(seed, Vector3.up, Vector3.up, 10f, altitude, slopeCos, densityKeep, hasOcean,
                 in rules, out pos, out rot, out scale);
 
         [Test]

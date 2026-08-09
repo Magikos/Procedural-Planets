@@ -96,7 +96,7 @@ namespace ProceduralPlanets.Tests
 
         static ScatterPrototypeDto Proto(string name, int slot, float spacing, BiomeType biome, float weight,
             float maxSlope, float fade, float blendPower, bool randomYaw, bool hasMaxAlt, float maxAlt)
-            => new ScatterPrototypeDto(name, slot, spacing, biome, blendPower, weight, maxSlope, fade,
+            => new ScatterPrototypeDto(name, slot, spacing, biome, blendPower, weight, maxSlope, fade, 0f,
                 false, 0f, hasMaxAlt, maxAlt, 0f, new Vector2(1f, 1.6f), randomYaw,
                 ScatterInteraction.None, System.Array.Empty<ScatterPartDto>());
 
