@@ -14,6 +14,12 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
     [Range(-45f, 45f), Tooltip("Axial tilt in degrees — affects how high the sun gets")]
     public float AxialTilt = 23.5f;
 
+    [Header("Shadows")]
+    [Tooltip("Sun elevation (deg above the viewer's local horizon) at/above which cast shadows are full strength. Below it they fade toward ShadowGrazingStrength so grazing dawn/dusk shadows stop reading as hard black dashes across the ground.")]
+    public float ShadowFadeElevationDeg = 22f;
+    [Range(0f, 1f), Tooltip("Cast-shadow strength when the sun sits on the viewer's horizon. 1 = no fade; lower = softer grazing shadows. Distant shadows are kept — just lighter — so nothing reads as un-shadowed.")]
+    public float ShadowGrazingStrength = 0.35f;
+
     [Header("Moon")]
     [Tooltip("How many days per full moon cycle")]
     public float MoonCycleDays = 8f;
@@ -211,6 +217,22 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
         return $"day length: {DayLengthSeconds:F1}s";
     }
 
+    [ConsoleCommand("shadow-grazing", "Get or set cast-shadow strength when the sun is on the viewer's horizon (0-1). Lower = softer grazing dawn/dusk shadows. Default 0.35.", MonoTargetType.Single)]
+    string ShadowGrazingCmd(float? value = null)
+    {
+        if (value == null) return $"grazing shadow strength: {ShadowGrazingStrength:F2}";
+        ShadowGrazingStrength = Mathf.Clamp01(value.Value);
+        return $"grazing shadow strength: {ShadowGrazingStrength:F2}";
+    }
+
+    [ConsoleCommand("shadow-fade-elev", "Get or set the sun elevation (deg) below which cast shadows start fading toward the grazing strength. Default 22.", MonoTargetType.Single)]
+    string ShadowFadeElevCmd(float? value = null)
+    {
+        if (value == null) return $"shadow fade elevation: {ShadowFadeElevationDeg:F1} deg";
+        ShadowFadeElevationDeg = Mathf.Max(0f, value.Value);
+        return $"shadow fade elevation: {ShadowFadeElevationDeg:F1} deg";
+    }
+
     [ConsoleCommand("set-local", "Set time of day relative to the camera position (0=midnight, 0.25=sunrise, 0.5=noon, 0.75=sunset).", MonoTargetType.Single)]
     string SetLocalCmd(float fraction)
     {
@@ -267,7 +289,23 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
         {
             SunLight.transform.position = center - sunDir * (_planetRadius > 0 ? _planetRadius * 10f : 1000f);
             SunLight.transform.LookAt(center);
+            UpdateShadowStrength(sunDir, center);
         }
+    }
+
+    // Fade the Sun's cast-shadow strength as it grazes the viewer's local horizon. At dawn/dusk the shadows
+    // are extremely long and, with a hard low-cost far LOD, read as black dashes stippled across the ground;
+    // softening them there (never to zero — distant shadows stay, just lighter) keeps the look grounded while
+    // midday shadows stay crisp. Elevation is measured at the view camera so the fade tracks what's on screen.
+    void UpdateShadowStrength(Vector3 sunDir, Vector3 center)
+    {
+        Camera cam = GetViewCamera();
+        if (cam == null) return;
+        Vector3 up = (cam.transform.position - center).normalized;
+        float sinElevation = Vector3.Dot(up, -sunDir); // -sunDir points toward the sun; = sin(elevation)
+        float fadeSin = Mathf.Sin(Mathf.Max(0f, ShadowFadeElevationDeg) * Mathf.Deg2Rad);
+        float t = fadeSin > 1e-4f ? Mathf.Clamp01(sinElevation / fadeSin) : 1f; // 0 on horizon, 1 at/above fade elev
+        SunLight.shadowStrength = Mathf.Lerp(Mathf.Clamp01(ShadowGrazingStrength), 1f, t);
     }
 
     void UpdateMoon(float dt)

@@ -173,7 +173,10 @@ Shader "Scatter/Impostor"
                 // mesh trees it fades into (both are lush, not a dark band).
                 half3 dayColor = card.rgb * lerp(0.85, 1.28, ndl * shade);
                 half3 nightColor = card.rgb * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
-                return half4(lerp(nightColor, dayColor, daylight), 1);
+                // Ease into night slower (sqrt) so a far billboard keeps a dim coloured silhouette through
+                // dusk instead of collapsing to a black-dot band while the lit ground behind it stays bright;
+                // deep night still resolves to nightColor. Matches the mesh prop (Scatter.shader).
+                return half4(lerp(nightColor, dayColor, sqrt(saturate(daylight))), 1);
             }
             ENDHLSL
         }
