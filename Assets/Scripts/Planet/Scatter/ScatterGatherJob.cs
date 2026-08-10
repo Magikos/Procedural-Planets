@@ -40,6 +40,7 @@ public struct ScatterProtoParams
             ScaleRange = new float2(p.ScaleRange.x, p.ScaleRange.y),
             RandomYaw = p.RandomYaw ? (byte)1 : (byte)0,
             ConformToSlope = p.ConformToSlope,
+            BaseRadius = p.GroundContactRadius(),
         },
     };
 }

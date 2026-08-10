@@ -383,6 +383,7 @@ public sealed class ScatterField : IDisposable
         MinWaterClearance = p.MinWaterClearanceMeters,
         ScaleRange = p.ScaleRange, RandomYaw = p.RandomYaw,
         ConformToSlope = p.ConformToSlope,
+        BaseRadius = p.GroundContactRadius(),
     };
 
     // Membership of a prototype's biome in an already-resolved BiomeResult (no eval — the gather

@@ -24,6 +24,7 @@ public struct PlacementRulesBurst
     public float2 ScaleRange;
     public byte RandomYaw;
     public float ConformToSlope;   // 0 = up stays radial (trees); 1 = up lies on the surface normal (rocks)
+    public float BaseRadius;       // ground-contact footprint radius; sinks a tilted wide base so it doesn't float
 }
 
 // The only biome fields the gather's membership test reads, promoted to blittable ints.
@@ -134,12 +135,13 @@ public static class ScatterGatherBurst
 
         // Mirror ScatterPlacementMath: conform=0 keeps up == dir (radial); conform=1 lies on the surface normal.
         float3 dirF = new float3(dir.x, dir.y, dir.z);
-        float3 upF = dirF;
-        if (rules.ConformToSlope > 0f)
-        {
-            float3 nF = new float3(surfaceNormal.x, surfaceNormal.y, surfaceNormal.z);
-            upF = math.normalize(math.lerp(dirF, nF, rules.ConformToSlope));
-        }
+        float3 nF = new float3(surfaceNormal.x, surfaceNormal.y, surfaceNormal.z);
+        float3 upF = rules.ConformToSlope > 0f
+            ? math.normalize(math.lerp(dirF, nF, rules.ConformToSlope))
+            : dirF;
+        // Sink a partially-conformed wide base so its downhill edge meets the slope (mirrors ScatterPlacementMath).
+        float sinTilt = math.length(math.cross(upF, nF));
+        posLocal -= surfaceNormal * (rules.BaseRadius * scale * sinTilt);
         quaternion align = FromUpTo(upF);
         quaternion yawQ = quaternion.AxisAngle(upF, math.radians(yaw));
         quaternion q = math.mul(yawQ, align);

@@ -11,6 +11,7 @@ public struct PlacementRules
     public Vector2 ScaleRange;
     public bool RandomYaw;
     public float ConformToSlope;   // 0 = up stays radial (trees); 1 = up lies on the surface normal (rocks)
+    public float BaseRadius;       // ground-contact footprint radius; sinks a tilted wide base so it doesn't float
 }
 
 // The single HLSL-portable placement decision: no managed sampler calls. Surface height, biome
@@ -62,6 +63,10 @@ public static class ScatterPlacementMath
         Vector3 up = rules.ConformToSlope > 0f
             ? Vector3.Normalize(Vector3.Lerp(dir, surfaceNormal, rules.ConformToSlope))
             : dir;
+        // Partial conform tilts the base off the slope; a wide base then floats its downhill edge. Sink the
+        // prop along the surface normal by baseRadius*scale*sin(tilt) so the lifted edge meets the ground.
+        float sinTilt = Vector3.Cross(up, surfaceNormal).magnitude;
+        posLocal -= surfaceNormal * (rules.BaseRadius * scale * sinTilt);
         Quaternion align = Quaternion.FromToRotation(Vector3.up, up);
         float yaw = rules.RandomYaw ? ScatterHash.To01(ScatterHash.Slot(slotSeed, 9)) * 360f : 0f;
         rot = Quaternion.AngleAxis(yaw, up) * align; // LOCAL rotation; caller applies planet rotation

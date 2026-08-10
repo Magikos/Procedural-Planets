@@ -70,6 +70,27 @@ public sealed record ScatterPrototypeDto(
         return System.Array.Empty<ScatterPartDto>();
     }
 
+    // World-unit radius of the ground-contact footprint: the XZ half-extent of the LOWEST part (the one that
+    // touches the ground). Placement sinks a partially-conformed prop by baseRadius*sin(tilt) so a wide base
+    // doesn't float its downhill edge on a slope. Uses the lowest part, not the widest, so a tree's broad
+    // canopy never counts — only the trunk that actually meets the surface. 0 (no mesh) => no sink.
+    public float GroundContactRadius()
+    {
+        float lowestMinY = float.MaxValue;
+        float radius = 0f;
+        foreach (var part in Parts)
+        {
+            if (part?.LodMeshes == null || part.LodMeshes.Length == 0 || part.LodMeshes[0] == null) continue;
+            Bounds b = part.LodMeshes[0].bounds;
+            if (b.min.y < lowestMinY)
+            {
+                lowestMinY = b.min.y;
+                radius = Mathf.Max(b.extents.x, b.extents.z);
+            }
+        }
+        return radius;
+    }
+
     // True when any part has enough to draw. Render data is optional — a prototype with no drawable
     // part is still placed (SP1), just not rendered (SP2).
     public bool CanRender
