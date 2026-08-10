@@ -15,6 +15,10 @@ public static partial class ShaderGlobalIds
     public const string BiomeFlatColors = "_BiomeFlatColors";
     public const string BiomeAlbedoTint = "_BiomeAlbedoTint";
     public const string BiomeDebugForceSameMaterial = "_BiomeDebugForceSameMaterial";
+    public const string BiomeInterlockEnabled = "_BiomeInterlockEnabled";
+    public const string BiomeInterlockDepth = "_BiomeInterlockDepth";
+    public const string BiomeInterlockNoiseAmp = "_BiomeInterlockNoiseAmp";
+    public const string BiomeInterlockNoiseScale = "_BiomeInterlockNoiseScale";
 
     public const string ClimateMap = "_ClimateMap";
     public const string ClimateMapResolution = "_ClimateMapResolution";

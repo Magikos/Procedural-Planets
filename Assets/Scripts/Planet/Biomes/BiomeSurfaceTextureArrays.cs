@@ -79,6 +79,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         Shader.SetGlobalInt(BiomeCountId, SliceCount);
         Shader.SetGlobalInt(GrassParamCountId, SliceCount);
         BiomeAlbedoTintRuntime.Publish(registry, SliceCount);
+        BiomeBlendRuntime.PublishDefaults();
     }
 
     public void Dispose()

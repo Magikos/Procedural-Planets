@@ -165,11 +165,22 @@ Shader "Planet/VertexColor"
             // keeping the atlas weights + 4-corner path. Isolates whether a visible biome border is material
             // CONTRAST (border vanishes when all slots share a material) vs WEIGHT/filtering (border remains).
             float _BiomeDebugForceSameMaterial;
+            // Overlay component isolation (Shader.SetGlobalFloat): 1=final coverage (grey), 2=grass tint colour,
+            // 3=greenness(R) vs coverage(G). Shows why the overlay reads as a thin contour vs a broad fill.
+            float _GrassOverlayDebug;
 
             // D2: per-biome production albedo multiplier, indexed by biome slot id (BiomeAlbedoTintRuntime).
             // Default white = identity. Equalize biome mean lightness toward neighbours to soften high-contrast
             // borders without desaturating. Multiplies the sampled SurfaceAlbedo only (not normal/ARM).
             float4 _BiomeAlbedoTint[64];
+
+            // Interlock-blend knobs (Shader.SetGlobalFloat) for the border-midtone fix in
+            // CornerTriplanarWeightedPbr. enabled 0/1; depth = blend softness (small = crisp seam);
+            // noiseAmp/noiseScale shape the organic wiggle that replaces the muddy 50/50 average.
+            float _BiomeInterlockEnabled;
+            float _BiomeInterlockDepth;
+            float _BiomeInterlockNoiseAmp;
+            float _BiomeInterlockNoiseScale;
 
             // Phase B step 9: per-chunk surface-state mask. Channels reserved for Phase E:
             //   R = paved alpha (concrete / brick / etc — disables grass + freezes other state)
@@ -498,6 +509,33 @@ Shader "Planet/VertexColor"
                 normalWS = float3(0, 0, 0);
                 arm     = float3(0, 0, 0);
                 const float wEps = 0.004;
+
+                // Interlock reweight: a linear top-K blend of dissimilar biome albedos reads as a
+                // muddy midtone band at borders (bright rock averaged with dark forest -> a light
+                // blue-grey stripe that is neither biome). Where >1 biome meets, treat per-biome
+                // value noise as a pseudo-height and keep only the locally-tallest within a narrow
+                // depth, so each pixel resolves to (mostly) one material with an organic wiggly seam
+                // instead of a 50/50 average. Single-biome interiors keep their weight untouched.
+                if (w.y > wEps && _BiomeInterlockEnabled > 0.5)
+                {
+                    float blendDepth = max(_BiomeInterlockDepth, 0.0001);
+                    float noiseAmp   = _BiomeInterlockNoiseAmp;
+                    float noiseScale = max(_BiomeInterlockNoiseScale, 0.0001);
+                    float sx = round(idsF.x), sy = round(idsF.y), sz = round(idsF.z), sw = round(idsF.w);
+                    float hx = w.x + noiseAmp * (ValueNoise3D((worldPos + BiomeSliceOffset(sx)) * noiseScale) - 0.5);
+                    float hy = w.y + noiseAmp * (ValueNoise3D((worldPos + BiomeSliceOffset(sy)) * noiseScale) - 0.5);
+                    float hz = (w.z > wEps) ? w.z + noiseAmp * (ValueNoise3D((worldPos + BiomeSliceOffset(sz)) * noiseScale) - 0.5) : -1e3;
+                    float hw = (w.w > wEps) ? w.w + noiseAmp * (ValueNoise3D((worldPos + BiomeSliceOffset(sw)) * noiseScale) - 0.5) : -1e3;
+                    float mh = max(max(hx, hy), max(hz, hw));
+                    float thr = mh - blendDepth;
+                    float bx = max(0.0, hx - thr);
+                    float by = max(0.0, hy - thr);
+                    float bz = (w.z > wEps) ? max(0.0, hz - thr) : 0.0;
+                    float bw2 = (w.w > wEps) ? max(0.0, hw - thr) : 0.0;
+                    float bsum = bx + by + bz + bw2;
+                    if (bsum > 1e-5)
+                        w = float4(bx, by, bz, bw2) / bsum;
+                }
 
                 if (w.x > wEps)
                 {
@@ -833,6 +871,15 @@ Shader "Planet/VertexColor"
                     * lerp(0.68, 1.30, fleck);
                 grassSurface *= max(0.05, surfaceVariation);
                 grassSurface *= _GrassSurfaceBrightness;
+
+                if (_GrassOverlayDebug > 0.5)
+                {
+                    if (_GrassOverlayDebug < 1.5) return grassCoverage.xxx;
+                    if (_GrassOverlayDebug < 2.5) return saturate(eval.tint);
+                    if (_GrassOverlayDebug < 3.5) return saturate(float3((eval.tint.g - eval.tint.r) * 3.0, grassCoverage, 0.0));
+                    if (_GrassOverlayDebug < 4.5) return saturate(eval.density).xxx;      // raw grass density
+                    return saturate(eval.envCoverage).xxx;                                // after smoothstep(toe,full)
+                }
 
                 return lerp(terrainAlbedo, saturate(grassSurface), grassCoverage);
             }

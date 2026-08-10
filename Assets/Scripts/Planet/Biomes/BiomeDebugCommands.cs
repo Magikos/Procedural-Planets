@@ -34,4 +34,19 @@ public static class BiomeDebugCommands
 
     [ConsoleCommand("tint-list", "List the active biomes' current production albedo tints (slot:type (r,g,b)).", MonoTargetType.Static)]
     public static string TintListCmd() => BiomeAlbedoTintRuntime.Describe();
+
+    [ConsoleCommand("interlock",
+        "Border interlock blend: biome.interlock <0|1> [depth] [amp] [scale]. Replaces the muddy 50/50 midtone "
+        + "where dissimilar biomes meet with an organic one-material-or-the-other seam (per-biome value noise as "
+        + "pseudo-height). Smaller depth = crisper; amp/scale shape the seam wiggle. Omitted args keep current.",
+        MonoTargetType.Static)]
+    public static string InterlockCmd(float enabled, float? depth = null, float? amp = null, float? scale = null)
+    {
+        BiomeBlendRuntime.Set(
+            enabled > 0.5f,
+            depth ?? BiomeBlendRuntime.Depth,
+            amp ?? BiomeBlendRuntime.NoiseAmp,
+            scale ?? BiomeBlendRuntime.NoiseScale);
+        return BiomeBlendRuntime.Describe();
+    }
 }
