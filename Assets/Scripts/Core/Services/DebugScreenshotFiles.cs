@@ -6,7 +6,7 @@ public static class DebugScreenshotFiles
 
     public static Texture2D Downsample(Texture2D source, int maxWidth)
     {
-        int targetWidth = Mathf.Clamp(maxWidth, 160, 1920);
+        int targetWidth = Mathf.Clamp(maxWidth, 160, 7680);
         if (source.width <= targetWidth)
             return source;
 

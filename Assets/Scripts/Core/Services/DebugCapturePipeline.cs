@@ -212,7 +212,8 @@ sealed class DebugCapturePipeline
         }
     }
 
-    public async Awaitable CaptureCurrentModeAsync(CancellationToken ct, string label = null)
+    public async Awaitable CaptureCurrentModeAsync(CancellationToken ct, string label = null,
+        int maxWidth = MaxScreenshotWidth, int superSize = 1)
     {
         if (_ctx.Registry == null || !_ctx.IsActive) return;
         if (_running)
@@ -221,10 +222,11 @@ sealed class DebugCapturePipeline
         await CaptureScreenshotAsync(
             _ctx.CurrentModeId,
             _ctx.Registry.GetModeName(_ctx.CurrentModeId),
-            ct, label);
+            ct, label, maxWidth, superSize);
     }
 
-    async Awaitable CaptureScreenshotAsync(DebugModeId modeId, string modeName, CancellationToken ct, string label = null)
+    async Awaitable CaptureScreenshotAsync(DebugModeId modeId, string modeName, CancellationToken ct,
+        string label = null, int maxWidth = MaxScreenshotWidth, int superSize = 1)
     {
         _running = true;
         DebugScreenshotFiles.RecordLastCaptureCamera();
@@ -233,7 +235,7 @@ sealed class DebugCapturePipeline
         {
             await WaitForModeRenderAsync(ct);
             ct.ThrowIfCancellationRequested();
-            SaveScreenshot(modeId, modeName, label);
+            SaveScreenshot(modeId, modeName, label, maxWidth, superSize);
         }
         catch (OperationCanceledException)
         {
@@ -249,15 +251,18 @@ sealed class DebugCapturePipeline
         }
     }
 
-    void SaveScreenshot(DebugModeId modeId, string modeName, string label = null)
+    void SaveScreenshot(DebugModeId modeId, string modeName, string label = null,
+        int maxWidth = MaxScreenshotWidth, int superSize = 1)
     {
         Texture2D source = null;
         Texture2D resized = null;
 
         try
         {
-            source = ScreenCapture.CaptureScreenshotAsTexture();
-            resized = DebugScreenshotFiles.Downsample(source, MaxScreenshotWidth);
+            source = superSize > 1
+                ? ScreenCapture.CaptureScreenshotAsTexture(superSize)
+                : ScreenCapture.CaptureScreenshotAsTexture();
+            resized = DebugScreenshotFiles.Downsample(source, maxWidth);
 
             string directory = DebugScreenshotFiles.GetDirectory();
             System.IO.Directory.CreateDirectory(directory);

@@ -370,4 +370,30 @@ public class DebugCaptureController : MonoBehaviour, IDebugCaptureModeContext
             if (reopenConsole && console != null) console.Open();
         }
     }
+
+    [ConsoleCommand("screenshot-high", "High-res screenshot of the current debug mode (2x supersample, up to 3840px) for fine detail like thin biome stripes or cloud grain. Optional label goes into the filename. Closes console during capture, then reopens.", MonoTargetType.Single)]
+    async Awaitable ScreenshotHighCmd(string label = null, CancellationToken ct = default)
+    {
+        bool reopenConsole = false;
+        ServiceLocator.TryGet<IConsoleService>(out var console);
+
+        try
+        {
+            if (console != null && console.IsOpen)
+            {
+                reopenConsole = true;
+                console.Close();
+                float endTime = Time.unscaledTime + 0.2f;
+                while (Time.unscaledTime < endTime)
+                    await Awaitable.NextFrameAsync(ct);
+            }
+
+            if (_pipeline != null)
+                await _pipeline.CaptureCurrentModeAsync(ct, label, 3840, 2);
+        }
+        finally
+        {
+            if (reopenConsole && console != null) console.Open();
+        }
+    }
 }
