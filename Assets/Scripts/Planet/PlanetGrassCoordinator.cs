@@ -19,7 +19,11 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     // Blanket on: the far grass-surface pass now uses linear coverage + toe cut (matching the
     // biome density blend) so it no longer stripes at biome borders. It is the base layer the
     // near blades and future tuft layers match to (single-source GrassCanopyAlbedo).
-    bool _grassBlanketEnabled = true;
+    // Disabled: the far surface-overlay paints a vivid green stripe where the baked grass COLOUR (eval.tint)
+    // shifts green along a moisture/biome-transition channel and the overlay amplifies that subtle gradient
+    // into a hard band (measured: tint g-r +0.21 in the band while coverage/density are unchanged). Parked
+    // until the grass-colour blend is reworked. Re-enable via grass.layer Blanket true.
+    bool _grassBlanketEnabled = false;
 
     ChunkedSurfaceProvider _chunkedProvider;
     BiomeSurfaceTextureArrays _surfaceArrays;
