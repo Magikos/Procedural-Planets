@@ -8,6 +8,33 @@ green sits in a ring exactly on the biome border. **The D2/G contrast work below
 lower-priority look item (the core biome albedo textures are contrasty) — not what Bryan was seeing; pursue only
 if he still wants it after the regression fix.** History retained below.
 
+## Follow-up (Bryan opted to pursue the base contrast) — 2026-08-09
+
+- **`force-same-material` diagnostic + D2 SHIPPED** (`biome force-same-material` / `biome.tint`, commit
+  `89324d6`). The force-same-material test confirmed the base biome border is **material contrast** (the band
+  vanished when every slot shared a material). **D2** (Codex's prioritized lever, D2 > D3 > D1) is a per-biome
+  production albedo multiplier (`BiomeDefinition.SurfaceAlbedoTint`, default white → `_BiomeAlbedoTint[64]`
+  global, multiplied per slot in `CornerTriplanarWeightedPbr`). Verified: `biome.tint Mountain 0.45` darkened
+  **only** the mountain (9273 px, others untouched). Bryan tunes biome lightness toward neighbours live, bakes
+  into the SO field / textures (D3).
+
+- **G (height-blend operator) — ATTEMPTED, then REVERTED. Key finding:** the biome atlas **corner texels are
+  1-HOT** (each `(texel)` of `_BiomeIds`/`_BiomeWeights` carries a single dominant biome; a probe that blackened
+  any pixel with a *second* active slot produced **zero** black pixels). So the smooth biome border is produced
+  **entirely by the 4-corner *bilinear*** of single-biome corners in `SampleBiomeTriplanarPbr` — **not** by
+  per-corner multi-biome weights. Codex's R2-5 premise ("insert G per-corner, before the bilinear") therefore
+  does not hold for this atlas: per corner there is nothing to compete, so the height blend was a verified
+  no-op (strength 0→1 gave `maxDiff = 0.0000`). This also revises the whole doc's earlier model: the blend is
+  **1-hot-per-texel + bilinear**, not per-texel weighted. A working height/interlock operator would have to run
+  at the **bilinear level** (competing the 4 corners' single materials by height), which needs the per-corner
+  material identity threaded through the bilinear — a larger restructure of `SampleBiomeTriplanarPbr`, deferred
+  unless the interlock look is specifically wanted. G code fully reverted; strength-0-exact was verified before
+  revert (`meanDiff 0.00019`, terrain byte-identical).
+
+- **Net:** the regression fix (`9ff9294`) addressed Bryan's actual walking complaint; **D2** is the shipped lever
+  for the residual base-albedo contrast; **G** is a dead end as Codex placed it (corners 1-hot) and would need a
+  bilinear-level rewrite.
+
 ---
 
 Status (superseded): rev 2 — Codex review verified (all 6 claims CONFIRMED against the tree, parallel-agent
