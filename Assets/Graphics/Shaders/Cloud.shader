@@ -238,7 +238,7 @@ v2f vert(uint vertexID : SV_VertexID)
     return output;
 }
 
-float LightMarch(float3 pos, float lightStepSize, float2 pixel, int viewStep, float cosAngle, out float lightDensity)
+float LightMarch(float3 pos, float lightStepSize, float cosAngle, float blueNoise, out float lightDensity)
 {
     float3 surfaceNormal = normalize(pos - _CloudPlanetCenter);
     float sunDot = dot(surfaceNormal, _SunParams.xyz);
@@ -246,22 +246,16 @@ float LightMarch(float3 pos, float lightStepSize, float2 pixel, int viewStep, fl
 
     float totalDensity = 0;
     float jitterStrength = saturate(_CloudRayOffsetStrength);
-    float viewStepF = (float)viewStep;
-    float lightStartJitter = (Hash12(pixel + float2(viewStepF * 37.17, 13.73)) - 0.5)
-        * lightStepSize
-        * jitterStrength;
+    // Blue-noise start offset (spatially smooth) instead of per-pixel/per-step white noise: stratifies
+    // the light march without spraying salt-and-pepper grain into the shadow term.
+    float lightStartJitter = (blueNoise - 0.5) * lightStepSize * jitterStrength;
     float3 lightPos = pos + _SunParams.xyz * lightStartJitter;
 
     int lightSteps = min(_CloudLightSteps, CLOUD_LIGHT_STEPS_MAX);
     for (int i = 0; i < lightSteps; i++)
     {
-        float lightStepF = (float)i;
-        float perStepJitter = (Hash12(pixel + float2(viewStepF * 19.31 + lightStepF * 7.11, lightStepF * 43.17)) - 0.5)
-            * lightStepSize
-            * jitterStrength
-            * 0.35;
         lightPos += _SunParams.xyz * lightStepSize;
-        totalDensity += SampleCloud(lightPos + _SunParams.xyz * perStepJitter).density * lightStepSize;
+        totalDensity += SampleCloud(lightPos).density * lightStepSize;
     }
 
     lightDensity = totalDensity;
@@ -299,7 +293,7 @@ ENDHLSL
                 float4 sceneColor = SAMPLE_TEXTURE2D(_Source, sampler_Source, i.uv);
 
                 if (_CloudWeatherResolution <= 0 || _CloudOuterRadius <= _CloudInnerRadius)
-                    return sceneColor;
+                    return float4(sceneColor.rgb, 0.0);
 
                 float viewLength = length(i.viewVector);
                 float3 rayDir = i.viewVector / max(viewLength, 0.0001);
@@ -316,7 +310,7 @@ ENDHLSL
 
                 float2 outerHit = RaySphere(_CloudPlanetCenter, _CloudOuterRadius, rayOrigin, rayDir);
                 if (outerHit.y <= 0)
-                    return sceneColor;
+                    return float4(sceneColor.rgb, 0.0);
 
                 float startDistance = outerHit.x;
                 float endDistance = min(outerHit.x + outerHit.y, sceneDepth);
@@ -340,7 +334,7 @@ ENDHLSL
                 }
 
                 if (endDistance <= startDistance)
-                    return sceneColor;
+                    return float4(sceneColor.rgb, 0.0);
 
                 int viewSteps = min(max(_CloudViewSteps, 1), CLOUD_MAX_STEPS);
                 float stepSize = (endDistance - startDistance) / viewSteps;
@@ -368,8 +362,9 @@ ENDHLSL
                 for (int s = 0; s < viewSteps; s++)
                 {
                     float stepF = (float)s;
-                    float stepNoise = Hash12(pixel + float2(stepF * 17.17 + pixelJitter, stepF * 61.31 + pixelJitter * 1.37));
-                    float withinStep = saturate(lerp(0.5, stepNoise, jitterStrength));
+                    // Blue-noise sub-step offset (constant per pixel) jitters the march phase spatially
+                    // smoothly, so residual banding reads as low-frequency dither, not white-noise grain.
+                    float withinStep = saturate(lerp(0.5, pixelJitter, jitterStrength));
                     float marchDistance = min(startDistance + stepSize * (stepF + withinStep), endDistance);
                     float3 jitteredSamplePos = rayOrigin + rayDir * marchDistance;
                     CloudSample cloud = SampleCloud(jitteredSamplePos);
@@ -393,7 +388,7 @@ ENDHLSL
                     if (cloud.density > 0.0001)
                     {
                         float lightDensity = 0.0;
-                        float lightTransmittance = LightMarch(jitteredSamplePos, lightStepSize, pixel, s, cosAngle, lightDensity);
+                        float lightTransmittance = LightMarch(jitteredSamplePos, lightStepSize, cosAngle, pixelJitter, lightDensity);
                         float3 surfaceNormal = sampleNormal;
                         float sunFacing = dot(surfaceNormal, _SunParams.xyz);
                         float localSun = smoothstep(-0.55, 0.35, sunFacing);

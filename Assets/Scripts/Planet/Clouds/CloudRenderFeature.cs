@@ -13,8 +13,10 @@ using UnityEngine.Rendering.RenderGraphModule;
 public class CloudRenderFeature : ScriptableRendererFeature
 {
     CloudRenderPass _pass;
+    CloudBlurRenderPass _blurPass;
     GodRayStreakRenderPass _godRayPass;
     Material _material;
+    Material _blurMaterial;
     Material _godRayMaterial;
     ICloudRuntime _cachedController;
     static readonly int _waterFocusModeId = Shader.PropertyToID(ShaderGlobalIds.WaterFocusMode);
@@ -27,6 +29,7 @@ public class CloudRenderFeature : ScriptableRendererFeature
     public override void Create()
     {
         _pass = new CloudRenderPass();
+        _blurPass = new CloudBlurRenderPass();
         _godRayPass = new GodRayStreakRenderPass();
     }
 
@@ -63,6 +66,19 @@ public class CloudRenderFeature : ScriptableRendererFeature
         _pass.Setup(_material);
         renderer.EnqueuePass(_pass);
 
+        // Soften raymarch grain / step-banding before the god-ray consumes cloud opacity.
+        if (_blurMaterial == null)
+        {
+            var blurShader = Shader.Find("Hidden/CloudBlur");
+            if (blurShader != null)
+                _blurMaterial = CoreUtils.CreateEngineMaterial(blurShader);
+        }
+        if (_blurMaterial != null)
+        {
+            _blurPass.Setup(_blurMaterial);
+            renderer.EnqueuePass(_blurPass);
+        }
+
         // God-ray streaks consume the cloud pass's output (cloud opacity in alpha), so they
         // run immediately after it — occluded by actual cloud gaps, not just terrain depth.
         if (_godRayMaterial == null)
@@ -81,8 +97,10 @@ public class CloudRenderFeature : ScriptableRendererFeature
     protected override void Dispose(bool disposing)
     {
         CoreUtils.Destroy(_material);
+        CoreUtils.Destroy(_blurMaterial);
         CoreUtils.Destroy(_godRayMaterial);
         _material = null;
+        _blurMaterial = null;
         _godRayMaterial = null;
         _cachedController = null;
     }
@@ -182,6 +200,69 @@ public class CloudRenderPass : ScriptableRenderPass
     }
 }
 
+public class CloudBlurRenderPass : ScriptableRenderPass
+{
+    static readonly int _sourceId = Shader.PropertyToID("_Source");
+    static readonly MaterialPropertyBlock _propertyBlock = new();
+
+    Material _material;
+
+    public CloudBlurRenderPass()
+    {
+        // Between the cloud raymarch (+1) and the god-ray (+3): soften cloud opacity/colour before
+        // the streak pass reads it, still before post-processing.
+        renderPassEvent = (RenderPassEvent)((int)RenderPassEvent.BeforeRenderingPostProcessing + 2);
+        requiresIntermediateTexture = true;
+    }
+
+    public void Setup(Material material) => _material = material;
+
+    private class PassData
+    {
+        internal Material material;
+        internal TextureHandle source;
+    }
+
+    public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
+    {
+        if (_material == null) return;
+
+        var resourceData = frameData.Get<UniversalResourceData>();
+        var cameraData = frameData.Get<UniversalCameraData>();
+
+        var camType = cameraData.camera.cameraType;
+        if (camType == CameraType.Preview || camType == CameraType.Reflection)
+            return;
+
+        TextureHandle source = resourceData.cameraColor;
+
+        var destinationDesc = renderGraph.GetTextureDesc(source);
+        destinationDesc.name = "CameraColor-CloudBlur";
+        destinationDesc.clearBuffer = false;
+        TextureHandle destination = renderGraph.CreateTexture(destinationDesc);
+
+        using (var builder = renderGraph.AddRasterRenderPass<PassData>("CloudBlur", out var passData))
+        {
+            passData.material = _material;
+            passData.source = source;
+
+            builder.UseTexture(source, AccessFlags.Read);
+            builder.SetRenderAttachment(destination, 0, AccessFlags.Write);
+            builder.AllowPassCulling(false);
+
+            builder.SetRenderFunc(static (PassData data, RasterGraphContext ctx) =>
+            {
+                _propertyBlock.Clear();
+                _propertyBlock.SetTexture(_sourceId, (RTHandle)data.source);
+                ctx.cmd.DrawProcedural(Matrix4x4.identity, data.material, 0,
+                    MeshTopology.Triangles, 3, 1, _propertyBlock);
+            });
+        }
+
+        resourceData.cameraColor = destination;
+    }
+}
+
 public class GodRayStreakRenderPass : ScriptableRenderPass
 {
     static readonly int _sourceId = Shader.PropertyToID("_Source");
@@ -193,7 +274,7 @@ public class GodRayStreakRenderPass : ScriptableRenderPass
     {
         // Immediately after the cloud pass, so cloud opacity (alpha) is available as an
         // occluder, and still before post-processing so the streaks bloom.
-        renderPassEvent = (RenderPassEvent)((int)RenderPassEvent.BeforeRenderingPostProcessing + 2);
+        renderPassEvent = (RenderPassEvent)((int)RenderPassEvent.BeforeRenderingPostProcessing + 3);
         ConfigureInput(ScriptableRenderPassInput.Depth);
         requiresIntermediateTexture = true;
     }
