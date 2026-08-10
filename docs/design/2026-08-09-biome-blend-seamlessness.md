@@ -1,9 +1,18 @@
 # Biome border seamlessness — options + plan (2026-08-09)
 
-Status: **rev 2 — Codex review verified (all 6 claims CONFIRMED against the tree, parallel-agent check), plan
-revised.** The corrected decision of record is the **"Verified disposition"** section at the bottom; where the
-original body below conflicts with it, the verified section wins. Bryan wants the biomes to **seamlessly blend
-together**; walking the surface he still sees **drastic border colors**.
+Status: **RESOLVED — it was a REGRESSION, fixed (commit `9ff9294`).** The drastic biome-edge line was the grass
+surface-**overlay**, not the biome albedo. `150a482` had killed it by co-terminating the overlay with the biome
+transition; `17707e3` dropped that gate (it starved savanna) and the line came back. Fix: restore the
+co-termination gated on grass **density** (savanna-safe) — raise the coverage toe. Verified: the removed overlay
+green sits in a ring exactly on the biome border. **The D2/G contrast work below is a SEPARATE, pre-existing,
+lower-priority look item (the core biome albedo textures are contrasty) — not what Bryan was seeing; pursue only
+if he still wants it after the regression fix.** History retained below.
+
+---
+
+Status (superseded): rev 2 — Codex review verified (all 6 claims CONFIRMED against the tree, parallel-agent
+check), plan revised. Bryan wants the biomes to **seamlessly blend together**; walking the surface he still sees
+**drastic border colors**.
 
 > **Superseded by verification** (see Verified disposition): (1) **Option A is moot** — the biome bake is a
 > per-face *atlas* sampled by all LOD nodes, so blend width is LOD-independent; there is no per-render-node
