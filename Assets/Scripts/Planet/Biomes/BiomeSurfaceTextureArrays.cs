@@ -78,6 +78,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         Shader.SetGlobalBuffer(GrassParamsId, _grassParamsBuffer);
         Shader.SetGlobalInt(BiomeCountId, SliceCount);
         Shader.SetGlobalInt(GrassParamCountId, SliceCount);
+        BiomeAlbedoTintRuntime.Publish(registry, SliceCount);
     }
 
     public void Dispose()
@@ -94,6 +95,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         Shader.SetGlobalBuffer(GrassParamsId, (ComputeBuffer)null);
         Shader.SetGlobalInt(BiomeCountId, 0);
         Shader.SetGlobalInt(GrassParamCountId, 0);
+        BiomeAlbedoTintRuntime.Clear();
         SliceCount = 0;
     }
 

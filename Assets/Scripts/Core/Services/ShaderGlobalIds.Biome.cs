@@ -13,6 +13,8 @@ public static partial class ShaderGlobalIds
     public const string BiomeGrassParams = "_BiomeGrassParams";
     public const string BiomeGrassParamCount = "_BiomeGrassParamCount";
     public const string BiomeFlatColors = "_BiomeFlatColors";
+    public const string BiomeAlbedoTint = "_BiomeAlbedoTint";
+    public const string BiomeDebugForceSameMaterial = "_BiomeDebugForceSameMaterial";
 
     public const string ClimateMap = "_ClimateMap";
     public const string ClimateMapResolution = "_ClimateMapResolution";

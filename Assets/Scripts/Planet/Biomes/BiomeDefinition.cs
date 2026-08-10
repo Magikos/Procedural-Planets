@@ -28,6 +28,11 @@ public class BiomeDefinition : ScriptableObject
     public Texture2D SurfaceARM;
     [Tooltip("World-space tiling factor for the triplanar sampler (1.0 = one texture tile per meter).")]
     [Range(0.01f, 100f)] public float SurfaceTiling = 1.0f;
+    [Tooltip("Production albedo multiplier for this biome's terrain material (texture-mode). Default white = no change. "
+        + "Use to equalize biome mean brightness/hue toward neighbours so high-contrast borders read seamlessly, "
+        + "WITHOUT desaturating (nudge the multiplier, keep saturation). Live-tunable via biome.tint; "
+        + "bake winning values into the SurfaceAlbedo textures for the final ship.")]
+    [ColorUsage(showAlpha: false, hdr: false)] public Color SurfaceAlbedoTint = Color.white;
 
     [Header("Phase C: Grass")]
     [Tooltip("Fraction of grass placement lanes that can emit a blade in this biome. Existing assets default to 0 so they do not emit grass until authored.")]

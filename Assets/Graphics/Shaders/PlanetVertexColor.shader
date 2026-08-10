@@ -161,6 +161,16 @@ Shader "Planet/VertexColor"
             TEXTURE2D_ARRAY(_BiomeNormalArray); SAMPLER(sampler_BiomeNormalArray);
             TEXTURE2D_ARRAY(_BiomeArmArray);    SAMPLER(sampler_BiomeArmArray);
 
+            // Diagnostic (Shader.SetGlobalFloat): force every biome slot to sample ONE material slice while
+            // keeping the atlas weights + 4-corner path. Isolates whether a visible biome border is material
+            // CONTRAST (border vanishes when all slots share a material) vs WEIGHT/filtering (border remains).
+            float _BiomeDebugForceSameMaterial;
+
+            // D2: per-biome production albedo multiplier, indexed by biome slot id (BiomeAlbedoTintRuntime).
+            // Default white = identity. Equalize biome mean lightness toward neighbours to soften high-contrast
+            // borders without desaturating. Multiplies the sampled SurfaceAlbedo only (not normal/ARM).
+            float4 _BiomeAlbedoTint[64];
+
             // Phase B step 9: per-chunk surface-state mask. Channels reserved for Phase E:
             //   R = paved alpha (concrete / brick / etc — disables grass + freezes other state)
             //   G = scorched alpha (burned / blackened)
@@ -491,29 +501,29 @@ Shader "Planet/VertexColor"
 
                 if (w.x > wEps)
                 {
-                    float s = round(idsF.x);
-                    albedo   += w.x * TriplanarSampleAlbedo(worldPos, bw, s);
+                    float s = _BiomeDebugForceSameMaterial > 0.5 ? 0.0 : round(idsF.x);
+                    albedo   += w.x * TriplanarSampleAlbedo(worldPos, bw, s) * _BiomeAlbedoTint[(int)s].rgb;
                     normalWS += w.x * TriplanarSampleNormal(worldPos, worldNormal, bw, s);
                     arm      += w.x * TriplanarSampleArm(worldPos, bw, s);
                 }
                 if (w.y > wEps)
                 {
-                    float s = round(idsF.y);
-                    albedo   += w.y * TriplanarSampleAlbedo(worldPos, bw, s);
+                    float s = _BiomeDebugForceSameMaterial > 0.5 ? 0.0 : round(idsF.y);
+                    albedo   += w.y * TriplanarSampleAlbedo(worldPos, bw, s) * _BiomeAlbedoTint[(int)s].rgb;
                     normalWS += w.y * TriplanarSampleNormal(worldPos, worldNormal, bw, s);
                     arm      += w.y * TriplanarSampleArm(worldPos, bw, s);
                 }
                 if (w.z > wEps)
                 {
-                    float s = round(idsF.z);
-                    albedo   += w.z * TriplanarSampleAlbedo(worldPos, bw, s);
+                    float s = _BiomeDebugForceSameMaterial > 0.5 ? 0.0 : round(idsF.z);
+                    albedo   += w.z * TriplanarSampleAlbedo(worldPos, bw, s) * _BiomeAlbedoTint[(int)s].rgb;
                     normalWS += w.z * TriplanarSampleNormal(worldPos, worldNormal, bw, s);
                     arm      += w.z * TriplanarSampleArm(worldPos, bw, s);
                 }
                 if (w.w > wEps)
                 {
-                    float s = round(idsF.w);
-                    albedo   += w.w * TriplanarSampleAlbedo(worldPos, bw, s);
+                    float s = _BiomeDebugForceSameMaterial > 0.5 ? 0.0 : round(idsF.w);
+                    albedo   += w.w * TriplanarSampleAlbedo(worldPos, bw, s) * _BiomeAlbedoTint[(int)s].rgb;
                     normalWS += w.w * TriplanarSampleNormal(worldPos, worldNormal, bw, s);
                     arm      += w.w * TriplanarSampleArm(worldPos, bw, s);
                 }
