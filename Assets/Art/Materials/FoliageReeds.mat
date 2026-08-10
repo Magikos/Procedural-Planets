@@ -49,7 +49,7 @@ Material:
     - _LeafNormalUp: 0.85
     - _Smoothness: 0.08
     - _WindFreq: 1.6
-    - _WindStrength: 0
+    - _WindStrength: 0.18
     m_Colors:
     - _ColorNoiseCool: {r: 0.82, g: 1, b: 0.88, a: 1}
     - _ColorNoiseWarm: {r: 1.18, g: 1, b: 0.62, a: 1}
