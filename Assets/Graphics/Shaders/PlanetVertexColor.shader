@@ -729,13 +729,18 @@ Shader "Planet/VertexColor"
                     max(_GrassFarOverlayAltitudeEnd, _GrassFarOverlayAltitudeStart + 1.0), cameraAltitude);
                 float approachWeight = lerp(saturate(_GrassFarOverlayOrbitStrength), 1.0, nearSurface);
 
-                // Linear coverage with a toe cut, NOT a pow-lift: coverage must track biome grass
-                // density directly. The old pow(.,0.62) is concave, so it lifts the low-density
-                // fringe at biome borders faster than the biome colour blends - that mismatch is
-                // the historical stripe. The toe drops the near-zero-density fringe entirely.
+                // The far overlay must co-terminate with the biome transition or it paints a vivid green ridge
+                // over the ground as it shifts to tan across a border = the bright biome-edge line. The
+                // original fix (150a482) gated on GROUND greenness, but that starves savanna (dense grass on
+                // TAN ground), so it was dropped (17707e3) and the line came back. Gate on grass DENSITY
+                // magnitude instead: paint only where a biome is genuinely grassy (grassland AND savanna
+                // interiors clear the toe), and drop the low-density arid-border bleed band where the ridge
+                // forms. smoothstep([toe,full]) keeps a smooth ramp (no kink) and full coverage in interiors so
+                // savanna stays lush; toe raised from 0.12 (which admitted the whole bleed band).
                 float rawCoverage = saturate(grass.density * slopeKeep * waterKeep);
-                float coverageToe = 0.12;
-                float envCoverage = saturate((rawCoverage - coverageToe) / (1.0 - coverageToe));
+                float coverageToe = 0.38;
+                float coverageFull = 0.72;
+                float envCoverage = smoothstep(coverageToe, coverageFull, rawCoverage);
                 float nearWeight = 1.0 - smoothstep(144.0, 200.0, viewDistance);
                 float midWeight = smoothstep(144.0, 200.0, viewDistance)
                     * (1.0 - smoothstep(200.0, 600.0, viewDistance));
