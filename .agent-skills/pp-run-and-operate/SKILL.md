@@ -7,7 +7,24 @@ description: Use when you need to run or operate the game — enter play mode, o
 
 Everything here is verified against code on branch `code-refactor` as of 2026-07-06. Repo root: `c:\Users\Bryan\Source\Repos\Magikorp\ProceduralPlanets`.
 
-**Agents cannot run Unity.** Play mode, captures, and visual checks are executed by Bryan. Your job is to (a) hand him an exact, paste-ready operation sequence and (b) interpret the artifacts that come back (screenshots + `.txt` sidecars in `local-only/debug-screenshots`). Build success (`dotnet build`) is a code-health check only — never claim runtime or visual correctness without in-game evidence (see pp-validation-and-evidence).
+**Two ways to run.** (1) Bryan drives — hand him an exact, paste-ready sequence and interpret the `F10-*` PNG+sidecar pairs that come back. His F10 path gives rich per-module diagnostics/sidecars you can't get otherwise, so it's still the way for anything needing sidecar state. (2) **Agent self-serve via the Unity MCP `execute_code` tool** — an agent CAN enter play, drive the console, freeze time, and render its own PNGs without Bryan (recipe below). Use self-serve to reproduce a view and eyeball/measure pixels; use Bryan's F10 when you need sidecar diagnostics or his final visual sign-off. Build success (`dotnet build`) is a code-health check only — never claim runtime or visual correctness without in-game evidence (see pp-validation-and-evidence).
+
+## Agent self-serve capture (Unity MCP `execute_code`) — verified 2026-08-10
+
+`mcp__unity__execute_code` with `compiler: codedom` runs C# **in the live editor**. This lets an agent reproduce a saved viewpoint and shoot its own screenshots solo. The recipe that works:
+
+1. **Enter play:** `UnityEditor.EditorApplication.isPlaying = true;` (exit with `= false`).
+2. **Wait for the world to stream** before teleporting/capturing. A fresh play + immediate teleport gets overridden by the default spawn, and an immediate capture shows only atmosphere haze — terrain chunks + the scatter gather fill over several seconds. Teleport in one call, capture in a later call (round-trips between MCP calls advance frames).
+3. **Drive the console by reflection:** find the `ConsoleController` MonoBehaviour, call its `RunCommand("camera.teleport dots")` (it returns null but executes). Or reflect a service directly (e.g. `CelestialManager`).
+4. **Beat the day/night cycle — FREEZE, then noon.** The cycle runs in real time and is fast (a full day in ~15-30 s of wall clock), so multi-call capture workflows drift into night. Reflect `CelestialManager`: `SetTimeFrozen(true)` then `TrySetLocalTimeOfDay(0.5f)` (console equivalents: `time.freeze true` + `time.set-local 0.5`). Frozen = the sun can't drift no matter how long you take; you can then do a clean A/B across edits. Unfreeze when done.
+5. **Render a PNG:** get `Camera.main`, render into a `RenderTexture`, `ReadPixels` into a `Texture2D`, `EncodeToPNG`, `File.WriteAllBytes` to the scratchpad dir, then `Read` the PNG. That's an F10-equivalent for pixels (no sidecar diagnostics).
+6. **Measure, don't just eyeball:** do the pixel analysis in the same C# — dark-fraction counts, an on/off diff overlay, mean-hue of a pixel class, crop-and-upscale zoom. This turned "is it shadow or object?" into a measured 73%-object / 27%-shadow answer (toggle the Sun light's `shadows` on/off and diff the two frames).
+
+Gotchas learned the hard way:
+- **`codedom` wraps the snippet in a method body**, so top-level `using` directives are a compile error ("Unexpected symbol `System'"). Fully-qualify everything (`System.Reflection.BindingFlags`, `System.AppDomain`, …) and `return` a string.
+- **`SetTimeOfDay` repositions the sun synchronously, but the shader `_SunParams` global publishes one frame LATER** (a LateUpdate). So "set noon + capture in the same call" renders night — set noon in call N, capture in call N+1. Freezing makes that two-call gap safe.
+- **Re-entering play regenerates a NEW world** (new seed) unless the seed is pinned — so a stop→play before/after is a *different* world (different continents/biomes; can't pixel-diff). A saved teleport is a fixed world *position*, so in the new world it can land at a different surface height (e.g. out in space over new ocean). For a matched A/B, stay in ONE play session and use freeze-time instead of stop→play.
+- The variance/"terrain present" heuristic is fooled by a planet disc against the starfield (high variance = space view, not ground). Check the camera forward·up is negative (looking down) and the sun elevation is > 0 before trusting a capture.
 
 ## The "ask Bryan to run X" protocol
 
