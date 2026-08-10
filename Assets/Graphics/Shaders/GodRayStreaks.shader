@@ -132,6 +132,12 @@ Shader "Hidden/GodRayStreaks"
                 // the near terrain, which has no 3D basis. Restrict the whole effect to sky pixels
                 // only, matching CalculateLightShafts's own SkyDepthMask(uv) gate in Atmosphere.shader.
                 float gate = screenFade * localSunVisibility * radialFalloff * SkyDepthMask(i.uv);
+                // radialFalloff is an exp() that never reaches 0, so far-from-sun sky pixels used to run
+                // the full 64-tap radial-blur loop to add a sub-quantization amount (contribution is
+                // bounded by gate*strength, and rayAccum decays hard that far out). Skip the loop there:
+                // the visible beams sit at high gate near the sun and are untouched, so this is look-neutral.
+                if (!isolate && gate * strength < 0.002)
+                    return float4(baseColor, 1.0);
                 if (gate <= 0.0)
                     return isolate ? float4(0, 0, 0, 1) : float4(baseColor, 1.0);
 
