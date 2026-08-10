@@ -165,17 +165,19 @@ Shader "Scatter/VertexColorLit"
                 float4 shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
                 half shadowAtten = MainLightRealtimeShadow(shadowCoord);
                 float cloudShadow = CloudShadowFactor(IN.positionWS, sunDir, localSun);
-                // Softer self-shadow + higher floor so dense bushes/props aren't dark side-on, matching the
-                // brightened tree canopies.
+                // Softer self-shadow + a shaded floor matched to the impostor card (ScatterImpostor uses
+                // 0.85..1.28) so a prop's dark side never collapses to a black dot and the mesh->impostor
+                // handoff has no brightness pop. Without a normal-up blend (rocks need true form) the floor
+                // is what keeps a shaded bush side coloured rather than near-black.
                 float shade = lerp(0.5, 1.0, shadowAtten * cloudShadow);
-                half3 dayColor = albedo * lerp(0.72, 1.15, ndl * shade);
+                half3 dayColor = albedo * lerp(0.85, 1.28, ndl * shade);
                 half3 nightColor = albedo * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
                 half3 col = lerp(nightColor, dayColor, daylight);
 
                 #if defined(_SCREEN_SPACE_OCCLUSION)
                     float2 aoUV = IN.screenPos.xy / max(IN.screenPos.w, 1e-4);
                     AmbientOcclusionFactor aoFactor = GetScreenSpaceAmbientOcclusion(aoUV);
-                    col *= aoFactor.indirectAmbientOcclusion;
+                    col *= lerp(1.0, aoFactor.indirectAmbientOcclusion, 0.25); // gentle, like foliage — don't crush dense props to black
                 #endif
 
                 col = lerp(col, _LodDebugTint.rgb, _LodDebugTint.a); // scatter.lodview: LOD-band colour
