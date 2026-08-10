@@ -358,3 +358,195 @@ sacrifices vibrancy; widening the blend (C/F/B) is refuted. So the interesting q
 5. If G is right, where does it slot — inside `CornerTriplanarWeightedPbr` (per-corner) or after the 4-corner
    bilinear? And should the height source be the ARM texture, a dedicated height map, or noise?
 6. If G is NOT worth it, which of D1/D2/D3 do you recommend, and is the vibrancy loss simply unavoidable?
+
+## Codex round-2 feedback — 2026-08-09
+
+**Verdict:** **G is worth a bounded shader experiment, but it is not a complete replacement for D.** A
+height/noise-shaped blend can replace the muddy near-field crossfade with coherent material patches and retain
+the endpoint textures locally. It cannot remove the endpoint brightness/hue jump: outside the blend the original
+colors still meet, and once the patches become sub-pixel their filtered average converges toward the same mixed
+color. The likely durable answer is therefore **a small D2/D3 mean-luminance correction plus G for transition
+character**, not G alone and not global desaturation.
+
+### R2-1. G is the right operator experiment, not a proof that contrast work is avoidable
+
+Height blend is the best first operator to test here. It keeps a continuous atlas ramp while allowing one
+material's high areas to remain visible deeper into the other material, which is a much better model for
+grass/dirt, rock/soil, and snow/rock than an unstructured RGB average. A stable world-space noise mask is a
+reasonable proxy when authored height is unavailable.
+
+Two alternatives are weaker first choices:
+
+- hard stochastic/dither selection preserves endpoint samples close up, but can sparkle or crawl unless the
+  mask is stable and filtered, and it still averages at distance;
+- perceptual-color-space blending can improve some hue paths, but adds fragment ALU, does nothing for the
+  normal/ARM transition, and cannot hide a large lightness difference.
+
+The visual target should be stated as **align average lightness enough that the distant border is quiet while
+preserving saturation and within-material contrast**. “Vibrant” does not require grass and rock to have widely
+different mean luminance.
+
+### R2-2. It fits per corner, but current ARM does not contain height
+
+`SurfaceARM` is explicitly **R=AO, G=roughness, B=metallic** in both the data contract and shader; none of those
+channels should be reinterpreted as height. The shader currently samples only `.rgb`, while the checked-in
+`*_ARM.png` sources all have alpha fixed at 1.0. Alpha is therefore available for a future authored height pack,
+but it contains no usable height today. The array placeholder is also `(AO=1, roughness=.5, metallic=0, A=1)`
+and would need a documented neutral-height alpha.
+
+If height is authored into ARM alpha, changing the triplanar ARM sample from RGB to RGBA obtains it from the
+**same three texture fetches per biome slot**. A dedicated height array would add three triplanar fetches per
+active slot and should not be the first implementation.
+
+The implementation must be two-phase inside `CornerTriplanarWeightedPbr`:
+
+1. sample and cache the active top-4 materials and their height/proxy values;
+2. derive support-preserving effective weights, normalize them, then accumulate **albedo, normal, and ARM with
+   those same weights**.
+
+The height formula must retain `effectiveWeight[i] = 0` whenever atlas `weight[i] = 0`; otherwise a high height
+can leak a biome beyond its authored atlas support. Strength zero must reproduce the current linear weights
+exactly. Keep the current stable slot order for ties and an epsilon fallback to the original weights if the
+height-weight sum collapses.
+
+Evidence: [`BiomeDefinition.SurfaceARM`](../../Assets/Scripts/Planet/Biomes/BiomeDefinition.cs#L27), array
+packing and placeholder at [`BiomeSurfaceTextureArrays`](../../Assets/Scripts/Planet/Biomes/BiomeSurfaceTextureArrays.cs#L51),
+and the current RGB sampler at [`PlanetVertexColor.shader`](../../Assets/Graphics/Shaders/PlanetVertexColor.shader#L443).
+
+### R2-3. A shader-only G does not perturb grass
+
+G would consume the existing biome IDs/weights without rewriting them. Near- and chunk-grass placement read
+those atlas textures independently, so blade counts, biome parameter blending, and scatter remain unchanged.
+This differs from B/C/F, which alter the shared atlas itself.
+
+“Terrain-only” should mean **terrain material only**, not albedo only: terrain normal and ARM must follow G's
+effective weights or lighting/material boundaries will disagree with color. Grass still uses the original atlas
+weights.
+
+Evidence: chunk-grass atlas reads in [`BiomeGrassPlace.compute`](../../Assets/Resources/BiomeGrassPlace.compute#L144)
+and near-field reads in [`GrassNearFieldPlace.compute`](../../Assets/Resources/GrassNearFieldPlace.compute#L275).
+
+### R2-4. G avoids bake cost, but it is not free
+
+`mapBake` is unaffected because G runs only in the terrain fragment shader, so it completely avoids C's measured
+generation-time regression. The cost moves to every visible terrain pixel on every frame.
+
+The live shader is already heavier than its old “48 taps worst-case” comment implies. With the current secondary
+albedo path enabled, each active biome slot can perform 3 primary-albedo + 3 secondary-albedo + 3 normal + 3 ARM
+array samples. Four slots at four atlas corners is therefore **up to 192 material-array samples per fragment**,
+plus the ID/weight reads; a single-biome interior is about 48 material-array samples. ARM-alpha height adds no
+texture samples, but it does add weight math, caching/register pressure, and potentially occupancy cost. A
+dedicated height array adds up to 48 more samples in the worst case.
+
+Do not use `mapBake` or the CPU-only `SurfaceVisibility` section to accept this shader change. Predict a GPU
+regression, then compare matched captures using whole-frame GPU avg/p95 with valid `n`, at the same seed, pose,
+resolution, and quality tier. Include both a broad border view and a terrain-heavy view.
+
+Evidence: primary/secondary albedo sampling at [`PlanetVertexColor.shader`](../../Assets/Graphics/Shaders/PlanetVertexColor.shader#L339)
+and the four-corner PBR calls at [line 541](../../Assets/Graphics/Shaders/PlanetVertexColor.shader#L541).
+
+### R2-5. Placement and source recommendation
+
+Apply G **inside `CornerTriplanarWeightedPbr`, before the four corner results are bilinearly combined**. After
+that bilinear, the per-biome contributors have already been collapsed into one albedo/normal/ARM triple, so
+there is no longer enough information to perform material competition. Per-corner shaping preserves the current
+point-ID/manual-bilinear design and its continuity.
+
+Recommended source order:
+
+1. **Experiment: reuse the existing per-biome, stable world-space macro noise as the height proxy.** The
+   production albedo path already evaluates a slice-offset `ValueNoise3D`; exposing that value to the two-phase
+   accumulator can test the operator without a new texture array or authoring every material. Keep the mask
+   smooth and world-space—do not use screen-space dither or a hard binary threshold.
+2. **If the operator wins visually: author true height into ARM alpha.** This gives texture-correlated
+   interlock with no additional texture fetches, but requires repacking and validating every ARM source plus
+   the placeholder/import contract.
+3. **Dedicated height array only if ARM alpha cannot be used** and profiling leaves room for the added taps.
+
+The macro-noise probe is not proof that authored height will look the same; it is the cheapest decisive test of
+whether patch-shaped material competition solves the observed border at all.
+
+### R2-6. D ranking and recommended decision sequence
+
+For iteration, rank **D2 > D3 > D1**. For the final shipped art, prefer **D3** once the desired values are known,
+with D2 retained only if runtime/planet-specific variation is genuinely needed.
+
+- **D2** targets only the offending biomes and is the best live-tuning instrument. The existing
+  `TintColor`/`TintPercent` authoring data already reaches `BiomeDefinitionDto`, but texture-mode PBR ignores it;
+  either make that existing contract explicitly affect production albedo or add a clearly named production
+  multiplier—do not repurpose `_BiomeFlatColors`, which stores resolved flat colors rather than identity
+  multipliers.
+- **D3** has zero runtime cost and is the cleanest final source of truth. Retuning average lightness need not
+  sacrifice saturation or texture detail, although it necessarily changes the endpoint palette somewhat.
+- **D1** is last: one global operation cannot selectively fix the worst neighbor pairs and needlessly changes
+  already-good biomes.
+
+Recommended next experiment:
+
+1. Establish a modest per-biome lightness correction with D2, preserving saturation.
+2. Add a default-off, strength-controlled G probe using existing macro noise; capture linear vs G at the same
+   border and at near/mid/far distances.
+3. Accept G only if it improves the border at all three distances and the whole-frame GPU delta fits a declared
+   budget.
+4. If accepted, compare the proxy against one or two hand-authored ARM-alpha height pairs before repacking the
+   full biome set. If rejected, stop at D2 and bake the chosen values into D3 where practical.
+
+This sequence keeps the operator experiment reversible and answers the art question before committing to a
+new height-data pipeline.
+
+## Verified build plan — 2026-08-09 (Codex round-2 CONFIRMED against the tree)
+
+All 4 round-2 claims **CONFIRMED** by 4 parallel adversarial agents (file:line evidence, zero refutations).
+The agents surfaced three **critical caveats** Codex's prose glossed — carried into the steps below.
+
+**Verified facts.** ARM = R:AO/G:rough/B:metallic; all 11 `*_ARM.png` have alpha ≡ 255 (no height today) but
+the array is already RGBA32, so ARM-alpha height costs **0 extra fetches** (`BiomeDefinition.cs:27`,
+`BiomeSurfaceTextureArrays.cs:66`, shader reads `.rgb` at `:450`). `TintColor`/`TintPercent` reach
+`BiomeDefinitionDto` but production albedo **ignores** them; the tint LUT `_BiomeFlatColors` is **fully dead**
+(never sampled) — don't repurpose it. The per-biome macro `ValueNoise3D` exists in `TriplanarSampleAlbedo:369`,
+world-space + smooth + per-slice (`BiomeSliceOffset`), runs at default settings — a free height **proxy**.
+`CornerTriplanarWeightedPbr` (`:480-519`) is the only place the top-4 are separated; cost ≈ **192 array
+taps/fragment** worst case (12/slot × 4 slots × 4 corners), ~48 single-biome.
+
+### ⚠ Critical caveats (verified, must honor)
+1. **Current accumulation is NOT normalized** and hard-drops slots with `weight ≤ wEps=0.004` (`:490`). A naive
+   "normalize then accumulate" at **strength 0 would shift colors** → the strength-0 path must reproduce the
+   current un-normalized, `wEps`-thresholded sum exactly. **Gate any normalization behind strength > 0.**
+2. The macro noise is **local** to `TriplanarSampleAlbedo` and sits **behind a feature gate** (`:364`,
+   `_BiomeSecondaryBlend`/`_BiomeMacroVariationStrength`) + a debug early-out. Plumb it out (out-param) **and
+   lift the compute above the gate** so the proxy stays valid when those look-dev uniforms are zeroed.
+3. **ARM-alpha placeholder = 1.0 = max height.** Unauthored/placeholder slices would dominate a height blend →
+   pick a **neutral height default** (e.g. treat missing height as 0.5) for placeholder + un-repacked slices.
+
+### Phase 1 — D2: per-biome lightness correction (the durable base)
+- Add a **new named production per-biome multiplier** (e.g. `_BiomeAlbedoTint[]`, default identity/white)
+  applied to the sampled `SurfaceAlbedo` in `CornerTriplanarWeightedPbr` — **not** `TintColor` (repurposing it
+  is surprising; it currently feeds only dead code) and **not** `_BiomeFlatColors`. Live-tunable via a console
+  setter (`terrain.biome-tint <biome> <color>` or a lightness scalar).
+- **Target: equalize biome mean *lightness*, preserve saturation** ("vibrant" ≠ different mean luminance). The
+  measured offenders: dark-green grass ≈(0.17,0.21,0.04) vs bright-grey rock ≈(0.38,0.35,0.34).
+- Default = no change (identity) → zero visual/perf risk until Bryan tunes. Bake the chosen values into the
+  authored textures (D3) for the final ship; keep D2 only if per-planet variation is genuinely needed.
+- **D-priority D2 > D3 > D1** (Codex): D1 global can't selectively fix the worst pairs.
+
+### Phase 2 — G: height-blend probe (default-off, strength-controlled)
+- Insert in the `CornerTriplanarWeightedPbr` **top-4 slot loop, before the `+=`** (never at the 4-corner
+  bilinear — too late). Two-phase: (1) read active-slot `(id, weight, heightProxy)`; (2) derive
+  `effectiveWeight[i]` (**== 0 iff `weight[i] ≤ wEps`** — preserve support), accumulate albedo+normal+ARM with
+  the **same** effective weights (mirrors the current same-weight-for-all-three pattern).
+- Height source = the macro `ValueNoise3D` **proxy** (caveat 2). `_BiomeHeightBlendStrength` uniform, **default
+  0 = current linear exactly** (caveat 1).
+- **Measure GPU, not `mapBake`** (all taps are per-fragment): whole-frame avg/p95, matched seed/pose/res/tier,
+  a broad-border view + a terrain-heavy view.
+- Terrain-material only — grass reads the atlas weights independently, unaffected (BB5/R2-3). Normal + ARM must
+  follow G's effective weights too (or lighting disagrees with color).
+
+### Sequence + gates
+1. **Phase 1 (D2)** — modest per-biome lightness correction, saturation preserved. Capture `TerrainSelectedAlbedo`.
+2. **Phase 2 (G probe)** — default-off; capture linear vs G at the same border at **near / mid / far**.
+3. **Accept G only if** it improves the border at all three distances **and** the whole-frame GPU delta fits a
+   declared budget. Update the stale cost comment at shader `:473`.
+4. **If G accepted** → author real height into ARM alpha (with caveat-3 neutral default), compare proxy vs 1–2
+   hand-authored pairs before repacking all 11. **If rejected** → stop at D2, bake into D3.
+
+All visual → grass-scene + main-planet capture-diff (`TerrainSelectedAlbedo`) and **Bryan's F10 sign-off**.
