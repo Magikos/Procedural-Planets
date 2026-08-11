@@ -11,10 +11,16 @@ public static class ScatterImpostorFactory
 {
     static readonly int _baseMapId = Shader.PropertyToID("_BaseMap");
     static readonly int _cutoffId = Shader.PropertyToID("_Cutoff");
+    static readonly int _gridNId = Shader.PropertyToID("_GridN");
+    static readonly int _centerOffsetId = Shader.PropertyToID("_CenterOffset");
+    static readonly int _worldSizeId = Shader.PropertyToID("_WorldSize");
     static readonly int _fadeInStartId = Shader.PropertyToID("_FadeInStart");
     static readonly int _fadeInEndId = Shader.PropertyToID("_FadeInEnd");
     static readonly int _fadeOutStartId = Shader.PropertyToID("_FadeOutStart");
     static readonly int _fadeOutEndId = Shader.PropertyToID("_FadeOutEnd");
+
+    // Frames per axis in the hemi-octahedral atlas. 8 = 64 angles into a 1024² card (128² cells).
+    const int OctGridN = 8;
 
     public static ScatterLodBatcher.Impostor TryBuild(ScatterPrototypeDto proto, Bounds worldBounds)
     {
@@ -32,7 +38,7 @@ public static class ScatterImpostorFactory
         }
         if (meshes.Count == 0) return default;
 
-        ScatterImpostorBaker.Card card = ScatterImpostorBaker.Bake(meshes, materials);
+        ScatterImpostorBaker.AtlasCard card = ScatterImpostorBaker.BakeAtlas(meshes, materials, OctGridN);
         if (!card.Valid) return default;
 
         float meshCull = proto.MaxCullDistance;
@@ -41,25 +47,30 @@ public static class ScatterImpostorFactory
         var mat = new Material(shader) { enableInstancing = true };
         mat.SetTexture(_baseMapId, card.Texture);
         mat.SetFloat(_cutoffId, 0.3f);
+        mat.SetFloat(_gridNId, card.GridN);
+        mat.SetFloat(_centerOffsetId, card.CenterOffset); // billboard centred on the tree centre
+        mat.SetFloat(_worldSizeId, card.WorldSize);       // square side (max of footprint / height)
         mat.SetFloat(_fadeInStartId, start);    // cross-fade in over the mesh-LOD dither-out band
         mat.SetFloat(_fadeInEndId, meshCull);
-        mat.SetFloat(_fadeOutStartId, end * 0.95f);
-        mat.SetFloat(_fadeOutEndId, end);
+        mat.SetFloat(_fadeOutStartId, end * 0.6f); // long dither-out so the tree line thins into the distance
+        mat.SetFloat(_fadeOutEndId, end);          // instead of a hard ~5% pop at the cull edge
 
-        var rp = new RenderParams(mat) { worldBounds = worldBounds };
-        return new ScatterLodBatcher.Impostor(rp, BuildQuad(card.Width, card.Height), start, end);
+        var rp = new RenderParams(mat) { worldBounds = worldBounds, shadowCastingMode = ShadowCastingMode.On };
+        return new ScatterLodBatcher.Impostor(rp, BuildUnitQuad(), start, end);
     }
 
-    static Mesh BuildQuad(float w, float h)
+    // Unit centred quad (xy in [-0.5,0.5], uv [0,1]); the octahedral shader billboards + scales it by
+    // _WorldSize and centres it at _CenterOffset above the pivot.
+    static Mesh BuildUnitQuad()
     {
         var m = new Mesh
         {
             vertices = new[]
             {
-                new Vector3(-w / 2f, 0f, 0f), new Vector3(w / 2f, 0f, 0f),
-                new Vector3(w / 2f, h, 0f), new Vector3(-w / 2f, h, 0f),
+                new Vector3(-0.5f, -0.5f, 0f), new Vector3(0.5f, -0.5f, 0f),
+                new Vector3(0.5f, 0.5f, 0f), new Vector3(-0.5f, 0.5f, 0f),
             },
-            uv = new[] { new Vector2(1, 0), new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1) },
+            uv = new[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1) },
             triangles = new[] { 0, 1, 2, 0, 2, 3 },
         };
         m.RecalculateBounds();

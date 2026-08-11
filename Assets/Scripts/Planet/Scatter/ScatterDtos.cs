@@ -114,7 +114,7 @@ public sealed record ScatterPrototypeDto(
     // draw, so the tree line pushes well toward the horizon. Cost is the gather: FarGatherRadius scales
     // with this, so the gathered disc area grows as the square — higher = a farther tree line but a slower
     // cold fill (near-first ordering keeps the foreground fast; the far ring trickles in).
-    const float ImpostorRangeMultiplier = 3.0f;
+    const float ImpostorRangeMultiplier = 4.5f;
 
     public bool HasImpostor => CanRender && MaxCullDistance >= ImpostorMinMeshCull;
     public float ImpostorStartDistance => MaxCullDistance * 0.85f; // cross-fade in over the mesh dither-out band

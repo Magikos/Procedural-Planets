@@ -20,7 +20,21 @@ public static class ScatterImpostorBaker
         public bool Valid;   // false when the bake produced almost no silhouette (see MinSilhouetteAlpha)
     }
 
+    // Octahedral impostor atlas: the prototype baked from a GridN×GridN grid of hemisphere camera angles
+    // (hemi-octahedral layout) into one square texture. At runtime the camera-facing quad picks the cell
+    // matching the view direction, so the card reads as the tree from ANY angle — including straight down —
+    // instead of a single front-view billboard that foreshortens to a slab from above.
+    public struct AtlasCard
+    {
+        public Texture2D Texture;   // (GridN*AtlasCellPx) square hemi-octahedral atlas, cell (i,j) at (i,j)*cellPx
+        public float WorldSize;     // square billboard side in world metres (max of footprint width / height)
+        public float CenterOffset;  // billboard centre height above the instance pivot (base) in world metres
+        public int GridN;           // frames per axis
+        public bool Valid;          // false when the bake keyed almost no silhouette (see MinSilhouetteAlpha)
+    }
+
     const int CardHeightPx = 256;
+    const int AtlasCellPx = 128;  // per-angle cell resolution in the octahedral atlas
     const int BakeLayer = 31; // isolate the bake rig from the rest of the scene
 
     // A bake that keys almost no coverage (thin _ForceLeaf blades like reeds, or a prototype whose front
@@ -98,6 +112,103 @@ public static class ScatterImpostorBaker
         Object.DestroyImmediate(root);
 
         return new Card { Texture = card, Width = w, Height = h, Valid = maxAlpha >= MinSilhouetteAlpha };
+    }
+
+    // Bakes the prototype from a GridN×GridN hemisphere of angles into one octahedral atlas. Same unlit-
+    // albedo + luminance-key silhouette as Bake, but square cells (framing the tree's max extent so it fits
+    // from any angle) and one render per cell. The billboard is centred on the tree centre (CenterOffset)
+    // and made camera-facing at runtime, so the atlas cell for the view direction always shows a real angle.
+    public static AtlasCard BakeAtlas(IReadOnlyList<Mesh> meshes, IReadOnlyList<Material> materials, int gridN)
+    {
+        Bounds b = meshes[0].bounds;
+        for (int i = 1; i < meshes.Count; i++) b.Encapsulate(meshes[i].bounds);
+        float w = Mathf.Max(b.size.x, b.size.z);
+        float h = Mathf.Max(b.size.y, 1e-3f);
+        float s = Mathf.Max(w, h);   // square framing fits the tree from top-down (w wide) and side (h tall)
+        Vector3 ctr = b.center;
+
+        var root = new GameObject("ImpostorAtlasBakeRig") { hideFlags = HideFlags.HideAndDontSave };
+        for (int i = 0; i < meshes.Count; i++)
+        {
+            var g = new GameObject("m") { layer = BakeLayer };
+            g.transform.SetParent(root.transform, false);
+            g.AddComponent<MeshFilter>().sharedMesh = meshes[i];
+            g.AddComponent<MeshRenderer>().sharedMaterial = materials[i];
+        }
+        var camGO = new GameObject("c");
+        camGO.transform.SetParent(root.transform, false);
+        Camera cam = camGO.AddComponent<Camera>();
+        cam.cameraType = CameraType.Preview;   // black background (see Bake) — the luminance key depends on it
+        cam.orthographic = true;
+        cam.orthographicSize = s * 0.52f;
+        cam.aspect = 1f;
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = Color.black;
+        cam.cullingMask = 1 << BakeLayer;
+        cam.nearClipPlane = 0.01f;
+        cam.farClipPlane = s * 8f;
+
+        AmbientMode savedMode = RenderSettings.ambientMode;
+        Color savedAmbient = RenderSettings.ambientLight;
+        RenderSettings.ambientMode = AmbientMode.Flat;
+        RenderSettings.ambientLight = Color.white;
+
+        int atlasPx = gridN * AtlasCellPx;
+        var atlas = new Texture2D(atlasPx, atlasPx, TextureFormat.ARGB32, false);
+        var cellRt = new RenderTexture(AtlasCellPx, AtlasCellPx, 16, RenderTextureFormat.ARGB32);
+        float dist = s * 2f;
+        float maxAlpha = 0f;
+        for (int j = 0; j < gridN; j++)
+        for (int i = 0; i < gridN; i++)
+        {
+            Vector3 dir = HemiOctDecode(new Vector2((i + 0.5f) / gridN, (j + 0.5f) / gridN)); // tree -> camera
+            Vector3 right = Vector3.Cross(Vector3.up, dir);
+            if (right.sqrMagnitude < 1e-6f) right = Vector3.Cross(Vector3.forward, dir); // top-down pole
+            right.Normalize();
+            Vector3 up = Vector3.Cross(dir, right).normalized;
+            camGO.transform.SetPositionAndRotation(ctr + dir * dist, Quaternion.LookRotation(-dir, up));
+
+            cam.targetTexture = cellRt;
+            cam.Render();
+            RenderTexture.active = cellRt;
+            var cell = new Texture2D(AtlasCellPx, AtlasCellPx, TextureFormat.ARGB32, false);
+            cell.ReadPixels(new Rect(0, 0, AtlasCellPx, AtlasCellPx), 0, 0);
+            cell.Apply();
+            RenderTexture.active = null;
+
+            Color[] cp = cell.GetPixels();
+            for (int k = 0; k < cp.Length; k++)
+            {
+                float lum = cp[k].r * 0.299f + cp[k].g * 0.587f + cp[k].b * 0.114f;
+                float t = Mathf.Clamp01((lum - 0.012f) / (0.05f - 0.012f));
+                float a = t * t * (3f - 2f * t);
+                if (a > maxAlpha) maxAlpha = a;
+                cp[k] = new Color(cp[k].r, cp[k].g, cp[k].b, a);
+            }
+            atlas.SetPixels(i * AtlasCellPx, j * AtlasCellPx, AtlasCellPx, AtlasCellPx, cp);
+            Object.DestroyImmediate(cell);
+        }
+        atlas.Apply();
+
+        RenderSettings.ambientMode = savedMode;
+        RenderSettings.ambientLight = savedAmbient;
+        cam.targetTexture = null;
+        RenderTexture.active = null;
+        Object.DestroyImmediate(cellRt);
+        Object.DestroyImmediate(root);
+
+        return new AtlasCard { Texture = atlas, WorldSize = s, CenterOffset = ctr.y, GridN = gridN, Valid = maxAlpha >= MinSilhouetteAlpha };
+    }
+
+    // Hemi-octahedral decode: square uv in [0,1]^2 -> unit direction on the upper hemisphere (y = up).
+    // Cell centre uv -> the camera direction that cell was baked from; the runtime encode is its inverse.
+    // uv=(0.5,0.5) -> straight up (top-down view); the four corners -> the horizon cardinal directions.
+    static Vector3 HemiOctDecode(Vector2 f)
+    {
+        f = f * 2f - Vector2.one;
+        Vector2 p = new Vector2(f.x + f.y, f.x - f.y) * 0.5f;
+        float y = 1f - Mathf.Abs(p.x) - Mathf.Abs(p.y);
+        return new Vector3(p.x, y, p.y).normalized;
     }
 
     static Texture2D RenderTo(Camera cam, RenderTexture rt, Color bg)
