@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Lake Cattails
   SlotId: 64
-  SpacingMeters: 6
+  SpacingMeters: 4
   Biome: 18
   BiomeBlendPower: 1
-  Weight: 0.9
+  Weight: 1
   MaxSlopeDegrees: 20
   SlopeFadeDegrees: 6
   ConformToSlope: 0
