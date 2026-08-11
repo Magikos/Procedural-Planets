@@ -131,9 +131,9 @@ The committed skill library is [.agent-skills/](.agent-skills/) (16 skills, buil
 
 ---
 
-## Don't touch
+## Ocean shader / caustics
 
-- **Caustics** (`Assets/Graphics/Shaders/Ocean.shader` and related caustics code). They look correct; every touch breaks them. Audit findings against caustics are flag-only — no code changes.
+- The old "don't touch caustics" rule is **lifted** (2026-08-11, Bryan). `Assets/Graphics/Shaders/Ocean.shader` and the WaterVolume caustics are editable. They remain fragile — change deliberately and verify the water still reads correctly (caustics, shoreline, depth blend) before committing.
 
 ---
 

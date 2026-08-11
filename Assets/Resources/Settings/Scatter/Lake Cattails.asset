@@ -33,11 +33,9 @@ MonoBehaviour:
   - Name: Reeds
     Material: {fileID: 2100000, guid: 320809e0e65aba840b0af34b718a08cf, type: 2}
     LodMeshes:
-    - {fileID: 4663865959570489909, guid: 18b997c676e20544fb1bd0e51fe3a1fb, type: 3}
     - {fileID: 6559907416872072135, guid: 18b997c676e20544fb1bd0e51fe3a1fb, type: 3}
     - {fileID: 7164127797826947399, guid: 18b997c676e20544fb1bd0e51fe3a1fb, type: 3}
     LodEndDistances:
-    - 40
     - 90
     - 200
     CastShadows: 0

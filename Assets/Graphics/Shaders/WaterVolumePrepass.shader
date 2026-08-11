@@ -77,7 +77,11 @@ Shader "Hidden/WaterVolumePrepass"
             float shore01 = input.waterData.g;
             float body01 = input.waterData.b;
             float freezeFactor = EvaluateFreezeFactor(input.waterData.a, body01);
-            return float4(input.forwardDepth, depth01, shore01, freezeFactor);
+            // .b carries shore coverage AND the body class in disjoint ranges: ocean (body01=1) -> [0.55,1],
+            // lake (body01=0) -> [0,0.45]. Only the coverage mask (max(.g,.b)) and the lake-tint decode read
+            // .b, so the shore feather survives while the volume can finally tell a lake from the ocean.
+            float shoreBody = shore01 * 0.45 + body01 * 0.55;
+            return float4(input.forwardDepth, depth01, shoreBody, freezeFactor);
         }
 
         float4 Frag(Varyings input) : SV_Target

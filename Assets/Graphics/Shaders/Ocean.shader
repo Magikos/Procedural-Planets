@@ -644,8 +644,14 @@ Shader "Planet/Ocean"
                 float daylight = smoothstep(-0.08, 0.18, localSun);
                 float shadow = CloudShadowFactor(positionWS, sunDir, localSun);
 
-                float3 shallowColor = lerp(_ShallowColor.rgb, float3(0.14, 0.58, 0.72), 0.30);
-                float3 deepColor = max(_DeepColor.rgb, float3(0.0, 0.055, 0.18));
+                // Small inland bodies (body01 -> 0 = lake) read as a murky green pond instead of the ocean's
+                // blue; the ocean (body01 -> 1) keeps its colours. Smooth so a lake's edge doesn't hard-cut.
+                float3 oceanShallow = lerp(_ShallowColor.rgb, float3(0.14, 0.58, 0.72), 0.30);
+                float3 oceanDeep = max(_DeepColor.rgb, float3(0.0, 0.055, 0.18));
+                float3 lakeShallow = float3(0.20, 0.36, 0.24);
+                float3 lakeDeep = float3(0.04, 0.13, 0.09);
+                float3 shallowColor = lerp(lakeShallow, oceanShallow, body01);
+                float3 deepColor = lerp(lakeDeep, oceanDeep, body01);
                 float3 waterColor = lerp(shallowColor, deepColor, depthBlend);
 
                 float nightLight = saturate(_NightAmbientIntensity * 0.10 + 0.015);
@@ -655,19 +661,21 @@ Shader "Planet/Ocean"
 
                 float3 skyReflection = lerp(float3(0.010, 0.018, 0.030), float3(0.38, 0.58, 0.76), daylight);
                 float3 litColor = waterColor * lightAmount;
-                float reflectionBlend = fresnel * lerp(0.08, 0.38, daylight);
+                // Lakes reflect far less sky than the ocean (body01 -> 0), so the murky green shows instead
+                // of a grazing-angle blue mirror.
+                float reflectionBlend = fresnel * lerp(0.08, 0.38, daylight) * lerp(0.08, 1.0, body01);
                 float rippleContrast = (rippleSignal - 0.5) * 2.0;
                 float waveShade = clamp(signedWaveHeight * 0.055 + rippleContrast * 0.072 + (rippleSun - saturate(localSun)) * 0.15, -0.12, 0.16);
                 litColor *= 1.0 + waveShade * daylight * lerp(0.50, 1.0, body01);
                 float3 baseSurfaceColor = lerp(litColor, skyReflection, reflectionBlend);
-                float3 farWaterColor = max(deepColor, float3(0.0, 0.060, 0.20));
+                float3 farWaterColor = max(deepColor, lerp(float3(0.02, 0.11, 0.07), float3(0.0, 0.060, 0.20), body01));
                 // Distant-water term must collapse to the same night floor as the near path.
                 // Previously it kept a fixed 0.48-0.90 of farWaterColor regardless of sun, so the
                 // open ocean (where surfacePathBlend ~ 1) stayed ~half-lit at night = the dark-side glow.
                 float farLight = lerp(nightLight, 0.76, daylight);
                 float3 farBase = farWaterColor * farLight;
-                float3 farGraze = skyReflection * 0.10 + farWaterColor * lerp(nightLight, 0.90, daylight);
-                float3 farSurfaceColor = lerp(farBase, farGraze, fresnel * 0.55);
+                float3 farGraze = skyReflection * lerp(0.02, 0.10, body01) + farWaterColor * lerp(nightLight, 0.90, daylight);
+                float3 farSurfaceColor = lerp(farBase, farGraze, fresnel * lerp(0.18, 0.55, body01));
                 float surfacePathBlend = smoothstep(0.10, 0.76, viewPath) * lerp(0.62, 0.98, body01);
                 layer.color = lerp(baseSurfaceColor, farSurfaceColor, surfacePathBlend);
                 layer.nearColor = baseSurfaceColor;
@@ -707,6 +715,9 @@ Shader "Planet/Ocean"
                 float depthAlpha = lerp(0.09, 0.34, depthBlend);
                 float shoreAlpha = lerp(0.42, 1.0, shoreVisibility);
                 float nearAlpha = _Alpha * depthAlpha * shoreAlpha * bodyVisibility;
+                // Murky lakes (body01 -> 0) read as an opaque green pond, not a clear window onto the bright
+                // caustic bottom; still honour the shore fade so the waterline stays soft.
+                nearAlpha = lerp(saturate(0.9 * shoreAlpha), nearAlpha, body01);
                 float farOpacityCeiling = lerp(0.72, 0.98, saturate(max(depthBlend, fresnel)));
                 float farAlpha = farOpacityCeiling * lerp(0.74, 1.0, body01);
                 float pathAlpha = saturate(smoothstep(0.08, 0.68, viewPath) * lerp(0.82, 1.0, fresnel));

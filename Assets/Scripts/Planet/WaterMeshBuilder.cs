@@ -610,6 +610,16 @@ public static class WaterMeshBuilder
             globalBodyFactor,
             globalEffectiveTemperature01,
             ref stats);
+
+        // Unify with the biome/scatter lake authority: force any vertex LakeMask tags as lake water to
+        // bodyFactor 0, so a lake the biome map treats as a lake also RENDERS as a lake (murky green, still,
+        // lake freeze schedule) instead of blue ocean. LakeMask is built earlier in gen (Planet.cs), so it is
+        // available here; null => keep the mesh's own size-based classification.
+        if (LakeMask.Current != null)
+            for (int i = 0; i < globalBodyFactor.Length; i++)
+                if (globalWet[i] && LakeMask.Current.Sample(globalDirections[i]) == LakeMask.Water)
+                    globalBodyFactor[i] = 0f;
+
         ComputeShoreDistance(wet, adjacency, globalShoreDistance);
 
         for (int faceIndex = 0; faceIndex < result.Faces.Length; faceIndex++)

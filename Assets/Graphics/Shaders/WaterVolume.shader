@@ -674,6 +674,7 @@ Shader "Hidden/WaterVolume"
         float4 waterData = SAMPLE_TEXTURE2D(_WaterVolumeData, sampler_WaterVolumeData, input.uv);
         float screenWaterCoverage = WaterCoverageFromData(waterData);
         float liquidContribution = 1.0 - saturate(waterData.a);
+        float lake01 = 1.0 - smoothstep(0.45, 0.55, waterData.b); // .b packs body01: <0.45 = lake, >0.55 = ocean
         float receiverDistance = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
         float3 receiverWS = _WorldSpaceCameraPos.xyz + rayDir * receiverDistance;
 
@@ -795,6 +796,15 @@ Shader "Hidden/WaterVolume"
         float3 fogColor = volumeTint * lerp(0.14, 0.62, volumeLight);
         waterBody = lerp(waterBody, fogColor, depthFog * 0.58);
         float3 color = waterBody * (1.0 - troughShadow) + caustics.contribution * 0.48 + caustics.prismContribution * 1.28;
+        // Murky inland lakes: the clear-ocean composite shows the bright refracted lakebed + caustics through
+        // shallow water. Override lake pixels (body01 -> 0) with an opaque green pond body so the bottom can't
+        // read through. Deeper/denser water darkens; day/night rides volumeLight. Gated to lake water only.
+        float3 lakeBody = lerp(float3(0.15, 0.46, 0.21), float3(0.05, 0.19, 0.10), saturate(depthFog + volumeOpacity * 0.4));
+        // Drive brightness by SUN light (0 at night) with only a faint moon lift, so the murky green
+        // darkens to near-black at night instead of self-glowing while the terrain is dark.
+        float lakeLight = saturate(caustics.sunLight * 1.25 + caustics.moonLight * 0.06);
+        lakeBody *= lerp(0.015, 1.15, lakeLight);
+        color = lerp(color, lakeBody, lake01 * saturate(screenWaterCoverage) * 0.97);
         color = FarTerrainWaterlineColor(color, farTerrainWaterlinePath, farTerrainWaterlineMask, volumeLight);
         return float4(saturate(color), source.a);
     }
