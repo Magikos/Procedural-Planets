@@ -18,7 +18,9 @@ public enum BiomeType
     IceBog,
     Mountain,
     Cave,
-    Underwater
+    Underwater,
+    Lake,       // small inland water body (vs Ocean)
+    LakeShore   // land ring around a lake (vs Beach)
 }
 
 public enum TemperatureUnit

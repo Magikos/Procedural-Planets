@@ -8,9 +8,11 @@ public sealed record BiomeRegistryDto(
     BiomeDefinitionDto OceanBiome,
     BiomeDefinitionDto BeachBiome,
     BiomeDefinitionDto MountainBiome,
-    BiomeDefinitionDto SnowyMountainBiome)
+    BiomeDefinitionDto SnowyMountainBiome,
+    BiomeDefinitionDto LakeBiome,
+    BiomeDefinitionDto LakeShoreBiome)
 {
-    public int BiomeCount => (GridEntries?.Length ?? 0) + 4;
+    public int BiomeCount => (GridEntries?.Length ?? 0) + 6;
 
     public static BiomeRegistryDto From(BiomeRegistry src)
     {
@@ -29,7 +31,9 @@ public sealed record BiomeRegistryDto(
             src.OceanBiome != null ? BiomeDefinitionDto.From(src.OceanBiome) : null,
             src.BeachBiome != null ? BiomeDefinitionDto.From(src.BeachBiome) : null,
             src.MountainBiome != null ? BiomeDefinitionDto.From(src.MountainBiome) : null,
-            src.SnowyMountainBiome != null ? BiomeDefinitionDto.From(src.SnowyMountainBiome) : null);
+            src.SnowyMountainBiome != null ? BiomeDefinitionDto.From(src.SnowyMountainBiome) : null,
+            src.LakeBiome != null ? BiomeDefinitionDto.From(src.LakeBiome) : null,
+            src.LakeShoreBiome != null ? BiomeDefinitionDto.From(src.LakeShoreBiome) : null);
     }
 
     public BiomeResult Resolve(float temperature, float moisture, float elevation)
@@ -60,6 +64,8 @@ public sealed record BiomeRegistryDto(
         if (BeachBiome != null && BeachBiome.Type == type) return BeachBiome;
         if (MountainBiome != null && MountainBiome.Type == type) return MountainBiome;
         if (SnowyMountainBiome != null && SnowyMountainBiome.Type == type) return SnowyMountainBiome;
+        if (LakeBiome != null && LakeBiome.Type == type) return LakeBiome;
+        if (LakeShoreBiome != null && LakeShoreBiome.Type == type) return LakeShoreBiome;
 
         if (GridEntries != null)
         {
@@ -83,6 +89,8 @@ public sealed record BiomeRegistryDto(
 
         if (index == gridCount + 2) return MountainBiome;
         if (index == gridCount + 3) return SnowyMountainBiome;
+        if (index == gridCount + 4) return LakeBiome;
+        if (index == gridCount + 5) return LakeShoreBiome;
         return null;
     }
 
@@ -101,6 +109,8 @@ public sealed record BiomeRegistryDto(
         if (BeachBiome != null && BeachBiome.Type == type) return 1;
         if (MountainBiome != null && MountainBiome.Type == type) return (byte)(gridCount + 2);
         if (SnowyMountainBiome != null && SnowyMountainBiome.Type == type) return (byte)(gridCount + 3);
+        if (LakeBiome != null && LakeBiome.Type == type) return (byte)(gridCount + 4);
+        if (LakeShoreBiome != null && LakeShoreBiome.Type == type) return (byte)(gridCount + 5);
         return 0;
     }
 
@@ -126,6 +136,8 @@ public sealed record BiomeRegistryDto(
             BeachBiomeId = 1,
             MountainBiomeId = (byte)(gridCount + 2),
             SnowyMountainBiomeId = (byte)(gridCount + 3),
+            LakeBiomeId = (byte)(gridCount + 4),
+            LakeShoreBiomeId = (byte)(gridCount + 5),
             GridBiomeIds = gridIds,
             BiomeCount = BiomeCount,
         };

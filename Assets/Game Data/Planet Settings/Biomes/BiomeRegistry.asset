@@ -31,7 +31,5 @@ MonoBehaviour:
   BeachBiome: {fileID: 11400000, guid: 7ded9e5dfa093f148b57dc19c1c8ebae, type: 2}
   MountainBiome: {fileID: 11400000, guid: 35940dfc10b2bee4ea371197d6a2d250, type: 2}
   SnowyMountainBiome: {fileID: 11400000, guid: a66ec3b10d0457544b7f5b7a79db3b2b, type: 2}
-  OceanThreshold: 0
-  BeachWidth: 0.001
-  MountainThreshold: 0.1
-  BlendWidth: 0.003
+  LakeBiome: {fileID: 11400000, guid: 836455326a1689149bda2394fb8dd2dc, type: 2}
+  LakeShoreBiome: {fileID: 11400000, guid: b8e70687a6cc2aa4c95730a4bfd33f49, type: 2}

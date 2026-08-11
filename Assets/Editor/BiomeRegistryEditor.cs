@@ -67,6 +67,11 @@ public class BiomeRegistryEditor : Editor
         EditorGUILayout.PropertyField(serializedObject.FindProperty("MountainBiome"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("SnowyMountainBiome"));
 
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Water-body Overrides", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("LakeBiome"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("LakeShoreBiome"));
+
         serializedObject.ApplyModifiedProperties();
 
         EditorGUILayout.Space();

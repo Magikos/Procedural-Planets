@@ -21,6 +21,8 @@ public struct BiomeLookupData
     public byte BeachBiomeId;
     public byte MountainBiomeId;
     public byte SnowyMountainBiomeId;
+    public byte LakeBiomeId;
+    public byte LakeShoreBiomeId;
 
     // Length = TemperatureSteps * MoistureSteps. Each entry is the slice id of the biome at
     // that grid cell. Unused cells (no GridEntries[i] in registry) fall back to the grid base

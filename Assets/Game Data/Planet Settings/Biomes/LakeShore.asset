@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f3cce766668c55488263da2289e7329, type: 3}
+  m_Name: LakeShore
+  m_EditorClassIdentifier: 
+  Type: 18
+  ColorGradient:
+    serializedVersion: 2
+    key0: {r: 0.22, g: 0.3, b: 0.12, a: 1}
+    key1: {r: 0.22, g: 0.3, b: 0.12, a: 1}
+    key2: {r: 0, g: 0, b: 0, a: 0}
+    key3: {r: 0, g: 0, b: 0, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 65535
+    ctime2: 0
+    ctime3: 0
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: 0
+    m_NumColorKeys: 2
+    m_NumAlphaKeys: 2
+  TintColor: {r: 1, g: 1, b: 1, a: 1}
+  TintPercent: 0
+  BiomeOffset: {x: 7384, y: 5102, z: 3964}
+  SurfaceAlbedo: {fileID: 2800000, guid: ccff32160f2e0674c8030da6f9288cd5, type: 3}
+  SurfaceSecondaryAlbedo: {fileID: 2800000, guid: ef7d5130ddd34d2488e713d9e6f23bd8, type: 3}
+  SurfaceNormal: {fileID: 2800000, guid: c60716c65ddc3d6408ec501cdb314c97, type: 3}
+  SurfaceARM: {fileID: 2800000, guid: 85c6334c10b1f044aa36482840cf99cd, type: 3}
+  SurfaceTiling: 1
+  SurfaceAlbedoTint: {r: 1, g: 1, b: 1, a: 1}
+  GrassDensity: 0.8
+  GrassTintBase: {r: 0.3, g: 0.5, b: 0.25, a: 1}
+  GrassTintDryShift: {r: 1, g: 1, b: 1, a: 1}
+  GrassTintLushShift: {r: 1, g: 1, b: 1, a: 1}
+  GrassHeight: 0.595
+  GrassWidth: 0.045
+  GrassClumpStrength: 0.55
+  GrassMaxSlopeDegrees: 35
+  GrassSlopeFadeDegrees: 5
+  GrassMinWaterClearance: 0.2
+  GrassBiomeBlendPower: 1

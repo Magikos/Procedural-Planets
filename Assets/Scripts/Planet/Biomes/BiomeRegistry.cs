@@ -16,7 +16,11 @@ public class BiomeRegistry : ScriptableObject
     public BiomeDefinition MountainBiome;
     public BiomeDefinition SnowyMountainBiome;
 
-    public int BiomeCount => (GridEntries != null ? GridEntries.Length : 0) + 4;
+    [Header("Water-body Overrides (small inland bodies)")]
+    public BiomeDefinition LakeBiome;       // small water body surface (vs OceanBiome)
+    public BiomeDefinition LakeShoreBiome;  // land ring around a lake (vs BeachBiome)
+
+    public int BiomeCount => (GridEntries != null ? GridEntries.Length : 0) + 6;
 
     public BiomeDefinition GetDefinitionByIndex(int index)
     {
@@ -30,6 +34,8 @@ public class BiomeRegistry : ScriptableObject
 
         if (index == gridCount + 2) return MountainBiome;
         if (index == gridCount + 3) return SnowyMountainBiome;
+        if (index == gridCount + 4) return LakeBiome;
+        if (index == gridCount + 5) return LakeShoreBiome;
         return null;
     }
 }
