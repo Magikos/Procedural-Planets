@@ -69,6 +69,44 @@ caustic surface, and no lake-specific plants — biomed identically to the ocean
   attempt a minimal murky-green tint by the per-vertex `BodyFactor` (already plumbed as `oceanFactor`) only if
   it can be isolated from caustics; otherwise flag and skip. Lowest priority.
 
-## Morning writeup (filled in as work lands)
+## Morning writeup (2026-08-11, overnight)
 
-_(TBD — see commits + the summary message.)_
+### Landed + verified (committed)
+- **Stage 1a — biome plumbing** (`a34c843`): `Lake` + `LakeShore` in `BiomeType`; registry SO/DTO/lookup/
+  editor extended (+4 -> +6 special biomes); `Lake.asset`/`LakeShore.asset` reuse Ocean/Swamp textures.
+- **Stage 1b — detection** (`087d361`): `LakeMask` — a whole-sphere flood-fill (192²/face, background thread)
+  that tags small below-water bodies as lake water + a 2-cell shore ring, sampled by direction. Both biome
+  resolvers (Burst bake path + managed scatter path) emit `Lake`/`LakeShore` from it. **Verified in-editor:**
+  ~3749 lake-water + 1296 shore cells (~9 lakes, matching the water-mesh body count); a lake cell resolves to
+  `Lake`, a shore cell to `LakeShore/<land>`.
+- **Stage 2 — lake-shore scatter** (`cdde4bf`, `57579ce`): raised `ScatterId.SlotBits` 6->7; added
+  `Lake Cattails` (dense, spacing 4), `Lake Reeds`, `Lake Rocks`, `Lake Wildflowers` prototypes on the
+  `LakeShore` biome (reuse existing reed/rock/flower meshes; `MaxAltitude 3m` hugs the water). **Verified
+  visually:** at a detected lake the shore reads as the muddy `LakeShore` texture (distinct from the green
+  land) with reeds + rocks at the waterline — see `local-only/agent-captures/lake/stage2_lakeshore_cattails.png`.
+  The reeds even render reddish at golden hour, close to the reference cattails.
+
+### Deferred (with design) — NOT done, to avoid overnight breakage
+- **Stage 3 — lily pads on the water.** Needs (a) importing a lily asset — best is
+  `D:\Unity\Explore Assets\Assets\Synty\PolygonNatureBiomes\PNB_Swamp_Marshland\Models\SM_Env_LillyPads_01.fbx`
+  (+ its `Materials/Plants/LillyPads_01.mat` + `Textures/Plants/LillyPads_01.tga`), converting the material to
+  the project's foliage shader; and (b) a **place-at-water-surface** path: scatter places on the terrain
+  radius, but a lily must sit at the **sea radius** (`PlanetRadius * (1 + OceanLevel)`) inside `Lake` cells.
+  Add an `OnWater` bool to `ScatterPrototype`/DTO/`PlacementRules(Burst)`; in both `TryPlace` paths, when
+  `OnWater`, use the sea radius instead of `localRadius` (keep managed+Burst parity — `ScatterGatherParityTests`).
+  Skipped tonight because a mis-imported material (magenta lily) or a parity break can't be verified safely
+  while you sleep.
+- **Stage 4 — lake water tint (murky green).** The lever is `Ocean.shader`'s surface color
+  (`lerp(_ShallowColor, _DeepColor, depthBlend)` at `:647-649`) tinted by the per-vertex `BodyFactor`
+  (already plumbed as `oceanFactor`; caustics are a separate WaterVolume feature at `:50`). **Not touched**
+  because `Ocean.shader` is the hard don't-touch ("every touch breaks the caustics") — this one wants your
+  review/hands, or a WaterVolume-side tint.
+
+### Known limitations / tunables (for review)
+- **Per-face flood-fill**: the classification runs per cube face, so a bay that crosses a face seam could
+  split into a sub-threshold piece and read as a lake. Isolated ponds classify correctly; a cross-face merge
+  is the fix. The `Lake` I captured is a genuine ~780 m pond, but some coastal spots may false-positive.
+- **Tunables** in `LakeMask.cs`: `Res` (192, detection resolution), `LakeMaxCells` (1400, the lake/ocean size
+  cutoff), `ShoreRings` (2, shore band width). Cattail density = `SpacingMeters` on the Lake prototypes.
+- The `LakeShore` shore currently reuses the **Swamp** ground texture (muddy). If you want a sandier lake
+  beach, point `LakeShore.asset`'s surface textures at Beach instead.
