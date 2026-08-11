@@ -36,10 +36,10 @@ public sealed record BiomeRegistryDto(
             src.LakeShoreBiome != null ? BiomeDefinitionDto.From(src.LakeShoreBiome) : null);
     }
 
-    public BiomeResult Resolve(float temperature, float moisture, float elevation)
+    public BiomeResult Resolve(float temperature, float moisture, float elevation, byte lakeState = 0)
     {
         BiomeResult gridResult = ResolveGrid(temperature, moisture);
-        return ResolveElevationOverrides(gridResult, temperature, moisture, elevation);
+        return ResolveElevationOverrides(gridResult, temperature, moisture, elevation, lakeState);
     }
 
     public BiomeResult ResolveWithLandBiomes(
@@ -48,14 +48,15 @@ public sealed record BiomeRegistryDto(
         float blendWeight,
         float temperature,
         float moisture,
-        float elevation)
+        float elevation,
+        byte lakeState = 0)
     {
         var landResult = new BiomeResult(primary, temperature, moisture)
         {
             SecondaryBiome = secondary,
             BlendWeight = secondary != primary ? Mathf.Clamp01(blendWeight) : 0f,
         };
-        return ResolveElevationOverrides(landResult, temperature, moisture, elevation);
+        return ResolveElevationOverrides(landResult, temperature, moisture, elevation, lakeState);
     }
 
     public BiomeDefinitionDto GetDefinition(BiomeType type)
@@ -147,7 +148,8 @@ public sealed record BiomeRegistryDto(
         BiomeResult gridResult,
         float temperature,
         float moisture,
-        float elevation)
+        float elevation,
+        byte lakeState = 0)
     {
         float beachWidth = BiomeConstants.BeachWidth;
         float beachTop = BiomeConstants.OceanThreshold + beachWidth;
@@ -155,6 +157,19 @@ public sealed record BiomeRegistryDto(
         float beachInnerBlend = beachWidth > 0f
             ? Mathf.Min(elevationBlend, beachWidth * 0.5f)
             : 0f;
+
+        // Lake override (mirrors BiomeLookupEvaluator.ResolveFromLandBiomes so bake + scatter agree): a
+        // small below-water body -> Lake (blends to LakeShore); its dry shore ring -> LakeShore (blends into
+        // the surrounding land). Gated on elevation so a mask mismatch can't misplace it.
+        if (lakeState == 1 && elevation < BiomeConstants.OceanThreshold)
+        {
+            float blend = BoundaryBlendWeight(BiomeConstants.OceanThreshold - elevation, elevationBlend);
+            return NewBlendedResult(BiomeType.Lake, BiomeType.LakeShore, blend, temperature, moisture);
+        }
+        if (lakeState == 2 && elevation >= BiomeConstants.OceanThreshold)
+        {
+            return NewBlendedResult(BiomeType.LakeShore, gridResult.PrimaryBiome, 0.35f, temperature, moisture);
+        }
 
         if (elevation < BiomeConstants.OceanThreshold)
         {

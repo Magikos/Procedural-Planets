@@ -56,6 +56,7 @@ public static class BiomeLookupEvaluator
             gridPrimaryId,
             gridSecondaryId,
             gridBlendWeight,
+            0,
             out primaryId,
             out secondaryId,
             out blendWeight);
@@ -68,6 +69,7 @@ public static class BiomeLookupEvaluator
         byte landPrimaryId,
         byte landSecondaryId,
         float landBlendWeight,
+        byte lakeState,
         out byte primaryId,
         out byte secondaryId,
         out float blendWeight)
@@ -78,6 +80,23 @@ public static class BiomeLookupEvaluator
         float beachInnerBlend = beachWidth > 0f
             ? Min(elevationBlend, beachWidth * 0.5f)
             : 0f;
+
+        // Lake override (LakeMask): a small below-water body -> Lake (blends to LakeShore at the edge like
+        // Ocean blends to Beach); its dry shore ring -> LakeShore (blends into the surrounding land). Gated
+        // on the elevation side so a mask-resolution mismatch can't put lake water on dry land or vice versa.
+        if (lakeState == 1 && elevation < BiomeConstants.OceanThreshold)
+        {
+            SetBlendedResult(lookup.LakeBiomeId, lookup.LakeShoreBiomeId,
+                BoundaryBlendWeight(BiomeConstants.OceanThreshold - elevation, elevationBlend),
+                out primaryId, out secondaryId, out blendWeight);
+            return;
+        }
+        if (lakeState == 2 && elevation >= BiomeConstants.OceanThreshold)
+        {
+            SetBlendedResult(lookup.LakeShoreBiomeId, landPrimaryId, 0.35f,
+                out primaryId, out secondaryId, out blendWeight);
+            return;
+        }
 
         if (elevation < BiomeConstants.OceanThreshold)
         {

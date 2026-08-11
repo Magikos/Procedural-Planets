@@ -317,12 +317,16 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
 
     BiomeResult ResolveBiome(Vector3 pointOnUnitSphere, ClimateSample climate)
     {
+        // Lake override (same LakeMask the terrain bake reads, so scatter membership matches the map).
+        byte lakeState = LakeMask.Current != null ? LakeMask.Current.Sample(pointOnUnitSphere) : (byte)0;
+
         if (_biomeAssignmentField == null)
         {
             return _biomeRegistry.Resolve(
                 climate.Temperature01,
                 climate.Moisture01,
-                climate.Elevation);
+                climate.Elevation,
+                lakeState);
         }
 
         BiomeAssignmentSample sample = _biomeAssignmentField.Evaluate(pointOnUnitSphere);
@@ -336,7 +340,8 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
             sample.SecondaryWeight,
             climate.Temperature01,
             climate.Moisture01,
-            climate.Elevation);
+            climate.Elevation,
+            lakeState);
     }
 
     void BuildBiomeColorLookup()

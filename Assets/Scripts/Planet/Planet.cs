@@ -319,6 +319,18 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             phaseTimer.Restart();
             if (this == null) return;
             _shapeGenerator.CommitElevationRange();
+
+            // Classify small inland water bodies as lakes (LakeMask) before the biome bake + scatter read
+            // it, so lakes biome + scatter differently from the ocean. Pure heightfield sampling, so it runs
+            // off the main thread; self-limiting (only small flood-fill components become lakes).
+            var lakeGround = new AnalyticGroundSampler(_shapeGenerator);
+            float lakeBaseRadius = lakeGround.PlanetRadius;
+            await Awaitable.BackgroundThreadAsync();
+            LakeMask lakeMask = LakeMask.Build(lakeGround, lakeBaseRadius, BiomeConstants.OceanThreshold);
+            await Awaitable.MainThreadAsync();
+            if (this == null) return;
+            LakeMask.Current = lakeMask;
+
             _progressHandle.Report(0.78f, "Applying colors...");
             await GenerateColorsAsync(new ProgressRangeHandle(_progressHandle, 0.78f, 0.12f), ct);
             long colorsMs = phaseTimer.ElapsedMilliseconds;
