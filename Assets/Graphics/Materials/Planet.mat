@@ -92,7 +92,7 @@ Material:
     - _BiomeMacroVariationScale: 0.012
     - _BiomeMacroVariationStrength: 0.14
     - _BiomeNormalReliefShadow: 0.55
-    - _BiomeNormalStrength: 2
+    - _BiomeNormalStrength: 8
     - _BiomeSecondaryBlend: 0.28
     - _BiomeSecondaryTilingScale: 0.32
     - _BiomeTriplanarTiling: 0.055
