@@ -10,7 +10,7 @@ public sealed class ScatterPrototype : ScriptableObject
 
     [Header("Identity (persistence key — never reuse or reorder)")]
     [Tooltip("Immutable id packed into every instance id (persistence key). Unique per library, 0..ScatterId.MaxSlot.")]
-    [Range(0, 63)] public int SlotId = 0;
+    [Range(0, ScatterId.MaxSlot)] public int SlotId = 0;
 
     [Header("Placement")]
     [Min(0.05f)] public float SpacingMeters = 8f;
