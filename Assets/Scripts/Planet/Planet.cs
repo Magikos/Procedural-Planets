@@ -465,6 +465,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     public void SetGrassLayerEnabled(GrassRenderLayer layer, bool enabled) =>
         _grass.SetGrassLayerEnabled(layer, enabled);
 
+    public void Rebuild() => _grass.Rebuild();
+
     public bool TryGetSurfaceRadius(Vector3 worldUnitDirection, out float surfaceRadius)
     {
         surfaceRadius = 0f;

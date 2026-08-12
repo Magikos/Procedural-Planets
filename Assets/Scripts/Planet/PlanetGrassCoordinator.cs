@@ -311,6 +311,17 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
         _grassController?.RequestRedispatch();
     }
 
+    // Dispose the GPU grass controllers so the next Tick recreates them with a fresh Material,
+    // compute reference, and GraphicsBuffers. The controllers cache those once in their ctor with no
+    // reload recovery, so an in-editor shader/compute reimport staled them and the blades stop drawing;
+    // this rebuilds without a full scene restart. Editor-iteration aid, harmless at runtime.
+    public void Rebuild()
+    {
+        DisposeControllers();
+        if (_terrainMaterial != null)
+            ApplyTerrainOverlay(_terrainMaterial);
+    }
+
     public void Dispose()
     {
         DisposeControllers();

@@ -272,6 +272,15 @@ public static class GrassCommands
         return FormatState(control.GetGrassRuntimeState());
     }
 
+    [ConsoleCommand("rebuild", "Dispose + recreate the GPU grass controllers (fresh shader/compute/buffers). Recovers blades after an in-editor recompile/reimport without a full scene restart.")]
+    public static string Rebuild()
+    {
+        if (!TryGetControl(out IGrassRuntimeControl control))
+            return "grass runtime control is unavailable";
+        control.Rebuild();
+        return "grass controllers disposed; blades rebuild next frame";
+    }
+
     [ConsoleCommand("render-mode", "Get or set Physical, Hybrid, or Cluster geometry without rebuilding.")]
     public static string RenderMode(GrassGeometryMode? mode = null)
     {

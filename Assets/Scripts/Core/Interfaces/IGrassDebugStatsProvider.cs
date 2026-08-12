@@ -86,4 +86,5 @@ public interface IGrassRuntimeControl
     GrassRuntimeState GetGrassRuntimeState();
     void SetGrassEnabled(bool enabled);
     void SetGrassLayerEnabled(GrassRenderLayer layer, bool enabled);
+    void Rebuild();
 }
