@@ -224,7 +224,11 @@ Shader "Scatter/Impostor"
                 // instead of a synthesized hemisphere. Unbaked materials default the atlas to flat (viewer-facing).
                 float3 nEnc = SampleOctBlended(TEXTURE2D_ARGS(_NormalMap, sampler_NormalMap), IN.gridCoord, IN.uv, _GridN).rgb;
                 float3 nv = nEnc * 2.0 - 1.0;
-                float3 N = normalize(IN.billRight * nv.x + IN.billUp * nv.y + IN.billFwd * nv.z);
+                // Reconstruct through the SAME frame the bake captured in: view-space x=billRight,
+                // y=the camera up (cross(view,right), not the surface up), z=view. Using the surface up would
+                // mis-map the normal for non-horizontal (top-down) view cells.
+                float3 camUp = normalize(cross(IN.billFwd, IN.billRight));
+                float3 N = normalize(IN.billRight * nv.x + camUp * nv.y + IN.billFwd * nv.z);
 
                 float3 planetNormal = normalize(IN.billUp);
                 float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
