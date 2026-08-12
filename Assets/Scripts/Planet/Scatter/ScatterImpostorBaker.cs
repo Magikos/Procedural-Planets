@@ -26,11 +26,12 @@ public static class ScatterImpostorBaker
     // instead of a single front-view billboard that foreshortens to a slab from above.
     public struct AtlasCard
     {
-        public Texture2D Texture;   // (GridN*AtlasCellPx) square hemi-octahedral atlas, cell (i,j) at (i,j)*cellPx
-        public float WorldSize;     // square billboard side in world metres (max of footprint width / height)
-        public float CenterOffset;  // billboard centre height above the instance pivot (base) in world metres
-        public int GridN;           // frames per axis
-        public bool Valid;          // false when the bake keyed almost no silhouette (see MinSilhouetteAlpha)
+        public Texture2D Texture;       // (GridN*AtlasCellPx) square hemi-octahedral atlas, cell (i,j) at (i,j)*cellPx
+        public Texture2D NormalTexture; // matching atlas of view-space normals (RGB encoded); null if not baked
+        public float WorldSize;         // square billboard side in world metres (max of footprint width / height)
+        public float CenterOffset;      // billboard centre height above the instance pivot (base) in world metres
+        public int GridN;               // frames per axis
+        public bool Valid;              // false when the bake keyed almost no silhouette (see MinSilhouetteAlpha)
     }
 
     const int CardHeightPx = 256;
@@ -156,11 +157,13 @@ public static class ScatterImpostorBaker
         RenderSettings.ambientMode = AmbientMode.Flat;
         RenderSettings.ambientLight = Color.white;
         int albedoBakeId = Shader.PropertyToID(ShaderGlobalIds.ImpostorAlbedoBake);
-        Shader.SetGlobalFloat(albedoBakeId, 1f); // scatter/foliage shaders output flat albedo while set
+        int normalBakeId = Shader.PropertyToID(ShaderGlobalIds.ImpostorNormalBake);
 
         int atlasPx = gridN * AtlasCellPx;
         var atlas = new Texture2D(atlasPx, atlasPx, TextureFormat.ARGB32, false);
+        var normalAtlas = new Texture2D(atlasPx, atlasPx, TextureFormat.ARGB32, false);
         var cellRt = new RenderTexture(AtlasCellPx, AtlasCellPx, 16, RenderTextureFormat.ARGB32);
+        var neutralNormalBg = new Color(0.5f, 0.5f, 1f, 1f); // encoded (0,0,1): faces the viewer
         float dist = s * 2f;
         float maxAlpha = 0f;
         for (int j = 0; j < gridN; j++)
@@ -173,32 +176,53 @@ public static class ScatterImpostorBaker
             Vector3 up = Vector3.Cross(dir, right).normalized;
             camGO.transform.SetPositionAndRotation(ctr + dir * dist, Quaternion.LookRotation(-dir, up));
 
+            // Albedo pass: flat unlit albedo on a black background (coverage keys the silhouette).
+            Shader.SetGlobalFloat(albedoBakeId, 1f);
+            Shader.SetGlobalFloat(normalBakeId, 0f);
+            cam.backgroundColor = Color.black;
             cam.targetTexture = cellRt;
             cam.Render();
             RenderTexture.active = cellRt;
-            var cell = new Texture2D(AtlasCellPx, AtlasCellPx, TextureFormat.ARGB32, false);
-            cell.ReadPixels(new Rect(0, 0, AtlasCellPx, AtlasCellPx), 0, 0);
-            cell.Apply();
+            var albedoCell = new Texture2D(AtlasCellPx, AtlasCellPx, TextureFormat.ARGB32, false);
+            albedoCell.ReadPixels(new Rect(0, 0, AtlasCellPx, AtlasCellPx), 0, 0);
+            albedoCell.Apply();
             RenderTexture.active = null;
 
-            Color[] cp = cell.GetPixels();
-            for (int k = 0; k < cp.Length; k++)
+            // Normal pass: view-space surface normal on a neutral (viewer-facing) background.
+            Shader.SetGlobalFloat(albedoBakeId, 0f);
+            Shader.SetGlobalFloat(normalBakeId, 1f);
+            cam.backgroundColor = neutralNormalBg;
+            cam.Render();
+            RenderTexture.active = cellRt;
+            var normalCell = new Texture2D(AtlasCellPx, AtlasCellPx, TextureFormat.ARGB32, false);
+            normalCell.ReadPixels(new Rect(0, 0, AtlasCellPx, AtlasCellPx), 0, 0);
+            normalCell.Apply();
+            RenderTexture.active = null;
+
+            Color[] ap = albedoCell.GetPixels();
+            Color[] np = normalCell.GetPixels();
+            for (int k = 0; k < ap.Length; k++)
             {
                 // Coverage from geometry presence, not brightness: the background is pure black, so any pixel
                 // the tree rendered has some colour. Keying the silhouette off luminance dropped dark foliage
                 // (shadowed / dark-green leaves) as holes ("shot with a shotgun"); key off the max channel
                 // with a low floor so dark-but-present leaves stay a solid silhouette.
-                float cover = Mathf.Max(cp[k].r, Mathf.Max(cp[k].g, cp[k].b));
+                float cover = Mathf.Max(ap[k].r, Mathf.Max(ap[k].g, ap[k].b));
                 float t = Mathf.Clamp01((cover - 0.008f) / (0.03f - 0.008f));
                 float a = t * t * (3f - 2f * t);
                 if (a > maxAlpha) maxAlpha = a;
-                cp[k] = new Color(cp[k].r, cp[k].g, cp[k].b, a);
+                ap[k] = new Color(ap[k].r, ap[k].g, ap[k].b, a);
+                np[k] = new Color(np[k].r, np[k].g, np[k].b, a); // same silhouette alpha on the normal atlas
             }
-            atlas.SetPixels(i * AtlasCellPx, j * AtlasCellPx, AtlasCellPx, AtlasCellPx, cp);
-            Object.DestroyImmediate(cell);
+            atlas.SetPixels(i * AtlasCellPx, j * AtlasCellPx, AtlasCellPx, AtlasCellPx, ap);
+            normalAtlas.SetPixels(i * AtlasCellPx, j * AtlasCellPx, AtlasCellPx, AtlasCellPx, np);
+            Object.DestroyImmediate(albedoCell);
+            Object.DestroyImmediate(normalCell);
         }
         Shader.SetGlobalFloat(albedoBakeId, 0f);
+        Shader.SetGlobalFloat(normalBakeId, 0f);
         atlas.Apply();
+        normalAtlas.Apply();
 
         RenderSettings.ambientMode = savedMode;
         RenderSettings.ambientLight = savedAmbient;
@@ -207,7 +231,7 @@ public static class ScatterImpostorBaker
         Object.DestroyImmediate(cellRt);
         Object.DestroyImmediate(root);
 
-        return new AtlasCard { Texture = atlas, WorldSize = s, CenterOffset = ctr.y, GridN = gridN, Valid = maxAlpha >= MinSilhouetteAlpha };
+        return new AtlasCard { Texture = atlas, NormalTexture = normalAtlas, WorldSize = s, CenterOffset = ctr.y, GridN = gridN, Valid = maxAlpha >= MinSilhouetteAlpha };
     }
 
     // Wrap a PRE-BAKED atlas texture (from the editor bake tool) as an AtlasCard, recomputing the

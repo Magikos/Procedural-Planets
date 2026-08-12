@@ -224,6 +224,7 @@ Shader "Scatter/FoliageLit"
             float3 _PlanetCenter;
             float _NightAmbientIntensity;
             float _ImpostorAlbedoBake; // 1 while the impostor baker renders: output flat albedo, no sun
+            float _ImpostorNormalBake; // 1 during the baker's normal pass: output view-space normal, no sun
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
             TEXTURE2D(_TrunkMap); SAMPLER(sampler_TrunkMap);
@@ -304,6 +305,9 @@ Shader "Scatter/FoliageLit"
                 // volume (bright crown, gently lit sides/underside) instead of dark per-card faces. Trunk
                 // (lm=0) keeps its true normal.
                 nrmWS = normalize(lerp(nrmWS, float3(0.0, 1.0, 0.0), _LeafNormalUp * lm));
+                // Impostor normal pass: output the view-space (canopy-softened) normal so the runtime relights
+                // the card with real structure instead of a synthesized hemisphere.
+                if (_ImpostorNormalBake > 0.5) return half4(mul((float3x3)UNITY_MATRIX_V, nrmWS) * 0.5 + 0.5, 1.0);
 
                 // Planet sun lighting (matches the terrain/grass, which shade from _SunParams). Diffuse
                 // only: albedo * a day level that ramps with the leaf normal facing the sun, blended to

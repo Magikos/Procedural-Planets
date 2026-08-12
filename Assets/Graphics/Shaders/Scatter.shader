@@ -99,6 +99,7 @@ Shader "Scatter/VertexColorLit"
             float3 _PlanetCenter;
             float _NightAmbientIntensity;
             float _ImpostorAlbedoBake; // 1 while the impostor baker renders: output flat albedo, no sun
+            float _ImpostorNormalBake; // 1 during the baker's normal pass: output view-space normal, no sun
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
 
@@ -158,6 +159,9 @@ Shader "Scatter/VertexColorLit"
                 // Planet sun lighting (matches terrain/foliage via _SunParams): diffuse albedo ramped by
                 // the surface normal facing the sun, blended to a cool night ambient by daylight.
                 float3 nrmWS = normalize(IN.normalWS);
+                // Impostor normal pass: output the view-space surface normal (encoded) so the runtime relights
+                // the card with the real surface instead of a synthesized hemisphere.
+                if (_ImpostorNormalBake > 0.5) return half4(mul((float3x3)UNITY_MATRIX_V, nrmWS) * 0.5 + 0.5, 1.0);
                 float3 planetNormal = normalize(IN.positionWS - _PlanetCenter);
                 float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
                 float localSun = dot(planetNormal, sunDir);
