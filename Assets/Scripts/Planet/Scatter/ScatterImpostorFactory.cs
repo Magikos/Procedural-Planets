@@ -38,7 +38,11 @@ public static class ScatterImpostorFactory
         }
         if (meshes.Count == 0) return default;
 
-        ScatterImpostorBaker.AtlasCard card = ScatterImpostorBaker.BakeAtlas(meshes, materials, OctGridN);
+        // Prefer a pre-baked atlas (editor bake tool) to skip the on-load bake; fall back to baking live
+        // for prototypes without one (runtime-placed / custom-saved structures).
+        ScatterImpostorBaker.AtlasCard card = proto.BakedImpostorAtlas != null
+            ? ScatterImpostorBaker.FromPrebaked(proto.BakedImpostorAtlas, meshes)
+            : ScatterImpostorBaker.BakeAtlas(meshes, materials, OctGridN);
         if (!card.Valid) return default;
 
         float meshCull = proto.MaxCullDistance;

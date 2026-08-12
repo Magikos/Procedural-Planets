@@ -1,0 +1,152 @@
+using System.Collections.Generic;
+using System.IO;
+using UnityEditor;
+using UnityEngine;
+
+// Editor tool: pre-bake every scatter prototype's far-field impostor atlas to a texture asset and assign it
+// to the prototype (ScatterPrototype.BakedImpostorAtlas). At runtime ScatterImpostorFactory uses the stored
+// atlas and skips the on-load bake, so startup does not render hundreds of angles and the far billboards look
+// identical every session. Re-runnable at any time (after adding/changing assets); prototypes without a
+// stored atlas still bake live, which is the fallback for runtime-placed / custom-saved structures.
+//
+// Must run in PLAY mode: the bake renders foliage through FoliageLit's planet-sun lighting, which is only set
+// up while playing (an edit-mode bake renders black cards). The tool freezes local noon first so every atlas
+// bakes under the same overhead light.
+public static class ScatterImpostorBakeTool
+{
+    const string AtlasFolder = "Assets/Resources/Settings/Scatter/ImpostorAtlases";
+    const int OctGridN = 8;                 // matches ScatterImpostorFactory
+    const float ImpostorMinMeshCull = 120f; // matches ScatterPrototypeDto.ImpostorMinMeshCull
+
+    [MenuItem("Tools/ProceduralPlanets/Bake Impostor Atlases (All)")]
+    public static void BakeAll()
+    {
+        if (!EditorApplication.isPlaying)
+        {
+            EditorUtility.DisplayDialog("Bake Impostor Atlases",
+                "Enter Play mode first, then run this again.\n\n" +
+                "The bake renders foliage through the planet-sun lighting, which is only set up during Play. " +
+                "Baking in edit mode produces black cards.", "OK");
+            return;
+        }
+
+        FreezeLocalNoon();
+
+        string[] guids = AssetDatabase.FindAssets("t:ScatterPrototype");
+        Directory.CreateDirectory(AtlasFolder);
+        int baked = 0, skipped = 0;
+        try
+        {
+            for (int gi = 0; gi < guids.Length; gi++)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guids[gi]);
+                var proto = AssetDatabase.LoadAssetAtPath<ScatterPrototype>(path);
+                if (proto == null) continue;
+                EditorUtility.DisplayProgressBar("Baking impostor atlases", proto.name, (float)gi / Mathf.Max(1, guids.Length));
+
+                var meshes = new List<Mesh>();
+                var mats = new List<Material>();
+                float maxCull = CollectImpostorParts(proto, meshes, mats);
+                if (meshes.Count == 0 || maxCull < ImpostorMinMeshCull) { skipped++; continue; }
+
+                ScatterImpostorBaker.AtlasCard card = ScatterImpostorBaker.BakeAtlas(meshes, mats, OctGridN);
+                if (!card.Valid)
+                {
+                    if (card.Texture != null) Object.DestroyImmediate(card.Texture);
+                    Debug.LogWarning($"[Impostor bake] '{proto.name}' keyed too little silhouette; left to bake at runtime.");
+                    skipped++;
+                    continue;
+                }
+
+                string atlasPath = $"{AtlasFolder}/{proto.name}_impostor.png";
+                File.WriteAllBytes(atlasPath, ImageConversion.EncodeToPNG(card.Texture));
+                Object.DestroyImmediate(card.Texture);
+                AssetDatabase.ImportAsset(atlasPath, ImportAssetOptions.ForceUpdate);
+                ConfigureAtlasImport(atlasPath);
+
+                proto.BakedImpostorAtlas = AssetDatabase.LoadAssetAtPath<Texture2D>(atlasPath);
+                EditorUtility.SetDirty(proto);
+                baked++;
+            }
+            AssetDatabase.SaveAssets();
+        }
+        finally { EditorUtility.ClearProgressBar(); }
+
+        Debug.Log($"[Impostor bake] baked {baked}, skipped {skipped} (no impostor tier / empty bake). " +
+                  $"Atlases in {AtlasFolder}. Stop and re-enter Play to see the stored atlases used (no on-load bake).");
+    }
+
+    [MenuItem("Tools/ProceduralPlanets/Clear Baked Impostor Atlases")]
+    public static void ClearAll()
+    {
+        string[] guids = AssetDatabase.FindAssets("t:ScatterPrototype");
+        int cleared = 0;
+        foreach (string g in guids)
+        {
+            var proto = AssetDatabase.LoadAssetAtPath<ScatterPrototype>(AssetDatabase.GUIDToAssetPath(g));
+            if (proto != null && proto.BakedImpostorAtlas != null)
+            {
+                proto.BakedImpostorAtlas = null;
+                EditorUtility.SetDirty(proto);
+                cleared++;
+            }
+        }
+        AssetDatabase.SaveAssets();
+        Debug.Log($"[Impostor bake] cleared {cleared} atlas references (prototypes now bake at runtime). " +
+                  $"The .png files under {AtlasFolder} are left on disk.");
+    }
+
+    static float CollectImpostorParts(ScatterPrototype proto, List<Mesh> meshes, List<Material> mats)
+    {
+        float maxCull = 0f;
+        if (proto.Parts != null && proto.Parts.Length > 0)
+        {
+            foreach (ScatterPart part in proto.Parts)
+            {
+                if (part == null || part.Material == null || part.LodMeshes == null
+                    || part.LodMeshes.Length == 0 || part.LodMeshes[0] == null) continue;
+                meshes.Add(part.LodMeshes[0]);
+                mats.Add(part.Material);
+                if (part.LodEndDistances != null && part.LodEndDistances.Length > 0)
+                    maxCull = Mathf.Max(maxCull, part.LodEndDistances[part.LodEndDistances.Length - 1]);
+            }
+        }
+        else if (proto.Material != null && proto.LodMeshes != null && proto.LodMeshes.Length > 0 && proto.LodMeshes[0] != null)
+        {
+            meshes.Add(proto.LodMeshes[0]);
+            mats.Add(proto.Material);
+            if (proto.LodEndDistances != null && proto.LodEndDistances.Length > 0)
+                maxCull = Mathf.Max(maxCull, proto.LodEndDistances[proto.LodEndDistances.Length - 1]);
+        }
+        return maxCull;
+    }
+
+    static void ConfigureAtlasImport(string atlasPath)
+    {
+        if (AssetImporter.GetAtPath(atlasPath) is not TextureImporter imp) return;
+        imp.textureType = TextureImporterType.Default;
+        imp.alphaSource = TextureImporterAlphaSource.FromInput;
+        imp.alphaIsTransparency = true;
+        imp.sRGBTexture = true;
+        imp.mipmapEnabled = false;                       // octahedral atlas: mips would bleed across cells
+        imp.wrapMode = TextureWrapMode.Clamp;
+        imp.filterMode = FilterMode.Bilinear;
+        imp.textureCompression = TextureImporterCompression.CompressedHQ;
+        imp.SaveAndReimport();
+    }
+
+    // Best-effort: freeze the sun at local noon so every atlas bakes under the same overhead light. Reflected
+    // so this editor-only tool needs no reference to the runtime console assembly.
+    static void FreezeLocalNoon()
+    {
+        foreach (var mb in Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+        {
+            if (mb == null || mb.GetType().Name != "ConsoleController") continue;
+            var run = mb.GetType().GetMethod("RunCommand");
+            if (run == null) return;
+            run.Invoke(mb, new object[] { "time.set-local 0.5" });
+            run.Invoke(mb, new object[] { "time.freeze true" });
+            return;
+        }
+    }
+}
