@@ -96,13 +96,14 @@ public static class ScatterImpostorBaker
         float maxAlpha = 0f;
         for (int i = 0; i < ap.Length; i++)
         {
-            float lum = ap[i].r * 0.299f + ap[i].g * 0.587f + ap[i].b * 0.114f;
-            float t = Mathf.Clamp01((lum - 0.012f) / (0.05f - 0.012f));
+            float cover = Mathf.Max(ap[i].r, Mathf.Max(ap[i].g, ap[i].b));
+            float t = Mathf.Clamp01((cover - 0.008f) / (0.03f - 0.008f)); // coverage, not luminance (see BakeAtlas)
             float a = t * t * (3f - 2f * t); // pure-black bg -> 0, geometry -> 1 (real smoothstep)
             if (a > maxAlpha) maxAlpha = a;
             outPx[i] = new Color(ap[i].r, ap[i].g, ap[i].b, a);
         }
         card.SetPixels(outPx);
+        NormalizeCoveredBrightness(card);
         card.Apply();
 
         cam.targetTexture = null;
@@ -179,8 +180,12 @@ public static class ScatterImpostorBaker
             Color[] cp = cell.GetPixels();
             for (int k = 0; k < cp.Length; k++)
             {
-                float lum = cp[k].r * 0.299f + cp[k].g * 0.587f + cp[k].b * 0.114f;
-                float t = Mathf.Clamp01((lum - 0.012f) / (0.05f - 0.012f));
+                // Coverage from geometry presence, not brightness: the background is pure black, so any pixel
+                // the tree rendered has some colour. Keying the silhouette off luminance dropped dark foliage
+                // (shadowed / dark-green leaves) as holes ("shot with a shotgun"); key off the max channel
+                // with a low floor so dark-but-present leaves stay a solid silhouette.
+                float cover = Mathf.Max(cp[k].r, Mathf.Max(cp[k].g, cp[k].b));
+                float t = Mathf.Clamp01((cover - 0.008f) / (0.03f - 0.008f));
                 float a = t * t * (3f - 2f * t);
                 if (a > maxAlpha) maxAlpha = a;
                 cp[k] = new Color(cp[k].r, cp[k].g, cp[k].b, a);
@@ -188,6 +193,10 @@ public static class ScatterImpostorBaker
             atlas.SetPixels(i * AtlasCellPx, j * AtlasCellPx, AtlasCellPx, AtlasCellPx, cp);
             Object.DestroyImmediate(cell);
         }
+        // The bake renders through FoliageLit's planet-sun lighting, so its brightness depends on the
+        // time-of-day the impostor first baked (near-black at dusk). Normalize the covered albedo to a fixed
+        // target so the impostor reads consistently and never bakes dark, independent of the bake-time sun.
+        NormalizeCoveredBrightness(atlas);
         atlas.Apply();
 
         RenderSettings.ambientMode = savedMode;
@@ -209,6 +218,30 @@ public static class ScatterImpostorBaker
         Vector2 p = new Vector2(f.x + f.y, f.x - f.y) * 0.5f;
         float y = 1f - Mathf.Abs(p.x) - Mathf.Abs(p.y);
         return new Vector3(p.x, y, p.y).normalized;
+    }
+
+    // Scale the covered (opaque) albedo so its mean brightness hits a fixed target, so an impostor that
+    // baked under a dim/dusk sun still reads as a proper mid-tone tree instead of a near-black blob. Only
+    // brightens (never darkens) and is capped, so a bake under a bright sun is left alone.
+    const float ImpostorTargetMeanBrightness = 0.17f;
+    static void NormalizeCoveredBrightness(Texture2D tex)
+    {
+        Color[] p = tex.GetPixels();
+        double sum = 0.0; int n = 0;
+        for (int i = 0; i < p.Length; i++)
+        {
+            if (p[i].a < 0.5f) continue;
+            sum += (p[i].r + p[i].g + p[i].b) / 3.0;
+            n++;
+        }
+        if (n == 0) return;
+        float mean = (float)(sum / n);
+        if (mean < 1e-4f) return;
+        float scale = Mathf.Clamp(ImpostorTargetMeanBrightness / mean, 1f, 8f);
+        if (scale <= 1.001f) return;
+        for (int i = 0; i < p.Length; i++)
+            p[i] = new Color(Mathf.Min(1f, p[i].r * scale), Mathf.Min(1f, p[i].g * scale), Mathf.Min(1f, p[i].b * scale), p[i].a);
+        tex.SetPixels(p);
     }
 
     static Texture2D RenderTo(Camera cam, RenderTexture rt, Color bg)
