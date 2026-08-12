@@ -78,16 +78,33 @@ One coral prefab is not a biome. `Assets/AssetPacks/Corals/` currently holds `Co
 
 ---
 
-## Open questions for Bryan
+## Decided
 
-1. **Is the seabed visible content or set dressing?** If the player will swim (the vision doc
-   lists swimming and fishing as later features), this is a real biome and deserves the depth
-   axis. If the ocean is only ever seen from above or from a boat, a shallow-water shelf band is
-   most of the value for a fraction of the work.
-2. **Does ocean scatter block on swimming?** Judging whether it reads correctly is hard without
-   being able to get down there. The free camera can, so this is not a hard blocker.
-3. **`Cave` (15) is also unemitted** — same class of gap. Worth folding into the same pass, or
-   deliberately separate?
+**The player will be down there** (Bryan, 2026-08-12). The seabed is real content, not set
+dressing. That rules out the cheap version — a shallow shelf band decorated for viewing from
+above — and commits us to the depth axis in §1.
+
+Consequences worth stating now, because they are easy to forget later:
+
+- **Depth bands are a biome axis, not a density curve.** Shelf, reef, slope and deep floor want
+  different prototype sets, not one set thinned with depth. Whatever §1 emits has to carry enough
+  resolution to say which band a cell is in.
+- **Underwater rendering stops being optional.** Content the player swims through has to be lit
+  through the water volume, receive caustics, and fade into the correct fog. §3 moves from
+  "open question" to required work.
+- **Scale reads differently underwater.** Props judged from a free camera above the surface will
+  not read the same at swimming eye height. Bench any ocean candidate from where the player will
+  actually be.
+- **Density has a floor as well as a ceiling.** An empty seabed the player swims across is worse
+  than an empty one they fly over — the emptiness is the experience rather than a distant texture.
+
+## Still open
+
+1. **Does ocean scatter block on swimming being implemented?** It does not: the free camera can
+   already go underwater, and the bench can spawn there. Judging at swimming eye height is a
+   camera position, not a feature dependency.
+2. **`Cave` (15) is also unemitted** — the same class of gap, and also somewhere the player will
+   physically be. Fold into this pass, or keep deliberately separate?
 
 ---
 

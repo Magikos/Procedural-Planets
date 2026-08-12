@@ -28,6 +28,13 @@ work is: emit a seabed biome → add a below-water placement mode with CPU/Burst
 how submerged props take the water volume's fog/absorption and caustics → depth-aware density.
 A reef is a colony, so it likely wants [[project_scatter_clumping_direction]].
 
-Open question Bryan has not answered: whether the seabed is real content (swimming/fishing are
-in [[project_game_vision]] as later features) or set dressing seen only from above — that choice
-changes the scope by a lot.
+**DECIDED 2026-08-12 by Bryan: "the player will be down there."** The seabed is real content,
+not set dressing. The cheap version — a shallow shelf band decorated for viewing from above — is
+ruled out. Consequences: depth bands are a *biome axis* (shelf/reef/slope/deep want different
+prototype sets, not one set thinned by depth); underwater lighting, caustics and fog become
+required rather than optional; candidates must be benched at swimming eye height, since scale
+reads differently from a camera above the surface.
+
+Still open: whether `Cave` (15) — the same unemitted-biome gap, also somewhere the player will
+physically be — folds into this pass or stays separate. Ocean scatter does *not* block on
+swimming being implemented; the free camera already goes underwater.
