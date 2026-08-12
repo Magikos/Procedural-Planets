@@ -83,10 +83,13 @@ public static class ScatterImpostorBaker
         Color savedAmbient = RenderSettings.ambientLight;
         RenderSettings.ambientMode = AmbientMode.Flat;
         RenderSettings.ambientLight = Color.white;
+        int albedoBakeId = Shader.PropertyToID(ShaderGlobalIds.ImpostorAlbedoBake);
+        Shader.SetGlobalFloat(albedoBakeId, 1f);
 
         var rt = new RenderTexture(px, CardHeightPx, 16, RenderTextureFormat.ARGB32);
         Texture2D albedo = RenderTo(cam, rt, Color.black);
 
+        Shader.SetGlobalFloat(albedoBakeId, 0f);
         RenderSettings.ambientMode = savedMode;
         RenderSettings.ambientLight = savedAmbient;
 
@@ -103,7 +106,6 @@ public static class ScatterImpostorBaker
             outPx[i] = new Color(ap[i].r, ap[i].g, ap[i].b, a);
         }
         card.SetPixels(outPx);
-        NormalizeCoveredBrightness(card);
         card.Apply();
 
         cam.targetTexture = null;
@@ -153,6 +155,8 @@ public static class ScatterImpostorBaker
         Color savedAmbient = RenderSettings.ambientLight;
         RenderSettings.ambientMode = AmbientMode.Flat;
         RenderSettings.ambientLight = Color.white;
+        int albedoBakeId = Shader.PropertyToID(ShaderGlobalIds.ImpostorAlbedoBake);
+        Shader.SetGlobalFloat(albedoBakeId, 1f); // scatter/foliage shaders output flat albedo while set
 
         int atlasPx = gridN * AtlasCellPx;
         var atlas = new Texture2D(atlasPx, atlasPx, TextureFormat.ARGB32, false);
@@ -193,10 +197,7 @@ public static class ScatterImpostorBaker
             atlas.SetPixels(i * AtlasCellPx, j * AtlasCellPx, AtlasCellPx, AtlasCellPx, cp);
             Object.DestroyImmediate(cell);
         }
-        // The bake renders through FoliageLit's planet-sun lighting, so its brightness depends on the
-        // time-of-day the impostor first baked (near-black at dusk). Normalize the covered albedo to a fixed
-        // target so the impostor reads consistently and never bakes dark, independent of the bake-time sun.
-        NormalizeCoveredBrightness(atlas);
+        Shader.SetGlobalFloat(albedoBakeId, 0f);
         atlas.Apply();
 
         RenderSettings.ambientMode = savedMode;
@@ -233,30 +234,6 @@ public static class ScatterImpostorBaker
         Vector2 p = new Vector2(f.x + f.y, f.x - f.y) * 0.5f;
         float y = 1f - Mathf.Abs(p.x) - Mathf.Abs(p.y);
         return new Vector3(p.x, y, p.y).normalized;
-    }
-
-    // Scale the covered (opaque) albedo so its mean brightness hits a fixed target, so an impostor that
-    // baked under a dim/dusk sun still reads as a proper mid-tone tree instead of a near-black blob. Only
-    // brightens (never darkens) and is capped, so a bake under a bright sun is left alone.
-    const float ImpostorTargetMeanBrightness = 0.17f;
-    static void NormalizeCoveredBrightness(Texture2D tex)
-    {
-        Color[] p = tex.GetPixels();
-        double sum = 0.0; int n = 0;
-        for (int i = 0; i < p.Length; i++)
-        {
-            if (p[i].a < 0.5f) continue;
-            sum += (p[i].r + p[i].g + p[i].b) / 3.0;
-            n++;
-        }
-        if (n == 0) return;
-        float mean = (float)(sum / n);
-        if (mean < 1e-4f) return;
-        float scale = Mathf.Clamp(ImpostorTargetMeanBrightness / mean, 1f, 8f);
-        if (scale <= 1.001f) return;
-        for (int i = 0; i < p.Length; i++)
-            p[i] = new Color(Mathf.Min(1f, p[i].r * scale), Mathf.Min(1f, p[i].g * scale), Mathf.Min(1f, p[i].b * scale), p[i].a);
-        tex.SetPixels(p);
     }
 
     static Texture2D RenderTo(Camera cam, RenderTexture rt, Color bg)

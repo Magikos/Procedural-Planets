@@ -98,6 +98,7 @@ Shader "Scatter/VertexColorLit"
             float3 _SunParams;
             float3 _PlanetCenter;
             float _NightAmbientIntensity;
+            float _ImpostorAlbedoBake; // 1 while the impostor baker renders: output flat albedo, no sun
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
 
@@ -149,6 +150,10 @@ Shader "Scatter/VertexColorLit"
                 // map assigned the sampler returns white, so albedo = _BaseColor (flat tint).
                 half3 tex = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).rgb;
                 half3 albedo = _BaseColor.rgb * tex;
+
+                // Impostor bake: return flat unlit albedo so no directional sun/shadow is baked into the card
+                // (the runtime impostor shader relights it). Prevents the half-lit / black-side impostor.
+                if (_ImpostorAlbedoBake > 0.5) return half4(albedo, 1.0);
 
                 // Planet sun lighting (matches terrain/foliage via _SunParams): diffuse albedo ramped by
                 // the surface normal facing the sun, blended to a cool night ambient by daylight.

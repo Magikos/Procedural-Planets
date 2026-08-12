@@ -223,6 +223,7 @@ Shader "Scatter/FoliageLit"
             float3 _SunParams;
             float3 _PlanetCenter;
             float _NightAmbientIntensity;
+            float _ImpostorAlbedoBake; // 1 while the impostor baker renders: output flat albedo, no sun
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
             TEXTURE2D(_TrunkMap); SAMPLER(sampler_TrunkMap);
@@ -290,6 +291,10 @@ Shader "Scatter/FoliageLit"
                 // bright exposed crown. Leaf-only (lm) so the trunk (G=0) is not blackened.
                 float leafAO = lerp(1.0 - _LeafAOIntensity, 1.0, IN.leafAO);
                 albedo *= lerp(1.0, leafAO, lm);
+
+                // Impostor bake: return flat unlit albedo (leaf cutout + baked leaf-AO kept, no directional
+                // sun) so the runtime impostor shader relights it. No half-lit / black-side impostor.
+                if (_ImpostorAlbedoBake > 0.5) return half4(albedo, 1.0);
 
                 // Double-sided: flip the normal on back faces so a leaf lit from either side reads correctly
                 // instead of the back face going black (which made the canopy merge into dark clumps).
