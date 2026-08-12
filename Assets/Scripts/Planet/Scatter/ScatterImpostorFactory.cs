@@ -60,7 +60,9 @@ public static class ScatterImpostorFactory
         mat.SetFloat(_fadeOutEndId, end);          // instead of a hard ~5% pop at the cull edge
 
         var rp = new RenderParams(mat) { worldBounds = worldBounds, shadowCastingMode = ShadowCastingMode.On };
-        return new ScatterLodBatcher.Impostor(rp, BuildUnitQuad(), start, end);
+        // A pre-baked atlas is a shared ASSET this impostor borrows; a live bake is a runtime texture it owns.
+        // Teardown destroys only the owned one (destroying the asset corrupts it / throws).
+        return new ScatterLodBatcher.Impostor(rp, BuildUnitQuad(), start, end, ownsCard: proto.BakedImpostorAtlas == null);
     }
 
     // Unit centred quad (xy in [-0.5,0.5], uv [0,1]); the octahedral shader billboards + scales it by

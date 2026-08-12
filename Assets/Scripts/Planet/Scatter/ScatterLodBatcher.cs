@@ -47,14 +47,18 @@ public sealed class ScatterLodBatcher
         public readonly float StartDistance; // where the impostor takes over (usually the mesh-LOD cull)
         public readonly float EndDistance;   // where the impostor itself culls
         public readonly bool Valid;
+        // True when the _BaseMap card is a runtime bake owned by this impostor (destroy it on teardown);
+        // false when it is a pre-baked atlas ASSET, which must never be destroyed.
+        public readonly bool OwnsCard;
 
-        public Impostor(RenderParams parameters, Mesh quad, float startDistance, float endDistance)
+        public Impostor(RenderParams parameters, Mesh quad, float startDistance, float endDistance, bool ownsCard = true)
         {
             Params = parameters;
             Quad = quad;
             StartDistance = startDistance;
             EndDistance = endDistance;
             Valid = quad != null && endDistance > startDistance;
+            OwnsCard = ownsCard;
         }
     }
 

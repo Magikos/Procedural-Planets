@@ -134,8 +134,12 @@ public sealed class ScatterRenderer : IDisposable
             Material m = imp.Params.material;
             if (m != null)
             {
-                Texture card = m.GetTexture(_impostorBaseMapId);
-                if (card != null) UnityEngine.Object.Destroy(card);
+                // Only destroy a runtime-baked card; a pre-baked atlas is a shared asset (never destroy it).
+                if (imp.OwnsCard)
+                {
+                    Texture card = m.GetTexture(_impostorBaseMapId);
+                    if (card != null) UnityEngine.Object.Destroy(card);
+                }
                 UnityEngine.Object.Destroy(m);
             }
             if (imp.Quad != null) UnityEngine.Object.Destroy(imp.Quad);
