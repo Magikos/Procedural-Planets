@@ -1,117 +1,127 @@
 # Ocean scatter — populating the water
 
-**Status:** not started. Tracking doc, written 2026-08-12 after the asset bench kept a coral.
-**Why now:** `Corals - Coral1_1` passed the bench (`docs/research/bench-style-batch-2-2026-08-12.md`)
-and is promoted to `Assets/AssetPacks/Corals/`. There is nowhere to put it.
+**Status:** first prototype authored 2026-08-12, **no code changes required**.
+**Why:** `Corals - Coral1_1` passed the asset bench and had nowhere to go.
+
+> **Correction (2026-08-12).** An earlier revision of this doc framed ocean scatter as a new
+> subsystem: emit a seabed biome, add a below-water placement mode, invent a depth axis. Bryan
+> pushed back — *"why is the ocean treated different than any other biome? Shouldn't this be the
+> same system everywhere?"* — and he was right. It **is** the same system. The ocean was not
+> special-cased, it was simply unpopulated. What follows is the corrected picture.
 
 ---
 
-## Current state (verified 2026-08-12)
+## The system already handles underwater
 
-**Ocean has no scatter at all.** 69 prototypes exist; a scan of their `Biome` values shows
-1–14, 17, 18 in use. Three biome types have zero prototypes:
+Three facts, verified in the placement code:
 
-| Value | `BiomeType` | Emitted by the resolver? |
+**1. Altitude is signed metres above sea level.**
+
+```csharp
+// ScatterField.cs:293  (and ScatterGatherJob.cs:129)
+float altitudeMeters = onWater ? 0f : (localRadius - ctx.SeaRadiusLocal) * scale;
+```
+
+Below the waterline it is simply negative. `ScatterPrototype`'s own tooltip says so:
+*"Altitude gate (metres above sea; negative = underwater)"*.
+
+**2. A depth band is an ordinary altitude gate.**
+
+```csharp
+// ScatterGatherBurst.cs:110
+if (rules.HasMinAltitude != 0 && altitudeMeters < rules.MinAltitude) return false;
+if (rules.HasMaxAltitude != 0 && altitudeMeters > rules.MaxAltitude) return false;
+if (hasOcean && rules.MinWaterClearance > 0f && altitudeMeters < rules.MinWaterClearance) return false;
+```
+
+`MinAltitude = -30, MaxAltitude = -3` is "the shelf". No new field, no new axis.
+
+**3. `MinWaterClearanceMeters` is a per-prototype opt-out, not a system boundary.** It only
+rejects when `> 0`. `Lake Lily` already ships with it at `0`. Set it to zero and the
+keep-above-water rule stops applying to that prototype.
+
+**Placement needs nothing new either.** Props already place at `localRadius`, the terrain
+surface — which below the waterline *is* the seabed. `OnWater` (the lily-pad path) is the special
+case; ordinary terrain placement is the general one, and it works at any depth.
+
+### Proof: `Ocean Coral`
+
+Authored with zero code changes — `Assets/Resources/Settings/Scatter/Ocean Coral Prototype.asset`,
+slot 69, added to `ScatterLibrary` (now 70 prototypes):
+
+| Field | Value | Why |
 |---|---|---|
-| 0 | `Ocean` | yes — `BiomeRegistryDto` blends Ocean↔Beach |
-| 15 | `Cave` | **never** |
-| 16 | `Underwater` | **never** |
+| `Biome` | `Ocean` | already emitted by `BiomeRegistryDto` |
+| `MinWaterClearanceMeters` | `0` | opt out of the keep-above-water rejection |
+| `HasMinAltitude` / `MinAltitudeMeters` | `true` / `-30` | no deeper than 30 m |
+| `HasMaxAltitude` / `MaxAltitudeMeters` | `true` / `-3` | at least 3 m under the surface |
+| `ConformToSlope` | `0.7` | lies on the seabed rather than standing radially |
+| `ScaleRange` | `1.5 – 3.5` | source meshes are sub-metre (0.56 × 0.52 × 0.60) |
 
-`Underwater` is declared in the enum and referenced nowhere. It is a placeholder, not a feature.
+Material `Assets/Art/Materials/CoralShelf.mat` is on `Scatter/FoliageLit` carrying the vendor
+albedo — the same rule the bench judges by.
 
-**Scatter cannot place below the waterline today.** Two water-aware paths exist and neither
-puts anything on the seabed:
+**Depth banding is per-prototype, which is better than a biome axis.** Shelf, reef and deep-floor
+sets are three prototypes with different altitude gates, competing for placement exactly like
+land biomes do. Adding a `depth` dimension to the biome resolver would have duplicated a
+mechanism that already exists.
 
-- `MinWaterClearanceMeters` — a *rejection* gate. `ScatterGatherBurst` drops any instance whose
-  `altitudeMeters < MinWaterClearance`. It exists to keep land props out of the water.
-- `OnWater` — pins the instance to the sea surface
-  (`ScatterField`: `placeRadius = ctx.SeaRadiusLocal + OnWaterSurfaceOffsetMeters / scale`).
-  This is the lily-pad path from the lake biome. It floats things *on* the water.
-
-There is no mode that places an instance on the terrain surface *underneath* the water.
+`BiomeType.Underwater` (16) and `Cave` (15) are still declared and emitted nowhere — but nothing
+here needs them. `Ocean` plus an altitude gate covers the seabed. They remain dead enum values.
 
 ---
 
-## What the work actually is
+## What is genuinely unbuilt
 
-Roughly in dependency order. None of this is estimated yet.
+Placement is solved. These are not:
 
-### 1. Emit a seabed biome
+### Underwater rendering
 
-Decide whether the seabed is `Underwater` or just `Ocean` with a depth axis, then make the
-resolver emit it. Today `Ocean` means "this cell is water", with no notion of what is beneath.
-Depth almost certainly needs to be a resolver input: a coral shelf and an abyssal plain are not
-the same biome, and the difference is the only thing that makes ocean scatter look deliberate.
+The real remaining risk, and unverified:
 
-If `Underwater` stays, it needs a real definition (colour, textures, grass params) or it will
-fall through the biome atlas the way an unregistered biome does.
+- Does `Scatter/FoliageLit` read correctly *through* the water volume, or do submerged props need
+  the ocean's fog and absorption applied? A prop lit as though it were in air will not sit in the
+  water no matter how well it is placed.
+- Caustics: the ocean shader has them, scatter does not receive them.
+- The far-field impostor tier bakes against a sky background. Underwater that is wrong.
 
-### 2. A below-water placement mode
+### Density, and the size of the ocean
 
-`OnWater` and `MinWaterClearance` do not compose into "on the seabed". The likely shape is a
-third mode on `ScatterPrototype` — place on terrain, require the terrain to be *below* sea
-level, and gate on depth rather than altitude. Needs CPU/Burst parity
-(`ScatterField` + `ScatterGatherJob` + `ScatterGatherBurst`), as every placement rule does.
+The largest surface on the planet. Uniform density is neither affordable nor desirable — scatter
+should concentrate on shelves and reefs. A reef *is* a colony, so this likely wants the clumping
+work in `project_scatter_clumping_direction` rather than a bespoke solution.
 
-Depth gating wants a min and a max: corals in the shallows, nothing in the deep.
+Because the player will be down there, density has a **floor as well as a ceiling**: an empty
+seabed swum across is worse than one flown over, since the emptiness becomes the experience.
 
-### 3. Rendering underwater
+### Content
 
-Open question, and the one most likely to produce ugly results:
-
-- Does `Scatter/FoliageLit` read correctly through the water volume, or do submerged props need
-  the ocean's fog/absorption applied? A prop lit as though it were in air will not sit in the water.
-- Caustics: the ocean shader has them; scatter does not receive them.
-- The far-field impostor tier bakes against a sky background. Underwater it should not.
-
-### 4. Depth-aware density and LOD
-
-Ocean is the largest surface on the planet. Uniform density is not affordable and not desirable —
-scatter should concentrate on shelves and reefs. This may want the clumping/colony work already
-noted in `project_scatter_clumping_direction`, since a reef *is* a colony.
-
-### 5. Content
-
-One coral prefab is not a biome. `Assets/AssetPacks/Corals/` currently holds `Corals.FBX`
-(33 sub-meshes) plus one prefab; the source pack also has `CoralGroups.FBX`, `CoralRocks.FBX` and
-`Seaweeds.FBX` still in the scratch project, and the bench can judge those next.
+One coral is not a biome. `Assets/AssetPacks/Corals/` holds `Corals.FBX` (33 meshes) and one
+prefab; `CoralGroups.FBX`, `CoralRocks.FBX` and `Seaweeds.FBX` are still in the scratch project
+and can go through the bench next.
 
 ---
 
 ## Decided
 
 **The player will be down there** (Bryan, 2026-08-12). The seabed is real content, not set
-dressing. That rules out the cheap version — a shallow shelf band decorated for viewing from
-above — and commits us to the depth axis in §1.
-
-Consequences worth stating now, because they are easy to forget later:
-
-- **Depth bands are a biome axis, not a density curve.** Shelf, reef, slope and deep floor want
-  different prototype sets, not one set thinned with depth. Whatever §1 emits has to carry enough
-  resolution to say which band a cell is in.
-- **Underwater rendering stops being optional.** Content the player swims through has to be lit
-  through the water volume, receive caustics, and fade into the correct fog. §3 moves from
-  "open question" to required work.
-- **Scale reads differently underwater.** Props judged from a free camera above the surface will
-  not read the same at swimming eye height. Bench any ocean candidate from where the player will
-  actually be.
-- **Density has a floor as well as a ceiling.** An empty seabed the player swims across is worse
-  than an empty one they fly over — the emptiness is the experience rather than a distant texture.
+dressing — so underwater rendering is required work rather than an open question, and ocean
+candidates should be benched at swimming eye height, since scale does not read the same from a
+camera above the surface.
 
 ## Still open
 
-1. **Does ocean scatter block on swimming being implemented?** It does not: the free camera can
-   already go underwater, and the bench can spawn there. Judging at swimming eye height is a
-   camera position, not a feature dependency.
-2. **`Cave` (15) is also unemitted** — the same class of gap, and also somewhere the player will
-   physically be. Fold into this pass, or keep deliberately separate?
+1. **Does ocean scatter block on swimming?** No. The free camera already goes underwater and the
+   bench can spawn there.
+2. **`Cave` (15) is the same unemitted-biome gap**, and also somewhere the player will be. Unlike
+   the ocean it probably *does* need resolver work, since there is no altitude trick for "inside".
+   Fold in, or keep separate?
 
 ---
 
 ## Related
 
-- Bench verdict and follow-ups: `docs/research/bench-style-batch-2-2026-08-12.md`
-- Lake biome, the closest precedent for adding a water biome + its scatter:
-  `docs/design/2026-08-11-lake-biome.md`
-- Scatter placement rules: `Assets/Scripts/Planet/Scatter/ScatterField.cs`,
-  `ScatterGatherJob.cs`, `ScatterGatherBurst.cs`
+- Bench verdict: `docs/research/bench-style-batch-2-2026-08-12.md`
+- Lake biome, the precedent for water-adjacent scatter: `docs/design/2026-08-11-lake-biome.md`
+- Placement rules: `Assets/Scripts/Planet/Scatter/ScatterField.cs`, `ScatterGatherJob.cs`,
+  `ScatterGatherBurst.cs`
