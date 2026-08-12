@@ -847,12 +847,13 @@ Shader "Planet/VertexColor"
                     fiberUv.x * noiseScale * 0.42,
                     fiberUv.y * noiseScale * 2.35,
                     11.0 + eval.tint.g * 23.0));
-                // The anisotropic fiber is a near blade-texture detail; unlike the fleck (which self-filters
-                // via fwidth) it is unfiltered, so at grazing distance it aliases into a directional weave
-                // across the carpet. Fade it to neutral with view distance: distant carpet reads as smooth
-                // grass (blades aren't resolvable there anyway), near keeps the blade texture.
-                float fiberFade = 1.0 - smoothstep(60.0, 190.0, length(positionWS - _WorldSpaceCameraPos));
-                fiber = lerp(0.5, fiber, fiberFade);
+                // The anisotropic fiber and fleck are near blade-texture detail; aligned to consistent world
+                // tangents they alias into directional weave/streaks at grazing distance (the fleck's fwidth
+                // self-filter is not enough at shallow angles). Fade both to neutral with view distance so
+                // distant carpet reads as smooth grass (blades aren't resolvable there anyway); near keeps the
+                // texture. The isotropic macro/detail/patch terms don't streak, so they stay.
+                float texFade = 1.0 - smoothstep(70.0, 200.0, length(positionWS - _WorldSpaceCameraPos));
+                fiber = lerp(0.5, fiber, texFade);
                 float breakup = lerp(macro * 0.65 + detail * 0.35, fiber, saturate(_GrassFarOverlayFiberStrength));
                 float patch = ValueNoise3D(eval.relPos * (noiseScale * 0.22) + eval.tint * 71.0 + 5.0);
                 float2 fleckUv = float2(fiberUv.x * 0.9, fiberUv.y * 3.0);
@@ -860,6 +861,7 @@ Shader "Planet/VertexColor"
                 float fleck = smoothstep(0.52, 0.88,
                     ValueNoise3D(float3(fleckUv.x, fleckUv.y, 23.0 + eval.tint.r * 19.0)));
                 fleck = lerp(0.5, fleck, fleckFilter);
+                fleck = lerp(0.5, fleck, texFade);
                 grassCoverage = saturate(grassCoverage
                     * lerp(0.86, 1.08, patch)
                     * lerp(0.58, 1.22, fleck));
