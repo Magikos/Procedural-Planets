@@ -75,15 +75,32 @@ here needs them. `Ocean` plus an altitude gate covers the seabed. They remain de
 
 Placement is solved. These are not:
 
-### Underwater rendering
+### Underwater rendering — **checked 2026-08-12, no custom shader needed yet**
 
-The real remaining risk, and unverified:
+Reviewed in-world on a reef shelf. Verdict from Bryan: *"the underwater foliage looks fine"* —
+**no ocean-specific foliage shader for now.**
 
-- Does `Scatter/FoliageLit` read correctly *through* the water volume, or do submerged props need
-  the ocean's fog and absorption applied? A prop lit as though it were in air will not sit in the
-  water no matter how well it is placed.
-- Caustics: the ocean shader has them, scatter does not receive them.
-- The far-field impostor tier bakes against a sky background. Underwater that is wrong.
+What the first look settled:
+
+- **`Scatter/FoliageLit` already receives the underwater fog.** This was the main risk and it is
+  not one: distant corals attenuate into the water the same way the terrain and the shoreline do.
+  Submerged scatter does not read as "lit for open air".
+- **Caustics still do not reach scatter.** The seabed terrain shows the rippled light; the corals
+  sitting on it stay flat-lit. Visible on close inspection, not objectionable at swimming distance.
+- Corals read slightly warm and saturated against the blue — acceptable, and cheaper to fix by
+  tinting the material than by writing a shader.
+- Far-field impostors underwater are still unverified; nothing in view was far enough to tier down.
+
+**A custom ocean foliage shader is therefore deferred, not required.** Revisit only if caustics on
+props turn out to matter, or if deeper water makes the absorption mismatch obvious — at shelf
+depths it is not.
+
+### General underwater effects — separate, and the actual gap
+
+Bryan, same session: *"the underwater effects in general need work (outside the foliage)."* This
+is water rendering, not scatter, and it is the thing to fix before any more effort goes into
+submerged props. Not yet scoped. It is what the eye notices first down there, so scatter polish
+ahead of it would be wasted.
 
 ### Density, and the size of the ocean
 

@@ -32,9 +32,26 @@ different altitude gates, competing exactly like land biomes. Adding `depth` to 
 would duplicate an existing mechanism. `BiomeType.Underwater` (16) and `Cave` (15) stay dead
 enum values — `Ocean` + altitude gate covers the seabed.
 
-**What IS unbuilt:** underwater *rendering* (does `Scatter/FoliageLit` read through the water
-volume? caustics don't reach scatter; impostors bake against sky) and density over an
-ocean-sized area — a reef is a colony, so see [[project_scatter_clumping_direction]].
+**Shipped 2026-08-12: 4 ocean prototypes**, slots 69–72, depth-layered with deliberately
+overlapping bands (`Ocean Coral` -30..-3, `Shallow` -14..-2, `Plate` -26..-4 conform 0.9,
+`Deep` -60..-22). All share one material (`Assets/Art/Materials/CoralShelf.mat`, Scatter/FoliageLit
++ the vendor albedo) and one texture set, downscaled 4096→1024 on import.
+
+**Underwater rendering CHECKED in-world — no custom ocean foliage shader needed.** Bryan: *"the
+underwater foliage looks fine."* The main risk did not materialise: **`Scatter/FoliageLit`
+already receives the underwater fog**, so submerged scatter attenuates like the terrain instead
+of reading as lit-for-air. Caustics still do not reach scatter (seabed shows ripples, corals stay
+flat-lit) — visible up close, not objectionable at swimming distance. Corals read slightly warm
+vs the blue; a material tint would be cheaper than a shader. Custom shader **deferred, not
+required**.
+
+**⚠️ The real gap is general underwater effects, not foliage** (Bryan: *"the underwater effects
+in general need work (outside the foliage)"*). That is water rendering, unscoped, and should come
+before more submerged-prop polish — it is what the eye notices first down there.
+
+**Still unbuilt:** density over an ocean-sized area — a reef is a colony, so see
+[[project_scatter_clumping_direction]]. Far-field impostors underwater still unverified (they
+bake against a sky background).
 
 **DECIDED (Bryan): the player will be down there.** Seabed is real content, so underwater
 rendering is required, and ocean candidates must be benched at swimming eye height.
