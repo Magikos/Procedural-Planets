@@ -847,6 +847,12 @@ Shader "Planet/VertexColor"
                     fiberUv.x * noiseScale * 0.42,
                     fiberUv.y * noiseScale * 2.35,
                     11.0 + eval.tint.g * 23.0));
+                // The anisotropic fiber is a near blade-texture detail; unlike the fleck (which self-filters
+                // via fwidth) it is unfiltered, so at grazing distance it aliases into a directional weave
+                // across the carpet. Fade it to neutral with view distance: distant carpet reads as smooth
+                // grass (blades aren't resolvable there anyway), near keeps the blade texture.
+                float fiberFade = 1.0 - smoothstep(60.0, 190.0, length(positionWS - _WorldSpaceCameraPos));
+                fiber = lerp(0.5, fiber, fiberFade);
                 float breakup = lerp(macro * 0.65 + detail * 0.35, fiber, saturate(_GrassFarOverlayFiberStrength));
                 float patch = ValueNoise3D(eval.relPos * (noiseScale * 0.22) + eval.tint * 71.0 + 5.0);
                 float2 fleckUv = float2(fiberUv.x * 0.9, fiberUv.y * 3.0);
