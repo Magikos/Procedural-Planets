@@ -114,3 +114,7 @@ graphify-out/
 /[Aa]ssets/[Ss]creenshots.meta
 /[Aa]ssets/_[Rr]ecovery/
 /[Aa]ssets/_[Rr]ecovery.meta
+
+# Asset Bench staging — candidate assets under evaluation, promoted out on a "keep" verdict, never committed
+/[Aa]ssets/_[Bb]ench/
+/[Aa]ssets/_[Bb]ench.meta

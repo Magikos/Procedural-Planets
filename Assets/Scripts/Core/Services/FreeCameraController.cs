@@ -335,6 +335,41 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
         }
     }
 
+    public void FrameCloseUp(Vector3 worldPosition, float boundsRadius)
+    {
+        float radius = Mathf.Max(boundsRadius, 0.5f);
+
+        Vector3 up = _lastPlanetRadius > 0f
+            ? (worldPosition - _lastPlanetCenter).normalized
+            : Vector3.up;
+
+        // Fit the bounding sphere to whichever FOV axis is narrower — on a portrait-ish game view that is
+        // the horizontal one, and fitting only the vertical crops the subject.
+        Camera cam = CameraComponent;
+        float halfVertical = (cam != null ? cam.fieldOfView : 60f) * 0.5f * Mathf.Deg2Rad;
+        float aspect = cam != null && cam.aspect > 0.01f ? cam.aspect : 1f;
+        float halfHorizontal = Mathf.Atan(Mathf.Tan(halfVertical) * aspect);
+        float halfAngle = Mathf.Max(Mathf.Min(halfVertical, halfHorizontal), 0.05f);
+
+        float distance = radius / Mathf.Sin(halfAngle) * 1.15f;
+
+        // Approach from the sunward side so the object is lit rather than silhouetted.
+        Vector3 side = Vector3.ProjectOnPlane(GetSunDirectionToSun(), up);
+        if (side.sqrMagnitude < 0.0001f)
+            side = Vector3.ProjectOnPlane(Vector3.right, up);
+        if (side.sqrMagnitude < 0.0001f)
+            side = Vector3.ProjectOnPlane(Vector3.forward, up);
+        side.Normalize();
+
+        Vector3 back = (side + up * 0.45f).normalized;
+        transform.position = worldPosition + back * distance;
+        transform.rotation = Quaternion.LookRotation((worldPosition - transform.position).normalized, up);
+
+        // Planet-scale fly speed overshoots a prop on the first keypress; scale it to the subject instead.
+        MoveSpeed = Mathf.Max(1f, radius * 1.5f);
+        _skipNextDelta = true;
+    }
+
     IPlanetSurfaceSampler GetPlanet()
     {
         return _cachedPlanet;
