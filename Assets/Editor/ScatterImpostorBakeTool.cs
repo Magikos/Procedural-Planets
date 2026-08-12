@@ -65,6 +65,16 @@ public static class ScatterImpostorBakeTool
                 ConfigureAtlasImport(atlasPath);
 
                 proto.BakedImpostorAtlas = AssetDatabase.LoadAssetAtPath<Texture2D>(atlasPath);
+
+                if (card.NormalTexture != null)
+                {
+                    string normalPath = $"{AtlasFolder}/{proto.name}_impostor_n.png";
+                    File.WriteAllBytes(normalPath, ImageConversion.EncodeToPNG(card.NormalTexture));
+                    Object.DestroyImmediate(card.NormalTexture);
+                    AssetDatabase.ImportAsset(normalPath, ImportAssetOptions.ForceUpdate);
+                    ConfigureAtlasImport(normalPath, isNormal: true);
+                    proto.BakedImpostorNormal = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
+                }
                 EditorUtility.SetDirty(proto);
                 baked++;
             }
@@ -84,9 +94,10 @@ public static class ScatterImpostorBakeTool
         foreach (string g in guids)
         {
             var proto = AssetDatabase.LoadAssetAtPath<ScatterPrototype>(AssetDatabase.GUIDToAssetPath(g));
-            if (proto != null && proto.BakedImpostorAtlas != null)
+            if (proto != null && (proto.BakedImpostorAtlas != null || proto.BakedImpostorNormal != null))
             {
                 proto.BakedImpostorAtlas = null;
+                proto.BakedImpostorNormal = null;
                 EditorUtility.SetDirty(proto);
                 cleared++;
             }
@@ -121,13 +132,13 @@ public static class ScatterImpostorBakeTool
         return maxCull;
     }
 
-    static void ConfigureAtlasImport(string atlasPath)
+    static void ConfigureAtlasImport(string atlasPath, bool isNormal = false)
     {
         if (AssetImporter.GetAtPath(atlasPath) is not TextureImporter imp) return;
         imp.textureType = TextureImporterType.Default;
         imp.alphaSource = TextureImporterAlphaSource.FromInput;
         imp.alphaIsTransparency = true;
-        imp.sRGBTexture = true;
+        imp.sRGBTexture = !isNormal; // normals are linear data, not colour
         imp.mipmapEnabled = false;                       // octahedral atlas: mips would bleed across cells
         imp.wrapMode = TextureWrapMode.Clamp;
         imp.filterMode = FilterMode.Bilinear;

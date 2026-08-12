@@ -32,7 +32,8 @@ public sealed record ScatterPrototypeDto(
     bool RandomYaw,
     ScatterInteraction Interaction,
     ScatterPartDto[] Parts,
-    Texture2D BakedImpostorAtlas = null)
+    Texture2D BakedImpostorAtlas = null,
+    Texture2D BakedImpostorNormal = null)
 {
     // Raw map only; ScatterLibraryDto.EnsureValid is the single validator (assets + overrides).
     public static ScatterPrototypeDto From(ScatterPrototype p) => new(
@@ -40,7 +41,7 @@ public sealed record ScatterPrototypeDto(
         p.MaxSlopeDegrees, p.SlopeFadeDegrees, p.ConformToSlope,
         p.HasMinAltitude, p.MinAltitudeMeters, p.HasMaxAltitude, p.MaxAltitudeMeters,
         p.MinWaterClearanceMeters, p.OnWater, p.ScaleRange, p.RandomYaw, p.Interaction,
-        BuildParts(p), p.BakedImpostorAtlas);
+        BuildParts(p), p.BakedImpostorAtlas, p.BakedImpostorNormal);
 
     static ScatterPartDto[] BuildParts(ScatterPrototype p)
     {

@@ -59,4 +59,8 @@ public sealed class ScatterPrototype : ScriptableObject
              "When set, the runtime uses it and skips the on-load bake (faster startup, consistent look). " +
              "Leave null to bake at runtime — the fallback for runtime-placed / custom-saved structures.")]
     public Texture2D BakedImpostorAtlas;
+
+    [Tooltip("Pre-baked view-space normal atlas paired with BakedImpostorAtlas. Lets the far billboard shade " +
+             "from the real surface (facets / canopy) instead of a synthesized hemisphere. Baked by the same tool.")]
+    public Texture2D BakedImpostorNormal;
 }

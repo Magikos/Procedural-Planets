@@ -10,6 +10,7 @@ Shader "Scatter/Impostor"
     Properties
     {
         _BaseMap ("Octahedral Atlas (RGB albedo, A silhouette)", 2D) = "white" {}
+        _NormalMap ("Octahedral Normal Atlas (view-space, encoded)", 2D) = "bump" {}
         _Cutoff ("Alpha Cutoff", Range(0,1)) = 0.5
         _NormalBulge ("Canopy Normal Bulge", Range(0.2,2)) = 1.3
         _GridN ("Octahedral grid frames per axis", Float) = 8
@@ -133,6 +134,7 @@ Shader "Scatter/Impostor"
             float _NightAmbientIntensity;
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
+            TEXTURE2D(_NormalMap); SAMPLER(sampler_NormalMap);
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
@@ -217,14 +219,12 @@ Shader "Scatter/Impostor"
                 int2 pix = int2(fmod(sp, 4.0));
                 clip(coverage - _Bayer4x4[pix.y * 4 + pix.x]);
 
-                // Synthesized canopy normal: the card as a hemisphere bulging toward the viewer so the
-                // sun-facing side lights and the far side shades, regardless of view angle.
-                float cx = IN.uv.x * 2.0 - 1.0;
-                float cy = IN.uv.y * 2.0 - 1.0;
-                float nz = sqrt(saturate(_NormalBulge - cx * cx - cy * cy));
-                float3 N = normalize(IN.billRight * cx + IN.billUp * cy + IN.billFwd * nz);
-                // Tilt toward surface-up so a near-overhead sun still lights the card (matches FoliageLit).
-                N = normalize(lerp(N, IN.billUp, 0.6));
+                // Real surface normal from the baked view-space normal atlas, reconstructed to world space via
+                // the billboard basis (right/up/view) so the card shades with the tree's/rock's actual facets
+                // instead of a synthesized hemisphere. Unbaked materials default the atlas to flat (viewer-facing).
+                float3 nEnc = SampleOctBlended(TEXTURE2D_ARGS(_NormalMap, sampler_NormalMap), IN.gridCoord, IN.uv, _GridN).rgb;
+                float3 nv = nEnc * 2.0 - 1.0;
+                float3 N = normalize(IN.billRight * nv.x + IN.billUp * nv.y + IN.billFwd * nv.z);
 
                 float3 planetNormal = normalize(IN.billUp);
                 float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);

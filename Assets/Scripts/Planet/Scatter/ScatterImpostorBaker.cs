@@ -238,7 +238,7 @@ public static class ScatterImpostorBaker
     // framing metadata (WorldSize, CenterOffset, GridN) from the same mesh bounds + cell size the bake used,
     // so a stored atlas needs no metadata sidecar. Lets the runtime skip the on-load bake when an atlas is
     // present, while the live BakeAtlas path stays as the fallback for runtime-placed / custom structures.
-    public static AtlasCard FromPrebaked(Texture2D atlas, IReadOnlyList<Mesh> meshes)
+    public static AtlasCard FromPrebaked(Texture2D atlas, Texture2D normalAtlas, IReadOnlyList<Mesh> meshes)
     {
         if (atlas == null || meshes == null || meshes.Count == 0) return default;
         Bounds b = meshes[0].bounds;
@@ -246,7 +246,7 @@ public static class ScatterImpostorBaker
         float w = Mathf.Max(b.size.x, b.size.z);
         float h = Mathf.Max(b.size.y, 1e-3f);
         int gridN = Mathf.Max(1, atlas.width / AtlasCellPx);
-        return new AtlasCard { Texture = atlas, WorldSize = Mathf.Max(w, h), CenterOffset = b.center.y, GridN = gridN, Valid = true };
+        return new AtlasCard { Texture = atlas, NormalTexture = normalAtlas, WorldSize = Mathf.Max(w, h), CenterOffset = b.center.y, GridN = gridN, Valid = true };
     }
 
     // Hemi-octahedral decode: square uv in [0,1]^2 -> unit direction on the upper hemisphere (y = up).

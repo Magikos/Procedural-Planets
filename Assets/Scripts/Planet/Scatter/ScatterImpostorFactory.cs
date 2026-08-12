@@ -10,6 +10,7 @@ using UnityEngine.Rendering;
 public static class ScatterImpostorFactory
 {
     static readonly int _baseMapId = Shader.PropertyToID("_BaseMap");
+    static readonly int _normalMapId = Shader.PropertyToID("_NormalMap");
     static readonly int _cutoffId = Shader.PropertyToID("_Cutoff");
     static readonly int _gridNId = Shader.PropertyToID("_GridN");
     static readonly int _centerOffsetId = Shader.PropertyToID("_CenterOffset");
@@ -41,7 +42,7 @@ public static class ScatterImpostorFactory
         // Prefer a pre-baked atlas (editor bake tool) to skip the on-load bake; fall back to baking live
         // for prototypes without one (runtime-placed / custom-saved structures).
         ScatterImpostorBaker.AtlasCard card = proto.BakedImpostorAtlas != null
-            ? ScatterImpostorBaker.FromPrebaked(proto.BakedImpostorAtlas, meshes)
+            ? ScatterImpostorBaker.FromPrebaked(proto.BakedImpostorAtlas, proto.BakedImpostorNormal, meshes)
             : ScatterImpostorBaker.BakeAtlas(meshes, materials, OctGridN);
         if (!card.Valid) return default;
 
@@ -50,6 +51,7 @@ public static class ScatterImpostorFactory
         float end = proto.ImpostorEndDistance;
         var mat = new Material(shader) { enableInstancing = true };
         mat.SetTexture(_baseMapId, card.Texture);
+        if (card.NormalTexture != null) mat.SetTexture(_normalMapId, card.NormalTexture);
         mat.SetFloat(_cutoffId, 0.3f);
         mat.SetFloat(_gridNId, card.GridN);
         mat.SetFloat(_centerOffsetId, card.CenterOffset); // billboard centred on the tree centre

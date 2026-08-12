@@ -23,6 +23,7 @@ public sealed class ScatterRenderer : IDisposable
     static readonly int _fadeStartId = Shader.PropertyToID("_FadeStart");
     static readonly int _fadeEndId = Shader.PropertyToID("_FadeEnd");
     static readonly int _impostorBaseMapId = Shader.PropertyToID("_BaseMap");
+    static readonly int _impostorNormalMapId = Shader.PropertyToID("_NormalMap");
 
     public ScatterRenderer(ScatterField field, Transform planetTransform)
     {
@@ -139,6 +140,8 @@ public sealed class ScatterRenderer : IDisposable
                 {
                     Texture card = m.GetTexture(_impostorBaseMapId);
                     if (card != null) UnityEngine.Object.Destroy(card);
+                    Texture nrm = m.GetTexture(_impostorNormalMapId);
+                    if (nrm != null) UnityEngine.Object.Destroy(nrm);
                 }
                 UnityEngine.Object.Destroy(m);
             }
