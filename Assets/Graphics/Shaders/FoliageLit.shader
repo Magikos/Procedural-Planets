@@ -319,10 +319,10 @@ Shader "Scatter/FoliageLit"
                 // Leaves take only a soft self-shadow (never below ~0.5) so a dense canopy stays lush at
                 // eye level instead of collapsing to black where it shadows its own sides; the trunk keeps
                 // the full cast shadow so it still grounds. Higher ambient floor keeps shaded foliage green.
-                float leafShade = lerp(0.5, 1.0, shadowAtten * cloudShadow);
-                float trunkShade = lerp(0.45, 1.0, shadowAtten * cloudShadow);
+                float leafShade = lerp(0.35, 1.0, shadowAtten * cloudShadow);
+                float trunkShade = lerp(0.3, 1.0, shadowAtten * cloudShadow);
                 float direct = ndl * lerp(trunkShade, leafShade, lm);
-                half3 dayColor = albedo * lerp(0.82, 1.25, direct);
+                half3 dayColor = albedo * lerp(0.6, 1.28, direct);
                 // Leaf backlight: the canopy glows where the sun is behind the leaves (lm = leaf mask, so
                 // the trunk is excluded). This is what gives Synty foliage its luminous, translucent look.
                 float3 viewDir = normalize(_WorldSpaceCameraPos - IN.positionWS);
@@ -331,7 +331,7 @@ Shader "Scatter/FoliageLit"
                 // Cast shadow on the WHOLE plant so understory foliage under a tree visibly darkens — the
                 // soft leafShade above only gives canopy interior depth. Sunlit crowns (shadowAtten≈1) are
                 // untouched; the 0.4 floor keeps shaded plants coloured, matching the ground shadow.
-                dayColor *= lerp(0.4, 1.0, lerp(1.0, shadowAtten, daylight));
+                dayColor *= lerp(0.25, 1.0, lerp(1.0, shadowAtten, daylight));
                 float nightAmbient = PlanetNightAmbient(_NightAmbientIntensity);
                 half3 nightColor = albedo * nightAmbient * 0.6;
                 half3 col = lerp(nightColor, dayColor, daylight);
@@ -341,7 +341,7 @@ Shader "Scatter/FoliageLit"
                 #if defined(_SCREEN_SPACE_OCCLUSION)
                     float2 aoUV = IN.screenPos.xy / max(IN.screenPos.w, 1e-4);
                     AmbientOcclusionFactor aoFactor = GetScreenSpaceAmbientOcclusion(aoUV);
-                    col *= lerp(1.0, aoFactor.indirectAmbientOcclusion, 0.25);
+                    col *= lerp(1.0, aoFactor.indirectAmbientOcclusion, 0.5);
                 #endif
 
                 col = lerp(col, _LodDebugTint.rgb, _LodDebugTint.a); // scatter.lodview: LOD-band colour

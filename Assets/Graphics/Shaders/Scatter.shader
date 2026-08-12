@@ -169,8 +169,8 @@ Shader "Scatter/VertexColorLit"
                 // 0.85..1.28) so a prop's dark side never collapses to a black dot and the mesh->impostor
                 // handoff has no brightness pop. Without a normal-up blend (rocks need true form) the floor
                 // is what keeps a shaded bush side coloured rather than near-black.
-                float shade = lerp(0.5, 1.0, shadowAtten * cloudShadow);
-                half3 dayColor = albedo * lerp(0.85, 1.28, ndl * shade);
+                float shade = lerp(0.35, 1.0, shadowAtten * cloudShadow);
+                half3 dayColor = albedo * lerp(0.6, 1.3, ndl * shade);
                 half3 nightColor = albedo * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
                 // Ease into night slower (sqrt) than the terrain does: near the terminator a dark-albedo prop
                 // otherwise collapses to the near-black nightColor while the lit ground behind it stays bright,

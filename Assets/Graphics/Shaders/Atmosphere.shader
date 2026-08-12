@@ -228,7 +228,10 @@ ENDHLSL
             float CameraUnderwater01()
             {
                 float seaOffset = length(_WorldSpaceCameraPos.xyz - _PlanetCenter) - _SeaLevelRadius;
-                return 1.0 - smoothstep(-1.5, 2.0, seaOffset);
+                // Underwater sky only once the camera is at/below the water surface — a small band above 0
+                // for a smooth dip-in. The old +2 m upper bound killed the atmosphere while standing on the
+                // shore of a sea-level lake (camera ~1 m up reads as "underwater").
+                return 1.0 - smoothstep(-1.5, 0.2, seaOffset);
             }
 
             float3 UnderwaterSkyColor(float3 viewDir)

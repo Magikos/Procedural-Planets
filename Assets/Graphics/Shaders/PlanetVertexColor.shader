@@ -1204,7 +1204,7 @@ Shader "Planet/VertexColor"
                 float normalTurnsAwayFromSun = saturate((geometricDiffuse - terrainDiffuse) * 3.0);
                 float reliefShadow = 1.0 - normalTurnsAwayFromSun * saturate(_BiomeNormalReliefShadow) * daylight;
                 float dayLight = lerp(0.24, 1.12, litDiffuse) * lerp(0.36, 1.0, ao) * reliefShadow;
-                dayLight *= lerp(0.45, 1.0, sunShadow);
+                dayLight *= lerp(0.28, 1.0, sunShadow);
                 float3 dayColor = surfaceAlbedo * dayLight * lerp(1.0, cloudShadow, daylight);
 
                 // Blinn specular: F0 = 0.04 dielectric / albedo metallic. Exponent scales with
