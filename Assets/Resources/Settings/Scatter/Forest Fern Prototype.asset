@@ -20,11 +20,13 @@ MonoBehaviour:
   Weight: 1.3
   MaxSlopeDegrees: 34
   SlopeFadeDegrees: 6
+  ConformToSlope: 0
   HasMinAltitude: 0
   MinAltitudeMeters: 0
   HasMaxAltitude: 0
   MaxAltitudeMeters: 0
   MinWaterClearanceMeters: 0.05
+  OnWater: 0
   ScaleRange: {x: 0.8, y: 1.3}
   RandomYaw: 1
   Interaction: 0
@@ -46,3 +48,4 @@ MonoBehaviour:
   LodEndDistances: []
   CastShadows: 1
   ReceiveShadows: 1
+  BakedImpostorAtlas: {fileID: 2800000, guid: 2eb53807f2756d04386839b9f8d37a6a, type: 3}
