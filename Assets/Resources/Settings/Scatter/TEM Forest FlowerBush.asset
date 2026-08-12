@@ -45,3 +45,4 @@ MonoBehaviour:
   CastShadows: 1
   ReceiveShadows: 1
   BakedImpostorAtlas: {fileID: 2800000, guid: 95750ec777ed8df4c883dd928d6fc895, type: 3}
+  BakedImpostorNormal: {fileID: 2800000, guid: 126179a486279704a95fc4ed6509a0d7, type: 3}
