@@ -36,7 +36,7 @@ MonoBehaviour:
     - {fileID: 2077005393848555372, guid: f9860d658bb47974b81fd2c006901fa0, type: 3}
     LodEndDistances:
     - 90
-    - 400
+    - 500
     CastShadows: 1
     ReceiveShadows: 1
   - Name: Branches
@@ -46,7 +46,7 @@ MonoBehaviour:
     - {fileID: 276114067924089942, guid: f9860d658bb47974b81fd2c006901fa0, type: 3}
     LodEndDistances:
     - 90
-    - 400
+    - 500
     CastShadows: 1
     ReceiveShadows: 1
   Material: {fileID: 0}
