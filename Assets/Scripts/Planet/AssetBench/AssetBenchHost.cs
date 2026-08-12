@@ -54,6 +54,7 @@ public sealed class AssetBenchHost : MonoBehaviour
         else if (Input.GetKeyDown(KeyCode.F1)) LastMessage = Service.SetVerdict(BenchVerdict.Keep);
         else if (Input.GetKeyDown(KeyCode.F2)) LastMessage = Service.SetVerdict(BenchVerdict.Cut);
         else if (Input.GetKeyDown(KeyCode.F3)) LastMessage = Service.SetVerdict(BenchVerdict.Later);
+        else if (Input.GetKeyDown(KeyCode.F5)) LastMessage = Service.SetVerdict(BenchVerdict.Blocked);
         else if (Input.GetKeyDown(KeyCode.F4)) HudVisible = !HudVisible;
         else if (Input.GetKeyDown(KeyCode.H)) LastMessage = Service.ToggleIsolate();
         else if (Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus))
@@ -121,6 +122,7 @@ public sealed class AssetBenchHost : MonoBehaviour
         BenchVerdict.Keep => new Color(0.40f, 1f, 0.45f),
         BenchVerdict.Cut => new Color(1f, 0.45f, 0.40f),
         BenchVerdict.Later => new Color(1f, 0.85f, 0.35f),
+        BenchVerdict.Blocked => new Color(1f, 0.55f, 0.20f),
         BenchVerdict.Error => new Color(1f, 0.35f, 0.75f),
         _ => CandidateColor,
     };
@@ -169,13 +171,15 @@ public sealed class AssetBenchHost : MonoBehaviour
             body.Append($"{i + 1}. {r.Label}  [{r.Verdict}]{(r.NeedsRework ? " [rework]" : "")}");
             if (current && !string.IsNullOrEmpty(r.Question))
                 body.Append($"\n      {r.Question}");
+            if (current && !string.IsNullOrEmpty(r.Note))
+                body.Append($"\n      ⚠ {r.Note}");
             body.Append('\n');
         }
 
         body.Append("\n1-9 jump / re-frame · Tab next · Shift+Tab prev");
         body.Append($"\nH {(s.IsIsolated ? "show reference" : "hide reference")} · F4 hide HUD");
         body.Append($"\n- / = zoom out / in ({s.Zoom:F2})");
-        body.Append("\nF1 keep · F2 cut · F3 later");
+        body.Append("\nF1 keep · F2 cut · F3 later · F5 blocked (could not judge)");
 
         var text = body.ToString();
         // Anchored right: the F6 debug overlay owns the top-left corner.

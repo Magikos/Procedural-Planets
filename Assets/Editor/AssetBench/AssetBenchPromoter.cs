@@ -8,6 +8,11 @@ using UnityEngine;
 /// <summary>
 /// Promotes assets that passed the bench out of the gitignored staging folder and into the project.
 ///
+/// Promotion moves an asset's whole dependency closure, not just the file named in the report. A mesh's
+/// materials, textures and shaders are usually staged alongside it, and moving the mesh alone leaves them
+/// behind in an ignored folder — which resolves fine locally, then arrives as missing materials on every
+/// other checkout.
+///
 /// This is a separate post-play step because <see cref="AssetDatabase.MoveAsset"/> is not safe during play
 /// mode. Moving through the AssetDatabase (rather than the filesystem) carries the .meta and preserves the
 /// GUID, so anything already referencing a promoted asset survives the move.
@@ -17,28 +22,45 @@ public sealed class AssetBenchPromoter : EditorWindow
     const string StagingRoot = "Assets/_Bench/";
     const string DefaultDestinationRoot = "Assets/AssetPacks/";
 
+    sealed class Move
+    {
+        public string Source;
+        public string Destination;
+        public string Problem;
+    }
+
     sealed class Candidate
     {
         public string Label;
         public string SourcePath;
-        public string DestinationPath;
         public bool Selected = true;
-        public string Problem;
+        public bool Expanded;
+        public readonly List<Move> Moves = new();
+
+        public int BlockedCount()
+        {
+            int n = 0;
+            foreach (Move m in Moves) if (m.Problem != null) n++;
+            return n;
+        }
     }
 
     string _reportPath = "";
+    string _destinationRoot = DefaultDestinationRoot;
     readonly List<Candidate> _candidates = new();
     Vector2 _scroll;
     string _summary = "";
 
     [MenuItem("Tools/Asset Bench/Promote From Report...")]
-    static void Open() => GetWindow<AssetBenchPromoter>(true, "Asset Bench — Promote", true).minSize = new Vector2(760f, 420f);
+    static void Open() => GetWindow<AssetBenchPromoter>(true, "Asset Bench — Promote", true).minSize = new Vector2(820f, 480f);
 
     void OnGUI()
     {
         EditorGUILayout.HelpBox(
-            "Reads a bench report, then moves every 'Keep' row out of Assets/_Bench/ into the project.\n" +
-            "Moves go through AssetDatabase so .meta files and GUIDs are preserved. Existing destinations are never overwritten.",
+            "Reads a bench report and moves every 'Keep' row out of Assets/_Bench/ into the project, "
+            + "together with the materials, textures and shaders it depends on.\n"
+            + "Moves go through AssetDatabase so .meta files and GUIDs are preserved. "
+            + "Existing destinations are never overwritten.",
             MessageType.Info);
 
         using (new EditorGUILayout.HorizontalScope())
@@ -48,9 +70,14 @@ public sealed class AssetBenchPromoter : EditorWindow
                 BrowseForReport();
         }
 
+        EditorGUI.BeginChangeCheck();
+        _destinationRoot = EditorGUILayout.TextField("Destination root", _destinationRoot);
+        if (EditorGUI.EndChangeCheck())
+            RebuildDestinations();
+
         using (new EditorGUI.DisabledScope(_candidates.Count == 0))
         {
-            if (GUILayout.Button($"Promote {SelectedCount()} selected", GUILayout.Height(28f)))
+            if (GUILayout.Button($"Promote {SelectedCount()} selected ({SelectedFileCount()} files)", GUILayout.Height(28f)))
                 Promote();
         }
 
@@ -69,14 +96,23 @@ public sealed class AssetBenchPromoter : EditorWindow
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     c.Selected = EditorGUILayout.Toggle(c.Selected, GUILayout.Width(18f));
-                    EditorGUILayout.LabelField(c.Label, EditorStyles.boldLabel);
+                    c.Expanded = EditorGUILayout.Foldout(c.Expanded, $"{c.Label}  —  {c.Moves.Count} file(s)", true);
                 }
 
-                EditorGUILayout.LabelField("from", c.SourcePath);
-                c.DestinationPath = EditorGUILayout.TextField("to", c.DestinationPath);
+                EditorGUILayout.LabelField("asset", c.SourcePath);
 
-                if (!string.IsNullOrEmpty(c.Problem))
-                    EditorGUILayout.HelpBox(c.Problem, MessageType.Warning);
+                int blocked = c.BlockedCount();
+                if (blocked > 0)
+                    EditorGUILayout.HelpBox($"{blocked} of {c.Moves.Count} file(s) will be skipped — see the list.", MessageType.Warning);
+
+                if (!c.Expanded) continue;
+
+                EditorGUI.indentLevel++;
+                foreach (Move m in c.Moves)
+                {
+                    EditorGUILayout.LabelField(Relative(m.Source), m.Problem == null ? "→ " + Relative(m.Destination) : "SKIP: " + m.Problem);
+                }
+                EditorGUI.indentLevel--;
             }
         }
         EditorGUILayout.EndScrollView();
@@ -85,10 +121,25 @@ public sealed class AssetBenchPromoter : EditorWindow
             EditorGUILayout.HelpBox(_summary, MessageType.None);
     }
 
+    static string Relative(string assetPath) =>
+        assetPath.StartsWith(StagingRoot, StringComparison.OrdinalIgnoreCase)
+            ? assetPath.Substring(StagingRoot.Length)
+            : assetPath;
+
     int SelectedCount()
     {
         int n = 0;
         foreach (Candidate c in _candidates) if (c.Selected) n++;
+        return n;
+    }
+
+    int SelectedFileCount()
+    {
+        int n = 0;
+        foreach (Candidate c in _candidates)
+            if (c.Selected)
+                foreach (Move m in c.Moves)
+                    if (m.Problem == null) n++;
         return n;
     }
 
@@ -114,7 +165,6 @@ public sealed class AssetBenchPromoter : EditorWindow
         try { lines = File.ReadAllLines(path); }
         catch (Exception ex) { _summary = $"Could not read report: {ex.Message}"; return; }
 
-        int keepRows = 0;
         foreach (string line in lines)
         {
             if (!line.StartsWith("|")) continue;
@@ -123,43 +173,68 @@ public sealed class AssetBenchPromoter : EditorWindow
             // Layout: "", #, Label, Verdict, NeedsRework, Biome, Note, Question, Path, ""
             if (cells.Length < 10) continue;
 
-            string verdict = cells[3].Trim();
-            if (!verdict.Equals("Keep", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!cells[3].Trim().Equals("Keep", StringComparison.OrdinalIgnoreCase)) continue;
 
-            string label = cells[2].Trim();
             string source = cells[9].Trim().Trim('`').Trim();
             if (string.IsNullOrEmpty(source)) continue;
 
-            keepRows++;
-            _candidates.Add(new Candidate
-            {
-                Label = label,
-                SourcePath = source,
-                DestinationPath = ProposeDestination(source),
-                Problem = Validate(source, ProposeDestination(source))
-            });
+            _candidates.Add(new Candidate { Label = cells[2].Trim(), SourcePath = source });
         }
 
-        _summary = keepRows == 0
+        RebuildDestinations();
+
+        _summary = _candidates.Count == 0
             ? "No 'Keep' rows found in that report."
-            : $"Loaded {keepRows} 'Keep' row(s).";
+            : $"Loaded {_candidates.Count} 'Keep' row(s), {SelectedFileCount()} file(s) to move.";
     }
 
-    static string ProposeDestination(string sourcePath)
+    void RebuildDestinations()
     {
-        if (!sourcePath.StartsWith(StagingRoot, StringComparison.OrdinalIgnoreCase))
-            return DefaultDestinationRoot + Path.GetFileName(sourcePath);
+        foreach (Candidate c in _candidates)
+        {
+            c.Moves.Clear();
+            foreach (string source in ClosureOf(c.SourcePath))
+            {
+                string destination = ProposeDestination(source);
+                c.Moves.Add(new Move
+                {
+                    Source = source,
+                    Destination = destination,
+                    Problem = Validate(source, destination),
+                });
+            }
+        }
+    }
 
-        string relative = sourcePath.Substring(StagingRoot.Length);
-        return DefaultDestinationRoot + relative;
+    /// The asset plus every dependency still sitting in staging. Dependencies already outside the staging
+    /// folder are shared project assets and stay where they are.
+    static List<string> ClosureOf(string assetPath)
+    {
+        var closure = new List<string> { assetPath };
+
+        foreach (string dependency in AssetDatabase.GetDependencies(assetPath, true))
+        {
+            if (dependency == assetPath) continue;
+            if (!dependency.StartsWith(StagingRoot, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!closure.Contains(dependency)) closure.Add(dependency);
+        }
+
+        return closure;
+    }
+
+    string ProposeDestination(string sourcePath)
+    {
+        string root = string.IsNullOrWhiteSpace(_destinationRoot) ? DefaultDestinationRoot : _destinationRoot;
+        if (!root.EndsWith("/")) root += "/";
+        return root + Relative(sourcePath);
     }
 
     static string Validate(string source, string destination)
     {
         if (!File.Exists(ToAbsolute(source)))
-            return "Source asset no longer exists.";
+            return "source no longer exists";
         if (File.Exists(ToAbsolute(destination)))
-            return "Destination already exists — this row will be skipped rather than overwritten.";
+            return "destination already exists";
         return null;
     }
 
@@ -171,6 +246,8 @@ public sealed class AssetBenchPromoter : EditorWindow
 
     void Promote()
     {
+        RebuildDestinations();
+
         int moved = 0, skipped = 0, failed = 0;
         var log = new StringBuilder();
 
@@ -179,33 +256,36 @@ public sealed class AssetBenchPromoter : EditorWindow
         {
             foreach (Candidate c in _candidates)
             {
-                if (!c.Selected) { skipped++; continue; }
+                if (!c.Selected) { skipped += c.Moves.Count; continue; }
 
-                string problem = Validate(c.SourcePath, c.DestinationPath);
-                if (problem != null)
+                foreach (Move m in c.Moves)
                 {
-                    c.Problem = problem;
-                    skipped++;
-                    log.AppendLine($"skip  {c.Label}: {problem}");
-                    continue;
-                }
+                    string problem = Validate(m.Source, m.Destination);
+                    if (problem != null)
+                    {
+                        m.Problem = problem;
+                        skipped++;
+                        log.AppendLine($"skip  {Relative(m.Source)}: {problem}");
+                        continue;
+                    }
 
-                string destDir = Path.GetDirectoryName(c.DestinationPath)?.Replace('\\', '/');
-                if (!string.IsNullOrEmpty(destDir) && !AssetDatabase.IsValidFolder(destDir))
-                    CreateFolderRecursive(destDir);
+                    string destDir = Path.GetDirectoryName(m.Destination)?.Replace('\\', '/');
+                    if (!string.IsNullOrEmpty(destDir) && !AssetDatabase.IsValidFolder(destDir))
+                        CreateFolderRecursive(destDir);
 
-                string error = AssetDatabase.MoveAsset(c.SourcePath, c.DestinationPath);
-                if (string.IsNullOrEmpty(error))
-                {
-                    moved++;
-                    c.Problem = null;
-                    log.AppendLine($"moved {c.Label} → {c.DestinationPath}");
-                }
-                else
-                {
-                    failed++;
-                    c.Problem = error;
-                    log.AppendLine($"FAIL  {c.Label}: {error}");
+                    string error = AssetDatabase.MoveAsset(m.Source, m.Destination);
+                    if (string.IsNullOrEmpty(error))
+                    {
+                        moved++;
+                        m.Problem = null;
+                        log.AppendLine($"moved {Relative(m.Source)} → {m.Destination}");
+                    }
+                    else
+                    {
+                        failed++;
+                        m.Problem = error;
+                        log.AppendLine($"FAIL  {Relative(m.Source)}: {error}");
+                    }
                 }
             }
         }

@@ -35,7 +35,26 @@ detail beat brand loyalty; low-poly *style* consistency still beats fidelity.
 ⚠️ Caveat on that specific verdict: the reference was `SM_Gen_Env_Tree_01` from
 **PolygonGeneric** — Synty's deliberately-minimal *filler* pack — not the
 `SM_Env_Tree_Meadow_01` (PolygonNatureBiomes, trunk + canopy parts) the game actually plants.
-The comparison was against Synty's weakest tree. Re-run before treating it as settled.
+Re-run against the Meadow Tree confirmed both toon oaks anyway.
+
+**Pattern after two bench batches (2026-08-12), 6 assets judged — it is category-dependent,
+not a blanket preference:**
+
+| Category | Winner | Verdict |
+|---|---|---|
+| Characters | **Synty** | KayKit Mage **Cut** vs Synty Fantasy Hero preset |
+| Animals | **Polyperfect** | Quirky fox **Cut** vs Polyperfect fox (Synty ships none) |
+| Trees | **non-Synty** | 2 toon oaks + Polyart Dreamscape all **Keep** — richer canopy geometry |
+| Ocean | **Corals** (Keep) | fills a biome with zero scatter today |
+
+Read: Synty is the house style and wins the character silhouette outright. Vegetation is where
+other packs beat it, on canopy geometry. Elsewhere the question is content-gap, not style.
+
+**Judge on our shader, not the vendor's** — the bench defaults to re-rendering candidates on
+`Scatter/FoliageLit` with vendor textures, because that is what the asset becomes once adopted
+(a `ScatterPrototype` with our materials). Vendor shaders show their demo scene, not our world,
+and they are not planet-aware. This also makes vendor shader breakage irrelevant: three of five
+packs staged in batch 2 had Built-in-pipeline shaders or shadergraphs that NRE on Unity 6.
 
 **Why this matters for every recommendation:** subsystems that looked like polish under the
 old "procedural planet renderer" framing are now first-class. Specifically **magic/spell VFX**

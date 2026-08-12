@@ -134,6 +134,22 @@ public static class AssetBenchCommands
         return value.HasValue ? s.SetZoom(value.Value) : $"bench: zoom = {s.Zoom:F2} (lower is closer)";
     }
 
+    [ConsoleCommand("shader", "How candidates render: 'project' (our shader, the default), 'vendor' (as authored), or a shader name. Applies on the next bench.load.", MonoTargetType.Static)]
+    public static string ShaderCmd(string value = "")
+    {
+        AssetBenchService s = Host().Service;
+        if (string.IsNullOrWhiteSpace(value))
+            return $"bench: mode={s.ShaderMode}, shader={s.ProjectShaderName}  (project | vendor | <shader name>)";
+
+        if (value.Equals("vendor", StringComparison.OrdinalIgnoreCase) || value.Equals("authored", StringComparison.OrdinalIgnoreCase))
+            return s.SetShaderMode(BenchShaderMode.AsAuthored, null);
+
+        if (value.Equals("project", StringComparison.OrdinalIgnoreCase))
+            return s.SetShaderMode(BenchShaderMode.ProjectShader, null);
+
+        return s.SetShaderMode(BenchShaderMode.ProjectShader, value);
+    }
+
     [ConsoleCommand("spacing", "Multiplier on how far apart the bench lays props out. Applies on the next bench.load.", MonoTargetType.Static)]
     public static string SpacingCmd(float? value = null)
     {
@@ -160,6 +176,9 @@ public static class AssetBenchCommands
 
     [ConsoleCommand("later", "Mark the focused pair as later (reconsider) and advance.", MonoTargetType.Static)]
     public static string LaterCmd() => Host().Service.SetVerdict(BenchVerdict.Later);
+
+    [ConsoleCommand("blocked", "Mark the focused pair as blocked — it did not render, so it could not be judged.", MonoTargetType.Static)]
+    public static string BlockedCmd() => Host().Service.SetVerdict(BenchVerdict.Blocked);
 
     [ConsoleCommand("note", "Attach a note to the focused pair.", MonoTargetType.Static)]
     public static string NoteCmd(string text) => Host().Service.SetNote(text);

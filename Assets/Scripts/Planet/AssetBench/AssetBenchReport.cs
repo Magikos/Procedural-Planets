@@ -1,7 +1,23 @@
 using System.Collections.Generic;
 using System.Text;
 
-public enum BenchVerdict { Unjudged, Keep, Cut, Later, Error }
+public enum BenchVerdict
+{
+    Unjudged,
+    Keep,
+    Cut,
+    Later,
+
+    /// <summary>
+    /// Could not be judged — it did not render properly, so there was nothing to look at. Deliberately not
+    /// <see cref="Later"/>: that means "seen, deciding later", and mixing the two files assets nobody ever
+    /// saw onto the reconsider list.
+    /// </summary>
+    Blocked,
+
+    /// <summary>The bench failed to place it at all. Set by the bench, not by a verdict key.</summary>
+    Error,
+}
 
 /// <summary>One judged entry. Mutable because the bench edits it in place as verdicts and notes arrive.</summary>
 public sealed class BenchRow
@@ -35,7 +51,7 @@ public static class AssetBenchReport
             return sb.ToString();
         }
 
-        int keep = 0, cut = 0, later = 0, unjudged = 0, error = 0;
+        int keep = 0, cut = 0, later = 0, unjudged = 0, error = 0, blocked = 0;
         foreach (BenchRow r in rows)
         {
             switch (r.Verdict)
@@ -43,6 +59,7 @@ public static class AssetBenchReport
                 case BenchVerdict.Keep: keep++; break;
                 case BenchVerdict.Cut: cut++; break;
                 case BenchVerdict.Later: later++; break;
+                case BenchVerdict.Blocked: blocked++; break;
                 case BenchVerdict.Error: error++; break;
                 default: unjudged++; break;
             }
@@ -51,6 +68,7 @@ public static class AssetBenchReport
         sb.Append("**Keep ").Append(keep)
           .Append(" · Cut ").Append(cut)
           .Append(" · Later ").Append(later)
+          .Append(" · Blocked ").Append(blocked)
           .Append(" · Unjudged ").Append(unjudged)
           .Append(" · Error ").Append(error)
           .Append("**").AppendLine();

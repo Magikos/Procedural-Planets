@@ -9,6 +9,20 @@ using UnityEngine;
 /// analytic surface can sit below the rendered mesh, and a prop floating above the terrain you are standing
 /// on answers the wrong question.
 /// </summary>
+public enum BenchShaderMode
+{
+    /// <summary>Render the candidate the way the vendor authored it — their shader, their look.</summary>
+    AsAuthored,
+
+    /// <summary>
+    /// Re-render the candidate's meshes on the project's own shader, carrying the vendor textures across.
+    /// This is the default because it answers the question actually being asked: not "how does this look in
+    /// the vendor's demo scene" but "how will this look in our world" — planet-aware lighting, night side
+    /// going dark, the same treatment every adopted asset ends up with.
+    /// </summary>
+    ProjectShader,
+}
+
 /// <summary>The spawned objects for one judged entry, kept so the HUD can label them and isolate the pair.</summary>
 public sealed class BenchPair
 {
@@ -42,6 +56,7 @@ public sealed class AssetBenchService
     float _radius;
     float _seaLevel;
     int _seaLevelHits;
+    bool _shaderMissing;
 
     AssetBenchManifest _manifest;
     readonly List<BenchRow> _rows = new();
@@ -74,6 +89,27 @@ public sealed class AssetBenchService
 
     /// <summary>Multiplier on the derived layout spacing. Read when a batch is loaded.</summary>
     public float Spacing { get; private set; } = 1f;
+
+    public BenchShaderMode ShaderMode { get; private set; } = BenchShaderMode.ProjectShader;
+
+    /// <summary>Shader the candidates are re-rendered on. Foliage by default; most candidates are props.</summary>
+    public string ProjectShaderName { get; private set; } = "Scatter/FoliageLit";
+
+    public string SetShaderMode(BenchShaderMode mode, string shaderName)
+    {
+        ShaderMode = mode;
+        if (!string.IsNullOrWhiteSpace(shaderName))
+        {
+            if (Shader.Find(shaderName) == null)
+                return $"bench: no shader named '{shaderName}'";
+            ProjectShaderName = shaderName;
+        }
+
+        string reload = IsLoaded ? " — reload the batch to apply" : "";
+        return mode == BenchShaderMode.AsAuthored
+            ? $"bench: candidates render as authored (vendor shaders){reload}"
+            : $"bench: candidates render on {ProjectShaderName}{reload}";
+    }
 
     public string SetSpacing(float value)
     {
@@ -120,10 +156,11 @@ public sealed class AssetBenchService
             return planetError;
 
         _manifest = manifest;
+        _shaderMissing = false;
         _container = new GameObject($"AssetBench [{manifest.BatchId}]").transform;
 
         Vector3 originDir = CameraDirOrDefault();
-        int spawned = 0, failed = 0;
+        int spawned = 0, failed = 0, incompatible = 0;
 
         float footprint = Mathf.Max(BatchFootprintRadius(manifest), MinFootprintRadius);
         float gapRad = Ang(footprint * GapPerRadius * Spacing);
@@ -167,6 +204,14 @@ public sealed class AssetBenchService
             }
             else spawned++;
 
+            string badShaders = DescribeIncompatibleShaders(candidate);
+            if (badShaders != null)
+            {
+                row.Note = $"candidate will not render under URP — Built-in shader(s): {badShaders}";
+                row.NeedsRework = true;
+                incompatible++;
+            }
+
             Vector3 centreDir = (slot.CandidateDir + slot.ReferenceDir).normalized;
             _rows.Add(row);
             _pairs.Add(new BenchPair
@@ -191,8 +236,19 @@ public sealed class AssetBenchService
             ? $"  ⚠ {_seaLevelHits} object(s) grounded at sea level — you are over ocean. Fly to land and re-run bench.load."
             : "";
 
+        string shaders = incompatible > 0
+            ? $"  ⚠ {incompatible} candidate(s) use Built-in-pipeline shaders and will draw magenta — F5 to mark Blocked."
+            : "";
+
+        if (_shaderMissing)
+            shaders += $"  ⚠ shader '{ProjectShaderName}' not found — candidates left as authored.";
+
+        string mode = ShaderMode == BenchShaderMode.ProjectShader
+            ? $"  Rendering candidates on {ProjectShaderName} (bench.shader vendor to compare)."
+            : "  Rendering candidates as authored (bench.shader project to compare).";
+
         return $"bench: loaded '{manifest.BatchId}' — {spawned} pairs{tail}. "
-             + $"1-9 jump, Tab next, F1 keep / F2 cut / F3 later.{water}";
+             + $"1-9 jump, Tab next, F1 keep / F2 cut / F3 later / F5 blocked.{mode}{water}{shaders}";
     }
 
     public void Focus(int index)
@@ -322,7 +378,11 @@ public sealed class AssetBenchService
             return null;
 
         GameObject go = UnityEngine.Object.Instantiate(prefab, groundPoint, Quaternion.identity, _container);
-        ApplyMaterial(go, materialOverride);
+
+        // An explicit material on the entry is a deliberate authoring choice and outranks the mode.
+        if (materialOverride != null) ApplyMaterial(go, materialOverride);
+        else if (ShaderMode == BenchShaderMode.ProjectShader && !ApplyProjectShader(go)) _shaderMissing = true;
+
         Orient(go, groundPoint, dir);
         return go;
     }
@@ -460,6 +520,56 @@ public sealed class AssetBenchService
         }
     }
 
+    /// Rebuilds every material slot on the project's shader, carrying the vendor albedo across. Per-slot
+    /// rather than one material for the whole prop: a tree is bark plus leaves, and collapsing them to a
+    /// single material puts bark on the canopy.
+    bool ApplyProjectShader(GameObject go)
+    {
+        Shader shader = Shader.Find(ProjectShaderName);
+        if (shader == null) return false;
+
+        foreach (Renderer r in go.GetComponentsInChildren<Renderer>(true))
+        {
+            Material[] source = r.sharedMaterials;
+            var slots = new Material[source.Length];
+
+            for (int i = 0; i < source.Length; i++)
+            {
+                var converted = new Material(shader) { name = (source[i] != null ? source[i].name : "slot" + i) + " (bench)" };
+                CopyAlbedo(source[i], converted);
+                slots[i] = converted;
+            }
+
+            r.sharedMaterials = slots;
+        }
+
+        return true;
+    }
+
+    static readonly string[] AlbedoProperties = { "_BaseMap", "_MainTex", "_BaseColorMap", "_Albedo", "_Diffuse" };
+
+    static void CopyAlbedo(Material source, Material destination)
+    {
+        if (source == null) return;
+
+        foreach (string property in AlbedoProperties)
+        {
+            if (!source.HasProperty(property)) continue;
+            Texture texture = source.GetTexture(property);
+            if (texture == null) continue;
+
+            foreach (string target in AlbedoProperties)
+                if (destination.HasProperty(target)) { destination.SetTexture(target, texture); break; }
+
+            break;
+        }
+
+        if (source.HasProperty("_BaseColor") && destination.HasProperty("_BaseColor"))
+            destination.SetColor("_BaseColor", source.GetColor("_BaseColor"));
+        else if (source.HasProperty("_Color") && destination.HasProperty("_BaseColor"))
+            destination.SetColor("_BaseColor", source.GetColor("_Color"));
+    }
+
     /// Vendor prefabs do not agree on where the pivot sits — base, centre, or an arbitrary rig root — so
     /// placing the pivot on the ground leaves props floating or half-buried. Drop each one until its lowest
     /// rendered point touches the ground instead.
@@ -476,6 +586,37 @@ public sealed class AssetBenchService
         float bottomAboveGround = Vector3.Dot(bounds.center - groundPoint, up) - halfHeight;
 
         go.transform.position -= up * bottomAboveGround;
+    }
+
+    /// A Built-in-pipeline shader still compiles and reports isSupported under URP — it just draws magenta.
+    /// Catching it here turns "why is the fox pink" into a note before the judging starts.
+    static string DescribeIncompatibleShaders(GameObject go)
+    {
+        if (go == null) return null;
+
+        var offenders = new List<string>();
+        foreach (Renderer r in go.GetComponentsInChildren<Renderer>(true))
+        {
+            foreach (Material m in r.sharedMaterials)
+            {
+                if (m == null || m.shader == null) continue;
+                if (DeclaresUniversalPipeline(m.shader)) continue;
+                if (!offenders.Contains(m.shader.name)) offenders.Add(m.shader.name);
+            }
+        }
+
+        return offenders.Count == 0 ? null : string.Join(", ", offenders);
+    }
+
+    static bool DeclaresUniversalPipeline(Shader shader)
+    {
+        var tag = new UnityEngine.Rendering.ShaderTagId("RenderPipeline");
+        for (int i = 0; i < shader.subshaderCount; i++)
+        {
+            string value = shader.FindSubshaderTagValue(i, tag).name;
+            if (!string.IsNullOrEmpty(value) && value.Contains("Universal")) return true;
+        }
+        return false;
     }
 
     /// Renderer bounds rather than the spawn points: a tree and a pebble need very different standoffs,
