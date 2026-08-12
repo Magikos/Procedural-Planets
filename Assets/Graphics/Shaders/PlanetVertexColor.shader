@@ -777,17 +777,16 @@ Shader "Planet/VertexColor"
                     max(_GrassFarOverlayAltitudeEnd, _GrassFarOverlayAltitudeStart + 1.0), cameraAltitude);
                 float approachWeight = lerp(saturate(_GrassFarOverlayOrbitStrength), 1.0, nearSurface);
 
-                // The far overlay must co-terminate with the biome transition or it paints a vivid green ridge
-                // over the ground as it shifts to tan across a border = the bright biome-edge line. The
-                // original fix (150a482) gated on GROUND greenness, but that starves savanna (dense grass on
-                // TAN ground), so it was dropped (17707e3) and the line came back. Gate on grass DENSITY
-                // magnitude instead: paint only where a biome is genuinely grassy (grassland AND savanna
-                // interiors clear the toe), and drop the low-density arid-border bleed band where the ridge
-                // forms. smoothstep([toe,full]) keeps a smooth ramp (no kink) and full coverage in interiors so
-                // savanna stays lush; toe raised from 0.12 (which admitted the whole bleed band).
+                // Carpet coverage scales SOFTLY and proportionally with grass density across the whole
+                // range. A narrow [toe,full] cut mapped a narrow density band to a narrow SPATIAL band at
+                // grassy->arid borders, so the moisture/biome tint gradient read as a hard green ridge (the
+                // biome-edge line). A wide gentle ramp spreads that transition over a broad gradient (no
+                // stripe): sparse/dry biomes read as a faint dry-grass tint over the ground instead of bare
+                // dirt, grassland interiors still reach full coverage, and true desert/rock (density ~0)
+                // stays bare. Tune the ramp width if a border still reads too sharp.
                 float rawCoverage = saturate(grass.density * slopeKeep * waterKeep);
-                float coverageToe = 0.38;
-                float coverageFull = 0.72;
+                float coverageToe = 0.06;
+                float coverageFull = 0.85;
                 float envCoverage = smoothstep(coverageToe, coverageFull, rawCoverage);
                 float nearWeight = 1.0 - smoothstep(144.0, 200.0, viewDistance);
                 float midWeight = smoothstep(144.0, 200.0, viewDistance)

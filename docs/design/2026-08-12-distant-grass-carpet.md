@@ -125,3 +125,20 @@ fly to grassland, toggle, and check the borders with `grass.debug-layer-colors`.
 
 Blanket **on** (preview, resets on restart), debug viz off, time frozen at noon, camera at `Lake1`.
 Toggle off with `grass.layer Blanket false`; unfreeze with `time.freeze false`.
+
+## Update 2026-08-12 — implemented
+
+Verified live (editor healthy after Bryan's restart) and shipped:
+
+- Soft gate landed in `PlanetVertexColor.shader` (0.06 / 0.85).
+- Blanket **enabled by default** (`_grassBlanketEnabled = true`) + surface brightness `0.35 → 0.6`
+  so the painted carpet reads at distance. A/B at the `Lake1` shore: distant grassy hills green up,
+  no stripe, and the arid waterline correctly stays dry (`grass-distance-v2_off` vs the on-shot).
+- Reeds (separate from grass, but same lake pass): `FoliageReeds._SeasonColor` warm tint
+  `(1.1,0.62,0.42) → white` — it was turning the olive/brown cattail atlas maroon; and
+  `Lake Cattails.ScaleRange 0.8-1.4 → 0.42-0.55` (the reed mesh is 3.4 m tall, so the old max was
+  ~4.8 m; new max ~1.9 m, under the 2 m capsule). Reed height needs a stop→play to rebind the DTO.
+- Still open: matching Synty's GREEN-LEAVED reeds needs a leafier mesh — the Swamp pack only ships
+  the bare cattail-stalk `SM_Env_Reeds_01`. Harvest follow-up.
+- Environment: the stuck `isCompiling` (HotReload looping on the uncommitted `AssetBench` scripts
+  not in an asmdef) recurred. Commit them into an asmdef / stash to make iteration reliable.

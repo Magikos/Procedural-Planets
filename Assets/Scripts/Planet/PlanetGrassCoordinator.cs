@@ -16,14 +16,11 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     bool _grassEnabled = true;
     bool _nearFieldGrassEnabled = true;
     bool _chunkGrassEnabled = false;
-    // Blanket on: the far grass-surface pass now uses linear coverage + toe cut (matching the
-    // biome density blend) so it no longer stripes at biome borders. It is the base layer the
-    // near blades and future tuft layers match to (single-source GrassCanopyAlbedo).
-    // Disabled: the far surface-overlay paints a vivid green stripe where the baked grass COLOUR (eval.tint)
-    // shifts green along a moisture/biome-transition channel and the overlay amplifies that subtle gradient
-    // into a hard band (measured: tint g-r +0.21 in the band while coverage/density are unchanged). Parked
-    // until the grass-colour blend is reworked. Re-enable via grass.layer Blanket true.
-    bool _grassBlanketEnabled = false;
+    // The far grass-surface overlay ("blanket") paints grass tint + procedural blade-fiber onto the
+    // terrain beyond the near-blade range, so grassland reads as a grass carpet at distance instead of
+    // bare ground. Its coverage gate is a soft proportional ramp (PlanetVertexColor.shader) so the
+    // grassy->arid transition is a gradient, not the hard biome-edge stripe that parked it before.
+    bool _grassBlanketEnabled = true;
 
     ChunkedSurfaceProvider _chunkedProvider;
     BiomeSurfaceTextureArrays _surfaceArrays;
@@ -46,7 +43,7 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     // Live-tunable via grass.* console commands (see bottom of file). The default aims the
     // painted surface at the aggregate blade canopy; close blade gaps still expose terrain.
     float _farOverlayStrength = 1.0f;
-    float _grassSurfaceBrightness = 0.35f;
+    float _grassSurfaceBrightness = 0.6f;
     float _grassSurfaceSaturation = 0.72f; // green-over-tan biome-edge line lever; lower trims the vivid pop
 
     const float GrassFarOverlayStart = 24f;
