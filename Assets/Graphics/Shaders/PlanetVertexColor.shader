@@ -847,6 +847,7 @@ Shader "Planet/VertexColor"
                     fiberUv.x * noiseScale * 0.42,
                     fiberUv.y * noiseScale * 2.35,
                     11.0 + eval.tint.g * 23.0));
+                float fiberRaw = fiber;
                 // The anisotropic fiber and fleck are near blade-texture detail; aligned to consistent world
                 // tangents they alias into directional weave/streaks at grazing distance (the fleck's fwidth
                 // self-filter is not enough at shallow angles). Fade both to neutral with view distance so
@@ -860,6 +861,7 @@ Shader "Planet/VertexColor"
                 float fleckFilter = saturate(1.0 - max(fwidth(fleckUv.x), fwidth(fleckUv.y)) * 1.5);
                 float fleck = smoothstep(0.52, 0.88,
                     ValueNoise3D(float3(fleckUv.x, fleckUv.y, 23.0 + eval.tint.r * 19.0)));
+                float fleckRaw = fleck;
                 fleck = lerp(0.5, fleck, fleckFilter);
                 fleck = lerp(0.5, fleck, texFade);
                 grassCoverage = saturate(grassCoverage
@@ -885,7 +887,12 @@ Shader "Planet/VertexColor"
                     if (_GrassOverlayDebug < 2.5) return saturate(eval.tint);
                     if (_GrassOverlayDebug < 3.5) return saturate(float3((eval.tint.g - eval.tint.r) * 3.0, grassCoverage, 0.0));
                     if (_GrassOverlayDebug < 4.5) return saturate(eval.density).xxx;      // raw grass density
-                    return saturate(eval.envCoverage).xxx;                                // after smoothstep(toe,full)
+                    if (_GrassOverlayDebug < 5.5) return saturate(eval.envCoverage).xxx;  // after smoothstep(toe,full)
+                    // 6: directional blade-texture (fiber+fleck) AFTER the distance fade -> RED where it still bands
+                    if (_GrassOverlayDebug < 6.5)
+                        return lerp(terrainAlbedo, float3(1.0, 0.0, 0.0), saturate((abs(fiber - 0.5) + abs(fleck - 0.5)) * 2.5) * grassCoverage);
+                    // 7: directional blade-texture BEFORE the fade (raw) -> RED = the full pattern source
+                    return lerp(terrainAlbedo, float3(1.0, 0.0, 0.0), saturate((abs(fiberRaw - 0.5) + abs(fleckRaw - 0.5)) * 2.5) * grassCoverage);
                 }
 
                 return lerp(terrainAlbedo, saturate(grassSurface), grassCoverage);

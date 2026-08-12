@@ -281,6 +281,15 @@ public static class GrassCommands
         return "grass controllers disposed; blades rebuild next frame";
     }
 
+    [ConsoleCommand("overlay-debug", "Far grass-carpet debug view: 0=off, 1=coverage, 2=tint, 4=density, 5=envCoverage, 6=fiber+fleck AFTER fade as RED, 7=fiber+fleck RAW as RED.")]
+    public static string OverlayDebug(int? mode = null)
+    {
+        int id = Shader.PropertyToID(ShaderGlobalIds.GrassOverlayDebug);
+        if (mode.HasValue)
+            Shader.SetGlobalFloat(id, mode.Value);
+        return $"grass overlay-debug = {(int)Shader.GetGlobalFloat(id)}";
+    }
+
     [ConsoleCommand("render-mode", "Get or set Physical, Hybrid, or Cluster geometry without rebuilding.")]
     public static string RenderMode(GrassGeometryMode? mode = null)
     {

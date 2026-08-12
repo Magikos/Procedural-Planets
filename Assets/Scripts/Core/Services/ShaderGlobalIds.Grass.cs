@@ -22,4 +22,5 @@ public static partial class ShaderGlobalIds
     public const string GrassClusterEndDistance = "_GrassClusterEndDistance";
     public const string GrassDebugBladeTint = "_GrassDebugBladeTint";
     public const string GrassDebugLayerColors = "_GrassDebugLayerColors";
+    public const string GrassOverlayDebug = "_GrassOverlayDebug";
 }
