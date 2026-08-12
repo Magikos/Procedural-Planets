@@ -21,6 +21,7 @@ public struct ScatterProtoParams
     public int Biome;             // (int)BiomeType
     public float SpacingMeters;
     public float BiomeBlendPower;
+    public byte OnWater;          // 1 = float on the sea surface inside water cells
     public PlacementRulesBurst Rules;
 
     public static ScatterProtoParams From(ScatterPrototypeDto p) => new ScatterProtoParams
@@ -29,6 +30,7 @@ public struct ScatterProtoParams
         Biome = (int)p.Biome,
         SpacingMeters = p.SpacingMeters,
         BiomeBlendPower = p.BiomeBlendPower,
+        OnWater = p.OnWater ? (byte)1 : (byte)0,
         Rules = new PlacementRulesBurst
         {
             Weight = p.Weight,
@@ -120,15 +122,19 @@ public struct ScatterGatherJob : IJobParallelFor
         float membership = ScatterGatherBurst.Membership(memo, pp.Biome);
         if (membership <= 0f) return false;
 
-        float altitudeMeters = (localRadius - SeaRadiusLocal) * Scale;
+        // OnWater prototypes (lily pads) float on the sea surface inside their biome's water cells, so they
+        // place at the sea radius with zero altitude and a flat (radial) normal instead of on the lakebed.
+        bool onWater = pp.OnWater != 0;
+        float placeRadius = onWater ? SeaRadiusLocal + ScatterPlacementMath.OnWaterSurfaceOffsetMeters / Scale : localRadius;
+        float altitudeMeters = onWater ? 0f : (localRadius - SeaRadiusLocal) * Scale;
         if (!ScatterGatherBurst.PassesAltitudeWater(altitudeMeters, HasOcean != 0, pp.Rules)) return false;
 
-        Vector3 localNormal = ScatterGatherBurst.SampleNormalAt(dir, localRadius, NoiseLayers, DiagData, DiagCells, PlanetRadius);
-        float slopeCos = Mathf.Clamp01(Vector3.Dot(localNormal, dir));
+        Vector3 localNormal = onWater ? dir : ScatterGatherBurst.SampleNormalAt(dir, localRadius, NoiseLayers, DiagData, DiagCells, PlanetRadius);
+        float slopeCos = onWater ? 1f : Mathf.Clamp01(Vector3.Dot(localNormal, dir));
         float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, pp.SpacingMeters, BaseRadiusLocal * Scale)
                             * Mathf.Pow(membership, pp.BiomeBlendPower);
 
-        if (!ScatterGatherBurst.TryPlace(slotSeed, dir, localNormal, localRadius, altitudeMeters, slopeCos,
+        if (!ScatterGatherBurst.TryPlace(slotSeed, dir, localNormal, placeRadius, altitudeMeters, slopeCos,
                 densityKeep, HasOcean != 0, pp.Rules, out Vector3 posLocal, out Quaternion rot, out float sc))
             return false;
 

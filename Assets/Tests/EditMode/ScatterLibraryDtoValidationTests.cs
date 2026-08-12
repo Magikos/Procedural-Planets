@@ -42,6 +42,7 @@ namespace ProceduralPlanets.Tests
             HasMinAltitude: false, MinAltitudeMeters: 0f,
             HasMaxAltitude: false, MaxAltitudeMeters: 0f,
             MinWaterClearanceMeters: 0.05f,
+            OnWater: false,
             ScaleRange: new Vector2(0.85f, 1.2f),
             RandomYaw: true,
             Interaction: ScatterInteraction.None,

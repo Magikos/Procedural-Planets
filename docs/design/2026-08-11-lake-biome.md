@@ -110,3 +110,35 @@ caustic surface, and no lake-specific plants — biomed identically to the ocean
   cutoff), `ShoreRings` (2, shore band width). Cattail density = `SpacingMeters` on the Lake prototypes.
 - The `LakeShore` shore currently reuses the **Swamp** ground texture (muddy). If you want a sandier lake
   beach, point `LakeShore.asset`'s surface textures at Beach instead.
+
+## Afternoon follow-up (2026-08-11) — Stages 3 + shore landed; look pass
+
+Landed after Bryan's morning review (branch `scatter-placement`/`character-controller-mvp`):
+- **Lush shore**: `LakeShore.asset` retargeted from Swamp mud to Grassland green surface textures + denser
+  grass (density 0.95, height 0.66, greener tint + gradient). Kills the orange cracked-mud waterline.
+- **Lily pads (Stage 3) DONE**: imported `SM_Env_LillyPads_01` (+ `LillyPads_01.tga`) into the project pack,
+  built `FoliageLily.mat` on the opaque `Scatter.shader`. New **`OnWater`** prototype flag (SO + DTO + Burst
+  `ScatterProtoParams`) → in BOTH gather paths (`ScatterField` + `ScatterGatherJob`, parity-mirrored) an
+  OnWater proto places at the **sea radius** (not the lakebed), altitude 0, flat radial normal, so it floats
+  on the water inside its biome's water cells. `Lake Lily` prototype (Biome=Lake, OnWater, spacing 12,
+  slot 68). Dropped its billboard LOD (a single card can't represent the pad cluster → read as a gray square)
+  and its impostor; LOD0 clusters render 0-400 m so a whole pond's pads are visible at once.
+- **On-water surface offset**: OnWater scatter sits `ScatterPlacementMath.OnWaterSurfaceOffsetMeters` (0.15 m)
+  above the sea surface so pads ride ON the water instead of z-fighting the coplanar water mesh / reading as
+  submerged under the water tint.
+
+### DEFERRED / TODO (don't forget)
+- **Lily buoyancy (Bryan, 2026-08-11)**: the water surface MOVES (Ocean swell / ripples), but lily pads are
+  placed at a fixed radius, so they don't bob with it. When we do the water-interaction pass, drive on-water
+  scatter vertical position (or a per-instance offset) from the SAME wave function the water mesh uses
+  (`EvaluateSurfaceWave` in `Ocean.shader`) so pads genuinely float/bob with the surface instead of sitting
+  at a static height. Until then the 0.15 m static offset keeps them readable.
+- **Lily density near shore**: reference has pads denser near the shore, open middle. Currently uniform
+  (`SpacingMeters` 12). Add a shore-distance density falloff (denser near the `LakeShore` band).
+- **Flower variety**: `LillyPads_01` is plain pads; `LillyPads_02` has pink/yellow flowers — mix in for the
+  reference look.
+- **Lily far-impostor**: cull is 400 m (≥120 → an impostor tier can build at ~340 m). A flat pad's octahedral
+  impostor may read as a floating card if viewed from far. If it does, add a per-prototype "no impostor" flag
+  for flat on-water scatter (bounded instance count makes mesh-only cheap for lakes anyway).
+- **Stale tests**: `ScatterIdTests.Bit63_StaysSpare*` / `PlayerBit_SetAndReadIndependently` assert bit 63 is
+  spare — false since `SlotBits` went 6→7 (`cdde4bf`). Update them to the current packing layout.

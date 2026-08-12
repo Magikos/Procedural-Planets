@@ -31,6 +31,8 @@ public sealed class ScatterPrototype : ScriptableObject
     public float MaxAltitudeMeters = 0f;
     [Tooltip("Land props: min metres above the waterline. 0 to disable.")]
     [Min(0f)] public float MinWaterClearanceMeters = 0.05f;
+    [Tooltip("Float on the water surface (sea radius) inside the biome's water cells instead of standing on the terrain. For lily pads and other on-water scatter. Use with Biome = Lake.")]
+    public bool OnWater = false;
 
     [Header("Transform jitter")]
     public Vector2 ScaleRange = new Vector2(0.85f, 1.2f);

@@ -18,8 +18,8 @@ MonoBehaviour:
   Biome: 18
   BiomeBlendPower: 1
   Weight: 0.7
-  MaxSlopeDegrees: 28
-  SlopeFadeDegrees: 6
+  MaxSlopeDegrees: 42
+  SlopeFadeDegrees: 5
   ConformToSlope: 0
   HasMinAltitude: 0
   MinAltitudeMeters: 0

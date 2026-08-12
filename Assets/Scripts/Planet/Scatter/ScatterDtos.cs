@@ -27,6 +27,7 @@ public sealed record ScatterPrototypeDto(
     bool HasMinAltitude, float MinAltitudeMeters,
     bool HasMaxAltitude, float MaxAltitudeMeters,
     float MinWaterClearanceMeters,
+    bool OnWater,
     Vector2 ScaleRange,
     bool RandomYaw,
     ScatterInteraction Interaction,
@@ -37,7 +38,7 @@ public sealed record ScatterPrototypeDto(
         p.DisplayName, p.SlotId, p.SpacingMeters, p.Biome, p.BiomeBlendPower, p.Weight,
         p.MaxSlopeDegrees, p.SlopeFadeDegrees, p.ConformToSlope,
         p.HasMinAltitude, p.MinAltitudeMeters, p.HasMaxAltitude, p.MaxAltitudeMeters,
-        p.MinWaterClearanceMeters, p.ScaleRange, p.RandomYaw, p.Interaction,
+        p.MinWaterClearanceMeters, p.OnWater, p.ScaleRange, p.RandomYaw, p.Interaction,
         BuildParts(p));
 
     static ScatterPartDto[] BuildParts(ScatterPrototype p)

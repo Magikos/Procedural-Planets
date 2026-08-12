@@ -10,34 +10,33 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
-  m_Name: Lake Cattails
+  m_Name: Lake Lily
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
-  DisplayName: Lake Cattails
-  SlotId: 64
-  SpacingMeters: 4
-  Biome: 18
+  DisplayName: Lake Lily
+  SlotId: 68
+  SpacingMeters: 12
+  Biome: 17
   BiomeBlendPower: 1
   Weight: 1
-  MaxSlopeDegrees: 45
+  MaxSlopeDegrees: 80
   SlopeFadeDegrees: 5
   ConformToSlope: 0
   HasMinAltitude: 0
   MinAltitudeMeters: 0
-  HasMaxAltitude: 1
-  MaxAltitudeMeters: 3
+  HasMaxAltitude: 0
+  MaxAltitudeMeters: 0
   MinWaterClearanceMeters: 0
-  ScaleRange: {x: 0.8, y: 1.4}
+  OnWater: 1
+  ScaleRange: {x: 0.8, y: 1.3}
   RandomYaw: 1
   Interaction: 0
   Parts:
-  - Name: Reeds
-    Material: {fileID: 2100000, guid: 320809e0e65aba840b0af34b718a08cf, type: 2}
+  - Name: Lily
+    Material: {fileID: 2100000, guid: 397c884e0d9dde34d8c80b6fc95bd463, type: 2}
     LodMeshes:
-    - {fileID: 6559907416872072135, guid: 18b997c676e20544fb1bd0e51fe3a1fb, type: 3}
-    - {fileID: 7164127797826947399, guid: 18b997c676e20544fb1bd0e51fe3a1fb, type: 3}
+    - {fileID: 7289050942599412193, guid: 286f09a940eb2f84a944b9fb36f28684, type: 3}
     LodEndDistances:
-    - 90
-    - 900
+    - 400
     CastShadows: 1
     ReceiveShadows: 1
   Material: {fileID: 0}

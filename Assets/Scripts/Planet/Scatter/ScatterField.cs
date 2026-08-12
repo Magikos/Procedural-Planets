@@ -286,15 +286,19 @@ public sealed class ScatterField : IDisposable
         float membership = MembershipFor(biomeMemo, proto.Biome);
         if (membership <= 0f) return false;
 
-        float altitudeMeters = (localRadius - ctx.SeaRadiusLocal) * scale;
+        // OnWater prototypes (lily pads) float on the sea surface inside their biome's water cells, so they
+        // place at the sea radius with zero altitude and a flat (radial) normal instead of on the lakebed.
+        bool onWater = proto.OnWater;
+        float placeRadius = onWater ? ctx.SeaRadiusLocal + ScatterPlacementMath.OnWaterSurfaceOffsetMeters / scale : localRadius;
+        float altitudeMeters = onWater ? 0f : (localRadius - ctx.SeaRadiusLocal) * scale;
         if (!ScatterPlacementMath.PassesAltitudeWater(altitudeMeters, ctx.HasOcean, rules)) return false;
 
-        Vector3 localNormal = _ground.SampleNormalAt(dir, localRadius);
-        float slopeCos = Mathf.Clamp01(Vector3.Dot(localNormal, dir));
+        Vector3 localNormal = onWater ? dir : _ground.SampleNormalAt(dir, localRadius);
+        float slopeCos = onWater ? 1f : Mathf.Clamp01(Vector3.Dot(localNormal, dir));
         float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, proto.SpacingMeters, ctx.BaseRadiusLocal * scale)
                             * Mathf.Pow(membership, proto.BiomeBlendPower);
 
-        if (!ScatterPlacementMath.TryPlace(slotSeed, dir, localNormal, localRadius, altitudeMeters, slopeCos,
+        if (!ScatterPlacementMath.TryPlace(slotSeed, dir, localNormal, placeRadius, altitudeMeters, slopeCos,
                 densityKeep, ctx.HasOcean, rules, out Vector3 posLocal, out Quaternion rot, out float sc))
             return false;
 

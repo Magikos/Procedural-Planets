@@ -19,6 +19,12 @@ public struct PlacementRules
 // kernel can mirror this function against baked textures. This is the CPU<->GPU parity surface.
 public static class ScatterPlacementMath
 {
+    // OnWater scatter (lily pads) sits this many metres above the sea surface so it rides ON the water
+    // instead of z-fighting the coplanar water mesh / reading as submerged under the water tint. Small
+    // enough not to look like it floats on a calm lake.
+    public const float OnWaterSurfaceOffsetMeters = 0.15f;
+
+
     // At zero fade MaxSlopeCos == MinSlopeCos and InverseLerp(a,a,x) returns 0, which would reject
     // flat ground too. Degenerate interval -> explicit hard cutoff.
     static float SlopeKeep(float maxSlopeCos, float minSlopeCos, float slopeCos)
