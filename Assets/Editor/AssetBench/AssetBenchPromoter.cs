@@ -170,12 +170,21 @@ public sealed class AssetBenchPromoter : EditorWindow
             if (!line.StartsWith("|")) continue;
 
             string[] cells = line.Split('|');
-            // Layout: "", #, Label, Verdict, NeedsRework, Biome, Note, Question, Path, ""
+            // Leading and trailing pipes produce empty first and last cells:
+            // "", #, Label, Verdict, NeedsRework, Biome, Note, Question, Path, ""
             if (cells.Length < 10) continue;
 
             if (!cells[3].Trim().Equals("Keep", StringComparison.OrdinalIgnoreCase)) continue;
 
-            string source = cells[9].Trim().Trim('`').Trim();
+            // Found by its backticks rather than a fixed index, so adding a column cannot silently
+            // turn every row into "no Keep rows found".
+            string source = null;
+            foreach (string cell in cells)
+            {
+                string trimmed = cell.Trim();
+                if (trimmed.StartsWith("`") && trimmed.EndsWith("`") && trimmed.Length > 2)
+                    source = trimmed.Trim('`').Trim();
+            }
             if (string.IsNullOrEmpty(source)) continue;
 
             _candidates.Add(new Candidate { Label = cells[2].Trim(), SourcePath = source });
@@ -251,6 +260,20 @@ public sealed class AssetBenchPromoter : EditorWindow
         int moved = 0, skipped = 0, failed = 0;
         var log = new StringBuilder();
 
+        // Folders first, outside the batch: CreateFolder does not register with the asset database until
+        // StopAssetEditing, so creating one inside the batch makes every move into it fail with
+        // "Parent directory is not in asset database".
+        foreach (Candidate c in _candidates)
+        {
+            if (!c.Selected) continue;
+            foreach (Move m in c.Moves)
+            {
+                string destDir = Path.GetDirectoryName(m.Destination)?.Replace('\\', '/');
+                if (!string.IsNullOrEmpty(destDir) && !AssetDatabase.IsValidFolder(destDir))
+                    CreateFolderRecursive(destDir);
+            }
+        }
+
         AssetDatabase.StartAssetEditing();
         try
         {
@@ -268,10 +291,6 @@ public sealed class AssetBenchPromoter : EditorWindow
                         log.AppendLine($"skip  {Relative(m.Source)}: {problem}");
                         continue;
                     }
-
-                    string destDir = Path.GetDirectoryName(m.Destination)?.Replace('\\', '/');
-                    if (!string.IsNullOrEmpty(destDir) && !AssetDatabase.IsValidFolder(destDir))
-                        CreateFolderRecursive(destDir);
 
                     string error = AssetDatabase.MoveAsset(m.Source, m.Destination);
                     if (string.IsNullOrEmpty(error))
@@ -298,16 +317,26 @@ public sealed class AssetBenchPromoter : EditorWindow
         _summary = $"Moved {moved} · skipped {skipped} · failed {failed}\n\n{log}";
     }
 
+    /// Follows the path CreateFolder actually returns rather than the one requested. CreateFolder
+    /// uniquifies — asked for "Corals" when it cannot see an existing one, it silently makes "Corals 1" —
+    /// so assuming the requested name spawns a numbered duplicate for every level of every file.
     static void CreateFolderRecursive(string folder)
     {
         string[] parts = folder.Split('/');
         string running = parts[0]; // "Assets"
+
         for (int i = 1; i < parts.Length; i++)
         {
             string next = running + "/" + parts[i];
-            if (!AssetDatabase.IsValidFolder(next))
-                AssetDatabase.CreateFolder(running, parts[i]);
-            running = next;
+            if (AssetDatabase.IsValidFolder(next))
+            {
+                running = next;
+                continue;
+            }
+
+            string guid = AssetDatabase.CreateFolder(running, parts[i]);
+            string created = AssetDatabase.GUIDToAssetPath(guid);
+            running = string.IsNullOrEmpty(created) ? next : created;
         }
     }
 }
