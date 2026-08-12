@@ -1,6 +1,6 @@
 ---
 name: pp-build-and-env
-description: Use when setting up the ProceduralPlanets working environment from scratch, cloning to a new machine, choosing the Unity version to install, running dotnet builds of the csproj files, hitting a build error that looks like a locked/shared intermediate DLL, wondering why Assembly-CSharp.csproj fails on missing Shapes files, asking what a third-party folder is or whether it can be touched, setting up or refreshing graphify, or deciding which dirs are generated and off-limits. Not for launching play mode or using the console — see pp-run-and-operate.
+description: Use when setting up the ProceduralPlanets working environment from scratch, cloning to a new machine, choosing the Unity version to install, running dotnet builds of the csproj files, hitting a build error that looks like a locked/shared intermediate DLL, hitting stale csproj/sln errors that reference source files which no longer exist (or Hot Reload saying "File is not part of any project"), asking what a third-party folder is or whether it can be touched, setting up or refreshing graphify, or deciding which dirs are generated and off-limits. Not for launching play mode or using the console — see pp-run-and-operate.
 ---
 
 # pp-build-and-env (discovery stub)

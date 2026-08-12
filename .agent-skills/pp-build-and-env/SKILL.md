@@ -1,6 +1,6 @@
 ---
 name: pp-build-and-env
-description: Use when setting up the ProceduralPlanets working environment from scratch, cloning to a new machine, choosing the Unity version to install, running dotnet builds of the csproj files, hitting a build error that looks like a locked/shared intermediate DLL, wondering why Assembly-CSharp.csproj fails on missing Shapes files, asking what a third-party folder is or whether it can be touched, setting up or refreshing graphify, or deciding which dirs are generated and off-limits. Not for launching play mode or using the console — see pp-run-and-operate.
+description: Use when setting up the ProceduralPlanets working environment from scratch, cloning to a new machine, choosing the Unity version to install, running dotnet builds of the csproj files, hitting a build error that looks like a locked/shared intermediate DLL, hitting stale csproj/sln errors that reference source files which no longer exist (or Hot Reload saying "File is not part of any project"), asking what a third-party folder is or whether it can be touched, setting up or refreshing graphify, or deciding which dirs are generated and off-limits. Not for launching play mode or using the console — see pp-run-and-operate.
 ---
 
 # Build and environment: recreate the working setup from scratch
@@ -50,7 +50,7 @@ These are **documented convention**, not run as part of authoring this skill —
 | `dotnet build ProceduralPlanets.Planet.csproj` | Planet assembly (bulk of gameplay/rendering code) | Primary code-health check |
 | `dotnet build ProceduralPlanets.Core.csproj` | Core assembly (console, services, boot) | Run when Core files touched |
 | `dotnet build ProceduralPlanets.Sampling.csproj` / `.Editor.csproj` | Sampling / editor assemblies | Rarely needed |
-| `dotnet build Assembly-CSharp.csproj` | **Do not use.** | Known-broken: references removed `Assets/Plugins/Shapes/...` sources (see third-party section) |
+| `dotnet build Assembly-CSharp.csproj` | **No longer exists.** | Every script now lives in an asmdef, so Unity stops generating it. See "csproj files are disposable" below. |
 
 Append `--no-restore` for speed on repeat builds (established usage in the repo's history).
 
@@ -89,19 +89,33 @@ Third-party directories are **not ours to refactor** — no project rules (comme
 | Wingman | `Assets/Plugins/Wingman/` (git-tracked) | Editor-only inspector utility (clipboard/inspector tooling, all code under `#if UNITY_EDITOR`) | Don't edit. Excluded from graphify via `.graphifyignore` |
 | Hot Reload (Singularity Group) | `Packages/com.singularitygroup.hotreload/` (git-tracked embedded package) | Live C# patching in the editor — "change code and get immediate updates" | Don't edit. Excluded from graphify. Dormant convenience; nothing in project code depends on it |
 
-### Removed from disk — only stale generated csprojs remain
+### Removed from disk — ✅ their stale csprojs were deleted 2026-08-12
 
-These Asset Store assets were removed from `Assets/` (never git-tracked; QFSW's csproj last regenerated 2026-06-03, GrassFlow's 2026-06-02). Their `.csproj` files still sit at repo root because Unity regenerates csprojs but never deletes orphans. **The source folders do not exist; no project code references them** (verified: zero hits for `QFSW|GrassFlow|StylizedGrass` in `Assets/Scripts`).
+These Asset Store assets were removed from `Assets/` and **no project code references any of them**: QFSW Quantum Console (superseded by `Assets/Scripts/Core/Console/`), **Shapes** (vector drawing), GrassFlow, Stylized Grass Shader, AssetInventory and its bundled sub-assemblies, ImpossibleRobert common, Package2Folder.
 
-| Stale csproj(s) | Was | Status |
-|---|---|---|
-| `QFSW.QC.*.csproj` (12 files) | QFSW Quantum Console | Removed; the project now ships its own console (`Assets/Scripts/Core/Console/`) |
-| `ShapesRuntime/ShapesEditor/ShapesSamples.csproj` | Shapes (vector drawing) | Removed; **cause of the `Assembly-CSharp.csproj` build failure** |
-| `GrassFlow.csproj`, `GrassFlowEditor.csproj` | GrassFlow (GPU grass) | Removed; project grass is custom (compute-based) |
-| `sc.stylizedgrass.*.csproj` | Stylized Grass Shader | Removed |
-| `AssetInventory.*.csproj` + `AudioTool.*`, `Brain.*`, `Automator.*`, `Database.*` (all point into `Assets/AssetInventory/Reuse/...`) | AssetInventory editor tool + its bundled sub-assemblies | Removed |
-| `ImpossibleRobert.Common*.csproj` | ImpossibleRobert common lib (AssetInventory dependency) | Removed |
-| `CodeStage.Package2Folder.csproj` | Package2Folder (bundled inside AssetInventory ThirdParty) | Removed |
+Their orphaned `.csproj` files lingered at repo root for months because **Unity regenerates csprojs but never deletes orphans**. They have now been deleted and the projects regenerated.
+
+### csproj files are disposable — delete them when they misbehave
+
+`*.csproj` and `*.sln` are **gitignored and untracked**. They are IDE artifacts only: Unity compiles from asmdefs and ignores them entirely. So a stale csproj can never break a Unity build — but it *will* break `dotnet build`, IDE navigation, and Hot Reload.
+
+**Symptoms of staleness:** `dotnet build` failing on files that do not exist; Hot Reload logging `File is not part of any project` for newly created scripts; an IDE showing assemblies for packages that were removed long ago.
+
+**Fix, and it is safe:**
+
+```powershell
+Remove-Item *.csproj, *.sln -Force      # gitignored, untracked, regenerated
+```
+
+then in Unity invoke `UnityEditor.SyncVS.SyncSolution()` (or just double-click any script in the Project window).
+
+**Result on 2026-08-12: 39 csproj → 6, with zero missing file references** (previously 33 of 39 referenced deleted sources, including `Assembly-CSharp.csproj` at 8/8 missing).
+
+The six legitimate projects are `ProceduralPlanets.{Core,Editor,Planet,Sampling,Tests.EditMode}` and `Wingman`.
+
+⚠️ **`Assembly-CSharp.csproj` no longer regenerates, and that is correct** — Unity only emits it for scripts outside an asmdef, and there are none. Any historical note calling it "permanently broken because of missing Shapes sources" was describing a stale artifact, **not a missing dependency. Shapes is not needed and must not be imported to 'fix' it.**
+
+⚠️ `SyncSolution()` regenerates the csprojs but did **not** restore the `.sln`. Double-click a script from Unity, or open the folder directly in Rider.
 
 Do not "clean up" the stale csprojs as drive-by work — they're gitignored local files on Bryan's machine; deleting them is harmless in principle but is his call.
 
@@ -146,7 +160,7 @@ Memory can be stale; revalidate dates/branches before acting on it. It is backgr
 ## Known traps (with the stories)
 
 1. **Parallel dotnet builds** — Core + Planet built simultaneously lock the same intermediate DLL and fail. Happened repeatedly during the 2026-05 water-artifact work; every time, the serial rerun passed. Always rerun serially before reporting a compile regression.
-2. **`Assembly-CSharp.csproj` is permanently broken** — it still references deleted `Assets/Plugins/Shapes/...` sources. This has been failing since at least 2026-05-21 and is not a regression. Build the four `ProceduralPlanets.*` csprojs instead.
+2. **~~`Assembly-CSharp.csproj` is permanently broken~~ — RESOLVED 2026-08-12.** The old story: it references deleted `Assets/Plugins/Shapes/...` sources and had been failing since 2026-05-21. The actual cause was a **stale generated artifact**, not a missing dependency — 33 of 39 csprojs referenced deleted sources. Deleting `*.csproj`/`*.sln` (gitignored, untracked) and regenerating produced 6 clean projects with zero missing references, and `Assembly-CSharp.csproj` correctly no longer exists because every script lives in an asmdef. **Do not import Shapes to "fix" this.** See "csproj files are disposable" above.
 3. **Wrong Unity version** — anything other than 6000.6.0a7 triggers reimport and unreviewed behavioral drift. The alpha is a deliberate pin; don't upgrade unilaterally.
 4. **"It compiles" declared as "it works"** — the costliest historical failures (water artifact saga, grass-blanket fight) involved changes that compiled fine and looked wrong. Compile is step zero; see **pp-validation-and-evidence**.
 5. **Editing generated csprojs or third-party dirs** — Unity overwrites the former; the latter are not ours (and the caustics don't-touch rule in CLAUDE.md is the precedent for how badly "harmless" touches go).
@@ -169,7 +183,8 @@ Facts above verified 2026-07-06 against commit `ec0b1cd`. Re-verify with:
 | Build convention (Planet csproj) | `grep -n "dotnet build" docs/design/2026-07-04-cloud-visual-migration-plan.md` |
 | Serial-trap record | `rg -n "intermediate DLL" .agent-memory/codex/MEMORY.md` |
 | Third-party dirs absent | `ls Assets/Plugins; ls Assets` (only Wingman under Plugins) |
-| Stale csproj → missing sources | `grep -o 'Compile Include="[^"]*"' ShapesRuntime.csproj \| head -3` then `ls "Assets/Plugins/Shapes"` (fails) |
+| csprojs are clean (no missing sources) | `ls *.csproj` (expect 6) — then for each, check every `<Compile Include="Assets\...">` path exists |
+| csproj/sln are untracked | `git ls-files "*.csproj" "*.sln"` (expect empty) |
 | Console open key | `grep -n "OpenConsole" Assets/Scripts/Core/Services/InputMapService.cs` |
 | Generation timings line | `rg -n "Generation timings" Assets/Scripts` |
 | graphify version / freshness | `graphify --version`; `head -15 graphify-out/GRAPH_REPORT.md` vs `git rev-parse HEAD` |
