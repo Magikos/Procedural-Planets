@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1cb756651b69059469ae82288331653c, type: 3}
+  m_Name: biome-gapfill
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::AssetBenchManifest
+  BatchId: biome-gapfill
+  Entries:
+  - CandidatePrefab: {fileID: 100000, guid: a5d7c2c7c8306c647a860848dca112bf, type: 3}
+    ReferencePrefab: {fileID: 0}
+    Label: LMHPOLY Cactus A (Desert)
+    Question: Desert has only a dead tree and a rock. Does a cactus fit beside them?
+    CandidateMaterial: {fileID: 2100000, guid: 730f368a336ff6e4084a30f962780fc7, type: 2}
+    ReferencePrototype: {fileID: 11400000, guid: 7df12498c0955b049864868d871b6cc3, type: 2}
+  - CandidatePrefab: {fileID: 100000, guid: 05a0514eab79f0343a90cdada9f31f81, type: 3}
+    ReferencePrefab: {fileID: 0}
+    Label: LMHPOLY Cactus B (Desert)
+    Question: Second cactus shape. Keep both for variety, or just one?
+    CandidateMaterial: {fileID: 2100000, guid: 730f368a336ff6e4084a30f962780fc7, type: 2}
+    ReferencePrototype: {fileID: 11400000, guid: 7df12498c0955b049864868d871b6cc3, type: 2}
+  - CandidatePrefab: {fileID: 100000, guid: eb5fd0c0ea8ae4f4780be19aed75c378, type: 3}
+    ReferencePrefab: {fileID: 0}
+    Label: LMHPOLY Low Plant (Tundra)
+    Question: Tundra is a dead tree and a rock. Does low ground cover help, or is bare correct?
+    CandidateMaterial: {fileID: 2100000, guid: 730f368a336ff6e4084a30f962780fc7, type: 2}
+    ReferencePrototype: {fileID: 11400000, guid: aed822b1efa3b064fb94c779242638e5, type: 2}
+  - CandidatePrefab: {fileID: 100000, guid: 2ef461709dd8eaf4ba61f4336df12118, type: 3}
+    ReferencePrefab: {fileID: 0}
+    Label: LMHPOLY Snow Rock (Snow)
+    Question: Snow-capped rock vs our plain Snow Rock. Better silhouette for the biome?
+    CandidateMaterial: {fileID: 2100000, guid: aed3472c84b79204ab79c997cc176e7a, type: 2}
+    ReferencePrototype: {fileID: 11400000, guid: 2e95812436d66224092099771134e458, type: 2}
+  - CandidatePrefab: {fileID: 100000, guid: bfad8e871ab5f3c4087325d91ff3b31f, type: 3}
+    ReferencePrefab: {fileID: 0}
+    Label: LMHPOLY Moss Rock (Tundra)
+    Question: Moss-capped rock vs our plain Tundra Rock.
+    CandidateMaterial: {fileID: 2100000, guid: 8c520fd92eeb4b741aa244e222e6e62b, type: 2}
+    ReferencePrototype: {fileID: 11400000, guid: 8d54a3d2c6ef4814a86f0a36b32f39fb, type: 2}
