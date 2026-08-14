@@ -50,6 +50,30 @@ not a blanket preference:**
 Read: Synty is the house style and wins the character silhouette outright. Vegetation is where
 other packs beat it, on canopy geometry. Elsewhere the question is content-gap, not style.
 
+**TREES ARE GENERATED, NOT BOUGHT (Bryan, 2026-08-12).** Decision: *"we are going to go with a
+custom Broccoli implementation, so we probably will only look at tree assets as reference for
+types we don't have generated."*
+
+- **Broccoli Tree Creator** (owned; installed in the scratch project at
+  `D:\Unity\Explore Assets\Assets\Waldemarst\Broccoli`, also cached at 684 MB) becomes the tree
+  pipeline. It bakes standalone `Mesh` `.asset` files with LOD chains — `PrefabBuilder.cs` has 19
+  LOD hits — which is exactly the shape `ScatterPart` wants (`LodMeshes` + `Material`).
+- **Harvest-only is satisfied without effort here.** Broccoli has ~300 `.cs` files and no
+  asmdefs, so its `Base/Builder/Factory/...` compile as *runtime* code, and its prefabs carry
+  `BroccoTreeController`. But **we consume meshes, not prefabs**, so none of that crosses. Tool
+  stays in scratch; baked meshes come over. Textbook case of the editor-tool-in-scratch rule.
+- **Vendor tree packs demote to reference only** — used to judge *what kinds* of tree we lack,
+  not as shipping content. Bench batches should stop treating trees as candidates.
+- Why: every vendor tree this session arrived broken the same way (Polyart shadergraphs NRE on
+  Unity 6, toon packs not planet-aware, Synty Generic shipped with no texture assigned). Three of
+  five packs in batch 2 needed shader work before they could even be looked at. Generated meshes
+  have no vendor shader, no dependency closure, no import breakage.
+- ⚠️ Unverified: whether Broccoli's baked meshes are UV-mapped to an atlas we can drive, and how
+  its leaf cards behave under `Scatter/FoliageLit` cutout. That is the thing that would sink it.
+- Consequence for the 4 promoted bench keeps: 3 are trees (2 toon oaks + Polyart Dreamscape) and
+  are now **interim/reference**, superseded once generated equivalents exist. The coral is not
+  affected. See [[project_ocean_scatter]].
+
 **Judge on our shader, not the vendor's** — the bench defaults to re-rendering candidates on
 `Scatter/FoliageLit` with vendor textures, because that is what the asset becomes once adopted
 (a `ScatterPrototype` with our materials). Vendor shaders show their demo scene, not our world,
