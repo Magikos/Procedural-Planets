@@ -172,19 +172,20 @@ public static class ScatterGatherBurst
         return 0f;
     }
 
-    // Bit layout copied from ScatterId.Pack; inputs are known-valid inside the gather so validation
-    // (which throws with string interpolation, not Burst-compilable) is dropped.
+    // Bit layout derived from ScatterId's shared bit-count consts, so it cannot drift from the
+    // managed packer (it once did: a re-declared SlotBits=6 aliased slots 64..127). Validation —
+    // which throws with string interpolation, not Burst-compilable — is dropped; inputs are
+    // known-valid inside the gather, and placement ids never set the player bit.
     public static ulong PackUnchecked(int face, int level, int x, int y, int slot)
     {
-        const int FaceBits = 3, LevelBits = 5, CoordBits = 24, SlotBits = 6;
-        const int LevelShift = FaceBits;
-        const int XShift = LevelShift + LevelBits;
-        const int YShift = XShift + CoordBits;
-        const int SlotShift = YShift + CoordBits;
-        const ulong FaceMask = (1UL << FaceBits) - 1;
-        const ulong LevelMask = (1UL << LevelBits) - 1;
-        const ulong CoordMask = (1UL << CoordBits) - 1;
-        const ulong SlotMask = (1UL << SlotBits) - 1;
+        const int LevelShift = ScatterId.FaceBits;
+        const int XShift = LevelShift + ScatterId.LevelBits;
+        const int YShift = XShift + ScatterId.CoordBits;
+        const int SlotShift = YShift + ScatterId.CoordBits;
+        const ulong FaceMask = (1UL << ScatterId.FaceBits) - 1;
+        const ulong LevelMask = (1UL << ScatterId.LevelBits) - 1;
+        const ulong CoordMask = (1UL << ScatterId.CoordBits) - 1;
+        const ulong SlotMask = (1UL << ScatterId.SlotBits) - 1;
         return ((ulong)face & FaceMask)
              | (((ulong)level & LevelMask) << LevelShift)
              | (((ulong)(uint)x & CoordMask) << XShift)

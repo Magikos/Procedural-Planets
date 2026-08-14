@@ -12,6 +12,22 @@ sealed class DebugOverlayHud : IDisposable
     GUIStyle _panelStyle;
     Texture2D _panelTexture;
 
+    bool _harvestFlashActive;
+    float _harvestFlashUntil;
+    string _harvestFlashMessage;
+
+    public DebugOverlayHud()
+    {
+        EventBus<ScatterHarvestedEvent>.Listen(OnHarvested);
+    }
+
+    void OnHarvested(ScatterHarvestedEvent e)
+    {
+        _harvestFlashActive = true;
+        _harvestFlashUntil = Time.unscaledTime + 2f;
+        _harvestFlashMessage = $"Chopped {e.Yield.Count}x {e.Yield.ItemId}";
+    }
+
     public void NotifyPrecipitationToggle(bool enabled)
     {
         _precipitationToggleFlashActive = true;
@@ -57,6 +73,14 @@ sealed class DebugOverlayHud : IDisposable
                 GUILayout.Label(_precipitationToggleFlashMessage);
             else
                 _precipitationToggleFlashActive = false;
+        }
+
+        if (_harvestFlashActive)
+        {
+            if (Time.unscaledTime <= _harvestFlashUntil)
+                GUILayout.Label(_harvestFlashMessage);
+            else
+                _harvestFlashActive = false;
         }
 
         if (!showDetailed)
@@ -108,6 +132,7 @@ sealed class DebugOverlayHud : IDisposable
 
     public void Dispose()
     {
+        EventBus<ScatterHarvestedEvent>.Unlisten(OnHarvested);
         if (_panelTexture != null)
         {
             UnityEngine.Object.Destroy(_panelTexture);

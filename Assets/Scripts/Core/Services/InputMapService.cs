@@ -36,6 +36,7 @@ public sealed class InputMapService : IInputMapService, IDisposable
     public InputAction TeleportToMarkers { get; }
     public InputAction GrassInteractorDistance { get; }
     public InputAction DumpAtmosphereDiagnostics { get; }
+    public InputAction Interact { get; }
 
     public InputAction OpenConsole { get; }
     public InputAction CloseConsole { get; }
@@ -123,6 +124,7 @@ public sealed class InputMapService : IInputMapService, IDisposable
             .With("button", "<Keyboard>/m");
         TeleportToMarkers = AddButton("TeleportToMarkers", "<Keyboard>/t");
         DumpAtmosphereDiagnostics = AddButton("DumpAtmosphereDiagnostics", "<Keyboard>/f12");
+        Interact = AddButton("Interact", "<Keyboard>/f"); // harvest the looked-at scatter instance (POC)
         GrassInteractorDistance = GameplayMap.AddAction(
             "GrassInteractorDistance", InputActionType.Value, expectedControlLayout: "Axis");
         GrassInteractorDistance.AddCompositeBinding("1DAxis")

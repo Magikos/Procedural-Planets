@@ -29,7 +29,7 @@ MonoBehaviour:
   OnWater: 0
   ScaleRange: {x: 0.7, y: 1}
   RandomYaw: 1
-  Interaction: 0
+  Interaction: 2
   Parts:
   - Name: Trunk
     Material: {fileID: 2100000, guid: 0b22fc0712ab9354a9ac7cf309c48e86, type: 2}

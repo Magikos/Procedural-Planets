@@ -6,7 +6,10 @@ using System;
 // SlotId, never the library array index, so reordering the library never moves an id.
 public static class ScatterId
 {
-    const int FaceBits = 3, LevelBits = 5, CoordBits = 24, SlotBits = 7;
+    // Public so the Burst packer (ScatterGatherBurst.PackUnchecked) derives its shifts/masks from
+    // the same bit counts instead of re-declaring them — a re-declared SlotBits once drifted to 6
+    // and aliased slots 64..127. Single source of truth for the layout.
+    public const int FaceBits = 3, LevelBits = 5, CoordBits = 24, SlotBits = 7;
     const int LevelShift = FaceBits;                 // 3
     const int XShift = LevelShift + LevelBits;       // 8
     const int YShift = XShift + CoordBits;           // 32

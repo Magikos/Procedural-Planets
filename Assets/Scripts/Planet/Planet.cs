@@ -50,6 +50,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     PlanetWaterSurface _waterSurface;
     PlanetTerrainMaterial _terrainMaterial;
     SurfaceEditController _surfaceEdits;
+    ScatterHarvestStore _harvestStore;
+    InventoryService _inventory;
+    HarvestInteractor _harvestInteractor;
 
     static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
     static readonly int _seaLevelRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
@@ -88,6 +91,45 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         context.Register<IClimateSampler>(this);
         context.Register<IGrassRuntimeControl>(this);
         context.Register<IGrassNearFieldStatsProvider>(_grass);
+
+        // Harvest interactor (POC): picker + verb wired to this world's scatter cache, harvest store, and
+        // inventory. The ScatterLibraryDto is NOT registered yet at world-service registration (it registers
+        // before settings freeze), so resolve it lazily — the interactor is only used post-generation, when
+        // the DTO exists. IsRegistered avoids the throw if a harvest is somehow attempted before then.
+        // Never let the POC harvest wiring crash boot — register defensively; if anything is off, harvesting
+        // is simply disabled this session and the reason is logged.
+        try
+        {
+            // Build ONCE and register the same stable instance each call — RegisterWorldServices runs more
+            // than once, and the context throws on re-registering a different instance (a fresh `new` each
+            // call is exactly what crashed boot). Deps are stable (cache/store/inventory) and the library is
+            // resolved lazily, so one interactor is correct across worlds.
+            if (_harvestInteractor == null)
+            {
+                System.Func<ScatterLibraryDto> libraryFn = () =>
+                    SettingsProvider.IsRegistered<ScatterLibraryDto>() ? SettingsProvider.GetSettings<ScatterLibraryDto>() : null;
+                ScatterTileCache scatterCache = _scatterRenderer.Cache;
+                var picker = new ScatterPicker(scatterCache, libraryFn);
+                var harvest = new HarvestService(
+                    id => _harvestStore.Add(id),
+                    (proto, id) => scatterCache.RemoveInstance(proto, id),
+                    (item, count) => _inventory.Add(item, count),
+                    proto =>
+                    {
+                        ScatterLibraryDto lib = libraryFn();
+                        return lib?.Prototypes != null && (uint)proto < (uint)lib.Prototypes.Length
+                            ? new ProtoHarvestInfo(lib.Prototypes[proto].Interaction, lib.Prototypes[proto].DisplayName)
+                            : default;
+                    });
+                _harvestInteractor = new HarvestInteractor(picker, harvest, Logger);
+            }
+            context.Register(_harvestInteractor);
+        }
+        catch (System.Exception e)
+        {
+            LoggerProvider.LogException("Harvest", e);
+            Logger.Log(LogLevel.Warning, "Harvest", "Harvest interactor not registered; harvesting disabled this session.");
+        }
     }
 
     void EnsureRuntimeOwners()
@@ -98,6 +140,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _waterSurface ??= new PlanetWaterSurface(transform);
         _terrainMaterial ??= new PlanetTerrainMaterial(Logger);
         _surfaceEdits ??= new SurfaceEditController(transform, Logger, () => _grass.InvalidateSurfaceMasks());
+        _harvestStore ??= new ScatterHarvestStore(Logger);
+        _inventory ??= new InventoryService();
+        _scatterRenderer.Cache.SetHarvestStore(_harvestStore);
     }
 
     void EnsureGrassCoordinator()
@@ -366,6 +411,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             await Awaitable.NextFrameAsync(ct);
             // After the last cancellable await: a cancelled generation never publishes readiness,
             // so scatter is only configured for a generation that actually reached this point.
+            _harvestStore.Configure(Seed);
             _scatter.Configure(Seed, planet.PlanetRadius, seaLevelRadius, planet.HasOceans);
             _scatterRenderer.Configure();
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _shapeGenerator.ElevationMin, _shapeGenerator.ElevationMax));

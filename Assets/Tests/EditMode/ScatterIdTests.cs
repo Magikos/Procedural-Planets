@@ -84,8 +84,8 @@ namespace ProceduralPlanets.Tests
             Assert.IsFalse(ScatterId.IsPlayer(notPlayer));
             Assert.IsTrue(ScatterId.IsPlayer(player));
 
-            // The player bit is the only difference between the two ids.
-            Assert.AreEqual(notPlayer | (1UL << 62), player);
+            // The player bit is the only difference between the two ids (bit 63 = SlotShift 56 + SlotBits 7).
+            Assert.AreEqual(notPlayer | (1UL << 63), player);
 
             // ...and it does not corrupt the other fields on unpack.
             ScatterId.Unpack(player, out int f, out int l, out int x, out int y, out int s);
@@ -97,11 +97,19 @@ namespace ProceduralPlanets.Tests
         }
 
         [Test]
-        public void Bit63_StaysSpareEvenAtMaxFieldsWithPlayer()
+        public void PlayerBit_IsBit63_AtMaxFields()
         {
-            ulong id = ScatterId.Pack(ScatterId.FaceCount - 1, ScatterId.MaxLevel, MaxCoord, MaxCoord,
-                                      ScatterId.MaxSlot, player: true);
-            Assert.AreEqual(0UL, id & (1UL << 63), "bit 63 must remain unused (spare)");
+            // With SlotBits=7 the layout uses all 64 bits: slot occupies 56..62, the player flag is bit 63.
+            // At max fields the player bit must stay clear when player:false and set when player:true, i.e.
+            // no field bleeds into bit 63.
+            ulong noPlayer = ScatterId.Pack(ScatterId.FaceCount - 1, ScatterId.MaxLevel, MaxCoord, MaxCoord,
+                                            ScatterId.MaxSlot, player: false);
+            ulong withPlayer = ScatterId.Pack(ScatterId.FaceCount - 1, ScatterId.MaxLevel, MaxCoord, MaxCoord,
+                                              ScatterId.MaxSlot, player: true);
+            Assert.AreEqual(0UL, noPlayer & (1UL << 63), "player bit (63) must be clear at max fields when player:false");
+            Assert.AreEqual(1UL << 63, withPlayer & (1UL << 63), "player flag is bit 63");
+            Assert.IsFalse(ScatterId.IsPlayer(noPlayer));
+            Assert.IsTrue(ScatterId.IsPlayer(withPlayer));
         }
 
         [Test]
@@ -156,6 +164,30 @@ namespace ProceduralPlanets.Tests
         public void Pack_RejectsSlotOutOfRange()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => ScatterId.Pack(0, 0, 0, 0, ScatterId.MaxSlot + 1));
+        }
+
+        // The Burst gather packs ids with ScatterGatherBurst.PackUnchecked (no throw, Burst-compilable).
+        // It must produce byte-identical ids to the managed ScatterId.Pack for every in-range input, or a
+        // saved harvest rebinds to the wrong instance. A re-declared SlotBits=6 in the Burst path once
+        // aliased slots 64..127 (the Burst path is the default on the real planet); this locks the parity.
+        [Test]
+        public void BurstPacker_MatchesManagedPack_AcrossSlots()
+        {
+            int[] faces = { 0, 3, 5 };
+            int[] levels = { 0, 1, ScatterId.MaxLevel };
+            int[] coords = { 0, 255, MaxCoord };
+            int[] slots = { 0, 31, 63, 64, 65, 100, ScatterId.MaxSlot };
+
+            foreach (int f in faces)
+            foreach (int l in levels)
+            foreach (int cx in coords)
+            foreach (int cy in coords)
+            foreach (int s in slots)
+            {
+                ulong managed = ScatterId.Pack(f, l, cx, cy, s, player: false);
+                ulong burst = ScatterGatherBurst.PackUnchecked(f, l, cx, cy, s);
+                Assert.AreEqual(managed, burst, $"burst vs managed pack diverged at face {f} level {l} ({cx},{cy}) slot {s}");
+            }
         }
     }
 }

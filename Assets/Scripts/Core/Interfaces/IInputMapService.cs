@@ -37,6 +37,7 @@ public interface IInputMapService
     InputAction TeleportToMarkers { get; }
     InputAction GrassInteractorDistance { get; }
     InputAction DumpAtmosphereDiagnostics { get; }
+    InputAction Interact { get; }
 
     InputAction OpenConsole { get; }
     InputAction CloseConsole { get; }

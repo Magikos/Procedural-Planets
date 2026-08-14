@@ -58,6 +58,10 @@ public sealed class ScatterTileCache
     // (O(the tile's instances), never an O(all live instances) rebuild).
     ScatterDrawBuckets _buckets;
 
+    // Optional harvested-instance filter: instances whose ScatterId is recorded here are dropped at Commit,
+    // so a harvested (chopped/collected) instance never re-enters the draw on re-gather or reload.
+    ScatterHarvestStore _harvest;
+
     int _protoCount;
     int _tileLevel;
     float[] _protoRadius = Array.Empty<float>(); // far draw end + prefetch lead; <0 = never gathered
@@ -98,6 +102,15 @@ public sealed class ScatterTileCache
     public int TileLevel => _tileLevel;
     public IReadOnlyList<Matrix4x4> Matrices(int proto) => _buckets.Matrices(proto);
     public IReadOnlyList<Vector3> Positions(int proto) => _buckets.Positions(proto);
+    public IReadOnlyList<ulong> Ids(int proto) => _buckets.Ids(proto);
+
+    // Remove a single instance this frame (harvested). The bucket drops it and marks the prototype's draw
+    // dirty, so the GPU re-uploads without it; persistence (so it stays gone after re-gather/reload) is the
+    // caller's job via the harvest store consulted in Commit.
+    public bool RemoveInstance(int proto, ulong id) => _buckets != null && _buckets.RemoveInstanceById(proto, id);
+
+    // The harvested-instance filter consulted in Commit. Set once after construction (before the first gather).
+    public void SetHarvestStore(ScatterHarvestStore store) => _harvest = store;
     // Whether this prototype's matrix list changed since the last call (for the GPU draw's dirty upload).
     public bool ConsumeDrawDirty(int proto) => _buckets.ConsumeDirty(proto);
 
@@ -434,7 +447,8 @@ public sealed class ScatterTileCache
         for (int i = 0; i < instances.Count; i++)
         {
             var inst = instances[i];
-            _buckets.Add(key.Tile, p, Matrix4x4.TRS(inst.PositionWS, inst.Rotation, Vector3.one * inst.Scale), inst.PositionWS);
+            if (_harvest != null && _harvest.Contains(inst.Id)) continue; // harvested: keep it out of the draw
+            _buckets.Add(key.Tile, p, Matrix4x4.TRS(inst.PositionWS, inst.Rotation, Vector3.one * inst.Scale), inst.PositionWS, inst.Id);
         }
     }
 

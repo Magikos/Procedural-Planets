@@ -26,6 +26,9 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
     const float GrassBendRadius = 2.2f;
     const float GrassBendStrength = 0.8f;
     const float GrassReleaseSeconds = 0.6f;
+    const float HarvestReach = 12f;   // from the camera, through the character, to the aimed instance (POC)
+    const float HarvestPerp = 3.5f;   // generous corridor around the aim ray — tree pivots sit at the base,
+                                      // so aiming near a trunk still picks it
 
     IPlanet _planet;
     IPlanetSurfaceSampler _sampler;
@@ -125,6 +128,15 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         if (_input != null && _input.Crouch.IsPressed()) speed *= CrouchMult;
         bool jump = _input != null && _input.Jump.WasPressedThisFrame();
 
+        // Harvest the aimed scatter instance on Interact. Rare event, so resolve the interactor per press
+        // (always the active world's) rather than caching a ref that would go stale on regen.
+        if (_input != null && _input.Interact.WasPressedThisFrame() && _input.GameplayEnabled && !LookBlocked())
+        {
+            Transform cam = ResolveCameraRig()?.CameraTransform;
+            if (cam != null && ServiceLocator.TryGet(out HarvestInteractor harvest))
+                harvest.TryHarvestLookedAt(new Ray(cam.position, cam.forward), HarvestReach, HarvestPerp, ToolTier.BasicAxe);
+        }
+
         CharacterPose pose = _driver.Tick(move, _forward, speed, Time.deltaTime, jump);
         _forward = pose.Forward;
         _child.SetPositionAndRotation(pose.Position, Quaternion.LookRotation(pose.Forward, pose.Up));
@@ -145,6 +157,21 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         Vector3 focus = _child.position + up * CamLookHeight;
         cam.position = focus - viewDir * CamDistance;
         cam.rotation = Quaternion.LookRotation(viewDir, up);
+    }
+
+    // Screen-center crosshair: the harvest ray is the camera's forward (screen centre), NOT the mouse cursor,
+    // so this shows where Interact (F) will aim. Aim it at the base of a tree.
+    void OnGUI()
+    {
+        if (!_spawned)
+            return;
+        float cx = Screen.width * 0.5f;
+        float cy = Screen.height * 0.5f;
+        Color prev = GUI.color;
+        GUI.color = Color.white;
+        GUI.DrawTexture(new Rect(cx - 6f, cy - 1f, 13f, 2f), Texture2D.whiteTexture);
+        GUI.DrawTexture(new Rect(cx - 1f, cy - 6f, 2f, 13f), Texture2D.whiteTexture);
+        GUI.color = prev;
     }
 
     // --- Spawn / despawn (driven by the static CharacterCommands) ---------

@@ -31,7 +31,7 @@ namespace ProceduralPlanets.Tests
                     int id = m.NextId++;
                     perProto[p].Add(id);
                     var mat = Matrix4x4.identity; mat.m03 = id;
-                    b.Add(tileId, p, mat, new Vector3(id, 0f, 0f));
+                    b.Add(tileId, p, mat, new Vector3(id, 0f, 0f), (ulong)id);
                 }
             }
             m.Tiles[tileId] = perProto;
@@ -44,14 +44,18 @@ namespace ProceduralPlanets.Tests
             {
                 var matrices = b.Matrices(p);
                 var positions = b.Positions(p);
+                var ids = b.Ids(p);
                 Assert.AreEqual(matrices.Count, positions.Count, $"proto {p}: matrix/position count mismatch");
+                Assert.AreEqual(matrices.Count, ids.Count, $"proto {p}: matrix/id count mismatch");
 
                 var actual = new List<int>(matrices.Count);
                 for (int i = 0; i < matrices.Count; i++)
                 {
                     int idM = Mathf.RoundToInt(matrices[i].m03);
                     int idP = Mathf.RoundToInt(positions[i].x);
+                    int idB = (int)ids[i];
                     Assert.AreEqual(idM, idP, $"proto {p} slot {i}: matrix/position unpaired ({idM} vs {idP})");
+                    Assert.AreEqual(idM, idB, $"proto {p} slot {i}: matrix/id unpaired ({idM} vs {idB})");
                     actual.Add(idM);
                 }
 
@@ -131,6 +135,31 @@ namespace ProceduralPlanets.Tests
             var m = new Model();
             AddTile(b, m, 1, new[] { 2, 2, 2 });
             b.RemoveTile(999);
+            Verify(b, m);
+        }
+
+        [Test]
+        public void RemoveInstanceById_RemovesOnlyThatInstance_KeepsInvariants()
+        {
+            var b = new ScatterDrawBuckets(Protos);
+            var m = new Model();
+            AddTile(b, m, 100, new[] { 5, 0, 3 });
+            AddTile(b, m, 200, new[] { 2, 7, 1 });
+            AddTile(b, m, 300, new[] { 0, 4, 6 });
+            Verify(b, m);
+
+            // Harvest one interior instance (proto 1, 4th of tile 200's seven).
+            int victim = m.Tiles[200][1][3];
+            Assert.IsTrue(b.RemoveInstanceById(1, (ulong)victim));
+            m.Tiles[200][1].Remove(victim);
+            Verify(b, m);
+
+            // Removing a non-resident id is a no-op returning false.
+            Assert.IsFalse(b.RemoveInstanceById(1, 999999UL));
+            Verify(b, m);
+
+            // The partially-harvested tile still evicts cleanly (tile-index bookkeeping intact).
+            b.RemoveTile(200); m.Tiles.Remove(200);
             Verify(b, m);
         }
     }

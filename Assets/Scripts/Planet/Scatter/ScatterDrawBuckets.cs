@@ -14,6 +14,7 @@ public sealed class ScatterDrawBuckets
     readonly int _protoCount;
     readonly List<Matrix4x4>[] _matrices;
     readonly List<Vector3>[] _positions;
+    readonly List<ulong>[] _ids;        // parallel to _matrices[p]: ScatterId of each packed slot (harvest key)
     readonly List<long>[] _ownerTile;   // parallel to _matrices[p]: tile owning each packed slot
     readonly List<int>[] _ownerSlot;    // parallel: index of this slot within its tile's per-proto index list
     // tileId -> per-prototype list of packed indices this tile occupies (its slots in _matrices[proto]).
@@ -27,6 +28,7 @@ public sealed class ScatterDrawBuckets
         _protoCount = protoCount;
         _matrices = new List<Matrix4x4>[protoCount];
         _positions = new List<Vector3>[protoCount];
+        _ids = new List<ulong>[protoCount];
         _ownerTile = new List<long>[protoCount];
         _ownerSlot = new List<int>[protoCount];
         _dirty = new bool[protoCount];
@@ -34,6 +36,7 @@ public sealed class ScatterDrawBuckets
         {
             _matrices[p] = new List<Matrix4x4>();
             _positions[p] = new List<Vector3>();
+            _ids[p] = new List<ulong>();
             _ownerTile[p] = new List<long>();
             _ownerSlot[p] = new List<int>();
         }
@@ -49,13 +52,14 @@ public sealed class ScatterDrawBuckets
 
     public IReadOnlyList<Matrix4x4> Matrices(int proto) => _matrices[proto];
     public IReadOnlyList<Vector3> Positions(int proto) => _positions[proto];
+    public IReadOnlyList<ulong> Ids(int proto) => _ids[proto];
 
     public int InstanceCount
     {
         get { int n = 0; for (int p = 0; p < _protoCount; p++) n += _matrices[p].Count; return n; }
     }
 
-    public void Add(long tileId, int proto, Matrix4x4 matrix, Vector3 position)
+    public void Add(long tileId, int proto, Matrix4x4 matrix, Vector3 position, ulong id)
     {
         if (!_tileIdx.TryGetValue(tileId, out var perProto))
         {
@@ -66,10 +70,42 @@ public sealed class ScatterDrawBuckets
         int packed = _matrices[proto].Count;
         _matrices[proto].Add(matrix);
         _positions[proto].Add(position);
+        _ids[proto].Add(id);
         _ownerTile[proto].Add(tileId);
         _ownerSlot[proto].Add(idx.Count);
         idx.Add(packed);
         _dirty[proto] = true;
+    }
+
+    // Remove a single instance by its ScatterId (harvested this frame). Rare user action, so it runs in
+    // O(the owning tile's instances): snapshot that tile, drop it via the proven RemoveTile, then re-add
+    // every instance except the harvested one — reusing the Add/RemoveTile invariants rather than
+    // hand-rolled single-slot surgery on the tile-index bookkeeping. Returns false if the id is not resident.
+    public bool RemoveInstanceById(int proto, ulong id)
+    {
+        if ((uint)proto >= (uint)_protoCount) return false;
+        int packed = _ids[proto].IndexOf(id);
+        if (packed < 0) return false;
+        long tile = _ownerTile[proto][packed];
+        if (!_tileIdx.TryGetValue(tile, out var perProto)) return false;
+
+        var survivors = new List<(int proto, Matrix4x4 matrix, Vector3 position, ulong id)>();
+        for (int p = 0; p < _protoCount; p++)
+        {
+            var slots = perProto[p];
+            if (slots == null) continue;
+            for (int k = 0; k < slots.Count; k++)
+            {
+                int packedIdx = slots[k];
+                ulong sid = _ids[p][packedIdx];
+                if (p == proto && sid == id) continue; // the harvested instance
+                survivors.Add((p, _matrices[p][packedIdx], _positions[p][packedIdx], sid));
+            }
+        }
+
+        RemoveTile(tile);
+        foreach (var s in survivors) Add(tile, s.proto, s.matrix, s.position, s.id);
+        return true;
     }
 
     public void RemoveTile(long tileId)
@@ -88,7 +124,7 @@ public sealed class ScatterDrawBuckets
     // belongs to the tile being removed, it stays in `idx` (updated) and is drained on a later iteration.
     void RemoveBlock(int p, List<int> idx)
     {
-        var mats = _matrices[p]; var poss = _positions[p];
+        var mats = _matrices[p]; var poss = _positions[p]; var ids = _ids[p];
         var owner = _ownerTile[p]; var slot = _ownerSlot[p];
         while (idx.Count > 0)
         {
@@ -99,6 +135,7 @@ public sealed class ScatterDrawBuckets
             {
                 mats[packed] = mats[last];
                 poss[packed] = poss[last];
+                ids[packed] = ids[last];
                 long moverTile = owner[last];
                 int moverSlot = slot[last];
                 owner[packed] = moverTile;
@@ -107,6 +144,7 @@ public sealed class ScatterDrawBuckets
             }
             mats.RemoveAt(last);
             poss.RemoveAt(last);
+            ids.RemoveAt(last);
             owner.RemoveAt(last);
             slot.RemoveAt(last);
         }
@@ -118,6 +156,7 @@ public sealed class ScatterDrawBuckets
         {
             _matrices[p].Clear();
             _positions[p].Clear();
+            _ids[p].Clear();
             _ownerTile[p].Clear();
             _ownerSlot[p].Clear();
         }
