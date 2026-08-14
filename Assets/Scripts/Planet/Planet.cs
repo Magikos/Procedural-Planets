@@ -192,7 +192,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             var scatterLib = Resources.Load<ScatterLibrary>("Settings/ScatterLibrary");
             if (scatterLib != null)
             {
-                settings.Register(ScatterLibraryDto.From(scatterLib));
+                settings.Register(TreeInjection.Apply(ScatterLibraryDto.From(scatterLib)));
             }
             else
             {

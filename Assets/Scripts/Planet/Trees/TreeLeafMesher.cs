@@ -8,15 +8,18 @@ using UnityEngine.Rendering;
 // foliage. Plain C#; Burst-ready for T7. Visual (leaf shape/size) is a first guess to tune.
 public static class TreeLeafMesher
 {
-    public static Mesh Build(TreeSkeleton sk, float leafScale = 1f)
+    // skip > 1 drops leaves for lower LODs (skip=2 keeps every other sprout); leafScale can enlarge to
+    // compensate for the thinner count.
+    public static Mesh Build(TreeSkeleton sk, float leafScale = 1f, int skip = 1)
     {
         var verts = new List<Vector3>();
         var uvs = new List<Vector2>();
         var tris = new List<int>();
 
+        skip = Mathf.Max(1, skip);
         if (sk != null)
-            foreach (TreeSprout s in sk.Sprouts)
-                AddCluster(s, leafScale, verts, uvs, tris);
+            for (int i = 0; i < sk.Sprouts.Count; i += skip)
+                AddCluster(sk.Sprouts[i], leafScale, verts, uvs, tris);
 
         var mesh = new Mesh
         {

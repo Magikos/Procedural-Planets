@@ -10,8 +10,10 @@ public static class TreeGenerator
         var tree = new GeneratedTree();
         TreeSkeleton sk = TreeStructureGenerator.Generate(def, seed);
 
-        tree.BarkLods = new[] { TreeTubeMesher.Build(sk) };
-        tree.FoliageLods = new[] { TreeLeafMesher.Build(sk, 1f) };
+        // LOD0 = full detail; LOD1 = fewer ring sides + half the leaves (scaled up a touch to compensate).
+        // The far billboard is the scatter impostor, baked from LOD0 by the existing pipeline.
+        tree.BarkLods = new[] { TreeTubeMesher.Build(sk, 0), TreeTubeMesher.Build(sk, 2) };
+        tree.FoliageLods = new[] { TreeLeafMesher.Build(sk, 1f, 1), TreeLeafMesher.Build(sk, 1.1f, 2) };
 
         tree.Height = sk.Height;
         tree.TrunkBaseGirth = sk.TrunkBaseGirth;

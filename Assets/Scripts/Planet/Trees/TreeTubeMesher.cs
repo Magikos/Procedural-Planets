@@ -8,7 +8,8 @@ using UnityEngine.Rendering;
 // flat-shading is a T3 tuning. One combined mesh. Plain C#; Burst-ready for T7.
 public static class TreeTubeMesher
 {
-    public static Mesh Build(TreeSkeleton sk)
+    // sidesDelta reduces radial resolution for lower LODs (clamped to >= 3 sides).
+    public static Mesh Build(TreeSkeleton sk, int sidesDelta = 0)
     {
         var verts = new List<Vector3>();
         var uvs = new List<Vector2>();
@@ -16,7 +17,7 @@ public static class TreeTubeMesher
 
         if (sk != null)
             foreach (TreeBranch b in sk.Branches)
-                AddBranch(b, verts, uvs, tris);
+                AddBranch(b, sidesDelta, verts, uvs, tris);
 
         var mesh = new Mesh
         {
@@ -89,11 +90,11 @@ public static class TreeTubeMesher
         return mesh;
     }
 
-    static void AddBranch(TreeBranch b, List<Vector3> verts, List<Vector2> uvs, List<int> tris)
+    static void AddBranch(TreeBranch b, int sidesDelta, List<Vector3> verts, List<Vector2> uvs, List<int> tris)
     {
         int rings = b.Centerline.Count;
         if (rings < 2) return;
-        int sides = Mathf.Max(3, b.RadialSides);
+        int sides = Mathf.Max(3, b.RadialSides - sidesDelta);
 
         int ring0 = verts.Count;
         float vLen = 0f;

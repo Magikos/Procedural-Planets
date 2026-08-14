@@ -50,6 +50,13 @@ public sealed class TreePreview : System.IDisposable
         return $"tree age = {_age:F2} (0=sapling, 1=old). Run tree.gen to see it.";
     }
 
+    [ConsoleCommand("inject", "Replace scatter trees with generated trees (on/off), then run `generate` to apply.", MonoTargetType.Registry)]
+    string InjectCmd(string state = "on")
+    {
+        TreeInjection.Enabled = state == "on" || state == "true" || state == "1";
+        return $"generated-tree injection {(TreeInjection.Enabled ? "ON" : "OFF")} — run `generate` (or regenerate the world) to apply.";
+    }
+
     void AddChild(string name, Mesh mesh, Material mat)
     {
         if (mesh == null) return;
