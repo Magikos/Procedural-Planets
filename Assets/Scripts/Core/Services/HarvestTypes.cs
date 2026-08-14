@@ -11,8 +11,10 @@ public readonly struct ToolTier
     public readonly int Damage;
     public ToolTier(string name, int damage) { Name = name; Damage = damage; }
 
-    // ponytail: one hardcoded tool for the POC; replace with an equipped-tool lookup + real tiers later.
+    // ponytail: hardcoded tools for the POC, chosen by what you aim at; replace with an equipped-tool lookup
+    // + real tiers (and a "do you have this tool" gate) once inventory/equip exists.
     public static readonly ToolTier BasicAxe = new ToolTier("Basic Axe", 1);
+    public static readonly ToolTier Shovel = new ToolTier("Shovel", 1);
 }
 
 // What harvesting a node yields. The POC derives one mapping from the prototype; data-drive it later.

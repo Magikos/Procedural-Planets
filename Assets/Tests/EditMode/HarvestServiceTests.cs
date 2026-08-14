@@ -31,12 +31,14 @@ namespace ProceduralPlanets.Tests
         }
 
         static HarvestService Make(HashSet<ulong> store, List<(int proto, ulong id)> removed,
-            Dictionary<string, int> inv, ScatterInteraction interaction, string displayName = "Pine")
+            Dictionary<string, int> inv, ScatterInteraction interaction, string displayName = "Pine",
+            HashSet<ulong> dug = null)
             => new HarvestService(
                 (id, proto, pos) => store.Add(id),
                 (p, id) => removed.Add((p, id)),
                 (item, n) => { inv.TryGetValue(item, out int c); inv[item] = c + n; },
-                _ => new ProtoHarvestInfo(interaction, displayName));
+                _ => new ProtoHarvestInfo(interaction, displayName),
+                id => dug != null && dug.Add(id));
 
         [Test]
         public void OneShot_FellsPersistsRemovesGrantsRaisesOnce()
@@ -86,6 +88,28 @@ namespace ProceduralPlanets.Tests
             Assert.AreEqual(0, removed.Count, "no remove on already-harvested");
             Assert.AreEqual(0, inv.Count, "no grant on already-harvested");
             Assert.AreEqual(0, _harvestedEvents);
+        }
+
+        [Test]
+        public void Dig_RemovesStump_GrantsWood_RaisesOnce_NoDoubleDig()
+        {
+            var store = new HashSet<ulong>();
+            var removed = new List<(int, ulong)>();
+            var inv = new Dictionary<string, int>();
+            var dug = new HashSet<ulong>();
+            var svc = Make(store, removed, inv, ScatterInteraction.Chop, dug: dug);
+
+            ulong id = 42UL;
+            HarvestResult r = svc.TryDig(id, new Vector3(1, 2, 3), ToolTier.Shovel);
+            Assert.AreEqual(HarvestOutcome.Felled, r.Outcome);
+            Assert.IsTrue(dug.Contains(id), "stump recorded dug");
+            Assert.Greater(inv["Wood"], 0, "dig grants wood");
+            Assert.AreEqual(1, _harvestedEvents);
+
+            _harvestedEvents = 0;
+            HarvestResult again = svc.TryDig(id, Vector3.zero, ToolTier.Shovel);
+            Assert.AreEqual(HarvestOutcome.AlreadyHarvested, again.Outcome);
+            Assert.AreEqual(0, _harvestedEvents, "no event on an already-dug stump");
         }
     }
 }

@@ -12,18 +12,32 @@ public sealed class HarvestService
     readonly Action<int, ulong> _removeFromDraw;     // drop the instance from the draw this frame
     readonly Action<string, int> _grantItem;         // credit the inventory
     readonly Func<int, ProtoHarvestInfo> _protoInfo; // prototype interaction + display name
+    readonly Func<ulong, bool> _digStump;            // dig a stump (Stump -> Dug); false if no stump there
 
     // ponytail: node HP defaulted so one hit fells it. Multi-hit chopping adds a per-ScatterId hit accumulator
     // consulted here — compare tool.Damage against remaining HP, raise HarvestHitEvent until it reaches 0.
     const int DefaultNodeHp = 1;
 
     public HarvestService(Func<ulong, int, Vector3, bool> persistHarvest, Action<int, ulong> removeFromDraw,
-        Action<string, int> grantItem, Func<int, ProtoHarvestInfo> protoInfo)
+        Action<string, int> grantItem, Func<int, ProtoHarvestInfo> protoInfo, Func<ulong, bool> digStump)
     {
         _persistHarvest = persistHarvest;
         _removeFromDraw = removeFromDraw;
         _grantItem = grantItem;
         _protoInfo = protoInfo;
+        _digStump = digStump;
+    }
+
+    // Dig up a stump (Stump -> Dug): it stops rendering and yields a little more wood. `tool` is the shovel
+    // (not gated yet — a "do you have a shovel" check waits for inventory/equip).
+    public HarvestResult TryDig(ulong id, Vector3 worldPos, in ToolTier tool)
+    {
+        if (_digStump == null || !_digStump(id))
+            return HarvestResult.AlreadyHarvested;
+        var yield = new HarvestYield("Wood", 1);
+        _grantItem(yield.ItemId, yield.Count);
+        EventBus<ScatterHarvestedEvent>.Raise(new ScatterHarvestedEvent(id, -1, worldPos, yield));
+        return HarvestResult.Felled(yield);
     }
 
     public HarvestResult TryHarvest(ulong id, int protoIndex, in ToolTier tool, Vector3 worldPos)

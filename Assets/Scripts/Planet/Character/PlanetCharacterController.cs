@@ -134,7 +134,7 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         {
             Transform cam = ResolveCameraRig()?.CameraTransform;
             if (cam != null && ServiceLocator.TryGet(out HarvestInteractor harvest))
-                harvest.TryHarvestLookedAt(new Ray(cam.position, cam.forward), HarvestReach, HarvestPerp, ToolTier.BasicAxe);
+                harvest.TryHarvestLookedAt(new Ray(cam.position, cam.forward), HarvestReach, HarvestPerp);
         }
 
         CharacterPose pose = _driver.Tick(move, _forward, speed, Time.deltaTime, jump);
