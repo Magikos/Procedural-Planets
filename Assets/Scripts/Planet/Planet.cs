@@ -56,6 +56,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     StumpRenderer _stumpRenderer;
     LogRenderer _logRenderer;
     TreeFallSystem _treeFall;
+    ChopFxSystem _chopFx;
+    TreePreview _treePreview;
 
     static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
     static readonly int _seaLevelRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
@@ -152,6 +154,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _treeFall ??= new TreeFallSystem(transform,
             () => SettingsProvider.IsRegistered<ScatterLibraryDto>() ? SettingsProvider.GetSettings<ScatterLibraryDto>() : null,
             _harvestStore);
+        _chopFx ??= new ChopFxSystem(transform);
+        _treePreview ??= new TreePreview(transform);
         _scatterRenderer.Cache.SetHarvestStore(_harvestStore);
     }
 
@@ -229,6 +233,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _grass?.Dispose();
         _treeFall?.Dispose();
         _treeFall = null;
+        _chopFx?.Dispose();
+        _chopFx = null;
+        _treePreview?.Dispose();
+        _treePreview = null;
         _logRenderer?.Dispose();
         _logRenderer = null;
         _stumpRenderer?.Dispose();
