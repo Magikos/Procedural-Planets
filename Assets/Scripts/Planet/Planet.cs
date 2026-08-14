@@ -143,7 +143,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _surfaceEdits ??= new SurfaceEditController(transform, Logger, () => _grass.InvalidateSurfaceMasks());
         _harvestStore ??= new ScatterHarvestStore(Logger);
         _inventory ??= new InventoryService();
-        _stumpRenderer ??= new StumpRenderer(_harvestStore, transform);
+        _stumpRenderer ??= new StumpRenderer(_harvestStore, transform,
+            () => SettingsProvider.IsRegistered<ScatterLibraryDto>() ? SettingsProvider.GetSettings<ScatterLibraryDto>() : null);
         _scatterRenderer.Cache.SetHarvestStore(_harvestStore);
     }
 

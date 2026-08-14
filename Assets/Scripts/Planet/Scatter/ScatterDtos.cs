@@ -33,15 +33,20 @@ public sealed record ScatterPrototypeDto(
     ScatterInteraction Interaction,
     ScatterPartDto[] Parts,
     Texture2D BakedImpostorAtlas = null,
-    Texture2D BakedImpostorNormal = null)
+    Texture2D BakedImpostorNormal = null,
+    Mesh StumpMesh = null,
+    Material StumpMaterial = null)
 {
+    // The first part's material — the stump's fallback material (the trunk) when StumpMaterial is unset.
+    public Material TrunkMaterial => Parts != null && Parts.Length > 0 ? Parts[0].Material : null;
+
     // Raw map only; ScatterLibraryDto.EnsureValid is the single validator (assets + overrides).
     public static ScatterPrototypeDto From(ScatterPrototype p) => new(
         p.DisplayName, p.SlotId, p.SpacingMeters, p.Biome, p.BiomeBlendPower, p.Weight,
         p.MaxSlopeDegrees, p.SlopeFadeDegrees, p.ConformToSlope,
         p.HasMinAltitude, p.MinAltitudeMeters, p.HasMaxAltitude, p.MaxAltitudeMeters,
         p.MinWaterClearanceMeters, p.OnWater, p.ScaleRange, p.RandomYaw, p.Interaction,
-        BuildParts(p), p.BakedImpostorAtlas, p.BakedImpostorNormal);
+        BuildParts(p), p.BakedImpostorAtlas, p.BakedImpostorNormal, p.StumpMesh, p.StumpMaterial);
 
     static ScatterPartDto[] BuildParts(ScatterPrototype p)
     {

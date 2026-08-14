@@ -41,6 +41,13 @@ public sealed class ScatterPrototype : ScriptableObject
     [Header("Interaction (SP5)")]
     public ScatterInteraction Interaction = ScatterInteraction.None;
 
+    [Header("Cut-set (harvest — see plans/005)")]
+    [Tooltip("Stump left when this is chopped — the lower trunk. Generate with Tools > ProceduralPlanets > " +
+             "Generate Tree Stumps, or assign a mesh. Null = a placeholder stump is drawn.")]
+    public Mesh StumpMesh;
+    [Tooltip("Material for the stump. Null = the first part's (trunk) material.")]
+    public Material StumpMaterial;
+
     [Header("Rendering (SP2 — optional; no drawable part = placed but not drawn)")]
     [Tooltip("Renderable parts, each a material + LOD mesh chain, drawn together at the instance. A simple prop is one part; a composite prop (tree = opaque trunk + cutout foliage) is several.")]
     public ScatterPart[] Parts = System.Array.Empty<ScatterPart>();

@@ -2,44 +2,60 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// Draws a stump at each Stump-state harvest record (Inc 1 of the tree cut-set — see plans/005). The stump is
-// a PLACEHOLDER (a short generated cylinder in a planet-aware lit material), oriented radial-up and sitting on
-// the ground at the felled tree's spot. Per-prototype authored stump meshes replace the placeholder in Inc 2.
+// Draws a stump at each Stump-state harvest record (tree cut-set — see plans/005). Uses the felled tree's
+// authored per-prototype StumpMesh + StumpMaterial (keyed by the record's protoIndex) so a chopped birch
+// leaves a birch stump; falls back to a placeholder cylinder for any prototype without an authored stump yet.
 // One RenderMesh per stump — fine for POC counts; instance if a felled forest ever needs it.
+//
+// Not yet matched: per-instance scale + yaw (the record stores position + proto only), so an authored stump
+// draws at the tree mesh's native scale. Add those to the record if size/rotation mismatch shows.
 public sealed class StumpRenderer : System.IDisposable
 {
-    static readonly Vector3 StumpScale = new Vector3(0.6f, 0.4f, 0.6f); // short + wide
+    static readonly Vector3 PlaceholderScale = new Vector3(0.6f, 0.4f, 0.6f);
 
     readonly ScatterHarvestStore _store;
     readonly Transform _planetTransform;
+    readonly System.Func<ScatterLibraryDto> _libraryFn;
     readonly List<ScatterHarvestStore.HarvestNode> _stumps = new();
-    Mesh _mesh;
-    Material _material;
-    RenderParams _rp;
+    readonly Dictionary<Material, RenderParams> _rpCache = new();
+
+    Mesh _placeholderMesh;
+    Material _placeholderMaterial;
     bool _ready;
 
-    public StumpRenderer(ScatterHarvestStore store, Transform planetTransform)
+    public StumpRenderer(ScatterHarvestStore store, Transform planetTransform, System.Func<ScatterLibraryDto> libraryFn)
     {
         _store = store;
         _planetTransform = planetTransform;
+        _libraryFn = libraryFn;
 
         GameObject temp = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        _mesh = temp.GetComponent<MeshFilter>().sharedMesh; // built-in cylinder mesh; survives the GO destroy
+        _placeholderMesh = temp.GetComponent<MeshFilter>().sharedMesh; // built-in; survives the GO destroy
         Collider col = temp.GetComponent<Collider>();
         if (col != null) Object.Destroy(col);
         if (Application.isPlaying) Object.Destroy(temp); else Object.DestroyImmediate(temp);
 
         Shader shader = Shader.Find("Planet/PropLit") ?? Shader.Find("Universal Render Pipeline/Lit");
-        if (shader == null || _mesh == null) return;
-        _material = new Material(shader) { name = "Stump (placeholder)", hideFlags = HideFlags.HideAndDontSave };
-        if (_material.HasProperty("_BaseColor")) _material.SetColor("_BaseColor", new Color(0.34f, 0.22f, 0.12f));
-        _rp = new RenderParams(_material)
-        {
-            worldBounds = new Bounds(_planetTransform.position, Vector3.one * 100000f),
-            shadowCastingMode = ShadowCastingMode.On,
-            receiveShadows = true,
-        };
+        if (shader == null || _placeholderMesh == null) return;
+        _placeholderMaterial = new Material(shader) { name = "Stump placeholder", hideFlags = HideFlags.HideAndDontSave };
+        if (_placeholderMaterial.HasProperty("_BaseColor"))
+            _placeholderMaterial.SetColor("_BaseColor", new Color(0.34f, 0.22f, 0.12f));
         _ready = true;
+    }
+
+    RenderParams Rp(Material m)
+    {
+        if (!_rpCache.TryGetValue(m, out RenderParams rp))
+        {
+            rp = new RenderParams(m)
+            {
+                worldBounds = new Bounds(_planetTransform.position, Vector3.one * 100000f),
+                shadowCastingMode = ShadowCastingMode.On,
+                receiveShadows = true,
+            };
+            _rpCache[m] = rp;
+        }
+        return rp;
     }
 
     public void Render(Camera camera)
@@ -48,28 +64,47 @@ public sealed class StumpRenderer : System.IDisposable
         _store.CollectStumps(_stumps);
         if (_stumps.Count == 0) return;
 
+        ScatterLibraryDto library = _libraryFn?.Invoke();
         Vector3 center = _planetTransform.position;
+
         for (int i = 0; i < _stumps.Count; i++)
         {
-            Vector3 basePos = _stumps[i].Position;
-            Vector3 up = basePos - center;
+            ScatterHarvestStore.HarvestNode node = _stumps[i];
+            Mesh mesh = _placeholderMesh;
+            Material mat = _placeholderMaterial;
+            bool authored = false;
+            if (library?.Prototypes != null && (uint)node.ProtoIndex < (uint)library.Prototypes.Length)
+            {
+                ScatterPrototypeDto proto = library.Prototypes[node.ProtoIndex];
+                if (proto.StumpMesh != null)
+                {
+                    mesh = proto.StumpMesh;
+                    mat = proto.StumpMaterial ?? proto.TrunkMaterial ?? _placeholderMaterial;
+                    authored = true;
+                }
+            }
+            if (mat == null) mat = _placeholderMaterial;
+
+            Vector3 up = node.Position - center;
             up = up.sqrMagnitude > 1e-6f ? up.normalized : Vector3.up;
             Quaternion rot = Quaternion.FromToRotation(Vector3.up, up);
-            // Record position is the felled tree's ground point; lift the centred cylinder by its half-height
-            // so the stump sits on the ground instead of half-sinking.
-            Vector3 pos = basePos + up * StumpScale.y;
-            Graphics.RenderMesh(_rp, _mesh, 0, Matrix4x4.TRS(pos, rot, StumpScale));
+            // Authored stump pivot is the tree base (mesh origin) -> sits at the record position, native scale.
+            // Placeholder cylinder is centre-pivoted -> lift by its half-height and use the placeholder scale.
+            Vector3 pos = authored ? node.Position : node.Position + up * PlaceholderScale.y;
+            Vector3 scale = authored ? Vector3.one : PlaceholderScale;
+            Graphics.RenderMesh(Rp(mat), mesh, 0, Matrix4x4.TRS(pos, rot, scale));
         }
     }
 
     public void Dispose()
     {
-        if (_material != null)
+        if (_placeholderMaterial != null)
         {
-            if (Application.isPlaying) Object.Destroy(_material);
-            else Object.DestroyImmediate(_material);
-            _material = null;
+            if (Application.isPlaying) Object.Destroy(_placeholderMaterial);
+            else Object.DestroyImmediate(_placeholderMaterial);
+            _placeholderMaterial = null;
         }
+        _rpCache.Clear();
         _ready = false;
     }
 }

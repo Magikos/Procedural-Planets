@@ -30,6 +30,8 @@ MonoBehaviour:
   ScaleRange: {x: 0.7, y: 1}
   RandomYaw: 1
   Interaction: 2
+  StumpMesh: {fileID: 4300000, guid: 9e19f742905d3074f88da62981e99d21, type: 2}
+  StumpMaterial: {fileID: 2100000, guid: 0b22fc0712ab9354a9ac7cf309c48e86, type: 2}
   Parts:
   - Name: Trunk
     Material: {fileID: 2100000, guid: 0b22fc0712ab9354a9ac7cf309c48e86, type: 2}

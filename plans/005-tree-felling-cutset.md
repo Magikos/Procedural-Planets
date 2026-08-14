@@ -1,6 +1,7 @@
 # Plan 005 — Tree felling: the cut-set (stump → fall → logs)
 
-**Status:** Inc 1 in progress. Builds on plan 003 (harvest POC, committed `5fa6ce0`).
+**Status:** Inc 1 committed (`140cb80`). Inc 2a done + play-verified (per-tree stumps render).
+Inc 2b (shovel) next. Builds on plan 003 (harvest POC, committed `5fa6ce0`).
 **Decided with Bryan 2026-08-12.**
 
 ## Vision

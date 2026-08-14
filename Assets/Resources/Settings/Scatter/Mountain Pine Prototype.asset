@@ -30,6 +30,8 @@ MonoBehaviour:
   ScaleRange: {x: 0.7, y: 1.1}
   RandomYaw: 1
   Interaction: 2
+  StumpMesh: {fileID: 4300000, guid: 99f507c542e84c84c8c49bd0be68f29d, type: 2}
+  StumpMaterial: {fileID: 2100000, guid: 422873f097e8abe4ea110bf8a8f037fa, type: 2}
   Parts:
   - Name: Pine
     Material: {fileID: 2100000, guid: 422873f097e8abe4ea110bf8a8f037fa, type: 2}
