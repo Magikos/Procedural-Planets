@@ -31,6 +31,64 @@ public static class TreeTubeMesher
         return mesh;
     }
 
+    // A single capped tube from a centerline + per-point girth (used for the cut-set stump/log). The mesh is
+    // built in local space with its pivot at centerline[0] (the base). Both ends are capped (cut surfaces).
+    public static Mesh BuildCappedTube(IReadOnlyList<Vector3> centerline, IReadOnlyList<float> girth, int sides)
+    {
+        var verts = new List<Vector3>();
+        var uvs = new List<Vector2>();
+        var tris = new List<int>();
+        int rings = centerline.Count;
+        var mesh = new Mesh { name = "Tree cut tube" };
+        if (rings < 2) return mesh;
+        sides = Mathf.Max(3, sides);
+        Vector3 origin = centerline[0];
+        float vLen = 0f;
+
+        for (int i = 0; i < rings; i++)
+        {
+            Vector3 c = centerline[i] - origin;
+            Vector3 fwd = i < rings - 1 ? (centerline[i + 1] - centerline[i]) : (centerline[i] - centerline[i - 1]);
+            fwd = fwd.sqrMagnitude > 1e-8f ? fwd.normalized : Vector3.up;
+            Vector3 right = Vector3.Cross(fwd, Mathf.Abs(fwd.y) < 0.9f ? Vector3.up : Vector3.right).normalized;
+            Vector3 up = Vector3.Cross(right, fwd).normalized;
+            float g = girth[i];
+            if (i > 0) vLen += (centerline[i] - centerline[i - 1]).magnitude;
+            for (int j = 0; j < sides; j++)
+            {
+                float a = 2f * Mathf.PI * j / sides;
+                verts.Add(c + (Mathf.Cos(a) * right + Mathf.Sin(a) * up) * g);
+                uvs.Add(new Vector2(j / (float)sides, vLen));
+            }
+        }
+
+        for (int i = 0; i < rings - 1; i++)
+        {
+            int a = i * sides, b = a + sides;
+            for (int j = 0; j < sides; j++)
+            {
+                int j1 = (j + 1) % sides;
+                tris.Add(a + j); tris.Add(b + j); tris.Add(a + j1);
+                tris.Add(a + j1); tris.Add(b + j); tris.Add(b + j1);
+            }
+        }
+
+        // Base cap (fan, faces down) + top cap (fan, faces up) — the cut surfaces.
+        int cBase = verts.Count; verts.Add(centerline[0] - origin); uvs.Add(new Vector2(0.5f, 0f));
+        for (int j = 0; j < sides; j++) { int j1 = (j + 1) % sides; tris.Add(cBase); tris.Add(j1); tris.Add(j); }
+        int last = (rings - 1) * sides;
+        int cTop = verts.Count; verts.Add(centerline[rings - 1] - origin); uvs.Add(new Vector2(0.5f, 1f));
+        for (int j = 0; j < sides; j++) { int j1 = (j + 1) % sides; tris.Add(cTop); tris.Add(last + j); tris.Add(last + j1); }
+
+        mesh.indexFormat = verts.Count > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16;
+        mesh.SetVertices(verts);
+        mesh.SetUVs(0, uvs);
+        mesh.SetTriangles(tris, 0);
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
     static void AddBranch(TreeBranch b, List<Vector3> verts, List<Vector2> uvs, List<int> tris)
     {
         int rings = b.Centerline.Count;
