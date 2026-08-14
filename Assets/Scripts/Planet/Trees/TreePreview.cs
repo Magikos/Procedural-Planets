@@ -1,16 +1,23 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-// Dev preview for the tree generator (plan 006): `tree.gen` grows a tree from a sample TreeDef + seed and spawns
-// it (bark + foliage) in front of the camera so shapes can be eyeballed in play. `tree.age` sets the age stage
-// (sapling..old). Console-only. Registered by Planet. Visual params (leaf/bark colors, sizes) are first guesses.
+// Dev preview for the tree generator (plan 006). `tree.gen` grows one tree in front of the camera; `tree.age`
+// / `tree.species` pick the stage + species. `tree.gallery` grids every species x age near the player so the
+// per-biome look can be tuned in one glance (and prints the biome->species map). Console-only, registered by
+// Planet. All spawned meshes orient to the local surface up so they stand upright on the planet.
 [CommandPrefix("tree")]
 public sealed class TreePreview : System.IDisposable
 {
     readonly Transform _planetTransform;
     float _age = 1f;
+    TreeDefLibrary.TreeSpecies _species = TreeDefLibrary.TreeSpecies.Broadleaf;
+
     GameObject _last;
     Material _barkMat;
     Material _foliageMat;
+
+    GameObject _gallery;
+    readonly List<Material> _galleryMats = new();
 
     public TreePreview(Transform planetTransform)
     {
@@ -18,25 +25,23 @@ public sealed class TreePreview : System.IDisposable
         ConsoleRegistry.RegisterInstance(this);
     }
 
-    [ConsoleCommand("gen", "Generate a preview tree in front of the camera. Optional seed.", MonoTargetType.Registry)]
+    [ConsoleCommand("gen", "Generate a preview tree of the current species/age in front of the camera. Optional seed.", MonoTargetType.Registry)]
     string GenCmd(int? seed = null)
     {
         var cam = Camera.main;
         if (cam == null) return "tree: no main camera";
 
-        TreeDef def = TreeDefLibrary.SampleBroadleaf(_age);
+        TreeDef def = TreeDefLibrary.Species(_species, _age);
         int s = seed ?? Random.Range(1, 999999);
         GeneratedTree tree = TreeGenerator.Generate(def, s);
 
         if (_last != null) Object.Destroy(_last);
         Vector3 pos = cam.transform.position + cam.transform.forward * 8f;
-        Vector3 up = _planetTransform != null ? (pos - _planetTransform.position) : Vector3.up;
-        up = up.sqrMagnitude > 1e-6f ? up.normalized : Vector3.up;
 
-        _last = new GameObject($"PreviewTree({s})");
-        _last.transform.SetPositionAndRotation(pos, Quaternion.FromToRotation(Vector3.up, up));
-        AddChild("bark", tree.Bark, BarkMat());
-        AddChild("foliage", tree.Foliage, FoliageMat());
+        _last = new GameObject($"PreviewTree({def.Name} {s})");
+        _last.transform.SetPositionAndRotation(pos, Quaternion.FromToRotation(Vector3.up, SurfaceUp(pos)));
+        AddMesh(_last.transform, "bark", tree.Bark, BarkMat(def.BarkColor));
+        AddMesh(_last.transform, "foliage", tree.Foliage, FoliageMat(def.LeafColor));
 
         return $"tree: '{def.Name}' age {_age:F2} seed {s} — H {tree.Height:F1}m, HP {tree.ChopHp}, wood {tree.WoodYield}; " +
                $"bark {(tree.Bark ? tree.Bark.vertexCount : 0)}v, foliage {(tree.Foliage ? tree.Foliage.vertexCount : 0)}v, " +
@@ -50,6 +55,66 @@ public sealed class TreePreview : System.IDisposable
         return $"tree age = {_age:F2} (0=sapling, 1=old). Run tree.gen to see it.";
     }
 
+    [ConsoleCommand("species", "Set preview species (broadleaf/conifer/birch/palm/acacia/shrub), then re-run tree.gen.", MonoTargetType.Registry)]
+    string SpeciesCmd(string name)
+    {
+        if (!TreeDefLibrary.TryParseSpecies(name, out _species))
+            return $"tree: unknown species '{name}'. Options: broadleaf, conifer, birch, palm, acacia, shrub.";
+        return $"tree species = {_species}. Run tree.gen to see it.";
+    }
+
+    [ConsoleCommand("gallery", "Grid every generated species x age (sapling..old) near the player + print the biome map. Optional seed.", MonoTargetType.Registry)]
+    string GalleryCmd(int? seed = null)
+    {
+        var cam = Camera.main;
+        if (cam == null) return "tree: no main camera";
+        int baseSeed = seed ?? 12345;
+
+        ClearGallery();
+        _gallery = new GameObject("TreeGallery");
+
+        Vector3 center = cam.transform.position + cam.transform.forward * 16f;
+        Vector3 up = SurfaceUp(center);
+        Vector3 right = Vector3.Cross(cam.transform.forward, up);
+        right = right.sqrMagnitude > 1e-5f ? right.normalized : Vector3.Cross(Vector3.forward, up).normalized;
+        Vector3 fwd = Vector3.Cross(up, right).normalized;
+
+        float[] ages = { 0.15f, 0.4f, 0.7f, 1f };
+        string[] ageNames = { "sapling", "young", "adult", "old" };
+        var species = TreeDefLibrary.AllSpecies;
+        const float colSpacing = 7f, rowSpacing = 9f;
+        float colOffset = (ages.Length - 1) * 0.5f;
+
+        int trees = 0;
+        for (int r = 0; r < species.Length; r++)
+        {
+            Material bark = null, foliage = null;
+            for (int c = 0; c < ages.Length; c++)
+            {
+                TreeDef def = TreeDefLibrary.Species(species[r], ages[c]);
+                if (bark == null)
+                {
+                    bark = MakeMat($"{def.Name} bark", def.BarkColor);
+                    foliage = MakeMat($"{def.Name} foliage", def.LeafColor);
+                    _galleryMats.Add(bark);
+                    _galleryMats.Add(foliage);
+                }
+
+                GeneratedTree tree = TreeGenerator.Generate(def, baseSeed + r * 31 + c);
+                Vector3 pos = center + right * ((c - colOffset) * colSpacing) + fwd * (-r * rowSpacing);
+                var cell = new GameObject($"{def.Name} ({ageNames[c]})");
+                cell.transform.SetParent(_gallery.transform, false);
+                cell.transform.SetPositionAndRotation(pos, Quaternion.FromToRotation(Vector3.up, SurfaceUp(pos)));
+                AddMesh(cell.transform, "bark", tree.Bark, bark);
+                AddMesh(cell.transform, "foliage", tree.Foliage, foliage);
+                AddLabel(cell.transform, $"{def.Name}\n{ageNames[c]}");
+                trees++;
+            }
+        }
+
+        return $"tree.gallery: {trees} trees ({species.Length} species x {ages.Length} ages) at {center}. Biome map:\n{TreeDefLibrary.BiomeMapSummary()}";
+    }
+
     [ConsoleCommand("inject", "Replace scatter trees with generated trees (on/off), then run `generate` to apply.", MonoTargetType.Registry)]
     string InjectCmd(string state = "on")
     {
@@ -57,24 +122,47 @@ public sealed class TreePreview : System.IDisposable
         return $"generated-tree injection {(TreeInjection.Enabled ? "ON" : "OFF")} — run `generate` (or regenerate the world) to apply.";
     }
 
-    void AddChild(string name, Mesh mesh, Material mat)
+    Vector3 SurfaceUp(Vector3 worldPos)
+    {
+        if (_planetTransform == null) return Vector3.up;
+        Vector3 up = worldPos - _planetTransform.position;
+        return up.sqrMagnitude > 1e-6f ? up.normalized : Vector3.up;
+    }
+
+    void AddMesh(Transform parent, string name, Mesh mesh, Material mat)
     {
         if (mesh == null) return;
         var go = new GameObject(name);
-        go.transform.SetParent(_last.transform, false);
+        go.transform.SetParent(parent, false);
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         go.AddComponent<MeshRenderer>().sharedMaterial = mat;
     }
 
-    Material BarkMat()
+    static void AddLabel(Transform parent, string text)
     {
-        if (_barkMat == null) _barkMat = MakeMat("Tree bark", new Color(0.35f, 0.24f, 0.14f));
+        var go = new GameObject("Label");
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = new Vector3(0f, -0.4f, 0f);
+        var tm = go.AddComponent<TextMesh>();
+        tm.text = text;
+        tm.characterSize = 0.14f;
+        tm.fontSize = 64;
+        tm.anchor = TextAnchor.UpperCenter;
+        tm.alignment = TextAlignment.Center;
+        tm.color = Color.black;
+    }
+
+    Material BarkMat(Color color)
+    {
+        if (_barkMat == null) _barkMat = MakeMat("Tree bark", color);
+        else if (_barkMat.HasProperty("_BaseColor")) _barkMat.SetColor("_BaseColor", color);
         return _barkMat;
     }
 
-    Material FoliageMat()
+    Material FoliageMat(Color color)
     {
-        if (_foliageMat == null) _foliageMat = MakeMat("Tree foliage", new Color(0.24f, 0.44f, 0.16f));
+        if (_foliageMat == null) _foliageMat = MakeMat("Tree foliage", color);
+        else if (_foliageMat.HasProperty("_BaseColor")) _foliageMat.SetColor("_BaseColor", color);
         return _foliageMat;
     }
 
@@ -86,11 +174,20 @@ public sealed class TreePreview : System.IDisposable
         return m;
     }
 
+    void ClearGallery()
+    {
+        if (_gallery != null) Object.Destroy(_gallery);
+        _gallery = null;
+        foreach (Material m in _galleryMats) if (m != null) Object.Destroy(m);
+        _galleryMats.Clear();
+    }
+
     public void Dispose()
     {
         ConsoleRegistry.UnregisterInstance(typeof(TreePreview));
         if (_last != null) Object.Destroy(_last);
         if (_barkMat != null) Object.Destroy(_barkMat);
         if (_foliageMat != null) Object.Destroy(_foliageMat);
+        ClearGallery();
     }
 }

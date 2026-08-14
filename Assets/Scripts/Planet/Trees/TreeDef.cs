@@ -13,6 +13,11 @@ public sealed class TreeDef
     [Range(0f, 1f)] public float Age = 1f; // 0 = sapling, 1 = old; scales height/girth/branch tiers/lean
     public LevelRule[] Levels = Array.Empty<LevelRule>();
 
+    // The species palette. Bark and leaf color travel with the definition so the gallery and the planet
+    // materials both read one source (birch = pale trunk, conifer = dark needles, etc.).
+    public Color BarkColor = new Color(0.35f, 0.24f, 0.14f);
+    public Color LeafColor = new Color(0.28f, 0.46f, 0.18f);
+
     // Level 0 is always the trunk (ParentLevel < 0). Later levels reference an earlier level as parent.
     public LevelRule Trunk => Levels != null && Levels.Length > 0 ? Levels[0] : null;
 }
