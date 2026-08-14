@@ -76,6 +76,29 @@ namespace ProceduralPlanets.Tests
         }
 
         [Test]
+        public void RecordLog_Persists_PositionRotationProto_AcrossReload()
+        {
+            var a = new ScatterHarvestStore();
+            a.Configure(TestSeed);
+            var rot = Quaternion.Euler(12f, 34f, 56f);
+            ulong logId = a.RecordLog(new Vector3(3, 4, 5), rot, 7);
+            Assert.AreNotEqual(0UL, logId);
+
+            var reloaded = new ScatterHarvestStore();
+            reloaded.Configure(TestSeed);
+            var logs = new List<ScatterHarvestStore.LogRecord>();
+            reloaded.CollectLogs(logs);
+            Assert.AreEqual(1, logs.Count);
+            Assert.AreEqual(new Vector3(3, 4, 5), logs[0].Position);
+            Assert.AreEqual(7, logs[0].ProtoIndex);
+            Assert.Less(Quaternion.Angle(rot, logs[0].Rotation), 0.5f, "rotation round-trips");
+
+            Assert.IsTrue(reloaded.RemoveLog(logId));
+            reloaded.CollectLogs(logs);
+            Assert.AreEqual(0, logs.Count, "removed log is gone");
+        }
+
+        [Test]
         public void Configure_WrongSeed_LoadsEmpty()
         {
             var a = new ScatterHarvestStore();

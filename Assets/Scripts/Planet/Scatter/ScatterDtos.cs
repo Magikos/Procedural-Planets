@@ -37,8 +37,21 @@ public sealed record ScatterPrototypeDto(
     Mesh StumpMesh = null,
     Material StumpMaterial = null)
 {
-    // The first part's material — the stump's fallback material (the trunk) when StumpMaterial is unset.
-    public Material TrunkMaterial => Parts != null && Parts.Length > 0 ? Parts[0].Material : null;
+    // The trunk = the first drawable part (Synty scatter-tree convention). Used for stumps and fallen logs so
+    // foliage (which splays flat when the tree lies down) is excluded.
+    public ScatterPartDto TrunkPart
+    {
+        get
+        {
+            if (Parts != null)
+                foreach (ScatterPartDto p in Parts)
+                    if (p != null && p.CanRender) return p;
+            return null;
+        }
+    }
+
+    // The stump's fallback material (the trunk) when StumpMaterial is unset.
+    public Material TrunkMaterial => TrunkPart?.Material;
 
     // Raw map only; ScatterLibraryDto.EnsureValid is the single validator (assets + overrides).
     public static ScatterPrototypeDto From(ScatterPrototype p) => new(

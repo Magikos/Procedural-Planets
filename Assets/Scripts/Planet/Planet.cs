@@ -54,6 +54,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     InventoryService _inventory;
     HarvestInteractor _harvestInteractor;
     StumpRenderer _stumpRenderer;
+    LogRenderer _logRenderer;
+    TreeFallSystem _treeFall;
 
     static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
     static readonly int _seaLevelRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
@@ -146,6 +148,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _inventory ??= new InventoryService();
         _stumpRenderer ??= new StumpRenderer(_harvestStore, transform,
             () => SettingsProvider.IsRegistered<ScatterLibraryDto>() ? SettingsProvider.GetSettings<ScatterLibraryDto>() : null);
+        _logRenderer ??= new LogRenderer(_harvestStore, transform);
+        _treeFall ??= new TreeFallSystem(transform,
+            () => SettingsProvider.IsRegistered<ScatterLibraryDto>() ? SettingsProvider.GetSettings<ScatterLibraryDto>() : null,
+            _harvestStore);
         _scatterRenderer.Cache.SetHarvestStore(_harvestStore);
     }
 
@@ -221,6 +227,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _cts?.Dispose();
         _cts = null;
         _grass?.Dispose();
+        _treeFall?.Dispose();
+        _treeFall = null;
+        _logRenderer?.Dispose();
+        _logRenderer = null;
         _stumpRenderer?.Dispose();
         _stumpRenderer = null;
         _scatterRenderer?.Dispose();
@@ -258,6 +268,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _grass.Tick(_observerCamera);
         _scatterRenderer?.Render(_observerCamera);
         _stumpRenderer?.Render(_observerCamera);
+        _logRenderer?.Render(_observerCamera);
         _surfaceEdits?.TickRegrowth();
     }
 

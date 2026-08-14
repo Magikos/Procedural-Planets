@@ -1,7 +1,14 @@
 # Plan 005 — Tree felling: the cut-set (stump → fall → logs)
 
-**Status:** Inc 1 committed (`140cb80`). Inc 2a done + play-verified (per-tree stumps render).
-Inc 2b (shovel) next. Builds on plan 003 (harvest POC, committed `5fa6ce0`).
+**Status:** Inc 1/2a/2b committed. Inc 3a (fall) + 4a (persistent logs) done + play-verified.
+Inc 3b (particles) next; 4b (chop log → wood) after. Builds on plan 003 (harvest POC, `5fa6ce0`).
+
+**Deferred to a dedicated TREE-POLISH pass (Bryan, 2026-08-12):** the whole tree/cut-set look needs a
+rework for real control over how trees look and fall. Two known items parked there: the falling tree
+mesh splays foliage/branches when flat, so the resting **log is a placeholder cylinder** (not per-tree
+geometry), and the tree→log handoff is a shape-pop. `FallenLogMesh` generation + a cleaner fall are
+part of that pass. The mechanic (fall → persistent log → will be harvestable) is done; the fidelity is
+the polish.
 **Decided with Bryan 2026-08-12.**
 
 ## Vision
