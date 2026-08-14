@@ -33,7 +33,7 @@ namespace ProceduralPlanets.Tests
         static HarvestService Make(HashSet<ulong> store, List<(int proto, ulong id)> removed,
             Dictionary<string, int> inv, ScatterInteraction interaction, string displayName = "Pine")
             => new HarvestService(
-                id => store.Add(id),
+                (id, proto, pos) => store.Add(id),
                 (p, id) => removed.Add((p, id)),
                 (item, n) => { inv.TryGetValue(item, out int c); inv[item] = c + n; },
                 _ => new ProtoHarvestInfo(interaction, displayName));

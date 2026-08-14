@@ -53,6 +53,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     ScatterHarvestStore _harvestStore;
     InventoryService _inventory;
     HarvestInteractor _harvestInteractor;
+    StumpRenderer _stumpRenderer;
 
     static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
     static readonly int _seaLevelRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
@@ -111,7 +112,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
                 ScatterTileCache scatterCache = _scatterRenderer.Cache;
                 var picker = new ScatterPicker(scatterCache, libraryFn);
                 var harvest = new HarvestService(
-                    id => _harvestStore.Add(id),
+                    (id, proto, pos) => _harvestStore.RecordStump(id, pos, proto),
                     (proto, id) => scatterCache.RemoveInstance(proto, id),
                     (item, count) => _inventory.Add(item, count),
                     proto =>
@@ -142,6 +143,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _surfaceEdits ??= new SurfaceEditController(transform, Logger, () => _grass.InvalidateSurfaceMasks());
         _harvestStore ??= new ScatterHarvestStore(Logger);
         _inventory ??= new InventoryService();
+        _stumpRenderer ??= new StumpRenderer(_harvestStore, transform);
         _scatterRenderer.Cache.SetHarvestStore(_harvestStore);
     }
 
@@ -217,6 +219,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _cts?.Dispose();
         _cts = null;
         _grass?.Dispose();
+        _stumpRenderer?.Dispose();
+        _stumpRenderer = null;
         _scatterRenderer?.Dispose();
         _scatterRenderer = null;
         _scatter?.Dispose();
@@ -251,6 +255,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _surfaceProvider.Tick(_observerCamera.transform.position, _observerCamera);
         _grass.Tick(_observerCamera);
         _scatterRenderer?.Render(_observerCamera);
+        _stumpRenderer?.Render(_observerCamera);
         _surfaceEdits?.TickRegrowth();
     }
 

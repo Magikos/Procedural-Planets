@@ -8,7 +8,7 @@ using UnityEngine;
 // player controller and tests wire independently.
 public sealed class HarvestService
 {
-    readonly Func<ulong, bool> _persistHarvest;      // record + persist; false if already harvested
+    readonly Func<ulong, int, Vector3, bool> _persistHarvest; // record fell (id, proto, pos); false if already
     readonly Action<int, ulong> _removeFromDraw;     // drop the instance from the draw this frame
     readonly Action<string, int> _grantItem;         // credit the inventory
     readonly Func<int, ProtoHarvestInfo> _protoInfo; // prototype interaction + display name
@@ -17,7 +17,7 @@ public sealed class HarvestService
     // consulted here — compare tool.Damage against remaining HP, raise HarvestHitEvent until it reaches 0.
     const int DefaultNodeHp = 1;
 
-    public HarvestService(Func<ulong, bool> persistHarvest, Action<int, ulong> removeFromDraw,
+    public HarvestService(Func<ulong, int, Vector3, bool> persistHarvest, Action<int, ulong> removeFromDraw,
         Action<string, int> grantItem, Func<int, ProtoHarvestInfo> protoInfo)
     {
         _persistHarvest = persistHarvest;
@@ -38,7 +38,7 @@ public sealed class HarvestService
             return HarvestResult.Hit;
         }
 
-        if (!_persistHarvest(id))
+        if (!_persistHarvest(id, protoIndex, worldPos))
             return HarvestResult.AlreadyHarvested;
 
         _removeFromDraw(protoIndex, id);
