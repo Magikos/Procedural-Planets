@@ -7,10 +7,10 @@ using UnityEngine;
 // physically derived. Trunk always grows +Y (Curve leans it); leaves attach to their ParentLevel tier.
 public static class TreeDefLibrary
 {
-    public enum TreeSpecies { Broadleaf, Conifer, Pine, Birch, Palm, Acacia, Shrub }
+    public enum TreeSpecies { Broadleaf, Conifer, Pine, Birch, Palm, Acacia, Shrub, Willow }
 
     public static readonly TreeSpecies[] AllSpecies =
-        { TreeSpecies.Broadleaf, TreeSpecies.Conifer, TreeSpecies.Pine, TreeSpecies.Birch, TreeSpecies.Palm, TreeSpecies.Acacia, TreeSpecies.Shrub };
+        { TreeSpecies.Broadleaf, TreeSpecies.Conifer, TreeSpecies.Pine, TreeSpecies.Birch, TreeSpecies.Palm, TreeSpecies.Acacia, TreeSpecies.Shrub, TreeSpecies.Willow };
 
     public static TreeDef Species(TreeSpecies s, float age = 1f) => s switch
     {
@@ -20,6 +20,7 @@ public static class TreeDefLibrary
         TreeSpecies.Palm => Palm(age),
         TreeSpecies.Acacia => Acacia(age),
         TreeSpecies.Shrub => Shrub(age),
+        TreeSpecies.Willow => Willow(age),
         _ => Broadleaf(age),
     };
 
@@ -32,8 +33,8 @@ public static class TreeDefLibrary
         switch (biome)
         {
             case BiomeType.Forest:
-            case BiomeType.Grassland:
-            case BiomeType.Swamp: s = TreeSpecies.Broadleaf; return true;
+            case BiomeType.Grassland: s = TreeSpecies.Broadleaf; return true;
+            case BiomeType.Swamp: s = TreeSpecies.Willow; return true;
             case BiomeType.Taiga:
             case BiomeType.Snow: s = TreeSpecies.Conifer; return true;   // dense fir/spruce cone
             case BiomeType.Steppe:
@@ -64,7 +65,7 @@ public static class TreeDefLibrary
     // filled by two leaf tiers (outer on the twigs, inner on the primaries) so the crown reads solid, not spindly.
     public static TreeDef Broadleaf(float age = 1f) => new TreeDef
     {
-        Name = "Broadleaf", GlobalScale = 1.6f, Age = Mathf.Clamp01(age),
+        Name = "Broadleaf", GlobalScale = 1.9f, Age = Mathf.Clamp01(age),
         BarkColor = new Color(0.35f, 0.24f, 0.14f), LeafColor = new Color(0.20f, 0.40f, 0.15f),
         Levels = new[]
         {
@@ -83,13 +84,13 @@ public static class TreeDefLibrary
             },
             new LevelRule
             {
-                Label = "leaves_outer", ParentLevel = 2, IsLeaf = true, Frequency = new Vector2(3, 5),
-                Range = new Vector2(0.1f, 1f), LeafSize = 0.9f, LeafGroup = 0,
+                Label = "leaves_outer", ParentLevel = 2, IsLeaf = true, Frequency = new Vector2(4, 6),
+                Range = new Vector2(0.1f, 1f), LeafSize = 0.95f, LeafGroup = 0,
             },
             new LevelRule
             {
-                Label = "leaves_inner", ParentLevel = 1, IsLeaf = true, Frequency = new Vector2(2, 4),
-                Range = new Vector2(0.4f, 1f), LeafSize = 1.1f, LeafGroup = 0,
+                Label = "leaves_inner", ParentLevel = 1, IsLeaf = true, Frequency = new Vector2(3, 5),
+                Range = new Vector2(0.4f, 1f), LeafSize = 1.15f, LeafGroup = 0,
             },
         },
     };
@@ -158,7 +159,7 @@ public static class TreeDefLibrary
         BarkColor = new Color(0.42f, 0.31f, 0.18f), LeafColor = new Color(0.24f, 0.44f, 0.20f),
         Levels = new[]
         {
-            new LevelRule { Label = "trunk", ParentLevel = -1, Length = new Vector2(8f, 11f), RadialSides = 6, Curve = 22f, Noise = 0.05f },
+            new LevelRule { Label = "trunk", ParentLevel = -1, Length = new Vector2(8f, 11f), RadialSides = 6, Curve = 12f, Noise = 0.06f },
             new LevelRule
             {
                 Label = "fronds", ParentLevel = 0, IsLeaf = true, Frequency = new Vector2(10, 14),
@@ -207,6 +208,28 @@ public static class TreeDefLibrary
             {
                 Label = "leaves", ParentLevel = 1, IsLeaf = true, Frequency = new Vector2(3, 5),
                 Range = new Vector2(0.2f, 1f), LeafSize = 0.65f, LeafGroup = 0,
+            },
+        },
+    };
+
+    // Weeping willow: short trunk, branches arching up, then long leafy strands cascading straight down.
+    public static TreeDef Willow(float age = 1f) => new TreeDef
+    {
+        Name = "Willow", GlobalScale = 1.6f, Age = Mathf.Clamp01(age),
+        BarkColor = new Color(0.32f, 0.26f, 0.18f), LeafColor = new Color(0.42f, 0.56f, 0.24f),
+        Levels = new[]
+        {
+            new LevelRule { Label = "trunk", ParentLevel = -1, Length = new Vector2(3.5f, 5f), RadialSides = 6, Curve = 8f, Noise = 0.05f },
+            new LevelRule
+            {
+                Label = "branches", ParentLevel = 0, Frequency = new Vector2(7, 10), ChildrenPerNode = 1,
+                Range = new Vector2(0.4f, 0.95f), ParallelAlign = 0.55f, GravityAlign = new Vector2(0.5f, 0.25f),
+                Length = new Vector2(2.4f, 1.6f), GirthScale = 0.5f, RadialSides = 4, Curve = 20f, Noise = 0.1f,
+            },
+            new LevelRule
+            {
+                Label = "strands", ParentLevel = 1, IsLeaf = true, Frequency = new Vector2(9, 14),
+                Range = new Vector2(0.3f, 1f), LeafSize = 3.5f, LeafGroup = 3,
             },
         },
     };

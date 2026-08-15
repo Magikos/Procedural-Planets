@@ -40,9 +40,11 @@ public static class TreeLeafMesher
     static void AddCluster(TreeSprout s, float leafScale, List<Vector3> verts, List<Vector2> uvs,
         List<Color> cols, List<int> tris)
     {
-        // LeafGroup 1 = a big drooping frond (palm); 2 = a spiky needle tuft (open pine); 0 = a crossed clump.
+        // LeafGroup 1 = a big drooping frond (palm); 2 = a spiky needle tuft (open pine); 3 = a weeping leaf strand
+        // (willow); 0 = a crossed clump.
         if (s.LeafGroup == 1) { AddFrond(s, leafScale, verts, uvs, cols, tris); return; }
         if (s.LeafGroup == 2) { AddNeedleTuft(s, leafScale, verts, uvs, cols, tris); return; }
+        if (s.LeafGroup == 3) { AddWeepingStrand(s, leafScale, verts, uvs, cols, tris); return; }
 
         float size = Mathf.Max(0.02f, s.Size * leafScale);
         Vector3 fwd = s.Direction.sqrMagnitude > 1e-6f ? s.Direction.normalized : Vector3.up;
@@ -94,6 +96,41 @@ public static class TreeLeafMesher
 
             p += dir * segLen;
             dir = (dir + Vector3.down * 0.22f).normalized; // arc the frond downward as it extends
+        }
+    }
+
+    // A weeping strand (willow): a thin leafy ribbon that leaves the branch tip going a little outward, then
+    // cascades straight down under gravity. UV v runs top->tip so the leaf texture reads along the strand.
+    static void AddWeepingStrand(TreeSprout s, float leafScale, List<Vector3> verts, List<Vector2> uvs,
+        List<Color> cols, List<int> tris)
+    {
+        float len = Mathf.Max(0.3f, s.Size * leafScale);
+        float w = Mathf.Max(0.03f, len * 0.05f);
+        Vector3 outward = new Vector3(s.Direction.x, 0f, s.Direction.z);
+        outward = outward.sqrMagnitude > 1e-4f ? outward.normalized : Vector3.right;
+        Vector3 d = (outward * 0.5f + Vector3.down).normalized; // start out, then curve down
+        Vector3 side = Vector3.Cross(d, Vector3.up);
+        side = side.sqrMagnitude > 1e-5f ? side.normalized : outward;
+
+        const int segs = 5;
+        float segLen = len / segs;
+        Vector3 p = s.Position;
+        int prevL = -1, prevR = -1;
+
+        for (int i = 0; i <= segs; i++)
+        {
+            float tt = i / (float)segs;
+            int li = verts.Count;
+            verts.Add(p - side * w); uvs.Add(new Vector2(0f, 1f - tt)); cols.Add(LeafVtx);
+            verts.Add(p + side * w); uvs.Add(new Vector2(1f, 1f - tt)); cols.Add(LeafVtx);
+            if (i > 0)
+            {
+                tris.Add(prevL); tris.Add(prevR); tris.Add(li + 1);
+                tris.Add(prevL); tris.Add(li + 1); tris.Add(li);
+            }
+            prevL = li; prevR = li + 1;
+            p += d * segLen;
+            d = (d + Vector3.down * 0.6f).normalized; // sag toward straight down
         }
     }
 
