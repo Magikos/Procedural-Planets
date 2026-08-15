@@ -4,6 +4,10 @@ using UnityEngine;
 // Code-first tree definition (plan 006). A species is a TreeDef: an ordered list of level rules (trunk = level
 // 0, then branch levels, then leaf levels) + a global age that scales the whole tree. One TreeDef + an age
 // gives the sapling/young/adult/old stages. Deterministic per seed. This is authored in code, not a node graph.
+// How the foliage mesh is built. LeafCards = textured leaf clumps / fronds (broadleaf, palm, etc.);
+// ConiferCone = a solid low-poly fir cone (no leaf texture available for needles).
+public enum FoliageStyle { LeafCards, ConiferCone }
+
 [Serializable]
 public sealed class TreeDef
 {
@@ -12,6 +16,8 @@ public sealed class TreeDef
 
     [Range(0f, 1f)] public float Age = 1f; // 0 = sapling, 1 = old; scales height/girth/branch tiers/lean
     public LevelRule[] Levels = Array.Empty<LevelRule>();
+    public FoliageStyle FoliageStyle = FoliageStyle.LeafCards;
+    public float TrunkTipScale = 0.28f; // trunk tip girth as a fraction of base; low = tapers to a spire (conifer)
 
     // The species palette. Bark and leaf color travel with the definition so the gallery and the planet
     // materials both read one source (birch = pale trunk, conifer = dark needles, etc.).

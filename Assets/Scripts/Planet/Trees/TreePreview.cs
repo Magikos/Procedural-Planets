@@ -16,9 +16,17 @@ public sealed class TreePreview : System.IDisposable
     GameObject _last;
     Material _barkMat;
     Material _foliageMat;
+    Material _coniferMat;
 
     GameObject _gallery;
     readonly List<Material> _galleryMats = new();
+
+    // Real biome leaf materials from the scatter library, per species (asset refs — never destroy).
+    readonly Dictionary<TreeDefLibrary.TreeSpecies, Material> _speciesFoliage = new();
+    ScatterLibrary _lib;
+    bool _libTried;
+    Material _cleanLeaf;
+    bool _cleanLeafTried;
 
     public TreePreview(Transform planetTransform)
     {
@@ -41,8 +49,11 @@ public sealed class TreePreview : System.IDisposable
 
         _last = new GameObject($"PreviewTree({def.Name} {s})");
         _last.transform.SetPositionAndRotation(pos, Quaternion.FromToRotation(Vector3.up, SurfaceUp(pos)));
+        Material genFoliage = def.FoliageStyle == FoliageStyle.ConiferCone
+            ? ConiferPreviewMat(def.LeafColor)
+            : FoliageMatForSpecies(_species) ?? FoliageMat(def.LeafColor);
         AddMesh(_last.transform, "bark", tree.Bark, BarkMat(def.BarkColor));
-        AddMesh(_last.transform, "foliage", tree.Foliage, FoliageMat(def.LeafColor));
+        AddMesh(_last.transform, "foliage", tree.Foliage, genFoliage);
 
         return $"tree: '{def.Name}' age {_age:F2} seed {s} — H {tree.Height:F1}m, HP {tree.ChopHp}, wood {tree.WoodYield}; " +
                $"bark {(tree.Bark ? tree.Bark.vertexCount : 0)}v, foliage {(tree.Foliage ? tree.Foliage.vertexCount : 0)}v, " +
@@ -96,9 +107,9 @@ public sealed class TreePreview : System.IDisposable
                 if (bark == null)
                 {
                     bark = MakeMat($"{def.Name} bark", def.BarkColor);
-                    foliage = MakeMat($"{def.Name} foliage", def.LeafColor);
                     _galleryMats.Add(bark);
-                    _galleryMats.Add(foliage);
+                    foliage = def.FoliageStyle == FoliageStyle.ConiferCone ? ConiferPreviewMat(def.LeafColor) : FoliageMatForSpecies(species[r]);
+                    if (foliage == null) { foliage = MakeMat($"{def.Name} foliage", def.LeafColor); _galleryMats.Add(foliage); }
                 }
 
                 GeneratedTree tree = TreeGenerator.Generate(def, baseSeed + r * 31 + c);
@@ -180,6 +191,74 @@ public sealed class TreePreview : System.IDisposable
         return _foliageMat;
     }
 
+    // The real biome leaf material (FoliageLit + leaf-patch texture) for a species: the foliage material of a
+    // scatter tree prototype whose biome maps to that species. Asset ref — cache it, never destroy it.
+    Material FoliageMatForSpecies(TreeDefLibrary.TreeSpecies s)
+    {
+        if (_speciesFoliage.TryGetValue(s, out Material cached)) return cached;
+        if (!_libTried) { _libTried = true; _lib = Resources.Load<ScatterLibrary>("Settings/ScatterLibrary"); }
+
+        Material found = null;
+        if (_lib?.Prototypes != null)
+            foreach (ScatterPrototype proto in _lib.Prototypes)
+            {
+                if (proto == null || proto.Interaction != ScatterInteraction.Chop || proto.Parts == null) continue;
+                if (!TreeDefLibrary.HasTree(proto.Biome, out TreeDefLibrary.TreeSpecies ps) || ps != s) continue;
+                Material m = TreeInjection.PickFoliageMaterial(MaterialsOf(proto));
+                if (m != null && !TreeInjection.IsPaletteAtlas(m)) { found = m; break; } // skip palette atlases (pine)
+            }
+        found ??= CleanLeaf(); // palette-atlas species (conifer) -> a clean leaf material
+        _speciesFoliage[s] = found;
+        return found;
+    }
+
+    // First clean (non-palette) leaf material in the library, as a fallback for species whose Synty material is a
+    // palette atlas. Asset ref — never destroy.
+    Material CleanLeaf()
+    {
+        if (_cleanLeafTried) return _cleanLeaf;
+        _cleanLeafTried = true;
+        if (_lib?.Prototypes != null)
+            foreach (ScatterPrototype proto in _lib.Prototypes)
+            {
+                if (proto == null || proto.Interaction != ScatterInteraction.Chop || proto.Parts == null) continue;
+                Material m = TreeInjection.PickFoliageMaterial(MaterialsOf(proto));
+                if (m != null && !TreeInjection.IsPaletteAtlas(m)) { _cleanLeaf = m; break; }
+            }
+        return _cleanLeaf;
+    }
+
+    static Material[] MaterialsOf(ScatterPrototype proto)
+    {
+        var mats = new Material[proto.Parts.Length];
+        for (int i = 0; i < mats.Length; i++) mats[i] = proto.Parts[i]?.Material;
+        return mats;
+    }
+
+    // Conifer needles: solid geometry on FoliageLit with _ForceLeaf so it gets foliage lighting + reads the cone's
+    // baked AO (vtx.G), matching the injected world.
+    Material ConiferPreviewMat(Color color)
+    {
+        if (_coniferMat == null)
+        {
+            Shader sh = Shader.Find("Scatter/FoliageLit") ?? Shader.Find("Scatter/VertexColorLit");
+            _coniferMat = new Material(sh) { name = "Tree needles", hideFlags = HideFlags.HideAndDontSave };
+            if (_coniferMat.HasProperty("_ForceLeaf")) _coniferMat.SetFloat("_ForceLeaf", 1f);
+            _coniferMat.enableInstancing = true;
+            // FoliageLit colors from _BaseMap (no _BaseColor), so paint a solid-green base; vtx.G AO shades it.
+            if (_coniferMat.HasProperty("_BaseMap"))
+            {
+                var t = new Texture2D(4, 4, TextureFormat.RGBA32, false) { name = "needle tint", hideFlags = HideFlags.HideAndDontSave };
+                var px = new Color[16];
+                for (int i = 0; i < px.Length; i++) px[i] = color;
+                t.SetPixels(px); t.Apply();
+                _coniferMat.SetTexture("_BaseMap", t);
+            }
+        }
+        if (_coniferMat.HasProperty("_BaseColor")) _coniferMat.SetColor("_BaseColor", color);
+        return _coniferMat;
+    }
+
     // Same shader the injected planet trees use: Scatter/VertexColorLit tints by _BaseColor and is planet-lit.
     static Material MakeMat(string name, Color color)
     {
@@ -204,6 +283,7 @@ public sealed class TreePreview : System.IDisposable
         if (_last != null) Object.Destroy(_last);
         if (_barkMat != null) Object.Destroy(_barkMat);
         if (_foliageMat != null) Object.Destroy(_foliageMat);
+        if (_coniferMat != null) Object.Destroy(_coniferMat);
         ClearGallery();
     }
 }

@@ -27,7 +27,7 @@ public static class TreeStructureGenerator
             float trunkGirth = trunkLen * 0.05f * Mathf.Lerp(0.6f, 1.4f, ageGirth);
             var trunk = new TreeBranch { Level = 0, IsTrunk = true, RadialSides = t.RadialSides, PositionOnParent = 0f };
             int trunkSegs = Mathf.Clamp(Mathf.RoundToInt(trunkLen / 1.4f), 3, 10);
-            BuildCenterline(trunk, Vector3.zero, Vector3.up, trunkLen, trunkGirth, trunkGirth * 0.28f, t.Curve, t.Noise, trunkSegs);
+            BuildCenterline(trunk, Vector3.zero, Vector3.up, trunkLen, trunkGirth, trunkGirth * def.TrunkTipScale, t.Curve, t.Noise, trunkSegs);
             sk.AddBranch(trunk);
             sk.Trunk = trunk;
             sk.Height = trunk.Tip.y;
