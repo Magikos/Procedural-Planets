@@ -18,6 +18,7 @@ public sealed class TreeDef
     public LevelRule[] Levels = Array.Empty<LevelRule>();
     public FoliageStyle FoliageStyle = FoliageStyle.LeafCards;
     public float TrunkTipScale = 0.28f; // trunk tip girth as a fraction of base; low = tapers to a spire (conifer)
+    public bool NeedleFoliage = false;  // solid dark-green needle material (fir cone / pine tufts) vs leaf texture
 
     // The species palette. Bark and leaf color travel with the definition so the gallery and the planet
     // materials both read one source (birch = pale trunk, conifer = dark needles, etc.).

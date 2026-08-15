@@ -71,7 +71,7 @@ public static class TreeInjection
             // Conifer cone is solid dark-green geometry (VertexColorLit); other species reuse the prototype's own
             // Synty leaf-patch material so each biome gets its correct leaf look (our cards carry the vtx.B leaf
             // mask it expects). Palette-atlas materials (pine's Generic_*) get a clean tinted leaf substitute.
-            Material foliage = def.FoliageStyle == FoliageStyle.ConiferCone
+            Material foliage = def.NeedleFoliage
                 ? ConiferMat(species, def)
                 : SyntyFoliage(p, species, def) ?? foliageFallback;
 
@@ -118,13 +118,16 @@ public static class TreeInjection
         return mats;
     }
 
-    // A palette/gradient atlas (Synty "Generic_*") maps color by UV cell, so our whole-card [0,1] UVs sample the
-    // rainbow strip instead of a leaf. Detect it so we can substitute a real leaf texture.
+    // Textures our whole-card [0,1] UVs can't use: palette/gradient atlases (Synty "Generic_*"), biome palette
+    // sheets ("..._Texture_NN", e.g. FoliageDead), and multi-leaf atlases (pohutukawa). Only the clean single-patch
+    // leaf textures (leafPatch_*) and the palm frond atlas (handled per-cell) survive; substitute for the rest.
     public static bool IsPaletteAtlas(Material m)
     {
         if (m == null) return true;
         Texture t = m.HasProperty("_BaseMap") ? m.GetTexture("_BaseMap") : m.mainTexture;
-        return t == null || (t.name != null && t.name.IndexOf("Generic", StringComparison.OrdinalIgnoreCase) >= 0);
+        if (t == null) return true;
+        string n = t.name != null ? t.name.ToLowerInvariant() : "";
+        return n.Contains("generic") || n.Contains("_texture") || n.Contains("palette") || n.Contains("pohutukawa");
     }
 
     static Material FindCleanLeaf(ScatterLibraryDto lib)

@@ -40,8 +40,9 @@ public static class TreeLeafMesher
     static void AddCluster(TreeSprout s, float leafScale, List<Vector3> verts, List<Vector2> uvs,
         List<Color> cols, List<int> tris)
     {
-        // LeafGroup 1 = a big drooping frond (palm); group 0 = a crossed leaf clump (everything else).
+        // LeafGroup 1 = a big drooping frond (palm); 2 = a spiky needle tuft (open pine); 0 = a crossed clump.
         if (s.LeafGroup == 1) { AddFrond(s, leafScale, verts, uvs, cols, tris); return; }
+        if (s.LeafGroup == 2) { AddNeedleTuft(s, leafScale, verts, uvs, cols, tris); return; }
 
         float size = Mathf.Max(0.02f, s.Size * leafScale);
         Vector3 fwd = s.Direction.sqrMagnitude > 1e-6f ? s.Direction.normalized : Vector3.up;
@@ -104,6 +105,39 @@ public static class TreeLeafMesher
 
     // FoliageLit reads leaf AO from vertex-color green; B=1 keeps the leaf mask on.
     static Color Leaf(float ao) => new Color(1f, Mathf.Clamp01(ao), 1f, 1f);
+
+    // A needle tuft: a small spiky drooping puff at a branch tip (open pine). Solid geometry, AO in vtx.G.
+    static void AddNeedleTuft(TreeSprout s, float leafScale, List<Vector3> verts, List<Vector2> uvs,
+        List<Color> cols, List<int> tris)
+    {
+        float r = Mathf.Max(0.05f, s.Size * leafScale);
+        Vector3 c = s.Position;
+        Vector3 apex = c + Vector3.up * (r * 0.8f);
+        int n = 16; // 8 spikes + 8 notches
+
+        for (int i = 0; i < n; i++)
+        {
+            Vector3 p0 = TuftPoint(c, i, n, r);
+            Vector3 p1 = TuftPoint(c, i + 1, n, r);
+            float g0 = (i % 2) == 0 ? 1f : 0.6f;
+            float g1 = ((i + 1) % 2) == 0 ? 1f : 0.6f;
+            int i0 = verts.Count;
+            verts.Add(apex); verts.Add(p0); verts.Add(p1);
+            uvs.Add(new Vector2(0.5f, 1f)); uvs.Add(new Vector2(0f, 0f)); uvs.Add(new Vector2(1f, 0f));
+            cols.Add(Leaf(0.5f)); cols.Add(Leaf(g0)); cols.Add(Leaf(g1));
+            tris.Add(i0); tris.Add(i0 + 1); tris.Add(i0 + 2);
+            tris.Add(i0); tris.Add(i0 + 2); tris.Add(i0 + 1); // back face
+        }
+    }
+
+    static Vector3 TuftPoint(Vector3 c, int i, int n, float r)
+    {
+        bool spike = (i % 2) == 0;
+        float a = i / (float)n * Mathf.PI * 2f;
+        float rr = spike ? r : r * 0.45f;
+        float yy = spike ? -r * 0.5f : -r * 0.15f; // spikes droop lower than notches
+        return c + new Vector3(Mathf.Cos(a) * rr, yy, Mathf.Sin(a) * rr);
+    }
 
     static void AddQuad(Vector3 center, Quaternion rot, float size, bool planeB,
         List<Vector3> verts, List<Vector2> uvs, List<Color> cols, List<int> tris)

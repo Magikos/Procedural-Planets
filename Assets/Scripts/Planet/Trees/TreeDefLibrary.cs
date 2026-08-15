@@ -7,14 +7,15 @@ using UnityEngine;
 // physically derived. Trunk always grows +Y (Curve leans it); leaves attach to their ParentLevel tier.
 public static class TreeDefLibrary
 {
-    public enum TreeSpecies { Broadleaf, Conifer, Birch, Palm, Acacia, Shrub }
+    public enum TreeSpecies { Broadleaf, Conifer, Pine, Birch, Palm, Acacia, Shrub }
 
     public static readonly TreeSpecies[] AllSpecies =
-        { TreeSpecies.Broadleaf, TreeSpecies.Conifer, TreeSpecies.Birch, TreeSpecies.Palm, TreeSpecies.Acacia, TreeSpecies.Shrub };
+        { TreeSpecies.Broadleaf, TreeSpecies.Conifer, TreeSpecies.Pine, TreeSpecies.Birch, TreeSpecies.Palm, TreeSpecies.Acacia, TreeSpecies.Shrub };
 
     public static TreeDef Species(TreeSpecies s, float age = 1f) => s switch
     {
         TreeSpecies.Conifer => Conifer(age),
+        TreeSpecies.Pine => Pine(age),
         TreeSpecies.Birch => Birch(age),
         TreeSpecies.Palm => Palm(age),
         TreeSpecies.Acacia => Acacia(age),
@@ -34,9 +35,9 @@ public static class TreeDefLibrary
             case BiomeType.Grassland:
             case BiomeType.Swamp: s = TreeSpecies.Broadleaf; return true;
             case BiomeType.Taiga:
-            case BiomeType.Snow:
-            case BiomeType.Steppe:      // Steppe Pine prototype -> conifer geometry matches its needle texture
-            case BiomeType.Mountain: s = TreeSpecies.Conifer; return true;
+            case BiomeType.Snow: s = TreeSpecies.Conifer; return true;   // dense fir/spruce cone
+            case BiomeType.Steppe:
+            case BiomeType.Mountain: s = TreeSpecies.Pine; return true;  // open tufted pine (dry / montane)
             case BiomeType.Tropical:
             case BiomeType.Beach: s = TreeSpecies.Palm; return true;
             case BiomeType.Savanna:
@@ -63,7 +64,7 @@ public static class TreeDefLibrary
     // filled by two leaf tiers (outer on the twigs, inner on the primaries) so the crown reads solid, not spindly.
     public static TreeDef Broadleaf(float age = 1f) => new TreeDef
     {
-        Name = "Broadleaf", GlobalScale = 1f, Age = Mathf.Clamp01(age),
+        Name = "Broadleaf", GlobalScale = 1.6f, Age = Mathf.Clamp01(age),
         BarkColor = new Color(0.35f, 0.24f, 0.14f), LeafColor = new Color(0.20f, 0.40f, 0.15f),
         Levels = new[]
         {
@@ -96,19 +97,42 @@ public static class TreeDefLibrary
     // Tall straight trunk under a solid drooping fir cone (parametric foliage; no needle texture in this pack).
     public static TreeDef Conifer(float age = 1f) => new TreeDef
     {
-        Name = "Conifer", GlobalScale = 1.1f, Age = Mathf.Clamp01(age),
+        Name = "Conifer", GlobalScale = 1.6f, Age = Mathf.Clamp01(age),
         BarkColor = new Color(0.26f, 0.19f, 0.13f), LeafColor = new Color(0.12f, 0.30f, 0.18f),
-        FoliageStyle = FoliageStyle.ConiferCone, TrunkTipScale = 0.05f, // spire, hidden by the cone
+        FoliageStyle = FoliageStyle.ConiferCone, TrunkTipScale = 0.05f, NeedleFoliage = true, // spire hidden by the cone
         Levels = new[]
         {
             new LevelRule { Label = "trunk", ParentLevel = -1, Length = new Vector2(8f, 11f), RadialSides = 6, Curve = 2f, Noise = 0.02f },
         },
     };
 
+    // Open pine: tall bare trunk, sparse upward branches only in the top half, each ending in a spiky needle tuft.
+    public static TreeDef Pine(float age = 1f) => new TreeDef
+    {
+        Name = "Pine", GlobalScale = 1.5f, Age = Mathf.Clamp01(age),
+        BarkColor = new Color(0.30f, 0.22f, 0.15f), LeafColor = new Color(0.16f, 0.34f, 0.20f),
+        TrunkTipScale = 0.06f, NeedleFoliage = true,
+        Levels = new[]
+        {
+            new LevelRule { Label = "trunk", ParentLevel = -1, Length = new Vector2(10f, 14f), RadialSides = 6, Curve = 3f, Noise = 0.03f },
+            new LevelRule
+            {
+                Label = "branches", ParentLevel = 0, Frequency = new Vector2(6, 10), ChildrenPerNode = 2,
+                Range = new Vector2(0.5f, 0.96f), ParallelAlign = 0.55f, GravityAlign = new Vector2(0.25f, -0.05f),
+                Length = new Vector2(2.2f, 1.1f), GirthScale = 0.3f, RadialSides = 3, Curve = 10f, Noise = 0.08f,
+            },
+            new LevelRule
+            {
+                Label = "tufts", ParentLevel = 1, IsLeaf = true, Frequency = new Vector2(2, 4),
+                Range = new Vector2(0.55f, 1f), LeafSize = 1.1f, LeafGroup = 2,
+            },
+        },
+    };
+
     // Slender pale trunk, sparse high canopy of upward branches.
     public static TreeDef Birch(float age = 1f) => new TreeDef
     {
-        Name = "Birch", GlobalScale = 1f, Age = Mathf.Clamp01(age),
+        Name = "Birch", GlobalScale = 1.4f, Age = Mathf.Clamp01(age),
         BarkColor = new Color(0.80f, 0.80f, 0.76f), LeafColor = new Color(0.38f, 0.54f, 0.20f),
         Levels = new[]
         {
@@ -130,7 +154,7 @@ public static class TreeDefLibrary
     // Bare leaning trunk, a crown of big fronds clustered at the very top.
     public static TreeDef Palm(float age = 1f) => new TreeDef
     {
-        Name = "Palm", GlobalScale = 1.05f, Age = Mathf.Clamp01(age),
+        Name = "Palm", GlobalScale = 1.4f, Age = Mathf.Clamp01(age),
         BarkColor = new Color(0.42f, 0.31f, 0.18f), LeafColor = new Color(0.24f, 0.44f, 0.20f),
         Levels = new[]
         {
@@ -146,7 +170,7 @@ public static class TreeDefLibrary
     // Short trunk, branches spreading wide up-and-out into a flat umbrella of dry canopy.
     public static TreeDef Acacia(float age = 1f) => new TreeDef
     {
-        Name = "Acacia", GlobalScale = 1f, Age = Mathf.Clamp01(age),
+        Name = "Acacia", GlobalScale = 1.5f, Age = Mathf.Clamp01(age),
         BarkColor = new Color(0.36f, 0.26f, 0.16f), LeafColor = new Color(0.36f, 0.46f, 0.22f),
         Levels = new[]
         {
@@ -168,7 +192,7 @@ public static class TreeDefLibrary
     // Low multi-stem bush: short trunk, many low branches up-and-out, dense small leaves.
     public static TreeDef Shrub(float age = 1f) => new TreeDef
     {
-        Name = "Shrub", GlobalScale = 0.6f, Age = Mathf.Clamp01(age),
+        Name = "Shrub", GlobalScale = 0.9f, Age = Mathf.Clamp01(age),
         BarkColor = new Color(0.34f, 0.26f, 0.16f), LeafColor = new Color(0.26f, 0.40f, 0.16f),
         Levels = new[]
         {

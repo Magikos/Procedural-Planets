@@ -49,7 +49,7 @@ public sealed class TreePreview : System.IDisposable
 
         _last = new GameObject($"PreviewTree({def.Name} {s})");
         _last.transform.SetPositionAndRotation(pos, Quaternion.FromToRotation(Vector3.up, SurfaceUp(pos)));
-        Material genFoliage = def.FoliageStyle == FoliageStyle.ConiferCone
+        Material genFoliage = def.NeedleFoliage
             ? ConiferPreviewMat(def.LeafColor)
             : FoliageMatForSpecies(_species) ?? FoliageMat(def.LeafColor);
         AddMesh(_last.transform, "bark", tree.Bark, BarkMat(def.BarkColor));
@@ -108,7 +108,7 @@ public sealed class TreePreview : System.IDisposable
                 {
                     bark = MakeMat($"{def.Name} bark", def.BarkColor);
                     _galleryMats.Add(bark);
-                    foliage = def.FoliageStyle == FoliageStyle.ConiferCone ? ConiferPreviewMat(def.LeafColor) : FoliageMatForSpecies(species[r]);
+                    foliage = def.NeedleFoliage ? ConiferPreviewMat(def.LeafColor) : FoliageMatForSpecies(species[r]);
                     if (foliage == null) { foliage = MakeMat($"{def.Name} foliage", def.LeafColor); _galleryMats.Add(foliage); }
                 }
 
