@@ -4,7 +4,8 @@ using UnityEngine;
 // Dev preview for the tree generator (plan 006). `tree.gen` grows one tree in front of the camera; `tree.age`
 // / `tree.species` pick the stage + species. `tree.gallery` grids every species x age near the player so the
 // per-biome look can be tuned in one glance (and prints the biome->species map). Console-only, registered by
-// Planet. All spawned meshes orient to the local surface up so they stand upright on the planet.
+// Planet. Uses the same Scatter/VertexColorLit + per-species _BaseColor the injected planet trees use, so the
+// gallery reads like the world. All meshes orient to the local surface up.
 [CommandPrefix("tree")]
 public sealed class TreePreview : System.IDisposable
 {
@@ -115,11 +116,24 @@ public sealed class TreePreview : System.IDisposable
         return $"tree.gallery: {trees} trees ({species.Length} species x {ages.Length} ages) at {center}. Biome map:\n{TreeDefLibrary.BiomeMapSummary()}";
     }
 
-    [ConsoleCommand("inject", "Replace scatter trees with generated trees (on/off), then run `generate` to apply.", MonoTargetType.Registry)]
+    [ConsoleCommand("inject", "Replace scatter trees with generated trees per biome (on/off), then run `generate` to apply.", MonoTargetType.Registry)]
     string InjectCmd(string state = "on")
     {
         TreeInjection.Enabled = state == "on" || state == "true" || state == "1";
-        return $"generated-tree injection {(TreeInjection.Enabled ? "ON" : "OFF")} — run `generate` (or regenerate the world) to apply.";
+        string status = $"generated-tree injection {(TreeInjection.Enabled ? "ON" : "OFF")}";
+
+        // The DTO is snapshotted at boot; re-register it so a runtime toggle actually takes effect on the next
+        // generate (Configure re-fetches ScatterLibraryDto). Off-play or pre-registration, boot-time Apply covers it.
+        if (SettingsProvider.IsRegistered<ScatterLibraryDto>())
+        {
+            ScatterLibraryDto dto = TreeInjection.Rebuild();
+            if (dto != null)
+            {
+                SettingsProvider.Update(dto);
+                return $"{status} — scatter library updated. Run `generate` to rebuild the world.";
+            }
+        }
+        return $"{status} — run `generate` to apply.";
     }
 
     Vector3 SurfaceUp(Vector3 worldPos)
@@ -166,11 +180,13 @@ public sealed class TreePreview : System.IDisposable
         return _foliageMat;
     }
 
+    // Same shader the injected planet trees use: Scatter/VertexColorLit tints by _BaseColor and is planet-lit.
     static Material MakeMat(string name, Color color)
     {
-        Shader sh = Shader.Find("Planet/PropLit") ?? Shader.Find("Universal Render Pipeline/Lit");
+        Shader sh = Shader.Find("Scatter/VertexColorLit") ?? Shader.Find("Universal Render Pipeline/Lit");
         var m = new Material(sh) { name = name, hideFlags = HideFlags.HideAndDontSave };
         if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", color);
+        m.enableInstancing = true;
         return m;
     }
 
