@@ -51,6 +51,44 @@ screenshot is a *different* problem — see the rectangles below.
 - **Bloom / exposure** — the one lever that would visibly change the sky, which he explicitly ruled out.
 - **Clumping** — design doc written: `docs/design/2026-08-15-forest-clumping.md`.
 
+## THE BLANKET FIX (2026-08-16) — root cause was a MOVING edge, not a colour
+
+Bryan: *"when you are moving through the world you can see that edge moving with you... the edge needs to be
+seamless."* That observation was the diagnosis. The far grass overlay faded in over **24 → 120 m of CAMERA
+distance** (`GrassFarOverlayStart/End`), so the handoff was a ring centred on the player, dragged along as he
+walked. **No colour match can hide a moving edge** — which is why years of tuning brightness/saturation never
+fixed it.
+
+**Fix: the paint is a BASE LAYER at full strength everywhere** (start 0 / end 1). Nothing about the ground varies
+with camera distance; blades just add geometry on top of paint that already reads as grass. Biome gating is
+separate and untouched (the lake shore stayed sandy). Bryan confirmed "much better". Committed `4a7097e`.
+
+Corollary: this removed the reason for the blade-distance increase, so it was reverted (144/200, budget back to
+1.5M, −168 MB VRAM). **The seam was never about blade reach** — the good result rendered with the ORIGINAL
+distances, because the quality change had never been compiled into that session.
+
+**Measurement discipline lessons from this hunt (all of these produced wrong conclusions first):**
+- `FreeCameraController` OWNS the camera and moves it every frame — `scatter.goto` gets undone, so several
+  "grassland" measurements were actually taken on a sandy lake shore. **Always re-read `scatter.count`'s biome
+  line immediately before sampling**, and prefer `camera.teleport`.
+- Probing a world that is still streaming gives moving numbers; an apparent "blanket toggle is not idempotent"
+  bug was just an unsettled world. Material state restores correctly.
+- Terrain is **one shared material across 117 renderers**, so per-chunk material drift is not a thing here.
+- `_GrassSurfaceSaturation` moves near AND far together (near ground contains paint between the blades), so the
+  near/far ratio is invariant to it — it cannot close a handoff gap.
+
+## Impostor "spotty horizon" (2026-08-16, analysed not yet verified)
+
+Bryan rebaked impostors and the distant tree line still read as speckled holes. Three compounding causes, all in
+storage/sampling rather than bake content — **so neither rebaking nor pushing the LOD distance back would fix it**:
+1. **Atlas baked with NO mipmaps** (`new Texture2D(..., false)`), so a 128 px cell minified into a few screen
+   pixels samples essentially at random. **Fixed** (mipChain true + `Apply(true)` + trilinear) — UNVERIFIED, and
+   the change sits in `ScatterImpostorBaker.cs` which the parallel perf session also rewrote, so it is left
+   uncommitted to avoid dragging their work in.
+2. **Hard `clip(card.a - _Cutoff)` at 0.3** turns that aliasing binary — keep/discard rather than blur.
+3. **Deliberate dither-out band**: `_FadeOutStart = end × 0.6` with a 4×4 screen-space Bayer pattern, so the
+   furthest 40% of impostor range is dissolving in a checker. With aerial haze now in, this may be redundant.
+
 ## Separate issue found the same day: rectangular ground patches
 
 Bryan's aerial screenshot showed large axis-aligned rectangles of differing green. **Not the tree work.** Prime

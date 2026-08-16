@@ -109,6 +109,18 @@ prototype has >=2 parts. `TreeShowcaseSpawner` needed `Parts.Length >= 2` to pic
 dither fade — render a gallery from >150 m and **every tree vanishes, leaving only shadows and labels**. Copy the
 material (never mutate the shared asset) and push the fade to ~5000 before wide shots.
 
+**BIOMES NOW MAP TO A SPECIES SET (2026-08-16, commit `658a587`).** One species per biome made every tropical
+region a palm monoculture ("palm trees everywhere") and left Cypress/Cedar/Poplar generating but placed nowhere.
+`TreeDefLibrary.SpeciesSet(biome)` returns 1-4 species; the pick is by the prototype's **ORDINAL within its
+biome**, NOT a name hash — hashing was tried and silently DROPPED species, because with one or two tree
+prototypes per biome it can miss the primary entirely (Swamp drew Broadleaf over Willow, Savanna drew Shrub over
+Acacia). Ordinal 0 always gets the set's first entry, so every biome keeps what it had. Species shipping: 6 → 9
+of 12. **Cypress + Cedar still unplaced** (Steppe/Mountain/Taiga/Snow have ONE tree prototype each, so only
+ordinal 0 is ever drawn); Fern needs injection to handle Collect-interaction prototypes.
+**DETERMINISM BUG FIXED (was mine):** variant seeds used `HashCode.Combine`, and .NET randomises string hashing
+**per process** — the same world seed grew different trees every run, breaking saved worlds and blocking impostor
+disk caching. Now an explicit FNV-1a over name+variant.
+
 **How foliage works now (key facts):**
 - Foliage = **textured leaf cards** (crossed quads, UV 0..1, vtx.B=1 leaf mask, vtx.G=AO) drawn with **each biome's
   own Synty FoliageLit leaf material** (`TreeInjection.PickFoliageMaterial`: prefer "...Canopy", else first
