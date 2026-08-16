@@ -121,6 +121,18 @@ ordinal 0 is ever drawn); Fern needs injection to handle Collect-interaction pro
 **per process** — the same world seed grew different trees every run, breaking saved worlds and blocking impostor
 disk caching. Now an explicit FNV-1a over name+variant.
 
+**ALL 11 TREE SPECIES + FERNS NOW SHIP (2026-08-16, commit `fbc0cb8`).** Cypress/Cedar were unplaced because
+their biomes have ONE tree prototype each, so the ordinal pick never left the set's first entry. Fix: the K
+variants walk the set (`ordinal + variant`) — variant 0 keeps the biome primary, alternates ride the variants, so
+a stand mixes SPECIES as well as ages. **This forced `ImpostorShareKey` from prototype → SPECIES** (a
+prototype-keyed atlas would billboard a cedar as a fir); that is also CHEAPER — distinct bakes 18 → 15, since
+every Broadleaf shares one card. **Ferns ship**: gate is name + NOT-Chop (they are interaction `None`, not
+`Collect` — the original guess was wrong), stem + frond parts, no cut-set, no variants. **Fern material trap:**
+Synty ferns wear `Leaf_Palm_01`, a 3-CELL frond atlas, while the blade primitive maps UV 0..1 across the WHOLE
+texture → every frond would show all three cells squashed. They wear a tinted single-leaf texture instead.
+**Still unverified in-world** — planet generation stalled 3× after "Scene services initialized" (needs a Unity
+restart), so all of the above is library-level verified only.
+
 **How foliage works now (key facts):**
 - Foliage = **textured leaf cards** (crossed quads, UV 0..1, vtx.B=1 leaf mask, vtx.G=AO) drawn with **each biome's
   own Synty FoliageLit leaf material** (`TreeInjection.PickFoliageMaterial`: prefer "...Canopy", else first
