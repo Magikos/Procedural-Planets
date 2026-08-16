@@ -29,7 +29,16 @@ cache. Likely a per-prototype `Clumpiness`/`PatchScale` on `ScatterPrototype` th
 feeds `densityKeep` in both `ScatterPlacementMath.TryPlace` and
 `ScatterGatherBurst.TryPlace` (parity), tested by `ScatterGatherParityTests`.
 
+**2026-08-15 (Bryan, restated + widened to TREES — deferred again, "we can work on the scatter later"):**
+the same gap at forest scale. Wanted: trees **clumped into forests**, with **empty plains** between them,
+and **sometimes just a light scattering** of individual trees — per biome type. So the clump layer isn't
+only a flower-patch nicety; it's the forest-vs-plain macro structure of a biome. One low-frequency field
+per prototype (or per biome) with three legible regimes — dense stand / bare / sparse individuals — rather
+than a single uniform density. Wants a **plan** for this before code. Current focus moved to tree variety
++ look instead (plan 006 archetypes).
+
 Related: [[project_scatter_gather_perf]] (placement/gather internals),
+[[project_tree_generator]] (what fills the clumps),
 [[project_scatter_biome_buildout]] (per-biome prototypes), [[project_planet_look_dev]]
 (Synty target look). Target-look reference screenshots are in the 2026-08-10
 conversation, not saved to disk.
