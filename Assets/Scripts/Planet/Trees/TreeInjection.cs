@@ -43,7 +43,7 @@ public static class TreeInjection
             // Which tree prototype this is WITHIN its biome, in library order — picks the species from the
             // biome's set so a biome with several tree prototypes grows several species instead of one repeated.
             var biomeOrdinal = new Dictionary<BiomeType, int>();
-            int replaced = 0, outOfSlots = 0;
+            int replaced = 0, outOfSlots = 0, ferns = 0;
             foreach (ScatterPrototypeDto p in lib.Prototypes)
             {
                 int ordinal = 0;
@@ -51,6 +51,13 @@ public static class TreeInjection
                 {
                     biomeOrdinal.TryGetValue(p.Biome, out ordinal);
                     biomeOrdinal[p.Biome] = ordinal + 1;
+                }
+                if (IsFern(p))
+                {
+                    ScatterPrototypeDto fern = TryReplaceFern(p);
+                    protos.Add(fern ?? p);
+                    if (fern != null) ferns++;
+                    continue;
                 }
                 ScatterPrototypeDto gen = IsTree(p) ? TryReplace(p, 0, k, p.SlotId, spacingScale, ordinal) : null;
                 protos.Add(gen ?? p);
@@ -69,7 +76,7 @@ public static class TreeInjection
 
             LoggerProvider.Log(LogLevel.Info, "TreeInject",
                 $"Replaced {replaced} tree prototype(s) with generated trees + {extra.Count} variant(s) " +
-                $"(x{k}, slots through {nextSlot - 1}/{ScatterId.MaxSlot}).");
+                $"(x{k}, slots through {nextSlot - 1}/{ScatterId.MaxSlot}); {ferns} fern prototype(s).");
             if (outOfSlots > 0)
                 LoggerProvider.Log(LogLevel.Warning, "TreeInject",
                     $"Out of scatter slots: {outOfSlots} tree variant(s) dropped. Lower tree.variants or free slots.");
@@ -91,6 +98,55 @@ public static class TreeInjection
 
     static bool IsTree(ScatterPrototypeDto p) =>
         p != null && p.Interaction == ScatterInteraction.Chop && p.Parts != null && p.Parts.Length > 0;
+
+    // Ferns are Collect, not Chop, so the tree path never saw them. They are the one non-tree plant the
+    // generator already produces, and matching them by name keeps the rest of the Collect library (flowers,
+    // mushrooms, reeds) on its Synty meshes.
+    static bool IsFern(ScatterPrototypeDto p) =>
+        p != null && p.Interaction != ScatterInteraction.Chop && p.Parts != null && p.Parts.Length > 0
+        && (p.DisplayName ?? "").IndexOf("fern", StringComparison.OrdinalIgnoreCase) >= 0;
+
+    // A generated fern replacing a Collect prototype: one bark part for the stem, one foliage part for the
+    // fronds, no cut-set (nothing chops a fern) and no extra variants (they are small enough that seed variety
+    // is not worth spending scatter slots on).
+    static ScatterPrototypeDto TryReplaceFern(ScatterPrototypeDto p)
+    {
+        try
+        {
+            int seed = (int)(StableHash(p.DisplayName ?? "fern", 0) % 900000) + 1;
+            TreeDef def = TreeDefLibrary.Species(TreeDefLibrary.TreeSpecies.Fern, 1f);
+            GeneratedTree t = TreeGenerator.Generate(def, seed);
+            if (t.Bark == null || t.Bark.vertexCount == 0) return null;
+            if (t.Foliage == null || t.Foliage.vertexCount == 0) return null;
+
+            // NOT the prototype's own material: the Synty ferns wear Leaf_Palm_01, a 3-cell frond atlas, and the
+            // blade primitive maps UV 0..1 across the WHOLE texture — so every frond would show all three cells
+            // squashed together. A tinted single-leaf texture is the only thing whole-card UVs can wear.
+            Material foliage = CleanFoliage(TreeDefLibrary.TreeSpecies.Fern, def);
+            if (foliage == null) return null; // no clean leaf material to tint — keep the Synty fern
+            (Material stem, Material _) = MatsFor(TreeDefLibrary.TreeSpecies.Fern, def);
+
+            float cull = p.Parts[0].MaxCullDistance;
+            if (cull < 20f) cull = 90f;
+            float[] dist = { cull };
+            return p with
+            {
+                Parts = new[]
+                {
+                    new ScatterPartDto(stem, new[] { t.Bark }, dist, false, true),
+                    new ScatterPartDto(foliage, new[] { t.Foliage }, dist, false, true),
+                },
+                BakedImpostorAtlas = null,
+                BakedImpostorNormal = null,
+                ImpostorShareKey = "Fern",
+            };
+        }
+        catch (Exception e)
+        {
+            LoggerProvider.LogException("TreeInject", e);
+            return null;
+        }
+    }
 
     // FNV-1a, NOT string.GetHashCode/HashCode.Combine: .NET randomises string hashing per PROCESS, so those
     // gave every session a different tree for the same world seed. Trees are world content — they have to be
@@ -124,7 +180,11 @@ public static class TreeInjection
             if ((p.DisplayName ?? "").IndexOf("birch", StringComparison.OrdinalIgnoreCase) >= 0)
                 species = TreeDefLibrary.TreeSpecies.Birch;
             else
-                species = TreeDefLibrary.SpeciesForPrototype(p.Biome, ordinalInBiome);
+                // ordinal + variant: variant 0 keeps the biome's primary species, and the extra variants walk
+                // the rest of the set. That is what finally places Cypress and Cedar — their biomes have only
+                // ONE tree prototype each, so ordinal alone never advanced past the set's first entry. It also
+                // means a single stand mixes species, not just ages.
+                species = TreeDefLibrary.SpeciesForPrototype(p.Biome, ordinalInBiome + variant);
 
             int seed = (int)(StableHash(p.DisplayName ?? "tree", variant) % 900000) + 1;
             // One variant -> the old per-TYPE age. Several -> ladder them sapling..old so a stand of one
@@ -176,7 +236,12 @@ public static class TreeInjection
                 StumpMaterial = bark,
                 BakedImpostorAtlas = null,
                 BakedImpostorNormal = null,
-                ImpostorShareKey = p.DisplayName,
+                // Keyed by SPECIES, not by source prototype: variants of one prototype are now different
+                // species, so a prototype-keyed atlas would have billboarded a cedar as a fir. Species-keying is
+                // also strictly cheaper — every Broadleaf in the world shares one bake instead of one per
+                // prototype. FromPrebaked re-frames the shared card to each variant's own bounds, so differing
+                // ages still billboard at their own size.
+                ImpostorShareKey = species + (dead ? "-dead" : ""),
             };
         }
         catch (Exception e)
