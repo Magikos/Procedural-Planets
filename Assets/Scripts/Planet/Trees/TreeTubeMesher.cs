@@ -110,7 +110,11 @@ public static class TreeTubeMesher
 
             if (i > 0) vLen += (c - b.Centerline[i - 1]).magnitude;
 
-            for (int j = 0; j < sides; j++)
+            // sides+1 vertices per ring: the last duplicates the first position but carries U=1, so the wrap
+            // face samples 1-1/sides -> 1 instead of running the whole texture backwards across one facet.
+            // Costs one vertex per ring and is what makes a bark texture (e.g. birch) legible at the seam.
+            // V is cumulative length in METRES, so a wrapped bark texture tiles per metre at any tree size.
+            for (int j = 0; j <= sides; j++)
             {
                 float a = 2f * Mathf.PI * j / sides;
                 verts.Add(c + (Mathf.Cos(a) * right + Mathf.Sin(a) * up) * girth);
@@ -118,15 +122,14 @@ public static class TreeTubeMesher
             }
         }
 
-        // Stitch consecutive rings (wrap around; no seam vertex for now).
+        int stride = sides + 1;
         for (int i = 0; i < rings - 1; i++)
         {
-            int a = ring0 + i * sides;
-            int b2 = a + sides;
+            int a = ring0 + i * stride;
+            int b2 = a + stride;
             for (int j = 0; j < sides; j++)
             {
-                int j1 = (j + 1) % sides;
-                int a0 = a + j, a1 = a + j1, b0 = b2 + j, b1 = b2 + j1;
+                int a0 = a + j, a1 = a + j + 1, b0 = b2 + j, b1 = b2 + j + 1;
                 tris.Add(a0); tris.Add(b0); tris.Add(a1);
                 tris.Add(a1); tris.Add(b0); tris.Add(b1);
             }
@@ -140,8 +143,7 @@ public static class TreeTubeMesher
             uvs.Add(new Vector2(0.5f, 0f));
             for (int j = 0; j < sides; j++)
             {
-                int j1 = (j + 1) % sides;
-                tris.Add(center); tris.Add(ring0 + j1); tris.Add(ring0 + j);
+                tris.Add(center); tris.Add(ring0 + j + 1); tris.Add(ring0 + j);
             }
         }
     }

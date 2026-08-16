@@ -45,6 +45,7 @@ public static class TreeLeafMesher
         if (s.LeafGroup == 1) { AddFrond(s, leafScale, verts, uvs, cols, tris); return; }
         if (s.LeafGroup == 2) { AddNeedleTuft(s, leafScale, verts, uvs, cols, tris); return; }
         if (s.LeafGroup == 3) { AddWeepingStrand(s, leafScale, verts, uvs, cols, tris); return; }
+        if (s.LeafGroup == 4) { AddBlade(s, leafScale, verts, uvs, cols, tris); return; }
 
         float size = Mathf.Max(0.02f, s.Size * leafScale);
         Vector3 fwd = s.Direction.sqrMagnitude > 1e-6f ? s.Direction.normalized : Vector3.up;
@@ -65,13 +66,16 @@ public static class TreeLeafMesher
     {
         float len = Mathf.Max(0.2f, s.Size * leafScale);
         Vector3 dir = s.Direction.sqrMagnitude > 1e-6f ? s.Direction.normalized : Vector3.up;
+        // A palm frond leaves the crown arching UP and out, then bends over under its own weight and droops at the
+        // tip. Launching it flat and sagging from the first segment gives a limp fan instead of that arc.
+        dir = (dir + Vector3.up * 0.95f).normalized;
 
         const float cells = 3f, inset = 0.01f;
         float hv = Hash01(s.Position);
         int cell = hv < 0.12f ? 0 : (hv < 0.6f ? 1 : 2); // 0 = dead-brown, 1 = green, 2 = dark-green
         float uMin = cell / cells + inset, uMax = (cell + 1f) / cells - inset;
 
-        const int segs = 5;
+        const int segs = 7; // enough samples to read as a curve rather than a bent stick
         float segLen = len / segs;
         Vector3 p = s.Position;
         int prevL = -1, prevR = -1;
@@ -79,7 +83,7 @@ public static class TreeLeafMesher
         for (int i = 0; i <= segs; i++)
         {
             float tt = i / (float)segs;
-            float w = Mathf.Lerp(0.16f, 0.09f, tt) * len; // gentle taper so the frond texture isn't clipped
+            float w = Mathf.Lerp(0.16f, 0.06f, tt * tt) * len; // holds width through the arc, then points at the tip
             Vector3 side = Vector3.Cross(dir, Vector3.up);
             if (side.sqrMagnitude < 1e-5f) side = Vector3.Cross(dir, Vector3.forward);
             side = side.normalized;
@@ -95,7 +99,7 @@ public static class TreeLeafMesher
             prevL = li; prevR = li + 1;
 
             p += dir * segLen;
-            dir = (dir + Vector3.down * 0.22f).normalized; // arc the frond downward as it extends
+            dir = (dir + Vector3.down * 0.42f).normalized; // steady bend: up at the base, over the top, down at the tip
         }
     }
 
@@ -105,7 +109,9 @@ public static class TreeLeafMesher
         List<Color> cols, List<int> tris)
     {
         float len = Mathf.Max(0.3f, s.Size * leafScale);
-        float w = Mathf.Max(0.03f, len * 0.05f);
+        // Wide enough that neighbouring strands overlap into a curtain — thin ones read as loose blades of grass
+        // hanging off bare sticks rather than willow foliage.
+        float w = Mathf.Max(0.05f, len * 0.11f);
         Vector3 outward = new Vector3(s.Direction.x, 0f, s.Direction.z);
         outward = outward.sqrMagnitude > 1e-4f ? outward.normalized : Vector3.right;
         Vector3 d = (outward * 0.5f + Vector3.down).normalized; // start out, then curve down
@@ -131,6 +137,43 @@ public static class TreeLeafMesher
             prevL = li; prevR = li + 1;
             p += d * segLen;
             d = (d + Vector3.down * 0.6f).normalized; // sag toward straight down
+        }
+    }
+
+    // A blade / fern frond: a narrow tapering ribbon that leaves the crown steeply and arcs over. Same idea as
+    // the palm frond, but UV u spans the WHOLE texture (0..1) instead of one cell of the palm atlas, so it wears
+    // the biome's ordinary leaf material — which is what makes it reusable for ferns, reeds and blades generally.
+    static void AddBlade(TreeSprout s, float leafScale, List<Vector3> verts, List<Vector2> uvs,
+        List<Color> cols, List<int> tris)
+    {
+        float len = Mathf.Max(0.15f, s.Size * leafScale);
+        Vector3 dir = s.Direction.sqrMagnitude > 1e-6f ? s.Direction.normalized : Vector3.up;
+        dir = (dir + Vector3.up * 1.5f).normalized; // ferns throw their fronds up before they arch over
+
+        const int segs = 6;
+        float segLen = len / segs;
+        Vector3 p = s.Position;
+        int prevL = -1, prevR = -1;
+
+        for (int i = 0; i <= segs; i++)
+        {
+            float tt = i / (float)segs;
+            float w = Mathf.Lerp(0.10f, 0.02f, tt * tt) * len; // wide near the base, pointed at the tip
+            Vector3 side = Vector3.Cross(dir, Vector3.up);
+            if (side.sqrMagnitude < 1e-5f) side = Vector3.Cross(dir, Vector3.forward);
+            side = side.normalized;
+
+            int li = verts.Count;
+            verts.Add(p - side * w); uvs.Add(new Vector2(0f, tt)); cols.Add(LeafVtx);
+            verts.Add(p + side * w); uvs.Add(new Vector2(1f, tt)); cols.Add(LeafVtx);
+            if (i > 0)
+            {
+                tris.Add(prevL); tris.Add(prevR); tris.Add(li + 1);
+                tris.Add(prevL); tris.Add(li + 1); tris.Add(li);
+            }
+            prevL = li; prevR = li + 1;
+            p += dir * segLen;
+            dir = (dir + Vector3.down * 0.30f).normalized;
         }
     }
 
@@ -196,7 +239,11 @@ public static class TreeLeafMesher
     // A solid low-poly conifer: layered drooping skirts up the trunk forming a dense fir cone (this pack has no
     // needle texture, so foliage is flat-shaded dark-green geometry via Scatter/VertexColorLit, not cards).
     // Double-sided so it reads solid from any angle. `scale` thins the cone for LODs.
-    public static Mesh BuildConiferCone(TreeSkeleton sk, int seed, float scale = 1f, int tiers = 18, int spokes = 11)
+    // baseFrac/radiusFrac shape the cone: where the lowest skirt sits up the trunk, and the cone's half-width, both
+    // as fractions of tree height. Fir/spruce = low and wide (the default); a narrow columnar cypress is the same
+    // mesh with a small radiusFrac.
+    public static Mesh BuildConiferCone(TreeSkeleton sk, int seed, float scale = 1f, int tiers = 18, int spokes = 11,
+        float baseFrac = 0.3f, float radiusFrac = 0.26f, float droop = 0.7f)
     {
         var verts = new List<Vector3>();
         var uvs = new List<Vector2>();
@@ -206,9 +253,13 @@ public static class TreeLeafMesher
         if (sk?.Trunk != null)
         {
             float h = Mathf.Max(1f, sk.Height);
-            float baseY = h * 0.28f; // start the skirts higher so the lower trunk shows, like a real pine
+            // baseFrac is where the lowest skirt HANGS FROM, not where foliage ends: the skirt droops ~0.7 of that
+            // tier's radius below it, and the bottom tier is the widest. So the visible clear trunk is roughly
+            // (baseFrac - 0.7 * radiusFrac) * h — set baseFrac below that and the skirts bury themselves in the
+            // ground and hide the trunk completely.
+            float baseY = h * baseFrac;
             float topY = h * 1.1f; // spire rises above the trunk tip so the trunk stays hidden
-            float maxR = h * 0.26f * scale;
+            float maxR = h * radiusFrac * scale;
             Vector3 b = sk.Trunk.Base;
             float tierGap = (topY - baseY) / tiers;
 
@@ -227,8 +278,8 @@ public static class TreeLeafMesher
                 int n = spokes * 2;
                 for (int s = 0; s < n; s++)
                 {
-                    Vector3 pA = RimPoint(b, s, n, roll, r, y);
-                    Vector3 pB = RimPoint(b, s + 1, n, roll, r, y);
+                    Vector3 pA = RimPoint(b, s, n, roll, r, y, droop);
+                    Vector3 pB = RimPoint(b, s + 1, n, roll, r, y, droop);
                     // Bake AO into vtx.G (FoliageLit reads it): interior/apex dark, spike tips bright, notches mid,
                     // + a little per-spike jitter so the cone reads as many leaves catching light, not a solid block.
                     float jitA = 0.85f + 0.15f * Hash01(pA * 3.1f);
@@ -247,12 +298,12 @@ public static class TreeLeafMesher
         }
 
         // A rim vertex: even index = spike (full radius, drooping low), odd = notch (pulled in, high).
-        static Vector3 RimPoint(Vector3 b, int s, int n, float roll, float r, float y)
+        static Vector3 RimPoint(Vector3 b, int s, int n, float roll, float r, float y, float droop)
         {
             bool spike = (s % 2) == 0;
             float a = s / (float)n * Mathf.PI * 2f + roll;
             float rr = spike ? r : r * 0.5f;
-            float yy = spike ? y - r * 0.9f : y - r * 0.3f;
+            float yy = spike ? y - r * droop : y - r * droop * 0.36f;
             return b + new Vector3(Mathf.Cos(a) * rr, yy, Mathf.Sin(a) * rr);
         }
 

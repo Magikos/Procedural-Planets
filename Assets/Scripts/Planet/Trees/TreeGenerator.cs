@@ -15,7 +15,11 @@ public static class TreeGenerator
         // shed the canopy — the impostor is the perf tier.
         tree.BarkLods = new[] { TreeTubeMesher.Build(sk, 0), TreeTubeMesher.Build(sk, 2) };
         tree.FoliageLods = def.FoliageStyle == FoliageStyle.ConiferCone
-            ? new[] { TreeLeafMesher.BuildConiferCone(sk, seed, 1f), TreeLeafMesher.BuildConiferCone(sk, seed, 1f, 12, 8) }
+            ? new[]
+            {
+                TreeLeafMesher.BuildConiferCone(sk, seed, 1f, def.ConeTiers, 11, def.ConeBaseFrac, def.ConeRadiusFrac, def.ConeDroop),
+                TreeLeafMesher.BuildConiferCone(sk, seed, 1f, Mathf.Max(4, def.ConeTiers * 2 / 3), 8, def.ConeBaseFrac, def.ConeRadiusFrac, def.ConeDroop),
+            }
             : new[] { TreeLeafMesher.Build(sk, 1f, 1), TreeLeafMesher.Build(sk, 1.15f, 1) };
 
         tree.Height = sk.Height;
