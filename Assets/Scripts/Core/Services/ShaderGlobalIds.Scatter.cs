@@ -9,4 +9,10 @@ public static partial class ShaderGlobalIds
     // view-space surface normal (encoded 0..1) instead of albedo, so the impostor can be relit with the
     // real surface normal at runtime rather than a synthesized hemisphere.
     public const string ImpostorNormalBake = "_ImpostorNormalBake";
+
+    // Foliage translucency: how strongly leaves glow when the sun is behind them. A GLOBAL rather than a
+    // material property because it is a look knob that gets dialled by eye — as a per-material value it could
+    // not be changed without a world reload, and tuning it at runtime would mean writing to shared material
+    // assets. Published by ScatterRenderer.Configure; `scatter.backlight` overrides it live.
+    public const string FoliageBacklight = "_FoliageBacklight";
 }

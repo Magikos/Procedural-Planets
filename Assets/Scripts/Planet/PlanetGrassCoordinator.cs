@@ -46,8 +46,14 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     float _grassSurfaceBrightness = 0.6f;
     float _grassSurfaceSaturation = 0.72f; // green-over-tan biome-edge line lever; lower trims the vivid pop
 
-    const float GrassFarOverlayStart = 24f;
-    const float GrassFarOverlayEnd = 120f;
+    // The painted grass is a BASE LAYER at full strength everywhere, not a distance ramp. It used to fade in
+    // over 24..120 m, which put a coverage gradient at a fixed radius around the camera — so the handoff to the
+    // blades was a ring you dragged around with you as you walked, and no amount of colour matching can hide a
+    // moving edge. With coverage constant, nothing about the ground changes with camera distance: the blades
+    // simply add geometry on top of paint that already reads as grass, and their fade has nothing to reveal.
+    // Which biomes get painted is a separate question, still handled by the biome/greenness gate in the shader.
+    const float GrassFarOverlayStart = 0f;
+    const float GrassFarOverlayEnd = 1f;
     const float GrassFarOverlayNoiseScale = 0.055f;
     const float GrassFarOverlayFiberStrength = 0.65f;
     const float GrassFarOverlayOrbitStrength = 0.42f;

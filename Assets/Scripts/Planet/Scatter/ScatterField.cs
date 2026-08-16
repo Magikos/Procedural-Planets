@@ -578,6 +578,16 @@ public sealed class ScatterField : IDisposable
         return new Vector3(r * Mathf.Cos(theta), r * Mathf.Sin(theta), z);
     }
 
+    // Look knob rather than placement, but it lives on the "scatter" prefix because scatter owns the foliage
+    // draw; ScatterRenderer.Configure publishes the default this overrides.
+    [ConsoleCommand("backlight", "Foliage translucency 0-2: how strongly leaves glow when the sun is behind them.", MonoTargetType.Registry)]
+    string BacklightCmd(float? value = null)
+    {
+        int id = Shader.PropertyToID(ShaderGlobalIds.FoliageBacklight);
+        if (value.HasValue) Shader.SetGlobalFloat(id, Mathf.Clamp(value.Value, 0f, 2f));
+        return $"foliage backlight: {Shader.GetGlobalFloat(id):F2} (default {ScatterRenderer.DefaultFoliageBacklight:F2})";
+    }
+
     [ConsoleCommand("goto", "Move the camera to the nearest surface point of a biome, e.g. scatter.goto Forest.", MonoTargetType.Registry)]
     string GotoCmd(BiomeType biome, float? heightMeters = null)
     {

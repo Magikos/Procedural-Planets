@@ -41,8 +41,15 @@ public sealed class ScatterRenderer : IDisposable
     // falls back to the CPU batcher when compute/SM4.5 is unavailable (Supported == false).
     public static bool UseGpuDraw = true;
 
+    // Foliage translucency strength. Global, so it can be dialled live via `scatter.backlight` without a
+    // world reload and without writing to the shared leaf material assets. Publish it here because an unset
+    // global reads 0, which silently turns the effect off.
+    static readonly int _foliageBacklightId = Shader.PropertyToID(ShaderGlobalIds.FoliageBacklight);
+    public const float DefaultFoliageBacklight = 1.0f; // Bryan's pick from the live sweep
+
     public void Configure()
     {
+        Shader.SetGlobalFloat(_foliageBacklightId, DefaultFoliageBacklight);
         DestroyImpostors(); // a previous world's baked cards/materials/quads
         _library = SettingsProvider.GetSettings<ScatterLibraryDto>();
         var bounds = new Bounds(_planetTransform.position, Vector3.one * 100000f);
