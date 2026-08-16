@@ -254,8 +254,22 @@ public static class TreeInjection
     static Material SyntyFoliage(ScatterPrototypeDto p, TreeDefLibrary.TreeSpecies s, TreeDef def)
     {
         Material picked = PickFoliageMaterial(MatsOf(p));
-        if (picked != null && !IsPaletteAtlas(picked)) return picked; // clean leaf-image material — use as-is
-        return CleanFoliage(s, def);                                  // palette atlas / none -> tinted clean leaf
+        if (picked != null && !IsPaletteAtlas(picked) && !IsWrongCellAtlas(picked, s))
+            return picked;             // clean leaf-image material — use as-is
+        return CleanFoliage(s, def);   // palette / wrong-atlas / none -> tinted clean leaf
+    }
+
+    // A multi-cell atlas is only wearable by the primitive that maps to ONE cell. Leaf_Palm_01 packs three
+    // fronds side by side and only AddFrond (LeafGroup 1, the Palm species) indexes a single one; a crossed leaf
+    // card maps UV 0..1 across the WHOLE texture, so a broadleaf wearing it renders all three fronds squashed
+    // into every leaf — big serrated green-and-dead-orange blades instead of foliage. This became reachable when
+    // biomes gained species SETS: Tropical now grows Broadleaf beside Palm, off the palm prototype's material.
+    static bool IsWrongCellAtlas(Material m, TreeDefLibrary.TreeSpecies s)
+    {
+        if (s == TreeDefLibrary.TreeSpecies.Palm) return false; // the one species that indexes a single cell
+        Texture t = m.HasProperty("_BaseMap") ? m.GetTexture("_BaseMap") : m.mainTexture;
+        string n = t != null && t.name != null ? t.name.ToLowerInvariant() : "";
+        return n.Contains("palm");
     }
 
     static Material[] MatsOf(ScatterPrototypeDto p)
