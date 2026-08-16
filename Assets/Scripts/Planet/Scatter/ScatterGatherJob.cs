@@ -22,6 +22,9 @@ public struct ScatterProtoParams
     public float SpacingMeters;
     public float BiomeBlendPower;
     public byte OnWater;          // 1 = float on the sea surface inside water cells
+    public float Clumpiness;      // 0 = uniform placement, unchanged
+    public float PatchScaleMeters;
+    public uint ClumpGroupSeed;   // per SPECIES, so a species' variants share one grove field
     public PlacementRulesBurst Rules;
 
     public static ScatterProtoParams From(ScatterPrototypeDto p) => new ScatterProtoParams
@@ -31,6 +34,9 @@ public struct ScatterProtoParams
         SpacingMeters = p.SpacingMeters,
         BiomeBlendPower = p.BiomeBlendPower,
         OnWater = p.OnWater ? (byte)1 : (byte)0,
+        Clumpiness = p.Clumpiness,
+        PatchScaleMeters = p.PatchScaleMeters,
+        ClumpGroupSeed = p.ClumpGroupSeed,
         Rules = new PlacementRulesBurst
         {
             Weight = p.Weight,
@@ -131,8 +137,11 @@ public struct ScatterGatherJob : IJobParallelFor
 
         Vector3 localNormal = onWater ? dir : ScatterGatherBurst.SampleNormalAt(dir, localRadius, NoiseLayers, DiagData, DiagCells, PlanetRadius);
         float slopeCos = onWater ? 1f : Mathf.Clamp01(Vector3.Dot(localNormal, dir));
+        // Must stay bit-identical to the managed path in ScatterField — same helper, same argument order.
         float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, pp.SpacingMeters, BaseRadiusLocal * Scale)
-                            * Mathf.Pow(membership, pp.BiomeBlendPower);
+                            * Mathf.Pow(membership, pp.BiomeBlendPower)
+                            * ScatterClumping.Keep(dir, BaseRadiusLocal * Scale, pp.Clumpiness,
+                                pp.PatchScaleMeters, pp.ClumpGroupSeed, (uint)pp.Biome, slopeCos);
 
         if (!ScatterGatherBurst.TryPlace(slotSeed, dir, localNormal, placeRadius, altitudeMeters, slopeCos,
                 densityKeep, HasOcean != 0, pp.Rules, out Vector3 posLocal, out Quaternion rot, out float sc))

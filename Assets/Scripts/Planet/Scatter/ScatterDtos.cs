@@ -36,8 +36,15 @@ public sealed record ScatterPrototypeDto(
     Texture2D BakedImpostorNormal = null,
     Mesh StumpMesh = null,
     Material StumpMaterial = null,
-    string ImpostorShareKey = null)
+    string ImpostorShareKey = null,
+    float Clumpiness = 0f,
+    float PatchScaleMeters = 250f)
 {
+    // Which grove field this prototype draws from. Keyed on the SPECIES (ImpostorShareKey) rather than the
+    // prototype, so the per-instance variants of one species share one field — otherwise a grove of variant 0
+    // lands in a clearing of variant 1 and the whole effect averages back out to uniform.
+    public uint ClumpGroupSeed => ScatterClumping.GroupSeedFor(ImpostorShareKey ?? DisplayName);
+
     // The trunk = the first drawable part (Synty scatter-tree convention). Used for stumps and fallen logs so
     // foliage (which splays flat when the tree lies down) is excluded.
     public ScatterPartDto TrunkPart
@@ -60,7 +67,8 @@ public sealed record ScatterPrototypeDto(
         p.MaxSlopeDegrees, p.SlopeFadeDegrees, p.ConformToSlope,
         p.HasMinAltitude, p.MinAltitudeMeters, p.HasMaxAltitude, p.MaxAltitudeMeters,
         p.MinWaterClearanceMeters, p.OnWater, p.ScaleRange, p.RandomYaw, p.Interaction,
-        BuildParts(p), p.BakedImpostorAtlas, p.BakedImpostorNormal, p.StumpMesh, p.StumpMaterial);
+        BuildParts(p), p.BakedImpostorAtlas, p.BakedImpostorNormal, p.StumpMesh, p.StumpMaterial,
+        null, p.Clumpiness, p.PatchScaleMeters);
 
     static ScatterPartDto[] BuildParts(ScatterPrototype p)
     {

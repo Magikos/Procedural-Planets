@@ -296,7 +296,9 @@ public sealed class ScatterField : IDisposable
         Vector3 localNormal = onWater ? dir : _ground.SampleNormalAt(dir, localRadius);
         float slopeCos = onWater ? 1f : Mathf.Clamp01(Vector3.Dot(localNormal, dir));
         float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, proto.SpacingMeters, ctx.BaseRadiusLocal * scale)
-                            * Mathf.Pow(membership, proto.BiomeBlendPower);
+                            * Mathf.Pow(membership, proto.BiomeBlendPower)
+                            * ScatterClumping.Keep(dir, ctx.BaseRadiusLocal * scale, proto.Clumpiness,
+                                proto.PatchScaleMeters, proto.ClumpGroupSeed, (uint)proto.Biome, slopeCos);
 
         if (!ScatterPlacementMath.TryPlace(slotSeed, dir, localNormal, placeRadius, altitudeMeters, slopeCos,
                 densityKeep, ctx.HasOcean, rules, out Vector3 posLocal, out Quaternion rot, out float sc))

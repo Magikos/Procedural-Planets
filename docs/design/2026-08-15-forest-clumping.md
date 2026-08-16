@@ -70,7 +70,37 @@ a "clearing" of variant 1 and the whole effect averages back out to uniform. Key
 - **No new draw cost.** This only changes *whether* a candidate is accepted, so it costs one noise sample per
   candidate and nothing at draw time.
 
-## Open questions for Bryan
+## BUILT 2026-08-16 — Bryan answered all three
+
+1. **Shared across species? BOTH.** A biome-wide openness field every prototype obeys (so a clearing is a
+   clearing for everything) plus a per-group grove field on top (so wooded areas still separate into stands).
+2. **Terrain-aware? YES.** Flat ground biases open, slopes bias wooded, so meadows land in hollows and flats
+   rather than on cliff faces. Uses `slopeCos`, which placement already samples — free. *Moisture is not
+   available at this layer*, so "wet ground opens up" is not implemented; it would need a climate sample in the
+   Burst gather.
+3. **Reuse for flowers? YES.** No code needed — `PatchScaleMeters` is per-prototype, so flowers author 20–60 m
+   where trees author 150–400 m.
+
+`ScatterClumping.Keep` is pure float math on `Unity.Mathematics.snoise`, called from the identical place in both
+the managed (`ScatterField`) and Burst (`ScatterGatherJob`) gathers, folded into `densityKeep` exactly like
+`AreaKeep` and membership — so parity holds by construction rather than by duplicated code.
+
+**Ships inert:** `Clumpiness` defaults to 0 and `Keep` early-returns exactly 1.0, verified bit-identical.
+
+**Measured, 6000 samples:** mean keep is 1.00 at clumpiness 0, 0.80 at 0.5, and 0.60 at 1.0 with 15% of the
+surface genuinely open. Note it redistributes but does NOT preserve the total — at 1.0 a biome carries ~40%
+fewer props, so raise `Weight` by ~1/mean to hold headcount. The first constants tried measured a mean of 0.33,
+a two-thirds cull, which is why these were tuned against the mean rather than by eye. Species separation is
+~19% of wooded points differing by >0.15 between two species.
+
+**The grouping trap is handled:** the grove field is keyed on `ImpostorShareKey` (the SPECIES), not the
+prototype, so a species' per-instance variants share one field. Keyed per prototype, a grove of variant 0 would
+land in a clearing of variant 1 and the whole effect would average back to uniform.
+
+**Still owed:** nothing is authored yet (every prototype is at Clumpiness 0), and none of it has been seen in a
+world — planet generation has been stalling, so this is verified numerically only.
+
+## Original open questions
 
 1. **Should clearings be shared across species?** A clearing that all trees avoid but grass fills reads as a
    meadow; independent fields per species give a patchier, less legible world. A hybrid — one biome-wide

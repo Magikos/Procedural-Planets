@@ -18,6 +18,12 @@ public sealed class ScatterPrototype : ScriptableObject
     [Range(0.25f, 4f)] public float BiomeBlendPower = 1f;
     [Range(0f, 4f)] public float Weight = 1f; // independent density multiplier
 
+    [Header("Clumping (groves + clearings)")]
+    [Tooltip("0 = uniform placement (unchanged). Higher = the prototype gathers into groves with genuinely open ground between them. Average density stays roughly the same; only its distribution changes.")]
+    [Range(0f, 1f)] public float Clumpiness = 0f;
+    [Tooltip("Roughly the diameter of one grove/colony in metres. Trees read well at 150-400; flower colonies at 20-60.")]
+    [Min(5f)] public float PatchScaleMeters = 250f;
+
     [Header("Slope gate")]
     [Range(0f, 90f)] public float MaxSlopeDegrees = 35f;
     [Range(0f, 15f)] public float SlopeFadeDegrees = 5f;
