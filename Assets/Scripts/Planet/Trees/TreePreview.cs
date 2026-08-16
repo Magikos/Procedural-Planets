@@ -91,19 +91,25 @@ public sealed class TreePreview : System.IDisposable
         right = right.sqrMagnitude > 1e-5f ? right.normalized : Vector3.Cross(Vector3.forward, up).normalized;
         Vector3 fwd = Vector3.Cross(up, right).normalized;
 
-        float[] ages = { 0.15f, 0.4f, 0.7f, 1f };
-        string[] ageNames = { "sapling", "young", "adult", "old" };
+        // Ages, then a DEAD column so the standing-snag variant is reviewed alongside the living stages.
+        float[] ages = { 0.15f, 0.4f, 0.7f, 1f, 1f };
+        string[] ageNames = { "sapling", "young", "adult", "old", "DEAD" };
         var species = TreeDefLibrary.AllSpecies;
-        const float colSpacing = 7f, rowSpacing = 9f;
+        // Wide enough that a 30-40 m crown never touches its neighbour — these are real-scale trees now, and a
+        // crowded grid hides exactly the silhouette the gallery exists to show.
+        const float colSpacing = 26f, rowSpacing = 34f;
         float colOffset = (ages.Length - 1) * 0.5f;
 
         int trees = 0;
         for (int r = 0; r < species.Length; r++)
         {
-            Material bark = null, foliage = null;
+            Material bark = null, foliage = null, deadBark = null;
             for (int c = 0; c < ages.Length; c++)
             {
-                TreeDef def = TreeDefLibrary.Species(species[r], ages[c]);
+                bool dead = c == ages.Length - 1;
+                TreeDef def = dead
+                    ? TreeDefLibrary.DeadSpecies(species[r], ages[c])
+                    : TreeDefLibrary.Species(species[r], ages[c]);
                 if (bark == null)
                 {
                     bark = MakeMat($"{def.Name} bark", def.BarkColor);
@@ -111,30 +117,46 @@ public sealed class TreePreview : System.IDisposable
                     foliage = def.NeedleFoliage ? ConiferPreviewMat(def.LeafColor) : FoliageMatForSpecies(species[r]);
                     if (foliage == null) { foliage = MakeMat($"{def.Name} foliage", def.LeafColor); _galleryMats.Add(foliage); }
                 }
+                if (dead && deadBark == null)
+                {
+                    deadBark = MakeMat($"{def.Name} dead bark", def.BarkColor);
+                    _galleryMats.Add(deadBark);
+                }
 
                 GeneratedTree tree = TreeGenerator.Generate(def, baseSeed + r * 31 + c);
                 Vector3 pos = center + right * ((c - colOffset) * colSpacing) + fwd * (-r * rowSpacing);
                 var cell = new GameObject($"{def.Name} ({ageNames[c]})");
                 cell.transform.SetParent(_gallery.transform, false);
                 cell.transform.SetPositionAndRotation(pos, Quaternion.FromToRotation(Vector3.up, SurfaceUp(pos)));
-                AddMesh(cell.transform, "bark", tree.Bark, bark);
+                AddMesh(cell.transform, "bark", tree.Bark, dead ? deadBark : bark);
                 AddMesh(cell.transform, "foliage", tree.Foliage, foliage);
+                AddCapsule(cell.transform); // 2 m human next to EVERY tree — the only honest scale reference
                 AddLabel(cell.transform, $"{def.Name}\n{ageNames[c]}");
                 trees++;
             }
         }
 
-        return $"tree.gallery: {trees} trees ({species.Length} species x {ages.Length} ages) at {center}. Biome map:\n{TreeDefLibrary.BiomeMapSummary()}";
+        return $"tree.gallery: {trees} trees ({species.Length} species x {ageNames.Length} columns incl. dead) at {center}. Biome map:\n{TreeDefLibrary.BiomeMapSummary()}";
     }
 
     [ConsoleCommand("inject", "Replace scatter trees with generated trees per biome (on/off), then run `generate` to apply.", MonoTargetType.Registry)]
     string InjectCmd(string state = "on")
     {
         TreeInjection.Enabled = state == "on" || state == "true" || state == "1";
-        string status = $"generated-tree injection {(TreeInjection.Enabled ? "ON" : "OFF")}";
+        return Reapply($"generated-tree injection {(TreeInjection.Enabled ? "ON" : "OFF")}");
+    }
 
-        // The DTO is snapshotted at boot; re-register it so a runtime toggle actually takes effect on the next
-        // generate (Configure re-fetches ScatterLibraryDto). Off-play or pre-registration, boot-time Apply covers it.
+    [ConsoleCommand("variants", "Generated tree variants per prototype (1-8): seeds + age stages that interleave in a stand.", MonoTargetType.Registry)]
+    string VariantsCmd(int count)
+    {
+        TreeInjection.Variants = Mathf.Clamp(count, 1, 8);
+        return Reapply($"tree variants = {TreeInjection.Variants} per prototype");
+    }
+
+    // The DTO is snapshotted at boot; re-register it so a runtime change actually takes effect on the next
+    // generate (Configure re-fetches ScatterLibraryDto). Off-play or pre-registration, boot-time Apply covers it.
+    static string Reapply(string status)
+    {
         if (SettingsProvider.IsRegistered<ScatterLibraryDto>())
         {
             ScatterLibraryDto dto = TreeInjection.Rebuild();
@@ -161,6 +183,20 @@ public sealed class TreePreview : System.IDisposable
         go.transform.SetParent(parent, false);
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+    }
+
+    // Unity's capsule primitive is exactly 2 m tall, so it stands in for the player without any rigging.
+    void AddCapsule(Transform parent)
+    {
+        var cap = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        cap.name = "2m human";
+        Collider col = cap.GetComponent<Collider>();
+        if (col != null) Object.Destroy(col);
+        cap.transform.SetParent(parent, false);
+        cap.transform.localPosition = new Vector3(3.5f, 1f, 0f);
+        var m = MakeMat("Gallery human", new Color(0.22f, 0.45f, 0.9f));
+        _galleryMats.Add(m);
+        cap.GetComponent<MeshRenderer>().sharedMaterial = m;
     }
 
     static void AddLabel(Transform parent, string text)
@@ -244,6 +280,7 @@ public sealed class TreePreview : System.IDisposable
             Shader sh = Shader.Find("Scatter/FoliageLit") ?? Shader.Find("Scatter/VertexColorLit");
             _coniferMat = new Material(sh) { name = "Tree needles", hideFlags = HideFlags.HideAndDontSave };
             if (_coniferMat.HasProperty("_ForceLeaf")) _coniferMat.SetFloat("_ForceLeaf", 1f);
+            if (_coniferMat.HasProperty("_WindStrength")) _coniferMat.SetFloat("_WindStrength", 0.1f); // 0 = rigid
             _coniferMat.enableInstancing = true;
             // FoliageLit colors from _BaseMap (no _BaseColor), so paint a solid-green base; vtx.G AO shades it.
             if (_coniferMat.HasProperty("_BaseMap"))

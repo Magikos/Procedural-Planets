@@ -12,14 +12,17 @@ public sealed class TreeShowcaseSpawner : MonoBehaviour
     public ScatterLibrary Library;
     public Light Sun;
     [Range(0f, 1f)] public float NightAmbientIntensity = 0.1f;
-    public float ColSpacing = 9f;
-    public float RowSpacing = 11f;
+    // Trees are real-scale now (a mature broadleaf is ~34 m across), so cells have to be far enough apart that
+    // neighbouring crowns never touch — a crowded table hides the silhouette the showcase exists to show.
+    public float ColSpacing = 26f;
+    public float RowSpacing = 34f;
     public int Seed = 12345;
     public bool BuildGround = true;
     public bool FrameCamera = true;   // snap Camera.main to view the whole table + fix its clip planes
 
-    static readonly float[] Ages = { 0.15f, 0.4f, 0.7f, 1f };
-    static readonly string[] AgeNames = { "sapling", "young", "adult", "old" };
+    // Ages, then a DEAD column so the standing-snag variant is reviewed beside the living stages.
+    static readonly float[] Ages = { 0.15f, 0.4f, 0.7f, 1f, 1f };
+    static readonly string[] AgeNames = { "sapling", "young", "adult", "old", "DEAD" };
 
     static readonly int SunParamsId = Shader.PropertyToID("_SunParams");
     static readonly int PlanetCenterId = Shader.PropertyToID("_PlanetCenter");
@@ -30,6 +33,9 @@ public sealed class TreeShowcaseSpawner : MonoBehaviour
     static readonly int InteractorsId = Shader.PropertyToID("_GrassInteractors");
     static readonly int InteractorCountId = Shader.PropertyToID("_GrassInteractorCount");
     ComputeBuffer _dummyInteractors;
+    readonly System.Collections.Generic.Dictionary<Material, Material> _noFade = new();
+    readonly System.Collections.Generic.List<Material> _spawnedMats = new();
+    Material _anyLeaf;
 
     void OnEnable()
     {
@@ -70,6 +76,10 @@ public sealed class TreeShowcaseSpawner : MonoBehaviour
     {
         for (int i = transform.childCount - 1; i >= 0; i--)
             DestroyImmediate(transform.GetChild(i).gameObject);
+        foreach (Material m in _spawnedMats) if (m != null) DestroyImmediate(m);
+        _spawnedMats.Clear();
+        _noFade.Clear();
+        _anyLeaf = null;
 
         if (Library == null) Library = Resources.Load<ScatterLibrary>("Settings/ScatterLibrary");
         if (Library == null) { Debug.LogError("TreeShowcaseSpawner: no ScatterLibrary found."); return; }
@@ -88,21 +98,26 @@ public sealed class TreeShowcaseSpawner : MonoBehaviour
             if (!TreeDefLibrary.HasTree(p.Biome, out TreeDefLibrary.TreeSpecies species)) continue;
 
             float z = -row * RowSpacing;
-            SpawnCapsule(new Vector3(-ColSpacing * 0.9f, 0f, z), row == 0); // 2 m character for scale
             SpawnOld(p, new Vector3(0f, 0f, z), $"{p.Biome} OLD\n{p.DisplayName}");
+            SpawnCapsule(new Vector3(4f, 0f, z), row == 0); // 2 m character beside the Synty original too
 
-            // Materials from the injected prototype (same index) = exactly what the planet uses.
+            // Materials from the injected prototype (same index) = exactly what the planet uses. A "* Dead Tree"
+            // prototype injects a bark part ONLY, so its foliage material has to be borrowed — this row still
+            // shows the living age stages, which need one.
             Material bark = null, foliage = null;
             ScatterPrototypeDto inj = injected.Prototypes[i];
-            if (!ReferenceEquals(inj, p) && inj?.Parts != null && inj.Parts.Length >= 2)
+            if (!ReferenceEquals(inj, p) && inj?.Parts != null && inj.Parts.Length >= 1)
             {
                 bark = inj.Parts[0].Material;
-                foliage = inj.Parts[1].Material;
+                foliage = inj.Parts.Length >= 2 ? inj.Parts[1].Material : AnyLeafMaterial(injected);
             }
 
             for (int a = 0; a < Ages.Length; a++)
             {
-                TreeDef def = TreeDefLibrary.Species(species, Ages[a]);
+                bool dead = a == Ages.Length - 1;
+                TreeDef def = dead
+                    ? TreeDefLibrary.DeadSpecies(species, Ages[a])
+                    : TreeDefLibrary.Species(species, Ages[a]);
                 GeneratedTree t = TreeGenerator.Generate(def, Seed + i * 7 + a);
                 var cell = new GameObject($"{species} {AgeNames[a]}");
                 cell.transform.SetParent(transform, false);
@@ -110,6 +125,7 @@ public sealed class TreeShowcaseSpawner : MonoBehaviour
                 AddMesh(cell.transform, "bark", t.Bark, bark);
                 AddMesh(cell.transform, "foliage", t.Foliage, foliage);
                 AddLabel(cell.transform, $"{species}\n{AgeNames[a]}");
+                SpawnCapsule(new Vector3((a + 1) * ColSpacing + 4f, 0f, z), false); // a human beside EVERY tree
             }
             row++;
         }
@@ -120,7 +136,7 @@ public sealed class TreeShowcaseSpawner : MonoBehaviour
     // Ground plane + soft ambient + a framed, un-clipped camera so the table is reviewable without hand-setup.
     void SetupStage(int rows)
     {
-        float xSpan = 4f * ColSpacing;                 // old(0) .. old age (4*col)
+        float xSpan = Ages.Length * ColSpacing;        // Synty original at 0 .. the DEAD column at Ages.Length*col
         float zSpan = Mathf.Max(1, rows - 1) * RowSpacing;
         Vector3 centerLocal = new Vector3(xSpan * 0.5f, 5f, -zSpan * 0.5f);
 
@@ -184,7 +200,36 @@ public sealed class TreeShowcaseSpawner : MonoBehaviour
         var go = new GameObject(name);
         go.transform.SetParent(parent, false);
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
-        go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+        go.AddComponent<MeshRenderer>().sharedMaterial = NoFade(mat);
+    }
+
+    // Any generated-tree foliage material in the library, for rows whose own prototype injects bark only (dead
+    // trees). Cached per Rebuild — the exact species tint matters less than the row rendering at all.
+    Material AnyLeafMaterial(ScatterLibraryDto injected)
+    {
+        if (_anyLeaf != null) return _anyLeaf;
+        foreach (ScatterPrototypeDto p in injected.Prototypes)
+            if (p != null && p.Interaction == ScatterInteraction.Chop && p.Parts != null && p.Parts.Length >= 2)
+            {
+                _anyLeaf = p.Parts[1].Material;
+                if (_anyLeaf != null) return _anyLeaf;
+            }
+        return null;
+    }
+
+    // Scatter materials dither out between _FadeStart and _FadeEnd (120..150 m by default). This table is wider
+    // than that, so viewing the whole thing would fade the far trees to nothing. Render through a COPY with the
+    // fade pushed past the horizon — copying matters because several of these are shared project assets.
+    Material NoFade(Material src)
+    {
+        if (src == null || !src.HasProperty("_FadeEnd")) return src;
+        if (_noFade.TryGetValue(src, out Material cached) && cached != null) return cached;
+        var copy = new Material(src) { name = src.name + " (showcase)" };
+        copy.SetFloat("_FadeStart", 8000f);
+        copy.SetFloat("_FadeEnd", 10000f);
+        _noFade[src] = copy;
+        _spawnedMats.Add(copy);
+        return copy;
     }
 
     void AddLabel(Transform parent, string text)
