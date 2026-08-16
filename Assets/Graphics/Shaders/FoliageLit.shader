@@ -21,6 +21,7 @@ Shader "Scatter/FoliageLit"
         _LeafMaskLo ("Leaf Mask Low (vtx.B)", Range(0,1)) = 0.6
         _LeafMaskHi ("Leaf Mask High (vtx.B)", Range(0,1)) = 0.85
         _LeafNormalUp ("Leaf Normal Up-Blend (canopy softness)", Range(0,1)) = 0.6
+        _LeafBacklight ("Leaf Backlight (translucency)", Range(0,2)) = 0.38
         [Toggle] _ForceLeaf ("Force Leaf (moss / hanging beards)", Float) = 0
         _WindStrength ("Wind Strength (m)", Float) = 0
         _WindFreq ("Wind Frequency", Float) = 1.6
@@ -60,6 +61,7 @@ Shader "Scatter/FoliageLit"
             float _LeafMaskLo;
             float _LeafMaskHi;
             float _LeafNormalUp;
+            float _LeafBacklight;
             float _WindStrength;
             float _WindFreq;
             float _ForceLeaf;
@@ -332,11 +334,20 @@ Shader "Scatter/FoliageLit"
                 float trunkShade = lerp(0.3, 1.0, shadowAtten * cloudShadow);
                 float direct = ndl * lerp(trunkShade, leafShade, lm);
                 half3 dayColor = albedo * lerp(0.6, 1.28, direct);
-                // Leaf backlight: the canopy glows where the sun is behind the leaves (lm = leaf mask, so
-                // the trunk is excluded). This is what gives Synty foliage its luminous, translucent look.
+                // Leaf translucency: the canopy glows where the sun is behind the leaves (lm = leaf mask, so
+                // the trunk is excluded). This is the single biggest thing separating a stylised forest from
+                // a pile of opaque geometry, so the lobe is deliberately BROAD - a tight one (pow 3) only lit
+                // the few leaves sitting exactly on the sun vector, which reads as a specular glint rather
+                // than a lit canopy. `wrap` adds the light that bleeds THROUGH a leaf facing away from the
+                // sun, and the tint warms it, because a real leaf transmits yellow-green while it reflects
+                // green. Strength is per-material (_LeafBacklight) so species can differ.
                 float3 viewDir = normalize(_WorldSpaceCameraPos - IN.positionWS);
-                float back = pow(saturate(dot(viewDir, -sunDir)), 3.0);
-                dayColor += albedo * back * 0.35 * daylight * cloudShadow * lm;
+                float back = pow(saturate(dot(viewDir, -sunDir)), 1.8);
+                float wrap = saturate(dot(nrmWS, -sunDir)) * 0.6 + 0.4;
+                // Only a slight warm shift: pushing blue down hard turned whole canopies mustard-brown and
+                // cost them their green, which reads as autumn rather than as sunlit.
+                half3 transmitTint = half3(1.08, 1.04, 0.86);
+                dayColor += albedo * transmitTint * (back * wrap * _LeafBacklight) * daylight * cloudShadow * lm;
                 // Cast shadow on the WHOLE plant so understory foliage under a tree visibly darkens — the
                 // soft leafShade above only gives canopy interior depth. Sunlit crowns (shadowAtten≈1) are
                 // untouched; the 0.4 floor keeps shaded plants coloured, matching the ground shadow.
