@@ -35,7 +35,8 @@ public sealed record ScatterPrototypeDto(
     Texture2D BakedImpostorAtlas = null,
     Texture2D BakedImpostorNormal = null,
     Mesh StumpMesh = null,
-    Material StumpMaterial = null)
+    Material StumpMaterial = null,
+    string ImpostorShareKey = null)
 {
     // The trunk = the first drawable part (Synty scatter-tree convention). Used for stumps and fallen logs so
     // foliage (which splays flat when the tree lies down) is excluded.

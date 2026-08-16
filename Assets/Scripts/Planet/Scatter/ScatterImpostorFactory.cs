@@ -23,6 +23,14 @@ public static class ScatterImpostorFactory
     // Frames per axis in the hemi-octahedral atlas. 8 = 64 angles into a 1024² card (128² cells).
     const int OctGridN = 8;
 
+    // Prototypes sharing an ImpostorShareKey (the generated age/seed variants of one tree species) reuse one
+    // baked atlas instead of each paying 64 camera renders + two 1024² textures. FromPrebaked re-frames the
+    // shared texture to each prototype's own bounds, so a sapling variant still billboards at sapling size.
+    // Cached cards are session-lived and never owned by an impostor, so a world regenerate reuses them.
+    // ponytail: keyed by name only — change the variant count mid-session and the far card stays as first
+    // baked (a 300 m+ silhouette nuance). Key on the tree def if that ever reads wrong.
+    static readonly Dictionary<string, ScatterImpostorBaker.AtlasCard> _sharedCards = new();
+
     public static ScatterLodBatcher.Impostor TryBuild(ScatterPrototypeDto proto, Bounds worldBounds)
     {
         if (!proto.HasImpostor) return default;
@@ -41,9 +49,23 @@ public static class ScatterImpostorFactory
 
         // Prefer a pre-baked atlas (editor bake tool) to skip the on-load bake; fall back to baking live
         // for prototypes without one (runtime-placed / custom-saved structures).
-        ScatterImpostorBaker.AtlasCard card = proto.BakedImpostorAtlas != null
-            ? ScatterImpostorBaker.FromPrebaked(proto.BakedImpostorAtlas, proto.BakedImpostorNormal, meshes)
-            : ScatterImpostorBaker.BakeAtlas(meshes, materials, OctGridN);
+        string shareKey = proto.BakedImpostorAtlas == null ? proto.ImpostorShareKey : null;
+        bool shared = !string.IsNullOrEmpty(shareKey);
+        ScatterImpostorBaker.AtlasCard card;
+        if (proto.BakedImpostorAtlas != null)
+            card = ScatterImpostorBaker.FromPrebaked(proto.BakedImpostorAtlas, proto.BakedImpostorNormal, meshes);
+        else if (shared && _sharedCards.TryGetValue(shareKey, out ScatterImpostorBaker.AtlasCard hit) && hit.Texture != null)
+            card = ScatterImpostorBaker.FromPrebaked(hit.Texture, hit.NormalTexture, meshes);
+        else
+        {
+            card = ScatterImpostorBaker.BakeAtlas(meshes, materials, OctGridN);
+            if (shared && card.Valid)
+            {
+                card.Texture.hideFlags = HideFlags.HideAndDontSave;
+                if (card.NormalTexture != null) card.NormalTexture.hideFlags = HideFlags.HideAndDontSave;
+                _sharedCards[shareKey] = card;
+            }
+        }
         if (!card.Valid) return default;
 
         float meshCull = proto.MaxCullDistance;
@@ -63,8 +85,10 @@ public static class ScatterImpostorFactory
 
         var rp = new RenderParams(mat) { worldBounds = worldBounds, shadowCastingMode = ShadowCastingMode.On };
         // A pre-baked atlas is a shared ASSET this impostor borrows; a live bake is a runtime texture it owns.
-        // Teardown destroys only the owned one (destroying the asset corrupts it / throws).
-        return new ScatterLodBatcher.Impostor(rp, BuildUnitQuad(), start, end, ownsCard: proto.BakedImpostorAtlas == null);
+        // Teardown destroys only the owned one (destroying the asset — or a card other prototypes still
+        // share — corrupts it / throws).
+        return new ScatterLodBatcher.Impostor(rp, BuildUnitQuad(), start, end,
+            ownsCard: proto.BakedImpostorAtlas == null && !shared);
     }
 
     // Unit centred quad (xy in [-0.5,0.5], uv [0,1]); the octahedral shader billboards + scales it by
