@@ -1,0 +1,74 @@
+---
+name: reference_unity_mcp
+description: Unity MCP is connected and usable — how to drive the editor, force compiles (auto-refresh is OFF), run console commands, and capture screenshots. Read before assuming you can't see the game.
+metadata:
+  type: reference
+---
+
+**Unity MCP IS CONNECTED and works** (instance `ProceduralPlanets@3ece516259d377a5`, Unity 6000.6.0a7).
+Verified end-to-end 2026-08-15: edited code, compiled, entered play, generated a planet, drove console commands,
+and captured screenshots of the running game — all without Bryan touching the editor. **Don't ask Bryan to run
+things you can run yourself.** Caveat: the MCP registers at session start only; if it's connected mid-session it
+won't appear until a fresh Claude Code session.
+
+## The compile loop (this is where the time gets lost)
+
+**`kAutoRefreshMode` is 0 — auto-refresh is DISABLED in this editor.** Saving a `.cs` does NOT recompile, and
+`refresh_unity` can report "compiling" while the assembly on disk stays old. Worse, **play mode blocks the domain
+reload**, so a compile can sit queued indefinitely.
+
+Reliable sequence:
+1. `manage_editor stop` (a reload cannot apply during play)
+2. `AssetDatabase.ImportAsset("Assets/.../File.cs", ImportAssetOptions.ForceUpdate)` for each edited file
+3. `CompilationPipeline.RequestScriptCompilation()`
+4. wait until `EditorApplication.isCompiling` is false
+5. **verify**: `File.GetLastWriteTime(typeof(SomeType).Assembly.Location)` vs the `.cs` write time
+
+**Always verify the timestamp before trusting a check.** Three verification passes in a row reported a fix as
+broken because they ran against an assembly built 5 minutes before the edit.
+
+**HotReload is installed and patches METHOD BODIES only.** So a logic change can take effect with a stale
+assembly on disk, while these do NOT: field initializers (`new TreeDef().RootFlare` read 0.00 instead of 0.32),
+newly added APIs (`TreeDefLibrary.DeadSpecies` "does not exist"), constructor/class-parameter changes. Also
+**static caches survive a patch** — a cached `Material` keeps its old property values until a real domain reload.
+
+`dotnet build ProceduralPlanets.*.csproj` is a fast syntax check but says NOTHING about what Unity has loaded.
+
+## Running the game
+
+- **Console commands from `execute_code`: `CommandExecutor.ExecuteImmediate("<cmd>")`** → `.Success/.Output/.Error`.
+  Async commands refuse ("async commands are not valid in immediate execution") — e.g. `planet.generate`.
+- Enumerate commands by reflecting `ConsoleRegistry._commands` (private static dict, ~230 entries).
+- Useful: `planet.status` (runtime line has `generating=True/False`), `scatter.goto <Biome> <height>`,
+  `scatter.count` (per-prototype instance counts near camera — the way to prove placement), `scatter.tiles`,
+  `scatter.density`, `camera.teleports` / `camera.teleport <name>`, `debug.profiling`, `time.freeze`.
+- **Planet generation takes ~2 minutes from entering play.** Poll `planet.status`; scatter commands answer
+  "not configured (generate a planet first)" until it finishes.
+- **Teleports often land on the NIGHT side** — screenshots come out black. Run `light.local-noon` + `time.freeze`.
+
+## Screenshots
+
+There is no screenshot tool. Render a camera and read the file:
+`RenderTexture` → `cam.Render()` → `ReadPixels` → `EncodeToPNG` → `File.WriteAllBytes` into the scratchpad →
+`Read` the PNG. 1600x900 is a good size.
+
+**Scatter materials dither out between `_FadeStart` 120 and `_FadeEnd` 150 m** — a wide shot from further away
+renders *nothing but shadows and labels*. Copy the material (never mutate the shared asset) and push the fade to
+~5000 before any distant shot.
+
+## execute_code gotchas
+
+- `Object` is ambiguous — write `UnityEngine.Object`.
+- `GetInstanceID()` is obsolete and fails compilation; compare references instead.
+- `GetComponent<MeshFilter>().sharedMesh` throws on objects lacking one — iterate `GetComponentsInChildren<MeshFilter>()`.
+- Roslyn compiles the snippet against the CURRENTLY LOADED assemblies, so a snippet referencing a brand-new API
+  fails until the domain actually reloaded. That failure is a useful staleness signal.
+
+## Don't save scenes casually
+
+The editor may hold **unsaved user edits**. On 2026-08-15 saving `BiomeShowcase.unity` (to persist one field)
+also persisted Bryan's unsaved rework of that scene — a ~40k-line diff replacing the committed contents. Check
+`scene.isDirty` and what's actually in the scene before saving, and prefer changing values at runtime (play-mode
+changes revert) when the change is only for a screenshot.
+
+Related: [[project_tree_generator]] (the work this was proven on), [[reference_agent_conversation]].

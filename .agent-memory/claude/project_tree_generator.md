@@ -86,12 +86,8 @@ canopy-jam worry did NOT materialise**: Forest = 194 trees in 80 m, dense but wa
 `SpacingMeters`**, keep the density parity. Cold fill completes (16,931 tiles, 159,456 instances, 0 queued).
 Perf (editor): ~18-20 ms at ground, ~31 ms camera raised 46 m over canopy — 109 protos didn't blow it up
 (off-biome protos have no instances so cost nothing). Distant treeline/impostors read correctly.
-**Driving the game from MCP:** `CommandExecutor.ExecuteImmediate("<cmd>")` runs any console command from
-`execute_code` (async ones refuse — "async commands are not valid in immediate execution"). Enumerate commands
-via reflection on `ConsoleRegistry._commands`. Useful: `scatter.goto <Biome> <height>`, `scatter.count`,
-`scatter.tiles`, `camera.teleport <name>`, `camera.teleports`, `light.local-noon` + `time.freeze` (teleports
-often land on the NIGHT side — screenshots come out black otherwise). Planet gen takes ~2 min from play;
-`planet.status` runtime line shows `generating=True/False`.
+**Driving the game from MCP: see [[reference_unity_mcp]]** — console commands, screenshots, the compile loop,
+and the auto-refresh trap all live there now.
 
 **SPECIES SET COMPLETE (12) except exotics — 2026-08-15.** Added Cypress, Cedar, Poplar, **Fern**.
 `TreeDef.Cone{BaseFrac,RadiusFrac,Droop,Tiers}` makes ONE cone mesh cover the conifer family: fir = defaults,
@@ -109,9 +105,9 @@ prototype has >=2 parts. `TreeShowcaseSpawner` needed `Parts.Length >= 2` to pic
 (Desert/Tundra map to Shrub, both dead-tree prototypes) rendered nothing but capsules. Swept the codebase after:
 `TreeShowcaseSpawner` was the only place. Verify galleries by COUNTING cells with geometry, not by eyeballing.
 
-**CAPTURE GOTCHA:** scatter materials carry `_FadeStart` 120 / `_FadeEnd` 150 dither fade — render a gallery
-from >150 m and **every tree vanishes, leaving only shadows and labels**. Copy the material (never mutate the
-shared asset) and push `_FadeStart/_FadeEnd` to ~5000 before wide shots.
+**CAPTURE GOTCHA** (also in [[reference_unity_mcp]]): scatter materials carry `_FadeStart` 120 / `_FadeEnd` 150
+dither fade — render a gallery from >150 m and **every tree vanishes, leaving only shadows and labels**. Copy the
+material (never mutate the shared asset) and push the fade to ~5000 before wide shots.
 
 **How foliage works now (key facts):**
 - Foliage = **textured leaf cards** (crossed quads, UV 0..1, vtx.B=1 leaf mask, vtx.G=AO) drawn with **each biome's
@@ -148,19 +144,10 @@ shared asset) and push `_FadeStart/_FadeEnd` to ~5000 before wide shots.
   `_WindStrength`, so Conifer AND Pine were completely rigid; now 0.10. `_ForceLeaf` alone buys nothing:
   `flex = leafMask * _WindStrength`. **Open:** `_WindStrength` is absolute sway METRES tuned for the old
   half-size trees, so 0.14 m on a 34 m oak reads ~half as strongly as it used to — may want it height-scaled.
-- **EDITOR GOTCHA (cost ~30 min this session): Unity auto-refresh is DISABLED here** (`EditorPrefs
-  kAutoRefreshMode == 0`). Saving a .cs does NOT recompile, and `refresh_unity` can report "compiling" while the
-  assembly on disk stays old — and a reload cannot apply while play mode is active. Symptoms: field initializers
-  read stale defaults, or a just-edited value doesn't take. **Always confirm with
-  `System.IO.File.GetLastWriteTime(typeof(X).Assembly.Location)` vs the .cs write time before trusting a check.**
-  Recipe that works: `manage_editor stop` → `CompilationPipeline.RequestScriptCompilation()` → wait
-  `isCompiling` false → verify asm timestamp. Also: `TreeInjection`'s static material caches (`_mats`,
-  `_coniferMats`) survive a HotReload patch, so material-param edits need a real domain reload.
-- **UNITY MCP works** (2026-08-15, `ProceduralPlanets@3ece516259d377a5`): loads at session start only — if connected
-  mid-session it won't register; needs a fresh Claude Code session. Once live: capture the scene by rendering a
-  camera to PNG via `mcp__unity__execute_code` + Read it (no screenshot tool exists). Loop: edit .cs →
-  `refresh_unity(compile,force,scripts,wait)` → `read_console errors` → `manage_editor stop/play` → execute_code
-  capture → Read. `Object` is ambiguous in execute_code — use `UnityEngine.Object`.
+- **EDITOR + MCP mechanics moved to [[reference_unity_mcp]]** (auto-refresh is OFF, HotReload patches method
+  bodies only, verify the assembly timestamp, console + screenshot recipes). Tree-specific corollary:
+  `TreeInjection`'s static material caches (`_mats`, `_coniferMats`) survive a HotReload patch, so any change to
+  a generated material's properties needs a real domain reload before it shows up.
 - **Per-instance variety: BUILT 2026-08-15 (Approach B), editor-verified, NOT yet play-verified in a real biome.**
   The slot RISK is **answered: there is NO slot→biome table** — `SlotId` only feeds the placement hash
   (`ScatterHash.Slot`) + the `ScatterId` pack; biome/spacing come from the prototype's own fields, so new slots
