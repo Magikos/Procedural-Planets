@@ -40,17 +40,26 @@ public static class TreeInjection
 
             var protos = new List<ScatterPrototypeDto>(lib.Prototypes.Length * k);
             var extra = new List<ScatterPrototypeDto>();
+            // Which tree prototype this is WITHIN its biome, in library order — picks the species from the
+            // biome's set so a biome with several tree prototypes grows several species instead of one repeated.
+            var biomeOrdinal = new Dictionary<BiomeType, int>();
             int replaced = 0, outOfSlots = 0;
             foreach (ScatterPrototypeDto p in lib.Prototypes)
             {
-                ScatterPrototypeDto gen = IsTree(p) ? TryReplace(p, 0, k, p.SlotId, spacingScale) : null;
+                int ordinal = 0;
+                if (IsTree(p))
+                {
+                    biomeOrdinal.TryGetValue(p.Biome, out ordinal);
+                    biomeOrdinal[p.Biome] = ordinal + 1;
+                }
+                ScatterPrototypeDto gen = IsTree(p) ? TryReplace(p, 0, k, p.SlotId, spacingScale, ordinal) : null;
                 protos.Add(gen ?? p);
                 if (gen == null) continue;
                 replaced++;
                 for (int v = 1; v < k; v++)
                 {
                     if (nextSlot > ScatterId.MaxSlot) { outOfSlots++; continue; }
-                    ScatterPrototypeDto variant = TryReplace(p, v, k, nextSlot, spacingScale);
+                    ScatterPrototypeDto variant = TryReplace(p, v, k, nextSlot, spacingScale, ordinal);
                     if (variant == null) continue;
                     extra.Add(variant);
                     nextSlot++;
@@ -83,6 +92,20 @@ public static class TreeInjection
     static bool IsTree(ScatterPrototypeDto p) =>
         p != null && p.Interaction == ScatterInteraction.Chop && p.Parts != null && p.Parts.Length > 0;
 
+    // FNV-1a, NOT string.GetHashCode/HashCode.Combine: .NET randomises string hashing per PROCESS, so those
+    // gave every session a different tree for the same world seed. Trees are world content — they have to be
+    // reproducible across runs, or a saved world regrows differently and impostor atlases can never be cached.
+    static uint StableHash(string s, int salt)
+    {
+        unchecked
+        {
+            uint h = 2166136261u;
+            foreach (char c in s) { h ^= c; h *= 16777619u; }
+            h ^= (uint)salt; h *= 16777619u;
+            return h;
+        }
+    }
+
     static int MaxSlot(ScatterLibraryDto lib)
     {
         int max = -1;
@@ -91,7 +114,7 @@ public static class TreeInjection
         return max;
     }
 
-    static ScatterPrototypeDto TryReplace(ScatterPrototypeDto p, int variant, int variantCount, int slot, float spacingScale)
+    static ScatterPrototypeDto TryReplace(ScatterPrototypeDto p, int variant, int variantCount, int slot, float spacingScale, int ordinalInBiome)
     {
         try
         {
@@ -100,10 +123,10 @@ public static class TreeInjection
             TreeDefLibrary.TreeSpecies species;
             if ((p.DisplayName ?? "").IndexOf("birch", StringComparison.OrdinalIgnoreCase) >= 0)
                 species = TreeDefLibrary.TreeSpecies.Birch;
-            else if (!TreeDefLibrary.HasTree(p.Biome, out species))
-                species = TreeDefLibrary.TreeSpecies.Broadleaf;
+            else
+                species = TreeDefLibrary.SpeciesForPrototype(p.Biome, ordinalInBiome);
 
-            int seed = Mathf.Abs(HashCode.Combine(p.DisplayName ?? "tree", variant)) % 900000 + 1;
+            int seed = (int)(StableHash(p.DisplayName ?? "tree", variant) % 900000) + 1;
             // One variant -> the old per-TYPE age. Several -> ladder them sapling..old so a stand of one
             // species mixes real age shapes (the generator scales height/girth/branch tiers/leaf size by age),
             // not just seeds.

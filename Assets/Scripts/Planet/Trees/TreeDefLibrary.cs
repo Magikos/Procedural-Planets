@@ -73,6 +73,42 @@ public static class TreeDefLibrary
         }
     }
 
+    // A biome grows a SET of species, not one. One species per biome made every tropical region a palm
+    // monoculture and left Cypress/Cedar/Poplar/Fern unreachable — generated correctly and placed nowhere.
+    // The prototype name picks within the set (stably hashed by the caller), so a biome's several tree
+    // prototypes become several species instead of the same tree repeated.
+    public static TreeSpecies[] SpeciesSet(BiomeType biome)
+    {
+        switch (biome)
+        {
+            case BiomeType.Forest: return new[] { TreeSpecies.Broadleaf, TreeSpecies.Conifer, TreeSpecies.Birch, TreeSpecies.Poplar };
+            case BiomeType.Grassland: return new[] { TreeSpecies.Broadleaf, TreeSpecies.Poplar, TreeSpecies.Birch };
+            case BiomeType.Swamp: return new[] { TreeSpecies.Willow, TreeSpecies.Broadleaf };
+            case BiomeType.Taiga: return new[] { TreeSpecies.Conifer, TreeSpecies.Cedar, TreeSpecies.Pine };
+            case BiomeType.Snow: return new[] { TreeSpecies.Conifer, TreeSpecies.Cedar };
+            case BiomeType.Steppe: return new[] { TreeSpecies.Pine, TreeSpecies.Cypress };
+            case BiomeType.Mountain: return new[] { TreeSpecies.Pine, TreeSpecies.Cypress, TreeSpecies.Conifer };
+            case BiomeType.Tropical: return new[] { TreeSpecies.Palm, TreeSpecies.Broadleaf };
+            case BiomeType.Beach: return new[] { TreeSpecies.Palm };
+            case BiomeType.Savanna: return new[] { TreeSpecies.Acacia, TreeSpecies.Shrub };
+            case BiomeType.Scrub: return new[] { TreeSpecies.Acacia, TreeSpecies.Cypress, TreeSpecies.Shrub };
+            case BiomeType.Desert:
+            case BiomeType.Tundra: return new[] { TreeSpecies.Shrub };
+            default: return System.Array.Empty<TreeSpecies>();
+        }
+    }
+
+    // Pick by the prototype's ORDINAL within its biome, not by hashing its name: with only one or two tree
+    // prototypes per biome a hash can miss the primary species entirely (Swamp drew Broadleaf instead of
+    // Willow, Savanna drew Shrub instead of Acacia). Ordinal 0 always gets the set's first entry, so every
+    // biome keeps the species it had, and the alternates only appear where a biome has extra prototypes.
+    public static TreeSpecies SpeciesForPrototype(BiomeType biome, int ordinalInBiome)
+    {
+        TreeSpecies[] set = SpeciesSet(biome);
+        if (set.Length == 0) return TreeSpecies.Broadleaf;
+        return set[((ordinalInBiome % set.Length) + set.Length) % set.Length];
+    }
+
     public static string BiomeMapSummary()
     {
         var sb = new StringBuilder();
