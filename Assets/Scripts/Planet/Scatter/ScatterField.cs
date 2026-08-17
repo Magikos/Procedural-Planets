@@ -484,13 +484,13 @@ public sealed class ScatterField : IDisposable
         var filtered = new HashSet<ulong>(); foreach (var i in fwd) if ((i.PositionWS - anchor).sqrMagnitude <= s2) filtered.Add(i.Id);
         if (!smallSet.SetEquals(filtered)) return $"scatter.verify FAIL: region-independence ({smallSet.Count} small vs {filtered.Count} filtered)";
 
-        // ID pack/unpack incl. player bit = true.
+        // ID pack/unpack round-trip, including the top slot value now that slot owns bit 63.
         ScatterId.Unpack(fwd[0].Id, out int f0, out int l0, out int x0, out int y0, out int sl0);
-        if (ScatterId.Pack(f0, l0, x0, y0, sl0, false) != fwd[0].Id) return "scatter.verify FAIL: base id round-trip";
-        ulong pid = ScatterId.Pack(f0, l0, x0, y0, sl0, true);
-        ScatterId.Unpack(pid, out int f1, out int l1, out int x1, out int y1, out int sl1);
-        if (!ScatterId.IsPlayer(pid) || f1 != f0 || l1 != l0 || x1 != x0 || y1 != y0 || sl1 != sl0)
-            return "scatter.verify FAIL: player id round-trip";
+        if (ScatterId.Pack(f0, l0, x0, y0, sl0) != fwd[0].Id) return "scatter.verify FAIL: base id round-trip";
+        ulong top = ScatterId.Pack(f0, l0, x0, y0, ScatterId.MaxSlot);
+        ScatterId.Unpack(top, out int f1, out int l1, out int x1, out int y1, out int sl1);
+        if (sl1 != ScatterId.MaxSlot || f1 != f0 || l1 != l0 || x1 != x0 || y1 != y0)
+            return "scatter.verify FAIL: top-slot id round-trip";
 
         sw.Stop();
         string status = statsF.CornerStraddle ? "PASS_WITH_KNOWN_CORNER_GAP" : "PASS";

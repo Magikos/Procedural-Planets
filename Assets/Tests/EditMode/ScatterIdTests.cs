@@ -40,7 +40,7 @@ namespace ProceduralPlanets.Tests
         [Test]
         public void PackUnpack_AllZeroFieldsPackToZero()
         {
-            ulong id = ScatterId.Pack(0, 0, 0, 0, 0, player: false);
+            ulong id = ScatterId.Pack(0, 0, 0, 0, 0);
             Assert.AreEqual(0UL, id);
 
             ScatterId.Unpack(id, out int face, out int level, out int x, out int y, out int slot);
@@ -75,41 +75,51 @@ namespace ProceduralPlanets.Tests
             }
         }
 
+        // Bit 63 was a reserved player-placed flag; slot took it (SlotBits 7 -> 8) because nothing set it and a
+        // player-placed object has no cell address to encode anyway. These two tests replace the old player-bit
+        // pair and lock what the widening has to guarantee.
         [Test]
-        public void PlayerBit_SetAndReadIndependently()
+        public void Slot_UsesBit63_AtMaxFields()
         {
-            ulong notPlayer = ScatterId.Pack(1, 2, 3, 4, 5, player: false);
-            ulong player = ScatterId.Pack(1, 2, 3, 4, 5, player: true);
+            ulong id = ScatterId.Pack(ScatterId.FaceCount - 1, ScatterId.MaxLevel, MaxCoord, MaxCoord, ScatterId.MaxSlot);
+            Assert.AreEqual(1UL << 63, id & (1UL << 63), "the top slot value must reach bit 63");
 
-            Assert.IsFalse(ScatterId.IsPlayer(notPlayer));
-            Assert.IsTrue(ScatterId.IsPlayer(player));
-
-            // The player bit is the only difference between the two ids (bit 63 = SlotShift 56 + SlotBits 7).
-            Assert.AreEqual(notPlayer | (1UL << 63), player);
-
-            // ...and it does not corrupt the other fields on unpack.
-            ScatterId.Unpack(player, out int f, out int l, out int x, out int y, out int s);
-            Assert.AreEqual(1, f);
-            Assert.AreEqual(2, l);
-            Assert.AreEqual(3, x);
-            Assert.AreEqual(4, y);
-            Assert.AreEqual(5, s);
+            ScatterId.Unpack(id, out int f, out int l, out int x, out int y, out int s);
+            Assert.AreEqual(ScatterId.MaxSlot, s);
+            Assert.AreEqual(MaxCoord, x, "slot must not bleed into the coordinate fields");
+            Assert.AreEqual(MaxCoord, y);
+            Assert.AreEqual(ScatterId.MaxLevel, l);
+            Assert.AreEqual(ScatterId.FaceCount - 1, f);
         }
 
+        // Slots 128..255 were unreachable before the widening, so nothing has ever exercised them.
         [Test]
-        public void PlayerBit_IsBit63_AtMaxFields()
+        public void Slot_AboveOldCeiling_RoundTrips()
         {
-            // With SlotBits=7 the layout uses all 64 bits: slot occupies 56..62, the player flag is bit 63.
-            // At max fields the player bit must stay clear when player:false and set when player:true, i.e.
-            // no field bleeds into bit 63.
-            ulong noPlayer = ScatterId.Pack(ScatterId.FaceCount - 1, ScatterId.MaxLevel, MaxCoord, MaxCoord,
-                                            ScatterId.MaxSlot, player: false);
-            ulong withPlayer = ScatterId.Pack(ScatterId.FaceCount - 1, ScatterId.MaxLevel, MaxCoord, MaxCoord,
-                                              ScatterId.MaxSlot, player: true);
-            Assert.AreEqual(0UL, noPlayer & (1UL << 63), "player bit (63) must be clear at max fields when player:false");
-            Assert.AreEqual(1UL << 63, withPlayer & (1UL << 63), "player flag is bit 63");
-            Assert.IsFalse(ScatterId.IsPlayer(noPlayer));
-            Assert.IsTrue(ScatterId.IsPlayer(withPlayer));
+            Assert.AreEqual(255, ScatterId.MaxSlot);
+            foreach (int slot in new[] { 128, 129, 200, 254, 255 })
+            {
+                ulong id = ScatterId.Pack(2, 7, 12345, 54321, slot);
+                ScatterId.Unpack(id, out int f, out int l, out int x, out int y, out int s);
+                Assert.AreEqual(slot, s, $"slot {slot} must round-trip");
+                Assert.AreEqual(2, f); Assert.AreEqual(7, l);
+                Assert.AreEqual(12345, x); Assert.AreEqual(54321, y);
+                Assert.AreEqual(id, ScatterGatherBurst.PackUnchecked(2, 7, 12345, 54321, slot),
+                    $"burst packer must match managed at slot {slot}");
+            }
+        }
+
+        // Ids written before the widening had bit 63 clear, so every old slot must decode unchanged.
+        [Test]
+        public void Slot_BelowOldCeiling_DecodesIdenticallyToOldLayout()
+        {
+            foreach (int slot in new[] { 0, 1, 63, 64, 126, 127 })
+            {
+                ulong id = ScatterId.Pack(4, 9, 777, 888, slot);
+                Assert.AreEqual(0UL, id & (1UL << 63), $"slot {slot} must leave bit 63 clear, as old saves do");
+                ScatterId.Unpack(id, out _, out _, out _, out _, out int s);
+                Assert.AreEqual(slot, s);
+            }
         }
 
         [Test]
@@ -176,7 +186,7 @@ namespace ProceduralPlanets.Tests
             int[] faces = { 0, 3, 5 };
             int[] levels = { 0, 1, ScatterId.MaxLevel };
             int[] coords = { 0, 255, MaxCoord };
-            int[] slots = { 0, 31, 63, 64, 65, 100, ScatterId.MaxSlot };
+            int[] slots = { 0, 31, 63, 64, 65, 100, 127, 128, 200, ScatterId.MaxSlot };
 
             foreach (int f in faces)
             foreach (int l in levels)
@@ -184,7 +194,7 @@ namespace ProceduralPlanets.Tests
             foreach (int cy in coords)
             foreach (int s in slots)
             {
-                ulong managed = ScatterId.Pack(f, l, cx, cy, s, player: false);
+                ulong managed = ScatterId.Pack(f, l, cx, cy, s);
                 ulong burst = ScatterGatherBurst.PackUnchecked(f, l, cx, cy, s);
                 Assert.AreEqual(managed, burst, $"burst vs managed pack diverged at face {f} level {l} ({cx},{cy}) slot {s}");
             }

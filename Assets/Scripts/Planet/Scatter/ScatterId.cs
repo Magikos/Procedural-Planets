@@ -9,12 +9,19 @@ public static class ScatterId
     // Public so the Burst packer (ScatterGatherBurst.PackUnchecked) derives its shifts/masks from
     // the same bit counts instead of re-declaring them — a re-declared SlotBits once drifted to 6
     // and aliased slots 64..127. Single source of truth for the layout.
-    public const int FaceBits = 3, LevelBits = 5, CoordBits = 24, SlotBits = 7;
+    // Bit 63 was a reserved "player-placed" flag. Nothing ever set it — only the verify self-test — and it was
+    // the wrong mechanism anyway: a player-placed object has no cell address, because its position is chosen
+    // rather than derived from the seed, so the other 63 bits would carry no meaning for it. Player objects
+    // need their own store. Reclaiming the bit widened the slot field instead.
+    //
+    // Safe for existing saves: the flag was always 0 in every id the game wrote, so slots 0..127 decode
+    // identically under the wider mask. If a unified handle is ever wanted, reserve a SLOT VALUE to mean
+    // "look this up elsewhere" rather than taking a bit back.
+    public const int FaceBits = 3, LevelBits = 5, CoordBits = 24, SlotBits = 8;
     const int LevelShift = FaceBits;                 // 3
     const int XShift = LevelShift + LevelBits;       // 8
     const int YShift = XShift + CoordBits;           // 32
-    const int SlotShift = YShift + CoordBits;        // 56
-    const int PlayerShift = SlotShift + SlotBits;    // 63 (slot 56..62, player bit 63 — all 64 bits used)
+    const int SlotShift = YShift + CoordBits;        // 56 (slot 56..63 — all 64 bits used)
 
     const ulong FaceMask = (1UL << FaceBits) - 1;
     const ulong LevelMask = (1UL << LevelBits) - 1;
@@ -30,7 +37,7 @@ public static class ScatterId
     // Unconditional validation (not #if): the id is a persistence key — a masked-in invalid value
     // in a shipped build would rebind a saved chop/collect to the wrong object. Masks are packing
     // mechanics only.
-    public static ulong Pack(int face, int level, int x, int y, int slot, bool player = false)
+    public static ulong Pack(int face, int level, int x, int y, int slot)
     {
         if ((uint)face >= FaceCount)
             throw new ArgumentOutOfRangeException(nameof(face), face, "scatter face must be 0..5");
@@ -44,11 +51,8 @@ public static class ScatterId
              | (((ulong)level & LevelMask) << LevelShift)
              | (((ulong)(uint)x & CoordMask) << XShift)
              | (((ulong)(uint)y & CoordMask) << YShift)
-             | (((ulong)slot & SlotMask) << SlotShift)
-             | ((player ? 1UL : 0UL) << PlayerShift);
+             | (((ulong)slot & SlotMask) << SlotShift);
     }
-
-    public static bool IsPlayer(ulong id) => ((id >> PlayerShift) & 1UL) != 0UL;
 
     public static void Unpack(ulong id, out int face, out int level, out int x, out int y, out int slot)
     {
