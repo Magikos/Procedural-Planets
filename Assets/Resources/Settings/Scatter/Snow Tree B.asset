@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
+  m_Name: Snow Tree B
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
+  DisplayName: Snow Tree B
+  SlotId: 74
+  SpacingMeters: 33.6
+  Biome: 12
+  BiomeBlendPower: 1
+  Weight: 1
+  Clumpiness: 0
+  PatchScaleMeters: 250
+  MaxSlopeDegrees: 30
+  SlopeFadeDegrees: 6
+  ConformToSlope: 0
+  HasMinAltitude: 0
+  MinAltitudeMeters: 0
+  HasMaxAltitude: 0
+  MaxAltitudeMeters: 0
+  MinWaterClearanceMeters: 0.05
+  OnWater: 0
+  ScaleRange: {x: 0.85, y: 1.25}
+  RandomYaw: 1
+  Interaction: 2
+  StumpMesh: {fileID: 4300000, guid: 19e0c9c87ca61ed43b8810a7fabc80eb, type: 2}
+  StumpMaterial: {fileID: 2100000, guid: 422873f097e8abe4ea110bf8a8f037fa, type: 2}
+  Parts:
+  - Name: Pine
+    Material: {fileID: 2100000, guid: 422873f097e8abe4ea110bf8a8f037fa, type: 2}
+    LodMeshes:
+    - {fileID: -2086173817701799432, guid: d12987b571e8cdf48a9f9c8a87d0ad21, type: 3}
+    LodEndDistances:
+    - 500
+    CastShadows: 1
+    ReceiveShadows: 1
+  Material: {fileID: 0}
+  LodMeshes: []
+  LodEndDistances: []
+  CastShadows: 1
+  ReceiveShadows: 1
+  BakedImpostorAtlas: {fileID: 2800000, guid: 96d81abb3fe42d649ae48b7f6ba130a9, type: 3}
+  BakedImpostorNormal: {fileID: 2800000, guid: 608275a1476bb5242b92193bf746d62c, type: 3}

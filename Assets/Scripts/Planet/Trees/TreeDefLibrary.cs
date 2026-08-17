@@ -85,7 +85,12 @@ public static class TreeDefLibrary
             case BiomeType.Grassland: return new[] { TreeSpecies.Broadleaf, TreeSpecies.Poplar, TreeSpecies.Birch };
             case BiomeType.Swamp: return new[] { TreeSpecies.Willow, TreeSpecies.Broadleaf };
             case BiomeType.Taiga: return new[] { TreeSpecies.Conifer, TreeSpecies.Cedar, TreeSpecies.Pine };
-            case BiomeType.Snow: return new[] { TreeSpecies.Conifer, TreeSpecies.Cedar };
+            // Snow is fir/spruce country. Cedar lives in Taiga instead — it is not a snow-line tree.
+            case BiomeType.Snow: return new[] { TreeSpecies.Conifer, TreeSpecies.Pine };
+            // A frozen bog: stunted, mostly dead. Deliberately NO Conifer — the IceBog prototype is a "Dead
+            // Tree", and a dead Conifer is a bare tapered spike, because the cone species carries no branch
+            // tiers to keep when its foliage is stripped. Broadleaf and Shrub still have limbs as snags.
+            case BiomeType.IceBog: return new[] { TreeSpecies.Shrub, TreeSpecies.Broadleaf };
             case BiomeType.Steppe: return new[] { TreeSpecies.Pine, TreeSpecies.Cypress };
             case BiomeType.Mountain: return new[] { TreeSpecies.Pine, TreeSpecies.Cypress, TreeSpecies.Conifer };
             case BiomeType.Tropical: return new[] { TreeSpecies.Palm, TreeSpecies.Broadleaf };
