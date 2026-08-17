@@ -184,6 +184,9 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
             await Awaitable.NextFrameAsync();
         }
         FaceAtlasPixels[] facePixels = buildAwaiter.GetResult();
+#if UNITY_EDITOR
+        LogAtlasChecksums(facePixels, atlasResolution);
+#endif
 
         try
         {
@@ -280,6 +283,53 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
         await Awaitable.MainThreadAsync();
         return results;
     }
+
+#if UNITY_EDITOR
+    // Regression oracle for generation-path optimization: a same-seed planet must produce
+    // identical id and weight checksums before and after any change to the climate, biome
+    // assignment, or smoothing path. Categorical ids cannot be validated by eye — two very
+    // similar-looking planets can differ in thousands of texels.
+    static void LogAtlasChecksums(FaceAtlasPixels[] facePixels, int atlasResolution)
+    {
+        const ulong offsetBasis = 14695981039346656037UL;
+        ulong ids = offsetBasis;
+        ulong weights = offsetBasis;
+        ulong blended = offsetBasis;
+        int hashedFaces = 0;
+
+        for (int face = 0; face < facePixels.Length; face++)
+        {
+            FaceAtlasPixels pixels = facePixels[face];
+            if (pixels == null) continue;
+
+            ids = HashPixels(ids, pixels.Ids);
+            weights = HashPixels(weights, pixels.Weights);
+            blended = HashPixels(blended, pixels.Blended);
+            hashedFaces++;
+        }
+
+        LoggerProvider.Log(LogLevel.Debug, "PhaseB",
+            $"Biome atlas checksum: ids={ids:X16}, weights={weights:X16}, blended={blended:X16}, " +
+            $"faces={hashedFaces}, resolution={atlasResolution}");
+    }
+
+    static ulong HashPixels(ulong hash, Color32[] pixels)
+    {
+        const ulong prime = 1099511628211UL;
+        if (pixels == null) return hash;
+
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            Color32 p = pixels[i];
+            hash = (hash ^ p.r) * prime;
+            hash = (hash ^ p.g) * prime;
+            hash = (hash ^ p.b) * prime;
+            hash = (hash ^ p.a) * prime;
+        }
+
+        return hash;
+    }
+#endif
 
     sealed class FaceAtlasPixels
     {

@@ -1038,7 +1038,15 @@ Shader "Planet/VertexColor"
                     return half4(CubeFaceDebugColor(input.positionWS - _PlanetCenter), 1.0);
 
                 if (_OceanDebugMode == DEBUG_BIOME_PRIMARY_ID)
+                {
+                #if defined(_BIOME_COLOR_MODE_TEXTURE)
+                    // Texture mode leaves the per-vertex id channel unwritten, so read the baked
+                    // map that actually shades the planet. Matches DEBUG_BIOME_MAP_PRIMARY_ID.
+                    return half4(BiomeIdColor(DominantBiomeId(input.chunkUv) / max((float)_BiomeCount, 1.0)), 1.0);
+                #else
                     return half4(BiomeIdColor(input.biomeData.z), 1.0);
+                #endif
+                }
 
                 if (_OceanDebugMode == DEBUG_BIOME_TEMPERATURE)
                     return half4(HeatmapBlueRed(input.biomeData.x), 1.0);

@@ -130,7 +130,7 @@ public sealed class ScatterGpuDraw : IDisposable
         return new Band { Mesh = imp.Quad, Near2 = start * start, Far2 = imp.EndDistance * imp.EndDistance, Rp = rp, Mpb = mpb };
     }
 
-    public void DrawProto(int p, IReadOnlyList<Matrix4x4> matrices, Vector3 camPos, bool dirty)
+    public void DrawProto(int p, List<Matrix4x4> matrices, Vector3 camPos, bool dirty)
     {
         if (!_supported) return;
         var g = _protos[p];
@@ -148,9 +148,7 @@ public sealed class ScatterGpuDraw : IDisposable
 
         if (dirty || grew || count != g.LastCount)
         {
-            if (_m.Length < count) _m = new Matrix4x4[count];
-            for (int i = 0; i < count; i++) _m[i] = matrices[i];
-            g.Master.SetData(_m, 0, 0, count);
+            g.Master.SetData(matrices, 0, 0, count);
             // world->object on the GPU — no CPU Matrix4x4.inverse, so churn while flying stays cheap.
             _cull.SetBuffer(_kernelInv, _cMaster, g.Master);
             _cull.SetBuffer(_kernelInv, _cMasterInv, g.MasterInv);

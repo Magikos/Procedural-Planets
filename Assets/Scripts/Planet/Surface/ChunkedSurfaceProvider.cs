@@ -1432,6 +1432,10 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                 ? CountBiomeMapBakeTargets(_allChunks, _usesFaceBiomeAtlases)
                 : 0;
             bool vertexColorsRequired = !bakeLookupBuilt || !_usesFaceBiomeAtlases;
+            ColorGenerator climateSource = vertexColorsRequired ? null : (ColorGenerator)biomeProvider;
+            BiomeMapBaker.ResetPassTimings();
+            System.Threading.Interlocked.Exchange(ref _climateAllocTicks, 0L);
+            System.Threading.Interlocked.Exchange(ref _climateEvalTicks, 0L);
             for (int batchStart = 0; batchStart < total; batchStart += colorBatchSize)
             {
                 int batchEnd = Mathf.Min(batchStart + colorBatchSize, total);
@@ -1451,7 +1455,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                     if (calculateVertexColors)
                         CalculateChunkColors(chunk, biomeProvider);
                     else
-                        CalculateChunkBiomeData(chunk, biomeProvider);
+                        CalculateChunkClimateData(chunk, climateSource);
                 });
                 vertexTimer.Stop();
                 vertexTicks += vertexTimer.ElapsedTicks;
@@ -1526,6 +1530,13 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
                 $"Biome color timings: total={totalTimer.ElapsedMilliseconds}ms, " +
                 $"vertex={TicksToMilliseconds(vertexTicks):F1}ms, " +
                 $"mapBake={TicksToMilliseconds(mapBakeTicks):F1}ms, " +
+                // Summed worker CPU time, not wall clock: these two run inside the mapBake
+                // Parallel.For, so they will exceed it. Their ratio is the meaningful number.
+                $"climateAllocCpu={TicksToMilliseconds(System.Threading.Interlocked.Read(ref _climateAllocTicks)):F1}ms, " +
+                $"climateEvalCpu={TicksToMilliseconds(System.Threading.Interlocked.Read(ref _climateEvalTicks)):F1}ms, " +
+                $"cores={System.Environment.ProcessorCount}, " +
+                $"hrGridCpu={TicksToMilliseconds(BiomeMapBaker.HighResGridTicks):F1}ms, " +
+                $"topKCpu={TicksToMilliseconds(BiomeMapBaker.TopKTicks):F1}ms, " +
                 $"retainUpload={TicksToMilliseconds(retainUploadTicks):F1}ms, " +
                 $"atlas={TicksToMilliseconds(atlasTicks):F1}ms, " +
                 $"chunks={total}, mapBakeChunks={bakedMapChunks}/{mapBakeTarget}, " +
@@ -1711,19 +1722,32 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         chunk.CpuBiomeData = biomeData;
     }
 
-    static void CalculateChunkBiomeData(PlanetChunk chunk, IBiomeProvider biomeProvider)
+    // Face-atlas mode takes biome ids and weights from the baked maps, so the per-vertex payload
+    // only has to carry climate. The exact per-vertex biome resolve this replaces cost a
+    // domain-warped assignment-field lookup, a lake sample, and a DTO resolve for each of ~19.25M
+    // vertices, and its only surviving reader was one debug mode.
+    static long _climateAllocTicks;
+    static long _climateEvalTicks;
+
+    static void CalculateChunkClimateData(PlanetChunk chunk, ColorGenerator colorGenerator)
     {
-        if (chunk == null || biomeProvider == null || chunk.CpuUnitSpherePoints == null || chunk.CpuElevations == null)
+        if (chunk == null || colorGenerator == null || chunk.CpuUnitSpherePoints == null || chunk.CpuElevations == null)
             return;
 
         int count = chunk.CpuUnitSpherePoints.Length;
         if (chunk.CpuElevations.Length != count) return;
 
+        long allocStart = Stopwatch.GetTimestamp();
         var biomeData = chunk.CpuBiomeData;
         if (biomeData == null || biomeData.Length != count) biomeData = new Vector4[count];
+        long evalStart = Stopwatch.GetTimestamp();
 
         for (int i = 0; i < count; i++)
-            biomeProvider.GetBiomeData(chunk.CpuUnitSpherePoints[i], chunk.CpuElevations[i], out biomeData[i]);
+            colorGenerator.GetClimateData(chunk.CpuUnitSpherePoints[i], chunk.CpuElevations[i], out biomeData[i]);
+
+        long evalEnd = Stopwatch.GetTimestamp();
+        System.Threading.Interlocked.Add(ref _climateAllocTicks, evalStart - allocStart);
+        System.Threading.Interlocked.Add(ref _climateEvalTicks, evalEnd - evalStart);
 
         chunk.CpuBiomeData = biomeData;
     }

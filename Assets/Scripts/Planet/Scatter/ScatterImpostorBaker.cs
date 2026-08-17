@@ -160,11 +160,21 @@ public static class ScatterImpostorBaker
         int normalBakeId = Shader.PropertyToID(ShaderGlobalIds.ImpostorNormalBake);
 
         int atlasPx = gridN * AtlasCellPx;
-        var atlas = new Texture2D(atlasPx, atlasPx, TextureFormat.ARGB32, false);
-        var normalAtlas = new Texture2D(atlasPx, atlasPx, TextureFormat.ARGB32, false);
-        var cellRt = new RenderTexture(AtlasCellPx, AtlasCellPx, 16, RenderTextureFormat.ARGB32);
+        // WITH mipmaps: an impostor card at the tree line covers a few screen pixels while a cell is 128 px, so
+        // an unmipped atlas is minified ~16x and samples essentially at random. Against the shader's hard alpha
+        // clip that aliasing becomes binary keep/discard, which is what made the distant tree line read as
+        // speckled holes. Mips also cap how far cells can bleed into each other: they only merge below ~8 px per
+        // cell, by which point the card is a couple of pixels on screen.
+        var atlas = new Texture2D(atlasPx, atlasPx, TextureFormat.ARGB32, true);
+        var normalAtlas = new Texture2D(atlasPx, atlasPx, TextureFormat.ARGB32, true);
+        // Every cell renders into its own viewport rect of one atlas-sized target, so the bake pays two
+        // GPU readbacks instead of two per cell. ReadPixels stalls the pipeline until the GPU drains, and
+        // at 8x8 that was 128 stalls per prototype — the dominant cost of the whole bake.
+        var albedoRt = new RenderTexture(atlasPx, atlasPx, 16, RenderTextureFormat.ARGB32);
+        var normalRt = new RenderTexture(atlasPx, atlasPx, 16, RenderTextureFormat.ARGB32);
         var neutralNormalBg = new Color(0.5f, 0.5f, 1f, 1f); // encoded (0,0,1): faces the viewer
         float dist = s * 2f;
+        float cellFrac = 1f / gridN;
         float maxAlpha = 0f;
         for (int j = 0; j < gridN; j++)
         for (int i = 0; i < gridN; i++)
@@ -176,59 +186,61 @@ public static class ScatterImpostorBaker
             Vector3 up = Vector3.Cross(dir, right).normalized;
             camGO.transform.SetPositionAndRotation(ctr + dir * dist, Quaternion.LookRotation(-dir, up));
 
+            cam.rect = new Rect(i * cellFrac, j * cellFrac, cellFrac, cellFrac);
+
             // Albedo pass: flat unlit albedo on a black background (coverage keys the silhouette).
             Shader.SetGlobalFloat(albedoBakeId, 1f);
             Shader.SetGlobalFloat(normalBakeId, 0f);
             cam.backgroundColor = Color.black;
-            cam.targetTexture = cellRt;
+            cam.targetTexture = albedoRt;
             cam.Render();
-            RenderTexture.active = cellRt;
-            var albedoCell = new Texture2D(AtlasCellPx, AtlasCellPx, TextureFormat.ARGB32, false);
-            albedoCell.ReadPixels(new Rect(0, 0, AtlasCellPx, AtlasCellPx), 0, 0);
-            albedoCell.Apply();
-            RenderTexture.active = null;
 
             // Normal pass: view-space surface normal on a neutral (viewer-facing) background.
             Shader.SetGlobalFloat(albedoBakeId, 0f);
             Shader.SetGlobalFloat(normalBakeId, 1f);
             cam.backgroundColor = neutralNormalBg;
+            cam.targetTexture = normalRt;
             cam.Render();
-            RenderTexture.active = cellRt;
-            var normalCell = new Texture2D(AtlasCellPx, AtlasCellPx, TextureFormat.ARGB32, false);
-            normalCell.ReadPixels(new Rect(0, 0, AtlasCellPx, AtlasCellPx), 0, 0);
-            normalCell.Apply();
-            RenderTexture.active = null;
-
-            Color[] ap = albedoCell.GetPixels();
-            Color[] np = normalCell.GetPixels();
-            for (int k = 0; k < ap.Length; k++)
-            {
-                // Coverage from geometry presence, not brightness: the background is pure black, so any pixel
-                // the tree rendered has some colour. Keying the silhouette off luminance dropped dark foliage
-                // (shadowed / dark-green leaves) as holes ("shot with a shotgun"); key off the max channel
-                // with a low floor so dark-but-present leaves stay a solid silhouette.
-                float cover = Mathf.Max(ap[k].r, Mathf.Max(ap[k].g, ap[k].b));
-                float t = Mathf.Clamp01((cover - 0.008f) / (0.03f - 0.008f));
-                float a = t * t * (3f - 2f * t);
-                if (a > maxAlpha) maxAlpha = a;
-                ap[k] = new Color(ap[k].r, ap[k].g, ap[k].b, a);
-                np[k] = new Color(np[k].r, np[k].g, np[k].b, a); // same silhouette alpha on the normal atlas
-            }
-            atlas.SetPixels(i * AtlasCellPx, j * AtlasCellPx, AtlasCellPx, AtlasCellPx, ap);
-            normalAtlas.SetPixels(i * AtlasCellPx, j * AtlasCellPx, AtlasCellPx, AtlasCellPx, np);
-            Object.DestroyImmediate(albedoCell);
-            Object.DestroyImmediate(normalCell);
         }
         Shader.SetGlobalFloat(albedoBakeId, 0f);
         Shader.SetGlobalFloat(normalBakeId, 0f);
-        atlas.Apply();
-        normalAtlas.Apply();
+
+        RenderTexture.active = albedoRt;
+        atlas.ReadPixels(new Rect(0, 0, atlasPx, atlasPx), 0, 0);
+        RenderTexture.active = normalRt;
+        normalAtlas.ReadPixels(new Rect(0, 0, atlasPx, atlasPx), 0, 0);
+        RenderTexture.active = null;
+
+        Color[] ap = atlas.GetPixels();
+        Color[] np = normalAtlas.GetPixels();
+        for (int k = 0; k < ap.Length; k++)
+        {
+            // Coverage from geometry presence, not brightness: the background is pure black, so any pixel
+            // the tree rendered has some colour. Keying the silhouette off luminance dropped dark foliage
+            // (shadowed / dark-green leaves) as holes ("shot with a shotgun"); key off the max channel
+            // with a low floor so dark-but-present leaves stay a solid silhouette.
+            float cover = Mathf.Max(ap[k].r, Mathf.Max(ap[k].g, ap[k].b));
+            float t = Mathf.Clamp01((cover - 0.008f) / (0.03f - 0.008f));
+            float a = t * t * (3f - 2f * t);
+            if (a > maxAlpha) maxAlpha = a;
+            ap[k] = new Color(ap[k].r, ap[k].g, ap[k].b, a);
+            np[k] = new Color(np[k].r, np[k].g, np[k].b, a); // same silhouette alpha on the normal atlas
+        }
+        atlas.SetPixels(ap);
+        normalAtlas.SetPixels(np);
+        // Apply(true) builds the mip chain; without it the texture keeps mip 0 only and the allocation above
+        // buys nothing. Trilinear so the card crossfades between mips instead of stepping between them.
+        atlas.Apply(true);
+        normalAtlas.Apply(true);
+        atlas.filterMode = FilterMode.Trilinear;
+        normalAtlas.filterMode = FilterMode.Trilinear;
 
         RenderSettings.ambientMode = savedMode;
         RenderSettings.ambientLight = savedAmbient;
         cam.targetTexture = null;
         RenderTexture.active = null;
-        Object.DestroyImmediate(cellRt);
+        Object.DestroyImmediate(albedoRt);
+        Object.DestroyImmediate(normalRt);
         Object.DestroyImmediate(root);
 
         return new AtlasCard { Texture = atlas, NormalTexture = normalAtlas, WorldSize = s, CenterOffset = ctr.y, GridN = gridN, Valid = maxAlpha >= MinSilhouetteAlpha };

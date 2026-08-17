@@ -192,7 +192,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             var scatterLib = Resources.Load<ScatterLibrary>("Settings/ScatterLibrary");
             if (scatterLib != null)
             {
-                settings.Register(TreeInjection.Apply(ScatterLibraryDto.From(scatterLib)));
+                settings.Register(RockInjection.Apply(TreeInjection.Apply(ScatterLibraryDto.From(scatterLib))));
             }
             else
             {
@@ -401,6 +401,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             await Awaitable.MainThreadAsync();
             if (this == null) return;
             LakeMask.Current = lakeMask;
+            long lakeMs = phaseTimer.ElapsedMilliseconds;
+            phaseTimer.Restart();
 
             _progressHandle.Report(0.78f, "Applying colors...");
             await GenerateColorsAsync(new ProgressRangeHandle(_progressHandle, 0.78f, 0.12f), ct);
@@ -419,10 +421,16 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
                 new ProgressRangeHandle(_progressHandle, 0.94f, 0.06f),
                 ct);
             long waterMs = phaseTimer.ElapsedMilliseconds;
+            phaseTimer.Restart();
+            var finalizeStep = System.Diagnostics.Stopwatch.StartNew();
             _grass.Configure(_surfaceProvider as ChunkedSurfaceProvider,
                 _colorGenerator.SurfaceArrays, Seed, _observerCamera, _terrainMaterial.Material);
+            long grassMs = finalizeStep.ElapsedMilliseconds;
+            finalizeStep.Restart();
             _surfaceEdits.Configure(_surfaceProvider as ChunkedSurfaceProvider, _terrainMaterial.Material, Seed);
             int replayedSurfaceEdits = _surfaceEdits.ReplayStamps(clearFirst: false);
+            long surfaceEditsMs = finalizeStep.ElapsedMilliseconds;
+            finalizeStep.Restart();
             if (replayedSurfaceEdits > 0)
                 Logger.Log(LogLevel.Debug, "Planet", $"Replayed {replayedSurfaceEdits} saved surface edit(s).");
             // Atmosphere is rendered by AtmosphereController + AtmosphereRenderFeature (post-process).
@@ -434,20 +442,37 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             _lastSeaLevelRadius = seaLevelRadius;
             UploadCorePlanetShaderGlobals(seaLevelRadius);
             _progressHandle.Report(1f, "Planet ready");
+            long shaderGlobalsMs = finalizeStep.ElapsedMilliseconds;
+            finalizeStep.Restart();
             await Awaitable.NextFrameAsync(ct);
             // After the last cancellable await: a cancelled generation never publishes readiness,
             // so scatter is only configured for a generation that actually reached this point.
             _harvestStore.Configure(Seed);
+            long harvestMs = finalizeStep.ElapsedMilliseconds;
+            finalizeStep.Restart();
             _scatter.Configure(Seed, planet.PlanetRadius, seaLevelRadius, planet.HasOceans);
+            long scatterMs = finalizeStep.ElapsedMilliseconds;
+            finalizeStep.Restart();
             _scatterRenderer.Configure();
+            long scatterRendererMs = finalizeStep.ElapsedMilliseconds;
+            finalizeStep.Restart();
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _shapeGenerator.ElevationMin, _shapeGenerator.ElevationMax));
-            Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, mode {planet.Resolution}, perFaceResolution {PerFaceResolution}, radius {scaledRadius:F1}");
+            long generatedEventMs = finalizeStep.ElapsedMilliseconds;
+            long finalizeMs = phaseTimer.ElapsedMilliseconds;
+            Logger.Log(
+                LogLevel.Debug,
+                "Planet",
+                $"Finalize timings: grass={grassMs}ms, surfaceEdits={surfaceEditsMs}ms, " +
+                $"shaderGlobals={shaderGlobalsMs}ms, harvest={harvestMs}ms, scatter={scatterMs}ms, " +
+                $"scatterRenderer={scatterRendererMs}ms, generatedEvent={generatedEventMs}ms, " +
+                $"total={finalizeMs}ms");
+            Logger.Log(LogLevel.Debug, "Planet", $"Generated planet with seed {Seed}, mode {planet.Resolution}, perFaceResolution {PerFaceResolution}, maxChunkDepth {planet.MaxChunkDepth}, burst {Unity.Burst.BurstCompiler.IsEnabled}, radius {scaledRadius:F1}");
             Logger.Log(
                 LogLevel.Debug,
                 "Planet",
                 $"Generation timings: initialize={initializationMs}ms, terrain={terrainMs}ms, " +
-                $"colors={colorsMs}ms, climate={climateMs}ms, water={waterMs}ms, " +
-                $"total={totalTimer.ElapsedMilliseconds}ms");
+                $"lake={lakeMs}ms, colors={colorsMs}ms, climate={climateMs}ms, water={waterMs}ms, " +
+                $"finalize={finalizeMs}ms, total={totalTimer.ElapsedMilliseconds}ms");
         }
         catch (System.OperationCanceledException)
         {

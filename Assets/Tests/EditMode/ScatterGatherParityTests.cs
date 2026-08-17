@@ -26,7 +26,6 @@ namespace ProceduralPlanets.Tests
             }
             public Color GetBiomeColor(Vector3 p, float e) => Color.green;
             public Color GetBiomeColorAndData(Vector3 p, float e, out Vector4 d) { d = Vector4.zero; return Color.green; }
-            public void GetBiomeData(Vector3 p, float e, out Vector4 d) { d = Vector4.zero; }
         }
 
         const int WorldSeed = 20260731;

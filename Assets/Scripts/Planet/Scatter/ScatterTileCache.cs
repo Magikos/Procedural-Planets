@@ -10,7 +10,7 @@ using UnityEngine;
 // tile + seed), cached, and reused; a camera move only gathers newly-entered (tile, prototype) pairs and
 // evicts tiles that left range. Per-move cost is the frontier ring, not the disc.
 //
-// Readiness is tracked per (tile, prototype) (ulong ReadyMask): a tile that entered range far away holds
+// Readiness is tracked per (tile, prototype) (a bitset per tile): a tile that entered range far away holds
 // only the far prototypes (trees); as the camera closes, its short-range prototypes (bushes, grass) are
 // enqueued and filled in — the payload is never a camera-clipped subset, so it is path-independent.
 //
@@ -34,8 +34,20 @@ public sealed class ScatterTileCache
     sealed class TileEntry
     {
         public readonly int Face, Tx, Ty;
-        public ulong ReadyMask; // which prototypes have been gathered+committed for this tile
-        public TileEntry(int face, int tx, int ty) { Face = face; Tx = tx; Ty = ty; }
+
+        // Which prototypes have been gathered+committed for this tile. A single ulong silently aliased
+        // prototype 64+ onto 0+ (C# masks the shift count), which went live as soon as tree variants pushed
+        // the library past 64 entries — tiles then read as ready for prototypes never gathered.
+        readonly ulong[] _ready;
+
+        public TileEntry(int face, int tx, int ty, int protoCount)
+        {
+            Face = face; Tx = tx; Ty = ty;
+            _ready = new ulong[(protoCount + 63) >> 6];
+        }
+
+        public bool IsReady(int p) => (_ready[p >> 6] & (1UL << (p & 63))) != 0;
+        public void MarkReady(int p) => _ready[p >> 6] |= 1UL << (p & 63);
     }
 
     const float ReevalMoveMeters = 40f;    // re-plan the required tile set only after this much camera travel
@@ -65,6 +77,9 @@ public sealed class ScatterTileCache
     int _protoCount;
     int _tileLevel;
     float[] _protoRadius = Array.Empty<float>(); // far draw end + prefetch lead; <0 = never gathered
+    int[] _sortedProtoIndex = Array.Empty<int>();    // renderable prototypes, descending radius
+    float[] _sortedProtoRadius = Array.Empty<float>(); // _protoRadius in that same order
+    int _sortedProtoCount;
     float _globalMaxRadius;
     float _tileWorld;                            // one tile's world size; eviction hysteresis
     bool _configured;
@@ -87,6 +102,8 @@ public sealed class ScatterTileCache
 
     static readonly Vector3 FarAway = new Vector3(1e9f, 1e9f, 1e9f);
 
+
+
     public ScatterTileCache(ScatterField field, Transform planetTransform)
     {
         _field = field;
@@ -100,7 +117,7 @@ public sealed class ScatterTileCache
         : "scatter tiles: not configured (generate a planet first)";
 
     public int TileLevel => _tileLevel;
-    public IReadOnlyList<Matrix4x4> Matrices(int proto) => _buckets.Matrices(proto);
+    public List<Matrix4x4> Matrices(int proto) => _buckets.Matrices(proto);
     public IReadOnlyList<Vector3> Positions(int proto) => _buckets.Positions(proto);
     public IReadOnlyList<ulong> Ids(int proto) => _buckets.Ids(proto);
 
@@ -150,6 +167,17 @@ public sealed class ScatterTileCache
             _protoRadius[p] = proto.CanRender ? proto.FarGatherRadius + prefetch : -1f;
             if (_protoRadius[p] > _globalMaxRadius) _globalMaxRadius = _protoRadius[p];
         }
+
+        // Renderable prototypes ordered by descending radius. Reeval walks tiles nearest-first and retreats a
+        // cursor through this, so the ordering is what lets it skip prototypes that cannot reach a tile.
+        _sortedProtoIndex = new int[_protoCount];
+        _sortedProtoRadius = new float[_protoCount];
+        _sortedProtoCount = 0;
+        for (int p = 0; p < _protoCount; p++)
+            if (_protoRadius[p] > 0f) _sortedProtoIndex[_sortedProtoCount++] = p;
+        System.Array.Sort(_sortedProtoIndex, 0, _sortedProtoCount,
+            Comparer<int>.Create((a, b) => _protoRadius[b].CompareTo(_protoRadius[a])));
+        for (int k = 0; k < _sortedProtoCount; k++) _sortedProtoRadius[k] = _protoRadius[_sortedProtoIndex[k]];
 
         _tiles.Clear();
         _inFlight.Clear();
@@ -229,31 +257,57 @@ public sealed class ScatterTileCache
 
         // Plan the required (tile, prototype) set: for each renderable prototype, the tiles at Lt within
         // its (draw end + prefetch) radius that are not already ready or pending.
+        //
+        // Tile geometry does not depend on the prototype, so the range build and the per-tile distance are
+        // computed ONCE at the global max radius and then filtered per prototype. Doing it inside the
+        // prototype loop repeated the same distance math _protoCount times — at 109 prototypes that was the
+        // whole cost of the re-plan, and it is what made this stall grow when tree variants raised the count.
         _work.Clear();
         float cellUv = ScatterQuadtree.CellUvWidth(_tileLevel);
-        for (int p = 0; p < _protoCount; p++)
+
+        _scratchTiles.Clear();
+        var maxRange = FaceSpaceCellRangeBuilder.BuildRangesLocal(
+            cameraPos, snap, ctx.BaseRadiusLocal, _globalMaxRadius, cellUv, 1, _ranges);
+        int tilesPerAxis = 1 << _tileLevel;
+        for (int rk = 0; rk < maxRange.Count; rk++)
         {
-            float radius = _protoRadius[p];
-            if (radius <= 0f) continue;
-            float r2 = radius * radius;
-            var result = FaceSpaceCellRangeBuilder.BuildRangesLocal(cameraPos, snap, ctx.BaseRadiusLocal, radius, cellUv, 1, _ranges);
-            for (int rk = 0; rk < result.Count; rk++)
+            FaceSpaceCell cell = _ranges[rk];
+            for (int dy = 0; dy < cell.GridSize.y; dy++)
+            for (int dx = 0; dx < cell.GridSize.x; dx++)
             {
-                FaceSpaceCell cell = _ranges[rk];
-                int n = 1 << _tileLevel;
-                for (int dy = 0; dy < cell.GridSize.y; dy++)
-                for (int dx = 0; dx < cell.GridSize.x; dx++)
-                {
-                    int tx = cell.PageOriginCellUV.x + dx, ty = cell.PageOriginCellUV.y + dy;
-                    if ((uint)tx >= (uint)n || (uint)ty >= (uint)n) continue;
-                    float dist = TileCenterDistance(cell.FaceIndex, tx, ty, snap, ctx.BaseRadiusLocal, anchorWS);
-                    if (dist * dist > r2) continue; // clip the conservative square range to the prototype disc
-                    long tileId = PackTile(cell.FaceIndex, tx, ty);
-                    if (_tiles.TryGetValue(tileId, out var e) && (e.ReadyMask & (1UL << p)) != 0) continue;
-                    var key = new WorkKey(tileId, p);
-                    if (_inFlight.Contains(key)) continue; // the worker is already gathering this pair
-                    _work.Add((key, dist));
-                }
+                int tx = cell.PageOriginCellUV.x + dx, ty = cell.PageOriginCellUV.y + dy;
+                if ((uint)tx >= (uint)tilesPerAxis || (uint)ty >= (uint)tilesPerAxis) continue;
+                float dist = TileCenterDistance(cell.FaceIndex, tx, ty, snap, ctx.BaseRadiusLocal, anchorWS);
+                if (dist > _globalMaxRadius) continue; // clip the conservative square range to the widest disc
+                long tileId = PackTile(cell.FaceIndex, tx, ty);
+                // Resolve the entry once per tile rather than once per (tile, prototype).
+                _tiles.TryGetValue(tileId, out TileEntry entry);
+                _scratchTiles.Add((tileId, dist, entry));
+            }
+        }
+
+        // Tile-major, both sides sorted: tiles by ascending distance, prototypes by descending radius. A
+        // prototype-major walk re-read the whole candidate list once per prototype, which at 109 prototypes
+        // and ~17k tiles moved tens of megabytes per re-plan. Walking tiles once keeps each tile's entry in
+        // cache while every prototype that reaches it is tested.
+        //
+        // Because both are sorted, the set of prototypes reaching the current tile only ever shrinks, so a
+        // single retreating cursor replaces any per-prototype search.
+        _scratchTiles.Sort(static (a, b) => a.dist.CompareTo(b.dist));
+
+        int protoLimit = _sortedProtoCount;
+        for (int i = 0; i < _scratchTiles.Count; i++)
+        {
+            (long tileId, float dist, TileEntry entry) = _scratchTiles[i];
+            while (protoLimit > 0 && _sortedProtoRadius[protoLimit - 1] < dist) protoLimit--;
+            if (protoLimit == 0) break; // nothing reaches this far, and every later tile is further still
+            for (int k = 0; k < protoLimit; k++)
+            {
+                int p = _sortedProtoIndex[k];
+                if (entry != null && entry.IsReady(p)) continue;
+                var key = new WorkKey(tileId, p);
+                if (_inFlight.Contains(key)) continue; // the worker is already gathering this pair
+                _work.Add((key, dist));
             }
         }
         // Nearest first: fill the visible frontier before prefetch tiles.
@@ -261,6 +315,7 @@ public sealed class ScatterTileCache
     }
 
     readonly List<long> _scratchEvict = new();
+    readonly List<(long tile, float dist, TileEntry entry)> _scratchTiles = new();
     readonly List<WorkKey> _batch = new();
     readonly List<List<ScatterInstance>> _batchResults = new();
 
@@ -437,11 +492,11 @@ public sealed class ScatterTileCache
         UnpackTile(key.Tile, out int face, out int tx, out int ty);
         if (!_tiles.TryGetValue(key.Tile, out var entry))
         {
-            entry = new TileEntry(face, tx, ty);
+            entry = new TileEntry(face, tx, ty, _protoCount);
             _tiles[key.Tile] = entry;
         }
         int p = key.Proto;
-        entry.ReadyMask |= 1UL << p;
+        entry.MarkReady(p);
         // `instances` is the worker's scratch list, consumed synchronously here; the buckets keep the
         // baked matrix + world position per instance, keyed by tile so eviction can remove just this slice.
         for (int i = 0; i < instances.Count; i++)

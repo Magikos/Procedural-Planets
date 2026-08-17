@@ -50,7 +50,9 @@ public sealed class ScatterDrawBuckets
         return d;
     }
 
-    public IReadOnlyList<Matrix4x4> Matrices(int proto) => _matrices[proto];
+    // Concrete List, not IReadOnlyList: GraphicsBuffer.SetData takes a List<T> directly, so the GPU upload
+    // path avoids copying every instance through an interface indexer into a staging array.
+    public List<Matrix4x4> Matrices(int proto) => _matrices[proto];
     public IReadOnlyList<Vector3> Positions(int proto) => _positions[proto];
     public IReadOnlyList<ulong> Ids(int proto) => _ids[proto];
 

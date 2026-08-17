@@ -85,13 +85,9 @@
 #define DEBUG_PRECIPITATION_CONTRIBUTION  45
 
 // --- Water Volume: Lip ---
-#define DEBUG_VOLUME_LIP_PINK             46
-#define DEBUG_VOLUME_LIP_RAW_PINK         47
-#define DEBUG_VOLUME_LIP_DEPTH_GATE       48
 
 // --- Water Surface: Backface / polish / isolation ---
 #define DEBUG_SURFACE_BACKFACE_PINK       49
-#define DEBUG_VOLUME_LIP_SCENE_PINK       50
 #define DEBUG_WAKE_MASK                   51
 #define DEBUG_SURFACE_POLISH              52
 #define DEBUG_SURFACE_RAW_OPAQUE          53
@@ -124,9 +120,11 @@
 #define DEBUG_WATER_GLINT_LOCATOR         72
 
 // --- Biome diagnostics (73-87) ---
-// Modes 73-77 and 87 read per-vertex biome data. Modes 78-80 read the per-chunk
+// Modes 74-77 and 87 read per-vertex biome data. Modes 78-80 read the per-chunk
 // biome map used by the texture-mode production terrain path. Modes 81-82
 // verify the production terrain albedo and lighting inputs.
+// Mode 73 is map-backed in texture mode (the per-vertex id channel is unwritten
+// there) and per-vertex in the low/no-atlas fallback.
 #define DEBUG_BIOME_PRIMARY_ID            73
 #define DEBUG_BIOME_TEMPERATURE           74
 #define DEBUG_BIOME_MOISTURE              75

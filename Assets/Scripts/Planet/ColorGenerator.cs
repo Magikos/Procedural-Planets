@@ -226,16 +226,24 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
         return color;
     }
 
-    public void GetBiomeData(Vector3 pointOnUnitSphere, float elevation, out Vector4 biomeData)
+    // Climate-only per-vertex payload for the face-atlas path: x temperature, y moisture,
+    // z unused, w altitude cooling. z stays 0 because the baked id/weight maps are the
+    // authoritative biome source there; resolving it per vertex would repeat the assignment
+    // field, lake, and DTO lookups that the map bake already performs.
+    public void GetClimateData(Vector3 pointOnUnitSphere, float elevation, out Vector4 biomeData)
     {
-        EvaluateBiomeData(
-            pointOnUnitSphere,
-            elevation,
-            out float temperature,
-            out float moisture,
-            out int primaryBiomeIndex,
-            out float altitudeTemperatureDrop);
-        biomeData = PackBiomeData(temperature, moisture, primaryBiomeIndex, altitudeTemperatureDrop);
+        if (_climateProvider == null)
+        {
+            biomeData = Vector4.zero;
+            return;
+        }
+
+        ClimateSample climate = _climateProvider.Evaluate(pointOnUnitSphere, elevation);
+        biomeData = new Vector4(
+            climate.Temperature01,
+            climate.Moisture01,
+            0f,
+            Mathf.Clamp01(climate.AltitudeTemperatureDrop));
     }
 
     Vector4 PackBiomeData(
@@ -252,37 +260,6 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
             moisture,
             primaryBiomeIndex / biomeCount,
             Mathf.Clamp01(altitudeTemperatureDrop));
-    }
-
-    void EvaluateBiomeData(
-        Vector3 pointOnUnitSphere,
-        float elevation,
-        out float temperature,
-        out float moisture,
-        out int primaryBiomeIndex,
-        out float altitudeTemperatureDrop)
-    {
-        temperature = 0f;
-        moisture = 0f;
-        primaryBiomeIndex = 0;
-        altitudeTemperatureDrop = 0f;
-
-        if (_biomeRegistry == null || _climateProvider == null)
-            return;
-
-        ClimateSample climate = _climateProvider.Evaluate(pointOnUnitSphere, elevation);
-        temperature = climate.Temperature01;
-        moisture = climate.Moisture01;
-        altitudeTemperatureDrop = climate.AltitudeTemperatureDrop;
-
-        BiomeResult result = ResolveBiome(pointOnUnitSphere, climate);
-        int maxIndex = _biomeColors != null && _biomeColors.Length > 0
-            ? _biomeColors.Length - 1
-            : Mathf.Max(_biomeRegistry.BiomeCount - 1, 0);
-        primaryBiomeIndex = Mathf.Clamp(
-            _biomeRegistry.GetSliceIdForBiomeType(result.PrimaryBiome),
-            0,
-            maxIndex);
     }
 
     Color EvaluateBiomeColor(

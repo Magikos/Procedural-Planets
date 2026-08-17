@@ -33,6 +33,23 @@ public static class BiomeMapBaker
 
     [System.ThreadStatic] static int[] _tlsTopKCounts;
 
+    // Bake() runs under Parallel.For, so the two pass timers accumulate through Interlocked.
+    // The split exists because the caller only sees one aggregate mapBake number, and the two
+    // passes have unrelated costs: grid construction is ~35.5M assignment-field/lake samples
+    // per generation, smoothing is ~3.93B counter updates. Optimizing either one blind is a
+    // coin flip.
+    static long _highResGridTicks;
+    static long _topKTicks;
+
+    internal static long HighResGridTicks => System.Threading.Interlocked.Read(ref _highResGridTicks);
+    internal static long TopKTicks => System.Threading.Interlocked.Read(ref _topKTicks);
+
+    internal static void ResetPassTimings()
+    {
+        System.Threading.Interlocked.Exchange(ref _highResGridTicks, 0L);
+        System.Threading.Interlocked.Exchange(ref _topKTicks, 0L);
+    }
+
     // Bake top-K biome maps for one chunk. All three output buffers must be Color32[TexelCount].
     // lutColors must be at least (max biome id + 1) entries. tempHighRes is a scratch byte buffer
     // of length HighResCount; caller can pool one per worker thread to eliminate GC pressure.
@@ -59,8 +76,15 @@ public static class BiomeMapBaker
         if (vertRes * vertRes != vertCount) return;
 
         int activeBiomeCount = GetActiveBiomeCount(lookup, lutColors);
+
+        long gridStart = System.Diagnostics.Stopwatch.GetTimestamp();
         BuildHighResIdGrid(chunk, lookup, assignmentField, vertRes, tempHighRes);
+        long topKStart = System.Diagnostics.Stopwatch.GetTimestamp();
         SampleTopKPerTexel(tempHighRes, lutColors, activeBiomeCount, blendedColors, ids, weights);
+        long bakeEnd = System.Diagnostics.Stopwatch.GetTimestamp();
+
+        System.Threading.Interlocked.Add(ref _highResGridTicks, topKStart - gridStart);
+        System.Threading.Interlocked.Add(ref _topKTicks, bakeEnd - topKStart);
     }
 
     static int GetActiveBiomeCount(in BiomeLookupData lookup, Color[] lutColors)
