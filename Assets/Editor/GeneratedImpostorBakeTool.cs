@@ -178,10 +178,10 @@ public static class GeneratedImpostorBakeTool
 
     static bool IsRockKey(string key) => key.StartsWith("rock-", System.StringComparison.Ordinal);
 
-    static bool IsPlantKey(string key) =>
-        key.StartsWith("bush-", System.StringComparison.Ordinal)
-        || key.StartsWith("flowerbush-", System.StringComparison.Ordinal)
-        || key.StartsWith("grass-", System.StringComparison.Ordinal);
+    // Ask PlantInjection rather than keeping a prefix list here. The list version rotted silently when six
+    // kinds were added: their keys fell through to the TREE probe, which returned an empty hash, and those
+    // props live-baked on every load while the manifest looked complete.
+    static bool IsPlantKey(string key) => PlantInjection.OwnsKey(key);
 
     static void DestroyCard(ScatterImpostorBaker.AtlasCard card)
     {

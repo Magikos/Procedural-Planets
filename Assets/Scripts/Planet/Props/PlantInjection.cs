@@ -125,12 +125,7 @@ public static class PlantInjection
             {
                 // A pad is a flat disc, which the ROCK generator already makes if you squash one axis. Building
                 // a disc primitive in the leaf mesher for a single prototype would be the wrong trade.
-                var pad = RockGenerator.Generate(new RockDef
-                {
-                    Name = "Lily Pad", Size = 1.05f, AxisBias = new Vector3(1f, 0.035f, 1f),
-                    Roughness = 0.22f, Subdivisions = 1, Buried = 0f,
-                    Color = new Color(0.24f, 0.42f, 0.20f),
-                }, seed);
+                var pad = RockGenerator.Generate(LilyPadDef(), seed);
                 if (pad.Lod0 == null || pad.Lod0.vertexCount == 0) return null;
                 stemMesh = pad.Lod0;
                 foliageMesh = null;
@@ -295,6 +290,32 @@ public static class PlantInjection
     // runtime, so a changed def or generator falls back to a live bake instead of a wrong silhouette.
     static readonly Dictionary<string, string> _probeHashes = new();
 
+    // Does this share key belong to a plant? DERIVED FROM THE Kind ENUM, not a hand-written prefix list — the
+    // hand-written one silently rotted the moment six new kinds were added, so reed/cattail/coral/flower keys
+    // were routed to the TREE probe, which cannot parse them and returned an empty hash. An empty hash never
+    // matches, so those keys live-baked forever while the manifest looked fine.
+    // Shared by the real path and the impostor probe: if these two ever describe different pads, the cached
+    // card silently stops matching and the lily live-bakes on every load.
+    static RockDef LilyPadDef() => new RockDef
+    {
+        Name = "Lily Pad", Size = 1.05f, AxisBias = new Vector3(1f, 0.035f, 1f),
+        Roughness = 0.22f, Subdivisions = 1, Buried = 0f,
+        Color = new Color(0.24f, 0.42f, 0.20f),
+    };
+
+    public static bool OwnsKey(string shareKey)
+    {
+        if (string.IsNullOrEmpty(shareKey)) return false;
+        int dash = shareKey.IndexOf('-');
+        if (dash <= 0) return false;
+        string kindWord = shareKey.Substring(0, dash);
+        if (kindWord == "flowerbush") return true; // the one key that is not a bare Kind name
+        foreach (Kind k in Enum.GetValues(typeof(Kind)))
+            if (k != Kind.None && string.Equals(k.ToString(), kindWord, StringComparison.OrdinalIgnoreCase))
+                return true;
+        return false;
+    }
+
     public static string ImpostorProbeHash(string shareKey)
     {
         if (string.IsNullOrEmpty(shareKey)) return string.Empty;
@@ -307,6 +328,21 @@ public static class PlantInjection
             string kindWord = dash >= 0 ? shareKey.Substring(0, dash) : shareKey;
             string suffix = dash >= 0 ? shareKey.Substring(dash + 1) : "";
             BiomeType biome = Enum.TryParse(suffix, out BiomeType b) ? b : BiomeType.Grassland;
+
+            // The lily is the one kind whose mesh comes from the rock generator, not a TreeDef, so it needs its
+            // own probe branch. Without one it produced no hash and live-baked on every load.
+            if (kindWord == "lily")
+            {
+                RockDef padDef = LilyPadDef();
+                GeneratedRock pad = RockGenerator.Generate(padDef, 1);
+                var padMeshes = new List<Mesh>();
+                if (pad.Lod0 != null) padMeshes.Add(pad.Lod0);
+                hash = GeneratedImpostorManifest.AppearanceHash(padMeshes, padDef.Color);
+                foreach (Mesh m in pad.Lods) if (m != null) UnityEngine.Object.DestroyImmediate(m);
+                if (pad.Collider != null) UnityEngine.Object.DestroyImmediate(pad.Collider);
+                _probeHashes[shareKey] = hash;
+                return hash;
+            }
 
             TreeDef def = kindWord switch
             {
