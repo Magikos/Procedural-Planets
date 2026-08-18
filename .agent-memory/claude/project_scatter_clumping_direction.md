@@ -1,9 +1,33 @@
 ---
 name: project_scatter_clumping_direction
-description: Future scatter feature — species should clump into patches/colonies, not just uniform density scatter (from Bryan's Synty target-look refs, 2026-08-10)
+description: Scatter clumping — SHIPPED and authored 2026-08-17 (was a future feature); groves/clearings live on all 79 prototypes
 metadata:
   type: project
 ---
+
+**STATUS 2026-08-17: DONE and authored.** `ScatterClumping.Keep` (two fields: a biome-wide
+openness that every prototype obeys, plus a per-species grove field) shipped inert in `a36cb79`,
+and on 2026-08-17 values were authored onto **all 79 prototype assets** — trees 0.6-0.85 at
+180-320 m patches, bushes 0.6/100 m, rocks 0.55/110 m, flowers 0.85-0.9 at 28-35 m, mushrooms
+0.9/18 m, grass 0.35/70 m, reeds 0.4/40 m (thin water-edge biomes stay low or they go bald).
+
+**Clumping COSTS headcount — that is the non-obvious part.** It redistributes but does not
+preserve the total, because the caller clamps `densityKeep` to 1. Measured mean keep over 20k
+samples, scale-invariant in patch size: clump 0.35→0.85, 0.55→0.77, 0.70→0.71, 0.85→0.64,
+1.0→0.58. So every prototype's `Weight` was multiplied by 1/mean (×1.17 … ×1.61) at the same
+time. Safe by construction: the spacing grid still caps density at one instance per cell, so a
+raised Weight can only fill toward the old maximum, never past it. **If you re-author clumpiness,
+re-do the Weight compensation or the world quietly loses ~30% of its props.**
+
+Grove fields key off `ScatterPrototypeDto.ClumpGroupSeed` = `ImpostorShareKey ?? DisplayName`,
+so `TreeInjection` variants of one species share a grove (they set ImpostorShareKey = species)
+while different species get independent overlapping fields — which is what makes an oak stand
+meet a fir stand with a soft blend instead of a fence line. Verified in play: dense stands
+thinning through stragglers to open meadow.
+
+---
+
+*Original entry (historical):*
 
 On 2026-08-10 (branch `scatter-placement`), after the dusk look pass, Bryan shared
 three Synty target-look screenshots (forest at golden hour, meadow, aerial flower

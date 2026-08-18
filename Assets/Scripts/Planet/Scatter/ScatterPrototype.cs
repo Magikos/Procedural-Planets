@@ -24,6 +24,15 @@ public sealed class ScatterPrototype : ScriptableObject
     [Tooltip("Roughly the diameter of one grove/colony in metres. Trees read well at 150-400; flower colonies at 20-60.")]
     [Min(5f)] public float PatchScaleMeters = 250f;
 
+    // MEASURED correlation against tree cover, so authoring does not have to guess:
+    //   +1.0 -> +0.83 (deep wood)   0 -> +0.80 (default)   -0.5 -> -0.06 (indifferent)   -1.0 -> -0.84 (open)
+    // Note the crossover is near -0.5, NOT 0: the default already leans wooded, because every prototype obeys
+    // the same openness field. A prop that should ignore cover entirely wants about -0.5.
+    [Tooltip("Where this prop sits relative to tree cover, using the shared openness field. +1 = deep wood " +
+             "(mushrooms, ferns). 0 = default, which already leans wooded. -0.5 = indifferent. -1 = open ground " +
+             "between stands (meadow flowers). Needs Clumpiness > 0 to do anything.")]
+    [Range(-1f, 1f)] public float ShadePreference = 0f;
+
     [Header("Slope gate")]
     [Range(0f, 90f)] public float MaxSlopeDegrees = 35f;
     [Range(0f, 15f)] public float SlopeFadeDegrees = 5f;

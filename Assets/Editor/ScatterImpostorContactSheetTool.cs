@@ -11,7 +11,7 @@ public static class ScatterImpostorContactSheetTool
     const int Cols = 7;
     const int Cell = 160;
 
-    [MenuItem("Planet/Scatter/Bake Impostor Contact Sheet")]
+    [MenuItem("Tools/ProceduralPlanets/Impostors/Bake Contact Sheet (Validator)", false, 40)]
     public static void BakeContactSheet()
     {
         ScatterLibrary lib = FindLibrary();

@@ -49,6 +49,10 @@ results, and implementation status before acting.
 - Resolve services during initialization, not per frame.
 - Ocean geometry waves belong on the existing spherical water mesh, not on a
   camera-following patch.
+- Character locomotion is spherical-first, not sphere-bound. The reusable motor
+  consumes injected gravity and grounding capabilities; radial gravity plus
+  analytic planet-surface grounding are the first implementations. Other worlds
+  can supply different providers without changing the movement core.
 
 ## Agent-Specific Indexes
 

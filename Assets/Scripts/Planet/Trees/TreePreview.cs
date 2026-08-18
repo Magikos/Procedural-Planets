@@ -67,11 +67,11 @@ public sealed class TreePreview : System.IDisposable
         return $"tree age = {_age:F2} (0=sapling, 1=old). Run tree.gen to see it.";
     }
 
-    [ConsoleCommand("species", "Set preview species (broadleaf/conifer/birch/palm/acacia/shrub), then re-run tree.gen.", MonoTargetType.Registry)]
+    [ConsoleCommand("species", "Set preview species, then re-run tree.gen. Run with a bad name to list them.", MonoTargetType.Registry)]
     string SpeciesCmd(string name)
     {
         if (!TreeDefLibrary.TryParseSpecies(name, out _species))
-            return $"tree: unknown species '{name}'. Options: broadleaf, conifer, birch, palm, acacia, shrub.";
+            return $"tree: unknown species '{name}'. Options: {string.Join(", ", TreeDefLibrary.AllSpecies)}.";
         return $"tree species = {_species}. Run tree.gen to see it.";
     }
 

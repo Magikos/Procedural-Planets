@@ -17,7 +17,9 @@ MonoBehaviour:
   SpacingMeters: 12
   Biome: 0
   BiomeBlendPower: 1
-  Weight: 1
+  Weight: 1.51
+  Clumpiness: 0.8
+  PatchScaleMeters: 60
   MaxSlopeDegrees: 40
   SlopeFadeDegrees: 8
   ConformToSlope: 0.6
@@ -30,6 +32,8 @@ MonoBehaviour:
   ScaleRange: {x: 2, y: 5}
   RandomYaw: 1
   Interaction: 0
+  StumpMesh: {fileID: 0}
+  StumpMaterial: {fileID: 0}
   Parts:
   - Name: Coral
     Material: {fileID: 2100000, guid: af9b0753be9b0a042a40d9190ef2b925, type: 2}
@@ -44,5 +48,5 @@ MonoBehaviour:
   LodEndDistances: []
   CastShadows: 1
   ReceiveShadows: 1
-  BakedImpostorAtlas: {fileID: 0}
-  BakedImpostorNormal: {fileID: 0}
+  BakedImpostorAtlas: {fileID: 2800000, guid: fb0caeb337d3c53408760d7fee6f2232, type: 3}
+  BakedImpostorNormal: {fileID: 2800000, guid: c05ca0a30aa98e94992512c07a73f284, type: 3}

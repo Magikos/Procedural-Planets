@@ -17,7 +17,9 @@ MonoBehaviour:
   SpacingMeters: 4
   Biome: 18
   BiomeBlendPower: 1
-  Weight: 1
+  Weight: 1.2
+  Clumpiness: 0.4
+  PatchScaleMeters: 40
   MaxSlopeDegrees: 45
   SlopeFadeDegrees: 5
   ConformToSlope: 0
@@ -30,6 +32,8 @@ MonoBehaviour:
   ScaleRange: {x: 0.42, y: 0.55}
   RandomYaw: 1
   Interaction: 0
+  StumpMesh: {fileID: 0}
+  StumpMaterial: {fileID: 0}
   Parts:
   - Name: Reeds
     Material: {fileID: 2100000, guid: 320809e0e65aba840b0af34b718a08cf, type: 2}

@@ -5,6 +5,23 @@ metadata:
   type: reference
 ---
 
+**HotReload can WEDGE compilation — fixable in code, no Unity restart (2026-08-17).** Symptom:
+`EditorApplication.isCompiling` stays `true` forever, the assembly on disk stops being rewritten, and the
+console fills with `[HotReload] File is not part of any project` plus `[HotReload] Scripts have compile
+errors: ... CS0103: The name 'X' does not exist` for **newly added .cs files**. Those errors are
+HotReload's own incremental compile, NOT Unity's — Unity never started. Trigger: adding new script files.
+Did NOT work: `AssetDatabase.Refresh(ForceUpdate)`, `CompilationPipeline.RequestScriptCompilation()`,
+`CodeEditor.CurrentCodeEditor.SyncAll()`, `EditorUtility.RequestScriptReload()`.
+**What DID work — stop the patcher, then request a compile:**
+```csharp
+var asm = AppDomain.CurrentDomain.GetAssemblies().First(a => a.GetName().Name == "SingularityGroup.HotReload.Editor");
+var patcher = asm.GetTypes().First(t => t.Name == "EditorCodePatcher");
+patcher.GetMethod("StopCodePatcher", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { true });
+UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
+```
+Compiled ~90 s later. Supersedes the older "needs a Unity restart" note. Check
+`EditorSceneManager.GetSceneAt(i).isDirty` before anything drastic — Bryan's unsaved scene edits are real.
+
 **Unity MCP IS CONNECTED and works** (instance `ProceduralPlanets@3ece516259d377a5`, Unity 6000.6.0a7).
 Verified end-to-end 2026-08-15: edited code, compiled, entered play, generated a planet, drove console commands,
 and captured screenshots of the running game — all without Bryan touching the editor. **Don't ask Bryan to run

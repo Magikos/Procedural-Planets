@@ -17,7 +17,9 @@ MonoBehaviour:
   SpacingMeters: 28
   Biome: 3
   BiomeBlendPower: 1
-  Weight: 1
+  Weight: 1.56
+  Clumpiness: 0.85
+  PatchScaleMeters: 320
   MaxSlopeDegrees: 28
   SlopeFadeDegrees: 6
   ConformToSlope: 0

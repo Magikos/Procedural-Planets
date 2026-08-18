@@ -46,6 +46,46 @@ Scatter LOD system on branch `scatter-placement` (2026-07-27, updated 2026-07-28
   plus a single camera-distance-swap asset. This is the dedicated fast-loading LOD workbench — do NOT
   develop LOD on the Planet scene (minutes to load). See [[project-scatter-biome-buildout]].
 
+**2026-08-17 — speckled horizon FIXED, and the root cause is a trap.** Bryan reported distant
+impostors reading as "spotty" and rebaking did not help. Cause: **an impostor atlas has TWO
+mipmap settings and only one of them matters.** The runtime `ScatterImpostorBaker` allocates its
+`Texture2D`, but the atlases the planet actually uses are the **saved PNGs** in
+`Assets/Resources/Settings/Scatter/ImpostorAtlases/`, whose mip setting comes from the `.meta`
+TextureImporter — and every one of them had `enableMipMap: 0`. So the runtime fix applied to a
+path the planet never takes. Fixing the *bake tool* alone also does nothing to atlases already on
+disk; the 104 existing `.meta` files had to be re-imported.
+Why mips are required, not optional: a tree-line card covers a few screen pixels while its cell is
+128 px, so unmipped it minifies ~16x and point-samples near-randomly; against the shader's hard
+`clip(card.a - _Cutoff)` that noise becomes binary keep/discard = speckle. Settings that fix it:
+`mipmapEnabled`, **`mipMapsPreserveCoverage` + `alphaTestReferenceValue = 0.5`** (matching
+`ScatterImpostor.shader` `_Cutoff` — without it, averaging alpha down the chain thins silhouettes
+until they dissolve), `filterMode = Trilinear`, `aniso 4`. The old "mips would bleed across cells"
+objection is real but only in the deepest mips, where the whole card is a couple of pixels.
+
+**2026-08-17 — generated impostor atlases now BAKED TO DISK.** `Tools > ProceduralPlanets > Bake
+Generated Impostor Atlases` (`GeneratedImpostorBakeTool`) writes one atlas per `ImpostorShareKey` to
+`Assets/Resources/Settings/Scatter/GeneratedImpostors/` + a `GeneratedImpostorManifest` in Resources;
+`TreeInjection` loads them instead of baking. Finalize `scatterRenderer` **13,637 → 911 ms**; 136 of
+138 impostor prototypes now use a disk card.
+**TRAP 1 — the bake MUST run in PLAY MODE.** In edit mode the `FoliageLit` canopy renders black, the
+coverage key reads that as background, and every tree bakes as a **bare trunk** — a normal-looking
+atlas that shows as stick-trees on the horizon. The tool now hard-refuses outside play; do not remove
+that guard.
+**TRAP 2 — the staleness hash must be PER SPECIES, not per prototype.** Every age/seed variant of a
+species has different meshes and they all share ONE card by design, so hashing a prototype's own
+meshes matched only the variant that got baked and sent every other variant back to a live bake (cost
+stayed at 4.5 s). `TreeInjection.ImpostorProbeHash` hashes a fixed probe (mid age, seed 1) of the
+species instead — which also catches generator changes a def-only hash would miss. Both the tool and
+the runtime call that same function.
+Meshes are deliberately NOT baked: generating them is **measured at 45 ms for every tree variant and
+150 ms for every rock**, so caching them would save nothing and would put the edit-a-TreeDef-and-play
+loop behind a bake step. Only atlases are cached. **Rocks opt out entirely** — they keep the source
+prototype's Synty card, because a 3 m stone billboards from 250 m to 1125 m where both silhouettes are
+the same grey lump; baking them cost 418 ms + 26.8 MB each for nothing.
+**Still live-baking every load: Swamp Reeds + IceBog Reeds (~590 ms).** They bake, fail the
+empty-silhouette guard, and get discarded — every single load. Pre-existing, not yet fixed; they carry
+no share key so the manifest cannot cache them.
+
 **Two Unity gotchas (cost real debugging time — reuse these):**
 1. Instanced billboards must read the per-instance matrix via `GetObjectToWorldMatrix()`, NOT raw
    `unity_ObjectToWorld._m03` field access. Under `RenderMeshInstanced` the raw field access doesn't

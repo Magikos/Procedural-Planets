@@ -25,6 +25,7 @@ public struct ScatterProtoParams
     public float Clumpiness;      // 0 = uniform placement, unchanged
     public float PatchScaleMeters;
     public uint ClumpGroupSeed;   // per SPECIES, so a species' variants share one grove field
+    public float ShadePreference; // <0 prefers open ground, >0 prefers dense wood
     public PlacementRulesBurst Rules;
 
     public static ScatterProtoParams From(ScatterPrototypeDto p) => new ScatterProtoParams
@@ -37,6 +38,7 @@ public struct ScatterProtoParams
         Clumpiness = p.Clumpiness,
         PatchScaleMeters = p.PatchScaleMeters,
         ClumpGroupSeed = p.ClumpGroupSeed,
+        ShadePreference = p.ShadePreference,
         Rules = new PlacementRulesBurst
         {
             Weight = p.Weight,
@@ -141,7 +143,8 @@ public struct ScatterGatherJob : IJobParallelFor
         float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, pp.SpacingMeters, BaseRadiusLocal * Scale)
                             * Mathf.Pow(membership, pp.BiomeBlendPower)
                             * ScatterClumping.Keep(dir, BaseRadiusLocal * Scale, pp.Clumpiness,
-                                pp.PatchScaleMeters, pp.ClumpGroupSeed, (uint)pp.Biome, slopeCos);
+                                pp.PatchScaleMeters, pp.ClumpGroupSeed, (uint)pp.Biome, slopeCos,
+                                pp.ShadePreference);
 
         if (!ScatterGatherBurst.TryPlace(slotSeed, dir, localNormal, placeRadius, altitudeMeters, slopeCos,
                 densityKeep, HasOcean != 0, pp.Rules, out Vector3 posLocal, out Quaternion rot, out float sc))

@@ -17,7 +17,9 @@ MonoBehaviour:
   SpacingMeters: 5
   Biome: 5
   BiomeBlendPower: 1
-  Weight: 1
+  Weight: 1.34
+  Clumpiness: 0.6
+  PatchScaleMeters: 100
   MaxSlopeDegrees: 35
   SlopeFadeDegrees: 5
   ConformToSlope: 0.6
@@ -30,6 +32,8 @@ MonoBehaviour:
   ScaleRange: {x: 0.8, y: 1.2}
   RandomYaw: 1
   Interaction: 0
+  StumpMesh: {fileID: 0}
+  StumpMaterial: {fileID: 0}
   Parts: []
   Material: {fileID: 2100000, guid: 50cb739c1d9e47e48b292d6eb257fbe1, type: 2}
   LodMeshes:

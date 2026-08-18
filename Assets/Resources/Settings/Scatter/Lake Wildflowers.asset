@@ -17,7 +17,10 @@ MonoBehaviour:
   SpacingMeters: 3.5
   Biome: 18
   BiomeBlendPower: 1
-  Weight: 0.7
+  Weight: 1.092
+  Clumpiness: 0.85
+  PatchScaleMeters: 35
+  ShadePreference: -0.5
   MaxSlopeDegrees: 42
   SlopeFadeDegrees: 5
   ConformToSlope: 0
@@ -30,6 +33,8 @@ MonoBehaviour:
   ScaleRange: {x: 0.7, y: 1.15}
   RandomYaw: 1
   Interaction: 0
+  StumpMesh: {fileID: 0}
+  StumpMaterial: {fileID: 0}
   Parts:
   - Name: Flowers
     Material: {fileID: 2100000, guid: 5dd04ad837e3073478fdbd82fe0620ca, type: 2}

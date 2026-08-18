@@ -18,7 +18,7 @@ public static class ScatterImpostorBakeTool
     const int OctGridN = 8;                 // matches ScatterImpostorFactory
     const float ImpostorMinMeshCull = 120f; // matches ScatterPrototypeDto.ImpostorMinMeshCull
 
-    [MenuItem("Tools/ProceduralPlanets/Bake Impostor Atlases (All)")]
+    [MenuItem("Tools/ProceduralPlanets/Impostors/Bake Impostors (Source Library)", false, 20)]
     public static void BakeAll()
     {
         if (!EditorApplication.isPlaying)
@@ -86,7 +86,7 @@ public static class ScatterImpostorBakeTool
                   $"Atlases in {AtlasFolder}. Stop and re-enter Play to see the stored atlases used (no on-load bake).");
     }
 
-    [MenuItem("Tools/ProceduralPlanets/Clear Baked Impostor Atlases")]
+    [MenuItem("Tools/ProceduralPlanets/Impostors/Clear Source Library Atlases", false, 21)]
     public static void ClearAll()
     {
         string[] guids = AssetDatabase.FindAssets("t:ScatterPrototype");
@@ -132,16 +132,28 @@ public static class ScatterImpostorBakeTool
         return maxCull;
     }
 
-    static void ConfigureAtlasImport(string atlasPath, bool isNormal = false)
+    // internal: the generated-prop bake tool writes atlases too and must import them identically. Two copies
+    // of these settings is exactly how the mip fix would get half-applied again.
+    internal static void ConfigureAtlasImport(string atlasPath, bool isNormal = false)
     {
         if (AssetImporter.GetAtPath(atlasPath) is not TextureImporter imp) return;
         imp.textureType = TextureImporterType.Default;
         imp.alphaSource = TextureImporterAlphaSource.FromInput;
         imp.alphaIsTransparency = true;
         imp.sRGBTexture = !isNormal; // normals are linear data, not colour
-        imp.mipmapEnabled = false;                       // octahedral atlas: mips would bleed across cells
+        // Mips are REQUIRED here, not optional. A tree-line impostor covers a few screen pixels while its atlas
+        // cell is 128px, so an unmipped card is minified ~16x and point-samples near-randomly; against the
+        // shader's hard clip(card.a - _Cutoff) that noise becomes binary keep/discard, which is the speckled
+        // horizon. The old setting disabled them to avoid cells bleeding into each other, but that only happens
+        // in the deepest mips, by which point the whole card is a couple of pixels wide.
+        imp.mipmapEnabled = true;
+        // Averaging alpha down a mip chain thins a silhouette until it falls under the cutoff and dissolves.
+        // Preserve-coverage rescales each mip's alpha to hold the same clipped area, at this shader's cutoff.
+        imp.mipMapsPreserveCoverage = true;
+        imp.alphaTestReferenceValue = 0.5f; // ScatterImpostor.shader _Cutoff
         imp.wrapMode = TextureWrapMode.Clamp;
-        imp.filterMode = FilterMode.Bilinear;
+        imp.filterMode = FilterMode.Trilinear; // crossfade between mips instead of stepping between them
+        imp.anisoLevel = 4;                    // cards are seen at a grazing angle across the tree line
         imp.textureCompression = TextureImporterCompression.CompressedHQ;
         imp.SaveAndReimport();
     }

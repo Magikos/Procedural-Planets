@@ -47,8 +47,13 @@ public static class ScatterClumping
     // fully preserve the total: at 1.0 the world carries ~40% fewer props. Raise the prototype's Weight by
     // roughly 1/mean if a biome should keep its old headcount. Compensating inside here does not work — the
     // caller clamps densityKeep to 1, so the boost would be eaten in exactly the dense areas that need it.
+    /// <param name="shadePreference">
+    /// Where in the openness field this prototype wants to sit. 0 = the old behaviour, thinning in clearings
+    /// like everything else. Negative = prefers the OPEN ground between stands (meadow flowers). Positive =
+    /// concentrates into the densest wood (mushrooms, shade plants).
+    /// </param>
     public static float Keep(float3 dir, float planetWorldRadius, float clumpiness, float patchScaleMeters,
-        uint groupSeed, uint biomeSeed, float slopeCos)
+        uint groupSeed, uint biomeSeed, float slopeCos, float shadePreference = 0f)
     {
         if (clumpiness <= 0f) return 1f; // ships inert: untouched placement until a prototype opts in
 
@@ -66,8 +71,33 @@ public static class ScatterClumping
         // against the radial, so this costs nothing extra to sample.
         openness += (slopeCos - 0.85f) * TerrainInfluence;
 
+        // An open-preferring prototype MIRRORS the openness field rather than inverting the result. Keeping
+        // (1 - wooded) would site it correctly but also gut its density, because the field averages well above
+        // half; mirroring the input keeps the same statistics and only moves WHERE it sits. Since every
+        // prototype in a biome reads one shared field, a mirrored flower lands precisely in the gaps between
+        // the trees and bushes that read it the normal way.
+        float pref = math.clamp(shadePreference, -1f, 1f);
         float wooded = math.smoothstep(OpenLo, OpenHi, openness);
-        float groveKeep = math.lerp(GroveFloor, 1f, grove);
+        if (pref < 0f)
+        {
+            // Blend toward the MIRRORED field's response, not toward the mirrored input. Lerping the input
+            // is degenerate at the halfway point — a 50/50 mix of a field and its own inverse is a constant,
+            // so -0.5 measured as exactly zero siting signal and the scale crossed over in the wrong place.
+            // Blending the response keeps -1..0 monotonic: -1 sits fully in the open, 0 behaves as before.
+            float openResponse = math.smoothstep(OpenLo, OpenHi, 1f - openness);
+            wooded = math.lerp(wooded, openResponse, -pref);
+        }
+        // Shade-seekers squeeze toward the densest wood. This DOES cost density — squaring a 0..1 field halves
+        // its mean — which is correct for mushrooms, and their Weight carries the compensation.
+        if (pref > 0f) wooded = math.lerp(wooded, wooded * wooded, pref);
+
+        // A prototype that states a shade preference is asking to be sited RELATIVE TO TREE COVER, and the
+        // grove field fights that: it is per-species noise with full 0..1 swing, while `wooded` is saturated at
+        // 1 across most of the surface, so left alone the grove term carries nearly all the variance and the
+        // shared openness signal is invisible. Measured: correlation against a neutral prototype was -0.002 at
+        // every preference, i.e. the setting did nothing to siting. Fade the grove out as the preference
+        // strengthens so the shared field is what actually places these props.
+        float groveKeep = math.lerp(math.lerp(GroveFloor, 1f, grove), 1f, math.abs(pref));
         float keep = wooded * groveKeep;
 
         return math.lerp(1f, keep, math.saturate(clumpiness));

@@ -136,6 +136,21 @@ CamDistance=5.5, JumpHeight=1.6.
 not dev-feature-based (e.g. scatter.goto is really "move view to location" → belongs under teleport/camera).
 Separate focused pass: survey commands → propose function-based taxonomy for review → move w/ old-name aliases.
 
-**State:** 001 BUILT + runtime-verified (spawn/walk/strafe/jump/camera all work), awaiting Bryan's play-test +
-feel-tuning; NOT pushed (branch character-controller-mvp, 6 commits). 002 (terrain-relief) ready when Bryan is.
-Console overhaul queued. GOTCHA: DTO/const/shader changes need clean stop→play; shader-CODE needs force-import.
+### Play-test round 2 fixes (commit e04dded, 2026-08-09)
+Bryan corrected me: he was over LAND (trees above him), NOT underwater — my ocean assumption was wrong for
+his case. Real bug (investigated, not assumed): grounding used the ANALYTIC surface (IPlanetSurfaceSampler),
+which differs from the RENDERED chunk mesh by 3-24 units (measured) — so the capsule spawned on the surface
+then FELL THROUGH to the analytic/sea surface. FIX: new PlanetRaycastGrounding grounds on the VISIBLE mesh via
+downward IPlanetSurfaceRaycaster (TryRaycastVisibleSurface = the rendered chunks; Planet.cs:515), fallback to
+analytic if ray misses; sea-level floor for ocean. KEY INSIGHT: raycaster=visible mesh, sampler=analytic — use
+raycaster for anything that must match what's drawn. Also fixed CURSOR TRAP (Bryan got stuck, had to quit):
+mouse-look now needs HOLDING right-mouse (cursor released on button-up, can't trap) + OnApplicationFocus
+release. Spawn readiness now reads IPlanet directly (rig.PlanetRadius lags the gen event a frame; IPlanet.
+LastGeneratedRadius/Transform/LastSeaLevelRadius reliable — but LastGeneratedRadius is SERIALIZED so stale
+pre-gen; mesh-ready = raycast hits). Runtime-verified: stays on surface, screenshot shows capsule on surface.
+
+**State:** 001 BUILT, 2 play-test rounds of fixes, runtime-verified (spawn on surface no fall-through,
+strafe no-spin, jump, hold-right-mouse look no cursor-trap); awaiting Bryan's next play-test + feel-tuning.
+NOT pushed (branch character-controller-mvp, 8 commits). 002 ready when Bryan is. Console overhaul QUEUED
+(function-based reorg, scatter.goto→teleport). GOTCHA: DTO/const/shader need clean stop→play; shader-CODE
+needs force-import; EditMode tests CAN'T run in play mode.

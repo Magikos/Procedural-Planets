@@ -31,7 +31,7 @@ public static class ScatterId
     // Operational max placement level = coordinate-bit count: at level L, cell coords span
     // 0..2^L-1, which must fit CoordBits. Also fits LevelBits (max 31). Single source of truth.
     public const int MaxLevel = CoordBits;           // 24
-    public const int MaxSlot = (1 << SlotBits) - 1;  // 127
+    public const int MaxSlot = (1 << SlotBits) - 1;  // 255
     public const int FaceCount = 6;
 
     // Unconditional validation (not #if): the id is a persistence key — a masked-in invalid value

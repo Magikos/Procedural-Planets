@@ -9,13 +9,18 @@ using UnityEngine;
 // Trunk always grows +Y (Curve leans it); leaves attach to their ParentLevel tier.
 public static class TreeDefLibrary
 {
-    public enum TreeSpecies { Broadleaf, Conifer, Pine, Birch, Palm, Acacia, Shrub, Willow, Cypress, Cedar, Poplar, Fern }
+    public enum TreeSpecies
+    {
+        Broadleaf, Conifer, Pine, Birch, Palm, Acacia, Shrub, Willow, Cypress, Cedar, Poplar, Fern,
+        Baobab, Banyan, JoshuaTree, Cactus,
+    }
 
     public static readonly TreeSpecies[] AllSpecies =
     {
         TreeSpecies.Broadleaf, TreeSpecies.Conifer, TreeSpecies.Pine, TreeSpecies.Birch, TreeSpecies.Palm,
         TreeSpecies.Acacia, TreeSpecies.Shrub, TreeSpecies.Willow, TreeSpecies.Cypress, TreeSpecies.Cedar,
-        TreeSpecies.Poplar, TreeSpecies.Fern,
+        TreeSpecies.Poplar, TreeSpecies.Fern, TreeSpecies.Baobab, TreeSpecies.Banyan, TreeSpecies.JoshuaTree,
+        TreeSpecies.Cactus,
     };
 
     public static TreeDef Species(TreeSpecies s, float age = 1f) => s switch
@@ -31,6 +36,10 @@ public static class TreeDefLibrary
         TreeSpecies.Cedar => Cedar(age),
         TreeSpecies.Poplar => Poplar(age),
         TreeSpecies.Fern => Fern(age),
+        TreeSpecies.Baobab => Baobab(age),
+        TreeSpecies.Banyan => Banyan(age),
+        TreeSpecies.JoshuaTree => JoshuaTree(age),
+        TreeSpecies.Cactus => Cactus(age),
         _ => Broadleaf(age),
     };
 
@@ -49,7 +58,12 @@ public static class TreeDefLibrary
         return def;
     }
 
-    public static TreeDef DeadSpecies(TreeSpecies s, float age = 1f) => AsDead(Species(s, age));
+    // Succulents have no branch tiers to strip and no bark to bleach, so AsDead turns them into grey spikes
+    // rather than dead plants. Desert's only tree prototype is a "Dead Tree", and that is where they grow.
+    static bool IsSucculent(TreeSpecies s) => s == TreeSpecies.Cactus || s == TreeSpecies.JoshuaTree;
+
+    public static TreeDef DeadSpecies(TreeSpecies s, float age = 1f) =>
+        IsSucculent(s) ? Species(s, age) : AsDead(Species(s, age));
 
     // Primary tree species per biome. Biomes not listed grow no trees (ocean/cave/water/ice-bog/lake).
     public static bool HasTree(BiomeType biome, out TreeSpecies s)
@@ -93,11 +107,13 @@ public static class TreeDefLibrary
             case BiomeType.IceBog: return new[] { TreeSpecies.Shrub, TreeSpecies.Broadleaf };
             case BiomeType.Steppe: return new[] { TreeSpecies.Pine, TreeSpecies.Cypress };
             case BiomeType.Mountain: return new[] { TreeSpecies.Pine, TreeSpecies.Cypress, TreeSpecies.Conifer };
-            case BiomeType.Tropical: return new[] { TreeSpecies.Palm, TreeSpecies.Broadleaf };
+            case BiomeType.Tropical: return new[] { TreeSpecies.Palm, TreeSpecies.Broadleaf, TreeSpecies.Banyan };
             case BiomeType.Beach: return new[] { TreeSpecies.Palm };
-            case BiomeType.Savanna: return new[] { TreeSpecies.Acacia, TreeSpecies.Shrub };
+            case BiomeType.Savanna: return new[] { TreeSpecies.Acacia, TreeSpecies.Baobab, TreeSpecies.Shrub };
             case BiomeType.Scrub: return new[] { TreeSpecies.Acacia, TreeSpecies.Cypress, TreeSpecies.Shrub };
-            case BiomeType.Desert:
+            // Desert grows no timber, so its "trees" are the succulents: a saguaro column and a joshua yucca,
+            // with the shrub first so the biome's existing dead-tree prototype still reads as a dead bush.
+            case BiomeType.Desert: return new[] { TreeSpecies.Shrub, TreeSpecies.Cactus, TreeSpecies.JoshuaTree };
             case BiomeType.Tundra: return new[] { TreeSpecies.Shrub };
             default: return System.Array.Empty<TreeSpecies>();
         }
@@ -387,6 +403,316 @@ public static class TreeDefLibrary
             {
                 Label = "strands", ParentLevel = 1, IsLeaf = true, Frequency = new Vector2(16, 22),
                 Range = new Vector2(0.2f, 1f), LeafSize = 3.4f, LeafGroup = 3,
+            },
+        },
+    };
+
+    // --- non-tree plants ---
+    // Deliberately NOT in TreeSpecies: nothing places these by biome species set, and adding them would put a
+    // bush in the tree gallery and let a biome grow one as its canopy. PlantInjection picks them by name.
+
+    // Low dense bush: a stub of a trunk under many low stems, leaves right down to the ground. Smaller and far
+    // denser than Shrub, which is a waist-high desert plant that has to read as a stunted TREE.
+    public static TreeDef Bush(float age = 1f, Color? leaf = null) => new TreeDef
+    {
+        Name = "Bush", MaxHeight = 1.35f, GlobalScale = 0.8f, Age = Mathf.Clamp01(age),
+        BarkColor = new Color(0.31f, 0.24f, 0.16f),
+        LeafColor = leaf ?? new Color(0.23f, 0.37f, 0.15f),
+        TrunkGirthScale = 0.8f, TrunkTipScale = 0.35f, RootFlare = 0.1f,
+        Levels = new[]
+        {
+            new LevelRule { Label = "stub", ParentLevel = -1, Length = new Vector2(0.7f, 1f), RadialSides = 5, Curve = 10f, Noise = 0.08f },
+            new LevelRule
+            {
+                Label = "stems", ParentLevel = 0, Frequency = new Vector2(6, 9), ChildrenPerNode = 1,
+                Range = new Vector2(0.02f, 0.75f), ParallelAlign = 0.7f, GravityAlign = new Vector2(0.55f, 0.3f),
+                Length = new Vector2(1.1f, 0.7f), GirthScale = 0.55f, RadialSides = 3, Curve = 20f, Noise = 0.16f,
+            },
+            // Dense and starting low: a bush with a bare bottom reads as a dead sapling.
+            new LevelRule
+            {
+                Label = "leaves", ParentLevel = 1, IsLeaf = true, Frequency = new Vector2(5, 8),
+                Range = new Vector2(0.05f, 1f), LeafSize = 0.5f, LeafGroup = 0,
+            },
+        },
+    };
+
+    // Grass clump: blades straight off the ground, the same blade primitive the fern fronds use. The stem is a
+    // stub that exists only to give the blades something to radiate from — MaxHeight normalises IT, not the
+    // blades, so the finished clump stands taller than this number.
+    public static TreeDef GrassTuft(float age = 1f, Color? leaf = null) => new TreeDef
+    {
+        Name = "Grass Tuft", MaxHeight = 0.34f, GlobalScale = 1f, Age = Mathf.Clamp01(age),
+        BarkColor = new Color(0.33f, 0.36f, 0.20f),
+        LeafColor = leaf ?? new Color(0.36f, 0.47f, 0.20f),
+        TrunkGirthScale = 0.4f, TrunkTipScale = 0.5f, RootFlare = 0.05f,
+        Levels = new[]
+        {
+            new LevelRule { Label = "stem", ParentLevel = -1, Length = new Vector2(0.22f, 0.34f), RadialSides = 3, Curve = 3f, Noise = 0.05f },
+            new LevelRule
+            {
+                Label = "blades", ParentLevel = 0, IsLeaf = true, Frequency = new Vector2(12, 18),
+                Range = new Vector2(0.02f, 1f), LeafSize = 0.5f, LeafGroup = 4,
+            },
+        },
+    };
+
+    // Flower: a bare stem with a whorl of petals at the tip. The petals are ordinary leaf cards clustered in
+    // the top 8% of the stem — no new mesher primitive, because a petal and a leaf are the same quad at this
+    // scale. The tint carries the species; the shape is shared.
+    public static TreeDef Flower(float age = 1f, Color? petal = null, float height = 0.34f) => new TreeDef
+    {
+        Name = "Flower", MaxHeight = height, GlobalScale = 1f, Age = Mathf.Clamp01(age),
+        BarkColor = new Color(0.30f, 0.40f, 0.20f),
+        LeafColor = petal ?? new Color(0.80f, 0.72f, 0.25f),
+        TrunkGirthScale = 0.22f, TrunkTipScale = 0.7f, RootFlare = 0.05f,
+        Levels = new[]
+        {
+            new LevelRule { Label = "stem", ParentLevel = -1, Length = new Vector2(0.28f, 0.4f), RadialSides = 3, Curve = 8f, Noise = 0.1f },
+            new LevelRule
+            {
+                Label = "petals", ParentLevel = 0, IsLeaf = true, Frequency = new Vector2(5, 7),
+                Range = new Vector2(0.92f, 1f), LeafSize = 0.2f, LeafGroup = 0,
+            },
+        },
+    };
+
+    // Mushroom: a short fat stem under a cap. The cap is the conifer cone mesh with almost no tiers, a wide
+    // radius and heavy droop — which is an umbrella, i.e. a cap. Reusing it avoids a dome primitive that would
+    // exist for three prototypes.
+    public static TreeDef Mushroom(float age = 1f, Color? cap = null, float height = 0.3f) => new TreeDef
+    {
+        Name = "Mushroom", MaxHeight = height, GlobalScale = 1f, Age = Mathf.Clamp01(age),
+        BarkColor = new Color(0.82f, 0.78f, 0.68f),
+        LeafColor = cap ?? new Color(0.62f, 0.18f, 0.14f),
+        FoliageStyle = FoliageStyle.ConiferCone, NeedleFoliage = true,
+        TrunkGirthScale = 0.75f, TrunkTipScale = 0.85f, RootFlare = 0.2f,
+        ConeBaseFrac = 0.62f, ConeRadiusFrac = 0.42f, ConeDroop = 0.85f, ConeTiers = 2,
+        Levels = new[]
+        {
+            new LevelRule { Label = "stem", ParentLevel = -1, Length = new Vector2(0.22f, 0.32f), RadialSides = 5, Curve = 5f, Noise = 0.06f },
+        },
+    };
+
+    // Reed: blades straight up off the waterline, taller and much narrower than a grass clump.
+    public static TreeDef Reed(float age = 1f, Color? blade = null) => new TreeDef
+    {
+        Name = "Reed", MaxHeight = 1.1f, GlobalScale = 1f, Age = Mathf.Clamp01(age),
+        BarkColor = new Color(0.34f, 0.38f, 0.22f),
+        LeafColor = blade ?? new Color(0.38f, 0.46f, 0.22f),
+        TrunkGirthScale = 0.3f, TrunkTipScale = 0.5f, RootFlare = 0.05f,
+        Levels = new[]
+        {
+            new LevelRule { Label = "stem", ParentLevel = -1, Length = new Vector2(0.8f, 1.1f), RadialSides = 3, Curve = 5f, Noise = 0.06f },
+            new LevelRule
+            {
+                Label = "blades", ParentLevel = 0, IsLeaf = true, Frequency = new Vector2(6, 10),
+                Range = new Vector2(0.05f, 1f), LeafSize = 0.85f, LeafGroup = 4,
+            },
+        },
+    };
+
+    // Cattail: a reed carrying the brown seed spike. The spike is a needle tuft at the very tip — the tuft
+    // primitive is a dense cluster, which at one-per-tip and a brown tint reads as the head.
+    public static TreeDef Cattail(float age = 1f) => new TreeDef
+    {
+        Name = "Cattail", MaxHeight = 1.5f, GlobalScale = 1f, Age = Mathf.Clamp01(age),
+        BarkColor = new Color(0.36f, 0.40f, 0.22f),
+        LeafColor = new Color(0.34f, 0.22f, 0.12f), // seed head; the blades wear the stem tint
+        FoliageStyle = FoliageStyle.LeafCards, NeedleFoliage = true,
+        TrunkGirthScale = 0.26f, TrunkTipScale = 0.8f, RootFlare = 0.05f,
+        Levels = new[]
+        {
+            new LevelRule { Label = "stem", ParentLevel = -1, Length = new Vector2(1.1f, 1.5f), RadialSides = 3, Curve = 4f, Noise = 0.05f },
+            new LevelRule
+            {
+                Label = "head", ParentLevel = 0, IsLeaf = true, Frequency = new Vector2(1, 1),
+                Range = new Vector2(0.88f, 0.96f), LeafSize = 0.28f, LeafGroup = 2,
+            },
+        },
+    };
+
+    // Kelp: a long limp stalk with blades all the way up. Underwater it should sway along its length rather
+    // than shear at the top like a land plant, which is a wind-field question, not a geometry one.
+    public static TreeDef Kelp(float age = 1f, Color? blade = null) => new TreeDef
+    {
+        Name = "Kelp", MaxHeight = 4.2f, GlobalScale = 1.1f, Age = Mathf.Clamp01(age),
+        BarkColor = new Color(0.24f, 0.30f, 0.16f),
+        LeafColor = blade ?? new Color(0.20f, 0.34f, 0.18f),
+        TrunkGirthScale = 0.16f, TrunkTipScale = 0.7f, RootFlare = 0.12f,
+        Levels = new[]
+        {
+            new LevelRule { Label = "stipe", ParentLevel = -1, Length = new Vector2(3f, 4.2f), RadialSides = 3, Curve = 26f, Noise = 0.14f },
+            new LevelRule
+            {
+                Label = "blades", ParentLevel = 0, IsLeaf = true, Frequency = new Vector2(10, 16),
+                Range = new Vector2(0.12f, 1f), LeafSize = 1.1f, LeafGroup = 4,
+            },
+        },
+    };
+
+    // Coral: the branching skeleton with NO leaf tier — the branches are the organism, the same way the saguaro
+    // is all trunk. `tall` gives finger/antler coral; otherwise a low spreading head.
+    public static TreeDef Coral(float age = 1f, Color? tint = null, bool tall = false) => new TreeDef
+    {
+        Name = tall ? "Coral Finger" : "Coral Head", MaxHeight = tall ? 1.8f : 1.1f,
+        GlobalScale = 1f, Age = Mathf.Clamp01(age),
+        BarkColor = tint ?? new Color(0.72f, 0.44f, 0.42f),
+        LeafColor = tint ?? new Color(0.72f, 0.44f, 0.42f),
+        TrunkGirthScale = tall ? 0.5f : 0.8f, TrunkTipScale = 0.55f, RootFlare = 0.35f,
+        Levels = new[]
+        {
+            new LevelRule { Label = "base", ParentLevel = -1, Length = new Vector2(0.4f, 0.6f), RadialSides = 5, Curve = 6f, Noise = 0.08f },
+            new LevelRule
+            {
+                Label = "arms", ParentLevel = 0, Frequency = new Vector2(4, 7), ChildrenPerNode = 2,
+                Range = new Vector2(0.1f, 0.95f), ParallelAlign = tall ? 0.35f : 0.75f,
+                GravityAlign = new Vector2(tall ? 0.8f : 0.45f, tall ? 0.85f : 0.3f),
+                Length = new Vector2(0.7f, 0.5f), GirthScale = 0.6f, RadialSides = 4, Curve = 22f, Noise = 0.18f,
+            },
+            new LevelRule
+            {
+                Label = "tips", ParentLevel = 1, Frequency = new Vector2(2, 4), ChildrenPerNode = 2,
+                Range = new Vector2(0.4f, 1f), ParallelAlign = 0.5f, GravityAlign = new Vector2(0.7f, 0.8f),
+                Length = new Vector2(0.4f, 0.28f), GirthScale = 0.62f, RadialSides = 3, Curve = 26f, Noise = 0.22f,
+            },
+        },
+    };
+
+    // Baobab: a swollen water-storing bottle trunk carrying a small crown of stubby limbs. The silhouette is
+    // ALL trunk — girth is the species, so TrunkGirthScale runs far above every other tree here and the crown
+    // starts high, leaving the bottle unbroken. Branches stay short and thin so they read as the "roots in the
+    // air" the tree is named for rather than as an oak's spread.
+    public static TreeDef Baobab(float age = 1f) => new TreeDef
+    {
+        Name = "Baobab", MaxHeight = 16f, GlobalScale = 1.6f, Age = Mathf.Clamp01(age), // adansonia 15-25 m, stout
+        BarkColor = new Color(0.52f, 0.47f, 0.41f), LeafColor = new Color(0.30f, 0.42f, 0.18f),
+        // Girth far above every other species and a tip still half the base width: the trunk has to stay fat all
+        // the way to the crown. A normal taper plus a big root flare reads as an ordinary tree standing in a
+        // cone, not as a bottle.
+        TrunkGirthScale = 5f, TrunkTipScale = 0.52f, RootFlare = 0.45f,
+        Levels = new[]
+        {
+            new LevelRule { Label = "trunk", ParentLevel = -1, Length = new Vector2(3.4f, 4.2f), RadialSides = 7, Curve = 4f, Noise = 0.04f },
+            new LevelRule
+            {
+                Label = "limbs", ParentLevel = 0, Frequency = new Vector2(5, 7), ChildrenPerNode = 1,
+                Range = new Vector2(0.78f, 0.99f), ParallelAlign = 0.66f, GravityAlign = new Vector2(0.5f, 0.4f),
+                Length = new Vector2(2.8f, 1.5f), GirthScale = 0.26f, RadialSides = 4, Curve = 24f, Noise = 0.12f,
+            },
+            new LevelRule
+            {
+                Label = "twigs", ParentLevel = 1, Frequency = new Vector2(3, 5), ChildrenPerNode = 1,
+                Range = new Vector2(0.4f, 0.98f), ParallelAlign = 0.6f, GravityAlign = new Vector2(0.45f, 0.35f),
+                Length = new Vector2(1.1f, 0.6f), GirthScale = 0.45f, RadialSides = 3, Curve = 22f, Noise = 0.14f,
+            },
+            // Sparse: a baobab is bare for much of the year, and a full dome would hide the trunk that IS the tree.
+            new LevelRule
+            {
+                Label = "leaves", ParentLevel = 2, IsLeaf = true, Frequency = new Vector2(2, 4),
+                Range = new Vector2(0.3f, 1f), LeafSize = 0.9f, LeafGroup = 0,
+            },
+        },
+    };
+
+    // Banyan: a low fork under a crown far wider than it is tall, with thin vertical droppers hanging off the
+    // limbs. The droppers are an ordinary branch tier aimed straight DOWN (GravityAlign fully negative, almost
+    // no curve) — that reads as aerial roots without needing root geometry the generator does not have.
+    public static TreeDef Banyan(float age = 1f) => new TreeDef
+    {
+        Name = "Banyan", MaxHeight = 24f, GlobalScale = 2f, Age = Mathf.Clamp01(age), // ficus benghalensis 20-30 m
+        BarkColor = new Color(0.38f, 0.31f, 0.24f), LeafColor = new Color(0.17f, 0.37f, 0.15f),
+        TrunkGirthScale = 1.9f, TrunkTipScale = 0.42f, RootFlare = 0.85f,
+        Levels = new[]
+        {
+            new LevelRule { Label = "trunk", ParentLevel = -1, Length = new Vector2(2.6f, 3.4f), RadialSides = 7, Curve = 5f, Noise = 0.05f },
+            new LevelRule
+            {
+                Label = "primary", ParentLevel = 0, Frequency = new Vector2(6, 9), ChildrenPerNode = 1,
+                Range = new Vector2(0.28f, 0.95f), ParallelAlign = 0.88f, GravityAlign = new Vector2(0.22f, -0.05f),
+                Length = new Vector2(5.6f, 3.4f), GirthScale = 0.5f, RadialSides = 4, Curve = 20f, Noise = 0.08f,
+            },
+            new LevelRule
+            {
+                // ParallelAlign near 1, NOT near 0: the parent limb is horizontal, so "along the parent" would
+                // fire these sideways as spikes. Perpendicular to a horizontal limb is vertical, and the
+                // negative GravityAlign then takes them straight down.
+                Label = "droppers", ParentLevel = 1, Frequency = new Vector2(2, 4), ChildrenPerNode = 1,
+                Range = new Vector2(0.35f, 0.92f), ParallelAlign = 0.95f, GravityAlign = new Vector2(-0.92f, -0.96f),
+                Length = new Vector2(1.8f, 1.2f), GirthScale = 0.14f, RadialSides = 3, Curve = 3f, Noise = 0.04f,
+            },
+            new LevelRule
+            {
+                Label = "twigs", ParentLevel = 1, Frequency = new Vector2(4, 6), ChildrenPerNode = 1,
+                Range = new Vector2(0.4f, 0.98f), ParallelAlign = 0.55f, GravityAlign = new Vector2(0.3f, 0.1f),
+                Length = new Vector2(1.6f, 0.9f), GirthScale = 0.45f, RadialSides = 3, Curve = 18f, Noise = 0.1f,
+            },
+            new LevelRule
+            {
+                Label = "leaves_outer", ParentLevel = 3, IsLeaf = true, Frequency = new Vector2(4, 6),
+                Range = new Vector2(0.1f, 1f), LeafSize = 1f, LeafGroup = 0,
+            },
+            new LevelRule
+            {
+                Label = "leaves_inner", ParentLevel = 1, IsLeaf = true, Frequency = new Vector2(3, 5),
+                Range = new Vector2(0.5f, 1f), LeafSize = 1.2f, LeafGroup = 0,
+            },
+        },
+    };
+
+    // Joshua tree: a stout yucca that forks, and forks again, each arm ending in a spiky rosette. The forks are
+    // what make it read — ChildrenPerNode 2 over a short Range splits the stem in two rather than hanging
+    // branches along it.
+    public static TreeDef JoshuaTree(float age = 1f) => new TreeDef
+    {
+        Name = "Joshua Tree", MaxHeight = 9f, GlobalScale = 1.2f, Age = Mathf.Clamp01(age), // yucca brevifolia 8-12 m
+        BarkColor = new Color(0.36f, 0.29f, 0.21f), LeafColor = new Color(0.26f, 0.36f, 0.19f),
+        TrunkGirthScale = 2.2f, TrunkTipScale = 0.6f, RootFlare = 0.3f, NeedleFoliage = true,
+        Levels = new[]
+        {
+            new LevelRule { Label = "trunk", ParentLevel = -1, Length = new Vector2(2.4f, 3.2f), RadialSides = 6, Curve = 6f, Noise = 0.05f },
+            new LevelRule
+            {
+                Label = "arms", ParentLevel = 0, Frequency = new Vector2(2, 3), ChildrenPerNode = 2,
+                Range = new Vector2(0.55f, 0.95f), ParallelAlign = 0.72f, GravityAlign = new Vector2(0.6f, 0.55f),
+                Length = new Vector2(2.2f, 1.4f), GirthScale = 0.62f, RadialSides = 5, Curve = 30f, Noise = 0.1f,
+            },
+            new LevelRule
+            {
+                Label = "forks", ParentLevel = 1, Frequency = new Vector2(1, 3), ChildrenPerNode = 2,
+                Range = new Vector2(0.6f, 0.98f), ParallelAlign = 0.7f, GravityAlign = new Vector2(0.65f, 0.6f),
+                Length = new Vector2(1.4f, 0.9f), GirthScale = 0.66f, RadialSides = 4, Curve = 28f, Noise = 0.12f,
+            },
+            // Several SMALL spikes per arm tip, not one big tuft. The needle tuft mesh is sized for a 38 m pine;
+            // at pine scale on a 9 m yucca the tufts merge into a single cone and the tree reads as a fir.
+            new LevelRule
+            {
+                Label = "rosettes", ParentLevel = 2, IsLeaf = true, Frequency = new Vector2(3, 5),
+                Range = new Vector2(0.78f, 1f), LeafSize = 0.42f, LeafGroup = 2,
+            },
+        },
+    };
+
+    // Saguaro: a ribbed green column with a few arms that leave the trunk sideways and turn up. No leaf tier at
+    // all — the plant IS its trunk, so the generated tree is bark geometry only, the same single-part shape a
+    // dead snag produces. High TrunkTipScale is the whole silhouette: a saguaro does not taper to a point.
+    public static TreeDef Cactus(float age = 1f) => new TreeDef
+    {
+        Name = "Saguaro", MaxHeight = 9.5f, GlobalScale = 1.2f, Age = Mathf.Clamp01(age), // carnegiea gigantea 10-15 m
+        BarkColor = new Color(0.29f, 0.44f, 0.25f), LeafColor = new Color(0.29f, 0.44f, 0.25f),
+        // Fat enough to read as a succulent, not a blade. A real saguaro is slender (~1:20), but at low poly
+        // and a low RadialSides count a truly slender column loses its round cross-section and reads as a flap.
+        TrunkGirthScale = 2.4f, TrunkTipScale = 0.9f, RootFlare = 0.1f,
+        Levels = new[]
+        {
+            new LevelRule { Label = "column", ParentLevel = -1, Length = new Vector2(3.5f, 4.5f), RadialSides = 9, Curve = 1f, Noise = 0.01f },
+            // Curve is doing the work: the arm leaves the column near-perpendicular and bends back to vertical,
+            // which is the saguaro's candelabra elbow. Short arms just read as stubs, so they need real length.
+            new LevelRule
+            {
+                Label = "arms", ParentLevel = 0, Frequency = new Vector2(2, 3), ChildrenPerNode = 1,
+                Range = new Vector2(0.3f, 0.62f), ParallelAlign = 1f, GravityAlign = new Vector2(0.05f, 0.92f),
+                Length = new Vector2(2.9f, 2.3f), GirthScale = 0.62f, RadialSides = 9, Curve = 62f, Noise = 0.02f,
             },
         },
     };

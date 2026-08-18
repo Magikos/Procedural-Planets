@@ -37,6 +37,8 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     static readonly int _grassFarOverlayFiberStrengthId = Shader.PropertyToID("_GrassFarOverlayFiberStrength");
     static readonly int _grassSurfaceBrightnessId = Shader.PropertyToID("_GrassSurfaceBrightness");
     static readonly int _grassSurfaceSaturationId = Shader.PropertyToID("_GrassSurfaceSaturation");
+    static readonly int _bladeSaturationId = Shader.PropertyToID(ShaderGlobalIds.GrassBladeSaturation);
+    static readonly int _bladeBrightnessId = Shader.PropertyToID(ShaderGlobalIds.GrassBladeBrightness);
     static readonly int _grassWaterRadiusId = Shader.PropertyToID("_GrassWaterRadius");
     static readonly int _biomeGrassParamCountId = Shader.PropertyToID(ShaderGlobalIds.BiomeGrassParamCount);
 
@@ -45,6 +47,9 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     float _farOverlayStrength = 1.0f;
     float _grassSurfaceBrightness = 0.6f;
     float _grassSurfaceSaturation = 0.72f; // green-over-tan biome-edge line lever; lower trims the vivid pop
+    // 3D blade grade. Authored per-biome tints read neon on the lush biomes; these pull the whole set earthier.
+    float _bladeSaturation = 0.78f;
+    float _bladeBrightness = 0.88f;
 
     // The painted grass is a BASE LAYER at full strength everywhere, not a distance ramp. It used to fade in
     // over 24..120 m, which put a coverage gradient at a fixed radius around the camera — so the handoff to the
@@ -87,6 +92,9 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
         _surfaceArrays = surfaceArrays;
         _seed = seed;
         _terrainMaterial = terrainMaterial;
+        // Before any placement dispatch: the compute reads these when it writes blade.Color, and a blade keeps
+        // the colour it was born with, so setting them afterwards would only affect blades placed later.
+        PushBladeGrade();
 
         if (provider == null)
             return;
@@ -324,8 +332,15 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     public void Rebuild()
     {
         DisposeControllers();
+        PushBladeGrade();
         if (_terrainMaterial != null)
             ApplyTerrainOverlay(_terrainMaterial);
+    }
+
+    void PushBladeGrade()
+    {
+        Shader.SetGlobalFloat(_bladeSaturationId, _bladeSaturation);
+        Shader.SetGlobalFloat(_bladeBrightnessId, _bladeBrightness);
     }
 
     public void Dispose()
@@ -365,6 +380,33 @@ sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
     {
         if (value.HasValue) { _grassSurfaceSaturation = Mathf.Clamp01(value.Value); ReapplyOverlay(); }
         return $"grass surface-saturation: {_grassSurfaceSaturation:F3}";
+    }
+
+    // The 3D blades, NOT the painted surface. Their colour is the per-biome authored Tint, which reads neon on
+    // the lush biomes; this grades the whole set toward earthier green without re-authoring 14 biomes. Blades
+    // are written into a buffer at placement time, so both setters rebuild.
+    [ConsoleCommand("blade-saturation", "3D grass blade saturation (0-1). Lower for earthier, less neon green. Default 0.78.", MonoTargetType.Registry)]
+    string BladeSaturationCmd(float? value = null)
+    {
+        if (value.HasValue)
+        {
+            _bladeSaturation = Mathf.Clamp01(value.Value);
+            Shader.SetGlobalFloat(_bladeSaturationId, _bladeSaturation);
+            Rebuild();
+        }
+        return $"grass blade-saturation: {_bladeSaturation:F3}";
+    }
+
+    [ConsoleCommand("blade-brightness", "3D grass blade brightness (0.3-1.5). Lower to stop blades glowing against the ground. Default 0.88.", MonoTargetType.Registry)]
+    string BladeBrightnessCmd(float? value = null)
+    {
+        if (value.HasValue)
+        {
+            _bladeBrightness = Mathf.Clamp(value.Value, 0.3f, 1.5f);
+            Shader.SetGlobalFloat(_bladeBrightnessId, _bladeBrightness);
+            Rebuild();
+        }
+        return $"grass blade-brightness: {_bladeBrightness:F3}";
     }
 
     [ConsoleCommand("overlay-status", "Print the live grass-line overlay tuning values.", MonoTargetType.Registry)]

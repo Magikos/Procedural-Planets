@@ -298,7 +298,8 @@ public sealed class ScatterField : IDisposable
         float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, proto.SpacingMeters, ctx.BaseRadiusLocal * scale)
                             * Mathf.Pow(membership, proto.BiomeBlendPower)
                             * ScatterClumping.Keep(dir, ctx.BaseRadiusLocal * scale, proto.Clumpiness,
-                                proto.PatchScaleMeters, proto.ClumpGroupSeed, (uint)proto.Biome, slopeCos);
+                                proto.PatchScaleMeters, proto.ClumpGroupSeed, (uint)proto.Biome, slopeCos,
+                                proto.ShadePreference);
 
         if (!ScatterPlacementMath.TryPlace(slotSeed, dir, localNormal, placeRadius, altitudeMeters, slopeCos,
                 densityKeep, ctx.HasOcean, rules, out Vector3 posLocal, out Quaternion rot, out float sc))

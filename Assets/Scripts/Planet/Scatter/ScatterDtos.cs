@@ -38,7 +38,8 @@ public sealed record ScatterPrototypeDto(
     Material StumpMaterial = null,
     string ImpostorShareKey = null,
     float Clumpiness = 0f,
-    float PatchScaleMeters = 250f)
+    float PatchScaleMeters = 250f,
+    float ShadePreference = 0f)
 {
     // Which grove field this prototype draws from. Keyed on the SPECIES (ImpostorShareKey) rather than the
     // prototype, so the per-instance variants of one species share one field — otherwise a grove of variant 0
@@ -68,7 +69,7 @@ public sealed record ScatterPrototypeDto(
         p.HasMinAltitude, p.MinAltitudeMeters, p.HasMaxAltitude, p.MaxAltitudeMeters,
         p.MinWaterClearanceMeters, p.OnWater, p.ScaleRange, p.RandomYaw, p.Interaction,
         BuildParts(p), p.BakedImpostorAtlas, p.BakedImpostorNormal, p.StumpMesh, p.StumpMaterial,
-        null, p.Clumpiness, p.PatchScaleMeters);
+        null, p.Clumpiness, p.PatchScaleMeters, p.ShadePreference);
 
     static ScatterPartDto[] BuildParts(ScatterPrototype p)
     {

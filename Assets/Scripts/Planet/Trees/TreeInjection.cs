@@ -22,11 +22,15 @@ public static class TreeInjection
     // Generated variants per source tree prototype (1 = the old one-mesh-per-prototype behaviour).
     public static int Variants = 3;
 
+    // The impostor bake tool clears this while it rebuilds, so it bakes from a library whose generated trees
+    // carry NO card. Without it the tool would see the atlases it baked last time, mistake them for prebaked
+    // Synty cards, and skip every tree — i.e. it could bake once and never again.
+    public static bool UseBakedImpostors = true;
+
     static readonly Dictionary<TreeDefLibrary.TreeSpecies, (Material bark, Material foliage)> _mats = new();
     static readonly Dictionary<TreeDefLibrary.TreeSpecies, Material> _cleanFallback = new();
     static readonly Dictionary<TreeDefLibrary.TreeSpecies, Material> _coniferMats = new();
     static Material _cleanBase; // a clean leaf-image FoliageLit material (not a Synty palette atlas)
-    static Texture2D _birchBark;
 
     public static ScatterLibraryDto Apply(ScatterLibraryDto lib)
     {
@@ -34,6 +38,9 @@ public static class TreeInjection
         try
         {
             _cleanBase = FindCleanLeaf(lib);
+            // Recognising a usable leaf material needs the tree library, so this is the only place that can find
+            // it; hand it to the shared factory so the non-tree plants can tint copies of the same texture.
+            GeneratedFoliage.Prime(_cleanBase);
             int k = Mathf.Clamp(Variants, 1, 8);
             float spacingScale = Mathf.Sqrt(k); // K interleaved variants at sqrt(K) spacing ~ the original density
             int nextSlot = MaxSlot(lib) + 1;
@@ -90,10 +97,15 @@ public static class TreeInjection
     }
 
     // Rebuild the scatter DTO from the source library at the current Enabled state, for a runtime toggle.
+    // Rocks are applied here too because this is the ONE place a runtime toggle rebuilds the library — rebuilding
+    // trees alone would silently drop the generated rocks every time `tree.inject` was touched.
     public static ScatterLibraryDto Rebuild()
     {
         var so = Resources.Load<ScatterLibrary>("Settings/ScatterLibrary");
-        return so != null ? Apply(ScatterLibraryDto.From(so)) : null;
+        if (so == null) return null;
+        // Trees, then plants, then rocks. Each allocates its variant slots above the highest one it can see, so
+        // the order fixes which range each family occupies; changing it renumbers saved variant slots.
+        return RockInjection.Apply(PlantInjection.Apply(Apply(ScatterLibraryDto.From(so))));
     }
 
     static bool IsTree(ScatterPrototypeDto p) =>
@@ -129,6 +141,9 @@ public static class TreeInjection
             float cull = p.Parts[0].MaxCullDistance;
             if (cull < 20f) cull = 90f;
             float[] dist = { cull };
+            Texture2D fernAtlas = null, fernNormal = null;
+            if (UseBakedImpostors)
+                GeneratedImpostorManifest.TryGet("Fern", ImpostorProbeHash("Fern"), out fernAtlas, out fernNormal);
             return p with
             {
                 Parts = new[]
@@ -136,8 +151,8 @@ public static class TreeInjection
                     new ScatterPartDto(stem, new[] { t.Bark }, dist, false, true),
                     new ScatterPartDto(foliage, new[] { t.Foliage }, dist, false, true),
                 },
-                BakedImpostorAtlas = null,
-                BakedImpostorNormal = null,
+                BakedImpostorAtlas = fernAtlas,
+                BakedImpostorNormal = fernNormal,
                 ImpostorShareKey = "Fern",
             };
         }
@@ -160,6 +175,56 @@ public static class TreeInjection
             h ^= (uint)salt; h *= 16777619u;
             return h;
         }
+    }
+
+    // Fingerprint of a species AS THE GENERATOR CURRENTLY BUILDS IT, used to decide whether a disk-baked
+    // impostor atlas still describes it. Hashing the generated geometry rather than the TreeDef's fields means
+    // it also catches changes to the generator itself, which a def-only hash would miss — and a forgotten
+    // rebake after a generator change is exactly the silent wrong-silhouette bug worth spending 1 ms on.
+    //
+    // One fixed probe (mid age, seed 1) per key, cached for the domain: the defs cannot change without a
+    // recompile, which clears the statics anyway.
+    static readonly Dictionary<string, string> _probeHashes = new();
+
+    public static string ImpostorProbeHash(string shareKey)
+    {
+        if (string.IsNullOrEmpty(shareKey)) return string.Empty;
+        if (_probeHashes.TryGetValue(shareKey, out string hit)) return hit;
+
+        string hash = string.Empty;
+        try
+        {
+            bool dead = shareKey.EndsWith("-dead", StringComparison.Ordinal);
+            string name = dead ? shareKey.Substring(0, shareKey.Length - 5) : shareKey;
+            if (TreeDefLibrary.TryParseSpecies(name, out TreeDefLibrary.TreeSpecies s))
+            {
+                TreeDef def = dead ? TreeDefLibrary.DeadSpecies(s, 0.5f) : TreeDefLibrary.Species(s, 0.5f);
+                GeneratedTree probe = TreeGenerator.Generate(def, 1);
+                var meshes = new List<Mesh>();
+                if (probe.Bark != null) meshes.Add(probe.Bark);
+                if (probe.Foliage != null) meshes.Add(probe.Foliage);
+                hash = GeneratedImpostorManifest.AppearanceHash(meshes, def.BarkColor, def.LeafColor);
+                DestroyProbe(probe);
+            }
+        }
+        catch (Exception e)
+        {
+            LoggerProvider.LogException("TreeInject", e); // no hash -> no cache hit -> live bake, never wrong
+        }
+        // Cache SUCCESS only. Caching an empty result poisons the rest of the domain, and the bake tool then
+        // writes that empty string into the manifest, where it can never match and the key live-bakes forever.
+        if (!string.IsNullOrEmpty(hash)) _probeHashes[shareKey] = hash;
+        return hash;
+    }
+
+    // The probe exists only to be measured; leaving its meshes alive would leak one full tree per species.
+    static void DestroyProbe(GeneratedTree t)
+    {
+        void Kill(Mesh m) { if (m != null) UnityEngine.Object.DestroyImmediate(m); }
+        if (t.BarkLods != null) foreach (Mesh m in t.BarkLods) Kill(m);
+        if (t.FoliageLods != null) foreach (Mesh m in t.FoliageLods) Kill(m);
+        Kill(t.Stump);
+        Kill(t.Log);
     }
 
     static int MaxSlot(ScatterLibraryDto lib)
@@ -221,10 +286,18 @@ public static class TreeInjection
                 ? new ScatterPartDto(foliage, t.FoliageLods, Trim(dist, t.FoliageLods.Length), true, false)
                 : null;
 
-            // Keep the prototype's biome + placement rules; swap identity (slot/name), parts + stump, and clear
-            // the Synty impostor atlas so the renderer bakes from the generated LOD0 — once per species, since
-            // all variants declare the same ImpostorShareKey. Age now carries most of the size variance, so the
-            // per-instance ScaleRange only jitters around it instead of doubling the tree.
+            // The Synty atlas cannot be kept — it is the wrong silhouette — so the far card comes from the
+            // generated LOD0. Prefer a disk-baked one (418 ms + 26.8 MB per share key if baked live); a miss
+            // or a stale hash just falls back to the live bake, which is slower and never wrong.
+            string shareKey = species + (dead ? "-dead" : "");
+            Texture2D bakedAtlas = null, bakedNormal = null;
+            if (UseBakedImpostors)
+                GeneratedImpostorManifest.TryGet(shareKey, ImpostorProbeHash(shareKey), out bakedAtlas, out bakedNormal);
+
+            // Keep the prototype's biome + placement rules; swap identity (slot/name), parts + stump, and the
+            // impostor card — once per species, since all variants declare the same ImpostorShareKey. Age now
+            // carries most of the size variance, so the per-instance ScaleRange only jitters around it instead
+            // of doubling the tree.
             return p with
             {
                 DisplayName = variant == 0 ? p.DisplayName : $"{p.DisplayName} v{variant}",
@@ -234,14 +307,14 @@ public static class TreeInjection
                 ScaleRange = variantCount > 1 ? new Vector2(0.85f, 1.2f) : new Vector2(0.6f, 1.45f),
                 StumpMesh = t.Stump,
                 StumpMaterial = bark,
-                BakedImpostorAtlas = null,
-                BakedImpostorNormal = null,
+                BakedImpostorAtlas = bakedAtlas,
+                BakedImpostorNormal = bakedNormal,
                 // Keyed by SPECIES, not by source prototype: variants of one prototype are now different
                 // species, so a prototype-keyed atlas would have billboarded a cedar as a fir. Species-keying is
                 // also strictly cheaper — every Broadleaf in the world shares one bake instead of one per
                 // prototype. FromPrebaked re-frames the shared card to each variant's own bounds, so differing
                 // ages still billboard at their own size.
-                ImpostorShareKey = species + (dead ? "-dead" : ""),
+                ImpostorShareKey = shareKey,
             };
         }
         catch (Exception e)
@@ -310,7 +383,11 @@ public static class TreeInjection
         if (!_cleanFallback.TryGetValue(s, out Material m))
         {
             m = new Material(_cleanBase) { name = $"Gen {def.Name} leaf" };
-            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", def.LeafColor * 2f); // texture already dark; lift tint
+            // FoliageLit exposes _SeasonColor, not _BaseColor, so the old _BaseColor line was a silent no-op and
+            // every species that fell back to this material wore the base texture's colour instead of its own.
+            Color leafTint = def.LeafColor * 2.2f; // texture is already dark; lift so the multiply stays bright
+            if (m.HasProperty("_SeasonColor")) m.SetColor("_SeasonColor", leafTint);
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", leafTint);
             _cleanFallback[s] = m;
         }
         return m;
@@ -368,58 +445,38 @@ public static class TreeInjection
         return t;
     }
 
+    // Bark character per species. The succulents get RIBBED, which is the whole silhouette read of a saguaro
+    // up close and the thing that stopped the cactus looking like a smooth green post.
+    static GeneratedSurfaceTexture.BarkStyle BarkStyleFor(TreeDefLibrary.TreeSpecies s) => s switch
+    {
+        TreeDefLibrary.TreeSpecies.Birch => GeneratedSurfaceTexture.BarkStyle.Birch,
+        TreeDefLibrary.TreeSpecies.Conifer or TreeDefLibrary.TreeSpecies.Pine
+            or TreeDefLibrary.TreeSpecies.Cedar or TreeDefLibrary.TreeSpecies.Cypress
+            => GeneratedSurfaceTexture.BarkStyle.Plated,
+        TreeDefLibrary.TreeSpecies.Palm => GeneratedSurfaceTexture.BarkStyle.Fibrous,
+        TreeDefLibrary.TreeSpecies.Cactus or TreeDefLibrary.TreeSpecies.JoshuaTree
+            => GeneratedSurfaceTexture.BarkStyle.Ribbed,
+        // A baobab's bark is famously smooth and taut over the swollen trunk; furrowing it fights the shape.
+        TreeDefLibrary.TreeSpecies.Baobab => GeneratedSurfaceTexture.BarkStyle.Smooth,
+        TreeDefLibrary.TreeSpecies.Shrub or TreeDefLibrary.TreeSpecies.Fern
+            => GeneratedSurfaceTexture.BarkStyle.Smooth,
+        _ => GeneratedSurfaceTexture.BarkStyle.Furrowed,
+    };
+
     static (Material, Material) MatsFor(TreeDefLibrary.TreeSpecies s, TreeDef def)
     {
         if (!_mats.TryGetValue(s, out (Material bark, Material foliage) pair))
         {
             Material bark = Mat($"Gen {def.Name} bark", def.BarkColor);
-            // Birch is defined by its markings, not just a pale trunk, and the trunk UVs tile per metre, so a
-            // small wrapped texture reads at any age. Every other species stays flat-coloured.
-            if (s == TreeDefLibrary.TreeSpecies.Birch && bark.HasProperty("_BaseMap"))
-                bark.SetTexture("_BaseMap", BirchBark());
+            // EVERY species gets a bark texture, not just birch. Trunk UVs tile per metre, so a small wrapped
+            // luminance texture reads at any age, and the flat-tinted trunks every other species used to wear
+            // were the single biggest reason they looked like plastic next to the birch.
+            if (bark.HasProperty("_BaseMap"))
+                bark.SetTexture("_BaseMap", GeneratedSurfaceTexture.Bark(BarkStyleFor(s)));
             pair = (bark, Mat($"Gen {def.Name} foliage", def.LeafColor));
             _mats[s] = pair;
         }
         return pair;
-    }
-
-    // Birch bark: near-white ground with dark lenticel dashes and a few grey streaks. Generated rather than
-    // authored so it needs no art asset and stays deterministic. 1 texture height = 1 metre of trunk (the mesher
-    // writes V in metres), so the dashes are life-sized on a sapling and on a 22 m adult alike.
-    static Texture2D BirchBark()
-    {
-        if (_birchBark != null) return _birchBark;
-        const int w = 64, h = 128;
-        var t = new Texture2D(w, h, TextureFormat.RGBA32, true) { name = "Gen birch bark", wrapMode = TextureWrapMode.Repeat };
-        var px = new Color[w * h];
-        uint rng = 0x9E3779B9;
-        float Rand() { rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng << 5; return (rng & 0xFFFFFF) / (float)0xFFFFFF; }
-
-        for (int i = 0; i < px.Length; i++)
-        {
-            float grain = 0.94f + 0.06f * Mathf.PerlinNoise((i % w) * 0.35f, (i / w) * 0.12f);
-            px[i] = new Color(grain, grain * 0.99f, grain * 0.95f, 1f);
-        }
-        // Horizontal dashes: short, dark, scattered — a few per band up the trunk.
-        for (int band = 0; band < 26; band++)
-        {
-            int y = (int)(Rand() * h);
-            int x = (int)(Rand() * w);
-            int len = 3 + (int)(Rand() * 11);
-            int thick = 1 + (int)(Rand() * 3);
-            float dark = 0.10f + Rand() * 0.22f;
-            for (int dy = 0; dy < thick; dy++)
-            for (int dx = 0; dx < len; dx++)
-            {
-                int xx = (x + dx) % w, yy = (y + dy) % h;
-                float taper = 1f - Mathf.Abs(dx / (float)len - 0.5f) * 0.7f; // fade the dash ends
-                px[yy * w + xx] = Color.Lerp(px[yy * w + xx], new Color(dark, dark * 0.95f, dark * 0.9f, 1f), taper);
-            }
-        }
-        t.SetPixels(px);
-        t.Apply();
-        _birchBark = t;
-        return t;
     }
 
     static float[] Trim(float[] dist, int n)

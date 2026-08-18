@@ -16,6 +16,13 @@
 // emission quota so an expensive primary face cannot starve a narrow neighbor strip.
 
 #include "../Graphics/Shaders/Includes/GrassPlacementCommon.hlsl"
+#include "../Graphics/Shaders/Includes/GrassColor.hlsl"
+
+// Live grade pulling every biome tint toward earthier green. The authored per-biome Tint stays the source of
+// variation; this only desaturates and dims the whole set, so one knob fixes "neon" without re-authoring 14
+// biomes. Blades are written into a buffer once, so a change needs grass.rebuild to show.
+float _GrassBladeSaturation;
+float _GrassBladeBrightness;
 
 Texture2D<float4> _NearFieldBiomeIds_F0;
 Texture2D<float4> _NearFieldBiomeIds_F1;
@@ -443,7 +450,7 @@ void PlaceAndCullNearField(uint3 id : SV_DispatchThreadID)
     GrassBladeInstance blade;
     blade.RootHeight = float4(rootWs, height);
     blade.UpWidth = float4(upWs, width);
-    blade.Color = float4(saturate(biome.Tint.rgb * shift), 1.0);
+    blade.Color = float4(GradeGrassTint(biome.Tint.rgb * shift, _GrassBladeSaturation, _GrassBladeBrightness), 1.0);
     _NearFieldGrassInstances[slot] = blade;
     AddStat(NF_STAT_EMITTED, 1u);
 }

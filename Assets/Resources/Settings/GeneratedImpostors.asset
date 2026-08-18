@@ -1,0 +1,219 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dabbf57cfa677d34b8723614d8513d1e, type: 3}
+  m_Name: GeneratedImpostors
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::GeneratedImpostorManifest
+  Entries:
+  - Key: Broadleaf
+    ShapeHash: 1D9A29CF
+    Atlas: {fileID: 2800000, guid: 4b433fbf790589e4997ca37df1bdd83f, type: 3}
+    Normal: {fileID: 2800000, guid: ecbf476b4ee088843b8297db39912c75, type: 3}
+  - Key: bush-Grassland
+    ShapeHash: 82689D99
+    Atlas: {fileID: 2800000, guid: 84b63d40da620ff4d9c5adb6191a3417, type: 3}
+    Normal: {fileID: 2800000, guid: 4471885efc62ca64ca4ceacd890647f8, type: 3}
+  - Key: rock-Forest
+    ShapeHash: 80E8C4CA
+    Atlas: {fileID: 2800000, guid: 0ef5958874c9223419a8a9e13a7cdfd9, type: 3}
+    Normal: {fileID: 2800000, guid: 9b4363c93475fc544a6c2b49b3bf01e1, type: 3}
+  - Key: Birch
+    ShapeHash: 78974D0B
+    Atlas: {fileID: 2800000, guid: cb6fcb1d005bf184a82a6aca777d827b, type: 3}
+    Normal: {fileID: 2800000, guid: 8e281cb0bf5aeae4586b85bcfe52d4de, type: 3}
+  - Key: Palm
+    ShapeHash: 21F26D80
+    Atlas: {fileID: 2800000, guid: 1886df2160a011343892446bf33e38eb, type: 3}
+    Normal: {fileID: 2800000, guid: 649de5194f2e76647952c4b930cc5ade, type: 3}
+  - Key: Willow
+    ShapeHash: FA1D86CF
+    Atlas: {fileID: 2800000, guid: 2e19a62adf1d1db478f095f3c0ab411a, type: 3}
+    Normal: {fileID: 2800000, guid: 0114e0dd3e889ca49a3dd3622914832a, type: 3}
+  - Key: Shrub-dead
+    ShapeHash: E31E6ACE
+    Atlas: {fileID: 2800000, guid: 84165485918b45946a275aa15a962644, type: 3}
+    Normal: {fileID: 2800000, guid: 8a52b369aa15df24889fa502a96f189f, type: 3}
+  - Key: Acacia
+    ShapeHash: A699432D
+    Atlas: {fileID: 2800000, guid: 056ae485742e5dc42a5b3666777f7f2d, type: 3}
+    Normal: {fileID: 2800000, guid: 77daf3978326a484abc0907835787e84, type: 3}
+  - Key: Acacia-dead
+    ShapeHash: AB303CCE
+    Atlas: {fileID: 2800000, guid: 75f94e3323bb3f144851d00ccd83254e, type: 3}
+    Normal: {fileID: 2800000, guid: ffd0f8d3aa4aab84cb1a9ed7998dc29f, type: 3}
+  - Key: Pine
+    ShapeHash: 54708D8F
+    Atlas: {fileID: 2800000, guid: 3f918a43455721645b3413e864849a08, type: 3}
+    Normal: {fileID: 2800000, guid: ff40d604201710047ba23293606c9458, type: 3}
+  - Key: Conifer
+    ShapeHash: 41AF4ACE
+    Atlas: {fileID: 2800000, guid: 4871fd7e53be6e24881b6375b4fc4f3a, type: 3}
+    Normal: {fileID: 2800000, guid: 7314a97d0f9c7e84ebb8b7c31ae6b6af, type: 3}
+  - Key: rock-Beach
+    ShapeHash: A8444A22
+    Atlas: {fileID: 2800000, guid: fb0eb5cbd0ca55a418020fa9921a1de0, type: 3}
+    Normal: {fileID: 2800000, guid: 513ff557ae42db64e9e306fa0ee85bb9, type: 3}
+  - Key: rock-Desert
+    ShapeHash: A8444A22
+    Atlas: {fileID: 2800000, guid: a5b9c3dd14f4eb7459a7307e80cb6cca, type: 3}
+    Normal: {fileID: 2800000, guid: 8e7d25d15204b9d4ea8f5005d8362172, type: 3}
+  - Key: rock-Savanna
+    ShapeHash: 4960308E
+    Atlas: {fileID: 2800000, guid: ad22b0998b40f1c44ab3d02b68e2dd3c, type: 3}
+    Normal: {fileID: 2800000, guid: d23dcd81eea03a2468e77f32778d8a6a, type: 3}
+  - Key: rock-Tropical
+    ShapeHash: 9A9E0FA3
+    Atlas: {fileID: 2800000, guid: 77a11988204eae144814138d92356229, type: 3}
+    Normal: {fileID: 2800000, guid: da43370d01dcd9e48a7729a7b83158a3, type: 3}
+  - Key: rock-Scrub
+    ShapeHash: 4960308E
+    Atlas: {fileID: 2800000, guid: 74eca925f398d404cbc899195598c42b, type: 3}
+    Normal: {fileID: 2800000, guid: 31d6348ba2e337a4598c03fd2d64ccca, type: 3}
+  - Key: rock-Grassland
+    ShapeHash: 80E8C4CA
+    Atlas: {fileID: 2800000, guid: 8ce43277d394e5343959f7996c94262b, type: 3}
+    Normal: {fileID: 2800000, guid: 5222e8f076a161246877b74a727e3260, type: 3}
+  - Key: rock-Steppe
+    ShapeHash: D0461EEA
+    Atlas: {fileID: 2800000, guid: 0aca478778370344d91ed56b64af06ab, type: 3}
+    Normal: {fileID: 2800000, guid: 1049a0f58cf9f5d469fe5fc56d90d1f9, type: 3}
+  - Key: rock-Taiga
+    ShapeHash: 33277EED
+    Atlas: {fileID: 2800000, guid: b66b12ad9bd807740bfc59cb0a8ffbe3, type: 3}
+    Normal: {fileID: 2800000, guid: 86d70c3b33b4e8748b1b5b9f1e683def, type: 3}
+  - Key: rock-Swamp
+    ShapeHash: 33277EED
+    Atlas: {fileID: 2800000, guid: a365f44d56358d947b4a869cadd4320a, type: 3}
+    Normal: {fileID: 2800000, guid: 9df09429d476a8a4a8f3fabf3d788f57, type: 3}
+  - Key: rock-Tundra
+    ShapeHash: D0461EEA
+    Atlas: {fileID: 2800000, guid: c2499d1f25a66c44c993d8e49a5a7d51, type: 3}
+    Normal: {fileID: 2800000, guid: b927195f9552e2941aa65e2dd0b03840, type: 3}
+  - Key: rock-Snow
+    ShapeHash: 463DED5F
+    Atlas: {fileID: 2800000, guid: 853dab980fca9bc4ab9cf676fab63cb1, type: 3}
+    Normal: {fileID: 2800000, guid: ffd2871f36c28c1469200843f1d41b9a, type: 3}
+  - Key: rock-IceBog
+    ShapeHash: 463DED5F
+    Atlas: {fileID: 2800000, guid: 629a2b7928f1bbc4fa9bde2b1932430f, type: 3}
+    Normal: {fileID: 2800000, guid: 4e62422020e372d43a0fa4b8f315bfb9, type: 3}
+  - Key: rock-Mountain
+    ShapeHash: F57EF847
+    Atlas: {fileID: 2800000, guid: 127063e43141a0e4bade765a0e5d39ba, type: 3}
+    Normal: {fileID: 2800000, guid: d194c39e91f1c7c4b92fcdc1ce551bfa, type: 3}
+  - Key: bush-Savanna
+    ShapeHash: 9C1520F3
+    Atlas: {fileID: 2800000, guid: 1a56eb764b3f4b14e96f43c2d702f26d, type: 3}
+    Normal: {fileID: 2800000, guid: f989975bbfd9aad48b9ad6bb25b0c0ef, type: 3}
+  - Key: bush-Scrub
+    ShapeHash: 50FFA1B8
+    Atlas: {fileID: 2800000, guid: d990f28a4f03dd24d85d39ab7b30068a, type: 3}
+    Normal: {fileID: 2800000, guid: ad04539e59051b844b1c46e097db27c8, type: 3}
+  - Key: bush-Steppe
+    ShapeHash: 50FFA1B8
+    Atlas: {fileID: 2800000, guid: 005d556fb0df2464d84e5fca6c15a7bc, type: 3}
+    Normal: {fileID: 2800000, guid: 92db6904b4802d743afe74bae4e29d38, type: 3}
+  - Key: bush-Taiga
+    ShapeHash: ACB12973
+    Atlas: {fileID: 2800000, guid: 9a677b8b05d726a44962e2dd0dc4a0f5, type: 3}
+    Normal: {fileID: 2800000, guid: cf3becf3b40d3674f8f338cd1bb9d450, type: 3}
+  - Key: Fern
+    ShapeHash: 3A690D4D
+    Atlas: {fileID: 2800000, guid: 52d9565db88f09046aba8bc8b5266164, type: 3}
+    Normal: {fileID: 2800000, guid: a32a3d5a2f7527b4098804cdf63eae9e, type: 3}
+  - Key: reed-Swamp
+    ShapeHash: 
+    Atlas: {fileID: 2800000, guid: 5d650ee009d1b114187afba35c7333d2, type: 3}
+    Normal: {fileID: 2800000, guid: d9392f1d9151a4547b080c4f09d2f73b, type: 3}
+  - Key: reed-IceBog
+    ShapeHash: 
+    Atlas: {fileID: 2800000, guid: 29aade395a7d330459343dbaebc94b3a, type: 3}
+    Normal: {fileID: 2800000, guid: 0cc260d158ab6884e92427bae5c1a827, type: 3}
+  - Key: flower-default
+    ShapeHash: 
+    Atlas: {fileID: 2800000, guid: 24eb30fb7358f084c96d880c4522ce32, type: 3}
+    Normal: {fileID: 2800000, guid: c25693f0a851cea4494421ab8d17e095, type: 3}
+  - Key: Poplar
+    ShapeHash: BD3D6E8D
+    Atlas: {fileID: 2800000, guid: f2379d05efc12ef43af5cf8932a5d3ca, type: 3}
+    Normal: {fileID: 2800000, guid: b6f4b2dc057e4bf40be316517873364b, type: 3}
+  - Key: reed-Beach
+    ShapeHash: 
+    Atlas: {fileID: 2800000, guid: 3c9d077b05a6ebd4cbd22e015104d063, type: 3}
+    Normal: {fileID: 2800000, guid: 1af63ae3d0bff3343aec46e336e9e14c, type: 3}
+  - Key: flowerbush-Grassland
+    ShapeHash: 755D60D3
+    Atlas: {fileID: 2800000, guid: f8ff17989cc453340b73762035274f5c, type: 3}
+    Normal: {fileID: 2800000, guid: cd772de95aa8465419f13eb162d226fc, type: 3}
+  - Key: flowerbush-Forest
+    ShapeHash: 755D60D3
+    Atlas: {fileID: 2800000, guid: f351bfad9ca12864a93aaa1b26e94e96, type: 3}
+    Normal: {fileID: 2800000, guid: a7f0970a882cbb64fa7f074ba47b7d7b, type: 3}
+  - Key: cattail-LakeShore
+    ShapeHash: 
+    Atlas: {fileID: 2800000, guid: 2b25c0c534568d4498578e5ed906aa49, type: 3}
+    Normal: {fileID: 2800000, guid: 3ed6e6fcf39b8434195efef7a334dd5c, type: 3}
+  - Key: reed-LakeShore
+    ShapeHash: 
+    Atlas: {fileID: 2800000, guid: f5ac4d9b1772df446aea9061541e1934, type: 3}
+    Normal: {fileID: 2800000, guid: d2a71df2496820c41b6f7c1e1d1eafd3, type: 3}
+  - Key: rock-LakeShore
+    ShapeHash: 80E8C4CA
+    Atlas: {fileID: 2800000, guid: f593747033f7eb245b97ce03fdc91af7, type: 3}
+    Normal: {fileID: 2800000, guid: c0a97bf88929ecd4584666b67d3a84a4, type: 3}
+  - Key: lily-Lake
+    ShapeHash: 
+    Atlas: {fileID: 2800000, guid: beeeaa3991117504b81ce9a5494f3bed, type: 3}
+    Normal: {fileID: 2800000, guid: 413ba9b52f910104297260dd1361f17c, type: 3}
+  - Key: coral-default
+    ShapeHash: 
+    Atlas: {fileID: 2800000, guid: df07d516fd3cb234b84eaa6c48f3bc19, type: 3}
+    Normal: {fileID: 2800000, guid: be79c48f09e32cb4e9ee8c55cc1fba00, type: 3}
+  - Key: coral-Deep
+    ShapeHash: 
+    Atlas: {fileID: 2800000, guid: 230acc88902205a4c8fbbd8049f8b9b7, type: 3}
+    Normal: {fileID: 2800000, guid: e3cf34f3f970a6e45a8d0d237872363f, type: 3}
+  - Key: Cedar
+    ShapeHash: 22513C8D
+    Atlas: {fileID: 2800000, guid: 9798c585af0293c449a04ad8464eb66b, type: 3}
+    Normal: {fileID: 2800000, guid: 1ed93fccb77e73c42b64bf8e4b59f18c, type: 3}
+  - Key: Cypress
+    ShapeHash: 830D97CF
+    Atlas: {fileID: 2800000, guid: de436374e59eb354985882708ac9bf1a, type: 3}
+    Normal: {fileID: 2800000, guid: 4ca34dec52cfb8047b56868d979d2864, type: 3}
+  - Key: Banyan
+    ShapeHash: AC2D42EF
+    Atlas: {fileID: 2800000, guid: c7f652423f5a175468568b96819c19ac, type: 3}
+    Normal: {fileID: 2800000, guid: 4e6d832ff8b735d45928921839938874, type: 3}
+  - Key: Cactus-dead
+    ShapeHash: 96390E64
+    Atlas: {fileID: 2800000, guid: 552d0bf1fd5d65a44bc1c12bb8218c46, type: 3}
+    Normal: {fileID: 2800000, guid: 62093cb71a78c304ab97fe23f565eb3f, type: 3}
+  - Key: JoshuaTree-dead
+    ShapeHash: D1A26314
+    Atlas: {fileID: 2800000, guid: b37f9c3e213dbb04189ed6870b1578c1, type: 3}
+    Normal: {fileID: 2800000, guid: cf6ba98ac5fab534cb2d1589abab3b7e, type: 3}
+  - Key: Baobab
+    ShapeHash: 04BE9AA7
+    Atlas: {fileID: 2800000, guid: 92247af2ff2cc8e42b82540595157d60, type: 3}
+    Normal: {fileID: 2800000, guid: 00ea79b5e9f1da743a9546aacf33c480, type: 3}
+  - Key: Shrub
+    ShapeHash: 16DD7F5C
+    Atlas: {fileID: 2800000, guid: 0ced24ba33d846f438fee9f1c6fe17e3, type: 3}
+    Normal: {fileID: 2800000, guid: dc94d958af8d011468afb1e7bee87950, type: 3}
+  - Key: Cypress-dead
+    ShapeHash: 28F4B6AA
+    Atlas: {fileID: 2800000, guid: af26c0f7ede5aab43a4f16b58f6f8161, type: 3}
+    Normal: {fileID: 2800000, guid: ada9a20d81c9ced43b47c4aead55fe7f, type: 3}
+  - Key: Broadleaf-dead
+    ShapeHash: FCB2A7CE
+    Atlas: {fileID: 2800000, guid: eb92c4ced9728ee4793f20479655db64, type: 3}
+    Normal: {fileID: 2800000, guid: dce17afa10197864a9fa4d59d9ec2a80, type: 3}

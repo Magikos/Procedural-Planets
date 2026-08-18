@@ -23,4 +23,9 @@ public static partial class ShaderGlobalIds
     public const string GrassDebugBladeTint = "_GrassDebugBladeTint";
     public const string GrassDebugLayerColors = "_GrassDebugLayerColors";
     public const string GrassOverlayDebug = "_GrassOverlayDebug";
+
+    // Live grade on the 3D blade tint, applied where the placement compute writes blade.Color. The authored
+    // per-biome Tint stays the source of variation; this only pulls the whole set toward earthier green.
+    public const string GrassBladeSaturation = "_GrassBladeSaturation";
+    public const string GrassBladeBrightness = "_GrassBladeBrightness";
 }
