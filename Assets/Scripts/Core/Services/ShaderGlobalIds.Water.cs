@@ -10,8 +10,17 @@ public static partial class ShaderGlobalIds
     public const string FrozenWaterBodies = "_FrozenWaterBodies";
     public const string PartiallyFrozenWaterBodies = "_PartiallyFrozenWaterBodies";
     public const string LiquidWaterBodies = "_LiquidWaterBodies";
-    public const string WaterWakeCount = "_WaterWakeCount";
-    public const string WaterWakePositions = "_WaterWakePositions";
-    public const string WaterWakeDirections = "_WaterWakeDirections";
-    public const string WaterWakeParams = "_WaterWakeParams";
+
+    // Vertex displacement and the freeze curve are globals, not material properties: Ocean.shader and
+    // WaterVolumePrepass.shader are separate materials that must rasterise the identical surface, and a
+    // per-material copy of any of these silently desynchronises them. Consumed by
+    // Includes/WaterDisplacement.hlsl; published by PlanetWaterSurface from WaterDto.
+    public const string SwellAmplitude = "_SwellAmplitude";
+    public const string SwellWavelength = "_SwellWavelength";
+    public const string WaveSpeed = "_WaveSpeed";
+    public const string FreezingEnabled = "_FreezingEnabled";
+    public const string LakeFreezeStart = "_LakeFreezeStart";
+    public const string LakeFreezeComplete = "_LakeFreezeComplete";
+    public const string OceanFreezeStart = "_OceanFreezeStart";
+    public const string OceanFreezeComplete = "_OceanFreezeComplete";
 }

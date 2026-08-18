@@ -11,6 +11,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     {
         typeof(PlanetDto),
         typeof(BiomeDto),
+        typeof(WaterDto),
         typeof(ScatterLibraryDto),
     };
 
@@ -172,6 +173,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     BiomeSettings GetBiomeSettingsSource() =>
         _recipe != null ? _recipe.BiomeSettingsSource : _planetSettings?.BiomeSettings;
 
+    WaterSettings GetWaterSettingsSource() =>
+        _recipe != null ? _recipe.WaterSettingsSource : _planetSettings?.WaterSettings;
+
     public void RegisterWorldSettings(ISettingsService settings)
     {
         PlanetSettings planetSource = GetPlanetSettingsSource();
@@ -187,6 +191,14 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             settings.Register(_recipe != null ? _recipe.ToPlanetDto() : PlanetDto.From(planetSource));
         if (!settings.IsRegistered<BiomeDto>())
             settings.Register(_recipe != null ? _recipe.ToBiomeDto() : BiomeDto.From(biomeSource));
+        if (!settings.IsRegistered<WaterDto>())
+        {
+            WaterSettings waterSource = GetWaterSettingsSource();
+            if (waterSource == null)
+                throw new System.InvalidOperationException(
+                    "Planet requires a WaterSettings asset on PlanetSettings or PlanetRecipe.");
+            settings.Register(_recipe != null ? _recipe.ToWaterDto() : WaterDto.From(waterSource));
+        }
         if (!settings.IsRegistered<ScatterLibraryDto>())
         {
             var scatterLib = Resources.Load<ScatterLibrary>("Settings/ScatterLibrary");
@@ -393,16 +405,26 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             if (this == null) return;
             _shapeGenerator.CommitElevationRange();
 
-            // Classify small inland water bodies as lakes (LakeMask) before the biome bake + scatter read
-            // it, so lakes biome + scatter differently from the ocean. Pure heightfield sampling, so it runs
-            // off the main thread; self-limiting (only small flood-fill components become lakes).
+            // Identify the water bodies (WaterBodyMap) before the biome bake + scatter read them, so lakes
+            // biome + scatter differently from the ocean. Pure heightfield sampling, so it runs off the main
+            // thread; self-limiting (only small flood-fill components become lakes).
             var lakeGround = new AnalyticGroundSampler(_shapeGenerator);
             float lakeBaseRadius = lakeGround.PlanetRadius;
+            WaterBodyMap.Current = null; // a cancelled generate must not leave the previous world visible
             await Awaitable.BackgroundThreadAsync();
-            LakeMask lakeMask = LakeMask.Build(lakeGround, lakeBaseRadius, BiomeConstants.OceanThreshold);
+            WaterBodyMap waterBodies = WaterBodyMap.Build(lakeGround, lakeBaseRadius, BiomeConstants.OceanThreshold);
             await Awaitable.MainThreadAsync();
             if (this == null) return;
-            LakeMask.Current = lakeMask;
+            WaterBodyMap.Current = waterBodies;
+            if (waterBodies?.Bodies != null)
+            {
+                Logger.Log(LogLevel.Debug, "Planet",
+                    $"Water bodies: {waterBodies.Bodies.CountOf(WaterBodyKind.Lake)} lake(s), " +
+                    $"{waterBodies.Bodies.CountOf(WaterBodyKind.Ocean)} ocean(s), catalog v{waterBodies.Bodies.Version}.");
+                if (waterBodies.SeamAsymmetryCount > 0)
+                    Logger.Log(LogLevel.Warning, "Planet",
+                        $"WaterBodyMap seam adjacency asymmetric in {waterBodies.SeamAsymmetryCount} case(s); a body may split at a cube seam.");
+            }
             long lakeMs = phaseTimer.ElapsedMilliseconds;
             phaseTimer.Restart();
 

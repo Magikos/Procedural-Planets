@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1a77f87c0ac36e479f4e53c8e24ef26, type: 3}
+  m_Name: Water
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::WaterSettings
+  ShallowBaseColor: {r: 0.2, g: 0.76, b: 0.82, a: 1}
+  DeepBaseColor: {r: 0, g: 0.018, b: 0.065, a: 1}
+  FoamColor: {r: 0.88, g: 0.98, b: 0.94, a: 0.9}
+  ReferenceRadius: 5000
+  ShallowDepth: 28
+  DeepDepth: 360
+  ShoreFoamDepth: 32
+  ShoreRange: 125
+  WaveAmplitude: 3.4
+  WaveScale: 480
+  WaveSpeed: 0.58
+  WaveNormalStrength: 4.5
+  SwellAmplitude: 5
+  SwellWavelength: 90
+  MotionStrength: 0.24
+  SunGlitterIntensity: 1.45
+  SunGlitterPower: 1400
+  ShoreFoamIntensity: 1
+  WhitecapIntensity: 1.08
+  Alpha: 0.36
+  ShallowColorBlend: 0.68
+  DeepColorBlend: 0.88
+  ShallowAlphaFactor: 0.14
+  ShallowAlphaMin: 0.1
+  DeepAlphaMin: 0.96
+  LakeFreezeStartTemperature01: 0.36
+  LakeFreezeCompleteTemperature01: 0.26
+  OceanFreezeStartTemperature01: 0.2
+  OceanFreezeCompleteTemperature01: 0.1
+  IceOpacity: 0.88
+  IceRoughness: 0.72
+  IceNormalStrength: 0.35
+  IceBreakupScale: 95
+  RefractionStrength: 0.3
+  CausticIntensity: 0.42
+  CausticDepth: 115
+  CausticContrast: 1.35
+  CausticPrismStrength: 0.46

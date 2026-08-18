@@ -42,4 +42,7 @@ public class PlanetSettings : ScriptableObject
     [Header("Biomes")]
     public BiomeSettings BiomeSettings;
     public Material PlanetMaterial;
+
+    [Header("Water")]
+    public WaterSettings WaterSettings;
 }

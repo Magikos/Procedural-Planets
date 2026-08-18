@@ -294,8 +294,8 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
 
     BiomeResult ResolveBiome(Vector3 pointOnUnitSphere, ClimateSample climate)
     {
-        // Lake override (same LakeMask the terrain bake reads, so scatter membership matches the map).
-        byte lakeState = LakeMask.Current != null ? LakeMask.Current.Sample(pointOnUnitSphere) : (byte)0;
+        // Lake override (same WaterBodyMap the terrain bake reads, so scatter membership matches the map).
+        byte lakeState = WaterBodyMap.Current != null ? WaterBodyMap.Current.Sample(pointOnUnitSphere) : (byte)0;
 
         if (_biomeAssignmentField == null)
         {

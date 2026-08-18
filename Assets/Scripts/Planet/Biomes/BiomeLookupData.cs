@@ -81,7 +81,7 @@ public static class BiomeLookupEvaluator
             ? Min(elevationBlend, beachWidth * 0.5f)
             : 0f;
 
-        // Lake override (LakeMask): a small below-water body -> Lake (blends to LakeShore at the edge like
+        // Lake override (WaterBodyMap): a small below-water body -> Lake (blends to LakeShore at the edge like
         // Ocean blends to Beach); its dry shore ring -> LakeShore (blends into the surrounding land). Gated
         // on the elevation side so a mask-resolution mismatch can't put lake water on dry land or vice versa.
         if (lakeState == 1 && elevation < BiomeConstants.OceanThreshold)

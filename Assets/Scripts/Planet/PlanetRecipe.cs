@@ -5,11 +5,17 @@ public class PlanetRecipe : ScriptableObject
 {
     public PlanetSettings PlanetSettings;
     public BiomeSettings BiomeSettings;
+    public WaterSettings WaterSettings;
     public DiagnosticGridBiomeLayout DiagnosticGridBiomeLayout;
     public DiagnosticTerrainLayout DiagnosticTerrainLayout;
 
     public BiomeSettings BiomeSettingsSource =>
         BiomeSettings != null ? BiomeSettings : PlanetSettings != null ? PlanetSettings.BiomeSettings : null;
+
+    public WaterSettings WaterSettingsSource =>
+        WaterSettings != null ? WaterSettings : PlanetSettings != null ? PlanetSettings.WaterSettings : null;
+
+    public WaterDto ToWaterDto() => WaterDto.From(WaterSettingsSource);
 
     public PlanetDto ToPlanetDto()
     {

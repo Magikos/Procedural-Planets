@@ -11,24 +11,14 @@ Shader "Planet/Ocean"
         _ShoreFoamSoftness ("Shore Range", Range(1, 300)) = 125
         _WaveAmplitude ("Wave Amplitude", Range(0, 12)) = 3.4
         _WaveScale ("Wave Scale", Range(50, 2000)) = 480
-        _WaveSpeed ("Wave Speed", Range(0, 4)) = 0.58
         _WaveNormalStrength ("Wave Normal Strength", Range(0, 16)) = 4.5
-        _SwellAmplitude ("Swell Amplitude (vertex, m)", Range(0, 20)) = 5.0
-        _SwellWavelength ("Swell Wavelength (vertex, m)", Range(40, 600)) = 90
         _WaterMotionStrength ("Water Motion Strength", Range(0, 1)) = 0.24
         _SunGlitterIntensity ("Sun Glitter Intensity", Range(0, 4)) = 0.75
         _SunGlitterPower ("Sun Glitter Power", Range(64, 4096)) = 1400
         _ShoreFoamIntensity ("Shore Foam Intensity", Range(0, 3)) = 1
         _WhitecapIntensity ("Whitecap Intensity", Range(0, 3)) = 1
-        _WakeFoamIntensity ("Wake Foam Intensity", Range(0, 4)) = 1
-        _WakeNormalStrength ("Wake Normal Strength", Range(0, 4)) = 1
         _OceanFocusMode ("Ocean Focus Mode", Range(0, 1)) = 1
         _Alpha ("Alpha", Range(0, 1)) = 0.9
-        _FreezingEnabled ("Freezing Enabled", Range(0, 1)) = 1
-        _LakeFreezeStart ("Lake Freeze Start", Range(0, 1)) = 0.36
-        _LakeFreezeComplete ("Lake Freeze Complete", Range(0, 1)) = 0.26
-        _OceanFreezeStart ("Ocean Freeze Start", Range(0, 1)) = 0.20
-        _OceanFreezeComplete ("Ocean Freeze Complete", Range(0, 1)) = 0.10
         _IceTint ("Ice Tint", Color) = (0.62, 0.82, 0.88, 1)
         _IceOpacity ("Ice Opacity", Range(0, 1)) = 0.88
         _IceRoughness ("Ice Roughness", Range(0, 1)) = 0.72
@@ -67,6 +57,7 @@ Shader "Planet/Ocean"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Includes/DebugModes.hlsl"
             #include "Includes/CloudShadows.hlsl"
+            #include "Includes/WaterDisplacement.hlsl"
 
             #define FORCE_WATER_LAYER_PROOF 0
             #define SHOW_SURFACE_IN_OFF 1
@@ -97,24 +88,14 @@ Shader "Planet/Ocean"
                 float _ShoreFoamSoftness;
                 float _WaveAmplitude;
                 float _WaveScale;
-                float _WaveSpeed;
                 float _WaveNormalStrength;
-                float _SwellAmplitude;
-                float _SwellWavelength;
                 float _WaterMotionStrength;
                 float _SunGlitterIntensity;
                 float _SunGlitterPower;
                 float _ShoreFoamIntensity;
                 float _WhitecapIntensity;
-                float _WakeFoamIntensity;
-                float _WakeNormalStrength;
                 float _OceanFocusMode;
                 float _Alpha;
-                float _FreezingEnabled;
-                float _LakeFreezeStart;
-                float _LakeFreezeComplete;
-                float _OceanFreezeStart;
-                float _OceanFreezeComplete;
                 float4 _IceTint;
                 float _IceOpacity;
                 float _IceRoughness;
@@ -122,7 +103,7 @@ Shader "Planet/Ocean"
                 float _IceBreakupScale;
             CBUFFER_END
 
-            float3 _PlanetCenter;
+
             float3 _SunParams;
             float _NightAmbientIntensity;
             int _OceanDebugMode;
@@ -158,17 +139,7 @@ Shader "Planet/Ocean"
                 float iceContribution;
             };
 
-            float3 SafeNormalize(float3 value, float3 fallback)
-            {
-                float lenSq = dot(value, value);
-                return lenSq > 0.000001 ? value * rsqrt(lenSq) : fallback;
-            }
 
-            float2 SafeNormalize2(float2 value, float2 fallback)
-            {
-                float lenSq = dot(value, value);
-                return lenSq > 0.000001 ? value * rsqrt(lenSq) : fallback;
-            }
 
             float Luminance3(float3 color)
             {
@@ -199,29 +170,7 @@ Shader "Planet/Ocean"
                 tangentB = SafeNormalize(cross(normalWS, tangentA), float3(0.0, 0.0, 1.0));
             }
 
-            void BuildPlanetWaveAxes(out float3 axisA, out float3 axisB)
-            {
-                float3 windWS = SafeNormalize(_WindDirection, float3(1.0, 0.0, 0.0));
-                float3 referenceAxis = abs(dot(windWS, float3(0.0, 1.0, 0.0))) < 0.92
-                    ? float3(0.0, 1.0, 0.0)
-                    : float3(0.0, 0.0, 1.0);
 
-                axisA = windWS;
-                axisB = SafeNormalize(cross(referenceAxis, axisA), float3(0.0, 0.0, 1.0));
-            }
-
-            // Single source of truth for the swell-energy gating components.
-            // Used by ComputeOceanSwell AND the WaveEnergy debug view; they MUST stay in sync.
-            // openWater01: 0 in ponds, 1 in open ocean (gates pond-vs-ocean amplitude).
-            // deepWater01: 0 in shore shallows, 1 in deeper water (gates how far swell reaches in).
-            // shoreFade  : 0 right at the coastline, 1 outside a thin calm band.
-            void EvaluateSwellGating(float depth01, float shore01, float body01,
-                out float openWater01, out float deepWater01, out float shoreFade)
-            {
-                openWater01 = smoothstep(0.30, 0.85, body01);
-                deepWater01 = smoothstep(0.003, 0.035, depth01); // was 0.015..0.16 - killed visible swell in shore-adjacent water
-                shoreFade   = smoothstep(0.005, 0.040, shore01); // was 0.015..0.16 - narrowed coastal calm band
-            }
 
             float SampleOceanStorm(float3 normalWS, float3 tangentA, float3 tangentB)
             {
@@ -241,15 +190,6 @@ Shader "Planet/Ocean"
                 return smoothstep(0.08, 0.92, saturate(storm));
             }
 
-            float EvaluateSurfaceWave(float2 positionTS, float2 directionTS, float wavelength, float speed, float amplitude, float phase, out float2 gradientTS)
-            {
-                float k = 6.28318530718 / max(wavelength, 0.001);
-                float theta = dot(positionTS, directionTS) * k + _GameTime * speed + phase;
-                float waveSin = sin(theta);
-                float waveCos = cos(theta);
-                gradientTS = directionTS * (waveCos * amplitude * k);
-                return waveSin * amplitude;
-            }
 
             float Hash21(float2 value)
             {
@@ -285,15 +225,6 @@ Shader "Planet/Ocean"
                 return saturate(lerp(fine, coarse, 0.42));
             }
 
-            float EvaluateFreezeFactor(float temperature01, float body01)
-            {
-                float start = lerp(_LakeFreezeStart, _OceanFreezeStart, body01);
-                float complete = lerp(_LakeFreezeComplete, _OceanFreezeComplete, body01);
-                float cold = min(start, complete);
-                float warm = max(start, complete);
-                float freeze = 1.0 - smoothstep(cold, max(warm, cold + 0.0001), temperature01);
-                return saturate(freeze * _FreezingEnabled);
-            }
 
             float EvaluateIceContribution(float3 positionWS, float3 normalWS, float freezeFactor)
             {
@@ -426,14 +357,22 @@ Shader "Planet/Ocean"
                 float openWater01 = smoothstep(0.42, 0.88, body01);
                 float deepWater01 = smoothstep(0.035, 0.22, depth01);
                 float weatherEnergy = saturate(wind01 * 0.92 + openWater01 * 0.08);
-                float lakeWind01 = smoothstep(0.34, 0.88, wind01);
-                float lakeEnergy = lerp(0.035, 0.50, lakeWind01) * lerp(0.18, 1.0, deepWater01);
+                // A pond ripples in the faintest breeze. The old smoothstep(0.34, 0.88) returned 0 for
+                // any normal wind (0.10 typical), pinning lakes to the 0.035 floor - which works out to
+                // roughly a millimetre of detail amplitude, i.e. a dead mirror.
+                float lakeWind01 = smoothstep(0.02, 0.55, wind01);
+                float lakeEnergy = lerp(0.16, 0.60, lakeWind01) * lerp(0.35, 1.0, deepWater01);
                 float oceanEnergy = lerp(0.48, 1.0, deepWater01) * lerp(0.80, 1.20, weatherEnergy);
                 waveEnergy = saturate(lerp(lakeEnergy, oceanEnergy, openWater01));
                 float chaos01 = saturate(wind01 * lerp(0.36, 0.86, openWater01) + openWater01 * 0.10);
 
-                float scale = max(_WaveScale, 12.0);
-                float amplitude = max(_WaveAmplitude, 0.0);
+                // Feature size must follow body size: 480 m detail on a ~350 m pond is a handful of
+                // features across the whole thing. Amplitude scales with it so wave STEEPNESS
+                // (amplitude/wavelength) stays constant - shortening wavelength alone multiplies slope
+                // by the same factor and the surface reads as crumpled foil rather than water.
+                float bodyWaveScale = lerp(0.10, 1.0, openWater01);
+                float scale = max(_WaveScale, 12.0) * bodyWaveScale;
+                float amplitude = max(_WaveAmplitude, 0.0) * bodyWaveScale;
                 float timeScale = max(_WaveSpeed, 0.001);
                 float waveTime = _GameTime * timeScale;
                 float2 warpDirA = SafeNormalize2(windTS * 0.21 + crossTS * 0.98, crossTS);
@@ -577,10 +516,24 @@ Shader "Planet/Ocean"
                     || (_OceanDebugMode >= DEBUG_VOLUME_SPHERE && _OceanDebugMode <= DEBUG_SEA_SOURCE_MATTE)
                     || _OceanDebugMode == DEBUG_VOLUME_AFTER_ATMOSPHERE
                     || (_OceanDebugMode >= DEBUG_VOLUME_CONTRIBUTION && _OceanDebugMode <= DEBUG_PRECIPITATION_CONTRIBUTION)
-                    || (_OceanDebugMode >= DEBUG_VOLUME_LIP_PINK && _OceanDebugMode <= DEBUG_VOLUME_LIP_DEPTH_GATE)
-                    || _OceanDebugMode == DEBUG_VOLUME_LIP_SCENE_PINK
                     || (_OceanDebugMode >= DEBUG_CAUSTICS_ONLY && _OceanDebugMode <= DEBUG_CAUSTICS_PRISM)
                     || (_OceanDebugMode >= DEBUG_TERRAIN_COAST_MASK && _OceanDebugMode <= DEBUG_TERRAIN_OVERRIDE_COMPOSITE);
+            }
+
+            // Sky colour along the reflected ray. The previous constant could never match the real
+            // sky, so grazing water read as flat paint against a warm horizon. Collapses to the
+            // night constant at daylight 0 - the distant-water night floor below depends on that.
+            float3 EvaluateSkyReflection(float3 reflectDir, float3 upWS, float3 sunDir, float daylight)
+            {
+                float upness = saturate(dot(reflectDir, upWS));
+                float sunAlign = saturate(dot(reflectDir, sunDir));
+                // Palette tracks the sky this atmosphere actually renders: teal above, warm gold near
+                // the horizon. A neutral-grey horizon reflects as wet sand, not water.
+                float3 zenithColor = float3(0.26, 0.44, 0.60);
+                float3 horizonColor = float3(0.62, 0.60, 0.46);
+                float3 dayColor = lerp(horizonColor, zenithColor, pow(upness, 0.55));
+                dayColor += float3(0.40, 0.26, 0.09) * pow(sunAlign, 8.0) * 0.60;
+                return lerp(float3(0.010, 0.018, 0.030), dayColor, daylight);
             }
 
             SurfaceLayer ComputeSurfaceLayer(
@@ -589,13 +542,20 @@ Shader "Planet/Ocean"
                 float depth01,
                 float shore01,
                 float body01,
-                float waterTemperature01)
+                float waterTemperature01,
+                float2 screenUV)
             {
                 SurfaceLayer layer;
 
                 float3 waterData = float3(depth01, shore01, body01);
+                // fwidth is a SCREEN-space derivative used to detect a WORLD-space data problem, so it
+                // saturates wherever a triangle compresses to few pixels - i.e. everywhere at grazing
+                // angles - and the old 0.22 floor then cut glint by 78% along those bands. That read as
+                // hard-edged blotches on the surface, worse than the vertex-colour seams it guards
+                // against. Fires only on strong discontinuities now, and suppresses gently.
+                // Root cause remains the vertex-colour packing in WaterMeshBuilder.
                 float dataEdge = saturate(length(fwidth(waterData)) * 16.0);
-                float dataContinuity = lerp(1.0, 0.22, smoothstep(0.16, 0.86, dataEdge));
+                float dataContinuity = lerp(1.0, 0.78, smoothstep(0.35, 1.0, dataEdge));
                 float depthBlend = SurfaceDepthBlend(depth01);
                 float shoreVisibility = smoothstep(0.018, 0.18, shore01);
                 float bodyVisibility = lerp(0.45, 1.0, body01);
@@ -659,11 +619,15 @@ Shader "Planet/Ocean"
                 float lightAmount = lerp(nightLight, dayLight, daylight);
                 lightAmount *= lerp(1.0, shadow, daylight * 0.45);
 
-                float3 skyReflection = lerp(float3(0.010, 0.018, 0.030), float3(0.38, 0.58, 0.76), daylight);
+                float3 reflectDir = reflect(-viewDir, rippleNormalWS);
+                float3 skyReflection = EvaluateSkyReflection(reflectDir, normalWS, sunDir, daylight);
+
                 float3 litColor = waterColor * lightAmount;
-                // Lakes reflect far less sky than the ocean (body01 -> 0), so the murky green shows instead
-                // of a grazing-angle blue mirror.
-                float reflectionBlend = fresnel * lerp(0.08, 0.38, daylight) * lerp(0.08, 1.0, body01);
+                // Reflection needs true Schlick (F0 0.02, ^5). The shared `fresnel` above uses ^3.2 for
+                // the alpha/glint paths, which is far broader - reusing it here reflects mid-angles as
+                // hard as grazing ones and washes the body colour out entirely.
+                float reflectFresnel = 0.02 + 0.98 * pow(1.0 - viewFacing, 5.0);
+                float reflectionBlend = reflectFresnel * lerp(0.08, 0.72, daylight) * lerp(0.45, 1.0, body01);
                 float rippleContrast = (rippleSignal - 0.5) * 2.0;
                 float waveShade = clamp(signedWaveHeight * 0.055 + rippleContrast * 0.072 + (rippleSun - saturate(localSun)) * 0.15, -0.12, 0.16);
                 litColor *= 1.0 + waveShade * daylight * lerp(0.50, 1.0, body01);
@@ -674,8 +638,11 @@ Shader "Planet/Ocean"
                 // open ocean (where surfacePathBlend ~ 1) stayed ~half-lit at night = the dark-side glow.
                 float farLight = lerp(nightLight, 0.76, daylight);
                 float3 farBase = farWaterColor * farLight;
-                float3 farGraze = skyReflection * lerp(0.02, 0.10, body01) + farWaterColor * lerp(nightLight, 0.90, daylight);
-                float3 farSurfaceColor = lerp(farBase, farGraze, fresnel * lerp(0.18, 0.55, body01));
+                // Lerp rather than sum, so raising the sky share cannot blow out the body colour and
+                // daylight 0 still collapses farGraze to the same night floor as farBase.
+                float3 farBody = farWaterColor * lerp(nightLight, 0.90, daylight);
+                float3 farGraze = lerp(farBody, skyReflection, lerp(0.35, 0.72, body01) * daylight);
+                float3 farSurfaceColor = lerp(farBase, farGraze, saturate(reflectFresnel * lerp(0.55, 0.85, body01)));
                 float surfacePathBlend = smoothstep(0.10, 0.76, viewPath) * lerp(0.62, 0.98, body01);
                 layer.color = lerp(baseSurfaceColor, farSurfaceColor, surfacePathBlend);
                 layer.nearColor = baseSurfaceColor;
@@ -747,53 +714,9 @@ Shader "Planet/Ocean"
                 return layer;
             }
 
-            // Large-swell vertex displacement: pushes the existing ocean mesh out along the planet
-            // normal by a summed-wave height (Lague-style radial displacement), so the WHOLE ocean has
-            // real 3D waves — world-fixed, not a camera patch. Reuses EvaluateSurfaceWave so the
-            // displaced geometry stays coherent with the fragment detail. Calms near shore and scales
-            // with body size: small ponds get short, low ripples; open ocean gets large swell.
-            // (This is the geometric layer of the GPU Gems two-layer model; fragment normals add detail.)
-            void ComputeOceanSwell(float3 positionWS, float3 planetNormal, float depth01, float shore01, float body01,
-                out float swellHeight, out float3 swellNormal)
-            {
-                swellHeight = 0.0;
-                swellNormal = planetNormal;
-
-                float openWater01, deepWater01, shoreFade;
-                EvaluateSwellGating(depth01, shore01, body01, openWater01, deepWater01, shoreFade);
-                float wind01 = _WindStrength01;
-                float energy = saturate(0.5 + wind01 * 0.5) * deepWater01 * shoreFade;
-                if (energy <= 0.001)
-                    return;
-
-                float3 localPosition = positionWS - _PlanetCenter;
-                float3 waveAxisA;
-                float3 waveAxisB;
-                BuildPlanetWaveAxes(waveAxisA, waveAxisB);
-                float2 positionTS = float2(dot(localPosition, waveAxisA), dot(localPosition, waveAxisB));
-
-                float2 windTS = float2(1.0, 0.0);
-                float2 crossTS = float2(0.0, 1.0);
-                float wavelength = max(_SwellWavelength, 24.0) * lerp(0.42, 1.0, openWater01);
-                // Pond floor 0.10 (was 0.18): ponds get visibly smaller waves than open ocean.
-                float amplitude = max(_SwellAmplitude, 0.0) * lerp(0.10, 1.0, openWater01) * energy;
-                float timeScale = max(_WaveSpeed, 0.001);
-
-                float2 gradientTS = float2(0.0, 0.0);
-                float2 g;
-                float height = 0.0;
-                height += EvaluateSurfaceWave(positionTS, windTS, wavelength, timeScale * 0.5, amplitude * 0.58, 0.00, g); gradientTS += g;
-                height += EvaluateSurfaceWave(positionTS, SafeNormalize2(windTS * 0.78 + crossTS * 0.45, windTS), wavelength * 0.68, timeScale * -0.62, amplitude * 0.30, 1.70, g); gradientTS += g;
-                height += EvaluateSurfaceWave(positionTS, SafeNormalize2(windTS * 0.40 - crossTS * 0.74, windTS), wavelength * 0.46, timeScale * 0.78, amplitude * 0.16, 3.10, g); gradientTS += g;
-
-                swellHeight = height;
-
-                // Surface normal from the height gradient, projected into the local tangent plane.
-                float3 slopeWS = waveAxisA * gradientTS.x + waveAxisB * gradientTS.y;
-                slopeWS = slopeWS - planetNormal * dot(slopeWS, planetNormal);
-                swellNormal = SafeNormalize(planetNormal - slopeWS, planetNormal);
-            }
-
+            // Large-swell vertex displacement lives in Includes/WaterDisplacement.hlsl so the volume
+            // prepass rasterises the identical surface. This is the geometric layer of the GPU Gems
+            // two-layer model; the fragment stage adds detail normals on top of it.
             Varyings vert(Attributes input)
             {
                 Varyings output;
@@ -802,14 +725,9 @@ Shader "Planet/Ocean"
                 float3 planetNormalWS = SafeNormalize(positionWS - _PlanetCenter, objectNormalWS);
 
                 float4 waterData = saturate(input.color);
-                float freezeFactor = EvaluateFreezeFactor(waterData.a, waterData.b);
                 float swellHeight;
                 float3 swellNormal;
-                ComputeOceanSwell(positionWS, planetNormalWS, waterData.r, waterData.g, waterData.b, swellHeight, swellNormal);
-                float liquidContribution = 1.0 - freezeFactor;
-                swellHeight *= liquidContribution;
-                swellNormal = SafeNormalize(lerp(planetNormalWS, swellNormal, liquidContribution), planetNormalWS);
-                positionWS += planetNormalWS * swellHeight; // radial displacement → real 3D waves on the mesh
+                positionWS = ComputeWaterVertexDisplacement(positionWS, planetNormalWS, waterData, swellNormal, swellHeight);
 
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.positionWS = positionWS;
@@ -841,7 +759,8 @@ Shader "Planet/Ocean"
                     depth01,
                     shore01,
                     body01,
-                    waterTemperature01);
+                    waterTemperature01,
+                    input.positionCS.xy / max(_ScaledScreenParams.xy, float2(1.0, 1.0)));
 
                 if (_OceanDebugMode == DEBUG_WATER_DEPTH)
                     return half4(lerp(float3(0.55, 1.0, 0.92), float3(0.0, 0.025, 0.16), layer.depthBlend), 1.0);

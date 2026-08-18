@@ -78,15 +78,8 @@ public static class DebugModeConstants
     public const int AtmosphereContribution = 44;
     public const int PrecipitationContribution = 45;
 
-    // Water Volume: Lip
-    public const int VolumeLipPink = 46;
-    public const int VolumeLipRawPink = 47;
-    public const int VolumeLipDepthGate = 48;
-
     // Water Surface: Backface / polish / isolation
     public const int SurfaceBackfacePink = 49;
-    public const int VolumeLipScenePink = 50;
-    public const int WakeMask = 51;
     public const int SurfacePolish = 52;
     public const int SurfaceRawOpaque = 53;
     public const int SurfaceFxContrib = 54;
@@ -181,7 +174,7 @@ public static class DebugModeConstants
             || mode == WaterOff
             || mode == FoamPink
             || mode == SurfaceBackfacePink
-            || (mode >= WakeMask && mode <= SurfaceFxProof)
+            || (mode >= SurfacePolish && mode <= SurfaceFxProof)
             || (mode >= CausticsOnly && mode <= CausticsPrism)
             || mode == SurfaceNightTerms
             || mode == SurfaceLumaHeat

@@ -40,24 +40,21 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
     static readonly int _oceanFocusModeId = Shader.PropertyToID(ShaderGlobalIds.OceanFocusMode);
     static readonly int _waveAmplitudeId = Shader.PropertyToID("_WaveAmplitude");
     static readonly int _waveScaleId = Shader.PropertyToID("_WaveScale");
-    static readonly int _waveSpeedId = Shader.PropertyToID("_WaveSpeed");
+    static readonly int _waveSpeedId = Shader.PropertyToID(ShaderGlobalIds.WaveSpeed);
     static readonly int _waveNormalStrengthId = Shader.PropertyToID("_WaveNormalStrength");
     static readonly int _waterMotionStrengthId = Shader.PropertyToID("_WaterMotionStrength");
     static readonly int _sunGlitterIntensityId = Shader.PropertyToID("_SunGlitterIntensity");
     static readonly int _shoreFoamIntensityId = Shader.PropertyToID("_ShoreFoamIntensity");
     static readonly int _whitecapIntensityId = Shader.PropertyToID("_WhitecapIntensity");
-    static readonly int _wakeFoamIntensityId = Shader.PropertyToID("_WakeFoamIntensity");
-    static readonly int _wakeNormalStrengthId = Shader.PropertyToID("_WakeNormalStrength");
-    static readonly int _waterWakeCountId = Shader.PropertyToID(ShaderGlobalIds.WaterWakeCount);
     static readonly int _shallowDepthId = Shader.PropertyToID("_ShallowDepth");
     static readonly int _deepDepthId = Shader.PropertyToID("_DeepDepth");
     static readonly int _shoreFoamDepthId = Shader.PropertyToID("_ShoreFoamDepth");
     static readonly int _shoreFoamSoftnessId = Shader.PropertyToID("_ShoreFoamSoftness");
-    static readonly int _freezingEnabledId = Shader.PropertyToID("_FreezingEnabled");
-    static readonly int _lakeFreezeStartId = Shader.PropertyToID("_LakeFreezeStart");
-    static readonly int _lakeFreezeCompleteId = Shader.PropertyToID("_LakeFreezeComplete");
-    static readonly int _oceanFreezeStartId = Shader.PropertyToID("_OceanFreezeStart");
-    static readonly int _oceanFreezeCompleteId = Shader.PropertyToID("_OceanFreezeComplete");
+    static readonly int _freezingEnabledId = Shader.PropertyToID(ShaderGlobalIds.FreezingEnabled);
+    static readonly int _lakeFreezeStartId = Shader.PropertyToID(ShaderGlobalIds.LakeFreezeStart);
+    static readonly int _lakeFreezeCompleteId = Shader.PropertyToID(ShaderGlobalIds.LakeFreezeComplete);
+    static readonly int _oceanFreezeStartId = Shader.PropertyToID(ShaderGlobalIds.OceanFreezeStart);
+    static readonly int _oceanFreezeCompleteId = Shader.PropertyToID(ShaderGlobalIds.OceanFreezeComplete);
     static readonly int _frozenWaterBodiesId = Shader.PropertyToID(ShaderGlobalIds.FrozenWaterBodies);
     static readonly int _partiallyFrozenWaterBodiesId = Shader.PropertyToID(ShaderGlobalIds.PartiallyFrozenWaterBodies);
     static readonly int _liquidWaterBodiesId = Shader.PropertyToID(ShaderGlobalIds.LiquidWaterBodies);
@@ -108,13 +105,13 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         Material mat = waterRenderer.sharedMaterial;
         sb.AppendLine($"Shader: {(mat != null && mat.shader != null ? mat.shader.name : "missing")}");
         sb.AppendLine($"Focus: ocean={GetMaterialFloat(mat, _oceanFocusModeId):F2}, waterGlobal={Shader.GetGlobalFloat(_waterFocusModeId):F2}, debug={state.CurrentModeId}:{state.CurrentModeName}");
-        sb.AppendLine($"Wave: amp={GetMaterialFloat(mat, _waveAmplitudeId):F2}, scale={GetMaterialFloat(mat, _waveScaleId):F2}, speed={GetMaterialFloat(mat, _waveSpeedId):F2}, normal={GetMaterialFloat(mat, _waveNormalStrengthId):F2}, motion={GetMaterialFloat(mat, _waterMotionStrengthId):F2}, shimmer={GetMaterialFloat(mat, _sunGlitterIntensityId):F2}");
-        sb.AppendLine($"SurfaceFx: shoreFoam={GetMaterialFloat(mat, _shoreFoamIntensityId):F2}, whitecaps={GetMaterialFloat(mat, _whitecapIntensityId):F2}, wakeFoam={GetMaterialFloat(mat, _wakeFoamIntensityId):F2}, wakeNormal={GetMaterialFloat(mat, _wakeNormalStrengthId):F2}, wakeSources={Shader.GetGlobalInt(_waterWakeCountId)}");
+        sb.AppendLine($"Wave: amp={GetMaterialFloat(mat, _waveAmplitudeId):F2}, scale={GetMaterialFloat(mat, _waveScaleId):F2}, speed={Shader.GetGlobalFloat(_waveSpeedId):F2}, normal={GetMaterialFloat(mat, _waveNormalStrengthId):F2}, motion={GetMaterialFloat(mat, _waterMotionStrengthId):F2}, shimmer={GetMaterialFloat(mat, _sunGlitterIntensityId):F2}");
+        sb.AppendLine($"SurfaceFx: shoreFoam={GetMaterialFloat(mat, _shoreFoamIntensityId):F2}, whitecaps={GetMaterialFloat(mat, _whitecapIntensityId):F2}");
         sb.AppendLine($"DepthFoam: shallow={GetMaterialFloat(mat, _shallowDepthId):F2}, deep={GetMaterialFloat(mat, _deepDepthId):F2}, foamWidth={GetMaterialFloat(mat, _shoreFoamDepthId):F2}, shoreRange={GetMaterialFloat(mat, _shoreFoamSoftnessId):F2}");
         sb.AppendLine(
-            $"FrozenWater: enabled={GetMaterialFloat(mat, _freezingEnabledId) > 0.5f}, " +
-            $"lake={GetMaterialFloat(mat, _lakeFreezeCompleteId):F3}-{GetMaterialFloat(mat, _lakeFreezeStartId):F3}, " +
-            $"ocean={GetMaterialFloat(mat, _oceanFreezeCompleteId):F3}-{GetMaterialFloat(mat, _oceanFreezeStartId):F3}, " +
+            $"FrozenWater: enabled={Shader.GetGlobalFloat(_freezingEnabledId) > 0.5f}, " +
+            $"lake={Shader.GetGlobalFloat(_lakeFreezeCompleteId):F3}-{Shader.GetGlobalFloat(_lakeFreezeStartId):F3}, " +
+            $"ocean={Shader.GetGlobalFloat(_oceanFreezeCompleteId):F3}-{Shader.GetGlobalFloat(_oceanFreezeStartId):F3}, " +
             $"bodies frozen/partial/liquid={Shader.GetGlobalInt(_frozenWaterBodiesId)}/" +
             $"{Shader.GetGlobalInt(_partiallyFrozenWaterBodiesId)}/{Shader.GetGlobalInt(_liquidWaterBodiesId)}");
 
@@ -135,23 +132,6 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
             && WaterMeshAnalysis.TryAnalyzeMeshIntegrity(waterFilter.sharedMesh, waterFilter.transform, cameraContext.PlanetCenter, cameraContext.SeaLevelRadius, out MeshIntegrityStats waterIntegrity))
         {
             sb.AppendLine($"MeshIntegrity: degTris={waterIntegrity.DegenerateTriangles}, boundaryEdges={waterIntegrity.BoundaryEdges}, nonManifoldEdges={waterIntegrity.NonManifoldEdges}, openEdgeVerts={waterIntegrity.OpenEdgeVertices}, seaRadErrAvgM={waterIntegrity.RadiusErrorAvgMeters:F3}, seaRadErrMaxM={waterIntegrity.RadiusErrorMaxMeters:F3}");
-        }
-
-        MeshFilter volumeLipFilter = GetWaterVolumeLipFilter(waterRenderer);
-        Mesh volumeLipMesh = volumeLipFilter != null ? volumeLipFilter.sharedMesh : null;
-        if (volumeLipMesh != null)
-        {
-            int volumeLipTriangles = volumeLipMesh.subMeshCount > 0 ? (int)(volumeLipMesh.GetIndexCount(0) / 3) : 0;
-            sb.AppendLine($"VolumeLipMesh: active={volumeLipFilter.gameObject.activeInHierarchy}, verts={volumeLipMesh.vertexCount}, tris={volumeLipTriangles}");
-            if (state.IncludeHeavyDiagnostics && cameraContext != null
-                && WaterMeshAnalysis.TryAnalyzeMeshIntegrity(volumeLipMesh, volumeLipFilter.transform, cameraContext.PlanetCenter, cameraContext.SeaLevelRadius, out MeshIntegrityStats lipIntegrity))
-            {
-                sb.AppendLine($"VolumeLipIntegrity: degTris={lipIntegrity.DegenerateTriangles}, boundaryEdges={lipIntegrity.BoundaryEdges}, nonManifoldEdges={lipIntegrity.NonManifoldEdges}, openEdgeVerts={lipIntegrity.OpenEdgeVertices}, seaRadErrAvgM={lipIntegrity.RadiusErrorAvgMeters:F3}, seaRadErrMaxM={lipIntegrity.RadiusErrorMaxMeters:F3}");
-            }
-        }
-        else
-        {
-            sb.AppendLine("VolumeLipMesh: missing");
         }
 
         sb.AppendLine($"DataRanges: depth={s.DepthMin:F3}-{s.DepthMax:F3} avg={s.DepthAvg:F3}, shore={s.ShoreMin:F3}-{s.ShoreMax:F3} avg={s.ShoreAvg:F3}, body={s.BodyMin:F3}-{s.BodyMax:F3} avg={s.BodyAvg:F3}, temp={s.TemperatureMin:F3}-{s.TemperatureMax:F3} avg={s.TemperatureAvg:F3}");
@@ -190,8 +170,8 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         Material mat = waterRenderer.sharedMaterial;
         GUILayout.Label($"Shader: {(mat != null && mat.shader != null ? mat.shader.name : "missing")}");
         GUILayout.Label($"Focus: ocean={GetMaterialFloat(mat, _oceanFocusModeId):F1}, waterGlobal={Shader.GetGlobalFloat(_waterFocusModeId):F1}, debug={state.CurrentModeId}:{state.CurrentModeName}");
-        GUILayout.Label($"Wave: amp={GetMaterialFloat(mat, _waveAmplitudeId):F2}, scale={GetMaterialFloat(mat, _waveScaleId):F1}, speed={GetMaterialFloat(mat, _waveSpeedId):F2}, normal={GetMaterialFloat(mat, _waveNormalStrengthId):F2}, motion={GetMaterialFloat(mat, _waterMotionStrengthId):F2}, shimmer={GetMaterialFloat(mat, _sunGlitterIntensityId):F2}");
-        GUILayout.Label($"SurfaceFx: shoreFoam={GetMaterialFloat(mat, _shoreFoamIntensityId):F2}, whitecaps={GetMaterialFloat(mat, _whitecapIntensityId):F2}, wakeFoam={GetMaterialFloat(mat, _wakeFoamIntensityId):F2}, wakeSources={Shader.GetGlobalInt(_waterWakeCountId)}");
+        GUILayout.Label($"Wave: amp={GetMaterialFloat(mat, _waveAmplitudeId):F2}, scale={GetMaterialFloat(mat, _waveScaleId):F1}, speed={Shader.GetGlobalFloat(_waveSpeedId):F2}, normal={GetMaterialFloat(mat, _waveNormalStrengthId):F2}, motion={GetMaterialFloat(mat, _waterMotionStrengthId):F2}, shimmer={GetMaterialFloat(mat, _sunGlitterIntensityId):F2}");
+        GUILayout.Label($"SurfaceFx: shoreFoam={GetMaterialFloat(mat, _shoreFoamIntensityId):F2}, whitecaps={GetMaterialFloat(mat, _whitecapIntensityId):F2}");
         GUILayout.Label($"Depth/Foam: shallow={GetMaterialFloat(mat, _shallowDepthId):F1}, deep={GetMaterialFloat(mat, _deepDepthId):F1}, foamWidth={GetMaterialFloat(mat, _shoreFoamDepthId):F1}, shoreRange={GetMaterialFloat(mat, _shoreFoamSoftnessId):F1}");
 
         if (state.WeatherProvider != null && cameraContext != null)
@@ -256,15 +236,6 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         }
 
         return null;
-    }
-
-    static MeshFilter GetWaterVolumeLipFilter(Renderer waterRenderer)
-    {
-        if (waterRenderer == null)
-            return null;
-
-        Transform lip = waterRenderer.transform.Find("WaterVolumeLip");
-        return lip != null ? lip.GetComponent<MeshFilter>() : null;
     }
 
     void RefreshWaterDebugStats(Renderer waterRenderer, ICameraRigContext cameraContext)

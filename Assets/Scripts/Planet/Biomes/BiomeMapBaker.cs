@@ -125,7 +125,7 @@ public static class BiomeMapBaker
                     Vector3 direction = CoordinateConverter.CubeFaceToUnitSphere(
                         chunk.FaceIndex, faceUv);
                     byte landPrimary = assignmentField.EvaluatePrimaryId(direction);
-                    byte lakeState = LakeMask.Current != null ? LakeMask.Current.Sample(direction) : (byte)0;
+                    byte lakeState = WaterBodyMap.Current != null ? WaterBodyMap.Current.Sample(direction) : (byte)0;
                     BiomeLookupEvaluator.ResolveFromLandBiomes(
                         lookup,
                         tm.x,
