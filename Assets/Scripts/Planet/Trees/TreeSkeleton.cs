@@ -65,4 +65,6 @@ public struct TreeSprout
     public float Size;
     public int LeafGroup;
     public int BranchLevel;
+    // Built into a SEPARATE mesh so the tier can wear its own material: a green shrub with coloured blooms.
+    public bool Accent;
 }

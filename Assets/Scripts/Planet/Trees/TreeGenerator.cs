@@ -22,6 +22,15 @@ public static class TreeGenerator
             }
             : new[] { TreeLeafMesher.Build(sk, 1f, 1), TreeLeafMesher.Build(sk, 1.15f, 1) };
 
+        // Accent tiers (blooms) build into their own mesh so they can carry a second material. Left null when
+        // no tier asked for it, which is every species today except the flowering plants.
+        if (def.FoliageStyle != FoliageStyle.ConiferCone && HasAccent(def))
+        {
+            Mesh accent = TreeLeafMesher.Build(sk, 1f, 1, accent: true);
+            if (accent != null && accent.vertexCount > 0) tree.AccentLods = new[] { accent };
+            else if (accent != null) Object.DestroyImmediate(accent);
+        }
+
         tree.Height = sk.Height;
         tree.TrunkBaseGirth = sk.TrunkBaseGirth;
 
@@ -39,5 +48,15 @@ public static class TreeGenerator
         TreeCutSet.Carve(sk, tree.ChopFraction, out tree.Stump, out tree.Log);
 
         return tree;
+    }
+
+    // Cheap pre-check: building an accent mesh walks every sprout, so skip it entirely for the species that
+    // declare no accent tier, which is all of them except the flowering plants.
+    static bool HasAccent(TreeDef def)
+    {
+        if (def.Levels == null) return false;
+        foreach (LevelRule r in def.Levels)
+            if (r != null && r.IsLeaf && r.AccentLeaf) return true;
+        return false;
     }
 }

@@ -413,7 +413,30 @@ public static class TreeDefLibrary
 
     // Low dense bush: a stub of a trunk under many low stems, leaves right down to the ground. Smaller and far
     // denser than Shrub, which is a waist-high desert plant that has to read as a stunted TREE.
-    public static TreeDef Bush(float age = 1f, Color? leaf = null) => new TreeDef
+    // `blooms` adds a sparse ACCENT tier on top of the green canopy. It builds into its own mesh so the
+    // injector can draw it with a flower-coloured material — the reference art is a green shrub speckled with
+    // blooms, and tinting the whole canopy instead produced a solid coloured blob.
+    public static TreeDef Bush(float age = 1f, Color? leaf = null, bool blooms = false)
+    {
+        TreeDef def = BushBase(age, leaf);
+        if (!blooms) return def;
+
+        var levels = new System.Collections.Generic.List<LevelRule>(def.Levels)
+        {
+            new LevelRule
+            {
+                // Far fewer than the leaves and only near the stem tips, so blooms read as dots on the
+                // surface of the bush rather than a second canopy.
+                Label = "blooms", ParentLevel = 1, IsLeaf = true, AccentLeaf = true,
+                Frequency = new Vector2(2, 4), Range = new Vector2(0.55f, 1f),
+                LeafSize = 0.22f, LeafGroup = 0,
+            },
+        };
+        def.Levels = levels.ToArray();
+        return def;
+    }
+
+    static TreeDef BushBase(float age, Color? leaf) => new TreeDef
     {
         Name = "Bush", MaxHeight = 1.35f, GlobalScale = 0.8f, Age = Mathf.Clamp01(age),
         BarkColor = new Color(0.31f, 0.24f, 0.16f),

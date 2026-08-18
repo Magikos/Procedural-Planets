@@ -118,7 +118,7 @@ public static class PlantInjection
             int seed = (int)(StableHash(name, variant) % 900000) + 1;
             float age = VariantsFor(kind) <= 1 ? 0.85f : Mathf.Lerp(0.6f, 1f, variant / (float)(VariantsFor(kind) - 1));
 
-            Mesh stemMesh, foliageMesh;
+            Mesh stemMesh, foliageMesh, accentMesh = null;
             Color stemTint, foliageTint;
 
             if (kind == Kind.Lily)
@@ -139,6 +139,7 @@ public static class PlantInjection
                 if (t.Bark == null || t.Bark.vertexCount == 0) return null; // keep Synty
                 stemMesh = t.Bark;
                 foliageMesh = t.Foliage != null && t.Foliage.vertexCount > 0 ? t.Foliage : null;
+                accentMesh = t.Accent != null && t.Accent.vertexCount > 0 ? t.Accent : null;
                 stemTint = def.BarkColor;
                 foliageTint = def.LeafColor;
                 // Coral and lily are the only kinds with no foliage tier by design; anything else arriving
@@ -160,6 +161,13 @@ public static class PlantInjection
 
             var parts = new List<ScatterPartDto> { new ScatterPartDto(stem, new[] { stemMesh }, dist, false, true) };
             if (foliageMesh != null) parts.Add(new ScatterPartDto(foliage, new[] { foliageMesh }, dist, false, true));
+            // Blooms are a third part in their own colour, which is what makes a flowering bush read as a green
+            // shrub speckled with flowers instead of a solid coloured blob.
+            if (accentMesh != null)
+            {
+                Material bloom = GeneratedFoliage.Leaf(key + " bloom", BloomColor(p.Biome), WindFor(kind), lift: 2.2f);
+                if (bloom != null) parts.Add(new ScatterPartDto(bloom, new[] { accentMesh }, dist, false, true));
+            }
 
             Texture2D bakedAtlas = null, bakedNormal = null;
             if (UseBakedImpostors)
@@ -188,7 +196,9 @@ public static class PlantInjection
         string n = p.DisplayName ?? "";
         return kind switch
         {
-            Kind.Bush => TreeDefLibrary.Bush(age, LeafTint(p.Biome, true, Has(n, "FlowerBush"))),
+            // A flowering bush stays GREEN and grows a separate bloom tier; the flower colour rides on that
+            // tier's own material rather than the whole canopy.
+            Kind.Bush => TreeDefLibrary.Bush(age, LeafTint(p.Biome, true, false), blooms: Has(n, "FlowerBush")),
             Kind.Grass => TreeDefLibrary.GrassTuft(age, LeafTint(p.Biome, false, false)),
             Kind.Flower => TreeDefLibrary.Flower(age, FlowerColor(n), Has(n, "Wildflower") ? 0.28f : 0.36f),
             Kind.Mushroom => TreeDefLibrary.Mushroom(age, MushroomCap(n)),
@@ -223,6 +233,15 @@ public static class PlantInjection
         if (Has(n, "Pink")) return new Color(0.88f, 0.52f, 0.66f);
         return new Color(0.86f, 0.80f, 0.42f); // "Wildflowers" — mixed meadow, leans warm
     }
+
+    // Bloom colour for a flowering bush, kept warm and distinct from the canopy so the speckle actually reads.
+    static Color BloomColor(BiomeType biome) => biome switch
+    {
+        BiomeType.Forest or BiomeType.Taiga => new Color(0.86f, 0.74f, 0.80f), // woodland pink-white
+        BiomeType.Tropical => new Color(0.90f, 0.52f, 0.62f),
+        BiomeType.Swamp => new Color(0.82f, 0.80f, 0.52f),
+        _ => new Color(0.92f, 0.82f, 0.34f),                                   // meadow yellow
+    };
 
     static Color MushroomCap(string n) =>
         Has(n, "Red") ? new Color(0.66f, 0.16f, 0.13f)
@@ -347,7 +366,7 @@ public static class PlantInjection
             TreeDef def = kindWord switch
             {
                 "grass" => TreeDefLibrary.GrassTuft(0.75f, LeafTint(biome, false, false)),
-                "flowerbush" => TreeDefLibrary.Bush(0.75f, LeafTint(biome, true, true)),
+                "flowerbush" => TreeDefLibrary.Bush(0.75f, LeafTint(biome, true, false), blooms: true),
                 "bush" => TreeDefLibrary.Bush(0.75f, LeafTint(biome, true, false)),
                 "flower" => TreeDefLibrary.Flower(0.75f, FlowerColor(suffix)),
                 "mushroom" => TreeDefLibrary.Mushroom(0.75f, MushroomCap(suffix)),

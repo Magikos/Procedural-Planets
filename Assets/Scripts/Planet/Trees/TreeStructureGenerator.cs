@@ -91,6 +91,7 @@ public static class TreeStructureGenerator
                                     Size = rule.LeafSize * scale * ageLeaf,
                                     LeafGroup = rule.LeafGroup,
                                     BranchLevel = li,
+                                    Accent = rule.AccentLeaf,
                                 });
                             }
                             else

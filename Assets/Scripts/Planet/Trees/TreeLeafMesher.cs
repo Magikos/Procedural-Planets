@@ -11,7 +11,12 @@ public static class TreeLeafMesher
 {
     static readonly Color LeafVtx = new Color(1f, 1f, 1f, 1f); // G=1 exposed AO, B=1 -> FoliageLit leaf mask on
 
-    public static Mesh Build(TreeSkeleton sk, float leafScale = 1f, int skip = 1)
+    /// <param name="accent">
+    /// Which half of the sprouts to build. false = the ordinary foliage; true = only the tiers flagged
+    /// AccentLeaf, as a separate mesh so they can be drawn with their own material (blooms on a green shrub).
+    /// Returns an empty mesh when nothing matches, which callers treat as "no accent part".
+    /// </param>
+    public static Mesh Build(TreeSkeleton sk, float leafScale = 1f, int skip = 1, bool accent = false)
     {
         var verts = new List<Vector3>();
         var uvs = new List<Vector2>();
@@ -21,7 +26,10 @@ public static class TreeLeafMesher
         skip = Mathf.Max(1, skip);
         if (sk != null)
             for (int i = 0; i < sk.Sprouts.Count; i += skip)
+            {
+                if (sk.Sprouts[i].Accent != accent) continue;
                 AddCluster(sk.Sprouts[i], leafScale, verts, uvs, cols, tris);
+            }
 
         var mesh = new Mesh
         {

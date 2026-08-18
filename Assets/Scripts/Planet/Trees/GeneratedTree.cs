@@ -9,6 +9,8 @@ public sealed class GeneratedTree
     // Standing geometry, index 0 = highest detail. Bark and foliage are separate meshes (separate materials).
     public Mesh[] BarkLods = System.Array.Empty<Mesh>();
     public Mesh[] FoliageLods = System.Array.Empty<Mesh>();
+    // Bloom/accent tiers, drawn with their own material. Empty for every species that declares no accent tier.
+    public Mesh[] AccentLods = System.Array.Empty<Mesh>();
 
     // Harvest cut-set — carved from the same trunk skeleton, so stump top and log bottom match by construction.
     public Mesh Stump;
@@ -26,4 +28,5 @@ public sealed class GeneratedTree
 
     public Mesh Bark => BarkLods.Length > 0 ? BarkLods[0] : null;
     public Mesh Foliage => FoliageLods.Length > 0 ? FoliageLods[0] : null;
+    public Mesh Accent => AccentLods.Length > 0 ? AccentLods[0] : null;
 }

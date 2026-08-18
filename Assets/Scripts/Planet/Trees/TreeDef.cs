@@ -91,4 +91,9 @@ public sealed class LevelRule
     [Header("Leaf (IsLeaf tiers)")]
     public float LeafSize = 0.5f;
     public int LeafGroup = 0;
+
+    // Emit this leaf tier into the ACCENT mesh instead of the main foliage mesh, so it can be drawn with a
+    // different material. A TreeDef carries ONE LeafColor and every leaf tier merges into one mesh, so this is
+    // the only way to get blooms speckled through a green shrub rather than a solid coloured blob.
+    public bool AccentLeaf = false;
 }
