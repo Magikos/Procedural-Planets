@@ -178,6 +178,17 @@ public sealed class PlanetWaterSurface
             $"water temp {waterMeshData.Stats.MinWaterTemperature01:F3}-{waterMeshData.Stats.MaxWaterTemperature01:F3} " +
             $"avg {waterMeshData.Stats.AverageWaterTemperature01:F3}, max depth {waterMeshData.Stats.MaxDepth:F1}");
 
+        // The volume prepass packs shore01 and body01 into one channel, which only decodes unambiguously
+        // while body01 stays near 0 or 1. Measured 0.02% on the reference world, so the pack is sound
+        // today; a body class that lands mid-range (per-body levels, rivers) breaks it silently, and this
+        // is the only place that would notice. See docs/design/2026-08-18-water-data-contract.md.
+        int ambiguous = waterMeshData.Stats.AmbiguousBodyVertices;
+        if (ambiguous > waterMeshData.Stats.MeshVertices / 200)
+            Logger.Log(LogLevel.Warning, "Water",
+                $"{ambiguous} of {waterMeshData.Stats.MeshVertices} water vertices carry an intermediate body " +
+                $"factor ({100f * ambiguous / Mathf.Max(waterMeshData.Stats.MeshVertices, 1):F2}%). The volume " +
+                "prepass packing decodes those as the wrong body type; the channel needs splitting.");
+
         var renderer = _waterObject.GetComponent<Renderer>();
         if (_waterMaterial == null ||
             _waterMaterial.name == "Default-Material" ||

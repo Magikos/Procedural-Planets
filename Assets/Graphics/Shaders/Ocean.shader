@@ -422,16 +422,16 @@ Shader "Planet/Ocean"
                 float breakupStrength = lerp(0.045, 0.18, saturate(chaos01 + openWater01 * 0.35));
                 surfaceGradientTS = surfaceGradientTS * lerp(0.72, 1.30, breakupNoise) + breakupVector * breakupStrength;
                 float cellPattern = SurfaceCellPattern(positionWS, normalWS, scale, waveTime, chaos01);
-                // Was lerp(0.70, 1.38) - a 2x ratio between cell centres and edges that stamped the
-                // voronoi grid directly into wave normals as a visible honeycomb. Tightened to a 1.17x
-                // ratio so cellPattern adds subtle variation without showing through as a stamped grid.
+                // Keep the centre-to-edge ratio near 1; a wider spread stamps the voronoi grid into the
+                // wave normals as a visible honeycomb.
                 surfaceGradientTS *= lerp(0.92, 1.08, cellPattern);
 
-                // Was smoothstep(0.010, 0.095) and (0.008, 0.070) - killed all fragment-detail
-                // waves (and therefore crest foam) in shore-adjacent shallow water. Lowered to
-                // match the EvaluateSwellGating thresholds so the fragment system tracks the swell.
-                float depthMask = smoothstep(0.003, 0.035, depth01);
-                float shoreMask = smoothstep(0.005, 0.040, shore01);
+                // Fragment detail must reach as far inshore as the vertex swell, or crest foam stops at
+                // the shallows while the geometry underneath is still moving. Reuse the swell gating
+                // rather than restating its thresholds. (openWater01 above is a separate, deliberately
+                // narrower gate for the detail layer, so it is not replaced here.)
+                float swellOpen01, depthMask, shoreMask;
+                EvaluateSwellGating(depth01, shore01, body01, swellOpen01, depthMask, shoreMask);
                 float surfaceMask = depthMask * shoreMask * waveEnergy;
                 float normalStrength = _WaveNormalStrength * 0.78 * lerp(0.42, 1.28, weatherEnergy) * surfaceMask;
                 float2 normalGradient = surfaceGradientTS * normalStrength;

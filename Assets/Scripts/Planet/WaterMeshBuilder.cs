@@ -34,6 +34,10 @@ public static class WaterMeshBuilder
         public float MinWaterTemperature01;
         public float MaxWaterTemperature01;
         public float AverageWaterTemperature01;
+        // Vertices whose body factor is neither lake nor ocean. The volume prepass packs shore01 and
+        // body01 into one channel (shore01 * 0.45 + body01 * 0.55), which only decodes unambiguously
+        // while body01 stays near 0 or 1 - see docs/design/2026-08-18-water-data-contract.md.
+        public int AmbiguousBodyVertices;
     }
 
     /// <summary>Pre-computed water mesh data. Safe to produce on a background thread via <see cref="Compute"/>.</summary>
@@ -157,6 +161,9 @@ public static class WaterMeshBuilder
                 onProgress?.Invoke(0.45f + 0.55f * (faceIndex + 1) / faces.Length);
             }
         }
+
+        foreach (Color c in colors)
+            if (c.b > 0.05f && c.b < 0.95f) stats.AmbiguousBodyVertices++;
 
         onProgress?.Invoke(1f);
         return new MeshData
@@ -627,6 +634,10 @@ public static class WaterMeshBuilder
             stats.MinWaterTemperature01 = 0f;
     }
 
+    // CPU mirror of EvaluateFreezeFactor in Includes/WaterDisplacement.hlsl, which is the source of truth.
+    // The mesh build runs on a worker thread and decides ice coverage per body before any shader sees the
+    // mesh, so this curve cannot be shared with HLSL - it can only be kept identical. Change one, change
+    // both. Mathf.SmoothStep(0, 1, InverseLerp(cold, warm, t)) is exactly HLSL smoothstep(cold, warm, t).
     static float EvaluateFreezeFactor(float temperature01, float bodyFactor, Settings settings)
     {
         if (!settings.EnableFreezing)

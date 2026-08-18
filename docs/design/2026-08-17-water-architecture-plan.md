@@ -100,10 +100,31 @@ halves (two lakes) is now one body judged at full size (possibly ocean). This is
 but no before/after lake count was captured — if lakes look sparser than expected, that constant is the
 one knob.
 
-**W4 Data contract.** Vertex RGBA + prepass RGBA, every field, units, every consumer. Consumers:
-`Ocean.shader`, `WaterVolumePrepass.shader`, **`Atmosphere.shader`**, **`WaterMeshAnalysis.cs`** (C#,
-feeds the verification instrument), ~45 debug modes. Fixes D5, D6, D7. **Co-dependent with W5** — fold,
-or ship a versioned contract W5 extends.
+**W4 Data contract — DONE 2026-08-18.** Written up as
+[2026-08-18-water-data-contract.md](2026-08-18-water-data-contract.md): all three carriers (mesh vertex
+colour, `_WaterVolumeData`, `_WaterInterfaceTexture`), every field with range/units/producer, every
+consumer site, the duplication status table, and the globals list.
+
+**D6 closed.** `Ocean.shader:433` restated `EvaluateSwellGating`'s exact thresholds
+(`smoothstep(0.003, 0.035, depth01)` / `smoothstep(0.005, 0.040, shore01)`) with a comment asking that
+they be kept in sync; it now calls the function. The pair at `Ocean.shader:357` is a *different*,
+deliberately narrower gate for the fragment detail layer and was correctly left alone.
+
+**D7 closed at two of three copies.** One HLSL implementation (source of truth) plus one CPU mirror in
+`WaterMeshBuilder`. The mirror is unavoidable — the mesh build decides ice coverage per body on a worker
+thread before any shader runs — so both sites now carry a comment naming the other.
+
+**D5 documented and guarded, deliberately not re-encoded.** `shoreBody = shore01 * 0.45 + body01 * 0.55`
+only decodes unambiguously while `body01` is near 0 or 1. **Measured on 481,682 water vertices: 99.43%
+exactly 1, 0.55% exactly 0, 98 vertices (0.02%) intermediate — all in [0.35, 0.40).** The volume's own
+decode already thresholds at `smoothstep(0.45, 0.55)`, so it wants a class, not a gradient.
+
+Re-encoding would touch the volume composite (the most expensive and most fragile pass, measured as the
+entire GPU water cost) and drag in `Atmosphere.shader`, whose `step(0.0001, forwardDepth)` validity test
+forbids signing channel R. And the right encoding depends on what **W5** needs channel B to carry once
+bodies have independent levels and ids — designing it now is designing it blind. Instead
+`BuildStats.AmbiguousBodyVertices` counts the breach and `PlanetWaterSurface` warns past 0.5%, because
+the symptom is a wrong body *tint* that nothing else would notice. **W5 owns the re-encode.**
 
 **W4a shared displacement include — DONE 2026-08-18 (D9, surface half).**
 `Assets/Graphics/Shaders/Includes/WaterDisplacement.hlsl` now owns `SafeNormalize`, `SafeNormalize2`,
@@ -271,14 +292,14 @@ or new `RuntimeInitializeOnLoadMethod`. Split large owners before adding respons
 | D1 | Depth ramp global — lake has no gradient | W15 |
 | D2 | Shoreline stamp `0.00165 × PlanetRadius` (**not** fixed 8.25 m) | W15 |
 | D3 | Whitecaps zero below a wind threshold that differs per body type | W15 |
-| D4 | Two body authorities — thresholds **and** per-face vs cross-face | W3 |
-| D5 | Prepass packing ambiguous at **every** intermediate value, not just 0.5 | W4 |
-| D6 | Swell gating recomputed at three sites | W4 |
-| D7 | `EvaluateFreezeFactor` triplicated incl. C# | W4 |
-| D8 | Orphan reflection: **inert unowned writer** + live shader residue | W16 |
-| D9 | Prepass doesn't displace; volume uses analytic radius — three surfaces disagree | W4, W18, W20 |
+| D4 | Two body authorities — thresholds **and** per-face vs cross-face | **CLOSED** 2026-08-18 (W3) |
+| D5 | Prepass packing ambiguous at **every** intermediate value, not just 0.5 | W4 documented + guarded — 0.02% exposure measured; re-encode owned by **W5** |
+| D6 | Swell gating recomputed at three sites | **CLOSED** 2026-08-18 (W4) |
+| D7 | `EvaluateFreezeFactor` triplicated incl. C# | **CLOSED** 2026-08-18 — 3 copies → 1 HLSL + 1 unavoidable CPU mirror |
+| D8 | Orphan reflection: **inert unowned writer** + live shader residue | **CLOSED** 2026-08-18 |
+| D9 | Prepass doesn't displace; volume uses analytic radius — three surfaces disagree | Surface half **CLOSED** 2026-08-18 (W4a); volume half open, W18/W20 |
 | D10 | `BiomeConstants.OceanThreshold` hardcoded `0f`, ignores `OceanLevel` | W5 |
-| D11 | `LakeMask.Current` static never cleared | W3 |
+| D11 | `LakeMask.Current` static never cleared | **CLOSED** 2026-08-18 (W3) |
 | D12 | `ChunkedSurfaceProvider` uses the older face-UV inverse | W6 (verify first) |
 
 ## 8. Verification

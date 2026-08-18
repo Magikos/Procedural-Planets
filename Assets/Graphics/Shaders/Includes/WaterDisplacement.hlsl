@@ -72,6 +72,9 @@ float EvaluateSurfaceWave(float2 positionTS, float2 directionTS, float wavelengt
     return waveSin * amplitude;
 }
 
+// Source of truth for the freeze curve. WaterMeshBuilder.EvaluateFreezeFactor is a CPU mirror of this -
+// it decides ice coverage per body during the mesh build, before any shader runs, so it cannot share the
+// code and can only be kept identical. Change one, change both.
 float EvaluateFreezeFactor(float temperature01, float body01)
 {
     float start = lerp(_LakeFreezeStart, _OceanFreezeStart, body01);
