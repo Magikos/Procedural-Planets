@@ -192,11 +192,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             var scatterLib = Resources.Load<ScatterLibrary>("Settings/ScatterLibrary");
             if (scatterLib != null)
             {
-                // Trees, then plants, then rocks — must match TreeInjection.Rebuild, which is the runtime
-                // toggle path. When these two disagree the world boots without whichever injector is missing
-                // here, and it looks exactly like the injector is broken rather than unwired.
-                settings.Register(RockInjection.Apply(PlantInjection.Apply(
-                    TreeInjection.Apply(ScatterLibraryDto.From(scatterLib)))));
+                // ApplyAll is the single composition point, shared with the runtime toggle path. Composing the
+                // chain here separately is what once dropped plants from every booted world.
+                settings.Register(TreeInjection.ApplyAll(ScatterLibraryDto.From(scatterLib)));
             }
             else
             {

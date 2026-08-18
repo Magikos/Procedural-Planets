@@ -46,6 +46,36 @@ public sealed class GeneratedImpostorManifest : ScriptableObject
 
     public static void ForgetCache() { _tried = false; _loaded = null; }
 
+    // Editor-only: say out loud which impostor keys did not resolve from disk and will therefore bake at load.
+    //
+    // This exists because the failure is otherwise INVISIBLE. A missing or stale card is not an error — the
+    // runtime just bakes it live and carries on correct but slow — so sixteen prototypes once live-baked across
+    // two bake runs and nothing said a word. Load time creeping back up is not a symptom anyone connects to a
+    // stale manifest. A build never bakes live, so this is dev feedback only and does not ship.
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    public static void ReportCoverage(ScatterLibraryDto lib)
+    {
+        if (lib?.Prototypes == null) return;
+        var missed = new SortedSet<string>();
+        int cached = 0;
+        foreach (ScatterPrototypeDto p in lib.Prototypes)
+        {
+            if (p == null || !p.HasImpostor || string.IsNullOrEmpty(p.ImpostorShareKey)) continue;
+            if (p.BakedImpostorAtlas != null) cached++;
+            else missed.Add(p.ImpostorShareKey);
+        }
+        if (missed.Count == 0)
+        {
+            LoggerProvider.Log(LogLevel.Debug, "Impostors", $"All {cached} impostor prototype(s) read a baked card.");
+            return;
+        }
+        // MEASURED 418 ms per key, so the estimate is honest rather than a vague "this is slower".
+        LoggerProvider.Log(LogLevel.Warning, "Impostors",
+            $"{missed.Count} impostor key(s) have no baked card and will bake at load " +
+            $"(about {missed.Count * 0.42f:0.0} s): {string.Join(", ", missed)}. " +
+            "Fix with Tools > ProceduralPlanets > Impostors > Bake Impostors (Generated Props), from play mode.");
+    }
+
     // Returns the cached atlas when `probeHash` still matches what was baked for this share key.
     //
     // The hash is PER SHARE KEY, not per prototype. Every age/seed variant of a species has different meshes,

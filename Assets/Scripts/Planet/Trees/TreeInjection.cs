@@ -99,13 +99,23 @@ public static class TreeInjection
     // Rebuild the scatter DTO from the source library at the current Enabled state, for a runtime toggle.
     // Rocks are applied here too because this is the ONE place a runtime toggle rebuilds the library — rebuilding
     // trees alone would silently drop the generated rocks every time `tree.inject` was touched.
+    // THE one place the injection chain is composed. Boot and the runtime toggle both call this: they used to
+    // compose it separately, they drifted, and a booted world silently had no plants while a runtime toggle
+    // produced them — which reads as a broken injector rather than an unwired one.
+    //
+    // Trees, then plants, then rocks. Each allocates its variant slots above the highest one it can see, so the
+    // order fixes which range each family occupies; changing it renumbers saved variant slots.
+    public static ScatterLibraryDto ApplyAll(ScatterLibraryDto source)
+    {
+        ScatterLibraryDto lib = RockInjection.Apply(PlantInjection.Apply(Apply(source)));
+        GeneratedImpostorManifest.ReportCoverage(lib);
+        return lib;
+    }
+
     public static ScatterLibraryDto Rebuild()
     {
         var so = Resources.Load<ScatterLibrary>("Settings/ScatterLibrary");
-        if (so == null) return null;
-        // Trees, then plants, then rocks. Each allocates its variant slots above the highest one it can see, so
-        // the order fixes which range each family occupies; changing it renumbers saved variant slots.
-        return RockInjection.Apply(PlantInjection.Apply(Apply(ScatterLibraryDto.From(so))));
+        return so != null ? ApplyAll(ScatterLibraryDto.From(so)) : null;
     }
 
     static bool IsTree(ScatterPrototypeDto p) =>
