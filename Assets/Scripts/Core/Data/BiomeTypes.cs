@@ -17,6 +17,8 @@ public enum BiomeType
     Snow,
     IceBog,
     Mountain,
+    // planned: seabed and cave scatter emit these; docs/design/2026-08-12-ocean-scatter.md.
+    // Declared ahead of the emitters on purpose — not dead values.
     Cave,
     Underwater,
     Lake,       // small inland water body (vs Ocean)

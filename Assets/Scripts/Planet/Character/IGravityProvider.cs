@@ -6,6 +6,9 @@ using UnityEngine;
 /// expressed without rewriting the driver. Acceleration is in m/s²; callers that only need orientation take
 /// <c>up = -acceleration.normalized</c>.
 /// </summary>
+// planned: one implementor today (radial planet gravity) by design — the motor consumes injected
+// gravity so other worlds can supply their own without touching the movement core. See
+// .agent-memory/claude/project_character_terrain_plans.md. Not a single-implementation smell.
 public interface IGravityProvider
 {
     /// <summary>

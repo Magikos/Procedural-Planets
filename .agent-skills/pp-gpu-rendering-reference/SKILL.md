@@ -109,8 +109,8 @@ and the far-field story is an open DECISION owned by the migration campaign.
 **Water** ([water-atmosphere-precipitation.md](water-atmosphere-precipitation.md)):
 two-layer split — `Ocean.shader` renders only the top sheet (waves, foam, glitter, ice);
 `WaterVolume.shader` is a fullscreen composite owning underwater fog, refraction, and
-**caustics**. Caustics are under a hard don't-touch rule (CLAUDE.md): describe, flag
-findings, never edit.
+**caustics**. Caustics are editable since 2026-08-11 (CLAUDE.md "Ocean shader / caustics")
+but remain fragile: change deliberately and verify caustics, shoreline and depth blend.
 
 **Atmosphere** (same file): classic single-scattering Rayleigh+Mie raymarch
 (`Assets/Graphics/Shaders/Includes/Atmosphere.hlsl`) with sun optical depth from a

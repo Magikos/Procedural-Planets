@@ -7,8 +7,9 @@ using UnityEngine.Rendering;
 // leaves a birch stump; falls back to a placeholder cylinder for any prototype without an authored stump yet.
 // One RenderMesh per stump — fine for POC counts; instance if a felled forest ever needs it.
 //
-// Not yet matched: per-instance scale + yaw (the record stores position + proto only), so an authored stump
-// draws at the tree mesh's native scale. Add those to the record if size/rotation mismatch shows.
+// ponytail: the harvest record stores position + proto only, so a stump draws at the tree mesh's
+// native scale and yaw rather than the felled instance's. Ceiling is a visible size/rotation
+// mismatch; add scale + yaw to the record when that shows.
 public sealed class StumpRenderer : System.IDisposable
 {
     static readonly Vector3 PlaceholderScale = new Vector3(0.6f, 0.4f, 0.6f);

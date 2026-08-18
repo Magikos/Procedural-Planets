@@ -9,9 +9,10 @@ using System.Collections.Generic;
 // so no crack forms. This approach produces some degenerate-area triangles, but the GPU cost
 // is negligible at our chunk densities.
 //
-// Future optimization: 16 distinct triangle templates (one per neighbor-LOD mask combo) that
-// emit true fan triangulation along coarser-LOD edges, eliminating degenerates. Not needed
-// for Phase A.
+// ponytail: one template with degenerate triangles along coarser-LOD edges, because the cost is
+// negligible at our chunk densities. Ceiling is 16 distinct templates (one per neighbor-LOD mask
+// combo) emitting true fan triangulation, which removes the degenerates. Do that if edge density
+// ever measures as a cost.
 public static class ChunkTriangleTemplate
 {
     // Triangle winding: each cell (x, y) emits two triangles

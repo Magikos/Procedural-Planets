@@ -1,0 +1,33 @@
+{
+  "scopeId": "scope-1",
+  "description": "The single definition of 'the repo' for every audit function. Changing this file must bump scopeId, which invalidates cached fingerprints and stored validation evidence.",
+  "include": [
+    "Assets/Scripts/**/*.cs",
+    "Assets/Editor/**/*.cs",
+    "Assets/Tests/**/*.cs",
+    "Assets/Graphics/**/*.shader",
+    "Assets/Graphics/**/*.compute",
+    "Assets/Graphics/**/*.hlsl",
+    "Assets/Resources/**/*.compute",
+    "Assets/Resources/**/*.shader",
+    "ProjectSettings/*.asset",
+    "Packages/manifest.json"
+  ],
+  "exclude": [
+    "Library/",
+    "Temp/",
+    "Obj/",
+    "obj/",
+    "Logs/",
+    "UserSettings/",
+    "local-only/",
+    "graphify-out/",
+    "Assets/Plugins/Wingman/",
+    "Packages/com.singularitygroup.hotreload/",
+    "tools/audit/"
+  ],
+  "notes": [
+    "Assets/Resources/*.compute was missed by the first revision of the design and contains ScatterCull.compute, central to the scatter draw path.",
+    "Counts are always generated from this manifest. Never type a count into prose."
+  ]
+}

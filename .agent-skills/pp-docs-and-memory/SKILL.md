@@ -93,6 +93,8 @@ comments; the comment was deleted.**
 - Experiments are deleted in the commit that supersedes them, or within one week.
 - Genuinely parked experiments go behind `#if PROJECT_X_EXPERIMENT` with a note on what's parked and why.
 - Dead fields, unused enum values, `#if false` blocks, unused DTOs: delete when discovered. In audits, tag them `DEAD` — deletion still waits for Bryan's finding review (findings-only rule wins).
+- **Exception — intended structure is not dead code.** If the site carries a `planned:` marker, or its intent appears in `docs/design/`, `plans/`, `advisor-plans/`, or `.agent-memory/`, it stays. Check those sources before tagging `DEAD`; code alone cannot distinguish "unused" from "not used *yet*". Known examples: `BiomeType.Cave` / `Underwater` (`docs/design/2026-08-12-ocean-scatter.md`), `IGravityProvider` (`.agent-memory/claude/project_character_terrain_plans.md`). If the intent is real but undocumented, the finding is "undocumented intent" and the fix is to record it, not to delete.
+- Intent markers: `// ponytail: <shortcut>, <ceiling and upgrade path>` for deliberately doing less, `// planned: <what will use this>, <doc path>` for deliberately doing more. These are the project's only debt/intent markers — no `TODO`/`FIXME`/`HACK`.
 - Editor-time self-tests via `RuntimeInitializeOnLoadMethod` are dead fixtures — delete, don't preserve as "tests".
 
 ## Memory runbook (.agent-memory/)

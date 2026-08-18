@@ -228,7 +228,7 @@ new surface-edit features add a stamp type, not a new persistence path.
 | Every shader-global name lives in `ShaderGlobalIds` | Globals collide across shaders; one grep finds every writer | Two systems fight over an undiscoverable string | Convention; audit sweep clean as of 2026-07-03 |
 | Per-frame shader-global writers use dirty flags; publish in `LateUpdate` | Uploads are not free; consistent publish phase | Redundant GPU uploads; mid-frame global flips | Precedent (`AtmosphereController`, `CloudController`); `ShaderGlobalsController` |
 | Stamps are canonical; masks are caches | Rebuildable state survives format changes and bugs | Unrecoverable divergence between saved edits and rendered wear | `Rebuild*FromStamps` paths exist and are the only rebuild story |
-| Caustics untouched (`Assets/Graphics/Shaders/Ocean.shader` + related) | Every touch has broken them (see pp-failure-archaeology) | Visual regression Bryan has to catch | CLAUDE.md "Don't touch"; findings against caustics are flag-only |
+| Caustics changed deliberately and verified (`Assets/Graphics/Shaders/Ocean.shader` + related) | Historically fragile — most past touches broke them (see pp-failure-archaeology) | Visual regression Bryan has to catch | CLAUDE.md "Ocean shader / caustics": editable since 2026-08-11, verify caustics + shoreline + depth blend before commit |
 | Audits are findings-only until Bryan marks fix/defer/wontfix | Bryan is the change authority | Unreviewed changes to a codebase with hand-tuned visuals | Workflow rule — see pp-change-control |
 
 ## 8. Decision log (load-bearing decisions + WHY)
@@ -309,7 +309,7 @@ new surface-edit features add a stamp type, not a new persistence path.
   the line: `WaterMeshBuilder` 849, `Planet.cs` 634, etc.).
 - **Don't route a subsystem's internal pipeline through ServiceLocator/EventBus** — those
   are cross-subsystem boundaries; internals use constructor-injected interfaces.
-- **Don't touch caustics.** Ever. Flag findings only.
+- **Caustics are editable since 2026-08-11**, but fragile — verify caustics, shoreline and depth blend before committing.
 
 ## When NOT to use this
 

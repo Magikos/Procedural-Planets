@@ -76,7 +76,7 @@ pp-validation-and-evidence and pp-run-and-operate.
 
 | Rule | Why | Incident behind it |
 |---|---|---|
-| **Caustics are untouchable** (`Assets/Graphics/Shaders/Ocean.shader` caustics code). Audit findings against caustics are flag-only. | They look correct now and are fragile: per CLAUDE.md, "every touch breaks them." | Repeated caustics breakage during the water arc is the stated origin of the rule (Bryan, 2026-07-06). Every recent audit and plan explicitly scopes them out ("Caustics untouched"). |
+| **Caustics are editable but fragile** (`Assets/Graphics/Shaders/Ocean.shader` + WaterVolume caustics). Change deliberately; verify caustics, shoreline and depth blend still read correctly before committing. | The don't-touch rule was **lifted 2026-08-11 (Bryan)**. Fragility is the remaining concern, not prohibition. | Origin was repeated breakage during the water arc (2026-07-06). Audits before 2026-08-11 scope them out ("Caustics untouched") — that is history, not current policy. |
 | **Audits are findings-only until Bryan marks decisions** | Bryan iterates over long arcs; findings get stale, and he wants independent agreement, not auto-fixes. Fixing mid-review destroys the review. | The whole code-refactor arc (2026-06-10 → 06-15) ran audit → Bryan review → fix, per finding. Memory records "do not roll directly from audit into edits without explicit approval." |
 | **Visual tuning gate (§3)** | An agent cannot see the render; captures + Bryan's eyes are the only ground truth. | G2/G3 reverts (§3); water-saga knob-twiddling. |
 | **No change-history or false comments; comments only for non-obvious WHY** | Comments drift into lies the compiler never checks. | Audit finding A2 (2026-07-03): `CloudShadows.hlsl` carried `// Same gloom term as Cloud.shader` while the two formulas had diverged (smoothstep steepening and storm gating differed) — sky and ground disagreed about the same storm. Fixed by extracting shared `WeatherCloudGloomFromRain` / `WeatherCloudGloom` into `WeatherSampling.hlsl` (lines 47–55 as of 2026-07-06; formula home: pp-weather-sim-reference) so both paths call one function instead of a comment promising parity. |
@@ -91,7 +91,11 @@ pp-validation-and-evidence and pp-run-and-operate.
 CLAUDE.md rule: experiments are deleted at the same commit that supersedes them, or
 within one week; genuinely parked experiments go behind `#if PROJECT_X_EXPERIMENT` with
 documentation of what's parked and why. Dead fields, unused enums, `#if false` blocks,
-unused DTOs: removed when discovered.
+unused DTOs: removed when discovered — **unless the site is marked `planned:` or its intent
+is documented in `docs/design/`, `plans/`, `advisor-plans/`, or `.agent-memory/`.** Structure
+built ahead of a planned feature is infrastructure, not dead code, and deleting it is a
+behavior-changing regression dressed as cleanup. Undocumented-but-real intent is fixed by
+writing it down, not by deleting.
 
 **The cloud temporal-accumulation revert (2026-07-01 → 07-03) is the template:**
 
@@ -151,7 +155,7 @@ history of this and other reverts: pp-failure-archaeology.
       for an approved reason (CLAUDE.md) — and NOT dead code that is already a numbered
       open audit finding (e.g. general audit G8, `EventBusAutoBinder.cs`): anything with
       a finding ID stays findings-first, Bryan-gated.
-- [ ] Check the don't-touch list: any path near `Ocean.shader` caustics → flag, don't edit.
+- [ ] Editing near `Ocean.shader` caustics? Allowed since 2026-08-11, but verify caustics, shoreline and depth blend before committing.
 - [ ] If visual: capture the BEFORE state first (`debug.capture-set` + F10 — protocol in
       pp-validation-and-evidence).
 - [ ] `git status` — know which dirty files are yours vs. another agent's.

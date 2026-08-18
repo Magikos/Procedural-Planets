@@ -1,6 +1,7 @@
 # Water, Atmosphere, Precipitation — layers and pass order
 
 Part of `pp-gpu-rendering-reference`. Verified against the working tree 2026-07-06.
+The water mesh and prepass sections were reverified against the dirty tree 2026-08-17.
 Primary files: `Assets/Graphics/Shaders/Ocean.shader`, `WaterVolume.shader`,
 `WaterVolumePrepass.shader`, `Assets/Scripts/Planet/WaterVolumeRenderFeature.cs`,
 `Assets/Scripts/Planet/WaterMeshBuilder.cs`,
@@ -33,10 +34,9 @@ water mesh per world from the wet cells of the 6 cube faces (`MeshData` is docum
 "Safe to produce on a background thread via `Compute`" — the Awaitable background
 pattern). Its load-bearing output is **vertex color as a data channel**:
 `r = depth01, g = shore01, b = body01 (pond↔ocean), a = temperature01`. Both the ocean
-vertex stage and the volume prepass decode exactly this layout — if you change one
-consumer, you change three. It also emits a second mesh, the **volume lip** (child
-`WaterVolumeLip`), used only underwater (below). `BuildStats` (bodies, frozen bodies,
-max depth) feed the water debug module.
+vertex stage and the volume prepass decode exactly this layout. Change all consumers
+when this contract changes. The current builder emits one water mesh. `BuildStats`
+(bodies, frozen bodies, max depth) feed the water debug module.
 
 ### Ocean.shader in brief
 
@@ -53,36 +53,27 @@ sine waves + voronoi surface cells, storm energy sampled from the weather grid
 `ValueNoise` breakup). ~20 `_OceanDebugMode` false-color views (LumaHeat, WaveEnergy,
 etc.) are the stage-ownership proof tools.
 
-### The volume prepass and the underwater lip
+### The volume prepass and current boundary coverage
 
 `WaterVolumeRenderFeature` enqueues two passes at `BeforeRenderingTransparents`:
 
 1. **Prepass** (`Hidden/WaterVolumePrepass`): draws the water mesh into an off-screen
-   `R16G16B16A16_SFloat` target ("WaterVolumeData") encoding
-   `(forwardDepth, depth01, shore01, freezeFactor)`, published globally as
-   `_WaterVolumeData`/`_WaterInterfaceTexture`.
+   `R16G16B16A16_SFloat` target ("WaterVolumeData"). It encodes
+   `(forwardDepth, depth01, shoreBody, freezeFactor)`, where
+   `shoreBody = shore01 * 0.45 + body01 * 0.55`. The pass publishes the target as
+   `_WaterVolumeData` and `_WaterInterfaceTexture`.
 2. **Composite** (`Hidden/WaterVolume`): fullscreen triangle that reads scene color +
    depth + the prepass target and rewrites `cameraColor`.
 
-The **lip** exists because when the camera is *inside* the water sphere the water
-surface behind the camera is not rasterized, leaving screen areas with no water data. So
-`AddRenderPasses` gates a second prepass draw
-(`WaterVolumeRenderFeature.cs:87`):
+The current dirty tree has no `WaterVolumeLip` mesh or relaxed prepass. The feature draws
+only the primary water mesh. Boundary coverage therefore depends on clipped shoreline
+vertices and the packed prepass data. `WaterVolume.shader` and `Atmosphere.shader` both
+derive coverage from `max(waterData.g, waterData.b)`. Change the shoreline depth stamp
+and the `shoreBody` packing as one contract. The composite still has a no-depth
+underwater fallback (`UnderwaterNoDepthColor`) and an orbital fade
+(`VolumeLayerVisibility`).
 
-```csharp
-bool drawRelaxedVolumeLip = renderableVolumeLipMesh != null
-    && IsCameraInsideWaterMesh(camera, meshFilter, mesh);
-```
-
-`IsCameraInsideWaterMesh` is a cheap radius test (camera distance vs mesh bounds radius
-+ 0.5 m). The lip pass renders with `ZTest Always` plus a *relaxed* manual depth gate in
-the fragment (`FragRelaxedLip`: accepted where there's no opaque scene or the lip is
-within a depth slack of it), filling the missing water data without stomping terrain in
-front of it. Debug views `VolumeLip*Pink` visualize acceptance. The composite also has a
-no-depth underwater fallback (`UnderwaterNoDepthColor`) and an orbital fade
-(`VolumeLayerVisibility`) so the effect dies out at altitude.
-
-### Caustics — the DON'T-TOUCH rule
+### Caustics — editable since 2026-08-11, still fragile
 
 What they are, so you can discuss them without editing them: in
 `WaterVolume.shader`, `ComputeReceiverCaustics` projects animated light patterns onto
@@ -98,11 +89,13 @@ that per-channel *time* shifts looked like three separate animations. The same
 `CausticResult` also drives volume transmittance/opacity/fog and the bottom-refraction
 distortion (`ComputeBottomDistortion`).
 
-**CLAUDE.md rule: caustics are untouchable.** They look correct and historically every
-touch broke them (the origin incident is why the rule exists). Audit findings against
-caustics are flag-only. Never suggest edits to the caustic functions, their constants
-(`CAUSTIC_SCALE 0.075`, `CAUSTIC_SPEED 1.05`), or the feature-level tuned values
-(`CausticIntensity 0.42` etc. in `WaterVolumeRenderFeature`). Debug views
+**CLAUDE.md rule: the don't-touch prohibition was lifted 2026-08-11 (Bryan).** Caustics
+are editable, and they remain fragile — historically most touches broke them, which is why
+the prohibition existed. Change deliberately, one variable at a time, and verify caustics,
+shoreline and depth blend before committing. Treat the caustic functions, their constants
+(`CAUSTIC_SCALE 0.075`, `CAUSTIC_SPEED 1.05`), and the feature-level tuned values
+(`CausticIntensity 0.42` etc. in `WaterVolumeRenderFeature`) as hand-tuned: they are
+changeable but every one of them was landed by eye, so re-verify visually. Debug views
 (`DEBUG_CAUSTICS_ONLY`, `_MASK`, `_LIGHT`, `_PRISM`) are the sanctioned way to inspect
 them.
 
@@ -205,8 +198,9 @@ live-controller lookup via `ServiceLocator.TryGet` with liveness caching
 ```
 # Pass events
 grep -rn "renderPassEvent" Assets/Scripts/Planet --include="*.cs"
-# Lip gating (camera-inside test)
-grep -n "IsCameraInsideWaterMesh" Assets/Scripts/Planet/WaterVolumeRenderFeature.cs
+# Primary-mesh-only prepass and packed boundary data
+grep -n "Setup(_prepassMaterial\|shoreBody" Assets/Scripts/Planet/WaterVolumeRenderFeature.cs Assets/Graphics/Shaders/WaterVolumePrepass.shader
+grep -n "WaterCoverageFromData\|WaterInterfaceCoverage" Assets/Graphics/Shaders/WaterVolume.shader Assets/Graphics/Shaders/Atmosphere.shader
 # Surface/volume ownership comment
 grep -n "WaterVolume owns underwater" Assets/Graphics/Shaders/Ocean.shader
 # Vertex-color data layout (both decoders)

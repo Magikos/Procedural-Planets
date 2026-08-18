@@ -1,6 +1,6 @@
 ---
 name: pp-failure-archaeology
-description: Use before retrying any previously-attempted approach, and when a symptom looks familiar - shoreline thin line, "washed transparent sheet" water, through-planet water artifact, diagonal/cube-face cloud seam, grainy dithered clouds, biome stripes or bright wash at biome borders, dark grass ring at 200 m, jagged/blocky path edges, faint chunk-boundary color seams, terrain looks flat despite normal maps, grass visible but sparse, atmosphere clipping terrain. Also when asking "why is the grass blanket/chunk layer disabled", "was X tried before", or "can I touch caustics" (no). Not for live triage steps - see pp-debugging-playbook. Not for executing the current cloud/grass campaign - see pp-visual-migration-campaign.
+description: Use before retrying any previously-attempted approach, and when a symptom looks familiar - shoreline thin line, "washed transparent sheet" water, through-planet water artifact, diagonal/cube-face cloud seam, grainy dithered clouds, biome stripes or bright wash at biome borders, dark grass ring at 200 m, jagged/blocky path edges, faint chunk-boundary color seams, terrain looks flat despite normal maps, grass visible but sparse, atmosphere clipping terrain. Also when asking "why is the grass blanket/chunk layer disabled", "was X tried before", or "can I touch caustics" (yes since 2026-08-11, but verify carefully). Not for live triage steps - see pp-debugging-playbook. Not for executing the current cloud/grass campaign - see pp-visual-migration-campaign.
 ---
 
 # ProceduralPlanets Failure Archaeology
@@ -42,7 +42,7 @@ Read the matching entry first; the full chronicle is optional.
 | 3 | Cloud cube-face UV seam | SETTLED | 2026-05-31 |
 | 4 | Cloud temporal-accumulation experiment | RETIRED | 2026-07-01 → 07-03 |
 | 5 | Biome-stripe / grass-blanket fight | Root cause SETTLED; blanket layer parked, re-land is an OPEN decision | 2026-07-01 → 07-03 |
-| 6 | Caustics breakage | Standing prohibition (don't touch) | pre-2026-05 |
+| 6 | Caustics breakage | Prohibition lifted 2026-08-11; editable but fragile, verify before commit | pre-2026-05 |
 | 7 | Atmosphere radius + star-sphere revert | SETTLED | 2026-05-01 |
 | 8 | Grass LOD G-series (partial ship + reverts) | SETTLED with reverts recorded; G6 OPEN | 2026-07-01 → 07-02 |
 | 9 | Chunk biome seam (top-K blend) | OPEN (mitigated, accepted for now) | 2026-05-31 |
@@ -250,21 +250,27 @@ distance weights never drove the surface albedo — `ApplyGrassSurfaceAlbedo` is
 distance-independent; only `envCoverage * strength` plus grading/brightness set the
 ground look; knobs added for overlay-start/end and noise/fiber were removed as inert.
 
-## 6. Caustics — standing prohibition
+## 6. Caustics — prohibition lifted 2026-08-11, fragility remains
 
-**The rule (CLAUDE.md "Don't touch"):** caustics in `Assets/Graphics/Shaders/Ocean.shader`
-and related code **look correct; every touch breaks them**. Audit findings against
-caustics are flag-only — no code changes. Every audit since honors this (e.g. the
-2026-07-01 grass-LOD audit lists caustics under "Scope not audited"; the 2026-07-03 line
-audit closes with "Caustics untouched").
+**Current rule (CLAUDE.md "Ocean shader / caustics"):** caustics in
+`Assets/Graphics/Shaders/Ocean.shader` and the WaterVolume caustics **are editable**. The
+standing prohibition was lifted 2026-08-11 by Bryan. They remain fragile — change
+deliberately and verify the water still reads correctly (caustics, shoreline, depth blend)
+before committing.
+
+**Historical note:** audits before 2026-08-11 scope caustics out (the 2026-07-01 grass-LOD
+audit lists them under "Scope not audited"; the 2026-07-03 line audit closes with "Caustics
+untouched"). That is a record of the old rule, not current policy.
 
 **Origin:** repeated breakage during the water arc whenever caustics code was edited;
 Bryan names it one of the three costliest failures and the origin of the don't-touch
 rule. UNVERIFIED: no committed record of the specific breaking edits survives in the repo
 — which is itself the reason the rule is absolute rather than conditional.
 
-**Status: prohibition, permanent.** There is no reopening evidence defined. If a caustics
-defect is ever found, the finding is flagged to Bryan, never fixed in-line.
+**Status: reopened 2026-08-11.** Bryan lifted the prohibition; caustics are editable. The
+fragility that motivated it is unchanged, so a caustics fix must be deliberate and verified
+against caustics, shoreline and depth blend before commit. Flagging without fixing is no
+longer required.
 
 ## 7. Atmosphere radius + star-sphere revert — SETTLED (commit `55814e3`, 2026-05-01)
 

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 
-// FUTURE: Command pattern for undoable world modifications (terrain deform, building place/remove).
-// Will be used when player interaction systems are implemented.
-// Registered by SceneBootstrap in the active world context.
+// planned: command pattern for undoable world modifications (terrain deform, building place/remove),
+// used once the player interaction systems land. docs/design/2026-06-13-world-lifecycle.md.
+// Registered by SceneBootstrap in the active world context; no actions execute through it yet.
 public class WorldActionManager : IWorldActionManager
 {
     readonly List<IWorldAction> _history = new();

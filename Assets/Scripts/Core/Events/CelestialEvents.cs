@@ -1,6 +1,6 @@
-// FUTURE: DayNightChangedEvent — for systems that react to day/night transitions
-// (e.g. NPC schedules, creature spawning, lighting changes).
-// Raised by CelestialManager. No listeners yet.
+// planned: consumed by systems that react to day/night transitions — NPC schedules, creature
+// spawning, lighting changes. Raised by CelestialManager already; no listeners yet, which is
+// expected until those systems exist.
 public struct DayNightChangedEvent : IGameEvent
 {
     public float TimeOfDay;
@@ -13,9 +13,9 @@ public struct DayNightChangedEvent : IGameEvent
     }
 }
 
-// FUTURE: MoonPhaseChangedEvent — for systems that react to moon phase changes
-// (e.g. werewolf mechanics, tidal effects, magic intensity).
-// Raised by CelestialManager. No listeners yet.
+// planned: consumed by systems that react to moon phase changes — werewolf mechanics, tidal
+// effects, magic intensity. Raised by CelestialManager already; no listeners yet, which is
+// expected until those systems exist.
 public struct MoonPhaseChangedEvent : IGameEvent
 {
     public float Phase;

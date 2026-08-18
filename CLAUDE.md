@@ -38,6 +38,13 @@ The committed skill library is [.agent-skills/](.agent-skills/) (16 skills, buil
 - The orchestrator also owns deterministic disposal in reverse init order.
 - Editor-only authoring affordances on SOs/MBs are legitimate and should not be stripped to satisfy "default to plain class."
 
+### Interface seams exist for modding
+
+- Most interfaces have exactly one implementation today — 35 of 69 as of 2026-08-18. **That is intentional, not drift.** The seams are where mod-supplied implementations will attach.
+- The mod architecture is not designed yet, so there is no doc to point at. **This rule is the record.**
+- A single-implementation interface is therefore **never a finding on its own**, and "collapse the interface, it has one implementor" is not a valid recommendation. Do not mark these sites `planned:` individually; this rule covers them.
+- What *is* a finding: an interface with no plausible second implementer and no seam value — an abstraction over something that could never vary.
+
 ### Boot path discipline
 
 - All initialization goes through `IEarlyInitialize` / `ILateInitialize` driven by `LoadingManager`.
@@ -111,6 +118,17 @@ The committed skill library is [.agent-skills/](.agent-skills/) (16 skills, buil
 - **Never** explain what the code does — well-named identifiers already do that.
 - When you touch a file for another reason, prune existing change-history comments you encounter.
 
+### Intent markers
+
+Two one-line markers are sanctioned comment forms. Both are written by the author at the moment of the decision, both state a WHY the code cannot express, and both permanently stop an audit or a reader re-litigating a settled call.
+
+- `// ponytail: <shortcut>, <the ceiling and the upgrade path>` — deliberately did **less**.
+- `// planned: <what will use this>, <doc path>` — deliberately did **more**, for a feature not yet built.
+
+These are the project's only debt and intent markers; do not introduce `TODO`, `FIXME`, or `HACK`.
+
+A `wontfix` decision on an audit finding belongs at the code site as one of these markers, not only in the findings doc — so the reason travels with the code.
+
 ### Logger
 
 - New code uses `ILogger` / `LoggerProvider`. Direct `UnityEngine.Debug.Log*` migrates as files are touched for other reasons.
@@ -120,7 +138,8 @@ The committed skill library is [.agent-skills/](.agent-skills/) (16 skills, buil
 
 - Experiments are deleted at the same commit that supersedes them, or within one week.
 - If genuinely parking an experiment, gate behind `#if PROJECT_X_EXPERIMENT` so it stops shipping. Document what's parked and why.
-- Dead fields, unused enum values, `#if false` blocks, and unused DTOs are removed when discovered.
+- Dead fields, unused enum values, `#if false` blocks, and unused DTOs are removed when discovered — **unless the site is marked `planned:`, or its intent is documented in `docs/design/`, `plans/`, `advisor-plans/`, or `.agent-memory/`.** Structure built ahead of a planned feature is infrastructure, not dead code. Code alone cannot tell the two apart, so check the intent sources before deleting.
+- If the intent is real but written nowhere, the fix is to write it down — a `planned:` marker or a design-doc line — **not** to delete the code.
 
 ---
 

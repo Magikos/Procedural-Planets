@@ -204,6 +204,11 @@ public enum ChunkLifecycle
     Generating,          // mesh job in flight (step 4+)
     Active,              // leaf, mesh available, visible
     ActiveWithChildren,  // subdivided; this chunk's mesh is hidden in favor of children
+    // planned (superseded, kept deliberately): these two cover an on-demand subdivide where the parent
+    // stays visible while children generate. The provider now pre-caches every chunk at every depth up
+    // front, so at runtime there are never children mid-generation and the transition is instant —
+    // ChunkVisibilitySelector switches visibility directly. They become live again only if chunk
+    // generation returns to on-demand (e.g. if memory pressure forces streaming). Not dead values.
     Subdividing,         // children Generating; this chunk's mesh still shown
     Merging,             // children being released; this chunk re-shown
     Unloading            // mesh disposed, chunk releasable

@@ -86,8 +86,8 @@ and the module registrations, 2026-07-06.
 
 Pipeline: mesh water metadata (`WaterMeshBuilder`, vertex colors R=depth01 G=shore01
 B=body01) → `WaterData` sampling → surface (`Ocean.shader`) + volume
-(`WaterVolume.shader`) → composite/post. **Caustics are don't-touch** — findings against
-them are flag-only.
+(`WaterVolume.shader`) → composite/post. **Caustics are editable since 2026-08-11** but
+fragile — change deliberately and verify caustics, shoreline and depth blend before commit.
 
 | Symptom | First check | Then | Owner if it lights up |
 |---|---|---|---|
@@ -193,7 +193,7 @@ Stop and re-plan when any of these fire:
 4. **You're about to change a constant Bryan hand-tuned, or judge a visual result by your
    own eye** → gated; see pp-change-control. Bryan's eyes lock looks.
 5. **You're mid-audit** → audits are findings-only until Bryan marks decisions. No fixing.
-6. **The artifact is in caustics** → flag-only, don't touch (`Ocean.shader` caustics rule).
+6. **The artifact is in caustics** → editable since 2026-08-11, but fragile; verify caustics, shoreline and depth blend before committing (`Ocean.shader`).
 
 ## 6. Picking the discriminating experiment
 

@@ -270,6 +270,10 @@ public interface IDebugOverlayContributor
     void DrawOverlay(DebugRuntimeState state);
 }
 
+// planned: kept deliberately, RE-REVIEW BY 2026-09-17. Nothing implements this and RegisterDiagnostic
+// is never called, so DebugCaptureMetadataBuilder iterates an empty list. Retained as a diagnostics
+// extension point (mods and future debug modules register here). If still unimplemented at the review
+// date, delete it and its consumer rather than carrying a hook no producer has ever exercised.
 public interface IDebugDiagnosticProvider
 {
     string Id { get; }

@@ -159,7 +159,7 @@ normal-dependent wrap term (lines 363-365) using the interpolated normal — per
 and R3.
 
 **Fence:** Phase 1 moves the *call site* of `CloudShadowFactor`; it does **not** edit
-`CloudShadows.hlsl`. That include feeds `Ocean.shader` (untouchable caustics) — if you
+`CloudShadows.hlsl`. That include feeds `Ocean.shader` (fragile caustics, editable since 2026-08-11) — if you
 find yourself editing the include to make this phase work, stop and re-read the plan.
 Also fence: do not retune any lighting constant (wrap 0.72/0.28, backlit 0.16, night
 0.65, …) "while in there" — Bryan's visual-tuning gate applies; the phase's cost claim is

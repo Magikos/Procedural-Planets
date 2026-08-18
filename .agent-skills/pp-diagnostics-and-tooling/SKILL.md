@@ -98,7 +98,7 @@ Key isolation modes and how to read them:
 | `AtmosphereBypass` (40) | Skip atmosphere post over water | Artifact disappears ⇒ atmosphere composite owns it |
 | `VolumeMask` (14) / `VolumeBoundary` (20) | Effective volume coverage / boundary | Coverage doesn't match visible water ⇒ mask too strict/loose near shore |
 | `FoamParts` (18) / `SurfaceAlpha` (19) | Foam components / surface alpha | Tracks the artifact exactly at shoreline ⇒ surface foam/alpha problem |
-| `CausticsOnly` (58) etc. | Caustics isolation | **Look, don't touch** — caustics are a no-edit zone (CLAUDE.md "Don't touch") |
+| `CausticsOnly` (58) etc. | Caustics isolation | Editable since 2026-08-11, but fragile — use this mode to verify caustics still read correctly after any water change |
 
 The same int enum also carries biome (73-80, plus `GrassLodCoverage` 86 /
 `BiomeAltitudeCooling` 87), terrain-texture (81-85 and 91-96; 88-90 in between are water

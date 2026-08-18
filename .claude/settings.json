@@ -5,6 +5,16 @@
     "defaultMode": "bypassPermissions"
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "S=$(powershell -NoProfile -ExecutionPolicy Bypass -File tools/audit/audit.ps1 -Action staleness 2>/dev/null | tr -d '\\r'); case \"$S\" in *\"state: current\"*) : ;; *) [ -n \"$S\" ] && echo \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"SessionStart\\\",\\\"additionalContext\\\":\\\"Code audit ledger (docs/audit/current.md) is not current: $(echo \\\"$S\\\" | tr '\\n' ' ' | sed 's/\\\"/ /g'). Report-only; run 'pwsh tools/audit/audit.ps1 -Action all' or the audit skill when convenient. Do not start an audit unless asked.\\\"}}\" ;; esac; exit 0"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
