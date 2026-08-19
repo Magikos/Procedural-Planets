@@ -5,6 +5,7 @@ HLSLINCLUDE
 #include "Includes/Common.hlsl"
 #include "Includes/Math.hlsl"
 #include "Includes/DebugModes.hlsl"
+#include "Includes/WaterVolumeData.hlsl"
 
 TEXTURE2D(_CameraDepthTexture);
 SAMPLER(sampler_CameraDepthTexture);
@@ -28,15 +29,11 @@ float LightShaftNoise(float2 pixel)
     return frac(52.9829189 * frac(dot(pixel, float2(0.06711056, 0.00583715))));
 }
 
-float WaterInterfaceCoverage(float4 waterData)
-{
-    return smoothstep(0.0005, 0.018, max(saturate(waterData.g), saturate(waterData.b)));
-}
 
 void AccumulateWaterInterface(float2 uv, float edgeWeight, inout float4 bestData, inout float bestCoverage)
 {
     float4 candidate = SAMPLE_TEXTURE2D(_WaterInterfaceTexture, sampler_WaterInterfaceTexture, uv);
-    float candidateCoverage = WaterInterfaceCoverage(candidate) * edgeWeight;
+    float candidateCoverage = WaterVolumeCoverage(candidate) * edgeWeight;
     if (candidateCoverage > bestCoverage)
     {
         bestData = candidate;
@@ -48,7 +45,7 @@ float4 SampleWaterInterfaceDilated(float2 uv, out float waterCoverage)
 {
     float2 texel = 1.0 / max(_ScreenParams.xy, float2(1.0, 1.0));
     float4 waterData = SAMPLE_TEXTURE2D(_WaterInterfaceTexture, sampler_WaterInterfaceTexture, uv);
-    waterCoverage = WaterInterfaceCoverage(waterData);
+    waterCoverage = WaterVolumeCoverage(waterData);
     AccumulateWaterInterface(uv + float2(texel.x, 0.0), 0.74, waterData, waterCoverage);
     AccumulateWaterInterface(uv - float2(texel.x, 0.0), 0.74, waterData, waterCoverage);
     AccumulateWaterInterface(uv + float2(0.0, texel.y), 0.74, waterData, waterCoverage);

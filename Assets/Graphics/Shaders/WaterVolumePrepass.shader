@@ -12,6 +12,7 @@ Shader "Hidden/WaterVolumePrepass"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Includes/DebugModes.hlsl"
         #include "Includes/WaterDisplacement.hlsl"
+        #include "Includes/WaterVolumeData.hlsl"
 
         TEXTURE2D(_CameraDepthTexture);
         SAMPLER(sampler_CameraDepthTexture);
@@ -70,11 +71,8 @@ Shader "Hidden/WaterVolumePrepass"
             float shore01 = input.waterData.g;
             float body01 = input.waterData.b;
             float freezeFactor = EvaluateFreezeFactor(input.waterData.a, body01);
-            // .b carries shore coverage AND the body class in disjoint ranges: ocean (body01=1) -> [0.55,1],
-            // lake (body01=0) -> [0,0.45]. Only the coverage mask (max(.g,.b)) and the lake-tint decode read
-            // .b, so the shore feather survives while the volume can finally tell a lake from the ocean.
-            float shoreBody = shore01 * 0.45 + body01 * 0.55;
-            return float4(input.forwardDepth, depth01, shoreBody, freezeFactor);
+            uint kind = body01 >= 0.5 ? WATER_KIND_OCEAN : WATER_KIND_LAKE;
+            return float4(input.forwardDepth, depth01, EncodeWaterShoreKind(shore01, kind), freezeFactor);
         }
 
         float4 Frag(Varyings input) : SV_Target

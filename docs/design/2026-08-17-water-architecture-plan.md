@@ -153,6 +153,42 @@ rather than re-deriving one. Owned by W18/W20.
 authored, or explicit priority), membership built **from that level** rather than from the global wet
 predicate, a stable `WaterBodyId`/level/type/bounds/membership in the catalog, and defined behaviour for
 nested basins, merged spillways, dry basins, rivers and waterfalls.
+
+**Level source decided 2026-08-19 (Bryan): spill solve.** Authored was rejected because bodies are
+discovered per seed and our ids are assignment-order, so there is nothing stable to author against — it
+survives only as an override slot. Rule-based (min + fixed depth) was rejected because it is not physical
+and yields no spill point, and the spill point is what gives W13 an anchor for where a river leaves a lake.
+
+*Algorithm:* priority-flood. Seed a min-heap with the ocean cells, pop lowest first, and give each
+neighbour `filled = max(ownElevation, poppedFilled)`. Every cell ends with the surface height of the basin
+containing it; `filled > own` marks submerged cells and the basin's fill level is that `filled` value.
+Nested basins and merged spillways fall out of the ordering rather than needing cases. Runs on the grid
+`WaterBodyMap` already samples — 221,184 cells, O(n log n), on the existing background thread.
+
+*Resolution:* 221,184 cells over a 5000 m sphere is ~1,420 m² per cell, **≈38 m per side**. Lake #8
+(325 cells ≈ 0.55 km²) has its rim resolved at 38 m. Lake #3 (2 cells) is at the noise floor.
+
+*Known cases to handle:* procedural noise makes thousands of 1-3 cell dimples, so a minimum basin area
+and minimum fill depth are required or the planet grows puddles everywhere. Dry (endorheic) basins are
+the open question — priority-flood fills every depression to its rim whether or not water would reach it;
+the climate provider's moisture field is the obvious gate and is already available.
+
+*Sequencing:*
+- **W5a** solver + real `SurfaceElevation` per body in the catalog, exposed through `water.bodies`.
+  No mesh change, therefore no visual change — verifiable on its own.
+- **W5b** mesh honours per-body level. `WaterMeshBuilder.cs:131` computes **one** scalar
+  `waterRadius = PlanetRadius * (1 + OceanLevel) + SurfaceOffset` and every vertex is
+  `direction * waterRadius`; that becomes a per-body lookup. The same file uses `OceanLevel` at six sites
+  (radius, shoreline interpolation `t`, depth, `isWet`, surface-edit evaluate). This is where raised lakes
+  first become visible.
+- **W5c** consumers, including D10.
+
+*Scoping correction to the "~60 sites" figure below:* `SeaLevelRadius`/`SeaRadiusLocal` appear 57 times
+across 24 C# files and 7 shaders, but they split in two. **Datum** consumers (atmosphere base radius,
+cloud base, stars, scale markers, camera altitude) want the planet's nominal sea level and stay scalar
+permanently. Only **body-surface** consumers (water mesh, scatter altitude gating, biome classification,
+character grounding and swim) need "the level of the body here". Classifying the 57 is the first step of
+W5c and contains no design choice.
 *Consumers:* ~60 sites across seven subsystems. Four sea-level authorities exist, one of which
 (`BiomeConstants.OceanThreshold`, hardcoded `0f`) ignores `OceanLevel` entirely — D10.
 Parity-locked duplicates: biome ×2, scatter ×2 (with a parity test), grass ×3.

@@ -36,7 +36,7 @@ vertices**, and they have no counterpart in the retained face grid, which matter
 |---|---|---|---|---|
 | R | `forwardDepth` | 0..far | metres | `max(-positionVS.z, 0)` at the **displaced** surface. Distance from the camera to the water surface along view-forward. Water does not write to the depth buffer (`ZWrite Off`), so this is the only record of where the surface is. |
 | G | `depth01` | 0..1 | normalised | Passthrough of vertex colour R. |
-| B | `shoreBody` | 0..1 | **packed** | `shore01 * 0.45 + body01 * 0.55`. Two values in one channel — see §4. |
+| B | `shore + kind` | 0..2047 | **packed** | `round(shore01 * 511) * 4 + kind`. Two values in one channel — see §4. |
 | A | `freezeFactor` | 0..1 | normalised | `EvaluateFreezeFactor(temperature01, body01)`. 1 = fully frozen. |
 
 Since 2026-08-18 the prepass **displaces** by `ComputeWaterVertexDisplacement`, identically to
@@ -68,7 +68,37 @@ as their validity test. Any scheme that signs or offsets channel R breaks the at
 
 ---
 
-## 4. The `shoreBody` packing, and its invariant — D5
+## 4. The channel-B packing — D5 (**re-encoded 2026-08-19**)
+
+Owned by `Includes/WaterVolumeData.hlsl`, which all three shaders now include. It holds the encode, the
+decode, and the coverage formula — `WaterVolume` and `Atmosphere` had previously grown *separate copies*
+of the same coverage expression against the same channels, with nothing able to report a drift.
+
+```
+packed = round(shore01 * 511) * 4 + kind      // max 2047, exact in fp16 (integers exact to 2048)
+```
+
+- `shore01` keeps **9 bits** (512 levels).
+- `kind` gets **2 bits**: `WATER_KIND_LAKE 0`, `WATER_KIND_OCEAN 1`, 2 and 3 reserved for river and
+  waterfall (W13/W14).
+
+**Why shore01 gets the bits.** Coverage runs `shore01` through `smoothstep(0.0005, 0.018)` — a ramp that
+lives entirely in the bottom few percent of the range. At 7 bits the shoreline feather would quantise to
+about five steps. The kind enum needs no headroom by comparison; W15 calibrates per body *type*, not per
+body instance, so the volume never needs a body id.
+
+**Filtering is safe.** The RT is screen-sized and read 1:1 by a fullscreen pass, and `Atmosphere`'s
+dilation is a **max-select** (`bestData = candidate`) rather than an average, so no packed value is ever
+interpolated between texels.
+
+**Coverage is bit-identical through the change.** `WaterVolumeCoverage` reconstructs the old
+`shore01 * 0.45 + (isOcean ? 0.55 : 0)` term rather than switching to the cleaner
+`step(0.0001, forwardDepth)` presence test. The ocean term was load-bearing: it is what kept coverage
+alive on ocean pixels where both `depth01` and `shore01` fall to zero at the waterline. Moving to a
+depth-based presence test changes the shoreline feather on every body at once, so it carries a
+`ponytail:` marker and wants its own change with its own visual pass.
+
+### The original defect, for the record
 
 `R16G16B16A16_SFloat` gives four channels; the volume needs five values (`forwardDepth`, `depth01`,
 `shore01`, `body01`, `freezeFactor`). `shore01` and `body01` share channel B.
@@ -93,19 +123,16 @@ The decode `lake01 = 1 - smoothstep(0.45, 0.55, shoreBody)` is exact **only whil
 So the packing is sound today, and the volume's own `smoothstep(0.45, 0.55)` already declares that it
 wants a binary class rather than a gradient.
 
-**Decision: document and guard, do not re-encode yet.** The 0.02% exposure does not justify touching the
-volume composite — the most expensive and most fragile pass in the water stack, and the one that would
-also drag `Atmosphere.shader` in via §3's invariant. More importantly, the *right* encoding depends on
-what **W5** needs channel B to carry once bodies have independent levels and identities; designing it now
-means designing it blind.
+**Resolved 2026-08-19 by the re-encode above.** The exposure was small, but the encoding failed *silently*
+and would have broken outright the day a third body kind existed — which W13/W14 guarantee. Signing
+channel R was rejected because §3's `step(0.0001, forwardDepth)` invariant forbids it; a second RT was
+rejected because the volume composite measured as the entire GPU cost of the water.
 
-**Guard:** `WaterMeshBuilder` counts vertices with `0.05 < body01 < 0.95` into
-`BuildStats.AmbiguousBodyVertices`; `PlanetWaterSurface` logs a Warning past 0.5% of mesh vertices. That
-is the only place the break would be visible, because the symptom is a wrong body *tint*, not an artefact.
-
-**Revisit in W5.** When per-body levels land, either give the catalog body id its own channel (which needs
-a fifth value and therefore a second RT or a narrower `forwardDepth`), or keep `body01` strictly binary and
-carry the id separately.
+**Guard retained.** `WaterMeshBuilder` still counts vertices with `0.05 < body01 < 0.95` into
+`BuildStats.AmbiguousBodyVertices` and `PlanetWaterSurface` warns past 0.5%. It no longer guards a
+decoding hazard — the encode now quantises to a kind regardless — but it is the only instrument that
+reports the mesh producing a body factor that is neither lake nor ocean, which is a real signal once W5
+introduces more body types.
 
 ---
 

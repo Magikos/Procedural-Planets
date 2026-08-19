@@ -21,6 +21,7 @@ Shader "Hidden/WaterVolume"
     #include "Includes/Math.hlsl"
     #include "Includes/DebugModes.hlsl"
     #include "Includes/CloudShadows.hlsl"
+    #include "Includes/WaterVolumeData.hlsl"
 
     #define FORCE_WATER_LAYER_PROOF 0
 
@@ -89,10 +90,6 @@ Shader "Hidden/WaterVolume"
         float3 color;
     };
 
-    float WaterCoverageFromData(float4 waterData)
-    {
-        return smoothstep(0.0005, 0.018, max(saturate(waterData.g), saturate(waterData.b)));
-    }
 
     float SceneDepthValid(float rawDepth)
     {
@@ -625,7 +622,7 @@ Shader "Hidden/WaterVolume"
         {
             float rawDepthProof = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, input.uv).r;
             float4 waterDataProof = SAMPLE_TEXTURE2D(_WaterVolumeData, sampler_WaterVolumeData, input.uv);
-            float waterMaskProof = WaterCoverageFromData(waterDataProof);
+            float waterMaskProof = WaterVolumeCoverage(waterDataProof);
 
             if (SceneDepthValid(rawDepthProof) > 0.0)
             {
@@ -672,9 +669,9 @@ Shader "Hidden/WaterVolume"
         }
 
         float4 waterData = SAMPLE_TEXTURE2D(_WaterVolumeData, sampler_WaterVolumeData, input.uv);
-        float screenWaterCoverage = WaterCoverageFromData(waterData);
+        float screenWaterCoverage = WaterVolumeCoverage(waterData);
         float liquidContribution = 1.0 - saturate(waterData.a);
-        float lake01 = 1.0 - smoothstep(0.45, 0.55, waterData.b); // .b packs body01: <0.45 = lake, >0.55 = ocean
+        float lake01 = WaterVolumeLakeMask(waterData);
         float receiverDistance = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
         float3 receiverWS = _WorldSpaceCameraPos.xyz + rayDir * receiverDistance;
 
