@@ -768,8 +768,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     // question in this area is settled by numbers the solve produces rather than by a fresh planet. Biome
     // colours and scatter placement do NOT update here: they bake against the water map during generation,
     // so a change that moves a shoreline still needs a full generate to be seen in the ground.
-    [ConsoleCommand("rebuild", "Re-solve water bodies and rebuild the water mesh against the existing terrain. Much faster than planet.generate; does not re-bake biome colours or scatter.", MonoTargetType.Single)]
-    async Awaitable<string> WaterRebuildCmd(CancellationToken ct = default)
+    [ConsoleCommand("rebuild-water", "Re-solve water bodies and rebuild the water mesh against the existing terrain. Much faster than planet.generate; does not re-bake biome colours or scatter.", MonoTargetType.Single)]
+    async Awaitable<string> RebuildWaterCmd(CancellationToken ct = default)
     {
         if (IsGenerating)
             throw new System.InvalidOperationException("planet generation already in progress");
