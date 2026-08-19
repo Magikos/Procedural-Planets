@@ -759,6 +759,50 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         await GeneratePlanetAsync(ct);
     }
 
+    // Redo only the water: solve the bodies again and rebuild the surface against the terrain that is
+    // already generated. Everything upstream - the shape generator, the chunk provider and its face
+    // samplers - is untouched and still valid, so this skips the terrain mesh, the biome bake, the grass
+    // atlases and the scatter configure that dominate a full generate.
+    //
+    // Exists because verifying a water change through planet.generate costs minutes, and almost every
+    // question in this area is settled by numbers the solve produces rather than by a fresh planet. Biome
+    // colours and scatter placement do NOT update here: they bake against the water map during generation,
+    // so a change that moves a shoreline still needs a full generate to be seen in the ground.
+    [ConsoleCommand("rebuild", "Re-solve water bodies and rebuild the water mesh against the existing terrain. Much faster than planet.generate; does not re-bake biome colours or scatter.", MonoTargetType.Single)]
+    async Awaitable<string> WaterRebuildCmd(CancellationToken ct = default)
+    {
+        if (IsGenerating)
+            throw new System.InvalidOperationException("planet generation already in progress");
+        if (_shapeGenerator == null || _surfaceProvider == null || _waterSurface == null)
+            return "planet.rebuild-water: no generated planet to rebuild against — run planet.generate first";
+
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        var ground = new AnalyticGroundSampler(_shapeGenerator);
+        float baseRadius = ground.PlanetRadius;
+
+        WaterBodyMap.Current = null;
+        await Awaitable.BackgroundThreadAsync();
+        WaterBodyMap rebuilt = WaterBodyMap.Build(ground, baseRadius, BiomeConstants.OceanThreshold);
+        await Awaitable.MainThreadAsync();
+        if (this == null) return "planet.rebuild-water: planet destroyed mid-rebuild";
+        WaterBodyMap.Current = rebuilt;
+        long solveMs = timer.ElapsedMilliseconds;
+
+        await _waterSurface.GenerateAsync(
+            _surfaceProvider.GetFaceMeshSamplers(),
+            _colorGenerator?.ClimateProvider,
+            PerFaceResolution,
+            null,
+            ct);
+
+        WaterBodyCatalog catalog = rebuilt?.Bodies;
+        return catalog == null
+            ? $"planet.rebuild-water: no bodies solved ({timer.ElapsedMilliseconds} ms)"
+            : $"planet.rebuild-water: {catalog.CountOf(WaterBodyKind.Lake)} lake(s), {catalog.CountOf(WaterBodyKind.Ocean)} ocean(s), " +
+              $"catalog v{catalog.Version}, seam {rebuilt.SeamAsymmetryCount}, drained {rebuilt.DrainedBasinCount} — " +
+              $"solve {solveMs} ms, total {timer.ElapsedMilliseconds} ms";
+    }
+
     static string AssetName(Object asset)
     {
         return asset != null ? asset.name : "none";

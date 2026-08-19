@@ -1,11 +1,12 @@
 ---
 name: project_water_architecture_build
-description: 2026-08-17/18 water redesign — plan doc location, W1-W4a shipped, and the gotchas each one surfaced
+description: 2026-08-17/19 water redesign — plan doc, W1-W5c shipped, per-body lake levels, and the gotchas each surfaced
 metadata:
   type: project
 ---
 
-Branch `harvest-vertical-slice`, uncommitted. Plan: **`docs/design/2026-08-17-water-architecture-plan.md`**
+Branch `harvest-vertical-slice`, committed through `2549d8e`. Plan:
+**`docs/design/2026-08-17-water-architecture-plan.md`**
 (v5 body + appendix holding four review rounds: 3 agent passes, Codex on v2 and v4). Tasks W1-W20,
 defects D1-D12, build order in §5, immediate work in §9. Goal set: waves, ripples, splashes, buoyancy,
 swimming, rivers, waterfalls, oceans and lakes, with caustics/reflections/foam/whitecaps/glint.
@@ -53,5 +54,45 @@ basin/spill solver (W5), not an aggregation over the existing predicate.
 - Test world measures 10 bodies: 3 ocean (101432 / 9796 / 2404 cells), 7 lake (325 down to 2). Bodies #2
   and #4 are **inland seas** — the concrete case W5's per-body spill level must handle.
 
-Next per §5: W4 (full data contract) → W5 (basin/spill solver) → W6 (query service).
+## 2026-08-19: per-body lake levels, end to end
+
+**W5 shipped.** `WaterSpillSolver` (priority-flood, own binary min-heap — Unity's profile predates
+`PriorityQueue`). Every basin gets its real spill height. **The planet has ~92 lakes, not 7** — the old
+global wet predicate could only see basins already below sea level. Highest sits **96.9 m above sea level**;
+7.79% of water vertices are now above the sea radius.
+
+**The one rule that explains every bug in this arc:** a consumer asking "where is sea level" globally when
+it should ask "where is water HERE". Fixed in the mesh, biome (D10), scatter, grass, and the volume. When
+something looks wrong near a raised lake, look for `_SeaLevelRadius` / `OceanLevel` / `SeaRadiusLocal`
+first.
+
+**Gotchas worth keeping:**
+- **The level field is not the solver's `filled` array.** `filled == ground` on draining land, which is
+  right for the solve and catastrophic as a wet test: the mesh samples the 38 m grid at ~half its cell
+  size, so any vertex below its cell's sampled height reads submerged and *half of every hillside floods*.
+  `BuildLevelField` emits a level only where water stands, dilated one ring, `NoWater` elsewhere.
+- **Never hand a Burst job an unassigned `NativeArray`.** Its pointer is null and the safety check faults
+  at the first memory touch — which was `Out.BeginForEachIndex`, so the stack blamed the stream writer.
+  Allocate a 1-element placeholder and gate on a separate resolution field.
+- **The 38 m mask grid is coarser than the mesh, so the true waterline sits INSIDE a mask cell.** Deciding
+  Lake/LakeShore by mask state left dry ground inside `Water` cells reading as plain land — which is
+  exactly the band reeds need. Decide by elevation vs the local level instead, in any lake-adjacent cell.
+- Cube-face projection is mirrored in three places now (C# `WaterLevelGrid`, HLSL `WaterLevelField.hlsl`,
+  and `WaterBodyMap`'s own indexer). A texture fetch cannot share C#, so all sites say "change one, change
+  both".
+- `planet.generate` is async and **`CommandExecutor.ExecuteImmediate` rejects it**; call
+  `Planet.GeneratePlanetAsync` by reflection instead. Firing it before scene bootstrap finishes throws
+  `Service ISeedProvider not registered`.
+- Forcing daylight via `time.set-local` / `TrySetLocalTimeOfDay` frequently leaves the sun below the
+  *chosen location's* horizon. Pick a lake by `dot(bodyDirection, _SunParams)` instead of fighting time.
+
+**Closed defects:** D4, D5, D6, D7, D8, D9, D10, D11. D5's re-encode is
+`round(shore01*511)*4 + kind` in `Includes/WaterVolumeData.hlsl` — 9 bits shore, 4 body kinds, exact in
+fp16. Signing channel R is forbidden: `Atmosphere.shader` uses `step(0.0001, forwardDepth)` as its
+water-validity test.
+
+**Still open:** W6 query service onward (buoyancy, swimming, rivers, waterfalls). `WaterVolume.shader`
+keeps the analytic sphere only for pixels the water mesh never covered.
+
+Next per §5: W6 (query service) → W7/W8 (physics, buoyancy) → W9 (swim).
 Related: [[project_water_tech_research]], [[feedback_goal_first_scoping]], [[reference_unity_mcp]].
