@@ -22,6 +22,7 @@ Shader "Hidden/WaterVolume"
     #include "Includes/DebugModes.hlsl"
     #include "Includes/CloudShadows.hlsl"
     #include "Includes/WaterVolumeData.hlsl"
+    #include "Includes/WaterLevelField.hlsl"
 
     #define FORCE_WATER_LAYER_PROOF 0
 
@@ -113,9 +114,14 @@ Shader "Hidden/WaterVolume"
         return lenSq > 0.0000001 ? value * rsqrt(lenSq) : fallback;
     }
 
+    // Height of the camera above the water standing beneath it. Against the global sea radius this read
+    // +40 m while the camera floated in a lake perched that high, so nothing ever registered as submerged.
     float CameraSeaOffset()
     {
-        return length(_WorldSpaceCameraPos.xyz - _PlanetCenter) - _SeaLevelRadius;
+        float3 fromCenter = _WorldSpaceCameraPos.xyz - _PlanetCenter;
+        float radius = length(fromCenter);
+        float surface = WaterSurfaceRadiusAt(fromCenter / max(radius, 0.0001), _SeaLevelRadius);
+        return radius - surface;
     }
 
     float CameraUnderwater01()
@@ -488,8 +494,9 @@ Shader "Hidden/WaterVolume"
         float refractedDistance = LinearEyeDepth(rawRefractedDepth, _ZBufferParams) * refractedViewLength;
         float3 refractedReceiverWS = _WorldSpaceCameraPos.xyz + refractedRayDir * refractedDistance;
 
-        float refractedRadius = length(refractedReceiverWS - _PlanetCenter);
-        float refractedWaterDepth = _SeaLevelRadius - refractedRadius;
+        float3 refractedFromCenter = refractedReceiverWS - _PlanetCenter;
+        float refractedRadius = length(refractedFromCenter);
+        float refractedWaterDepth = WaterSurfaceRadiusAt(refractedFromCenter / max(refractedRadius, 0.0001), _SeaLevelRadius) - refractedRadius;
         float refractedUnderwater = smoothstep(0.05, 1.25, refractedWaterDepth);
         float refractedWaterPath = WaterPathToReceiver(refractedRayDir, refractedDistance);
         float refractedPathMask = smoothstep(0.02, 0.75, refractedWaterPath);
@@ -531,7 +538,8 @@ Shader "Hidden/WaterVolume"
         if (receiverRadius <= 0.0001)
             return result;
 
-        float waterDepth = _SeaLevelRadius - receiverRadius;
+        // Depth below the water standing over the RECEIVER, so caustics land on a raised lake bed too.
+        float waterDepth = WaterSurfaceRadiusAt(fromCenter / receiverRadius, _SeaLevelRadius) - receiverRadius;
         float receiverUnderwater = smoothstep(0.05, 1.25, waterDepth);
         if (receiverUnderwater <= 0.0)
             return result;

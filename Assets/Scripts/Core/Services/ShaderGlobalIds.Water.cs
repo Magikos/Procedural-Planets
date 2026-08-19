@@ -23,4 +23,12 @@ public static partial class ShaderGlobalIds
     public const string LakeFreezeComplete = "_LakeFreezeComplete";
     public const string OceanFreezeStart = "_OceanFreezeStart";
     public const string OceanFreezeComplete = "_OceanFreezeComplete";
+
+    // Per-direction water surface height, one cube-face slice each. Replaces _SeaLevelRadius for anything
+    // asking where the water surface is HERE rather than where the planet's ocean sits. Resolution 0 means
+    // no field is published and every consumer falls back to the global radius.
+    // Published by WaterLevelTexture; consumed via Includes/WaterLevelField.hlsl.
+    public const string WaterLevelTex = "_WaterLevelTex";
+    public const string WaterLevelRes = "_WaterLevelRes";
+    public const string WaterLevelBaseRadius = "_WaterLevelBaseRadius";
 }

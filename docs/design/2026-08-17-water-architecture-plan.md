@@ -237,6 +237,29 @@ the climate provider's moisture field is the obvious gate and is already availab
   its real outlet is narrower than the 38 m grid remains an open question and is the most likely defect.
 - **W5c** consumers, including D10. *In progress 2026-08-19.*
 
+  **Water level on the GPU — done 2026-08-19.** `WaterLevelTexture` publishes the level grid as a
+  192×192×6 `R32_SFloat` `Texture2DArray` (884 KB), point-sampled because neighbouring cells can belong to
+  different bodies and interpolating two lake surfaces yields a level belonging to neither.
+  `Includes/WaterLevelField.hlsl` owns the fetch; its cube-face projection is a mirror of
+  `WaterLevelGrid.Index` in C#, which a texture fetch cannot share, so both sites say "change one, change
+  both". `_WaterLevelRes = 0` means no field and every consumer falls back to the global sea radius, so a
+  world without solved water renders exactly as before.
+
+  *Grass fade (answers "should grass fade into the water?" — no, and the code already agreed).*
+  `PlanetVertexColor.shader` fades grass over a 4 m band above `waterClearance`, which was always the
+  intent. Keyed to `_GrassWaterRadius` — the global sea radius — that band read 40 m of altitude at a
+  raised lake's own waterline, so grass grew in at full strength and the only thing thinning it was the
+  biome bake's 25×25 blur kernel. It now fades against the water standing at that direction.
+
+  *Volume point tests.* `CameraSeaOffset`, the caustic receiver depth and the refracted receiver depth all
+  compared against `_SeaLevelRadius`, so a raised lake was never underwater and never caught caustics.
+  All three now use `WaterSurfaceRadiusAt`.
+
+  *Still analytic:* `WaterPathToReceiver` and `FarTerrainWaterlineMask` ray-sphere against
+  `_SeaLevelRadius` to measure optical path length along a view ray. That is a different quantity from a
+  point test and a sphere cannot represent it for a raised body; its correct generalisation is the prepass
+  `forwardDepth`, which already records the real surface distance per pixel. Separable next piece.
+
   **Membership from level — done.** Bodies are now flood-filled from the solved submerged set rather than
   the global wet predicate, so the catalog reports **92 lakes + 3 oceans** instead of 7 + 3, matching what
   the mesh draws. Every new lake gets an id, a catalog entry, and a `Water` mask, and `DilateShores` runs on

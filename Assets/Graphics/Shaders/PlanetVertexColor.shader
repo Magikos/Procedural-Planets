@@ -69,6 +69,7 @@ Shader "Planet/VertexColor"
             #include "Includes/CloudShadows.hlsl"
             #include "Includes/DebugModes.hlsl"
             #include "Includes/GrassColor.hlsl"
+            #include "Includes/WaterLevelField.hlsl"
             #include "Includes/PlanetSunLighting.hlsl"
 
             struct Attributes
@@ -765,7 +766,11 @@ Shader "Planet/VertexColor"
                 float waterKeep = 1.0;
                 if (_GrassWaterRadius > 0.0)
                 {
-                    float altitude = length(relPos) - _GrassWaterRadius;
+                    // Fade against the water standing HERE, not the planet's ocean. Keyed to the global
+                    // radius, a lake 40 m up left this reading 40 m of altitude at its own waterline - far
+                    // outside the 4 m fade band - so grass grew at full strength into the lake.
+                    float waterRadius = WaterSurfaceRadiusAt(normalize(relPos), _GrassWaterRadius);
+                    float altitude = length(relPos) - waterRadius;
                     waterKeep = smoothstep(max(grass.waterClearance, 0.0), max(grass.waterClearance, 0.0) + 4.0, altitude);
                 }
                 eval.waterKeep = saturate(waterKeep);

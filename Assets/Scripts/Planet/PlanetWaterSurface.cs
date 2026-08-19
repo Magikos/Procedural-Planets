@@ -54,6 +54,8 @@ public sealed class PlanetWaterSurface
     static readonly int _partiallyFrozenWaterBodiesId = Shader.PropertyToID(ShaderGlobalIds.PartiallyFrozenWaterBodies);
     static readonly int _liquidWaterBodiesId = Shader.PropertyToID(ShaderGlobalIds.LiquidWaterBodies);
 
+    readonly WaterLevelTexture _levelTexture = new();
+
 
 
     public PlanetWaterSurface(Transform planetTransform)
@@ -128,6 +130,10 @@ public sealed class PlanetWaterSurface
             OceanFreezeCompleteTemperature01 = water.OceanFreezeCompleteTemperature01,
             Levels = WaterBodyMap.Current
         };
+
+        // Publish the level field before the mesh build so the terrain and volume shaders are never a frame
+        // behind the surface they are shading against.
+        _levelTexture.Publish(WaterBodyMap.Current?.LevelGrid, WaterBodyMap.Resolution, planet.PlanetRadius);
         // Water builder reads per-face vertex/elevation grids via IFaceMeshSampler. Both
         // resolution modes (Low/High) supply this view; chunked path wraps each root chunk.
         if (faceSamplers == null || faceSamplers.Count == 0)
@@ -453,5 +459,6 @@ public sealed class PlanetWaterSurface
         }
         // _waterObject is a child of the planet transform and is destroyed with the planet.
         _waterObject = null;
+        _levelTexture.Dispose();
     }
 }
