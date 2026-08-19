@@ -113,7 +113,7 @@ public sealed class PerFaceSurfaceProvider : IPlanetSurfaceProvider
         localRadius = 0f;
         if (_terrainFaces == null) return false;
 
-        var (face, uv) = CoordinateConverter.UnitSphereToCubeFace(localUnitDirection);
+        CoordinateConverter.UnitSphereToCubeFaceUvExact(localUnitDirection, out int face, out Vector2 uv);
         if (face < 0 || face >= _terrainFaces.Length || _terrainFaces[face] == null)
             return false;
         return _terrainFaces[face].TrySampleSurfaceRadius(uv, out localRadius) && localRadius > 0f;

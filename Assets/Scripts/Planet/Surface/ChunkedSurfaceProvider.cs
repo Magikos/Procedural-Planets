@@ -290,7 +290,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         localRadius = 0f;
         if (_quadtrees == null) return false;
 
-        var (face, faceUv) = CoordinateConverter.UnitSphereToCubeFace(localUnitDirection);
+        CoordinateConverter.UnitSphereToCubeFaceUvExact(localUnitDirection, out int face, out Vector2 faceUv);
         if (face < 0 || face >= 6 || _quadtrees[face] == null) return false;
 
         var leaf = _quadtrees[face].FindLeafContaining(faceUv);
@@ -1584,7 +1584,7 @@ public sealed class ChunkedSurfaceProvider : IPlanetSurfaceProvider, IChunkVisib
         if (_quadtrees == null || _quadtrees.Length != 6) return 0;
         if (localUnitDirection.sqrMagnitude < 0.0001f) return 0;
 
-        var (face, faceUv) = CoordinateConverter.UnitSphereToCubeFace(localUnitDirection.normalized);
+        CoordinateConverter.UnitSphereToCubeFaceUvExact(localUnitDirection.normalized, out int face, out Vector2 faceUv);
         if (face < 0 || face >= _quadtrees.Length || _quadtrees[face] == null) return 0;
 
         PlanetChunk leaf = _quadtrees[face].FindLeafContaining(faceUv);

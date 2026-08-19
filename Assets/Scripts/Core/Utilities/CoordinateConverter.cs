@@ -34,39 +34,6 @@ public static class CoordinateConverter
         return new Vector3(x, y, z);
     }
 
-    public static (int face, Vector2 uv) UnitSphereToCubeFace(Vector3 point)
-    {
-        float absX = Mathf.Abs(point.x);
-        float absY = Mathf.Abs(point.y);
-        float absZ = Mathf.Abs(point.z);
-
-        int face;
-        float u, v;
-
-        if (absY >= absX && absY >= absZ)
-        {
-            face = point.y > 0 ? 0 : 1;
-            float sign = point.y > 0 ? 1f : -1f;
-            u = point.x / absY;
-            v = point.z / absY * sign;
-        }
-        else if (absX >= absY && absX >= absZ)
-        {
-            face = point.x > 0 ? 3 : 2;
-            float sign = point.x > 0 ? 1f : -1f;
-            u = point.z / absX * -sign;
-            v = point.y / absX;
-        }
-        else
-        {
-            face = point.z > 0 ? 4 : 5;
-            float sign = point.z > 0 ? 1f : -1f;
-            u = point.x / absZ * sign;
-            v = point.y / absZ;
-        }
-
-        return (face, new Vector2((u + 1f) * 0.5f, (v + 1f) * 0.5f));
-    }
 
     public static Vector3 CubeFaceToUnitSphere(int face, Vector2 uv)
     {
@@ -81,8 +48,8 @@ public static class CoordinateConverter
         return pointOnCube.normalized;
     }
 
-    // Exact inverse of CubeFaceToUnitSphere. UnitSphereToCubeFace uses an older UV
-    // orientation; biome atlases and diagnostic grids need this basis.
+    // Exact inverse of CubeFaceToUnitSphere: same localUp / axisA / axisB basis PlanetChunkMeshJob builds
+    // vertices from, so a direction resolves to the face UV the mesh was actually generated at.
     public static void UnitSphereToCubeFaceUvExact(Vector3 direction, out int face, out Vector2 uv)
     {
         direction.Normalize();
@@ -119,7 +86,7 @@ public static class CoordinateConverter
 
     public static ChunkCoord UnitSphereToChunkCoord(Vector3 point, int chunksPerFaceEdge)
     {
-        var (face, uv) = UnitSphereToCubeFace(point);
+        UnitSphereToCubeFaceUvExact(point, out int face, out Vector2 uv);
         int x = Mathf.Clamp(Mathf.FloorToInt(uv.x * chunksPerFaceEdge), 0, chunksPerFaceEdge - 1);
         int y = Mathf.Clamp(Mathf.FloorToInt(uv.y * chunksPerFaceEdge), 0, chunksPerFaceEdge - 1);
         return new ChunkCoord(face, x, y);
