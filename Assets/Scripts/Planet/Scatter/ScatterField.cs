@@ -104,7 +104,7 @@ public sealed class ScatterField : IDisposable
         // Local-space radius of the water surface above a direction. Without this a lily pad on a lake
         // 97 m up would be placed at the global sea radius and end up buried under the hillside.
         public float SeaRadiusAt(Vector3 dir) =>
-            WaterLevel != null
+            WaterLevelRes > 0
                 ? WaterLevelGrid.SeaRadius(WaterLevel[WaterLevelGrid.Index(dir, WaterLevelRes)], BaseRadiusLocal, SeaRadiusLocal)
                 : SeaRadiusLocal;
 
@@ -116,8 +116,11 @@ public sealed class ScatterField : IDisposable
     {
         context = default;
         if (!_configured || _library == null || _levels == null) return false;
+        // Resolution must read 0 when there is no grid: scatter configures before the first water build, and
+        // a non-zero resolution beside a null grid is an invitation to index nothing.
+        float[] waterLevel = WaterBodyMap.Current?.LevelGrid;
         context = new GatherContext(_library, _levels, _worldSeed, _baseRadiusLocal, _seaRadiusLocal, _hasOcean,
-            WaterBodyMap.Current?.LevelGrid, WaterBodyMap.Resolution);
+            waterLevel, waterLevel != null ? WaterBodyMap.Resolution : 0);
         return true;
     }
 

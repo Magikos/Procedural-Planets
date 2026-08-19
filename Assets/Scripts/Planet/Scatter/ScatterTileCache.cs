@@ -107,13 +107,14 @@ public sealed class ScatterTileCache
 
         if (_waterLevel.IsCreated) _waterLevel.Dispose();
         _waterLevelSource = ctx.WaterLevel;
-        if (ctx.WaterLevel == null)
-        {
-            _waterLevel = default;
-            return _waterLevel;
-        }
 
-        _waterLevel = new NativeArray<float>(ctx.WaterLevel, Allocator.Persistent);
+        // Never hand the job an unassigned NativeArray. Its internal pointer is null, and the job safety
+        // check faults on the first memory touch - which is Out.BeginForEachIndex, so the stack blames the
+        // stream writer rather than this field. A one-element placeholder keeps the field valid; the job
+        // gates on WaterLevelRes, which is 0 whenever there is no real grid.
+        _waterLevel = ctx.WaterLevel != null
+            ? new NativeArray<float>(ctx.WaterLevel, Allocator.Persistent)
+            : new NativeArray<float>(1, Allocator.Persistent);
         return _waterLevel;
     }
     bool _nativeAllocated;
