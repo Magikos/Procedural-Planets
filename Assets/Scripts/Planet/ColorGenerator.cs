@@ -296,6 +296,9 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
     {
         // Lake override (same WaterBodyMap the terrain bake reads, so scatter membership matches the map).
         byte lakeState = WaterBodyMap.Current != null ? WaterBodyMap.Current.Sample(pointOnUnitSphere) : (byte)0;
+        float waterLevel = WaterBodyMap.Current != null
+            ? WaterBodyMap.Current.LevelAt(pointOnUnitSphere, BiomeConstants.OceanThreshold)
+            : BiomeConstants.OceanThreshold;
 
         if (_biomeAssignmentField == null)
         {
@@ -303,7 +306,8 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
                 climate.Temperature01,
                 climate.Moisture01,
                 climate.Elevation,
-                lakeState);
+                lakeState,
+                waterLevel);
         }
 
         BiomeAssignmentSample sample = _biomeAssignmentField.Evaluate(pointOnUnitSphere);
@@ -318,7 +322,8 @@ public class ColorGenerator : IBiomeProvider, System.IDisposable
             climate.Temperature01,
             climate.Moisture01,
             climate.Elevation,
-            lakeState);
+            lakeState,
+            waterLevel);
     }
 
     void BuildBiomeColorLookup()

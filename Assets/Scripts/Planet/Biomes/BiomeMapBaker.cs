@@ -126,6 +126,9 @@ public static class BiomeMapBaker
                         chunk.FaceIndex, faceUv);
                     byte landPrimary = assignmentField.EvaluatePrimaryId(direction);
                     byte lakeState = WaterBodyMap.Current != null ? WaterBodyMap.Current.Sample(direction) : (byte)0;
+                    float waterLevel = WaterBodyMap.Current != null
+                        ? WaterBodyMap.Current.LevelAt(direction, BiomeConstants.OceanThreshold)
+                        : BiomeConstants.OceanThreshold;
                     BiomeLookupEvaluator.ResolveFromLandBiomes(
                         lookup,
                         tm.x,
@@ -134,6 +137,7 @@ public static class BiomeMapBaker
                         landPrimary,
                         0f,
                         lakeState,
+                        waterLevel,
                         out primary,
                         out _,
                         out _);

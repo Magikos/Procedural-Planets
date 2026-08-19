@@ -57,6 +57,7 @@ public static class BiomeLookupEvaluator
             gridSecondaryId,
             gridBlendWeight,
             0,
+            BiomeConstants.OceanThreshold,
             out primaryId,
             out secondaryId,
             out blendWeight);
@@ -70,6 +71,7 @@ public static class BiomeLookupEvaluator
         byte landSecondaryId,
         float landBlendWeight,
         byte lakeState,
+        float waterLevel,
         out byte primaryId,
         out byte secondaryId,
         out float blendWeight)
@@ -84,14 +86,18 @@ public static class BiomeLookupEvaluator
         // Lake override (WaterBodyMap): a small below-water body -> Lake (blends to LakeShore at the edge like
         // Ocean blends to Beach); its dry shore ring -> LakeShore (blends into the surrounding land). Gated
         // on the elevation side so a mask-resolution mismatch can't put lake water on dry land or vice versa.
-        if (lakeState == 1 && elevation < BiomeConstants.OceanThreshold)
+        //
+        // The gate is against THIS body's surface, not the global ocean level. A lake perched 40 m up has a
+        // bed at +20 m, which against the global level reads as ordinary highland - so the override never
+        // fired, the lake floor came out Grassland, and grass grew on it under the water.
+        if (lakeState == 1 && elevation < waterLevel)
         {
             SetBlendedResult(lookup.LakeBiomeId, lookup.LakeShoreBiomeId,
-                BoundaryBlendWeight(BiomeConstants.OceanThreshold - elevation, elevationBlend),
+                BoundaryBlendWeight(waterLevel - elevation, elevationBlend),
                 out primaryId, out secondaryId, out blendWeight);
             return;
         }
-        if (lakeState == 2 && elevation >= BiomeConstants.OceanThreshold)
+        if (lakeState == 2 && elevation >= waterLevel)
         {
             SetBlendedResult(lookup.LakeShoreBiomeId, landPrimaryId, 0.35f,
                 out primaryId, out secondaryId, out blendWeight);
