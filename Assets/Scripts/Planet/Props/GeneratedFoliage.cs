@@ -32,7 +32,7 @@ public static class GeneratedFoliage
         // albedo. Setting _BaseColor on it is a silent no-op behind a HasProperty guard, which is exactly how
         // three separate passes at the plant palette changed nothing on screen. Set whichever the material
         // actually exposes.
-        Color tinted = tint * Mathf.Max(0.1f, lift);
+        Color tinted = Normalise(tint * Mathf.Max(0.1f, lift));
         if (m.HasProperty("_SeasonColor")) m.SetColor("_SeasonColor", tinted);
         if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", tinted);
         // FoliageLit's wind is per-material sway in metres and defaults to 0, so a material built in code is
@@ -41,6 +41,18 @@ public static class GeneratedFoliage
         m.enableInstancing = true;
         _leaves[key] = m;
         return m;
+    }
+
+    // Cap an albedo multiplier at 1 while keeping its hue.
+    //
+    // _SeasonColor MULTIPLIES the leaf albedo, so a value above 1 is brighter than white and behaves like a
+    // weak emissive: fine in daylight, but at night it is the only lit thing in frame and the props read as
+    // glowing. The lift that stops dark textures reading black pushed bright tints to nearly 2x white — the
+    // flowers were the worst at 1.98 — which is what lit up a dark forest floor.
+    public static Color Normalise(Color c)
+    {
+        float peak = Mathf.Max(c.r, Mathf.Max(c.g, c.b));
+        return peak > 1f ? new Color(c.r / peak, c.g / peak, c.b / peak, c.a) : c;
     }
 
     // Flat vertex-lit surface for stems and bark.

@@ -395,7 +395,9 @@ public static class TreeInjection
             m = new Material(_cleanBase) { name = $"Gen {def.Name} leaf" };
             // FoliageLit exposes _SeasonColor, not _BaseColor, so the old _BaseColor line was a silent no-op and
             // every species that fell back to this material wore the base texture's colour instead of its own.
-            Color leafTint = def.LeafColor * 2.2f; // texture is already dark; lift so the multiply stays bright
+            // Lifted because the source texture is dark, then capped at 1: an albedo multiplier above 1 is
+            // brighter than white and reads as self-lit at night.
+            Color leafTint = GeneratedFoliage.Normalise(def.LeafColor * 2.2f);
             if (m.HasProperty("_SeasonColor")) m.SetColor("_SeasonColor", leafTint);
             if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", leafTint);
             _cleanFallback[s] = m;
