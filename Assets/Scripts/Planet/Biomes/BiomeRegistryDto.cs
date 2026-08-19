@@ -166,12 +166,14 @@ public sealed record BiomeRegistryDto(
         // the surrounding land). Gated on elevation so a mask mismatch can't misplace it.
         //
         // Against THIS body's surface, not the global ocean level - see the note in the mirrored copy.
-        if (lakeState == 1 && elevation < waterLevel)
+        // Decided by elevation within any lake-adjacent cell, so the boundary lands on the waterline rather
+        // than on the 38 m mask grid - see the note in the mirrored copy.
+        if (lakeState != 0 && elevation < waterLevel)
         {
             float blend = BoundaryBlendWeight(waterLevel - elevation, elevationBlend);
             return NewBlendedResult(BiomeType.Lake, BiomeType.LakeShore, blend, temperature, moisture);
         }
-        if (lakeState == 2 && elevation >= waterLevel)
+        if (lakeState != 0)
         {
             return NewBlendedResult(BiomeType.LakeShore, gridResult.PrimaryBiome, 0.35f, temperature, moisture);
         }

@@ -157,9 +157,36 @@ Shader "Hidden/WaterVolume"
         return dot(normalWS, -rayDir) < 0.0 ? -normalWS : normalWS;
     }
 
-    float WaterPathToReceiver(float3 rayDir, float receiverDistance)
+    // Distance along the view ray to the water surface the prepass rasterised at this pixel, or 0 where it
+    // rasterised none. Channel R holds view-forward depth, so it needs the same viewLength scaling the
+    // scene depth gets before the two can be compared.
+    float WaterSurfaceRayDistance(float4 waterData, float viewLength)
     {
-        if (_SeaLevelRadius <= 0.0 || receiverDistance <= 0.0)
+        return max(waterData.r, 0.0) * viewLength;
+    }
+
+    // Thickness of water the ray crosses between the camera and the receiver.
+    //
+    // This used to ray-sphere against _SeaLevelRadius, which cannot describe a lake sitting above sea
+    // level - the sphere passes below the lake entirely, so a submerged lakebed reported no water over it
+    // and took neither caustics nor depth fog. The prepass already rasterises the real surface, per body
+    // and with the swell displacement applied, so the entry point is simply that.
+    float WaterPathToReceiver(float3 rayDir, float receiverDistance, float surfaceRayDistance)
+    {
+        if (receiverDistance <= 0.0)
+            return 0.0;
+
+        // Camera already below the surface: everything up to the receiver is water, with no entry to find.
+        if (CameraSeaOffset() < 0.0)
+            return receiverDistance;
+
+        if (surfaceRayDistance > 0.0)
+            return max(receiverDistance - surfaceRayDistance, 0.0);
+
+        // No water was rasterised at this pixel, so there is no measured entry point. That leaves the
+        // analytic ocean sphere, which is right for open water seen past the edge of the mesh and wrong for
+        // nothing that reaches here - a raised lake always rasterises where it covers a pixel.
+        if (_SeaLevelRadius <= 0.0)
             return 0.0;
 
         float2 seaHit = RaySphere(_PlanetCenter, _SeaLevelRadius, _WorldSpaceCameraPos.xyz, rayDir);
@@ -469,7 +496,8 @@ Shader "Hidden/WaterVolume"
         return result;
     }
 
-    BottomDistortionResult ComputeBottomDistortion(float2 uv, float3 sourceColor, float3 receiverWS, CausticResult caustics, float debugScale)
+    BottomDistortionResult ComputeBottomDistortion(float2 uv, float3 sourceColor, float3 receiverWS, CausticResult caustics, float debugScale,
+        float surfaceRayDistance)
     {
         BottomDistortionResult result = EmptyBottomDistortionResult(sourceColor);
         if (_RefractionStrength <= 0.0 || caustics.mask <= 0.0)
@@ -498,7 +526,8 @@ Shader "Hidden/WaterVolume"
         float refractedRadius = length(refractedFromCenter);
         float refractedWaterDepth = WaterSurfaceRadiusAt(refractedFromCenter / max(refractedRadius, 0.0001), _SeaLevelRadius) - refractedRadius;
         float refractedUnderwater = smoothstep(0.05, 1.25, refractedWaterDepth);
-        float refractedWaterPath = WaterPathToReceiver(refractedRayDir, refractedDistance);
+        // The refracted ray leaves from the same surface point, so it shares the measured entry distance.
+        float refractedWaterPath = WaterPathToReceiver(refractedRayDir, refractedDistance, surfaceRayDistance);
         float refractedPathMask = smoothstep(0.02, 0.75, refractedWaterPath);
         float sampleValid = depthValid * refractedUnderwater * refractedPathMask;
 
@@ -527,7 +556,8 @@ Shader "Hidden/WaterVolume"
         return result;
     }
 
-    CausticResult ComputeReceiverCaustics(float3 receiverWS, float3 rayDir, float receiverDistance, float screenWaterCoverage)
+    CausticResult ComputeReceiverCaustics(float3 receiverWS, float3 rayDir, float receiverDistance, float screenWaterCoverage,
+        float surfaceRayDistance)
     {
         CausticResult result = EmptyCausticResult();
         if (_SeaLevelRadius <= 0.0)
@@ -544,7 +574,7 @@ Shader "Hidden/WaterVolume"
         if (receiverUnderwater <= 0.0)
             return result;
 
-        float waterPath = WaterPathToReceiver(rayDir, receiverDistance);
+        float waterPath = WaterPathToReceiver(rayDir, receiverDistance, surfaceRayDistance);
         float pathMask = smoothstep(0.02, 0.75, waterPath);
         float coverage = max(saturate(screenWaterCoverage), pathMask);
         float mask = receiverUnderwater * coverage;
@@ -639,7 +669,8 @@ Shader "Hidden/WaterVolume"
                 float3 rayDirProof = viewVectorProof / viewLengthProof;
                 float receiverDistanceProof = LinearEyeDepth(rawDepthProof, _ZBufferParams) * viewLengthProof;
                 float3 receiverWSProof = _WorldSpaceCameraPos.xyz + rayDirProof * receiverDistanceProof;
-                CausticResult causticsProof = ComputeReceiverCaustics(receiverWSProof, rayDirProof, receiverDistanceProof, waterMaskProof);
+                CausticResult causticsProof = ComputeReceiverCaustics(receiverWSProof, rayDirProof, receiverDistanceProof, waterMaskProof,
+                    WaterSurfaceRayDistance(waterDataProof, viewLengthProof));
                 waterMaskProof = max(waterMaskProof, causticsProof.mask);
             }
 
@@ -683,7 +714,8 @@ Shader "Hidden/WaterVolume"
         float receiverDistance = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
         float3 receiverWS = _WorldSpaceCameraPos.xyz + rayDir * receiverDistance;
 
-        CausticResult caustics = ComputeReceiverCaustics(receiverWS, rayDir, receiverDistance, screenWaterCoverage);
+        float surfaceRayDistance = WaterSurfaceRayDistance(waterData, viewLength);
+        CausticResult caustics = ComputeReceiverCaustics(receiverWS, rayDir, receiverDistance, screenWaterCoverage, surfaceRayDistance);
         float layerVisibility = VolumeLayerVisibility();
         caustics.mask *= layerVisibility;
         caustics.contribution *= layerVisibility;
@@ -738,7 +770,8 @@ Shader "Hidden/WaterVolume"
                 source.rgb,
                 receiverWS,
                 caustics,
-                distortionDebugScale);
+                distortionDebugScale,
+                surfaceRayDistance);
             bottomDistortion.mask *= liquidContribution;
             bottomDistortion.offsetUv *= liquidContribution;
             bottomDistortion.strengthPixels *= liquidContribution;

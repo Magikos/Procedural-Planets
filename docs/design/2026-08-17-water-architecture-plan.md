@@ -255,10 +255,26 @@ the climate provider's moisture field is the obvious gate and is already availab
   compared against `_SeaLevelRadius`, so a raised lake was never underwater and never caught caustics.
   All three now use `WaterSurfaceRadiusAt`.
 
-  *Still analytic:* `WaterPathToReceiver` and `FarTerrainWaterlineMask` ray-sphere against
-  `_SeaLevelRadius` to measure optical path length along a view ray. That is a different quantity from a
-  point test and a sphere cannot represent it for a raised body; its correct generalisation is the prepass
-  `forwardDepth`, which already records the real surface distance per pixel. Separable next piece.
+  **Path integral — done 2026-08-19, D9 closed.** `WaterPathToReceiver` took the water column from a
+  ray-sphere against `_SeaLevelRadius`, which passes *below* a raised lake entirely, so a submerged lakebed
+  reported no water over it and took neither caustics nor depth fog. It now measures from the surface the
+  prepass rasterised — `waterData.r * viewLength` — which is the real surface, per body and with the swell
+  displacement already applied. An underwater camera short-circuits to the full receiver distance, since
+  there is no entry to find. The sphere survives only where the water mesh covered no pixel, which is open
+  ocean past the edge of the mesh; a raised lake always rasterises where it covers a pixel.
+
+  **Waterline-aligned biome — done 2026-08-19, and this is what unblocked reeds.** The mask is a 38 m grid
+  while elevation is sampled at mesh resolution, so the true waterline sits *inside* a mask cell. Both
+  resolvers keyed the Lake and LakeShore branches off the mask state, so dry ground inside a `Water` cell
+  fell through to plain land, and that band is exactly where reeds belong.
+
+  Both branches now decide by elevation within *any* lake-adjacent cell, which puts the boundary on the
+  waterline rather than on the grid. **Measured at lake #26:** the first `LakeShore` was at 210 m and
+  **+7.5 m above the water**, outside `Lake Reeds`/`Cattails`' `MaxAltitude` of 3 m — so nothing could ever
+  place. It now begins at 183 m and **+0.5 m**, giving a roughly 15 m band inside tolerance. Reeds render.
+
+  Note this was the correct fix rather than raising the prototypes' altitude cap: the cap was right, the
+  band was misplaced.
 
   **Membership from level — done.** Bodies are now flood-filled from the solved submerged set rather than
   the global wet predicate, so the catalog reports **92 lakes + 3 oceans** instead of 7 + 3, matching what
@@ -429,8 +445,8 @@ or new `RuntimeInitializeOnLoadMethod`. Split large owners before adding respons
 | D6 | Swell gating recomputed at three sites | **CLOSED** 2026-08-18 (W4) |
 | D7 | `EvaluateFreezeFactor` triplicated incl. C# | **CLOSED** 2026-08-18 — 3 copies → 1 HLSL + 1 unavoidable CPU mirror |
 | D8 | Orphan reflection: **inert unowned writer** + live shader residue | **CLOSED** 2026-08-18 |
-| D9 | Prepass doesn't displace; volume uses analytic radius — three surfaces disagree | Surface half **CLOSED** 2026-08-18 (W4a); volume half open, W18/W20 |
-| D10 | `BiomeConstants.OceanThreshold` hardcoded `0f`, ignores `OceanLevel` | W5 |
+| D9 | Prepass doesn't displace; volume uses analytic radius — three surfaces disagree | **CLOSED** 2026-08-19 — surface half W4a, volume point tests and path integral W5c |
+| D10 | `BiomeConstants.OceanThreshold` hardcoded `0f`, ignores `OceanLevel` | **CLOSED** 2026-08-19 (W5c) |
 | D11 | `LakeMask.Current` static never cleared | **CLOSED** 2026-08-18 (W3) |
 | D12 | `ChunkedSurfaceProvider` uses the older face-UV inverse | W6 (verify first) |
 

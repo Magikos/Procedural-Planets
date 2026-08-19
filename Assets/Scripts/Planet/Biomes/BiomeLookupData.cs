@@ -90,14 +90,18 @@ public static class BiomeLookupEvaluator
         // The gate is against THIS body's surface, not the global ocean level. A lake perched 40 m up has a
         // bed at +20 m, which against the global level reads as ordinary highland - so the override never
         // fired, the lake floor came out Grassland, and grass grew on it under the water.
-        if (lakeState == 1 && elevation < waterLevel)
+        // The mask is a 38 m grid but elevation is sampled at mesh resolution, so the true waterline sits
+        // INSIDE a mask cell. Deciding by elevation within any lake-adjacent cell puts the boundary on the
+        // waterline itself rather than on the grid: dry ground inside a Water cell becomes shore, which is
+        // the metre-scale band reeds need, and submerged ground inside a Shore cell becomes lake.
+        if (lakeState != 0 && elevation < waterLevel)
         {
             SetBlendedResult(lookup.LakeBiomeId, lookup.LakeShoreBiomeId,
                 BoundaryBlendWeight(waterLevel - elevation, elevationBlend),
                 out primaryId, out secondaryId, out blendWeight);
             return;
         }
-        if (lakeState == 2 && elevation >= waterLevel)
+        if (lakeState != 0)
         {
             SetBlendedResult(lookup.LakeShoreBiomeId, landPrimaryId, 0.35f,
                 out primaryId, out secondaryId, out blendWeight);
