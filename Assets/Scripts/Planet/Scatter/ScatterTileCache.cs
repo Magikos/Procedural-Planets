@@ -104,6 +104,7 @@ public sealed class ScatterTileCache
 
 
 
+
     public ScatterTileCache(ScatterField field, Transform planetTransform)
     {
         _field = field;
@@ -228,19 +229,72 @@ public sealed class ScatterTileCache
     public void Update(Vector3 cameraPos)
     {
         if (!_configured) return;
-        if ((cameraPos - _lastReevalPos).sqrMagnitude > ReevalMoveMeters * ReevalMoveMeters)
+
+        // The re-plan costs ~30 ms at 176 prototypes and 16.5k tiles, spread evenly across five stages with
+        // no single hotspot left to optimise. It only fires every ReevalMoveMeters — about once a second at
+        // flying speed — so there are ~60 idle frames to spread it over. Running one stage per frame turns a
+        // 30 ms stall into a worst case of the largest single stage.
+        if (_replanStage == ReplanStage.Idle
+            && (cameraPos - _lastReevalPos).sqrMagnitude > ReevalMoveMeters * ReevalMoveMeters)
         {
-            Reeval(cameraPos);
-            _lastReevalPos = cameraPos;
+            if (BeginReplan(cameraPos)) { _lastReevalPos = cameraPos; }
         }
+        else if (_replanStage != ReplanStage.Idle)
+        {
+            StepReplan();
+        }
+
         if (!_working && _work.Count > 0) _ = RunWorkerAsync();
     }
 
-    void Reeval(Vector3 cameraPos)
+    enum ReplanStage { Idle, Evict, Candidates, SortTiles, Filter, Publish }
+
+    ReplanStage _replanStage = ReplanStage.Idle;
+    ScatterField.GatherContext _replanCtx;
+    PlanetTransformSnapshot _replanSnap;
+    Vector3 _replanAnchor;
+    Vector3 _replanCameraPos;
+    int _replanEpoch;
+    // The new plan is built here and swapped in at Publish, so the worker keeps draining the previous plan
+    // instead of seeing a half-built one.
+    readonly List<(WorkKey key, float dist)> _workNext = new();
+
+    bool BeginReplan(Vector3 cameraPos)
     {
-        if (!_field.TryCaptureGatherContext(out ScatterField.GatherContext ctx) || !ctx.IsValid) return;
+        if (!_field.TryCaptureGatherContext(out ScatterField.GatherContext ctx) || !ctx.IsValid) return false;
         var snap = PlanetTransformSnapshot.Capture(_planetTransform);
-        if (!TryAnchor(snap, cameraPos, ctx.BaseRadiusLocal, out Vector3 anchorWS)) return;
+        if (!TryAnchor(snap, cameraPos, ctx.BaseRadiusLocal, out Vector3 anchorWS)) return false;
+
+        _replanCtx = ctx;
+        _replanSnap = snap;
+        _replanAnchor = anchorWS;
+        _replanCameraPos = cameraPos;
+        _replanEpoch = _epoch;
+        _replanStage = ReplanStage.Evict;
+        StepReplan();   // do the first stage immediately so nothing waits a frame to start
+        return true;
+    }
+
+    void StepReplan()
+    {
+        // A world change invalidates everything the in-flight plan captured.
+        if (_replanEpoch != _epoch || !_configured) { _replanStage = ReplanStage.Idle; return; }
+
+        switch (_replanStage)
+        {
+            case ReplanStage.Evict:      ReplanEvict();      _replanStage = ReplanStage.Candidates; break;
+            case ReplanStage.Candidates: ReplanCandidates(); _replanStage = ReplanStage.SortTiles;  break;
+            case ReplanStage.SortTiles:  ReplanSortTiles();  _replanStage = ReplanStage.Filter;     break;
+            case ReplanStage.Filter:     ReplanFilter();     _replanStage = ReplanStage.Publish;    break;
+            case ReplanStage.Publish:    ReplanPublish();    _replanStage = ReplanStage.Idle;       break;
+        }
+    }
+
+    void ReplanEvict()
+    {
+        ScatterField.GatherContext ctx = _replanCtx;
+        PlanetTransformSnapshot snap = _replanSnap;
+        Vector3 anchorWS = _replanAnchor;
 
         // Evict tiles that left range (distance-based, with hysteresis). Each departed tile's instances are
         // swap-removed from the buckets in O(its own instances) — never an O(all live instances) rebuild.
@@ -254,6 +308,14 @@ public sealed class ScatterTileCache
             _buckets.RemoveTile(_scratchEvict[i]);
             _tiles.Remove(_scratchEvict[i]);
         }
+    }
+
+    void ReplanCandidates()
+    {
+        ScatterField.GatherContext ctx = _replanCtx;
+        PlanetTransformSnapshot snap = _replanSnap;
+        Vector3 anchorWS = _replanAnchor;
+        Vector3 cameraPos = _replanCameraPos;
 
         // Plan the required (tile, prototype) set: for each renderable prototype, the tiles at Lt within
         // its (draw end + prefetch) radius that are not already ready or pending.
@@ -262,7 +324,7 @@ public sealed class ScatterTileCache
         // computed ONCE at the global max radius and then filtered per prototype. Doing it inside the
         // prototype loop repeated the same distance math _protoCount times — at 109 prototypes that was the
         // whole cost of the re-plan, and it is what made this stall grow when tree variants raised the count.
-        _work.Clear();
+        _workNext.Clear();
         float cellUv = ScatterQuadtree.CellUvWidth(_tileLevel);
 
         _scratchTiles.Clear();
@@ -293,8 +355,15 @@ public sealed class ScatterTileCache
         //
         // Because both are sorted, the set of prototypes reaching the current tile only ever shrinks, so a
         // single retreating cursor replaces any per-prototype search.
-        _scratchTiles.Sort(static (a, b) => a.dist.CompareTo(b.dist));
+    }
 
+    void ReplanSortTiles()
+    {
+        _scratchTiles.Sort(static (a, b) => a.dist.CompareTo(b.dist));
+    }
+
+    void ReplanFilter()
+    {
         int protoLimit = _sortedProtoCount;
         for (int i = 0; i < _scratchTiles.Count; i++)
         {
@@ -307,11 +376,18 @@ public sealed class ScatterTileCache
                 if (entry != null && entry.IsReady(p)) continue;
                 var key = new WorkKey(tileId, p);
                 if (_inFlight.Contains(key)) continue; // the worker is already gathering this pair
-                _work.Add((key, dist));
+                _workNext.Add((key, dist));
             }
         }
+    }
+
+    void ReplanPublish()
+    {
         // Nearest first: fill the visible frontier before prefetch tiles.
-        _work.Sort(static (a, b) => a.dist.CompareTo(b.dist));
+        _workNext.Sort(static (a, b) => a.dist.CompareTo(b.dist));
+        _work.Clear();
+        _work.AddRange(_workNext);
+        _workNext.Clear();
     }
 
     readonly List<long> _scratchEvict = new();
