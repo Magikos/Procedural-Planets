@@ -139,8 +139,50 @@ public sealed class WaterBodyMap
 
         _neighbors = BuildNeighborTable();
 
+        // The ocean is whatever the global level already floods in one large connected piece. It is only
+        // needed as the drain the spill solve pours toward; the real bodies come out of the solved level.
+        bool[] oceanSeeds = FindOceanSeeds(wet);
+        bool[] submerged = ResolveLevels(oceanSeeds, elevation, oceanThreshold) ?? wet;
+
+        Bodies = new WaterBodyCatalog(BuildBodiesFromLevel(submerged, oceanSeeds, elevation, oceanThreshold));
+        DilateShores(submerged);
+        SeamAsymmetryCount = CountAsymmetricSeams();
+    }
+
+    bool[] FindOceanSeeds(bool[] wet)
+    {
+        var seeds = new bool[TotalCells];
+        var visited = new bool[TotalCells];
+        var stack = new Stack<int>(1024);
+        var component = new List<int>(2048);
+        for (int start = 0; start < TotalCells; start++)
+        {
+            if (!wet[start] || visited[start]) continue;
+            component.Clear();
+            stack.Push(start);
+            visited[start] = true;
+            while (stack.Count > 0)
+            {
+                int c = stack.Pop();
+                component.Add(c);
+                for (int n = 0; n < 4; n++)
+                {
+                    int ni = _neighbors[c * 4 + n];
+                    if (ni >= 0 && wet[ni] && !visited[ni]) { visited[ni] = true; stack.Push(ni); }
+                }
+            }
+            if (component.Count >= LakeMaxCells)
+                foreach (int c in component) seeds[c] = true;
+        }
+        return seeds;
+    }
+
+    // Bodies come from the solved level, not the global wet predicate, so a basin perched above sea level is
+    // an ordinary body with an id, a catalog entry and a Lake/LakeShore mask - which is what makes the biome
+    // bake put reeds and lilies on its shore instead of the forest that was there when it was dry ground.
+    List<WaterBody> BuildBodiesFromLevel(bool[] submerged, bool[] oceanSeeds, float[] elevation, float oceanThreshold)
+    {
         var bodies = new List<WaterBody>();
-        var cellsByBody = new Dictionary<ushort, int[]>();
         var visited = new bool[TotalCells];
         var stack = new Stack<int>(1024);
         var component = new List<int>(2048);
@@ -148,26 +190,34 @@ public sealed class WaterBodyMap
 
         for (int start = 0; start < TotalCells; start++)
         {
-            if (!wet[start] || visited[start]) continue;
+            if (!submerged[start] || visited[start]) continue;
             component.Clear();
             stack.Push(start);
             visited[start] = true;
             Vector3 dirSum = Vector3.zero;
             float minElev = float.MaxValue;
+            float level = float.MinValue;
+            bool touchesOcean = false;
             while (stack.Count > 0)
             {
                 int c = stack.Pop();
                 component.Add(c);
                 dirSum += CellDirection(c);
                 if (elevation[c] < minElev) minElev = elevation[c];
+                if (_level != null && _level[c] > level) level = _level[c];
+                if (oceanSeeds[c]) touchesOcean = true;
                 for (int n = 0; n < 4; n++)
                 {
                     int ni = _neighbors[c * 4 + n];
-                    if (ni >= 0 && wet[ni] && !visited[ni]) { visited[ni] = true; stack.Push(ni); }
+                    if (ni >= 0 && submerged[ni] && !visited[ni]) { visited[ni] = true; stack.Push(ni); }
                 }
             }
 
-            WaterBodyKind kind = component.Count < LakeMaxCells ? WaterBodyKind.Lake : WaterBodyKind.Ocean;
+            // Reaching the ocean is what makes a body the ocean, rather than its size. A landlocked basin
+            // larger than LakeMaxCells is an inland sea and still wants lake treatment.
+            WaterBodyKind kind = touchesOcean ? WaterBodyKind.Ocean : WaterBodyKind.Lake;
+            if (level == float.MinValue) level = oceanThreshold;
+
             ushort id = nextId++;
             foreach (int c in component)
             {
@@ -175,57 +225,36 @@ public sealed class WaterBodyMap
                 if (kind == WaterBodyKind.Lake) _mask[c] = Water;
             }
 
-            bodies.Add(new WaterBody(id, kind, component.Count, dirSum.normalized, minElev, oceanThreshold));
-            cellsByBody[id] = component.ToArray();
+            bodies.Add(new WaterBody(id, kind, component.Count, dirSum.normalized, minElev, level));
 
             // Ids are ushort with 0 reserved for "no body"; a world with more bodies than this is not a planet.
             if (nextId == ushort.MaxValue) break;
         }
-
-        Bodies = new WaterBodyCatalog(ResolveSpillLevels(bodies, cellsByBody, elevation, oceanThreshold));
-        DilateShores(wet);
-        SeamAsymmetryCount = CountAsymmetricSeams();
+        return bodies;
     }
 
-    // Replaces every body's placeholder level with the height its surface would actually sit at: the ocean
-    // keeps the global level, and each enclosed basin gets the spill height the priority flood found for it.
-    // The mesh still builds from the single global level - that is W5b - so this only fills in the catalog.
-    List<WaterBody> ResolveSpillLevels(List<WaterBody> bodies, Dictionary<ushort, int[]> cellsByBody,
-        float[] elevation, float oceanThreshold)
+    // Runs the spill solve and turns it into the level field plus the submerged set the bodies are built
+    // from. Returns null when there is no ocean to drain toward, in which case every basin would fill to its
+    // rim and the answer would be meaningless, so the caller falls back to the global wet predicate.
+    bool[] ResolveLevels(bool[] oceanSeeds, float[] elevation, float oceanThreshold)
     {
-        var oceanSeeds = new bool[TotalCells];
         bool anySeed = false;
-        foreach (WaterBody body in bodies)
-        {
-            if (body.Kind != WaterBodyKind.Ocean) continue;
-            foreach (int c in cellsByBody[body.Id]) { oceanSeeds[c] = true; anySeed = true; }
-        }
-
-        // A world with no ocean has nothing to drain to, so every basin would fill to its rim and the answer
-        // would be meaningless. Leave the placeholder level in that case.
-        if (!anySeed) return bodies;
+        foreach (bool s in oceanSeeds) if (s) { anySeed = true; break; }
+        if (!anySeed) return null;
 
         float[] filled = WaterSpillSolver.Solve(elevation, _neighbors, oceanSeeds, oceanThreshold);
         SubmergedBasinSizes = MeasureSubmergedBasins(filled, elevation);
         DrainBasinsBelowMinimumArea(filled, elevation);
 
+        var submerged = new bool[TotalCells];
         SubmergedCellCount = 0;
         for (int i = 0; i < TotalCells; i++)
-            if (filled[i] > elevation[i] + SpillDepthEpsilon) SubmergedCellCount++;
-        _level = BuildLevelField(filled, elevation);
-
-        var resolved = new List<WaterBody>(bodies.Count);
-        foreach (WaterBody body in bodies)
         {
-            if (body.Kind == WaterBodyKind.Ocean) { resolved.Add(body); continue; }
-
-            // Cells of one body share a basin, so they share a spill height; take the max so a cell that the
-            // flood reached from outside the basin cannot pull the level down.
-            float level = float.MinValue;
-            foreach (int c in cellsByBody[body.Id]) if (filled[c] > level) level = filled[c];
-            resolved.Add(body with { SurfaceElevation = level });
+            submerged[i] = filled[i] > elevation[i] + SpillDepthEpsilon;
+            if (submerged[i]) SubmergedCellCount++;
         }
-        return resolved;
+        _level = BuildLevelField(filled, elevation);
+        return submerged;
     }
 
     // Grow the lake surface onto surrounding dry land, exactly ShoreRings steps. Each ring is computed against
@@ -414,6 +443,12 @@ public sealed class WaterBodyMap
 
     // Body id at a local unit direction; 0 when the cell is not below water.
     public ushort SampleBodyId(Vector3 direction) => _bodyId[CellIndex(direction)];
+
+    // The raw level grid, for consumers outside the water system that need their own copy - scatter has to
+    // upload it to a Burst job. Indexed with WaterLevelGrid.Index(dir, Resolution); WaterLevelGrid.NoWater
+    // marks cells where no water stands. Null when the solve did not run.
+    public float[] LevelGrid => _level;
+    public static int Resolution => Res;
 
     // Water surface height at a direction, for use as `elevation < LevelAt(dir)`.
     //

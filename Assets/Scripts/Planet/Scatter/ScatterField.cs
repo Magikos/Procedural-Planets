@@ -88,12 +88,25 @@ public sealed class ScatterField : IDisposable
         public readonly float SeaRadiusLocal;
         public readonly bool HasOcean;
 
+        // Per-basin water levels; null falls back to the single SeaRadiusLocal everywhere.
+        public readonly float[] WaterLevel;
+        public readonly int WaterLevelRes;
+
         public GatherContext(ScatterLibraryDto library, int[] levels, int worldSeed,
-            float baseRadiusLocal, float seaRadiusLocal, bool hasOcean)
+            float baseRadiusLocal, float seaRadiusLocal, bool hasOcean,
+            float[] waterLevel, int waterLevelRes)
         {
             Library = library; Levels = levels; WorldSeed = worldSeed;
             BaseRadiusLocal = baseRadiusLocal; SeaRadiusLocal = seaRadiusLocal; HasOcean = hasOcean;
+            WaterLevel = waterLevel; WaterLevelRes = waterLevelRes;
         }
+
+        // Local-space radius of the water surface above a direction. Without this a lily pad on a lake
+        // 97 m up would be placed at the global sea radius and end up buried under the hillside.
+        public float SeaRadiusAt(Vector3 dir) =>
+            WaterLevel != null
+                ? WaterLevelGrid.SeaRadius(WaterLevel[WaterLevelGrid.Index(dir, WaterLevelRes)], BaseRadiusLocal, SeaRadiusLocal)
+                : SeaRadiusLocal;
 
         public bool IsValid => Library != null && Levels != null && Levels.Length == Library.Prototypes.Length;
     }
@@ -103,7 +116,8 @@ public sealed class ScatterField : IDisposable
     {
         context = default;
         if (!_configured || _library == null || _levels == null) return false;
-        context = new GatherContext(_library, _levels, _worldSeed, _baseRadiusLocal, _seaRadiusLocal, _hasOcean);
+        context = new GatherContext(_library, _levels, _worldSeed, _baseRadiusLocal, _seaRadiusLocal, _hasOcean,
+            WaterBodyMap.Current?.LevelGrid, WaterBodyMap.Resolution);
         return true;
     }
 
@@ -289,8 +303,9 @@ public sealed class ScatterField : IDisposable
         // OnWater prototypes (lily pads) float on the sea surface inside their biome's water cells, so they
         // place at the sea radius with zero altitude and a flat (radial) normal instead of on the lakebed.
         bool onWater = proto.OnWater;
-        float placeRadius = onWater ? ctx.SeaRadiusLocal + ScatterPlacementMath.OnWaterSurfaceOffsetMeters / scale : localRadius;
-        float altitudeMeters = onWater ? 0f : (localRadius - ctx.SeaRadiusLocal) * scale;
+        float seaRadiusHere = ctx.SeaRadiusAt(dir);
+        float placeRadius = onWater ? seaRadiusHere + ScatterPlacementMath.OnWaterSurfaceOffsetMeters / scale : localRadius;
+        float altitudeMeters = onWater ? 0f : (localRadius - seaRadiusHere) * scale;
         if (!ScatterPlacementMath.PassesAltitudeWater(altitudeMeters, ctx.HasOcean, rules)) return false;
 
         Vector3 localNormal = onWater ? dir : _ground.SampleNormalAt(dir, localRadius);

@@ -77,6 +77,10 @@ public struct ScatterGatherJob : IJobParallelFor
     public int TileLevel;
     public float BaseRadiusLocal;
     public float SeaRadiusLocal;
+    // Per-basin water levels, empty to fall back to SeaRadiusLocal everywhere. Must stay bit-identical to
+    // ScatterField.GatherContext.SeaRadiusAt - same helper, same argument order.
+    [ReadOnly] public NativeArray<float> WaterLevel;
+    public int WaterLevelRes;
     public float PlanetRadius;
     public float Scale;
     public byte HasOcean;
@@ -133,8 +137,11 @@ public struct ScatterGatherJob : IJobParallelFor
         // OnWater prototypes (lily pads) float on the sea surface inside their biome's water cells, so they
         // place at the sea radius with zero altitude and a flat (radial) normal instead of on the lakebed.
         bool onWater = pp.OnWater != 0;
-        float placeRadius = onWater ? SeaRadiusLocal + ScatterPlacementMath.OnWaterSurfaceOffsetMeters / Scale : localRadius;
-        float altitudeMeters = onWater ? 0f : (localRadius - SeaRadiusLocal) * Scale;
+        float seaRadiusHere = WaterLevel.IsCreated && WaterLevel.Length > 0
+            ? WaterLevelGrid.SeaRadius(WaterLevel[WaterLevelGrid.Index(dir, WaterLevelRes)], BaseRadiusLocal, SeaRadiusLocal)
+            : SeaRadiusLocal;
+        float placeRadius = onWater ? seaRadiusHere + ScatterPlacementMath.OnWaterSurfaceOffsetMeters / Scale : localRadius;
+        float altitudeMeters = onWater ? 0f : (localRadius - seaRadiusHere) * Scale;
         if (!ScatterGatherBurst.PassesAltitudeWater(altitudeMeters, HasOcean != 0, pp.Rules)) return false;
 
         Vector3 localNormal = onWater ? dir : ScatterGatherBurst.SampleNormalAt(dir, localRadius, NoiseLayers, DiagData, DiagCells, PlanetRadius);

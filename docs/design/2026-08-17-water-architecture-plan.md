@@ -235,7 +235,26 @@ the climate provider's moisture field is the obvious gate and is already availab
   through `time.set-local` and `TrySetLocalTimeOfDay` left the sun below that location's horizon, so every
   capture came back night-lit. The numbers above are the only evidence; whether a basin over-fills because
   its real outlet is narrower than the 38 m grid remains an open question and is the most likely defect.
-- **W5c** consumers, including D10.
+- **W5c** consumers, including D10. *In progress 2026-08-19.*
+
+  **Membership from level — done.** Bodies are now flood-filled from the solved submerged set rather than
+  the global wet predicate, so the catalog reports **92 lakes + 3 oceans** instead of 7 + 3, matching what
+  the mesh draws. Every new lake gets an id, a catalog entry, and a `Water` mask, and `DilateShores` runs on
+  the submerged set so their rims become `Shore`. That is what makes the biome bake resolve Lake and
+  LakeShore there, which is in turn what selects lilies and reeds instead of the forest that stood on the
+  ground when it was dry.
+
+  Ocean-vs-lake is now decided by **reaching the ocean**, not by size. A landlocked basin larger than
+  `LakeMaxCells` is an inland sea and still wants lake treatment; the old size rule would have called it
+  ocean.
+
+  **Scatter per-point level — done, unverified.** `ScatterField` and `ScatterGatherJob` both computed
+  `altitudeMeters` and the on-water placement radius against a single global `SeaRadiusLocal`. A lily pad on
+  a lake 97 m up was therefore placed at the *global* sea radius and buried under the hillside. Both paths
+  now resolve the level at the candidate direction. `WaterLevelGrid` holds the cube-face projection so the
+  part that could drift between the managed and Burst copies has one implementation; each path only does its
+  own array read. `ScatterTileCache` uploads the grid to the job once per world, keyed on the managed array
+  identity so an unchanged world does not re-copy 221k floats per batch.
 
 *Scoping correction to the "~60 sites" figure below:* `SeaLevelRadius`/`SeaRadiusLocal` appear 57 times
 across 24 C# files and 7 shaders, but they split in two. **Datum** consumers (atmosphere base radius,

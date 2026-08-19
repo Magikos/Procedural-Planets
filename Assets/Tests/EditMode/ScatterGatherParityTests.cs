@@ -117,7 +117,11 @@ namespace ProceduralPlanets.Tests
             AddTile(0, 10, 100);
 
             // --- managed reference ---
-            var ctx = new ScatterField.GatherContext(_library, _levels, WorldSeed, PlanetRadius, SeaRadiusLocal, HasOcean);
+            // No water level grid: both paths fall back to the single SeaRadiusLocal, which is what this
+            // test compares. Per-basin levels are covered by the grid lookup being shared (WaterLevelGrid),
+            // not duplicated, so there is no second implementation for parity to drift against.
+            var ctx = new ScatterField.GatherContext(_library, _levels, WorldSeed, PlanetRadius, SeaRadiusLocal, HasOcean,
+                waterLevel: null, waterLevelRes: 0);
             var managed = new List<ScatterInstance>[pairs.Count];
             int totalManaged = 0, emptyPairs = 0, densest = 0;
             for (int i = 0; i < pairs.Count; i++)

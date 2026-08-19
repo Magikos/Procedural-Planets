@@ -94,6 +94,28 @@ public sealed class ScatterTileCache
     NativeArray<byte> _diagCells;
     DiagnosticTerrainSettingsData _diagData;
     NativeArray<ScatterProtoParams> _protoParams;
+
+    // The water level grid, uploaded once per world. Keyed on the managed array identity so a regenerated
+    // world replaces it and an unchanged one does not re-copy 221k floats every batch.
+    NativeArray<float> _waterLevel;
+    float[] _waterLevelSource;
+
+    NativeArray<float> EnsureWaterLevel(ScatterField.GatherContext ctx)
+    {
+        if (ReferenceEquals(ctx.WaterLevel, _waterLevelSource) && _waterLevel.IsCreated)
+            return _waterLevel;
+
+        if (_waterLevel.IsCreated) _waterLevel.Dispose();
+        _waterLevelSource = ctx.WaterLevel;
+        if (ctx.WaterLevel == null)
+        {
+            _waterLevel = default;
+            return _waterLevel;
+        }
+
+        _waterLevel = new NativeArray<float>(ctx.WaterLevel, Allocator.Persistent);
+        return _waterLevel;
+    }
     bool _nativeAllocated;
     bool _burstReady;
     float _planetRadius;
@@ -220,6 +242,8 @@ public sealed class ScatterTileCache
         if (_noiseLayers.IsCreated) _noiseLayers.Dispose();
         if (_diagCells.IsCreated) _diagCells.Dispose();
         if (_protoParams.IsCreated) _protoParams.Dispose();
+        if (_waterLevel.IsCreated) _waterLevel.Dispose();
+        _waterLevelSource = null;
         _nativeAllocated = false;
         _burstReady = false;
     }
@@ -514,6 +538,8 @@ public sealed class ScatterTileCache
                 TileLevel = tileLevel,
                 BaseRadiusLocal = ctx.BaseRadiusLocal,
                 SeaRadiusLocal = ctx.SeaRadiusLocal,
+                WaterLevel = EnsureWaterLevel(ctx),
+                WaterLevelRes = ctx.WaterLevelRes,
                 PlanetRadius = _planetRadius,
                 Scale = snap.UniformScale,
                 HasOcean = ctx.HasOcean ? (byte)1 : (byte)0,
