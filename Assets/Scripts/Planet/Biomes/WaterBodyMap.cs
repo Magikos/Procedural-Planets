@@ -10,9 +10,11 @@ public enum WaterBodyKind : byte
 
 // One connected below-water region on the sphere.
 //
-// SurfaceElevation is the level this body surface sits at. Every body currently reports the global ocean
-// level because the water mesh is a single shell built from one threshold; a per-basin spill solve replaces
-// the value later, and that is what lets a lake sit above sea level without moving the ocean.
+// SurfaceElevation is the height this body's surface sits at, in the same units as PlanetSettings.OceanLevel.
+// Oceans report the global level; lakes report the spill height WaterSpillSolver found for their basin, which
+// is where a lake with an outflow actually sits. The water MESH is still one shell built from the global
+// level, so a lake whose spill height is above sea level is described correctly here but not yet drawn that
+// way - that is W5b.
 public sealed record WaterBody(
     ushort Id,
     WaterBodyKind Kind,
@@ -79,10 +81,26 @@ public sealed class WaterBodyMap
     const int LakeMaxCells = 1400;
     const int ShoreRings = 2;            // land cells within this many steps of lake water become LakeShore
 
+    // Water shallower than this is rounding noise, not a lake.
+    const float SpillDepthEpsilon = 1e-6f;
+
     readonly byte[] _mask = new byte[TotalCells];
     readonly ushort[] _bodyId = new ushort[TotalCells];
 
+    // 4 per cell, -1 where there is none. Built once because the flood fill, the shore dilation, the spill
+    // solve and the seam check all walk it, and recomputing the seam projection in each was the bulk of the
+    // build cost.
+    int[] _neighbors;
+
     public WaterBodyCatalog Bodies { get; private set; }
+
+    // Cells the spill solve found underwater. Larger than the wet-cell count whenever basins above sea level
+    // would hold water, which is the population W5b turns into raised lakes.
+    public int SubmergedCellCount { get; private set; }
+
+    // Connected-component sizes of that set, largest first. W5b needs this to pick its minimum-area
+    // threshold, because procedural noise produces single-cell dimples that would otherwise all become ponds.
+    public int[] SubmergedBasinSizes { get; private set; } = System.Array.Empty<int>();
 
     // Seam neighbour lookups that did not agree in both directions. Cube faces at equal resolution should be
     // 1:1 across a seam, so this is expected to be 0; a non-zero count means a body could split at a seam.
@@ -108,7 +126,10 @@ public sealed class WaterBodyMap
             wet[i] = elev < oceanThreshold;
         }
 
+        _neighbors = BuildNeighborTable();
+
         var bodies = new List<WaterBody>();
+        var cellsByBody = new Dictionary<ushort, int[]>();
         var visited = new bool[TotalCells];
         var stack = new Stack<int>(1024);
         var component = new List<int>(2048);
@@ -130,8 +151,8 @@ public sealed class WaterBodyMap
                 if (elevation[c] < minElev) minElev = elevation[c];
                 for (int n = 0; n < 4; n++)
                 {
-                    int ni = Neighbor(c, n);
-                    if (wet[ni] && !visited[ni]) { visited[ni] = true; stack.Push(ni); }
+                    int ni = _neighbors[c * 4 + n];
+                    if (ni >= 0 && wet[ni] && !visited[ni]) { visited[ni] = true; stack.Push(ni); }
                 }
             }
 
@@ -144,14 +165,53 @@ public sealed class WaterBodyMap
             }
 
             bodies.Add(new WaterBody(id, kind, component.Count, dirSum.normalized, minElev, oceanThreshold));
+            cellsByBody[id] = component.ToArray();
 
             // Ids are ushort with 0 reserved for "no body"; a world with more bodies than this is not a planet.
             if (nextId == ushort.MaxValue) break;
         }
 
-        Bodies = new WaterBodyCatalog(bodies);
+        Bodies = new WaterBodyCatalog(ResolveSpillLevels(bodies, cellsByBody, elevation, oceanThreshold));
         DilateShores(wet);
         SeamAsymmetryCount = CountAsymmetricSeams();
+    }
+
+    // Replaces every body's placeholder level with the height its surface would actually sit at: the ocean
+    // keeps the global level, and each enclosed basin gets the spill height the priority flood found for it.
+    // The mesh still builds from the single global level - that is W5b - so this only fills in the catalog.
+    List<WaterBody> ResolveSpillLevels(List<WaterBody> bodies, Dictionary<ushort, int[]> cellsByBody,
+        float[] elevation, float oceanThreshold)
+    {
+        var oceanSeeds = new bool[TotalCells];
+        bool anySeed = false;
+        foreach (WaterBody body in bodies)
+        {
+            if (body.Kind != WaterBodyKind.Ocean) continue;
+            foreach (int c in cellsByBody[body.Id]) { oceanSeeds[c] = true; anySeed = true; }
+        }
+
+        // A world with no ocean has nothing to drain to, so every basin would fill to its rim and the answer
+        // would be meaningless. Leave the placeholder level in that case.
+        if (!anySeed) return bodies;
+
+        float[] filled = WaterSpillSolver.Solve(elevation, _neighbors, oceanSeeds, oceanThreshold);
+        SubmergedCellCount = 0;
+        for (int i = 0; i < TotalCells; i++)
+            if (filled[i] > elevation[i] + SpillDepthEpsilon) SubmergedCellCount++;
+        SubmergedBasinSizes = MeasureSubmergedBasins(filled, elevation);
+
+        var resolved = new List<WaterBody>(bodies.Count);
+        foreach (WaterBody body in bodies)
+        {
+            if (body.Kind == WaterBodyKind.Ocean) { resolved.Add(body); continue; }
+
+            // Cells of one body share a basin, so they share a spill height; take the max so a cell that the
+            // flood reached from outside the basin cannot pull the level down.
+            float level = float.MinValue;
+            foreach (int c in cellsByBody[body.Id]) if (filled[c] > level) level = filled[c];
+            resolved.Add(body with { SurfaceElevation = level });
+        }
+        return resolved;
     }
 
     // Grow the lake surface onto surrounding dry land, exactly ShoreRings steps. Each ring is computed against
@@ -169,7 +229,8 @@ public sealed class WaterBodyMap
                 if (_mask[i] != None || wet[i]) continue; // only unclaimed dry land
                 for (int n = 0; n < 4; n++)
                 {
-                    if (_mask[Neighbor(i, n)] == target) { toMark.Add(i); break; }
+                    int ni = _neighbors[i * 4 + n];
+                    if (ni >= 0 && _mask[ni] == target) { toMark.Add(i); break; }
                 }
             }
             foreach (int i in toMark) _mask[i] = Shore;
@@ -178,6 +239,47 @@ public sealed class WaterBodyMap
 
     static readonly int[] NeighborDx = { -1, 1, 0, 0 };
     static readonly int[] NeighborDy = { 0, 0, -1, 1 };
+
+    // Connected-component sizes of everything the spill solve put underwater, largest first. W5b builds its
+    // bodies from this set instead of the global wet predicate, so this is what says whether a minimum-area
+    // threshold is needed: procedural noise makes single-cell dimples that would otherwise all become ponds.
+    int[] MeasureSubmergedBasins(float[] filled, float[] elevation)
+    {
+        var sizes = new List<int>();
+        var visited = new bool[TotalCells];
+        var stack = new Stack<int>(256);
+        for (int start = 0; start < TotalCells; start++)
+        {
+            if (visited[start] || filled[start] <= elevation[start] + SpillDepthEpsilon) continue;
+            visited[start] = true;
+            stack.Push(start);
+            int size = 0;
+            while (stack.Count > 0)
+            {
+                int c = stack.Pop();
+                size++;
+                for (int n = 0; n < 4; n++)
+                {
+                    int ni = _neighbors[c * 4 + n];
+                    if (ni < 0 || visited[ni] || filled[ni] <= elevation[ni] + SpillDepthEpsilon) continue;
+                    visited[ni] = true;
+                    stack.Push(ni);
+                }
+            }
+            sizes.Add(size);
+        }
+        sizes.Sort((a, b) => b.CompareTo(a));
+        return sizes.ToArray();
+    }
+
+    int[] BuildNeighborTable()
+    {
+        var table = new int[TotalCells * 4];
+        for (int i = 0; i < TotalCells; i++)
+            for (int n = 0; n < 4; n++)
+                table[i * 4 + n] = Neighbor(i, n);
+        return table;
+    }
 
     // 4-neighbour of a global cell index. Inside a face this is plain index maths (exact). At a seam we step
     // the cell centre one cell past the face edge in face-uv, project that to a direction and re-classify it.
@@ -205,9 +307,9 @@ public sealed class WaterBodyMap
             if (x > 0 && x < Res - 1 && y > 0 && y < Res - 1) continue;
             for (int n = 0; n < 4; n++)
             {
-                int ni = Neighbor(i, n);
+                int ni = _neighbors[i * 4 + n];
                 bool mutual = false;
-                for (int b = 0; b < 4; b++) if (Neighbor(ni, b) == i) { mutual = true; break; }
+                for (int b = 0; b < 4; b++) if (_neighbors[ni * 4 + b] == i) { mutual = true; break; }
                 if (!mutual) bad++;
             }
         }

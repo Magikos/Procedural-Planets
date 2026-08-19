@@ -174,8 +174,34 @@ the open question — priority-flood fills every depression to its rim whether o
 the climate provider's moisture field is the obvious gate and is already available.
 
 *Sequencing:*
-- **W5a** solver + real `SurfaceElevation` per body in the catalog, exposed through `water.bodies`.
-  No mesh change, therefore no visual change — verifiable on its own.
+- **W5a — DONE 2026-08-19.** `WaterSpillSolver` (priority-flood, own binary min-heap since Unity's runtime
+  profile predates `PriorityQueue`). `WaterBodyMap` now precomputes a neighbour table once — the flood fill,
+  shore dilation, spill solve and seam check all walk it instead of recomputing the seam projection — and
+  every lake's `SurfaceElevation` is its real spill height. No mesh change, so no visual change.
+
+  **Measured on the reference world.** Oceans hold level `0.00000` exactly, confirming the seeding. Lakes:
+
+  | Body | Cells | Level | Rise above sea | Depth |
+  |---|---|---|---|---|
+  | #5 | 100 | 0.01937 | **+96.9 m** | 118.6 m |
+  | #3 | 2 | 0.00858 | +42.9 m | 44.6 m |
+  | #7 | 14 | 0.00822 | +41.1 m | 51.3 m |
+  | #9, #10 | 23, 21 | 0.00062 | +3.1 m | 9.8, 7.1 m |
+  | #8 | 325 | 0.00035 | +1.8 m | 45.8 m |
+  | #6 | 5 | 0.00008 | +0.4 m | 3.4 m |
+
+  **The headline result is the basin count, not the levels.** The solve puts 121,640 cells underwater
+  against 114,122 the global wet predicate currently draws — only 6.6% more water by area — but that water
+  is spread across **322 connected basins where the current predicate finds 10 bodies**. Three of the 322
+  are the oceans (101429 / 9796 / 2404 cells); the rest are lakes the single global level cannot represent.
+  So the planet has on the order of a hundred mountain lakes waiting to appear, individually small.
+
+  **The micro-basin fear was overblown.** Procedural noise did not produce thousands of dimples: only 94 of
+  the 322 basins are single-cell, together 94 cells. Size distribution after the three oceans: 1378, 573,
+  513, 345, 192, 174, 172, 171, 151, … A minimum-area threshold of **8–16 cells** (≈11,000–23,000 m²) leaves
+  139 or 92 lakes respectively and is the knob W5b should expose.
+
+  `water.bodies` reports level, rise, depth, and the basin histogram.
 - **W5b** mesh honours per-body level. `WaterMeshBuilder.cs:131` computes **one** scalar
   `waterRadius = PlanetRadius * (1 + OceanLevel) + SurfaceOffset` and every vertex is
   `direction * waterRadius`; that becomes a per-body lookup. The same file uses `OceanLevel` at six sites

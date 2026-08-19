@@ -360,12 +360,35 @@ public sealed class PlanetWaterSurface
         WaterBodyCatalog catalog = WaterBodyMap.Current?.Bodies;
         if (catalog == null) return "water.bodies: no catalog (generate a planet first)";
 
+        var planet = SettingsProvider.GetSettings<PlanetDto>();
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"catalog v{catalog.Version}: {catalog.CountOf(WaterBodyKind.Lake)} lake(s), " +
-                      $"{catalog.CountOf(WaterBodyKind.Ocean)} ocean(s), seam asymmetry {WaterBodyMap.Current.SeamAsymmetryCount}");
+                      $"{catalog.CountOf(WaterBodyKind.Ocean)} ocean(s), seam asymmetry " +
+                      $"{WaterBodyMap.Current.SeamAsymmetryCount}, submerged cells {WaterBodyMap.Current.SubmergedCellCount}");
+        sb.AppendLine($"  global ocean level {planet.OceanLevel:F4}; rise is metres above it at R={planet.PlanetRadius:F0}");
+
+        // What the spill solve found, against what the global wet predicate currently draws. The gap is the
+        // work W5b turns into raised lakes, and the size histogram is what sets its minimum-area threshold.
+        int[] basins = WaterBodyMap.Current.SubmergedBasinSizes;
+        if (basins.Length > 0)
+        {
+            sb.Append("  spill basins by minimum size:");
+            foreach (int t in new[] { 1, 4, 8, 16, 64 })
+            {
+                int n = 0;
+                foreach (int s in basins) if (s >= t) n++;
+                sb.Append($"  >={t}:{n}");
+            }
+            sb.AppendLine();
+        }
         foreach (WaterBody b in catalog.Bodies)
-            sb.AppendLine($"  #{b.Id} {b.Kind} cells={b.CellCount} minElev={b.MinElevation:F4} " +
-                          $"level={b.SurfaceElevation:F4} dir=({b.CenterDirection.x:F2},{b.CenterDirection.y:F2},{b.CenterDirection.z:F2})");
+        {
+            float riseMeters = (b.SurfaceElevation - planet.OceanLevel) * planet.PlanetRadius;
+            float depthMeters = (b.SurfaceElevation - b.MinElevation) * planet.PlanetRadius;
+            sb.AppendLine($"  #{b.Id} {b.Kind} cells={b.CellCount} level={b.SurfaceElevation:F5} " +
+                          $"rise={riseMeters:F1}m depth={depthMeters:F1}m " +
+                          $"dir=({b.CenterDirection.x:F2},{b.CenterDirection.y:F2},{b.CenterDirection.z:F2})");
+        }
         return sb.ToString().TrimEnd();
     }
 
