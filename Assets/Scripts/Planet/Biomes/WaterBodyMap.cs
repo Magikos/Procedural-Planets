@@ -83,6 +83,10 @@ public sealed class WaterBodyMap
 
     // Water shallower than this is rounding noise, not a lake.
     const float SpillDepthEpsilon = 1e-6f;
+    // Smallest basin that becomes water. 16 cells is roughly 23,000 m^2 at R=5000.
+    const int MinBasinCells = 16;
+    // Level value meaning "no water stands here". Below any real elevation, so `elevation < level` is false.
+    const float NoWater = float.NegativeInfinity;
 
     readonly byte[] _mask = new byte[TotalCells];
     readonly ushort[] _bodyId = new ushort[TotalCells];
@@ -98,9 +102,16 @@ public sealed class WaterBodyMap
     // would hold water, which is the population W5b turns into raised lakes.
     public int SubmergedCellCount { get; private set; }
 
-    // Connected-component sizes of that set, largest first. W5b needs this to pick its minimum-area
-    // threshold, because procedural noise produces single-cell dimples that would otherwise all become ponds.
+    // Connected-component sizes of that set BEFORE the minimum-area cut, largest first. Retained because it
+    // is what says whether the cut is set sensibly for a given world.
     public int[] SubmergedBasinSizes { get; private set; } = System.Array.Empty<int>();
+
+    // Basins dropped for being smaller than MinBasinCells.
+    public int DrainedBasinCount { get; private set; }
+
+    // Water surface height per cell in PlanetSettings.OceanLevel units, NoWater where none stands. Dilated
+    // one ring onto the shore so `elevation < LevelAt(dir)` stays a valid wet test at mesh resolution.
+    float[] _level;
 
     // Seam neighbour lookups that did not agree in both directions. Cube faces at equal resolution should be
     // 1:1 across a seam, so this is expected to be 0; a non-zero count means a body could split at a seam.
@@ -195,10 +206,13 @@ public sealed class WaterBodyMap
         if (!anySeed) return bodies;
 
         float[] filled = WaterSpillSolver.Solve(elevation, _neighbors, oceanSeeds, oceanThreshold);
+        SubmergedBasinSizes = MeasureSubmergedBasins(filled, elevation);
+        DrainBasinsBelowMinimumArea(filled, elevation);
+
         SubmergedCellCount = 0;
         for (int i = 0; i < TotalCells; i++)
             if (filled[i] > elevation[i] + SpillDepthEpsilon) SubmergedCellCount++;
-        SubmergedBasinSizes = MeasureSubmergedBasins(filled, elevation);
+        _level = BuildLevelField(filled, elevation);
 
         var resolved = new List<WaterBody>(bodies.Count);
         foreach (WaterBody body in bodies)
@@ -272,6 +286,69 @@ public sealed class WaterBodyMap
         return sizes.ToArray();
     }
 
+    // Turns the solver's filled heights into a field the mesh can test at ITS resolution.
+    //
+    // The solver sets filled == ground on land that drains away, which is correct for the solve but useless
+    // as a wet test: the mesh samples this grid at roughly half its cell size, so a vertex sitting below its
+    // 38 m cell's sampled height would read as under water and half of every hillside would flood.
+    //
+    // So a level only exists where water actually stands. Land keeps NoWater, and the water level is dilated
+    // one ring onto the surrounding land so the shoreline can still be found between the last wet cell and
+    // the first dry one - without that ring the coastline would quantise to the coarse grid.
+    float[] BuildLevelField(float[] filled, float[] elevation)
+    {
+        var level = new float[TotalCells];
+        for (int i = 0; i < TotalCells; i++)
+            level[i] = filled[i] > elevation[i] + SpillDepthEpsilon ? filled[i] : NoWater;
+
+        var dilated = (float[])level.Clone();
+        for (int i = 0; i < TotalCells; i++)
+        {
+            if (level[i] != NoWater) continue;
+            float highest = NoWater;
+            for (int n = 0; n < 4; n++)
+            {
+                int ni = _neighbors[i * 4 + n];
+                if (ni >= 0 && level[ni] > highest) highest = level[ni];
+            }
+            dilated[i] = highest;
+        }
+        return dilated;
+    }
+
+    // A basin smaller than MinBasinCells is terrain noise rather than a lake, so drop its level back to the
+    // ground and it simply never becomes water. Measured on the reference world, 94 of 322 basins are a
+    // single cell; the cut at 16 keeps about 92 lakes and at 8 about 139.
+    void DrainBasinsBelowMinimumArea(float[] filled, float[] elevation)
+    {
+        var visited = new bool[TotalCells];
+        var stack = new Stack<int>(256);
+        var component = new List<int>(256);
+        for (int start = 0; start < TotalCells; start++)
+        {
+            if (visited[start] || filled[start] <= elevation[start] + SpillDepthEpsilon) continue;
+            component.Clear();
+            visited[start] = true;
+            stack.Push(start);
+            while (stack.Count > 0)
+            {
+                int c = stack.Pop();
+                component.Add(c);
+                for (int n = 0; n < 4; n++)
+                {
+                    int ni = _neighbors[c * 4 + n];
+                    if (ni < 0 || visited[ni] || filled[ni] <= elevation[ni] + SpillDepthEpsilon) continue;
+                    visited[ni] = true;
+                    stack.Push(ni);
+                }
+            }
+
+            if (component.Count >= MinBasinCells) continue;
+            foreach (int c in component) filled[c] = elevation[c];
+            DrainedBasinCount++;
+        }
+    }
+
     int[] BuildNeighborTable()
     {
         var table = new int[TotalCells * 4];
@@ -337,6 +414,19 @@ public sealed class WaterBodyMap
 
     // Body id at a local unit direction; 0 when the cell is not below water.
     public ushort SampleBodyId(Vector3 direction) => _bodyId[CellIndex(direction)];
+
+    // Water surface height at a direction, for use as `elevation < LevelAt(dir)`.
+    //
+    // Falls back to the global ocean level both where no water stands and where the solve did not run at all
+    // (a world with no ocean has nothing to drain to). That fallback is what makes this change purely
+    // additive: every cell the solver had nothing to say about behaves exactly as the old single shell did,
+    // and only solved basins depart from it.
+    public float LevelAt(Vector3 direction, float fallbackLevel)
+    {
+        if (_level == null) return fallbackLevel;
+        float level = _level[CellIndex(direction)];
+        return level == NoWater ? fallbackLevel : level;
+    }
 
     public bool TrySampleBody(Vector3 direction, out WaterBody body)
     {

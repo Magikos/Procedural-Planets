@@ -125,7 +125,8 @@ public sealed class PlanetWaterSurface
             LakeFreezeStartTemperature01 = water.LakeFreezeStartTemperature01,
             LakeFreezeCompleteTemperature01 = water.LakeFreezeCompleteTemperature01,
             OceanFreezeStartTemperature01 = water.OceanFreezeStartTemperature01,
-            OceanFreezeCompleteTemperature01 = water.OceanFreezeCompleteTemperature01
+            OceanFreezeCompleteTemperature01 = water.OceanFreezeCompleteTemperature01,
+            Levels = WaterBodyMap.Current
         };
         // Water builder reads per-face vertex/elevation grids via IFaceMeshSampler. Both
         // resolution modes (Low/High) supply this view; chunked path wraps each root chunk.

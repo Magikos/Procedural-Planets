@@ -202,11 +202,39 @@ the climate provider's moisture field is the obvious gate and is already availab
   139 or 92 lakes respectively and is the knob W5b should expose.
 
   `water.bodies` reports level, rise, depth, and the basin histogram.
-- **W5b** mesh honours per-body level. `WaterMeshBuilder.cs:131` computes **one** scalar
-  `waterRadius = PlanetRadius * (1 + OceanLevel) + SurfaceOffset` and every vertex is
-  `direction * waterRadius`; that becomes a per-body lookup. The same file uses `OceanLevel` at six sites
-  (radius, shoreline interpolation `t`, depth, `isWet`, surface-edit evaluate). This is where raised lakes
-  first become visible.
+- **W5b — LANDED 2026-08-19, visually incomplete.** The single `waterRadius` scalar is gone; every vertex
+  sits on its own body's surface, and `isWet` tests against the solved level rather than `OceanLevel`.
+  `MinBasinCells = 16` drops noise basins.
+
+  *Measured:* 520,554 water vertices against 481,682 before (+8.1%). **40,569 vertices (7.79%) now sit
+  above sea radius, the highest 148.5 m up.** 227 basins drained, 95 kept (3 ocean + 92 lake). Lake-class
+  vertices went 2,668 → 30,039.
+
+  **Bug found and fixed during the build.** The first version used the solver's `filled` array directly as
+  the level field. The solver sets `filled == ground` on land that drains away, which is right for the
+  solve but wrong as a wet test: the mesh samples this grid at roughly half its cell size, so any vertex
+  below its 38 m cell's sampled height read as submerged and *half of every hillside flooded*. Generation
+  crawled — 0.0033 progress in 2.5 minutes, ~28 minutes projected — because the mesh was trying to flood
+  the planet. `BuildLevelField` now emits a level only where water stands, dilated one ring onto the shore
+  so the coastline still resolves at mesh resolution, and `NoWater` elsewhere. `LevelAt` falls back to
+  `OceanLevel` on `NoWater`, which makes the whole change **purely additive**: any cell the solver had
+  nothing to say about behaves exactly as the old single shell did.
+
+  **Not visually finished, and it currently looks worse.** Trees stand in the new lakes because scatter,
+  biome classification and grounding all still key off the global sea level — that is W5c, and until it
+  lands a raised lake floods whatever was placed on the ground beneath it.
+
+  **Two known inconsistencies for W5c:**
+  1. The catalog still enumerates only the 10 bodies the old wet predicate found, while the mesh now draws
+     ~92 lakes. Membership must be rebuilt from the level field, which is also what gives the new lakes
+     ids, `_mask` Lake/LakeShore biome overrides, and catalog entries.
+  2. Intermediate `body01` vertices rose from 98 (0.02%) to 2,515 (0.48%) — still under the 0.5% guard, but
+     close enough that W5c should expect the warning to fire.
+
+  *Unverified:* fill extent has not been checked by eye. Repeated attempts to force daylight at lake #5
+  through `time.set-local` and `TrySetLocalTimeOfDay` left the sun below that location's horizon, so every
+  capture came back night-lit. The numbers above are the only evidence; whether a basin over-fills because
+  its real outlet is narrower than the 38 m grid remains an open question and is the most likely defect.
 - **W5c** consumers, including D10.
 
 *Scoping correction to the "~60 sites" figure below:* `SeaLevelRadius`/`SeaRadiusLocal` appear 57 times

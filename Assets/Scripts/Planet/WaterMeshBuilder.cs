@@ -18,6 +18,10 @@ public static class WaterMeshBuilder
         public float LakeFreezeCompleteTemperature01;
         public float OceanFreezeStartTemperature01;
         public float OceanFreezeCompleteTemperature01;
+
+        // Per-basin water surface heights from the spill solve. Null falls back to OceanLevel everywhere,
+        // which is the single-shell behaviour this replaced.
+        public WaterBodyMap Levels;
     }
 
     public struct BuildStats
@@ -128,7 +132,6 @@ public static class WaterMeshBuilder
 
         if (faces != null && faces.Length > 0)
         {
-            float waterRadius = settings.PlanetRadius * (1f + settings.OceanLevel) + settings.SurfaceOffset;
             float deepDepth = Mathf.Max(settings.DeepDepth, 0.001f);
             float shoreRange = Mathf.Max(settings.ShoreRange, 0.001f);
             GlobalWaterData waterData = BuildGlobalWaterData(faces, settings, ref stats);
@@ -147,7 +150,6 @@ public static class WaterMeshBuilder
                     waterData.Faces[faceIndex],
                     waterData.DepthMeters,
                     settings,
-                    waterRadius,
                     deepDepth,
                     shoreRange,
                     originalVertexCache,
@@ -204,7 +206,6 @@ public static class WaterMeshBuilder
         FaceWaterData faceData,
         float[] globalDepthMeters,
         Settings settings,
-        float waterRadius,
         float deepDepth,
         float shoreRange,
         Dictionary<int, int> originalVertexCache,
@@ -305,9 +306,15 @@ public static class WaterMeshBuilder
 
         WaterPoint CreateIntersection(int a, int b)
         {
-            float t = Mathf.InverseLerp(elevations[a], elevations[b], settings.OceanLevel);
             bool aWet = wet[a];
             bool bWet = wet[b];
+            // Clip against the level of whichever end is under water; the dry end belongs to no body, and its
+            // level reads back as ground height, which would put the shoreline in the wrong place.
+            Vector3 wetDirection = aWet ? directions[a] : directions[b];
+            float clipLevel = settings.Levels != null
+                ? settings.Levels.LevelAt(wetDirection, settings.OceanLevel)
+                : settings.OceanLevel;
+            float t = Mathf.InverseLerp(elevations[a], elevations[b], clipLevel);
             float edgeAngleRadians = Vector3.Angle(directions[a], directions[b]) * Mathf.Deg2Rad;
             float edgeWorldLength = Mathf.Max(edgeAngleRadians * settings.PlanetRadius, cellWorldSize * 0.25f);
             float overlapT = Mathf.Clamp01(shorelineOverlapMeters / edgeWorldLength);
@@ -339,7 +346,10 @@ public static class WaterMeshBuilder
 
                 float depth = globalIndex >= 0 && globalIndex < globalDepthMeters.Length
                     ? globalDepthMeters[globalIndex]
-                    : Mathf.Max(0f, (settings.OceanLevel - elevations[point.OriginalIndex]) * settings.PlanetRadius);
+                    : Mathf.Max(0f, ((settings.Levels != null
+                            ? settings.Levels.LevelAt(point.Direction, settings.OceanLevel)
+                            : settings.OceanLevel)
+                        - elevations[point.OriginalIndex]) * settings.PlanetRadius);
                 float shore = shoreDistanceCells[point.OriginalIndex] == int.MaxValue
                     ? 1f
                     : Mathf.Clamp01(shoreDistanceCells[point.OriginalIndex] * cellWorldSize / shoreRange);
@@ -363,7 +373,12 @@ public static class WaterMeshBuilder
         int AddVertex(Vector3 direction, float depth, float shore, float oceanFactor, float waterTemperature01)
         {
             int vertexIndex = vertices.Count;
-            vertices.Add(direction * waterRadius);
+            // Each vertex sits on its own body's surface. Within a basin every cell shares one spill height,
+            // so a lake stays flat; between basins the level steps at the rim, which is where it should.
+            float level = settings.Levels != null
+                ? settings.Levels.LevelAt(direction, settings.OceanLevel)
+                : settings.OceanLevel;
+            vertices.Add(direction * (settings.PlanetRadius * (1f + level) + settings.SurfaceOffset));
             normals.Add(direction);
             colors.Add(new Color(
                 Mathf.Clamp01(depth / deepDepth),
@@ -417,8 +432,14 @@ public static class WaterMeshBuilder
                     globalTemperatureSampled.Add(false);
                 }
 
-                bool isWet = elevations[i] < settings.OceanLevel;
-                float depth = Mathf.Max(0f, (settings.OceanLevel - elevations[i]) * settings.PlanetRadius);
+                // The spill solve gives every direction the height water would stand at, and sets it equal to
+                // the ground wherever water would drain away. So this one test finds the ocean, lakes below
+                // sea level, and basins perched above it, without a special case for any of them.
+                float waterLevel = settings.Levels != null
+                    ? settings.Levels.LevelAt(directions[i], settings.OceanLevel)
+                    : settings.OceanLevel;
+                bool isWet = elevations[i] < waterLevel;
+                float depth = Mathf.Max(0f, (waterLevel - elevations[i]) * settings.PlanetRadius);
                 faceData.GlobalIndices[i] = globalIndex;
                 faceData.Wet[i] = isWet;
                 faceData.ShoreDistanceCells[i] = int.MaxValue;
