@@ -136,6 +136,8 @@ namespace ProceduralPlanets.Tests
             }
 
             // --- Burst job over the same pairs ---
+            // Length 1 and never read: WaterLevelRes 0 disables the lookup, but the container must exist.
+            var waterLevel = new NativeArray<float>(1, Allocator.TempJob);
             var pairArr = new NativeArray<ScatterPairInput>(pairs.ToArray(), Allocator.TempJob);
             var noiseLayers = _shape.BuildNoiseFilterData(Allocator.TempJob);
             var diagCells = _shape.BuildDiagnosticTerrainCells(Allocator.TempJob);
@@ -162,6 +164,11 @@ namespace ProceduralPlanets.Tests
                 PlanetRadius = PlanetRadius,
                 Scale = _snap.UniformScale,
                 HasOcean = HasOcean ? (byte)1 : (byte)0,
+                // Burst validates EVERY container at schedule time, even one the job never reads. WaterLevelRes
+                // is 0 so the lookup is skipped and both paths fall back to SeaRadiusLocal, exactly as the
+                // managed reference above does — but the array still has to exist or scheduling throws.
+                WaterLevel = waterLevel,
+                WaterLevelRes = 0,
                 Out = stream.AsWriter(),
             };
             job.Schedule(pairArr.Length, 1).Complete();
@@ -221,6 +228,7 @@ namespace ProceduralPlanets.Tests
             }
             finally
             {
+                waterLevel.Dispose();
                 pairArr.Dispose();
                 noiseLayers.Dispose();
                 diagCells.Dispose();

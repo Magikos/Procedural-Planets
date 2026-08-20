@@ -108,7 +108,7 @@ public static class TreeInjection
     public static ScatterLibraryDto ApplyAll(ScatterLibraryDto source)
     {
         ScatterLibraryDto lib = RockInjection.Apply(PlantInjection.Apply(Apply(source)));
-        GeneratedImpostorManifest.ReportCoverage(lib);
+        ScatterValidation.Run(lib);
         return lib;
     }
 

@@ -150,11 +150,11 @@ MonoBehaviour:
     Atlas: {fileID: 2800000, guid: 3c9d077b05a6ebd4cbd22e015104d063, type: 3}
     Normal: {fileID: 2800000, guid: 1af63ae3d0bff3343aec46e336e9e14c, type: 3}
   - Key: flowerbush-Grassland
-    ShapeHash: 755D60D3
+    ShapeHash: 82689D99
     Atlas: {fileID: 2800000, guid: f8ff17989cc453340b73762035274f5c, type: 3}
     Normal: {fileID: 2800000, guid: cd772de95aa8465419f13eb162d226fc, type: 3}
   - Key: flowerbush-Forest
-    ShapeHash: 755D60D3
+    ShapeHash: 82689D99
     Atlas: {fileID: 2800000, guid: f351bfad9ca12864a93aaa1b26e94e96, type: 3}
     Normal: {fileID: 2800000, guid: a7f0970a882cbb64fa7f074ba47b7d7b, type: 3}
   - Key: cattail-LakeShore
@@ -169,6 +169,10 @@ MonoBehaviour:
     ShapeHash: 80E8C4CA
     Atlas: {fileID: 2800000, guid: f593747033f7eb245b97ce03fdc91af7, type: 3}
     Normal: {fileID: 2800000, guid: c0a97bf88929ecd4584666b67d3a84a4, type: 3}
+  - Key: lily-Lake
+    ShapeHash: 0D7B3550
+    Atlas: {fileID: 2800000, guid: beeeaa3991117504b81ce9a5494f3bed, type: 3}
+    Normal: {fileID: 2800000, guid: 413ba9b52f910104297260dd1361f17c, type: 3}
   - Key: coral-default
     ShapeHash: C18202D5
     Atlas: {fileID: 2800000, guid: df07d516fd3cb234b84eaa6c48f3bc19, type: 3}
@@ -185,6 +189,10 @@ MonoBehaviour:
     ShapeHash: 830D97CF
     Atlas: {fileID: 2800000, guid: de436374e59eb354985882708ac9bf1a, type: 3}
     Normal: {fileID: 2800000, guid: 4ca34dec52cfb8047b56868d979d2864, type: 3}
+  - Key: kelp-Ocean
+    ShapeHash: 2BCA337E
+    Atlas: {fileID: 2800000, guid: 3a219545b53746e418db0dd2d44c87f3, type: 3}
+    Normal: {fileID: 2800000, guid: 42f997a41b4465548a4357933dd646b2, type: 3}
   - Key: Banyan
     ShapeHash: AC2D42EF
     Atlas: {fileID: 2800000, guid: c7f652423f5a175468568b96819c19ac, type: 3}

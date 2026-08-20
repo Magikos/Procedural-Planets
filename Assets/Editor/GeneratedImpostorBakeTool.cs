@@ -41,6 +41,8 @@ public static class GeneratedImpostorBakeTool
         TreeInjection.UseBakedImpostors = false;
         PlantInjection.UseBakedImpostors = false;
         RockInjection.UseBakedImpostors = false;
+        // This rebuild intentionally has no cards, so the coverage check would warn about every key mid-bake.
+        ScatterValidation.Suppressed = true;
         ScatterLibraryDto lib;
         try { lib = TreeInjection.Rebuild(); }
         finally
@@ -48,6 +50,7 @@ public static class GeneratedImpostorBakeTool
             TreeInjection.UseBakedImpostors = restoreTrees;
             PlantInjection.UseBakedImpostors = restorePlants;
             RockInjection.UseBakedImpostors = restoreRocks;
+            ScatterValidation.Suppressed = false;
         }
         if (lib?.Prototypes == null)
         {
