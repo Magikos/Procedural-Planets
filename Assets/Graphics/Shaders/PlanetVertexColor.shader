@@ -727,18 +727,11 @@ Shader "Planet/VertexColor"
 
             GrassOverlayEval EmptyGrassOverlayEval()
             {
-                GrassOverlayEval e;
-                e.farWeight = 0.0;
-                e.midWeight = 0.0;
-                e.nearWeight = 0.0;
-                e.envCoverage = 0.0;
-                e.approachWeight = 0.0;
-                e.density = 0.0;
-                e.slopeKeep = 0.0;
-                e.waterKeep = 0.0;
-                e.tint = 0.0;
-                e.relPos = 0.0;
-                e.planetNormal = 0.0;
+                // Zero the whole struct rather than listing fields. Flow analysis cannot see through the
+                // call, so declaring then assigning still warns as potentially uninitialised at every early
+                // return in EvaluateGrassOverlay - and a field added to the struct later would quietly miss
+                // a hand-written list. Every field was being set to 0 anyway.
+                GrassOverlayEval e = (GrassOverlayEval)0;
                 return e;
             }
 
