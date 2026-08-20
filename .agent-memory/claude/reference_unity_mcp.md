@@ -89,3 +89,29 @@ also persisted Bryan's unsaved rework of that scene — a ~40k-line diff replaci
 changes revert) when the change is only for a screenshot.
 
 Related: [[project_tree_generator]] (the work this was proven on), [[reference_agent_conversation]].
+
+## Iteration cost: where the time actually goes (measured 2026-08-20)
+
+**Planet generation is ~40 s, not minutes.** The phase log is already in `Editor.log` — grep it for
+`Generation timings` (path `~/AppData/Local/Unity/Editor/Editor.log`). Recent runs:
+
+```
+initialize=4.3s  terrain=9.2s  lake=1.0s  colors=19.5s  climate=0.3s  water=5.0s  finalize=0.2s  total=39.3s
+```
+
+`colors` (the biome bake) is half the total and is the only phase worth attacking if generation ever needs
+to be faster. Historical entries in the same log show `colors` used to be ~39 s for a ~57 s total, so the
+earlier optimisation work stuck — see [[project_startup_generation_perf]]. **There is no regression.**
+
+**The real per-iteration cost is Unity compile + domain reload, 2-5 minutes**, on every code change.
+Generation is a rounding error beside it. Consequences:
+
+- **Batch code edits.** One compile for several changes beats one compile each.
+- **Poll at 20-30 s, never 300 s.** I once reported generation as "~15 minutes" purely because I slept in
+  300 s blocks around a 40 s job and counted the overshoot as runtime. The claim was false and it nearly
+  sent me optimising a phase that is not slow. Short polls caught completion immediately.
+- **Read `Editor.log` before measuring anything.** The instrumentation usually already exists; the console
+  hides `Debug` level, which is why the timings looked absent.
+
+`planet.rebuild-water` re-solves bodies and rebuilds the water mesh against existing terrain in **13 s** —
+use it for any water change that does not need the biome or scatter bake.

@@ -47,3 +47,17 @@ UnitSphereToCubeFaceUvExact(d, out f, out uv);  Vector3.Angle(d, CubeFaceToUnitS
 **Note there are at least three cube-face UV conventions in the tree** (this pair, plus
 `FaceSpaceCellRangeBuilder`'s used by grass/scatter/`WaterBodyMap`, plus the HLSL mirror in
 `WaterLevelField.hlsl`). They are not interchangeable. Related: [[project_water_architecture_build]].
+
+## Audit of every other projection pair (2026-08-20) — all clean
+
+One pair being silently wrong is reason to check the rest. Round-tripped 3000 random directions:
+
+| pair | result |
+|---|---|
+| `CoordinateConverter` exact ↔ forward | max 0.0198 deg = 1.7 m |
+| `FaceSpaceCellRangeBuilder` `DirectionToFaceUv` ↔ `CubeFaceToUnitSphere` | max 0.0198 deg = 1.7 m |
+| `WaterLevelGrid.Index` vs `WaterBodyMap`'s own indexer | **0 / 3000 cell mismatches** |
+| `ChunkCoord` round trip | max 1.21 deg against a 1.41 deg cell — inside one cell |
+
+The 1.7 m worst case on the first two is `Mathf.Clamp01` at exact face corners, not a mirror error — the
+mean is 0.000015 deg. **D12 was the only broken pair.** Re-run this audit whenever a projection is added.
