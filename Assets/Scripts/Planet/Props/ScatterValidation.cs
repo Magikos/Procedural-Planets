@@ -28,6 +28,46 @@ public static class ScatterValidation
         ReportImpostorCoverage(lib);
         ReportOverbrightMaterials(lib);
         ReportUndrawable(lib);
+        ReportLodDiscontinuity(lib);
+    }
+
+    // A far LOD that is a different SIZE from the near one pops as you cross the band. Found this way: the
+    // generated rocks rebuilt their coarse shell from the same displacement field at fewer vertices, missed the
+    // outward bumps, and came out 17% smaller — a boulder that shrank when you walked away from it.
+    static void ReportLodDiscontinuity(ScatterLibraryDto lib)
+    {
+        // 18%, not 12%: the foliage mesher DELIBERATELY builds far-LOD leaves 15% larger to hold canopy
+        // coverage as detail drops, which shows up as a 1.15 bounds ratio on species whose leaves are the
+        // silhouette (palms). Flagging that every load would be noise, and a check that cries wolf gets
+        // ignored — this still catches the rock case, which was 0.83.
+        const float Tolerance = 0.18f;
+        var bad = new List<string>();
+        foreach (ScatterPrototypeDto p in lib.Prototypes)
+        {
+            if (p?.Parts == null) continue;
+            foreach (ScatterPartDto part in p.Parts)
+            {
+                if (part?.LodMeshes == null || part.LodMeshes.Length < 2) continue;
+                for (int i = 1; i < part.LodMeshes.Length; i++)
+                {
+                    Mesh near = part.LodMeshes[i - 1], far = part.LodMeshes[i];
+                    if (near == null || far == null) continue;
+                    float a = near.bounds.extents.magnitude, b = far.bounds.extents.magnitude;
+                    if (a < 1e-4f) continue;
+                    float ratio = b / a;
+                    if (Mathf.Abs(ratio - 1f) > Tolerance)
+                    { bad.Add($"{p.DisplayName} lod{i} x{ratio:0.00}"); break; }
+                    // A far LOD heavier than the near one is the LOD chain built backwards.
+                    if (far.vertexCount > near.vertexCount)
+                    { bad.Add($"{p.DisplayName} lod{i} is HEAVIER than lod{i - 1}"); break; }
+                }
+            }
+        }
+        if (bad.Count == 0) return;
+        LoggerProvider.Log(LogLevel.Warning, "ScatterCheck",
+            $"{bad.Count} prototype(s) change size or cost across an LOD band, which pops as you cross it: " +
+            string.Join(", ", bad.GetRange(0, Mathf.Min(bad.Count, 12))) +
+            (bad.Count > 12 ? $" (+{bad.Count - 12} more)" : ""));
     }
 
     // Keys that will bake at load. Correct but slow, and utterly silent without this.
