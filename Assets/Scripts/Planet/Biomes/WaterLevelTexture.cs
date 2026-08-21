@@ -66,16 +66,25 @@ public sealed class WaterLevelTexture : System.IDisposable
     // existed before this field, so a world with no solved water renders exactly as it used to.
     public void Clear() => Shader.SetGlobalFloat(_resId, 0f);
 
+    // Unbind before destroying, in that order, and never the reverse.
+    //
+    // Resolution 0 makes every consumer take its early-out before it samples, so it must be published
+    // first; nulling the global then drops the binding so nothing holds a handle to a destroyed resource.
+    // Doing this the other way round leaves _WaterLevelTex pointing at freed memory while the terrain and
+    // volume shaders still sample it every frame - a use-after-free on the GPU, which is the shape of fault
+    // that shows up as a device hang rather than a clean exception.
+    //
+    // Destroy rather than DestroyImmediate in play mode: it defers to end of frame, so a render pass that
+    // already has the texture bound finishes with a live resource. DestroyImmediate frees it synchronously.
     void Release()
     {
         if (_texture == null) return;
-        Object.DestroyImmediate(_texture);
+        Shader.SetGlobalFloat(_resId, 0f);
+        Shader.SetGlobalTexture(_texId, null);
+        if (Application.isPlaying) Object.Destroy(_texture);
+        else Object.DestroyImmediate(_texture);
         _texture = null;
     }
 
-    public void Dispose()
-    {
-        Clear();
-        Release();
-    }
+    public void Dispose() => Release();
 }
