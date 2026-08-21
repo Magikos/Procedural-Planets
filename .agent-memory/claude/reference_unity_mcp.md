@@ -115,3 +115,25 @@ Generation is a rounding error beside it. Consequences:
 
 `planet.rebuild-water` re-solves bodies and rebuilds the water mesh against existing terrain in **13 s** —
 use it for any water change that does not need the biome or scatter bake.
+
+## The editor can be hammered into a GPU device hang (2026-08-21)
+
+After a long unattended session — dozens of play/stop cycles, domain reloads and full generations over
+many hours — the editor died with:
+
+```
+D3D12Fence::Wait error: Device removal.
+d3d12: Device failed error (887a0006)     <- DXGI_ERROR_DEVICE_HUNG
+d3d12: GfxDevice was NOT out of Local memory (1.5 GB of 24.7 GB)
+```
+
+**Not an out-of-memory.** A device hang during a `Texture2DArray` upload at boot
+(`[LoadingManager] Late-initializing 2 components`), which is the biome atlas — 512x512 RGBA32, 36 slices
+— not anything task-specific. `AppData/Local/Temp/Unity/Editor/Crashes` shows this recurs on this project
+roughly every week or two, so it predates any one session.
+
+**How to behave:** check `Get-Process -Name Unity` before concluding the MCP link is merely slow — a long
+run of `no_unity_session` replies can mean the editor is gone, not busy. Read the tail of `Editor.log` for
+the cause, and check the crash-folder timestamps to see whether the crash is yours or old. Prefer fewer,
+batched compile cycles; each domain reload is a fresh round of large uploads. And after a device hang,
+surface it rather than silently relaunching and hammering the same GPU.
