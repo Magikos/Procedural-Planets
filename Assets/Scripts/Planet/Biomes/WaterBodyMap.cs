@@ -330,6 +330,14 @@ public sealed class WaterBodyMap
         for (int i = 0; i < TotalCells; i++)
             level[i] = filled[i] > elevation[i] + SpillDepthEpsilon ? filled[i] : NoWater;
 
+        // The ring exists for one reason: the mesh samples elevation far finer than this grid, so the true
+        // waterline sits INSIDE the first dry cell and the mesh needs a level there to find it.
+        //
+        // That reasoning only holds where the cell's ground is ABOVE the water. A dry cell whose ground sits
+        // BELOW the level is not a shoreline - the solve already decided water drains away from it - and
+        // handing it a lake's level floods it wholesale. Beside a lake on flat ground that submerges a full
+        // cell-wide apron of land, and because the outer boundary then falls on cell edges it reads as a
+        // straight-edged translucent sheet lying over the grass rather than as a shore.
         var dilated = (float[])level.Clone();
         for (int i = 0; i < TotalCells; i++)
         {
@@ -338,7 +346,9 @@ public sealed class WaterBodyMap
             for (int n = 0; n < 4; n++)
             {
                 int ni = _neighbors[i * 4 + n];
-                if (ni >= 0 && level[ni] > highest) highest = level[ni];
+                if (ni < 0 || level[ni] <= highest) continue;
+                if (elevation[i] <= level[ni]) continue;   // below the water: not a shore, would flood
+                highest = level[ni];
             }
             dilated[i] = highest;
         }

@@ -63,6 +63,10 @@ public static class WaterMeshBuilder
         public Vector3 Direction;
         public float BodyFactor;
         public float Temperature01;
+        // Height this point sits at. Carried rather than re-derived: a clip point is placed by the level of
+        // the body it was clipped AGAINST, and looking it up again from the point own direction can land in
+        // a neighbouring cell belonging to a different body at a different height.
+        public float SurfaceLevel;
     }
 
     struct FaceWaterData
@@ -292,6 +296,10 @@ public static class WaterMeshBuilder
             }
         }
 
+        float LevelAtDirection(Vector3 dir) => settings.Levels != null
+            ? settings.Levels.LevelAt(dir, settings.OceanLevel)
+            : settings.OceanLevel;
+
         WaterPoint CreateOriginal(int index)
         {
             return new WaterPoint
@@ -300,7 +308,8 @@ public static class WaterMeshBuilder
                 OriginalIndex = index,
                 Direction = directions[index],
                 BodyFactor = bodyFactor[index],
-                Temperature01 = temperature01[index]
+                Temperature01 = temperature01[index],
+                SurfaceLevel = LevelAtDirection(directions[index])
             };
         }
 
@@ -311,9 +320,7 @@ public static class WaterMeshBuilder
             // Clip against the level of whichever end is under water; the dry end belongs to no body, and its
             // level reads back as ground height, which would put the shoreline in the wrong place.
             Vector3 wetDirection = aWet ? directions[a] : directions[b];
-            float clipLevel = settings.Levels != null
-                ? settings.Levels.LevelAt(wetDirection, settings.OceanLevel)
-                : settings.OceanLevel;
+            float clipLevel = LevelAtDirection(wetDirection);
             float t = Mathf.InverseLerp(elevations[a], elevations[b], clipLevel);
             float edgeAngleRadians = Vector3.Angle(directions[a], directions[b]) * Mathf.Deg2Rad;
             float edgeWorldLength = Mathf.Max(edgeAngleRadians * settings.PlanetRadius, cellWorldSize * 0.25f);
@@ -332,7 +339,8 @@ public static class WaterMeshBuilder
                 EdgeB = b,
                 Direction = direction,
                 BodyFactor = Mathf.Max(bodyFactor[a], bodyFactor[b]),
-                Temperature01 = aWet ? temperature01[a] : temperature01[b]
+                Temperature01 = aWet ? temperature01[a] : temperature01[b],
+                SurfaceLevel = clipLevel
             };
         }
 
@@ -354,7 +362,7 @@ public static class WaterMeshBuilder
                     ? 1f
                     : Mathf.Clamp01(shoreDistanceCells[point.OriginalIndex] * cellWorldSize / shoreRange);
 
-                int vertexIndex = AddVertex(point.Direction, depth, shore, point.BodyFactor, point.Temperature01);
+                int vertexIndex = AddVertex(point.Direction, depth, shore, point.BodyFactor, point.Temperature01, point.SurfaceLevel);
                 originalVertexCache.Add(globalIndex, vertexIndex);
                 return vertexIndex;
             }
@@ -365,19 +373,17 @@ public static class WaterMeshBuilder
             if (edgeVertexCache.TryGetValue(edgeKey, out int edgeVertex))
                 return edgeVertex;
 
-            edgeVertex = AddVertex(point.Direction, shorelineEdgeDepth, shorelineEdgeShore, point.BodyFactor, point.Temperature01);
+            edgeVertex = AddVertex(point.Direction, shorelineEdgeDepth, shorelineEdgeShore, point.BodyFactor, point.Temperature01, point.SurfaceLevel);
             edgeVertexCache.Add(edgeKey, edgeVertex);
             return edgeVertex;
         }
 
-        int AddVertex(Vector3 direction, float depth, float shore, float oceanFactor, float waterTemperature01)
+        // level is the point own SurfaceLevel, carried from where it was decided. Within a basin every cell
+        // shares one spill height so a lake stays flat; a clip point keeps the height of the body it was
+        // clipped against instead of whatever cell its final direction happens to fall in.
+        int AddVertex(Vector3 direction, float depth, float shore, float oceanFactor, float waterTemperature01, float level)
         {
             int vertexIndex = vertices.Count;
-            // Each vertex sits on its own body's surface. Within a basin every cell shares one spill height,
-            // so a lake stays flat; between basins the level steps at the rim, which is where it should.
-            float level = settings.Levels != null
-                ? settings.Levels.LevelAt(direction, settings.OceanLevel)
-                : settings.OceanLevel;
             vertices.Add(direction * (settings.PlanetRadius * (1f + level) + settings.SurfaceOffset));
             normals.Add(direction);
             colors.Add(new Color(
