@@ -1,5 +1,7 @@
 # ProceduralPlanets — "What's Next" Roadmap
 
+> **Superseded twice.** First by [2026-08-12-next-roadmap.md](2026-08-12-next-roadmap.md), then by [2026-08-20-magikos-game-architecture.md](2026-08-20-magikos-game-architecture.md), which is the current doc of record for the game layer. Kept for its maturity snapshot and its reasoning; do not plan from its rankings. Its gate "human-verify the character MVP first" is retired (done), and its expected instanced-to-Rigidbody harvest handoff is not how plan 005 landed.
+
 _Advisory roadmap, evidence-grounded. Branch reality: work sits on `scatter-placement`/`character-controller-mvp` off `main` @ c54fc72, HEAD at `ddbd42c`. `MEMORY.md` still names `code-refactor` as active — that is stale and should be corrected._
 
 > Provenance: generated 2026-08-09 by a 6-agent read-only survey (recon + look/systems/code-health/perf lenses + synthesis). Directions and tradeoffs are the deliverable; specific `file:line` refs are leads — spot-check before acting on any one of them.

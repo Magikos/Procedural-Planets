@@ -138,14 +138,17 @@ A `wontfix` decision on an audit finding belongs at the code site as one of thes
 
 - Experiments are deleted at the same commit that supersedes them, or within one week.
 - If genuinely parking an experiment, gate behind `#if PROJECT_X_EXPERIMENT` so it stops shipping. Document what's parked and why.
-- Dead fields, unused enum values, `#if false` blocks, and unused DTOs are removed when discovered — **unless the site is marked `planned:`, or its intent is documented in `docs/design/`, `plans/`, `advisor-plans/`, or `.agent-memory/`.** Structure built ahead of a planned feature is infrastructure, not dead code. Code alone cannot tell the two apart, so check the intent sources before deleting.
+- Dead fields, unused enum values, `#if false` blocks, and unused DTOs are removed when discovered — **unless the site is marked `planned:`, or its intent is documented in `docs/design/`, `plans/`, `advisor-plans/`, `docs/phases/`, or `.agent-memory/`.** Structure built ahead of a planned feature is infrastructure, not dead code. Code alone cannot tell the two apart, so check the intent sources before deleting.
+- `docs/phases/` was added to that list on 2026-08-21 because omitting it had already cost code: `ObjectPool`, `IObjectPool<T>`, `PoissonDiscSampling`, `PoissonDiscSphereSampling` and `EventBusAutoBinder` were deleted at `f63ec14` on the grounds that their only recorded usage was "in `docs/phases/`". Those seventeen chapters, indexed by `docs/PROJECT_PLAN.md`, are the original project plan and are a first-class intent source.
 - If the intent is real but written nowhere, the fix is to write it down — a `planned:` marker or a design-doc line — **not** to delete the code.
 
 ---
 
 ## Tests
 
-- No test framework is being added near-term. Don't propose one.
+- **No *new* test framework.** The Unity Test Framework is already in the manifest and the EditMode suite at `Assets/Tests/EditMode/` is already used for gameplay logic — `HarvestServiceTests`, `ScatterHarvestStoreTests`, `ScatterPickMathTests`, `CharacterMotorTests`, `ScatterGatherParityTests`. Use it. Do not propose a second framework, a mocking library, or a PlayMode/performance-test vehicle.
+- **A test has to earn its place** by preventing a regression or replacing a slow play-test loop (Bryan, 2026-08-21). Pure domain logic qualifies: grid placement, resource accounting, effect resolution, serialization round-trips, CPU/GPU parity. Rendering and feel do not — those are verified by capture and by eye (see pp-validation-and-evidence).
+- This supersedes the older blanket rule "no test framework is being added near-term; don't propose one", which contradicted the 78 EditMode tests that already existed.
 - Editor-time self-tests that run via `RuntimeInitializeOnLoadMethod` are dead fixtures, not tests — delete them.
 
 ---

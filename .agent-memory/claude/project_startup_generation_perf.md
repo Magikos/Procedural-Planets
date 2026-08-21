@@ -45,10 +45,15 @@ Sharing was already fine (109 prototypes → 21 live bakes, 36 shared, 33 prebak
 2. `finalize` 7.0 s — all impostor bakes. Cacheable to disk **once the seed bug below is fixed**.
 3. terrain 6.9 s, water 7.0 s — untouched.
 
-## Blocking bug for further impostor work
+## Blocking bug for further impostor work — FIXED 2026-08-20
 
-`TreeInjection.cs:106` uses `HashCode.Combine` for variant seeds — randomized per process, so trees
-are structurally different every session for the same world seed (proven: topology + bounds XOR
-differ across two runs of identical code). Fix with `ScatterHash`. See [[project-tree-generator]].
+Was: `TreeInjection` seeded variants with `HashCode.Combine`, which .NET randomizes per PROCESS, so
+trees were structurally different every session for the same world seed (proven: topology + bounds
+XOR differ across two runs of identical code).
+
+FIXED — `TreeInjection.cs:176` now uses FNV-1a and carries a comment naming the exact trap. Verified
+by reading HEAD 2026-08-20. Impostor disk-caching and world reproducibility are no longer blocked by
+this. `SeedProvider` (FNV-1a, `GetSeedForSystem`/`GetSeedForChunk`/`GetSeedForEntity`) is the
+deterministic derivation service to use for any new seeded work. See [[project-tree-generator]].
 
 Related: [[project-runtime-hitch-profile]], [[reference-unity-mcp]], [[feedback-audit-workflow]]

@@ -111,12 +111,52 @@ arcs {2,8,32,128,512} m. Slopes sampled 7–12°. Sag table above (near ≈ 0.00
 `execute_code` MCP tool. **Not yet done:** convert the largest in-render gap to screen pixels at a declared
 camera pose; predeclare pixel/contact thresholds; a matched **land** grounding test.
 
-## Follow-ups (open)
+## Follow-ups
 
-1. Land grounding test with the SU3 instrumentation — prove mesh-grounding vs silent analytic fallback.
-2. Pixel-threshold analysis of the distance sag before any height-unify work is scheduled.
+1. ~~Land grounding test with the SU3 instrumentation~~ — **CLOSED 2026-08-21, see addendum below.**
+2. Pixel-threshold analysis of the distance sag before any height-unify work is scheduled. *(open)*
 3. Align [collision-strategy](2026-08-09-collision-strategy.md): "one ground-truth surface" → "one **fixed**
-   collision-LOD reference (camera-independent)"; keep analytic as approximate query only.
+   collision-LOD reference (camera-independent)"; keep analytic as approximate query only. *(open)*
+
+## Addendum 2026-08-21 — follow-up 1 measured, and SU1 confirmed empirically
+
+Run while writing [2026-08-20-magikos-game-architecture.md](2026-08-20-magikos-game-architecture.md), which
+needed to know whether ground height is deterministic across clients for 8-player co-op. World: play mode,
+surface radius 5108 at the probe direction (a different seed from the rev-2 probe, which used 5293).
+
+**Follow-up 1 — mesh-hit vs silent fallback rate.** 300 Fibonacci-distributed directions, ray from
+`analytic + 400 m` inward, max distance 900 m:
+
+| | result |
+|---|---|
+| `TryRaycastSurface` resolved (**mesh hit**, #7) | **129 / 300 = 43%** |
+| Silent analytic fallback (#6) | **171 / 300 = 57%** |
+| Fallback-vs-mesh radius delta, where both resolved | mean **31 mm**, median 16 mm, p95 119 mm, **max 273 mm** |
+
+So the fallback is not rare — it is the majority path away from the camera, exactly as SU3 suspected. The
+error it introduces is bounded at **≤0.28 m** on this world. Grounding is therefore a *blend* of #7 and #6 in
+practice, not mesh-grounding with an edge case.
+
+**Methodological caveat, stated because rev 2 asked for it:** SU3 said "declare an acceptable fallback rate
+before the run." That was **not** predeclared — the rate above is descriptive, not a pass/fail against a
+pre-committed threshold. If a threshold matters, set one and re-run; the probe is cheap.
+
+**SU1 confirmed empirically.** Rev 2 established by code trace that #6 is fixed-depth and camera-independent.
+Measured: 120 directions in one patch, sampled with the camera at 8126 m altitude and again at 120 m —
+**zero drift, 120/120 bit-identical**, for both #6 and #2. The mechanism, for the record: the quadtree is
+built complete to `_maxChunkDepth = 4` on all six faces (`_allChunks` = **2046** = 6×(1+4+16+64+256)) and
+**1536** of those retain `CpuVertexRadii` — exactly the 6×256 max-depth leaves. LOD selects what is *drawn*;
+it never prunes the sampling tree.
+
+**#1/#2 vs #6 agreement** (300 directions): mean **7.9 mm**, median 3.9 mm, p95 26 mm, max 243 mm, 100%
+within 1 m. Consistent with the rev-2 sag table's near-field row, and it confirms the sampling grid sits at
+max depth planet-wide rather than at a camera-selected LOD.
+
+**Consequence for the policy-2 table.** The "Character grounding" row's status changes from **UNPROVEN** to
+*measured: authority #7 43% of the time, #6 the rest, bounded disagreement ≤0.28 m*. The authority choice
+itself is unchanged and this addendum does not reopen it. Note also that the original reason for preferring
+#7 — a 3–24 unit disagreement recorded in `plans/001` — was the face-UV inverse defect (D12, `8fdd1d2`) and
+no longer exists.
 
 ---
 

@@ -10,7 +10,7 @@ public sealed class ScatterDebugModule : IDebugModule, IDebugCaptureMetadataProv
 {
     public DebugModuleId Id => ScatterDebugIds.Module;
 
-    public void Register(DebugRegistry registry) { }
+    public void Register(DebugRegistry registry) => registry.RegisterMetadataProvider(this);
 
     public void AppendMetadata(DebugCaptureContext context, StringBuilder sb)
     {
