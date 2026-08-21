@@ -19,6 +19,15 @@ public class WaterSettings : ScriptableObject
     public float ShoreFoamDepth = 32f;
     public float ShoreRange = 125f;
 
+    [Tooltip("Water depth in metres at which the volume tint starts, and where it reaches full strength. " +
+             "This is the shoreline feather: a depth ramp, so it widens by itself on a shallow bank.")]
+    public float EdgeFadeStartMeters = 0.1f;
+    public float EdgeFadeEndMeters = 6.5f;
+
+    [Tooltip("Same, for the ocean. Much shallower than a lake: an ocean shelf stays a few metres deep a long "
+           + "way out, and open water is turbid enough that you should not see its bed.")]
+    public float OceanEdgeFadeEndMeters = 1.5f;
+
     [Header("Waves")]
     public float WaveAmplitude = 3.4f;
     public float WaveScale = 480f;

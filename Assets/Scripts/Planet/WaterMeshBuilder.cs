@@ -236,8 +236,13 @@ public static class WaterMeshBuilder
         var clipped = new WaterPoint[4];
         float cellWorldSize = settings.PlanetRadius * Mathf.PI * 0.5f / Mathf.Max(resolution - 1, 1);
         float shorelineOverlapMeters = Mathf.Clamp(shoreRange * 0.22f, settings.PlanetRadius * 0.0012f, settings.PlanetRadius * 0.0075f);
-        float shorelineEdgeDepth = Mathf.Clamp(shorelineOverlapMeters * 0.30f, settings.PlanetRadius * 0.00015f, deepDepth * 0.06f);
-        float shorelineEdgeShore = Mathf.Clamp01(shorelineOverlapMeters * 0.45f / shoreRange);
+        // The mesh overlaps the waterline by shorelineOverlapMeters so no gap can open between water and
+        // land. Those inland vertices carry ZERO depth and zero shore, because that is what the water is
+        // there - nothing. They used to claim 8 m of depth, which made the overlap fully opaque: the tint
+        // reached full strength the instant the mesh started, giving the hard waterline, and wherever the
+        // overlap was not buried by rising ground it read as a solid sheet of water lying on the grass.
+        const float shorelineEdgeDepth = 0f;
+        const float shorelineEdgeShore = 0f;
         int addedMeshVertices = 0;
         int addedTriangles = 0;
 

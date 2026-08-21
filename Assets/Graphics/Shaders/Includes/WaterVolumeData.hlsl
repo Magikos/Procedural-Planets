@@ -42,20 +42,33 @@ void DecodeWaterShoreKind(float packed, out float shore01, out uint kind)
     shore01 = floor(p * 0.25) * (1.0 / WATER_SHORE_QUANT);
 }
 
+float _WaterEdgeFadeStart;
+float _WaterEdgeFadeEnd;
+float _WaterEdgeFadeEndOcean;
+
 // Screen coverage of the water surface. Single source of truth - WaterVolume and Atmosphere both had their
 // own copy of this expression, against the same channels, with no way to notice if one drifted.
 //
-// ponytail: the ocean term below reproduces the old packed value purely so coverage stays bit-identical
-// through this change. The cleaner test is step(0.0001, data.r), since forwardDepth is non-zero exactly
-// where the mesh rasterised and needs no per-kind floor - but that alters the shoreline feather on every
-// body at once, so it wants its own change and its own visual pass.
+// DEPTH alone drives this, which is the whole shoreline feather. Water is transparent where it is shallow,
+// so the tint has to fade out as the bed rises; a depth ramp also widens by itself on a shallow bank and
+// tightens on a steep one, which no distance ramp can do.
+//
+// It used to be smoothstep(0.0005, 0.018, max(depth01, shore01 * 0.45 + isOcean * 0.55)). The shore01 term
+// was a bug: it crossed the top of the ramp about five metres out, where the water is roughly a metre deep,
+// so it short-circuited the depth term and snapped every lake edge to full opacity - the hard waterline.
+//
+// The ocean term was NOT a bug, and removing it outright made the seabed visible across whole bays. A
+// constant 0.55 sits far above the ramp, so ocean coverage was 1 everywhere; that was hiding the fact that
+// an ocean shelf stays under a few metres deep for a very long way out. So the ocean keeps a feather, it
+// just reaches full strength in about 1.5 m of depth instead of a lake's 6.5 m. That is a real difference
+// rather than a fudge - open water is turbid and you cannot see its bed, a lake is clear and you can.
 float WaterVolumeCoverage(float4 data)
 {
     float shore01;
     uint kind;
     DecodeWaterShoreKind(data.b, shore01, kind);
-    float legacyShoreBody = shore01 * 0.45 + (kind == WATER_KIND_OCEAN ? 0.55 : 0.0);
-    return smoothstep(0.0005, 0.018, max(saturate(data.g), saturate(legacyShoreBody)));
+    float fadeEnd = kind == WATER_KIND_OCEAN ? _WaterEdgeFadeEndOcean : _WaterEdgeFadeEnd;
+    return smoothstep(_WaterEdgeFadeStart, fadeEnd, saturate(data.g));
 }
 
 float WaterVolumeLakeMask(float4 data)

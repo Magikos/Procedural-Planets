@@ -32,6 +32,9 @@ public sealed class PlanetWaterSurface
     static readonly int _waveNormalStrengthId = Shader.PropertyToID("_WaveNormalStrength");
     static readonly int _swellAmplitudeId = Shader.PropertyToID(ShaderGlobalIds.SwellAmplitude);
     static readonly int _swellWavelengthId = Shader.PropertyToID(ShaderGlobalIds.SwellWavelength);
+    static readonly int _waterEdgeFadeStartId = Shader.PropertyToID(ShaderGlobalIds.WaterEdgeFadeStart);
+    static readonly int _waterEdgeFadeEndId = Shader.PropertyToID(ShaderGlobalIds.WaterEdgeFadeEnd);
+    static readonly int _waterEdgeFadeEndOceanId = Shader.PropertyToID(ShaderGlobalIds.WaterEdgeFadeEndOcean);
     static readonly int _waterMotionStrengthId = Shader.PropertyToID("_WaterMotionStrength");
     static readonly int _sunGlitterIntensityId = Shader.PropertyToID("_SunGlitterIntensity");
     static readonly int _sunGlitterPowerId = Shader.PropertyToID("_SunGlitterPower");
@@ -255,6 +258,9 @@ public sealed class PlanetWaterSurface
             mat.SetFloat(_waveNormalStrengthId, water.WaveNormalStrength);
             Shader.SetGlobalFloat(_swellAmplitudeId, water.SwellAmplitude);
             Shader.SetGlobalFloat(_swellWavelengthId, water.SwellWavelength);
+            Shader.SetGlobalFloat(_waterEdgeFadeStartId, water.EdgeFadeStartMeters / Mathf.Max(water.DeepDepth, 0.001f));
+            Shader.SetGlobalFloat(_waterEdgeFadeEndId, water.EdgeFadeEndMeters / Mathf.Max(water.DeepDepth, 0.001f));
+            Shader.SetGlobalFloat(_waterEdgeFadeEndOceanId, water.OceanEdgeFadeEndMeters / Mathf.Max(water.DeepDepth, 0.001f));
             mat.SetFloat(_waterMotionStrengthId, water.MotionStrength);
             mat.SetFloat(_sunGlitterIntensityId, water.SunGlitterIntensity);
             mat.SetFloat(_sunGlitterPowerId, water.SunGlitterPower);
