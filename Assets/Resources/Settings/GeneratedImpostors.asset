@@ -214,7 +214,7 @@ MonoBehaviour:
     Atlas: {fileID: 2800000, guid: 0ced24ba33d846f438fee9f1c6fe17e3, type: 3}
     Normal: {fileID: 2800000, guid: dc94d958af8d011468afb1e7bee87950, type: 3}
   - Key: Cypress-dead
-    ShapeHash: 28F4B6AA
+    ShapeHash: FCB2A7CE
     Atlas: {fileID: 2800000, guid: af26c0f7ede5aab43a4f16b58f6f8161, type: 3}
     Normal: {fileID: 2800000, guid: ada9a20d81c9ced43b47c4aead55fe7f, type: 3}
   - Key: Broadleaf-dead

@@ -62,8 +62,20 @@ public static class TreeDefLibrary
     // rather than dead plants. Desert's only tree prototype is a "Dead Tree", and that is where they grow.
     static bool IsSucculent(TreeSpecies s) => s == TreeSpecies.Cactus || s == TreeSpecies.JoshuaTree;
 
-    public static TreeDef DeadSpecies(TreeSpecies s, float age = 1f) =>
-        IsSucculent(s) ? Species(s, age) : AsDead(Species(s, age));
+    public static TreeDef DeadSpecies(TreeSpecies s, float age = 1f)
+    {
+        if (IsSucculent(s)) return Species(s, age);
+
+        TreeDef def = Species(s, age);
+        // A CONE species (fir, cypress, cedar) carries its whole canopy as one cone mesh and declares NO branch
+        // tiers, so stripping the foliage leaves a bare tapered pole — a telegraph pole, not a dead tree. This
+        // was already known for IceBog, where Conifer was hand-excluded from the set; the same trap caught
+        // Cypress in Scrub. Handle it here so no biome can reintroduce it by adding a cone species.
+        if (def.FoliageStyle == FoliageStyle.ConiferCone)
+            def = Species(TreeSpecies.Broadleaf, age);
+
+        return AsDead(def);
+    }
 
     // Primary tree species per biome. Biomes not listed grow no trees (ocean/cave/water/ice-bog/lake).
     public static bool HasTree(BiomeType biome, out TreeSpecies s)
