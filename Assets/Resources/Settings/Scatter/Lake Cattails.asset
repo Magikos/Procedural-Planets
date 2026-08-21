@@ -42,7 +42,7 @@ MonoBehaviour:
     - {fileID: 7164127797826947399, guid: 18b997c676e20544fb1bd0e51fe3a1fb, type: 3}
     LodEndDistances:
     - 90
-    - 900
+    - 130
     CastShadows: 1
     ReceiveShadows: 1
   Material: {fileID: 0}

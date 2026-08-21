@@ -59,6 +59,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     LogRenderer _logRenderer;
     TreeFallSystem _treeFall;
     ChopFxSystem _chopFx;
+    ScatterDebugReporter _scatterDebug;
     TreePreview _treePreview;
 
     static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
@@ -99,6 +100,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         context.Register<IClimateSampler>(this);
         context.Register<IGrassRuntimeControl>(this);
         context.Register<IGrassNearFieldStatsProvider>(_grass);
+        context.Register<IScatterDebugReport>(_scatterDebug);
 
         // Harvest interactor (POC): picker + verb wired to this world's scatter cache, harvest store, and
         // inventory. The ScatterLibraryDto is NOT registered yet at world-service registration (it registers
@@ -159,6 +161,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             () => SettingsProvider.IsRegistered<ScatterLibraryDto>() ? SettingsProvider.GetSettings<ScatterLibraryDto>() : null,
             _harvestStore);
         _chopFx ??= new ChopFxSystem(transform);
+        _scatterDebug ??= new ScatterDebugReporter();
         _treePreview ??= new TreePreview(transform);
         _scatterRenderer.Cache.SetHarvestStore(_harvestStore);
     }
@@ -262,6 +265,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _scatterRenderer = null;
         _scatter?.Dispose();
         _scatter = null;
+        _scatterDebug = null; // world-scoped registration; the context drops it on teardown
         _climateMapGpuData?.Dispose();
         _climateMapGpuData = null;
         _surfaceProvider?.Dispose();
