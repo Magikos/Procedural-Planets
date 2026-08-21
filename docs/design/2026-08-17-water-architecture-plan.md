@@ -308,6 +308,55 @@ Contract changes: `PlanetGeneratedEvent.SeaLevelRadius` is a scalar with ~8 subs
 `ScatterTileCache` bakes sea radius into cached tiles with no invalidation path; `WaterMeshAnalysis`
 asserts the single-radius invariant. Rename — `SurfaceRadius` already means terrain ground radius.
 
+### W6 reconciliation against the Magikos architecture (2026-08-21)
+
+This plan predates Bryan's 2026-08-20 call that **8-player multiplayer is a hard constraint shaping
+architecture now**. W6 introduces a service interface, so it is exactly the kind of thing that would
+otherwise be designed twice. Six constraints from
+[2026-08-20-magikos-game-architecture.md](2026-08-20-magikos-game-architecture.md) apply:
+
+**1 — The service is world-scoped, not static (§7.6).** "No gameplay state lives in a static." Water body
+data is derived world state rather than gameplay state, so the letter of the rule permits a static, but
+`WaterBodyMap.Current` already violates the project's own `IWorldServiceRegistrar` rule and D11 was a
+symptom of it. **W6 should own the body map and retire `WaterBodyMap.Current`** — a static cleared by hand
+before each build is a mitigation, not an owner.
+
+**2 — Water is never replicated; it is derived from the seed on every client (§7.2).** The replication
+table lists "terrain, biomes, water, weather grid" as **seed only**. So every query answer must be
+**bit-stable across processes**: two clients standing in the same lake must compute the same surface
+height, or buoyancy desyncs with nothing on the wire to correct it.
+
+The spill solve already qualifies — it is pure over the heightfield, seeded, and produced identical
+results across every run this session. **The swell term does not.** `ShaderGlobalsController.cs:37` sets
+`_GameTime` from `Mathf.Repeat(Time.time, period)` — per-process wall clock, and wrapped, so two clients
+sit at different phases of the cycle permanently rather than merely offset. For rendering that is
+harmless; every client sees plausible waves. For **buoyancy it is not**: the same boat floats at a
+different height on each machine, with nothing replicated to reconcile it. Swell must key off the **world
+tick**, not `Time`.
+
+**3 — Simulation runs on a fixed tick (§7.3 rule 4, and blocking debt B2).** Buoyancy and swim are
+simulation. B2 records that locomotion still runs `Time.deltaTime` inside `Update`, and calls a fixed-tick
+accumulator a prerequisite for prediction. **W7/W8 should not be built on the current variable tick.**
+
+**4 — Gameplay may not reference planet types (ADR-5).** `Magikos.Game` never references
+`ProceduralPlanets.Planet`. So W6's return value cannot hand out a `WaterBody` record or a `WaterBodyMap`.
+The query surface gameplay sees must be expressible in primitives plus a stable id — which fits §6.3's
+capability-contract shape, and means the versioned extension point B3 asks for is the *same seam*.
+
+**5 — The bubble is already shared (§7.5).** The collision bubble, the scatter query bubble and the
+replication bubble "should be the same bubble, not two". A water query bubble is a fourth user of it, not
+a fifth structure.
+
+**6 — Swim is a named architecture trigger (§9.3).** "The ASM lands at the second locomotion driver
+(**swim**, climb or flight), or the first NPC — whichever comes first." So **W9 is not merely a water
+feature**: shipping swim is what commits the project to the `AdaptiveStateMachine` locomotion refactor.
+That belongs in the W9 estimate, and it is a reason to sequence W9 deliberately rather than as a
+follow-on from W8.
+
+*Net effect on the task below:* the interface is unchanged in spirit, but `bodyId` must be a plain stable
+id rather than a catalog reference, the swell term must take a world tick instead of `_GameTime`, and the
+service registers through `IWorldServiceRegistrar` and retires the static.
+
 **W6 Water query service.** `TryGetWaterSurface(pos) → surfacePoint, signedDepth, normal, flow, bodyId`.
 Two-phase (register at world services, configure post-generation), Burst job view, released on teardown.
 *Ship a versioned interaction extension point* so W10 can extend rather than replace (B3).
