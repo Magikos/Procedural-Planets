@@ -238,11 +238,14 @@ Shader "Scatter/Impostor"
                 half shadowAtten = MainLightRealtimeShadow(TransformWorldToShadowCoord(IN.positionWS));
                 float cloudShadow = CloudShadowFactor(IN.positionWS, sunDir, localSun);
                 half shade = lerp(0.5, 1.0, shadowAtten * cloudShadow);
-                half3 dayColor = card.rgb * lerp(0.85, 1.28, ndl * shade);
+                // Shaded floor matches Scatter.shader's mesh tier (0.6) so a prop's dark side does not step
+                // brighter as it crosses the mesh -> impostor handoff. These were 0.85 vs 0.6, which read as
+                // a prop changing shade as you walked toward it.
+                half3 dayColor = card.rgb * lerp(0.6, 1.28, ndl * shade);
                 half3 nightColor = card.rgb * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
-                // Ease into night slower (sqrt) so a far billboard keeps a dim coloured silhouette through
-                // dusk instead of collapsing to a black-dot band; deep night still resolves to nightColor.
-                return half4(lerp(nightColor, dayColor, sqrt(saturate(daylight))), 1);
+                // Linear, matching the mesh tier, the terrain and FoliageLit. See Scatter.shader for why the
+                // old sqrt easing left props lit under a sun that had already set.
+                return half4(lerp(nightColor, dayColor, saturate(daylight)), 1);
             }
             ENDHLSL
         }

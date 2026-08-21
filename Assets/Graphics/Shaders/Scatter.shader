@@ -181,11 +181,12 @@ Shader "Scatter/VertexColorLit"
                 float shade = lerp(0.35, 1.0, shadowAtten * cloudShadow);
                 half3 dayColor = albedo * lerp(0.6, 1.3, ndl * shade);
                 half3 nightColor = albedo * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
-                // Ease into night slower (sqrt) than the terrain does: near the terminator a dark-albedo prop
-                // otherwise collapses to the near-black nightColor while the lit ground behind it stays bright,
-                // reading as a black-dot band at dusk. sqrt keeps a dim coloured silhouette through twilight;
-                // deep night (daylight -> 0) still resolves to nightColor, so props don't glow after dark.
-                half3 col = lerp(nightColor, dayColor, sqrt(saturate(daylight)));
+                // Blend to night on the SAME linear curve the terrain and FoliageLit use. This was once sqrt,
+                // to stop a dark-albedo prop collapsing to a black dot against still-lit ground. It overshot:
+                // past the terminator the ground goes dark while props hold ~89% of their noon brightness,
+                // so a field of pale rocks stays lit under a sun below the horizon. The black-dot case is
+                // already covered by this shader's shaded floor (0.6), which is well above the terrain's 0.24.
+                half3 col = lerp(nightColor, dayColor, saturate(daylight));
 
                 #if defined(_SCREEN_SPACE_OCCLUSION)
                     float2 aoUV = IN.screenPos.xy / max(IN.screenPos.w, 1e-4);
