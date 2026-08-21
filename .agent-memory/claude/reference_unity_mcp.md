@@ -116,6 +116,20 @@ Generation is a rounding error beside it. Consequences:
 `planet.rebuild-water` re-solves bodies and rebuilds the water mesh against existing terrain in **13 s** —
 use it for any water change that does not need the biome or scatter bake.
 
+## Framing a screenshot: two traps that cost real time
+
+**Shader globals do not update in the call that sets them.** `_SunParams` is published by
+`CelestialManager` during Update, so reading it immediately after `TrySetLocalTimeOfDay` returns the
+PREVIOUS frame's sun. I twice measured "sun dot up = -0.01", concluded a location was unlit, and moved the
+camera for nothing — the real value was 1.00 once a frame had passed. Set the time, return, then read.
+
+**`_SunParams` is world space; body directions are planet-local.** The planet transform is rotated, so
+`dot(bodyDirection, sun)` is meaningless. Use `dot(planet.TransformDirection(bodyDirection), sun)`. Getting
+this wrong makes every lake look equally lit and picks a bad one.
+
+Reliable recipe for a lit subject: set time → return from the call → read `_SunParams` → rank candidates by
+the WORLD-space dot → position the camera at the winner. Beats nudging the clock and hoping.
+
 ## The editor can be hammered into a GPU device hang (2026-08-21)
 
 After a long unattended session — dozens of play/stop cycles, domain reloads and full generations over
