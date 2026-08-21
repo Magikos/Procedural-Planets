@@ -42,3 +42,45 @@ publishes one frame AFTER SetTimeOfDay. `camera.surface-view true` before telepo
 or the free-cam pulls back to orbit. Clouds still drift with the sun frozen, so
 same-world A/B has cloud-shadow noise. Related: [[project_scatter_lod_impostor]],
 [[project_planet_look_dev]], [[project_grass_terrain_lighting_arc]].
+
+## 2026-08-21: "rocks lit, trees black at dusk" — NOT A DEFECT (measured, closed)
+
+Bryan reported a forest under a sun **4.7° below his horizon**: black conifers,
+pale rocks glowing. Instinct says "the props aren't going dark." Instinct is wrong.
+
+**Decisive measurement.** Same pixels, camera fixed, clock frozen:
+
+| sun elevation | props | ground |
+|---|---|---|
+| −88° (no direct light) | 0.080 | 0.084 |
+| +1.4° (grazing) | 0.611 | 0.203 |
+
+Props collapse to ground level when there is no sun, so they are **not**
+ambient-glowing. They are **directly lit**: a rock or trunk presents faces at every
+angle, so a near-horizon sun strikes some of them near-normal (`ndl`≈1) while flat
+ground has `ndl`≈0.02. Low sun lighting vertical surfaces and missing horizontal
+ones is correct. Add sphere curvature — on R=5000 a 2 km view spans enough arc that
+distant props sit in real sunlight while the camera stands in twilight — and the
+whole look is explained.
+
+**Three candidate fixes measured and REJECTED. Do not re-try these:**
+- prop `sqrt(daylight)` → linear night curve: **−3.3%**
+- fog washing distant props: **3.9%**
+- daylight-scaled ambient floor: **+0.7%**
+
+**Trap that manufactured a fake finding:** I built the "rock" mask by selecting the
+*brightest* pixels, which preferentially picks sunlit faces — inflating a "rocks are
+5.3× the ground" ratio that was an artifact of the mask, not a defect. Never define
+a brightness mask by brightness when brightness is the thing being measured.
+
+**Second trap:** overriding `_SunParams` directly to fake a sun angle leaves the
+atmosphere/fog globals at the real time, so "night" frames render under daytime fog.
+Ground luminance changed between runs in which only *prop* shaders had changed — that
+impossibility is the tell. Use `time.freeze on` + `time.set-local` so every system
+agrees on the time, and A/B by actually swapping the shader file.
+
+Shipped as consistency only (commit `9e92fef`), NOT as a fix for the above: all prop
+shaders now use the linear night curve and a 0.6 shaded floor, matching terrain and
+`FoliageLit`. The impostor tier had been 0.85 against the mesh's 0.6 — a 42% step on
+a prop's dark side across the mesh→impostor handoff, which is the real mechanism
+behind "rocks change shade as you approach".
