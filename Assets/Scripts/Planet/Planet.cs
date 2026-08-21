@@ -49,6 +49,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     ScatterField _scatter;
     ScatterRenderer _scatterRenderer;
     PlanetWaterSurface _waterSurface;
+    WaterQueryService _waterQuery;
     PlanetTerrainMaterial _terrainMaterial;
     SurfaceEditController _surfaceEdits;
     ScatterHarvestStore _harvestStore;
@@ -91,6 +92,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         EnsureRuntimeOwners();
         context.Register<IPlanet>(this);
         context.Register<IPlanetSurfaceSampler>(this);
+        context.Register<IWaterQueryService>(_waterQuery);
         context.Register<IPlanetSurfaceRaycaster>(this);
         context.Register<ISurfacePathBrushService>(_surfaceEdits);
         context.Register(_surfaceEdits);
@@ -145,6 +147,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _scatter ??= new ScatterField(transform, new AnalyticGroundSampler(_shapeGenerator), _colorGenerator);
         _scatterRenderer ??= new ScatterRenderer(_scatter, transform);
         _waterSurface ??= new PlanetWaterSurface(transform);
+        _waterQuery ??= new WaterQueryService(transform);
         _terrainMaterial ??= new PlanetTerrainMaterial(Logger);
         _surfaceEdits ??= new SurfaceEditController(transform, Logger, () => _grass.InvalidateSurfaceMasks());
         _harvestStore ??= new ScatterHarvestStore(Logger);
@@ -475,6 +478,11 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             long harvestMs = finalizeStep.ElapsedMilliseconds;
             finalizeStep.Restart();
             _scatter.Configure(Seed, planet.PlanetRadius, seaLevelRadius, planet.HasOceans);
+            // Same body map and surface offset the water mesh was built from, so a query and the surface it
+            // describes cannot disagree.
+            _waterQuery.Configure(WaterBodyMap.Current, new AnalyticGroundSampler(_shapeGenerator),
+                planet.PlanetRadius, planet.OceanLevel,
+                Mathf.Max(planet.PlanetRadius * 0.00003f, 0.02f));
             long scatterMs = finalizeStep.ElapsedMilliseconds;
             finalizeStep.Restart();
             _scatterRenderer.Configure();

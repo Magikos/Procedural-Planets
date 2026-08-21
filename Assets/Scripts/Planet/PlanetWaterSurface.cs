@@ -399,6 +399,25 @@ public sealed class PlanetWaterSurface
         return sb.ToString().TrimEnd();
     }
 
+    [ConsoleCommand("at", "water.at [x y z] - report the water surface at a world position, or at the camera.", MonoTargetType.Registry)]
+    string AtCmd(float? x = null, float? y = null, float? z = null)
+    {
+        if (!ServiceLocator.TryGet(out IWaterQueryService query))
+            return "water.at: no IWaterQueryService registered";
+
+        Vector3 probe;
+        if (x.HasValue && y.HasValue && z.HasValue) probe = new Vector3(x.Value, y.Value, z.Value);
+        else if (Camera.main != null) probe = Camera.main.transform.position;
+        else return "water.at: no position given and no main camera";
+
+        if (!query.TryGetWaterSurface(probe, out WaterSample s))
+            return $"water.at ({probe.x:F1},{probe.y:F1},{probe.z:F1}): no water body here";
+
+        return $"water.at ({probe.x:F1},{probe.y:F1},{probe.z:F1}): body #{s.BodyId} {(s.IsOcean ? "ocean" : "lake")}, " +
+               $"{(s.IsSubmerged ? "submerged" : "above surface")} by {Mathf.Abs(s.SignedDepth):F2} m, " +
+               $"body depth {s.BodyDepth:F1} m, surface at ({s.SurfacePoint.x:F1},{s.SurfacePoint.y:F1},{s.SurfacePoint.z:F1})";
+    }
+
     [ConsoleCommand("reset", "Restore the runtime DTO from the authored WaterSettings asset.", MonoTargetType.Registry)]
     string ResetCmd()
     {
