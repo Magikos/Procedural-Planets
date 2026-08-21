@@ -50,7 +50,7 @@ namespace ProceduralPlanets.Tests
 
             using var reloaded = new WorldDeltaLog();
             reloaded.Open(_dir, WorldKey);
-            Assert.IsTrue(reloaded.TryGet(big, out WorldDelta read));
+            Assert.IsTrue(reloaded.TryGet(DeltaKind.EntitySpawned, big, out WorldDelta read));
             Assert.AreEqual(DeltaKind.EntitySpawned, read.Kind);
             Assert.AreEqual(big, read.Key);
             Assert.AreEqual(written.Position, read.Position);
@@ -88,9 +88,9 @@ namespace ProceduralPlanets.Tests
             log.Append(Chop(501UL, Vector3.zero, 4));
 
             Assert.AreEqual(2, log.Count, "two keys touched, so two live records");
-            Assert.IsTrue(log.TryGet(500UL, out WorldDelta d));
+            Assert.IsTrue(log.TryGet(DeltaKind.ScatterState, 500UL, out WorldDelta d));
             Assert.AreEqual(1, d.State);
-            Assert.IsFalse(log.TryGet(9999UL, out _));
+            Assert.IsFalse(log.TryGet(DeltaKind.ScatterState, 9999UL, out _));
         }
 
         [Test]
@@ -110,9 +110,9 @@ namespace ProceduralPlanets.Tests
 
             using var reloaded = new WorldDeltaLog();
             reloaded.Open(_dir, WorldKey);
-            Assert.IsTrue(reloaded.TryGet(1UL, out _), "records before the tear survive");
-            Assert.IsTrue(reloaded.TryGet(2UL, out _));
-            Assert.IsFalse(reloaded.TryGet(3UL, out _), "the torn record is dropped, not half-read");
+            Assert.IsTrue(reloaded.TryGet(DeltaKind.ScatterState, 1UL, out _), "records before the tear survive");
+            Assert.IsTrue(reloaded.TryGet(DeltaKind.ScatterState, 2UL, out _));
+            Assert.IsFalse(reloaded.TryGet(DeltaKind.ScatterState, 3UL, out _), "the torn record is dropped, not half-read");
             Assert.AreEqual(1, reloaded.TornRecordsDropped);
         }
 
@@ -132,8 +132,8 @@ namespace ProceduralPlanets.Tests
 
             using var reloaded = new WorldDeltaLog();
             reloaded.Open(_dir, WorldKey);
-            Assert.IsTrue(reloaded.TryGet(1UL, out _));
-            Assert.IsFalse(reloaded.TryGet(2UL, out _));
+            Assert.IsTrue(reloaded.TryGet(DeltaKind.ScatterState, 1UL, out _));
+            Assert.IsFalse(reloaded.TryGet(DeltaKind.ScatterState, 2UL, out _));
             Assert.AreEqual(1, reloaded.TornRecordsDropped);
         }
 
@@ -157,7 +157,7 @@ namespace ProceduralPlanets.Tests
             Assert.AreEqual(0, reloaded.TornRecordsDropped);
             for (ulong i = 0; i < 20; i++)
             {
-                Assert.IsTrue(reloaded.TryGet(i, out WorldDelta d), $"key {i} survived compaction");
+                Assert.IsTrue(reloaded.TryGet(DeltaKind.ScatterState, i, out WorldDelta d), $"key {i} survived compaction");
                 Assert.AreEqual(new Vector3(i, 0, 0), d.Position);
             }
         }
@@ -177,7 +177,7 @@ namespace ProceduralPlanets.Tests
             using var reloaded = new WorldDeltaLog();
             reloaded.Open(_dir, WorldKey);
             Assert.AreEqual(11, reloaded.Count, "base plus log, with neither dropped");
-            Assert.IsTrue(reloaded.TryGet(100UL, out WorldDelta d));
+            Assert.IsTrue(reloaded.TryGet(DeltaKind.ScatterState, 100UL, out WorldDelta d));
             Assert.AreEqual(7, d.TypeIndex);
         }
 
@@ -203,13 +203,13 @@ namespace ProceduralPlanets.Tests
             Assert.AreEqual(3, reloaded.Count);
             Assert.AreEqual(0, reloaded.TornRecordsDropped);
 
-            Assert.IsTrue(reloaded.TryGet(2UL, out WorldDelta withPayload));
+            Assert.IsTrue(reloaded.TryGet(DeltaKind.SurfaceStamp, 2UL, out WorldDelta withPayload));
             CollectionAssert.AreEqual(stamp, withPayload.Payload);
 
-            Assert.IsTrue(reloaded.TryGet(1UL, out WorldDelta without));
+            Assert.IsTrue(reloaded.TryGet(DeltaKind.ScatterRemoved, 1UL, out WorldDelta without));
             Assert.IsNull(without.Payload, "a payload-free record stays payload-free");
 
-            Assert.IsTrue(reloaded.TryGet(3UL, out WorldDelta after));
+            Assert.IsTrue(reloaded.TryGet(DeltaKind.ScatterState, 3UL, out WorldDelta after));
             Assert.AreEqual(5, after.TypeIndex, "the record after a payload is still framed correctly");
             Assert.AreEqual(Vector3.one, after.Position);
         }
@@ -222,6 +222,46 @@ namespace ProceduralPlanets.Tests
             Assert.AreEqual(0, d.PayloadLength);
             Assert.Throws<ArgumentOutOfRangeException>(
                 () => new WorldDelta(0, DeltaKind.EntityState, 1UL, payload: new byte[WorldDelta.MaxPayloadBytes + 1]));
+        }
+
+        [Test]
+        public void SameNumber_InTwoIdSpaces_StaysTwoRecords()
+        {
+            // A ScatterId packs a cell address that can be small, and EntityId counters start at 1, so the
+            // same number naming a tree and a dropped log is ordinary rather than exotic. Keyed on the bare
+            // ulong, the log would let one overwrite the other and a chopped tree would come back.
+            const ulong shared = 42UL;
+
+            using var log = new WorldDeltaLog();
+            log.Open(_dir, WorldKey);
+            log.Append(new WorldDelta(0, DeltaKind.ScatterState, shared, Vector3.up, typeIndex: 1, state: 1));
+            log.Append(new WorldDelta(0, DeltaKind.EntitySpawned, shared, Vector3.down, typeIndex: 2));
+            log.Append(new WorldDelta(0, DeltaKind.SurfaceStamp, shared, payload: new byte[] { 9 }));
+
+            Assert.AreEqual(3, log.Count, "three id spaces, so three live records");
+            Assert.IsTrue(log.TryGet(DeltaKind.ScatterState, shared, out WorldDelta tree));
+            Assert.AreEqual(Vector3.up, tree.Position);
+            Assert.IsTrue(log.TryGet(DeltaKind.EntitySpawned, shared, out WorldDelta dropped));
+            Assert.AreEqual(Vector3.down, dropped.Position);
+            Assert.IsTrue(log.TryGet(DeltaKind.SurfaceStamp, shared, out WorldDelta stamp));
+            Assert.AreEqual(1, stamp.PayloadLength);
+        }
+
+        [Test]
+        public void KindsDescribingOneThing_ShareASpace_SoTheyCollapse()
+        {
+            using var log = new WorldDeltaLog();
+            log.Open(_dir, WorldKey);
+
+            // An entity's whole life is one live record: spawned, moved, then removed leaves a tombstone.
+            log.Append(new WorldDelta(0, DeltaKind.EntitySpawned, 1UL, Vector3.zero, typeIndex: 4));
+            log.Append(new WorldDelta(0, DeltaKind.EntityMoved, 1UL, Vector3.one));
+            log.Append(new WorldDelta(0, DeltaKind.EntityRemoved, 1UL));
+            Assert.AreEqual(1, log.Count);
+
+            // The lookup takes any kind in the space, so asking with Spawned still finds the tombstone.
+            Assert.IsTrue(log.TryGet(DeltaKind.EntitySpawned, 1UL, out WorldDelta d));
+            Assert.AreEqual(DeltaKind.EntityRemoved, d.Kind);
         }
 
         [Test]

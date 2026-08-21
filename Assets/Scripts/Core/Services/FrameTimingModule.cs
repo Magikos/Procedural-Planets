@@ -9,10 +9,9 @@ using UnityEngine;
 public enum FrameTimingSection
 {
     SurfaceVisibility = 0,
-    Water = 1,
-    Clouds = 2,
-    NearGrass = 3,
-    ChunkGrass = 4,
+    Clouds = 1,
+    NearGrass = 2,
+    ChunkGrass = 3,
 }
 
 public static class FrameTimingIds
@@ -47,7 +46,7 @@ public readonly struct FrameTimingStats
 // All callers are main-thread per-frame Update code, so Time.frameCount access is safe.
 public static class FrameTimingCounters
 {
-    const int SectionCount = 5;
+    const int SectionCount = 4;
     const int RollingWindowSize = 120;
     const double MaxValidWholeFrameMs = 1000.0;
 
@@ -268,7 +267,6 @@ public sealed class FrameTimingModule : IDebugModule, IDebugCaptureMetadataProvi
     string _cachedWholeFrame = "Frame: (gathering...)";
     string _cachedWholeWindow = "Rolling window: (gathering...)";
     string _cachedSurfaceVisibility;
-    string _cachedWater;
     string _cachedClouds;
     string _cachedNearGrass;
     string _cachedChunkGrass;
@@ -289,7 +287,6 @@ public sealed class FrameTimingModule : IDebugModule, IDebugCaptureMetadataProvi
         sb.AppendLine(_cachedWholeFrame);
         sb.AppendLine(_cachedWholeWindow);
         sb.AppendLine(_cachedSurfaceVisibility);
-        sb.AppendLine(_cachedWater);
         sb.AppendLine(_cachedClouds);
         sb.AppendLine(_cachedNearGrass);
         sb.AppendLine(_cachedChunkGrass);
@@ -311,7 +308,6 @@ public sealed class FrameTimingModule : IDebugModule, IDebugCaptureMetadataProvi
         GUILayout.Label($"Frame Timing ({FrameTimingCounters.WindowCapacity}-frame rolling window)");
         GUILayout.Label(_cachedWholeWindow);
         GUILayout.Label(_cachedSurfaceVisibility);
-        GUILayout.Label(_cachedWater);
         GUILayout.Label(_cachedClouds);
         GUILayout.Label(_cachedNearGrass);
         GUILayout.Label(_cachedChunkGrass);
@@ -327,7 +323,6 @@ public sealed class FrameTimingModule : IDebugModule, IDebugCaptureMetadataProvi
         _cachedWholeWindow =
             $"Rolling: CPU {FormatWindow(cpu)}; GPU {FormatWindow(gpu)}";
         _cachedSurfaceVisibility = $"Surface/terrain CPU: {FormatWindow(FrameTimingCounters.GetSectionStats(FrameTimingSection.SurfaceVisibility))}";
-        _cachedWater = $"Water CPU:          {FormatWindow(FrameTimingCounters.GetSectionStats(FrameTimingSection.Water))}";
         _cachedClouds = $"Clouds CPU:         {FormatWindow(FrameTimingCounters.GetSectionStats(FrameTimingSection.Clouds))}";
         _cachedNearGrass = $"Near grass CPU:     {FormatWindow(FrameTimingCounters.GetSectionStats(FrameTimingSection.NearGrass))}";
         _cachedChunkGrass = $"Chunk grass CPU:    {FormatWindow(FrameTimingCounters.GetSectionStats(FrameTimingSection.ChunkGrass))}";

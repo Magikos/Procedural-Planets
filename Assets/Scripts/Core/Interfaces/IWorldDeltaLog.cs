@@ -11,8 +11,9 @@ public interface IWorldDeltaLog
     /// <returns>The record as stored, with its assigned sequence.</returns>
     WorldDelta Append(in WorldDelta delta);
 
-    /// <summary>Latest record for a key, or false when the key has no history.</summary>
-    bool TryGet(ulong key, out WorldDelta delta);
+    /// <summary>Latest record for a key, or false when the key has no history. The kind selects the id space:
+    /// a ScatterId and an EntityId can be the same number, so the bare key is not enough to identify a record.</summary>
+    bool TryGet(DeltaKind kind, ulong key, out WorldDelta delta);
 
     /// <summary>The current state: one record per key, holding the latest value for that key.</summary>
     IReadOnlyList<WorldDelta> Snapshot();

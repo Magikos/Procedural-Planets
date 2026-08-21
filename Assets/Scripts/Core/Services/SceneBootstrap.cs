@@ -83,8 +83,6 @@ public class SceneBootstrap : MonoBehaviour, IEarlyInitialize
         ServiceLocator.RegisterWorld<ISeedProvider>(_seedProvider);
         ServiceLocator.RegisterWorld<IWorldActionManager>(_worldActionManager);
 
-        if (_validationProfile == WorldServiceValidationProfile.Full)
-            EnsureComponent<WaterWakeController>();
         EnsureComponent<ScaleReferenceMarkers>();
         RegisterSceneServices();
         RegisterSceneSettings();

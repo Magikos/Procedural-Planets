@@ -32,7 +32,7 @@ public sealed class WorldDeltaLog : IWorldDeltaLog, System.IDisposable
     readonly ILogger _log;
     readonly long _compactThreshold;
     readonly List<WorldDelta> _live = new();
-    readonly Dictionary<ulong, int> _byKey = new();     // key -> index into _live
+    readonly Dictionary<(byte Space, ulong Key), int> _byKey = new();   // (space, key) -> index into _live
     readonly byte[] _scratch = new byte[WorldDelta.FixedBytes];
 
     string _basePath;
@@ -95,12 +95,30 @@ public sealed class WorldDeltaLog : IWorldDeltaLog, System.IDisposable
         return stored;
     }
 
-    public bool TryGet(ulong key, out WorldDelta delta)
+    public bool TryGet(DeltaKind kind, ulong key, out WorldDelta delta)
     {
-        if (_byKey.TryGetValue(key, out int index)) { delta = _live[index]; return true; }
+        if (_byKey.TryGetValue((SpaceOf(kind), key), out int index)) { delta = _live[index]; return true; }
         delta = default;
         return false;
     }
+
+    // A ScatterId and an EntityId are different numbers for different things, and nothing stops them being
+    // the SAME number - a ScatterId packs a cell address that can be small, and EntityId counters start at 1.
+    // Keying the live set on the raw ulong would let a dropped log overwrite a chopped tree. The space is the
+    // disambiguator, so lookups take the kind rather than the bare key.
+    //
+    // Kinds that describe one thing share a space on purpose: a tree's ScatterRemoved and ScatterState
+    // collapse to one live record, as do an entity's Spawned, Moved, Removed and State.
+    internal static byte SpaceOf(DeltaKind kind) => kind switch
+    {
+        DeltaKind.ScatterRemoved or DeltaKind.ScatterState => 1,
+        DeltaKind.SurfaceStamp => 2,
+        DeltaKind.PlayerState => 3,
+        DeltaKind.TerrainDeform => 4,
+        DeltaKind.EntitySpawned or DeltaKind.EntityMoved
+            or DeltaKind.EntityRemoved or DeltaKind.EntityState => 5,
+        _ => 0,
+    };
 
     public IReadOnlyList<WorldDelta> Snapshot() => _live;
 
@@ -146,8 +164,9 @@ public sealed class WorldDeltaLog : IWorldDeltaLog, System.IDisposable
     {
         // Last write per key wins, so a stump that is later dug leaves one record rather than two, and the
         // live set stays proportional to changed things rather than to changes.
-        if (_byKey.TryGetValue(d.Key, out int index)) _live[index] = d;
-        else { _byKey[d.Key] = _live.Count; _live.Add(d); }
+        (byte, ulong) slot = (SpaceOf(d.Kind), d.Key);
+        if (_byKey.TryGetValue(slot, out int index)) _live[index] = d;
+        else { _byKey[slot] = _live.Count; _live.Add(d); }
         if (d.Sequence >= _nextSequence) _nextSequence = d.Sequence + 1;
     }
 

@@ -53,6 +53,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     PlanetTerrainMaterial _terrainMaterial;
     SurfaceEditController _surfaceEdits;
     ScatterHarvestStore _harvestStore;
+    WorldDeltaLog _deltaLog;
     InventoryService _inventory;
     HarvestInteractor _harvestInteractor;
     StumpRenderer _stumpRenderer;
@@ -97,6 +98,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         context.Register<IPlanetSurfaceRaycaster>(this);
         context.Register<ISurfacePathBrushService>(_surfaceEdits);
         context.Register(_surfaceEdits);
+        context.Register<IWorldDeltaLog>(_deltaLog);
         context.Register<IClimateSampler>(this);
         context.Register<IGrassRuntimeControl>(this);
         context.Register<IGrassNearFieldStatsProvider>(_grass);
@@ -152,6 +154,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _waterQuery ??= new WaterQueryService(transform);
         _terrainMaterial ??= new PlanetTerrainMaterial(Logger);
         _surfaceEdits ??= new SurfaceEditController(transform, Logger, () => _grass.InvalidateSurfaceMasks());
+        _deltaLog ??= new WorldDeltaLog(Logger);
         _harvestStore ??= new ScatterHarvestStore(Logger);
         _inventory ??= new InventoryService();
         _stumpRenderer ??= new StumpRenderer(_harvestStore, transform,
@@ -271,6 +274,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _surfaceProvider?.Dispose();
         _surfaceProvider = null;
         _perFaceProvider = null;
+        _deltaLog?.Dispose();   // flushes to the platter; a chop must survive a quit
+        _deltaLog = null;
         _colorGenerator?.Dispose();
         _waterSurface?.Dispose();
         _terrainMaterial?.Dispose();
@@ -478,7 +483,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             await Awaitable.NextFrameAsync(ct);
             // After the last cancellable await: a cancelled generation never publishes readiness,
             // so scatter is only configured for a generation that actually reached this point.
-            _harvestStore.Configure(Seed);
+            _deltaLog.Open(System.IO.Path.Combine(Application.persistentDataPath, "ProceduralPlanets"), "world-" + Seed);
+            _harvestStore.Configure(Seed, _deltaLog);
             long harvestMs = finalizeStep.ElapsedMilliseconds;
             finalizeStep.Restart();
             _scatter.Configure(Seed, planet.PlanetRadius, seaLevelRadius, planet.HasOceans);
