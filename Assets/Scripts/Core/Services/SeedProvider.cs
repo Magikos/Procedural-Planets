@@ -27,6 +27,11 @@ public class SeedProvider : ISeedProvider
         return Combine(WorldSeed, coord.Face, coord.X, coord.Y, entityIndex);
     }
 
+    public int GetSeedForEntity(ulong entityKey)
+    {
+        return Combine(WorldSeed, (int)entityKey, (int)(entityKey >> 32));
+    }
+
     static int StableHash(string text)
     {
         unchecked

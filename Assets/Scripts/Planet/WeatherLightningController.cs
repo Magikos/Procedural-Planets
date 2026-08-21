@@ -112,6 +112,8 @@ public class WeatherLightningController : MonoBehaviour
             return;
         }
 
+        // ponytail: strike timing and shape read global RNG, so clients will see different flashes; harmless
+        // while lightning stays cosmetic, and the fix is to seed it from the world tick once that exists (B2).
         _strikeDirection = ScatterDirection(stormDirection.normalized);
         BuildLightningPath(_strikeDirection);
         _strikeStartTime = Time.time;

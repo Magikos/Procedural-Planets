@@ -25,8 +25,11 @@ public readonly struct HarvestYield
     public HarvestYield(string itemId, int count) { ItemId = itemId; Count = count; }
 }
 
-// A node took harvest damage but is not yet felled (multi-hit chopping). The POC never raises it (one-shot
-// fell), but future hit-particle / chop-SFX systems subscribe here.
+// A node took harvest damage but is not yet felled (multi-hit chopping).
+//
+// planned: multi-hit chopping and its hit-particle / chop-SFX systems, docs/design/2026-08-12-next-roadmap.md.
+// Unreachable today rather than merely unsubscribed: HarvestService raises it only when tool.Damage is below
+// a node's HP, and every tool currently does exactly enough damage to fell in one swing.
 public readonly struct HarvestHitEvent : IGameEvent
 {
     public readonly ulong Id;

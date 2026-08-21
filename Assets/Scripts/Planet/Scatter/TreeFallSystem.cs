@@ -12,6 +12,11 @@ public sealed class TreeFallSystem : System.IDisposable
     readonly System.Func<ScatterLibraryDto> _libraryFn;
     readonly ScatterHarvestStore _store;
 
+    // Resolved on the first fell rather than in the constructor: Planet builds this system in Awake, and
+    // SceneBootstrap does not register ISeedProvider until EarlyInitialize. A chop is a discrete player
+    // action, so caching it here is not a per-frame resolve.
+    ISeedProvider _seeds;
+
     public TreeFallSystem(Transform planetTransform, System.Func<ScatterLibraryDto> libraryFn, ScatterHarvestStore store)
     {
         _planetTransform = planetTransform;
@@ -45,8 +50,34 @@ public sealed class TreeFallSystem : System.IDisposable
         if (root.transform.childCount == 0) { Object.Destroy(root); return; }
 
         int protoIndex = e.ProtoIndex;
-        root.AddComponent<FallingTree>().Launch(up, Random.onUnitSphere, FallSeconds,
+        _seeds ??= ServiceLocator.TryGet(out ISeedProvider seeds) ? seeds : null;
+        int fallSeed = _seeds?.GetSeedForEntity(e.Id) ?? (int)e.Id;
+        Vector3 topple = _planetTransform.TransformDirection(
+            ToppleDirection(fallSeed, _planetTransform.InverseTransformDirection(up)));
+        root.AddComponent<FallingTree>().Launch(up, topple, FallSeconds,
             (pos, rot) => _store?.RecordLog(pos, rot, protoIndex));
+    }
+
+    // Which way a felled tree goes over, from a seed derived off the tree's own id so two processes agree.
+    // It was Random.onUnitSphere, which reads global RNG state that tree generation had already stirred:
+    // the same tree fell a different way every session, and under multiplayer every client would watch a
+    // different fall and save a different resting log.
+    //
+    // The basis is built in PLANET-LOCAL space on purpose. Crossing against world up would fold the planet's
+    // own rotation into the answer, and two processes holding the planet at different rotations would then
+    // disagree again for a subtler reason.
+    public static Vector3 ToppleDirection(int fallSeed, Vector3 localUp)
+    {
+        localUp = localUp.sqrMagnitude > 1e-6f ? localUp.normalized : Vector3.up;
+
+        // The seed is already FNV-mixed by ISeedProvider; spreading the low bits over a full turn is all
+        // that is left to do.
+        float angle = (uint)fallSeed * (2f * Mathf.PI / 4294967296f);
+
+        Vector3 reference = Mathf.Abs(localUp.y) < 0.99f ? Vector3.up : Vector3.right;
+        Vector3 tangent = Vector3.Cross(localUp, reference).normalized;
+        Vector3 bitangent = Vector3.Cross(localUp, tangent);
+        return tangent * Mathf.Cos(angle) + bitangent * Mathf.Sin(angle);
     }
 
     public void Dispose() => EventBus<ScatterHarvestedEvent>.Unlisten(OnHarvested);
