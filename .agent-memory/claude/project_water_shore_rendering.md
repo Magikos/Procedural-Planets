@@ -83,3 +83,35 @@ in a working tree. **Worth periodically checking `git ls-files` against referenc
 `.meta`.** Fixed in `726c6eb`.
 
 Related: [[project_water_architecture_build]], [[reference_unity_mcp]], [[feedback_quality_over_cheap]].
+
+## The stepped lake bed: full chain, measured (supersedes the guesses above)
+
+Six attempts failed because two independent faults must be fixed TOGETHER. Each was tested alone; each alone
+does nothing, which is why every attempt looked like "no change".
+
+**Ruled OUT with hard evidence, do not re-investigate:**
+- The bake. Read the live atlas: ids `50 50 | 73 x7 | 71 x85` with weights ramping smoothly over ~14 texels
+  (~110 m). The kernel histogram works. Atlas is 1009 per face = 16 leaves x 63 stride, **7.78 m per texel**.
+- The shader's 4-corner reconstruction, BOTH the albedo path and the grass overlay path. Textbook bilinear -
+  `uv * res - 0.5`, `floor`, fractional lerp. No half-texel or truncation error.
+- LOD. Every leaf is depth 4 (1536 uniform). Distance only changes how many steps fit in frame.
+
+**The actual chain:**
+- INNER Lake/LakeShore edge is smooth - decided by `elevation < waterLevel`, continuous.
+- OUTER LakeShore/land edge is the staircase - decided by **`lakeState != 0`, a binary test on the 41 m mask**.
+  Its cell-shaped outline propagates to everything downstream.
+- Kernel smoothing is 46 m against 41 m steps, ratio **1.1** - it blurs ACROSS the edge but cannot remove the
+  staircase SHAPE along it. A blurred staircase is still a staircase.
+- `LakeShoreHandoff` exists to replace that binary test with a terrain ramp, and is defeated twice over:
+  1. pass 1 keeps only the primary id, so the blend is **discarded** -> needs `Dominant(p, s, blend)`
+  2. the ramp's reference level is **NoWater one ring out**, so it saturates instantly -> needs a wide
+     reference-level field, dilated WITHOUT the anti-flood guard (that guard is only for the wet test)
+
+**Untried and most likely: both together, with `Dominant` scoped to the LAKE branch only.** Applying
+`Dominant` to every biome boundary was measured and is BAD - large regions flip grass -> scrub, because the
+secondary is dominant across much of the planet. That also means "primary is the base biome" is not a safe
+assumption about the resolver's convention.
+
+Cheap read-only tools that made this tractable: blit a non-readable atlas to a point-filtered RT and
+`ReadPixels` it; `CoordinateConverter.UnitSphereToCubeFaceUvExact(dir, out face, out uv)` then `uv * 1008`
+gives the atlas texel; call `BiomeDto.Registry.Resolve` directly in the live world.
