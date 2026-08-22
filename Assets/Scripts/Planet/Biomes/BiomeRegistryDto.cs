@@ -175,7 +175,9 @@ public sealed record BiomeRegistryDto(
         }
         if (lakeState != 0)
         {
-            return NewBlendedResult(BiomeType.LakeShore, gridResult.PrimaryBiome, 0.35f, temperature, moisture);
+            // Height ramp, not the old constant 0.35 - see the note in the mirrored copy.
+            return NewBlendedResult(BiomeType.LakeShore, gridResult.PrimaryBiome,
+                LakeShoreHandoff(elevation, waterLevel), temperature, moisture);
         }
 
         if (elevation < BiomeConstants.OceanThreshold)
@@ -296,6 +298,14 @@ public sealed record BiomeRegistryDto(
     {
         if (width <= 0f) return 0f;
         return 0.5f * (1f - Mathf.Clamp01(distanceFromBoundary / width));
+    }
+
+    // Mirrors BiomeLookupData.LakeShoreHandoff - see the note there.
+    static float LakeShoreHandoff(float elevation, float waterLevel)
+    {
+        if (BiomeConstants.LakeShoreBlendHeight <= 0f) return 1f;
+        float t = Mathf.Clamp01((elevation - waterLevel) / BiomeConstants.LakeShoreBlendHeight);
+        return t * t * (3f - 2f * t);
     }
 
     int GetGridIndex(int tempIdx, int moistIdx)

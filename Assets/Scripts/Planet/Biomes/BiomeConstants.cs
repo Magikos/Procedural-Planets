@@ -11,6 +11,18 @@ public static class BiomeConstants
     public const float BlendWidth = 0.003f;
     public const float ElevationBlendWidth = 0.001f;
 
+    // Height above a lake's own surface over which LakeShore hands off to the surrounding land. 12.5 m at
+    // R=5000.
+    //
+    // This one cannot use BoundaryBlendWeight like every other boundary here. That helper tops out at 0.5
+    // because it expects BOTH sides to blend toward each other and meet at a 50/50 mix. The land outside a
+    // lake's shore ring has lakeState == 0, so it cannot know a lake is near and cannot blend back - the ring
+    // has to carry the whole ramp from pure shore to pure land on its own, which means reaching 1.
+    //
+    // Keep it comfortably shorter than the ring is tall or the ramp runs out of ring before it finishes and
+    // the hard edge comes back, just further out.
+    public const float LakeShoreBlendHeight = 0.0025f;
+
     // Voronoi biome assignment
     public const float VoronoiTemperatureWeight = 4.26f;
     public const float VoronoiDomainWarpScale = 2.5f;

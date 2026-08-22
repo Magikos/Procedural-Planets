@@ -103,7 +103,11 @@ public static class BiomeLookupEvaluator
         }
         if (lakeState != 0)
         {
-            SetBlendedResult(lookup.LakeShoreBiomeId, landPrimaryId, 0.35f,
+            // Ramp on height above THIS lake's surface. It was a constant 0.35, so the whole shore ring was
+            // one flat 35 % mix that jumped to pure land at the ring's outer edge - and that edge is the 38 m
+            // mask grid, which is why the shore read as a hard stair-stepped band rather than a beach.
+            SetBlendedResult(lookup.LakeShoreBiomeId, landPrimaryId,
+                LakeShoreHandoff(elevation, waterLevel),
                 out primaryId, out secondaryId, out blendWeight);
             return;
         }
@@ -240,6 +244,16 @@ public static class BiomeLookupEvaluator
     {
         if (width <= 0f) return 0f;
         return 0.5f * (1f - Clamp01(distanceFromBoundary / width));
+    }
+
+    // Reaches a full 1, unlike BoundaryBlendWeight - see BiomeConstants.LakeShoreBlendHeight for why the
+    // shore ring has to carry the whole ramp instead of meeting the land halfway. Smoothstep rather than a
+    // straight line so neither end of the band shows a crease where the gradient changes.
+    static float LakeShoreHandoff(float elevation, float waterLevel)
+    {
+        if (BiomeConstants.LakeShoreBlendHeight <= 0f) return 1f;
+        float t = Clamp01((elevation - waterLevel) / BiomeConstants.LakeShoreBlendHeight);
+        return t * t * (3f - 2f * t);
     }
 
     static float Clamp01(float value)
