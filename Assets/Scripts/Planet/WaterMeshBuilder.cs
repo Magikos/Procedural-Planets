@@ -235,12 +235,11 @@ public static class WaterMeshBuilder
 
         var clipped = new WaterPoint[4];
         float cellWorldSize = settings.PlanetRadius * Mathf.PI * 0.5f / Mathf.Max(resolution - 1, 1);
-        float shorelineOverlapMeters = Mathf.Clamp(shoreRange * 0.22f, settings.PlanetRadius * 0.0012f, settings.PlanetRadius * 0.0075f);
-        // The mesh overlaps the waterline by shorelineOverlapMeters so no gap can open between water and
-        // land. Those inland vertices carry ZERO depth and zero shore, because that is what the water is
-        // there - nothing. They used to claim 8 m of depth, which made the overlap fully opaque: the tint
-        // reached full strength the instant the mesh started, giving the hard waterline, and wherever the
-        // overlap was not buried by rising ground it read as a solid sheet of water lying on the grass.
+        // The mesh overlaps the waterline slightly so no gap can open between water and land. Those inland
+        // vertices carry ZERO depth and zero shore, because that is what the water is there - nothing. They
+        // used to claim 8 m of depth, which made the overlap fully opaque: the tint reached full strength
+        // the instant the mesh started, and wherever the overlap was not buried by rising ground it read as
+        // a solid sheet of water lying on the grass.
         const float shorelineEdgeDepth = 0f;
         const float shorelineEdgeShore = 0f;
         int addedMeshVertices = 0;
@@ -327,14 +326,21 @@ public static class WaterMeshBuilder
             Vector3 wetDirection = aWet ? directions[a] : directions[b];
             float clipLevel = LevelAtDirection(wetDirection);
             float t = Mathf.InverseLerp(elevations[a], elevations[b], clipLevel);
-            float edgeAngleRadians = Vector3.Angle(directions[a], directions[b]) * Mathf.Deg2Rad;
-            float edgeWorldLength = Mathf.Max(edgeAngleRadians * settings.PlanetRadius, cellWorldSize * 0.25f);
-            float overlapT = Mathf.Clamp01(shorelineOverlapMeters / edgeWorldLength);
+            // t is where the ground actually crosses the water level along this edge, so the outline it
+            // traces is a real shoreline rather than a grid. The overlap must therefore be a SMALL fraction
+            // of an edge: push it far and t saturates at Clamp01, the vertex snaps onto the dry grid corner,
+            // and the whole outline collapses into an axis-aligned staircase of cell-sized squares.
+            //
+            // It used to be a distance, ~27.5 m against a ~41 m edge - 0.67 of an edge - so every crossing
+            // past t = 0.33 clamped. That was almost all of them, and it is what put the square steps around
+            // every lake. Any overhang that survives is trimmed per pixel against the depth buffer in
+            // Ocean.shader, so this only has to be big enough to close the seam, not to hide anything.
+            const float ShorelineOverlapEdgeFraction = 0.08f;
 
             if (aWet && !bWet)
-                t += overlapT;
+                t += ShorelineOverlapEdgeFraction;
             else if (!aWet && bWet)
-                t -= overlapT;
+                t -= ShorelineOverlapEdgeFraction;
 
             Vector3 direction = Vector3.Lerp(directions[a], directions[b], Mathf.Clamp01(t)).normalized;
             return new WaterPoint

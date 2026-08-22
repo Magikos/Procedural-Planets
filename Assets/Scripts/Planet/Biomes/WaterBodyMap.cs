@@ -338,22 +338,40 @@ public sealed class WaterBodyMap
         // handing it a lake's level floods it wholesale. Beside a lake on flat ground that submerges a full
         // cell-wide apron of land, and because the outer boundary then falls on cell edges it reads as a
         // straight-edged translucent sheet lying over the grass rather than as a shore.
+        // Several rings, not one. Every consumer asks LevelAt "how high is the water here", and LevelAt
+        // falls back to the GLOBAL ocean level wherever no level exists - which for a lake perched 30 m up
+        // reads as "dry" instantly. So the field's outer boundary is where the water mesh stops being built
+        // and where the Lake biome stops being assigned, and with a single ring that boundary sat one cell
+        // off the water: a 41 m grid, square, which is exactly the stair-stepped edge seen around every lake.
+        //
+        // Widening it is safe BECAUSE of the guard below. A cell only takes a level if its own ground is
+        // above that level, so a dilated cell can never satisfy elevation < level and can never flood. The
+        // ring simply climbs the bank until it runs out of ground below the water, and the true waterline is
+        // then found by elevation everywhere along it instead of being cut off at a cell edge.
         var dilated = (float[])level.Clone();
-        for (int i = 0; i < TotalCells; i++)
+        for (int ring = 0; ring < LevelDilationRings; ring++)
         {
-            if (level[i] != NoWater) continue;
-            float highest = NoWater;
-            for (int n = 0; n < 4; n++)
+            float[] source = (float[])dilated.Clone();
+            for (int i = 0; i < TotalCells; i++)
             {
-                int ni = _neighbors[i * 4 + n];
-                if (ni < 0 || level[ni] <= highest) continue;
-                if (elevation[i] <= level[ni]) continue;   // below the water: not a shore, would flood
-                highest = level[ni];
+                if (source[i] != NoWater) continue;
+                float highest = NoWater;
+                for (int n = 0; n < 4; n++)
+                {
+                    int ni = _neighbors[i * 4 + n];
+                    if (ni < 0 || source[ni] <= highest) continue;
+                    if (elevation[i] <= source[ni]) continue;   // below the water: not a shore, would flood
+                    highest = source[ni];
+                }
+                dilated[i] = highest;
             }
-            dilated[i] = highest;
         }
         return dilated;
     }
+
+    // Cells of bank the water level is carried up. Four is about 160 m, comfortably past the widest shore
+    // band, so no consumer ever meets the grid edge before the ground has risen out of the water.
+    const int LevelDilationRings = 4;
 
     // A basin smaller than MinBasinCells is terrain noise rather than a lake, so drop its level back to the
     // ground and it simply never becomes water. Measured on the reference world, 94 of 322 basins are a

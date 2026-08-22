@@ -553,20 +553,43 @@ Shader "Planet/Ocean"
             // shoreline finer than the water mesh's triangles, so anything gated on it inherited the
             // triangulation - which is exactly the polygonal foam contour the halftone below was added to
             // hide. Measuring per pixel removes the cause rather than covering it.
-            float ShoreGradient(float3 positionWS, float2 screenUV)
+            // Metres of water standing over the bed at this pixel. Negative would mean the bed is ABOVE the
+            // water plane, i.e. the mesh is hanging over dry land, so the sign is kept - callers need it.
+            // sceneValid is 0 against open sky, where there is no bed to measure to.
+            float MeasuredWaterColumn(float3 positionWS, float2 screenUV, out float sceneValid)
             {
                 float rawDepth = SampleSceneDepth(screenUV);
                 #if UNITY_REVERSED_Z
-                    if (rawDepth <= 0.0001) return 0.0;     // open sky: nothing to be near
+                    sceneValid = step(0.0001, rawDepth);
                 #else
-                    if (rawDepth >= 0.9999) return 0.0;
+                    sceneValid = 1.0 - step(0.9999, rawDepth);
                 #endif
 
                 float3 sceneWS = ComputeWorldSpacePosition(screenUV, rawDepth, UNITY_MATRIX_I_VP);
                 float3 up = SafeNormalize(positionWS - _PlanetCenter, float3(0.0, 1.0, 0.0));
-                float column = max(dot(positionWS - sceneWS, up), 0.0);
-                float t = 1.0 - saturate(column / max(_ShoreFoamDepth, 0.001));
-                return t * t;                               // bias the band toward the waterline itself
+                return dot(positionWS - sceneWS, up);
+            }
+
+            float ShoreGradient(float column, float sceneValid)
+            {
+                float t = 1.0 - saturate(max(column, 0.0) / max(_ShoreFoamDepth, 0.001));
+                return t * t * sceneValid;                  // bias the band toward the waterline itself
+            }
+
+            // The water mesh is built from a 41 m cell grid, so its outline is a staircase of whole square
+            // cells and the last ring of them hangs out over dry ground. Those squares were drawing a full
+            // sheet of water on the grass, trees standing in it - the squares around every lake.
+            //
+            // Nothing in the mesh can fix that: the mesh cannot know where the waterline runs inside one of
+            // its own cells. The depth buffer can. Where the bed sits above the water plane the column is
+            // negative and the surface simply is not there, so the overhang fades out and the visible edge
+            // becomes the real waterline rather than the cell boundary.
+            float SurfaceCoverage(float column, float sceneValid)
+            {
+                // A few centimetres, not metres: this is only meant to kill the overhang and antialias the
+                // contact line. The wider look of a shallow shore is the volume's depth ramp, not this.
+                float covered = saturate(column / 0.08);
+                return lerp(1.0, covered, sceneValid);      // no bed behind it (open sky) means keep the sheet
             }
 
             SurfaceLayer ComputeSurfaceLayer(
@@ -602,7 +625,9 @@ Shader "Planet/Ocean"
                 float foamAmount;
                 float shoreFoam;
                 float crestFoam;
-                float shoreGradient = ShoreGradient(positionWS, screenUV);
+                float sceneValid;
+                float waterColumn = MeasuredWaterColumn(positionWS, screenUV, sceneValid);
+                float shoreGradient = ShoreGradient(waterColumn, sceneValid);
                 ComputeSurfaceWaves(positionWS, normalWS, depth01, shore01, shoreGradient, body01, rippleNormalWS, signedWaveHeight, waveSlope, rippleSignal, waveProof, waveEnergy, storm01, foamAmount, shoreFoam, crestFoam);
                 float freezeFactor = EvaluateFreezeFactor(waterTemperature01, body01);
                 float iceContribution = EvaluateIceContribution(positionWS, normalWS, freezeFactor);
@@ -722,7 +747,8 @@ Shader "Planet/Ocean"
                 float farOpacityCeiling = lerp(0.72, 0.98, saturate(max(depthBlend, fresnel)));
                 float farAlpha = farOpacityCeiling * lerp(0.74, 1.0, body01);
                 float pathAlpha = saturate(smoothstep(0.08, 0.68, viewPath) * lerp(0.82, 1.0, fresnel));
-                layer.alpha = saturate(lerp(lerp(nearAlpha, farAlpha, pathAlpha), _IceOpacity, iceContribution));
+                layer.alpha = saturate(lerp(lerp(nearAlpha, farAlpha, pathAlpha), _IceOpacity, iceContribution))
+                            * SurfaceCoverage(waterColumn, sceneValid);
                 layer.depthBlend = depthBlend;
                 layer.shoreVisibility = shoreVisibility;
                 layer.fresnel = fresnel;
