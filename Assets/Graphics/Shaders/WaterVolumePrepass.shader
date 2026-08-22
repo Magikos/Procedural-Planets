@@ -12,11 +12,15 @@ Shader "Hidden/WaterVolumePrepass"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Includes/DebugModes.hlsl"
         #include "Includes/WaterDisplacement.hlsl"
+        #include "Includes/WaterLevelField.hlsl"
         #include "Includes/WaterVolumeData.hlsl"
 
         TEXTURE2D(_CameraDepthTexture);
         SAMPLER(sampler_CameraDepthTexture);
 
+        // Global, so deliberately NOT in a per-material buffer - a material property of the same name would
+        // shadow it and the shader would silently read a stale planet radius.
+        float _SeaLevelRadius;
         float _ShoreFoamSoftness;
         float _DeepDepth;
         int _OceanDebugMode;
@@ -74,16 +78,42 @@ Shader "Hidden/WaterVolumePrepass"
         // triangle contours no matter how it was tuned. The depth buffer knows exactly where the bed is under
         // every pixel, so the feather now follows the real waterline and is independent of mesh resolution.
         //
-        // Measured RADIALLY, because down on a planet is toward its centre, not along world -Y.
+        // Depth is taken at the BED's own direction, not by projecting the gap between the water pixel and
+        // the bed onto the water pixel's up.
+        //
+        // That projection is only right while the bed sits more or less directly under the water pixel. At a
+        // grazing angle the depth-buffer hit is hundreds of metres further along the ray, so it subtracts the
+        // radius of one place from the water height of another, and past a certain view angle the result
+        // flips sign and the column collapses to zero. The angle at which it flips is the same for every
+        // pixel across the frame, which draws it as a hard horizontal line partway up the sea - the sharp
+        // edge at the horizon.
+        //
+        // Asking the level field where the water surface is above the BED point removes the angle from the
+        // problem entirely. Same form the caustics already use in WaterVolume.shader.
+        // sceneValid also carries HOW FAR the bed is, because the depth buffer is only trustworthy for this
+        // question while the bed is close to the water pixel.
+        //
+        // The buffer answers "what is behind this pixel", not "what is under it". Looking down at a shore
+        // those coincide. Looking ALONG the water they do not: the first opaque hit behind a water pixel is
+        // land on the far side, hundreds of metres away and above the water, so the column reads zero and
+        // the volume decides there is no water. That happens at the same view angle right across the frame,
+        // which draws it as a hard horizontal line partway up the sea - the sharp edge at the horizon.
+        //
+        // So near the shore the measurement wins, giving the fine mesh-independent waterline, and across
+        // open water it hands back to the mesh's own baked depth, which is coarse but is right out there.
         float MeasuredWaterColumn(Varyings input, out float sceneValid)
         {
             float2 screenUv = GetNormalizedScreenSpaceUV(input.positionCS);
             float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, screenUv).r;
-            sceneValid = SceneDepthValid(rawDepth);
 
             float3 sceneWS = ComputeWorldSpacePosition(screenUv, rawDepth, UNITY_MATRIX_I_VP);
-            float3 up = SafeNormalize(input.positionWS - _PlanetCenter, float3(0.0, 1.0, 0.0));
-            return max(dot(input.positionWS - sceneWS, up), 0.0);
+            float bedOffset = length(sceneWS - input.positionWS);
+            sceneValid = SceneDepthValid(rawDepth) * (1.0 - smoothstep(40.0, 160.0, bedOffset));
+
+            float3 fromCenter = sceneWS - _PlanetCenter;
+            float bedRadius = max(length(fromCenter), 0.0001);
+            float surfaceRadius = WaterSurfaceRadiusAt(fromCenter / bedRadius, _SeaLevelRadius);
+            return max(surfaceRadius - bedRadius, 0.0);
         }
 
 

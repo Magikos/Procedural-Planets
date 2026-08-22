@@ -58,6 +58,9 @@ Shader "Planet/Ocean"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
             #include "Includes/DebugModes.hlsl"
             #include "Includes/CloudShadows.hlsl"
+            #include "Includes/WaterLevelField.hlsl"
+            // Global; never inside UnityPerMaterial, or a same-named material property shadows it.
+            float _SeaLevelRadius;
             #include "Includes/WaterDisplacement.hlsl"
 
             #define FORCE_WATER_LAYER_PROOF 0
@@ -596,9 +599,18 @@ Shader "Planet/Ocean"
                     sceneValid = 1.0 - step(0.9999, rawDepth);
                 #endif
 
+                // At the BED's own direction, not projected onto this pixel's up - see the note on the
+                // matching function in WaterVolumePrepass.shader.
                 float3 sceneWS = ComputeWorldSpacePosition(screenUV, rawDepth, UNITY_MATRIX_I_VP);
-                float3 up = SafeNormalize(positionWS - _PlanetCenter, float3(0.0, 1.0, 0.0));
-                return dot(positionWS - sceneWS, up);
+
+                // And only while the bed is genuinely near this pixel. Looking ALONG the water, the first
+                // opaque hit behind a water pixel is land on the far shore, which reads as no water at all
+                // and would lay foam across the whole open sea. Same reason the prepass weights this.
+                sceneValid *= 1.0 - smoothstep(40.0, 160.0, length(sceneWS - positionWS));
+
+                float3 fromCenter = sceneWS - _PlanetCenter;
+                float bedRadius = max(length(fromCenter), 0.0001);
+                return WaterSurfaceRadiusAt(fromCenter / bedRadius, _SeaLevelRadius) - bedRadius;
             }
 
             float ShoreGradient(float column, float sceneValid)
@@ -607,21 +619,18 @@ Shader "Planet/Ocean"
                 return t * t * sceneValid;                  // bias the band toward the waterline itself
             }
 
-            // The water mesh is built from a 41 m cell grid, so its outline is a staircase of whole square
-            // cells and the last ring of them hangs out over dry ground. Those squares were drawing a full
-            // sheet of water on the grass, trees standing in it - the squares around every lake.
+            // There is deliberately no depth-buffer gate on the surface's own alpha.
             //
-            // Nothing in the mesh can fix that: the mesh cannot know where the waterline runs inside one of
-            // its own cells. The depth buffer can. Where the bed sits above the water plane the column is
-            // negative and the surface simply is not there, so the overhang fades out and the visible edge
-            // becomes the real waterline rather than the cell boundary.
-            float SurfaceCoverage(float column, float sceneValid)
-            {
-                // A few centimetres, not metres: this is only meant to kill the overhang and antialias the
-                // contact line. The wider look of a shallow shore is the volume's depth ramp, not this.
-                float covered = saturate(column / 0.08);
-                return lerp(1.0, covered, sceneValid);      // no bed behind it (open sky) means keep the sheet
-            }
+            // One was tried, trimming the sheet wherever the bed behind a pixel sat above the water. It works
+            // looking down at a shore and is badly wrong looking ALONG one: at a grazing angle the depth
+            // buffer behind a water pixel holds distant land on the far side of the water, so the test
+            // concluded there was no water and erased the surface - a hard horizontal line partway up the
+            // sea, in the same place across the whole frame.
+            //
+            // The depth buffer answers "what is behind this pixel", never "is there water AT this pixel",
+            // and no amount of tuning turns one into the other. The mesh already answers the second, because
+            // it only exists where water stands. Trimming overhang belongs in the mesh, which is why the
+            // shoreline clip keeps its real elevation crossing and the overlap is a small fraction of an edge.
 
             SurfaceLayer ComputeSurfaceLayer(
                 float3 positionWS,
@@ -778,8 +787,7 @@ Shader "Planet/Ocean"
                 float farOpacityCeiling = lerp(0.72, 0.98, saturate(max(depthBlend, fresnel)));
                 float farAlpha = farOpacityCeiling * lerp(0.74, 1.0, body01);
                 float pathAlpha = saturate(smoothstep(0.08, 0.68, viewPath) * lerp(0.82, 1.0, fresnel));
-                layer.alpha = saturate(lerp(lerp(nearAlpha, farAlpha, pathAlpha), _IceOpacity, iceContribution))
-                            * SurfaceCoverage(waterColumn, sceneValid);
+                layer.alpha = saturate(lerp(lerp(nearAlpha, farAlpha, pathAlpha), _IceOpacity, iceContribution));
                 layer.depthBlend = depthBlend;
                 layer.shoreVisibility = shoreVisibility;
                 layer.fresnel = fresnel;
