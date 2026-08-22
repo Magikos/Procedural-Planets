@@ -79,7 +79,12 @@ public sealed class WaterBodyMap
     // A body smaller than this is a lake, not ocean. Now measured over the WHOLE body rather than per face,
     // so a lake straddling a cube seam is judged by its true size instead of being counted twice.
     const int LakeMaxCells = 1400;
-    const int ShoreRings = 2;            // land cells within this many steps of lake water become LakeShore
+    // How far both the shore mask and the water level reach onto dry land. ONE number because the two must
+    // agree: the mesh decides water from the level field alone, the biome resolver gates on the mask, and
+    // wherever the two disagree the mesh draws water over ground the biome has called land - which shows up
+    // as a cell-shaped notch bitten out of the lake bed. Four cells is about 160 m, past the widest shore
+    // band, so neither field's own boundary is ever the visible edge.
+    const int ShoreRings = 4;
 
     // Water shallower than this is rounding noise, not a lake.
     const float SpillDepthEpsilon = 1e-6f;
@@ -110,7 +115,7 @@ public sealed class WaterBodyMap
     public int DrainedBasinCount { get; private set; }
 
     // Water surface height per cell in PlanetSettings.OceanLevel units, NoWater where none stands. Dilated
-    // one ring onto the shore so `elevation < LevelAt(dir)` stays a valid wet test at mesh resolution.
+    // ShoreRings onto the shore so `elevation < LevelAt(dir)` stays a valid wet test at mesh resolution.
     float[] _level;
 
     // Seam neighbour lookups that did not agree in both directions. Cube faces at equal resolution should be
@@ -349,7 +354,7 @@ public sealed class WaterBodyMap
         // ring simply climbs the bank until it runs out of ground below the water, and the true waterline is
         // then found by elevation everywhere along it instead of being cut off at a cell edge.
         var dilated = (float[])level.Clone();
-        for (int ring = 0; ring < LevelDilationRings; ring++)
+        for (int ring = 0; ring < ShoreRings; ring++)
         {
             float[] source = (float[])dilated.Clone();
             for (int i = 0; i < TotalCells; i++)
@@ -369,9 +374,6 @@ public sealed class WaterBodyMap
         return dilated;
     }
 
-    // Cells of bank the water level is carried up. Four is about 160 m, comfortably past the widest shore
-    // band, so no consumer ever meets the grid edge before the ground has risen out of the water.
-    const int LevelDilationRings = 4;
 
     // A basin smaller than MinBasinCells is terrain noise rather than a lake, so drop its level back to the
     // ground and it simply never becomes water. Measured on the reference world, 94 of 322 basins are a
