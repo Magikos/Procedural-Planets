@@ -309,6 +309,36 @@ Shader "Planet/Ocean"
                 return smoothstep(0.10, 0.54, pattern);
             }
 
+            // How much of the fine wave detail this pixel can actually resolve, 1 near the camera falling to
+            // 0 into the distance and at grazing angles.
+            //
+            // The detail waves are evaluated analytically, so unlike a texture they have no mip chain and
+            // nothing stops them being sampled far below Nyquist. Their shortest wavelength is about 3 m,
+            // while a pixel near the horizon covers tens of metres, and the beat between the two is the fine
+            // diagonal weave that appears across the middle distance - read as the sea bed showing through,
+            // or as the far side's waves bleeding across, but it is just undersampling.
+            //
+            // fwidth gives the footprint in the same units the detail is sampled in, so the fade follows the
+            // real pixel size and handles grazing angles for free. Detail fades to the coarse swell gradient
+            // rather than to flat, so distant water keeps its large-scale shape and only loses the ripples
+            // that were never resolvable.
+            float DetailResolve(float2 samplePos, float shortestWavelength)
+            {
+                // MINOR axis, not fwidth. At a grazing angle the footprint is enormously stretched along the
+                // view and still tight across it, so the major axis says "resolve nothing" over the whole
+                // sea and flattens it to a mirror. The narrow axis is what anisotropic filtering keys on and
+                // it keeps the ripples that are genuinely still resolvable.
+                float2 dx = ddx(samplePos);
+                float2 dy = ddy(samplePos);
+                float footprint = max(min(length(dx), length(dy)), 1e-5);
+                float resolve = saturate(shortestWavelength / footprint);
+
+                // Never all the way to zero. Detail that cannot be resolved should stop beating against the
+                // pixel grid, but water with no ripple at all reads as a dead mirror, which is worse than a
+                // little aliasing. The remainder is what a roughness-widening approach would leave behind.
+                return lerp(0.32, 1.0, resolve);
+            }
+
             float SurfaceCellPattern(float3 positionWS, float3 normalWS, float scale, float time, float chaos01)
             {
                 float cellScale = max(scale * lerp(0.18, 0.11, chaos01), 1.0);
@@ -416,7 +446,8 @@ Shader "Planet/Ocean"
                 detailHeight += EvaluateSurfaceWave(detailPosCross, SafeNormalize2(windTS * 0.91 - crossTS * 0.42, windTS), detailScale * 0.42, timeScale * 1.38, detailStrength * 0.014, 4.90, gradient);
                 detailGradientTS += gradient;
 
-                float2 surfaceGradientTS = gradientTS * 0.18 + detailGradientTS * 1.35;
+                float detailResolve = DetailResolve(detailPos, detailScale * 0.42);
+                float2 surfaceGradientTS = gradientTS * 0.18 + detailGradientTS * (1.35 * detailResolve);
                 height += detailHeight * 0.42;
                 float breakupNoise = ValueNoise(detailPos / max(detailScale * 5.6, 1.0) + float2(waveTime * 0.071, -waveTime * 0.043));
                 float breakupNoiseB = ValueNoise((detailPos + crossTS * scale * 0.37) / max(detailScale * 3.4, 1.0) + float2(-waveTime * 0.052, waveTime * 0.064));
