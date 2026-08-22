@@ -7,7 +7,7 @@ Shader "Planet/Ocean"
         _FoamColor ("Foam Color", Color) = (0.92, 0.98, 1.0, 0.95)
         _ShallowDepth ("Shallow Depth", Range(1, 500)) = 28
         _DeepDepth ("Deep Depth", Range(20, 3000)) = 360
-        _ShoreFoamDepth ("Shore Foam Width", Range(1, 200)) = 24
+        _ShoreFoamDepth ("Shore Foam Depth (m of water)", Range(0.2, 40)) = 2.5
         _ShoreFoamSoftness ("Shore Range", Range(1, 300)) = 125
         _WaveAmplitude ("Wave Amplitude", Range(0, 12)) = 3.4
         _WaveScale ("Wave Scale", Range(50, 2000)) = 480
@@ -55,6 +55,7 @@ Shader "Planet/Ocean"
             #pragma fragment frag
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
             #include "Includes/DebugModes.hlsl"
             #include "Includes/CloudShadows.hlsl"
             #include "Includes/WaterDisplacement.hlsl"
@@ -326,6 +327,7 @@ Shader "Planet/Ocean"
                 float3 normalWS,
                 float depth01,
                 float shore01,
+                float shoreGradient,
                 float body01,
                 out float3 rippleNormalWS,
                 out float signedWaveHeight,
@@ -463,15 +465,22 @@ Shader "Planet/Ocean"
                 crossedProof += proofA * proofB * lerp(0.18, 0.42, proofCrossNoise);
                 waveProof = saturate(max(cellPattern, crossedProof * 0.45) * lerp(0.42, 1.0, waveEnergy));
 
-                // Smooth shoreFoam saturation (halftoning happens later, in the composite).
-                // shore01 ramp does ALL the gating: full intensity at the actual shoreline,
-                // fades to zero by shore01 = 0.19 (~24 m from shore).
-                // The previous depth gate (smoothstep(0.002, 0.025, depth01)) was offsetting foam
-                // 1-9 m off-shore into triangle-shaped pockets where water happened to deepen,
-                // creating the "sparse pink clumps that don't follow the shoreline" symptom.
-                float shoreBand = 1.0 - smoothstep(0.020, 0.19, shore01);
-                float shorePulse = 0.66 + 0.34 * sin(dot(detailPos, windTS) / max(scale * 0.072, 1.0) - waveTime * 0.95);
-                shoreFoam = saturate(shoreBand * shorePulse * _ShoreFoamIntensity * lerp(0.72, 1.06, wind01));
+                // Shore foam, shaped by the per-pixel distance to the waterline and broken up by noise that
+                // can only ever ADD inside the band.
+                //
+                // The old version multiplied a shore01 band by a sine running along the wind:
+                //   shorePulse = 0.66 + 0.34 * sin(dot(detailPos, windTS) / ... - waveTime * 0.95)
+                // A 3x swing feeding the halftone threshold below meant every trough of that sine fell
+                // under the threshold and vanished completely, so a gentle wind modulation came out as hard
+                // wind-aligned stripes lying across the shoreline instead of foam following it.
+                //
+                // Two noises at different scales are summed INSIDE the saturate, then the whole thing is
+                // multiplied by the gradient. Adding perturbs the band's edge; multiplying means foam cannot
+                // exist where there is no shore, whatever the noise does. That ordering is the entire trick.
+                float foamNoiseA = ValueNoise(detailPos / max(scale * 0.085, 1.0) + float2(waveTime * 0.13, -waveTime * 0.09));
+                float foamNoiseB = ValueNoise(detailPos / max(scale * 0.042, 1.0) - float2(waveTime * 0.17, waveTime * 0.11));
+                shoreFoam = saturate(foamNoiseA + foamNoiseB + shoreGradient) * shoreGradient
+                          * _ShoreFoamIntensity * lerp(0.72, 1.06, wind01);
 
                 float crestDriver = max(signedWaveHeight, 0.0) * 0.58 + waveSlope * 0.84 + waveProof * 0.20;
                 float crestEnergy = saturate(wind01 * 0.56 + openWater01 * 0.34);
@@ -536,6 +545,30 @@ Shader "Planet/Ocean"
                 return lerp(float3(0.010, 0.018, 0.030), dayColor, daylight);
             }
 
+            // How close this pixel is to the waterline, as 1 at the shore falling to 0 by _ShoreFoamDepth
+            // metres of water. Measured against the depth buffer, radially, because down on a planet is
+            // toward its centre.
+            //
+            // This replaces the interpolated shore01 vertex channel for foam. shore01 cannot describe a
+            // shoreline finer than the water mesh's triangles, so anything gated on it inherited the
+            // triangulation - which is exactly the polygonal foam contour the halftone below was added to
+            // hide. Measuring per pixel removes the cause rather than covering it.
+            float ShoreGradient(float3 positionWS, float2 screenUV)
+            {
+                float rawDepth = SampleSceneDepth(screenUV);
+                #if UNITY_REVERSED_Z
+                    if (rawDepth <= 0.0001) return 0.0;     // open sky: nothing to be near
+                #else
+                    if (rawDepth >= 0.9999) return 0.0;
+                #endif
+
+                float3 sceneWS = ComputeWorldSpacePosition(screenUV, rawDepth, UNITY_MATRIX_I_VP);
+                float3 up = SafeNormalize(positionWS - _PlanetCenter, float3(0.0, 1.0, 0.0));
+                float column = max(dot(positionWS - sceneWS, up), 0.0);
+                float t = 1.0 - saturate(column / max(_ShoreFoamDepth, 0.001));
+                return t * t;                               // bias the band toward the waterline itself
+            }
+
             SurfaceLayer ComputeSurfaceLayer(
                 float3 positionWS,
                 float3 normalWS,
@@ -569,7 +602,8 @@ Shader "Planet/Ocean"
                 float foamAmount;
                 float shoreFoam;
                 float crestFoam;
-                ComputeSurfaceWaves(positionWS, normalWS, depth01, shore01, body01, rippleNormalWS, signedWaveHeight, waveSlope, rippleSignal, waveProof, waveEnergy, storm01, foamAmount, shoreFoam, crestFoam);
+                float shoreGradient = ShoreGradient(positionWS, screenUV);
+                ComputeSurfaceWaves(positionWS, normalWS, depth01, shore01, shoreGradient, body01, rippleNormalWS, signedWaveHeight, waveSlope, rippleSignal, waveProof, waveEnergy, storm01, foamAmount, shoreFoam, crestFoam);
                 float freezeFactor = EvaluateFreezeFactor(waterTemperature01, body01);
                 float iceContribution = EvaluateIceContribution(positionWS, normalWS, freezeFactor);
                 float liquidContribution = 1.0 - iceContribution;

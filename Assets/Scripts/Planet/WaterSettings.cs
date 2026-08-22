@@ -16,7 +16,10 @@ public class WaterSettings : ScriptableObject
     [Header("Depth and shore")]
     public float ShallowDepth = 28f;
     public float DeepDepth = 360f;
-    public float ShoreFoamDepth = 32f;
+    [Tooltip("Water DEPTH in metres over which shore foam fades out. It used to be a distance-from-shore " +
+             "width, which could not follow a shoreline finer than the water mesh's triangles; foam is now " +
+             "measured against the depth buffer, so a couple of metres of water is the whole band.")]
+    public float ShoreFoamDepth = 2.5f;
     public float ShoreRange = 125f;
 
     [Tooltip("Water depth in metres at which the volume tint starts, and where it reaches full strength. " +
