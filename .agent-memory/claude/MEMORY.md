@@ -1,5 +1,7 @@
 # Memory Index
 
+- [Water shore + horizon rendering](project_water_shore_rendering.md) — 8 fixes 2026-08-22. **Stepped lake bed STILL OPEN: pass 1 of the biome bake DISCARDS blend, so tuning it can never work.** Depth buffer answers "what is behind", not "what is under".
+
 - [World delta log — M0 save foundation](project_world_delta_log.md) — append-only log + EntityId. **GOTCHA: a ScatterId and an EntityId can be the SAME number — the keyspace must be split.** Verified on Bryan's real save: 54 records imported, 3.2x smaller than the JSON.
 
 - [ffmpeg / watching video](reference_ffmpeg_video.md) — **I can't read video directly, but ffmpeg 9.0 IS installed** (2026-08-21, winget `Gyan.FFmpeg`) so a recording becomes frames I can read. **Bash shells started before the install need `export PATH="$PATH:/c/Users/Bryan/AppData/Local/Microsoft/WinGet/Links"`.** Probe first, sample at 1-2 fps, write to the scratchpad — a long clip at high fps burns context fast. For LOD/pop issues prefer capturing frames myself at labelled distances; video is for what I can't reproduce on demand.
