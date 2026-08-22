@@ -86,6 +86,11 @@ public sealed class WaterBodyMap
     // band, so neither field's own boundary is ever the visible edge.
     const int ShoreRings = 4;
 
+    // How far the water LEVEL is carried onto dry land. Must stay <= ShoreRings - see BuildLevelField.
+    const int LevelRings = 1;
+
+
+
     // Water shallower than this is rounding noise, not a lake.
     const float SpillDepthEpsilon = 1e-6f;
     // Smallest basin that becomes water. 16 cells is roughly 23,000 m^2 at R=5000.
@@ -349,12 +354,20 @@ public sealed class WaterBodyMap
         // and where the Lake biome stops being assigned, and with a single ring that boundary sat one cell
         // off the water: a 41 m grid, square, which is exactly the stair-stepped edge seen around every lake.
         //
-        // Widening it is safe BECAUSE of the guard below. A cell only takes a level if its own ground is
-        // above that level, so a dilated cell can never satisfy elevation < level and can never flood. The
-        // ring simply climbs the bank until it runs out of ground below the water, and the true waterline is
-        // then found by elevation everywhere along it instead of being cut off at a cell edge.
+        // LevelRings, NOT ShoreRings, and it must stay the SMALLER of the two.
+        //
+        // The guard below stops a dilated cell flooding on the COARSE sample, but the biome bake and the mesh
+        // both sample elevation far finer than 41 m. Carried four rings up a bank, a shore cell only a metre
+        // above the water has dips inside it that read below the borrowed level, and the biome resolver's
+        // `lakeState != 0 && elevation < waterLevel` then paints lake bed on them - a staircase of orange
+        // cells wandering inland, with the water tint sitting on top of it.
+        //
+        // One ring is all the mesh ever needed: enough to find the crossing inside the first dry cell. The
+        // shore MASK still runs to ShoreRings, which is what gives LakeShore room for its handoff ramp.
+        // Level smaller than mask is also the safe direction for the pair - wherever the level says water,
+        // the mask already says lake, so the two cannot disagree and bite a notch out of the bed.
         var dilated = (float[])level.Clone();
-        for (int ring = 0; ring < ShoreRings; ring++)
+        for (int ring = 0; ring < LevelRings; ring++)
         {
             float[] source = (float[])dilated.Clone();
             for (int i = 0; i < TotalCells; i++)
@@ -366,6 +379,12 @@ public sealed class WaterBodyMap
                     int ni = _neighbors[i * 4 + n];
                     if (ni < 0 || source[ni] <= highest) continue;
                     if (elevation[i] <= source[ni]) continue;   // below the water: not a shore, would flood
+                    // And stop once the ground has climbed clear of the water. Ring count alone let the
+                    // level walk 160 m up a bank and, where two basins sit close, straight across the gap
+                    // between them. This grid is 41 m but the mesh samples elevation far finer, so every
+                    // dip inside a carried cell then came out below that borrowed level and was meshed as
+                    // water - sheets of it lying across the grass, joining one lake to the next.
+                    //
                     highest = source[ni];
                 }
                 dilated[i] = highest;
