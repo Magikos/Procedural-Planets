@@ -205,6 +205,24 @@ Shader "Hidden/WaterVolume"
         if (_SeaLevelRadius <= 0.0 || receiverDistance <= 0.0)
             return 0.0;
 
+        // Camera below the surface: every pixel reaches the eye through water, so the path is simply the
+        // distance to whatever the ray hit and the whole frame is attenuated by it.
+        //
+        // This has to come before the analytic ocean sphere below, which cannot answer the question for a
+        // raised lake: the camera sits four metres UNDER a lake whose surface is thirty metres ABOVE global
+        // sea level, so it is outside that sphere, the ray misses it, and the mask fell out at zero. Dry
+        // land seen from inside a lake therefore arrived with no attenuation at all - the bleached, white
+        // look of the far shore and everything standing on it.
+        //
+        // Keyed on the per-direction surface, not the global radius, so it is the lake's own level that
+        // decides. Attenuation is exponential in seaPath, so nearby bed stays readable while the far shore
+        // fades - which is the depth cue that was missing entirely.
+        if (CameraSeaOffset() < 0.0)
+        {
+            seaPath = receiverDistance;
+            return 1.0;
+        }
+
         float3 fromCenter = receiverWS - _PlanetCenter;
         float receiverRadius = length(fromCenter);
         if (receiverRadius <= 0.0001)
