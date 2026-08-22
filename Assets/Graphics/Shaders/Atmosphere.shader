@@ -326,8 +326,23 @@ ENDHLSL
                 // contributes (vs 25% with the harder fix, vs 62% with no fix at all).
                 float detailPreserveFraction = lerp(0.38, 0.55, lowSun01);
 
-                float detailPreserve = waterSurfaceMask * detailPreserveFraction;
-                float highlightPreserve = waterSurfaceMask * smoothstep(0.32, 0.82, sourceLuma) * 0.24;
+                // Fade the preserve out with distance, on the same curve the terrain already uses.
+                //
+                // Preserving a fixed slice of the water's own colour is right in front of the camera, where
+                // the surface detail is the point. It is wrong at the limb: water twelve kilometres away was
+                // still keeping forty per cent of itself while the sky beside it went to full scattering, so
+                // the two never met in tone and the join stayed visible. The mesh silhouette there is one
+                // pixel wide and unantialiased, so any difference across it reads as a hard jagged line -
+                // the sharp edge at the horizon.
+                //
+                // Far water now converges to the same atmosphere as the sky it meets, which removes the
+                // tonal step the aliasing was riding on. Near water is untouched.
+                float waterClarityEnd = max(_TerrainAerialPerspectiveDistances.x, 0.0);
+                float waterAtmosphereStart = max(_TerrainAerialPerspectiveDistances.y, waterClarityEnd + 1.0);
+                float waterClarity = 1.0 - smoothstep(waterClarityEnd, waterAtmosphereStart, sceneDepth);
+
+                float detailPreserve = waterSurfaceMask * detailPreserveFraction * waterClarity;
+                float highlightPreserve = waterSurfaceMask * smoothstep(0.32, 0.82, sourceLuma) * 0.24 * waterClarity;
                 color = lerp(color, originalCol.rgb, detailPreserve);
                 color = lerp(color, max(color, originalCol.rgb), highlightPreserve);
 
