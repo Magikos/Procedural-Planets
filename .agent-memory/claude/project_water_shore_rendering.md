@@ -115,3 +115,34 @@ assumption about the resolver's convention.
 Cheap read-only tools that made this tractable: blit a non-readable atlas to a point-filtered RT and
 `ReadPixels` it; `CoordinateConverter.UnitSphereToCubeFaceUvExact(dir, out face, out uv)` then `uv * 1008`
 gives the atlas texel; call `BiomeDto.Registry.Resolve` directly in the live world.
+
+## RETRACTION — the "bake is exonerated" finding above is WRONG
+
+The atlas read that produced it is invalid. Valid biome ids run **0..17** (gridCount 12: Ocean 0, Beach 1,
+grid 2..13, Mountain 14, Snowy 15, Lake 16, LakeShore 17). The bytes read out were **50, 71, 73** — all out of
+range, all resolving to NULL through GetDefinitionByIndex. Graphics.Blit resampled or format-converted rather
+than handing back raw bytes, so both the ids AND the "weights ramp smoothly over ~110 m" reading are
+meaningless.
+
+**So the bake is NOT ruled out**, nor is anything that reading was used to argue. To read these atlases
+properly use AsyncGPUReadback, or CopyTexture into a matching-format readable texture — never Blit, which goes
+through a filtered and converted path.
+
+Still genuinely ruled out, on other evidence:
+- LOD. All 1536 leaves are depth 4, measured directly off the chunk tree.
+- The shader's 4-corner reconstruction, both the albedo and grass-overlay paths — textbook bilinear, read line
+  by line, no half-texel or truncation error.
+
+## Attempt 7 (also failed), and what it DID establish
+
+Both halves at once: wide reference level (dilated without the anti-flood guard) plus the shore ramp choosing
+the dominant biome, scoped to the lake branch only. Compiled, generated, and confirmed ShoreReferenceLevelAt
+returns the lake level at shore cells where LevelAt gives NoWater. **Staircase completely unchanged.**
+
+Useful negative: terrain was NOT degraded this time, so scoping the dominant-biome rule to the lake branch does
+avoid the planet-wide grass-to-scrub regression the unscoped version caused. That part of the design is sound.
+
+Seven attempts have now changed the lake branch of the resolver, the level fields, the mask dilation and the
+bake's id choice, with zero effect on this artifact. The weight of evidence says **the boundary being drawn is
+probably not produced by the lake branch at all**. Next step is to identify which biome ids actually sit either
+side of it — reading the atlas CORRECTLY per above — before touching any more code. It may not be a lake edge.
