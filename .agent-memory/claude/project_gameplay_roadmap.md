@@ -103,11 +103,12 @@ only draw source → auto-fixes the GPU draw, no shader change). Persist = mirro
 block). Hardest gap = picking which instance the player looks at (no colliders; buckets drop the
 Id at `:437` → must retain it + build a ray→nearest-instance query).
 
-**LATENT BUG (harvest Stage 0 prerequisite):** `ScatterGatherBurst.PackUnchecked:179` packs with
-`SlotBits=6` vs canonical `ScatterId.cs:9` `SlotBits=7`. The Burst path is the DEFAULT on the
-real planet, so lake-shore props at slots 64–67 (see [[project_lake_biome]]) pack aliased ids.
-Independent of harvest but harvest is the first feature needing stable per-instance ids. Fix the
-Burst packer to the canonical layout (prefer sharing `ScatterId`'s constants).
+**SLOT-BITS DRIFT — FIXED, do not re-investigate (verified 2026-08-21).**
+`ScatterGatherBurst.PackUnchecked` no longer re-declares the width; it derives `SlotMask` from
+`ScatterId.SlotBits`, which is now **8** (255 slots, `ScatterId.cs:20`). Both files carry a comment
+recording the old drift. This matters more than it used to: the library now reaches **slot 175**
+(176 prototypes), so a 6-bit packer would alias most of it — it does not.
+The lesson that survives: **bit widths live in `ScatterId` only.** A second declaration is the bug.
 
 Related: [[project_lake_biome]] (slots 64-67), [[reference_collision_strategy]] (collider
 streaming deferred), [[project_current_focus]] (prior code-refactor arc).

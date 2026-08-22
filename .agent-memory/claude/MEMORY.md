@@ -1,6 +1,6 @@
 # Memory Index
 
-- [Water shore + horizon rendering](project_water_shore_rendering.md) — 8 fixes 2026-08-22. **Stepped lake bed STILL OPEN: pass 1 of the biome bake DISCARDS blend, so tuning it can never work.** Depth buffer answers "what is behind", not "what is under".
+- [Water shore + horizon rendering](project_water_shore_rendering.md) — 8 fixes 2026-08-22. **Stepped lake edge STILL OPEN — the tan band is DESERT, not LakeShore; 7 attempts fixed the wrong biome.** Read atlases with AsyncGPUReadback, never Blit.
 
 - [World delta log — M0 save foundation](project_world_delta_log.md) — append-only log + EntityId. **GOTCHA: a ScatterId and an EntityId can be the SAME number — the keyspace must be split.** Verified on Bryan's real save: 54 records imported, 3.2x smaller than the JSON.
 

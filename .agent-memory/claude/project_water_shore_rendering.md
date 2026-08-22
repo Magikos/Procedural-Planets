@@ -146,3 +146,40 @@ Seven attempts have now changed the lake branch of the resolver, the level field
 bake's id choice, with zero effect on this artifact. The weight of evidence says **the boundary being drawn is
 probably not produced by the lake branch at all**. Next step is to identify which biome ids actually sit either
 side of it — reading the atlas CORRECTLY per above — before touching any more code. It may not be a lake edge.
+
+## CORRECTED DIAGNOSIS — supersedes every "still open" section above
+
+Read the atlas properly (AsyncGPUReadback, not Blit) and the framing every earlier section used is wrong.
+
+**The tan band beside a lake is Desert (id 11), an ordinary Voronoi land biome. It is NOT LakeShore.**
+Measured across the boundary, 7.78 m per texel:
+
+```
+366 m   Lake 0.48 / Desert 0.27 / LakeShore 0.25
+381 m   Desert 0.43 / Lake 0.31 / LakeShore 0.25
+443 m   Desert 1.00
+```
+
+LakeShore (id 17) never exceeds **0.27** anywhere - a trace through the transition, then gone. Valid ids for
+this world: Ocean 0, Beach 1, grid 2..13, Mountain 14, Snowy 15, Lake 16, LakeShore 17.
+
+So the stepped edge is a **Desert-to-Lake** boundary. All seven attempts modified the LakeShore path, a biome
+that is barely present here, which is exactly why nothing ever moved.
+
+The transition is NOT hard: it ramps over ~9 texels (**70 m**) with three biomes overlapping. The bake produces
+a proper gradient. The staircase is a SHAPE in plan view, not a hardness across the edge - consistent with the
+kernel arithmetic (46 m smoothing against 41 m steps, ratio 1.1). The shape comes from where **Lake** is
+assigned, and that is `lakeState != 0 && elevation < waterLevel`, gated on the 41 m mask.
+
+**Untried candidates that target the real mechanism:**
+- raise `WaterBodyMap.Res` 192 -> 384 (41 m cells -> 20 m), ~4x the flood-fill cost on a phase costing ~1 s
+- jitter the `lakeState` test at bake time so the Lake outline dithers at 7.8 m instead of stepping at 41 m
+
+**Process failure worth remembering.** I assumed "tan sand beside water = LakeShore" in the first minute and
+never checked it. Seven attempts, two regressions and one false "ruled out" all descend from that single
+unverified assumption. The check that falsified it was three read-only lines with no regeneration. **Identify
+what you are looking at before theorising about why it looks wrong.**
+
+Second: a `Graphics.Blit` into a RenderTexture is NOT a measurement of texture contents - it resamples and
+converts. It returned ids 50/71/73 where the real values were 16/11/17. Use `AsyncGPUReadback.Request(tex, 0,
+GraphicsFormat.R8G8B8A8_UNorm)` then `WaitForCompletion()`.

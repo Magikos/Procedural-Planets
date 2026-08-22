@@ -1,6 +1,6 @@
 ---
 name: project-runtime-hitch-profile
-description: Travel stutter SOLVED 2026-08-16 — it was Reeval (tile re-plan) + the master buffer upload, not GC, mesh page-in, or the gather job; frames >100ms went 22 -> 1
+description: Travel stutter SOLVED in two rounds (2026-08-16 optimise, 2026-08-19 stage across frames) — it was always Reeval, the tile re-plan; Bryan confirmed smooth. Reeval scales with PROTOTYPE COUNT, so adding species re-opens it.
 metadata:
   type: project
 ---
@@ -76,6 +76,37 @@ To rerun: a temporary `-autobench` hook in `Planet.cs` (reverted after use) plac
 `Awaitable.WaitForSecondsAsync`, never frame counts — a build runs several times the Editor's frame
 rate and frame-based waits expire early. Player log:
 `%USERPROFILE%\AppData\LocalLow\Magikorp\ProceduralPlanets\Player.log`.
+
+## Round 2 — 2026-08-19, commit `d4fe217`. Bryan confirmed smooth.
+
+A residual "small stutter every second or so" remained after round 1. It was **Reeval again**.
+Prototypes had grown 109 → **176** (rock and plant variants joined the tree ones), and Reeval scales
+with prototype count, so 28.6 ms had grown back to **30.5 ms, worst 59.3 ms, firing once per second
+at 40 m/s** — the cadence Bryan reported, exactly.
+
+**The split showed no hotspot left**, which is what chose the fix:
+
+```
+evict 5.0ms   candidates 7.7ms   sortTiles 6.8ms   filter 9.5ms   sortWork 1.5ms
+```
+
+Evenly spread → optimising any one stage buys ≤9 ms. The work is inherently ~30 ms, so the fix was to
+**stop doing it in one frame**. Reeval is now a five-stage state machine, one stage per `Update`. It
+fires once a second, so ~60 idle frames are available and the latency is irrelevant. The new plan
+builds into `_workNext` and swaps at Publish so the worker never sees a half-built plan; an epoch
+change aborts an in-flight re-plan.
+
+| | before | after |
+|---|---:|---:|
+| worst single-frame re-plan | 59.3 ms | **14.7 ms** |
+| frames >100 ms | 16 | **0** |
+| frames 33-100 ms | 189 | 75 |
+| frames 16.7-33 ms | 94 | 221 |
+
+**Forward-looking:** staging bounds the per-frame cost, but total re-plan work still grows with
+prototype count. Adding many more species raises the per-stage cost again. Next lever if it returns
+is chunking *within* a stage (filter and candidates first) — deliberately not built, since one stage
+per frame already fits the budget.
 
 ## Method notes
 
