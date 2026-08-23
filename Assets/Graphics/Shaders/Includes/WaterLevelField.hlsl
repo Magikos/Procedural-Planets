@@ -23,7 +23,7 @@ float _WaterLevelBaseRadius;
 
 // Cube-face projection, shared by both fields. Extracted rather than copied because it has to stay identical
 // to WaterLevelGrid.Index in C# and one copy is already one more than can be kept in step by hand.
-void WaterLevelFaceUv(float3 direction, float resolution, out int face, out float2 uv)
+void WaterLevelFaceUvRaw(float3 direction, out int face, out float2 uv)
 {
     float3 a = abs(direction);
     float uSigned, vSigned;
@@ -47,9 +47,14 @@ void WaterLevelFaceUv(float3 direction, float resolution, out int face, out floa
         else                    { face = 5; uSigned = -direction.y * inv; vSigned = -direction.x * inv; }
     }
 
-    uv = float2(uSigned * 0.5 + 0.5, vSigned * 0.5 + 0.5);
-    // Sample at the cell centre the C# side would land on, so both agree on which cell a direction owns.
-    uv = (floor(saturate(uv) * resolution) + 0.5) / resolution;
+    uv = saturate(float2(uSigned * 0.5 + 0.5, vSigned * 0.5 + 0.5));
+}
+
+// Snapped to the cell centre the C# side would land on, so both agree on which cell a direction owns.
+void WaterLevelFaceUv(float3 direction, float resolution, out int face, out float2 uv)
+{
+    WaterLevelFaceUvRaw(direction, face, uv);
+    uv = (floor(uv * resolution) + 0.5) / resolution;
 }
 
 // Water surface height in planet-radius units, or WATER_LEVEL_NO_WATER_MAX and below where none stands.
@@ -74,8 +79,37 @@ float SampleShoreLevel(float3 direction)
 
     int face;
     float2 uv;
-    WaterLevelFaceUv(direction, _ShoreLevelRes, face, uv);
-    return SAMPLE_TEXTURE2D_ARRAY_LOD(_ShoreLevelTex, sampler_ShoreLevelTex, uv, face, 0).r;
+    WaterLevelFaceUvRaw(direction, face, uv);
+
+    // Bilinear, computed by hand from four point taps. Hardware filtering cannot do this: cells holding no
+    // water carry a sentinel far below any real level, and blending that into a neighbour drags the surface
+    // down to nothing. Weighting only the valid taps keeps the result smooth right out to the field's edge.
+    //
+    // Point-sampling this field made every fade measured against it a staircase of 41 m cells - the blocks
+    // around every lake. The tight field must stay point-sampled because it decides wetness and has to agree
+    // with C# cell for cell; this one only answers "how high does water stand near here", so it may blend.
+    float2 texel = uv * _ShoreLevelRes - 0.5;
+    float2 baseCell = floor(texel);
+    float2 lerpAmount = texel - baseCell;
+
+    float sum = 0.0;
+    float weight = 0.0;
+    [unroll] for (int j = 0; j < 2; j++)
+    {
+        [unroll] for (int i = 0; i < 2; i++)
+        {
+            float2 cell = clamp(baseCell + float2(i, j), 0.0, _ShoreLevelRes - 1.0);
+            float level = SAMPLE_TEXTURE2D_ARRAY_LOD(_ShoreLevelTex, sampler_ShoreLevelTex,
+                (cell + 0.5) / _ShoreLevelRes, face, 0).r;
+            float w = (i == 0 ? 1.0 - lerpAmount.x : lerpAmount.x)
+                    * (j == 0 ? 1.0 - lerpAmount.y : lerpAmount.y);
+            w *= level > WATER_LEVEL_NO_WATER_MAX ? 1.0 : 0.0;
+            sum += level * w;
+            weight += w;
+        }
+    }
+
+    return weight > 1e-5 ? sum / weight : WATER_LEVEL_NO_WATER_MAX - 1.0;
 }
 
 // Local-space radius of the water surface above a direction, falling back to the global sea radius
