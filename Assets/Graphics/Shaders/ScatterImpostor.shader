@@ -126,6 +126,7 @@ Shader "Scatter/Impostor"
             #pragma instancing_options procedural:setup
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #pragma multi_compile_fog
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Includes/PlanetSunLighting.hlsl"
             #include "Includes/CloudShadows.hlsl"
@@ -147,6 +148,9 @@ Shader "Scatter/Impostor"
                 float _FadeInEnd;
                 float _FadeOutStart;
                 float _FadeOutEnd;
+                // Must stay in every pass's UnityPerMaterial, in the same order: the SRP batcher requires an
+                // identical layout across a shader's passes.
+                float4 _LodDebugTint;
             CBUFFER_END
 
             #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
@@ -181,6 +185,7 @@ Shader "Scatter/Impostor"
                 float3 billUp : TEXCOORD5;     // surface normal
                 float3 billFwd : TEXCOORD6;    // view direction
                 float3 positionWS : TEXCOORD7;
+                float fogFactor : TEXCOORD8;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -203,6 +208,7 @@ Shader "Scatter/Impostor"
                 OUT.billRight = right;
                 OUT.billUp = up;
                 OUT.billFwd = view;
+                OUT.fogFactor = ComputeFogFactor(OUT.positionHCS.z);
                 return OUT;
             }
 
@@ -237,7 +243,9 @@ Shader "Scatter/Impostor"
                 half ndl = saturate(dot(N, sunDir));
                 half shadowAtten = MainLightRealtimeShadow(TransformWorldToShadowCoord(IN.positionWS));
                 float cloudShadow = CloudShadowFactor(IN.positionWS, sunDir, localSun);
-                half shade = lerp(0.5, 1.0, shadowAtten * cloudShadow);
+                // Shadow floor matches the mesh tier (Scatter.shader and FoliageLit both use 0.35). At 0.5 a
+                // shadowed prop LIGHTENED as it crossed into impostor range, which is a pop in its own right.
+                half shade = lerp(0.35, 1.0, shadowAtten * cloudShadow);
                 // Shaded floor matches Scatter.shader's mesh tier (0.6) so a prop's dark side does not step
                 // brighter as it crosses the mesh -> impostor handoff. These were 0.85 vs 0.6, which read as
                 // a prop changing shade as you walked toward it.
@@ -245,7 +253,12 @@ Shader "Scatter/Impostor"
                 half3 nightColor = card.rgb * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
                 // Linear, matching the mesh tier, the terrain and FoliageLit. See Scatter.shader for why the
                 // old sqrt easing left props lit under a sun that had already set.
-                return half4(lerp(nightColor, dayColor, saturate(daylight)), 1);
+                half3 col = lerp(nightColor, dayColor, saturate(daylight));
+                col = lerp(col, _LodDebugTint.rgb, _LodDebugTint.a); // scatter.lodview: LOD-band colour
+                // Fog LAST, like the mesh tier. Without it a prop shed its aerial perspective the instant it
+                // crossed into impostor range — the tier that draws from 340 m to 2250 m, where fog matters most.
+                col = MixFog(col, IN.fogFactor);
+                return half4(col, 1);
             }
             ENDHLSL
         }
@@ -283,6 +296,9 @@ Shader "Scatter/Impostor"
                 float _FadeInEnd;
                 float _FadeOutStart;
                 float _FadeOutEnd;
+                // Must stay in every pass's UnityPerMaterial, in the same order: the SRP batcher requires an
+                // identical layout across a shader's passes.
+                float4 _LodDebugTint;
             CBUFFER_END
 
             #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
@@ -376,6 +392,9 @@ Shader "Scatter/Impostor"
                 float _FadeInEnd;
                 float _FadeOutStart;
                 float _FadeOutEnd;
+                // Must stay in every pass's UnityPerMaterial, in the same order: the SRP batcher requires an
+                // identical layout across a shader's passes.
+                float4 _LodDebugTint;
             CBUFFER_END
 
             #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)

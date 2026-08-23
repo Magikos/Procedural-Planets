@@ -19,6 +19,7 @@ public sealed class ScatterGpuDraw : IDisposable
     static readonly int _visibleId = Shader.PropertyToID("_ScatterVisible");
     static readonly int _fadeStartId = Shader.PropertyToID("_FadeStart");
     static readonly int _fadeEndId = Shader.PropertyToID("_FadeEnd");
+    static readonly int _lodTintId = Shader.PropertyToID("_LodDebugTint");
 
     static readonly int _cMaster = Shader.PropertyToID("_Master");
     static readonly int _cMasterInv = Shader.PropertyToID("_MasterInv");
@@ -35,6 +36,7 @@ public sealed class ScatterGpuDraw : IDisposable
     sealed class Band
     {
         public Mesh Mesh;
+        public int Lod;                    // mesh LOD index; -1 = the impostor tier (scatter.lodview colour)
         public float Near2, Far2;
         public RenderParams Rp;            // material + shadow mode + bounds; matProps holds buffers + fade
         public MaterialPropertyBlock Mpb;
@@ -93,7 +95,7 @@ public sealed class ScatterGpuDraw : IDisposable
                     if (mesh == null) continue;
                     float far = pd.LodEndDistances[lod];
                     float near = lod == 0 ? 0f : Mathf.Max(0f, pd.LodEndDistances[lod - 1] - TransitionWidth);
-                    bands.Add(MakeMeshBand(mesh, near, far, pd.Material, pd.CastShadows, pd.ReceiveShadows, bounds));
+                    bands.Add(MakeMeshBand(mesh, lod, near, far, pd.Material, pd.CastShadows, pd.ReceiveShadows, bounds));
                 }
             }
             var imp = impostors != null && p < impostors.Length ? impostors[p] : default;
@@ -104,7 +106,7 @@ public sealed class ScatterGpuDraw : IDisposable
         }
     }
 
-    Band MakeMeshBand(Mesh mesh, float near, float far, Material mat, bool cast, bool receive, Bounds bounds)
+    Band MakeMeshBand(Mesh mesh, int lod, float near, float far, Material mat, bool cast, bool receive, Bounds bounds)
     {
         var mpb = new MaterialPropertyBlock();
         mpb.SetFloat(_fadeStartId, far - TransitionWidth); // fade the outgoing LOD out over its last band
@@ -116,7 +118,7 @@ public sealed class ScatterGpuDraw : IDisposable
             worldBounds = bounds,
             matProps = mpb,
         };
-        return new Band { Mesh = mesh, Near2 = near * near, Far2 = far * far, Rp = rp, Mpb = mpb };
+        return new Band { Mesh = mesh, Lod = lod, Near2 = near * near, Far2 = far * far, Rp = rp, Mpb = mpb };
     }
 
     Band MakeImpostorBand(ScatterLodBatcher.Impostor imp)
@@ -127,7 +129,7 @@ public sealed class ScatterGpuDraw : IDisposable
         var rp = imp.Params;
         rp.matProps = mpb;
         float start = Mathf.Max(0f, imp.StartDistance - TransitionWidth);
-        return new Band { Mesh = imp.Quad, Near2 = start * start, Far2 = imp.EndDistance * imp.EndDistance, Rp = rp, Mpb = mpb };
+        return new Band { Mesh = imp.Quad, Lod = -1, Near2 = start * start, Far2 = imp.EndDistance * imp.EndDistance, Rp = rp, Mpb = mpb };
     }
 
     public void DrawProto(int p, List<Matrix4x4> matrices, Vector3 camPos, bool dirty)
@@ -178,6 +180,7 @@ public sealed class ScatterGpuDraw : IDisposable
             b.Mpb.SetBuffer(_matricesId, g.Master);
             b.Mpb.SetBuffer(_matricesInvId, g.MasterInv);
             b.Mpb.SetBuffer(_visibleId, b.Visible);
+            b.Mpb.SetColor(_lodTintId, ScatterLodBatcher.DebugTintFor(b.Lod)); // scatter.lodview
             RenderParams rp = b.Rp;
             rp.matProps = b.Mpb;
             Graphics.RenderMeshIndirect(rp, b.Mesh, b.Args, 1, 0);

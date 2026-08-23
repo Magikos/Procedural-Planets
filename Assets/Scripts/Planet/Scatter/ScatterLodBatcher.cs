@@ -38,6 +38,14 @@ public sealed class ScatterLodBatcher
     static readonly Color _impostorColor = new Color(1f, 0.2f, 1f, 1f);
     static readonly Color _tintOff = new Color(0f, 0f, 0f, 0f); // alpha 0 => shader lerp is a no-op
 
+    // Shared with ScatterGpuDraw, which is the path the planet actually draws through (UseGpuDraw defaults
+    // to true). Without this the debug view only coloured the CPU fallback, so scatter.lodview looked broken
+    // on the planet while still working in the LOD strip workbench.
+    public static Color DebugTintFor(int lod) =>
+        !LodTintDebug ? _tintOff
+                      : lod < 0 ? _impostorColor
+                                : _lodColors[Mathf.Min(lod, _lodColors.Length - 1)];
+
     // One camera-facing quad (billboarded in the impostor shader), drawn beyond the mesh-LOD range out
     // to EndDistance. Valid is false when there is no baked card, which skips the tier (mesh-LOD only).
     public readonly struct Impostor
