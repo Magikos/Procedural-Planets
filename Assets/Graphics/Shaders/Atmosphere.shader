@@ -310,6 +310,17 @@ ENDHLSL
                 float3 shaftColor = CalculateLightShafts(i.uv);
                 color += shaftColor;
 
+                // Under water the sight path is water, not air, so none of the above applies. The volume
+                // pass runs first and has already attenuated these pixels by how much water is in the way;
+                // laying air scattering over the top of that re-lit every one of them with the SKY's colour.
+                // That is why the far shore and everything standing on it read bleached cream by day and
+                // flat black at night, instead of fading into the water.
+                //
+                // Air light shafts go with it - they are shafts through atmosphere, and underwater god rays
+                // are a different effect that would have to be built against the water column.
+                float underwater01 = _WaterVolumeEnabled > 0.5 ? CameraUnderwater01() : 0.0;
+                color = lerp(color, originalCol.xyz, underwater01);
+
                 // Raw shaft signal only, amplified so a faint contribution is still visible.
                 // Isolates whether CalculateLightShafts is producing anything at all, independent
                 // of how it blends into the sky.
