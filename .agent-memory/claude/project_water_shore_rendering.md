@@ -309,3 +309,40 @@ collapse. Comparing component counts between runs did NOT work: my two passes co
 `OceanShoreStudy`, `Lake1`). It is the sanctioned way to travel - see
 [[feedback_camera_teleport_wedges_editor]]. Set time with `time.set-local 0.42`, and render in a LATER
 call: lighting needs a frame, so a capture in the same call still comes back at night.
+
+## Jagged shoreline: per-pixel trim, and why it needs a cover set (2026-08-23, `9e5d2e0` + `2634101`)
+
+The water mesh is **~21.6 m per quad** (median triangle edge; WaterBodyMap is 40.9 m, they are NOT the same
+grid). Its waterline is a marching-squares contour on that grid - a chain of straight segments. That is the
+jagged beach and much of why lakes read hard rather than soft. Raising mesh resolution only shortens the
+segments; it cannot remove them.
+
+**The fix is two halves, and half alone does nothing.**
+
+1. `Ocean.shader` trims surface alpha per pixel against the measured water column, so the visible edge sits on
+   the real ground crossing at pixel resolution.
+2. `WaterMeshBuilder` builds from a **cover set** - the wet set grown `CoverRings` (2, ~43 m) outward - so the
+   trim always has geometry to carve. Shipping (1) with only a 0.30-of-an-edge overlap left the zigzag intact
+   on shallow bays: Bryan's F10 showed sand wedges cutting INTO the water, i.e. MISSING water, and no trim can
+   add geometry that is not there. On a 1:200 shelf that overlap is centimetres of height, while the mesh's
+   wet test uses the level field point-sampled at 40.9 m and the shader trims against the bilinear shore
+   field - they disagree by more than it covered.
+
+**The old objection is dead, but for a specific reason.** A depth-buffer trim was tried years earlier and
+abandoned because looking ALONG the water the first opaque hit is the FAR shore, so the column read negative
+and the surface was erased in a hard horizontal band. It works now only because `MeasuredWaterColumn` drops
+`sceneValid` to zero past 160 m of bed distance, so a far-shore hit cannot trim anything. **Never trim on the
+depth buffer without that gate.** Verified from 3.5 m above a lake looking across: water continuous to the far
+shore, no band.
+
+**Trap the cover set introduces:** a covered-but-dry vertex has no water history, so its `bodyFactor` is 0 -
+which means LAKE - and the first build painted murky green patches with straight cover-ring edges out into the
+ocean. Anything the ring carries must carry level, bodyFactor AND temperature from the wet neighbour it came
+from. Level alone is not enough.
+
+**Costs measured:** mesh 515,886 -> 548,472 verts (+6.3%). Overhang at the earlier 0.30 overlap was 1.74% ->
+3.70% of verts, mean lift 0.42 -> 1.07 m.
+
+**Workflow note:** each verify cycle is ~15 minutes of generation, so batch the checks you want per run.
+Reproduce Bryan's exact viewpoint with `camera.teleport LastDebugCapture`, render at the sidecar's source
+resolution, and crop with ffmpeg for a like-for-like before/after against his F10 PNG.
