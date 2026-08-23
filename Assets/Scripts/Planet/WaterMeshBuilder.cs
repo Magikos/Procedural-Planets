@@ -72,6 +72,13 @@ public static class WaterMeshBuilder
     struct FaceWaterData
     {
         public bool[] Wet;
+        // Vertices the mesh is BUILT from: the wet set grown CoverRings outward. Ocean.shader decides where
+        // the sheet actually stops, per pixel, so the mesh only has to cover the waterline generously - see
+        // CoverRings. Wet stays the truth about what is under water, for depth, bodies and shore distance.
+        public bool[] Cover;
+        // Water surface height for a Cover vertex. Its own where wet; the highest wet neighbour's where the
+        // ring reached it, so the sheet stays flat across the overlap instead of following the ground up.
+        public float[] CoverLevel;
         public int[] ShoreDistanceCells;
         public float[] BodyFactor;
         public float[] Temperature01;
@@ -225,12 +232,15 @@ public static class WaterMeshBuilder
         float[] elevations = face.Elevations;
         int vertexCount = directions.Length;
 
-        bool[] wet = faceData.Wet;
+        // The mesh is built from Cover, not Wet: Ocean.shader decides where the sheet stops per pixel, so
+        // this only has to reach past the waterline everywhere. Wet still answers what is under water.
+        bool[] wet = faceData.Cover;
+        float[] coverLevel = faceData.CoverLevel;
         int[] shoreDistanceCells = faceData.ShoreDistanceCells;
         float[] bodyFactor = faceData.BodyFactor;
         float[] temperature01 = faceData.Temperature01;
         int[] globalIndices = faceData.GlobalIndices;
-        if (wet == null || shoreDistanceCells == null || bodyFactor == null || temperature01 == null || globalIndices == null)
+        if (wet == null || coverLevel == null || shoreDistanceCells == null || bodyFactor == null || temperature01 == null || globalIndices == null)
             return;
 
         var clipped = new WaterPoint[4];
@@ -300,8 +310,11 @@ public static class WaterMeshBuilder
             }
         }
 
-        float LevelAtDirection(Vector3 dir) => settings.Levels != null
-            ? settings.Levels.LevelAt(dir, settings.OceanLevel)
+        // The level carried with the cover set, so a vertex the ring reached sits at its lake's surface
+        // rather than at the global shell. Asking the level field again here would answer NoWater for those
+        // vertices and drop the overlap to sea level, tearing the sheet open along every raised shoreline.
+        float LevelAtIndex(int index) => coverLevel[index] > float.NegativeInfinity
+            ? coverLevel[index]
             : settings.OceanLevel;
 
         WaterPoint CreateOriginal(int index)
@@ -313,7 +326,7 @@ public static class WaterMeshBuilder
                 Direction = directions[index],
                 BodyFactor = bodyFactor[index],
                 Temperature01 = temperature01[index],
-                SurfaceLevel = LevelAtDirection(directions[index])
+                SurfaceLevel = LevelAtIndex(index)
             };
         }
 
@@ -321,26 +334,20 @@ public static class WaterMeshBuilder
         {
             bool aWet = wet[a];
             bool bWet = wet[b];
-            // Clip against the level of whichever end is under water; the dry end belongs to no body, and its
-            // level reads back as ground height, which would put the shoreline in the wrong place.
-            Vector3 wetDirection = aWet ? directions[a] : directions[b];
-            float clipLevel = LevelAtDirection(wetDirection);
+            // Clip against the level of whichever end the cover set claims; the outside end belongs to no
+            // body, and its level reads back as ground height, which would put the edge in the wrong place.
+            float clipLevel = LevelAtIndex(aWet ? a : b);
             float t = Mathf.InverseLerp(elevations[a], elevations[b], clipLevel);
             // t is where the ground actually crosses the water level along this edge, so the outline it
             // traces is a real shoreline rather than a grid. The overlap must therefore be a SMALL fraction
             // of an edge: push it far and t saturates at Clamp01, the vertex snaps onto the dry grid corner,
             // and the whole outline collapses into an axis-aligned staircase of cell-sized squares.
             //
-            // It used to be a distance, ~27.5 m against a ~22 m edge, so every crossing past t = 0.33
-            // clamped, the vertex snapped to the dry grid corner, and the outline collapsed into a staircase.
-            //
-            // Ocean.shader now decides where the sheet stops per PIXEL, so this no longer sets the visible
-            // waterline - it only has to guarantee the mesh COVERS it. That is why it is much wider than the
-            // seam alone needs: the mesh clips against a level field quantised at 40.9 m while the ground it
-            // crosses is sampled at ~21.6 m, and on flat ground a small height error is a large lateral one,
-            // so the true line can fall well outside a tight overlap. Where the mesh stops short there is no
-            // geometry for the trim to carve and the zigzag survives as a notch of missing water.
-            const float ShorelineOverlapEdgeFraction = 0.30f;
+            // Only closes the seam at the cover set's OUTER boundary, which lies CoverRings inland and is
+            // erased per pixel long before it could be seen. Coverage of the real waterline is CoverRings'
+            // job, not this nudge's - push this far instead and t saturates at Clamp01, the vertex snaps to
+            // the grid corner, and the boundary becomes an axis-aligned staircase for no gain.
+            const float ShorelineOverlapEdgeFraction = 0.08f;
 
             if (aWet && !bWet)
                 t += ShorelineOverlapEdgeFraction;
@@ -421,6 +428,7 @@ public static class WaterMeshBuilder
         var globalDirections = new List<Vector3>();
         var globalTemperature01 = new List<float>();
         var globalTemperatureSampled = new List<bool>();
+        var globalLevel = new List<float>();
 
         for (int faceIndex = 0; faceIndex < faces.Length; faceIndex++)
         {
@@ -434,6 +442,8 @@ public static class WaterMeshBuilder
             var faceData = new FaceWaterData
             {
                 Wet = new bool[vertexCount],
+                Cover = new bool[vertexCount],
+                CoverLevel = new float[vertexCount],
                 ShoreDistanceCells = new int[vertexCount],
                 BodyFactor = new float[vertexCount],
                 Temperature01 = new float[vertexCount],
@@ -449,6 +459,7 @@ public static class WaterMeshBuilder
                     globalIndicesByDirection.Add(key, globalIndex);
                     globalWet.Add(false);
                     globalDepthMeters.Add(0f);
+                    globalLevel.Add(float.NegativeInfinity);
                     globalDirections.Add(directions[i]);
                     globalTemperature01.Add(0.5f);
                     globalTemperatureSampled.Add(false);
@@ -486,6 +497,8 @@ public static class WaterMeshBuilder
                 stats.WetVertices++;
                 stats.MaxDepth = Mathf.Max(stats.MaxDepth, depth);
                 globalWet[globalIndex] = true;
+                if (waterLevel > globalLevel[globalIndex])
+                    globalLevel[globalIndex] = waterLevel;
                 if (depth > globalDepthMeters[globalIndex])
                     globalDepthMeters[globalIndex] = depth;
                 if (!globalTemperatureSampled[globalIndex] && settings.ClimateProvider != null)
@@ -527,6 +540,9 @@ public static class WaterMeshBuilder
 
         ComputeShoreDistance(wet, adjacency, globalShoreDistance);
 
+        float[] levels = globalLevel.ToArray();
+        bool[] cover = BuildCoverSet(wet, adjacency, levels, globalBodyFactor, globalEffectiveTemperature01);
+
         for (int faceIndex = 0; faceIndex < result.Faces.Length; faceIndex++)
         {
             FaceWaterData faceData = result.Faces[faceIndex];
@@ -539,6 +555,8 @@ public static class WaterMeshBuilder
                 faceData.BodyFactor[i] = globalBodyFactor[globalIndex];
                 faceData.Temperature01[i] = globalEffectiveTemperature01[globalIndex];
                 faceData.ShoreDistanceCells[i] = globalShoreDistance[globalIndex];
+                faceData.Cover[i] = cover[globalIndex];
+                faceData.CoverLevel[i] = levels[globalIndex];
             }
 
             result.Faces[faceIndex] = faceData;
@@ -546,6 +564,52 @@ public static class WaterMeshBuilder
 
         result.DepthMeters = globalDepthMeters.ToArray();
         return result;
+    }
+
+    // How far past the waterline the mesh is built. Two rings, ~43 m, because on a shallow shelf a small
+    // disagreement in surface height is a large one in distance: the mesh's wet test uses the level field
+    // point-sampled at 40.9 m, while Ocean.shader trims against the bilinear shore field, and where the bed
+    // falls away at 1:200 a centimetre between them is metres of beach.
+    //
+    // Undershooting is the failure that shows. Where the cover stops short of the true waterline there is no
+    // geometry for the trim to carve, so the mesh's own marching-squares outline becomes the visible edge -
+    // a chain of straight segments, which is the jagged shoreline. Overshooting costs a little overdraw on
+    // land and is erased per pixel.
+    const int CoverRings = 2;
+
+    // The wet set grown CoverRings outward, carrying each wet vertex's surface properties with it. Levels
+    // keep the sheet flat over the overlap; bodyFactor and temperature must travel too, because a vertex
+    // that never held water has bodyFactor 0 - which reads as LAKE, and painted murky green patches with
+    // straight cover-ring edges out into the ocean. All three are written in place, taken from the wet
+    // neighbour with the highest level.
+    static bool[] BuildCoverSet(bool[] wet, List<int>[] adjacency, float[] levels,
+        float[] bodyFactor, float[] temperature01)
+    {
+        var cover = (bool[])wet.Clone();
+        for (int ring = 0; ring < CoverRings; ring++)
+        {
+            bool[] source = (bool[])cover.Clone();
+            for (int i = 0; i < cover.Length; i++)
+            {
+                if (source[i]) continue;
+                List<int> neighbours = adjacency[i];
+                if (neighbours == null) continue;
+                int from = -1;
+                float highest = float.NegativeInfinity;
+                foreach (int n in neighbours)
+                    if (source[n] && levels[n] > highest)
+                    {
+                        highest = levels[n];
+                        from = n;
+                    }
+                if (from < 0) continue;
+                cover[i] = true;
+                levels[i] = highest;
+                bodyFactor[i] = bodyFactor[from];
+                temperature01[i] = temperature01[from];
+            }
+        }
+        return cover;
     }
 
     static List<int>[] BuildGlobalAdjacency(IFaceMeshSampler[] faces, FaceWaterData[] faceData, int globalVertexCount)
