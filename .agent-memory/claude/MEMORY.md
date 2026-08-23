@@ -66,3 +66,5 @@
 - [Agent conversation](reference_agent_conversation.md) — `docs/agent-conversation/` is the shared cross-agent scratchpad for parallel work on the same phase
 - [Console arc](project_console_arc.md) — debug console shipped (~60 cmds, 13 prefixes); CONSOLE-6 audit/cleanup in progress, do NOT fix before Bryan reviews findings
 - [Planet Architect reference](reference_planet_architect.md) — external biome/climate/vegetation reference at D:\Planet_Architect_v0.1.5_Windows; analysis paper in docs/research/
+
+- [Camera teleport wedges the Editor](feedback_camera_teleport_wedges_editor.md) - a long play-mode position jump re-plans ~77k scatter tiles on the main thread; Unity goes unresponsive and MCP times out. Prefer captures and C# queries over travelling.
