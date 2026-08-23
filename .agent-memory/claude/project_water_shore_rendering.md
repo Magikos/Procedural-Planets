@@ -408,3 +408,33 @@ drifts between the two captures and the comparison is worthless.
 `DensityMultiplier` and play-stop restores it - but the console reports 0-1 while the asset stores the
 internal multiplier, so you cannot read the old value back off the asset to restore it. Record the value
 BEFORE changing it.
+
+## Snell's window: attempted and NOT landed (2026-08-23) - read this before retrying
+
+Four hypotheses, four failures, reverted. The design is probably right; the iteration loop was not.
+
+**What is verified true:**
+- The underwater sky branch in `Atmosphere.shader` DOES run. Measured at a submerged camera with a probe
+  returning the three gate terms: `SkyDepthMask = 0.99`, `CameraUnderwater01 = 0.85`,
+  `WaterInterfaceFrontMask = 0.65`. Do not re-suspect the gate.
+- `CalculateScattering(start, dir, sceneDepth, sceneColor)` lives in `Includes/Atmosphere.hlsl` and is in
+  scope there. `_AtmosphereRadius` = 6087, `_SeaLevelRadius` = 5000, so a submerged start is BELOW the
+  surface the atmosphere integrates outward from - the leading suspicion is that it returns `sceneColor`
+  unchanged from such an origin. Moving the start to where the ray exits the water did not visibly change
+  anything, but see the loop problem below before trusting that.
+- `CameraSeaOffset()` does NOT exist in Atmosphere.shader (it is WaterVolume's). Compute the offset inline,
+  as `CameraUnderwater01()` there already does.
+
+**The real blocker is the iteration loop, not the physics.** A probe that returned flat red did not paint,
+and a later measurement proved the branch was executing all along - the capture had read a STALE shader
+variant. `ShaderUtil.GetShaderMessages` returning zero errors does NOT mean the new variant is live. Every
+one-cycle conclusion in that stretch is therefore untrustworthy. Before resuming: establish a loop that
+proves which build is running - change a colour to something unmistakable, wait, capture, confirm, and only
+then measure. Budget ~2 min per cycle and do not stack hypotheses between confirmations.
+
+**Design that was written** (kept here so it need not be re-derived): critical angle
+`asin(1/1.333) = 48.75 deg`, `COS_CRITICAL = 0.6593`, `window = smoothstep(COS_CRITICAL - 0.10,
+COS_CRITICAL + 0.05, dot(viewDir, camUp))`; refract with `sinAir = 1.333 * sinWater`, rebuild the direction
+from the tangent and up components; attenuate by `exp(-(3.80, 1.75, 0.58) * saturate(depthAbove /
+cosWater / 40))` to agree with the volume's own coefficients; composite the water pass's surface on top
+with `WaterInterfaceFrontMask`.
