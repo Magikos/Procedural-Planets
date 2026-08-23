@@ -18,7 +18,12 @@ public static class TreeGenerator
             ? new[]
             {
                 TreeLeafMesher.BuildConiferCone(sk, seed, 1f, def.ConeTiers, 11, def.ConeBaseFrac, def.ConeRadiusFrac, def.ConeDroop),
-                TreeLeafMesher.BuildConiferCone(sk, seed, 1f, Mathf.Max(4, def.ConeTiers * 2 / 3), 8, def.ConeBaseFrac, def.ConeRadiusFrac, def.ConeDroop),
+                // 3/4 tiers and 9 spokes, not 2/3 and 8. The old step dropped 52% of the cone (measured
+                // 1188 -> 576 verts on Taiga Pine) with scale left at 1, so the canopy went see-through at
+                // the LOD0->LOD1 boundary — a step no crossfade that short could hide. Unlike leaf cards, a
+                // cone cannot be compensated by scaling: widening it does not refill the gaps between spokes,
+                // so the only honest fix is to decimate less.
+                TreeLeafMesher.BuildConiferCone(sk, seed, 1f, Mathf.Max(4, def.ConeTiers * 3 / 4), 9, def.ConeBaseFrac, def.ConeRadiusFrac, def.ConeDroop),
             }
             : new[] { TreeLeafMesher.Build(sk, 1f, 1), TreeLeafMesher.Build(sk, 1.15f, 1) };
 

@@ -25,7 +25,10 @@ public sealed class ScatterLodBatcher
     // LOD crossfade: overlap adjacent bands by this width and dither the OUTGOING LOD out over its last
     // TransitionWidth metres (via the material's existing _FadeStart/_FadeEnd screen-door), while the
     // INCOMING LOD is already drawn solid underneath. Kills the hard mesh-swap pop at each band boundary.
-    const float TransitionWidth = 15f;
+    // 40 m, not 15. The crossfade has to outlast the swap it hides: at a 60 m/s fly-through 15 m is 0.25 s,
+    // far too fast to mask a tree canopy changing between LODs, which is the "LOD -> detail" pop. 40 m gives
+    // ~0.67 s at that speed. Cost is a wider band where both LODs draw.
+    const float TransitionWidth = 40f;
     static readonly int _fadeStartId = Shader.PropertyToID("_FadeStart");
     static readonly int _fadeEndId = Shader.PropertyToID("_FadeEnd");
     static readonly Color[] _lodColors =

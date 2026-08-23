@@ -32,7 +32,7 @@ public sealed class ScatterGpuDraw : IDisposable
     static readonly int _cNear2 = Shader.PropertyToID("_Near2");
     static readonly int _cFar2 = Shader.PropertyToID("_Far2");
 
-    const float TransitionWidth = 15f; // must match ScatterLodBatcher
+    const float TransitionWidth = 40f; // must match ScatterLodBatcher — see the note there
 
     sealed class Band
     {
