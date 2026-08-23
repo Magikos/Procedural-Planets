@@ -127,6 +127,10 @@ public sealed class WaterBodyMap
     // a reference height rather than a wetness test - see ShoreLevelGrid.
     float[] _shoreLevel;
 
+    // Cells the SOLVE put water in, as opposed to cells the dilation ring only carried a level to. Kept
+    // because the two are indistinguishable in _level and must not be treated alike - see TrySolvedLevelAt.
+    bool[] _solvedWater;
+
     // Seam neighbour lookups that did not agree in both directions. Cube faces at equal resolution should be
     // 1:1 across a seam, so this is expected to be 0; a non-zero count means a body could split at a seam.
     public int SeamAsymmetryCount { get; private set; }
@@ -267,6 +271,7 @@ public sealed class WaterBodyMap
             submerged[i] = filled[i] > elevation[i] + SpillDepthEpsilon;
             if (submerged[i]) SubmergedCellCount++;
         }
+        _solvedWater = submerged;
         _level = BuildLevelField(filled, elevation, LevelRings, guardAgainstFlooding: true);
         _shoreLevel = BuildLevelField(filled, elevation, ShoreRings, guardAgainstFlooding: false);
         return submerged;
@@ -530,6 +535,35 @@ public sealed class WaterBodyMap
         if (_level == null) return fallbackLevel;
         float level = _level[CellIndex(direction)];
         return level == NoWater ? fallbackLevel : level;
+    }
+
+    // True once the spill solve has produced a level field. Where it has, NoWater is an ANSWER - water
+    // drains away there - and a caller deciding wetness must not substitute the global sea shell for it.
+    public bool HasSolvedLevels => _level != null && _solvedWater != null;
+
+    // Water surface height at a direction, and ONLY where the solve actually put water there. Use this, not
+    // LevelAt, to decide whether a point is under water.
+    //
+    // _level holds two different things that look identical: heights the solve computed, and heights the
+    // dilation ring carried one cell onto dry land. The ring exists so the mesh can find the waterline
+    // crossing INSIDE that first dry cell, and the crossing is always taken from the WET end's level - so a
+    // carried height was never needed to decide wetness, only to describe it.
+    //
+    // Using it as a wetness test is unsound. BuildLevelField's anti-flood guard rejects a carried cell whose
+    // COARSE 41 m elevation sits below the borrowed level, but the mesh samples elevation far finer than the
+    // grid, so a cell that passes the guard can still hold dips a metre below it. Each such dip was meshed
+    // as water and, having no wet neighbour to join, became an isolated 41 m sheet lying on the grass near a
+    // lake. Measured on six of them: mask Shore, level 0.2 to 1.3 m above the ground the fine sampler reads.
+    public bool TrySolvedLevelAt(Vector3 direction, out float level)
+    {
+        level = 0f;
+        if (_level == null || _solvedWater == null) return false;
+        int cell = CellIndex(direction);
+        if (!_solvedWater[cell]) return false;
+        float value = _level[cell];
+        if (value == NoWater) return false;
+        level = value;
+        return true;
     }
 
     public bool TrySampleBody(Vector3 direction, out WaterBody body)

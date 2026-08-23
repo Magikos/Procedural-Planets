@@ -452,11 +452,25 @@ public static class WaterMeshBuilder
                 // The spill solve gives every direction the height water would stand at, and sets it equal to
                 // the ground wherever water would drain away. So this one test finds the ocean, lakes below
                 // sea level, and basins perched above it, without a special case for any of them.
-                float waterLevel = settings.Levels != null
-                    ? settings.Levels.LevelAt(directions[i], settings.OceanLevel)
-                    : settings.OceanLevel;
-                bool isWet = elevations[i] < waterLevel;
-                float depth = Mathf.Max(0f, (waterLevel - elevations[i]) * settings.PlanetRadius);
+                //
+                // Only where the solve actually put water, though. A level the dilation ring merely carried
+                // onto dry land describes where the waterline is, and CreateIntersection reads it from the
+                // wet end for exactly that - but a carried height cannot decide that the cell it sits on is
+                // itself submerged. Letting it try floods any dip finer than the 41 m grid, and each such
+                // dip became a lone 41 m sheet of water lying on the grass beside a lake.
+                float waterLevel;
+                bool isWet;
+                if (settings.Levels != null && settings.Levels.HasSolvedLevels)
+                {
+                    isWet = settings.Levels.TrySolvedLevelAt(directions[i], out waterLevel)
+                            && elevations[i] < waterLevel;
+                }
+                else
+                {
+                    waterLevel = settings.OceanLevel;
+                    isWet = elevations[i] < waterLevel;
+                }
+                float depth = isWet ? (waterLevel - elevations[i]) * settings.PlanetRadius : 0f;
                 faceData.GlobalIndices[i] = globalIndex;
                 faceData.Wet[i] = isWet;
                 faceData.ShoreDistanceCells[i] = int.MaxValue;

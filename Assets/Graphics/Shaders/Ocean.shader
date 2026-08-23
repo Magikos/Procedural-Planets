@@ -610,13 +610,26 @@ Shader "Planet/Ocean"
 
                 float3 fromCenter = sceneWS - _PlanetCenter;
                 float bedRadius = max(length(fromCenter), 0.0001);
-                return WaterSurfaceRadiusAt(fromCenter / bedRadius, _SeaLevelRadius) - bedRadius;
+                // The SHORE field, not the wet-test one. This is a height question - how high does water
+                // stand over this bed - and the wet-test field is point-sampled on 41 m cells, which made
+                // the whole foam band step in blocks that size along every shoreline.
+                return ShoreSurfaceRadiusAt(fromCenter / bedRadius, _SeaLevelRadius) - bedRadius;
             }
+
+            // Metres of dry land the mesh may overhang before its foam is gone. Slightly wider than the
+            // overhang the shoreline clip can produce, so the band ends before the sheet does.
+            #define SHORE_FOAM_OVERHANG_FADE 0.75
 
             float ShoreGradient(float column, float sceneValid)
             {
                 float t = 1.0 - saturate(max(column, 0.0) / max(_ShoreFoamDepth, 0.001));
-                return t * t * sceneValid;                  // bias the band toward the waterline itself
+                // Fade back out once the bed rises ABOVE the water plane. Clamping the column at zero made
+                // overhanging mesh read as the shallowest possible water - the strongest point of the band -
+                // so foam went to full white exactly where the sheet lay on dry ground. That is the hard
+                // white rim tracing every coast, and it is what made the inland overlap opaque instead of
+                // the near-nothing its zero depth asks for.
+                float onLand = saturate(-column / SHORE_FOAM_OVERHANG_FADE);
+                return t * t * sceneValid * (1.0 - onLand);
             }
 
             // There is deliberately no depth-buffer gate on the surface's own alpha.
