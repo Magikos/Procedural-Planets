@@ -285,7 +285,18 @@ ENDHLSL
                 float3 viewDir = i.viewVector / max(viewLength, 0.0001);
 
                 if (_WaterVolumeEnabled > 0.5 && CameraUnderwater01() > 0.01 && SkyDepthMask(i.uv) > 0.5)
-                    return float4(UnderwaterSkyColor(viewDir), originalCol.w);
+                {
+                    // Seen from below, the water surface IS the sky: its ripples, the sun's glint coming
+                    // through it, and the bright disc of Snell's window. The surface writes no depth, so
+                    // every pixel showing it classifies as sky here - and returning a colour outright
+                    // discarded all of it, leaving one flat wash over the whole upward view. Rendering the
+                    // same frame with the atmosphere bypassed shows what was being thrown away.
+                    //
+                    // So keep what the water pass drew wherever it drew something, and use the flat colour
+                    // only for the water beyond it.
+                    float surface = saturate(WaterInterfaceFrontMask(i.uv));
+                    return float4(lerp(UnderwaterSkyColor(viewDir), originalCol.rgb, surface), originalCol.w);
+                }
 
                 if (_OceanDebugMode == DEBUG_ATMOSPHERE_WATER_CUT && _WaterVolumeEnabled > 0.5)
                 {
