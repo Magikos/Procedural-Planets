@@ -15,4 +15,9 @@ public static partial class ShaderGlobalIds
     // not be changed without a world reload, and tuning it at runtime would mean writing to shared material
     // assets. Published by ScatterRenderer.Configure; `scatter.backlight` overrides it live.
     public const string FoliageBacklight = "_FoliageBacklight";
+
+    // Seconds a newly gathered instance takes to dither in. A GLOBAL for the same reason as
+    // FoliageBacklight: it is a feel value dialled by eye, and it must apply to every scatter material at
+    // once. Zero disables the ramp (instances appear immediately, the old behaviour).
+    public const string ScatterFadeInSeconds = "_ScatterFadeInSeconds";
 }

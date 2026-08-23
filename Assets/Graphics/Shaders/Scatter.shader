@@ -41,7 +41,24 @@ Shader "Scatter/VertexColorLit"
             StructuredBuffer<float4x4> _ScatterMatrices;
             StructuredBuffer<float4x4> _ScatterMatricesInv;
             StructuredBuffer<uint> _ScatterVisible;
+            // Time.timeSinceLevelLoad when each instance became resident, parallel to _ScatterMatrices and
+            // read through the same _ScatterVisible indirection. Only the GPU-indirect path has a per-instance
+            // index, so the ramp lives entirely inside this guard; the CPU fallback draws at full opacity.
+            StructuredBuffer<float> _ScatterBorn;
         #endif
+        float _ScatterFadeInSeconds;
+
+        // 0 while an instance is still ramping in, 1 once it has fully arrived.
+        float ScatterAppear()
+        {
+        #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+            if (_ScatterFadeInSeconds <= 0.0) return 1.0;
+            float born = _ScatterBorn[_ScatterVisible[unity_InstanceID]];
+            return saturate((_Time.y - born) / _ScatterFadeInSeconds);
+        #else
+            return 1.0;
+        #endif
+        }
         void setup()
         {
         #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
@@ -59,11 +76,13 @@ Shader "Scatter/VertexColorLit"
             15.0/16, 7.0/16, 13.0/16, 5.0/16
         };
 
-        // Discards the fragment progressively as the instance nears the cull distance.
-        void DistanceDither(float3 positionWS, float4 screenPos)
+        // Discards the fragment progressively as the instance nears the cull distance, and while it is still
+        // fading in. Both are the same screen-door: `appear` 0 hides the instance completely, 1 shows it.
+        void DistanceDither(float3 positionWS, float4 screenPos, float appear)
         {
             float dist = distance(positionWS, _WorldSpaceCameraPos);
             float fade = saturate((dist - _FadeStart) / max(1e-3, _FadeEnd - _FadeStart)); // 0 near, 1 at cull
+            fade = max(fade, 1.0 - appear);
             float2 sp = (screenPos.xy / max(screenPos.w, 1e-4)) * _ScreenParams.xy;
             int2 pix = int2(fmod(sp, 4.0));
             float threshold = _Bayer4x4[pix.y * 4 + pix.x];
@@ -121,6 +140,7 @@ Shader "Scatter/VertexColorLit"
                 float4 color : COLOR;
                 float fogFactor : TEXCOORD3;
                 float4 screenPos : TEXCOORD4;
+                float appear : TEXCOORD5;   // arrival ramp, computed in vert (unity_InstanceID is vertex-stage only)
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -138,13 +158,14 @@ Shader "Scatter/VertexColorLit"
                 OUT.color = IN.color;
                 OUT.fogFactor = ComputeFogFactor(pos.positionCS.z);
                 OUT.screenPos = ComputeScreenPos(pos.positionCS);
+                OUT.appear = ScatterAppear();
                 return OUT;
             }
 
             half4 frag(Varyings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
-                DistanceDither(IN.positionWS, IN.screenPos);
+                DistanceDither(IN.positionWS, IN.screenPos, IN.appear);
 
                 // Albedo = base map * tint. Vertex colour is intentionally NOT used as albedo:
                 // Synty low-poly stores a data mask there (blue), not display colour. With no base
@@ -280,6 +301,7 @@ Shader "Scatter/VertexColorLit"
                 float4 positionHCS : SV_POSITION;
                 float3 positionWS : TEXCOORD0;
                 float3 normalWS : TEXCOORD1;
+                float appear : TEXCOORD3;
                 float4 screenPos : TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -295,13 +317,14 @@ Shader "Scatter/VertexColorLit"
                 OUT.positionWS = pos.positionWS;
                 OUT.normalWS = nrm.normalWS;
                 OUT.screenPos = ComputeScreenPos(pos.positionCS);
+                OUT.appear = ScatterAppear();
                 return OUT;
             }
 
             half4 dnFrag(DNVaryings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
-                DistanceDither(IN.positionWS, IN.screenPos);
+                DistanceDither(IN.positionWS, IN.screenPos, IN.appear);
                 return half4(normalize(IN.normalWS), 0);
             }
             ENDHLSL

@@ -609,6 +609,18 @@ public sealed class ScatterField : IDisposable
         return $"foliage backlight: {Shader.GetGlobalFloat(id):F2} (default {ScatterRenderer.DefaultFoliageBacklight:F2})";
     }
 
+    [ConsoleCommand("fadein", "Seconds a newly gathered scatter instance dithers in over. 0 = appear instantly.", MonoTargetType.Registry)]
+    string FadeInCmd(float? seconds = null)
+    {
+        int id = Shader.PropertyToID(ShaderGlobalIds.ScatterFadeInSeconds);
+        if (seconds.HasValue)
+        {
+            ScatterRenderer.FadeInSeconds = Mathf.Clamp(seconds.Value, 0f, 5f);
+            Shader.SetGlobalFloat(id, ScatterRenderer.FadeInSeconds);
+        }
+        return $"scatter fade-in: {Shader.GetGlobalFloat(id):F2}s (0 = the old instant pop)";
+    }
+
     [ConsoleCommand("goto", "Move the camera to the nearest surface point of a biome, e.g. scatter.goto Forest.", MonoTargetType.Registry)]
     string GotoCmd(BiomeType biome, float? heightMeters = null)
     {

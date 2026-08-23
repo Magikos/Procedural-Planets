@@ -87,7 +87,20 @@ Shader "Scatter/FoliageLit"
             StructuredBuffer<float4x4> _ScatterMatrices;
             StructuredBuffer<float4x4> _ScatterMatricesInv;
             StructuredBuffer<uint> _ScatterVisible; // this band's indices into the master matrix buffers
+            // Arrival time per instance, so a newly gathered prop ramps in. See Scatter.shader.
+            StructuredBuffer<float> _ScatterBorn;
         #endif
+        float _ScatterFadeInSeconds;
+
+        float ScatterAppear()
+        {
+        #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+            if (_ScatterFadeInSeconds <= 0.0) return 1.0;
+            return saturate((_Time.y - _ScatterBorn[_ScatterVisible[unity_InstanceID]]) / _ScatterFadeInSeconds);
+        #else
+            return 1.0;
+        #endif
+        }
         void setup()
         {
         #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
@@ -104,10 +117,11 @@ Shader "Scatter/FoliageLit"
             15.0/16, 7.0/16, 13.0/16, 5.0/16
         };
 
-        void DistanceDither(float3 positionWS, float4 screenPos)
+        void DistanceDither(float3 positionWS, float4 screenPos, float appear)
         {
             float dist = distance(positionWS, _WorldSpaceCameraPos);
             float fade = saturate((dist - _FadeStart) / max(1e-3, _FadeEnd - _FadeStart));
+            fade = max(fade, 1.0 - appear);
             float2 sp = (screenPos.xy / max(screenPos.w, 1e-4)) * _ScreenParams.xy;
             int2 pix = int2(fmod(sp, 4.0));
             clip(_Bayer4x4[pix.y * 4 + pix.x] - fade);
@@ -252,6 +266,7 @@ Shader "Scatter/FoliageLit"
                 float fogFactor : TEXCOORD4;
                 float4 screenPos : TEXCOORD5;
                 float leafAO : TEXCOORD6; // Synty baked leaf AO (vertex colour G)
+                float appear : TEXCOORD7;   // arrival ramp; unity_InstanceID is vertex-stage only
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -271,13 +286,14 @@ Shader "Scatter/FoliageLit"
                 OUT.leafAO = IN.color.g; // Synty bakes leaf AO into vertex colour G (0 occluded .. 1 exposed)
                 OUT.fogFactor = ComputeFogFactor(OUT.positionHCS.z);
                 OUT.screenPos = ComputeScreenPos(OUT.positionHCS);
+                OUT.appear = ScatterAppear();
                 return OUT;
             }
 
             half4 frag(Varyings IN, FRONT_FACE_TYPE cullFace : FRONT_FACE_SEMANTIC) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
-                DistanceDither(IN.positionWS, IN.screenPos);
+                DistanceDither(IN.positionWS, IN.screenPos, IN.appear);
 
                 half4 leaf = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
                 half3 trunk = SAMPLE_TEXTURE2D(_TrunkMap, sampler_TrunkMap, IN.uv).rgb * _TrunkTint.rgb;
@@ -479,6 +495,7 @@ Shader "Scatter/FoliageLit"
                 float2 uv : TEXCOORD2;
                 float leafMask : TEXCOORD3;
                 float4 screenPos : TEXCOORD4;
+                float appear : TEXCOORD5;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -495,13 +512,14 @@ Shader "Scatter/FoliageLit"
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.leafMask = leafMask;
                 OUT.screenPos = ComputeScreenPos(OUT.positionHCS);
+                OUT.appear = ScatterAppear();
                 return OUT;
             }
 
             half4 dnFrag(DNVaryings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
-                DistanceDither(IN.positionWS, IN.screenPos);
+                DistanceDither(IN.positionWS, IN.screenPos, IN.appear);
                 half4 leaf = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
                 float lm = IN.leafMask;
                 float cutoff = lerp(0.0, _Cutoff + _LeafFall, lm);

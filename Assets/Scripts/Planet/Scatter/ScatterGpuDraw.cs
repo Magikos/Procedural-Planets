@@ -20,6 +20,7 @@ public sealed class ScatterGpuDraw : IDisposable
     static readonly int _fadeStartId = Shader.PropertyToID("_FadeStart");
     static readonly int _fadeEndId = Shader.PropertyToID("_FadeEnd");
     static readonly int _lodTintId = Shader.PropertyToID("_LodDebugTint");
+    static readonly int _bornId = Shader.PropertyToID("_ScatterBorn");
 
     static readonly int _cMaster = Shader.PropertyToID("_Master");
     static readonly int _cMasterInv = Shader.PropertyToID("_MasterInv");
@@ -46,15 +47,15 @@ public sealed class ScatterGpuDraw : IDisposable
 
     sealed class ProtoGpu
     {
-        public GraphicsBuffer Master, MasterInv;
+        public GraphicsBuffer Master, MasterInv, Born;
         public int Capacity;
         public int LastCount = -1; // last uploaded instance count; -1 forces the first upload
         public Band[] Bands;
         public void Dispose()
         {
-            Master?.Dispose(); MasterInv?.Dispose();
+            Master?.Dispose(); MasterInv?.Dispose(); Born?.Dispose();
             if (Bands != null) foreach (var b in Bands) { b.Visible?.Dispose(); b.Args?.Dispose(); }
-            Master = null; MasterInv = null; Bands = null; Capacity = 0;
+            Master = null; MasterInv = null; Born = null; Bands = null; Capacity = 0;
         }
     }
 
@@ -132,7 +133,7 @@ public sealed class ScatterGpuDraw : IDisposable
         return new Band { Mesh = imp.Quad, Lod = -1, Near2 = start * start, Far2 = imp.EndDistance * imp.EndDistance, Rp = rp, Mpb = mpb };
     }
 
-    public void DrawProto(int p, List<Matrix4x4> matrices, Vector3 camPos, bool dirty)
+    public void DrawProto(int p, List<Matrix4x4> matrices, List<float> born, Vector3 camPos, bool dirty)
     {
         if (!_supported) return;
         var g = _protos[p];
@@ -151,6 +152,8 @@ public sealed class ScatterGpuDraw : IDisposable
         if (dirty || grew || count != g.LastCount)
         {
             g.Master.SetData(matrices, 0, 0, count);
+            // Arrival times ride the same upload: they only change when the instance list does.
+            if (born != null && born.Count >= count) g.Born.SetData(born, 0, 0, count);
             // world->object on the GPU — no CPU Matrix4x4.inverse, so churn while flying stays cheap.
             _cull.SetBuffer(_kernelInv, _cMaster, g.Master);
             _cull.SetBuffer(_kernelInv, _cMasterInv, g.MasterInv);
@@ -180,6 +183,7 @@ public sealed class ScatterGpuDraw : IDisposable
             b.Mpb.SetBuffer(_matricesId, g.Master);
             b.Mpb.SetBuffer(_matricesInvId, g.MasterInv);
             b.Mpb.SetBuffer(_visibleId, b.Visible);
+            b.Mpb.SetBuffer(_bornId, g.Born);
             b.Mpb.SetColor(_lodTintId, ScatterLodBatcher.DebugTintFor(b.Lod)); // scatter.lodview
             RenderParams rp = b.Rp;
             rp.matProps = b.Mpb;
@@ -194,6 +198,8 @@ public sealed class ScatterGpuDraw : IDisposable
         int cap = Mathf.NextPowerOfTwo(Mathf.Max(count, 256));
         g.Master = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cap, 64);      // sizeof(float4x4)
         g.MasterInv = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cap, 64);
+        g.Born?.Dispose();
+        g.Born = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cap, sizeof(float));
         foreach (var b in g.Bands)
         {
             b.Visible?.Dispose();

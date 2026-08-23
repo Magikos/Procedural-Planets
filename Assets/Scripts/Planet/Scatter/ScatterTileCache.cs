@@ -143,6 +143,7 @@ public sealed class ScatterTileCache
     public int TileLevel => _tileLevel;
     public List<Matrix4x4> Matrices(int proto) => _buckets.Matrices(proto);
     public IReadOnlyList<Vector3> Positions(int proto) => _buckets.Positions(proto);
+    public List<float> Born(int proto) => _buckets.Born(proto);
     public IReadOnlyList<ulong> Ids(int proto) => _buckets.Ids(proto);
 
     // Remove a single instance this frame (harvested). The bucket drops it and marks the prototype's draw

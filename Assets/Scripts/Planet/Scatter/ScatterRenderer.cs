@@ -47,9 +47,17 @@ public sealed class ScatterRenderer : IDisposable
     static readonly int _foliageBacklightId = Shader.PropertyToID(ShaderGlobalIds.FoliageBacklight);
     public const float DefaultFoliageBacklight = 1.0f; // Bryan's pick from the live sweep
 
+    // Newly gathered instances dither in over this many seconds instead of appearing solid. Measured need:
+    // flying at 60 m/s the tile plan runs a permanent backlog (peak 13,665 pending pairs) and the visible
+    // instance count climbs by ~1,500 every 0.1 s — thousands of props per second arriving at full opacity.
+    // Published here because an unset global reads 0, which disables the ramp.
+    static readonly int _fadeInSecondsId = Shader.PropertyToID(ShaderGlobalIds.ScatterFadeInSeconds);
+    public static float FadeInSeconds = 0.6f;
+
     public void Configure()
     {
         Shader.SetGlobalFloat(_foliageBacklightId, DefaultFoliageBacklight);
+        Shader.SetGlobalFloat(_fadeInSecondsId, FadeInSeconds);
         DestroyImpostors(); // a previous world's baked cards/materials/quads
         _library = SettingsProvider.GetSettings<ScatterLibraryDto>();
         var bounds = new Bounds(_planetTransform.position, Vector3.one * 100000f);
@@ -117,7 +125,7 @@ public sealed class ScatterRenderer : IDisposable
             if (!proto.CanRender) continue;
             var matrices = _cache.Matrices(p);
             if (matrices.Count == 0) continue;
-            if (UseGpuDraw && _gpu.Supported) _gpu.DrawProto(p, matrices, camPos, _cache.ConsumeDrawDirty(p));
+            if (UseGpuDraw && _gpu.Supported) _gpu.DrawProto(p, matrices, _cache.Born(p), camPos, _cache.ConsumeDrawDirty(p));
             else _batcher.Draw(proto, _renderParams[p], matrices, _cache.Positions(p), camPos, _impostors[p]);
         }
     }

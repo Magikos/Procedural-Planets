@@ -110,6 +110,11 @@ Shader "Scatter/Impostor"
             3.0/16, 11.0/16, 1.0/16, 9.0/16,
             15.0/16, 7.0/16, 13.0/16, 5.0/16
         };
+
+        // Arrival ramp, shared with the mesh tiers. Folded into `coverage` rather than a DistanceDither,
+        // because the impostor already dithers on its own fade-in/fade-out coverage. The buffers it reads are
+        // declared per-pass in this shader, so SCATTER_APPEAR is defined after them, not here.
+        float _ScatterFadeInSeconds;
         ENDHLSL
 
         Pass
@@ -157,7 +162,17 @@ Shader "Scatter/Impostor"
                 StructuredBuffer<float4x4> _ScatterMatrices;
                 StructuredBuffer<float4x4> _ScatterMatricesInv;
                 StructuredBuffer<uint> _ScatterVisible;
+                StructuredBuffer<float> _ScatterBorn;
             #endif
+            float ScatterAppear()
+            {
+            #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+                if (_ScatterFadeInSeconds <= 0.0) return 1.0;
+                return saturate((_Time.y - _ScatterBorn[_ScatterVisible[unity_InstanceID]]) / _ScatterFadeInSeconds);
+            #else
+                return 1.0;
+            #endif
+            }
             void setup()
             {
             #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
@@ -186,6 +201,7 @@ Shader "Scatter/Impostor"
                 float3 billFwd : TEXCOORD6;    // view direction
                 float3 positionWS : TEXCOORD7;
                 float fogFactor : TEXCOORD8;
+                float appear : TEXCOORD9;   // arrival ramp; unity_InstanceID is vertex-stage only
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -209,6 +225,7 @@ Shader "Scatter/Impostor"
                 OUT.billUp = up;
                 OUT.billFwd = view;
                 OUT.fogFactor = ComputeFogFactor(OUT.positionHCS.z);
+                OUT.appear = ScatterAppear();
                 return OUT;
             }
 
@@ -219,7 +236,7 @@ Shader "Scatter/Impostor"
 
                 float fadeIn = saturate((IN.dist - _FadeInStart) / max(1e-3, _FadeInEnd - _FadeInStart));
                 float fadeOut = 1.0 - saturate((IN.dist - _FadeOutStart) / max(1e-3, _FadeOutEnd - _FadeOutStart));
-                float coverage = fadeIn * fadeOut;
+                float coverage = fadeIn * fadeOut * IN.appear;
 
                 float2 sp = (IN.screenPos.xy / max(IN.screenPos.w, 1e-4)) * _ScreenParams.xy;
                 int2 pix = int2(fmod(sp, 4.0));
@@ -305,7 +322,17 @@ Shader "Scatter/Impostor"
                 StructuredBuffer<float4x4> _ScatterMatrices;
                 StructuredBuffer<float4x4> _ScatterMatricesInv;
                 StructuredBuffer<uint> _ScatterVisible;
+                StructuredBuffer<float> _ScatterBorn;
             #endif
+            float ScatterAppear()
+            {
+            #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+                if (_ScatterFadeInSeconds <= 0.0) return 1.0;
+                return saturate((_Time.y - _ScatterBorn[_ScatterVisible[unity_InstanceID]]) / _ScatterFadeInSeconds);
+            #else
+                return 1.0;
+            #endif
+            }
             void setup()
             {
             #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
@@ -401,7 +428,17 @@ Shader "Scatter/Impostor"
                 StructuredBuffer<float4x4> _ScatterMatrices;
                 StructuredBuffer<float4x4> _ScatterMatricesInv;
                 StructuredBuffer<uint> _ScatterVisible;
+                StructuredBuffer<float> _ScatterBorn;
             #endif
+            float ScatterAppear()
+            {
+            #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+                if (_ScatterFadeInSeconds <= 0.0) return 1.0;
+                return saturate((_Time.y - _ScatterBorn[_ScatterVisible[unity_InstanceID]]) / _ScatterFadeInSeconds);
+            #else
+                return 1.0;
+            #endif
+            }
             void setup()
             {
             #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
@@ -428,6 +465,7 @@ Shader "Scatter/Impostor"
                 float3 billRight : TEXCOORD4;
                 float3 billUp : TEXCOORD5;
                 float3 billFwd : TEXCOORD6;
+                float appear : TEXCOORD8;
                 float3 positionWS : TEXCOORD7;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -451,6 +489,7 @@ Shader "Scatter/Impostor"
                 OUT.billRight = right;
                 OUT.billUp = up;
                 OUT.billFwd = view;
+                OUT.appear = ScatterAppear();
                 return OUT;
             }
 
@@ -461,7 +500,7 @@ Shader "Scatter/Impostor"
 
                 float fadeIn = saturate((IN.dist - _FadeInStart) / max(1e-3, _FadeInEnd - _FadeInStart));
                 float fadeOut = 1.0 - saturate((IN.dist - _FadeOutStart) / max(1e-3, _FadeOutEnd - _FadeOutStart));
-                float coverage = fadeIn * fadeOut;
+                float coverage = fadeIn * fadeOut * IN.appear;
 
                 float2 sp = (IN.screenPos.xy / max(IN.screenPos.w, 1e-4)) * _ScreenParams.xy;
                 int2 pix = int2(fmod(sp, 4.0));

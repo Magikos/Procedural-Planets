@@ -17,6 +17,10 @@ public sealed class ScatterDrawBuckets
     readonly List<ulong>[] _ids;        // parallel to _matrices[p]: ScatterId of each packed slot (harvest key)
     readonly List<long>[] _ownerTile;   // parallel to _matrices[p]: tile owning each packed slot
     readonly List<int>[] _ownerSlot;    // parallel: index of this slot within its tile's per-proto index list
+    // parallel: Time.timeSinceLevelLoad when the slot became resident, so the shader can ramp a newly
+    // gathered instance in instead of it appearing at full opacity. Flying at 60 m/s the tile plan runs a
+    // permanent backlog and thousands of instances land inside view every second; without this they pop.
+    readonly List<float>[] _born;
     // tileId -> per-prototype list of packed indices this tile occupies (its slots in _matrices[proto]).
     readonly Dictionary<long, List<int>[]> _tileIdx = new();
     // Per-prototype: this frame the packed matrix list changed (add/remove). The GPU draw re-uploads +
@@ -31,6 +35,7 @@ public sealed class ScatterDrawBuckets
         _ids = new List<ulong>[protoCount];
         _ownerTile = new List<long>[protoCount];
         _ownerSlot = new List<int>[protoCount];
+        _born = new List<float>[protoCount];
         _dirty = new bool[protoCount];
         for (int p = 0; p < protoCount; p++)
         {
@@ -39,6 +44,7 @@ public sealed class ScatterDrawBuckets
             _ids[p] = new List<ulong>();
             _ownerTile[p] = new List<long>();
             _ownerSlot[p] = new List<int>();
+            _born[p] = new List<float>();
         }
     }
 
@@ -55,6 +61,7 @@ public sealed class ScatterDrawBuckets
     public List<Matrix4x4> Matrices(int proto) => _matrices[proto];
     public IReadOnlyList<Vector3> Positions(int proto) => _positions[proto];
     public IReadOnlyList<ulong> Ids(int proto) => _ids[proto];
+    public List<float> Born(int proto) => _born[proto];
 
     public int InstanceCount
     {
@@ -62,6 +69,11 @@ public sealed class ScatterDrawBuckets
     }
 
     public void Add(long tileId, int proto, Matrix4x4 matrix, Vector3 position, ulong id)
+        => Add(tileId, proto, matrix, position, id, Time.timeSinceLevelLoad);
+
+    // bornOverride preserves an existing instance's arrival time. RemoveInstanceById rebuilds a whole tile
+    // to drop one harvested prop; without it every surviving prop in that tile would re-fade as if new.
+    public void Add(long tileId, int proto, Matrix4x4 matrix, Vector3 position, ulong id, float bornOverride)
     {
         if (!_tileIdx.TryGetValue(tileId, out var perProto))
         {
@@ -75,6 +87,7 @@ public sealed class ScatterDrawBuckets
         _ids[proto].Add(id);
         _ownerTile[proto].Add(tileId);
         _ownerSlot[proto].Add(idx.Count);
+        _born[proto].Add(bornOverride);
         idx.Add(packed);
         _dirty[proto] = true;
     }
@@ -91,7 +104,7 @@ public sealed class ScatterDrawBuckets
         long tile = _ownerTile[proto][packed];
         if (!_tileIdx.TryGetValue(tile, out var perProto)) return false;
 
-        var survivors = new List<(int proto, Matrix4x4 matrix, Vector3 position, ulong id)>();
+        var survivors = new List<(int proto, Matrix4x4 matrix, Vector3 position, ulong id, float born)>();
         for (int p = 0; p < _protoCount; p++)
         {
             var slots = perProto[p];
@@ -101,12 +114,12 @@ public sealed class ScatterDrawBuckets
                 int packedIdx = slots[k];
                 ulong sid = _ids[p][packedIdx];
                 if (p == proto && sid == id) continue; // the harvested instance
-                survivors.Add((p, _matrices[p][packedIdx], _positions[p][packedIdx], sid));
+                survivors.Add((p, _matrices[p][packedIdx], _positions[p][packedIdx], sid, _born[p][packedIdx]));
             }
         }
 
         RemoveTile(tile);
-        foreach (var s in survivors) Add(tile, s.proto, s.matrix, s.position, s.id);
+        foreach (var s in survivors) Add(tile, s.proto, s.matrix, s.position, s.id, s.born);
         return true;
     }
 
@@ -127,7 +140,7 @@ public sealed class ScatterDrawBuckets
     void RemoveBlock(int p, List<int> idx)
     {
         var mats = _matrices[p]; var poss = _positions[p]; var ids = _ids[p];
-        var owner = _ownerTile[p]; var slot = _ownerSlot[p];
+        var owner = _ownerTile[p]; var slot = _ownerSlot[p]; var born = _born[p];
         while (idx.Count > 0)
         {
             int packed = idx[idx.Count - 1];
@@ -138,6 +151,7 @@ public sealed class ScatterDrawBuckets
                 mats[packed] = mats[last];
                 poss[packed] = poss[last];
                 ids[packed] = ids[last];
+                born[packed] = born[last];
                 long moverTile = owner[last];
                 int moverSlot = slot[last];
                 owner[packed] = moverTile;
@@ -149,6 +163,7 @@ public sealed class ScatterDrawBuckets
             ids.RemoveAt(last);
             owner.RemoveAt(last);
             slot.RemoveAt(last);
+            born.RemoveAt(last);
         }
     }
 
@@ -161,6 +176,7 @@ public sealed class ScatterDrawBuckets
             _ids[p].Clear();
             _ownerTile[p].Clear();
             _ownerSlot[p].Clear();
+            _born[p].Clear();
         }
         _tileIdx.Clear();
     }
