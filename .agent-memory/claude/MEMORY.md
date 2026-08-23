@@ -1,6 +1,6 @@
 # Memory Index
 
-- [Water shore + horizon rendering](project_water_shore_rendering.md) — 8 fixes 2026-08-22. **Stepped lake edge STILL OPEN — the tan band is DESERT, not LakeShore; 7 attempts fixed the wrong biome.** Read atlases with AsyncGPUReadback, never Blit.
+- [Water shore + horizon rendering](project_water_shore_rendering.md) — 9 fixes. **Lake "blocks" SOLVED: it was the GRASS water-fade, not biomes — 7 attempts in the wrong system.** Found by colour-coded elimination, read-only, no regenerates.
 
 - [World delta log — M0 save foundation](project_world_delta_log.md) — append-only log + EntityId. **GOTCHA: a ScatterId and an EntityId can be the SAME number — the keyspace must be split.** Verified on Bryan's real save: 54 records imported, 3.2x smaller than the JSON.
 

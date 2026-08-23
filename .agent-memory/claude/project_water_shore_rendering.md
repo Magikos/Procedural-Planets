@@ -183,3 +183,56 @@ what you are looking at before theorising about why it looks wrong.**
 Second: a `Graphics.Blit` into a RenderTexture is NOT a measurement of texture contents - it resamples and
 converts. It returned ids 50/71/73 where the real values were 16/11/17. Use `AsyncGPUReadback.Request(tex, 0,
 GraphicsFormat.R8G8B8A8_UNorm)` then `WaitForCompletion()`.
+
+## SOLVED — it was GRASS, not biomes. Supersedes every section above.
+
+Fixed in `52143a1`. The blocks around every lake were the grass carpet vanishing in cell-shaped patches,
+letting bare ground show through. **No part of the biome system was ever involved.**
+
+`EvaluateGrassOverlay` in PlanetVertexColor.shader fades grass out approaching water:
+
+```
+waterRadius = WaterSurfaceRadiusAt(dir, _GrassWaterRadius);
+altitude    = length(relPos) - waterRadius;
+waterKeep   = smoothstep(clearance, clearance + 4.0, altitude);
+```
+
+The level field it measured against stops ONE cell from the water, and past that the lookup falls back to the
+GLOBAL sea radius. Beside a lake perched 30 m up that fallback is a **30 m step in altitude against a 4 m fade
+band**, so waterKeep flipped 0 to 1 across a single 41 m cell edge. waterKeep multiplies every overlay weight,
+which is why GrassLodCoverage showed pure black exactly where the beauty pass showed dark blocks.
+
+Fix: two level fields. The tight one is unchanged and still answers every wetness test (the mesh reads it via
+C# and MUST keep it, or water is meshed over dry ground). A second is carried ShoreRings onto dry land WITHOUT
+the anti-flood guard - nothing compares it against elevation, and the cells that guard excludes are exactly the
+ones the fade needs. Grass reads the second. No existing consumer changed.
+
+**Residual to eye:** the suppressed band is now soft and contour-following but WIDER, because the fade actually
+completes instead of snapping. Whether that width is right is a tuning call on `waterClearance` and the 4 m
+band, not a bug.
+
+## How it was found, after seven failed attempts
+
+Bryan called it: stop theorising, colour-code it. Four elimination tests, all READ-ONLY, no regenerations:
+
+| test | result |
+| --- | --- |
+| false-colour the biome id atlas in plan view | smooth organic regions - **clean** |
+| `_CloudShadowParams` strength -> 0 | blocks remain |
+| `QualitySettings.shadows = Disable` | blocks remain |
+| `GrassLodCoverage` debug mode | **blocks are here** |
+
+Seven prior attempts changed the biome resolver, both level fields, the mask dilation and the bake's id choice
+- a system that was never involved - all from assuming in the first minute that tan sand beside water meant
+LakeShore. It was Desert, and the artifact was grass.
+
+**Two false negatives that nearly killed the correct hypothesis:**
+- `Shader.GetGlobalFloat("_GrassWaterRadius")` returns 0 - it is a MATERIAL property, real value 5000. Reading
+  a material property through the global channel returns a plausible-looking zero. Check `HasProperty` on the
+  material. Terrain material is `Planet (runtime)`, shader `Planet/VertexColor`.
+- `round(idPacked * 255.0)` for biome ids is EXACT for every id 0..17. Not a rounding bug; do not re-suspect it.
+
+**Method that works here:** pick the cheapest test that splits the space in half, run it read-only, and only
+then form a hypothesis. Existing debug modes (`WaterOff`, `VolumeMask`, `SurfaceAlpha`, `AtmosphereBypass`,
+`GrassLodCoverage`, `BiomeMapPrimaryId`) plus runtime toggles of globals and material floats cover most of the
+render pipeline without a single regeneration.
