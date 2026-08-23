@@ -762,7 +762,15 @@ Shader "Planet/VertexColor"
                     // Fade against the water standing HERE, not the planet's ocean. Keyed to the global
                     // radius, a lake 40 m up left this reading 40 m of altitude at its own waterline - far
                     // outside the 4 m fade band - so grass grew at full strength into the lake.
-                    float waterRadius = WaterSurfaceRadiusAt(normalize(relPos), _GrassWaterRadius);
+                    //
+                    // The SHORE field, not the wet-test one. The wet-test field stops one cell from the
+                    // water, and beyond it this falls back to the global sea radius - beside a lake perched
+                    // 30 m up that is a 30 m step in altitude against a 4 m fade band. waterKeep therefore
+                    // went 0 to 1 across a single 41 m cell edge and multiplies every overlay weight, so the
+                    // grass carpet vanished in cell-shaped patches and left bare ground showing through:
+                    // the blocks around every lake. The shore field is carried far enough onto dry land for
+                    // the fade to finish before it runs out.
+                    float waterRadius = ShoreSurfaceRadiusAt(normalize(relPos), _GrassWaterRadius);
                     float altitude = length(relPos) - waterRadius;
                     waterKeep = smoothstep(max(grass.waterClearance, 0.0), max(grass.waterClearance, 0.0) + 4.0, altitude);
                 }

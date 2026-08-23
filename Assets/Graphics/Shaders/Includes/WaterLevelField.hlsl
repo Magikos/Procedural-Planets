@@ -13,19 +13,19 @@
 TEXTURE2D_ARRAY(_WaterLevelTex);
 SAMPLER(sampler_WaterLevelTex);
 float _WaterLevelRes;
+TEXTURE2D_ARRAY(_ShoreLevelTex);
+SAMPLER(sampler_ShoreLevelTex);
+float _ShoreLevelRes;
 // Scale the level is expressed against, published with the field so no caller has to supply it.
 float _WaterLevelBaseRadius;
 
 #define WATER_LEVEL_NO_WATER_MAX (-0.5)
 
-// Water surface height in planet-radius units, or WATER_LEVEL_NO_WATER_MAX and below where none stands.
-float SampleWaterLevel(float3 direction)
+// Cube-face projection, shared by both fields. Extracted rather than copied because it has to stay identical
+// to WaterLevelGrid.Index in C# and one copy is already one more than can be kept in step by hand.
+void WaterLevelFaceUv(float3 direction, float resolution, out int face, out float2 uv)
 {
-    if (_WaterLevelRes <= 0.0)
-        return WATER_LEVEL_NO_WATER_MAX - 1.0;
-
     float3 a = abs(direction);
-    int face;
     float uSigned, vSigned;
 
     if (a.y >= a.x && a.y >= a.z)
@@ -47,10 +47,35 @@ float SampleWaterLevel(float3 direction)
         else                    { face = 5; uSigned = -direction.y * inv; vSigned = -direction.x * inv; }
     }
 
-    float2 uv = float2(uSigned * 0.5 + 0.5, vSigned * 0.5 + 0.5);
+    uv = float2(uSigned * 0.5 + 0.5, vSigned * 0.5 + 0.5);
     // Sample at the cell centre the C# side would land on, so both agree on which cell a direction owns.
-    uv = (floor(saturate(uv) * _WaterLevelRes) + 0.5) / _WaterLevelRes;
+    uv = (floor(saturate(uv) * resolution) + 0.5) / resolution;
+}
+
+// Water surface height in planet-radius units, or WATER_LEVEL_NO_WATER_MAX and below where none stands.
+float SampleWaterLevel(float3 direction)
+{
+    if (_WaterLevelRes <= 0.0)
+        return WATER_LEVEL_NO_WATER_MAX - 1.0;
+
+    int face;
+    float2 uv;
+    WaterLevelFaceUv(direction, _WaterLevelRes, face, uv);
     return SAMPLE_TEXTURE2D_ARRAY_LOD(_WaterLevelTex, sampler_WaterLevelTex, uv, face, 0).r;
+}
+
+// The same solve carried further onto dry land. Answers "how high does water stand near here" for callers
+// measuring a height ABOVE the water; never use it as a wetness test, because it deliberately covers ground
+// that is dry.
+float SampleShoreLevel(float3 direction)
+{
+    if (_ShoreLevelRes <= 0.0)
+        return WATER_LEVEL_NO_WATER_MAX - 1.0;
+
+    int face;
+    float2 uv;
+    WaterLevelFaceUv(direction, _ShoreLevelRes, face, uv);
+    return SAMPLE_TEXTURE2D_ARRAY_LOD(_ShoreLevelTex, sampler_ShoreLevelTex, uv, face, 0).r;
 }
 
 // Local-space radius of the water surface above a direction, falling back to the global sea radius
@@ -58,6 +83,14 @@ float SampleWaterLevel(float3 direction)
 float WaterSurfaceRadiusAt(float3 direction, float fallbackSeaRadius)
 {
     float level = SampleWaterLevel(direction);
+    return level > WATER_LEVEL_NO_WATER_MAX ? _WaterLevelBaseRadius * (1.0 + level) : fallbackSeaRadius;
+}
+
+// Same, against the wider field. For "how far above the water is this ground" - the tight field ends one cell
+// from the water, so a fade measured against it snaps from suppressed to clear across one cell boundary.
+float ShoreSurfaceRadiusAt(float3 direction, float fallbackSeaRadius)
+{
+    float level = SampleShoreLevel(direction);
     return level > WATER_LEVEL_NO_WATER_MAX ? _WaterLevelBaseRadius * (1.0 + level) : fallbackSeaRadius;
 }
 

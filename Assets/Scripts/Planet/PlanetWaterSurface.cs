@@ -59,6 +59,12 @@ public sealed class PlanetWaterSurface
 
     readonly WaterLevelTexture _levelTexture = new();
 
+    // Wider companion field. Grass fades out approaching water and that fade cannot finish inside the tight
+    // field - see WaterBodyMap.ShoreLevelGrid for what that produced.
+    readonly WaterLevelTexture _shoreLevelTexture = new(
+        ShaderGlobalIds.ShoreLevelTex, ShaderGlobalIds.ShoreLevelRes,
+        ShaderGlobalIds.WaterLevelBaseRadius, "ShoreLevelField");
+
 
 
     public PlanetWaterSurface(Transform planetTransform)
@@ -137,6 +143,7 @@ public sealed class PlanetWaterSurface
         // Publish the level field before the mesh build so the terrain and volume shaders are never a frame
         // behind the surface they are shading against.
         _levelTexture.Publish(WaterBodyMap.Current?.LevelGrid, WaterBodyMap.Resolution, planet.PlanetRadius);
+        _shoreLevelTexture.Publish(WaterBodyMap.Current?.ShoreLevelGrid, WaterBodyMap.Resolution, planet.PlanetRadius);
         // Water builder reads per-face vertex/elevation grids via IFaceMeshSampler. Both
         // resolution modes (Low/High) supply this view; chunked path wraps each root chunk.
         if (faceSamplers == null || faceSamplers.Count == 0)
@@ -485,5 +492,6 @@ public sealed class PlanetWaterSurface
         // _waterObject is a child of the planet transform and is destroyed with the planet.
         _waterObject = null;
         _levelTexture.Dispose();
+        _shoreLevelTexture.Dispose();
     }
 }

@@ -123,6 +123,10 @@ public sealed class WaterBodyMap
     // ShoreRings onto the shore so `elevation < LevelAt(dir)` stays a valid wet test at mesh resolution.
     float[] _level;
 
+    // Same solve carried ShoreRings onto dry land and WITHOUT the anti-flood guard, for consumers that need
+    // a reference height rather than a wetness test - see ShoreLevelGrid.
+    float[] _shoreLevel;
+
     // Seam neighbour lookups that did not agree in both directions. Cube faces at equal resolution should be
     // 1:1 across a seam, so this is expected to be 0; a non-zero count means a body could split at a seam.
     public int SeamAsymmetryCount { get; private set; }
@@ -263,7 +267,8 @@ public sealed class WaterBodyMap
             submerged[i] = filled[i] > elevation[i] + SpillDepthEpsilon;
             if (submerged[i]) SubmergedCellCount++;
         }
-        _level = BuildLevelField(filled, elevation);
+        _level = BuildLevelField(filled, elevation, LevelRings, guardAgainstFlooding: true);
+        _shoreLevel = BuildLevelField(filled, elevation, ShoreRings, guardAgainstFlooding: false);
         return submerged;
     }
 
@@ -334,7 +339,7 @@ public sealed class WaterBodyMap
     // So a level only exists where water actually stands. Land keeps NoWater, and the water level is dilated
     // one ring onto the surrounding land so the shoreline can still be found between the last wet cell and
     // the first dry one - without that ring the coastline would quantise to the coarse grid.
-    float[] BuildLevelField(float[] filled, float[] elevation)
+    float[] BuildLevelField(float[] filled, float[] elevation, int rings, bool guardAgainstFlooding)
     {
         var level = new float[TotalCells];
         for (int i = 0; i < TotalCells; i++)
@@ -367,7 +372,7 @@ public sealed class WaterBodyMap
         // Level smaller than mask is also the safe direction for the pair - wherever the level says water,
         // the mask already says lake, so the two cannot disagree and bite a notch out of the bed.
         var dilated = (float[])level.Clone();
-        for (int ring = 0; ring < LevelRings; ring++)
+        for (int ring = 0; ring < rings; ring++)
         {
             float[] source = (float[])dilated.Clone();
             for (int i = 0; i < TotalCells; i++)
@@ -378,7 +383,10 @@ public sealed class WaterBodyMap
                 {
                     int ni = _neighbors[i * 4 + n];
                     if (ni < 0 || source[ni] <= highest) continue;
-                    if (elevation[i] <= source[ni]) continue;   // below the water: not a shore, would flood
+                    // Only the WET-TEST field needs this. The reference field is never compared against
+                    // elevation to decide wetness, and the cells it would exclude are exactly the ones whose
+                    // height above the water the grass fade has to ask about.
+                    if (guardAgainstFlooding && elevation[i] <= source[ni]) continue;
                     // And stop once the ground has climbed clear of the water. Ring count alone let the
                     // level walk 160 m up a bank and, where two basins sit close, straight across the gap
                     // between them. This grid is 41 m but the mesh samples elevation far finer, so every
@@ -497,6 +505,18 @@ public sealed class WaterBodyMap
     // upload it to a Burst job. Indexed with WaterLevelGrid.Index(dir, Resolution); WaterLevelGrid.NoWater
     // marks cells where no water stands. Null when the solve did not run.
     public float[] LevelGrid => _level;
+
+    // The same solve carried further onto dry land, for asking "how high above the water is this ground"
+    // rather than "is this ground wet". Grass fades out approaching water over a few metres of altitude, and
+    // against the tight field that fade cannot finish: the field ends one cell from the water, the shader
+    // falls back to the GLOBAL sea radius there, and beside a lake perched 30 m up that fallback is a 30 m
+    // step against a 4 m fade band. Grass therefore switched from fully suppressed to fully present across a
+    // single 41 m cell boundary, leaving cell-shaped patches of bare ground around every lake.
+    //
+    // Dilated WITHOUT the anti-flood guard on purpose. That guard exists so a dry cell below a neighbouring
+    // level cannot be meshed as water; nothing here is ever compared against elevation to decide wetness, and
+    // those cells are exactly the ones the fade needs an answer for.
+    public float[] ShoreLevelGrid => _shoreLevel;
     public static int Resolution => Res;
 
     // Water surface height at a direction, for use as `elevation < LevelAt(dir)`.

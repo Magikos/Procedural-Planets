@@ -32,6 +32,11 @@ public static partial class ShaderGlobalIds
     public const string WaterLevelRes = "_WaterLevelRes";
     public const string WaterLevelBaseRadius = "_WaterLevelBaseRadius";
 
+    // The same field carried further onto dry land, for height-above-water questions rather than wetness.
+    // Published by PlanetWaterSurface; consumed by Includes/WaterLevelField.hlsl.
+    public const string ShoreLevelTex = "_ShoreLevelTex";
+    public const string ShoreLevelRes = "_ShoreLevelRes";
+
     // Where the water volume tint fades in, as a fraction of DeepDepth. The shoreline feather is a depth
     // ramp rather than a distance ramp so it widens by itself on a shallow bank and tightens on a steep one.
     // Consumed by Includes/WaterVolumeData.hlsl; published by PlanetWaterSurface from WaterDto.

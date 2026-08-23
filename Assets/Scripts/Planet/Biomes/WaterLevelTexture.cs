@@ -17,11 +17,26 @@ public sealed class WaterLevelTexture : System.IDisposable
     // fetch. Far below any real elevation, so a shader comparing against it can never read it as water.
     public const float NoWaterSentinel = -1f;
 
-    static readonly int _texId = Shader.PropertyToID(ShaderGlobalIds.WaterLevelTex);
-    static readonly int _resId = Shader.PropertyToID(ShaderGlobalIds.WaterLevelRes);
-    static readonly int _baseRadiusId = Shader.PropertyToID(ShaderGlobalIds.WaterLevelBaseRadius);
+    // Which globals this instance publishes to. Two fields exist - the tight one every wetness test uses,
+    // and a wider one carried onto dry land for height-above-water questions - and they are the same data
+    // laid out identically, so they share this class rather than duplicating it.
+    readonly int _texId;
+    readonly int _resId;
+    readonly int _baseRadiusId;
+    readonly string _textureName;
 
     Texture2DArray _texture;
+
+    public WaterLevelTexture(string texName = ShaderGlobalIds.WaterLevelTex,
+        string resName = ShaderGlobalIds.WaterLevelRes,
+        string baseRadiusName = ShaderGlobalIds.WaterLevelBaseRadius,
+        string textureName = "WaterLevelField")
+    {
+        _texId = Shader.PropertyToID(texName);
+        _resId = Shader.PropertyToID(resName);
+        _baseRadiusId = Shader.PropertyToID(baseRadiusName);
+        _textureName = textureName;
+    }
 
     public void Publish(float[] level, int resolution, float baseRadiusLocal)
     {
@@ -37,7 +52,7 @@ public sealed class WaterLevelTexture : System.IDisposable
             _texture = new Texture2DArray(resolution, resolution, 6, GraphicsFormat.R32_SFloat,
                 TextureCreationFlags.None)
             {
-                name = "WaterLevelField",
+                name = _textureName,
                 wrapMode = TextureWrapMode.Clamp,
                 // Point sampling: neighbouring cells can belong to different bodies at different heights,
                 // and interpolating between two lake surfaces produces a level belonging to neither.
