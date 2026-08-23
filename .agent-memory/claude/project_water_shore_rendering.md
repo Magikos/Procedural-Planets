@@ -380,3 +380,31 @@ outside it. Also underwater god rays (air shafts are now suppressed when submerg
 **Open inconsistency for Bryan's eye:** `UnderwaterSkyColor` is bright teal while the volume's `deepTint` is
 dark navy, so distant things fade toward a colour the surrounding water never reaches. The extinction maths is
 right; the two just disagree about what deep water looks like.
+
+## A hard block at the horizon is CLOUDS, not the sea ray (2026-08-23)
+
+Bryan reported a rectangular hard-edged block sitting on the water horizon and asked whether the
+enter-water / under-the-curve / exit-water artifact had returned after `e5ddd5a`. It had not.
+
+Reproduced at his saved teleport `SeeThroughWater` (camera 178 m up, looking 14.6 deg BELOW horizontal over
+water - the exact grazing geometry the sea-ray bug lived in):
+
+| test | result |
+| --- | --- |
+| midday, clouds on | horizon smooth, no block |
+| low sun (`time.set-local 0.76`), clouds on | **block appears on the horizon** |
+| same, `cloud.density 0` | block gone, horizon a clean curve |
+| `WaterOff` (26) | no block in the terrain silhouette |
+
+So the block is the cloud raymarch at the horizon. It only shows at low sun because that is when the horizon
+clouds are lit enough to see - which is why it reads as a time-of-day effect. The stair-stepped edges on the
+other horizon clouds in the same frame are the same artifact and are the tell.
+
+**Method note:** `cloud.density 0` is a one-command split for "is this clouds?", far cheaper than reasoning
+about the raymarch. `quality.cloud-steps` is the related knob. Pair it with `time.freeze on` or the sun
+drifts between the two captures and the comparison is worthless.
+
+**Care:** `cloud.density` changes the runtime DTO only - `CloudSettings.asset` keeps its authored
+`DensityMultiplier` and play-stop restores it - but the console reports 0-1 while the asset stores the
+internal multiplier, so you cannot read the old value back off the asset to restore it. Record the value
+BEFORE changing it.
