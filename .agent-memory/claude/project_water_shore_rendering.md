@@ -346,3 +346,37 @@ from. Level alone is not enough.
 **Workflow note:** each verify cycle is ~15 minutes of generation, so batch the checks you want per run.
 Reproduce Bryan's exact viewpoint with `camera.teleport LastDebugCapture`, render at the sidecar's source
 resolution, and crop with ffmpeg for a like-for-like before/after against his F10 PNG.
+
+## Underwater: the atmosphere owns the bug, not the water (2026-08-23, `6d2e3d0` + `847e867`)
+
+Both underwater defects lived in `Atmosphere.shader`, not in any water shader. **Render order is volume ->
+atmosphere** (`DEBUG_VOLUME_AFTER_ATMOSPHERE = 41` exists precisely because that is NOT the default), so the
+atmosphere gets the last word on every underwater pixel and was using it wrongly twice.
+
+**1. Flat teal wash, no surface underside.** The water surface writes no depth (`ZWrite Off`), so every pixel
+showing it classifies as SKY. The underwater branch did `return float4(UnderwaterSkyColor(viewDir), ...)`,
+discarding `originalCol` - and `originalCol` was the surface the Ocean pass had just drawn, ripples, glint and
+all. Now `lerp(UnderwaterSkyColor, originalCol.rgb, WaterInterfaceFrontMask(uv))`.
+
+**2. Far shore bleached cream by day, black at night** (Bryan's exact words). The volume already attenuates
+those pixels - `FarTerrainWaterlineMask` early-outs to mask 1.0, `seaPath = receiverDistance`, when
+`CameraSeaOffset() < 0` - and then `CalculateScattering` laid AIR scattering over the top, so they took the
+sky's colour rather than the water's. Fixed by fading the whole atmosphere contribution out with
+`CameraUnderwater01()`. No-op above water, verified against the OceanShoreStudy view.
+
+**The single most useful probe here is `_OceanDebugMode = 40` (`AtmosphereBypass`).** If a frame looks right
+with the atmosphere off and wrong with it on, the atmosphere is the owner. That one capture found both bugs.
+`ShouldBypassAtmosphereForWaterDebug()` lists every mode that already skips it.
+
+**Trap:** the underwater sky branch sits BEFORE the `DEBUG_ATMOSPHERE_WATER_CUT` (42) branch, so mode 42 is
+dead while submerged and tells you nothing. I wasted a capture on it. Check branch ORDER before trusting a
+debug mode to isolate something.
+
+**Still not built** (do not report underwater as done): Snell's window - straight up the surface is correctly
+near-transparent at normal incidence, so there is nothing to preserve and the view stays flat; a real window
+needs the sky refracted and attenuated inside the ~48.6 deg critical cone with total internal reflection
+outside it. Also underwater god rays (air shafts are now suppressed when submerged, correctly).
+
+**Open inconsistency for Bryan's eye:** `UnderwaterSkyColor` is bright teal while the volume's `deepTint` is
+dark navy, so distant things fade toward a colour the surrounding water never reaches. The extinction maths is
+right; the two just disagree about what deep water looks like.
