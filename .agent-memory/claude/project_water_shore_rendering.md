@@ -236,3 +236,36 @@ LakeShore. It was Desert, and the artifact was grass.
 then form a hypothesis. Existing debug modes (`WaterOff`, `VolumeMask`, `SurfaceAlpha`, `AtmosphereBypass`,
 `GrassLodCoverage`, `BiomeMapPrimaryId`) plus runtime toggles of globals and material floats cover most of the
 render pipeline without a single regeneration.
+
+## The blocks took TWO fixes, not one. `52143a1` was only half.
+
+`52143a1` was reported here as SOLVED. It was not. Bryan's next F10 still showed them, and the beauty pass
+confirmed it: dark patches with hard 90-degree axis-aligned steps, grass still growing *inside* them, so a
+darkening rather than a hole.
+
+Second fix `538b7cc`. Same function, different mechanism:
+
+| | |
+| --- | --- |
+| `52143a1` | past the tight field's edge the lookup fell back to the GLOBAL sea radius - a 30 m step against a 4 m fade band. Fixed by adding a second, wider shore field. |
+| `538b7cc` | the shore field is **point-sampled with its UV snapped to a cell centre**, so any fade measured against it is a 41 m staircase *by construction*. Fixed by bilinear-blending four taps. |
+
+Hardware bilinear cannot be used on either field: dry cells carry a sentinel far below any real level, and
+letting it into the blend drags the surface to nothing. Weight only the taps above `WATER_LEVEL_NO_WATER_MAX`.
+The tight field keeps its exact snap - it decides wetness and must agree with C# cell for cell.
+
+**The stage-split that found it, three captures, no regeneration** - `_OceanDebugMode` renders terrain albedo
+at three points in the same fragment shader:
+
+| mode | stage | blocks? |
+| --- | --- | --- |
+| 95 `TerrainPrimaryAlbedo` | raw biome triplanar | clean |
+| 94 `TerrainOverrideComposite` | coast/slope/snow masks | clean |
+| 81 `TerrainSelectedAlbedo` | after overrides AND after `ApplyGrassSurfaceAlbedo` | **blocks** |
+
+Two modes bracketing one function is worth far more than any amount of reasoning about the function. Reach for
+that bracket first whenever an artifact survives a fix.
+
+**Trap that cost a capture:** `DebugModeConstants` already used 87 (`BiomeAltitudeCooling`). A hand-added
+temporary mode collided with it and produced a plausible-looking image that meant nothing. `Max=107` - read
+the constants before picking a number, or better, bracket with the modes that already exist.
