@@ -331,11 +331,16 @@ public static class WaterMeshBuilder
             // of an edge: push it far and t saturates at Clamp01, the vertex snaps onto the dry grid corner,
             // and the whole outline collapses into an axis-aligned staircase of cell-sized squares.
             //
-            // It used to be a distance, ~27.5 m against a ~41 m edge - 0.67 of an edge - so every crossing
-            // past t = 0.33 clamped. That was almost all of them, and it is what put the square steps around
-            // every lake. Any overhang that survives is trimmed per pixel against the depth buffer in
-            // Ocean.shader, so this only has to be big enough to close the seam, not to hide anything.
-            const float ShorelineOverlapEdgeFraction = 0.08f;
+            // It used to be a distance, ~27.5 m against a ~22 m edge, so every crossing past t = 0.33
+            // clamped, the vertex snapped to the dry grid corner, and the outline collapsed into a staircase.
+            //
+            // Ocean.shader now decides where the sheet stops per PIXEL, so this no longer sets the visible
+            // waterline - it only has to guarantee the mesh COVERS it. That is why it is much wider than the
+            // seam alone needs: the mesh clips against a level field quantised at 40.9 m while the ground it
+            // crosses is sampled at ~21.6 m, and on flat ground a small height error is a large lateral one,
+            // so the true line can fall well outside a tight overlap. Where the mesh stops short there is no
+            // geometry for the trim to carve and the zigzag survives as a notch of missing water.
+            const float ShorelineOverlapEdgeFraction = 0.30f;
 
             if (aWet && !bWet)
                 t += ShorelineOverlapEdgeFraction;

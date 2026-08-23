@@ -632,18 +632,29 @@ Shader "Planet/Ocean"
                 return t * t * sceneValid * (1.0 - onLand);
             }
 
-            // There is deliberately no depth-buffer gate on the surface's own alpha.
+            // Metres of dry ground over which the sheet fades out. Small enough that the waterline stays
+            // crisp, wide enough that it antialiases instead of stair-stepping along pixel rows.
+            #define SHORE_TRIM_FADE 0.35
+
+            // Where the sheet stops, decided per PIXEL rather than by the mesh outline.
             //
-            // One was tried, trimming the sheet wherever the bed behind a pixel sat above the water. It works
-            // looking down at a shore and is badly wrong looking ALONG one: at a grazing angle the depth
-            // buffer behind a water pixel holds distant land on the far side of the water, so the test
-            // concluded there was no water and erased the surface - a hard horizontal line partway up the
-            // sea, in the same place across the whole frame.
+            // The mesh's waterline is a marching-squares contour on a ~21.6 m grid: a chain of straight
+            // segments, which is the zigzag along every beach and the hard-edged look of every lake. No mesh
+            // resolution fixes that, it only shortens the segments. Measuring the water column here instead
+            // puts the visible edge on the real ground crossing at pixel resolution, and lets the mesh carry
+            // a generous overlap inland whose own outline never shows.
             //
-            // The depth buffer answers "what is behind this pixel", never "is there water AT this pixel",
-            // and no amount of tuning turns one into the other. The mesh already answers the second, because
-            // it only exists where water stands. Trimming overhang belongs in the mesh, which is why the
-            // shoreline clip keeps its real elevation crossing and the overlap is a small fraction of an edge.
+            // A depth-buffer trim was tried once before and abandoned. Looking ALONG the water, the first
+            // opaque hit behind a water pixel is land on the FAR shore, so the column read negative and the
+            // surface was erased in a hard horizontal band across the whole frame. What makes it work now is
+            // sceneValid: MeasuredWaterColumn already drops it to zero once the bed is more than 160 m from
+            // the pixel, so a far-shore hit cannot trim anything. Only a bed close enough to be THIS pixel's
+            // own ground is allowed to say there is no water here.
+            float ShorelineTrim(float column, float sceneValid)
+            {
+                float onLand = saturate(-column / SHORE_TRIM_FADE);
+                return 1.0 - onLand * sceneValid;
+            }
 
             SurfaceLayer ComputeSurfaceLayer(
                 float3 positionWS,
@@ -801,6 +812,7 @@ Shader "Planet/Ocean"
                 float farAlpha = farOpacityCeiling * lerp(0.74, 1.0, body01);
                 float pathAlpha = saturate(smoothstep(0.08, 0.68, viewPath) * lerp(0.82, 1.0, fresnel));
                 layer.alpha = saturate(lerp(lerp(nearAlpha, farAlpha, pathAlpha), _IceOpacity, iceContribution));
+                layer.alpha *= ShorelineTrim(waterColumn, sceneValid);
                 layer.depthBlend = depthBlend;
                 layer.shoreVisibility = shoreVisibility;
                 layer.fresnel = fresnel;
