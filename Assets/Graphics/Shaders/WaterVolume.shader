@@ -235,7 +235,23 @@ Shader "Hidden/WaterVolume"
         float seaStart = max(seaHit.x, 0.0);
         float seaEnd = min(receiverDistance, seaHit.x + seaHit.y);
         seaPath = max(seaEnd - seaStart, 0.0);
-        float seaBeforeTerrain = step(seaStart, receiverDistance - 0.25);
+
+        // How far below the sea surface the sight line passes at its deepest.
+        //
+        // This is the horizon, expressed as a number that varies smoothly through it. Whether the ray
+        // INTERSECTS the sea sphere does not: it flips at the tangent ray, and the chord it opens up goes
+        // from nothing to kilometres over a fraction of a degree. Keying the mask on that put a hard
+        // horizontal cut across the frame with the volume at full strength on one side and absent on the
+        // other - the sharp edge in the water at the horizon.
+        float3 toCenter = _PlanetCenter - _WorldSpaceCameraPos.xyz;
+        float closestApproach = length(toCenter - rayDir * dot(toCenter, rayDir));
+        float submersion = _SeaLevelRadius - closestApproach;
+        float belowHorizon = smoothstep(0.0, max(_ShallowDepth, 2.0), submersion);
+
+        // Soft, for the same reason: a step here cut the far shore's own waterline in a straight line
+        // wherever the terrain sat within a metre of where the sphere was entered.
+        float seaBeforeTerrain = smoothstep(0.0, max(_ShallowDepth * 0.5, 2.0), receiverDistance - seaStart)
+                               * belowHorizon;
         float pathBeforeTerrain = smoothstep(max(_ShallowDepth * 0.08, 1.0), max(_ShallowDepth * 1.5, 18.0), seaPath);
 
         float3 planetUp = fromCenter / receiverRadius;
