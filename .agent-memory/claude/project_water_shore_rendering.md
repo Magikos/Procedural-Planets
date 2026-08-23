@@ -269,3 +269,43 @@ that bracket first whenever an artifact survives a fix.
 **Trap that cost a capture:** `DebugModeConstants` already used 87 (`BiomeAltitudeCooling`). A hand-added
 temporary mode collided with it and produced a plausible-looking image that meant nothing. `Max=107` - read
 the constants before picking a number, or better, bracket with the modes that already exist.
+
+## The 41 m water mesh: sheets on grass, and the white rim (2026-08-23, `c1966ef`)
+
+Both of Bryan's remaining water complaints had one shared cause. The water mesh is **192 per face = 41 m
+per quad**, an order of magnitude coarser than the terrain it has to follow.
+
+**Isolated pale sheets on open ground.** `WaterBodyMap` dilates `_level` one ring onto dry land so the mesh
+can find the waterline crossing INSIDE the first dry cell. `CreateIntersection` always takes that level from
+the WET end - so a carried height was never needed to decide wetness, only to describe it. The mesh used it
+as its wet test anyway. `BuildLevelField`'s anti-flood guard rejects a carried cell whose **coarse** 41 m
+elevation sits below the borrowed level, but the mesh samples elevation far finer, so a cell that passes the
+guard still holds dips beneath it. Each dip meshed as water, had no wet neighbour to join, and became a lone
+41 m sheet. Fixed with `TrySolvedLevelAt`, which answers only for cells the solve actually put water in.
+
+**The hard white rim on every coast, ocean and lake.** `ShoreGradient` computed
+`1 - saturate(max(column,0)/_ShoreFoamDepth)`. Where the mesh overhangs land the column goes negative, the
+clamp reads it as zero metres of water - the *strongest* point of the band - and foam saturated to white
+exactly where the sheet lay on grass. Now faded back out as the bed rises above the water plane.
+`MeasuredWaterColumn` also switched to the bilinear shore field; the point-sampled one was quantising the
+band's width at 41 m.
+
+**Two wrong turns worth not repeating.**
+
+- I first blamed `LevelAt`'s ocean-level fallback re-flooding basins that `DrainBasinsBelowMinimumArea`
+  (`MinBasinCells = 16`) had drained. Source-plausible, and **measured false**: all six puddle sites came
+  back `mask=Shore`, `TryLevelAt=true`. Regenerating and re-testing the six known coordinates was what
+  caught it. A source-level proof is not a measurement.
+- The mechanism was already written in the comment at `BuildLevelField` - "the guard stops a dilated cell
+  flooding on the COARSE sample, but the mesh samples elevation far finer than 41 m". I had read that file
+  twice without reading that paragraph. **Read the comments at the site before theorising about it.**
+
+**Verification that worked:** keep the coordinates of the artifacts, regenerate, and re-query them. Nearest
+water at the six sites went 1-3 m to 18-49 m, and the mesh lost 0.75% of its vertices - targeted, not a
+collapse. Comparing component counts between runs did NOT work: my two passes counted different things
+(triangle-corner occurrences vs unique vertices), so 13 vs 15 meant nothing.
+
+**Use `camera.teleport <name>`** (`camera.teleports` lists 26 saved views, incl. `ShoreStudy`,
+`OceanShoreStudy`, `Lake1`). It is the sanctioned way to travel - see
+[[feedback_camera_teleport_wedges_editor]]. Set time with `time.set-local 0.42`, and render in a LATER
+call: lighting needs a frame, so a capture in the same call still comes back at night.
