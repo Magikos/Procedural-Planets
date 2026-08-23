@@ -34,3 +34,28 @@ Two diagnostics worth keeping, both usable while the Editor is dead:
   zero means it is genuinely stuck.
 - `dotnet build ProceduralPlanets.Planet.csproj -v q --nologo` compiles the C# with no Editor at all,
   3.5 s. Use it to check edits while Unity is unavailable. It cannot check shaders.
+
+## The play-mode camera also DRIFTS, and it silently invalidates captures
+
+Measured 2026-08-23. A camera set to a submerged position was found later at radius 5039.8 - **+39.8 m
+ABOVE water** - without anything obviously moving it. Several shader iterations were captured from that
+drifted position and read as "my change did nothing", when in truth the code path under test was gated on
+being underwater and never ran.
+
+**Always re-assert `cam.transform.position` and `.rotation` in the SAME call that renders**, and print a
+witness value (altitude, seaOffset) alongside the result. A capture whose viewpoint is not proven in the same
+call proves nothing.
+
+## Shader reimport in play mode: it works, but takes ~75 s
+
+Same session. `AssetDatabase.ImportAsset(..., ForceUpdate)` on a shader DOES take effect during play mode -
+proved by returning `float4(1,0,1,1)` unconditionally from the fragment and watching the frame go magenta.
+It took **~75 s** to appear; a probe read at 45 s still showed the OLD variant.
+
+`ShaderUtil.GetShaderMessages` reporting zero errors does NOT mean the new variant is live. Waiting on that
+is what made a whole run of single-cycle conclusions untrustworthy.
+
+**The reliable loop:** capture a reference pixel first, import, wait 110 s+, then re-capture and assert the
+pixel actually CHANGED before believing anything the frame shows. If it did not change, the variant is
+either stale or the code path is not running - and those two are indistinguishable without the unconditional
+magenta test, which is the tie-breaker.
