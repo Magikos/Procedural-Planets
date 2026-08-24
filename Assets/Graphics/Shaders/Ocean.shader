@@ -839,17 +839,22 @@ Shader "Planet/Ocean"
                 float frontFacing = smoothstep(-0.10, 0.10, signedViewFacing);
                 layer.alpha *= lerp(1.0, frontFacing, cameraAboveWater);
 
-                // True grazing incidence, i.e. the last stretch of surface before the tangent. Water there
-                // reflects very nearly all of the sky and transmits almost none of what is beneath it - so
-                // the horizon should read as a bright sheen the planet's own curve cannot show through.
-                // The authored farGraze blend stops at 0.72 of the sky and never takes alpha to opaque,
-                // which left the sheet still part transparent right up to the tangent.
+                // Water is cumulative: the more of it a ray passes through, the less comes back out. Toward
+                // the horizon the ray runs almost along the surface, so it crosses kilometres of water and
+                // nothing behind it should survive - the planet's own curve least of all. Looking straight
+                // down the same ray crosses only a few metres, so the bottom stays visible. One quantity
+                // covers both, and the shader already computes it: viewPath is the Beer-Lambert integral
+                // over the slant distance.
                 //
-                // Deliberately a separate term keyed on the last part of the Fresnel ramp, so every
-                // mid-angle keeps the look that was tuned for it.
-                float horizonGraze = smoothstep(0.62, 0.97, reflectFresnel) * cameraAboveWater;
-                layer.color = lerp(layer.color, skyReflection, horizonGraze * lerp(0.15, 0.60, daylight));
-                layer.alpha = lerp(layer.alpha, 1.0, horizonGraze);
+                // It must NOT be keyed on the Fresnel term, which is what the first version of this did.
+                // reflectFresnel is built from the ripple normal, that normal is interpolated per vertex,
+                // and one water quad at the horizon covers a lot of screen - so the effect switched on and
+                // off facet by facet and painted a hard-edged bright patch across the middle of the
+                // waterline. viewPath depends on camera distance, so it varies smoothly and reaches the
+                // whole horizon band at once.
+                float deepPath = smoothstep(0.80, 0.995, viewPath) * cameraAboveWater;
+                layer.color = lerp(layer.color, skyReflection, deepPath * lerp(0.15, 0.60, daylight));
+                layer.alpha = lerp(layer.alpha, 1.0, deepPath);
                 layer.depthBlend = depthBlend;
                 layer.shoreVisibility = shoreVisibility;
                 layer.fresnel = fresnel;
