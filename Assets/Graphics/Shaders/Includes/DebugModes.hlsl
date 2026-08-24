@@ -172,8 +172,14 @@
 #define DEBUG_ATMOSPHERE_LIGHT_SHAFTS        106
 #define DEBUG_GOD_RAY_STREAKS                107
 
+// Two-tone "is the shape THIS channel" views. RED below the split, blue above, so the shape either lights
+// up red or it does not. Read by eye.
+#define DEBUG_SHAPE_IS_DEPTH                 108
+#define DEBUG_SHAPE_IS_SHORE                 109
+#define DEBUG_SHAPE_IS_BODY                  110
+
 // Convenience: last defined mode. Update when adding new modes.
-#define DEBUG_MODE_MAX                    107
+#define DEBUG_MODE_MAX                    110
 
 bool IsProductionEquivalentDebugMode(int mode)
 {

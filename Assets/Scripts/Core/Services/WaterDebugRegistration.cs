@@ -23,6 +23,9 @@ static class WaterDebugRegistration
         RegisterMode(registry, DebugModeConstants.WaterWaveHeight, "WaveHeight", "Water Surface");
         RegisterMode(registry, DebugModeConstants.WaterWaveSlope, "WaveSlope", "Water Surface");
         RegisterMode(registry, DebugModeConstants.WaterData, "WaterData", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.ShapeIsDepth, "ShapeIsDepth", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.ShapeIsShore, "ShapeIsShore", "Water Surface");
+        RegisterMode(registry, DebugModeConstants.ShapeIsBody, "ShapeIsBody", "Water Surface");
         RegisterMode(registry, DebugModeConstants.WaterAbsorption, "Absorption", "Water Surface");
         RegisterMode(registry, DebugModeConstants.VolumeData, "VolumeData", "Water Volume");
         RegisterMode(registry, DebugModeConstants.VolumeMask, "VolumeMask", "Water Volume");

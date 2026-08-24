@@ -160,8 +160,15 @@ public static class DebugModeConstants
     public const int AtmosphereLightShafts = 106;
     public const int GodRayStreaks = 107;
 
+    // Two-tone "is the shape THIS channel" views. Each paints the water BRIGHT RED where its channel is
+    // below the split and blue above it, so the shape being investigated either lights up red or it does
+    // not. Meant to be read by eye, not sampled.
+    public const int ShapeIsDepth = 108;
+    public const int ShapeIsShore = 109;
+    public const int ShapeIsBody = 110;
+
     /// <summary>Highest defined mode value. Update when adding new modes.</summary>
-    public const int Max = 107;
+    public const int Max = 110;
 
     public static bool SuppressesWeatherPasses(int mode)
     {

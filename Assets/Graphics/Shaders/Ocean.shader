@@ -944,6 +944,15 @@ Shader "Planet/Ocean"
                 }
                 if (_OceanDebugMode == DEBUG_WATER_WAVE_SLOPE)
                     return half4(lerp(float3(0.02, 0.04, 0.06), float3(0.1, 1.0, 0.45), saturate(layer.waveSlope * 2.4)), 1.0);
+                // Two-tone: BRIGHT RED below the split, blue above. Point one of these at a shape you want
+                // identified - if the shape turns solid red, that channel is what defines it. Split at 0.5
+                // because the vertex channels are packed 0..1 and the interesting boundaries sit mid-range.
+                if (_OceanDebugMode == DEBUG_SHAPE_IS_DEPTH)
+                    return half4(depth01 < 0.5 ? float3(1.0, 0.0, 0.0) : float3(0.0, 0.15, 0.9), 1.0);
+                if (_OceanDebugMode == DEBUG_SHAPE_IS_SHORE)
+                    return half4(shore01 < 0.5 ? float3(1.0, 0.0, 0.0) : float3(0.0, 0.15, 0.9), 1.0);
+                if (_OceanDebugMode == DEBUG_SHAPE_IS_BODY)
+                    return half4(body01 < 0.5 ? float3(1.0, 0.0, 0.0) : float3(0.0, 0.15, 0.9), 1.0);
                 if (_OceanDebugMode == DEBUG_WATER_DATA)
                     return half4(depth01, shore01, body01, 1.0);
                 if (_OceanDebugMode == DEBUG_WATER_ABSORPTION)
