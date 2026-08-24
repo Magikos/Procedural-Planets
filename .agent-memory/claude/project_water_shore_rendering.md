@@ -683,3 +683,41 @@ the near side. `2704811` fixed that for the rendered surface; this pass had the 
 because nothing had looked at what the PREPASS writes. When a back-face problem is found in one water pass,
 check every other pass that rasterises the same mesh: Ocean.shader, WaterVolumePrepass.shader, and any future
 one all draw it Cull Off.
+
+## RESOLVED: Snell's window (2026-08-24, `bc198ac`)
+
+Supersedes "Snell's window: attempted and NOT landed" above. It works: from below the surface, looking up now
+shows the whole sky compressed into a cone of half-angle asin(1/1.333) = 48.75 deg about vertical, brightening
+towards the rim where it crowds against the critical angle, dark water outside it.
+
+**Three earlier attempts failed for a reason that was never the physics.** The window was computed correctly
+every single time and then discarded by the last line of the branch:
+
+```
+return lerp(result, originalCol.rgb, surface);   // surface = WaterInterfaceFrontMask
+```
+
+That mask is ~1 underwater looking up, so `originalCol` - the volume's flat tint - replaced the window
+entirely. The blend is right for grazing angles, where it preserves the surface's ripples and glint; it just
+must not win overhead, where the surface is nearly transparent. Now faded out inside the window:
+`surface * (1.0 - window * 0.85)`.
+
+**How it was finally found:** probing what `CalculateScattering` actually RETURNED rather than theorising
+about it. `(0.369, 0.486, 0.369)` against a flat-teal frame of `(0.145, 0.424, 0.435)` proved the scattering
+call was fine, so the loss had to be downstream - and there was only one line left. Straight application of
+[[feedback_identify_before_fixing]].
+
+**Retract from the earlier entry:** the suspicion that `CalculateScattering` returns `sceneColor` unchanged
+from a submerged origin is FALSE. It returns a real scattered colour. Passing a very large sceneDepth is
+correct and is what the normal sky path does too.
+
+**Not art-directed.** Brightness and rim falloff are physically motivated but verified at ONE sun angle only.
+Expect tuning against Bryan's eye.
+
+**Also closed the same day:** the grazing "seeing the planet's contour through the water" complaint fixed
+itself with `1fbcedf` - it was a symptom of the prepass recording the far ocean's distance. The horizon
+opacity work built for it (`afe78ba`, `b18e862`) was reverted and was never needed.
+
+**Water still open:** underwater god rays (air light shafts are suppressed when submerged, correctly; the
+water-column equivalent does not exist), and `shore01` is vestigial now that foam and the shoreline are
+per-pixel.
