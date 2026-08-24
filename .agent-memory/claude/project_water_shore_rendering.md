@@ -650,3 +650,36 @@ range spans a handful of bands, not dozens - check the expected magnitude first.
 mode in `ShouldBypassAtmosphereForWaterDebug` unless it deliberately lives in the atmosphere. And when a view
 reports "clean", suspect the view before believing it: a null result from an unvalidated instrument is not
 evidence.
+
+## RESOLVED: the prepass recorded the FAR ocean's distance (2026-08-24, `1fbcedf`)
+
+Closes the arc above. `WaterVolumePrepass.shader` draws `Cull Off` - required, since from below the surface
+the underside is the whole view - and `ZWrite Off` with the depth attachment bound `AccessFlags.Read`, so its
+own triangles never depth-test against each other. **Whichever rasterises LAST wins the pixel, which is
+index-buffer order, not distance.** At grazing the near ocean and the ocean past the horizon cover the same
+pixels, so in patches the forward depth written is the FAR surface's. `CompositeDepthScaled` substitutes that
+for scene depth and the atmosphere hazes those patches by the wrong distance - hard-edged, boundaries along
+triangle edges, which is the V-shaped notch.
+
+Fix: discard back-facing water in the prepass fragment when the camera is above the surface - the same test
+already proven for the visible surface in `2704811`. Underwater it collapses to `clip(1.0)`, so `Cull Off`
+still does its real job.
+
+`ZWrite On` was the other candidate and is NOT available: the render graph binds that depth attachment
+read-only, so enabling it would write into the camera depth buffer and change every downstream pass.
+
+**Ruled out by measurement before any fix was written** - the discipline that finally worked:
+
+| suspect | test that killed it |
+| --- | --- |
+| wave displacement | identical shape at `_SwellAmplitude 0` |
+| `min()` in CompositeDepthScaled | branch selection uniformly water, never switches |
+| interface mask | exactly 1.0 |
+| scene depth / seabed | smooth |
+| every water vertex channel | smooth on a direct ramp |
+
+**Same root as the very first symptom Bryan reported in this arc** - the far side of the ocean visible through
+the near side. `2704811` fixed that for the rendered surface; this pass had the identical flaw and was missed
+because nothing had looked at what the PREPASS writes. When a back-face problem is found in one water pass,
+check every other pass that rasterises the same mesh: Ocean.shader, WaterVolumePrepass.shader, and any future
+one all draw it Cull Off.
