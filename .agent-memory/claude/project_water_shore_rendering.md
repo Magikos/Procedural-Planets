@@ -577,3 +577,37 @@ was the shape being pointed at.
 **Also:** do not write a mechanism into memory until the fix built on it has been verified against the
 artifact. This retraction exists because I wrote the bodyFactor story up as settled fact on the strength of
 a plausible measurement and a green build.
+
+## The stepped shape on the sea is the ATMOSPHERE's composite depth (2026-08-24, `a96fd1c`)
+
+A hard-edged region of slightly different water, with a vertical side, sitting near the horizon. Bryan
+reported it repeatedly; I gave five wrong diagnoses before colouring it properly. Isolated at last with
+`debug.mode ShapeIsCompositeDepth`, which renders the shape ON ITS OWN.
+
+**It is not in the water at all.** `Atmosphere.shader`'s `CompositeDepthScaled` substitutes the water
+forward depth from the volume prepass for the scene depth, gated by `WaterInterfaceFrontMask`. Where that
+depth steps, the distance aerial perspective is computed from jumps, and the result is a patch of different
+haze lying on the sea.
+
+**Elimination chain, every step read by eye from a full frame:**
+
+| test | result |
+| --- | --- |
+| `ShapeIsDepth` / `ShapeIsShore` / `ShapeIsBody` | all paint UNIFORMLY - none of those vertex channels |
+| shape survives with the water painted flat red | not produced by the water surface shader |
+| `SurfaceOnly`, `AtmosphereBypass` | shape ABSENT - the atmosphere owns it |
+| `ShapeIsWaterMask` | clean - not the gating mask |
+| `ShapeIsCompositeDepth` | shape PRESENT |
+
+**Wrong diagnoses I gave for this one shape, in order:** `reflectFresnel`; `viewPath`; the interpolated
+ripple normal; `depth01` (from a `depthBlend` probe that changed global contrast and masked rather than
+isolated); the swell `bodyFactor` gate (written into memory as fact, then retracted); my own `deepPath`
+horizon term (real, but a different artifact). Every one was a genuine discontinuity somewhere in the frame.
+None was the shape.
+
+**The rule that finally worked, and it was Bryan's:** paint the shape itself and hand the tool to the person
+who can see it. A correlated discontinuity is not evidence; only the shape is. When an artifact survives
+several confident fixes, stop fixing and build the view that makes it identifiable - and make it something
+Bryan can switch on himself, so the target is agreed before any more code changes.
+
+**Still open:** why the prepass writes a stepped water forward depth. Not investigated.
