@@ -468,3 +468,36 @@ ordering across the whole water stack.
 
 **Generalises:** any "I can see through to geometry that should be over the horizon" on a sphere is a
 back-face question first. Reach for the facing sign before a ray.
+
+## Horizon opacity: key it on PATH, never on the surface normal (2026-08-24, `b18e862`)
+
+Bryan wanted the water opaque toward the horizon (so the planet's curve cannot show through) while staying
+transparent when looking steeply down. His framing is the correct model and the shader already had the
+quantity for it:
+
+> Water is cumulative. The more water you look through, the more opaque it gets.
+
+`viewPath = 1 - exp(-viewPathMeters / (DeepDepth * 0.62))`, where
+`viewPathMeters = cameraDistance / max(viewFacing, 0.12)` - a Beer-Lambert integral over the SLANT distance.
+Along the surface that is kilometres, so it saturates; straight down it is metres, so it stays near zero.
+One term, both requirements:
+
+```
+float deepPath = smoothstep(0.80, 0.995, viewPath) * cameraAboveWater;
+layer.color = lerp(layer.color, skyReflection, deepPath * lerp(0.15, 0.60, daylight));
+layer.alpha = lerp(layer.alpha, 1.0, deepPath);
+```
+
+**The mistake worth not repeating.** The first version keyed this on `reflectFresnel`. That is built from
+the RIPPLE NORMAL, which is interpolated per vertex, and a single water quad at the horizon covers a large
+part of the screen - so the effect switched on and off facet by facet and painted a hard-edged bright
+rectangle across the middle of the waterline.
+
+**Generalises:** any effect meant to vary smoothly across the horizon must be driven by a quantity that
+varies smoothly in SCREEN space. Camera distance and path length do. A per-vertex-interpolated normal does
+not, and at grazing angles its faceting is magnified enormously because one quad spans many pixels. Same
+family as the two field-quantisation staircases earlier in this arc: a smooth-looking gate over a piecewise
+input shows the pieces.
+
+**Also:** `time.set-local 0.78` was NIGHT at the 09:56 F10 viewpoint (global 0.10). Local time maps
+differently per camera longitude - check the render, do not assume 0.75 is sunset everywhere.
