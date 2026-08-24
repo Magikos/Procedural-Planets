@@ -501,3 +501,49 @@ input shows the pieces.
 
 **Also:** `time.set-local 0.78` was NIGHT at the 09:56 F10 viewpoint (global 0.10). Local time maps
 differently per camera longitude - check the render, do not assume 0.75 is sunset everywhere.
+
+## The raised slab of water: vertex DISPLACEMENT, gated 10:1 on a vertex channel (2026-08-24, `3f7082c`)
+
+A rectangular block of water standing out of the sea - flat top, hard vertical side wall. Nothing done in
+the fragment shader ever moved it, because it was never shading: the base mesh is flat (all 69,285 water
+vertices within 3 km measured at exactly 0 m altitude) and the shape comes from the VERTEX displacement.
+
+`WaterDisplacement.hlsl`:
+```
+openWater01 = smoothstep(0.30, 0.85, body01);
+amplitude   = _SwellAmplitude * lerp(0.10, 1.0, openWater01) * energy;
+```
+Ten to one, driven by a per-vertex channel. Measured across the slab edge: bodyFactor 0.667 -> 0.294, so
+amplitude 0.66 -> 0.10 - a 6.6x step in wave height over one mesh boundary. Fixed with three passes of
+neighbour averaging on the final bodyFactor (after ClassifyWaterBodies, after the WaterBodyMap lake
+override, and after BuildCoverSet's inheritance, which can leave adjacent cover vertices holding values from
+different bodies).
+
+**Whenever an artifact has a flat top and vertical sides, suspect vertex displacement before shading.**
+Confirm in one step by histogramming water vertex altitudes near the camera - a flat mesh means the shape is
+being made in the vertex stage.
+
+## Method: tiled debug IMAGES beat single-pixel probes
+
+Four consecutive wrong hypotheses on this one artifact, then Bryan said "make some debug views". Capturing
+beauty + WaterData(11) + SurfaceAlpha(19) + SurfaceAlphaParts(55) at the same viewpoint and stacking them
+with ffmpeg located it immediately: the first three showed the same vertical edge at the same x, the fourth
+barely did.
+
+My pixel probes had failed TWICE on the same artifact:
+- `Texture2D.GetPixel` has y=0 at the BOTTOM while the image has y=0 at the TOP. A scanline chosen off the
+  screenshot lands in the wrong place. Convert, or scan a range of rows.
+- A single row can simply miss the edge. Scan for the max horizontal jump over a band of rows instead of
+  picking one.
+
+**Cheap and no shader edit:** modes 11 (depth01, shore01, body01), 19, 55 (alpha, viewPath, fresnel) and
+64 (nearColor, farColor, pathBlend) already exist and bracket most of the surface chain.
+
+## Process failure worth not repeating
+
+`b18e862` was committed and verified clean. I then made THREE further changes without verifying any of them,
+and Bryan looked at the result - which by then contained a regression I had introduced (the sphere-normal
+swap made `horizonPathMeters = cameraDistance / max(horizonFacing, 0.02)` saturate abruptly across a whole
+region, because the ripple normal's jitter had been smearing that transition). I then spent four cycles
+hunting a bug I had just created. **Verify before showing, and never stack unverified changes on a verified
+commit.**
