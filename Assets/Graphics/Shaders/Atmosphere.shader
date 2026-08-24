@@ -287,8 +287,23 @@ ENDHLSL
                 if (ShouldBypassAtmosphereForWaterDebug())
                     return originalCol;
 
+                // Two-tone view of the mask the atmosphere uses to decide a pixel is water. It gates
+                // CompositeDepthScaled, which swaps the depth aerial perspective is computed from between
+                // the scene and the WATER surface - so a hard boundary here becomes a hard-edged region of
+                // different haze sitting on the sea.
+                if (_OceanDebugMode == DEBUG_SHAPE_IS_WATER_MASK)
+                {
+                    float m = WaterInterfaceFrontMask(i.uv);
+                    return float4(m > 0.5 ? float3(1.0, 0.0, 0.0) : float3(0.0, 0.15, 0.9), 1.0);
+                }
+
                 float viewLength = length(i.viewVector);
                 float3 viewDir = i.viewVector / max(viewLength, 0.0001);
+
+                // The distance aerial perspective is actually computed from, as a red ramp. A hard edge
+                // here is a hard edge in the haze, which is what a stepped region on the sea looks like.
+                if (_OceanDebugMode == DEBUG_SHAPE_IS_COMPOSITE_DEPTH)
+                    return float4(saturate(CompositeDepthScaled(i.uv, viewLength) / 3000.0), 0.0, 0.0, 1.0);
 
                 if (_WaterVolumeEnabled > 0.5 && CameraUnderwater01() > 0.01 && SkyDepthMask(i.uv) > 0.5)
                 {

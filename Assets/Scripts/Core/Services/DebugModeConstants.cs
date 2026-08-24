@@ -166,9 +166,13 @@ public static class DebugModeConstants
     public const int ShapeIsDepth = 108;
     public const int ShapeIsShore = 109;
     public const int ShapeIsBody = 110;
+    // Same idea, but for the mask the ATMOSPHERE uses to decide it is looking at water.
+    public const int ShapeIsWaterMask = 111;
+    // The depth the atmosphere actually computes aerial perspective from, as a red ramp.
+    public const int ShapeIsCompositeDepth = 112;
 
     /// <summary>Highest defined mode value. Update when adding new modes.</summary>
-    public const int Max = 110;
+    public const int Max = 112;
 
     public static bool SuppressesWeatherPasses(int mode)
     {
