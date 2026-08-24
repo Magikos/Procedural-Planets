@@ -324,7 +324,26 @@ ENDHLSL
                 {
                     float coverage;
                     float4 waterData = SampleWaterInterfaceDilated(i.uv, coverage);
-                    return float4(frac(waterData.r * viewLength / 40.0), 0.0, 0.0, 1.0);
+                    // Same scale as ShapeIsCompositeDepth so the two are directly comparable. The first
+                    // version used frac(d/40) on a distance of order a kilometre, which cycles about
+                    // twenty-five times and aliases into noise at grazing - it hid the very structure it
+                    // was meant to find.
+                    return float4(saturate(waterData.r * viewLength / 3000.0), 0.0, 0.0, 1.0);
+                }
+
+                // Which branch of min(sceneDepth, waterDepth) actually wins, since the mask is 1 over the
+                // water and CompositeDepthScaled reduces to that min. Both inputs measured smooth on their
+                // own, so if the shape lives anywhere it is in WHERE the winner changes. Red = the water
+                // surface is nearer, blue = the seabed is.
+                if (_OceanDebugMode == DEBUG_SHAPE_IS_DEPTH_SOURCE)
+                {
+                    float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, i.uv).r;
+                    float sceneDepth = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
+                    float coverage;
+                    float4 waterData = SampleWaterInterfaceDilated(i.uv, coverage);
+                    float waterDepth = waterData.r * viewLength;
+                    bool waterWins = waterData.r > 0.0001 && waterDepth < sceneDepth;
+                    return float4(waterWins ? float3(1.0, 0.0, 0.0) : float3(0.0, 0.15, 0.9), 1.0);
                 }
 
                 if (_WaterVolumeEnabled > 0.5 && CameraUnderwater01() > 0.01 && SkyDepthMask(i.uv) > 0.5)

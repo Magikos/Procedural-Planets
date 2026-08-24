@@ -181,9 +181,10 @@
 #define DEBUG_SHAPE_IS_COMPOSITE_DEPTH       112
 #define DEBUG_SHAPE_IS_DATA_EDGE             113
 #define DEBUG_SHAPE_IS_PREPASS_DEPTH         114
+#define DEBUG_SHAPE_IS_DEPTH_SOURCE          115
 
 // Convenience: last defined mode. Update when adding new modes.
-#define DEBUG_MODE_MAX                    114
+#define DEBUG_MODE_MAX                    115
 
 bool IsProductionEquivalentDebugMode(int mode)
 {

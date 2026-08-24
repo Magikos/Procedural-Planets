@@ -176,9 +176,11 @@ public static class DebugModeConstants
     // The water forward depth the VOLUME PREPASS writes, banded. Distinct from the surface vertex
     // channels - this is what the atmosphere substitutes for scene depth.
     public const int ShapeIsPrepassDepth = 114;
+    // Which branch of min(sceneDepth, waterDepth) wins. Red = water, blue = scene.
+    public const int ShapeIsDepthSource = 115;
 
     /// <summary>Highest defined mode value. Update when adding new modes.</summary>
-    public const int Max = 114;
+    public const int Max = 115;
 
     public static bool SuppressesWeatherPasses(int mode)
     {
