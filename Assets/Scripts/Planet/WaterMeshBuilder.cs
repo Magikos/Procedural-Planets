@@ -538,6 +538,8 @@ public static class WaterMeshBuilder
                 if (globalWet[i] && WaterBodyMap.Current.Sample(globalDirections[i]) == WaterBodyMap.Water)
                     globalBodyFactor[i] = 0f;
 
+        SmoothBodyFactor(globalBodyFactor, adjacency);
+
         ComputeShoreDistance(wet, adjacency, globalShoreDistance);
 
         float[] levels = globalLevel.ToArray();
@@ -564,6 +566,41 @@ public static class WaterMeshBuilder
 
         result.DepthMeters = globalDepthMeters.ToArray();
         return result;
+    }
+
+    // Passes of neighbour averaging applied to bodyFactor before it is baked into the vertices.
+    //
+    // Swell amplitude is gated on this channel in WaterDisplacement.hlsl:
+    //     openWater01 = smoothstep(0.30, 0.85, body01);
+    //     amplitude   = _SwellAmplitude * lerp(0.10, 1.0, openWater01) * energy;
+    // which is a TEN TO ONE range. A pond and the open ocean genuinely belong at opposite ends of it, but
+    // when the value crosses that range between two adjacent vertices the wave height does too, and the
+    // result is a rectangular slab of raised water with a flat top and vertical side walls standing out of
+    // the sea. Measured across one such edge: bodyFactor 0.667 -> 0.294, which is amplitude 0.66 -> 0.10.
+    //
+    // Smoothing the field rather than softening the gate, because the gate is right - it is the transition
+    // that has to happen over a distance the eye reads as a shoreline rather than over one quad.
+    const int BodyFactorSmoothingPasses = 3;
+
+    // Neighbour-average bodyFactor so ocean-to-pond spans several cells instead of a single edge. Runs after
+    // ClassifyWaterBodies and the WaterBodyMap lake override, so it smooths the final verdict rather than an
+    // intermediate one, and after BuildCoverSet's inheritance which can leave neighbouring cover vertices
+    // holding values from different bodies.
+    static void SmoothBodyFactor(float[] bodyFactor, List<int>[] adjacency)
+    {
+        var next = new float[bodyFactor.Length];
+        for (int pass = 0; pass < BodyFactorSmoothingPasses; pass++)
+        {
+            for (int i = 0; i < bodyFactor.Length; i++)
+            {
+                List<int> neighbours = adjacency[i];
+                if (neighbours == null || neighbours.Count == 0) { next[i] = bodyFactor[i]; continue; }
+                float sum = bodyFactor[i];
+                foreach (int n in neighbours) sum += bodyFactor[n];
+                next[i] = sum / (neighbours.Count + 1);
+            }
+            System.Array.Copy(next, bodyFactor, bodyFactor.Length);
+        }
     }
 
     // How far past the waterline the mesh is built. Two rings, ~43 m, because on a shallow shelf a small
