@@ -611,3 +611,42 @@ several confident fixes, stop fixing and build the view that makes it identifiab
 Bryan can switch on himself, so the target is agreed before any more code changes.
 
 **Still open:** why the prepass writes a stepped water forward depth. Not investigated.
+
+## CORRECTION: the stepped sea shape is the PREPASS forward depth (2026-08-24, `1d1258a`)
+
+Supersedes the section above that stopped at "the atmosphere's composite depth". The composite depth carries
+the shape, but only because it inherits it: `debug.mode ShapeIsPrepassDepth` renders the shape on its own -
+bright region, hard right edge, V-shaped notch. The volume prepass writes a stepped water forward depth over
+that region; `CompositeDepthScaled` substitutes it for scene depth, so the distance aerial perspective is
+computed from jumps and a hard-edged patch of different haze lies on the sea.
+
+Chain, every link measured rather than argued:
+
+| quantity | verdict |
+| --- | --- |
+| water vertex channels (depth01/shore01/body01) | smooth |
+| scene depth / seabed | smooth |
+| interface mask | exactly 1.0, uniform |
+| `min()` branch selection | uniformly water, never switches |
+| **prepass water forward depth** | **THE SHAPE** |
+
+Not yet investigated: why the prepass writes a step there.
+
+## THE lesson: three bad instruments, three wrong answers
+
+Every "that reads clean, so it is not that" in this investigation was produced by a broken visualisation, not
+by the data. The measurements were fine; the instruments lied.
+
+1. **Two-tone split at a fixed threshold.** `value < 0.5 ? red : blue` shows NOTHING when both sides of a
+   boundary sit on the same side of the split. Reported depth01, shore01, body01 and the interface mask all
+   "uniform" for a shape that plainly existed.
+2. **Forgetting the debug view is composited over.** The water-data modes were not in
+   `ShouldBypassAtmosphereForWaterDebug`, so aerial perspective hazed them and flattened the contours.
+3. **`frac(d / 40)` on a distance of order a kilometre.** Cycles ~25 times and aliases into noise at grazing
+   - it hid the very step it was built to find, and sent the search into the atmosphere for several rounds.
+
+**Rules that follow.** Prefer a CONTOUR BAND (`frac(x * k)`) over a threshold, and pick `k` so the whole
+range spans a handful of bands, not dozens - check the expected magnitude first. Register a new water debug
+mode in `ShouldBypassAtmosphereForWaterDebug` unless it deliberately lives in the atmosphere. And when a view
+reports "clean", suspect the view before believing it: a null result from an unvalidated instrument is not
+evidence.
