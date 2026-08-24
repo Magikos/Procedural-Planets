@@ -136,6 +136,26 @@ Shader "Hidden/WaterVolumePrepass"
 
         float4 Frag(Varyings input) : SV_Target
         {
+            // Drop water that is showing the camera its UNDERSIDE.
+            //
+            // This pass draws Cull Off - it has to, because from below the surface the underside is the whole
+            // view - and ZWrite Off with the depth attachment bound read-only, so its own triangles never
+            // depth-test against each other. Whichever one rasterises LAST wins the pixel, and that is index
+            // order, not distance. At grazing the near ocean and the ocean past the horizon cover the same
+            // pixels, so in patches the forward depth recorded here is the FAR surface's. The atmosphere
+            // substitutes that distance for scene depth in CompositeDepthScaled and hazes those patches by
+            // the wrong amount - a hard-edged region of different haze lying on the sea, its boundary
+            // following triangle edges.
+            //
+            // On a convex sphere no back-facing water can legitimately be seen from above the surface, so
+            // the facing sign settles it, exactly as it does for the visible surface in Ocean.shader.
+            // Underwater nothing is discarded, which is what keeps Cull Off doing its real job.
+            float3 planetNormalWS = SafeNormalize(input.positionWS - _PlanetCenter, float3(0.0, 1.0, 0.0));
+            float3 toCameraWS = SafeNormalize(_WorldSpaceCameraPos.xyz - input.positionWS, planetNormalWS);
+            float cameraSeaOffset = length(_WorldSpaceCameraPos.xyz - _PlanetCenter) - _SeaLevelRadius;
+            float cameraAboveWater = saturate((cameraSeaOffset - 0.5) / 2.0);
+            clip(lerp(1.0, dot(toCameraWS, planetNormalWS), cameraAboveWater));
+
             return EncodeWaterVolumeData(input);
         }
 
