@@ -43,4 +43,13 @@ public static partial class ShaderGlobalIds
     public const string WaterEdgeFadeStart = "_WaterEdgeFadeStart";
     public const string WaterEdgeFadeEnd = "_WaterEdgeFadeEnd";
     public const string WaterEdgeFadeEndOcean = "_WaterEdgeFadeEndOcean";
+
+    // The colour deep water settles to, as PlanetWaterSurface computes it from PlanetDto.WaterColor and
+    // WaterDto.DeepBaseColor. The water shaders get it as the material's own _DeepColor; this global exists
+    // so Atmosphere.shader can reach the same value, because it renders the view THROUGH the water from
+    // below and had its own hardcoded copy that had drifted to roughly half the authored brightness.
+    //
+    // Deliberately NOT named _DeepColor: a material property of the same name shadows the global wherever
+    // that material is bound, which is exactly how the wave parameters went wrong before.
+    public const string WaterDeepColor = "_WaterDeepColor";
 }

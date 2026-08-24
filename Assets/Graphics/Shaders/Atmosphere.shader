@@ -23,6 +23,8 @@ int _LightShaftSamples;
 int _PrecipitationDebugMode;
 int _OceanDebugMode;
 float _WaterVolumeEnabled;
+// Published by PlanetWaterSurface. See ShaderGlobalIds.WaterDeepColor for why it is not called _DeepColor.
+float4 _WaterDeepColor;
 
 float LightShaftNoise(float2 pixel)
 {
@@ -237,7 +239,11 @@ ENDHLSL
                 float3 sunDir = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : cameraUp;
                 float daylight = smoothstep(-0.08, 0.20, dot(cameraUp, sunDir));
                 float viewUp = smoothstep(-0.35, 0.85, dot(viewDir, cameraUp));
-                float3 deepWater = float3(0.0, 0.020, 0.070);
+                // The authored deep-water colour, the same one the volume settles to, rather than a second
+                // copy of it. The copy that used to live here read (0.0, 0.020, 0.070) against an authored
+                // (0.008, 0.058, 0.133) - about half the brightness - so a far shore faded to something
+                // three to four times darker than the water around it instead of fading INTO it.
+                float3 deepWater = _WaterDeepColor.rgb;
                 float3 litWater = lerp(float3(0.012, 0.105, 0.165), float3(0.065, 0.300, 0.420), daylight);
                 return lerp(deepWater, litWater, viewUp * 0.62 + daylight * 0.24);
             }

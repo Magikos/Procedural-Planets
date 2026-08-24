@@ -21,6 +21,7 @@ public sealed class PlanetWaterSurface
 
     static readonly int _shallowColorId = Shader.PropertyToID("_ShallowColor");
     static readonly int _deepColorId = Shader.PropertyToID("_DeepColor");
+    static readonly int _waterDeepColorGlobalId = Shader.PropertyToID(ShaderGlobalIds.WaterDeepColor);
     static readonly int _foamColorId = Shader.PropertyToID("_FoamColor");
     static readonly int _shallowDepthId = Shader.PropertyToID("_ShallowDepth");
     static readonly int _deepDepthId = Shader.PropertyToID("_DeepDepth");
@@ -254,6 +255,9 @@ public sealed class PlanetWaterSurface
 
             mat.SetColor(_shallowColorId, shallow);
             mat.SetColor(_deepColorId, deep);
+            // Atmosphere.shader renders the view through the water from below and needs the same answer.
+            // It cannot read the material's _DeepColor, so publish it under a name nothing shadows.
+            Shader.SetGlobalColor(_waterDeepColorGlobalId, deep);
             mat.SetColor(_foamColorId, water.FoamColor);
             mat.SetFloat(_shallowDepthId, water.ShallowDepth * waterScale);
             mat.SetFloat(_deepDepthId, water.DeepDepth * waterScale);
