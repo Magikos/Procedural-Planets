@@ -833,28 +833,8 @@ Shader "Planet/Ocean"
                 float cameraSeaOffset = length(_WorldSpaceCameraPos.xyz - _PlanetCenter)
                                       - ShoreSurfaceRadiusAt(cameraDirection, _SeaLevelRadius);
                 float cameraAboveWater = smoothstep(-0.5, 1.5, cameraSeaOffset);
-                // Wide enough that the cut is a soft band rather than a knife edge. At grazing incidence a
-                // small change in the facing dot covers a lot of screen, so a narrow ramp here lands as a
-                // hard line along the horizon.
-                float frontFacing = smoothstep(-0.10, 0.10, signedViewFacing);
+                float frontFacing = smoothstep(-0.03, 0.03, signedViewFacing);
                 layer.alpha *= lerp(1.0, frontFacing, cameraAboveWater);
-
-                // Water is cumulative: the more of it a ray passes through, the less comes back out. Toward
-                // the horizon the ray runs almost along the surface, so it crosses kilometres of water and
-                // nothing behind it should survive - the planet's own curve least of all. Looking straight
-                // down the same ray crosses only a few metres, so the bottom stays visible. One quantity
-                // covers both, and the shader already computes it: viewPath is the Beer-Lambert integral
-                // over the slant distance.
-                //
-                // It must NOT be keyed on the Fresnel term, which is what the first version of this did.
-                // reflectFresnel is built from the ripple normal, that normal is interpolated per vertex,
-                // and one water quad at the horizon covers a lot of screen - so the effect switched on and
-                // off facet by facet and painted a hard-edged bright patch across the middle of the
-                // waterline. viewPath depends on camera distance, so it varies smoothly and reaches the
-                // whole horizon band at once.
-                float deepPath = smoothstep(0.80, 0.995, viewPath) * cameraAboveWater;
-                layer.color = lerp(layer.color, skyReflection, deepPath * lerp(0.15, 0.60, daylight));
-                layer.alpha = lerp(layer.alpha, 1.0, deepPath);
                 layer.depthBlend = depthBlend;
                 layer.shoreVisibility = shoreVisibility;
                 layer.fresnel = fresnel;
