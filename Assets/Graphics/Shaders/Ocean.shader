@@ -833,8 +833,23 @@ Shader "Planet/Ocean"
                 float cameraSeaOffset = length(_WorldSpaceCameraPos.xyz - _PlanetCenter)
                                       - ShoreSurfaceRadiusAt(cameraDirection, _SeaLevelRadius);
                 float cameraAboveWater = smoothstep(-0.5, 1.5, cameraSeaOffset);
-                float frontFacing = smoothstep(-0.03, 0.03, signedViewFacing);
+                // Wide enough that the cut is a soft band rather than a knife edge. At grazing incidence a
+                // small change in the facing dot covers a lot of screen, so a narrow ramp here lands as a
+                // hard line along the horizon.
+                float frontFacing = smoothstep(-0.10, 0.10, signedViewFacing);
                 layer.alpha *= lerp(1.0, frontFacing, cameraAboveWater);
+
+                // True grazing incidence, i.e. the last stretch of surface before the tangent. Water there
+                // reflects very nearly all of the sky and transmits almost none of what is beneath it - so
+                // the horizon should read as a bright sheen the planet's own curve cannot show through.
+                // The authored farGraze blend stops at 0.72 of the sky and never takes alpha to opaque,
+                // which left the sheet still part transparent right up to the tangent.
+                //
+                // Deliberately a separate term keyed on the last part of the Fresnel ramp, so every
+                // mid-angle keeps the look that was tuned for it.
+                float horizonGraze = smoothstep(0.62, 0.97, reflectFresnel) * cameraAboveWater;
+                layer.color = lerp(layer.color, skyReflection, horizonGraze * lerp(0.15, 0.60, daylight));
+                layer.alpha = lerp(layer.alpha, 1.0, horizonGraze);
                 layer.depthBlend = depthBlend;
                 layer.shoreVisibility = shoreVisibility;
                 layer.fresnel = fresnel;
