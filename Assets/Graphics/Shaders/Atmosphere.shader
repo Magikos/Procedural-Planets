@@ -25,6 +25,9 @@ int _OceanDebugMode;
 float _WaterVolumeEnabled;
 // Published by PlanetWaterSurface. See ShaderGlobalIds.WaterDeepColor for why it is not called _DeepColor.
 float4 _WaterDeepColor;
+// Also published by PlanetWaterSurface. Used here only to size the band over which the camera counts as
+// submerged - see CameraUnderwater01.
+float _SwellAmplitude;
 
 float LightShaftNoise(float2 pixel)
 {
@@ -235,10 +238,18 @@ ENDHLSL
             float CameraUnderwater01()
             {
                 float seaOffset = length(_WorldSpaceCameraPos.xyz - _PlanetCenter) - _SeaLevelRadius;
-                // Underwater sky only once the camera is at/below the water surface — a small band above 0
-                // for a smooth dip-in. The old +2 m upper bound killed the atmosphere while standing on the
-                // shore of a sea-level lake (camera ~1 m up reads as "underwater").
-                return 1.0 - smoothstep(-1.5, 0.2, seaOffset);
+
+                // Faded across the SWELL, not across a fixed band. This compares against the mean sea radius
+                // and knows nothing about the waves on top of it, so with a 5 m swell a camera 1.4 m below
+                // the mean read 0.996 - fully submerged - while the view still showed open air, the beach and
+                // the treeline un-refracted. Snell's window was then painted over that sky as a hard circle.
+                //
+                // Within a wave height of the mean surface the camera genuinely is in and out of the water as
+                // swells pass, so the honest answer there is partial, and the underwater treatment should ease
+                // in rather than switch. The small positive bound keeps the old behaviour of not calling the
+                // shore of a sea-level lake "underwater" when standing a metre above it.
+                float band = max(_SwellAmplitude, 1.5);
+                return 1.0 - smoothstep(-band, band * 0.15, seaOffset);
             }
 
             float3 UnderwaterSkyColor(float3 viewDir)
@@ -346,7 +357,12 @@ ENDHLSL
                     return float4(waterWins ? float3(1.0, 0.0, 0.0) : float3(0.0, 0.15, 0.9), 1.0);
                 }
 
-                if (_WaterVolumeEnabled > 0.5 && CameraUnderwater01() > 0.01 && SkyDepthMask(i.uv) > 0.5)
+                // Only once the camera is MORE IN than out. This used to fire at 0.01, which with a 5 m
+                // swell meant a camera a metre below the mean surface - visibly in open air between waves -
+                // took the full underwater treatment and had Snell's window painted across its sky as a
+                // hard disc. The branch returns early, so a partial weight cannot soften it; the gate itself
+                // has to be the decision.
+                if (_WaterVolumeEnabled > 0.5 && CameraUnderwater01() > 0.5 && SkyDepthMask(i.uv) > 0.5)
                 {
                     // Seen from below, the water surface IS the sky: its ripples, the sun's glint coming
                     // through it, and the bright disc of Snell's window. The surface writes no depth, so
@@ -365,6 +381,9 @@ ENDHLSL
                     // flat colour, which is the single biggest thing missing from being underwater.
                     const float COS_CRITICAL = 0.6593;   // cos(48.75 deg), water n = 1.333
                     float window = smoothstep(COS_CRITICAL - 0.12, COS_CRITICAL + 0.04, cosWater);
+                    // Eased in with depth as well as angle, so the window grows as the camera sinks rather
+                    // than appearing at full strength the instant the gate opens.
+                    window *= saturate((CameraUnderwater01() - 0.5) / 0.35);
 
                     float3 result = UnderwaterSkyColor(viewDir);
 
