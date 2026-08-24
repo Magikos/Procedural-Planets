@@ -813,6 +813,28 @@ Shader "Planet/Ocean"
                 float pathAlpha = saturate(smoothstep(0.08, 0.68, viewPath) * lerp(0.82, 1.0, fresnel));
                 layer.alpha = saturate(lerp(lerp(nearAlpha, farAlpha, pathAlpha), _IceOpacity, iceContribution));
                 layer.alpha *= ShorelineTrim(waterColumn, sceneValid);
+
+                // Drop water that is showing the camera its UNDERSIDE.
+                //
+                // The mesh is Cull Off, because from below the surface the underside is the whole view. From
+                // ABOVE, though, a back-facing water fragment is water the planet has already curved away -
+                // past the horizon - and since the surface writes no depth it blends straight through the
+                // water in front of it. That is the far side of the ocean showing through the near side: a
+                // second waterline sitting above the real one with the sky glowing between them.
+                //
+                // On a convex sphere no back-facing water can be legitimately visible from above the
+                // surface, so the sign of the facing dot settles it - no ray, no second pass. The same test
+                // also hides the far slope of a nearby wave, which its own crest ought to occlude and
+                // cannot, for the same lack of a depth write.
+                //
+                // Gated on the camera's own side so the underwater view is untouched, and smoothed across
+                // both boundaries so nothing pops as a swell lifts past the eye.
+                float3 cameraDirection = SafeNormalize(_WorldSpaceCameraPos.xyz - _PlanetCenter, float3(0.0, 1.0, 0.0));
+                float cameraSeaOffset = length(_WorldSpaceCameraPos.xyz - _PlanetCenter)
+                                      - ShoreSurfaceRadiusAt(cameraDirection, _SeaLevelRadius);
+                float cameraAboveWater = smoothstep(-0.5, 1.5, cameraSeaOffset);
+                float frontFacing = smoothstep(-0.03, 0.03, signedViewFacing);
+                layer.alpha *= lerp(1.0, frontFacing, cameraAboveWater);
                 layer.depthBlend = depthBlend;
                 layer.shoreVisibility = shoreVisibility;
                 layer.fresnel = fresnel;
