@@ -547,3 +547,33 @@ swap made `horizonPathMeters = cameraDistance / max(horizonFacing, 0.02)` satura
 region, because the ripple normal's jitter had been smearing that transition). I then spent four cycles
 hunting a bug I had just created. **Verify before showing, and never stack unverified changes on a verified
 commit.**
+
+## RETRACTION: the "raised slab" was NOT vertex displacement, and not bodyFactor
+
+The section above claiming the slab was swell amplitude gated 10:1 on `bodyFactor` is **WRONG**. It was
+committed to memory before the claim had been tested against the shape itself, and the fix it describes
+(`3f7082c`, neighbour-averaging bodyFactor) has been reverted along with it - it changed nothing visible.
+
+What it actually was, found the moment Bryan said "turn that shape bright red": **my own `deepPath` term**
+from `b18e862`, the path-driven horizon opacity. Colouring my three added terms - R = `1-frontFacing`,
+G = `deepPath`, B = `1-ShorelineTrim` - lit the slab in GREEN with its exact hard vertical edge. Reverted in
+`19bb02e` together with `afe78ba`.
+
+Wrong diagnoses I gave for this ONE shape, in order: `reflectFresnel`, `viewPath`, the interpolated ripple
+normal, `depth01` (via a `depthBlend` falsification probe that changed global contrast and so masked rather
+than isolated), the swell `bodyFactor` gate. Every one was a real discontinuity somewhere in the frame. None
+was the shape being pointed at.
+
+**The two rules that would have saved all of it:**
+
+1. **Colour the shape itself first.** Not a term you suspect - the actual pixels the user is pointing at.
+   Bryan has now had to give this instruction twice in one session (the lake blocks, then this), and both
+   times it identified the cause in a single capture after many failed cycles. Correlated discontinuities
+   are everywhere in a frame like this; only the shape itself is evidence.
+2. **Suspect your own last few commits before anything in the existing codebase.** The slab appeared two
+   commits after I started adding horizon terms, and I spent the entire investigation looking at code I had
+   not written.
+
+**Also:** do not write a mechanism into memory until the fix built on it has been verified against the
+artifact. This retraction exists because I wrote the bodyFactor story up as settled fact on the strength of
+a plausible measurement and a green build.
