@@ -88,7 +88,15 @@ bool ShouldBypassAtmosphereForWaterDebug()
         || (_OceanDebugMode >= DEBUG_SURFACE_NIGHT_TERMS && _OceanDebugMode <= DEBUG_WATER_GLINT_LOCATOR) // night + wave + foam + glint discovery 64-72
         || (_OceanDebugMode >= DEBUG_BIOME_PRIMARY_ID && _OceanDebugMode <= DEBUG_BIOME_ALTITUDE_COOLING)
         || (_OceanDebugMode >= DEBUG_WATER_TEMPERATURE && _OceanDebugMode <= DEBUG_WATER_ICE_CONTRIBUTION)
-        || (_OceanDebugMode >= DEBUG_TERRAIN_COAST_MASK && _OceanDebugMode <= DEBUG_TERRAIN_OVERRIDE_COMPOSITE);
+        || (_OceanDebugMode >= DEBUG_TERRAIN_COAST_MASK && _OceanDebugMode <= DEBUG_TERRAIN_OVERRIDE_COMPOSITE)
+        // The water-data shape views must show the raw channel, not the channel with aerial perspective
+        // composited over it - that washes the contour bands out and was making a real difference look flat.
+        // ShapeIsWaterMask and ShapeIsCompositeDepth are deliberately NOT listed: they live IN this shader,
+        // and bypassing would return before they ever ran.
+        || _OceanDebugMode == DEBUG_SHAPE_IS_DEPTH
+        || _OceanDebugMode == DEBUG_SHAPE_IS_SHORE
+        || _OceanDebugMode == DEBUG_SHAPE_IS_BODY
+        || _OceanDebugMode == DEBUG_SHAPE_IS_DATA_EDGE;
 }
 
 float CompositeDepthScaled(float2 uv, float viewLength)
@@ -293,8 +301,12 @@ ENDHLSL
                 // different haze sitting on the sea.
                 if (_OceanDebugMode == DEBUG_SHAPE_IS_WATER_MASK)
                 {
+                    // BANDED, not thresholded. The first version of this split at 0.5 and reported the mask
+                    // "clean" - but a mask running 0.6 to 0.95 is uniformly above that split while still
+                    // moving the lerp in CompositeDepthScaled a long way. Same mistake the channel views
+                    // made. Bands show any variation at all.
                     float m = WaterInterfaceFrontMask(i.uv);
-                    return float4(m > 0.5 ? float3(1.0, 0.0, 0.0) : float3(0.0, 0.15, 0.9), 1.0);
+                    return float4(frac(m * 16.0), 0.0, 0.0, 1.0);
                 }
 
                 float viewLength = length(i.viewVector);
@@ -304,6 +316,16 @@ ENDHLSL
                 // here is a hard edge in the haze, which is what a stepped region on the sea looks like.
                 if (_OceanDebugMode == DEBUG_SHAPE_IS_COMPOSITE_DEPTH)
                     return float4(saturate(CompositeDepthScaled(i.uv, viewLength) / 3000.0), 0.0, 0.0, 1.0);
+
+                // The water forward depth the volume prepass wrote, banded so any discontinuity shows. This
+                // is the value CompositeDepthScaled substitutes for scene depth, and it is NOT the surface's
+                // vertex channels - those measured smooth. If the shape is anywhere, it should be here.
+                if (_OceanDebugMode == DEBUG_SHAPE_IS_PREPASS_DEPTH)
+                {
+                    float coverage;
+                    float4 waterData = SampleWaterInterfaceDilated(i.uv, coverage);
+                    return float4(frac(waterData.r * viewLength / 40.0), 0.0, 0.0, 1.0);
+                }
 
                 if (_WaterVolumeEnabled > 0.5 && CameraUnderwater01() > 0.01 && SkyDepthMask(i.uv) > 0.5)
                 {

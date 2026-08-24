@@ -170,9 +170,15 @@ public static class DebugModeConstants
     public const int ShapeIsWaterMask = 111;
     // The depth the atmosphere actually computes aerial perspective from, as a red ramp.
     public const int ShapeIsCompositeDepth = 112;
+    // Screen-space edge detect on the packed water vertex data. Finds ANY discontinuity regardless of
+    // where the values sit, which a fixed threshold cannot.
+    public const int ShapeIsDataEdge = 113;
+    // The water forward depth the VOLUME PREPASS writes, banded. Distinct from the surface vertex
+    // channels - this is what the atmosphere substitutes for scene depth.
+    public const int ShapeIsPrepassDepth = 114;
 
     /// <summary>Highest defined mode value. Update when adding new modes.</summary>
-    public const int Max = 112;
+    public const int Max = 114;
 
     public static bool SuppressesWeatherPasses(int mode)
     {

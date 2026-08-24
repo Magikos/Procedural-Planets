@@ -947,12 +947,24 @@ Shader "Planet/Ocean"
                 // Two-tone: BRIGHT RED below the split, blue above. Point one of these at a shape you want
                 // identified - if the shape turns solid red, that channel is what defines it. Split at 0.5
                 // because the vertex channels are packed 0..1 and the interesting boundaries sit mid-range.
+                // Screen-space derivative of the packed vertex data, hugely amplified. Any place adjacent
+                // pixels disagree lights up, whatever the values are - which a fixed threshold split cannot
+                // find. Red = the data is discontinuous here.
+                if (_OceanDebugMode == DEBUG_SHAPE_IS_DATA_EDGE)
+                {
+                    float3 d = abs(ddx(float3(depth01, shore01, body01))) + abs(ddy(float3(depth01, shore01, body01)));
+                    return half4(saturate(max(max(d.x, d.y), d.z) * 400.0), 0.0, 0.0, 1.0);
+                }
+                // CONTOUR BANDS, not a threshold. A fixed split shows nothing when both sides of a
+                // boundary sit on the same side of it - which is exactly how these modes first reported
+                // "uniform" for a channel that genuinely differs. Banding reveals any difference at all:
+                // a region holding a different value carries visibly different bands.
                 if (_OceanDebugMode == DEBUG_SHAPE_IS_DEPTH)
-                    return half4(depth01 < 0.5 ? float3(1.0, 0.0, 0.0) : float3(0.0, 0.15, 0.9), 1.0);
+                    return half4(frac(depth01 * 32.0), 0.0, 0.0, 1.0);
                 if (_OceanDebugMode == DEBUG_SHAPE_IS_SHORE)
-                    return half4(shore01 < 0.5 ? float3(1.0, 0.0, 0.0) : float3(0.0, 0.15, 0.9), 1.0);
+                    return half4(frac(shore01 * 32.0), 0.0, 0.0, 1.0);
                 if (_OceanDebugMode == DEBUG_SHAPE_IS_BODY)
-                    return half4(body01 < 0.5 ? float3(1.0, 0.0, 0.0) : float3(0.0, 0.15, 0.9), 1.0);
+                    return half4(frac(body01 * 32.0), 0.0, 0.0, 1.0);
                 if (_OceanDebugMode == DEBUG_WATER_DATA)
                     return half4(depth01, shore01, body01, 1.0);
                 if (_OceanDebugMode == DEBUG_WATER_ABSORPTION)
