@@ -68,3 +68,5 @@
 - [Planet Architect reference](reference_planet_architect.md) — external biome/climate/vegetation reference at D:\Planet_Architect_v0.1.5_Windows; analysis paper in docs/research/
 
 - [Camera teleport wedges the Editor](feedback_camera_teleport_wedges_editor.md) - a long play-mode position jump re-plans ~77k scatter tiles on the main thread; Unity goes unresponsive and MCP times out. Prefer captures and C# queries over travelling.
+
+- [Identify before fixing](feedback_identify_before_fixing.md) - Bryan: colour the artifact itself and agree the target before more fixes; escalate to that after ONE failed fix, and suspect your own recent commits first.
