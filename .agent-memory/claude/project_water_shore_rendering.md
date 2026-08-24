@@ -721,3 +721,19 @@ opacity work built for it (`afe78ba`, `b18e862`) was reverted and was never need
 **Water still open:** underwater god rays (air light shafts are suppressed when submerged, correctly; the
 water-column equivalent does not exist), and `shore01` is vestigial now that foam and the shoreline are
 per-pixel.
+
+### Snell's window - verified at two sun angles, and what is still missing
+
+Checked at sunset and at local noon, 5 m down, looking straight up, 90 deg fov. Works at both; at noon the
+SUN is visible refracted inside the cone, which is the correct behaviour and a good sign the refraction maths
+is right.
+
+**Known gap, not a bug in the window:** outside the critical cone the surface should be a MIRROR showing the
+underwater scene (total internal reflection). That term does not exist, so it falls back to the flat ambient
+`UnderwaterSkyColor`, which is bright. Consequences measured at noon: inside 0.50/0.66/0.58 vs outside
+0.29/0.54/0.49 - a gentle gradient rather than a defined disc, and a green cast that bleeds across the soft
+boundary.
+
+Adding TIR is a real increment, not a tweak: it needs the underwater scene sampled about the reflected
+direction, not a constant. Judgement call whether it is worth it versus underwater god rays, which are more
+visible. Left for Bryan.
