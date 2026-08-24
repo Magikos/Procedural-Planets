@@ -955,16 +955,17 @@ Shader "Planet/Ocean"
                     float3 d = abs(ddx(float3(depth01, shore01, body01))) + abs(ddy(float3(depth01, shore01, body01)));
                     return half4(saturate(max(max(d.x, d.y), d.z) * 400.0), 0.0, 0.0, 1.0);
                 }
-                // CONTOUR BANDS, not a threshold. A fixed split shows nothing when both sides of a
-                // boundary sit on the same side of it - which is exactly how these modes first reported
-                // "uniform" for a channel that genuinely differs. Banding reveals any difference at all:
-                // a region holding a different value carries visibly different bands.
+                // DIRECT RAMP. These channels are 0..1, so the value itself is the right instrument.
+                // Two earlier versions were worse: a 0.5 threshold split, which is blind whenever both
+                // sides of a boundary sit above or below it, and frac(x * 32), which on a channel sitting
+                // near 1.0 aliases into speckle. Both reported "uniform" for a channel that jumps by half
+                // its range across eight pixels.
                 if (_OceanDebugMode == DEBUG_SHAPE_IS_DEPTH)
-                    return half4(frac(depth01 * 32.0), 0.0, 0.0, 1.0);
+                    return half4(depth01, 0.0, 0.0, 1.0);
                 if (_OceanDebugMode == DEBUG_SHAPE_IS_SHORE)
-                    return half4(frac(shore01 * 32.0), 0.0, 0.0, 1.0);
+                    return half4(shore01, 0.0, 0.0, 1.0);
                 if (_OceanDebugMode == DEBUG_SHAPE_IS_BODY)
-                    return half4(frac(body01 * 32.0), 0.0, 0.0, 1.0);
+                    return half4(body01, 0.0, 0.0, 1.0);
                 if (_OceanDebugMode == DEBUG_WATER_DATA)
                     return half4(depth01, shore01, body01, 1.0);
                 if (_OceanDebugMode == DEBUG_WATER_ABSORPTION)
