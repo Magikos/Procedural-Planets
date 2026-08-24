@@ -356,8 +356,54 @@ ENDHLSL
                     //
                     // So keep what the water pass drew wherever it drew something, and use the flat colour
                     // only for the water beyond it.
-                    float surface = saturate(WaterInterfaceFrontMask(i.uv));
-                    return float4(lerp(UnderwaterSkyColor(viewDir), originalCol.rgb, surface), originalCol.w);
+                    float3 camUp = normalize(_WorldSpaceCameraPos.xyz - _PlanetCenter);
+                    float cosWater = dot(viewDir, camUp);
+
+                    // SNELL'S WINDOW. Everything above the surface reaches the eye through a cone of
+                    // half-angle asin(1/1.333) = 48.75 degrees about straight up; outside it the surface is
+                    // a mirror and no sky gets through at all. Without this the whole upward view is one
+                    // flat colour, which is the single biggest thing missing from being underwater.
+                    const float COS_CRITICAL = 0.6593;   // cos(48.75 deg), water n = 1.333
+                    float window = smoothstep(COS_CRITICAL - 0.12, COS_CRITICAL + 0.04, cosWater);
+
+                    float3 result = UnderwaterSkyColor(viewDir);
+
+                    if (window > 0.001)
+                    {
+                        // Bend the ray back out through the surface: sin(air) = n * sin(water), so that
+                        // 48.75 degree cone opens to the whole hemisphere in air. This is why the entire
+                        // sky fits inside the window and crowds together towards its rim.
+                        float sinWater = sqrt(saturate(1.0 - cosWater * cosWater));
+                        float sinAir = saturate(1.333 * sinWater);
+                        float cosAir = sqrt(saturate(1.0 - sinAir * sinAir));
+                        float3 tangent = viewDir - camUp * cosWater;
+                        float tangentLength = length(tangent);
+                        float3 refracted = tangentLength > 1e-5
+                            ? normalize(tangent / tangentLength * sinAir + camUp * cosAir)
+                            : camUp;
+
+                        // Scatter from where the ray LEAVES the water, not from the camera: the atmosphere
+                        // integrates outward from the planet surface, so a start point below sea level has
+                        // no atmosphere in front of it to integrate.
+                        float depthAbove = max(_SeaLevelRadius - length(_WorldSpaceCameraPos.xyz - _PlanetCenter), 0.0);
+                        float pathToSurface = depthAbove / max(cosWater, 0.05);
+                        float3 exitPoint = _WorldSpaceCameraPos.xyz + viewDir * pathToSurface;
+                        float3 sky = CalculateScattering(exitPoint, refracted,
+                            _AtmosphereRadius * 4.0, originalCol.xyz);
+
+                        // Attenuated by the water actually overhead, on the coefficients the volume uses, so
+                        // the window agrees with the rest of the frame about how water absorbs.
+                        float3 throughWater = exp(-float3(3.80, 1.75, 0.58) * saturate(pathToSurface / 40.0));
+                        result = lerp(result, sky * throughWater, window);
+                    }
+
+                    // Whatever the water pass drew here - ripples, glint - sits in front of all of it, but
+                    // only OUTSIDE the window. Overhead the surface is nearly transparent and what the water
+                    // pass drew there is just the volume tint; letting it win discards the window entirely.
+                    // That last detail is what made three previous attempts at this produce no visible
+                    // change - the window was being computed correctly every time and then overwritten.
+                    float surface = saturate(WaterInterfaceFrontMask(i.uv)) * (1.0 - window * 0.85);
+                    return float4(lerp(result, originalCol.rgb, surface), originalCol.w);
                 }
 
                 if (_OceanDebugMode == DEBUG_ATMOSPHERE_WATER_CUT && _WaterVolumeEnabled > 0.5)
