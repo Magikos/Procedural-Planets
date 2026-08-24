@@ -438,3 +438,33 @@ COS_CRITICAL + 0.05, dot(viewDir, camUp))`; refract with `sinAir = 1.333 * sinWa
 from the tangent and up components; attenuate by `exp(-(3.80, 1.75, 0.58) * saturate(depthAbove /
 cosWater / 40))` to agree with the volume's own coefficients; composite the water pass's surface on top
 with `WaterInterfaceFrontMask`.
+
+## Seeing the far side of the ocean through the near side (2026-08-24, `2704811`)
+
+From above water looking at the horizon, the ocean past the planet's curve rendered THROUGH the water in
+front of the camera - a second waterline above the real one, sky glowing between them, checkered moire along
+it. Bryan asked whether a per-frame ray check was needed. It is not.
+
+**The key geometric fact: on a convex sphere, a back-facing water fragment cannot legitimately be seen from
+above the surface.** If the underside is facing you, that water is past the horizon. So the sign of
+`dot(viewDir, normalWS)` settles it - and Ocean.shader was already computing exactly that as
+`signedViewFacing`, one line away, for foam.
+
+```
+float cameraAboveWater = smoothstep(-0.5, 1.5, cameraSeaOffset);   // vs the SHORE field, not _SeaLevelRadius
+float frontFacing      = smoothstep(-0.03, 0.03, signedViewFacing);
+layer.alpha *= lerp(1.0, frontFacing, cameraAboveWater);
+```
+
+`Cull Off` has to stay - from below, the underside IS the whole view - so this gates on the camera's side
+instead. Underwater it is a no-op by construction (`cameraAboveWater` = 0, term collapses to 1).
+
+**Bonus the same test buys:** water writes no depth, so a nearby wave's far slope is not occluded by its own
+crest either. Same sign test hides both.
+
+**Rejected, with reasons:** dynamic `Cull Back`/`Cull Front` by camera side is free but pops at the crossing
+and cannot handle the near-wave case; depth-writing the surface fixes self-occlusion but breaks transparency
+ordering across the whole water stack.
+
+**Generalises:** any "I can see through to geometry that should be over the horizon" on a sphere is a
+back-face question first. Reach for the facing sign before a ray.
