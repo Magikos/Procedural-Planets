@@ -737,3 +737,22 @@ boundary.
 Adding TIR is a real increment, not a tweak: it needs the underwater scene sampled about the reflected
 direction, not a constant. Judgement call whether it is worth it versus underwater god rays, which are more
 visible. Left for Bryan.
+
+## Underwater compositing needs a RESTRUCTURE, not another patch (2026-08-24)
+
+Design doc: [docs/design/2026-08-24-underwater-compositing.md](../../docs/design/2026-08-24-underwater-compositing.md)
+
+The underwater branch in `Atmosphere.shader` is a sequence of overrides - flat ambient colour, then Snell's
+window over it, then the water pass's surface over that - and every fix in the area has been another override
+on top. Three of the last five needed follow-up fixes.
+
+**Measured, 12 m down looking up:** `SurfaceOnly` shows the underside dark navy with wave streaks, which is
+CORRECT; the beauty pass floods bright teal over it. The "glowing underside" Bryan reported is the surface
+showing through that wash, not the surface being lit wrongly. Captures `glow_0.png` / `glow_25.png`.
+
+Proposed: compose one result from through-the-surface (Snell), reflected-off-the-underside (total internal
+reflection, currently missing entirely), and the water column's in-scatter - weighted by Fresnel, added rather
+than overridden. `847e867` and `6d2e3d0` will likely be subsumed.
+
+**Do not start this mid-session on top of accumulated context.** The doc has the do-not-regress list with the
+viewpoint each committed fix was verified at, and the tooling timings.
