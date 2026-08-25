@@ -49,11 +49,12 @@ public sealed class LogRenderer : System.IDisposable
         for (int i = 0; i < _logs.Count; i++)
         {
             ScatterHarvestStore.LogRecord log = _logs[i];
+            float scale = ScatterHarvestStore.StoredScaleOr(log.Scale);
             // The cylinder is centre-pivoted; shift it half a length along its (rotated) axis so the log lies
             // from the felled tree's base outward instead of half-sinking into the stump.
             Vector3 axis = log.Rotation * Vector3.up;
-            Vector3 pos = log.Position + axis * LogScale.y;
-            Graphics.RenderMesh(_rp, _mesh, 0, Matrix4x4.TRS(pos, log.Rotation, LogScale));
+            Vector3 pos = log.Position + axis * (LogScale.y * scale);
+            Graphics.RenderMesh(_rp, _mesh, 0, Matrix4x4.TRS(pos, log.Rotation, LogScale * scale));
         }
     }
 

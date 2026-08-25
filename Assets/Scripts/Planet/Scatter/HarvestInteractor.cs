@@ -31,11 +31,9 @@ public sealed class HarvestInteractor
             return false;
         }
 
-        ulong treeId = 0;
-        int treeProto = -1;
-        Vector3 treePos = default;
+        ScatterPick tree = default;
         bool hasTree = _picker != null &&
-            _picker.TryPick(ray, reachMeters, maxPerpMeters, out treeId, out treeProto, out treePos);
+            _picker.TryPick(ray, reachMeters, maxPerpMeters, out tree);
         bool hasStump = TryPickStump(ray, reachMeters, maxPerpMeters, out ulong stumpId, out Vector3 stumpPos);
 
         if (!hasTree && !hasStump)
@@ -46,11 +44,11 @@ public sealed class HarvestInteractor
 
         // The nearer target (to the ray origin) wins when both a tree and a stump are in aim.
         bool dig = hasStump && (!hasTree ||
-            (stumpPos - ray.origin).sqrMagnitude < (treePos - ray.origin).sqrMagnitude);
+            (stumpPos - ray.origin).sqrMagnitude < (tree.Position - ray.origin).sqrMagnitude);
 
         HarvestResult r = dig
             ? _harvest.TryDig(stumpId, stumpPos, ToolTier.Shovel)
-            : _harvest.TryHarvest(treeId, treeProto, ToolTier.BasicAxe, treePos);
+            : _harvest.TryHarvest(tree, ToolTier.BasicAxe);
 
         switch (r.Outcome)
         {

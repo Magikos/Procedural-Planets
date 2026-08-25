@@ -4,9 +4,13 @@ using UnityEngine;
 
 // Saved edit stamps are the durable world state. Path wear, scorch, and future
 // surface textures are derived caches rebuilt from this stamp list.
+//
+// The stamps live in the world delta log, one record each, so this is a view over that log rather than a store
+// of its own. Every mutation appends; nothing rewrites a whole file per brush sample the way the old
+// surface-edits-{seed}.json did.
 public sealed class SurfaceEditController : ISurfacePathBrushService
 {
-    const int SaveVersion = 1;
+    const int LegacySaveVersion = 1;
     const float DefaultRegrowRefreshSeconds = 5f;
     static readonly int SurfacePathDebugId = Shader.PropertyToID("_SurfacePathDebug");
 
@@ -17,13 +21,16 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
 
     ChunkedSurfaceProvider _provider;
     Material _terrainMaterial;
+    IWorldDeltaLog _delta;
+    IWorldDeltaLog _loadedDelta;
     int _seed;
     int _loadedSeed = int.MinValue;
+    ulong _nextStampId = 1;
     float _nextRegrowRefreshTime;
-    bool _saveDirty;
     int _strokeCounter;
     int _activeStrokeId;
     bool _strokeOpen;
+    bool _warnedNoDeltaLog;
     float _regrowRefreshSeconds = DefaultRegrowRefreshSeconds;
 
     public SurfaceEditController(Transform planetTransform, ILogger logger, System.Action invalidateGrass)
@@ -33,11 +40,22 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
         _invalidateGrass = invalidateGrass;
     }
 
-    public void Configure(ChunkedSurfaceProvider provider, Material terrainMaterial, int seed)
+    public void Configure(ChunkedSurfaceProvider provider, Material terrainMaterial, int seed, IWorldDeltaLog deltaLog)
     {
         _provider = provider;
         _terrainMaterial = terrainMaterial;
         _seed = seed;
+        _delta = deltaLog;
+    }
+
+    /// <summary>The durable stamp set, in creation order. Rebuilt from the log; a caller must not mutate it.</summary>
+    public IReadOnlyList<SurfaceEditStamp> SavedStamps
+    {
+        get
+        {
+            EnsureLoaded();
+            return _stamps;
+        }
     }
 
     public bool TryPaintDisc(Vector3 localUnitDirection, float radiusMeters, float strength,
@@ -73,9 +91,9 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
         {
             SurfaceEditStamp stamp = new()
             {
-                kind = "path",
-                shape = ShapeId(shape),
-                operation = OperationId(operation),
+                kind = SurfaceEditStampCodec.PathKind,
+                shape = SurfaceEditStampCodec.ShapeId(shape),
+                operation = SurfaceEditStampCodec.OperationId(operation),
                 strokeId = NextStrokeId(saveImmediately),
                 direction = localUnitDirection.normalized,
                 radiusMeters = radius,
@@ -83,7 +101,7 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
                 createdUnixSeconds = NowUnixSeconds(),
                 regrowSeconds = Mathf.Max(0f, regrowSeconds),
             };
-            AddStamp(stamp, saveImmediately);
+            AddStamp(stamp);
             if (saveImmediately)
                 _provider.RebuildPathWearFromStamps(_stamps, NowUnixSeconds());
 
@@ -139,9 +157,9 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
         {
             SurfaceEditStamp stamp = new()
             {
-                kind = "scorch",
-                shape = ShapeId(shape),
-                operation = OperationId(operation),
+                kind = SurfaceEditStampCodec.ScorchKind,
+                shape = SurfaceEditStampCodec.ShapeId(shape),
+                operation = SurfaceEditStampCodec.OperationId(operation),
                 strokeId = NextStrokeId(saveImmediately),
                 direction = localUnitDirection.normalized,
                 radiusMeters = radius,
@@ -149,7 +167,7 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
                 createdUnixSeconds = NowUnixSeconds(),
                 regrowSeconds = Mathf.Max(0f, regrowSeconds),
             };
-            AddStamp(stamp, saveImmediately);
+            AddStamp(stamp);
             summary += stamp.regrowSeconds > 0f
                 ? $"; saved {stamp.operation} scorch regrow={stamp.regrowSeconds:F0}s"
                 : $"; saved permanent {stamp.operation} scorch";
@@ -193,13 +211,7 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
     public string ClearSavedStamps()
     {
         EnsureLoaded();
-        int stamps = _stamps.Count;
-        _stamps.Clear();
-
-        string path = FilePath();
-        if (File.Exists(path))
-            File.Delete(path);
-
+        int stamps = RemoveStamps(kind: null);
         int chunks = ClearRuntimeMasks();
         return $"cleared {stamps} saved path stamp(s), {chunks} runtime chunk mask(s)";
     }
@@ -207,18 +219,7 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
     public string ClearSavedScorchStamps()
     {
         EnsureLoaded();
-        int removed = 0;
-        for (int i = _stamps.Count - 1; i >= 0; i--)
-        {
-            if (_stamps[i].kind != "scorch")
-                continue;
-
-            _stamps.RemoveAt(i);
-            removed++;
-        }
-
-        if (removed > 0)
-            Save();
+        int removed = RemoveStamps(SurfaceEditStampCodec.ScorchKind);
         int replayed = ReplayStamps(clearFirst: true);
         return $"cleared {removed} saved scorch stamp(s), replayed {replayed} remaining surface edit(s)";
     }
@@ -230,13 +231,13 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
 
         EnsureLoaded();
         int active = CountActiveStamps(NowUnixSeconds());
-        int pathCount = CountKind("path");
-        int scorchCount = CountKind("scorch");
+        int pathCount = CountKind(SurfaceEditStampCodec.PathKind);
+        int scorchCount = CountKind(SurfaceEditStampCodec.ScorchKind);
         int regrowing = CountRegrowingStamps();
         float debug = _terrainMaterial != null && _terrainMaterial.HasProperty(SurfacePathDebugId)
             ? _terrainMaterial.GetFloat(SurfacePathDebugId)
             : 0f;
-        return $"path mask ready: wear={PlanetChunkTextures.PathWearResolution} R8 vector-baked, surface-state fallback=64 RGBA; debug={DebugName(debug)}, saved={_stamps.Count} (path={pathCount}, scorch={scorchCount}, regrowing={regrowing}), active={active}, regrow-refresh={_regrowRefreshSeconds:F1}s, file={Path.GetFileName(FilePath())}";
+        return $"path mask ready: wear={PlanetChunkTextures.PathWearResolution} R8 vector-baked, surface-state fallback=64 RGBA; debug={DebugName(debug)}, saved={_stamps.Count} (path={pathCount}, scorch={scorchCount}, regrowing={regrowing}), active={active}, regrow-refresh={_regrowRefreshSeconds:F1}s, store={(_delta != null ? "world delta log" : "memory only (no delta log)")}";
     }
 
     public string SetDebug(bool? enabled)
@@ -291,8 +292,6 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
             _provider.RebuildPathWearFromStamps(_stamps, NowUnixSeconds());
             _invalidateGrass?.Invoke();
         }
-        if (_saveDirty)
-            Save();
     }
 
     public void FlushSurfacePathEdits() => FlushPendingSave();
@@ -385,6 +384,9 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
     // until FlushPendingSave closes it, so its stamps composite by max instead of stacking.
     int NextStrokeId(bool immediate)
     {
+        // Before the counter is seeded from the saved stamps, not after: a fresh id that collides with a
+        // saved stroke composites the two as one drag on the next replay.
+        EnsureLoaded();
         if (immediate)
             return ++_strokeCounter;
 
@@ -403,14 +405,12 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
 
         EnsureLoaded();
         long now = NowUnixSeconds();
-        int removed = PruneExpired(now);
+        PruneExpired(now);
         if (clearFirst)
             _provider.ClearSurfaceStateMasks();
 
         int replayed = _provider.RebuildPathWearFromStamps(_stamps, now)
             + _provider.RebuildSurfaceStateFromStamps(_stamps, now);
-        if (removed > 0)
-            Save();
         if (clearFirst || replayed > 0)
             _invalidateGrass?.Invoke();
         return replayed;
@@ -433,77 +433,99 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
         _nextRegrowRefreshTime = Time.unscaledTime + _regrowRefreshSeconds;
     }
 
-    void AddStamp(SurfaceEditStamp stamp, bool saveImmediately)
+    void AddStamp(SurfaceEditStamp stamp)
     {
         EnsureLoaded();
-        _saveDirty |= PruneExpired(NowUnixSeconds()) > 0;
+        PruneExpired(NowUnixSeconds());
+        Apply(SurfaceEditStampCodec.Encode(_nextStampId, stamp));
+    }
+
+    // --- delta log view ---
+
+    // One append, then the same fold the replay uses. Going through Ingest rather than adding to _stamps
+    // directly is what keeps a live world and a reloaded one from drifting apart: every stamp the session
+    // holds has been through the encoder and back.
+    void Apply(in WorldDelta delta)
+    {
+        if (_delta == null)
+        {
+            if (!_warnedNoDeltaLog)
+            {
+                _warnedNoDeltaLog = true;
+                _logger?.Log(LogLevel.Warning, "SurfaceEdit", "No delta log configured; surface edits will not persist.");
+            }
+            Ingest(delta);
+            return;
+        }
+        Ingest(_delta.Append(delta));
+    }
+
+    void Ingest(in WorldDelta delta)
+    {
+        if (delta.Kind != DeltaKind.SurfaceStamp)
+            return;
+        if (delta.Key >= _nextStampId)
+            _nextStampId = delta.Key + 1;
+
+        if (delta.State == SurfaceEditStampCodec.StateRemoved)
+        {
+            RemoveStampRecord(delta.Key);
+            return;
+        }
+        if (!SurfaceEditStampCodec.TryDecode(delta, out SurfaceEditStamp stamp))
+            return;
+
         _stamps.Add(stamp);
-        if (saveImmediately)
-            Save();
-        else
-            _saveDirty = true;
+        if (stamp.strokeId > _strokeCounter)
+            _strokeCounter = stamp.strokeId;
+    }
+
+    void RemoveStampRecord(ulong recordId)
+    {
+        for (int i = 0; i < _stamps.Count; i++)
+        {
+            if (_stamps[i].recordId != recordId)
+                continue;
+
+            _stamps.RemoveAt(i);
+            return;
+        }
+    }
+
+    // Tombstones every stamp of `kind` (all of them when null). Removal must be a record of its own: an
+    // erased stamp is still in the log, and a client that only replayed the additions would paint it back.
+    int RemoveStamps(string kind)
+    {
+        int removed = 0;
+        for (int i = _stamps.Count - 1; i >= 0; i--)
+        {
+            if (kind != null && _stamps[i].kind != kind)
+                continue;
+
+            Apply(SurfaceEditStampCodec.Tombstone(_stamps[i].recordId));
+            removed++;
+        }
+        return removed;
     }
 
     void EnsureLoaded()
     {
-        if (_loadedSeed == _seed)
+        if (_loadedSeed == _seed && ReferenceEquals(_loadedDelta, _delta))
             return;
 
         _loadedSeed = _seed;
+        _loadedDelta = _delta;
         _stamps.Clear();
         _strokeCounter = 0;
         _activeStrokeId = 0;
         _strokeOpen = false;
+        _nextStampId = 1;
 
-        string path = FilePath();
-        if (!File.Exists(path))
-            return;
+        if (_delta != null)
+            foreach (WorldDelta d in _delta.Snapshot())
+                Ingest(d);
 
-        try
-        {
-            string json = File.ReadAllText(path);
-            SurfaceEditSaveData data = JsonUtility.FromJson<SurfaceEditSaveData>(json);
-            if (data?.stamps == null || data.version != SaveVersion || data.planetSeed != _seed)
-                return;
-
-            _stamps.AddRange(data.stamps);
-            int maxStrokeId = 0;
-            for (int i = 0; i < _stamps.Count; i++)
-                maxStrokeId = Mathf.Max(maxStrokeId, _stamps[i].strokeId);
-
-            bool migrated = false;
-            for (int i = 0; i < _stamps.Count; i++)
-            {
-                if (_stamps[i].strokeId > 0)
-                    continue;
-
-                _stamps[i].strokeId = ++maxStrokeId;
-                migrated = true;
-            }
-
-            _strokeCounter = maxStrokeId;
-            _saveDirty = migrated;
-        }
-        catch (System.Exception ex)
-        {
-            _logger.LogException("SurfaceEdit", ex);
-        }
-    }
-
-    void Save()
-    {
-        string directory = Path.GetDirectoryName(FilePath());
-        if (!string.IsNullOrEmpty(directory))
-            Directory.CreateDirectory(directory);
-
-        SurfaceEditSaveData data = new()
-        {
-            version = SaveVersion,
-            planetSeed = _seed,
-            stamps = _stamps,
-        };
-        File.WriteAllText(FilePath(), JsonUtility.ToJson(data, prettyPrint: true));
-        _saveDirty = false;
+        ImportLegacySave();
     }
 
     int PruneExpired(long now)
@@ -514,10 +536,70 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
             if (EffectiveStrength(_stamps[i], now) > 0f)
                 continue;
 
-            _stamps.RemoveAt(i);
+            Apply(SurfaceEditStampCodec.Tombstone(_stamps[i].recordId));
             removed++;
         }
         return removed;
+    }
+
+    // --- migration off the old per-seed JSON ---
+
+    // Reads the v1 JSON once and appends it to the delta log. The guard is the log itself: once it holds any
+    // surface-stamp record the import has already run, and re-running it would paint back stamps the player
+    // has since cleared. The file is left exactly where it is - it is the player's save data, and nothing here
+    // has standing to delete it.
+    void ImportLegacySave()
+    {
+        if (_delta == null || HasSurfaceStampRecords())
+            return;
+
+        string path = LegacyPath();
+        if (!File.Exists(path))
+            return;
+
+        try
+        {
+            SurfaceEditSaveData data = JsonUtility.FromJson<SurfaceEditSaveData>(File.ReadAllText(path));
+            if (data?.stamps == null || data.version != LegacySaveVersion || data.planetSeed != _seed)
+            {
+                _logger?.Log(LogLevel.Info, "SurfaceEdit",
+                    $"Ignoring {Path.GetFileName(path)}: version {data?.version} seed {data?.planetSeed}.");
+                return;
+            }
+
+            int maxStrokeId = 0;
+            for (int i = 0; i < data.stamps.Count; i++)
+                maxStrokeId = Mathf.Max(maxStrokeId, data.stamps[i].strokeId);
+
+            for (int i = 0; i < data.stamps.Count; i++)
+            {
+                SurfaceEditStamp stamp = data.stamps[i];
+                if (stamp == null)
+                    continue;
+                // Saves older than the stroke-id field group every stamp into stroke 0, which composites them
+                // as one drag rather than as separate paints.
+                if (stamp.strokeId <= 0)
+                    stamp.strokeId = ++maxStrokeId;
+                Apply(SurfaceEditStampCodec.Encode(_nextStampId, stamp));
+            }
+
+            if (data.stamps.Count > 0)
+                _logger?.Log(LogLevel.Info, "SurfaceEdit",
+                    $"Imported {data.stamps.Count} surface edit(s) from the pre-delta-log save.");
+        }
+        catch (System.Exception ex)
+        {
+            _logger.LogException("SurfaceEdit", ex);
+        }
+    }
+
+    bool HasSurfaceStampRecords()
+    {
+        System.Collections.Generic.IReadOnlyList<WorldDelta> snapshot = _delta.Snapshot();
+        for (int i = 0; i < snapshot.Count; i++)
+            if (snapshot[i].Kind == DeltaKind.SurfaceStamp)
+                return true;
+        return false;
     }
 
     int CountActiveStamps(long now)
@@ -575,19 +657,6 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
 
     static long NowUnixSeconds() => System.DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-    static string ShapeId(SurfacePathShape shape)
-    {
-        switch (shape)
-        {
-            case SurfacePathShape.HardDisc:
-                return "hard-disc";
-            case SurfacePathShape.HardSquare:
-                return "hard-square";
-            default:
-                return "disc";
-        }
-    }
-
     static string DebugName(float value)
     {
         if (value > 1.5f)
@@ -595,14 +664,8 @@ public sealed class SurfaceEditController : ISurfacePathBrushService
         return value > 0.5f ? "hot-pink" : "off";
     }
 
-    static string OperationId(SurfacePathOperation operation) =>
-        operation == SurfacePathOperation.Erase ? "erase" : "paint";
-
-    string FilePath()
-    {
-        string directory = Path.Combine(Application.persistentDataPath, "ProceduralPlanets");
-        return Path.Combine(directory, $"surface-edits-{_seed}.json");
-    }
+    string LegacyPath() =>
+        Path.Combine(Application.persistentDataPath, "ProceduralPlanets", $"surface-edits-{_seed}.json");
 }
 
 [System.Serializable]
@@ -625,4 +688,88 @@ public sealed class SurfaceEditStamp
     public float strength;
     public long createdUnixSeconds;
     public float regrowSeconds;
+
+    /// <summary>Key of the delta record this stamp came from. Not part of the stamp; it addresses the record.</summary>
+    [System.NonSerialized] public ulong recordId;
+}
+
+// A stamp has nine fields and no transform, so it does not fit the delta record's hoisted fields - which is
+// exactly what the record's opaque payload is for. The one field that IS hoisted is the direction: it goes in
+// the record's Position so spatial code (a replication interest bucket, a log inspector) can place a stamp
+// without knowing this encoding.
+//
+// The payload carries its own format byte. A later field is added by writing a new format and keeping a read
+// path for the old one, the same way the log itself versions.
+public static class SurfaceEditStampCodec
+{
+    public const string PathKind = "path";
+    public const string ScorchKind = "scorch";
+
+    public const byte StatePresent = 0;
+    public const byte StateRemoved = 1;
+
+    const byte PayloadFormat1 = 1;
+    const int PayloadBytes1 = 28;
+
+    public static WorldDelta Encode(ulong recordId, SurfaceEditStamp stamp)
+    {
+        var payload = new byte[PayloadBytes1];
+        payload[0] = PayloadFormat1;
+        payload[1] = (byte)(stamp.kind == ScorchKind ? 1 : 0);
+        payload[2] = (byte)ParseShape(stamp.shape);
+        payload[3] = (byte)(stamp.operation == "erase" ? SurfacePathOperation.Erase : SurfacePathOperation.Paint);
+        System.BitConverter.GetBytes(stamp.strokeId).CopyTo(payload, 4);
+        System.BitConverter.GetBytes(stamp.radiusMeters).CopyTo(payload, 8);
+        System.BitConverter.GetBytes(stamp.strength).CopyTo(payload, 12);
+        System.BitConverter.GetBytes(stamp.createdUnixSeconds).CopyTo(payload, 16);
+        System.BitConverter.GetBytes(stamp.regrowSeconds).CopyTo(payload, 24);
+        return new WorldDelta(0, DeltaKind.SurfaceStamp, recordId, stamp.direction,
+            state: StatePresent, payload: payload);
+    }
+
+    /// <summary>A cleared or fully regrown stamp. Last write per key wins, so this replaces the record rather than adding one.</summary>
+    public static WorldDelta Tombstone(ulong recordId) =>
+        new(0, DeltaKind.SurfaceStamp, recordId, state: StateRemoved);
+
+    public static bool TryDecode(in WorldDelta delta, out SurfaceEditStamp stamp)
+    {
+        stamp = null;
+        byte[] payload = delta.Payload;
+        if (payload == null || payload.Length < PayloadBytes1 || payload[0] != PayloadFormat1)
+            return false;
+
+        stamp = new SurfaceEditStamp
+        {
+            recordId = delta.Key,
+            kind = payload[1] == 1 ? ScorchKind : PathKind,
+            shape = ShapeId((SurfacePathShape)payload[2]),
+            operation = OperationId((SurfacePathOperation)payload[3]),
+            strokeId = System.BitConverter.ToInt32(payload, 4),
+            direction = delta.Position,
+            radiusMeters = System.BitConverter.ToSingle(payload, 8),
+            strength = System.BitConverter.ToSingle(payload, 12),
+            createdUnixSeconds = System.BitConverter.ToInt64(payload, 16),
+            regrowSeconds = System.BitConverter.ToSingle(payload, 24),
+        };
+        return true;
+    }
+
+    // The provider reads these as strings, so the wire form is a byte and the in-memory form stays what
+    // ChunkedSurfaceProvider already compares against.
+    public static string ShapeId(SurfacePathShape shape) => shape switch
+    {
+        SurfacePathShape.HardDisc => "hard-disc",
+        SurfacePathShape.HardSquare => "hard-square",
+        _ => "disc",
+    };
+
+    public static SurfacePathShape ParseShape(string shape) => shape switch
+    {
+        "hard-disc" => SurfacePathShape.HardDisc,
+        "hard-square" => SurfacePathShape.HardSquare,
+        _ => SurfacePathShape.SoftDisc,
+    };
+
+    public static string OperationId(SurfacePathOperation operation) =>
+        operation == SurfacePathOperation.Erase ? "erase" : "paint";
 }

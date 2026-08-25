@@ -40,7 +40,8 @@ namespace ProceduralPlanets.Tests
             // > int.MaxValue and a negative TypeIndex: the byte packing must not be sign- or width-lossy.
             ulong big = (1UL << 63) | 987654321UL;
             var written = new WorldDelta(7, DeltaKind.EntitySpawned, big,
-                new Vector3(-1234.5f, 6789.25f, 0.125f), new Quaternion(0.1f, -0.2f, 0.3f, -0.9f), -42, 200);
+                new Vector3(-1234.5f, 6789.25f, 0.125f), new Quaternion(0.1f, -0.2f, 0.3f, -0.9f), -42, 200,
+                scale: 3.4375f);
 
             using (var log = new WorldDeltaLog())
             {
@@ -57,7 +58,105 @@ namespace ProceduralPlanets.Tests
             Assert.AreEqual(written.Rotation, read.Rotation);
             Assert.AreEqual(-42, read.TypeIndex);
             Assert.AreEqual(200, read.State);
+            Assert.AreEqual(3.4375f, read.Scale, "scale survives, so a felled tree's stump is its own size");
             Assert.AreEqual(0, reloaded.TornRecordsDropped);
+        }
+
+        [Test]
+        public void Scale_DefaultsToOne_NotZero()
+        {
+            // Every kind that has no size still writes a scale, and a consumer multiplies by it. Defaulting
+            // to 0 would collapse every stump and log to nothing.
+            Assert.AreEqual(1f, new WorldDelta(0, DeltaKind.ScatterRemoved, 1UL).Scale);
+
+            using var log = new WorldDeltaLog();
+            log.Open(_dir, WorldKey);
+            Assert.AreEqual(1f, log.Append(new WorldDelta(0, DeltaKind.ScatterRemoved, 1UL)).Scale);
+        }
+
+        [Test]
+        public void V1File_IsReadAndUpgraded_RatherThanRefused()
+        {
+            // Bryan's live world is already a v1 log. Refusing it would drop every chop in it, so the reader
+            // has to understand the old fixed part - which ends at state, before scale was appended - and the
+            // open has to leave the file in the current schema so the next append is not written behind a
+            // header promising the old framing.
+            WriteV1Log(BasePath,
+                (1UL, new Vector3(1, 2, 3), 4, (byte)0),
+                (2UL, new Vector3(-5, 6, 7), 9, (byte)1));
+
+            using (var upgraded = new WorldDeltaLog())
+            {
+                upgraded.Open(_dir, WorldKey);
+                Assert.AreEqual(0, upgraded.TornRecordsDropped, "a v1 record is not a torn record");
+                Assert.AreEqual(2, upgraded.Count);
+                Assert.IsTrue(upgraded.TryGet(DeltaKind.ScatterState, 1UL, out WorldDelta d));
+                Assert.AreEqual(new Vector3(1, 2, 3), d.Position);
+                Assert.AreEqual(4, d.TypeIndex);
+                Assert.AreEqual(1f, d.Scale, "a record written before the field reads as unscaled");
+
+                upgraded.Append(Chop(3UL, Vector3.one, 7));
+            }
+
+            // The append after the upgrade has to be readable, which it is not if the header still says v1.
+            using var reloaded = new WorldDeltaLog();
+            reloaded.Open(_dir, WorldKey);
+            Assert.AreEqual(3, reloaded.Count);
+            Assert.AreEqual(0, reloaded.TornRecordsDropped);
+            Assert.IsTrue(reloaded.TryGet(DeltaKind.ScatterState, 3UL, out WorldDelta appended));
+            Assert.AreEqual(7, appended.TypeIndex);
+        }
+
+        [Test]
+        public void UnknownSchema_IsRefused_NotHalfRead()
+        {
+            // A file from a future build cannot be interpreted, and half-reading it is worse than ignoring it.
+            byte[] header = new byte[8];
+            BitConverter.GetBytes(0x504C4457u).CopyTo(header, 0);
+            BitConverter.GetBytes(WorldDeltaLog.SchemaVersion + 1).CopyTo(header, 4);
+            File.WriteAllBytes(BasePath, header);
+
+            using var log = new WorldDeltaLog();
+            log.Open(_dir, WorldKey);
+            Assert.AreEqual(0, log.Count);
+        }
+
+        // Written byte by byte rather than through the current writer: the point is to read a file an OLD
+        // build produced, so a change to the current framing must not quietly change the fixture.
+        static void WriteV1Log(string path, params (ulong key, Vector3 pos, int proto, byte state)[] records)
+        {
+            const int v1Fixed = 48;
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            using var fs = new FileStream(path, FileMode.Create, FileAccess.Write);
+
+            var header = new byte[8];
+            BitConverter.GetBytes(0x504C4457u).CopyTo(header, 0);
+            BitConverter.GetBytes(1).CopyTo(header, 4);
+            fs.Write(header, 0, header.Length);
+
+            uint sequence = 1;
+            foreach ((ulong key, Vector3 pos, int proto, byte state) in records)
+            {
+                var b = new byte[v1Fixed];
+                BitConverter.GetBytes(sequence++).CopyTo(b, 0);
+                b[4] = (byte)DeltaKind.ScatterState;
+                BitConverter.GetBytes(key).CopyTo(b, 5);
+                BitConverter.GetBytes((ushort)0).CopyTo(b, 13);
+                BitConverter.GetBytes(pos.x).CopyTo(b, 15);
+                BitConverter.GetBytes(pos.y).CopyTo(b, 19);
+                BitConverter.GetBytes(pos.z).CopyTo(b, 23);
+                BitConverter.GetBytes(0f).CopyTo(b, 27);
+                BitConverter.GetBytes(0f).CopyTo(b, 31);
+                BitConverter.GetBytes(0f).CopyTo(b, 35);
+                BitConverter.GetBytes(1f).CopyTo(b, 39);
+                BitConverter.GetBytes(proto).CopyTo(b, 43);
+                b[47] = state;
+
+                uint hash = 2166136261u;
+                for (int i = 0; i < b.Length; i++) { hash ^= b[i]; hash *= 16777619u; }
+                fs.Write(b, 0, b.Length);
+                fs.Write(BitConverter.GetBytes(hash), 0, 4);
+            }
         }
 
         [Test]

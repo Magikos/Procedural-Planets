@@ -55,6 +55,9 @@ namespace ProceduralPlanets.Tests
             return store;
         }
 
+        static ScatterPick Pick(ulong id, Vector3 pos, int proto, float scale = 1f) =>
+            new ScatterPick(id, proto, pos, Quaternion.Euler(0f, 143f, 0f), scale);
+
         static ScatterHarvestStore.HarvestNode Find(ScatterHarvestStore store, ulong id)
         {
             var list = new List<ScatterHarvestStore.HarvestNode>();
@@ -69,9 +72,9 @@ namespace ProceduralPlanets.Tests
             using (WorldDeltaLog log = OpenLog(TestSeed))
             {
                 ScatterHarvestStore a = Store(log);
-                Assert.IsTrue(a.RecordStump(100UL, new Vector3(1, 2, 3), 4));
-                Assert.IsTrue(a.RecordStump(big, new Vector3(-5, 6, 7), 9));
-                Assert.IsFalse(a.RecordStump(100UL, Vector3.zero, 0), "duplicate record returns false");
+                Assert.IsTrue(a.RecordStump(Pick(100UL, new Vector3(1, 2, 3), 4)));
+                Assert.IsTrue(a.RecordStump(Pick(big, new Vector3(-5, 6, 7), 9, scale: 2.75f)));
+                Assert.IsFalse(a.RecordStump(Pick(100UL, Vector3.zero, 0)), "duplicate record returns false");
                 Assert.AreEqual(2, a.Count);
             }
 
@@ -89,6 +92,46 @@ namespace ProceduralPlanets.Tests
         }
 
         [Test]
+        public void FelledTransform_SurvivesReload_AndTheDigThatFollows()
+        {
+            // The stump renderer and the falling tree are both placed from this record. A stump that came
+            // back at the mesh's authored yaw and size was B11: it visibly did not match the tree that stood
+            // there. Digging rewrites the record, so it has to carry the transform forward too.
+            var rotation = Quaternion.Euler(11f, 143f, 7f);
+            using (WorldDeltaLog log = OpenLog(TestSeed))
+            {
+                ScatterHarvestStore a = Store(log);
+                a.RecordStump(new ScatterPick(100UL, 4, new Vector3(1, 2, 3), rotation, 2.75f));
+            }
+
+            using WorldDeltaLog reopened = OpenLog(TestSeed);
+            ScatterHarvestStore reloaded = Store(reopened);
+            ScatterHarvestStore.HarvestNode n = Find(reloaded, 100UL);
+            Assert.Less(Quaternion.Angle(rotation, n.Rotation), 0.5f, "yaw round-trips");
+            Assert.AreEqual(2.75f, n.Scale, 1e-4f, "scale round-trips");
+            Assert.IsTrue(ScatterHarvestStore.HasStoredRotation(n.Rotation));
+
+            reloaded.RecordDug(100UL);
+            Assert.IsTrue(reloaded.TryGetStump(100UL, out ScatterHarvestStore.HarvestNode dug));
+            Assert.Less(Quaternion.Angle(rotation, dug.Rotation), 0.5f, "digging keeps the transform");
+            Assert.AreEqual(2.75f, dug.Scale, 1e-4f);
+        }
+
+        [Test]
+        public void RecordWithoutAStoredRotation_FallsBackRatherThanLyingOnItsSide()
+        {
+            // Everything written before the transform was persisted stored Quaternion.identity, and a field
+            // absent from an older record reads back as all zeros. A scatter instance stands on the radial,
+            // so neither is a rotation it can have - the renderers must treat both as "unknown".
+            Assert.IsFalse(ScatterHarvestStore.HasStoredRotation(Quaternion.identity));
+            Assert.IsFalse(ScatterHarvestStore.HasStoredRotation(new Quaternion(0f, 0f, 0f, 0f)));
+            Assert.IsTrue(ScatterHarvestStore.HasStoredRotation(Quaternion.Euler(0f, 90f, 0f)));
+
+            Assert.AreEqual(1f, ScatterHarvestStore.StoredScaleOr(0f), "an absent scale is 1, not 0");
+            Assert.AreEqual(2.5f, ScatterHarvestStore.StoredScaleOr(2.5f));
+        }
+
+        [Test]
         public void RecordDug_RemovesStump_ButStillBlocksStandingTree_AndPersists()
         {
             var stumps = new List<ScatterHarvestStore.HarvestNode>();
@@ -96,7 +139,7 @@ namespace ProceduralPlanets.Tests
             using (WorldDeltaLog log = OpenLog(TestSeed))
             {
                 ScatterHarvestStore a = Store(log);
-                a.RecordStump(100UL, new Vector3(1, 2, 3), 4);
+                a.RecordStump(Pick(100UL, new Vector3(1, 2, 3), 4));
                 Assert.IsTrue(a.RecordDug(100UL));
                 Assert.IsFalse(a.RecordDug(100UL), "digging an already-dug node returns false");
 
@@ -119,7 +162,7 @@ namespace ProceduralPlanets.Tests
             // per chop - that is what keeps the save proportional to changed things.
             using WorldDeltaLog log = OpenLog(TestSeed);
             ScatterHarvestStore a = Store(log);
-            a.RecordStump(100UL, Vector3.one, 4);
+            a.RecordStump(Pick(100UL, Vector3.one, 4));
             a.RecordDug(100UL);
             Assert.AreEqual(1, log.Count);
         }
@@ -133,7 +176,7 @@ namespace ProceduralPlanets.Tests
             using (WorldDeltaLog log = OpenLog(TestSeed))
             {
                 ScatterHarvestStore a = Store(log);
-                logId = a.RecordLog(new Vector3(3, 4, 5), rot, 7);
+                logId = a.RecordLog(new Vector3(3, 4, 5), rot, 1.8f, 7);
                 Assert.AreNotEqual(0UL, logId);
             }
 
@@ -145,6 +188,7 @@ namespace ProceduralPlanets.Tests
             Assert.AreEqual(new Vector3(3, 4, 5), logs[0].Position);
             Assert.AreEqual(7, logs[0].ProtoIndex);
             Assert.Less(Quaternion.Angle(rot, logs[0].Rotation), 0.5f, "rotation round-trips");
+            Assert.AreEqual(1.8f, logs[0].Scale, 1e-4f, "a big tree leaves a big log");
 
             Assert.IsTrue(reloaded.RemoveLog(logId));
             reloaded.CollectLogs(logs);
@@ -159,11 +203,11 @@ namespace ProceduralPlanets.Tests
             // would mint an id a live log already holds and overwrite it.
             ulong first;
             using (WorldDeltaLog log = OpenLog(TestSeed))
-                first = Store(log).RecordLog(Vector3.zero, Quaternion.identity, 1);
+                first = Store(log).RecordLog(Vector3.zero, Quaternion.identity, 1f, 1);
 
             using WorldDeltaLog reopened = OpenLog(TestSeed);
             ScatterHarvestStore reloaded = Store(reopened);
-            ulong second = reloaded.RecordLog(Vector3.one, Quaternion.identity, 2);
+            ulong second = reloaded.RecordLog(Vector3.one, Quaternion.identity, 1f, 2);
 
             Assert.AreNotEqual(first, second);
             var logs = new List<ScatterHarvestStore.LogRecord>();
@@ -178,7 +222,7 @@ namespace ProceduralPlanets.Tests
             using (WorldDeltaLog log = OpenLog(TestSeed))
             {
                 ScatterHarvestStore a = Store(log);
-                logId = a.RecordLog(Vector3.zero, Quaternion.identity, 1);
+                logId = a.RecordLog(Vector3.zero, Quaternion.identity, 1f, 1);
                 Assert.IsTrue(a.RemoveLog(logId));
             }
 
@@ -192,7 +236,7 @@ namespace ProceduralPlanets.Tests
         public void Configure_DifferentWorld_LoadsEmpty()
         {
             using (WorldDeltaLog log = OpenLog(TestSeed))
-                Store(log).RecordStump(100UL, Vector3.one, 0);
+                Store(log).RecordStump(Pick(100UL, Vector3.one, 0));
 
             using WorldDeltaLog other = OpenLog(TestSeed + 1);
             ScatterHarvestStore store = Store(other, TestSeed + 1);

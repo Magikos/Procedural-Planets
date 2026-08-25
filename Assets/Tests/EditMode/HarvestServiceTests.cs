@@ -30,11 +30,14 @@ namespace ProceduralPlanets.Tests
             EventBus<HarvestHitEvent>.ClearAll();
         }
 
+        static ScatterPick Tree(ulong id, int proto, Vector3 pos) =>
+            new ScatterPick(id, proto, pos, Quaternion.Euler(0f, 37f, 0f), 1.4f);
+
         static HarvestService Make(HashSet<ulong> store, List<(int proto, ulong id)> removed,
             Dictionary<string, int> inv, ScatterInteraction interaction, string displayName = "Pine",
-            HashSet<ulong> dug = null)
+            HashSet<ulong> dug = null, List<ScatterPick> persisted = null)
             => new HarvestService(
-                (id, proto, pos) => store.Add(id),
+                pick => { persisted?.Add(pick); return store.Add(pick.Id); },
                 (p, id) => removed.Add((p, id)),
                 (item, n) => { inv.TryGetValue(item, out int c); inv[item] = c + n; },
                 _ => new ProtoHarvestInfo(interaction, displayName),
@@ -46,10 +49,12 @@ namespace ProceduralPlanets.Tests
             var store = new HashSet<ulong>();
             var removed = new List<(int, ulong)>();
             var inv = new Dictionary<string, int>();
-            var svc = Make(store, removed, inv, ScatterInteraction.Chop);
+            var persisted = new List<ScatterPick>();
+            var svc = Make(store, removed, inv, ScatterInteraction.Chop, persisted: persisted);
 
             ulong id = 0xABCDEF12345UL;
-            HarvestResult r = svc.TryHarvest(id, 4, ToolTier.BasicAxe, new Vector3(1, 2, 3));
+            ScatterPick pick = Tree(id, 4, new Vector3(1, 2, 3));
+            HarvestResult r = svc.TryHarvest(pick, ToolTier.BasicAxe);
 
             Assert.AreEqual(HarvestOutcome.Felled, r.Outcome);
             Assert.Greater(r.Yield.Count, 0);
@@ -58,6 +63,12 @@ namespace ProceduralPlanets.Tests
             Assert.Greater(inv[r.Yield.ItemId], 0, "inventory credited");
             Assert.AreEqual(1, _harvestedEvents, "ScatterHarvestedEvent raised exactly once");
             Assert.AreEqual(id, _lastEvent.Id);
+
+            // The stump and the fall are placed from what was persisted, so the felled instance's yaw and
+            // size have to reach the record rather than being dropped at the verb.
+            Assert.AreEqual(1, persisted.Count);
+            Assert.AreEqual(pick.Rotation, persisted[0].Rotation);
+            Assert.AreEqual(pick.Scale, persisted[0].Scale);
         }
 
         [Test]
@@ -68,7 +79,7 @@ namespace ProceduralPlanets.Tests
             var inv = new Dictionary<string, int>();
             var svc = Make(store, removed, inv, ScatterInteraction.None);
 
-            HarvestResult r = svc.TryHarvest(1UL, 0, ToolTier.BasicAxe, Vector3.zero);
+            HarvestResult r = svc.TryHarvest(Tree(1UL, 0, Vector3.zero), ToolTier.BasicAxe);
             Assert.AreEqual(HarvestOutcome.NotHarvestable, r.Outcome);
             Assert.AreEqual(0, store.Count);
             Assert.AreEqual(0, removed.Count);
@@ -83,7 +94,7 @@ namespace ProceduralPlanets.Tests
             var inv = new Dictionary<string, int>();
             var svc = Make(store, removed, inv, ScatterInteraction.Chop);
 
-            HarvestResult r = svc.TryHarvest(7UL, 4, ToolTier.BasicAxe, Vector3.zero);
+            HarvestResult r = svc.TryHarvest(Tree(7UL, 4, Vector3.zero), ToolTier.BasicAxe);
             Assert.AreEqual(HarvestOutcome.AlreadyHarvested, r.Outcome);
             Assert.AreEqual(0, removed.Count, "no remove on already-harvested");
             Assert.AreEqual(0, inv.Count, "no grant on already-harvested");

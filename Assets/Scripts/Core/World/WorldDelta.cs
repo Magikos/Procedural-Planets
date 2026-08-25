@@ -39,8 +39,8 @@ public enum DeltaKind : byte
 /// </remarks>
 public readonly struct WorldDelta
 {
-    /// <summary>Bytes before the payload: sequence, kind, key, payload length, transform, type and state.</summary>
-    public const int FixedBytes = 48;
+    /// <summary>Bytes before the payload: sequence, kind, key, payload length, transform, type, state and scale.</summary>
+    public const int FixedBytes = 52;
 
     /// <summary>Bytes after the payload. A checksum, so a torn tail is detected rather than trusted.</summary>
     public const int ChecksumBytes = 4;
@@ -57,6 +57,13 @@ public readonly struct WorldDelta
     public readonly Vector3 Position;
     public readonly Quaternion Rotation;
 
+    /// <summary>
+    /// Uniform scale of the thing this record describes. Scatter instances vary in size, so a felled tree's
+    /// stump and its fallen log are the wrong size without it.
+    /// </summary>
+    /// <remarks>1 for kinds that have no size. <c>default(WorldDelta)</c> therefore carries 0, not 1.</remarks>
+    public readonly float Scale;
+
     /// <summary>Prototype index, item type, or stamp type, per <see cref="Kind"/>.</summary>
     public readonly int TypeIndex;
 
@@ -68,7 +75,7 @@ public readonly struct WorldDelta
 
     public WorldDelta(uint sequence, DeltaKind kind, ulong key,
         Vector3 position = default, Quaternion rotation = default, int typeIndex = 0, byte state = 0,
-        byte[] payload = null)
+        float scale = 1f, byte[] payload = null)
     {
         if (payload != null && payload.Length > MaxPayloadBytes)
             throw new System.ArgumentOutOfRangeException(nameof(payload), payload.Length,
@@ -78,6 +85,7 @@ public readonly struct WorldDelta
         Key = key;
         Position = position;
         Rotation = rotation;
+        Scale = scale;
         TypeIndex = typeIndex;
         State = state;
         Payload = payload != null && payload.Length > 0 ? payload : null;
@@ -89,8 +97,8 @@ public readonly struct WorldDelta
     public int SerializedSize => FixedBytes + PayloadLength + ChecksumBytes;
 
     public WorldDelta WithSequence(uint sequence) =>
-        new(sequence, Kind, Key, Position, Rotation, TypeIndex, State, Payload);
+        new(sequence, Kind, Key, Position, Rotation, TypeIndex, State, Scale, Payload);
 
     public override string ToString() =>
-        $"#{Sequence} {Kind} key={Key:X} type={TypeIndex} state={State} payload={PayloadLength}B";
+        $"#{Sequence} {Kind} key={Key:X} type={TypeIndex} state={State} scale={Scale:F3} payload={PayloadLength}B";
 }

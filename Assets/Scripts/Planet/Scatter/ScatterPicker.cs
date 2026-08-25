@@ -27,8 +27,34 @@ public static class ScatterPickMath
     }
 }
 
+// One picked scatter instance, with the whole transform the draw bucket held rather than only where it stood.
+// A stump and a fallen log are placed from this: without the yaw and scale they wear the mesh's authored size
+// and facing, and visibly do not match the tree that was standing there.
+public readonly struct ScatterPick
+{
+    public readonly ulong Id;
+    public readonly int ProtoIndex;
+    public readonly Vector3 Position;
+    public readonly Quaternion Rotation;
+
+    /// <summary>Uniform: placement scales scatter by one factor, never per axis.</summary>
+    public readonly float Scale;
+
+    public ScatterPick(ulong id, int protoIndex, Vector3 position, Quaternion rotation, float scale)
+    {
+        Id = id;
+        ProtoIndex = protoIndex;
+        Position = position;
+        Rotation = rotation;
+        Scale = scale;
+    }
+
+    public static ScatterPick FromMatrix(ulong id, int protoIndex, in Matrix4x4 draw) =>
+        new(id, protoIndex, draw.GetPosition(), draw.rotation, draw.lossyScale.x);
+}
+
 // Finds the nearest HARVESTABLE scatter instance (Interaction != None) along a camera ray, across every
-// prototype's live draw bucket, and returns its stable ScatterId + prototype index + world position.
+// prototype's live draw bucket, and returns its stable ScatterId + prototype index + world transform.
 public sealed class ScatterPicker
 {
     readonly ScatterTileCache _cache;
@@ -42,15 +68,14 @@ public sealed class ScatterPicker
         _libraryFn = libraryFn;
     }
 
-    public bool TryPick(Ray ray, float reachMeters, float maxPerpMeters, out ulong id, out int protoIndex, out Vector3 pos)
+    public bool TryPick(Ray ray, float reachMeters, float maxPerpMeters, out ScatterPick pick)
     {
-        id = 0;
-        protoIndex = -1;
-        pos = default;
+        pick = default;
         ScatterLibraryDto library = _libraryFn?.Invoke();
         if (_cache == null || library?.Prototypes == null) return false;
 
         float bestT = float.MaxValue;
+        bool found = false;
         for (int p = 0; p < library.Prototypes.Length; p++)
         {
             if (library.Prototypes[p].Interaction == ScatterInteraction.None) continue;
@@ -58,10 +83,11 @@ public sealed class ScatterPicker
             int i = ScatterPickMath.NearestAlongRay(ray, positions, reachMeters, maxPerpMeters, out float t);
             if (i < 0 || t >= bestT) continue;
             bestT = t;
-            protoIndex = p;
-            pos = positions[i];
-            id = _cache.Ids(p)[i];
+            // Matrices, positions and ids are parallel by ScatterDrawBuckets' invariant, so one index reads
+            // the whole instance.
+            pick = ScatterPick.FromMatrix(_cache.Ids(p)[i], p, _cache.Matrices(p)[i]);
+            found = true;
         }
-        return protoIndex >= 0;
+        return found;
     }
 }

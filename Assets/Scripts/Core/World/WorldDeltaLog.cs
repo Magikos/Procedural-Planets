@@ -21,9 +21,15 @@ using UnityEngine;
 //  - Appends reach the OS immediately; Flush forces them to the platter.
 public sealed class WorldDeltaLog : IWorldDeltaLog, System.IDisposable
 {
-    // Bumped only on a change the reader cannot interpret. A file whose version does not match is refused
-    // rather than half-read, because a half-read save is worse than an absent one.
-    public const int SchemaVersion = 1;
+    // Bumped only on a change the reader cannot interpret. A file whose version is newer, or older than the
+    // oldest version this reader still understands, is refused rather than half-read - a half-read save is
+    // worse than an absent one.
+    public const int SchemaVersion = 2;
+
+    // v1's fixed part is a strict prefix of v2's: the scale field was appended at the end, so every earlier
+    // field sits at the same offset and a v1 record reads as a v2 record with scale 1.
+    const int OldestReadableVersion = 1;
+    const int FixedBytesV1 = 48;
 
     const int HeaderSize = 8;               // magic 4 + version 4
     const uint Magic = 0x504C4457;          // WDLP
@@ -40,6 +46,7 @@ public sealed class WorldDeltaLog : IWorldDeltaLog, System.IDisposable
     FileStream _stream;
     uint _nextSequence = 1;
     long _appendedBytes;
+    bool _readAnOlderSchema;
 
     public WorldDeltaLog(ILogger log = null, long compactThreshold = DefaultCompactThreshold)
     {
@@ -65,10 +72,16 @@ public sealed class WorldDeltaLog : IWorldDeltaLog, System.IDisposable
         _byKey.Clear();
         _nextSequence = 1;
         TornRecordsDropped = 0;
+        _readAnOlderSchema = false;
 
         Replay(_basePath);
         Replay(_logPath);
         OpenLogStream();
+
+        // An older file cannot be appended to: the next record would be written in the new framing behind a
+        // header that promises the old one. Compaction already rewrites everything live under the current
+        // header and drops the log, so the upgrade is the existing path rather than a second one.
+        if (_readAnOlderSchema) Compact();
     }
 
     // FileMode.Append on a missing file gives an empty file, and an empty file carries no magic - a reader
@@ -186,16 +199,18 @@ public sealed class WorldDeltaLog : IWorldDeltaLog, System.IDisposable
                 return;
             }
             int version = System.BitConverter.ToInt32(header, 4);
-            if (version != SchemaVersion)
+            if (version < OldestReadableVersion || version > SchemaVersion)
             {
-                Warn($"{Path.GetFileName(path)}: schema v{version}, expected v{SchemaVersion} - refused");
+                Warn($"{Path.GetFileName(path)}: schema v{version}, expected v{OldestReadableVersion}..v{SchemaVersion} - refused");
                 return;
             }
+            if (version < SchemaVersion) _readAnOlderSchema = true;
 
+            int fixedBytes = version == 1 ? FixedBytesV1 : WorldDelta.FixedBytes;
             var scratch = new byte[WorldDelta.FixedBytes];
             while (true)
             {
-                RecordRead status = TryReadRecord(fs, scratch, out WorldDelta d);
+                RecordRead status = TryReadRecord(fs, scratch, fixedBytes, out WorldDelta d);
                 if (status == RecordRead.EndOfFile) break;
                 if (status == RecordRead.Damaged)
                 {
@@ -223,8 +238,10 @@ public sealed class WorldDeltaLog : IWorldDeltaLog, System.IDisposable
 
     // --- record framing ---
     //
-    // sequence 4 | kind 1 | key 8 | payloadLength 2 | position 12 | rotation 16 | typeIndex 4 | state 1
+    // sequence 4 | kind 1 | key 8 | payloadLength 2 | position 12 | rotation 16 | typeIndex 4 | state 1 | scale 4
     //   then payloadLength bytes, then a 4-byte checksum over everything above.
+    //
+    // Scale sits last so v1 (which ended at state) is a strict prefix and reads with no offset table.
 
     enum RecordRead { Ok, EndOfFile, Damaged }
 
@@ -244,6 +261,7 @@ public sealed class WorldDeltaLog : IWorldDeltaLog, System.IDisposable
         System.BitConverter.GetBytes(d.Rotation.w).CopyTo(scratch, 39);
         System.BitConverter.GetBytes(d.TypeIndex).CopyTo(scratch, 43);
         scratch[47] = d.State;
+        System.BitConverter.GetBytes(d.Scale).CopyTo(scratch, 48);
 
         uint hash = Checksum(scratch, WorldDelta.FixedBytes, Fnv1aSeed);
         if (n > 0) hash = Checksum(d.Payload, n, hash);
@@ -255,12 +273,12 @@ public sealed class WorldDeltaLog : IWorldDeltaLog, System.IDisposable
         s.Write(tail, 0, WorldDelta.ChecksumBytes);
     }
 
-    static RecordRead TryReadRecord(Stream s, byte[] scratch, out WorldDelta d)
+    static RecordRead TryReadRecord(Stream s, byte[] scratch, int fixedBytes, out WorldDelta d)
     {
         d = default;
-        int first = s.Read(scratch, 0, WorldDelta.FixedBytes);
+        int first = s.Read(scratch, 0, fixedBytes);
         if (first == 0) return RecordRead.EndOfFile;
-        if (first < WorldDelta.FixedBytes && !ReadExactly(s, scratch, WorldDelta.FixedBytes, first))
+        if (first < fixedBytes && !ReadExactly(s, scratch, fixedBytes, first))
             return RecordRead.Damaged;
 
         int n = System.BitConverter.ToUInt16(scratch, 13);
@@ -274,7 +292,7 @@ public sealed class WorldDeltaLog : IWorldDeltaLog, System.IDisposable
         var tail = new byte[WorldDelta.ChecksumBytes];
         if (!ReadExactly(s, tail, WorldDelta.ChecksumBytes)) return RecordRead.Damaged;
 
-        uint hash = Checksum(scratch, WorldDelta.FixedBytes, Fnv1aSeed);
+        uint hash = Checksum(scratch, fixedBytes, Fnv1aSeed);
         if (n > 0) hash = Checksum(payload, n, hash);
         if (System.BitConverter.ToUInt32(tail, 0) != hash) return RecordRead.Damaged;
 
@@ -286,6 +304,7 @@ public sealed class WorldDeltaLog : IWorldDeltaLog, System.IDisposable
             new Quaternion(System.BitConverter.ToSingle(scratch, 27), System.BitConverter.ToSingle(scratch, 31), System.BitConverter.ToSingle(scratch, 35), System.BitConverter.ToSingle(scratch, 39)),
             System.BitConverter.ToInt32(scratch, 43),
             scratch[47],
+            fixedBytes > FixedBytesV1 ? System.BitConverter.ToSingle(scratch, 48) : 1f,
             payload);
         return RecordRead.Ok;
     }

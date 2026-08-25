@@ -36,8 +36,20 @@ public sealed class TreeFallSystem : System.IDisposable
         Vector3 up = e.WorldPos - _planetTransform.position;
         up = up.sqrMagnitude > 1e-6f ? up.normalized : Vector3.up;
 
+        // The felled instance's own yaw and size, read back from the record HarvestService just wrote. Without
+        // them the falling tree is the mesh's authored size and facing, and does not match either the tree the
+        // player was looking at or the stump it leaves.
+        Quaternion standing = Quaternion.FromToRotation(Vector3.up, up);
+        float scale = 1f;
+        if (_store != null && _store.TryGetStump(e.Id, out ScatterHarvestStore.HarvestNode felled))
+        {
+            if (ScatterHarvestStore.HasStoredRotation(felled.Rotation)) standing = felled.Rotation;
+            scale = ScatterHarvestStore.StoredScaleOr(felled.Scale);
+        }
+
         var root = new GameObject("Falling Tree");
-        root.transform.SetPositionAndRotation(e.WorldPos, Quaternion.FromToRotation(Vector3.up, up));
+        root.transform.SetPositionAndRotation(e.WorldPos, standing);
+        root.transform.localScale = Vector3.one * scale;
         foreach (ScatterPartDto part in proto.Parts)
         {
             if (part?.Material == null || part.LodMeshes == null || part.LodMeshes.Length == 0 || part.LodMeshes[0] == null)
@@ -55,7 +67,7 @@ public sealed class TreeFallSystem : System.IDisposable
         Vector3 topple = _planetTransform.TransformDirection(
             ToppleDirection(fallSeed, _planetTransform.InverseTransformDirection(up)));
         root.AddComponent<FallingTree>().Launch(up, topple, FallSeconds,
-            (pos, rot) => _store?.RecordLog(pos, rot, protoIndex));
+            (pos, rot) => _store?.RecordLog(pos, rot, scale, protoIndex));
     }
 
     // Which way a felled tree goes over, from a seed derived off the tree's own id so two processes agree.

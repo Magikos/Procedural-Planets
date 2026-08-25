@@ -8,7 +8,7 @@ using UnityEngine;
 // player controller and tests wire independently.
 public sealed class HarvestService
 {
-    readonly Func<ulong, int, Vector3, bool> _persistHarvest; // record fell (id, proto, pos); false if already
+    readonly Func<ScatterPick, bool> _persistHarvest; // record the fell; false if already harvested
     readonly Action<int, ulong> _removeFromDraw;     // drop the instance from the draw this frame
     readonly Action<string, int> _grantItem;         // credit the inventory
     readonly Func<int, ProtoHarvestInfo> _protoInfo; // prototype interaction + display name
@@ -18,7 +18,7 @@ public sealed class HarvestService
     // consulted here — compare tool.Damage against remaining HP, raise HarvestHitEvent until it reaches 0.
     const int DefaultNodeHp = 1;
 
-    public HarvestService(Func<ulong, int, Vector3, bool> persistHarvest, Action<int, ulong> removeFromDraw,
+    public HarvestService(Func<ScatterPick, bool> persistHarvest, Action<int, ulong> removeFromDraw,
         Action<string, int> grantItem, Func<int, ProtoHarvestInfo> protoInfo, Func<ulong, bool> digStump)
     {
         _persistHarvest = persistHarvest;
@@ -40,25 +40,28 @@ public sealed class HarvestService
         return HarvestResult.Felled(yield);
     }
 
-    public HarvestResult TryHarvest(ulong id, int protoIndex, in ToolTier tool, Vector3 worldPos)
+    public HarvestResult TryHarvest(in ScatterPick pick, in ToolTier tool)
     {
-        ProtoHarvestInfo info = _protoInfo(protoIndex);
+        ProtoHarvestInfo info = _protoInfo(pick.ProtoIndex);
         if (info.Interaction == ScatterInteraction.None)
             return HarvestResult.NotHarvestable;
 
         if (tool.Damage < DefaultNodeHp)
         {
-            EventBus<HarvestHitEvent>.Raise(new HarvestHitEvent(id, protoIndex, worldPos, DefaultNodeHp - tool.Damage));
+            EventBus<HarvestHitEvent>.Raise(
+                new HarvestHitEvent(pick.Id, pick.ProtoIndex, pick.Position, DefaultNodeHp - tool.Damage));
             return HarvestResult.Hit;
         }
 
-        if (!_persistHarvest(id, protoIndex, worldPos))
+        // Persist BEFORE the event: the fall and stump systems read the felled instance's transform back out
+        // of the record, so the record has to exist by the time they run.
+        if (!_persistHarvest(pick))
             return HarvestResult.AlreadyHarvested;
 
-        _removeFromDraw(protoIndex, id);
+        _removeFromDraw(pick.ProtoIndex, pick.Id);
         HarvestYield yield = ResolveYield(info);
         if (yield.Count > 0) _grantItem(yield.ItemId, yield.Count);
-        EventBus<ScatterHarvestedEvent>.Raise(new ScatterHarvestedEvent(id, protoIndex, worldPos, yield));
+        EventBus<ScatterHarvestedEvent>.Raise(new ScatterHarvestedEvent(pick.Id, pick.ProtoIndex, pick.Position, yield));
         return HarvestResult.Felled(yield);
     }
 

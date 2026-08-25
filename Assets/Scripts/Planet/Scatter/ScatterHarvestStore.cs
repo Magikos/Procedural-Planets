@@ -22,6 +22,8 @@ public sealed class ScatterHarvestStore
     {
         public ulong Id;
         public Vector3 Position;
+        public Quaternion Rotation;
+        public float Scale;
         public int ProtoIndex;
         public HarvestState State;
     }
@@ -31,6 +33,7 @@ public sealed class ScatterHarvestStore
         public ulong Id;
         public Vector3 Position;
         public Quaternion Rotation;
+        public float Scale;
         public int ProtoIndex;
     }
 
@@ -61,21 +64,34 @@ public sealed class ScatterHarvestStore
     public bool Contains(ulong id) => _nodes.ContainsKey(id);
     public int Count => _nodes.Count;
 
-    public bool RecordStump(ulong id, Vector3 position, int protoIndex)
+    /// <summary>Records the felled instance's whole transform, so the stump it leaves matches the tree that stood there.</summary>
+    public bool RecordStump(in ScatterPick pick)
     {
-        if (_nodes.ContainsKey(id)) return false;
-        Apply(new WorldDelta(0, DeltaKind.ScatterState, id, position, Quaternion.identity, protoIndex,
-            (byte)HarvestState.Stump));
+        if (_nodes.ContainsKey(pick.Id)) return false;
+        Apply(new WorldDelta(0, DeltaKind.ScatterState, pick.Id, pick.Position, pick.Rotation, pick.ProtoIndex,
+            (byte)HarvestState.Stump, pick.Scale));
         return true;
     }
 
     public bool RecordDug(ulong id)
     {
         if (!_nodes.TryGetValue(id, out HarvestNode n) || n.State == HarvestState.Dug) return false;
-        Apply(new WorldDelta(0, DeltaKind.ScatterState, id, n.Position, Quaternion.identity, n.ProtoIndex,
-            (byte)HarvestState.Dug));
+        Apply(new WorldDelta(0, DeltaKind.ScatterState, id, n.Position, n.Rotation, n.ProtoIndex,
+            (byte)HarvestState.Dug, n.Scale));
         return true;
     }
+
+    public bool TryGetStump(ulong id, out HarvestNode node) => _nodes.TryGetValue(id, out node);
+
+    // Records written before the felled transform was persisted carry no usable rotation: that writer stored
+    // Quaternion.identity, and a field absent from an older record reads back as all zeros. A scatter instance
+    // stands on the radial, so neither value is one it can actually have - both mean "unknown", and a consumer
+    // must fall back to aligning with the surface rather than laying the stump on its side.
+    public static bool HasStoredRotation(in Quaternion rotation) =>
+        rotation.x * rotation.x + rotation.y * rotation.y + rotation.z * rotation.z + rotation.w * rotation.w > 1e-6f
+        && rotation != Quaternion.identity;
+
+    public static float StoredScaleOr(float scale, float fallback = 1f) => scale > 0f ? scale : fallback;
 
     public void CollectStumps(List<HarvestNode> into)
     {
@@ -87,10 +103,10 @@ public sealed class ScatterHarvestStore
     // --- fallen logs (placed objects, harvestable for wood) ---
 
     /// <summary>Records a fallen log at its settled transform. Returns the new entity id.</summary>
-    public ulong RecordLog(Vector3 position, Quaternion rotation, int protoIndex)
+    public ulong RecordLog(Vector3 position, Quaternion rotation, float scale, int protoIndex)
     {
         EntityId id = _entityIds.Next();
-        Apply(new WorldDelta(0, DeltaKind.EntitySpawned, id.Value, position, rotation, protoIndex));
+        Apply(new WorldDelta(0, DeltaKind.EntitySpawned, id.Value, position, rotation, protoIndex, scale: scale));
         return id.Value;
     }
 
@@ -140,6 +156,8 @@ public sealed class ScatterHarvestStore
                 {
                     Id = d.Key,
                     Position = d.Position,
+                    Rotation = d.Rotation,
+                    Scale = d.Scale,
                     ProtoIndex = d.TypeIndex,
                     State = (HarvestState)d.State,
                 };
@@ -152,6 +170,7 @@ public sealed class ScatterHarvestStore
                     Id = d.Key,
                     Position = d.Position,
                     Rotation = d.Rotation,
+                    Scale = d.Scale,
                     ProtoIndex = d.TypeIndex,
                 };
                 break;

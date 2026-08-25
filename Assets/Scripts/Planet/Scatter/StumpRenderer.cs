@@ -6,10 +6,6 @@ using UnityEngine.Rendering;
 // authored per-prototype StumpMesh + StumpMaterial (keyed by the record's protoIndex) so a chopped birch
 // leaves a birch stump; falls back to a placeholder cylinder for any prototype without an authored stump yet.
 // One RenderMesh per stump — fine for POC counts; instance if a felled forest ever needs it.
-//
-// ponytail: the harvest record stores position + proto only, so a stump draws at the tree mesh's
-// native scale and yaw rather than the felled instance's. Ceiling is a visible size/rotation
-// mismatch; add scale + yaw to the record when that shows.
 public sealed class StumpRenderer : System.IDisposable
 {
     static readonly Vector3 PlaceholderScale = new Vector3(0.6f, 0.4f, 0.6f);
@@ -88,11 +84,14 @@ public sealed class StumpRenderer : System.IDisposable
 
             Vector3 up = node.Position - center;
             up = up.sqrMagnitude > 1e-6f ? up.normalized : Vector3.up;
-            Quaternion rot = Quaternion.FromToRotation(Vector3.up, up);
-            // Authored stump pivot is the tree base (mesh origin) -> sits at the record position, native scale.
+            Quaternion rot = ScatterHarvestStore.HasStoredRotation(node.Rotation)
+                ? node.Rotation
+                : Quaternion.FromToRotation(Vector3.up, up);
+            float instanceScale = ScatterHarvestStore.StoredScaleOr(node.Scale);
+            // Authored stump pivot is the tree base (mesh origin) -> sits at the record position.
             // Placeholder cylinder is centre-pivoted -> lift by its half-height and use the placeholder scale.
-            Vector3 pos = authored ? node.Position : node.Position + up * PlaceholderScale.y;
-            Vector3 scale = authored ? Vector3.one : PlaceholderScale;
+            Vector3 pos = authored ? node.Position : node.Position + up * (PlaceholderScale.y * instanceScale);
+            Vector3 scale = (authored ? Vector3.one : PlaceholderScale) * instanceScale;
             Graphics.RenderMesh(Rp(mat), mesh, 0, Matrix4x4.TRS(pos, rot, scale));
         }
     }

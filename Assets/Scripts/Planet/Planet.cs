@@ -123,7 +123,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
                 ScatterTileCache scatterCache = _scatterRenderer.Cache;
                 var picker = new ScatterPicker(scatterCache, libraryFn);
                 var harvest = new HarvestService(
-                    (id, proto, pos) => _harvestStore.RecordStump(id, pos, proto),
+                    pick => _harvestStore.RecordStump(pick),
                     (proto, id) => scatterCache.RemoveInstance(proto, id),
                     (item, count) => _inventory.Add(item, count),
                     proto =>
@@ -463,12 +463,6 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
                 _colorGenerator.SurfaceArrays, Seed, _observerCamera, _terrainMaterial.Material);
             long grassMs = finalizeStep.ElapsedMilliseconds;
             finalizeStep.Restart();
-            _surfaceEdits.Configure(_surfaceProvider as ChunkedSurfaceProvider, _terrainMaterial.Material, Seed);
-            int replayedSurfaceEdits = _surfaceEdits.ReplayStamps(clearFirst: false);
-            long surfaceEditsMs = finalizeStep.ElapsedMilliseconds;
-            finalizeStep.Restart();
-            if (replayedSurfaceEdits > 0)
-                Logger.Log(LogLevel.Debug, "Planet", $"Replayed {replayedSurfaceEdits} saved surface edit(s).");
             // Atmosphere is rendered by AtmosphereController + AtmosphereRenderFeature (post-process).
 
             var planet = SettingsProvider.GetSettings<PlanetDto>();
@@ -486,6 +480,13 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             _deltaLog.Open(System.IO.Path.Combine(Application.persistentDataPath, "ProceduralPlanets"), "world-" + Seed);
             _harvestStore.Configure(Seed, _deltaLog);
             long harvestMs = finalizeStep.ElapsedMilliseconds;
+            finalizeStep.Restart();
+            // Surface edits read the same log, so they configure after it opens rather than before.
+            _surfaceEdits.Configure(_surfaceProvider as ChunkedSurfaceProvider, _terrainMaterial.Material, Seed, _deltaLog);
+            int replayedSurfaceEdits = _surfaceEdits.ReplayStamps(clearFirst: false);
+            if (replayedSurfaceEdits > 0)
+                Logger.Log(LogLevel.Debug, "Planet", $"Replayed {replayedSurfaceEdits} saved surface edit(s).");
+            long surfaceEditsMs = finalizeStep.ElapsedMilliseconds;
             finalizeStep.Restart();
             _scatter.Configure(Seed, planet.PlanetRadius, seaLevelRadius, planet.HasOceans);
             // Same body map and surface offset the water mesh was built from, so a query and the surface it
