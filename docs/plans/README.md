@@ -269,6 +269,13 @@ contains editor-coroutines with no first-party use.
 Smallest fix: delete these systems/package after focused reference searches remain empty.
 Reintroduce a concrete implementation when gameplay actually needs it.
 
+> **SUPERSEDED for `IWorldAction`/`WorldActionManager` (2026-08-25).** Do not act on that half of X01.
+> Overturned twice since: `docs/design/2026-08-18-periodic-code-audit.md` and
+> `docs/design/2026-08-20-magikos-game-architecture.md` (row B8, struck — "protected infrastructure,
+> do not delete"). Both code sites carry `planned:` markers, six `docs/phases/` files record the intent,
+> and `action.undo`/`redo`/`history`/`clear` are live console commands, so "no real action" is not the
+> same as "no consumer". The scope question is settled at B8a. The rest of X01 is untouched by this note.
+
 ## Implementation phases
 
 ### Phase 0 — decisions and reproducible baselines

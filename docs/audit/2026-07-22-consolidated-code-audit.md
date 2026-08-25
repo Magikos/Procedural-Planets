@@ -362,6 +362,24 @@ until a second implementation or real test seam exists.
 
 **Status:** PARTIAL — batch 1 FIXED, commit `12e4e99` (branch `agent/autofix`). Deleted the five unreferenced types (`ObjectPool`, `CubeSphereMeshBuilder`, `PoissonDiscSampling`, `PoissonDiscSphereSampling`, `EventBusAutoBinder`); grep-confirmed no consumers, Unity recompiled clean. The wake/action scaffolding + bootstrap/console-surface removal (batch 2) is left Bryan-gated per the finding and was NOT touched.
 
+**CLOSED wontfix for the action half, 2026-08-25.** `IWorldAction`/`WorldActionManager` are **not** to be
+deleted. Both sites carry `planned:` markers; six `docs/phases/` files record the intent; and
+`action.undo`/`redo`/`history`/`clear` are live console commands, so this finding's "no consumer" evidence
+was measuring implementors, not consumers. Ruled in `docs/design/2026-08-20-magikos-game-architecture.md`
+row B8 ("protected infrastructure. Do not delete") and scoped at B8a. The wake half of batch 2 is
+untouched by this note and remains open.
+
+**Batch 1 needs Bryan's eye, not another agent's.** `CLAUDE.md` records batch 1's deletion of
+`ObjectPool`, `IObjectPool<T>`, `PoissonDiscSampling`, `PoissonDiscSphereSampling` and `EventBusAutoBinder`
+as a **mistake** — the intent for those types lived in `docs/phases/`, which the rule now names a
+first-class intent source. This finding's own evidence section cites four `docs/phases/` files and
+recommended deletion anyway, which is exactly the failure mode. Whether to restore them is a call for
+Bryan. Provenance resolved 2026-08-25: the `12e4e99` credited above **does not exist in this repository**
+(it was on the since-rebased `agent/autofix` branch). The real commit is `f63ec14`, 2026-07-27, "Close F12
+(batch 1): delete unreferenced dead-code utilities", 10 files and 493 deletions. `CLAUDE.md` is correct.
+That also makes restoring cheap rather than a rewrite — each file comes back with
+`git show f63ec14^:Assets/Scripts/Core/Utilities/ObjectPool.cs` and so on for the other four.
+
 **Category:** Maintainability  
 **Severity:** Medium  
 **Description:** Eleven files implement dormant pooling, wake, world-action, mesh-builder,

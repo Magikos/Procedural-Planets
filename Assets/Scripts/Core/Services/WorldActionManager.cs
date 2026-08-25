@@ -6,6 +6,13 @@ using UnityEngine;
 // planned: command pattern for undoable world modifications (terrain deform, building place/remove),
 // used once the player interaction systems land. docs/design/2026-06-13-world-lifecycle.md.
 // Registered by SceneBootstrap in the active world context; no actions execute through it yet.
+//
+// Scope decided 2026-08-25 (B8a): undo is a LOCAL editing affordance. An IWorldAction never writes to
+// WorldDeltaLog, because the log cannot answer "what was it before" — records carry no prior value,
+// Remember collapses last-write-wins per (space, key), and compaction discards history at a size
+// threshold, which would make undo depth vary with unrelated write volume. Once an action becomes a
+// delta it is final, reversed only by a new forward action.
+// This is also NOT M1's command layer: that choke point is HarvestService.TryHarvest.
 public class WorldActionManager : IWorldActionManager
 {
     readonly List<IWorldAction> _history = new();
