@@ -3,6 +3,7 @@
     "rootNamespace": "",
     "references": [
         "ProceduralPlanets.Planet",
+        "Magikos.Game",
         "ProceduralPlanets.Core",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",

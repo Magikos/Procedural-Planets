@@ -1,11 +1,11 @@
 using UnityEngine;
 
 /// <summary>
-/// The thin player/planet HOST for the walking-character MVP. It owns only the Unity/player concerns: input,
-/// a mouse-look third-person camera, grass, and a separate movable child GameObject. All surface math lives in
-/// the actor-agnostic <see cref="SurfaceCharacterController"/>; this host resolves the planet-specific
-/// providers, feeds look-relative intent into the driver, and applies the returned pose to the child. It never
-/// moves its own transform.
+/// The thin player/planet HOST for the walking-character MVP. It owns only the Unity/player concerns: the
+/// local input provider, a mouse-look third-person camera, grass, and a separate movable child GameObject. All
+/// surface math lives in the actor-agnostic <see cref="SurfaceCharacterController"/>; this host resolves the
+/// planet-specific providers, feeds look-relative intent into the driver, and applies the returned pose to the
+/// child. It never moves its own transform.
 ///
 /// Controls (fly-camera style): mouse looks, character faces the look direction, W/S forward/back, A/D strafe,
 /// Space jump, Left-Shift sprint, Left-Ctrl crouch.
@@ -33,14 +33,15 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
     IPlanet _planet;
     IPlanetSurfaceSampler _sampler;
     IPlanetSurfaceRaycaster _raycaster;
-    IInputMapService _input;
+    IInputProvider _input;
     ICameraRigContext _cameraRig;
     IFreeCameraService _freeCam;
-    ICameraLookBlocker _lookBlocker;
 
     SurfaceCharacterController _driver;
     Transform _child;
     Material _propMaterial;
+
+    uint _tick;
 
     Vector3 _center;
     float _radius;
@@ -105,39 +106,34 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
             return;
 
         Vector3 up = _driver.Pose.Up;
+        ActorIntent intent = _input != null ? _input.Sample(_tick++) : default;
 
         // Look only while HOLDING right-mouse (like the free camera) — the cursor is captured only during the
         // hold and released the instant you let go, so it can never trap the mouse (e.g. to open the console).
-        bool looking = _input != null && _input.LookHold.IsPressed() && _input.GameplayEnabled && !LookBlocked();
-        SetCursorLocked(looking);
-        if (looking)
+        SetCursorLocked(intent.Held(ActorButtons.LookHold));
+        if (intent.Look.sqrMagnitude > 0.0001f)
         {
-            Vector2 look = _input.Look.ReadValue<Vector2>();
-            if (look.sqrMagnitude > 0.0001f)
-            {
-                _forward = Quaternion.AngleAxis(look.x * LookSensitivity, up) * _forward;
-                _pitch = Mathf.Clamp(_pitch - look.y * LookSensitivity, MinPitch, MaxPitch);
-            }
+            _forward = Quaternion.AngleAxis(intent.Look.x * LookSensitivity, up) * _forward;
+            _pitch = Mathf.Clamp(_pitch - intent.Look.y * LookSensitivity, MinPitch, MaxPitch);
         }
         if (CharacterMath.TryProjectOntoTangent(_forward, up, out Vector3 fp))
             _forward = fp;
 
-        Vector2 move = _input != null ? _input.Move.ReadValue<Vector2>() : Vector2.zero;
         float speed = WalkSpeed;
-        if (_input != null && _input.Sprint.IsPressed()) speed *= SprintMult;
-        if (_input != null && _input.Crouch.IsPressed()) speed *= CrouchMult;
-        bool jump = _input != null && _input.Jump.WasPressedThisFrame();
+        if (intent.Held(ActorButtons.Sprint)) speed *= SprintMult;
+        if (intent.Held(ActorButtons.Crouch)) speed *= CrouchMult;
 
         // Harvest the aimed scatter instance on Interact. Rare event, so resolve the interactor per press
         // (always the active world's) rather than caching a ref that would go stale on regen.
-        if (_input != null && _input.Interact.WasPressedThisFrame() && _input.GameplayEnabled && !LookBlocked())
+        if (intent.Held(ActorButtons.Interact))
         {
             Transform cam = ResolveCameraRig()?.CameraTransform;
             if (cam != null && ServiceLocator.TryGet(out HarvestInteractor harvest))
                 harvest.TryHarvestLookedAt(new Ray(cam.position, cam.forward), HarvestReach, HarvestPerp);
         }
 
-        CharacterPose pose = _driver.Tick(move, _forward, speed, Time.deltaTime, jump);
+        CharacterPose pose = _driver.Tick(
+            intent.Move, _forward, speed, Time.deltaTime, intent.Held(ActorButtons.Jump));
         _forward = pose.Forward;
         _child.SetPositionAndRotation(pose.Position, Quaternion.LookRotation(pose.Forward, pose.Up));
     }
@@ -321,13 +317,6 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         Cursor.visible = !locked;
     }
 
-    bool LookBlocked()
-    {
-        if (!ServiceLocator.IsAlive(_lookBlocker))
-            ServiceLocator.TryGet(out _lookBlocker);
-        return _lookBlocker != null && _lookBlocker.BlocksCameraLook;
-    }
-
     void SuspendFreeCamera(bool suspended)
     {
         if (ResolveFreeCam() != null)
@@ -336,8 +325,8 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
 
     void ResolveInput()
     {
-        if (_input == null)
-            ServiceLocator.TryGet(out _input);
+        if (_input == null && ServiceLocator.TryGet(out IInputMapService map))
+            _input = new LocalPlayerInput(map);
     }
 
     IPlanetSurfaceRaycaster ResolveRaycaster()
