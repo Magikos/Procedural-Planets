@@ -767,8 +767,12 @@ prepass (wrote that fix, moved the mask 0.0000 -> 0.0005, reverted). `ZTest Alwa
 true observation that pointed at the wrong layer - the water genuinely IS behind the bed at grazing angles
 when the eye is on the surface; that is geometry, not a bug.
 
-**Follow-on, NOT caused by this:** grass renders growing through the water at that viewpoint, and the
-sidecar shows **zero** grass water-cull rejections. Was invisible while the water was.
+**Follow-on FIXED same day (`cd7c475`):** grass grew through raised lakes because BOTH placement computes
+gated on `_WaterRadius`, a single scalar = `PlanetRadius * (1 + OceanLevel)` - the ocean sphere and nothing
+else. Now asks the level field per direction, scalar kept as fallback. Water rejections 0 -> 157,327 at that
+viewpoint. The cube-face projection moved to `WaterLevelProjection.hlsl` because the computes read arrays
+with `.Load` and cannot include the URP-macro `WaterLevelField.hlsl`; `GrassWaterFieldBinding` sets it on
+the computes because **compute shaders do not see shader globals**.
 
 **Also corrected today: `WaterQueryService` EXISTS** (99 lines, `Planet.cs:97` registers it, `Configure` at
 `Planet.cs:493`). I told Bryan W6 was unbuilt and the keystone to build next - it is built and already
