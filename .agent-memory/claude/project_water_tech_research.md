@@ -14,6 +14,17 @@ metadata:
 
 **W1 is the keystone and it's unusually cheap for us.** Our wave primitive has **no horizontal displacement**, so a CPU height query needs **no fixed-point inversion** — the thing that costs Gerstner/FFT 4× and burns GDWaterKart 15 texel reads. A byte-exact CPU mirror is 3 `sin` + 3 `cos`. Insertion point `PlanetSurfaceGrounding.cs:38`. Unlocks buoyancy/swimming/boats/splashes.
 
+> **CORRECTION 2026-08-25 — do not use the paragraph above to scope W6.** "No inversion" is true and still
+> the reason a CPU mirror is cheap, but it does NOT make the water query small. The architecture plan
+> ([docs/design/2026-08-17-water-architecture-plan.md](../../docs/design/2026-08-17-water-architecture-plan.md), W6)
+> refutes analytic mirroring outright: the swell is gated by per-vertex `depth01`/`shore01`/`body01` and
+> zeroed by `EvaluateFreezeFactor`, so **near shore and on frozen bodies an analytic mirror is wrong by 100%
+> of amplitude** — precisely where wading and swim-entry happen. W6 needs the MESH: triangle interpolation
+> (exact), a retained face grid, and the `originalVertexCache` that `WaterMeshBuilder.cs:150` currently
+> discards. 4.65% of mesh vertices are shoreline clip vertices with no grid counterpart.
+>
+> I nearly told Bryan "W6 is small" off this paragraph. Read the plan's W6 section before scoping it.
+
 **W-BUG-1 — CORRECTED 2026-08-17, first version was WRONG.** The subagent claimed all modes degenerate together at `±(A×B)` (13.4% of ocean glassy), reasoning `positionTS=(0,0)` there. **Phase zero ≠ phase GRADIENT zero.** Re-derived: `theta = k·dot(L, dirTS.x·A + dirTS.y·B)`, so each mode is a plane wave with its own fixed 3-D `D̂ᵢ`; local frequency on the sphere is `k·sin(angle(L̂,D̂))`. So each mode degenerates at **its own** `±D̂ᵢ`, and `±(A×B)` is where waves are **sharpest**, not flattest. Real defect = **clustering**: all three `D̂ᵢ` lie in `span{A,B}` → all 6 poles on one wind-aligned great circle within ~90°. Severity mild — at `D̂₁` only mode 1 (0.58 of 1.04 amplitude) flattens, detail drops to ~46%, not glassy. Some degeneracy is unavoidable (hairy ball). Fix = spread modes 2/3 through `(A, cross(A,B))`; it's a **visual change**, needs a capture-diff.
 **Lesson: verify subagent analytic claims by re-deriving. This one survived into a doc of record and a user-facing summary before I checked it.**
 Also: `_SwellAmplitude`/`_SwellWavelength` are **material-authored only** (latent CPU/GPU divergence — fix before W1); volume `_SeaLevelRadius` is **wave-blind by ±5 m** vs the displaced surface.

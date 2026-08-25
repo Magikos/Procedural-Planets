@@ -370,8 +370,14 @@ face-centre 26.042 m. Mode response 79.3% / 57.2% / 14.8% at the mean; **1.06 m 
 moves the surface. Retained face grid (13.570 MiB) gives O(1) cell lookup but carries only directions
 and elevations; the missing artefact is the discarded `originalVertexCache` (3.375 MiB). **4.65% of mesh
 vertices are shoreline clip vertices with no grid counterpart** — where wading and swim-entry happen.
-*Verify D12 first* — `ChunkedSurfaceProvider` uses the "older" face-UV inverse while the grid uses the
-exact one.
+~~*Verify D12 first* — `ChunkedSurfaceProvider` uses the "older" face-UV inverse while the grid uses the
+exact one.~~ **Gate cleared 2026-08-25.** `ChunkedSurfaceProvider.cs:293` calls
+`CoordinateConverter.UnitSphereToCubeFaceUvExact`, and the old `UnitSphereToCubeFace` no longer exists
+anywhere in the tree — it was deleted with the D12 fix at `8fdd1d2`. Nothing to re-verify.
+
+**Design W6's signature against W8 in the same pass.** The buoyancy reference contract is
+`ref float[] waterHeights`, which this task already notes is incompatible; settling that after W6 ships
+means rebuilding it.
 
 **W7 Physics host.** First fixed-step host and first streamed terrain colliders in the project. The
 character destroys its own capsule (`PlanetCharacterController.cs:295-300`); terrain chunks have no
