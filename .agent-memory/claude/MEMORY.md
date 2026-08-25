@@ -1,5 +1,7 @@
 # Memory Index
 
+- [M0 foundations](project_m0_foundations.md) — 2026-08-25, 5 parallel lanes. **`Magikos.Game` ships with ZERO asmdef references, so "authority touches no camera/input" is now a compile error.** Delta log v1→v2 (scale appended LAST = strict byte-prefix). **Three ledger rows were WRONG: B8 was already struck, B14's "one attribute each" is INERT (Burst direct-call needs the attribute on class AND method), B10 undercounted 29 .bak files.** 146→159 tests.
+
 - [Water shore + horizon rendering](project_water_shore_rendering.md) — 9 fixes. **Lake "blocks" SOLVED: it was the GRASS water-fade, not biomes — 7 attempts in the wrong system.** Found by colour-coded elimination, read-only, no regenerates.
 
 - [World delta log — M0 save foundation](project_world_delta_log.md) — append-only log + EntityId. **GOTCHA: a ScatterId and an EntityId can be the SAME number — the keyspace must be split.** Verified on Bryan's real save: 54 records imported, 3.2x smaller than the JSON.
