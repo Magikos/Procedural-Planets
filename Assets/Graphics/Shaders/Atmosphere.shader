@@ -32,6 +32,10 @@ float4 _WaterDeepColor;
 float _NightAmbientIntensity;
 float3 _MoonParams;
 float _MoonIntensity;
+// Published by PlanetWaterSurface from WaterDto; see ShaderGlobalIds.Water for why the underwater night
+// floor is a water setting rather than a share of _NightAmbientIntensity. Tunable with `water.set`.
+float _UnderwaterNightScale;
+float _UnderwaterShaftIntensity;
 
 float LightShaftNoise(float2 pixel)
 {
@@ -279,9 +283,14 @@ ENDHLSL
                 // Same floor Ocean.shader uses for its surface, so the water reads consistently from above
                 // and below and `light.*` moves both at once, plus the moon on the same scale the volume
                 // pass lights its caustics with. A moon below the horizon lights nothing.
+                //
+                // _UnderwaterNightScale then moves the submerged half on its own. The floor above is a share
+                // of a world-wide global, and being able to see underwater at midnight is a water art call
+                // that must not drag every lit surface on the planet with it. The moon stays outside the
+                // scale: it is light that is really there, not a readability floor.
                 float3 moonDir = dot(_MoonParams, _MoonParams) > 0.0001 ? normalize(_MoonParams) : cameraUp;
                 float moonlight = saturate(_MoonIntensity) * saturate(dot(cameraUp, moonDir));
-                float nightLevel = saturate(_NightAmbientIntensity * 0.10 + 0.015 + moonlight);
+                float nightLevel = saturate((_NightAmbientIntensity * 0.10 + 0.015) * _UnderwaterNightScale + moonlight);
                 ambient *= lerp(nightLevel, 1.0, daylight);
 
                 // Forward scattering toward the sun. Water scatters strongly forward, so looking toward the
@@ -328,7 +337,9 @@ ENDHLSL
                 // measurement, not by taste: the ambient term this replaced read (0.010, 0.038, 0.036) at
                 // 8 m down looking 70 degrees off vertical toward the sun, and this reproduces it there
                 // while now falling off with depth and path the way the ambient copy could not.
-                // Bryan has not had his eye on the magnitude.
+                //
+                // The RATIO between the channels is the measurement and stays here; the magnitude rides
+                // _UnderwaterShaftIntensity, so tuning strength cannot accidentally recolour the shafts.
                 const float3 SHAFT_SCATTER = float3(0.0055, 0.0105, 0.0112);
 
                 // Beyond this the column has absorbed the shafts anyway, and marching further only spends
@@ -384,7 +395,7 @@ ENDHLSL
                 // all but invisible looking straight down one.
                 float forward = saturate(dot(viewDir, sunUnderwater));
                 float phase = 0.25 + pow(forward, 3.0) * 1.75;
-                return accumulated * phase * daylight * SHAFT_SCATTER;
+                return accumulated * phase * daylight * SHAFT_SCATTER * _UnderwaterShaftIntensity;
             }
 
             v2f AtmosphereVertex(Attributes v)

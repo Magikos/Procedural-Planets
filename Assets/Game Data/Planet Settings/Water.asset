@@ -45,6 +45,8 @@ MonoBehaviour:
   IceRoughness: 0.72
   IceNormalStrength: 0.35
   IceBreakupScale: 95
+  UnderwaterNightScale: 1
+  UnderwaterShaftIntensity: 1
   RefractionStrength: 0.3
   CausticIntensity: 0.42
   CausticDepth: 115

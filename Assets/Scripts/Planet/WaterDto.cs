@@ -41,7 +41,9 @@ public sealed record WaterDto(
     float CausticIntensity,
     float CausticDepth,
     float CausticContrast,
-    float CausticPrismStrength)
+    float CausticPrismStrength,
+    float UnderwaterNightScale,
+    float UnderwaterShaftIntensity)
 {
     public static WaterDto From(WaterSettings src)
     {
@@ -87,7 +89,9 @@ public sealed record WaterDto(
             src.CausticIntensity,
             src.CausticDepth,
             src.CausticContrast,
-            src.CausticPrismStrength);
+            src.CausticPrismStrength,
+            src.UnderwaterNightScale,
+            src.UnderwaterShaftIntensity);
     }
 
     /// <summary>Authored distances are relative to <see cref="ReferenceRadius"/>; scale them for this planet.</summary>

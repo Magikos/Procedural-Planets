@@ -68,6 +68,15 @@ public class WaterSettings : ScriptableObject
     public float IceNormalStrength = 0.35f;
     public float IceBreakupScale = 95f;
 
+    [Header("Underwater")]
+    [Tooltip("Multiplies the ambient light the water column falls to at night. 1 is the level derived from " +
+             "the world's shared night ambient; raise it if midnight underwater reads too dark to play in.")]
+    public float UnderwaterNightScale = 1f;
+
+    [Tooltip("Strength of the underwater sun shafts. Their per-channel colour stays authored in " +
+             "Atmosphere.shader, so this moves how strong they are without changing what colour they are.")]
+    public float UnderwaterShaftIntensity = 1f;
+
     // Consumed by WaterVolumeRenderFeature, which runs for editor cameras with no active world and so
     // reads the frozen DTO rather than the world settings service.
     [Header("Volume")]

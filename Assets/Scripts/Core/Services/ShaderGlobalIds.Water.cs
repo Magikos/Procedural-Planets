@@ -64,4 +64,17 @@ public static partial class ShaderGlobalIds
     // Deliberately NOT named _DeepColor: a material property of the same name shadows the global wherever
     // that material is bound, which is exactly how the wave parameters went wrong before.
     public const string WaterDeepColor = "_WaterDeepColor";
+
+    // The two magnitudes in Atmosphere.shader's submerged composite. Published by PlanetWaterSurface from
+    // WaterDto; nothing else reads them.
+    //
+    // UnderwaterNightScale multiplies the ambient floor the water column falls to after dark. It exists so
+    // that floor can move without _NightAmbientIntensity, which lights every surface on the planet at once:
+    // how readable the water is at midnight is a water art call, not a world-wide one.
+    //
+    // UnderwaterShaftIntensity scales the sun-shaft scattering coefficient. Only the magnitude - the
+    // per-channel ratio stays an authored constant in the shader, so the shafts keep their colour and the
+    // knob moves the one axis a person actually wants.
+    public const string UnderwaterNightScale = "_UnderwaterNightScale";
+    public const string UnderwaterShaftIntensity = "_UnderwaterShaftIntensity";
 }
