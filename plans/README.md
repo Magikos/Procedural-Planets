@@ -19,6 +19,10 @@ These are the two highest-leverage moves off the frontier survey:
 |---|------|------|----------|--------|------|------------|
 | 001 | [Character controller MVP](001-character-controller-mvp.md) | Spike (build) | P1 | M | Med | none |
 | 002 | [Terrain-relief diagnosis](002-terrain-relief-experiment.md) | Experiment (diagnose) | P1 | S | Low | none |
+| 003 | [Harvesting vertical slice](003-harvest-vertical-slice.md) | Feature (build) | P1 | M | Med | 001 (player host + ray + Interact input) |
+| 004 | [Character presence & feel](004-character-feel.md) | Feature (build, visual) | P1 | M/L | Med | 001 (host/child split); recommended BEFORE 003 |
+| 005 | [Tree felling cut-set](005-tree-felling-cutset.md) | Feature (build) | P2 | M | Med | 003 (harvest verb + picker) |
+| 006 | [Procedural tree generator](006-procedural-tree-generator.md) | Feature (build) | P2 | L | Med | none; supersedes 005's fixed-mesh approach |
 
 **Independent** — no shared files (001 is new gameplay scripts; 002 is shader diagnosis + one
 material/shader constant). Can run in parallel or in either order. 002 is the faster win and a
@@ -28,10 +32,19 @@ natural warm-up; 001 is the larger investment.
 
 | # | Status | Notes |
 |---|--------|-------|
-| 001 | **BUILT** (branch `character-controller-mvp`, not pushed) — awaiting play-test | Code written + committed autonomously 2026-08-09. Compiles clean, 78/78 EditMode green, **runtime-smoked on a real planet** (spawn → walk 6 m → grounded, up·radial=1.0, grass registers, camera follows, no exceptions). See [BUILD-STATUS.md](BUILD-STATUS.md). Remaining = human visual/WASD verification + camera-feel tuning + optional foot-trail. Deviation: static `character.spawn` command (assembly boundary), not `EnsureComponent`. |
+| 001 | **DONE** — merged; `2a50425`/`75a9367` are ancestors of `HEAD` | Code written + committed autonomously 2026-08-09. Compiles clean, 78/78 EditMode green, **runtime-smoked on a real planet** (spawn → walk 6 m → grounded, up·radial=1.0, grass registers, camera follows, no exceptions). See [BUILD-STATUS.md](BUILD-STATUS.md). Remaining = human visual/WASD verification + camera-feel tuning + optional foot-trail. Deviation: static `character.spawn` command (assembly boundary), not `EnsureComponent`. |
 | 002 | REVISED (5 rounds) — **recommend approve** | Codex T1-T23 folded; tiling control + drift check, oblique sun, weather + wind + foliage-shadow freeze, negative-control/2×2, paste-ready MCP material helper, archive-before-prune, `scatter.count`/`goto` biome ID, result → promoted `docs/design/`. Not yet executed. |
+| 003 | **DONE** — committed `5fa6ce0`, play-verified 2026-08-12 | First gameplay loop (roadmap Track A) LIVE: F chops a tree → vanishes + `Chopped 3x Wood`. All 18 trees Chop; crosshair; forgiving pick. SlotBits fix + parity test; buckets retain ScatterId + RemoveInstanceById; ScatterHarvestStore + Commit filter; HarvestService/types/inventory/picker/interactor; Interact=**F** in InputMapService; PlanetCharacterController harvest handler; DebugOverlayHud subscribes ScatterHarvestedEvent. **6 trees set to Chop.** Builds clean Core→Planet. Persistence later moved onto the unified `WorldDeltaLog` (M0). |
+| 004 | **TODO** — ready to execute | Character presence & feel (roadmap Track B; recommended before 003). Written 2026-08-12 vs `17a8672`. Camera damping + analytic boom (chunks have NO colliders → use `IPlanetSurfaceRaycaster`, not `Physics`), movement accel/turn-slerp, auto-spawn + input toggle, then rigged Synty model + locomotion Animator. FEEL work — every constant behind a console knob, Bryan locks the look. Builds on 001's host/child split. |
+| 005 | **PARTIAL** — Inc 1/2a/2b committed; 3a (fall) + 4a (persistent logs) done + play-verified | Tree felling cut-set (stump → fall → logs). Inc 3b (particles) and 4b (chop log → wood) outstanding. The whole tree/cut-set *look* is deferred to a dedicated tree-polish pass (Bryan, 2026-08-12): the resting log is a placeholder cylinder and the tree→log handoff is a shape-pop. Mechanic done, fidelity deferred. |
+| 006 | **PARTIAL** — generator built; per-instance variety shipped 2026-08-15 | Procedural tree generator (supersedes 005's fixed-mesh cut-set). `tree.gen` + `tree.inject on`. Not done: per-instance age, log-mesh wire, >1 species, Valheim-style chop. |
 
 Executor updates the Status cell (TODO / IN-PROGRESS / DONE / BLOCKED) as work lands.
+
+**Note (2026-08-25):** plans 001–006 predate
+[the game architecture doc](../docs/design/2026-08-20-magikos-game-architecture.md), which is now the doc of
+record and sequences work as milestones M0–M6. Plan 004 remains live but its camera-boom stage is gated on
+the collision bubble, which that doc moved to **M4**.
 
 ## Considered and rejected (this survey)
 
