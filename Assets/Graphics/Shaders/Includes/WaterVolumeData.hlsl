@@ -24,6 +24,17 @@
 // This replaced shore01 * 0.45 + body01 * 0.55, which only decoded correctly while body01 was near 0 or 1
 // and would have failed silently the day a third body kind existed.
 
+// RGB absorption of water, as the exponent for ONE extinction unit. Consumers that measure path in metres
+// divide by WATER_ABSORPTION_UNIT_METRES; consumers that already hold a normalised 0..1 extinction use it
+// directly. Red goes first and blue survives, and every consumer has to use the same ratio or the volume,
+// the far waterline and Snell's window disagree about what colour deep water is.
+#define WATER_ABSORPTION float3(3.80, 1.75, 0.58)
+#define WATER_ABSORPTION_UNIT_METRES 40.0
+
+// Refractive index of water, which fixes the critical angle asin(1/n) = 48.75 degrees. That cone is
+// Snell's window, and the same number bends the ray back out through the surface.
+#define WATER_IOR 1.333
+
 #define WATER_KIND_LAKE   0u
 #define WATER_KIND_OCEAN  1u
 // 2 and 3 are reserved for river and waterfall (W13 / W14).

@@ -14,10 +14,18 @@
 // on them exactly. PlanetWaterSurface publishes them from WaterDto; the names live in
 // ShaderGlobalIds.Water.cs. A material that re-declares any of them shadows the global and silently
 // desynchronises the two surfaces again.
+#ifndef PLANET_CENTER_DECLARED
+#define PLANET_CENTER_DECLARED
 float3 _PlanetCenter;
+#endif
 float _SwellAmplitude;
 float _SwellWavelength;
 float _WaveSpeed;
+// The fragment field's size and height. Promoted out of Ocean.shader's Properties block: a material
+// property of either name shadows the global wherever that material is bound, so the surface and the
+// atmosphere would have banded their waves off different numbers without noticing.
+float _WaveAmplitude;
+float _WaveScale;
 float _FreezingEnabled;
 float _LakeFreezeStart;
 float _LakeFreezeComplete;
@@ -126,6 +134,130 @@ void ComputeOceanSwell(float3 positionWS, float3 planetNormal, float depth01, fl
     float3 slopeWS = waveAxisA * gradientTS.x + waveAxisB * gradientTS.y;
     slopeWS = slopeWS - planetNormal * dot(slopeWS, planetNormal);
     swellNormal = SafeNormalize(planetNormal - slopeWS, planetNormal);
+}
+
+struct WaterRippleParams
+{
+    float openWater01;
+    float deepWater01;
+    float weatherEnergy;
+    float waveEnergy;
+    float chaos01;
+    float scale;
+    float amplitude;
+    float timeScale;
+};
+
+// The fragment field's size and energy, from the water-data channels and the wind. Hoisted alongside the
+// field itself: a second consumer that derived these on its own would band its waves off a different size
+// and never look wrong enough to notice.
+//
+// These gates are deliberately NOT EvaluateSwellGating's. That one gates the vertex swell and reaches
+// further inshore; this one is the narrower detail gate, and Ocean.shader uses both, for different things.
+WaterRippleParams EvaluateRippleParameters(float depth01, float body01)
+{
+    WaterRippleParams params;
+    float wind01 = _WindStrength01;
+    params.openWater01 = smoothstep(0.42, 0.88, body01);
+    params.deepWater01 = smoothstep(0.035, 0.22, depth01);
+    params.weatherEnergy = saturate(wind01 * 0.92 + params.openWater01 * 0.08);
+
+    // A pond ripples in the faintest breeze. The old smoothstep(0.34, 0.88) returned 0 for any normal wind
+    // (0.10 typical), pinning lakes to the 0.035 floor - roughly a millimetre of detail amplitude, i.e. a
+    // dead mirror.
+    float lakeWind01 = smoothstep(0.02, 0.55, wind01);
+    float lakeEnergy = lerp(0.16, 0.60, lakeWind01) * lerp(0.35, 1.0, params.deepWater01);
+    float oceanEnergy = lerp(0.48, 1.0, params.deepWater01) * lerp(0.80, 1.20, params.weatherEnergy);
+    params.waveEnergy = saturate(lerp(lakeEnergy, oceanEnergy, params.openWater01));
+    params.chaos01 = saturate(wind01 * lerp(0.36, 0.86, params.openWater01) + params.openWater01 * 0.10);
+
+    // Feature size must follow body size: 480 m detail on a ~350 m pond is a handful of features across the
+    // whole thing. Amplitude scales with it so wave STEEPNESS (amplitude/wavelength) stays constant -
+    // shortening wavelength alone multiplies slope by the same factor and the surface reads as crumpled
+    // foil rather than water.
+    float bodyWaveScale = lerp(0.10, 1.0, params.openWater01);
+    params.scale = max(_WaveScale, 12.0) * bodyWaveScale;
+    params.amplitude = max(_WaveAmplitude, 0.0) * bodyWaveScale;
+    params.timeScale = max(_WaveSpeed, 0.001);
+    return params;
+}
+
+struct WaterRippleField
+{
+    float2 wavePos;           // domain-warped sample position for the long waves
+    float2 detailPos;         // and for the short ones; breakup and foam noise key off it
+    float2 detailPosCross;    // second short-wave position, drifting across the wind
+    float detailScale;        // shortest wavelength in play, for resolve and antialiasing decisions
+    float height;             // long-wave height
+    float detailHeight;       // short-wave height
+    float2 gradientTS;        // long-wave slope
+    float2 detailGradientTS;  // short-wave slope
+    float waveTime;
+};
+
+// The FRAGMENT-stage wave field: a domain warp, four long waves and three short ones.
+//
+// Distinct from ComputeOceanSwell, which is the VERTEX displacement - that one moves the mesh and has to
+// stay a plain height field so a CPU height query needs no inversion. This one only shades. Both live here
+// for the same reason: anything that has to agree with the water surface must evaluate the identical waves,
+// and a second copy of them drifts the moment either is tuned.
+//
+// The SHORT waves are the ones that matter to a consumer outside Ocean.shader. Focusing goes as surface
+// curvature and curvature as 1/wavelength squared, so the 90 m swell focuses about 300 m down while a 2 m
+// ripple focuses about 14 m down - which is why caustics are sharp on a shallow bed, and why underwater
+// shafts band off these and not off the swell.
+//
+// scale and amplitude are PARAMETERS because Ocean.shader authors them as material properties. An
+// underwater consumer needs them as globals; promoting them is a separate change with a domain reload in
+// it, and is deliberately not folded in here.
+WaterRippleField ComputeWaterRipple(float2 positionTS, float2 windTS, float2 crossTS,
+    float scale, float amplitude, float timeScale, float waveEnergy, float weatherEnergy, float chaos01)
+{
+    WaterRippleField field;
+    field.waveTime = _GameTime * timeScale;
+
+    float2 warpDirA = SafeNormalize2(windTS * 0.21 + crossTS * 0.98, crossTS);
+    float2 warpDirB = SafeNormalize2(windTS * -0.76 + crossTS * 0.65, crossTS);
+    float2 domainWarp = float2(
+        sin(dot(positionTS, warpDirA) / max(scale * 1.70, 1.0) + field.waveTime * 0.34),
+        sin(dot(positionTS, warpDirB) / max(scale * 1.23, 1.0) - field.waveTime * 0.27));
+    domainWarp *= scale * lerp(0.018, 0.095, chaos01);
+    field.wavePos = positionTS + domainWarp;
+
+    float2 detailDrift = windTS * (field.waveTime * scale * lerp(0.004, 0.018, weatherEnergy))
+        + crossTS * (sin(field.waveTime * 0.31) * scale * lerp(0.004, 0.016, chaos01));
+    field.detailPos = positionTS + domainWarp * lerp(1.35, 2.85, chaos01) + detailDrift;
+    float2 crossDrift = crossTS * (field.waveTime * scale * lerp(0.006, 0.028, weatherEnergy))
+        + windTS * (sin(field.waveTime * 0.37 + 1.7) * scale * lerp(0.005, 0.020, chaos01));
+    field.detailPosCross = positionTS - domainWarp * lerp(0.85, 2.25, chaos01) + crossDrift;
+
+    field.gradientTS = float2(0.0, 0.0);
+    field.detailGradientTS = float2(0.0, 0.0);
+    field.height = 0.0;
+    field.detailHeight = 0.0;
+
+    float2 gradient;
+    float swellStrength = amplitude * waveEnergy;
+    float detailStrength = amplitude * waveEnergy * lerp(0.62, 1.48, weatherEnergy);
+
+    field.height += EvaluateSurfaceWave(field.wavePos, windTS, scale * 1.18, timeScale * 0.18, swellStrength * 0.19, 0.00, gradient);
+    field.gradientTS += gradient;
+    field.height += EvaluateSurfaceWave(field.wavePos, SafeNormalize2(windTS * 0.70 + crossTS * (0.24 + chaos01 * 0.18), windTS), scale * 0.58, timeScale * -0.24, swellStrength * 0.085, 1.70, gradient);
+    field.gradientTS += gradient;
+    field.height += EvaluateSurfaceWave(field.wavePos, SafeNormalize2(windTS * 0.34 - crossTS * 0.68, windTS), scale * 0.25, timeScale * 0.36, swellStrength * 0.040, 3.10, gradient);
+    field.gradientTS += gradient;
+    field.height += EvaluateSurfaceWave(field.wavePos, SafeNormalize2(windTS * -0.22 + crossTS * 0.98, crossTS), scale * 0.13, timeScale * -0.48, swellStrength * 0.018, 5.40, gradient);
+    field.gradientTS += gradient;
+
+    field.detailScale = clamp(scale * lerp(0.038, 0.026, chaos01), 7.5, 26.0);
+    field.detailHeight += EvaluateSurfaceWave(field.detailPos, SafeNormalize2(windTS * 0.54 + crossTS * 0.84, windTS), field.detailScale * 0.88, timeScale * 0.82, detailStrength * 0.028, 0.80, gradient);
+    field.detailGradientTS += gradient;
+    field.detailHeight += EvaluateSurfaceWave(field.detailPosCross, SafeNormalize2(windTS * -0.28 + crossTS * 0.96, crossTS), field.detailScale * 0.61, timeScale * -1.10, detailStrength * 0.020, 2.40, gradient);
+    field.detailGradientTS += gradient;
+    field.detailHeight += EvaluateSurfaceWave(field.detailPosCross, SafeNormalize2(windTS * 0.91 - crossTS * 0.42, windTS), field.detailScale * 0.42, timeScale * 1.38, detailStrength * 0.014, 4.90, gradient);
+    field.detailGradientTS += gradient;
+
+    return field;
 }
 
 // The whole vertex-stage displacement, including the freeze lock. Every shader that rasterises the water

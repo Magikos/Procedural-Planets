@@ -422,8 +422,10 @@ two shorelines, which is the exact scar this targets.
 displacement include** (W4) so shadows match the waves; flip `shadowCastingMode` off `Off`. Every
 registered water renderer must cast.
 
-**W19 Underwater.** Unify the drifted `CameraUnderwater01` pair, both keyed off the global radius.
-Urgent once W9 lands.
+**W19 Underwater — DONE 2026-08-25.** One `CameraSubmerged01` in `WaterLevelField.hlsl`, keyed off the
+water LEVEL FIELD (not the global radius — the task text was wrong about that; the global radius is the
+half `Atmosphere` had wrong) and faded across the swell. Landed with the underwater compositing
+restructure, [2026-08-24-underwater-compositing.md](2026-08-24-underwater-compositing.md).
 
 **W20 Body-aware volume + atmosphere.** *(added by review — I had wrongly declared this impossible)*
 Resolve the visible `WaterBodyId` and interface point from the multi-mesh prepass; replace analytic-

@@ -50,6 +50,8 @@ Shader "Hidden/WaterVolume"
     static const float CAUSTIC_SPEED = 1.05;
     float3 _PlanetCenter;
     float _SeaLevelRadius;
+    // Sizes the band over which the camera counts as submerged - see CameraSubmerged01.
+    float _SwellAmplitude;
     float3 _SunParams;
     float _SunIntensity;
     float3 _MoonParams;
@@ -114,19 +116,14 @@ Shader "Hidden/WaterVolume"
         return lenSq > 0.0000001 ? value * rsqrt(lenSq) : fallback;
     }
 
-    // Height of the camera above the water standing beneath it. Against the global sea radius this read
-    // +40 m while the camera floated in a lake perched that high, so nothing ever registered as submerged.
     float CameraSeaOffset()
     {
-        float3 fromCenter = _WorldSpaceCameraPos.xyz - _PlanetCenter;
-        float radius = length(fromCenter);
-        float surface = WaterSurfaceRadiusAt(fromCenter / max(radius, 0.0001), _SeaLevelRadius);
-        return radius - surface;
+        return CameraSeaOffset(_WorldSpaceCameraPos.xyz, _PlanetCenter, _SeaLevelRadius);
     }
 
     float CameraUnderwater01()
     {
-        return 1.0 - smoothstep(-1.5, 2.0, CameraSeaOffset());
+        return CameraSubmerged01(_WorldSpaceCameraPos.xyz, _PlanetCenter, _SeaLevelRadius, _SwellAmplitude);
     }
 
     float VolumeLayerVisibility()
@@ -268,7 +265,7 @@ Shader "Hidden/WaterVolume"
         float3 deepTint = max(_DeepColor.rgb, float3(0.0, 0.028, 0.105));
         float3 waterTint = lerp(shallowTint, deepTint, pathTint);
         float lightScale = lerp(0.34, 0.82, volumeLight);
-        float3 attenuatedSource = sourceColor * exp(-float3(3.80, 1.75, 0.58) * extinction);
+        float3 attenuatedSource = sourceColor * exp(-WATER_ABSORPTION * extinction);
         float3 waterColor = lerp(attenuatedSource, waterTint * lightScale, saturate(extinction * 0.92));
         return lerp(sourceColor, waterColor, saturate(mask));
     }
@@ -734,8 +731,15 @@ Shader "Hidden/WaterVolume"
 
         if (SceneDepthValid(rawDepth) <= 0.0)
         {
-            if (CameraUnderwater01() > 0.01
-                && (IsProductionEquivalentDebugMode(_OceanDebugMode) || volumeBodyDebug))
+            // This pass runs BEFORE transparents, so writing the water column here painted over the sky and
+            // the surface then blended onto it - the flat teal the underside appeared to glow through. It
+            // also ran from 0.01 submerged, while the atmosphere's underwater branch only starts at 0.5, so
+            // between waves the wash appeared with nothing composited over it.
+            //
+            // Underwater sky pixels are the atmosphere pass's, whole: it runs last, it knows the distance to
+            // the surface, and it is the only pass with real scattering for what comes through the window.
+            // Kept for the volume debug views, which have no later pass to draw them.
+            if (CameraUnderwater01() > 0.01 && volumeBodyDebug)
                 return float4(UnderwaterNoDepthColor(rayDir), 1.0);
 
             return (causticDebug || bottomDistortionDebug || volumeBodyDebug) ? float4(0.0, 0.0, 0.0, 1.0) : source;

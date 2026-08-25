@@ -9,8 +9,6 @@ Shader "Planet/Ocean"
         _DeepDepth ("Deep Depth", Range(20, 3000)) = 360
         _ShoreFoamDepth ("Shore Foam Depth (m of water)", Range(0.2, 40)) = 2.5
         _ShoreFoamSoftness ("Shore Range", Range(1, 300)) = 125
-        _WaveAmplitude ("Wave Amplitude", Range(0, 12)) = 3.4
-        _WaveScale ("Wave Scale", Range(50, 2000)) = 480
         _WaveNormalStrength ("Wave Normal Strength", Range(0, 16)) = 4.5
         _WaterMotionStrength ("Water Motion Strength", Range(0, 1)) = 0.24
         _SunGlitterIntensity ("Sun Glitter Intensity", Range(0, 4)) = 0.75
@@ -90,8 +88,6 @@ Shader "Planet/Ocean"
                 float _DeepDepth;
                 float _ShoreFoamDepth;
                 float _ShoreFoamSoftness;
-                float _WaveAmplitude;
-                float _WaveScale;
                 float _WaveNormalStrength;
                 float _WaterMotionStrength;
                 float _SunGlitterIntensity;
@@ -389,65 +385,30 @@ Shader "Planet/Ocean"
                 float2 crossTS = float2(0.0, 1.0);
                 float wind01 = _WindStrength01;
                 storm01 = SampleOceanStorm(normalWS, tangentA, tangentB);
-                float openWater01 = smoothstep(0.42, 0.88, body01);
-                float deepWater01 = smoothstep(0.035, 0.22, depth01);
-                float weatherEnergy = saturate(wind01 * 0.92 + openWater01 * 0.08);
-                // A pond ripples in the faintest breeze. The old smoothstep(0.34, 0.88) returned 0 for
-                // any normal wind (0.10 typical), pinning lakes to the 0.035 floor - which works out to
-                // roughly a millimetre of detail amplitude, i.e. a dead mirror.
-                float lakeWind01 = smoothstep(0.02, 0.55, wind01);
-                float lakeEnergy = lerp(0.16, 0.60, lakeWind01) * lerp(0.35, 1.0, deepWater01);
-                float oceanEnergy = lerp(0.48, 1.0, deepWater01) * lerp(0.80, 1.20, weatherEnergy);
-                waveEnergy = saturate(lerp(lakeEnergy, oceanEnergy, openWater01));
-                float chaos01 = saturate(wind01 * lerp(0.36, 0.86, openWater01) + openWater01 * 0.10);
+                WaterRippleParams waveParams = EvaluateRippleParameters(depth01, body01);
+                float openWater01 = waveParams.openWater01;
+                float deepWater01 = waveParams.deepWater01;
+                float weatherEnergy = waveParams.weatherEnergy;
+                waveEnergy = waveParams.waveEnergy;
+                float chaos01 = waveParams.chaos01;
+                float scale = waveParams.scale;
+                float amplitude = waveParams.amplitude;
+                float timeScale = waveParams.timeScale;
 
-                // Feature size must follow body size: 480 m detail on a ~350 m pond is a handful of
-                // features across the whole thing. Amplitude scales with it so wave STEEPNESS
-                // (amplitude/wavelength) stays constant - shortening wavelength alone multiplies slope
-                // by the same factor and the surface reads as crumpled foil rather than water.
-                float bodyWaveScale = lerp(0.10, 1.0, openWater01);
-                float scale = max(_WaveScale, 12.0) * bodyWaveScale;
-                float amplitude = max(_WaveAmplitude, 0.0) * bodyWaveScale;
-                float timeScale = max(_WaveSpeed, 0.001);
-                float waveTime = _GameTime * timeScale;
-                float2 warpDirA = SafeNormalize2(windTS * 0.21 + crossTS * 0.98, crossTS);
-                float2 warpDirB = SafeNormalize2(windTS * -0.76 + crossTS * 0.65, crossTS);
-                float2 domainWarp = float2(
-                    sin(dot(positionTS, warpDirA) / max(scale * 1.70, 1.0) + waveTime * 0.34),
-                    sin(dot(positionTS, warpDirB) / max(scale * 1.23, 1.0) - waveTime * 0.27));
-                domainWarp *= scale * lerp(0.018, 0.095, chaos01);
-                float2 wavePos = positionTS + domainWarp;
-                float2 detailDrift = windTS * (waveTime * scale * lerp(0.004, 0.018, weatherEnergy))
-                    + crossTS * (sin(waveTime * 0.31) * scale * lerp(0.004, 0.016, chaos01));
-                float2 detailPos = positionTS + domainWarp * lerp(1.35, 2.85, chaos01) + detailDrift;
-                float2 crossDrift = crossTS * (waveTime * scale * lerp(0.006, 0.028, weatherEnergy))
-                    + windTS * (sin(waveTime * 0.37 + 1.7) * scale * lerp(0.005, 0.020, chaos01));
-                float2 detailPosCross = positionTS - domainWarp * lerp(0.85, 2.25, chaos01) + crossDrift;
+                // The wave field itself lives in WaterDisplacement.hlsl, beside the vertex swell, so that
+                // anything which has to agree with this surface evaluates the same waves rather than a copy.
+                WaterRippleField ripple = ComputeWaterRipple(positionTS, windTS, crossTS,
+                    scale, amplitude, timeScale, waveEnergy, weatherEnergy, chaos01);
 
-                float2 gradientTS = float2(0.0, 0.0);
-                float2 detailGradientTS = float2(0.0, 0.0);
-                float2 gradient;
-                float height = 0.0;
-                float detailHeight = 0.0;
-                float swellStrength = amplitude * waveEnergy;
-                float detailStrength = amplitude * waveEnergy * lerp(0.62, 1.48, weatherEnergy);
-
-                height += EvaluateSurfaceWave(wavePos, windTS, scale * 1.18, timeScale * 0.18, swellStrength * 0.19, 0.00, gradient);
-                gradientTS += gradient;
-                height += EvaluateSurfaceWave(wavePos, SafeNormalize2(windTS * 0.70 + crossTS * (0.24 + chaos01 * 0.18), windTS), scale * 0.58, timeScale * -0.24, swellStrength * 0.085, 1.70, gradient);
-                gradientTS += gradient;
-                height += EvaluateSurfaceWave(wavePos, SafeNormalize2(windTS * 0.34 - crossTS * 0.68, windTS), scale * 0.25, timeScale * 0.36, swellStrength * 0.040, 3.10, gradient);
-                gradientTS += gradient;
-                height += EvaluateSurfaceWave(wavePos, SafeNormalize2(windTS * -0.22 + crossTS * 0.98, crossTS), scale * 0.13, timeScale * -0.48, swellStrength * 0.018, 5.40, gradient);
-                gradientTS += gradient;
-
-                float detailScale = clamp(scale * lerp(0.038, 0.026, chaos01), 7.5, 26.0);
-                detailHeight += EvaluateSurfaceWave(detailPos, SafeNormalize2(windTS * 0.54 + crossTS * 0.84, windTS), detailScale * 0.88, timeScale * 0.82, detailStrength * 0.028, 0.80, gradient);
-                detailGradientTS += gradient;
-                detailHeight += EvaluateSurfaceWave(detailPosCross, SafeNormalize2(windTS * -0.28 + crossTS * 0.96, crossTS), detailScale * 0.61, timeScale * -1.10, detailStrength * 0.020, 2.40, gradient);
-                detailGradientTS += gradient;
-                detailHeight += EvaluateSurfaceWave(detailPosCross, SafeNormalize2(windTS * 0.91 - crossTS * 0.42, windTS), detailScale * 0.42, timeScale * 1.38, detailStrength * 0.014, 4.90, gradient);
-                detailGradientTS += gradient;
+                float waveTime = ripple.waveTime;
+                float2 wavePos = ripple.wavePos;
+                float2 detailPos = ripple.detailPos;
+                float2 detailPosCross = ripple.detailPosCross;
+                float detailScale = ripple.detailScale;
+                float height = ripple.height;
+                float detailHeight = ripple.detailHeight;
+                float2 gradientTS = ripple.gradientTS;
+                float2 detailGradientTS = ripple.detailGradientTS;
 
                 float detailResolve = DetailResolve(detailPos, detailScale * 0.42);
                 float2 surfaceGradientTS = gradientTS * 0.18 + detailGradientTS * (1.35 * detailResolve);

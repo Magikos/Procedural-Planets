@@ -27,8 +27,8 @@ public sealed class PlanetWaterSurface
     static readonly int _deepDepthId = Shader.PropertyToID("_DeepDepth");
     static readonly int _shoreFoamDepthId = Shader.PropertyToID("_ShoreFoamDepth");
     static readonly int _shoreFoamSoftnessId = Shader.PropertyToID("_ShoreFoamSoftness");
-    static readonly int _waveAmplitudeId = Shader.PropertyToID("_WaveAmplitude");
-    static readonly int _waveScaleId = Shader.PropertyToID("_WaveScale");
+    static readonly int _waveAmplitudeId = Shader.PropertyToID(ShaderGlobalIds.WaveAmplitude);
+    static readonly int _waveScaleId = Shader.PropertyToID(ShaderGlobalIds.WaveScale);
     static readonly int _waveSpeedId = Shader.PropertyToID(ShaderGlobalIds.WaveSpeed);
     static readonly int _waveNormalStrengthId = Shader.PropertyToID("_WaveNormalStrength");
     static readonly int _swellAmplitudeId = Shader.PropertyToID(ShaderGlobalIds.SwellAmplitude);
@@ -263,8 +263,8 @@ public sealed class PlanetWaterSurface
             mat.SetFloat(_deepDepthId, water.DeepDepth * waterScale);
             mat.SetFloat(_shoreFoamDepthId, water.ShoreFoamDepth * waterScale);
             mat.SetFloat(_shoreFoamSoftnessId, water.ShoreRange * waterScale);
-            mat.SetFloat(_waveAmplitudeId, water.WaveAmplitude * waterScale);
-            mat.SetFloat(_waveScaleId, water.WaveScale * waterScale);
+            Shader.SetGlobalFloat(_waveAmplitudeId, water.WaveAmplitude * waterScale);
+            Shader.SetGlobalFloat(_waveScaleId, water.WaveScale * waterScale);
             Shader.SetGlobalFloat(_waveSpeedId, water.WaveSpeed);
             mat.SetFloat(_waveNormalStrengthId, water.WaveNormalStrength);
             Shader.SetGlobalFloat(_swellAmplitudeId, water.SwellAmplitude);

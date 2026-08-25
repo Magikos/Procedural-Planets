@@ -128,4 +128,30 @@ float ShoreSurfaceRadiusAt(float3 direction, float fallbackSeaRadius)
     return level > WATER_LEVEL_NO_WATER_MAX ? _WaterLevelBaseRadius * (1.0 + level) : fallbackSeaRadius;
 }
 
+// Height of the camera above the water standing beneath it.
+//
+// Taken as arguments rather than off globals because the callers do not agree on which globals they have
+// declared - Atmosphere, WaterVolume and Ocean each own a different subset.
+float CameraSeaOffset(float3 cameraPositionWS, float3 planetCentre, float fallbackSeaRadius)
+{
+    float3 fromCentre = cameraPositionWS - planetCentre;
+    float radius = length(fromCentre);
+    return radius - WaterSurfaceRadiusAt(fromCentre / max(radius, 0.0001), fallbackSeaRadius);
+}
+
+// How submerged the camera is, 0 clear of the water to 1 fully under.
+//
+// This existed twice and each copy had one half right. WaterVolume measured against this field - correct
+// the moment the camera is in a lake perched above sea level - but faded across a fixed 1.5/2.0 m band.
+// Atmosphere faded across the SWELL - correct, because within a wave height of the mean surface the camera
+// genuinely is in and out of the water as swells pass - but measured against the global sea sphere, so it
+// read +95 m while the camera floated in a raised lake and never treated that view as underwater at all.
+// One function with both correct halves; nothing here may go back to _SeaLevelRadius alone.
+float CameraSubmerged01(float3 cameraPositionWS, float3 planetCentre, float fallbackSeaRadius, float swellAmplitude)
+{
+    float band = max(swellAmplitude, 1.5);
+    float offset = CameraSeaOffset(cameraPositionWS, planetCentre, fallbackSeaRadius);
+    return 1.0 - smoothstep(-band, band * 0.15, offset);
+}
+
 #endif

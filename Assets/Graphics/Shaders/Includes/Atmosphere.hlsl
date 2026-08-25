@@ -5,7 +5,13 @@
 
 // --- Uniforms ---
 float3 _SunParams;          // Directional sun (normalized direction)
+// Guarded because WaterDisplacement.hlsl declares the same global, and the atmosphere pass now includes
+// both: it needs the swell normal at the point where a ray leaves the water. Redeclaring a global is a
+// compile error, so whichever include lands first owns it.
+#ifndef PLANET_CENTER_DECLARED
+#define PLANET_CENTER_DECLARED
 float3 _PlanetCenter;
+#endif
 float _SeaLevelRadius;        // Sea level - ray intersection floor
 float _DensityOriginRadius; // Same as _SeaLevelRadius - density height=0 at sea level
 float _AtmosphereRadius;

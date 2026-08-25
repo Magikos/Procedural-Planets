@@ -18,6 +18,14 @@ public static partial class ShaderGlobalIds
     public const string SwellAmplitude = "_SwellAmplitude";
     public const string SwellWavelength = "_SwellWavelength";
     public const string WaveSpeed = "_WaveSpeed";
+
+    // The FRAGMENT wave field's size and height. Globals for the same reason as the swell above, but the
+    // consumer is different: Atmosphere.shader bands its underwater sun shafts and shapes Snell's window
+    // off the SHORT waves these describe, because focusing goes as surface curvature and curvature as
+    // 1/wavelength squared - the long swell focuses hundreds of metres down, a metre-scale ripple about
+    // fifteen. Consumed by Includes/WaterDisplacement.hlsl (ComputeWaterRipple).
+    public const string WaveAmplitude = "_WaveAmplitude";
+    public const string WaveScale = "_WaveScale";
     public const string FreezingEnabled = "_FreezingEnabled";
     public const string LakeFreezeStart = "_LakeFreezeStart";
     public const string LakeFreezeComplete = "_LakeFreezeComplete";

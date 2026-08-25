@@ -38,8 +38,8 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
 
     static readonly int _waterFocusModeId = Shader.PropertyToID(ShaderGlobalIds.WaterFocusMode);
     static readonly int _oceanFocusModeId = Shader.PropertyToID(ShaderGlobalIds.OceanFocusMode);
-    static readonly int _waveAmplitudeId = Shader.PropertyToID("_WaveAmplitude");
-    static readonly int _waveScaleId = Shader.PropertyToID("_WaveScale");
+    static readonly int _waveAmplitudeId = Shader.PropertyToID(ShaderGlobalIds.WaveAmplitude);
+    static readonly int _waveScaleId = Shader.PropertyToID(ShaderGlobalIds.WaveScale);
     static readonly int _waveSpeedId = Shader.PropertyToID(ShaderGlobalIds.WaveSpeed);
     static readonly int _waveNormalStrengthId = Shader.PropertyToID("_WaveNormalStrength");
     static readonly int _waterMotionStrengthId = Shader.PropertyToID("_WaterMotionStrength");
@@ -105,7 +105,7 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         Material mat = waterRenderer.sharedMaterial;
         sb.AppendLine($"Shader: {(mat != null && mat.shader != null ? mat.shader.name : "missing")}");
         sb.AppendLine($"Focus: ocean={GetMaterialFloat(mat, _oceanFocusModeId):F2}, waterGlobal={Shader.GetGlobalFloat(_waterFocusModeId):F2}, debug={state.CurrentModeId}:{state.CurrentModeName}");
-        sb.AppendLine($"Wave: amp={GetMaterialFloat(mat, _waveAmplitudeId):F2}, scale={GetMaterialFloat(mat, _waveScaleId):F2}, speed={Shader.GetGlobalFloat(_waveSpeedId):F2}, normal={GetMaterialFloat(mat, _waveNormalStrengthId):F2}, motion={GetMaterialFloat(mat, _waterMotionStrengthId):F2}, shimmer={GetMaterialFloat(mat, _sunGlitterIntensityId):F2}");
+        sb.AppendLine($"Wave: amp={Shader.GetGlobalFloat(_waveAmplitudeId):F2}, scale={Shader.GetGlobalFloat(_waveScaleId):F2}, speed={Shader.GetGlobalFloat(_waveSpeedId):F2}, normal={GetMaterialFloat(mat, _waveNormalStrengthId):F2}, motion={GetMaterialFloat(mat, _waterMotionStrengthId):F2}, shimmer={GetMaterialFloat(mat, _sunGlitterIntensityId):F2}");
         sb.AppendLine($"SurfaceFx: shoreFoam={GetMaterialFloat(mat, _shoreFoamIntensityId):F2}, whitecaps={GetMaterialFloat(mat, _whitecapIntensityId):F2}");
         sb.AppendLine($"DepthFoam: shallow={GetMaterialFloat(mat, _shallowDepthId):F2}, deep={GetMaterialFloat(mat, _deepDepthId):F2}, foamWidth={GetMaterialFloat(mat, _shoreFoamDepthId):F2}, shoreRange={GetMaterialFloat(mat, _shoreFoamSoftnessId):F2}");
         sb.AppendLine(
@@ -170,7 +170,7 @@ public sealed class WaterDebugModule : IDebugModule, IDebugModeApplier, IDebugCa
         Material mat = waterRenderer.sharedMaterial;
         GUILayout.Label($"Shader: {(mat != null && mat.shader != null ? mat.shader.name : "missing")}");
         GUILayout.Label($"Focus: ocean={GetMaterialFloat(mat, _oceanFocusModeId):F1}, waterGlobal={Shader.GetGlobalFloat(_waterFocusModeId):F1}, debug={state.CurrentModeId}:{state.CurrentModeName}");
-        GUILayout.Label($"Wave: amp={GetMaterialFloat(mat, _waveAmplitudeId):F2}, scale={GetMaterialFloat(mat, _waveScaleId):F1}, speed={Shader.GetGlobalFloat(_waveSpeedId):F2}, normal={GetMaterialFloat(mat, _waveNormalStrengthId):F2}, motion={GetMaterialFloat(mat, _waterMotionStrengthId):F2}, shimmer={GetMaterialFloat(mat, _sunGlitterIntensityId):F2}");
+        GUILayout.Label($"Wave: amp={Shader.GetGlobalFloat(_waveAmplitudeId):F2}, scale={Shader.GetGlobalFloat(_waveScaleId):F1}, speed={Shader.GetGlobalFloat(_waveSpeedId):F2}, normal={GetMaterialFloat(mat, _waveNormalStrengthId):F2}, motion={GetMaterialFloat(mat, _waterMotionStrengthId):F2}, shimmer={GetMaterialFloat(mat, _sunGlitterIntensityId):F2}");
         GUILayout.Label($"SurfaceFx: shoreFoam={GetMaterialFloat(mat, _shoreFoamIntensityId):F2}, whitecaps={GetMaterialFloat(mat, _whitecapIntensityId):F2}");
         GUILayout.Label($"Depth/Foam: shallow={GetMaterialFloat(mat, _shallowDepthId):F1}, deep={GetMaterialFloat(mat, _deepDepthId):F1}, foamWidth={GetMaterialFloat(mat, _shoreFoamDepthId):F1}, shoreRange={GetMaterialFloat(mat, _shoreFoamSoftnessId):F1}");
 

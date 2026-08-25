@@ -6,6 +6,8 @@ HLSLINCLUDE
 #include "Includes/Math.hlsl"
 #include "Includes/DebugModes.hlsl"
 #include "Includes/WaterVolumeData.hlsl"
+#include "Includes/WaterLevelField.hlsl"
+#include "Includes/WaterDisplacement.hlsl"
 
 TEXTURE2D(_CameraDepthTexture);
 SAMPLER(sampler_CameraDepthTexture);
@@ -25,9 +27,11 @@ int _OceanDebugMode;
 float _WaterVolumeEnabled;
 // Published by PlanetWaterSurface. See ShaderGlobalIds.WaterDeepColor for why it is not called _DeepColor.
 float4 _WaterDeepColor;
-// Also published by PlanetWaterSurface. Used here only to size the band over which the camera counts as
-// submerged - see CameraUnderwater01.
-float _SwellAmplitude;
+// Published by CelestialManager; the shared night floor every lit surface uses. Tunable with `light.*`.
+// The moon pair comes from the same publisher, on the scale WaterVolume lights its caustics with.
+float _NightAmbientIntensity;
+float3 _MoonParams;
+float _MoonIntensity;
 
 float LightShaftNoise(float2 pixel)
 {
@@ -237,19 +241,21 @@ ENDHLSL
 
             float CameraUnderwater01()
             {
-                float seaOffset = length(_WorldSpaceCameraPos.xyz - _PlanetCenter) - _SeaLevelRadius;
+                return CameraSubmerged01(_WorldSpaceCameraPos.xyz, _PlanetCenter, _SeaLevelRadius, _SwellAmplitude);
+            }
 
-                // Faded across the SWELL, not across a fixed band. This compares against the mean sea radius
-                // and knows nothing about the waves on top of it, so with a 5 m swell a camera 1.4 m below
-                // the mean read 0.996 - fully submerged - while the view still showed open air, the beach and
-                // the treeline un-refracted. Snell's window was then painted over that sky as a hard circle.
-                //
-                // Within a wave height of the mean surface the camera genuinely is in and out of the water as
-                // swells pass, so the honest answer there is partial, and the underwater treatment should ease
-                // in rather than switch. The small positive bound keeps the old behaviour of not calling the
-                // shore of a sea-level lake "underwater" when standing a metre above it.
-                float band = max(_SwellAmplitude, 1.5);
-                return 1.0 - smoothstep(-band, band * 0.15, seaOffset);
+            // The sun's direction seen from UNDER the surface. Refraction bends it toward vertical, so from
+            // below the sun sits higher than it does from the beach, and at grazing incidence it is pulled
+            // inside the 48.75 degree cone rather than staying near the horizon. Both the column's forward
+            // scattering and the shafts have to use this; the direction in the sky is wrong for both.
+            float3 RefractedSunDirection(float3 cameraUp, float3 sunDir, out float cosSunWater)
+            {
+                float cosSunAir = dot(cameraUp, sunDir);
+                float sinSunWater = sqrt(saturate(1.0 - cosSunAir * cosSunAir)) / WATER_IOR;
+                cosSunWater = sqrt(saturate(1.0 - sinSunWater * sinSunWater));
+                float3 sunTangent = sunDir - cameraUp * cosSunAir;
+                return SafeNormalize(
+                    SafeNormalize(sunTangent, cameraUp) * sinSunWater + cameraUp * cosSunWater, cameraUp);
             }
 
             float3 UnderwaterSkyColor(float3 viewDir)
@@ -263,8 +269,122 @@ ENDHLSL
                 // (0.008, 0.058, 0.133) - about half the brightness - so a far shore faded to something
                 // three to four times darker than the water around it instead of fading INTO it.
                 float3 deepWater = _WaterDeepColor.rgb;
-                float3 litWater = lerp(float3(0.012, 0.105, 0.165), float3(0.065, 0.300, 0.420), daylight);
-                return lerp(deepWater, litWater, viewUp * 0.62 + daylight * 0.24);
+                float3 ambient = lerp(deepWater, float3(0.065, 0.300, 0.420), viewUp * 0.62 + daylight * 0.24);
+
+                // Colour and LIGHT LEVEL, kept apart. The old form lerped toward a "lit" colour whose night
+                // end was (0.012, 0.105, 0.165) - brighter than the authored deep colour in both green and
+                // blue - so midnight underwater came out a mid-blue however dark the world above it was.
+                // A night floor belongs in the light, not in the palette.
+                //
+                // Same floor Ocean.shader uses for its surface, so the water reads consistently from above
+                // and below and `light.*` moves both at once, plus the moon on the same scale the volume
+                // pass lights its caustics with. A moon below the horizon lights nothing.
+                float3 moonDir = dot(_MoonParams, _MoonParams) > 0.0001 ? normalize(_MoonParams) : cameraUp;
+                float moonlight = saturate(_MoonIntensity) * saturate(dot(cameraUp, moonDir));
+                float nightLevel = saturate(_NightAmbientIntensity * 0.10 + 0.015 + moonlight);
+                ambient *= lerp(nightLevel, 1.0, daylight);
+
+                // Forward scattering toward the sun. Water scatters strongly forward, so looking toward the
+                // sun underwater is markedly brighter than looking away from it at the same elevation.
+                // Without this term the column is one colour per elevation in every direction, which is what
+                // makes it read as a painted backdrop instead of a medium you are inside.
+                //
+                float cosSunWater;
+                float3 sunUnderwater = RefractedSunDirection(cameraUp, sunDir, cosSunWater);
+
+                // No sun term here. The directional part of the column - brighter toward the sun, dimmer
+                // away from it, dimmer with depth - is the march in UnderwaterSunShafts, which integrates it
+                // properly along the ray. A second hand-set copy of it here is the duplicated-override shape
+                // this whole file was restructured to remove.
+                return ambient;
+            }
+
+            // Sunlight in the column itself. Water scatters it sideways, so the beams between the surface
+            // and the seabed are visible from outside them - the underwater half of the effect the seabed
+            // caustics are the other half of.
+            //
+            // The bands come from the swell: where the surface tilts to face the sun, more light crosses it
+            // and the beam under that patch is brighter, and where it tilts away the beam thins. That is the
+            // same tilt the caustics focus with, so the two agree without sharing a pattern - which they
+            // could not do anyway, since CausticPattern is 81 animated Voronoi cells per call and this would
+            // need one per march step.
+            //
+            // Sampled where each step's SUN ray crosses the surface, not at the step itself. Anchoring the
+            // bands to the step would slide them with the camera instead of leaving them standing in the
+            // water under the waves that cast them.
+            float3 UnderwaterSunShafts(float3 viewDir, float rayLength, float surfaceRadius,
+                float depth01, float body01, float dither)
+            {
+                float3 cameraUp = normalize(_WorldSpaceCameraPos.xyz - _PlanetCenter);
+                float3 sunDir = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : cameraUp;
+                float daylight = smoothstep(-0.02, 0.22, dot(cameraUp, sunDir));
+                if (daylight <= 0.001)
+                    return float3(0.0, 0.0, 0.0);
+
+                float cosSunWater;
+                float3 sunUnderwater = RefractedSunDirection(cameraUp, sunDir, cosSunWater);
+
+                // How much of the sunlight crossing the column scatters back to the eye per metre. Set by
+                // measurement, not by taste: the ambient term this replaced read (0.010, 0.038, 0.036) at
+                // 8 m down looking 70 degrees off vertical toward the sun, and this reproduces it there
+                // while now falling off with depth and path the way the ambient copy could not.
+                // Bryan has not had his eye on the magnitude.
+                const float3 SHAFT_SCATTER = float3(0.0055, 0.0105, 0.0112);
+
+                // Beyond this the column has absorbed the shafts anyway, and marching further only spends
+                // steps where nothing is left to see.
+                const int SHAFT_STEPS = 10;
+                float marchLength = min(rayLength, 90.0);
+                float stepLength = marchLength / SHAFT_STEPS;
+
+                // Constant over the march, so out of the loop.
+                float3 waveAxisA, waveAxisB;
+                BuildPlanetWaveAxes(waveAxisA, waveAxisB);
+                WaterRippleParams shaftParams = EvaluateRippleParameters(depth01, body01);
+
+                float3 accumulated = float3(0.0, 0.0, 0.0);
+                for (int step = 0; step < SHAFT_STEPS; step++)
+                {
+                    float travelled = (step + dither) * stepLength;
+                    float3 samplePos = _WorldSpaceCameraPos.xyz + viewDir * travelled;
+                    float sampleDepth = surfaceRadius - length(samplePos - _PlanetCenter);
+                    if (sampleDepth <= 0.0)
+                        continue;
+
+                    float sunPath = sampleDepth / max(cosSunWater, 0.15);
+                    float3 entryPoint = samplePos + sunUnderwater * sunPath;
+                    float3 entryFlat = SafeNormalize(entryPoint - _PlanetCenter, cameraUp);
+
+                    // The SHORT waves, not the swell. Focusing goes as surface curvature and curvature as
+                    // 1/wavelength squared, so the 90 m swell barely bands at all - measured mean |tiltGain|
+                    // 0.03 - while the metre-scale ripples do. Same field Ocean.shader shades with, so a
+                    // bright beam lands where the surface above it is actually tilted into the sun.
+                    float3 entryLocal = entryPoint - _PlanetCenter;
+                    float2 entryTS = float2(dot(entryLocal, waveAxisA), dot(entryLocal, waveAxisB));
+                    WaterRippleField entryRipple = ComputeWaterRipple(entryTS, float2(1.0, 0.0), float2(0.0, 1.0),
+                        shaftParams.scale, shaftParams.amplitude, shaftParams.timeScale,
+                        shaftParams.waveEnergy, shaftParams.weatherEnergy, shaftParams.chaos01);
+                    float2 entryGradient = entryRipple.gradientTS * 0.18 + entryRipple.detailGradientTS * 1.35;
+                    float3 entryTangentA = SafeNormalize(waveAxisA - entryFlat * dot(waveAxisA, entryFlat), waveAxisA);
+                    float3 entryTangentB = SafeNormalize(waveAxisB - entryFlat * dot(waveAxisB, entryFlat), waveAxisB);
+                    float3 entryNormal = SafeNormalize(
+                        entryFlat - entryTangentA * entryGradient.x - entryTangentB * entryGradient.y, entryFlat);
+
+                    // How much more (or less) light crosses the surface here than across a flat one. First
+                    // order in the tilt, and NOT clamped at 1 - the whole point is the bright half.
+                    float tiltGain = dot(entryNormal, sunDir) - dot(entryFlat, sunDir);
+                    float beam = max(1.0 + tiltGain * 6.0, 0.0);
+
+                    float3 transmit = exp(-WATER_ABSORPTION
+                        * ((sunPath + travelled) / WATER_ABSORPTION_UNIT_METRES));
+                    accumulated += transmit * beam * stepLength;
+                }
+
+                // Forward-peaked, like the ambient term: a shaft is brightest seen nearly along itself and
+                // all but invisible looking straight down one.
+                float forward = saturate(dot(viewDir, sunUnderwater));
+                float phase = 0.25 + pow(forward, 3.0) * 1.75;
+                return accumulated * phase * daylight * SHAFT_SCATTER;
             }
 
             v2f AtmosphereVertex(Attributes v)
@@ -364,65 +484,176 @@ ENDHLSL
                 // has to be the decision.
                 if (_WaterVolumeEnabled > 0.5 && CameraUnderwater01() > 0.5 && SkyDepthMask(i.uv) > 0.5)
                 {
-                    // Seen from below, the water surface IS the sky: its ripples, the sun's glint coming
-                    // through it, and the bright disc of Snell's window. The surface writes no depth, so
-                    // every pixel showing it classifies as sky here - and returning a colour outright
-                    // discarded all of it, leaving one flat wash over the whole upward view. Rendering the
-                    // same frame with the atmosphere bypassed shows what was being thrown away.
+                    // ONE composite of the three things that physically reach the eye, not a stack of
+                    // overrides. Every earlier version of this block computed a term and then let the next
+                    // term paint over it, so each fix here broke the one before it.
                     //
-                    // So keep what the water pass drew wherever it drew something, and use the flat colour
-                    // only for the water beyond it.
+                    //   through the surface   Snell's window - the sky, refracted
+                    //   off the surface       total internal reflection outside that window
+                    //   the water column      in-scattered light between the eye and the surface
+                    //
+                    // Fresnel splits the first two and the column's own opacity weighs them against the
+                    // third, so nothing needs masking out of anything else.
                     float3 camUp = normalize(_WorldSpaceCameraPos.xyz - _PlanetCenter);
-                    float cosWater = dot(viewDir, camUp);
+                    float cosViewUp = dot(viewDir, camUp);
 
-                    // SNELL'S WINDOW. Everything above the surface reaches the eye through a cone of
-                    // half-angle asin(1/1.333) = 48.75 degrees about straight up; outside it the surface is
-                    // a mirror and no sky gets through at all. Without this the whole upward view is one
-                    // flat colour, which is the single biggest thing missing from being underwater.
-                    const float COS_CRITICAL = 0.6593;   // cos(48.75 deg), water n = 1.333
-                    float window = smoothstep(COS_CRITICAL - 0.12, COS_CRITICAL + 0.04, cosWater);
-                    // Eased in with depth as well as angle, so the window grows as the camera sinks rather
-                    // than appearing at full strength the instant the gate opens.
-                    window *= saturate((CameraUnderwater01() - 0.5) / 0.35);
+                    // The column looking out along the ray. The mirror term is further down - it reflects
+                    // about the wave-tilted surface, which is not known yet.
+                    float3 columnColor = UnderwaterSkyColor(viewDir);
 
-                    float3 result = UnderwaterSkyColor(viewDir);
+                    // Distance to the surface along THIS ray, against the water LEVEL FIELD rather than the
+                    // sea sphere, so a lake perched above sea level is measured to its own surface.
+                    //
+                    // NOT from the prepass depth channel. Underwater that pass deliberately clips nothing,
+                    // draws Cull Off and writes no depth, so in patches it records the distance to the ocean
+                    // PAST THE HORIZON instead of the surface overhead - the same defect 1fbcedf fixed for
+                    // the view from above. Reading it here split the upward view into two flat colours along
+                    // a triangle edge.
+                    //
+                    // A ray that is not headed up never leaves the water, and the large stand-in makes
+                    // transmit zero, so the composite collapses to the column with no special case.
+                    float3 fromCentre = _WorldSpaceCameraPos.xyz - _PlanetCenter;
+                    float cameraRadius = length(fromCentre);
+                    float depthBelowSurface = max(
+                        WaterSurfaceRadiusAt(fromCentre / max(cameraRadius, 0.0001), _SeaLevelRadius) - cameraRadius,
+                        0.0);
+                    float pathToSurface = cosViewUp > 0.02 ? depthBelowSurface / cosViewUp : 4000.0;
 
+                    // THE SURFACE'S OWN NORMAL where this ray leaves the water, not the planet normal.
+                    //
+                    // Everything below refracts and reflects about this, so the window's rim heaves with the
+                    // swell instead of sitting as a fixed circle about straight up. That heave is most of
+                    // what reads as "being underwater"; without it the disc is geometrically right and dead.
+                    //
+                    // The same include the surface mesh and the volume prepass displace with, so the rim
+                    // tracks the waves the player can see rather than a second wave field.
+                    //
+                    // Gating comes from the prepass channels. They are the far ocean's in the same patches
+                    // the depth channel is wrong in, but openWater/deepWater/shoreFade are near-identical
+                    // between near and far open water, so the error does not show the way a metric distance
+                    // does. It would show inside a small lake seen across a shoreline; nothing does that yet.
+                    float exitCoverage;
+                    float4 exitData = SampleWaterInterfaceDilated(i.uv, exitCoverage);
+                    float exitShore01;
+                    uint exitKind;
+                    DecodeWaterShoreKind(exitData.b, exitShore01, exitKind);
+                    float exitBody01 = exitKind == WATER_KIND_OCEAN ? 1.0 : 0.0;
+
+                    float3 exitPointWS = _WorldSpaceCameraPos.xyz + viewDir * min(pathToSurface, 200.0);
+                    float3 exitPlanetNormal = SafeNormalize(exitPointWS - _PlanetCenter, camUp);
+                    float swellHeight;
+                    float3 swellNormal;
+                    ComputeOceanSwell(exitPointWS, exitPlanetNormal, exitData.g, exitShore01, exitBody01,
+                        swellHeight, swellNormal);
+
+                    // Fine chop on top of the swell. The swell alone gives a rim that heaves but is
+                    // otherwise smooth; the short waves are what make a real Snell's window's edge crawl.
+                    //
+                    // Geometric slope only. Ocean.shader multiplies this gradient by _WaveNormalStrength to
+                    // exaggerate its shading, and carrying that here would refract light through a surface
+                    // steeper than the one the mesh and the depth buffer actually agree on.
+                    float3 waveAxisA, waveAxisB;
+                    BuildPlanetWaveAxes(waveAxisA, waveAxisB);
+                    float3 exitLocal = exitPointWS - _PlanetCenter;
+                    float2 exitTS = float2(dot(exitLocal, waveAxisA), dot(exitLocal, waveAxisB));
+                    WaterRippleParams exitParams = EvaluateRippleParameters(exitData.g, exitBody01);
+                    WaterRippleField exitRipple = ComputeWaterRipple(exitTS, float2(1.0, 0.0), float2(0.0, 1.0),
+                        exitParams.scale, exitParams.amplitude, exitParams.timeScale,
+                        exitParams.waveEnergy, exitParams.weatherEnergy, exitParams.chaos01);
+
+                    float2 chopGradientTS = exitRipple.gradientTS * 0.18 + exitRipple.detailGradientTS * 1.35;
+                    float3 chopTangentA = SafeNormalize(
+                        waveAxisA - exitPlanetNormal * dot(waveAxisA, exitPlanetNormal), waveAxisA);
+                    float3 chopTangentB = SafeNormalize(
+                        waveAxisB - exitPlanetNormal * dot(waveAxisB, exitPlanetNormal), waveAxisB);
+                    float3 choppyNormal = SafeNormalize(
+                        swellNormal - chopTangentA * chopGradientTS.x - chopTangentB * chopGradientTS.y,
+                        swellNormal);
+
+                    // Ice locks the surface flat, exactly as ComputeWaterVertexDisplacement does for the mesh.
+                    float3 surfaceNormal = SafeNormalize(
+                        lerp(exitPlanetNormal, choppyNormal, 1.0 - saturate(exitData.a)), exitPlanetNormal);
+
+                    float cosWater = dot(viewDir, surfaceNormal);
+
+                    // What total internal reflection shows: the water below, mirrored in the wave-tilted
+                    // underside. Reflecting about the planet normal instead made every direction outside the
+                    // window map to the same near-horizontal ray and come back one flat colour.
+                    //
+                    // ponytail: the column, not the seabed. A real underside also mirrors the bottom where
+                    // it is close enough to see, which needs the underwater scene sampled about the
+                    // reflected ray - and that ray points down and behind, so it is mostly off screen and
+                    // screen-space reflection will not supply it.
+                    float3 mirrorColor = UnderwaterSkyColor(reflect(viewDir, surfaceNormal));
+
+                    // Unpolarised Fresnel for water -> air. Past the critical angle sinAir exceeds 1, there
+                    // is no transmitted ray at all, and this stays exactly 1 - total internal reflection.
+                    // The window's rim and its outer edge come out of that instead of a placed smoothstep,
+                    // which is why the window used to read as a soft glow rather than a defined disc.
+                    float sinWater = sqrt(saturate(1.0 - cosWater * cosWater));
+                    float sinAir = WATER_IOR * sinWater;
+                    float fresnel = 1.0;
+                    float3 refracted = surfaceNormal;
+                    if (sinAir < 1.0 && cosWater > 0.0)
+                    {
+                        float cosAir = sqrt(saturate(1.0 - sinAir * sinAir));
+                        float rs = (WATER_IOR * cosWater - cosAir) / (WATER_IOR * cosWater + cosAir);
+                        float rp = (WATER_IOR * cosAir - cosWater) / (WATER_IOR * cosAir + cosWater);
+                        fresnel = saturate(0.5 * (rs * rs + rp * rp));
+                        float3 tangent = viewDir - surfaceNormal * cosWater;
+                        float tangentLength = length(tangent);
+                        refracted = tangentLength > 1e-5
+                            ? normalize(tangent / tangentLength * sinAir + surfaceNormal * cosAir)
+                            : surfaceNormal;
+                    }
+
+                    // Between waves the camera genuinely is part in and part out, so the window eases in
+                    // with submersion as well as with angle. The gate above is binary and cannot do this.
+                    float window = (1.0 - fresnel) * saturate((CameraUnderwater01() - 0.5) / 0.35);
+
+                    float3 skyColor = float3(0.0, 0.0, 0.0);
                     if (window > 0.001)
                     {
-                        // Bend the ray back out through the surface: sin(air) = n * sin(water), so that
-                        // 48.75 degree cone opens to the whole hemisphere in air. This is why the entire
-                        // sky fits inside the window and crowds together towards its rim.
-                        float sinWater = sqrt(saturate(1.0 - cosWater * cosWater));
-                        float sinAir = saturate(1.333 * sinWater);
-                        float cosAir = sqrt(saturate(1.0 - sinAir * sinAir));
-                        float3 tangent = viewDir - camUp * cosWater;
-                        float tangentLength = length(tangent);
-                        float3 refracted = tangentLength > 1e-5
-                            ? normalize(tangent / tangentLength * sinAir + camUp * cosAir)
-                            : camUp;
-
                         // Scatter from where the ray LEAVES the water, not from the camera: the atmosphere
                         // integrates outward from the planet surface, so a start point below sea level has
                         // no atmosphere in front of it to integrate.
-                        float depthAbove = max(_SeaLevelRadius - length(_WorldSpaceCameraPos.xyz - _PlanetCenter), 0.0);
-                        float pathToSurface = depthAbove / max(cosWater, 0.05);
-                        float3 exitPoint = _WorldSpaceCameraPos.xyz + viewDir * pathToSurface;
-                        float3 sky = CalculateScattering(exitPoint, refracted,
-                            _AtmosphereRadius * 4.0, originalCol.xyz);
-
-                        // Attenuated by the water actually overhead, on the coefficients the volume uses, so
-                        // the window agrees with the rest of the frame about how water absorbs.
-                        float3 throughWater = exp(-float3(3.80, 1.75, 0.58) * saturate(pathToSurface / 40.0));
-                        result = lerp(result, sky * throughWater, window);
+                        //
+                        // Lifted clear of _SeaLevelRadius first. CalculateScattering treats that radius as
+                        // the planet and hands back the background for any ray starting inside it, and the
+                        // exit point sits ON the water - exactly that radius for the ocean, below it for a
+                        // lake in a basin. Left as it was, the whole window returned black except near the
+                        // frame edges, where the longer rays happened to clear the sphere.
+                        //
+                        // Black background: beyond the atmosphere there is space, and passing the water
+                        // colour in tinted the window with the very wash this branch exists to remove.
+                        float exitRadius = length(exitPointWS - _PlanetCenter);
+                        float3 scatterStart = _PlanetCenter + exitPlanetNormal
+                                            * max(exitRadius, _SeaLevelRadius + _SwellAmplitude + 1.0);
+                        skyColor = CalculateScattering(scatterStart, refracted,
+                            _AtmosphereRadius * 4.0, float3(0.0, 0.0, 0.0));
                     }
 
-                    // Whatever the water pass drew here - ripples, glint - sits in front of all of it, but
-                    // only OUTSIDE the window. Overhead the surface is nearly transparent and what the water
-                    // pass drew there is just the volume tint; letting it win discards the window entirely.
-                    // That last detail is what made three previous attempts at this produce no visible
-                    // change - the window was being computed correctly every time and then overwritten.
-                    float surface = saturate(WaterInterfaceFrontMask(i.uv)) * (1.0 - window * 0.85);
-                    return float4(lerp(result, originalCol.rgb, surface), originalCol.w);
+                    // ponytail: swell only - no fine ripple, no glint. The rim heaves with the waves but has
+                    // no small-scale chop on it. The ripple normal lives in Ocean.shader's fragment stage and
+                    // is not in the shared include; hoisting it there is the upgrade path.
+                    float3 interfaceColor = lerp(mirrorColor, skyColor, window);
+
+                    // Beer-Lambert over the water actually between the eye and the surface, on the same
+                    // coefficients the volume uses so the window agrees with the rest of the frame about
+                    // how water absorbs. Not saturated: the old cap floored blue transmission at 0.56 no
+                    // matter how deep the camera was, which is a large part of why the surface read as
+                    // flooded from any depth.
+                    float3 transmit = exp(-WATER_ABSORPTION * (pathToSurface / WATER_ABSORPTION_UNIT_METRES));
+                    float3 result = interfaceColor * transmit + columnColor * (1.0 - transmit);
+
+                    // Shafts live in the column between the eye and the surface, so they add on top of a
+                    // composite that already accounts for that column's own glow.
+                    float surfaceRadius = cameraRadius + depthBelowSurface;
+                    float3 shafts = UnderwaterSunShafts(viewDir, pathToSurface, surfaceRadius,
+                        exitData.g, exitBody01, LightShaftNoise(i.uv * _ScreenParams.xy));
+                    result += shafts;
+
+                    return float4(result, originalCol.w);
                 }
 
                 if (_OceanDebugMode == DEBUG_ATMOSPHERE_WATER_CUT && _WaterVolumeEnabled > 0.5)
@@ -443,10 +674,35 @@ ENDHLSL
                 // That is why the far shore and everything standing on it read bleached cream by day and
                 // flat black at night, instead of fading into the water.
                 //
-                // Air light shafts go with it - they are shafts through atmosphere, and underwater god rays
-                // are a different effect that would have to be built against the water column.
+                // Air light shafts go with it - they are shafts through atmosphere. The underwater shafts
+                // that replace them are built against the water column instead, and are added here rather
+                // than blended, because they are light arriving on top of what the volume already drew.
                 float underwater01 = _WaterVolumeEnabled > 0.5 ? CameraUnderwater01() : 0.0;
                 color = lerp(color, originalCol.xyz, underwater01);
+
+                if (underwater01 > 0.001)
+                {
+                    float3 submergedFromCentre = _WorldSpaceCameraPos.xyz - _PlanetCenter;
+                    float submergedRadius = length(submergedFromCentre);
+                    float submergedSurfaceRadius = WaterSurfaceRadiusAt(
+                        submergedFromCentre / max(submergedRadius, 0.0001), _SeaLevelRadius);
+
+                    // The GEOMETRY's distance, not CompositeDepthScaled - that substitutes the water
+                    // surface's distance where the surface covers a pixel, which underwater is the thing
+                    // behind the camera's own head rather than the seabed the shaft ends on.
+                    float rawSceneDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, i.uv).r;
+                    float geometryDistance = LinearEyeDepth(rawSceneDepth, _ZBufferParams) * viewLength;
+
+                    float shaftCoverage;
+                    float4 shaftData = SampleWaterInterfaceDilated(i.uv, shaftCoverage);
+                    float shaftShore01;
+                    uint shaftKind;
+                    DecodeWaterShoreKind(shaftData.b, shaftShore01, shaftKind);
+
+                    color += UnderwaterSunShafts(viewDir, geometryDistance, submergedSurfaceRadius,
+                        shaftData.g, shaftKind == WATER_KIND_OCEAN ? 1.0 : 0.0,
+                        LightShaftNoise(i.uv * _ScreenParams.xy)) * underwater01;
+                }
 
                 // Raw shaft signal only, amplified so a faint contribution is still visible.
                 // Isolates whether CalculateLightShafts is producing anything at all, independent

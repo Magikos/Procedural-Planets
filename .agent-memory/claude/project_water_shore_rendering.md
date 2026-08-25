@@ -738,21 +738,92 @@ Adding TIR is a real increment, not a tweak: it needs the underwater scene sampl
 direction, not a constant. Judgement call whether it is worth it versus underwater god rays, which are more
 visible. Left for Bryan.
 
-## Underwater compositing needs a RESTRUCTURE, not another patch (2026-08-24)
+## Underwater compositing restructure - LANDED (2026-08-24, uncommitted)
 
 Design doc: [docs/design/2026-08-24-underwater-compositing.md](../../docs/design/2026-08-24-underwater-compositing.md)
 
-The underwater branch in `Atmosphere.shader` is a sequence of overrides - flat ambient colour, then Snell's
-window over it, then the water pass's surface over that - and every fix in the area has been another override
-on top. Three of the last five needed follow-up fixes.
+**The flood was `WaterVolume.shader:737`, NOT the atmosphere branch.** The earlier entry here blamed the
+atmosphere on the strength of `SurfaceOnly` vs beauty - but `SurfaceOnly` returns `source` at
+`WaterVolume.shader:690` too, so that comparison switched off both passes and could not attribute the
+artifact to either. **A debug mode that disables more than one pass cannot tell you which one is guilty.**
 
-**Measured, 12 m down looking up:** `SurfaceOnly` shows the underside dark navy with wave streaks, which is
-CORRECT; the beauty pass floods bright teal over it. The "glowing underside" Bryan reported is the surface
-showing through that wash, not the surface being lit wrongly. Captures `glow_0.png` / `glow_25.png`.
+The real chain: the surface writes no depth, so every underside pixel classified as "no geometry"; the volume
+composite runs BEFORE transparents and returned `UnderwaterNoDepthColor` outright, painting flat teal over
+the sky; `Ocean.shader` then blended the underside onto that at ~a third of an alpha. Three separate water
+column colours existed in one frame. **The flood was gated on `IsProductionEquivalentDebugMode`, so no debug
+mode could show it** - that is why five rounds missed it. Found with a temporary probe gated on
+`_SceneDepthDebugRange`, a float settable from C# with no enum change.
 
-Proposed: compose one result from through-the-surface (Snell), reflected-off-the-underside (total internal
-reflection, currently missing entirely), and the water column's in-scatter - weighted by Fresnel, added rather
-than overridden. `847e867` and `6d2e3d0` will likely be subsumed.
+Landed: one composite in `Atmosphere.shader` - `interface * transmit + column * (1 - transmit)`, with
+`interface = lerp(TIR mirror, refracted sky, 1 - fresnel)`. Snell's window is now the Fresnel term, so the
+rim and the hard outer edge come from physics rather than a placed smoothstep, and TIR exists for the first
+time. Constants `WATER_ABSORPTION` / `WATER_IOR` hoisted into `WaterVolumeData.hlsl`.
 
-**Do not start this mid-session on top of accumulated context.** The doc has the do-not-regress list with the
-viewpoint each committed fix was verified at, and the tooling timings.
+Extended 2026-08-25: the interface now refracts and reflects about the **swell normal at the exit point**
+(atmosphere includes `WaterDisplacement.hlsl` and calls `ComputeOceanSwell`), so Snell's window heaves with
+the waves instead of being a fixed circle; TIR reflects about that normal too (about the PLANET normal every
+direction outside the cone mapped to the same near-horizontal ray and came back flat); and the column
+scatters forward toward the sun's REFRACTED direction. **W19 closed** - the drifted `CameraUnderwater01` pair
+is one `CameraSubmerged01` in `WaterLevelField.hlsl`; each copy had one half right (level field vs swell
+band).
+
+Three traps found en route, all likely to recur:
+- **The prepass depth channel is unusable underwater** - it clips nothing there by design, so it records the
+  ocean past the horizon. Using it for the path to the surface split the view along a triangle edge. Use
+  `WaterLevelField.hlsl` instead.
+- **`CalculateScattering` returns the background for any ray starting inside `_SeaLevelRadius`**, and the
+  exit point sits exactly on that radius. The window was black everywhere but the frame edges. Lift the
+  start point clear of the sphere.
+- **`Ocean.shader`'s underside colour is NOT interface radiance.** It is the water body seen from ABOVE -
+  body tint, sky reflection, above-water lighting. Making the surface opaque underwater so the atmosphere
+  could reuse its ripples painted an above-water sheet over the window, split along mesh triangle edges.
+  Reverted; `Ocean.shader` is untouched.
+
+Verified with play mode PAUSED. Seven viewpoints **0/518400 pixels different from HEAD**.
+**GOTCHA: `Camera.Render()` still advances `_Time.y` ~0.01 s while paused**, and across two tool calls that
+moves a glint and reports tens of differing pixels for a null change - print `_Time.y` and require both sides
+to match, or you will chase a phantom regression (I did, twice).
+
+**God rays landed the same day** as `UnderwaterSunShafts` - a 10-step march that asks, per step, where that
+step's SUN ray crossed the surface, so light is attenuated by the real path in and out. Added over geometry
+as well as sky. It REPLACED a hand-set ambient sun tint inside `UnderwaterSkyColor`; keeping both would have
+been a second copy of "brighter toward the sun", the duplicated-override shape this arc exists to kill.
+`SHAFT_SCATTER` was set by measuring what the tint produced, not by taste.
+
+**Ripple hoist DONE** - `ComputeWaterRipple` now lives in `WaterDisplacement.hlsl` beside the vertex swell
+(domain warp + 4 long + 3 short waves, returns a `WaterRippleField`). 53 lines out of `Ocean.shader`, which
+keeps its own breakup/cell/resolve. **Proven bit-identical at 7 viewpoints, 4 showing water surface.**
+
+**`_WaveAmplitude`/`_WaveScale` PROMOTED to globals** (2026-08-25) so the atmosphere can evaluate the same
+waves: consts in `ShaderGlobalIds.Water.cs`, `Shader.SetGlobalFloat` at `PlanetWaterSurface.cs:266-267`,
+deleted from Ocean's Properties block AND its local decls, `WaterDebugModule` reads globals.
+`EvaluateRippleParameters` hoisted too. **Verify a promotion with `material.HasProperty(name) == false`** -
+that is the direct test for the shadowing trap, and a control property that should stay True catches an
+over-broad delete. Measured after: globals 3.4/480, both HasProperty False, `_WaveNormalStrength` still True.
+Snell's window now visibly wave-lobed at wind 18 m/s (`v12_wind18_wide_d3.png`); at the usual wind 0.1 the
+chop is subtle because ripple amplitude is gated by wind.
+
+Measured, not guessed: mean `|tiltGain|` across the march is **0.03** at the authored 90 m swell. Focusing
+goes as surface CURVATURE and curvature as 1/wavelength², so a 90 m swell focuses ~300 m down while a 2 m
+ripple focuses ~14 m down - which is why real caustics are sharp on a shallow bed. **Do NOT try to reuse
+`CausticPattern` per march step - it is 81 animated Voronoi cells per call (~970 per pixel at 10 steps).**
+
+**Underwater at night was too bright (Bryan, 2026-08-25) - the cause was a COLOUR, not a light level.**
+`UnderwaterSkyColor` lerped toward a "lit" colour whose night end `(0.012, 0.105, 0.165)` was BRIGHTER than
+the authored deep colour in green and blue, so midnight underwater was a mid-blue however dark the world
+above was. Colour and light level are now separate; the night floor is
+`saturate(_NightAmbientIntensity * 0.10 + 0.015 + moonlight)` - **the same floor `Ocean.shader:701` uses for
+the surface**, so both sides of the waterline move together. Daylight is unchanged by construction.
+
+**Measured: this is a ~29x reduction at night, which is far more than "a bit".** Old night value
+`(0.0105, 0.0871, 0.1528)` linear vs new `~(0.0007, 0.0035, 0.0053)`. It is near-black. Two facts before
+re-tuning: (1) the house night floor really is 0.017, so this now MATCHES the surface rather than
+overshooting relative to it; (2) `_MoonIntensity` is only ~0.011 at FULL moon against `_SunIntensity` 17, so
+the moon term is worth ~25% and cannot carry a readable night on its own. If Bryan wants underwater night
+readable rather than realistic, that is a deliberate art call and needs its own `WaterDto` level - do not
+just inflate the shared floor, it moves the whole world.
+
+Still open: TIR mirrors the column not the seabed (its reflected ray points down and behind the camera, so
+SSR cannot supply it); `SHAFT_SCATTER` and the night level have not had Bryan's eye; shaft march cost is
+unprofiled (~110 trig/underwater pixel). Observed but NOT investigated: distant scatter impostors over the
+far seabed read as dark angled specks (`v9_seabed.png`) - same family as [[project_scatter_dusk_lighting]].
