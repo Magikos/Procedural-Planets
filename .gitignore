@@ -118,3 +118,8 @@ graphify-out/
 # Asset Bench staging — candidate assets under evaluation, promoted out on a "keep" verdict, never committed
 /[Aa]ssets/_[Bb]ench/
 /[Aa]ssets/_[Bb]ench.meta
+
+# Editor/tooling backup copies. `sed -i.bak` and similar leave these behind; they are never source of
+# truth and were accumulating as permanent untracked noise (29 of them by 2026-08-25, 8 made that day).
+*.bak
+*.bak.meta

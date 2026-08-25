@@ -152,6 +152,13 @@ Shader "Hidden/WaterVolumePrepass"
             // Underwater nothing is discarded, which is what keeps Cull Off doing its real job.
             float3 planetNormalWS = SafeNormalize(input.positionWS - _PlanetCenter, float3(0.0, 1.0, 0.0));
             float3 toCameraWS = SafeNormalize(_WorldSpaceCameraPos.xyz - input.positionWS, planetNormalWS);
+            // ponytail: measured against the global sea sphere, not CameraSeaOffset()'s level field, so a
+            // camera over a lake perched above sea level reads as higher than it is. Tried and MEASURED as a
+            // non-fix on 2026-08-24: switching this to the field moved the missing-lake-disc mask from
+            // 0.0000 to 0.0005, i.e. nothing, and was reverted. That symptom is the depth test, not this
+            // (ZTest Always lights 26,065 of 31,046 pixels). Correct it when the clip band itself misbehaves,
+            // not in pursuit of a missing lake. Ceiling: the two water passes disagree by up to the lake
+            // spill height, which only matters once the 0.5/2.0 m band straddles a perched surface.
             float cameraSeaOffset = length(_WorldSpaceCameraPos.xyz - _PlanetCenter) - _SeaLevelRadius;
             float cameraAboveWater = saturate((cameraSeaOffset - 0.5) / 2.0);
             clip(lerp(1.0, dot(toCameraWS, planetNormalWS), cameraAboveWater));
