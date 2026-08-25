@@ -738,6 +738,32 @@ Adding TIR is a real increment, not a tweak: it needs the underwater scene sampl
 direction, not a constant. Judgement call whether it is worth it versus underwater god rays, which are more
 visible. Left for Bryan.
 
+## OPEN: camera exactly at a raised lake's surface - prepass writes no volume data (2026-08-25)
+
+Bryan's F10 `F10-water.00-Off-20260825-131607-415`. Camera radius **5041.21**, lake surface **5041.26** -
+**5 cm below the surface** of a lake perched 41 m above sea level. Reads as a hard-edged circular disc of
+water in a big sand bowl: no shoreline feather, no depth tint, no caustics, no foam.
+
+**Localised by binary, cause NOT yet fixed.** Established, in order:
+1. The disc IS the water mesh - disabling the renderer removes it and sand shows through.
+2. ONE renderer, ONE mesh (548,472 verts) - so this is **not** W12/multi-mesh.
+3. 436 water verts within 300 m of the camera, all at radius 5041.26, all vertex-colour LAKE. Geometry
+   is present.
+4. `Ocean.shader` draws it; `WaterVolumePrepass` writes **0 of 31,046** pixels across the disc, while
+   writing the distant ocean fine in the same frame.
+5. A probe returning a constant from `Frag` **before** the facing clip lit 0 pixels on the disc, and
+   before/after the clip were **identical frame-wide** - so the clip removes nothing here.
+6. **`ZTest Always` on the prepass pass lights 26,065 of 31,046.** The depth test is the cause.
+
+So: the prepass's `ZTest LEqual` rejects the lake's fragments while Ocean's transparent pass draws them.
+Both nominally test LEqual, so the next question is what depth attachment the prepass RT is actually bound
+against, and/or the grazing-angle depth blow-up when the eye sits ON the water plane (view rays nearly
+parallel to it, so its depth explodes and the bed behind wins).
+
+**DEAD ENDS - do not repeat:** it is not the facing clip; it is not W12; it is not terrain masquerading as
+water; it is not the `_SeaLevelRadius`-vs-level-field bug (I wrote that fix, it moved the mask 0.0000 ->
+0.0005, i.e. nothing, and I reverted it). Everything is reverted to HEAD.
+
 ## Underwater compositing restructure - LANDED (2026-08-24, uncommitted)
 
 Design doc: [docs/design/2026-08-24-underwater-compositing.md](../../docs/design/2026-08-24-underwater-compositing.md)
