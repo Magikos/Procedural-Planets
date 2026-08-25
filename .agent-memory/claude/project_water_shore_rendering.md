@@ -738,7 +738,43 @@ Adding TIR is a real increment, not a tweak: it needs the underwater scene sampl
 direction, not a constant. Judgement call whether it is worth it versus underwater god rays, which are more
 visible. Left for Bryan.
 
-## OPEN: camera exactly at a raised lake's surface - prepass writes no volume data (2026-08-25)
+## SOLVED: the shaders were 15 cm below the water they were drawing (2026-08-25, `292f8dc`)
+
+**Root cause of the "sand bowl with a hard disc of water" F10.** The rendered sheet sits `SurfaceOffset`
+above the solved level so it does not z-fight the bed. `WaterMeshBuilder` applies it; `WaterQueryService`
+adds it back; **`WaterLevelField.hlsl` did not**. Measured across 5504 water verts planet-wide:
+`meshRadius - fieldRadius` = mean **0.150 m**, min 0.149, max 0.151 - a constant bias, exactly
+`max(PlanetRadius * 0.00003, 0.02)`.
+
+Inside that 15 cm band the camera was ABOVE the water to every shader and BELOW it to the mesh at once.
+**Three sign tests in `WaterVolume` flip at exactly 0**, and `WaterPathToReceiver`'s "camera already below
+the surface" branch is one: on the wrong branch it hunted a surface entry point, found none in the prepass,
+fell back to the analytic sea sphere 41 m down, and returned NO water path - so a lake perched 41 m up
+rendered with no volume tint across its entire basin.
+
+Fixed by hoisting the expression to `WaterMeshBuilder.SurfaceOffsetFor` (it was hand-written in two C#
+sites) and publishing `_WaterSurfaceOffset` for the shaders.
+
+**Method note worth keeping: the win came from comparing two authorities numerically, not from looking
+harder at the picture.** Sampling mesh vertex radii against the field's own texels turned a vague "odd edge
+case" into a constant 0.150 m with min/max 0.149/0.151. Bryan's own reading of the screenshot ("a lake at
+the bottom of the lake") was closer than mine - I had called the bowl dry lakebed; terrain sampling showed
+it 3.6-52 m BELOW the lake surface, i.e. underwater the whole way.
+
+**Dead ends on the way, do not repeat:** not the facing clip (probe before/after was identical frame-wide);
+not W12 (one renderer, one mesh); not terrain masquerading as water; not the global-sea-radius bug in the
+prepass (wrote that fix, moved the mask 0.0000 -> 0.0005, reverted). `ZTest Always` lighting the disc was a
+true observation that pointed at the wrong layer - the water genuinely IS behind the bed at grazing angles
+when the eye is on the surface; that is geometry, not a bug.
+
+**Follow-on, NOT caused by this:** grass renders growing through the water at that viewpoint, and the
+sidecar shows **zero** grass water-cull rejections. Was invisible while the water was.
+
+**Also corrected today: `WaterQueryService` EXISTS** (99 lines, `Planet.cs:97` registers it, `Configure` at
+`Planet.cs:493`). I told Bryan W6 was unbuilt and the keystone to build next - it is built and already
+handles SurfaceOffset correctly. Check before scoping W6 again.
+
+## SUPERSEDED: camera exactly at a raised lake's surface - prepass writes no volume data (2026-08-25)
 
 Bryan's F10 `F10-water.00-Off-20260825-131607-415`. Camera radius **5041.21**, lake surface **5041.26** -
 **5 cm below the surface** of a lake perched 41 m above sea level. Reads as a hard-edged circular disc of
