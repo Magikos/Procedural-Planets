@@ -203,6 +203,7 @@ sealed class GrassChunkDispatcher : System.IDisposable
         _placementCompute.SetMatrix(PlanetLocalToWorldId, _planetTransform.localToWorldMatrix);
         _placementCompute.SetFloat(PlanetWorldScaleId, FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform));
         _placementCompute.SetFloat(WaterRadiusId, _waterRadius);
+        GrassWaterFieldBinding.Bind(_placementCompute, _placeKernel);
         _placementCompute.SetInt(SeedId, _seed);
         // Camera position falls back to planet origin so initial placement before first Tick produces blades.
         Vector3 cameraPos = _tickCamera != null ? _tickCamera.transform.position : _planetTransform.position;

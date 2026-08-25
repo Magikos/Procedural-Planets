@@ -216,13 +216,17 @@ void PlaceAndCull(uint3 id : SV_DispatchThreadID)
     }
 
     float laneRadius = LoadRadius(laneCenterFaceUv);
-    if (_WaterRadius > 0.0 && laneRadius <= _WaterRadius + max(biome.Placement.z, 0.0))
+    float3 laneSphereNormal = CubeFaceToUnitSphere(_FaceIndex, laneCenterFaceUv);
+
+    // Water clearance, against the water standing under THIS direction. The scalar it falls back to can
+    // only describe the ocean sphere, so a lake perched above sea level was invisible here and grass grew
+    // straight through it.
+    float laneWaterRadius = GrassWaterSurfaceRadiusAt(laneSphereNormal, _WaterRadius);
+    if (laneWaterRadius > 0.0 && laneRadius <= laneWaterRadius + max(biome.Placement.z, 0.0))
     {
         AddStat(STAT_WATER_REJECTED_LANES, 1u);
         return;
     }
-
-    float3 laneSphereNormal = CubeFaceToUnitSphere(_FaceIndex, laneCenterFaceUv);
     float3 laneNormalLocal = LoadNormal(laneCenterFaceUv);
     if (dot(laneNormalLocal, laneSphereNormal) < 0.0)
         laneNormalLocal = -laneNormalLocal;

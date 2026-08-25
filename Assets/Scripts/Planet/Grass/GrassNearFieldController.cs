@@ -407,6 +407,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         _compute.SetFloat(DrawDistanceId, _drawDistance);
         _compute.SetFloat(FadeBandId, _fadeBand);
         _compute.SetFloat(WaterRadiusId, _waterRadius);
+        GrassWaterFieldBinding.Bind(_compute, _kernel);
         _compute.SetFloat(PlanetRadiusId, _planetRadius);
         _compute.SetFloat(PlanetWorldScaleId, FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform));
         _compute.SetMatrix(PlanetLocalToWorldId, _planetTransform.localToWorldMatrix);

@@ -29,43 +29,8 @@ float _WaterLevelBaseRadius;
 // which is what made standing exactly at a lake surface behave strangely.
 float _WaterSurfaceOffset;
 
-#define WATER_LEVEL_NO_WATER_MAX (-0.5)
-
-// Cube-face projection, shared by both fields. Extracted rather than copied because it has to stay identical
-// to WaterLevelGrid.Index in C# and one copy is already one more than can be kept in step by hand.
-void WaterLevelFaceUvRaw(float3 direction, out int face, out float2 uv)
-{
-    float3 a = abs(direction);
-    float uSigned, vSigned;
-
-    if (a.y >= a.x && a.y >= a.z)
-    {
-        float inv = 1.0 / max(a.y, 1e-8);
-        if (direction.y >= 0.0) { face = 0; uSigned = direction.x * inv; vSigned = -direction.z * inv; }
-        else                    { face = 1; uSigned = -direction.x * inv; vSigned = -direction.z * inv; }
-    }
-    else if (a.x >= a.y && a.x >= a.z)
-    {
-        float inv = 1.0 / max(a.x, 1e-8);
-        if (direction.x >= 0.0) { face = 3; uSigned = direction.z * inv; vSigned = -direction.y * inv; }
-        else                    { face = 2; uSigned = -direction.z * inv; vSigned = -direction.y * inv; }
-    }
-    else
-    {
-        float inv = 1.0 / max(a.z, 1e-8);
-        if (direction.z >= 0.0) { face = 4; uSigned = direction.y * inv; vSigned = -direction.x * inv; }
-        else                    { face = 5; uSigned = -direction.y * inv; vSigned = -direction.x * inv; }
-    }
-
-    uv = saturate(float2(uSigned * 0.5 + 0.5, vSigned * 0.5 + 0.5));
-}
-
-// Snapped to the cell centre the C# side would land on, so both agree on which cell a direction owns.
-void WaterLevelFaceUv(float3 direction, float resolution, out int face, out float2 uv)
-{
-    WaterLevelFaceUvRaw(direction, face, uv);
-    uv = (floor(uv * resolution) + 0.5) / resolution;
-}
+// The cube-face projection lives in its own file so the grass placement computes can share it.
+#include "WaterLevelProjection.hlsl"
 
 // Water surface height in planet-radius units, or WATER_LEVEL_NO_WATER_MAX and below where none stands.
 float SampleWaterLevel(float3 direction)

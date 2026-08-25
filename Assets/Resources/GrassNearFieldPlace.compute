@@ -387,9 +387,12 @@ void PlaceAndCullNearField(uint3 id : SV_DispatchThreadID)
         return;
     }
 
-    // Water clearance.
-    if (_NearFieldWaterRadius > 0.0
-        && surfaceRadius <= _NearFieldWaterRadius + max(biome.Placement.z, 0.0))
+    // Water clearance, against the water standing under THIS direction. The scalar it falls back to can
+    // only describe the ocean sphere, so a lake perched above sea level was invisible here and grass grew
+    // straight through it.
+    float waterRadiusHere = GrassWaterSurfaceRadiusAt(dirWs, _NearFieldWaterRadius);
+    if (waterRadiusHere > 0.0
+        && surfaceRadius <= waterRadiusHere + max(biome.Placement.z, 0.0))
     {
         AddStat(NF_STAT_WATER_REJECTED, 1u);
         return;
