@@ -1,4 +1,6 @@
+using Unity.Mathematics;
 using UnityEngine;
+using Rng = Unity.Mathematics.Random;
 
 /// <summary>
 /// Drives short lightning pulses in active storm cells. Rendering stays in the
@@ -30,6 +32,10 @@ public class WeatherLightningController : MonoBehaviour
     public Color LightningColor = new Color(0.72f, 0.84f, 1f, 1f);
 
     IWeatherProvider _weather;
+    ISeedProvider _seeds;
+    int _systemSeed;
+    int _strikeIndex;
+    Rng _rng = Rng.CreateFromIndex(0);
     Vector3 _planetCenter;
     bool _hasPlanet;
     Vector3 _strikeDirection = Vector3.up;
@@ -84,6 +90,16 @@ public class WeatherLightningController : MonoBehaviour
     {
         _planetCenter = evt.PlanetCenter;
         _hasPlanet = true;
+        RefreshSeed();
+    }
+
+    // Re-derived per generation, so seed.set followed by a regenerate replays the same storms rather than
+    // carrying the previous world's sequence forward.
+    void RefreshSeed()
+    {
+        _seeds ??= ServiceLocator.TryGet(out ISeedProvider seeds) ? seeds : null;
+        _systemSeed = _seeds?.GetSeedForSystem("Lightning") ?? 0;
+        _strikeIndex = 0;
     }
 
     void ResolveWeatherProvider()
@@ -112,15 +128,20 @@ public class WeatherLightningController : MonoBehaviour
             return;
         }
 
-        // ponytail: strike timing and shape read global RNG, so clients will see different flashes; harmless
-        // while lightning stays cosmetic, and the fix is to seed it from the world tick once that exists (B2).
+        // Each strike is seeded from (world seed, strike index) rather than continuing one stream, so a client
+        // that missed earlier strikes still draws this one identically instead of desyncing for the session.
+        // ponytail: two clients still have to agree on the strike INDEX, and the schedule below runs off local
+        // Time.time, so they do not yet. Shape is deterministic; arrival is not. Closing that needs the shared
+        // world tick (B2) plus a replicated schedule (M1) - docs/design/2026-08-20-magikos-game-architecture.md.
+        _rng = Rng.CreateFromIndex(math.hash(new uint2((uint)_systemSeed, (uint)_strikeIndex++)));
+
         _strikeDirection = ScatterDirection(stormDirection.normalized);
         BuildLightningPath(_strikeDirection);
         _strikeStartTime = Time.time;
         _strikeDuration = Mathf.Max(FlashDuration, 0.05f);
-        _strikePower = CloudFlashIntensity * Mathf.Lerp(0.75f, 1.25f, Random.value);
-        _secondaryPower = Random.value <= SecondaryPulseChance
-            ? _strikePower * Mathf.Lerp(0.25f, 0.55f, Random.value)
+        _strikePower = CloudFlashIntensity * Mathf.Lerp(0.75f, 1.25f, _rng.NextFloat());
+        _secondaryPower = _rng.NextFloat() <= SecondaryPulseChance
+            ? _strikePower * Mathf.Lerp(0.25f, 0.55f, _rng.NextFloat())
             : 0f;
         float strikeRadius = (stormPosition - _planetCenter).magnitude;
         Vector3 strikePosition = _planetCenter + _strikeDirection * strikeRadius;
@@ -137,7 +158,7 @@ public class WeatherLightningController : MonoBehaviour
 
     Vector3 ScatterDirection(Vector3 direction)
     {
-        float scatterRadians = StrikeScatterAngle * Mathf.Deg2Rad * Mathf.Sqrt(Random.value);
+        float scatterRadians = StrikeScatterAngle * Mathf.Deg2Rad * Mathf.Sqrt(_rng.NextFloat());
         if (scatterRadians <= 0.0001f)
             return direction;
 
@@ -146,7 +167,7 @@ public class WeatherLightningController : MonoBehaviour
             : Vector3.up;
         Vector3 tangent = Vector3.Cross(reference, direction).normalized;
         Vector3 bitangent = Vector3.Cross(direction, tangent).normalized;
-        float angle = Random.value * Mathf.PI * 2f;
+        float angle = _rng.NextFloat() * Mathf.PI * 2f;
         Vector3 offset = tangent * Mathf.Cos(angle) + bitangent * Mathf.Sin(angle);
         return (direction * Mathf.Cos(scatterRadians) + offset * Mathf.Sin(scatterRadians)).normalized;
     }
@@ -160,7 +181,7 @@ public class WeatherLightningController : MonoBehaviour
             : Vector3.up;
         Vector3 tangent = Vector3.Cross(reference, origin).normalized;
         Vector3 bitangent = Vector3.Cross(origin, tangent).normalized;
-        float pathAngle = Random.value * Mathf.PI * 2f;
+        float pathAngle = _rng.NextFloat() * Mathf.PI * 2f;
         Vector3 travel = tangent * Mathf.Cos(pathAngle) + bitangent * Mathf.Sin(pathAngle);
 
         int count = Mathf.Clamp(PathCellCount, 1, 4);
@@ -172,7 +193,7 @@ public class WeatherLightningController : MonoBehaviour
                 continue;
             }
 
-            float stepRadians = PathStepAngle * Mathf.Deg2Rad * i * Mathf.Lerp(0.75f, 1.25f, Random.value);
+            float stepRadians = PathStepAngle * Mathf.Deg2Rad * i * Mathf.Lerp(0.75f, 1.25f, _rng.NextFloat());
             Vector3 bend = Vector3.Cross(origin, travel).normalized;
             Vector3 bentTravel = (travel * Mathf.Cos(stepRadians * 0.3f) + bend * Mathf.Sin(stepRadians * 0.3f)).normalized;
             _pathDirections[i] = (origin * Mathf.Cos(stepRadians) + bentTravel * Mathf.Sin(stepRadians)).normalized;
@@ -203,7 +224,7 @@ public class WeatherLightningController : MonoBehaviour
 
     void ScheduleNextStrike(float minDelay, float maxDelay)
     {
-        _nextStrikeTime = Time.time + Random.Range(Mathf.Max(0.05f, minDelay), Mathf.Max(minDelay, maxDelay));
+        _nextStrikeTime = Time.time + _rng.NextFloat(Mathf.Max(0.05f, minDelay), Mathf.Max(minDelay, maxDelay));
     }
 
     void UploadLightning()
