@@ -264,7 +264,9 @@ Shader "Hidden/WaterVolume"
         float3 shallowTint = lerp(_ShallowColor.rgb, float3(0.16, 0.58, 0.68), 0.35);
         float3 deepTint = max(_DeepColor.rgb, float3(0.0, 0.028, 0.105));
         float3 waterTint = lerp(shallowTint, deepTint, pathTint);
-        float lightScale = lerp(0.34, 0.82, volumeLight);
+        // Floor was 0.34 - the far shore's water kept a third of its daylight tint all night, so a distant
+        // waterline glowed against dark land. Same reason as the fog floor below. Unchanged at full light.
+        float lightScale = lerp(0.02, 0.82, volumeLight);
         float3 attenuatedSource = sourceColor * exp(-WATER_ABSORPTION * extinction);
         float3 waterColor = lerp(attenuatedSource, waterTint * lightScale, saturate(extinction * 0.92));
         return lerp(sourceColor, waterColor, saturate(mask));
@@ -869,7 +871,11 @@ Shader "Hidden/WaterVolume"
         float scatterAmount = saturate(volumeOpacity * lostLight * 0.82 * volumeLight);
         float3 waterBody = transmittedScene + volumeTint * scatterAmount;
         float depthFog = VolumeDepthFog(caustics);
-        float3 fogColor = volumeTint * lerp(0.14, 0.62, volumeLight);
+        // Floor was 0.14, which is a seventh of full daylight held on regardless of the sun, so the ocean
+        // fog self-glowed at night over a seabed that was correctly dark. Same defect the lake body below
+        // was already fixed for - blue scatter needs light, and absorption is what happens in darkness.
+        // Unchanged at volumeLight 1, so daylight is identical by construction.
+        float3 fogColor = volumeTint * lerp(0.015, 0.62, volumeLight);
         waterBody = lerp(waterBody, fogColor, depthFog * 0.58);
         float3 color = waterBody * (1.0 - troughShadow) + caustics.contribution * 0.48 + caustics.prismContribution * 1.28;
         // Murky inland lakes: the clear-ocean composite shows the bright refracted lakebed + caustics through

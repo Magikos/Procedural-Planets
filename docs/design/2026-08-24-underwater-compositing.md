@@ -130,6 +130,13 @@ Then, the same pass extended (2026-08-25):
   its shading, and carrying that here would refract light through a surface steeper than the one the mesh
   and the depth buffer agree on.
 
+- **The ocean volume's night floors, in `WaterVolume.shader`.** The seabed at night read
+  `(0.094, 0.247, 0.247)` while the column above it was near-black — the fog kept `lerp(0.14, …)` of its
+  daylight tint whatever the sun did, and the far-shore waterline kept `lerp(0.34, …)`. Both self-glowed
+  over correctly dark terrain. The lake body in the same function had already been fixed for exactly this
+  ("darkens to near-black at night instead of self-glowing while the terrain is dark"); the ocean path had
+  not. Both floors dropped, and both are unchanged at full light, so daylight is identical by construction.
+
 - **Underwater at night was too bright** (Bryan, 2026-08-25). `UnderwaterSkyColor` lerped toward a "lit"
   colour whose night end was `(0.012, 0.105, 0.165)` — brighter than the authored deep colour in both green
   and blue — so midnight underwater came out a mid-blue however dark the world above it was. Colour and

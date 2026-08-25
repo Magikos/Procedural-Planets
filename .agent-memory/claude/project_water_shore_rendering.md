@@ -815,6 +815,15 @@ above was. Colour and light level are now separate; the night floor is
 `saturate(_NightAmbientIntensity * 0.10 + 0.015 + moonlight)` - **the same floor `Ocean.shader:701` uses for
 the surface**, so both sides of the waterline move together. Daylight is unchanged by construction.
 
+**The same defect existed a second time, in `WaterVolume.shader`, for the OCEAN only.** The seabed at night
+read `(0.094, 0.247, 0.247)` while the column above it was near-black: `fogColor = volumeTint * lerp(0.14,
+0.62, volumeLight)` held a seventh of daylight whatever the sun did, and `FarTerrainWaterlineColor`'s
+`lerp(0.34, 0.82, volumeLight)` held a third. **The LAKE body in the same function had already been fixed
+for exactly this** ("darkens to near-black at night instead of self-glowing while the terrain is dark") -
+the ocean path was simply missed. Floors dropped to 0.015 / 0.02; both are unchanged at full light, so
+daylight is identical by construction. **Pattern to look for: `lerp(floor, full, lightTerm)` where floor is
+a meaningful fraction of full - that is a light level baked into a colour, and it self-glows at night.**
+
 **Measured: this is a ~29x reduction at night, which is far more than "a bit".** Old night value
 `(0.0105, 0.0871, 0.1528)` linear vs new `~(0.0007, 0.0035, 0.0053)`. It is near-black. Two facts before
 re-tuning: (1) the house night floor really is 0.017, so this now MATCHES the surface rather than
