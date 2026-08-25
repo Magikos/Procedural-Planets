@@ -33,6 +33,7 @@ public sealed class PlanetWaterSurface
     static readonly int _waveNormalStrengthId = Shader.PropertyToID("_WaveNormalStrength");
     static readonly int _swellAmplitudeId = Shader.PropertyToID(ShaderGlobalIds.SwellAmplitude);
     static readonly int _swellWavelengthId = Shader.PropertyToID(ShaderGlobalIds.SwellWavelength);
+    static readonly int _waterSurfaceOffsetId = Shader.PropertyToID(ShaderGlobalIds.WaterSurfaceOffset);
     static readonly int _waterEdgeFadeStartId = Shader.PropertyToID(ShaderGlobalIds.WaterEdgeFadeStart);
     static readonly int _waterEdgeFadeEndId = Shader.PropertyToID(ShaderGlobalIds.WaterEdgeFadeEnd);
     static readonly int _waterEdgeFadeEndOceanId = Shader.PropertyToID(ShaderGlobalIds.WaterEdgeFadeEndOcean);
@@ -124,13 +125,18 @@ public sealed class PlanetWaterSurface
 
         var water = SettingsProvider.GetSettings<WaterDto>();
         float waterScale = GetWaterDistanceScale();
+        // One expression, shared with WaterQueryService and published to the shaders, so the mesh, gameplay
+        // and every shader agree on where the surface is.
+        float surfaceOffset = WaterMeshBuilder.SurfaceOffsetFor(planet.PlanetRadius);
+        Shader.SetGlobalFloat(_waterSurfaceOffsetId, surfaceOffset);
+
         var buildSettings = new WaterMeshBuilder.Settings
         {
             PlanetRadius = planet.PlanetRadius,
             OceanLevel = planet.OceanLevel,
             DeepDepth = water.DeepDepth * waterScale,
             ShoreRange = water.ShoreRange * waterScale,
-            SurfaceOffset = Mathf.Max(planet.PlanetRadius * 0.00003f, 0.02f),
+            SurfaceOffset = surfaceOffset,
             OceanBodyVertexThreshold = Mathf.Max(48, perFaceResolution * perFaceResolution / 28),
             ClimateProvider = climateProvider,
             EnableFreezing = planet.EnableFrozenWater,

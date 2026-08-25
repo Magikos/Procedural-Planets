@@ -19,6 +19,16 @@ float _ShoreLevelRes;
 // Scale the level is expressed against, published with the field so no caller has to supply it.
 float _WaterLevelBaseRadius;
 
+// How far the rendered sheet sits above the SOLVED level. WaterMeshBuilder adds it to every water vertex so
+// the surface does not z-fight the bed it was clipped against, and WaterQueryService adds it so gameplay
+// floats a boat on the surface it can see.
+//
+// This file did not, and that was a real defect rather than a rounding difference: measured across 5504
+// water vertices planet-wide the mesh sat 0.150 m above what these functions returned, every time. Inside
+// that band a camera read as ABOVE the water to every shader and BELOW it to the mesh at the same instant,
+// which is what made standing exactly at a lake surface behave strangely.
+float _WaterSurfaceOffset;
+
 #define WATER_LEVEL_NO_WATER_MAX (-0.5)
 
 // Cube-face projection, shared by both fields. Extracted rather than copied because it has to stay identical
@@ -117,7 +127,7 @@ float SampleShoreLevel(float3 direction)
 float WaterSurfaceRadiusAt(float3 direction, float fallbackSeaRadius)
 {
     float level = SampleWaterLevel(direction);
-    return level > WATER_LEVEL_NO_WATER_MAX ? _WaterLevelBaseRadius * (1.0 + level) : fallbackSeaRadius;
+    return level > WATER_LEVEL_NO_WATER_MAX ? _WaterLevelBaseRadius * (1.0 + level) + _WaterSurfaceOffset : fallbackSeaRadius;
 }
 
 // Same, against the wider field. For "how far above the water is this ground" - the tight field ends one cell
@@ -125,7 +135,7 @@ float WaterSurfaceRadiusAt(float3 direction, float fallbackSeaRadius)
 float ShoreSurfaceRadiusAt(float3 direction, float fallbackSeaRadius)
 {
     float level = SampleShoreLevel(direction);
-    return level > WATER_LEVEL_NO_WATER_MAX ? _WaterLevelBaseRadius * (1.0 + level) : fallbackSeaRadius;
+    return level > WATER_LEVEL_NO_WATER_MAX ? _WaterLevelBaseRadius * (1.0 + level) + _WaterSurfaceOffset : fallbackSeaRadius;
 }
 
 // Height of the camera above the water standing beneath it.

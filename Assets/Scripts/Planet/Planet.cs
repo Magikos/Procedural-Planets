@@ -492,7 +492,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             // describes cannot disagree.
             _waterQuery.Configure(WaterBodyMap.Current, new AnalyticGroundSampler(_shapeGenerator),
                 planet.PlanetRadius, planet.OceanLevel,
-                Mathf.Max(planet.PlanetRadius * 0.00003f, 0.02f));
+                WaterMeshBuilder.SurfaceOffsetFor(planet.PlanetRadius));
             long scatterMs = finalizeStep.ElapsedMilliseconds;
             finalizeStep.Restart();
             _scatterRenderer.Configure();

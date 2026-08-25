@@ -39,6 +39,10 @@ public static partial class ShaderGlobalIds
     public const string WaterLevelTex = "_WaterLevelTex";
     public const string WaterLevelRes = "_WaterLevelRes";
     public const string WaterLevelBaseRadius = "_WaterLevelBaseRadius";
+    // How far the rendered water sheet sits above the solved level. WaterLevelField.hlsl adds it so the
+    // shaders answer the same "where is the surface" as the mesh and WaterQueryService.
+    // Published by PlanetWaterSurface from WaterMeshBuilder.SurfaceOffsetFor.
+    public const string WaterSurfaceOffset = "_WaterSurfaceOffset";
 
     // The same field carried further onto dry land, for height-above-water questions rather than wetness.
     // Published by PlanetWaterSurface; consumed by Includes/WaterLevelField.hlsl.

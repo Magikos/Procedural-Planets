@@ -4,6 +4,15 @@ using UnityEngine.Rendering;
 
 public static class WaterMeshBuilder
 {
+    // How far the RENDERED water surface sits above the solved level, so the sheet does not z-fight the bed
+    // it was clipped against.
+    //
+    // Anything asking where the surface IS has to add it, and this is the one place the expression lives.
+    // It was written out by hand in three places and omitted entirely from WaterLevelField.hlsl, so every
+    // shader believed the water was 15 cm lower than it was drawn - and a camera within 15 cm of a lake
+    // surface read as above the water to the shaders and below it to the mesh at the same instant.
+    public static float SurfaceOffsetFor(float planetRadius) => Mathf.Max(planetRadius * 0.00003f, 0.02f);
+
     public struct Settings
     {
         public float PlanetRadius;
@@ -12,6 +21,7 @@ public static class WaterMeshBuilder
         public float ShoreRange;
         public float SurfaceOffset;
         public int OceanBodyVertexThreshold;
+
         public IClimateProvider ClimateProvider;
         public bool EnableFreezing;
         public float LakeFreezeStartTemperature01;
