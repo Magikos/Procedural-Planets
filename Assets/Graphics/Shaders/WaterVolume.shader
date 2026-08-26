@@ -78,6 +78,8 @@ Shader "Hidden/WaterVolume"
         float sunLight;
         float moonLight;
         float light;
+        // The same light with the receiver-orientation terms left out - see VolumeBodyLight.
+        float bodyLight;
         float waterDepth;
         float waterPath;
         float3 contribution;
@@ -512,10 +514,24 @@ Shader "Hidden/WaterVolume"
         return saturate(max(pathFog * 0.78, depthFog * 0.48) * caustics.mask);
     }
 
+    // How much of the receiver's own orientation is allowed to reach the water BODY's glow.
+    //
+    // caustics.light carries sunFacing, which comes from a normal reconstructed with ddx/ddy of world
+    // position. That is fine for light landing ON a surface, but the body is the water between the eye and
+    // that surface and it is lit whatever the surface is doing. Letting facing reach zero here meant any
+    // receiver a few pixels wide - where the derivatives straddle a silhouette and the normal is noise -
+    // punched a hole straight through the ocean's glow, so a field of coral read as black specks on a lit
+    // seabed. Floored rather than removed: at 0 the seabed loses the shading variation this term also
+    // supplies and the whole bed goes flat.
+    //
+    // Bryan's call: 0.45 is the least that stopped the specks while leaving the bed's relief readable.
+    #define VOLUME_BODY_FACING_FLOOR 0.45
+
     float VolumeBodyLight(CausticResult caustics)
     {
         // Absorption can happen in darkness, but blue volume scatter needs light.
-        return saturate(caustics.light * 1.28 + 0.012);
+        float facingFloored = lerp(caustics.bodyLight, caustics.light, 1.0 - VOLUME_BODY_FACING_FLOOR);
+        return saturate(facingFloored * 1.28 + 0.012);
     }
 
     BottomDistortionResult EmptyBottomDistortionResult(float3 sourceColor)
@@ -582,6 +598,7 @@ Shader "Hidden/WaterVolume"
         result.sunLight = 0.0;
         result.moonLight = 0.0;
         result.light = 0.0;
+        result.bodyLight = 0.0;
         result.waterDepth = 0.0;
         result.waterPath = 0.0;
         result.contribution = 0.0;
@@ -633,6 +650,14 @@ Shader "Hidden/WaterVolume"
         float moonLight = localMoon * moonFacing * moonShadow * saturate(_MoonIntensity);
 
         float light = saturate(sunLight + moonLight);
+
+        // Facing-free companion to `light`, for the water column rather than the surface it ends on.
+        // Assigned BEFORE the early-out below, because a collapsed facing term is exactly what triggers
+        // that early-out - leaving bodyLight at zero there would reopen the holes this exists to close.
+        float sunBody = localSun * sunShadow * sunIntensity01;
+        float moonBody = localMoon * moonShadow * saturate(_MoonIntensity);
+        result.bodyLight = saturate(sunBody + moonBody);
+
         if (light <= 0.0001)
         {
             result.mask = mask;
