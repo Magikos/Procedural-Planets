@@ -84,6 +84,10 @@ public sealed class CreaturePredatorVision : System.IDisposable
         if (_hooked) return;
         RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
         _hooked = true;
+
+        // The console draws from the same callback and subscribed at boot, so without this the tint pass
+        // multiplies over the line you just typed and the console goes unreadable.
+        if (ServiceLocator.TryGet(out IConsoleService console)) console.RaiseToTop();
     }
 
     void Unhook()

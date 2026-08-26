@@ -56,6 +56,18 @@ public sealed class ConsoleController : MonoBehaviour, IConsoleService
         _inputController.UnhookTextInput();
     }
 
+    /// <summary>
+    /// Move the console's draw to the end of the render callback list. Delegate invocation order is
+    /// subscription order, and the console subscribes at boot - so a fullscreen overlay switched on later
+    /// draws over the text you are trying to read unless the console re-subscribes behind it.
+    /// </summary>
+    public void RaiseToTop()
+    {
+        if (!isActiveAndEnabled) return;
+        RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
+        RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
+    }
+
     void OnDestroy()
     {
         // Shut the runner down first so any in-flight ObservePending skips writing to dead state.

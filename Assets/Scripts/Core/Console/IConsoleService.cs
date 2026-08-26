@@ -7,6 +7,12 @@ public interface IConsoleService
     void Close();
     void Toggle();
 
+    /// <summary>
+    /// Redraw the console after every other render callback registered so far, so a fullscreen debug
+    /// overlay switched on mid-session cannot tint or cover the console text.
+    /// </summary>
+    void RaiseToTop();
+
     void RunCommand(string commandLine);
     void Print(string text);
     void PrintLine(string text);
