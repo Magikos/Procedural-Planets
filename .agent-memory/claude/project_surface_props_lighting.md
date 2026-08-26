@@ -107,3 +107,7 @@ co-termination gate (it starved savanna). FIX (`9ff9294`): re-gate the far overl
   `_GrassSurfaceSaturation`, default 0.72, mirrors `grass.surface-brightness`) so Bryan tunes it live + bakes.
   GOTCHA: `PlanetGrassCoordinator` is a plain SERVICE not a MB (FindObjectsByType won't find it); overlay props
   are per-MATERIAL (not globals, so NOT in ShaderGlobalIds). See [[project-grass-terrain-lighting-arc]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Surface props + lighting](project_surface_props_lighting.md) — 2026-08-09 (branch character-controller-mvp): walk-test fixes. **Planet/PropLit shader** = REUSABLE planet-aware prop lighting (night side darkens via _SunParams globals) → use for ALL surface objects/NPCs, NOT default URP Lit. **ScatterPrototype.ConformToSlope [0..1]** tilts props to surface normal per Bryan's rule (rocks=1, bushes/flowerbushes=0.6 FIT terrain; trees/flowers/grass=0 GROW UP; CPU/Burst parity, 78 green). **Floating scatter = ORIENTATION not height** (rev2, Codex-corrected): scatter uses raw ShapeGenerator noise NOT TryGetSurfaceRadius; sag ~0 near camera. Char grounding "fixed" = OBSERVATION (raycast falls back to analytic; land test owed). Commits db2a66b/41712d4/36ad833/5af2008

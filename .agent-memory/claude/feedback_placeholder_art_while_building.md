@@ -23,3 +23,7 @@ note the direction here is the opposite of gold-plating: it licenses LESS work o
 Does not weaken [[feedback-quality-over-cheap]]: placeholder ART is fine, placeholder MECHANICS are not.
 
 Related: [[project-creature-residency]], [[project-all-generated-props]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Placeholder art while building](feedback_placeholder_art_while_building.md) — Bryan 2026-08-26: *"I am fine with all place holder art/shapes as we build out the mechanics."* **Never gate a mechanic on an art import; build against a primitive and keep the swap to one file.** Placeholder ART yes, placeholder MECHANICS no.

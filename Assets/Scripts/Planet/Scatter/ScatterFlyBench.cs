@@ -54,10 +54,10 @@ public sealed class ScatterFlyBench : MonoBehaviour
     public void StartBench(float speedMps, float seconds)
     {
         var cam = Camera.main;
-        if (cam == null) { Debug.LogWarning("[FlyBench] no Camera.main"); return; }
+        if (cam == null) { LoggerProvider.Log(LogLevel.Warning, "FlyBench", "no Camera.main"); return; }
 
         _cache = ConsoleRegistry.GetInstance(typeof(ScatterTileCache)) as ScatterTileCache;
-        if (_cache == null) Debug.LogWarning("[FlyBench] ScatterTileCache not registered — load-lag will read 0 (generate a planet first)");
+        if (_cache == null) LoggerProvider.Log(LogLevel.Warning, "FlyBench", "ScatterTileCache not registered — load-lag will read 0 (generate a planet first)");
 
         SpeedMps = Mathf.Max(1f, speedMps);
         DurationSec = Mathf.Max(1f, seconds);
@@ -90,7 +90,7 @@ public sealed class ScatterFlyBench : MonoBehaviour
         _tPrev = _t0;
         _nextSample = 0f;
         _running = true;
-        Debug.Log($"[FlyBench] start: {SpeedMps:F0} m/s for {DurationSec:F0}s (sample {SampleHz:F0} Hz) at radius {_radius:F0}");
+        LoggerProvider.Log(LogLevel.Info, "FlyBench", $"start: {SpeedMps:F0} m/s for {DurationSec:F0}s (sample {SampleHz:F0} Hz) at radius {_radius:F0}");
     }
 
     public void StopBench() => Finish("stopped");
@@ -151,11 +151,11 @@ public sealed class ScatterFlyBench : MonoBehaviour
             ? "stream kept up (no backlog)"
             : $"OUTRUN — backlog peaked at {_maxPending} pairs (avg {avgPending:F0}); raise stream throughput or lower speed";
         LastReport =
-            $"[FlyBench] {why}: {SpeedMps:F0} m/s, {_samples} samples over {DurationSec:F0}s\n" +
+            $"{why}: {SpeedMps:F0} m/s, {_samples} samples over {DurationSec:F0}s\n" +
             $"  load-lag: max {_maxPending} / avg {avgPending:F0} pending pairs; live instances {_minLive}..{_maxLive}\n" +
             $"  worst frame {_worstFrameMs:F1} ms\n" +
             $"  verdict: {verdict}";
-        Debug.Log(LastReport);
-        Debug.Log("[FlyBench] CSV\n" + _csv);
+        LoggerProvider.Log(LogLevel.Info, "FlyBench", LastReport);
+        LoggerProvider.Log(LogLevel.Info, "FlyBench", "CSV\n" + _csv);
     }
 }

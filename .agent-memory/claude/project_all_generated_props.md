@@ -68,3 +68,7 @@ the textbook trim-sheet case, and UVs are expensive to retrofit, so decide befor
 
 Related: [[project_tree_generator]], [[project-scatter-lod-impostor]], [[project_ocean_scatter]]
 (underwater is blocked on a PLACEMENT axis, not geometry), [[project_scatter_clumping_direction]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [All-generated props direction](project_all_generated_props.md) — 2026-08-17 Bryan: replace EVERY Synty scatter prop with generated geometry (trees → flowers/reeds → lily/coral/seaweed). **FINAL GOAL NOT YET BUILT: bake the generated MESHES at build time so nothing generates at runtime** — only atlases are baked today; meshes stay runtime because they measure 195 ms and that keeps the tuning loop. Bryan agreed to defer until the species set stops churning: "just don't forget that is the final goal." The reason is ownership (an asset you can open/tweak/prefab), not load time. Pack meshes stay welcome as **landmark pieces only**, and they don't get harvest for free.

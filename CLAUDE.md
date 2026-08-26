@@ -165,6 +165,20 @@ A `wontfix` decision on an audit finding belongs at the code site as one of thes
 - Don't start fixing during an audit phase. Don't fix while findings are still under review.
 - Cross-reference baseline audit findings instead of re-listing them.
 
+## Context discipline
+
+Tool results are ~87% of everything in context, and every one of them is re-read on every
+later turn of the session. A line dumped at turn 50 is paid for again at turn 500.
+
+- `tools/hooks/quiet-bash.js` (PreToolUse/Bash) already digests build/install/test output and
+  truncates `cat` over 400 lines. It fails open — an unrecognised command is passed through
+  untouched, so it is a floor, not a substitute for judgement.
+- Read source with the Read tool, not `cat`. Read has offset/limit; `cat` has neither.
+- Ask for the answer, not the haystack: `grep -c`, `grep -l`, or `| head` beats a raw dump.
+- Large intermediate output goes to the scratchpad, then read back only the part you need.
+- If a rewrite prints a `__CCQUIET__` marker, it truncated something. Never edit or summarise
+  a file from truncated output — go get the rest.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.

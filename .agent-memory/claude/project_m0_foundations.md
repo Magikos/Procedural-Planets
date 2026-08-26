@@ -63,3 +63,7 @@ needing a capability interface), and **background flush** — deliberately not d
 
 Related: [[project_world_delta_log]], [[project_water_shore_rendering]], [[project_magikos_architecture]],
 [[feedback_quality_over_cheap]], [[reference_unity_mcp]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [M0 foundations](project_m0_foundations.md) — 2026-08-25, 5 parallel lanes. **`Magikos.Game` ships with ZERO asmdef references, so "authority touches no camera/input" is now a compile error.** Delta log v1→v2 (scale appended LAST = strict byte-prefix). **Three ledger rows were WRONG: B8 was already struck, B14's "one attribute each" is INERT (Burst direct-call needs the attribute on class AND method), B10 undercounted 29 .bak files.** 146→159 tests.

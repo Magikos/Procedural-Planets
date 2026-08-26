@@ -39,3 +39,7 @@ Wildflowers — reuse existing reed/rock/flower meshes; `MaxAltitude 3m` hugs th
 **Known limitation:** per-face flood-fill can split a bay crossing a cube seam into a sub-threshold piece ->
 false lake; isolated ponds are correct. Tunables in `LakeMask.cs`: `Res`, `LakeMaxCells`, `ShoreRings`;
 cattail density = `SpacingMeters` on the Lake prototypes. Related: [[project_scatter_dusk_lighting]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Lake biome](project_lake_biome.md) — 2026-08-11 (branch scatter-placement): lakes are their own biome (Lake/LakeShore) vs ocean. **LakeMask** flood-fills small below-water bodies at gen (bg thread) → both biome resolvers emit Lake/LakeShore via a `lakeState` arg; shore reeds/cattails/rocks/wildflowers (scatter slots 64-67, SlotBits raised 6→7). Committed a34c843/087d361/cdde4bf/57579ce. DEFERRED: lily-pads-on-water + murky water tint. Doc: docs/design/2026-08-11-lake-biome.md

@@ -22,3 +22,7 @@ Two-part trees (meadow/birch/pohutukawa): canopy part uses its own material with
 **Open docs**: audit addendum `docs/audit/2026-07-26-scatter-audit.md` (N1 = `ScatterRenderer.Draw` rescans all instances per prototype×part×LOD — worth fixing; N2 = runtime enableInstancing write on shared material asset). Far-field impostor design awaiting Bryan's approval: `docs/design/2026-07-26-scatter-impostor-design.md` (recommends single cylindrical billboard first tier; needs distances + single-vs-octahedral call).
 
 **Gaps / future**: no cactus (Desert = dead tree + rock), no snow-specific trees (Snow = pine), `PNB_Enchanted_Forest` pack unused, mushrooms/lilypads not wired, snow/autumn `_SeasonColor` tinting not applied. Foliage still reads dark under backlight — a diffuse wrap / lit underside is the next polish lever if wanted. Related: [[project-grass-layering-arc]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Scatter biome buildout](project_scatter_biome_buildout.md) — 2026-07-26: all 14 land biomes have scatter (42 prototypes); FoliageLit rules (never atlas as _TrunkMap, _ForceLeaf, Cull Off, _LeafNormalUp); per-biome slot convention (Birch=slot4)

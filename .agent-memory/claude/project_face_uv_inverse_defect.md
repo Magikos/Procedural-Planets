@@ -61,3 +61,7 @@ One pair being silently wrong is reason to check the rest. Round-tripped 3000 ra
 
 The 1.7 m worst case on the first two is `Mathf.Clamp01` at exact face corners, not a mirror error — the
 mean is 0.000015 deg. **D12 was the only broken pair.** Re-run this audit whenever a projection is added.
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Face-UV inverse defect](project_face_uv_inverse_defect.md) — **D12, fixed `8fdd1d2`.** `CoordinateConverter.UnitSphereToCubeFace` looked like an inverse and wasn't — right face, **mirrored UV**, round-trip error mean 55° (4.8 km at R=5000). EVERY ground query used it (character grounding, camera, scale markers, grass altitude, climate): measured vs analytic, **1/300 agreed within 1 m, mean 101 m** → after fix **300/300, mean 0.008 m**. Invisible because it returns a plausible radius from the wrong place. Old function deleted. **Three cube-face UV conventions exist in the tree; they are not interchangeable — always round-trip-test a new one.**

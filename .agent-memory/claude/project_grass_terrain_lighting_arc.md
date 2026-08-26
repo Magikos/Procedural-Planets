@@ -94,3 +94,7 @@ offset the baked dim. Verified: mid-far dots went black→olive/coloured vegetat
 (not blown). The far overlay saturation/coverage is only a minor lever (overlay is a far-DISTANCE effect;
 mid-ground is near-field blades) — don't over-tune it. GOTCHA restated: impostor materials are runtime-baked,
 so ScatterImpostor edits need a full stop→play REGEN to re-bake, not a force-reimport.
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Grass/terrain lighting arc](project_grass_terrain_lighting_arc.md) — 2026-08-01: impostor shadows + grass-blanket brightness (3b052dc); bright-green biome-edge LINE = terrain grass-surface OVERLAY (green-over-tan luminant), fixed by greenness gate (1abe68a). GOTCHA: shader-code edits don't hot-reload — force AssetDatabase.ImportAsset; diagnose with debug.mode TerrainSelectedAlbedo/BiomeMapFlatColor

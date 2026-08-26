@@ -119,3 +119,7 @@ Before trusting any static-counter probe in play mode, confirm exactly one copy 
 loaded (see [[reference-unity-mcp]]) — HotReload silently splits statics and reports zero.
 
 Related: [[project-startup-generation-perf]], [[project-scatter-gather-perf]], [[reference-unity-mcp]]
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Runtime hitch profile](project_runtime_hitch_profile.md) — **SOLVED 2026-08-16, commit `764a0fd`**: travel stutter was `ScatterTileCache.Reeval` (tile re-plan, main thread, every **40 m travelled** = `ReevalMoveMeters`, looping per-prototype over prototype-independent geometry) plus `ScatterGpuDraw` re-copying a prototype's whole matrix array through an interface indexer (18.6M matrices/30 s). Reeval **170.6→28.6 ms**, upload **1591→222 ms/30 s**, frames >100 ms **22→1**. **CLEARED, don't re-investigate: GC (2 collections/30 s), chunk mesh page-in (69 ms/30 s), gather job wait (347 ms/30 s).** Found + fixed en route: `ReadyMask` was one `ulong` for 109 prototypes → slots 73-108 (tree variants) were silently NOT RENDERING; fixing it took live instances 200k→894k. **BUILD MEASURED 2026-08-17: load 40 s → 15.0 s, `finalize` 7 s → 0.06 s (players use PREBAKED impostor atlases; the live bake is Editor-only), 0 frames >100 ms, 287/301 frames ≤16.7 ms, worst 43 ms.** Editor overhead was most of the apparent problem — do NOT cut density based on Editor numbers. Caveat: build run was at 118k-277k instances, not the Editor forest's 1.1M, since `scatter.goto` is unregistered in a player; full-density build test still owed.

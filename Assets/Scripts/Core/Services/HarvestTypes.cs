@@ -51,3 +51,22 @@ public readonly struct ScatterHarvestedEvent : IGameEvent
     public ScatterHarvestedEvent(ulong id, int protoIndex, Vector3 worldPos, HarvestYield yield)
     { Id = id; ProtoIndex = protoIndex; WorldPos = worldPos; Yield = yield; }
 }
+
+// A creature was struck. Carries both outcomes rather than splitting into hit/killed events, because every
+// subscriber so far wants the same line either way and the two differ only in whether Yield is worth reading.
+//
+// Deliberately NOT ScatterHarvestedEvent: TreeFallSystem and ChopFxSystem subscribe to that one and would
+// topple a tree and burst leaves where the deer was standing.
+public readonly struct CreatureStruckEvent : IGameEvent
+{
+    public readonly ulong Id;
+    public readonly Vector3 WorldPos;
+    public readonly string DisplayName;
+    public readonly int RemainingHealth;
+    public readonly bool Killed;
+    public readonly HarvestYield Yield;
+
+    public CreatureStruckEvent(ulong id, Vector3 worldPos, string displayName, int remainingHealth,
+        bool killed, HarvestYield yield)
+    { Id = id; WorldPos = worldPos; DisplayName = displayName; RemainingHealth = remainingHealth; Killed = killed; Yield = yield; }
+}

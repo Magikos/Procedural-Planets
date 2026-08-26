@@ -85,3 +85,7 @@ Levers: `grass.layer Blanket true|false`, `grass.overlay-strength`, `grass.surfa
 `grass.surface-saturation`, `grass.debug-layer-colors`. Doc: docs/design/2026-08-12-distant-grass-carpet.md.
 Evidence PNGs: local-only/debug-screenshots/grass-distance-*.png. Committed d520d74 (doc only).
 Related: [[project_grass_layering_arc]] (blanket revived then parked for the stripe), [[project_lake_biome]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Distant grass carpet](project_distant_grass_carpet.md) — 2026-08-12: "grass doesn't draw far enough / far shore=dirt" (Lake1) = the DISABLED far grass-surface overlay ("blanket", `_grassBlanketEnabled=false`), which ALREADY EXISTS + is blade-textured. Off due to biome-edge stripe (hard gate `smoothstep(0.38,0.72)`). **Lake1 is ARID** (far-shore density~0) so carpet won't green it — that's a biome/content Q, not carpet. Proposed soft-gate (0.06/0.85) in tree, UNCOMMITTED + unverified (editor isCompiling stuck: HotReload looping on uncommitted AssetBench scripts). Doc d520d74; evidence local-only/debug-screenshots/grass-distance-*.png

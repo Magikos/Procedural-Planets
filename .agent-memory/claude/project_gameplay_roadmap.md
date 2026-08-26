@@ -112,3 +112,7 @@ The lesson that survives: **bit widths live in `ScatterId` only.** A second decl
 
 Related: [[project_lake_biome]] (slots 64-67), [[reference_collision_strategy]] (collider
 streaming deferred), [[project_current_focus]] (prior code-refactor arc).
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Gameplay roadmap](project_gameplay_roadmap.md) — 2026-08-12: pivot from look-polish to gameplay frontier. Roadmap `docs/design/2026-08-12-next-roadmap.md` (substrate mature, game ~0%; 3 tracks A-harvest/B-feel/C-code-health, rec B→A). Code-health pass LANDED uncommitted (FlyBench→ILogger, GrassNearFieldController dead-toggle+comment cleanup); DEFERRED w/ reasons (ScatterField split=CLAUDE.md conflict; grass god-class dedup=needs play-verify; SuppressionRadius=load-bearing). Harvest plan `plans/003-harvest-vertical-slice.md` (DONE, `5fa6ce0`). **The old "SlotBits=6 aliases slots 64-67" warning is RESOLVED — do not re-raise it.** Canonical is now **8** (`ScatterId.cs:20`, bit 63 reclaimed) and every packer derives from it, so it cannot re-break; coverage is in **`ScatterIdTests`**, not `ScatterGatherParityTests`.

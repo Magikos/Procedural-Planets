@@ -18,3 +18,7 @@ Bryan's unfinished character-controller experiment: `C:\Users\Bryan\Source\Repos
 **SKIP:** their EventBus (dupe), Singleton (PP forbids → WorldContext DI), Logwin (→ ILogger), PlayerInputProvider (dupe input svc), all physics motor/sensor code, empty interfaces, LocomotionSettings-static + CharacterStats-POCO (→ one PP SO→DTO). Rules predicate DSL = optional/lean-skip (only ~6 combinators if transitions grow; prefer lambdas; class-per-predicate is the anti-pattern).
 
 Full catalog (MVP/LATER/SKIP per idea, file:line) in `plans/001-character-controller-mvp.md` Appendix, harvested 2026-08-08 via a 6-agent parallel read.
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [State Machine project (prior art)](reference_state_machine_project.md) — external unfinished char controller at `C:\Users\Bryan\Source\Repos\Magikorp\State Machine`; WIP skeleton (motor empty, physics-collider based) → harvest PATTERNS not code. Its generic hierarchical FSM (AdaptiveStateMachine<TContext>, composite, context-adaptive ResolveTo, EvaluateExit) = PP Phase-10 graduation backbone, NOT MVP. Full catalog in plans/001 Appendix

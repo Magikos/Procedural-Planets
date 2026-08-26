@@ -94,3 +94,7 @@ over. Full per-subsystem plan: `docs/research/2026-08-11-asset-adoption-map.md`.
 **How to apply:** when scoping any new work, check it against these pillars before proposing
 it. Off-genre content (sci-fi, modern/urban, racing, military) is skip-on-sight — Bryan owns
 a lot of it and explicitly said to skip it.
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Game vision](project_game_vision.md) — 2026-08-10 STATED BY BRYAN: the planet is substrate for a **Valheim-inspired fantasy RPG where you play a WIZARD**. Pillars: building/crafting/cooking/potions, harvesting (chop/mine/fish/garden), **high magic + lots of spells**, **portals = fast travel**, wildlife/monsters/NPCs/towns, tame+ride mounts, carts (wheelbarrow→wagon), late-game flight; later sailing/swimming/fishing. Art = low-poly Synty. **Asset rule: HARVEST-ONLY** (no vendor runtime C# ever ships; editor tools stay in scratch project). Reprioritises magic-VFX + portals to top-three; survival/crafting/building is the biggest zero-code gap. **2026-08-12:** Synty = default + tie-breaker but NOT absolute — richer geometry wins (kept 2 toon oaks with real leaf canopies over a Synty trunk→leaf-sphere); caveat: that ref was the *Generic* filler pack, not the NatureBiomes tree the game plants.

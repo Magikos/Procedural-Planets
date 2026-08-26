@@ -36,3 +36,7 @@ goal; it is the thing being changed. A missing prerequisite is evidence about *o
   the review gate is for **aesthetic choices**, not for bugs. See [[feedback_audit_workflow]].
 
 Seen on the water redesign, [[project_water_architecture_build]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Goal-first scoping](feedback_goal_first_scoping.md) — Bryan: prerequisites become tasks, never reasons to defer a goal. *"That's like saying we don't have any lamps in the house right now so we don't need electrical outlets."* A scope doc discovers what must happen to reach the goal; it never trims goals that don't fit the current design. Also: a defect with a findable mechanism doesn't need visual review first — the review gate is for aesthetic choices.

@@ -66,3 +66,7 @@ custom. Grass looks good WITHOUT clumps, so this is optional polish.
 
 Next planned: holistic colour/lighting pass with all layers in (Bryan's call, on the real
 planet). See [[project-current-focus]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Grass layering arc](project_grass_layering_arc.md) — 2026-07-16/17: far-field blanket revived (linear-coverage fix) + blade clump identity + scale/width fixes shipped; textured cards & ground-darkening reverted; Synty clump scatter PARKED (determinism/pivot/material); verify grass on REAL planet not the grid test scene

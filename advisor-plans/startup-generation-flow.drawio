@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="30.2.4">
+  <diagram id="startup-generation" name="Startup generation">
+    <mxGraphModel dx="1780" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="2" value="Startup orchestration" style="swimlane;startSize=30;horizontal=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;container=1;pointerEvents=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1760" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="LoadingManager&#xa;dependency-ordered initializers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="2">
+          <mxGeometry x="40" y="50" width="250" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="Planet.InitializeAsync&#xa;settings + seeded providers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="2">
+          <mxGeometry x="370" y="50" width="250" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="PlanetGeneratedEvent&#xa;world becomes ready" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="2">
+          <mxGeometry x="1450" y="50" width="260" height="65" as="geometry" />
+        </mxCell>
+
+        <mxCell id="6" value="Static biome authority (preserved and deterministic for a seed)" style="swimlane;startSize=30;horizontal=1;whiteSpace=wrap;html=1;fillColor=#fffaf0;strokeColor=#d6b656;fontStyle=1;container=1;pointerEvents=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="190" width="1760" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="7" value="Static ClimateProvider&#xa;latitude + elevation + seeded&#xa;temperature / moisture noise" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="6">
+          <mxGeometry x="40" y="60" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="8" value="Voronoi seed assignment&#xa;climate chooses land biome" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="6">
+          <mxGeometry x="350" y="60" width="240" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="9" value="Cleanup pass (preserved)&#xa;up to 5 iterations&#xa;8 neighbors, 6-vote rule" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="6">
+          <mxGeometry x="650" y="60" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="10" value="Cleaned primary atlas&#xa;512 x 512 x 6" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="6">
+          <mxGeometry x="960" y="60" width="240" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="11" value="Planet generation hot path" style="swimlane;startSize=30;horizontal=1;whiteSpace=wrap;html=1;fillColor=#f4fbff;strokeColor=#6c8ebf;fontStyle=1;container=1;pointerEvents=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="410" width="1760" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="12" value="Terrain mesh + normals&#xa;Burst already enabled" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="11">
+          <mxGeometry x="30" y="75" width="190" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="13" value="Lake mask&#xa;ocean / lake / shore" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="11">
+          <mxGeometry x="250" y="75" width="190" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="14" value="Plan 002&#xa;Burst climate vertex bake&#xa;full precision retained" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="11">
+          <mxGeometry x="470" y="65" width="220" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="15" value="Leaf high-res ID grid&#xa;cleaned land + lake / elevation overrides" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="11">
+          <mxGeometry x="720" y="65" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="16" value="Plan 003&#xa;exact rolling 25 x 25 histogram&#xa;top K = 4, byte-identical" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="11">
+          <mxGeometry x="990" y="65" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="17" value="Face biome atlases&#xa;IDs + weights + blended color" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="11">
+          <mxGeometry x="1260" y="75" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="18" value="Water mesh&#xa;terrain + static climate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="11">
+          <mxGeometry x="1510" y="75" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="19" value="Runtime after planet readiness" style="swimlane;startSize=30;horizontal=1;whiteSpace=wrap;html=1;fillColor=#faf6fc;strokeColor=#9673a6;fontStyle=1;container=1;pointerEvents=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="660" width="1760" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="20" value="WeatherManager&#xa;late dependency on IPlanet" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="19">
+          <mxGeometry x="1010" y="65" width="250" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="21" value="Evolving runtime weather grid&#xa;clouds / precipitation / dynamics&#xa;does not redefine static biomes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="19">
+          <mxGeometry x="1360" y="55" width="310" height="95" as="geometry" />
+        </mxCell>
+
+        <mxCell id="22" value="await" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="3" target="4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="23" value="initialize" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=0.25;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="4" target="7">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="175" y="175" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="24" value="assign" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="7" target="8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="25" value="remove anomalies" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="8" target="9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="26" value="bake" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="9" target="10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="27" value="then terrain" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=0.75;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="4" target="12">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="560" y="175" /><mxPoint x="10" y="175" /><mxPoint x="10" y="465" /><mxPoint x="145" y="465" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="28" value="height field" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="12" target="13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="29" value="directions + elevation" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="13" target="14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="30" value="static formulas" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="7" target="14">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="185" y="395" /><mxPoint x="600" y="395" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="31" value="full-precision T / M" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="14" target="15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="32" value="cleaned land IDs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="10" target="15">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1080" y="395" /><mxPoint x="860" y="395" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="33" value="ID samples" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="15" target="16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="34" value="top-K maps" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="16" target="17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="35" value="then water" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="17" target="18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="36" value="ready" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="18" target="5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="37" value="late dependency" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=0.25;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="5" target="20">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1790" y="160" /><mxPoint x="1790" y="700" /><mxPoint x="1155" y="700" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="38" value="generate + evolve" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="20" target="21">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

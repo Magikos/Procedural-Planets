@@ -57,3 +57,7 @@ this. `SeedProvider` (FNV-1a, `GetSeedForSystem`/`GetSeedForChunk`/`GetSeedForEn
 deterministic derivation service to use for any new seeded work. See [[project-tree-generator]].
 
 Related: [[project-runtime-hitch-profile]], [[reference-unity-mcp]], [[feedback-audit-workflow]]
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Startup generation perf](project_startup_generation_perf.md) — 2026-08-16: planet gen **76.3 s → ~40.3 s**, Phase B `vertex` **30.1 s → 4.8 s**. Wins came from DELETING redundant per-vertex work and from one impostor readback per pass (was 128 GPU stalls/prototype), **not Burst**. **Byte-identical atlases proven** by reverting only the changed files while keeping the checksum instrumentation — reuse that trick. Codex plans 002 (Burst) and 003 (rolling histogram) both REJECTED on evidence. #1 hotspot now `finalize` (grass+surfaceEdits+scatter Configure). The `TreeInjection` per-process seed bug this file used to flag is **FIXED** (FNV-1a).

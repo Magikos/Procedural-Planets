@@ -46,3 +46,7 @@ Also measured: **`Uninstrumented CPU` = 21.70 ms of a 22.11 ms CPU frame — 98%
 **Open structural question for Bryan: per-body water level** — unlocks mountain lakes + rivers + waterfalls together, highest blast radius.
 
 Related: [[reference-local-only]] (its `*_unity_guide.md` files are fake papers — verified in this survey), [[project-gameplay-roadmap]], [[project-lake-biome]], [[project-ocean-scatter]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Water tech research](project_water_tech_research.md) — 2026-08-16 survey (doc `docs/research/2026-08-16-water-tech-research.md`, W1–W28). **Our water is stronger than every prior doc claims** — "no waves on the sphere" is STALE; `ComputeOceanSwell` already displaces radially with wind coupling. **W1 keystone: our waves have NO horizontal displacement → CPU height query needs NO inversion, 3 `sin` calls** (insert at `PlanetSurfaceGrounding.cs:38`). **W-BUG-1 CORRECTED (first version wrong — phase zero ≠ gradient zero):** each swell mode degenerates at its own `±D̂ᵢ`, `±(A×B)` is where waves are *sharpest*; real defect is that all 3 poles cluster on one wind-aligned great circle, severity mild (~46% detail dip, not glassy). Dead: wake globals (no shader reads), `WaterVolumeLip` (never instantiated), `Water CPU` HUD (measures nothing). Best sources: Poseidon (CPU/GPU parity + height-only Bézier wave), Polyart Dreamscape, DWP2 (buoyancy, ~12-line sphere port), ECM2 (swim, already gravity-agnostic). Dead ends listed so nobody re-searches.

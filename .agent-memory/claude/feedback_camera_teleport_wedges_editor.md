@@ -59,3 +59,7 @@ is what made a whole run of single-cycle conclusions untrustworthy.
 pixel actually CHANGED before believing anything the frame shows. If it did not change, the variant is
 either stale or the code path is not running - and those two are indistinguishable without the unconditional
 magenta test, which is the tie-breaker.
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Camera teleport wedges the Editor](feedback_camera_teleport_wedges_editor.md) - a long play-mode position jump re-plans ~77k scatter tiles on the main thread; Unity goes unresponsive and MCP times out. Prefer captures and C# queries over travelling.

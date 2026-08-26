@@ -151,3 +151,7 @@ run of `no_unity_session` replies can mean the editor is gone, not busy. Read th
 the cause, and check the crash-folder timestamps to see whether the crash is yours or old. Prefer fewer,
 batched compile cycles; each domain reload is a fresh round of large uploads. And after a device hang,
 surface it rather than silently relaunching and hammering the same GPU.
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Unity MCP — you can drive the editor](reference_unity_mcp.md) — **MCP IS CONNECTED and works**; don't ask Bryan to run what you can run yourself. Proven 2026-08-15: edit → compile → play → generate a planet → console commands → screenshots, unattended. **Auto-refresh is OFF (`kAutoRefreshMode` 0)**: saving a .cs does NOT recompile, play mode BLOCKS the domain reload, and HotReload patches method bodies but NOT field initializers/new APIs — always verify `Assembly.Location` write time vs the .cs before trusting a check. Console via `CommandExecutor.ExecuteImmediate`; screenshots via RenderTexture→PNG→Read. **HotReload WEDGES compilation when you add new .cs files** (`isCompiling` stuck true forever, `[HotReload] File is not part of any project`); Refresh/RequestScriptCompilation/SyncAll/RequestScriptReload all fail — the fix is `EditorCodePatcher.StopCodePatcher(true)` via reflection then RequestScriptCompilation. No Unity restart needed.

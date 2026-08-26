@@ -3,7 +3,8 @@
 --- !u!129 &1
 PlayerSettings:
   m_ObjectHideFlags: 0
-  serializedVersion: 30
+  m_BuildProfilePlayerSettings: {fileID: 0}
+  serializedVersion: 32
   productGUID: c2b8963e6d0380448b8e00869e32984d
   AndroidProfiler: 0
   AndroidFilterTouchesWhenObscured: 0
@@ -45,6 +46,7 @@ PlayerSettings:
   defaultScreenHeight: 768
   defaultScreenWidthWeb: 960
   defaultScreenHeightWeb: 600
+  webProgressiveAssetLoading: 0
   m_StereoRenderingPath: 0
   m_ActiveColorSpace: 1
   unsupportedMSAAFallback: 0
@@ -258,7 +260,6 @@ PlayerSettings:
   VisionOSManualSigningProvisioningProfileType: 0
   appleEnableAutomaticSigning: 0
   iOSRequireARKit: 0
-  iOSAutomaticallyDetectAndAddCapabilities: 1
   appleEnableProMotion: 0
   shaderPrecisionModel: 0
   clonedFromGUID: 3c72c65a16f0acb438eed22b8b16c24a
@@ -830,12 +831,11 @@ PlayerSettings:
   webGLCloseOnQuit: 0
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
-  webProgressiveAssetLoading: 0
   scriptingDefineSymbols:
     Android: GRASSFLOW_SRP
     Nintendo Switch: GRASSFLOW_SRP
     PS4: GRASSFLOW_SRP
-    Standalone: SHAPES_URP;GRASSFLOW_SRP;ASSET_INVENTORY
+    Standalone: SHAPES_URP;GRASSFLOW_SRP;ASSET_INVENTORY;SENTIS_ANALYTICS_ENABLED;APP_UI_EDITOR_ONLY
     WebGL: GRASSFLOW_SRP
     XboxOne: GRASSFLOW_SRP
     iPhone: GRASSFLOW_SRP
@@ -862,6 +862,7 @@ PlayerSettings:
   editorAssembliesCompatibilityLevel: 1
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
+  windowsCopyVCRuntime: 1
   metroPackageName: ProceduralPlanets
   metroPackageVersion: 
   metroCertificatePath: 

@@ -66,3 +66,7 @@ Related: [[project_scatter_gather_perf]] (placement/gather internals),
 [[project_scatter_biome_buildout]] (per-biome prototypes), [[project_planet_look_dev]]
 (Synty target look). Target-look reference screenshots are in the 2026-08-10
 conversation, not saved to disk.
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Scatter clumping](project_scatter_clumping_direction.md) — **DONE 2026-08-17**: `ScatterClumping.Keep` authored onto all 79 prototypes (trees 0.6-0.85 @ 180-320 m, flowers 0.85-0.9 @ 28-35 m, rocks 0.55 @ 110 m, reeds low or shorelines go bald). **GOTCHA: clumping COSTS ~30% headcount** (densityKeep clamps to 1) — measured mean keep 0.35→0.85 … 1.0→0.58, so every `Weight` was multiplied by 1/mean (×1.17-×1.61). Re-author clumpiness ⇒ redo the compensation. Grove field keys off `ImpostorShareKey ?? DisplayName`, so species blend softly instead of meeting on a fence line. Play-verified.

@@ -50,6 +50,14 @@ public sealed class CreatureSpecies
     [Tooltip("Metres at which it notices a threat. A deer looks further than a rabbit.")]
     [Min(1f)] public float AwarenessMeters = 35f;
 
+    [Tooltip("Hits it takes to bring down. LIVE-ONLY: a wounded animal you walk away from is whole again " +
+             "when you come back, because health is the one thing about it that is not written down.")]
+    [Min(1)] public int MaxHealth = 3;
+
+    [Tooltip("What killing it credits to the inventory - the same one a felled tree feeds.")]
+    public string YieldItemId = "Hide";
+    [Min(0)] public int YieldCount = 1;
+
     [Min(0.1f)] public float BodyHeightMeters = 1.7f;
     public Color BodyColor = new(0.45f, 0.33f, 0.22f);
 }
@@ -67,10 +75,16 @@ public sealed record CreatureSpeciesDto(
     Color BodyColor,
     BiomeType[] Biomes,
     CreatureFaction Faction,
-    float AwarenessMeters)
+    float AwarenessMeters,
+    int MaxHealth,
+    string YieldItemId,
+    int YieldCount)
 {
     /// <summary>True when a death of this species never lapses - the boss case, same code path as a deer.</summary>
     public bool NeverRespawns => RespawnSeconds <= 0f;
+
+    /// <summary>What killing one credits to the inventory.</summary>
+    public HarvestYield Yield => new(YieldItemId, YieldCount);
 
     /// <summary>
     /// Whether the species settles in a biome. An EMPTY list means any: a species is limited by its altitude
@@ -105,7 +119,10 @@ public sealed record CreatureSpeciesDto(
                 // inspector edit reach code that already read the settings.
                 src.Biomes == null ? System.Array.Empty<BiomeType>() : (BiomeType[])src.Biomes.Clone(),
                 src.Faction,
-                Mathf.Max(1f, src.AwarenessMeters));
+                Mathf.Max(1f, src.AwarenessMeters),
+                Mathf.Max(1, src.MaxHealth),
+                string.IsNullOrWhiteSpace(src.YieldItemId) ? "Hide" : src.YieldItemId,
+                Mathf.Max(0, src.YieldCount));
 }
 
 public sealed record CreatureLibraryDto(CreatureSpeciesDto[] Species, float ObserverBubbleMeters)
@@ -150,14 +167,14 @@ public sealed record CreatureLibraryDto(CreatureSpeciesDto[] Species, float Obse
             new CreatureSpeciesDto("Placeholder Deer", 3, 120f, 2.5f, 0.8f, 300f, 2f, 3000f, 1.7f,
                 new Color(0.45f, 0.33f, 0.22f),
                 new[] { BiomeType.Forest, BiomeType.Taiga, BiomeType.Tropical, BiomeType.Swamp },
-                CreatureFaction.Wildlife, 45f),
+                CreatureFaction.Wildlife, 45f, 3, "Hide", 2),
 
             // Open-country grazer: small, numerous, and deliberately in biomes the deer refuses, so crossing
             // a biome line visibly swaps which animal is around you. Skittish - bolts at 25 m.
             new CreatureSpeciesDto("Placeholder Rabbit", 6, 45f, 3.2f, 1.2f, 120f, 2f, 2200f, 0.45f,
                 new Color(0.62f, 0.58f, 0.52f),
                 new[] { BiomeType.Grassland, BiomeType.Scrub, BiomeType.Steppe, BiomeType.Savanna },
-                CreatureFaction.Wildlife, 25f),
+                CreatureFaction.Wildlife, 25f, 1, "Hide", 1),
         },
         300f);
 }

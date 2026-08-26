@@ -46,3 +46,7 @@ to `%USERPROFILE%/AppData/LocalLow/Magikorp/ProceduralPlanets/weather-grid-*/cel
 **Still-wanted polish (Bryan's words, deferred):** clouds "still need some visual work" —
 not specified. Rain visuals pass was the planned next weather item (rain-shaft bake,
 precipitation particles vs real storms). See [[project-current-focus]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Cloud/weather visual arc](project_cloud_weather_arc.md) — 2026-07-14: cloud-type profiles + climate-temp driver + coverage 0.30 baked + rain-shaft/aureole/sun-bleed fix shipped; clouds parked needing polish; weather.force flattens source map (use weather.regenerate)

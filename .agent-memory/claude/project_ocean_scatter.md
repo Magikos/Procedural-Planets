@@ -58,3 +58,7 @@ rendering is required, and ocean candidates must be benched at swimming eye heig
 
 **Lesson worth keeping:** before writing up a gap as a new subsystem, check whether the existing
 one already expresses it. The signed-altitude field had been there the whole time.
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Ocean scatter — SHIPPED](project_ocean_scatter.md) — **DO NOT repeat the old "scatter cannot place below the waterline" claim; it is FALSE and this index line used to say it.** Altitude is SIGNED (`altitudeMeters = (localRadius - SeaRadiusLocal) * scale`), and `MinWaterClearance` only rejects when `> 0`, so a depth band is an ordinary altitude gate — no new system, no depth axis. 4 coral prototypes shipped 2026-08-12 at slots 69–72 with bands −30..−3 / −14..−2 / −26..−4 / −60..−22. **Re-verified 2026-08-17: 995 coral instances placed within 80 m of a Beach point.** Underwater foliage rendering already checked by Bryan ("looks fine") — `Scatter/FoliageLit` receives the underwater fog. Real remaining gap = general underwater water effects + reef colony density, NOT placement. Doc: docs/design/2026-08-12-ocean-scatter.md

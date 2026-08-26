@@ -335,3 +335,7 @@ tree line ~1200m. Remaining polish: dark BRANCH structure still shows through th
 coverage/mesh — try lowering the Meadow foliage `_Cutoff` for fuller cards); grass is tall/dense vs the
 reference's shorter flower-dotted meadow; more props (no mushrooms in-pack — Bryan's Extras has
 LMHPOLY/Toon Fantasy Nature to import); day/night-driven ambient. See [[project-scatter-biome-buildout]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Planet look-dev](project_planet_look_dev.md) — 2026-07-28: Synty-look pass (post was OFF→enabled+graded PlanetLookProfile, ambient lifted, scatter densified, grass=compute-blanket per-biome params raised); commits 29f1b6a+d75144d; grass follow-ups (far-field coverage, flowers need mesh, bush brightness, day/night ambient)

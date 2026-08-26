@@ -51,3 +51,7 @@ four remaining raw-coefficient setters to 0-1: `cloud.density` (was 0-0.08), `cl
 (was 0.0001-0.05, `Lerp`/`InverseLerp` to keep the nonzero floor). `…HumanMax` consts hold the
 mapping. Build clean. NOTE for Bryan: any muscle-memory raw values for these four now read as
 0-1 (e.g. old `cloud.density 0.03` ≈ new `cloud.density 0.38`).
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Human-readable console params](project_human_readable_console_params.md) — DONE 2026-07-17: swept cloud/atmo/precip/weather cmds; converted cloud.density, cloud.debug-threshold/saturation, atmosphere.sun-disc-blend to 0-1; convention promoted into pp-change-control §4

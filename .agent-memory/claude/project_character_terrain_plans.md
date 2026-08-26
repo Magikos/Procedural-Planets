@@ -154,3 +154,7 @@ strafe no-spin, jump, hold-right-mouse look no cursor-trap); awaiting Bryan's ne
 NOT pushed (branch character-controller-mvp, 8 commits). 002 ready when Bryan is. Console overhaul QUEUED
 (function-based reorg, scatter.goto→teleport). GOTCHA: DTO/const/shader need clean stop→play; shader-CODE
 needs force-import; EditMode tests CAN'T run in play mode.
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Character + terrain-relief plans](project_character_terrain_plans.md) — 2026-08-08: plans/ dir has 001 character-controller MVP (walk the sphere; analytic ground, no colliders) + 002 terrain-relief diagnosis (H1-weak vs H2 lighting-curve; oblique sun not noon; Material.SetFloat on ONE shared clone). Both REVISED after Codex review (folded confirmed fixes), awaiting 2nd opinion → approval → execute 002→001. Planned at c54fc72

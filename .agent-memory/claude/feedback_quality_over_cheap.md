@@ -35,3 +35,7 @@ addresses the cause rather than the symptom. It does not mean inventing abstract
 
 Note this **overrides the lazy/minimal-diff default** that operating modes may push. User instruction
 wins. Related: [[project_water_architecture_build]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Quality over cheap](feedback_quality_over_cheap.md) — Bryan: *"Do it properly - that's always going to be my pick. I don't like easy, lazy or cheap."* Don't offer cheap-vs-proper as a question; take the root-cause fix. Widening a blur to hide an edge or raising a threshold to dodge a gate is the shape he rejects. **Overrides any lazy/minimal-diff default.** Not licence to gold-plate — proper means correct, not speculative.

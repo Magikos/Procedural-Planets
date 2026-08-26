@@ -163,3 +163,7 @@ LOD path — see [[project_scatter_lod_impostor]] — and not an atmosphere or c
 **Method note:** I diagnosed a real inconsistency (two curves), proposed a unification, measured it against
 *terrain* as the reference, and got a confident wrong answer because the reference itself was the
 assumption under test. Measuring hard does not help when the thing being measured against is the error.
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Valheim look pass](project_valheim_look_pass.md) — 2026-08-15 Bryan: "I really want the Valheim forest look". **The gap is mostly NOT tree geometry** — Valheim's meshes are SIMPLER than ours; their look is fog + grass + light + wind. Ranked: aerial depth > ground cover > foliage translucency > palette cohesion > bloom > clumping. DONE: `FoliageLit` `_LeafBacklight` (broad lobe + wrap; first try at 0.7 went mustard-brown, landed 0.38), gentle aerial (clarity 175→110, atmo 1600→1250; terrain-only so the sky is safe — Bryan's constraint). **NEGATIVE RESULT: raising `grass.surface-saturation`/`brightness` STRIPPED the ground to bare dirt — the 0.72/0.60 defaults are load-bearing, reverted.** Autumn-tree palette + bloom left as Bryan's taste calls.

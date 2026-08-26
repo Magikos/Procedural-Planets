@@ -115,3 +115,7 @@ underwater fog" is FALSE — props depend entirely on the full-screen volume com
 `sunLight < 0.2` on only **0.78%** of pixels while the specks covered **2.9%**, which pointed away from the
 real cause and bought a wrong fix. Viewing that same debug channel as a PICTURE showed the props as exact
 black holes in it. **On thin features, read debug channels as images; a frame-wide statistic buries them.**
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Scatter dusk/black-dot lighting](project_scatter_dusk_lighting.md) — 2026-08-10 (branch scatter-placement): "black dots/dashes" are STAGE-SPECIFIC. Noon=mesh prop shaded floor (SyntyProps on **Scatter.shader**, bushes+rocks share it; floor 0.72→0.85 + SSAO→25%, commit 0795b36). Dusk=grazing-sun long shadows (**CelestialManager** fades `SunLight.shadowStrength` by viewer sun-elevation; `time.shadow-grazing`/`time.shadow-fade-elev`, commit 3865d2d). Far ribbon=impostors, NOT a bug (healthy olive card, dim-at-dusk is correct). Diagnosed via agent self-serve captures.

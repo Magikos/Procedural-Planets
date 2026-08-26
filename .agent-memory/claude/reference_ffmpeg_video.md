@@ -42,3 +42,7 @@ Also: a video frame is much lower quality than a rendered capture. If Bryan does
 matters far more than length.
 
 Related: [[reference_unity_mcp]] (rendering captures directly from the editor).
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [ffmpeg / watching video](reference_ffmpeg_video.md) — **I can't read video directly, but ffmpeg 9.0 IS installed** (2026-08-21, winget `Gyan.FFmpeg`) so a recording becomes frames I can read. **Bash shells started before the install need `export PATH="$PATH:/c/Users/Bryan/AppData/Local/Microsoft/WinGet/Links"`.** Probe first, sample at 1-2 fps, write to the scratchpad — a long clip at high fps burns context fast. For LOD/pop issues prefer capturing frames myself at labelled distances; video is for what I can't reproduce on demand.

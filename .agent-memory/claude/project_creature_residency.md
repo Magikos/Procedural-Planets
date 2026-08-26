@@ -67,3 +67,7 @@ become a suitability draw (a uniform lattice went empty for 729 m near an unsuit
 quarter of the cell (120 m at 490 m works); fast-forward should NOT kill. Multi-observer budget still open.
 
 Related: [[project_world_delta_log]], [[project_magikos_architecture]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Creature residency spine](project_creature_residency.md) — 2026-08-26 §11 slice BUILT+play-verified. Life support owned by OBSERVATION, not the spawner. **Traps: a derived creature key and a minted EntityId share the delta log's entity space (split via `EntityId.DerivedOwner = 0xFFFF`); unix-epoch expiry math in `float` rounds to ~128 s, so an expiry test MUST use a real timestamp.**

@@ -137,7 +137,7 @@ public struct ScatterGatherJob : IJobParallelFor
         // OnWater prototypes (lily pads) float on the sea surface inside their biome's water cells, so they
         // place at the sea radius with zero altitude and a flat (radial) normal instead of on the lakebed.
         bool onWater = pp.OnWater != 0;
-        float seaRadiusHere = WaterLevel.IsCreated && WaterLevel.Length > 0
+        float seaRadiusHere = WaterLevelRes > 0
             ? WaterLevelGrid.SeaRadius(WaterLevel[WaterLevelGrid.Index(dir, WaterLevelRes)], BaseRadiusLocal, SeaRadiusLocal)
             : SeaRadiusLocal;
         float placeRadius = onWater ? seaRadiusHere + ScatterPlacementMath.OnWaterSurfaceOffsetMeters / Scale : localRadius;

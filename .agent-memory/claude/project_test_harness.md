@@ -34,3 +34,7 @@ the standing "don't propose a framework" text as superseded by his request, not 
 `record`s — build one valid instance, flip one field with `with { }` per test. Golden-value tests are
 the right tool for anything whose output is a persistence contract. No ScriptableObjects or asset
 loading needed for any of these.
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Test harness](project_test_harness.md) — 2026-07-27: first tests (EditMode, 49 green: ScatterId/DTO-validation/ScatterHash-golden/PlacementMath); Bryan requested TDD → overrides CLAUDE.md "no test framework" rule (UTF 1.8.0 was already in manifest); reconcile CLAUDE.md + testing-stance when confirmed

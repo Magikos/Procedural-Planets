@@ -1,22 +1,16 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// Dense camera-centered near-field grass renderer, slice 2.
-// Pairs with [Assets/Resources/GrassNearFieldPlace.compute].
+// Dense camera-centered near-field grass renderer. Pairs with
+// [Assets/Resources/GrassNearFieldPlace.compute].
 //
-// SLICE 2 vs SLICE 1:
-//  - Face-space stable cells. Camera no longer defines where blades live, only which
-//    cells are visible. Fixes the swimming/teleporting bug.
-//  - Fixed face-space cell width derived from planet scale. Roots stay stable across
-//    dispatch pages; local cube-face distortion is handled as density variation for now.
-//  - Range paging at ~4m world equivalent: re-dispatch only when the page origin moves,
-//    not every sub-cell camera motion.
-//  - Explicit slot allocation via InterlockedAdd on the indirect args buffer. Real
-//    overflow accounting; no CopyCount needed.
-//  - Stable per-root distance thinning crossfades the dense near path into chunk grass
-//    without a camera-centered opacity ring at drawDistance.
-//  - Multi-face dispatch with proportional range quotas. Neighbor-face strips are rendered
-//    at cube seams without allowing the primary face to consume the shared output buffer.
+// Blades live in fixed face-space cells (derived from planet scale), not camera space, so
+// roots stay put as the camera moves instead of swimming. Re-dispatch is paged at ~4 m
+// world equivalent: only when the page origin crosses, not on every sub-cell motion. Each
+// face range appends into one shared instances buffer via InterlockedAdd against a per-range
+// quota, so neighbor-face seam strips render without the primary face overrunning the
+// buffer. Stable per-root distance thinning crossfades the dense near path into chunk grass
+// without a camera-centered opacity ring at the draw distance.
 sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStatsProvider
 {
     const string ComputeResource = "GrassNearFieldPlace";
@@ -42,8 +36,8 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
     // Chunk-center suppression creates coarse ownership shapes. Keep chunk grass under
     // the near path and let stable per-root thinning perform the visual crossfade.
     const float SuppressionRadiusFraction = 0f;
+    // Sized to the near-field band: lanes grow with radius^2, so this and the draw distance move together.
     const int DefaultCapacityInstances = 1_500_000; // ~72 MB at 48 bytes per blade
-    const bool EnableMultiFaceDispatch = true;
 
     static readonly int[] BiomeIdsIds = new int[6];
     static readonly int[] BiomeWeightsIds = new int[6];
@@ -264,8 +258,6 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             $"Initialized: capacity={_capacity}, spacing={_spacing}, cellUvWidth={_cellUvWidth:E3}, fullDensity={_fullDensityDistance}, draw={_drawDistance}, fadeBand={_fadeBand}, pageCellSize={_pageCellSize}, buffer={_bufferBytes / (1024f * 1024f):F1} MB");
     }
 
-    // Slice 4b range construction is shared with the deprecated mid-field experiment.
-    // Near field now dispatches every valid range into one quota-protected output buffer.
     readonly FaceSpaceCell[] _rangeScratch = new FaceSpaceCell[FaceSpaceCellRangeBuilder.MaxRanges];
     readonly FaceSpaceCell[] _lastRanges = new FaceSpaceCell[FaceSpaceCellRangeBuilder.MaxRanges];
     int _lastRangeCount;
@@ -282,7 +274,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         if (result.Count == 0)
             return;
 
-        int activeRangeCount = EnableMultiFaceDispatch ? result.Count : 1;
+        int activeRangeCount = result.Count;
         bool shouldDispatch = !_hasLastDispatch || activeRangeCount != _lastRangeCount;
         if (!shouldDispatch)
         {
@@ -318,7 +310,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             _lastGridWidth = _rangeScratch[0].GridSize.x;
             _lastGridHeight = _rangeScratch[0].GridSize.y;
             _lastFaceCount = activeRangeCount;
-            _lastSeamRisk = result.UncoveredCornerStraddle || (!EnableMultiFaceDispatch && result.Count > 1);
+            _lastSeamRisk = result.UncoveredCornerStraddle;
             _lastDispatchReason = reason;
             _dispatchesTotal++;
             _dispatchedThisFrame = true;
@@ -327,7 +319,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         {
             // Range geometry can change without page boundary cross (e.g. camera rotates
             // inside a page but the seam-risk indicator should still update).
-            _lastSeamRisk = result.UncoveredCornerStraddle || (!EnableMultiFaceDispatch && result.Count > 1);
+            _lastSeamRisk = result.UncoveredCornerStraddle;
         }
 
         Render(camera);
@@ -548,7 +540,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             PageOriginCellV = _lastPagedStartV,
             FaceIndex = _lastFace,
             FacesActive = _lastFaceCount,
-            MultiFaceDispatchEnabled = EnableMultiFaceDispatch,
+            MultiFaceDispatchEnabled = true,
             SeamRisk = _lastSeamRisk,
             LastDispatchReason = _lastDispatchReason,
             DispatchedThisFrame = _dispatchedThisFrame,
@@ -585,12 +577,6 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         _lastAltitudeFade = alpha01;
         _material.SetFloat(ChunkFadeId, alpha01);
     }
-
-    // Helpers moved to FaceSpaceCellRangeBuilder (slice 4b) - public statics:
-    //   FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(face, uv)
-    //   FaceSpaceCellRangeBuilder.DirectionToFaceUv(dir, out face, out uv)
-    //   FaceSpaceCellRangeBuilder.ComputeMetersPerUV(face, faceUv, planetWorldRadius)
-    //   FaceSpaceCellRangeBuilder.GetUniformWorldScale(transform)
 
     public void Dispose()
     {

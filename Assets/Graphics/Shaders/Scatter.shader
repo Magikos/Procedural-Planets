@@ -68,12 +68,14 @@ Shader "Scatter/VertexColorLit"
         #endif
         }
 
-        // 4x4 Bayer matrix, normalised 0..1.
+        // 4x4 Bayer matrix, normalised to the CENTRE of each of the 16 levels. The half-step offset is
+        // load-bearing: at 0.0/16 the lowest cell equals a zero fade, so clip(threshold - fade) discarded
+        // one pixel in every 16 on every instance at every distance, which read as a permanent grain.
         static const float _Bayer4x4[16] = {
-            0.0/16, 8.0/16, 2.0/16, 10.0/16,
-            12.0/16, 4.0/16, 14.0/16, 6.0/16,
-            3.0/16, 11.0/16, 1.0/16, 9.0/16,
-            15.0/16, 7.0/16, 13.0/16, 5.0/16
+            0.5/16, 8.5/16, 2.5/16, 10.5/16,
+            12.5/16, 4.5/16, 14.5/16, 6.5/16,
+            3.5/16, 11.5/16, 1.5/16, 9.5/16,
+            15.5/16, 7.5/16, 13.5/16, 5.5/16
         };
 
         // Discards the fragment progressively as the instance nears the cull distance, and while it is still

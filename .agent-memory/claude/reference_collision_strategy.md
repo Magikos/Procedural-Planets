@@ -27,3 +27,7 @@ heightfield (`TerrainCollider`) version is only right for a future physics `Char
 
 **SDF/Phase-9:** collision is a byproduct of the meshing pass — generate render + collision mesh from the same
 SDF for near+changed chunks; dig → re-mesh + re-cook that chunk. "Build/update collision at gen/modification."
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Collision strategy](reference_collision_strategy.md) — 2026-08-09 DECIDED: analytic raycast for cheap ground queries (character/spawn, no colliders) + STREAMED per-chunk MeshColliders (cook-once/cache/async-BakeMesh) in a bubble for real physics (rocks/trees/ragdolls); ONE ground-truth surface; rejected single-vert-patch + custom solver; SDF = collision-as-meshing-byproduct. Doc: docs/design/2026-08-09-collision-strategy.md

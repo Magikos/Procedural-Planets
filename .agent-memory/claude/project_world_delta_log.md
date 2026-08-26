@@ -78,3 +78,7 @@ unrecoverable if deleted. Two got swept into a commit by `git add -A` and were u
 
 Related: [[project_gameplay_roadmap]], [[project_tree_generator]], [[reference_unity_mcp]],
 [[feedback_quality_over_cheap]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [World delta log — M0 save foundation](project_world_delta_log.md) — append-only log + EntityId. **GOTCHA: a ScatterId and an EntityId can be the SAME number — the keyspace must be split.** Verified on Bryan's real save: 54 records imported, 3.2x smaller than the JSON.

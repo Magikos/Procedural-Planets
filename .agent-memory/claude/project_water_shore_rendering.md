@@ -937,3 +937,7 @@ unchanged; look-up Snell's window intact with its rim still heaving.
 
 **Still visible in the same shot and NOT this bug:** seabed scatter reads as black speckles - the
 dark-specks defect, same family as [[project_scatter_dusk_lighting]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Water shore + horizon rendering](project_water_shore_rendering.md) — 9 fixes. **Lake "blocks" SOLVED: it was the GRASS water-fade, not biomes — 7 attempts in the wrong system.** Found by colour-coded elimination, read-only, no regenerates.

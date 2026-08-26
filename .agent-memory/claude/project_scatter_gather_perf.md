@@ -321,3 +321,7 @@ beyond impostor range (AAA method, cheaper than more billboards); (2) biome pre-
 in chat, not committed); knobs = `PlanetLookProfile.asset` grading + scatter-density DTO + grass params.
 The baked surface-radius atlas idea (Lever A) is now OPTIONAL — the incremental cache made the per-move
 gather cheap enough without it; revisit only if the frontier cost bites. See [[project-planet-look-dev]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Scatter gather perf](project_scatter_gather_perf.md) — 2026-08-01: fly-feedback round (5 items shipped, branch `scatter-placement`). **#4 outrun** = gather drained a whole frame/batch → `ScatterTileCache.GatherBatchBurst` now `Complete()`s inline on MAIN (off-main Complete THROWS thread-mismatch); backlog avg 5000→median 0. **#3 bush/rock pop-in** = impostor gate `ScatterDtos.ImpostorMinMeshCull` 300→120 → bushes/rocks/reeds billboard to 3×cull like trees. **#5 biome lines** = `BiomeMapBaker.KernelRadius` 6→12 (softens terrain+grass, shared atlas). #1/2 grass bright+shadow = 6bb3302. Commits 6bb3302/91c5d75/3605ce0. GOTCHA: DTO/compile-time const needs clean stop→play (hot-reload keeps old world). Earlier: incremental TILE CACHE, coarse-biome memo, parallel Burst gather

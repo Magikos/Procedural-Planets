@@ -41,3 +41,7 @@ fallen logs. Those are saved exceptions in `ScatterHarvestStore`, not seed-deriv
 renderer that decorates existing stump records rather than a scatter prototype.
 
 Related: [[project_scatter_clumping_direction]], [[project_all_generated_props]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [ShadePreference siting](project_shade_preference_siting.md) — 2026-08-18: props can now be sited relative to TREE COVER (mushrooms/ferns under canopy, meadow flowers in the gaps). **MEASURED table: +1.0→corr +0.83, 0→+0.80, −0.5→−0.06, −1.0→−0.84 — the crossover is at −0.5, NOT 0**, because default already leans wooded. Traps: never lerp the openness INPUT toward its mirror (50/50 of a field and its inverse is a constant); `wooded` is saturated across ~85% of the surface so per-species grove noise drowns the shared signal unless it fades out. **Measure siting against the shared openness field, not one neutral prototype** — doing the latter read −0.002 everywhere and made a working feature look dead.

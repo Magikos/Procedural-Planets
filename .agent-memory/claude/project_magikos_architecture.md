@@ -214,3 +214,7 @@ base defense, boats raft→karve→longship, map/waypoints/compass, spell discov
 
 Related: [[project-game-vision]], [[project-gameplay-roadmap]], [[project-all-generated-props]],
 [[reference-collision-strategy]], [[reference-state-machine-project]], [[project-startup-generation-perf]]
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Magikos game architecture](project_magikos_architecture.md) — 2026-08-20 doc of record `docs/design/2026-08-20-magikos-game-architecture.md`, merging Bryan's Magikos docx with repo reality. **Bryan's calls: multiplayer (8p) HARD constraint now; PC + console; one planet; DEDICATED SERVER is a future target so authority belongs to the SERVER ROLE, never "the host player" — no authoritative code may touch a camera, input or GPU.** Keystone: world = seed + exception log, promote to GameObject only while interactive; one record format serves save, replication, late-join AND client cache. All 7 open decisions ruled 2026-08-21 (durability out, MDI deferred to M3, `.inputactions` yes, tests where they prevent regression). **MEASURED: 6 of 7 gameplay facts already CPU-authoritative, so keep GPU + port nothing; rejected a CPU GPU-emulator because GPU float isn't bit-identical across vendors and seed-replication needs clients to agree. Weather is the ONLY violation. My "ground height is LOD-dependent" claim was MEASURED FALSE and retracted — quadtree is fully built to depth 4 (2046 chunks, 1536 keep CpuVertexRadii), LOD selects what is DRAWN not what is sampled, so zero drift over an 8 km camera move.**

@@ -23,3 +23,7 @@ then synthesize MY feedback that concurs where confirmed, pushes back where the 
 overreached, and adds what both missed. Then fold confirmed corrections into the plan body,
 not just appended notes. Two-way review (me ↔ Codex) is the working loop. See
 [[project-character-terrain-plans]].
+
+## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
+
+- [Adversarial review verification](feedback_adversarial_review_verification.md) — Bryan liked verifying Codex's review claims against the tree with PARALLEL agents before accepting (Workflow barrier, one agent/claim, structured verdict). Don't take review on faith; fold confirmed fixes into the body
