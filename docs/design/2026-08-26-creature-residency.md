@@ -504,3 +504,23 @@ If the free camera is not a threat - and it must not be - flee needs another way
 gives a real player and is the honest path. `creature.threat <seconds>` plants a temporary threat source at
 the camera for quick checks, and `creature.friendly <seconds>` exercises the spell override before any spell
 system exists.
+
+### Behaviour, as built (2026-08-26)
+
+The machine landed as `Assets/Scripts/Game/Ai/AdaptiveStateMachine.cs` in `Magikos.Game`, which is where it
+belongs: zero assembly references, so it can drive a player as readily as an animal. Four things diverge from
+the harvested original, and each is a defect that was found rather than a preference:
+
+1. **States are keyed by a small integer they own, not by `Type`.** Type keys made "which state is running"
+   and "what gets written down" two different values joined by a hand-written mapping. With an integer key
+   the id IS the key, so the persist-as-an-id rule above is structural rather than a convention. Restoring is
+   `Start(ref ctx, savedId)`.
+2. **A state acts on the frame it is entered.** The original returned after switching, spending that tick on
+   the transition - visible as an animal freezing for a beat before it runs.
+3. **No block-timeout watchdog**, which is where the `Time.deltaTime` read lived. Authority code cannot read
+   a static clock; a fast-forward has no frames. Nothing blocks yet, so nothing is lost.
+4. **Construction refuses** duplicate ids, transitions from unknown states, and transitions missing a
+   condition or target. Each of those used to produce an actor that simply never entered a state.
+
+Not built: `CompositeState`. Nothing needs nesting yet and the integer keying does not foreclose it - a
+composite is a state that owns a sub-machine and forwards to it.
