@@ -248,6 +248,64 @@ ENDHLSL
                 return CameraSubmerged01(_WorldSpaceCameraPos.xyz, _PlanetCenter, _SeaLevelRadius, _SwellAmplitude);
             }
 
+            // How far along viewDir a submerged camera's ray travels before it leaves the water.
+            //
+            // Measured against the water LEVEL FIELD rather than the sea sphere, so a lake perched above sea
+            // level is measured to its own surface. A ray that is not headed up never leaves the water at
+            // all; the large stand-in makes transmit zero downstream, so the composite collapses to the
+            // column with no special case.
+            float UnderwaterPathToSurface(float3 viewDir, out float cameraRadius, out float depthBelowSurface)
+            {
+                float3 fromCentre = _WorldSpaceCameraPos.xyz - _PlanetCenter;
+                cameraRadius = length(fromCentre);
+                float3 camUp = fromCentre / max(cameraRadius, 0.0001);
+                depthBelowSurface = max(WaterSurfaceRadiusAt(camUp, _SeaLevelRadius) - cameraRadius, 0.0);
+                float cosViewUp = dot(viewDir, camUp);
+                return cosViewUp > 0.02 ? depthBelowSurface / cosViewUp : 4000.0;
+            }
+
+            // Does this ray reach open air before it reaches anything solid?
+            //
+            // Sky always does. So does above-water GEOMETRY - a far shore, the trees standing on it, a cloud
+            // behind them - and that is the case this used to miss. The interface branch gated on
+            // SkyDepthMask, so any pixel with depth skipped Snell's window, Fresnel and total internal
+            // reflection entirely, and the atmosphere then handed back the raw scene colour. Above-water
+            // geometry therefore reached a submerged eye carrying its full above-water lighting, unabsorbed:
+            // a sunlit tree on the shore was the brightest thing in an underwater frame, and it stayed
+            // sharp at angles far outside the 48.75 degree cone where it should have been replaced by the
+            // mirror. Anything nearer than the surface - the seabed, the column itself - still answers
+            // false and keeps the volume pass's own attenuation.
+            bool ViewLeavesWater(float2 uv, float3 viewDir, float viewLength,
+                out float waterPath, out float cameraRadius, out float depthBelowSurface)
+            {
+                waterPath = UnderwaterPathToSurface(viewDir, cameraRadius, depthBelowSurface);
+
+                if (SkyDepthMask(uv) > 0.5)
+                    return true;
+
+                float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r;
+                float geometryDistance = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
+
+                // Whether the RECEIVER stands in air, not whether it is further away than an estimated exit
+                // point. Comparing distances fails at grazing angles: waterPath is a flat-plane estimate that
+                // runs away to its stand-in near the horizon, so a shore that is genuinely dry tested as
+                // nearer than the exit and fell through to its raw colour - which left the waterline band
+                // lit while the clouds far behind it were correctly replaced. This is the same question, and
+                // the same authority, WaterVolume asks of its own receivers.
+                float3 receiverWS = _WorldSpaceCameraPos.xyz + viewDir * geometryDistance;
+                float3 receiverFromCentre = receiverWS - _PlanetCenter;
+                float receiverRadius = length(receiverFromCentre);
+                bool receiverInAir = receiverRadius > WaterSurfaceRadiusAt(
+                    receiverFromCentre / max(receiverRadius, 0.0001), _SeaLevelRadius);
+
+                // Never absorb over more water than lies between the eye and the thing being looked at. A
+                // grazing ray to a shore a kilometre off still crosses a kilometre of water, so it arrives
+                // as column colour - which is correct, and is why the far waterline goes flat rather than
+                // staying sharp.
+                waterPath = min(waterPath, geometryDistance);
+                return receiverInAir;
+            }
+
             // The sun's direction seen from UNDER the surface. Refraction bends it toward vertical, so from
             // below the sun sits higher than it does from the beach, and at grazing incidence it is pulled
             // inside the 48.75 degree cone rather than staying near the horizon. Both the column's forward
@@ -493,7 +551,17 @@ ENDHLSL
                 // took the full underwater treatment and had Snell's window painted across its sky as a
                 // hard disc. The branch returns early, so a partial weight cannot soften it; the gate itself
                 // has to be the decision.
-                if (_WaterVolumeEnabled > 0.5 && CameraUnderwater01() > 0.5 && SkyDepthMask(i.uv) > 0.5)
+                float uwPathToSurface = 0.0;
+                float uwCameraRadius = 0.0;
+                float uwDepthBelowSurface = 0.0;
+                bool uwLeavesWater = false;
+                if (_WaterVolumeEnabled > 0.5 && CameraUnderwater01() > 0.5)
+                {
+                    uwLeavesWater = ViewLeavesWater(i.uv, viewDir, viewLength,
+                        uwPathToSurface, uwCameraRadius, uwDepthBelowSurface);
+                }
+
+                if (uwLeavesWater)
                 {
                     // ONE composite of the three things that physically reach the eye, not a stack of
                     // overrides. Every earlier version of this block computed a term and then let the next
@@ -523,12 +591,9 @@ ENDHLSL
                     //
                     // A ray that is not headed up never leaves the water, and the large stand-in makes
                     // transmit zero, so the composite collapses to the column with no special case.
-                    float3 fromCentre = _WorldSpaceCameraPos.xyz - _PlanetCenter;
-                    float cameraRadius = length(fromCentre);
-                    float depthBelowSurface = max(
-                        WaterSurfaceRadiusAt(fromCentre / max(cameraRadius, 0.0001), _SeaLevelRadius) - cameraRadius,
-                        0.0);
-                    float pathToSurface = cosViewUp > 0.02 ? depthBelowSurface / cosViewUp : 4000.0;
+                    float cameraRadius = uwCameraRadius;
+                    float depthBelowSurface = uwDepthBelowSurface;
+                    float pathToSurface = uwPathToSurface;
 
                     // THE SURFACE'S OWN NORMAL where this ray leaves the water, not the planet normal.
                     //
@@ -623,7 +688,7 @@ ENDHLSL
                     float window = (1.0 - fresnel) * saturate((CameraUnderwater01() - 0.5) / 0.35);
 
                     float3 skyColor = float3(0.0, 0.0, 0.0);
-                    if (window > 0.001)
+                    if (window > 0.001 && SkyDepthMask(i.uv) > 0.5)
                     {
                         // Scatter from where the ray LEAVES the water, not from the camera: the atmosphere
                         // integrates outward from the planet surface, so a start point below sea level has
@@ -642,6 +707,22 @@ ENDHLSL
                                             * max(exitRadius, _SeaLevelRadius + _SwellAmplitude + 1.0);
                         skyColor = CalculateScattering(scatterStart, refracted,
                             _AtmosphereRadius * 4.0, float3(0.0, 0.0, 0.0));
+                    }
+                    else if (window > 0.001)
+                    {
+                        // Above-water geometry inside the window - the far shore, the trees on it, a cloud
+                        // behind them. It is already lit, so what reaches the eye is that colour, weighed by
+                        // the same Fresnel and absorbed over the same path as the sky beside it.
+                        //
+                        // ponytail: sampled straight down the UNREFRACTED ray. A true Snell's window bends
+                        // the sight line at the surface, and for geometry that means resampling the scene
+                        // along the refracted direction - which a post pass cannot do, because the camera
+                        // never rasterised the scene there. Compression inside the disc is the part that is
+                        // missing, so the shore sits slightly wrong within the window rather than being the
+                        // wrong shore; outside the cone Fresnel reaches 1 and none of it survives anyway.
+                        // Upgrade path is to refract the screen-space sample position toward the window
+                        // centre and accept the edge stretch, the usual way this is faked.
+                        skyColor = originalCol.xyz;
                     }
 
                     // ponytail: swell only - no fine ripple, no glint. The rim heaves with the waves but has
