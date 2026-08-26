@@ -195,7 +195,7 @@ namespace ProceduralPlanets.Tests
         // --- behaviour survives demotion ---------------------------------------
 
         static CreatureSpeciesDto Deer => new("Deer", 3, 120f, 2.5f, 0.8f, 300f, 2f, 3000f, 1.7f,
-            Color.white, new[] { BiomeType.Forest }, CreatureFaction.Wildlife, 45f);
+            Color.white, new[] { BiomeType.Forest }, CreatureFaction.Wildlife, 45f, 3, "Hide", 2);
 
         [Test]
         public void ABrainRebuiltFromARememberedBehaviour_ResumesIt()

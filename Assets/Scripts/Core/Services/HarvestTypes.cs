@@ -15,6 +15,7 @@ public readonly struct ToolTier
     // + real tiers (and a "do you have this tool" gate) once inventory/equip exists.
     public static readonly ToolTier BasicAxe = new ToolTier("Basic Axe", 1);
     public static readonly ToolTier Shovel = new ToolTier("Shovel", 1);
+    public static readonly ToolTier Club = new ToolTier("Club", 1);
 }
 
 // What harvesting a node yields. The POC derives one mapping from the prototype; data-drive it later.

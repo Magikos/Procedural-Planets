@@ -19,6 +19,7 @@ sealed class DebugOverlayHud : IDisposable
     public DebugOverlayHud()
     {
         EventBus<ScatterHarvestedEvent>.Listen(OnHarvested);
+        EventBus<CreatureStruckEvent>.Listen(OnCreatureStruck);
     }
 
     void OnHarvested(ScatterHarvestedEvent e)
@@ -26,6 +27,15 @@ sealed class DebugOverlayHud : IDisposable
         _harvestFlashActive = true;
         _harvestFlashUntil = Time.unscaledTime + 2f;
         _harvestFlashMessage = $"Chopped {e.Yield.Count}x {e.Yield.ItemId}";
+    }
+
+    void OnCreatureStruck(CreatureStruckEvent e)
+    {
+        _harvestFlashActive = true;
+        _harvestFlashUntil = Time.unscaledTime + 2f;
+        _harvestFlashMessage = e.Killed
+            ? $"Killed the {e.DisplayName} (+{e.Yield.Count} {e.Yield.ItemId})"
+            : $"Hit the {e.DisplayName} - {e.RemainingHealth} left";
     }
 
     public void NotifyPrecipitationToggle(bool enabled)
@@ -133,6 +143,7 @@ sealed class DebugOverlayHud : IDisposable
     public void Dispose()
     {
         EventBus<ScatterHarvestedEvent>.Unlisten(OnHarvested);
+        EventBus<CreatureStruckEvent>.Unlisten(OnCreatureStruck);
         if (_panelTexture != null)
         {
             UnityEngine.Object.Destroy(_panelTexture);

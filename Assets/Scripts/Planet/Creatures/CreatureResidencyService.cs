@@ -65,6 +65,16 @@ public sealed class CreatureResidencyService : IDisposable
         public CreatureBrain Brain;                 // rebuilt from Behaviour at promotion
         public uint Tick;
 
+        // ponytail: health is LIVE-only, so an animal you wound and then walk away from is whole when you
+        // return. The upgrade is one byte in the demotion record beside the behaviour, once a wounded animal
+        // is worth persisting.
+        public int Health;
+
+        // Being hit makes the attacker a threat for a while whatever the faction table says. Without it an
+        // animal the friendly spell has disarmed stands still while you club it.
+        public long AlarmUntilUnix;
+        public Vector3 AlarmFrom;
+
         // What the log currently says about this slot, so a demote that would rewrite the same thing does not.
         public bool Written;
         public Vector3 WrittenPosition;
@@ -77,6 +87,10 @@ public sealed class CreatureResidencyService : IDisposable
     // still repopulates its slot without waiting for you to walk.
     const float PlanIntervalSeconds = 1f;
     const float PlanMoveMeters = 40f;          // the same travel gate ScatterTileCache re-plans on
+
+    // Seconds a struck animal treats its attacker as a threat. Long enough to clear the awareness radius at
+    // panic speed, short enough that it goes back to grazing rather than running forever.
+    const long AlarmSeconds = 8L;
     const float DemoteHysteresis = 1.15f;      // demote further out than we promote, so a creature on the
                                                // boundary does not flicker between tiers
     const float DefaultBubbleMeters = 300f;
@@ -421,6 +435,8 @@ public sealed class CreatureResidencyService : IDisposable
         // The brain is rebuilt from the remembered behaviour, never carried across the gap as a live object.
         // Without this an animal that was fleeing when you walked away is grazing when you come back.
         r.Brain = new CreatureBrain(_seeds.GetSeedForEntity(r.Id.Value), species, r.Behaviour);
+        r.Health = species.MaxHealth;
+        r.AlarmUntilUnix = 0L;
     }
 
     // Demotion drops the simulation, never the creature. What it was doing and where it was left are kept as
@@ -505,6 +521,12 @@ public sealed class CreatureResidencyService : IDisposable
             senses.ThreatPosition = threat.Position;
             senses.ThreatDistance = Vector3.Distance(r.Position, threat.Position);
         }
+        else if (now < r.AlarmUntilUnix)
+        {
+            senses.HasThreat = true;
+            senses.ThreatPosition = r.AlarmFrom;
+            senses.ThreatDistance = Vector3.Distance(r.Position, r.AlarmFrom);
+        }
         r.Brain.Observe(senses);
 
         // Look.x is a turn RATE in degrees per second here. ActorIntent carries raw device units and leaves
@@ -561,6 +583,37 @@ public sealed class CreatureResidencyService : IDisposable
 
         Retire(r);
         return true;
+    }
+
+    /// <summary>
+    /// Damage a creature. When its health runs out it dies down the SAME path <see cref="Kill"/> takes, so a
+    /// hunted animal and a console kill leave identical records and repopulate identically.
+    /// </summary>
+    /// <remarks>
+    /// Grants nothing and raises nothing: the caller owns the inventory. Keeping the credit out of here is
+    /// what lets the harvest choke point stay the only place an item is created.
+    /// </remarks>
+    public CreatureStrike Strike(EntityId id, int damage, Vector3 fromWorldPos)
+    {
+        if (!_configured || !CreatureKey.IsCreature(id)) return default;
+        EntityId slotKey = CreatureKey.SlotOf(id);
+        if (!_bySlot.TryGetValue(slotKey.Value, out Resident r) || r.Id != id || !r.IsLive) return default;
+
+        CreatureSpeciesDto species = _library.At(r.SpeciesIndex);
+        if (species == null) return default;
+
+        r.Health -= Mathf.Max(1, damage);
+        if (r.Health > 0)
+        {
+            r.AlarmUntilUnix = NowUnixSeconds() + AlarmSeconds;
+            r.AlarmFrom = fromWorldPos;
+            return CreatureStrike.Wounded(species.DisplayName, r.Position, r.Health);
+        }
+
+        // Read the position out BEFORE the kill: Kill retires the resident, and a corpse that reports the
+        // origin drops its loot at the centre of the planet.
+        Vector3 died = r.Position;
+        return Kill(id) ? CreatureStrike.Fatal(species.DisplayName, died, species.Yield) : default;
     }
 
     static long NowUnixSeconds() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -683,6 +736,23 @@ public sealed class CreatureResidencyService : IDisposable
                     $"({(target.IsLive ? "live " + target.Behaviour : "a record, too far to be simulated")}), " +
                     $"{DistanceFromObserver(target):F0} m away";
         return true;
+    }
+
+    [ConsoleCommand("strike", "Hit the nearest live creature once, the way a tool does. No loot - that is the " +
+        "harvest path; this only proves health and death.", MonoTargetType.Registry)]
+    string StrikeCmd(int damage = 1)
+    {
+        if (!_configured) return "creature residency inactive";
+        Resident target = Nearest(_observerPos, liveOnly: true);
+        if (target == null) return "no live creature in range";
+
+        string id = CreatureKey.Describe(target.Id);
+        CreatureStrike s = Strike(target.Id, damage, _observerPos);
+        if (!s.Hit) return "strike failed for " + id;
+        Invalidate();
+        return s.Killed
+            ? $"killed {id} {s.DisplayName} (would have yielded {s.Yield.Count}x {s.Yield.ItemId})"
+            : $"hit {id} {s.DisplayName}, {s.RemainingHealth} health left - it bolts for {AlarmSeconds}s";
     }
 
     [ConsoleCommand("kill", "Kill the nearest live creature. It stays dead until its species' respawn expiry lapses.",
@@ -842,4 +912,34 @@ public sealed class CreatureResidencyService : IDisposable
             ? "no creature records"
             : $"forgot {slots.Count} record(s); every slot is back to generation 0 at its home";
     }
+}
+
+/// <summary>
+/// The outcome of one blow. <see cref="Hit"/> false means there was nothing there to hit - a stale id, a
+/// creature that has already demoted, or one that died to an earlier blow this frame.
+/// </summary>
+public readonly struct CreatureStrike
+{
+    public readonly bool Hit;
+    public readonly bool Killed;
+    public readonly int RemainingHealth;
+    public readonly string DisplayName;
+    public readonly Vector3 Position;
+    public readonly HarvestYield Yield;
+
+    CreatureStrike(bool killed, int remainingHealth, string displayName, Vector3 position, HarvestYield yield)
+    {
+        Hit = true;
+        Killed = killed;
+        RemainingHealth = remainingHealth;
+        DisplayName = displayName;
+        Position = position;
+        Yield = yield;
+    }
+
+    public static CreatureStrike Wounded(string displayName, Vector3 position, int remainingHealth) =>
+        new(false, remainingHealth, displayName, position, default);
+
+    public static CreatureStrike Fatal(string displayName, Vector3 position, HarvestYield yield) =>
+        new(true, 0, displayName, position, yield);
 }

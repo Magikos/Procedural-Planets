@@ -563,3 +563,67 @@ of it - writing on demote, seeding a resident from a saved record - is not, and 
 unattended: the editor throttles to roughly a twentieth speed whenever it loses focus, putting one planet
 generation near an hour. Worth one pass when someone is at the machine: displace a creature, let it demote,
 `creature.records` should show it; then stop, play, and it should still be there doing the same thing.
+
+---
+
+## 17. Hunting: a creature is a harvest node with legs (2026-08-26)
+
+The first thing the residency spine is *for*. `creature.kill` proved the death record; this connects it to the
+game, and it needed no new subsystem — the harvest slice on this branch already owned every piece.
+
+### What was reused rather than built
+
+| need | what already did it |
+| --- | --- |
+| aim at a thing in the world | `ScatterPicker` / `ScatterPickMath.NearestAlongRay`, the tree and stump picker |
+| one verb, one place | `HarvestService`, described in its own header as "the one verb choke point" |
+| credit an item | the `grantItem` delegate `Planet` already binds to `InventoryService` |
+| death, record, respawn | `CreatureResidencyService.Kill` — untouched |
+| a wounded animal runs | `FleeState`, already driven by `Senses.HasThreat` |
+
+New code is `HarvestService.TryStrike`, `CreatureResidencyService.Strike`, creature picking inside
+`HarvestInteractor`, and three fields on a species. Nothing else moved.
+
+### Three decisions worth writing down
+
+**Health is live-only.** A `Resident` gets `species.MaxHealth` on promotion and loses it on demotion, so an
+animal you wound and walk away from is whole when you come back. That is not a bug to fix later for free:
+section 5's promise is that a creature which has done nothing notable costs zero bytes, and a wound byte on
+every deer breaks it. Marked `ponytail:` at the site — the upgrade is one byte in the demotion record beside
+the behaviour, the moment a wounded animal is worth persisting.
+
+**Being hit makes the attacker a threat, whatever the faction table says.** `AlarmUntilUnix` + `AlarmFrom` on
+the resident, ORed into perception behind the ordinary threat query, 8 seconds. Without it an animal the
+friendly spell had disarmed would stand still while you clubbed it — the one case where the directed relation
+table of section 16 gives the wrong answer, because being attacked is not a *relation*, it is an event.
+
+**A separate `CreatureStruckEvent`, not `ScatterHarvestedEvent`.** `TreeFallSystem` and `ChopFxSystem`
+subscribe to the latter and would topple a tree and burst leaves where the deer was standing. One event
+carries both outcomes (wound and kill) rather than splitting, because every subscriber so far wants the same
+line either way.
+
+### The thing that is now blocked, and it is not a defect
+
+**A player cannot get within club reach of a healthy animal.** `PlanetCharacterController` reports
+`ThreatRegistry.LocalPlayer` every tick, wildlife fear players by default (section 16, Bryan's call), a deer
+notices at 45 m and flees at 2.4x its walk speed. The chase is unwinnable on foot, and that is what the model
+says should happen.
+
+So melee is not the hunting verb. The three ways out, in the order they will probably arrive:
+
+1. `creature.friendly <seconds>` — works today, and is how the loop is play-tested now.
+2. A ranged attack. There is no spell system yet; this is the natural first thing one does.
+3. Stealth — a crouch or cover term reducing effective awareness. Needs the analytic horizon test section 16
+   named and declined to pay for.
+
+Deliberately NOT taken: lowering `AwarenessMeters` until melee works. That would trade a working flee for a
+working chase and make the animals feel deaf.
+
+### Verified
+
+`creature.strike [damage]` exercises health and death with no player at all. `HarvestService.TryStrike` has
+tests for wound-credits-nothing, kill-credits-once, and corpse-yields-nothing (a held interact key must not
+farm one deer forever). 234/234 EditMode green.
+
+Not verified in play: the pick. Aiming at a moving 45 cm capsule through the same perpendicular tolerance a
+tree trunk uses may want a tolerance of its own — a number to find by trying it, not by reasoning.

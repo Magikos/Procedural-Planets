@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
@@ -20,6 +21,8 @@ namespace ProceduralPlanets.Tests
             _harvestedEvents = 0;
             EventBus<ScatterHarvestedEvent>.ClearAll();
             EventBus<HarvestHitEvent>.ClearAll();
+            EventBus<CreatureStruckEvent>.ClearAll();
+            _struckEvents = 0;
             EventBus<ScatterHarvestedEvent>.Listen(OnHarvested);
         }
 
@@ -28,6 +31,8 @@ namespace ProceduralPlanets.Tests
         {
             EventBus<ScatterHarvestedEvent>.ClearAll();
             EventBus<HarvestHitEvent>.ClearAll();
+            EventBus<CreatureStruckEvent>.ClearAll();
+            _struckEvents = 0;
         }
 
         static ScatterPick Tree(ulong id, int proto, Vector3 pos) =>
@@ -121,6 +126,73 @@ namespace ProceduralPlanets.Tests
             HarvestResult again = svc.TryDig(id, Vector3.zero, ToolTier.Shovel);
             Assert.AreEqual(HarvestOutcome.AlreadyHarvested, again.Outcome);
             Assert.AreEqual(0, _harvestedEvents, "no event on an already-dug stump");
+        }
+
+        // --- creature strikes ------------------------------------------------
+
+        int _struckEvents;
+        CreatureStruckEvent _lastStruck;
+
+        void OnStruck(CreatureStruckEvent e) { _struckEvents++; _lastStruck = e; }
+
+        // An animal with health, standing in for the residency service. It owns its own health exactly as the
+        // real one does, so what is under test here is the choke point's credit-and-announce, not the arithmetic.
+        static Func<EntityId, int, Vector3, CreatureStrike> Animal(int health, string name, HarvestYield yield)
+        {
+            int remaining = health;
+            return (_, damage, _) =>
+            {
+                if (remaining <= 0) return default;
+                remaining -= Mathf.Max(1, damage);
+                return remaining > 0
+                    ? CreatureStrike.Wounded(name, Vector3.one, remaining)
+                    : CreatureStrike.Fatal(name, Vector3.one, yield);
+            };
+        }
+
+        static HarvestService MakeHunter(Dictionary<string, int> inv,
+            Func<EntityId, int, Vector3, CreatureStrike> animal = null)
+            => new HarvestService(
+                _ => true,
+                (_, _) => { },
+                (item, n) => { inv.TryGetValue(item, out int c); inv[item] = c + n; },
+                _ => default,
+                _ => false,
+                animal);
+
+        [Test]
+        public void Strike_WoundsWithoutGranting_ThenKillsAndGrantsExactlyOnce()
+        {
+            var inv = new Dictionary<string, int>();
+            HarvestService svc = MakeHunter(inv, Animal(3, "Placeholder Deer", new HarvestYield("Hide", 2)));
+            EventBus<CreatureStruckEvent>.Listen(OnStruck);
+
+            var id = new EntityId(EntityId.DerivedOwner, 7);
+
+            Assert.AreEqual(HarvestOutcome.Hit, svc.TryStrike(id, Vector3.zero, ToolTier.Club).Outcome);
+            Assert.AreEqual(HarvestOutcome.Hit, svc.TryStrike(id, Vector3.zero, ToolTier.Club).Outcome);
+            Assert.AreEqual(0, inv.Count, "a wound credits nothing");
+
+            HarvestResult fatal = svc.TryStrike(id, Vector3.zero, ToolTier.Club);
+            Assert.AreEqual(HarvestOutcome.Felled, fatal.Outcome);
+            Assert.AreEqual(2, inv["Hide"]);
+            Assert.AreEqual(3, _struckEvents, "every blow is announced, wound or kill");
+            Assert.IsTrue(_lastStruck.Killed);
+
+            // The corpse is not a second harvest. Without this a held interact key farms one deer forever.
+            Assert.AreEqual(HarvestOutcome.AlreadyHarvested,
+                svc.TryStrike(id, Vector3.zero, ToolTier.Club).Outcome);
+            Assert.AreEqual(2, inv["Hide"], "a dead animal does not yield twice");
+            Assert.AreEqual(3, _struckEvents);
+        }
+
+        [Test]
+        public void Strike_WithNoCreatureSystemWired_IsNotHarvestable()
+        {
+            var inv = new Dictionary<string, int>();
+            HarvestService svc = MakeHunter(inv);
+            Assert.AreEqual(HarvestOutcome.NotHarvestable,
+                svc.TryStrike(new EntityId(EntityId.DerivedOwner, 7), Vector3.zero, ToolTier.Club).Outcome);
         }
     }
 }

@@ -13,19 +13,22 @@ public sealed class HarvestService
     readonly Action<string, int> _grantItem;         // credit the inventory
     readonly Func<int, ProtoHarvestInfo> _protoInfo; // prototype interaction + display name
     readonly Func<ulong, bool> _digStump;            // dig a stump (Stump -> Dug); false if no stump there
+    readonly Func<EntityId, int, Vector3, CreatureStrike> _strikeCreature; // wound or kill an animal
 
     // ponytail: node HP defaulted so one hit fells it. Multi-hit chopping adds a per-ScatterId hit accumulator
     // consulted here — compare tool.Damage against remaining HP, raise HarvestHitEvent until it reaches 0.
     const int DefaultNodeHp = 1;
 
     public HarvestService(Func<ScatterPick, bool> persistHarvest, Action<int, ulong> removeFromDraw,
-        Action<string, int> grantItem, Func<int, ProtoHarvestInfo> protoInfo, Func<ulong, bool> digStump)
+        Action<string, int> grantItem, Func<int, ProtoHarvestInfo> protoInfo, Func<ulong, bool> digStump,
+        Func<EntityId, int, Vector3, CreatureStrike> strikeCreature = null)
     {
         _persistHarvest = persistHarvest;
         _removeFromDraw = removeFromDraw;
         _grantItem = grantItem;
         _protoInfo = protoInfo;
         _digStump = digStump;
+        _strikeCreature = strikeCreature;
     }
 
     // Dig up a stump (Stump -> Dug): it stops rendering and yields a little more wood. `tool` is the shovel
@@ -38,6 +41,21 @@ public sealed class HarvestService
         _grantItem(yield.ItemId, yield.Count);
         EventBus<ScatterHarvestedEvent>.Raise(new ScatterHarvestedEvent(id, -1, worldPos, yield));
         return HarvestResult.Felled(yield);
+    }
+
+    // A creature is a harvest node with legs: same choke point, same inventory, same one blow per press. The
+    // creature system owns its health and its death record; this owns the credit and the announcement.
+    public HarvestResult TryStrike(EntityId creatureId, Vector3 fromWorldPos, in ToolTier tool)
+    {
+        if (_strikeCreature == null) return HarvestResult.NotHarvestable;
+
+        CreatureStrike s = _strikeCreature(creatureId, tool.Damage, fromWorldPos);
+        if (!s.Hit) return HarvestResult.AlreadyHarvested;
+
+        if (s.Killed && s.Yield.Count > 0) _grantItem(s.Yield.ItemId, s.Yield.Count);
+        EventBus<CreatureStruckEvent>.Raise(new CreatureStruckEvent(
+            creatureId.Value, s.Position, s.DisplayName, s.RemainingHealth, s.Killed, s.Yield));
+        return s.Killed ? HarvestResult.Felled(s.Yield) : HarvestResult.Hit;
     }
 
     public HarvestResult TryHarvest(in ScatterPick pick, in ToolTier tool)

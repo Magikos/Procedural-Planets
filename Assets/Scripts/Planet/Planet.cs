@@ -139,8 +139,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
                             ? new ProtoHarvestInfo(lib.Prototypes[proto].Interaction, lib.Prototypes[proto].DisplayName)
                             : default;
                     },
-                    id => _harvestStore.RecordDug(id));
-                _harvestInteractor = new HarvestInteractor(picker, harvest, _harvestStore, Logger);
+                    id => _harvestStore.RecordDug(id),
+                    (creature, damage, from) => _creatures.Strike(creature, damage, from));
+                _harvestInteractor = new HarvestInteractor(picker, harvest, _harvestStore, Logger, _creatures);
             }
             context.Register(_harvestInteractor);
         }

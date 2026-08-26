@@ -411,7 +411,7 @@ namespace ProceduralPlanets.Tests
 
         static CreatureSpeciesDto Species(float minAlt, float maxAlt, params BiomeType[] biomes) =>
             new("Test", 3, 120f, 2.5f, 0.8f, 300f, minAlt, maxAlt, 1.7f, Color.white, biomes,
-                CreatureFaction.Wildlife, 35f);
+                CreatureFaction.Wildlife, 35f, 3, "Hide", 1);
 
         [Test]
         public void AnEmptyBiomeList_MeansAnyBiome()
