@@ -66,7 +66,7 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
     static readonly int _cloudMultiScatterParamsId = Shader.PropertyToID(ShaderGlobalIds.CloudMultiScatterParams);
     static readonly int _cloudAmbientSkyId = Shader.PropertyToID(ShaderGlobalIds.CloudAmbientSky);
     static readonly int _cloudAmbientGroundId = Shader.PropertyToID(ShaderGlobalIds.CloudAmbientGround);
-    static readonly int _cloudAerialStrengthId = Shader.PropertyToID(ShaderGlobalIds.CloudAerialStrength);
+    static readonly int _cloudAerialDensityId = Shader.PropertyToID(ShaderGlobalIds.CloudAerialDensity);
     static readonly int _cloudBacklitParamsId = Shader.PropertyToID(ShaderGlobalIds.CloudBacklitParams);
     static readonly int _godRayStreakParamsId = Shader.PropertyToID(ShaderGlobalIds.GodRayStreakParams);
     static readonly int _godRayStreakRadialFalloffId = Shader.PropertyToID(ShaderGlobalIds.GodRayStreakRadialFalloff);
@@ -226,7 +226,11 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
             CloudConstants.MultiScatterStrength));
         Shader.SetGlobalColor(_cloudAmbientSkyId, CloudConstants.AmbientSky);
         Shader.SetGlobalColor(_cloudAmbientGroundId, CloudConstants.AmbientGround);
-        Shader.SetGlobalFloat(_cloudAerialStrengthId, Mathf.Clamp01(_aerialFade));
+        float aerialFade = Mathf.Clamp(_aerialFade, 0f, 0.999f);
+        float aerialDensity = aerialFade <= 0f
+            ? 0f
+            : -Mathf.Log(1f - aerialFade) / CloudConstants.AerialReferenceDistance;
+        Shader.SetGlobalFloat(_cloudAerialDensityId, aerialDensity);
         Shader.SetGlobalVector(_cloudBacklitParamsId, new Vector4(
             _backlitStrength, CloudConstants.BacklitPower, 0f, 0f));
         Shader.SetGlobalVector(_godRayStreakParamsId, new Vector4(
@@ -408,7 +412,7 @@ public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegist
         return $"cloud debug saturation: {human:F2} (0-1)";
     }
 
-    [ConsoleCommand("aerial-fade", "Get or set how much distant clouds haze into the sky, 0-1 (0=off, 1=hazes at the same rate terrain does).", MonoTargetType.Single)]
+    [ConsoleCommand("aerial-fade", "Get or set how much distant clouds haze into the sky, 0-1 (0=off, 0.5=half, 1=full at the reference distance).", MonoTargetType.Single)]
     string AerialFadeCmd(float? value = null)
     {
         if (value == null) return $"cloud aerial fade: {_aerialFade:P0} (0-1)";

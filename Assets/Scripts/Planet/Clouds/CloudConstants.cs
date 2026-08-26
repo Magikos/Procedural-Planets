@@ -56,13 +56,11 @@ public static class CloudConstants
     public const float MultiScatterStrength = 0.35f;
     public static readonly Color AmbientSky = new Color(0.62f, 0.76f, 0.98f, 1f);
     public static readonly Color AmbientGround = new Color(0.50f, 0.45f, 0.38f, 1f);
-    // Aerial perspective: "distant clouds sit in the sky". A 0-1 scale on the ATMOSPHERE's own aerial
-    // curve (TerrainClarityDistance -> TerrainAtmosphereDistance), so 1 fades a cloud at exactly the rate
-    // terrain at the same distance fades. There is deliberately no cloud-side reference distance any more:
-    // it was 2500 m on a planet whose horizon is a few hundred, so clouds stayed bright at distances where
-    // terrain had already vanished into haze, and anything standing in front of them showed up only as a
-    // sky-coloured hole punched through the cloud.
-    public const float AerialFade = 1f;
+    // Aerial perspective (Phase 3): "distant clouds sit in the sky". Authored as a 0-1 fade
+    // fraction (human), converted to the shader's Beer-Lambert per-metre coefficient at
+    // AerialReferenceDistance. 0 = off, 1 = fully hazed at the reference distance.
+    public const float AerialFade = 0.7f;
+    public const float AerialReferenceDistance = 2500f;
     // Backlit inner glow: forward-scattered sunlight bleeding through a cloud lit from behind.
     // Strength is the human 0-2 knob (cloud.backlit); Power tightens the forward lobe.
     public const float BacklitStrength = 0.6f;
