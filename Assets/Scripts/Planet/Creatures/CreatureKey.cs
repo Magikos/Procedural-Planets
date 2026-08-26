@@ -87,8 +87,20 @@ public static class CreatureKey
         return new EntityId(EntityId.DerivedOwner, counter);
     }
 
-    /// <summary>True when the id addresses a seed-derived creature rather than a minted object.</summary>
-    public static bool IsCreature(EntityId id) => id.Owner == EntityId.DerivedOwner && !id.IsNone;
+    const ulong MarkerMask = 1UL << MarkerShift;
+
+    /// <summary>
+    /// True when the id is a well-formed creature address: the derived owner tag AND the marker bit every
+    /// packed address carries.
+    /// </summary>
+    /// <remarks>
+    /// The marker is part of the test, not just of the packing. The owner tag alone is a namespace, and other
+    /// well-known derived ids live in it - the local player's threat-registry id is one. Checking only the tag
+    /// reads those as creatures and hands them to <see cref="Unpack"/>, which then produces a plausible
+    /// territory that does not exist.
+    /// </remarks>
+    public static bool IsCreature(EntityId id) =>
+        id.Owner == EntityId.DerivedOwner && (id.Counter & MarkerMask) != 0;
 
     public static void Unpack(EntityId id, out int face, out int level, out int x, out int y,
         out int slot, out int generation)

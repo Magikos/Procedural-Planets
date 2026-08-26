@@ -36,6 +36,7 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
     IInputProvider _input;
     ICameraRigContext _cameraRig;
     IFreeCameraService _freeCam;
+    ThreatRegistry _threats;
 
     SurfaceCharacterController _driver;
     Transform _child;
@@ -95,6 +96,7 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         _hasPlanet = _radius > 0f;
         if (_sampler == null)
             ServiceLocator.TryGet(out _sampler);
+        _threats = null;   // world-scoped: a new world has a new registry, so never keep the old one
 
         if (_spawned && _hasPlanet && TrySeedPose(out CharacterPose seed))
             RebuildDriver(seed);
@@ -136,6 +138,10 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
             intent.Move, _forward, speed, Time.deltaTime, intent.Held(ActorButtons.Jump));
         _forward = pose.Forward;
         _child.SetPositionAndRotation(pose.Position, Quaternion.LookRotation(pose.Forward, pose.Up));
+
+        // A spawned player is a THREAT-bearing entity, which the free camera deliberately is not: wildlife
+        // reacts to identities, and a debug camera has none. This is the only thing that makes deer run.
+        ResolveThreats()?.Report(ThreatRegistry.LocalPlayer, pose.Position, CreatureFaction.Player);
     }
 
     void LateUpdate()
@@ -196,6 +202,8 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         _spawned = false;
         if (_child != null)
             _child.gameObject.SetActive(false);
+        // Stop frightening the wildlife the moment the player stops existing.
+        ResolveThreats()?.Withdraw(ThreatRegistry.LocalPlayer);
         SetCursorLocked(false);
         SuspendFreeCamera(false);
         return "character despawned; free-fly restored";
@@ -222,6 +230,7 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
     {
         err = null;
         if (_sampler == null) ServiceLocator.TryGet(out _sampler);
+        _threats = null;   // world-scoped: never carry one world's registry into the next
         if (_planet == null) ServiceLocator.TryGet(out _planet);
         if (_sampler == null || _planet == null)
         {
@@ -348,5 +357,12 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         if (_freeCam == null)
             ServiceLocator.TryGet(out _freeCam);
         return _freeCam;
+    }
+
+    // World-scoped, so it is re-resolved rather than cached across a regeneration.
+    ThreatRegistry ResolveThreats()
+    {
+        if (_threats == null) ServiceLocator.TryGet(out _threats);
+        return _threats;
     }
 }

@@ -57,8 +57,12 @@ public sealed class CreatureResidencyService : IDisposable
         public Vector3 Forward;
         public long LastSimulatedUnix;  // when the position above was last true
 
+        // What it was DOING, kept as a value across demotion. The brain is a live object and dies with the
+        // simulation; this survives it and rebuilds the brain on promotion.
+        public CreatureBehaviour Behaviour;
+
         public SurfaceCharacterController Driver;   // non-null only while simulated
-        public CreatureWanderInput Brain;
+        public CreatureBrain Brain;                 // rebuilt from Behaviour at promotion
         public uint Tick;
 
         public bool IsLive => Driver != null;
@@ -93,6 +97,7 @@ public sealed class CreatureResidencyService : IDisposable
     IWorldDeltaLog _delta;
     ISeedProvider _seeds;
     IBiomeProvider _biome;
+    ThreatRegistry _threats = new();
     CreatureLibraryDto _library;
 
     // Both capabilities are stateless positional queries, so every creature shares one pair rather than
@@ -115,6 +120,7 @@ public sealed class CreatureResidencyService : IDisposable
 
     float _lastPlanMs;
     int _lastPlanCells;
+    long _debugThreatUntil;
 
     /// <summary>Creatures currently simulated, for a renderer to draw. Rebuilt each tick.</summary>
     public IReadOnlyList<LiveCreature> Live => _live;
@@ -150,12 +156,13 @@ public sealed class CreatureResidencyService : IDisposable
     /// creatures in different places, and carrying one world's residents into another is the bug that makes a
     /// regenerated planet keep the old planet's wildlife.
     /// </summary>
-    public void Configure(int seed, IWorldDeltaLog deltaLog, IBiomeProvider biome,
+    public void Configure(int seed, IWorldDeltaLog deltaLog, IBiomeProvider biome, ThreatRegistry threats,
         float planetRadius, float seaLevelRadius)
     {
         _seed = seed;
         _delta = deltaLog;
         _biome = biome;
+        _threats = threats ?? new ThreatRegistry();
         _planetRadius = planetRadius;
         _seaLevelRadius = seaLevelRadius;
         _center = _planetTransform != null ? _planetTransform.position : Vector3.zero;
@@ -165,6 +172,9 @@ public sealed class CreatureResidencyService : IDisposable
         _library = SettingsProvider.IsRegistered<CreatureLibraryDto>()
             ? SettingsProvider.GetSettings<CreatureLibraryDto>()
             : CreatureLibraryDto.Placeholder;
+        _threats.SetRelations(SettingsProvider.IsRegistered<FactionRelationsDto>()
+            ? SettingsProvider.GetSettings<FactionRelationsDto>()
+            : FactionRelationsDto.Default);
 
         _bySlot.Clear();
         _all.Clear();
@@ -201,6 +211,14 @@ public sealed class CreatureResidencyService : IDisposable
         long now = NowUnixSeconds();
         float bubble = BubbleMeters;
         _observerPos = observerWorldPos;
+        _threats.PruneExpired(now);
+
+        // The debug threat follows the camera while it lasts, so you can walk it at a herd.
+        if (_debugThreatUntil > 0L)
+        {
+            if (now < _debugThreatUntil) _threats.Report(DebugThreatId, observerWorldPos, CreatureFaction.Player);
+            else { _threats.Withdraw(DebugThreatId); _debugThreatUntil = 0L; }
+        }
 
         if (Time.unscaledTime >= _nextPlanTime ||
             (observerWorldPos - _planAnchor).sqrMagnitude > PlanMoveMeters * PlanMoveMeters)
@@ -309,7 +327,7 @@ public sealed class CreatureResidencyService : IDisposable
             Position = home,
             Forward = CharacterMath.ArbitraryTangent((home - _center).normalized),
             LastSimulatedUnix = now,
-            Brain = new CreatureWanderInput(_seeds.GetSeedForEntity(id.Value), species.HomeRangeMeters),
+            Behaviour = CreatureBehaviour.Wander,
         };
         _bySlot[slotKey.Value] = resident;
         _all.Add(resident);
@@ -381,6 +399,10 @@ public sealed class CreatureResidencyService : IDisposable
         r.Driver = new SurfaceCharacterController(
             _gravity, _grounding, species.BodyHeightMeters * 0.5f,
             new CharacterPose(r.Position, ground.Normal, forward));
+
+        // The brain is rebuilt from the remembered behaviour, never carried across the gap as a live object.
+        // Without this an animal that was fleeing when you walked away is grazing when you come back.
+        r.Brain = new CreatureBrain(_seeds.GetSeedForEntity(r.Id.Value), species, r.Behaviour);
     }
 
     // Demotion drops the simulation, never the creature. The position it was left at is remembered in memory
@@ -393,7 +415,10 @@ public sealed class CreatureResidencyService : IDisposable
     void Demote(Resident r, long now)
     {
         r.LastSimulatedUnix = now;
+        r.Behaviour = r.Brain?.Behaviour ?? r.Behaviour;
         r.Driver = null;
+        r.Brain = null;
+        _threats.Withdraw(r.Id);
     }
 
     void Simulate(Resident r, float deltaTime, long now)
@@ -402,8 +427,30 @@ public sealed class CreatureResidencyService : IDisposable
         if (species == null) return;
 
         Vector3 up = r.Driver.Pose.Up;
-        float toHome = CreatureTerritory.SurfaceDistance(_center, r.Position, r.Home);
-        r.Brain.Observe(r.Position, r.Forward, up, r.Home, toHome);
+
+        // Perception, then decision, then movement - in that order, and the creature reaches for nothing
+        // itself. What it may react to comes from the THREAT registry, which carries identities; the observer
+        // positions that decide what is simulated never appear here, which is why a debug camera is invisible
+        // to wildlife without a special case for cameras.
+        var senses = new CreatureContext
+        {
+            Position = r.Position,
+            Up = up,
+            Forward = r.Forward,
+            Home = r.Home,
+            DistanceToHome = CreatureTerritory.SurfaceDistance(_center, r.Position, r.Home),
+            DeltaTime = deltaTime,
+            Tick = r.Tick,
+            Species = species,
+        };
+        if (_threats.TryFindThreat(r.Position, r.Id, species.Faction, species.AwarenessMeters, now,
+                out ThreatSource threat))
+        {
+            senses.HasThreat = true;
+            senses.ThreatPosition = threat.Position;
+            senses.ThreatDistance = Vector3.Distance(r.Position, threat.Position);
+        }
+        r.Brain.Observe(senses);
 
         // Look.x is a turn RATE in degrees per second here. ActorIntent carries raw device units and leaves
         // the scaling to whatever hosts the actor; for an animal the host is this service.
@@ -413,10 +460,16 @@ public sealed class CreatureResidencyService : IDisposable
             ? tangent
             : r.Forward;
 
-        CharacterPose pose = r.Driver.Tick(intent.Move, forward, species.WalkSpeedMps, deltaTime);
+        CharacterPose pose = r.Driver.Tick(
+            intent.Move, forward, species.WalkSpeedMps * r.Brain.SpeedScale, deltaTime);
         r.Position = pose.Position;
         r.Forward = pose.Forward;
+        r.Behaviour = r.Brain.Behaviour;
         r.LastSimulatedUnix = now;
+
+        // A live animal is something other animals can react to. Costs nothing today (Wildlife ignores
+        // Wildlife) and is what a predator will read when one exists.
+        _threats.Report(r.Id, r.Position, species.Faction);
     }
 
     // --- death ------------------------------------------------------------
@@ -531,7 +584,7 @@ public sealed class CreatureResidencyService : IDisposable
             Resident r = sorted[i];
             sb.Append('\n').Append(CreatureKey.Describe(r.Id))
               .Append(' ').Append(_library.At(r.SpeciesIndex)?.DisplayName ?? "?")
-              .Append(r.IsLive ? " live" : " record")
+              .Append(r.IsLive ? " live " : " record ").Append(r.Behaviour)
               .Append(" d=").Append(Vector3.Distance(from, r.Position).ToString("F0")).Append('m')
               .Append(" fromHome=")
               .Append(CreatureTerritory.SurfaceDistance(_center, r.Position, r.Home).ToString("F0")).Append('m');
@@ -608,6 +661,62 @@ public sealed class CreatureResidencyService : IDisposable
                   : $" lapsed -> generation {d.NextGeneration}");
         }
         return count == 0 ? "no creature death records" : count + " death record(s):" + sb;
+    }
+
+    // A fake threat parked at the observer. The free camera is a POSITION and can never be a threat by
+    // design, so provoking a flee otherwise means spawning the character every time you want to check a
+    // tweak. This is the debug affordance that buys back the convenience without weakening the rule.
+    static readonly EntityId DebugThreatId = new(EntityId.DerivedOwner, 2);
+
+    [ConsoleCommand("threat", "Park a fake Player-faction threat at the camera for N seconds so wildlife reacts. 0 removes it.",
+        MonoTargetType.Registry)]
+    string ThreatCmd(float seconds = 20f)
+    {
+        if (!_configured) return "creature residency inactive";
+        if (seconds <= 0f)
+        {
+            _threats.Withdraw(DebugThreatId);
+            return "debug threat removed";
+        }
+        _threats.Report(DebugThreatId, _observerPos, CreatureFaction.Player);
+        // Expiry rides on the same disguise clock: after it lapses the source is withdrawn on the next tick.
+        _debugThreatUntil = NowUnixSeconds() + (long)seconds;
+        return $"debug threat at the camera for {seconds:F0}s; wildlife within its awareness radius will run";
+    }
+
+    [ConsoleCommand("friendly", "Make the debug threat (and the player) be SEEN as wildlife for N seconds - the friendly-to-animals spell.",
+        MonoTargetType.Registry)]
+    string FriendlyCmd(float seconds = 30f)
+    {
+        if (!_configured) return "creature residency inactive";
+        long now = NowUnixSeconds();
+        _threats.SetDisguise(DebugThreatId, CreatureFaction.Wildlife, seconds, now);
+        _threats.SetDisguise(ThreatRegistry.LocalPlayer, CreatureFaction.Wildlife, seconds, now);
+        return seconds > 0f
+            ? $"seen as wildlife for {seconds:F0}s; nothing flees from you, and no species data changed"
+            : "friendly effect cleared";
+    }
+
+    [ConsoleCommand("threats", "List what wildlife can currently react to, and any active friendly effects.",
+        MonoTargetType.Registry)]
+    string ThreatsCmd()
+    {
+        long now = NowUnixSeconds();
+        var sb = new System.Text.StringBuilder();
+        sb.Append(_threats.Sources.Count).Append(" threat source(s), ")
+          .Append(_threats.DisguiseCount).Append(" active effect(s):");
+        for (int i = 0; i < _threats.Sources.Count; i++)
+        {
+            ThreatSource s = _threats.Sources[i];
+            CreatureFaction seen = _threats.SeenAs(s, now);
+            sb.Append('\n').Append(CreatureKey.IsCreature(s.Id) ? CreatureKey.Describe(s.Id) : s.Id.ToString())
+              .Append(' ').Append(s.Faction);
+            if (seen != s.Faction)
+                sb.Append(" seen-as ").Append(seen)
+                  .Append(" (").Append(_threats.DisguiseSecondsLeft(s.Id, now).ToString("F0")).Append("s left)");
+            sb.Append(" d=").Append(Vector3.Distance(_observerPos, s.Position).ToString("F0")).Append('m');
+        }
+        return sb.ToString();
     }
 
     [ConsoleCommand("clear-deaths", "Tombstone every creature death record, so all suppressed slots repopulate now.",

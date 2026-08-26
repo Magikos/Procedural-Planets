@@ -32,6 +32,17 @@ namespace ProceduralPlanets.Tests
         }
 
         [Test]
+        public void OtherDerivedIds_AreNotMistakenForCreatures()
+        {
+            // The derived owner tag is a NAMESPACE, not a creature marker: well-known ids such as the local
+            // player's threat-registry id live in it too. Testing the tag alone reads those as creatures and
+            // unpacks them into a territory that does not exist.
+            var wellKnown = new EntityId(EntityId.DerivedOwner, 1);
+            Assert.IsFalse(CreatureKey.IsCreature(wellKnown));
+            Assert.IsTrue(CreatureKey.IsCreature(CreatureKey.Individual(0, 4, 0, 0, 0, 0)));
+        }
+
+        [Test]
         public void TheAllZeroTerritory_IsAValidIdRatherThanNone()
         {
             // face 0, level 0, cell 0,0, slot 0, generation 0 is a real address. Without the marker bit it
@@ -260,7 +271,8 @@ namespace ProceduralPlanets.Tests
         // --- suitability: altitude and biome ---------------------------------
 
         static CreatureSpeciesDto Species(float minAlt, float maxAlt, params BiomeType[] biomes) =>
-            new("Test", 3, 120f, 2.5f, 0.8f, 300f, minAlt, maxAlt, 1.7f, Color.white, biomes);
+            new("Test", 3, 120f, 2.5f, 0.8f, 300f, minAlt, maxAlt, 1.7f, Color.white, biomes,
+                CreatureFaction.Wildlife, 35f);
 
         [Test]
         public void AnEmptyBiomeList_MeansAnyBiome()

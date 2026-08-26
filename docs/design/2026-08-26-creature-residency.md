@@ -405,3 +405,102 @@ FSM wrapped around a single state with zero transitions is the speculative infra
 
 Skipped from that project, unchanged from the earlier harvest: its EventBus, Singleton, Logwin,
 PlayerInputProvider, all physics motor/sensor code, and the empty `ICharacter*Context` interfaces.
+
+---
+
+## 16. Threat: what a creature is actually afraid of (2026-08-26)
+
+The flee behaviour of §15 needs an answer to "flee from *what*". Getting that wrong makes a deer bolt from a
+debug camera, and makes "deer do not run from other deer" a special case written per species.
+
+### Presence is not threat
+
+`CreatureResidencyService.Tick` takes a `Vector3`, not an entity, because authority code must not know a
+camera exists (§10). The consequence is the fix:
+
+| list | contents | decides |
+| --- | --- | --- |
+| **observers** | positions | what is **simulated** |
+| **threats** | entity id + position + faction | what is **feared** |
+
+The free camera is in the first and can never be in the second, because a threat query needs an identity and
+a debug camera has none. So flying around debugging leaves the wildlife grazing, and that is the existing
+split doing its job rather than a special case for the camera.
+
+**The invariant to protect: the observer list must never grow an identity.** The moment it does, presence and
+threat collapse back together and the camera becomes a predator again.
+
+### Relations are directed
+
+A symmetric "are we friends" flag cannot express the pair we need: a wolf *hunts* a deer, a deer is *afraid
+of* a wolf. Same pair, different relation each way. So the table is directed - how the ROW feels about the
+COLUMN:
+
+| | → Wildlife | → Predator | → Player |
+| --- | --- | --- | --- |
+| **Wildlife** | Neutral | Afraid | Afraid |
+| **Predator** | Hostile | Neutral | Hostile |
+| **Player** | Neutral | Neutral | Neutral |
+
+Bryan's requirement that deer ignore deer, rabbits and birds is one cell - `Wildlife → Wildlife = Neutral` -
+rather than a rule written per species. Adding a species means picking a faction, not editing a list of who
+fears whom.
+
+**Decided (Bryan, 2026-08-26): the player is a threat to wildlife by default**, armed or not. Deer bolt on
+sight. It is the simplest rule and it is what makes the friendly spell feel like it did something.
+
+### The spell decides the shape
+
+A friendly-to-animals spell is the requirement that rules out the obvious implementation. If "deer fear
+players" were baked into the deer's species data, the spell would have to mutate species data - globally, for
+every player, permanently. Wrong three times over. So the lookup is:
+
+> `Relation(me, them)` = `base(myFaction, theirFaction)`, **overridden by an active effect on THEM**
+
+The spell puts a temporary effect on the *caster*: to animals, they count as Wildlife. One caster, one
+duration, species data untouched. Two properties are not optional:
+
+- **Authority-side.** A client cannot declare itself friendly to the server's wolves.
+- **It is a RECORD with an expiry**, not a live flag - `startedUnixSeconds + durationSeconds`, held in memory
+  today. Bryan's instinct is that active spells should survive a save; that is not designed yet, but shaping
+  the effect as a record now means persisting it later is one `Append` against the existing
+  `DeltaKind.EntityState` rather than a rewrite. This is §15's lesson a second time: **do not build state
+  that exists only as a live object.**
+
+That expiry is the **third** use of `createdUnix + durationSeconds` in this codebase, after path wear
+(`SurfaceEditController`) and creature death (`CreatureDeathRecord`). Rule of three is reached; a shared
+helper is now worth considering, but after the third use is working, not before.
+
+### Loyalty is a second axis, and must not merge with faction
+
+- **Faction** - species-level, shared, **zero bytes per wild creature**. Answers "is that a threat".
+- **Loyalty** - per-INDIVIDUAL, a scalar, for taming. §7 already establishes that a tamed animal is an
+  exception carrying a real record, which is the natural home for it.
+
+Merging them would put a per-individual byte on every deer on the planet and kill §5's promise that a
+creature which has done nothing interesting costs nothing. Faction stays free; loyalty is what an animal
+costs once it matters.
+
+Free consequence of the same model: when one deer flees, alerting nearby creatures of the SAME faction gives
+herd panic with no herd system. Not built, but the model does not fight it.
+
+### What flee needs beyond relations
+
+- **Awareness radius** per species - a deer notices further than a rabbit.
+- **Detection is distance-only.** Line of sight would need raycasts against terrain that has no colliders; an
+  analytic horizon test is possible but is real work. Ceiling named rather than paid.
+- **Flee heading** away from the threat along the surface - the great-circle math already exists.
+- **An exit condition** - threat gone or far enough. This is what `EvaluateExit` is for.
+- **Return home** - the homing pull already in the wander brain.
+- **A persisted behaviour id** (§15). Without it a deer that was fleeing when you left is calm when you
+  return, which is the red-car problem one layer up from where §1 solved it.
+
+Cost is not a concern: live creatures are bubble-bounded (tens) and threats are single digits. Even
+creature-versus-creature is a few hundred checks a tick. Ceiling named, not optimised.
+
+### Testing it without a player
+
+If the free camera is not a threat - and it must not be - flee needs another way to provoke. `character.spawn`
+gives a real player and is the honest path. `creature.threat <seconds>` plants a temporary threat source at
+the camera for quick checks, and `creature.friendly <seconds>` exercises the spell override before any spell
+system exists.

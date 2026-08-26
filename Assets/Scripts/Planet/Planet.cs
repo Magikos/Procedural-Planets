@@ -64,6 +64,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     TreePreview _treePreview;
     CreatureResidencyService _creatures;
     CreatureView _creatureView;
+    ThreatRegistry _threats;
 
     static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
     static readonly int _seaLevelRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
@@ -106,6 +107,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         context.Register<IGrassNearFieldStatsProvider>(_grass);
         context.Register<IScatterDebugReport>(_scatterDebug);
         context.Register(_creatures);
+        context.Register(_threats);
 
         // Harvest interactor (POC): picker + verb wired to this world's scatter cache, harvest store, and
         // inventory. The ScatterLibraryDto is NOT registered yet at world-service registration (it registers
@@ -171,6 +173,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _treePreview ??= new TreePreview(transform);
         _creatures ??= new CreatureResidencyService(transform, this, Logger);
         _creatureView ??= new CreatureView(transform);
+        _threats ??= new ThreatRegistry();
         _scatterRenderer.Cache.SetHarvestStore(_harvestStore);
     }
 
@@ -238,6 +241,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
                     "No Resources/Settings/CreatureLibrary asset; using the built-in placeholder species.");
             settings.Register(CreatureLibraryDto.From(creatureLib));
         }
+        if (!settings.IsRegistered<FactionRelationsDto>())
+            settings.Register(FactionRelationsDto.From(
+                Resources.Load<FactionRelations>("Settings/FactionRelations")));
     }
 
     public async Awaitable EarlyInitialize(CancellationToken cancellationToken)
@@ -284,6 +290,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _scatterDebug = null; // world-scoped registration; the context drops it on teardown
         _creatureView?.Dispose();
         _creatureView = null;
+        _threats?.Clear();
+        _threats = null;
         _creatures?.Dispose();
         _creatures = null;
         _climateMapGpuData?.Dispose();
@@ -529,7 +537,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             _creatureView.Dispose();
             // Same IBiomeProvider the terrain bake and scatter placement read, so a creature cannot disagree
             // with the ground about which biome it is standing in.
-            _creatures.Configure(Seed, _deltaLog, _colorGenerator, planet.PlanetRadius, seaLevelRadius);
+            _creatures.Configure(Seed, _deltaLog, _colorGenerator, _threats, planet.PlanetRadius, seaLevelRadius);
             long scatterRendererMs = finalizeStep.ElapsedMilliseconds;
             finalizeStep.Restart();
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _shapeGenerator.ElevationMin, _shapeGenerator.ElevationMax));

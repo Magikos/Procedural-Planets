@@ -43,6 +43,13 @@ public sealed class CreatureSpecies
              "by its altitude band.")]
     public BiomeType[] Biomes = System.Array.Empty<BiomeType>();
 
+    [Tooltip("Whose side it is on. Decides what it fears through the faction table, so adding a species " +
+             "means picking a faction rather than listing who it runs from.")]
+    public CreatureFaction Faction = CreatureFaction.Wildlife;
+
+    [Tooltip("Metres at which it notices a threat. A deer looks further than a rabbit.")]
+    [Min(1f)] public float AwarenessMeters = 35f;
+
     [Min(0.1f)] public float BodyHeightMeters = 1.7f;
     public Color BodyColor = new(0.45f, 0.33f, 0.22f);
 }
@@ -58,7 +65,9 @@ public sealed record CreatureSpeciesDto(
     float MaxAltitudeMeters,
     float BodyHeightMeters,
     Color BodyColor,
-    BiomeType[] Biomes)
+    BiomeType[] Biomes,
+    CreatureFaction Faction,
+    float AwarenessMeters)
 {
     /// <summary>True when a death of this species never lapses - the boss case, same code path as a deer.</summary>
     public bool NeverRespawns => RespawnSeconds <= 0f;
@@ -94,7 +103,9 @@ public sealed record CreatureSpeciesDto(
                 src.BodyColor,
                 // Copied, not aliased: a DTO is a snapshot, and sharing the asset's array would let an
                 // inspector edit reach code that already read the settings.
-                src.Biomes == null ? System.Array.Empty<BiomeType>() : (BiomeType[])src.Biomes.Clone());
+                src.Biomes == null ? System.Array.Empty<BiomeType>() : (BiomeType[])src.Biomes.Clone(),
+                src.Faction,
+                Mathf.Max(1f, src.AwarenessMeters));
 }
 
 public sealed record CreatureLibraryDto(CreatureSpeciesDto[] Species, float ObserverBubbleMeters)
@@ -135,16 +146,18 @@ public sealed record CreatureLibraryDto(CreatureSpeciesDto[] Species, float Obse
     public static CreatureLibraryDto Placeholder { get; } = new(
         new[]
         {
-            // Woodland browser: tall, sparse, wooded biomes.
+            // Woodland browser: tall, sparse, wooded biomes. Notices a threat at 45 m.
             new CreatureSpeciesDto("Placeholder Deer", 3, 120f, 2.5f, 0.8f, 300f, 2f, 3000f, 1.7f,
                 new Color(0.45f, 0.33f, 0.22f),
-                new[] { BiomeType.Forest, BiomeType.Taiga, BiomeType.Tropical, BiomeType.Swamp }),
+                new[] { BiomeType.Forest, BiomeType.Taiga, BiomeType.Tropical, BiomeType.Swamp },
+                CreatureFaction.Wildlife, 45f),
 
             // Open-country grazer: small, numerous, and deliberately in biomes the deer refuses, so crossing
-            // a biome line visibly swaps which animal is around you.
+            // a biome line visibly swaps which animal is around you. Skittish - bolts at 25 m.
             new CreatureSpeciesDto("Placeholder Rabbit", 6, 45f, 3.2f, 1.2f, 120f, 2f, 2200f, 0.45f,
                 new Color(0.62f, 0.58f, 0.52f),
-                new[] { BiomeType.Grassland, BiomeType.Scrub, BiomeType.Steppe, BiomeType.Savanna }),
+                new[] { BiomeType.Grassland, BiomeType.Scrub, BiomeType.Steppe, BiomeType.Savanna },
+                CreatureFaction.Wildlife, 25f),
         },
         300f);
 }
