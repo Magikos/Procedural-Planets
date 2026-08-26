@@ -902,3 +902,38 @@ Still open: TIR mirrors the column not the seabed (its reflected ray points down
 SSR cannot supply it); `SHAFT_SCATTER` and the night level have not had Bryan's eye; shaft march cost is
 unprofiled (~110 trig/underwater pixel). Observed but NOT investigated: distant scatter impostors over the
 far seabed read as dark angled specks (`v9_seabed.png`) - same family as [[project_scatter_dusk_lighting]].
+
+## Underwater interface was SKY-ONLY - closed 2026-08-26 (`006571e`)
+
+Bryan: "from underwater, looking up at the terrain. I don't think that is accurate." A sunlit tree on the
+far shore was the **brightest pixel in an underwater frame**, sharp, at ~82 deg from vertical - far outside
+the 48.75 deg cone where nothing above the surface should be visible.
+
+**The interface branch was gated on `SkyDepthMask`, so Snell's window / Fresnel / TIR only ever ran on sky
+pixels.** Any pixel with depth skipped it, and three paths then all declined to treat it:
+`WaterVolume`'s caustics early-return because the RECEIVER is dry (`:606`), the atmosphere deliberately
+hands back `originalCol` underwater (`847e867`), and the interface never saw it. Above-water geometry
+therefore reached a submerged eye with its full above-water lighting, unabsorbed.
+
+Fix: gate on "does this ray reach open air" instead. Beyond-surface colour is the sky for a sky pixel and
+`originalCol` for a geometry pixel; the existing Fresnel/absorb/composite does the rest, so outside the cone
+the shore is replaced by the TIR mirror.
+
+**Two traps in the gate itself, both cost a round:**
+- A **distance test (`pathToSurface < geometryDistance`) is WRONG** - `depthBelowSurface / cosViewUp` is a
+  flat-plane estimate that runs away to its 4000 m stand-in near the horizon, so a genuinely dry shore
+  tested as nearer than the exit. It cleared the far clouds and left the waterline band lit: **a half fix
+  that looks like a whole one.** Ask whether the RECEIVER is above its own local water surface - the same
+  question, and same authority, `WaterVolume` asks.
+- **Clamp the absorbed path to the receiver distance.** A grazing ray to a shore a km off absorbs over that
+  km and arrives as column colour. Correct - you cannot see a shore a km away through water at a grazing
+  angle - and it is why the far waterline now goes flat instead of staying sharp.
+
+`ponytail:` geometry is sampled down the UNREFRACTED ray; true window compression needs re-projecting the
+scene along the refracted direction, which a post pass cannot do.
+
+Measured at Bryan's viewpoint, 12 m down: brightest 0.673 -> 0.628, no longer a cloud. Above-water view
+unchanged; look-up Snell's window intact with its rim still heaving.
+
+**Still visible in the same shot and NOT this bug:** seabed scatter reads as black speckles - the
+dark-specks defect, same family as [[project_scatter_dusk_lighting]].
