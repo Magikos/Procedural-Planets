@@ -99,13 +99,14 @@ namespace ProceduralPlanets.Tests
 
         // --- death, expiry and repopulation ---------------------------------
 
-        static CreatureDeathRecord Death(long diedAt, float respawnSeconds, int generation = 0) =>
-            new(Slot(), speciesIndex: 0, generation, new Vector3(1f, 2f, 3f), diedAt, respawnSeconds);
+        static CreatureRecord Death(long diedAt, float respawnSeconds, int generation = 0) =>
+            CreatureRecord.Death(Slot(), speciesIndex: 0, generation, new Vector3(1f, 2f, 3f),
+                diedAt, respawnSeconds);
 
         [Test]
         public void ADeath_SuppressesItsSlotUntilTheExpiryLapses()
         {
-            CreatureDeathRecord death = Death(diedAt: 1000, respawnSeconds: 60f);
+            CreatureRecord death = Death(diedAt: 1000, respawnSeconds: 60f);
 
             Assert.IsTrue(death.Suppresses(1000), "the instant of death");
             Assert.IsTrue(death.Suppresses(1059), "one second short of the expiry");
@@ -123,7 +124,7 @@ namespace ProceduralPlanets.Tests
             // epoch to the nearest ~128 s, and the countdown then sits still while the clock moves - which is
             // exactly what a test written against a toy timestamp like 1000 fails to catch.
             const long now = 1787756079;
-            CreatureDeathRecord death = Death(diedAt: now - 247, respawnSeconds: 300f);
+            CreatureRecord death = Death(diedAt: now - 247, respawnSeconds: 300f);
 
             Assert.AreEqual(53f, death.SecondsUntilRespawn(now), 0.5f);
             Assert.AreEqual(52f, death.SecondsUntilRespawn(now + 1), 0.5f);
@@ -136,7 +137,7 @@ namespace ProceduralPlanets.Tests
         {
             foreach (float never in new[] { 0f, -1f, float.NaN })
             {
-                CreatureDeathRecord death = Death(diedAt: 1000, respawnSeconds: never);
+                CreatureRecord death = Death(diedAt: 1000, respawnSeconds: never);
                 Assert.IsTrue(death.NeverLapses, $"respawn {never} must be permanent");
                 Assert.IsTrue(death.Suppresses(long.MaxValue / 2), $"respawn {never} must still suppress");
                 Assert.AreEqual(float.PositiveInfinity, death.SecondsUntilRespawn(1_000_000));
@@ -146,7 +147,7 @@ namespace ProceduralPlanets.Tests
         [Test]
         public void AnExpiredDeath_RepopulatesTheSlotWithANewGeneration()
         {
-            CreatureDeathRecord death = Death(diedAt: 1000, respawnSeconds: 60f, generation: 4);
+            CreatureRecord death = Death(diedAt: 1000, respawnSeconds: 60f, generation: 4);
 
             Assert.IsFalse(CreatureTerritory.TryResolveOccupant(true, death, 1030, out _),
                 "the slot stays empty while the death suppresses it");
@@ -166,7 +167,7 @@ namespace ProceduralPlanets.Tests
         [Test]
         public void ANeverRespawningDeath_KeepsTheSlotEmptyForever()
         {
-            CreatureDeathRecord death = Death(diedAt: 1000, respawnSeconds: 0f, generation: 2);
+            CreatureRecord death = Death(diedAt: 1000, respawnSeconds: 0f, generation: 2);
             Assert.IsFalse(CreatureTerritory.TryResolveOccupant(true, death, 1000, out _));
             Assert.IsFalse(CreatureTerritory.TryResolveOccupant(true, death, long.MaxValue / 2, out _));
         }
@@ -174,7 +175,7 @@ namespace ProceduralPlanets.Tests
         [Test]
         public void TheGeneration_WrapsRatherThanOverflowingTheKey()
         {
-            CreatureDeathRecord last = Death(diedAt: 0, respawnSeconds: 1f, generation: CreatureKey.GenerationWrap - 1);
+            CreatureRecord last = Death(diedAt: 0, respawnSeconds: 1f, generation: CreatureKey.GenerationWrap - 1);
             Assert.AreEqual(0, last.NextGeneration);
             Assert.DoesNotThrow(() => CreatureKey.AtGeneration(Slot(), last.NextGeneration));
         }
@@ -184,29 +185,167 @@ namespace ProceduralPlanets.Tests
         [Test]
         public void ADeathRecord_SurvivesTheRoundTripThroughTheDeltaLog()
         {
-            CreatureDeathRecord source = Death(diedAt: 1735689600, respawnSeconds: 604800f, generation: 9);
-            WorldDelta delta = CreatureDeathCodec.Encode(source);
+            CreatureRecord source = Death(diedAt: 1735689600, respawnSeconds: 604800f, generation: 9);
+            WorldDelta delta = CreatureRecordCodec.Encode(source);
 
             Assert.AreEqual(DeltaKind.EntityRemoved, delta.Kind,
                 "creature deaths reuse the entity kinds so the log collapses them to one live record per slot");
 
-            Assert.IsTrue(CreatureDeathCodec.TryDecode(delta, out CreatureDeathRecord read));
+            Assert.IsTrue(CreatureRecordCodec.TryDecode(delta, out CreatureRecord read));
             Assert.AreEqual(source.Slot.Value, read.Slot.Value);
             Assert.AreEqual(source.SpeciesIndex, read.SpeciesIndex);
             Assert.AreEqual(source.Generation, read.Generation);
-            Assert.AreEqual(source.DiedUnixSeconds, read.DiedUnixSeconds);
+            Assert.AreEqual(source.UnixSeconds, read.UnixSeconds);
             Assert.AreEqual(source.RespawnSeconds, read.RespawnSeconds, 1e-3f);
-            Assert.AreEqual(source.DiedAt, read.DiedAt);
+            Assert.AreEqual(source.Position, read.Position);
+            Assert.IsTrue(read.IsDead);
         }
 
         [Test]
-        public void ADeathRecordIsFiledUnderItsSlot_EvenWhenHandedTheIndividual()
+        public void ADisplacementRecord_SurvivesTheRoundTripAndIsNotADeath()
+        {
+            CreatureRecord source = CreatureRecord.Displacement(Slot(), speciesIndex: 1, generation: 3,
+                new Vector3(10f, -20f, 30f), 1787760000, CreatureBehaviour.Flee);
+            WorldDelta delta = CreatureRecordCodec.Encode(source);
+
+            Assert.AreEqual(DeltaKind.EntityMoved, delta.Kind);
+            Assert.IsTrue(CreatureRecordCodec.TryDecode(delta, out CreatureRecord read));
+
+            Assert.IsFalse(read.IsDead);
+            Assert.AreEqual(3, read.Generation);
+            Assert.AreEqual(CreatureBehaviour.Flee, read.Behaviour,
+                "what it was doing has to survive, or a fleeing animal comes back calm");
+            Assert.AreEqual(source.Position, read.Position);
+            Assert.AreEqual(source.UnixSeconds, read.UnixSeconds);
+            Assert.IsFalse(read.Suppresses(long.MaxValue / 2), "a displaced creature is alive");
+        }
+
+        [Test]
+        public void ADisplacementCarriesTheGeneration_SoItCanReplaceALapsedDeath()
+        {
+            // Both share a key AND a delta space, so the later write replaces the earlier. If a displacement
+            // did not carry the generation, overwriting a lapsed death would silently reset the slot to
+            // generation 0 - the one thing section 5 says must never happen.
+            CreatureRecord displaced = CreatureRecord.Displacement(Slot(), 0, generation: 7,
+                Vector3.one, 1787760000, CreatureBehaviour.Wander);
+
+            Assert.IsTrue(CreatureTerritory.TryResolveOccupant(true, displaced, 1787760000, out int generation));
+            Assert.AreEqual(7, generation, "a displacement describes the CURRENT occupant, so its generation is live");
+        }
+
+        [Test]
+        public void ARecordIsFiledUnderItsSlot_EvenWhenHandedTheIndividual()
         {
             EntityId slot = Slot();
-            var record = new CreatureDeathRecord(CreatureKey.AtGeneration(slot, 6), 0, 6, Vector3.zero, 0, 1f);
+            CreatureRecord record = CreatureRecord.Death(
+                CreatureKey.AtGeneration(slot, 6), 0, 6, Vector3.zero, 0, 1f);
 
             Assert.AreEqual(slot.Value, record.Slot.Value,
-                "a key carrying generation bits would file the death where no lookup goes looking");
+                "a key carrying generation bits would file the record where no lookup goes looking");
+        }
+
+        // --- when a creature is worth a byte -----------------------------------
+
+        const float HomeRange = 120f;
+
+        static CreatureRecordAction Decide(float fromHome, CreatureBehaviour behaviour = CreatureBehaviour.Wander,
+            int generation = 0, bool written = false, float movedSinceWritten = 0f,
+            CreatureBehaviour writtenBehaviour = CreatureBehaviour.Wander) =>
+            CreatureRecordPolicy.Decide(fromHome, HomeRange, behaviour, generation, written,
+                movedSinceWritten, writtenBehaviour);
+
+        [Test]
+        public void ACalmAnimalNearItsHome_CostsNothing()
+        {
+            // Section 5's promise. It is where the seed would have put it, so there is nothing to write down.
+            Assert.AreEqual(CreatureRecordAction.Keep, Decide(fromHome: 10f));
+            Assert.AreEqual(CreatureRecordAction.Keep, Decide(fromHome: HomeRange * 0.5f));
+        }
+
+        [Test]
+        public void AnAnimalLeftFarFromHome_IsWrittenDown()
+        {
+            Assert.AreEqual(CreatureRecordAction.Write, Decide(fromHome: HomeRange));
+        }
+
+        [Test]
+        public void AnAgitatedAnimal_IsWrittenDownEvenStandingOnItsHome()
+        {
+            // What it was DOING is the exceptional part. A deer that was fleeing when you walked away has to
+            // still be fleeing when you come back, wherever it happened to be standing.
+            Assert.AreEqual(CreatureRecordAction.Write,
+                Decide(fromHome: 0f, behaviour: CreatureBehaviour.Flee));
+        }
+
+        [Test]
+        public void AnAnimalThatDriftedHome_HasItsRecordDropped()
+        {
+            // Section 6: the log shrinks back toward the seed. Leaving the record behind is how a save file
+            // grows forever instead.
+            Assert.AreEqual(CreatureRecordAction.Forget, Decide(fromHome: 5f, written: true));
+        }
+
+        [Test]
+        public void ASlotWhoseGenerationMovedOn_KeepsARecordEvenWithNothingElseToSay()
+        {
+            // The generation counter lives nowhere else. Forgetting the record would put the slot back to
+            // generation 0 and resurrect an animal the player already killed.
+            Assert.AreEqual(CreatureRecordAction.Write,
+                Decide(fromHome: 0f, generation: 3));
+            Assert.AreNotEqual(CreatureRecordAction.Forget,
+                Decide(fromHome: 0f, generation: 3, written: true));
+        }
+
+        [Test]
+        public void RewritingTheSameThing_IsSkipped()
+        {
+            // A creature crossing the bubble boundary demotes repeatedly. Without this the log gets an append
+            // every time it steps out.
+            Assert.AreEqual(CreatureRecordAction.Keep,
+                Decide(fromHome: HomeRange, written: true, movedSinceWritten: 2f));
+            Assert.AreEqual(CreatureRecordAction.Write,
+                Decide(fromHome: HomeRange, written: true, movedSinceWritten: 50f));
+        }
+
+        [Test]
+        public void AChangeOfBehaviour_IsAlwaysWorthARewrite()
+        {
+            // It has not moved, but it started running. That is the whole point of saving the behaviour.
+            Assert.AreEqual(CreatureRecordAction.Write,
+                Decide(fromHome: HomeRange, behaviour: CreatureBehaviour.Flee, written: true,
+                    movedSinceWritten: 0f, writtenBehaviour: CreatureBehaviour.Wander));
+        }
+
+        [Test]
+        public void AFormatOneDeathRecord_StillReadsAsADeath()
+        {
+            // Format 1 predates displacement records and is already in Bryan's save. It carried no state byte
+            // and no behaviour, so everything it describes is a death - reading it as a displacement would
+            // resurrect creatures that were killed.
+            var payload = new byte[17];
+            payload[0] = 1;                                                   // format
+            BitConverter.GetBytes(4).CopyTo(payload, 1);                      // generation
+            BitConverter.GetBytes(1735689600L).CopyTo(payload, 5);            // died
+            BitConverter.GetBytes(600f).CopyTo(payload, 13);                  // respawn
+
+            var legacy = new WorldDelta(0, DeltaKind.EntityRemoved, Slot().Value,
+                new Vector3(1f, 2f, 3f), typeIndex: 0, payload: payload);
+
+            Assert.IsTrue(CreatureRecordCodec.TryDecode(legacy, out CreatureRecord read));
+            Assert.IsTrue(read.IsDead);
+            Assert.AreEqual(4, read.Generation);
+            Assert.AreEqual(1735689600L, read.UnixSeconds);
+            Assert.AreEqual(600f, read.RespawnSeconds, 1e-3f);
+            Assert.IsTrue(read.Suppresses(1735689600L + 599));
+            Assert.IsFalse(read.Suppresses(1735689600L + 600));
+        }
+
+        [Test]
+        public void AForgetRecord_PutsTheSlotBackToWhatTheSeedSays()
+        {
+            // The payload-free record is how a creature that drifted home stops costing storage. It must fail
+            // to decode, because the ABSENCE of a readable record is what means "exactly what the seed says".
+            Assert.IsFalse(CreatureRecordCodec.TryDecode(CreatureRecordCodec.Forget(Slot()), out _));
         }
 
         [Test]
@@ -215,7 +354,7 @@ namespace ProceduralPlanets.Tests
             // A dropped log's removal is the same DeltaKind. Only the owner tag tells the two apart, and
             // decoding one as the other would suppress a territory slot that nothing ever killed.
             var log = new WorldDelta(0, DeltaKind.EntityRemoved, new EntityId(EntityId.HostOwner, 42).Value);
-            Assert.IsFalse(CreatureDeathCodec.TryDecode(log, out _));
+            Assert.IsFalse(CreatureRecordCodec.TryDecode(log, out _));
         }
 
         [Test]
@@ -224,7 +363,7 @@ namespace ProceduralPlanets.Tests
             // clear-deaths writes a payload-free record over the death. It must fail to decode, because the
             // absence of a readable death is what puts the slot back to its seed default.
             var tombstone = new WorldDelta(0, DeltaKind.EntityRemoved, Slot().Value);
-            Assert.IsFalse(CreatureDeathCodec.TryDecode(tombstone, out _));
+            Assert.IsFalse(CreatureRecordCodec.TryDecode(tombstone, out _));
         }
 
         // --- birth ----------------------------------------------------------

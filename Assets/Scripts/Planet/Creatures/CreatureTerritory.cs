@@ -63,20 +63,23 @@ public static class CreatureTerritory
     /// original occupant; while a death still suppresses it the slot is empty; once the death lapses the slot
     /// repopulates with the NEXT generation - a different animal from the one that was killed.
     /// </summary>
-    public static bool TryResolveOccupant(bool hasDeath, in CreatureDeathRecord death, long nowUnixSeconds,
+    public static bool TryResolveOccupant(bool hasRecord, in CreatureRecord record, long nowUnixSeconds,
         out int generation)
     {
-        if (!hasDeath)
+        if (!hasRecord)
         {
-            generation = 0;
+            generation = 0;   // nothing written down: the slot holds exactly what the seed predicts
             return true;
         }
-        if (death.Suppresses(nowUnixSeconds))
+        if (record.Suppresses(nowUnixSeconds))
         {
-            generation = death.Generation;
+            generation = record.Generation;
             return false;
         }
-        generation = death.NextGeneration;
+        // A displacement describes the CURRENT occupant, so its generation is the live one. A lapsed death
+        // describes the previous occupant, so the live one is the next generation. Reading the generation off
+        // the record either way is what stops a repopulated slot falling back to 0.
+        generation = record.IsDead ? record.NextGeneration : record.Generation;
         return true;
     }
 

@@ -524,3 +524,42 @@ the harvested original, and each is a defect that was found rather than a prefer
 
 Not built: `CompositeState`. Nothing needs nesting yet and the integer keying does not foreclose it - a
 composite is a state that owns a sub-machine and forwards to it.
+
+### Persistence, closed 2026-08-26
+
+Both `ponytail:` markers on demotion are discharged. §13 question 2 answered the home range, which was the
+stated blocker: a displacement is worth a byte once a creature is beyond half of it, or is doing anything
+other than wandering.
+
+**One record per slot, not two.** A death and a displacement would share a key AND a delta space, so the later
+write replaces the earlier one. That is correct in one direction - a dead creature is not also out wandering -
+but a trap in the other: a displacement written for the slot's NEXT occupant would overwrite a lapsed death
+and take the generation counter with it, and a repopulated slot silently falling back to generation 0 is
+exactly what §5 forbids. Every record therefore carries the generation whatever else it says, and
+`CreatureRecord` covers both cases behind one codec.
+
+**The log still shrinks back toward the seed.** `CreatureRecordPolicy` is that rule, kept pure because it is
+what decides whether the save grows:
+
+| situation | action |
+| --- | --- |
+| calm, near home, never killed | nothing written (§5) |
+| beyond half its home range, or not wandering | written |
+| drifted home again | record DROPPED (§6) |
+| generation has moved on | record kept even with nothing else to say |
+
+That last row is the one that is easy to get wrong. The generation counter lives nowhere else, so forgetting
+the record would put the slot back to generation 0 and resurrect an animal the player already killed.
+
+Payload format 2 adds a state byte and the behaviour. Format 1 was death-only and is still read, because it is
+already in Bryan's save - reading it as anything but a death would resurrect killed creatures.
+
+`creature.deaths` and `creature.clear-deaths` became `creature.records` and `creature.clear-records`, since
+deaths are no longer the only thing recorded.
+
+**Verification gap, stated plainly.** The decision rule, both record round-trips, generation preservation
+across the collapse, and the format-1 migration are covered by tests (230/230 green). The PLUMBING either side
+of it - writing on demote, seeding a resident from a saved record - is not, and could not be play-tested
+unattended: the editor throttles to roughly a twentieth speed whenever it loses focus, putting one planet
+generation near an hour. Worth one pass when someone is at the machine: displace a creature, let it demote,
+`creature.records` should show it; then stop, play, and it should still be there doing the same thing.

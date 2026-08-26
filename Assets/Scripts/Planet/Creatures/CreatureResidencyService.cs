@@ -65,6 +65,11 @@ public sealed class CreatureResidencyService : IDisposable
         public CreatureBrain Brain;                 // rebuilt from Behaviour at promotion
         public uint Tick;
 
+        // What the log currently says about this slot, so a demote that would rewrite the same thing does not.
+        public bool Written;
+        public Vector3 WrittenPosition;
+        public CreatureBehaviour WrittenBehaviour;
+
         public bool IsLive => Driver != null;
     }
 
@@ -288,8 +293,8 @@ public sealed class CreatureResidencyService : IDisposable
     void ResolveSlot(EntityId slotKey, int speciesIndex, CreatureSpeciesDto species,
         in PlanetTransformSnapshot planet, long now)
     {
-        bool hasDeath = TryGetDeath(slotKey, out CreatureDeathRecord death);
-        bool occupied = CreatureTerritory.TryResolveOccupant(hasDeath, death, now, out int generation);
+        bool hasRecord = TryGetRecord(slotKey, out CreatureRecord record);
+        bool occupied = CreatureTerritory.TryResolveOccupant(hasRecord, record, now, out int generation);
 
         _bySlot.TryGetValue(slotKey.Value, out Resident existing);
 
@@ -317,6 +322,13 @@ public sealed class CreatureResidencyService : IDisposable
         }
 
         EntityId id = CreatureKey.AtGeneration(slotKey, generation);
+
+        // A saved displacement describes THIS occupant, so it is where the creature actually is and what it
+        // was doing - the fast-forward on promotion then runs from there. Anything else (no record, or a
+        // lapsed death describing the previous occupant) starts a fresh animal at its home.
+        bool resume = hasRecord && !record.IsDead && record.Generation == generation;
+        Vector3 position = resume ? record.Position : home;
+
         var resident = new Resident
         {
             Slot = slotKey,
@@ -324,10 +336,11 @@ public sealed class CreatureResidencyService : IDisposable
             SpeciesIndex = speciesIndex,
             Generation = generation,
             Home = home,
-            Position = home,
-            Forward = CharacterMath.ArbitraryTangent((home - _center).normalized),
-            LastSimulatedUnix = now,
-            Behaviour = CreatureBehaviour.Wander,
+            Position = position,
+            Forward = CharacterMath.ArbitraryTangent((position - _center).normalized),
+            LastSimulatedUnix = resume ? record.UnixSeconds : now,
+            Behaviour = resume ? record.Behaviour : CreatureBehaviour.Wander,
+            Written = resume,
         };
         _bySlot[slotKey.Value] = resident;
         _all.Add(resident);
@@ -405,13 +418,8 @@ public sealed class CreatureResidencyService : IDisposable
         r.Brain = new CreatureBrain(_seeds.GetSeedForEntity(r.Id.Value), species, r.Behaviour);
     }
 
-    // Demotion drops the simulation, never the creature. The position it was left at is remembered in memory
-    // and is what a later re-observation fast-forwards from.
-    //
-    // ponytail: in memory only, so a creature left far from home is back home after a save/load - which is
-    // just a maximal fast-forward, and keeps an animal that has done nothing notable at zero bytes. The
-    // upgrade is one EntityMoved record appended here when the displacement is large; it waits on how far
-    // "home" should be (design doc section 13 question 2), because that number is what makes it worth a write.
+    // Demotion drops the simulation, never the creature. What it was doing and where it was left are kept as
+    // VALUES - in memory always, and in the log when they are worth saying.
     void Demote(Resident r, long now)
     {
         r.LastSimulatedUnix = now;
@@ -419,6 +427,48 @@ public sealed class CreatureResidencyService : IDisposable
         r.Driver = null;
         r.Brain = null;
         _threats.Withdraw(r.Id);
+        Remember(r, now);
+    }
+
+    /// <summary>
+    /// Write down a creature that the seed no longer describes, or forget one it does again.
+    /// </summary>
+    /// <remarks>
+    /// The forget path is what keeps §6's promise that the log shrinks back toward the seed: an animal that
+    /// wandered off and later drifted home stops costing anything. The exception is a slot whose generation
+    /// has moved on - that counter lives nowhere else, so its record stays even when it says nothing else.
+    /// </remarks>
+    void Remember(Resident r, long now)
+    {
+        if (_delta == null) return;
+
+        CreatureSpeciesDto species = _library.At(r.SpeciesIndex);
+        if (species == null) return;
+
+        CreatureRecordAction action = CreatureRecordPolicy.Decide(
+            CreatureTerritory.SurfaceDistance(_center, r.Position, r.Home),
+            species.HomeRangeMeters,
+            r.Behaviour,
+            r.Generation,
+            r.Written,
+            Vector3.Distance(r.Position, r.WrittenPosition),
+            r.WrittenBehaviour);
+
+        switch (action)
+        {
+            case CreatureRecordAction.Forget:
+                _delta.Append(CreatureRecordCodec.Forget(r.Slot));
+                r.Written = false;
+                break;
+
+            case CreatureRecordAction.Write:
+                _delta.Append(CreatureRecordCodec.Encode(CreatureRecord.Displacement(
+                    r.Slot, r.SpeciesIndex, r.Generation, r.Position, now, r.Behaviour)));
+                r.Written = true;
+                r.WrittenPosition = r.Position;
+                r.WrittenBehaviour = r.Behaviour;
+                break;
+        }
     }
 
     void Simulate(Resident r, float deltaTime, long now)
@@ -474,12 +524,13 @@ public sealed class CreatureResidencyService : IDisposable
 
     // --- death ------------------------------------------------------------
 
-    bool TryGetDeath(EntityId slotKey, out CreatureDeathRecord death)
+    // Either entity kind hashes to the same space, so one lookup finds whichever the slot last wrote.
+    bool TryGetRecord(EntityId slotKey, out CreatureRecord record)
     {
-        death = default;
+        record = default;
         return _delta != null
             && _delta.TryGet(DeltaKind.EntityRemoved, slotKey.Value, out WorldDelta d)
-            && CreatureDeathCodec.TryDecode(d, out death);
+            && CreatureRecordCodec.TryDecode(d, out record);
     }
 
     /// <summary>
@@ -496,9 +547,11 @@ public sealed class CreatureResidencyService : IDisposable
         CreatureSpeciesDto species = _library.At(r.SpeciesIndex);
         if (species == null) return false;
 
-        var record = new CreatureDeathRecord(slotKey, r.SpeciesIndex, r.Generation, r.Position,
+        // Replaces whatever the slot last said, including a displacement: the log keeps one live record per
+        // slot, and a dead creature is not also out wandering.
+        CreatureRecord record = CreatureRecord.Death(slotKey, r.SpeciesIndex, r.Generation, r.Position,
             NowUnixSeconds(), species.RespawnSeconds);
-        if (_delta != null) _delta.Append(CreatureDeathCodec.Encode(record));
+        if (_delta != null) _delta.Append(CreatureRecordCodec.Encode(record));
         else _log?.Log(LogLevel.Warning, "Creature", "No delta log configured; the death will not persist.");
 
         Retire(r);
@@ -640,9 +693,9 @@ public sealed class CreatureResidencyService : IDisposable
         return $"bubble = {BubbleMeters:F0}m (demotes at {BubbleMeters * DemoteHysteresis:F0}m)";
     }
 
-    [ConsoleCommand("deaths", "Live death records in the world log: slot, generation, and time left before the slot repopulates.",
+    [ConsoleCommand("records", "Everything the world log says about creatures: deaths with their expiry, and creatures left somewhere the seed does not predict.",
         MonoTargetType.Registry)]
-    string DeathsCmd()
+    string RecordsCmd()
     {
         if (_delta == null) return "no delta log";
         long now = NowUnixSeconds();
@@ -651,16 +704,23 @@ public sealed class CreatureResidencyService : IDisposable
         IReadOnlyList<WorldDelta> snapshot = _delta.Snapshot();
         for (int i = 0; i < snapshot.Count; i++)
         {
-            if (!CreatureDeathCodec.TryDecode(snapshot[i], out CreatureDeathRecord d)) continue;
+            if (!CreatureRecordCodec.TryDecode(snapshot[i], out CreatureRecord d)) continue;
             count++;
-            float left = d.SecondsUntilRespawn(now);
             sb.Append('\n').Append(CreatureKey.Describe(CreatureKey.AtGeneration(d.Slot, d.Generation)))
-              .Append(" species=").Append(d.SpeciesIndex)
-              .Append(d.Suppresses(now)
-                  ? float.IsPositiveInfinity(left) ? " suppressed=forever" : $" suppressed={left:F0}s"
-                  : $" lapsed -> generation {d.NextGeneration}");
+              .Append(" species=").Append(d.SpeciesIndex);
+
+            if (!d.IsDead)
+            {
+                sb.Append(" displaced ").Append(d.Behaviour)
+                  .Append(" at ").Append(d.Position.ToString("F0"));
+                continue;
+            }
+            float left = d.SecondsUntilRespawn(now);
+            sb.Append(d.Suppresses(now)
+                ? float.IsPositiveInfinity(left) ? " dead=forever" : $" dead, respawns in {left:F0}s"
+                : $" dead but lapsed -> generation {d.NextGeneration}");
         }
-        return count == 0 ? "no creature death records" : count + " death record(s):" + sb;
+        return count == 0 ? "no creature records; the world is exactly what the seed says" : count + " record(s):" + sb;
     }
 
     // A fake threat parked at the observer. The free camera is a POSITION and can never be a threat by
@@ -719,26 +779,27 @@ public sealed class CreatureResidencyService : IDisposable
         return sb.ToString();
     }
 
-    [ConsoleCommand("clear-deaths", "Tombstone every creature death record, so all suppressed slots repopulate now.",
+    [ConsoleCommand("clear-records", "Forget every creature record, putting the whole population back to what the seed says.",
         MonoTargetType.Registry)]
-    string ClearDeathsCmd()
+    string ClearRecordsCmd()
     {
         if (_delta == null) return "no delta log";
 
-        // Removal must be a record of its own. Dropping the entry from memory would leave the death in the
-        // file, and a client replaying the log - or this world on its next load - would kill the creature again.
+        // Removal must be a record of its own. Dropping the entry from memory would leave it in the file, and
+        // a client replaying the log - or this world on its next load - would apply it again.
         var slots = new List<ulong>();
         IReadOnlyList<WorldDelta> snapshot = _delta.Snapshot();
         for (int i = 0; i < snapshot.Count; i++)
-            if (CreatureDeathCodec.TryDecode(snapshot[i], out CreatureDeathRecord d))
+            if (CreatureRecordCodec.TryDecode(snapshot[i], out CreatureRecord d))
                 slots.Add(d.Slot.Value);
 
         foreach (ulong slot in slots)
-            _delta.Append(new WorldDelta(0, DeltaKind.EntityRemoved, slot));
+            _delta.Append(CreatureRecordCodec.Forget(new EntityId(slot)));
 
+        foreach (Resident r in _all) r.Written = false;
         Invalidate();
         return slots.Count == 0
-            ? "no creature death records"
-            : $"cleared {slots.Count} death record(s); those slots repopulate at generation 0";
+            ? "no creature records"
+            : $"forgot {slots.Count} record(s); every slot is back to generation 0 at its home";
     }
 }
