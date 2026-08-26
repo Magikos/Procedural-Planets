@@ -34,10 +34,31 @@ re-runs the biome field once a second forever.** Measured plan cost 0.05–0.06 
 so no per-tick creation cap was needed. Verified in play: Forest → 5 deer + 1 rabbit; Grassland → 6 rabbits,
 nearest deer past 150 m.
 
-**Next up, in order (chosen by capability forced, not by animal):** deer + flee → the §15 FSM trigger, which
-is the same work as the `EntityMoved` demotion record and persist-behaviour-as-an-id. Then boar + loot on
-death (reuses `HarvestYield`/`InventoryService`). Wolf, troll and bosses are blocked on combat — there is no
-health or damage anywhere in the tree. Bosses additionally need a FIXED-LOCATION spawner; today every
+**Threat + flee SHIPPED (`6623c34`), FSM redesigned (`3220878`), persistence closed (`381e353`).**
+
+- **Presence is not threat.** Observers are POSITIONS (what is simulated); threats are ENTITIES with a faction
+  (what is feared). That is why the debug freecam frightens nothing — it has no identity, so it cannot enter
+  the threat list. **Invariant: never let the observer list grow an identity.**
+- Faction relations are a **directed** table; `Wildlife→Wildlife = Neutral` is the single cell that makes deer
+  ignore deer/rabbits/birds. The friendly-to-animals spell is a **disguise on the caster** (seen-as Wildlife,
+  with an expiry), never a change to species data.
+- **FSM keys states by an integer the state owns, not by `Type`** — so the dispatch key IS the persisted
+  behaviour id and there is no mapping table to drift. Divergences from the harvest: a state acts on the frame
+  it is entered, no block-timeout watchdog (that was the `Time.deltaTime` read), construction throws on
+  duplicate ids.
+- **One creature record per slot.** A death and a displacement share a key AND a delta space, so a
+  displacement for the NEXT occupant would overwrite a lapsed death and reset the generation. **Every record
+  carries the generation.** `CreatureRecordPolicy` keeps §5 (calm animal = zero bytes) and §6 (drifted home =
+  record dropped) true; a moved-on generation is the one thing that keeps a record alive with nothing to say.
+
+**OWED: play-verification of the FSM redesign and of the record plumbing.** Blocked on a workflow trap —
+**the Unity editor throttles play mode to ~1/20 speed whenever it loses focus** (8 s of play time per 170 s
+wall clock), so a planet generation takes about an hour unattended. `Application.runInBackground = true` only
+helps while focused.
+
+**Next, by capability forced (not by animal):** boar + loot on death (reuses `HarvestYield`/`InventoryService`;
+turns `creature.kill` into a gameplay verb). Wolf, troll and bosses are blocked on **combat** — no health or
+damage exists anywhere in the tree. Bosses additionally need a **fixed-location spawner**; today every
 territory gets N of every species, so `PerTerritory 1` + never-expire has no way to say "this one place".
 Fish and birds need a non-grounded driver.
 
