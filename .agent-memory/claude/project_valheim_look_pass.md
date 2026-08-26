@@ -135,3 +135,31 @@ badly: it removed only 40% of the horizon cloud where the authored distances rem
 - **"messages=0" right after `ImportAsset` is NOT proof a shader compiles.** Variants compile on use: this
   reported clean, then failed with `undeclared identifier 'Luminance'` (a URP `Color.hlsl` function
   Cloud.shader does not include). Only the Unity console showed it. Check the console, not the import.
+
+### CORRECTION 2026-08-26 — the above entry's conclusion was WRONG, reverted at `7f29261`
+
+Bryan: *"now I can't see the clouds very far away and clouds need to be seen very very far. So that was
+not the correct fix."* He is right. **Do not tie cloud aerial fade to the terrain distances.**
+
+**The premise was wrong, not the code.** I argued a cloud and a hill at the same distance should fade
+equally, and called the two curves a duplicated authority. **Distance is not the shared quantity — air mass
+is.** A ray to a hill runs its whole length through the dense surface layer; a ray to a cloud climbs out of
+that layer into thin air almost at once. Same metres, far less extinction. **Clouds outliving terrain by a
+long way is correct**, and on a 5 km planet whose horizon is a few hundred metres it is the only way clouds
+can read as the distant, high things they are. `AerialReferenceDistance = 2500` with the 0.7 default was
+doing a real job; it is restored exactly.
+
+This also flips the earlier "REJECTED" note: the `ViewTransmittance` / optical-depth route was measuring
+the *right* quantity (air mass). I rejected it for "under-hazing" — but under-hazing clouds relative to
+terrain is the physically correct answer, so my rejection test was aimed at the wrong target. If this is
+ever revisited, that is the branch to take, not the distance pair.
+
+**The sky-coloured silhouettes are NOT a defect.** A dark object at the horizon washes to sky colour while
+the cloud behind it, higher and in thinner air, does not — so a haze-coloured tree cut out of a bright
+cloud is what correct aerial perspective looks like. What genuinely reads wrong in the capture is that the
+silhouettes are **speckled/dithered rather than clean shapes**, which is impostor aliasing in the scatter
+LOD path — see [[project_scatter_lod_impostor]] — and not an atmosphere or cloud question at all.
+
+**Method note:** I diagnosed a real inconsistency (two curves), proposed a unification, measured it against
+*terrain* as the reference, and got a confident wrong answer because the reference itself was the
+assumption under test. Measuring hard does not help when the thing being measured against is the error.
