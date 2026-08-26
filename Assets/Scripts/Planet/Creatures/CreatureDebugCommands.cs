@@ -11,6 +11,20 @@ using UnityEngine;
 [CommandPrefix("creature")]
 public static class CreatureDebugCommands
 {
+    [ConsoleCommand("vision", "Predator view: dull the world to blue and ring every creature in a hot colour, through terrain.",
+        MonoTargetType.Static)]
+    public static string VisionCmd(bool on = true)
+    {
+        if (!ServiceLocator.TryGet(out CreatureView view))
+            return "creature.vision: no creature view (generate a planet first)";
+
+        view.PredatorVision.Enabled = on;
+        return on
+            ? "predator view ON. Markers hold a constant screen size and ignore depth, so a rabbit behind a " +
+              "hill at 300 m is still a dot. `creature.vision false` to turn it off."
+            : "predator view off";
+    }
+
     [ConsoleCommand("goto", "Move the camera to the nearest creature, so 'I cannot find one' has an answer.",
         MonoTargetType.Static)]
     public static string GotoCmd()

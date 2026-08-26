@@ -19,6 +19,9 @@ public sealed class CreatureView : System.IDisposable
     readonly Dictionary<int, Material> _materials = new();
     readonly List<ulong> _stale = new();
 
+    /// <summary>The find-the-wildlife debug view. Off costs nothing: it is not even hooked to the pipeline.</summary>
+    public CreaturePredatorVision PredatorVision { get; } = new();
+
     bool _visible = true;
 
     public CreatureView(Transform parent) => _parent = parent;
@@ -37,6 +40,7 @@ public sealed class CreatureView : System.IDisposable
 
     public void Sync(IReadOnlyList<CreatureResidencyService.LiveCreature> live, CreatureLibraryDto library)
     {
+        PredatorVision.Sync(live, library);
         if (_parent == null) return;
 
         for (int i = 0; i < live.Count; i++)
@@ -108,7 +112,12 @@ public sealed class CreatureView : System.IDisposable
         return material;
     }
 
-    public void Dispose()
+    /// <summary>
+    /// Drop this world's bodies. Called on regeneration, where <see cref="Dispose"/> would be wrong: it would
+    /// silently switch the predator view off, and a debug mode that turns itself off when you regenerate is
+    /// worse than one that does not exist.
+    /// </summary>
+    public void Clear()
     {
         foreach (KeyValuePair<ulong, Transform> kv in _bodies)
             if (kv.Value != null) Object.Destroy(kv.Value.gameObject);
@@ -116,5 +125,11 @@ public sealed class CreatureView : System.IDisposable
         foreach (KeyValuePair<int, Material> kv in _materials)
             if (kv.Value != null) Object.Destroy(kv.Value);
         _materials.Clear();
+    }
+
+    public void Dispose()
+    {
+        Clear();
+        PredatorVision.Dispose();
     }
 }

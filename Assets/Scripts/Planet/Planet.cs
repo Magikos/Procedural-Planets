@@ -108,6 +108,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         context.Register<IScatterDebugReport>(_scatterDebug);
         context.Register(_creatures);
         context.Register(_threats);
+        context.Register(_creatureView);
 
         // Harvest interactor (POC): picker + verb wired to this world's scatter cache, harvest store, and
         // inventory. The ScatterLibraryDto is NOT registered yet at world-service registration (it registers
@@ -534,7 +535,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             // Creature residency reads the same log the harvest store does, so it configures after it opens.
             // The view is dropped with it: DestroyChildren already took its bodies, and a new world's
             // creatures are different animals in different places.
-            _creatureView.Dispose();
+            _creatureView.Clear();
             // Same IBiomeProvider the terrain bake and scatter placement read, so a creature cannot disagree
             // with the ground about which biome it is standing in.
             _creatures.Configure(Seed, _deltaLog, _colorGenerator, _threats, planet.PlanetRadius, seaLevelRadius);
