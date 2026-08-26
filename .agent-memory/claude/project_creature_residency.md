@@ -1,6 +1,6 @@
 ---
 name: project-creature-residency
-description: Creature residency spine (first slice, 2026-08-26) — what it is, the two traps it hit, and what was deliberately left out.
+description: Creature residency spine and hunting (2026-08-26) - what is built, the traps it hit, and why a player cannot catch an animal on foot.
 metadata:
   type: project
 ---
@@ -51,16 +51,40 @@ nearest deer past 150 m.
   carries the generation.** `CreatureRecordPolicy` keeps §5 (calm animal = zero bytes) and §6 (drifted home =
   record dropped) true; a moved-on generation is the one thing that keeps a record alive with nothing to say.
 
+
+**Hunting SHIPPED (`644215f`), predator debug view SHIPPED (`9639163` + `e50bde6`).**
+
+- A creature is a third harvest target beside a tree and a stump. `HarvestService.TryStrike` grants and
+  announces; `CreatureResidencyService.Strike` owns health and routes death through the untouched `Kill`.
+  Reused, not written: `ScatterPickMath.NearestAlongRay`, the `grantItem` delegate, `FleeState`.
+- **Health is LIVE-only** — a wounded animal that leaves the bubble comes back whole. Deliberate: a wound byte
+  on every deer breaks the zero-bytes-for-a-calm-animal promise. `ponytail:` at the site.
+- **Being hit alarms an animal for 8 s regardless of the faction table.** Being attacked is an event, not a
+  relation, and without it a friendly-spelled player can club a deer that never reacts.
+- **TRAP — do not raise `ScatterHarvestedEvent` for anything that is not scatter.** `TreeFallSystem` and
+  `ChopFxSystem` subscribe to it and will topple a tree and burst leaves wherever it says. Creatures got their
+  own `CreatureStruckEvent`.
+- **A player CANNOT catch an animal on foot, and that is not a bug.** `PlanetCharacterController` reports
+  `ThreatRegistry.LocalPlayer` every tick; a deer notices at 45 m and flees at 2.4x walk. Melee is not the
+  hunting verb — `creature.friendly <seconds>` is how the loop is play-tested until a ranged attack exists.
+  **Do not "fix" it by lowering `AwarenessMeters`**; that trades a working flee for a working chase.
+
+**TRAP — overlay draw order.** The console, the loading bar and the predator view all draw from
+`RenderPipelineManager.endCameraRendering`, and delegate order is SUBSCRIPTION order. The console subscribes
+at boot, so anything switched on later drew over it (the predator tint made the console unreadable). Fixed
+with `IConsoleService.RaiseToTop()`, called when the predator view hooks. Any new fullscreen overlay must do
+the same.
+
 **OWED: play-verification of the FSM redesign and of the record plumbing.** Blocked on a workflow trap —
 **the Unity editor throttles play mode to ~1/20 speed whenever it loses focus** (8 s of play time per 170 s
 wall clock), so a planet generation takes about an hour unattended. `Application.runInBackground = true` only
 helps while focused.
 
-**Next, by capability forced (not by animal):** boar + loot on death (reuses `HarvestYield`/`InventoryService`;
-turns `creature.kill` into a gameplay verb). Wolf, troll and bosses are blocked on **combat** — no health or
-damage exists anywhere in the tree. Bosses additionally need a **fixed-location spawner**; today every
-territory gets N of every species, so `PerTerritory 1` + never-expire has no way to say "this one place".
-Fish and birds need a non-grounded driver.
+**Next, by capability forced (not by animal):** loot on death is DONE, so a boar is now a data row rather than
+work. A wolf is blocked on the OTHER half of combat — a creature that damages a PLAYER. Health and damage now
+exist for creatures only (`Resident.Health`, `HarvestService.TryStrike`); the player has neither. Bosses
+additionally need a **fixed-location spawner**; today every territory gets N of every species, so
+`PerTerritory 1` + never-expire has no way to say "this one place". Fish and birds need a non-grounded driver.
 
 §13 answers recorded in the doc: lattice stays as the territory unit but the home draw inside a cell should
 become a suitability draw (a uniform lattice went empty for 729 m near an unsuitable band); home range ≈ a
