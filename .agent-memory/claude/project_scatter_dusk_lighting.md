@@ -84,3 +84,34 @@ shaders now use the linear night curve and a 0.6 shaded floor, matching terrain 
 `FoliageLit`. The impostor tier had been 0.85 against the mesh's 0.6 — a 42% step on
 a prop's dark side across the mesh→impostor handoff, which is the real mechanism
 behind "rocks change shade as you approach".
+
+## 2026-08-26: cause #4 — UNDERWATER black specks are holes in the WATER, not dark props
+
+Fourth stage-specific cause, and the only one where the props are innocent. Fixed `ea422e6`.
+
+`caustics.light` carries `sunFacing`, from a normal reconstructed with `ddx/ddy` of world position
+(`WaterVolume.ReceiverNormalFromDepth`). Correct for light landing ON a surface — but it also drove
+`VolumeBodyLight`, the glow of the water column BETWEEN eye and receiver, which is lit regardless of what
+the ray ends on. On a coral stalk a few pixels wide the derivatives straddle the silhouette, the normal is
+noise, `sunFacing` collapses to 0, **and the ocean's own light went dark in the shape of the prop.**
+
+Fix: `VolumeBodyLight` blends toward a facing-free `bodyLight` (floor `VOLUME_BODY_FACING_FLOOR` 0.45, a
+visual constant for Bryan). **Assign `bodyLight` BEFORE the `light <= 0.0001` early-out** — a collapsed
+facing term is exactly what triggers it, so assigning after leaves it zero on every buggy pixel. Removing
+facing outright kills the specks but **flattens the seabed**, because that same term carries the bed's
+shading. Darkest pixel 0.035 → 0.180; pixels below luma 0.15 went 2.87% → 0.00%.
+
+**Ruled out by measurement first — do not re-chase:** grass (`grass.enabled false` gave an identical dark
+count), sun shadows (identical with shadows off, and the sun was 37°, not grazing), render-queue order
+(every scatter material is queue **2000**, drawn before the volume composite at
+`BeforeRenderingTransparents`), a bad impostor bake (`coral-Deep` atlas mean luma **0.414**, healthy), and
+`caustics.mask` (0.996, nothing below 0.2 — the volume reached those pixels all along).
+
+Also corrected: **no prop shader mentions water at all.** `Scatter/VertexColorLit`, `Scatter/FoliageLit`
+and `Scatter/Impostor` have zero underwater references, so the older claim that "FoliageLit receives the
+underwater fog" is FALSE — props depend entirely on the full-screen volume composite.
+
+**METHOD LESSON — the aggregate lied and the image told the truth.** The `VolumeLight` debug reported
+`sunLight < 0.2` on only **0.78%** of pixels while the specks covered **2.9%**, which pointed away from the
+real cause and bought a wrong fix. Viewing that same debug channel as a PICTURE showed the props as exact
+black holes in it. **On thin features, read debug channels as images; a frame-wide statistic buries them.**
