@@ -101,3 +101,37 @@ the seven perf files and regenerating.
 
 Related: [[project_tree_generator]], [[reference_unity_mcp]], [[project_scatter_clumping_direction]],
 [[project_planet_look_dev]].
+
+## 2026-08-26: clouds had their OWN aerial distances, and it showed as sky-coloured tree holes
+
+Bryan: *"So the silhouettes are the colour of the sky?"* They were — measured (0.258, 0.534, 0.548)
+against clear sky (0.242, 0.522, 0.489). Fixed `afbbe21`.
+
+**The trees were correct and invisible; the clouds were wrong.** Aerial perspective erases anything at
+that range, so distant trees genuinely vanish — but they still write depth, so they occluded the clouds
+behind them, and the clouds were still bright. The only evidence a tree existed was a tree-shaped hole
+full of sky.
+
+Clouds ran their own fade, `exp(-distance * density)`, authored as **70% hazed at 2500 m**. This planet's
+radius is ~5 km, so from +30 m the horizon is ~**550 m** and the cloud base is met at ~**1764 m**, where
+that curve had spent only **57%** — while the atmosphere had already taken terrain to nothing. Two
+independently authored "how far can you see" numbers drifting apart; the drift was the artifact.
+
+Fix: the cloud fade now reads **`_TerrainAerialPerspectiveDistances`** (110 m / 1250 m — the pair from the
+Valheim pass above), so a cloud fades exactly as a hill at the same distance does. The cloud-side
+reference distance is **deleted, not retuned** — retuning leaves two numbers to drift again.
+`cloud.aerial-fade` survives as a 0-1 scale on that curve, default **1.0** (was 0.7 against the old curve,
+where it meant something else). Horizon cream pixels 26538 → 3571; brightest 0.833 → 0.722.
+
+**REJECTED, do not retry: driving it from the atmosphere's actual transmittance.** I built a shared
+`ViewTransmittance` on the `_BakedOpticalDepth` LUT — the more principled quantity, and the *wrong* one.
+Perceived haze here is dominated by **in-scattering, not extinction**, so `1 - transmittance` under-hazes
+badly: it removed only 40% of the horizon cloud where the authored distances remove 87%. Reverted.
+
+**Two tooling traps, both cost a round:**
+- **`cloud.aerial-fade` looked dead.** The setter only marks `_staticPropertiesDirty`; the controller
+  publishes on its next `Update`. A console set followed by `cam.Render()` **in the same call** renders the
+  old value — identical numbers across a whole sweep. Same family as the `_SunParams` one-frame lag.
+- **"messages=0" right after `ImportAsset` is NOT proof a shader compiles.** Variants compile on use: this
+  reported clean, then failed with `undeclared identifier 'Luminance'` (a URP `Color.hlsl` function
+  Cloud.shader does not include). Only the Unity console showed it. Check the console, not the import.
