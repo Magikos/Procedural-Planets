@@ -52,7 +52,11 @@ float _CloudPowderStrength;
 float4 _CloudMultiScatterParams;
 float4 _CloudAmbientSky;
 float4 _CloudAmbientGround;
-float _CloudAerialDensity;
+// 0-1 scale on the atmosphere's own aerial-perspective curve below, not a per-metre density.
+float _CloudAerialStrength;
+// The atmosphere's authored "clear until x, fully atmospheric by y" pair, published by
+// AtmosphereController and used here so clouds and terrain fade on ONE set of distances.
+float2 _TerrainAerialPerspectiveDistances;
 float4 _CloudBacklitParams;
 float4 _CloudSilverLiningParams;
 float4 _CloudRainShaftParams; // x=strength (0=off), y=length metres below cloud base
@@ -535,7 +539,19 @@ ENDHLSL
                 // Aerial perspective: clouds render after the atmosphere, so sceneColor already
                 // holds the atmosphere-lit sky behind this pixel. Fade the cloud toward it with
                 // view distance so distant clouds haze into the sky instead of pasting on it.
-                float aerial = 1.0 - exp(-cloudStartDistance * _CloudAerialDensity);
+                // Faded on the ATMOSPHERE's own distances, not a second curve of the cloud's own.
+                //
+                // This used to be exp(-distance * density) with density authored against a 2500 m
+                // reference. This planet's horizon is a few hundred metres, so clouds were barely half
+                // hazed at a distance where terrain had already gone completely. Trees on the far shore
+                // then appeared ONLY as sky-coloured holes punched through cloud that had no business
+                // still being bright: the tree was correctly erased by haze, the cloud behind it was not,
+                // and the hole was the only evidence the tree existed. Two "how far can you see" numbers,
+                // drifting apart. Now there is one, and it is the pair Bryan tunes for terrain.
+                float aerialClearEnd = max(_TerrainAerialPerspectiveDistances.x, 0.0);
+                float aerialFullBy = max(_TerrainAerialPerspectiveDistances.y, aerialClearEnd + 1.0);
+                float aerial = saturate(
+                    smoothstep(aerialClearEnd, aerialFullBy, cloudStartDistance) * _CloudAerialStrength);
                 result = lerp(result, sceneColor.rgb, aerial);
 
                 // Screen-space cloud opacity for the god-ray streak pass to occlude on (distant

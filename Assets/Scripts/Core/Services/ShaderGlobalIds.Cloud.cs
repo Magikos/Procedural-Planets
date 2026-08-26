@@ -27,7 +27,7 @@ public static partial class ShaderGlobalIds
     public const string CloudMultiScatterParams = "_CloudMultiScatterParams";
     public const string CloudAmbientSky = "_CloudAmbientSky";
     public const string CloudAmbientGround = "_CloudAmbientGround";
-    public const string CloudAerialDensity = "_CloudAerialDensity";
+    public const string CloudAerialStrength = "_CloudAerialStrength";
     public const string CloudBacklitParams = "_CloudBacklitParams";
     public const string GodRayStreakParams = "_GodRayStreakParams";
     public const string GodRayStreakRadialFalloff = "_GodRayStreakRadialFalloff";
