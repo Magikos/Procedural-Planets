@@ -432,7 +432,7 @@ public sealed class CreatureResidencyService : IDisposable
         // itself. What it may react to comes from the THREAT registry, which carries identities; the observer
         // positions that decide what is simulated never appear here, which is why a debug camera is invisible
         // to wildlife without a special case for cameras.
-        var senses = new CreatureContext
+        var senses = new CreatureSenses
         {
             Position = r.Position,
             Up = up,

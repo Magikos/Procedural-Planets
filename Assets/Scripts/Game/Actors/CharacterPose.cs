@@ -49,6 +49,20 @@ public static class CharacterMath
         return true;
     }
 
+    /// <summary>
+    /// Signed degrees from <paramref name="forward"/> to the direction of <paramref name="target"/>, both
+    /// flattened into the tangent plane of <paramref name="up"/>. Positive turns toward the actor's right.
+    /// Returns 0 when either direction is degenerate, which reads as "already facing it" and is the safe
+    /// answer for a caller steering by this.
+    /// </summary>
+    public static float TangentBearing(Vector3 from, Vector3 forward, Vector3 up, Vector3 target)
+    {
+        if (!TryProjectOntoTangent(target - from, up, out Vector3 toTarget) ||
+            !TryProjectOntoTangent(forward, up, out Vector3 face))
+            return 0f;
+        return Vector3.SignedAngle(face, toTarget, up);
+    }
+
     /// <summary>Any unit vector in the tangent plane of <paramref name="up"/> — the degenerate-forward fallback.</summary>
     public static Vector3 ArbitraryTangent(Vector3 up)
     {

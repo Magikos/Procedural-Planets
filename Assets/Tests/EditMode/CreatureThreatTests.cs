@@ -214,7 +214,7 @@ namespace ProceduralPlanets.Tests
         public void AResumedFlee_EndsItselfOnceNothingIsChasing()
         {
             var brain = new CreatureBrain(1234, Deer, CreatureBehaviour.Flee);
-            brain.Observe(new CreatureContext
+            brain.Observe(new CreatureSenses
             {
                 Position = Vector3.zero,
                 Up = Vector3.up,
@@ -233,7 +233,7 @@ namespace ProceduralPlanets.Tests
         public void AThreatOverridesWhateverTheAnimalWasDoing()
         {
             var brain = new CreatureBrain(1234, Deer, CreatureBehaviour.Wander);
-            brain.Observe(new CreatureContext
+            brain.Observe(new CreatureSenses
             {
                 Position = Vector3.zero,
                 Up = Vector3.up,
