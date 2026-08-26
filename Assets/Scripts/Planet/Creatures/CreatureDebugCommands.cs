@@ -1,0 +1,35 @@
+using UnityEngine;
+
+/// <summary>
+/// The `creature.*` commands that need a camera, kept out of <see cref="CreatureResidencyService"/> because
+/// that is authority code and may not touch one. The service answers WHERE to stand; this moves the view.
+/// </summary>
+/// <remarks>
+/// Written after "I flew around Grassland and never saw a creature" turned out to be unanswerable from the
+/// console: the residency was working and the animals were there, but nothing could take you to one.
+/// </remarks>
+[CommandPrefix("creature")]
+public static class CreatureDebugCommands
+{
+    [ConsoleCommand("goto", "Move the camera to the nearest creature, so 'I cannot find one' has an answer.",
+        MonoTargetType.Static)]
+    public static string GotoCmd()
+    {
+        Camera cam = Camera.main;
+        if (cam == null) return "creature.goto: no main camera";
+        if (!ServiceLocator.TryGet(out CreatureResidencyService creatures))
+            return "creature.goto: no creature residency (generate a planet first)";
+
+        if (!creatures.TryGetViewpointOfNearest(out Vector3 viewpoint, out Vector3 lookAt, out string described))
+            return "creature.goto: nothing in range. `creature.status` lists each species' biomes - one whose " +
+                   "list does not include the ground you are standing on has nothing here to find.";
+
+        if (!ServiceLocator.TryGet(out IPlanet planet) || planet.Transform == null)
+            return "creature.goto: no planet";
+
+        Vector3 up = (lookAt - planet.Transform.position).normalized;
+        cam.transform.position = viewpoint;
+        cam.transform.rotation = Quaternion.LookRotation((lookAt - viewpoint).normalized, up);
+        return "creature.goto: " + described;
+    }
+}

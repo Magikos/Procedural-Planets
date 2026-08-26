@@ -239,7 +239,12 @@ public sealed class CreatureResidencyService : IDisposable
         for (int i = 0; i < _all.Count; i++)
         {
             Resident r = _all[i];
-            float distance = Vector3.Distance(observerWorldPos, r.Position);
+
+            // Distance ALONG THE SURFACE, not through the air. The planner already collects territories by
+            // direction from the planet centre, so measuring promotion straight-line disagreed with it: an
+            // observer 300 m up is a full bubble radius from a creature directly beneath them, and nothing
+            // within the planned territories ever promoted. Flying over a herd showed an empty world.
+            float distance = CreatureTerritory.SurfaceDistance(_center, r.Position, observerWorldPos);
 
             if (!r.IsLive && distance <= bubble)
                 Promote(r, now);
@@ -570,17 +575,23 @@ public sealed class CreatureResidencyService : IDisposable
         return count;
     }
 
+    // Surface distance, matching what the bubble measures - otherwise the console reports a creature as 350 m
+    // away while it is live inside a 300 m bubble, which reads as a bug in the residency rather than in the
+    // readout.
+    float DistanceFromObserver(Resident r) =>
+        CreatureTerritory.SurfaceDistance(_center, r.Position, _observerPos);
+
     Resident Nearest(Vector3 from, bool liveOnly)
     {
         Resident best = null;
-        float bestSq = float.MaxValue;
+        float bestDistance = float.MaxValue;
         for (int i = 0; i < _all.Count; i++)
         {
             Resident r = _all[i];
             if (liveOnly && !r.IsLive) continue;
-            float sq = (r.Position - from).sqrMagnitude;
-            if (sq >= bestSq) continue;
-            bestSq = sq;
+            float d = CreatureTerritory.SurfaceDistance(_center, r.Position, from);
+            if (d >= bestDistance) continue;
+            bestDistance = d;
             best = r;
         }
         return best;
@@ -628,7 +639,7 @@ public sealed class CreatureResidencyService : IDisposable
 
         Vector3 from = _observerPos;
         var sorted = new List<Resident>(_all);
-        sorted.Sort((a, b) => (a.Position - from).sqrMagnitude.CompareTo((b.Position - from).sqrMagnitude));
+        sorted.Sort((a, b) => DistanceFromObserver(a).CompareTo(DistanceFromObserver(b)));
 
         var sb = new System.Text.StringBuilder();
         sb.Append(_all.Count).Append(" resident(s), ").Append(_live.Count).Append(" live:");
@@ -638,11 +649,40 @@ public sealed class CreatureResidencyService : IDisposable
             sb.Append('\n').Append(CreatureKey.Describe(r.Id))
               .Append(' ').Append(_library.At(r.SpeciesIndex)?.DisplayName ?? "?")
               .Append(r.IsLive ? " live " : " record ").Append(r.Behaviour)
-              .Append(" d=").Append(Vector3.Distance(from, r.Position).ToString("F0")).Append('m')
+              .Append(" d=").Append(DistanceFromObserver(r).ToString("F0")).Append('m')
               .Append(" fromHome=")
               .Append(CreatureTerritory.SurfaceDistance(_center, r.Position, r.Home).ToString("F0")).Append('m');
         }
         return sb.ToString();
+    }
+
+    /// <summary>Where to stand to look at a creature: just above the ground, a few metres to its side.</summary>
+    /// <remarks>
+    /// Exists because "I flew around and never saw one" is a question the console could not answer. It gives
+    /// back a POSITION rather than moving anything, so the service still touches no camera - the caller does
+    /// the moving.
+    /// </remarks>
+    public bool TryGetViewpointOfNearest(out Vector3 viewpoint, out Vector3 lookAt, out string described)
+    {
+        viewpoint = default;
+        lookAt = default;
+        described = null;
+        if (!_configured) return false;
+
+        Resident target = Nearest(_observerPos, liveOnly: true) ?? Nearest(_observerPos, liveOnly: false);
+        if (target == null) return false;
+
+        Vector3 up = (target.Position - _center).normalized;
+        Vector3 side = Vector3.Cross(up, target.Forward);
+        if (side.sqrMagnitude < 1e-6f) side = CharacterMath.ArbitraryTangent(up);
+
+        CreatureSpeciesDto species = _library.At(target.SpeciesIndex);
+        lookAt = target.Position + up * (species?.BodyHeightMeters ?? 1f) * 0.5f;
+        viewpoint = target.Position + up * 3f + side.normalized * 6f;
+        described = $"{CreatureKey.Describe(target.Id)} {species?.DisplayName ?? "?"} " +
+                    $"({(target.IsLive ? "live " + target.Behaviour : "a record, too far to be simulated")}), " +
+                    $"{DistanceFromObserver(target):F0} m away";
+        return true;
     }
 
     [ConsoleCommand("kill", "Kill the nearest live creature. It stays dead until its species' respawn expiry lapses.",

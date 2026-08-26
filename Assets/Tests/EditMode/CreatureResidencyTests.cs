@@ -557,6 +557,39 @@ namespace ProceduralPlanets.Tests
         }
 
         [Test]
+        public void AnObserverInTheAir_IsStillNextToWhatIsBeneathIt()
+        {
+            // The bug this pins: promotion used straight-line distance while the planner collected territories
+            // by direction from the planet centre. An observer 300 m up was a full bubble radius from a
+            // creature DIRECTLY BENEATH them, so flying over a herd showed an empty world.
+            Vector3 center = Vector3.zero;
+            const float ground = 5000f;
+            const float bubble = 300f;
+
+            Vector3 creature = new Vector3(0f, 0f, 1f) * ground;
+            Vector3 overhead = creature.normalized * (ground + 400f);   // 400 m up, well past the bubble
+
+            Assert.Greater(Vector3.Distance(overhead, creature), bubble,
+                "straight-line distance alone would reject it, which is exactly what went wrong");
+            Assert.AreEqual(0f, CreatureTerritory.SurfaceDistance(center, creature, overhead), 1f,
+                "along the surface it is directly underfoot, and that is what the bubble must measure");
+        }
+
+        [Test]
+        public void AltitudeDoesNotEatTheBubble()
+        {
+            Vector3 center = Vector3.zero;
+            const float ground = 5000f;
+
+            // 200 m along the surface, seen from 500 m up: still 200 m of ground between them.
+            Vector3 creature = new Vector3(0f, 0f, 1f) * ground;
+            Vector3 observerGround = Quaternion.AngleAxis(200f / ground * Mathf.Rad2Deg, Vector3.up) * creature;
+            Vector3 observerHigh = observerGround.normalized * (ground + 500f);
+
+            Assert.AreEqual(200f, CreatureTerritory.SurfaceDistance(center, creature, observerHigh), 15f);
+        }
+
+        [Test]
         public void Drifting_IsSafeAtHomeAndAtThePlanetCentre()
         {
             Vector3 home = new Vector3(0f, 5000f, 0f);
