@@ -30,6 +30,14 @@ public readonly struct EntityId : IEquatable<EntityId>, IComparable<EntityId>
     /// <summary>The host's tag. Ids under it are authoritative; every other tag is a client's prediction.</summary>
     public const ushort HostOwner = 0;
 
+    /// <summary>
+    /// Reserved for ids DERIVED from the world seed rather than allocated - a wild creature's
+    /// (spawner, slot, generation) address. A derived id must sit in the same key space as a minted one,
+    /// because the delta log's entity records address both; reserving an owner tag is what stops the two
+    /// ever being the same number. No allocator mints under it.
+    /// </summary>
+    public const ushort DerivedOwner = 0xFFFF;
+
     public readonly ulong Value;
 
     public EntityId(ulong value) => Value = value;
@@ -72,7 +80,13 @@ public sealed class EntityIdAllocator
     readonly ushort _owner;
     ulong _nextCounter = 1;
 
-    public EntityIdAllocator(ushort owner = EntityId.HostOwner) => _owner = owner;
+    public EntityIdAllocator(ushort owner = EntityId.HostOwner)
+    {
+        if (owner == EntityId.DerivedOwner)
+            throw new ArgumentOutOfRangeException(nameof(owner), owner,
+                $"owner {EntityId.DerivedOwner:X} is reserved for seed-derived ids and cannot be minted from");
+        _owner = owner;
+    }
 
     public ushort Owner => _owner;
 

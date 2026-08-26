@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd64d094c82dc224caaf1158a88bb1dd, type: 3}
+  m_Name: CreatureLibrary
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::CreatureLibrary
+  Species:
+  - DisplayName: Placeholder Deer
+    PerTerritory: 3
+    HomeRangeMeters: 120
+    WalkSpeedMps: 2.5
+    DriftHomeSpeedMps: 0.8
+    RespawnSeconds: 300
+    MinAltitudeMeters: 2
+    MaxAltitudeMeters: 3000
+    Biomes: 0700000009000000040000000a000000i
+    BodyHeightMeters: 1.7
+    BodyColor: {r: 0.45, g: 0.33, b: 0.22, a: 1}
+  - DisplayName: Placeholder Rabbit
+    PerTerritory: 6
+    HomeRangeMeters: 45
+    WalkSpeedMps: 3.2
+    DriftHomeSpeedMps: 1.2
+    RespawnSeconds: 120
+    MinAltitudeMeters: 2
+    MaxAltitudeMeters: 2200
+    Biomes: 06000000050000000800000003000000i
+    BodyHeightMeters: 0.45
+    BodyColor: {r: 0.62, g: 0.58, b: 0.52, a: 1}
+  ObserverBubbleMeters: 300

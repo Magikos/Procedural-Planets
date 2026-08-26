@@ -1,7 +1,9 @@
 # Creature residency — wildlife that stays where you left it
 
-Status: **design, not started.** Written 2026-08-26 as a cold handoff: the executing session is assumed to
-have no prior context, so every seam it needs is named with a path below.
+Status: **§11 first slice built and verified, 2026-08-26.** The rest is still design. Written as a cold
+handoff: the executing session is assumed to have no prior context, so every seam it needs is named with a
+path below. §11 now carries the evidence for each done-condition; §13 carries the answers watching it run
+produced.
 
 Parent: [the game architecture](2026-08-20-magikos-game-architecture.md). This is the ambient/creature
 layer, sitting on that document's keystone (*world = seed + exception log; promote to GameObject only while
@@ -230,6 +232,49 @@ Definition of done:
 6. Set expiry to never and it stays dead permanently — the boss case, same code path.
 7. EditMode tests for slot/generation resolution and expiry arithmetic. The rest verified in play.
 
+### Built, 2026-08-26
+
+`Assets/Scripts/Planet/Creatures/` — `CreatureKey` (derived identity), `CreatureTerritory` (birth + drift
+home), `CreatureDeathRecord` + `CreatureDeathCodec` (expiry, delta-log encoding), `CreatureResidencyService`
+(the ladder, `creature.*` commands), `CreatureWanderInput` (the brain, an `IInputProvider`), `CreatureView`
+(capsules), `CreatureLibrary` SO + `CreatureLibraryDto`. Wired through `Planet`, which resolves the observer
+POSITION and hands it over — the service itself never sees a camera. Tests in
+`Assets/Tests/EditMode/CreatureResidencyTests.cs`.
+
+Evidence, all at seed 1691104419 on face 5 territory (11,9):
+
+| condition | evidence |
+| --- | --- |
+| 1 derived, deterministic | the bubble-local id set is byte-identical across two independent runs (domain reload + full regeneration): 14 ids, `diff` clean |
+| 2 walks the sphere | capsule grounded and wandering in the forest; `fromHome` advances every tick; no colliders |
+| 3 away and back | 3 km away → live 3→0 with all 91 residents kept; back after ~75 s → the SAME three ids, `fromHome` 21→2, 23→2, 30→14 |
+| 4 stays dead across save/load | `C5/4:11,9#0g0` killed, then stop → recompile → domain reload → regenerate: still `suppressed` from the on-disk log |
+| 5 expiry repopulates a NEW generation | two independent lapses — a 300 s record produced live `#0g1`, a 25 s record produced `#2g1` |
+| 6 never-expire stays dead | `creature.respawn 0` then kill → `suppressed=forever`, still forever after a reload |
+| 7 tests | 182/182 EditMode green (23 new) |
+
+**Follow-up landed 2026-08-26 — biome siting + a second species.** `CreatureSpecies` gained a `Biomes` list
+(empty = any, so a new species stays a one-line addition) and placement now gates on biome as well as the
+signed altitude band, answering §13 question 1 — details there. A second placeholder, `Placeholder Rabbit`,
+exists specifically to prove the gate: it lives in Grassland/Scrub/Steppe/Savanna, biomes the deer refuses,
+so crossing a biome line visibly swaps which animal is around you. Measured at one Forest spot: 5 deer live,
+1 rabbit. At one Grassland spot: 6 rabbits live and the nearest deer pushed out past 150 m. Both remain
+capsules — 1.7 m brown and 0.45 m pale — per Bryan's standing call that placeholder art is fine while
+mechanics are built. 189/189 EditMode tests green.
+
+Two defects were found by running it and fixed: forcing a re-plan also cleared the position the console
+measured distances from (`d=Infinity`, and `creature.kill` finding nothing), and `SecondsUntilRespawn` did
+unix-epoch arithmetic in `float`, which rounds the epoch to the nearest ~128 s so the countdown read as a
+constant. Suppression itself was always long arithmetic and correct. The second now has a test at a real
+timestamp — the original test used `diedAt: 1000`, which is small enough to hide it.
+
+**Deliberately not built, and why** (both marked at the code site): the coarse tier of §4 — the ladder is
+`full` and `record` only, because no §11 condition distinguishes coarse from record and the budget of §8 is
+not in this slice; and the demotion record is in MEMORY only, so a creature left far from home is back home
+after a save/load. That is a maximal fast-forward rather than a lost creature, and it keeps §5's promise that
+an animal which has done nothing notable costs zero bytes. The upgrade is one `EntityMoved` record on
+demotion past a displacement threshold — which wants question 2 below answered first.
+
 ## 12. Not in scope
 
 Real AI behaviour (fleeing, aggro, pack hunting), combat, taming, breeding, animation blending and rig
@@ -238,19 +283,52 @@ creature exists, persists, and can be found again."*
 
 ## 13. Open questions for Bryan
 
-1. **Territory shape** — do spawners sit on a fixed lattice (one per chunk/tile), or are they placed by
-   biome suitability like scatter?
-2. **How far is "home"** — is a home range tens of metres or hundreds?
-3. **Does fast-forward kill?** A creature unobserved for a month: does it ever die of the passage of time,
-   or only from being killed?
-4. **Simultaneous observers** — with 8 players, is the budget global or per-player?
+None of these blocked the first slice. Three are now answered from watching it run; the fourth is not,
+and saying so is more useful than a guess.
 
-None of these block the first slice; all four can be answered from watching it run.
+1. **Territory shape** — **both, at different levels. ANSWERED AND BUILT, 2026-08-26.** The lattice stays as
+   the territory unit (level 4: 16x16 cells per cube face, 1,536 territories, ~490 m across) because the cell
+   address is what makes the id derivable and the save key stable — a suitability field cannot do that job.
+   But a uniform lattice with ONE home draw per slot goes empty wherever that single point fails the gate:
+   standing on a shelf just under sea level, the nearest creature was **729 m away** with every local slot
+   rejected, which a player reads as "this world has no animals" rather than "this patch is unsuitable".
+
+   Built: `CreatureTerritory.HomeCandidate(seeds, slot, attempt)` draws up to `HomeAttempts` (5) points
+   inside the same cell, and the service keeps the first whose ground AND biome the species accepts.
+   Attempt 0 is unchanged from the single-draw version, so a slot's preferred spot did not move — the retry
+   only changes where it settles for. Siting now reads the same `IBiomeProvider` the terrain bake and scatter
+   placement use, so a creature cannot disagree with the ground about which biome it stands in.
+
+   Two things fell out of building it:
+   - A rejection is permanent (suitability is seed-derived), so rejected slots are cached in `_barren`.
+     Without it every unsuitable slot in the bubble re-runs the biome field once a second, forever.
+   - Measured plan cost with the cache: **0.05–0.06 ms for 15 territories** across two species. No spreading
+     over frames is needed, and the "cap new residents per tick" idea was dropped as unnecessary.
+
+2. **How far is "home"** — **roughly a quarter of the territory: 100–150 m.** At 120 m against a 490 m cell,
+   observed `fromHome` ranged 2–65 m in normal wandering and the homing pull reeled creatures back
+   reliably. A territory's three animals stayed distinguishable and did not merge into the neighbouring
+   territory's group, which is what starts to happen as the range approaches half the cell.
+
+3. **Does fast-forward kill?** — **Recommend no, and the slice supports it.** Drifting home at 0.8 m/s
+   already supplies the whole "the world moved on while you were away" feeling: a 75 s absence visibly
+   relocated every creature toward home. Adding a death-by-time term buys no player-visible outcome and
+   reintroduces exactly the population crash/explosion failure §7 rejects. Deaths stay exceptional.
+
+4. **Simultaneous observers** — **unanswered; nothing in the slice exercised it.** `Tick` takes one observer
+   position today. The multi-observer shape is a union of bubbles with a creature's tier decided by its
+   NEAREST observer, which follows from §4 without a new idea — but whether the budget is global or
+   per-player depends on measurements that need more than one player to make, so it stays open.
 
 ## 14. Gotchas that will bite a cold session
 
-- **Re-entering play generates a NEW world (new seed).** Stop → play breaks any before/after pixel or
-  position comparison. Freeze and compare within one session.
+- ~~**Re-entering play generates a NEW world (new seed).**~~ **Measured false for this scene, 2026-08-26.**
+  `SceneBootstrap.WorldSeed` is a serialized field fixed at `12345` (`SceneBootstrap.cs:55`), used unless a
+  `WorldLoadRequest` overrides it (`:79`), so `Planet.Seed` came back as `1691104419` across three separate
+  play sessions with a domain reload between them. That stability is what made the §11 save/load conditions
+  testable at all — a creature death written in one session was still suppressing its slot in the next.
+  The original warning still applies to anything that DOES randomise the seed, and to before/after *pixel*
+  comparisons, where a full regeneration changes far more than the seed.
 - Console setters that mark a dirty flag publish on the controller's **next `Update`** — setting a value and
   rendering in the same call renders the old one.
 - A shader reporting zero messages straight after `AssetDatabase.ImportAsset` is **not** proven; variants
@@ -258,3 +336,72 @@ None of these block the first slice; all four can be answered from watching it r
 - Unity auto-refresh is **off** in this project: saving a `.cs` does not recompile. Play mode blocks domain
   reload.
 - The dirty worktree is normal and sacred. Never discard, stash over, or clean changes you did not make.
+
+---
+
+## 15. Behaviour: the state machine decision (2026-08-26)
+
+Not part of the §11 slice. Recorded now because the constraint in "The load-bearing part" below is free to
+honour today and expensive to retrofit, and because someone will otherwise build behaviour on live objects.
+
+**Decision: harvest `AdaptiveStateMachine<TContext>` from Bryan's State Machine project as the creature
+behaviour backbone, when the second behaviour arrives — not before.**
+
+Source: `C:\Users\Bryan\Source\Repos\Magikorp\State Machine\Assets\Scripts\StateMachine\`. Verified present
+and re-read 2026-08-26: `AdaptiveStateMachine.cs`, `Interfaces/IState.cs`, `CompositeState.cs`,
+`StateTransition.cs`. The wider project is a WIP skeleton whose motor is empty and entirely collider-based —
+**harvest the FSM, not the character code.**
+
+### Why this FSM, and why not something else
+
+Three of its features are why it beats a hand-rolled switch for animals specifically:
+
+- `ResolveTo(from, ctx) => Type` — the target is chosen by context at transition time, so "flee exits back to
+  whatever I was doing" does not require every state to know every other state.
+- `EvaluateExit(ctx) => Type?` — a state ends *itself* ("done eating", "lost the scent") instead of a
+  transition table polling for a condition only that state can see.
+- `CompositeState` — `Alive{Idle, Wander, Flee}` / `Dead` is the natural creature shape, and a pack's
+  `Hunting` composite nests inside it without flattening the whole table.
+
+Not a behaviour tree, not utility AI. BTs earn their keep on deep reactive composition; utility AI on many
+competing drives. Deer, wolves, trolls and a boss need neither, and this FSM is already owned and understood.
+
+### The load-bearing part: behaviour persists as an id, not as a live object
+
+`AdaptiveStateMachine` keeps `_currentState` **inside the machine** (`AdaptiveStateMachine.cs:19`). A machine
+is a live object, and §4 demotion destroys live objects. Build behaviour on the machine alone and a wolf that
+was hunting you is idle when you come back — the §1 red-car problem, one layer up from where this document
+solved it.
+
+So the rule, decided now:
+
+> A creature's behaviour state is persisted as a small id and re-entered on promotion. The FSM instance is a
+> promotion-time artefact, never the source of truth.
+
+This costs nothing to honour. `WorldDelta.State` is already a byte, unused by the death record, and §4 already
+lists "state" in what a demotion writes down. It lands on the **same** work as the `EntityMoved` demotion
+record already marked `ponytail:` in `CreatureResidencyService.Demote` — build the two together, put the
+behaviour id in `State`, and the FSM drops in behind `IInputProvider` with no rework: a
+`CreatureBrain : IInputProvider` owning a machine whose states write an `ActorIntent`. The seam the §11 slice
+already built takes it unchanged.
+
+### Trigger
+
+The second behaviour with a real transition. Flee-from-player is the natural one: the moment behaviour is
+wander/flee/return, hand-rolled branching starts losing. Until then `CreatureWanderInput` is ~60 lines, and an
+FSM wrapped around a single state with zero transitions is the speculative infrastructure this project bans.
+
+### Three things the port must fix — not optional
+
+1. **`Time.deltaTime` inside the machine** (`AdaptiveStateMachine.cs:120`, the block-timeout watchdog).
+   Authority code cannot read static Time: a fast-forward has no frames, and a dedicated server's
+   `Time.deltaTime` does not mean what the caller assumes. `dt` comes from the injected context.
+2. **`Logwin` and `Debug.LogError`** throughout → `ILogger`. Logwin is a plugin this project does not have.
+3. **The states are not stateless.** `.agent-memory` claimed "context injected per-update, states hold no
+   data" and that is **wrong**: `FallingState.Enter` writes `AirControlFactor` onto the *state instance*
+   (`Airborne/FallingState.cs`). Sharing one state set across creatures would cross-contaminate them. Take one
+   machine and one state set per **LIVE** creature — records need no machine, so the count is bounded by the
+   bubble rather than by the lattice — or make "no instance fields on a state" a porting rule and enforce it.
+
+Skipped from that project, unchanged from the earlier harvest: its EventBus, Singleton, Logwin,
+PlayerInputProvider, all physics motor/sensor code, and the empty `ICharacter*Context` interfaces.

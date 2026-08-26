@@ -1,5 +1,9 @@
 # Memory Index
 
+- [Placeholder art while building](feedback_placeholder_art_while_building.md) — Bryan 2026-08-26: *"I am fine with all place holder art/shapes as we build out the mechanics."* **Never gate a mechanic on an art import; build against a primitive and keep the swap to one file.** Placeholder ART yes, placeholder MECHANICS no.
+
+- [Creature residency spine](project_creature_residency.md) — 2026-08-26 §11 slice BUILT+play-verified. Life support owned by OBSERVATION, not the spawner. **Traps: a derived creature key and a minted EntityId share the delta log's entity space (split via `EntityId.DerivedOwner = 0xFFFF`); unix-epoch expiry math in `float` rounds to ~128 s, so an expiry test MUST use a real timestamp.**
+
 - [M0 foundations](project_m0_foundations.md) — 2026-08-25, 5 parallel lanes. **`Magikos.Game` ships with ZERO asmdef references, so "authority touches no camera/input" is now a compile error.** Delta log v1→v2 (scale appended LAST = strict byte-prefix). **Three ledger rows were WRONG: B8 was already struck, B14's "one attribute each" is INERT (Burst direct-call needs the attribute on class AND method), B10 undercounted 29 .bak files.** 146→159 tests.
 
 - [Water shore + horizon rendering](project_water_shore_rendering.md) — 9 fixes. **Lake "blocks" SOLVED: it was the GRASS water-fade, not biomes — 7 attempts in the wrong system.** Found by colour-coded elimination, read-only, no regenerates.
