@@ -12,6 +12,9 @@ public enum CreatureBehaviour : byte
 {
     Wander = 0,
     Flee = 1,
+
+    /// <summary>On the ground and staying there for a while. Only a flier ever chooses it.</summary>
+    Perch = 2,
 }
 
 /// <summary>
@@ -54,6 +57,12 @@ public struct CreatureContext
 
     /// <summary>Multiplier on the species walk speed - fleeing is faster than grazing.</summary>
     public float SpeedScale;
+
+    /// <summary>
+    /// The tick the current state was entered on, written by whichever state cares. Per-CREATURE, which is
+    /// why it lives here: a state instance is shared by every animal running it and may hold nothing.
+    /// </summary>
+    public uint StateEnteredTick;
 }
 
 /// <summary>
@@ -64,7 +73,7 @@ public struct CreatureContext
 public sealed class CreatureBrain : IInputProvider
 {
     // Stateless and shared by every creature: per-actor data lives in the context, never on a state.
-    static readonly IState<CreatureContext>[] States = { new WanderState(), new FleeState() };
+    static readonly IState<CreatureContext>[] States = { new WanderState(), new FleeState(), new PerchState() };
 
     static readonly StateTransition<CreatureContext>[] Transitions =
     {
@@ -76,7 +85,30 @@ public sealed class CreatureBrain : IInputProvider
             Condition = (in CreatureContext c) => c.Senses.HasThreat,
             ResolveTo = (int _, in CreatureContext _) => (int)CreatureBehaviour.Flee,
         },
+
+        // Only a flier ever lands, and only from an unbothered wander. Everything on the ground is already
+        // where perching would put it, so the condition tests the one thing that makes a species a flier.
+        new()
+        {
+            From = (int)CreatureBehaviour.Wander,
+            Condition = WantsToLand,
+            ResolveTo = (int _, in CreatureContext _) => (int)CreatureBehaviour.Perch,
+        },
     };
+
+    /// <summary>How often a flier reconsiders landing, in 50 Hz ticks, and how likely it is each time.</summary>
+    const uint PerchDecisionTicks = 250;
+    const float PerchChance = 0.35f;
+
+    static bool WantsToLand(in CreatureContext c)
+    {
+        if ((c.Senses.Species?.CruiseAltitudeMeters ?? 0f) <= 0f) return false;
+
+        // One draw per decision window rather than per tick, so the same bird makes the same decision in the
+        // same order whatever the frame rate - the same rule the wander heading is drawn under.
+        uint bucket = c.Senses.Tick / PerchDecisionTicks;
+        return ScatterHash.To01(ScatterHash.Mix(c.Seed ^ (bucket * 0x7feb352du))) < PerchChance;
+    }
 
     readonly AdaptiveStateMachine<CreatureContext> _machine;
     CreatureContext _context;
@@ -183,5 +215,40 @@ sealed class FleeState : IState<CreatureContext>
         c.TurnDegreesPerSecond = Mathf.Clamp(away, -TurnDegreesPerSecond, TurnDegreesPerSecond);
         c.Throttle = 1f;
         c.SpeedScale = PanicSpeedScale;
+    }
+}
+
+/// <summary>
+/// Down on the ground, still, for a while. What makes a bird read as a bird rather than as a dot holding an
+/// altitude: it comes down, sits, and goes back up.
+/// </summary>
+/// <remarks>
+/// The state itself only asks for stillness. The DESCENT is the host's, because altitude is a property of how
+/// the creature is grounded rather than of what it intends - which is the same split that let a flier exist at
+/// all without a second driver.
+/// </remarks>
+sealed class PerchState : IState<CreatureContext>
+{
+    /// <summary>Ticks on the ground before it takes off again. Longer than a decision window, so a bird that
+    /// has just taken off does not immediately land again on the same draw.</summary>
+    const uint DwellTicks = 600;
+
+    public int Id => (int)CreatureBehaviour.Perch;
+
+    // The one piece of per-creature data any state keeps, and it lives on the CONTEXT rather than here: one
+    // instance of this class is shared by every bird in the world.
+    public void Enter(ref CreatureContext c) => c.StateEnteredTick = c.Senses.Tick;
+
+    public void Exit(ref CreatureContext c) { }
+
+    /// <summary>Unsigned subtraction on purpose: the tick counter wraps, and the difference still holds.</summary>
+    public int EvaluateExit(in CreatureContext c) =>
+        c.Senses.Tick - c.StateEnteredTick >= DwellTicks ? (int)CreatureBehaviour.Wander : StateId.None;
+
+    public void Update(ref CreatureContext c)
+    {
+        c.TurnDegreesPerSecond = 0f;
+        c.Throttle = 0f;
+        c.SpeedScale = 0f;
     }
 }

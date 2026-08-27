@@ -62,6 +62,7 @@ public sealed class CreatureResidencyService : IDisposable
         public CreatureBehaviour Behaviour;
 
         public SurfaceCharacterController Driver;   // non-null only while simulated
+        public FlightGrounding Flight;              // non-null only for a flier, and only while simulated
         public CreatureBrain Brain;                 // rebuilt from Behaviour at promotion
         public uint Tick;
 
@@ -87,6 +88,9 @@ public sealed class CreatureResidencyService : IDisposable
     // still repopulates its slot without waiting for you to walk.
     const float PlanIntervalSeconds = 1f;
     const float PlanMoveMeters = 40f;          // the same travel gate ScatterTileCache re-plans on
+
+    // Metres per second a flier changes altitude by. Slow enough to read as a descent rather than a drop.
+    const float ClimbSpeedMps = 3.5f;
 
     // Seconds a struck animal treats its attacker as a threat. Long enough to clear the awareness radius at
     // panic speed, short enough that it goes back to grazing rather than running forever.
@@ -430,12 +434,26 @@ public sealed class CreatureResidencyService : IDisposable
             forward = CharacterMath.ArbitraryTangent(up);
         r.Forward = forward;
 
-        if (!_grounding.TryGround(r.Position, -up, FootOffset(species), out GroundResult ground))
+        // A flier is grounded through a wrapper that adds its altitude. Nothing below this line knows the
+        // difference: the motor holds a body above whatever surface it is told about, and for a bird that
+        // surface is simply higher up.
+        IGroundingProvider grounding = _grounding;
+        r.Flight = null;
+        if (species.CruiseAltitudeMeters > 0f)
+        {
+            r.Flight = new FlightGrounding(_grounding)
+            {
+                AltitudeMeters = r.Behaviour == CreatureBehaviour.Perch ? 0f : species.CruiseAltitudeMeters,
+            };
+            grounding = r.Flight;
+        }
+
+        if (!grounding.TryGround(r.Position, -up, FootOffset(species), out GroundResult ground))
             return;   // no surface under it this frame; stay a record and try again next tick
 
         r.Position = ground.Position;
         r.Driver = new SurfaceCharacterController(
-            _gravity, _grounding, FootOffset(species),
+            _gravity, grounding, FootOffset(species),
             new CharacterPose(r.Position, ground.Normal, forward));
 
         // The brain is rebuilt from the remembered behaviour, never carried across the gap as a live object.
@@ -453,6 +471,7 @@ public sealed class CreatureResidencyService : IDisposable
         r.Behaviour = r.Brain?.Behaviour ?? r.Behaviour;
         r.Driver = null;
         r.Brain = null;
+        r.Flight = null;
         _threats.Withdraw(r.Id);
         Remember(r, now);
     }
@@ -550,6 +569,14 @@ public sealed class CreatureResidencyService : IDisposable
         r.Behaviour = r.Brain.Behaviour;
         r.LastSimulatedUnix = now;
 
+        // Climb and descent are a RATE, not a jump. Setting the altitude straight to its target teleports a
+        // bird nine metres downward on the frame it decides to land.
+        if (r.Flight != null)
+        {
+            float target = r.Behaviour == CreatureBehaviour.Perch ? 0f : species.CruiseAltitudeMeters;
+            r.Flight.AltitudeMeters = Mathf.MoveTowards(r.Flight.AltitudeMeters, target, ClimbSpeedMps * deltaTime);
+        }
+
         // A live animal is something other animals can react to. Costs nothing today (Wildlife ignores
         // Wildlife) and is what a predator will read when one exists.
         _threats.Report(r.Id, r.Position, species.Faction);
@@ -602,14 +629,11 @@ public sealed class CreatureResidencyService : IDisposable
     }
 
     /// <summary>
-    /// How far above the surface the body sits. A flier is the SAME code with a bigger offset - the motor
-    /// already holds a body at a height above the ground, so a bird needed no second grounding provider and
-    /// no second driver.
+    /// How far above the surface the BODY sits. A flier adds its cruise altitude on top through
+    /// <see cref="FlightGrounding"/>, which is where the number can change while it is flying - perching
+    /// lowers it to zero and takes off raises it again, with no second driver and no second motor.
     /// </summary>
-    // ponytail: a bird therefore cruises and never lands. Perching is a third brain state that drops the
-    // offset to zero for a while - the FSM takes it without rework, and nothing here has to change.
-    static float FootOffset(CreatureSpeciesDto species) =>
-        species.BodyHeightMeters * 0.5f + species.CruiseAltitudeMeters;
+    static float FootOffset(CreatureSpeciesDto species) => species.BodyHeightMeters * 0.5f;
 
     // Face-down along the direction it was travelling. Its own forward is already tangent to the surface, so
     // this cannot degenerate the way an arbitrary forward against the surface normal would.
@@ -1096,4 +1120,25 @@ public readonly struct CreatureStrike
 
     public static CreatureStrike NothingLeft(string displayName, Vector3 position) =>
         new(CreatureStrikeOutcome.NothingLeft, 0, displayName, position, default);
+}
+
+/// <summary>
+/// Grounding, raised. Wraps the real provider and adds an altitude the host can change while the creature is
+/// flying, which is the whole of what makes a bird a bird here.
+/// </summary>
+/// <remarks>
+/// One per LIVE flier, because the altitude is per-individual and changes as it lands and takes off. That is
+/// the only reason it is not shared the way the plain grounding provider is.
+/// </remarks>
+public sealed class FlightGrounding : IGroundingProvider
+{
+    readonly IGroundingProvider _surface;
+
+    /// <summary>Metres above the ground the body is held. Zero is perched.</summary>
+    public float AltitudeMeters;
+
+    public FlightGrounding(IGroundingProvider surface) => _surface = surface;
+
+    public bool TryGround(Vector3 worldPos, Vector3 downDir, float footOffset, out GroundResult result) =>
+        _surface.TryGround(worldPos, downDir, footOffset + Mathf.Max(0f, AltitudeMeters), out result);
 }

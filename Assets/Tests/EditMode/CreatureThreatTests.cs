@@ -264,5 +264,116 @@ namespace ProceduralPlanets.Tests
                 "a creature address always sets bit 47 of its counter; this one must not");
             Assert.IsFalse(ThreatRegistry.LocalPlayer.IsNone);
         }
+
+        // --- perching: only fliers, and only for a while --------------------
+
+        static CreatureSpeciesDto Flier => new("Bird", 4, 200f, 6f, 2.5f, 180f, 2f, 4000f, 0.35f,
+            Color.white, System.Array.Empty<BiomeType>(), CreatureFaction.Wildlife, 70f, 1, "Feathers", 2, 9f);
+
+        static CreatureSpeciesDto Walker => new("Deer", 3, 120f, 2.5f, 0.8f, 300f, 2f, 3000f, 1.7f,
+            Color.white, System.Array.Empty<BiomeType>(), CreatureFaction.Wildlife, 45f, 3, "Hide", 2, 0f);
+
+        static CreatureSenses Calm(CreatureSpeciesDto species, uint tick) => new()
+        {
+            Position = new Vector3(0f, 1000f, 0f),
+            Up = Vector3.up,
+            Forward = Vector3.forward,
+            Home = new Vector3(0f, 1000f, 0f),
+            DeltaTime = 0.02f,
+            Tick = tick,
+            Species = species,
+        };
+
+        static CreatureBehaviour RunFor(CreatureSpeciesDto species, int seed, uint ticks)
+        {
+            var brain = new CreatureBrain(seed, species, CreatureBehaviour.Wander);
+            for (uint t = 0; t < ticks; t++)
+            {
+                brain.Observe(Calm(species, t));
+                brain.Sample(t);
+            }
+            return brain.Behaviour;
+        }
+
+        [Test]
+        public void AWalkerNeverPerches_HoweverLongItWanders()
+        {
+            // Perching is the one behaviour gated on being a flier. A deer reaching it would mean the gate is
+            // reading something other than the cruise altitude.
+            for (int seed = 1; seed <= 12; seed++)
+                for (uint ticks = 100; ticks <= 3000; ticks += 700)
+                    Assert.AreNotEqual(CreatureBehaviour.Perch, RunFor(Walker, seed, ticks),
+                        $"deer perched at seed {seed} after {ticks} ticks");
+        }
+
+        [Test]
+        public void AFlierPerchesEventually_AndTakesOffAgain()
+        {
+            bool everPerched = false, everBackUp = false;
+            for (int seed = 1; seed <= 12 && !(everPerched && everBackUp); seed++)
+            {
+                var species = Flier;
+                var brain = new CreatureBrain(seed, species, CreatureBehaviour.Wander);
+                bool sawPerch = false;
+                for (uint t = 0; t < 4000; t++)
+                {
+                    brain.Observe(Calm(species, t));
+                    brain.Sample(t);
+                    if (brain.Behaviour == CreatureBehaviour.Perch) { sawPerch = true; everPerched = true; }
+                    else if (sawPerch) everBackUp = true;
+                }
+            }
+            Assert.IsTrue(everPerched, "no bird ever landed across twelve seeds and 80 s of ticks");
+            Assert.IsTrue(everBackUp, "a bird landed and never took off again");
+        }
+
+        [Test]
+        public void AThreatBeatsAPerch()
+        {
+            // Fear overrides from ANY state. A bird that sits on the ground while something walks up to it is
+            // the transition table having gained a hole.
+            var species = Flier;
+            var brain = new CreatureBrain(7, species, CreatureBehaviour.Perch);
+
+            CreatureSenses scared = Calm(species, 10);
+            scared.HasThreat = true;
+            scared.ThreatPosition = new Vector3(5f, 1000f, 0f);
+            scared.ThreatDistance = 5f;
+
+            brain.Observe(scared);
+            brain.Sample(10);
+            Assert.AreEqual(CreatureBehaviour.Flee, brain.Behaviour);
+        }
+
+        [Test]
+        public void FlightGroundingAddsItsAltitudeOnTop()
+        {
+            var flat = new FlatGrounding();
+            var flight = new FlightGrounding(flat) { AltitudeMeters = 9f };
+
+            Assert.IsTrue(flight.TryGround(Vector3.zero, Vector3.down, 0.2f, out _));
+            Assert.AreEqual(9.2f, flat.LastFootOffset, 1e-4f, "the wrapper adds, it does not replace");
+
+            // Perched is zero, and a negative altitude must not pull a body underground.
+            flight.AltitudeMeters = 0f;
+            flight.TryGround(Vector3.zero, Vector3.down, 0.2f, out _);
+            Assert.AreEqual(0.2f, flat.LastFootOffset, 1e-4f);
+
+            flight.AltitudeMeters = -50f;
+            flight.TryGround(Vector3.zero, Vector3.down, 0.2f, out _);
+            Assert.AreEqual(0.2f, flat.LastFootOffset, 1e-4f, "a negative altitude is clamped away");
+        }
+
+        sealed class FlatGrounding : IGroundingProvider
+        {
+            public float LastFootOffset;
+
+            public bool TryGround(Vector3 worldPos, Vector3 downDir, float footOffset, out GroundResult result)
+            {
+                LastFootOffset = footOffset;
+                result = new GroundResult(worldPos + Vector3.up * footOffset, Vector3.up);
+                return true;
+            }
+        }
     }
 }
