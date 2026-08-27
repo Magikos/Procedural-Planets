@@ -12,7 +12,7 @@ Keep entries under ~200 chars; this file loads into every session.
 - [Identify before fixing](feedback_identify_before_fixing.md) — Colour the artifact and agree the target before more fixes. Escalate after ONE failed fix; suspect your own recent commits first.
 - [Adversarial review verification](feedback_adversarial_review_verification.md) — Verify a reviewer's claims against the tree with parallel agents before accepting. Don't take review on faith.
 - [Audit & review workflow](feedback_audit_workflow.md) — How audits are run and reviewed before any fixing starts.
-- [Camera teleport wedges the Editor](feedback_camera_teleport_wedges_editor.md) — A long play-mode jump re-plans ~77k scatter tiles on the main thread; Unity hangs and MCP times out. Prefer captures over travelling.
+- [Camera teleport wedges the Editor](feedback_camera_teleport_wedges_editor.md) — A long HORIZONTAL jump re-plans ~77k scatter tiles and hangs Unity. A vertical descent over the same spot is cheap; test the arc, not the distance. Unattended play verification IS viable.
 - [No coroutines, use Awaitable](feedback_async_no_coroutines.md) — All async work uses Awaitable, never Unity coroutines.
 - [Settings DTO pattern](feedback_settings_dto_pattern.md) — Settings SOs are editor-only; runtime reads immutable snapshot DTOs, never the SO.
 - [Subsystem decomposition wiring](feedback_subsystem_decomposition_wiring.md) — Split god-class internals into interfaces + orchestrator injection. ServiceLocator/EventBus are cross-subsystem only.
