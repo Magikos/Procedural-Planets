@@ -94,7 +94,7 @@ public sealed record AmbientSwarmProfile(
             MinLocalSun: 0.15f, MaxLocalSun: 1f,
             new[] { BiomeType.Grassland, BiomeType.Forest, BiomeType.Tropical, BiomeType.Savanna, BiomeType.Swamp },
             ScatterRadiusMeters: 4f, ReturnAfterSeconds: 4f, HeightMeters: 0f, AnchorDriftMps: 0f,
-            FadeBand: 0.20f),
+            FadeBand: 0.45f),
 
         new(AmbientSwarmKind.Fireflies, "Fireflies", SwarmCount: 9, Particles: 18,
             SwarmRadiusMeters: 5f, ParticleSize: 0.12f, SpeedMps: 0.5f,
@@ -102,7 +102,7 @@ public sealed record AmbientSwarmProfile(
             MinLocalSun: -1f, MaxLocalSun: 0.02f,
             new[] { BiomeType.Forest, BiomeType.Swamp, BiomeType.Tropical, BiomeType.Taiga, BiomeType.Grassland },
             ScatterRadiusMeters: 3f, ReturnAfterSeconds: 6f, HeightMeters: 0f, AnchorDriftMps: 0f,
-            FadeBand: 0.22f),
+            FadeBand: 0.55f),
 
         // No biome list and no daylight window: flies go wherever a body is, whenever there is one.
         new(AmbientSwarmKind.Flies, "Flies", SwarmCount: 0, Particles: 26,
@@ -122,7 +122,7 @@ public sealed record AmbientSwarmProfile(
             MinLocalSun: -0.05f, MaxLocalSun: 1f,
             System.Array.Empty<BiomeType>(),
             ScatterRadiusMeters: 0f, ReturnAfterSeconds: 1f,
-            HeightMeters: 55f, AnchorDriftMps: 5f, FadeBand: 0.15f),
+            HeightMeters: 55f, AnchorDriftMps: 5f, FadeBand: 0.35f),
     };
 }
 
@@ -163,6 +163,7 @@ public sealed class AmbientSwarms : System.IDisposable
         public ParticleSystem System;
         public Vector3 Heading;         // tangent it drifts along, for the kinds that cross the sky
         public bool Retiring;           // no longer emitting, waiting for its last particle to fade
+        public float AppliedActivity = -1f;  // the density this swarm is currently emitting at
         public bool Scattered;
         public float SettleAtTime;      // unscaled time the scatter ends
     }
@@ -350,9 +351,11 @@ public sealed class AmbientSwarms : System.IDisposable
             AmbientSwarmProfile profile = _profiles[p];
             if (profile.Kind == AmbientSwarmKind.Flies) continue;
 
-            // How many of this kind the sun currently wants. Rounding a ramped count is what makes them
-            // arrive a few at a time: one swarm, then two, then the lot, and back down the same way.
-            int want = Mathf.RoundToInt(profile.SwarmCount * profile.ActivityAt(localSun));
+            // How many of this kind the sun currently wants, and how densely each one emits. Both ramp: the
+            // count spreads them across the ground, the density decides whether a cluster is two insects or
+            // eighteen. Count alone made nine full clusters arrive inside seven seconds of a 120 s day.
+            float activity = profile.ActivityAt(localSun);
+            int want = Mathf.RoundToInt(profile.SwarmCount * activity);
 
             // Something 55 m up is a long way away before it is out of sight, so its keep radius grows with
             // its height. Without this a flock is retired and replaced every few seconds of drift.
@@ -394,6 +397,8 @@ public sealed class AmbientSwarms : System.IDisposable
                 PlaceAt(swarm, anchor);
                 swarm.Heading = HeadingAt(anchor);
             }
+
+            ApplyDensity(profile, activity);
 
             if (profile.AnchorDriftMps > 0f) Drift(profile);
         }
@@ -644,7 +649,7 @@ public sealed class AmbientSwarms : System.IDisposable
                 // put every one of them out of phase with the others.
                 main.startLifetime = new ParticleSystem.MinMaxCurve(5f, 11f);
                 main.startSpeed = new ParticleSystem.MinMaxCurve(0.02f, 0.12f);
-                emission.rateOverTime = profile.Particles / 7f;
+                emission.rateOverTime = BaseEmissionRate(profile);
 
                 // A slow circle around the anchor with a slight inward pull, so they hold together as a
                 // cluster near one spot instead of dispersing the way a plain emitter does.
@@ -670,7 +675,7 @@ public sealed class AmbientSwarms : System.IDisposable
                 // Erratic but going somewhere: a bobbing vertical, a wide wander, and a pull back in so they
                 // circle a patch instead of leaving it.
                 main.startLifetime = new ParticleSystem.MinMaxCurve(6f, 12f);
-                emission.rateOverTime = profile.Particles / 6f;
+                emission.rateOverTime = BaseEmissionRate(profile);
 
                 Orbit(ps, -0.5f, 0.5f);
                 velocity.radial = new ParticleSystem.MinMaxCurve(-0.15f, 0.1f);
@@ -700,7 +705,7 @@ public sealed class AmbientSwarms : System.IDisposable
                 // litter blowing about.
                 main.startLifetime = new ParticleSystem.MinMaxCurve(14f, 26f);
                 main.startSpeed = new ParticleSystem.MinMaxCurve(0f, 0.2f);
-                emission.rateOverTime = profile.Particles / 12f;
+                emission.rateOverTime = BaseEmissionRate(profile);
 
                 Orbit(ps, 0.35f, 0.7f);                                      // all one way round
                 velocity.radial = new ParticleSystem.MinMaxCurve(-0.05f, 0.05f);
@@ -716,7 +721,7 @@ public sealed class AmbientSwarms : System.IDisposable
             default:
                 // Flies. Jitter IS the correct read here — the only kind that should look like noise.
                 main.startLifetime = new ParticleSystem.MinMaxCurve(1.2f, 3f);
-                emission.rateOverTime = profile.Particles / 2f;
+                emission.rateOverTime = BaseEmissionRate(profile);
 
                 Orbit(ps, -1.5f, 1.5f);
                 velocity.radial = new ParticleSystem.MinMaxCurve(-0.4f, 0.2f);
@@ -733,6 +738,45 @@ public sealed class AmbientSwarms : System.IDisposable
 
                 color.color = FadeInOut();
                 break;
+        }
+    }
+
+    /// <summary>
+    /// Particles per second a full-strength swarm of this kind emits. One place, because the sun ramp scales
+    /// it and the two must agree on what "full" means.
+    /// </summary>
+    static float BaseEmissionRate(AmbientSwarmProfile profile) => profile.Kind switch
+    {
+        AmbientSwarmKind.Fireflies => profile.Particles / 7f,
+        AmbientSwarmKind.Butterflies => profile.Particles / 6f,
+        AmbientSwarmKind.Birds => profile.Particles / 12f,
+        _ => profile.Particles / 2f,
+    };
+
+    /// <summary>
+    /// Thin each swarm's emission by how far into its hours it is, so the FIRST firefly of the evening is one
+    /// or two insects rather than a full cluster of eighteen.
+    /// </summary>
+    /// <remarks>
+    /// Ramping the swarm COUNT alone was not enough. A day here is 120 seconds, so a fade band of a fifth of
+    /// the sun's range is about seven seconds of real time, and nine clusters arriving inside seven seconds
+    /// each at full density reads exactly like everything switching on at once - which is what Bryan saw.
+    /// Density is the other half of the ramp, and the one that shows at the very edges of the night.
+    /// </remarks>
+    void ApplyDensity(AmbientSwarmProfile profile, float activity)
+    {
+        for (int i = 0; i < _swarms.Count; i++)
+        {
+            Swarm s = _swarms[i];
+            if (s.Kind != profile.Kind || s.Retiring || s.System == null) continue;
+
+            // Quantised: a MinMaxCurve write per swarm per frame is pointless churn when the sun has barely
+            // moved, and the eye cannot see a two percent change in a spawn rate anyway.
+            if (Mathf.Abs(activity - s.AppliedActivity) < 0.02f) continue;
+            s.AppliedActivity = activity;
+
+            ParticleSystem.EmissionModule emission = s.System.emission;
+            emission.rateOverTime = BaseEmissionRate(profile) * activity;
         }
     }
 

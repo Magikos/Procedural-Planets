@@ -748,12 +748,15 @@ namespace ProceduralPlanets.Tests
 
             float dusk = fireflies.ActivityAt(0f);
             float later = fireflies.ActivityAt(-0.08f);
-            float night = fireflies.ActivityAt(-0.5f);
+            float deeper = fireflies.ActivityAt(-0.5f);
+            float night = fireflies.ActivityAt(-0.8f);
 
             Assert.Greater(dusk, 0f, "a few of them the moment the sun touches the horizon");
             Assert.Less(dusk, 1f, "but not all of them");
             Assert.Greater(later, dusk, "more as it gets darker");
-            Assert.AreEqual(1f, night, "and the lot in full dark");
+            Assert.Greater(deeper, later, "and still climbing well after dusk - the band is deliberately wide");
+            Assert.Less(deeper, 1f, "not finished at -0.5, or the fade is too quick for a 120 s day");
+            Assert.AreEqual(1f, night, 1e-3f, "and the lot in full dark");
         }
 
         [Test]
@@ -826,6 +829,42 @@ namespace ProceduralPlanets.Tests
             // The real library, against the real key. Exceeding this is silent aliasing, not an exception.
             Assert.LessOrEqual(CreatureResidencyService.SlotsNeeded(CreatureLibraryDto.Placeholder),
                 CreatureKey.MaxSlot + 1);
+        }
+
+        [Test]
+        public void TheFireflyFadeIsWideEnoughToTakeRealSecondsOnAShortDay()
+        {
+            // A day here is 120 s (CelestialManager.DayLengthSeconds), so the sun sweeps dot(up,sun) at roughly
+            // 0.03 per second near the horizon. A fade band of 0.2 is therefore about SEVEN seconds of real
+            // time, which is why the first version read as everything switching on at once. The band has to be
+            // wide enough that the ramp is still climbing well after dusk.
+            AmbientSwarmProfile fireflies = Profile(AmbientSwarmKind.Fireflies);
+
+            Assert.Less(fireflies.ActivityAt(-0.10f), 0.5f, "ten degrees past dusk should still be sparse");
+            Assert.Less(fireflies.ActivityAt(-0.30f), 1f, "the fade must not be finished this early");
+            Assert.AreEqual(1f, fireflies.ActivityAt(-0.60f), 1e-3f, "and it should reach full in deep night");
+        }
+
+        [Test]
+        public void EveryRampedKindClimbsMonotonicallyIntoItsHours()
+        {
+            // No step, no plateau, no reversal anywhere in the band - a reversal would read as insects
+            // flickering out and back as the sun moves.
+            foreach (AmbientSwarmKind kind in new[] { AmbientSwarmKind.Fireflies, AmbientSwarmKind.Butterflies })
+            {
+                AmbientSwarmProfile p = Profile(kind);
+                float sign = kind == AmbientSwarmKind.Fireflies ? -1f : 1f;
+                float previous = -1f;
+
+                for (int i = 0; i <= 40; i++)
+                {
+                    float sun = sign * (i / 40f);        // walk from the horizon into this kind's hours
+                    float a = p.ActivityAt(sun);
+                    Assert.GreaterOrEqual(a, previous - 1e-4f, $"{kind} dipped at sun {sun:F2}");
+                    previous = a;
+                }
+                Assert.AreEqual(1f, previous, 1e-3f, $"{kind} never reached full strength");
+            }
         }
     }
 }
