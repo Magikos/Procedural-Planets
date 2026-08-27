@@ -1,6 +1,6 @@
 ---
 name: feedback-camera-teleport-wedges-editor
-description: Never jump the play-mode camera a long distance via transform.position - it re-plans the whole scatter field and hangs the Editor until MCP times out
+description: A long HORIZONTAL play-mode camera jump re-plans the whole scatter field and hangs the Editor; a vertical descent over the same spot is cheap and safe
 metadata:
   type: feedback
 ---
@@ -59,6 +59,28 @@ is what made a whole run of single-cycle conclusions untrustworthy.
 pixel actually CHANGED before believing anything the frame shows. If it did not change, the variant is
 either stale or the code path is not running - and those two are indistinguishable without the unconditional
 magenta test, which is the tie-breaker.
+
+
+## It is HORIZONTAL travel that costs, not altitude (measured 2026-08-26)
+
+The rule above is about a jump a quarter of the way around the planet. A DESCENT is a different move and is
+cheap: `ScatterTileCache` re-plans on surface travel, so dropping from orbit to the ground above roughly the
+same spot changes almost no tile addresses.
+
+Measured overnight 2026-08-26, twice: camera at 13,234 m from the planet centre down to the surface, with the
+target only **149 m away horizontally**, taken in two hops with a wait between. Frames held **13-16 ms**
+throughout, `execute_code` never missed a beat, and the whole verification session ran unattended for over an
+hour without a stall.
+
+**So the test before teleporting is the HORIZONTAL arc, not the distance.** Compute it first — that is one
+`execute_code` call — and if it is a few hundred metres, go. If it is kilometres, use `scatter.goto` or do not
+travel.
+
+The same session also contradicts the throttle claim in [[reference_unity_mcp]]: **unfocused, with
+`Application.runInBackground` true, a full planet generation took 62-85 s, not the better part of an hour.**
+Unattended play-mode verification is viable, and it is worth the wait — one session of it found five defects
+in code that had already been committed and documented as working, including a whole feature that Unity was
+silently refusing to run.
 
 ## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
 

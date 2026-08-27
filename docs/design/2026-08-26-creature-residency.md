@@ -745,3 +745,39 @@ because these are not four settings of one behaviour:
 That motion is authored in local space, which forced a fix that was latent from the start: **a swarm's
 transform is now oriented to the surface at its anchor.** Without it "rise slowly" and "circle overhead" name
 the wrong axis everywhere except the one point on the planet where local up happens to be world up.
+
+### Verified in play, 2026-08-26 (overnight)
+
+Everything above was written without ever seeing it. Generated a planet, stood in a night forest, and looked.
+
+**What was right.** Fireflies render, blink out of phase, and cluster within about six metres of their anchor.
+The carcass lies on its side where the deer died, with a cast shadow. Flies gather on it. Butterflies were
+correctly absent — the ground there is sand, which is not on their list. **All eight carcasses survived a full
+stop and restart**, replayed from the delta log seven minutes older and fast-forwarded to the right stage,
+which closes the carcass half of the persistence question end to end.
+
+**Five defects, one of them fatal to a feature.**
+
+1. **The per-kind motion was not running at all.** Unity validates the three axes of a velocity group as a
+   unit; give one a two-constant range and leave the others at their default single constant and it rejects
+   the WHOLE module, logging `Particle Velocity curves must all be in the same mode` every frame. The blink
+   survived only because colour-over-lifetime is a separate module. Measured after the fix: tangential
+   0.278 m/s dominant, vertical +0.082, radial ~0.1 — the circling-and-rising that was authored and had never
+   once happened.
+2. **Straight-line keep distance, for the second time in this system.** An observer 300 m up is a full keep
+   radius from a swarm directly beneath them, so every ambient swarm was placed and retired on the frame it
+   was born. Identical in cause to the creature promotion bug: on a sphere, distance is along the surface.
+3. **Placement did not know how high the observer was**, so even after (2) the top-up loop spawned a swarm the
+   keep test retired on the same tick, forever. Visible as six particle systems each less than a second old
+   holding zero particles.
+4. **Fly swarms spawned for every carcass in the save at any distance**, while the body only draws within
+   120 m — a cloud of flies a quarter of a kilometre away with nothing underneath it.
+5. **Flies were near-black at 5 cm**: invisible at night, nearly so by day. Bigger helped; a mid-grey read as
+   pale dust motes over sand, so the colour went back down and the size stayed up.
+
+**A tooling correction worth more than any of them.** `.agent-memory` says the editor throttles play mode to
+roughly a twentieth speed whenever it loses focus, putting one planet generation near an hour, and that
+`Application.runInBackground` only helps while focused. **Measured false tonight**: unfocused, with
+`runInBackground` true, generation completed in 62–85 s and frames ran at 13–16 ms throughout. Teleporting the
+camera from orbit to the ground — in two steps, above the same spot — did not wedge anything either. Unattended
+play-mode verification is viable, and skipping it is what let five defects ship.

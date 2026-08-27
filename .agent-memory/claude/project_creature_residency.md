@@ -102,6 +102,31 @@ the same.
   so a flier is `BodyHeightMeters * 0.5 + CruiseAltitudeMeters`. One number on a species. Do not build an
   `IFlyingProvider`. Ceiling: a bird cruises and never lands; perching is a third FSM state.
 
+
+**Play-verified overnight 2026-08-26 (`a287963` `afdb43a`), and five defects found by doing it.**
+
+- **TRAP — a Unity particle velocity module validates its three axes as a UNIT.** Set `orbitalY` to a
+  two-constant range and leave `orbitalX/Z` at their default single constant, and Unity rejects the WHOLE
+  module, logging `Particle Velocity curves must all be in the same mode` every frame. The motion silently
+  never happens. Set all three axes together, in one mode. This killed a whole committed feature.
+- **Straight-line distance bit a SECOND time.** Ambient swarm keep-radius measured through the air, so an
+  observer 300 m up was a full radius from a swarm directly below and every one was retired on the frame it
+  was born. On a sphere, distance is `CreatureTerritory.SurfaceDistance` plus the altitude difference.
+- Placement finds ground and does not know the observer's altitude, so a spawn loop must re-check the keep
+  test or it spawns-and-retires forever.
+- **Carcass persistence VERIFIED end to end**: 8 bodies written in one session came back from the delta log
+  in the next, correctly aged and staged.
+- Flies at night are invisible and that is physically right — verify insect visibility in DAYLIGHT.
+- Particle colours render considerably lighter than authored here (post/bloom); author darker than looks right.
+
+**CORRECTION, measured: unattended play-mode verification IS viable.** The old note that the editor throttles
+to ~1/20 speed unfocused (a planet generation near an hour) and that `Application.runInBackground` only helps
+while focused is FALSE as measured 2026-08-26: unfocused with `runInBackground` true, generation took 62-85 s
+and frames held 13-16 ms. Teleporting the camera from orbit to ground in two steps above the same spot wedged
+nothing. Screenshot via `cam.Render()` into a RenderTexture then `EncodeToPNG`, and read the file.
+**Skipping this step is what let five defects ship.** See [[feedback_camera_teleport_wedges_editor]] and
+[[reference_unity_mcp]], both of which overstate the risk.
+
 **OWED: play-verification of the FSM redesign and of the record plumbing.** Blocked on a workflow trap —
 **the Unity editor throttles play mode to ~1/20 speed whenever it loses focus** (8 s of play time per 170 s
 wall clock), so a planet generation takes about an hour unattended. `Application.runInBackground = true` only
