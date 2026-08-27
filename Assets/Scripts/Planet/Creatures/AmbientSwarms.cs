@@ -194,6 +194,69 @@ public sealed class AmbientSwarms : System.IDisposable
 
     public int SwarmCount => _swarms.Count;
 
+    /// <summary>The profiles this instance is running, so a readout can say what each kind WANTS.</summary>
+    public AmbientSwarmProfile[] Profiles => _profiles;
+
+    /// <summary>How many of a kind are up and emitting. Excludes the ones fading out.</summary>
+    public int CountLive(AmbientSwarmKind kind) => CountOf(kind);
+
+    /// <summary>
+    /// The biome under a world position, evaluated through the SAME provider placement uses.
+    /// </summary>
+    /// <remarks>
+    /// Exposed because a readout that resolves its own biome provider can disagree with the one that actually
+    /// decides where swarms go. `ServiceLocator` does not carry an `IBiomeProvider` at all - this one is
+    /// injected at Configure - so a console command that asked the locator got a silent fallback and reported
+    /// a biome that was not the one being tested against.
+    /// </remarks>
+    public bool TryBiomeAt(Vector3 worldPos, out BiomeType biome)
+    {
+        biome = default;
+        if (_biome == null || _sampler == null) return false;
+
+        PlanetTransformSnapshot planet = PlanetTransformSnapshot.Capture(_parent);
+        Vector3 dir = (worldPos - _center).normalized;
+        if (dir.sqrMagnitude < 1e-6f || !_sampler.TryGetSurfaceRadius(dir, out float radius)) return false;
+
+        float localRadius = radius / Mathf.Max(planet.UniformScale, 1e-4f);
+        biome = _biome.EvaluateBiome(planet.InverseTransformDirection(dir),
+            localRadius / _planetRadius - 1f).PrimaryBiome;
+        return true;
+    }
+
+    public int CountParticles(AmbientSwarmKind kind)
+    {
+        int n = 0;
+        for (int i = 0; i < _swarms.Count; i++)
+            if (_swarms[i].Kind == kind && _swarms[i].System != null) n += _swarms[i].System.particleCount;
+        return n;
+    }
+
+    /// <summary>
+    /// Distance to the nearest of a kind, and how far above the ground it sits. Both are what someone standing
+    /// in the world needs to be told: which way to walk, and whether to look up.
+    /// </summary>
+    public bool TryNearest(AmbientSwarmKind kind, Vector3 from, out float metres, out float heightMeters)
+    {
+        metres = float.MaxValue;
+        heightMeters = 0f;
+        bool found = false;
+
+        for (int i = 0; i < _swarms.Count; i++)
+        {
+            Swarm s = _swarms[i];
+            if (s.Kind != kind || s.Retiring) continue;
+
+            float d = CreatureTerritory.SurfaceDistance(_center, s.Anchor, from);
+            if (d >= metres) continue;
+
+            metres = d;
+            heightMeters = (s.Anchor - _center).magnitude - (from - _center).magnitude;
+            found = true;
+        }
+        return found;
+    }
+
     public bool Enabled
     {
         get => _enabled;

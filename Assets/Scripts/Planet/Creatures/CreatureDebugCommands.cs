@@ -39,6 +39,76 @@ public static class CreatureDebugCommands
             : "swarms off";
     }
 
+    [ConsoleCommand("ambience", "Why there are or are not butterflies, fireflies, birds and flies where you " +
+        "are standing: the sun angle, the biome under your feet, and what each kind is waiting for.",
+        MonoTargetType.Static)]
+    public static string AmbienceCmd()
+    {
+        Camera cam = Camera.main;
+        if (cam == null) return "creature.ambience: no main camera";
+        if (!ServiceLocator.TryGet(out AmbientSwarms swarms))
+            return "creature.ambience: no swarm system (generate a planet first)";
+        if (!ServiceLocator.TryGet(out IPlanet planet) || planet.Transform == null)
+            return "creature.ambience: no planet";
+
+        Vector3 here = cam.transform.position;
+        Vector3 up = (here - planet.Transform.position).normalized;
+
+        float localSun = 1f;
+        if (ServiceLocator.TryGet(out ICelestialTimeController celestial))
+            localSun = Vector3.Dot(up, celestial.SunDirection);
+
+        // Asked of the swarm system, not of ServiceLocator - the locator carries no IBiomeProvider, so
+        // resolving one here returned a silent fallback and this line reported a biome nothing was tested
+        // against. A readout that can disagree with the thing it reports on is worse than no readout.
+        bool knowBiome = swarms.TryBiomeAt(here, out BiomeType biome);
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append("sun ").Append(localSun.ToString("F2")).Append(' ').Append(DescribeSun(localSun))
+          .Append("   biome ").Append(knowBiome ? biome.ToString() : "UNKNOWN")
+          .Append("   swarms ").Append(swarms.Enabled ? "on" : "OFF (creature.swarms true)");
+
+        foreach (AmbientSwarmProfile p in swarms.Profiles)
+        {
+            int live = swarms.CountLive(p.Kind);
+            sb.Append("\n  ").Append(p.DisplayName.PadRight(12))
+              .Append(" live=").Append(live)
+              .Append(" particles=").Append(swarms.CountParticles(p.Kind));
+
+            if (swarms.TryNearest(p.Kind, here, out float metres, out float height))
+            {
+                sb.Append("  nearest ").Append(metres.ToString("F0")).Append(" m away");
+                if (height > 3f) sb.Append(", ").Append(height.ToString("F0")).Append(" m UP - look up");
+            }
+
+            sb.Append("  -> ").Append(WhyNone(p, live, localSun, biome, knowBiome));
+        }
+        return sb.ToString();
+    }
+
+    // The whole point of the command: when a kind is missing, say which gate is holding it back.
+    static string WhyNone(AmbientSwarmProfile p, int live, float localSun, BiomeType biome, bool knowBiome)
+    {
+        if (p.Kind == AmbientSwarmKind.Flies)
+            return live > 0 ? "on a carcass" : "needs a carcass dead 2+ min within 120 m (creature.corpses)";
+
+        float activity = p.ActivityAt(localSun);
+        if (activity <= 0f)
+            return localSun > p.MaxLocalSun
+                ? $"too bright - wants sun below {p.MaxLocalSun:F2}"
+                : $"too dark - wants sun above {p.MinLocalSun:F2}";
+
+        int want = Mathf.RoundToInt(p.SwarmCount * activity);
+        if (knowBiome && !p.LivesIn(biome))
+            return $"not a {biome} species - wants {string.Join("/", p.Biomes)}";
+        if (live < want) return $"wants {want} here, still settling";
+        return "here";
+    }
+
+    static string DescribeSun(float localSun) =>
+        localSun > 0.6f ? "(high)" : localSun > 0.15f ? "(day)" : localSun > 0.02f ? "(low)"
+        : localSun > -0.15f ? "(dusk/dawn)" : "(night)";
+
     [ConsoleCommand("goto", "Move the camera to the nearest creature, so 'I cannot find one' has an answer.",
         MonoTargetType.Static)]
     public static string GotoCmd()
