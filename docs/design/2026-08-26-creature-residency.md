@@ -781,3 +781,52 @@ roughly a twentieth speed whenever it loses focus, putting one planet generation
 `runInBackground` true, generation completed in 62–85 s and frames ran at 13–16 ms throughout. Teleporting the
 camera from orbit to the ground — in two steps, above the same spot — did not wedge anything either. Unattended
 play-mode verification is viable, and skipping it is what let five defects ship.
+
+### Dusk ramp and motion, measured (2026-08-26, overnight)
+
+Bryan on the first build: fireflies pop in and out at dusk, and everything reads like a particle system. Both
+fixed, and this time both measured in the running world rather than asserted.
+
+**The ramp, stepping the sun down over one spot:**
+
+| dot(local up, sun) | swarms predicted | swarms observed |
+| --- | --- | --- |
+| +0.197 | 0 | 0 |
+| −0.001 | 1 | 1 |
+| −0.051 | 3 | 3 |
+| −0.103 | 5 | 5 |
+| −0.158 | 7 | 7 |
+| −0.298 | 9 | 9 |
+
+Few, then more, then more — and on the way back up, eight swarms went to `Retiring` with **43 particles still
+in the air**, finishing their own lifetimes rather than being deleted in one frame. That second half is what
+the pop-out actually was.
+
+**The motion, sampled by advancing the system a controlled 0.6 s:** tangential 0.278 m/s dominant, vertical
++0.082, radial ~0.1 — circling slowly while drifting upward. Before the curve-mode fix the velocity module was
+rejected whole, so all three were zero and none of the authored motion had ever run.
+
+### Perching, and why there were no birds to perch (2026-08-26)
+
+A bird that only cruises is a dot holding an altitude. `CreatureBehaviour.Perch` is a third brain state — down,
+still, then back up — and it is what makes one read as an animal.
+
+The descent is deliberately NOT the state's business. Altitude is a property of how a creature is grounded
+rather than of what it intends, so it moved into `FlightGrounding`, a wrapper that adds a height on top of the
+real provider and lets the host change that height while the bird is flying. Same split that let a flier exist
+at all: the motor holds a body above whatever surface it is told about, and for a bird that surface is simply
+higher up. The change is a RATE — setting the altitude straight to its target teleports a bird nine metres
+downward on the frame it decides to land.
+
+**Then the check found there were no birds at all.** The species had been added to
+`CreatureLibraryDto.Placeholder`, which the world uses only when no asset is registered — and
+`Assets/Resources/Settings/CreatureLibrary.asset` is registered, with two species in it. Every bird in every
+session so far had existed only in a code path nothing runs.
+
+Adding it made Unity write out the fields the asset had been silently defaulting, which exposed a second
+thing: **the deer and the rabbit had been running at awareness 35**, not the 45 and 25 that the code
+placeholder and section 16 both state. The asset predates those fields, so Unity had been filling them from
+the field initializers all along, and nothing anywhere said so.
+
+Both are the same lesson as the velocity module, three times in one night: **a default that is never written
+down is a value nobody can see is wrong.**
