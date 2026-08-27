@@ -25,6 +25,20 @@ public static class CreatureDebugCommands
             : "predator view off";
     }
 
+    [ConsoleCommand("swarms", "Butterflies, fireflies and carcass flies on or off, and how many are up.",
+        MonoTargetType.Static)]
+    public static string SwarmsCmd(bool on = true)
+    {
+        if (!ServiceLocator.TryGet(out AmbientSwarms swarms))
+            return "creature.swarms: no swarm system (generate a planet first)";
+
+        swarms.Enabled = on;
+        return on
+            ? $"swarms ON - {swarms.SwarmCount} up. Butterflies want the sun well up, fireflies want it below " +
+              "the horizon WHERE YOU ARE, and flies want a carcass that has been dead a couple of minutes."
+            : "swarms off";
+    }
+
     [ConsoleCommand("goto", "Move the camera to the nearest creature, so 'I cannot find one' has an answer.",
         MonoTargetType.Static)]
     public static string GotoCmd()

@@ -691,5 +691,48 @@ namespace ProceduralPlanets.Tests
             Assert.IsFalse(CreatureKey.IsCreature(corpse));
             Assert.AreNotEqual(EntityId.HostOwner, corpse.Owner, "a fallen log must not ingest it");
         }
+
+        // --- ambient swarms: out at the right time, in the right place -------
+
+        static AmbientSwarmProfile Profile(AmbientSwarmKind kind)
+        {
+            AmbientSwarmProfile[] all = AmbientSwarmProfile.Defaults;
+            for (int i = 0; i < all.Length; i++)
+                if (all[i].Kind == kind) return all[i];
+            return null;
+        }
+
+        [Test]
+        public void ButterfliesAreOutInTheSun_FirefliesAfterItSets()
+        {
+            // The argument is dot(local up, sun direction): 1 is straight overhead, 0 is the horizon.
+            AmbientSwarmProfile butterflies = Profile(AmbientSwarmKind.Butterflies);
+            AmbientSwarmProfile fireflies = Profile(AmbientSwarmKind.Fireflies);
+
+            Assert.IsTrue(butterflies.ActiveAt(1f));
+            Assert.IsFalse(butterflies.ActiveAt(-0.5f), "not at night");
+            Assert.IsFalse(butterflies.ActiveAt(0.02f), "nor at dusk");
+
+            Assert.IsTrue(fireflies.ActiveAt(-0.5f));
+            Assert.IsTrue(fireflies.ActiveAt(0f), "the moment the sun touches the horizon");
+            Assert.IsFalse(fireflies.ActiveAt(1f), "never at noon");
+        }
+
+        [Test]
+        public void FliesDoNotCareWhatTimeItIs()
+        {
+            AmbientSwarmProfile flies = Profile(AmbientSwarmKind.Flies);
+            Assert.IsTrue(flies.ActiveAt(1f));
+            Assert.IsTrue(flies.ActiveAt(-1f));
+            Assert.IsTrue(flies.LivesIn(BiomeType.Desert), "an empty biome list means anywhere");
+        }
+
+        [Test]
+        public void ASwarmKindWithABiomeListRefusesTheOnesNotOnIt()
+        {
+            AmbientSwarmProfile butterflies = Profile(AmbientSwarmKind.Butterflies);
+            Assert.IsTrue(butterflies.LivesIn(BiomeType.Grassland));
+            Assert.IsFalse(butterflies.LivesIn(BiomeType.Snow));
+        }
     }
 }

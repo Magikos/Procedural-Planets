@@ -66,6 +66,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     CreatureView _creatureView;
     ThreatRegistry _threats;
     CreatureCorpseStore _corpses;
+    AmbientSwarms _swarms;
+    ICelestialTimeController _celestial;
 
     static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
     static readonly int _seaLevelRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
@@ -111,6 +113,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         context.Register(_threats);
         context.Register(_creatureView);
         context.Register(_corpses);
+        context.Register(_swarms);
 
         // Harvest interactor (POC): picker + verb wired to this world's scatter cache, harvest store, and
         // inventory. The ScatterLibraryDto is NOT registered yet at world-service registration (it registers
@@ -179,6 +182,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _creatureView ??= new CreatureView(transform);
         _threats ??= new ThreatRegistry();
         _corpses ??= new CreatureCorpseStore(Logger);
+        _swarms ??= new AmbientSwarms(transform, Logger);
         _scatterRenderer.Cache.SetHarvestStore(_harvestStore);
     }
 
@@ -293,6 +297,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _scatter?.Dispose();
         _scatter = null;
         _scatterDebug = null; // world-scoped registration; the context drops it on teardown
+        _swarms?.Dispose();
+        _swarms = null;
+        _celestial = null;
         _creatureView?.Dispose();
         _creatureView = null;
         _threats?.Clear();
@@ -344,7 +351,22 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             _creatureView?.Sync(_creatures.Live, _creatures.Library);
             _creatureView?.SyncCorpses(_corpses, _creatures.Library, _observerCamera.transform.position,
                 CreatureCorpseStore.KeepAliveMeters);
+            TickSwarms(_observerCamera.transform.position);
         }
+    }
+
+    // How high the sun stands HERE, which on a sphere is the only meaningful answer to "is it night".
+    // The global clock says nothing about the far side of the planet.
+    void TickSwarms(Vector3 observerWorldPos)
+    {
+        if (_swarms == null) return;
+
+        Vector3 up = (observerWorldPos - transform.position).normalized;
+        _celestial ??= ServiceLocator.TryGet(out ICelestialTimeController c) ? c : null;
+        float localSun = _celestial != null ? Vector3.Dot(up, _celestial.SunDirection) : 1f;
+
+        _swarms.Tick(observerWorldPos, localSun, _corpses,
+            System.DateTimeOffset.UtcNow.ToUnixTimeSeconds());
     }
 
     async Awaitable InitializeAsync(IProgressHandle progress, CancellationToken ct)
@@ -545,6 +567,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             // Same IBiomeProvider the terrain bake and scatter placement read, so a creature cannot disagree
             // with the ground about which biome it is standing in.
             _corpses.Configure(_deltaLog);
+            _swarms.Configure(this, _colorGenerator, _threats, transform.position, planet.PlanetRadius, seaLevelRadius);
             _creatures.Configure(Seed, _deltaLog, _colorGenerator, _threats, planet.PlanetRadius, seaLevelRadius,
                 _corpses);
             long scatterRendererMs = finalizeStep.ElapsedMilliseconds;
