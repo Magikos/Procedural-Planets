@@ -12,6 +12,9 @@ public enum AmbientSwarmKind : byte
 
     /// <summary>Anchored to a carcass rather than to the ground, and only while there is something to eat.</summary>
     Flies = 2,
+
+    /// <summary>A flock overhead, drifting across the sky. Decoration only - the huntable bird is a resident.</summary>
+    Birds = 3,
 }
 
 /// <summary>
@@ -37,7 +40,9 @@ public sealed record AmbientSwarmProfile(
     float MaxLocalSun,
     BiomeType[] Biomes,
     float ScatterRadiusMeters,
-    float ReturnAfterSeconds)
+    float ReturnAfterSeconds,
+    float HeightMeters,
+    float AnchorDriftMps)
 {
     /// <summary>
     /// Whether this kind is out, given how high the sun stands WHERE THE OBSERVER IS: the dot of the local up
@@ -65,14 +70,14 @@ public sealed record AmbientSwarmProfile(
             new Color(0.95f, 0.80f, 0.30f), Additive: false,
             MinLocalSun: 0.15f, MaxLocalSun: 1f,
             new[] { BiomeType.Grassland, BiomeType.Forest, BiomeType.Tropical, BiomeType.Savanna, BiomeType.Swamp },
-            ScatterRadiusMeters: 4f, ReturnAfterSeconds: 4f),
+            ScatterRadiusMeters: 4f, ReturnAfterSeconds: 4f, HeightMeters: 0f, AnchorDriftMps: 0f),
 
         new(AmbientSwarmKind.Fireflies, "Fireflies", SwarmCount: 5, Particles: 22,
             SwarmRadiusMeters: 5f, ParticleSize: 0.12f, SpeedMps: 0.5f,
             new Color(0.75f, 1.00f, 0.35f), Additive: true,
             MinLocalSun: -1f, MaxLocalSun: 0.02f,
             new[] { BiomeType.Forest, BiomeType.Swamp, BiomeType.Tropical, BiomeType.Taiga, BiomeType.Grassland },
-            ScatterRadiusMeters: 3f, ReturnAfterSeconds: 6f),
+            ScatterRadiusMeters: 3f, ReturnAfterSeconds: 6f, HeightMeters: 0f, AnchorDriftMps: 0f),
 
         // No biome list and no daylight window: flies go wherever a body is, whenever there is one.
         new(AmbientSwarmKind.Flies, "Flies", SwarmCount: 0, Particles: 26,
@@ -80,7 +85,18 @@ public sealed record AmbientSwarmProfile(
             new Color(0.10f, 0.09f, 0.08f), Additive: false,
             MinLocalSun: -1f, MaxLocalSun: 1f,
             System.Array.Empty<BiomeType>(),
-            ScatterRadiusMeters: 6f, ReturnAfterSeconds: 8f),
+            ScatterRadiusMeters: 6f, ReturnAfterSeconds: 8f, HeightMeters: 0f, AnchorDriftMps: 0f),
+
+        // Overhead, all day, anywhere, and crossing the sky rather than hovering. ScatterRadius 0 means they
+        // are never startled: nothing on the ground reaches them, and a flock that panicked at a footstep
+        // eighty metres below would read as a bug rather than as wildlife.
+        new(AmbientSwarmKind.Birds, "Birds", SwarmCount: 2, Particles: 11,
+            SwarmRadiusMeters: 14f, ParticleSize: 0.55f, SpeedMps: 2.2f,
+            new Color(0.20f, 0.19f, 0.22f), Additive: false,
+            MinLocalSun: -0.05f, MaxLocalSun: 1f,
+            System.Array.Empty<BiomeType>(),
+            ScatterRadiusMeters: 0f, ReturnAfterSeconds: 1f,
+            HeightMeters: 55f, AnchorDriftMps: 5f),
     };
 }
 
@@ -119,6 +135,7 @@ public sealed class AmbientSwarms : System.IDisposable
         public ulong AnchorId;          // the carcass it is on, or 0 for a free-floating ambient swarm
         public Vector3 Anchor;
         public ParticleSystem System;
+        public Vector3 Heading;         // tangent it drifts along, for the kinds that cross the sky
         public bool Scattered;
         public float SettleAtTime;      // unscaled time the scatter ends
     }
@@ -234,14 +251,17 @@ public sealed class AmbientSwarms : System.IDisposable
 
     void SyncAmbient(Vector3 observerWorldPos, float localSun)
     {
-        float keepSqr = KeepAnchorMeters * KeepAnchorMeters;
-
         for (int p = 0; p < _profiles.Length; p++)
         {
             AmbientSwarmProfile profile = _profiles[p];
             if (profile.Kind == AmbientSwarmKind.Flies) continue;
 
             bool active = profile.ActiveAt(localSun);
+
+            // Something 55 m up is a long way away before it is out of sight, so its keep radius grows with
+            // its height. Without this a flock is retired and replaced every few seconds of drift.
+            float keep = KeepAnchorMeters + profile.HeightMeters * 2f;
+            float keepSqr = keep * keep;
 
             // Out of hours, or left behind: retire rather than follow. A butterfly that jumps thirty metres to
             // keep up with you is far more noticeable than one that simply is not there.
@@ -262,9 +282,49 @@ public sealed class AmbientSwarms : System.IDisposable
                 Swarm swarm = Spawn(profile, anchorId: 0UL);
                 if (swarm == null) break;
                 swarm.Anchor = anchor;
+                swarm.Heading = HeadingAt(anchor);
                 swarm.System.transform.position = anchor;
             }
+
+            if (profile.AnchorDriftMps > 0f) Drift(profile);
         }
+    }
+
+    /// <summary>
+    /// Move a drifting kind's anchor along the surface. The height is re-derived from the ground under the new
+    /// position every step, so a flock crosses a valley at its own altitude instead of flying into the hill on
+    /// the far side.
+    /// </summary>
+    void Drift(AmbientSwarmProfile profile)
+    {
+        float step = profile.AnchorDriftMps * Time.deltaTime;
+
+        for (int i = 0; i < _swarms.Count; i++)
+        {
+            Swarm swarm = _swarms[i];
+            if (swarm.Kind != profile.Kind) continue;
+
+            Vector3 moved = swarm.Anchor + swarm.Heading * step;
+            Vector3 dir = (moved - _center).normalized;
+            if (dir.sqrMagnitude < 1e-6f || !_sampler.TryGetSurfaceRadius(dir, out float radius)) continue;
+
+            swarm.Anchor = _center + dir * (Mathf.Max(radius, _seaLevelRadius) + profile.HeightMeters);
+            swarm.Heading = HeadingAt(swarm.Anchor, swarm.Heading);
+            swarm.System.transform.position = swarm.Anchor;
+        }
+    }
+
+    // A heading is a tangent, and a tangent stops being one the moment the thing holding it has moved around
+    // the sphere. Re-projecting each step is what keeps a long drift from curving into the ground.
+    Vector3 HeadingAt(Vector3 anchor, Vector3 previous = default)
+    {
+        Vector3 up = (anchor - _center).normalized;
+        if (previous != default && CharacterMath.TryProjectOntoTangent(previous, up, out Vector3 kept))
+            return kept;
+
+        uint h = ScatterHash.Mix(_draw++ ^ 0x85ebca6bu);
+        Vector3 tangent = CharacterMath.ArbitraryTangent(up);
+        return Quaternion.AngleAxis(ScatterHash.To01(h) * 360f, up) * tangent;
     }
 
     bool TryPlaceAmbientAnchor(AmbientSwarmProfile profile, Vector3 observerWorldPos, out Vector3 anchor)
@@ -295,8 +355,9 @@ public sealed class AmbientSwarms : System.IDisposable
             // placement never asked what was underneath it.
             if (radius <= _seaLevelRadius) continue;
 
-            // Off the ground by roughly the swarm's own size, so the cloud is at eye level rather than buried.
-            anchor = _center + dir * radius + dir * (profile.SwarmRadiusMeters * 0.6f);
+            // Off the ground by its own height, or by roughly its own size when it has none, so the cloud is at
+            // eye level rather than buried in the hill it was placed on.
+            anchor = _center + dir * (radius + Mathf.Max(profile.HeightMeters, profile.SwarmRadiusMeters * 0.6f));
             return true;
         }
         return false;

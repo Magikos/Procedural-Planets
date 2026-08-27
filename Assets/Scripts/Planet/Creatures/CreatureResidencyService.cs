@@ -430,12 +430,12 @@ public sealed class CreatureResidencyService : IDisposable
             forward = CharacterMath.ArbitraryTangent(up);
         r.Forward = forward;
 
-        if (!_grounding.TryGround(r.Position, -up, species.BodyHeightMeters * 0.5f, out GroundResult ground))
+        if (!_grounding.TryGround(r.Position, -up, FootOffset(species), out GroundResult ground))
             return;   // no surface under it this frame; stay a record and try again next tick
 
         r.Position = ground.Position;
         r.Driver = new SurfaceCharacterController(
-            _gravity, _grounding, species.BodyHeightMeters * 0.5f,
+            _gravity, _grounding, FootOffset(species),
             new CharacterPose(r.Position, ground.Normal, forward));
 
         // The brain is rebuilt from the remembered behaviour, never carried across the gap as a live object.
@@ -600,6 +600,16 @@ public sealed class CreatureResidencyService : IDisposable
         Retire(r);
         return true;
     }
+
+    /// <summary>
+    /// How far above the surface the body sits. A flier is the SAME code with a bigger offset - the motor
+    /// already holds a body at a height above the ground, so a bird needed no second grounding provider and
+    /// no second driver.
+    /// </summary>
+    // ponytail: a bird therefore cruises and never lands. Perching is a third brain state that drops the
+    // offset to zero for a while - the FSM takes it without rework, and nothing here has to change.
+    static float FootOffset(CreatureSpeciesDto species) =>
+        species.BodyHeightMeters * 0.5f + species.CruiseAltitudeMeters;
 
     // Face-down along the direction it was travelling. Its own forward is already tangent to the surface, so
     // this cannot degenerate the way an arbitrary forward against the surface normal would.

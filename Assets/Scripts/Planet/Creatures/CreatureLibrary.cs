@@ -58,6 +58,10 @@ public sealed class CreatureSpecies
     public string YieldItemId = "Hide";
     [Min(0)] public int YieldCount = 1;
 
+    [Tooltip("Metres it holds ABOVE the ground. Zero walks. Anything else flies - the motor already keeps a " +
+             "body at a height, so a bird is this one number rather than a separate driver.")]
+    [Min(0f)] public float CruiseAltitudeMeters = 0f;
+
     [Min(0.1f)] public float BodyHeightMeters = 1.7f;
     public Color BodyColor = new(0.45f, 0.33f, 0.22f);
 }
@@ -78,7 +82,8 @@ public sealed record CreatureSpeciesDto(
     float AwarenessMeters,
     int MaxHealth,
     string YieldItemId,
-    int YieldCount)
+    int YieldCount,
+    float CruiseAltitudeMeters)
 {
     /// <summary>True when a death of this species never lapses - the boss case, same code path as a deer.</summary>
     public bool NeverRespawns => RespawnSeconds <= 0f;
@@ -122,7 +127,8 @@ public sealed record CreatureSpeciesDto(
                 Mathf.Max(1f, src.AwarenessMeters),
                 Mathf.Max(1, src.MaxHealth),
                 string.IsNullOrWhiteSpace(src.YieldItemId) ? "Hide" : src.YieldItemId,
-                Mathf.Max(0, src.YieldCount));
+                Mathf.Max(0, src.YieldCount),
+                Mathf.Max(0f, src.CruiseAltitudeMeters));
 }
 
 public sealed record CreatureLibraryDto(CreatureSpeciesDto[] Species, float ObserverBubbleMeters)
@@ -167,14 +173,29 @@ public sealed record CreatureLibraryDto(CreatureSpeciesDto[] Species, float Obse
             new CreatureSpeciesDto("Placeholder Deer", 3, 120f, 2.5f, 0.8f, 300f, 2f, 3000f, 1.7f,
                 new Color(0.45f, 0.33f, 0.22f),
                 new[] { BiomeType.Forest, BiomeType.Taiga, BiomeType.Tropical, BiomeType.Swamp },
-                CreatureFaction.Wildlife, 45f, 3, "Hide", 2),
+                CreatureFaction.Wildlife, 45f, 3, "Hide", 2, 0f),
 
             // Open-country grazer: small, numerous, and deliberately in biomes the deer refuses, so crossing
             // a biome line visibly swaps which animal is around you. Skittish - bolts at 25 m.
             new CreatureSpeciesDto("Placeholder Rabbit", 6, 45f, 3.2f, 1.2f, 120f, 2f, 2200f, 0.45f,
                 new Color(0.62f, 0.58f, 0.52f),
                 new[] { BiomeType.Grassland, BiomeType.Scrub, BiomeType.Steppe, BiomeType.Savanna },
-                CreatureFaction.Wildlife, 25f, 1, "Hide", 1),
+                CreatureFaction.Wildlife, 25f, 1, "Hide", 1, 0f),
+
+            // The flier, and the whole of what makes it one: a cruise altitude. Everything else about it is an
+            // ordinary resident - a slot, a home range, a death record, a carcass. It notices further than
+            // anything on the ground, which is what being up there is for.
+            new CreatureSpeciesDto("Placeholder Bird", 4, 200f, 6f, 2.5f, 180f, 2f, 4000f, 0.35f,
+                new Color(0.22f, 0.20f, 0.24f),
+                System.Array.Empty<BiomeType>(),
+                CreatureFaction.Wildlife, 70f, 1, "Feathers", 2, CruiseAltitude),
         },
         300f);
+
+    /// <summary>
+    /// Metres a placeholder bird holds above the ground. Low ON PURPOSE: high enough to read as flying, low
+    /// enough that it is still a thing in the world rather than a dot, and low enough to be worth aiming at
+    /// once there is anything to aim with.
+    /// </summary>
+    const float CruiseAltitude = 9f;
 }
