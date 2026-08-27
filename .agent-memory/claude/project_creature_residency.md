@@ -75,6 +75,33 @@ at boot, so anything switched on later drew over it (the predator tint made the 
 with `IConsoleService.RaiseToTop()`, called when the predator view hooks. Any new fullscreen overlay must do
 the same.
 
+
+**Carcasses, swarms and birds SHIPPED (2026-08-26, `85d28ae` `e1f0dcc` `c3d5b83`).**
+
+- **ANSWERED, do not re-derive: a point light lights NOTHING in this world.** URP is Forward+
+  (`m_RenderingMode: 2` in `Assets/Settings/PC_Renderer.asset`), so the pipeline supports 256 additional
+  lights — but `GetAdditionalLight` appears **zero times** in the tree. Terrain, grass, props and foliage all
+  shade from `Includes/PlanetSunLighting.hlsl`, 40 lines of analytic sun. `FoliageLit`, `Scatter` and
+  `PlanetVertexColor` declare `_ADDITIONAL_LIGHTS` and never read it — a dead keyword. Fireflies are emissive
+  billboards (`Hidden/SwarmParticles`); real light spill means adding a light loop to those four shaders.
+- **Carcass decay is a derived cache over ONE stored timestamp.** Stage = f(now − diedAt), so a body
+  fast-forwards free across a save. Same shape as path wear over stamps.
+- **TRAP — a slot key at generation 0 IS the id of the individual that died in it.** Both live in the delta
+  log's entity space, so carcasses mint under `EntityId.CorpseOwner` (0xFFFE). `ScatterHarvestStore` now
+  ignores entity records that are not host-minted; without that guard a carcass replayed as a phantom fallen
+  log and dragged the log allocator's counter up with it.
+- **Loot is on the BODY, not the killing blow.** Both go through `CreatureResidencyService.Strike` — the id's
+  owner tag picks the path.
+- **Never despawn in view** (Bryan, from Valheim): a spent carcass is removed only past
+  `CreatureCorpseStore.KeepAliveMeters`. Buildings extend it later; `planned:` at the site.
+- **Day/night for ambience is `dot(local up, sun direction)`, NEVER the global clock.** On a sphere the clock
+  says nothing about whether it is dark here. Fireflies at noon on the far side is the bug it produces.
+- **Swarms scatter off the THREAT registry, not the observer position** — so the freecam cannot startle flies,
+  same invariant that keeps it from frightening a deer.
+- **Flying needed NO new driver.** `IGroundingProvider.TryGround` already takes an offset above the surface,
+  so a flier is `BodyHeightMeters * 0.5 + CruiseAltitudeMeters`. One number on a species. Do not build an
+  `IFlyingProvider`. Ceiling: a bird cruises and never lands; perching is a third FSM state.
+
 **OWED: play-verification of the FSM redesign and of the record plumbing.** Blocked on a workflow trap —
 **the Unity editor throttles play mode to ~1/20 speed whenever it loses focus** (8 s of play time per 170 s
 wall clock), so a planet generation takes about an hour unattended. `Application.runInBackground = true` only

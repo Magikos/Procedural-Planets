@@ -627,3 +627,91 @@ farm one deer forever). 234/234 EditMode green.
 
 Not verified in play: the pick. Aiming at a moving 45 cm capsule through the same perpendicular tolerance a
 tree trunk uses may want a tolerance of its own — a number to find by trying it, not by reasoning.
+
+---
+
+## 18. Carcasses, ambience, and birds (2026-08-26)
+
+Four things Bryan asked for in one sitting: butterflies, fireflies, flies on a carcass that react to someone
+walking up, and birds. The carcass came first because the flies need one and because it changes the hunting
+flow of section 17.
+
+### The lighting question, answered first
+
+**Can a firefly be a point light?** The pipeline says yes and the shaders say no.
+
+| fact | evidence |
+| --- | --- |
+| URP is **Forward+** | `m_RenderingMode: 2` in `Assets/Settings/PC_Renderer.asset` — no eight-light cap, 256 additional lights, and the `AdditionalLightsPerObjectLimit: 4` in the RP asset is ignored on this path |
+| **no world shader samples them** | `GetAdditionalLight` appears **zero times** in the tree. Terrain, grass, props and foliage all light from `Includes/PlanetSunLighting.hlsl` — 40 lines of analytic sun, no light loop |
+| three shaders declare the keyword and never use it | `#pragma multi_compile _ _ADDITIONAL_LIGHTS` in `FoliageLit`, `Scatter` and `PlanetVertexColor`, with nothing reading it — a dead keyword, the same shape as the `_BaseColor` silent-no-op trap |
+
+So a `Light` on a firefly would light nothing: not the ground, not the grass, not the animal beside it. What
+was built instead is an emissive billboard, which is bright in a dark scene without lighting anything and is
+what the effect actually reads as. Real light spill is a separate, expensive decision — an additional-lights
+loop added to the four most fragile shaders here — and it should be taken after seeing the sprites and missing
+the glow, not before.
+
+### The carcass is a derived cache over one timestamp
+
+The only thing stored is when it died. Fresh, Bloated, Rotting, Bones and Gone are a pure function of elapsed
+time, so a body fast-forwards for free across a save, a reload, or a week away. Same shape as path wear, where
+the saved stamps are the truth and the mask is a rebuildable cache.
+
+**Two records, two keys, two purposes.** The death record is about the SLOT and decides when a new animal
+arrives; the carcass is about the BODY and decides how long it lies there. One record could not do both — a
+slot repopulates in minutes and a body lasts three days.
+
+That forced a third id space. A carcass is minted rather than derived, but it shares the delta log's entity
+space with the creature slot it came from, and **a slot key at generation zero is numerically the id of the
+individual that died in it**. `EntityId.CorpseOwner` keeps them apart. The same guard was missing in
+`ScatterHarvestStore`, which treated every `EntitySpawned` as a fallen log: a carcass would have replayed as a
+phantom log and dragged the log allocator's counter up with it.
+
+**Nothing vanishes while you are looking at it** (Bryan, from Valheim). A spent carcass is removed only once
+the observer is past `KeepAliveMeters`. Buildings will extend that radius; marked `planned:` at the site.
+
+Loot moved onto the body. A killing blow yields nothing now; hitting the carcass takes the hide. Both go
+through the same `Strike` verb, because from the player's side it is one action — hit the thing you are aiming
+at — and the id says which it was.
+
+### One swarm system, four uses
+
+Butterflies, fireflies and bird flocks anchor NEAR THE OBSERVER and are retired rather than followed once they
+fall behind. Nobody tracks a butterfly; it is atmosphere within a few tens of metres. That is what makes the
+whole system free — no population, no persistence, no save cost. Flies are the exception and the reason it
+exists: their anchor is a carcass.
+
+Three decisions worth keeping:
+
+- **Whether a kind is out is decided by the sun angle WHERE THE OBSERVER IS**, not by the global clock. On a
+  sphere the clock says nothing about whether it is dark here, and fireflies at noon on the far side is
+  exactly the bug it would produce. The quantity is `dot(local up, sun direction)` — the same one the terrain
+  shader lights from.
+- **Scattering reads the THREAT registry, not the observer position.** Section 16's invariant holds: the debug
+  freecam has no identity, so it cannot make a cloud of flies lift off any more than it can frighten a deer. A
+  swarm is startled through the wildlife lens — by whatever a deer would be startled by.
+- **The lift-off emits a burst as well as widening the emitter.** Widening alone reads as fog rolling out
+  rather than as flies being disturbed.
+
+### Flying needed no new driver
+
+`IGroundingProvider.TryGround` already takes an offset above the surface, which is what the motor holds a body
+at. A flier is that offset plus a cruise altitude: **one number on a species**, and every other thing about a
+bird — slot, home range, flee, death record, carcass — is the deer's code path unchanged. No
+`IFlyingProvider`, no second motor, no second driver.
+
+A drifting flock re-derives its height from the ground under its new position each step, so it crosses a
+valley at its own altitude instead of flying into the far hill, and re-projects its heading onto the local
+tangent, without which a long drift curves into the ground.
+
+Named rather than paid for: **a bird cruises and never lands.** Perching is a third brain state that drops the
+offset to zero for a while, which the FSM takes without rework.
+
+### Verified
+
+245/245 EditMode green — stage boundaries at real timestamps, a clock that ran backwards, loot-once, the
+keep-alive rule, the id-space collision, and the sun-angle gate in both directions.
+
+Not verified in play: any of the pixels. `creature.decay 500` compresses three days of rot into a few minutes,
+`creature.swarms` toggles the lot, and `creature.corpses` lists what is lying about.
