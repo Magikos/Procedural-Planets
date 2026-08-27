@@ -107,7 +107,7 @@ public sealed record AmbientSwarmProfile(
         // No biome list and no daylight window: flies go wherever a body is, whenever there is one.
         new(AmbientSwarmKind.Flies, "Flies", SwarmCount: 0, Particles: 26,
             SwarmRadiusMeters: 0.7f, ParticleSize: 0.11f, SpeedMps: 1.6f,
-            new Color(0.30f, 0.27f, 0.22f), Additive: false,
+            new Color(0.13f, 0.12f, 0.10f), Additive: false,
             MinLocalSun: -1f, MaxLocalSun: 1f,
             System.Array.Empty<BiomeType>(),
             ScatterRadiusMeters: 6f, ReturnAfterSeconds: 8f, HeightMeters: 0f, AnchorDriftMps: 0f,
@@ -320,6 +320,12 @@ public sealed class AmbientSwarms : System.IDisposable
             for (int have = live; have < want; have++)
             {
                 if (!TryPlaceAmbientAnchor(profile, observerWorldPos, out Vector3 anchor)) break;
+
+                // Placement finds ground; it does not know how far above that ground the observer is. From
+                // orbit every anchor is thousands of metres below, so without this the loop spawned a swarm,
+                // the keep test retired it on the same tick, and the pair repeated every frame forever.
+                if (KeptDistance(anchor, observerWorldPos) > keep) break;
+
                 Swarm swarm = Spawn(profile, anchorId: 0UL);
                 if (swarm == null) break;
                 PlaceAt(swarm, anchor);
@@ -475,7 +481,7 @@ public sealed class AmbientSwarms : System.IDisposable
     {
         float along = CreatureTerritory.SurfaceDistance(_center, anchor, observerWorldPos);
         float vertical = Mathf.Abs((anchor - _center).magnitude - (observerWorldPos - _center).magnitude);
-        return Mathf.Max(along, vertical - AnchorRadiusMeters);
+        return Mathf.Max(along, vertical);
     }
 
     /// <summary>
