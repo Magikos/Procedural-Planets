@@ -868,3 +868,25 @@ which is why it outnumbers the deer three to one; and the perched fraction, whic
 
 **Still unverified: butterflies.** Both ground positions the checks landed on were sand, which they correctly
 refuse, so no butterfly has ever been seen.
+
+### Butterflies, finally seen (2026-08-26, overnight)
+
+Four swarms, twenty-one particles each, in grassland at local noon — exactly the authored count. The last of
+the four kinds is confirmed rendering, and the biome gate is confirmed working in both directions: the two
+earlier attempts landed on sand and correctly got none.
+
+They read as **round yellow beads**, because they were drawing the firefly's soft circle in a different
+colour. That is the same "looks like a particle system" note in another form, so the sprite gained a two-lobed
+silhouette behind a `_Wings` toggle, and each butterfly now starts at its own angle and spins at its own rate.
+The tumble flashes the lobes edge-on and back, which at this size is the whole of a wingbeat, and the varying
+rates stop a cluster pulsing in unison. Fireflies, flies and birds keep the dot — for those it is right.
+
+Verified after the change: `_Wings` reads 1 on the butterfly material, rotation-over-lifetime is on, and the
+two lobes are visible on the near particles in a capture. Far ones remain single specks, which at 0.18 m and
+ten metres is what they should be.
+
+The lobe proportions are a taste number and have had one pass, not several. If they read as a figure-of-eight
+rather than as wings, the separation and radii in `Hidden/SwarmParticles` are the two values to move.
+
+**Every kind is now confirmed rendering in the world**: fireflies, flies on a carcass, birds, butterflies —
+plus the carcass itself, the dusk ramp, the motion, perching, and carcass persistence across a restart.
