@@ -119,13 +119,17 @@ the same.
 - Flies at night are invisible and that is physically right — verify insect visibility in DAYLIGHT.
 - Particle colours render considerably lighter than authored here (post/bloom); author darker than looks right.
 
-**CORRECTION, measured: unattended play-mode verification IS viable.** The old note that the editor throttles
-to ~1/20 speed unfocused (a planet generation near an hour) and that `Application.runInBackground` only helps
-while focused is FALSE as measured 2026-08-26: unfocused with `runInBackground` true, generation took 62-85 s
-and frames held 13-16 ms. Teleporting the camera from orbit to ground in two steps above the same spot wedged
-nothing. Screenshot via `cam.Render()` into a RenderTexture then `EncodeToPNG`, and read the file.
-**Skipping this step is what let five defects ship.** See [[feedback_camera_teleport_wedges_editor]] and
-[[reference_unity_mcp]], both of which overstate the risk.
+**CORRECTION, measured: unattended play-mode verification IS worth attempting.** The old note says the editor
+throttles to ~1/20 speed unfocused (a planet generation near an hour) and that `Application.runInBackground`
+only helps while focused. Measured 2026-08-26, unfocused with `runInBackground` true: several generations
+completed in **62-85 s** with frames at 13-16 ms, and later runs the same night were slow — so it varies
+rather than being a fixed penalty. Teleporting the camera from orbit to ground in two steps above the same
+spot wedged nothing. Screenshot via `cam.Render()` into a RenderTexture then `EncodeToPNG`, and read the file.
+**Skipping this step is what let six defects ship**, including a species-slot collision that meant one of
+three species had never spawned. See [[feedback_camera_teleport_wedges_editor]].
+
+**Wait on the background timer's NOTIFICATION before querying Unity.** Querying immediately after launching a
+`sleep` measures nothing, and the unchanged clock reads like a stall that is not there.
 
 **OWED: play-verification of the FSM redesign and of the record plumbing.** Blocked on a workflow trap —
 **the Unity editor throttles play mode to ~1/20 speed whenever it loses focus** (8 s of play time per 170 s

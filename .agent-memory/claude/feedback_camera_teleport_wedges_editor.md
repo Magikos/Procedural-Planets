@@ -76,11 +76,18 @@ hour without a stall.
 `execute_code` call — and if it is a few hundred metres, go. If it is kilometres, use `scatter.goto` or do not
 travel.
 
-The same session also contradicts the throttle claim in [[reference_unity_mcp]]: **unfocused, with
-`Application.runInBackground` true, a full planet generation took 62-85 s, not the better part of an hour.**
-Unattended play-mode verification is viable, and it is worth the wait — one session of it found five defects
-in code that had already been committed and documented as working, including a whole feature that Unity was
-silently refusing to run.
+The same session also softens the throttle claim in [[reference_unity_mcp]]. Unfocused, with
+`Application.runInBackground` true, **several full planet generations completed in 62-85 s** — not the better
+part of an hour. Later runs in the same night WERE slow, so the speed varies rather than being a fixed
+penalty; the useful correction is that unattended play-mode verification is **worth attempting** rather than
+written off in advance.
+
+Budget for it either way, and **wait on the background timer's notification before querying** — polling
+straight after launching a `sleep` measures nothing and reads like a stall.
+
+One session of it found five defects in code that had already been committed and documented as working,
+including a whole feature Unity was silently refusing to run, and a species-slot collision that meant one of
+three creature species had never spawned at all.
 
 ## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
 
