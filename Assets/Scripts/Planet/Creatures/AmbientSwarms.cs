@@ -106,8 +106,8 @@ public sealed record AmbientSwarmProfile(
 
         // No biome list and no daylight window: flies go wherever a body is, whenever there is one.
         new(AmbientSwarmKind.Flies, "Flies", SwarmCount: 0, Particles: 26,
-            SwarmRadiusMeters: 0.7f, ParticleSize: 0.05f, SpeedMps: 1.6f,
-            new Color(0.10f, 0.09f, 0.08f), Additive: false,
+            SwarmRadiusMeters: 0.7f, ParticleSize: 0.11f, SpeedMps: 1.6f,
+            new Color(0.30f, 0.27f, 0.22f), Additive: false,
             MinLocalSun: -1f, MaxLocalSun: 1f,
             System.Array.Empty<BiomeType>(),
             ScatterRadiusMeters: 6f, ReturnAfterSeconds: 8f, HeightMeters: 0f, AnchorDriftMps: 0f,
@@ -228,7 +228,7 @@ public sealed class AmbientSwarms : System.IDisposable
     {
         if (!_configured || !_enabled || _parent == null) return;
 
-        SyncFlies(corpses, nowUnixSeconds);
+        SyncFlies(corpses, observerWorldPos, nowUnixSeconds);
         SyncAmbient(observerWorldPos, localSun);
         UpdateScatter(nowUnixSeconds);
         SweepFaded();
@@ -236,15 +236,19 @@ public sealed class AmbientSwarms : System.IDisposable
 
     // --- flies: anchored to what died ------------------------------------
 
-    void SyncFlies(CreatureCorpseStore corpses, long nowUnixSeconds)
+    void SyncFlies(CreatureCorpseStore corpses, Vector3 observerWorldPos, long nowUnixSeconds)
     {
         AmbientSwarmProfile profile = ProfileOf(AmbientSwarmKind.Flies);
         _corpseScratch.Clear();
 
         if (corpses != null)
         {
+            // Bounded by the same radius the BODY is drawn within. Without it every carcass in the save keeps
+            // a live particle system, and a cloud of flies hangs in the air a quarter of a kilometre away with
+            // nothing underneath it, because the body it belongs to is out of draw range.
             foreach (CreatureCorpse c in corpses.All)
-                if (corpses.Decay.HasFlies(c, nowUnixSeconds))
+                if (corpses.Decay.HasFlies(c, nowUnixSeconds) &&
+                    KeptDistance(c.Position, observerWorldPos) <= CreatureCorpseStore.KeepAliveMeters)
                     _corpseScratch.Add(c);
         }
 
@@ -290,7 +294,6 @@ public sealed class AmbientSwarms : System.IDisposable
             // Something 55 m up is a long way away before it is out of sight, so its keep radius grows with
             // its height. Without this a flock is retired and replaced every few seconds of drift.
             float keep = KeepAnchorMeters + profile.HeightMeters * 2f;
-            float keepSqr = keep * keep;
 
             // Left behind: retire rather than follow. A butterfly that jumps thirty metres to keep up with you
             // is far more noticeable than one that simply is not there.
@@ -300,7 +303,7 @@ public sealed class AmbientSwarms : System.IDisposable
             {
                 Swarm s = _swarms[i];
                 if (s.Kind != profile.Kind || s.Retiring) continue;
-                if ((s.Anchor - observerWorldPos).sqrMagnitude > keepSqr) { _retired.Add(s); continue; }
+                if (KeptDistance(s.Anchor, observerWorldPos) > keep) { _retired.Add(s); continue; }
                 live++;
             }
 
@@ -369,6 +372,12 @@ public sealed class AmbientSwarms : System.IDisposable
         Vector3 up = (observerWorldPos - _center).normalized;
         if (up.sqrMagnitude < 1e-6f) return false;
 
+        // The sampler answers in WORLD units and the biome field is planet-LOCAL. Converting once here rather
+        // than mixing the two is what CreatureResidencyService.TryFindHome does, and a swarm that disagreed
+        // with the ground about which biome it is over would be a silent wrong answer, not a visible failure.
+        PlanetTransformSnapshot planet = PlanetTransformSnapshot.Capture(_parent);
+        float scale = Mathf.Max(planet.UniformScale, 1e-4f);
+
         for (int attempt = 0; attempt < 4; attempt++)
         {
             uint h = ScatterHash.Mix(_draw++ ^ ((uint)profile.Kind * 0x9e3779b1u));
@@ -381,15 +390,20 @@ public sealed class AmbientSwarms : System.IDisposable
             Vector3 dir = (observerWorldPos + offset - _center).normalized;
             if (!_sampler.TryGetSurfaceRadius(dir, out float radius)) continue;
 
-            if (_biome != null && profile.Biomes.Length > 0)
-            {
-                BiomeType biome = _biome.EvaluateBiome(dir, radius / _planetRadius - 1f).PrimaryBiome;
-                if (!profile.LivesIn(biome)) continue;
-            }
+            float localRadius = radius / scale;
 
             // Above the waterline. A cloud of butterflies bobbing over open ocean is the giveaway that
-            // placement never asked what was underneath it.
+            // placement never asked what was underneath it. Compared against the WORLD radius, which is what
+            // PlanetSurfaceGrounding does with the same value — the two must agree or a swarm hovers over
+            // water the character is walking on.
             if (radius <= _seaLevelRadius) continue;
+
+            if (_biome != null && profile.Biomes.Length > 0)
+            {
+                Vector3 localDir = planet.InverseTransformDirection(dir);
+                BiomeType biome = _biome.EvaluateBiome(localDir, localRadius / _planetRadius - 1f).PrimaryBiome;
+                if (!profile.LivesIn(biome)) continue;
+            }
 
             // Off the ground by its own height, or by roughly its own size when it has none, so the cloud is at
             // eye level rather than buried in the hill it was placed on.
@@ -445,6 +459,23 @@ public sealed class AmbientSwarms : System.IDisposable
         // The lift-off itself. Without the burst the cloud only widens as it re-emits, which reads as fog
         // rolling out rather than as flies being disturbed.
         if (scattered) swarm.System.Emit(profile.Particles / 2);
+    }
+
+    /// <summary>
+    /// How far a swarm is from the observer for the purpose of keeping it, measured ALONG THE SURFACE plus
+    /// whatever height it holds.
+    /// </summary>
+    /// <remarks>
+    /// Straight-line distance is wrong here for the same reason it was wrong for creature promotion: an
+    /// observer three hundred metres up is a full keep-radius from a swarm directly beneath them, so every
+    /// ambient swarm was placed and retired again on the frame it was born. Flying over a meadow showed a
+    /// handful of fireflies churning instead of a meadow full of them.
+    /// </remarks>
+    float KeptDistance(Vector3 anchor, Vector3 observerWorldPos)
+    {
+        float along = CreatureTerritory.SurfaceDistance(_center, anchor, observerWorldPos);
+        float vertical = Mathf.Abs((anchor - _center).magnitude - (observerWorldPos - _center).magnitude);
+        return Mathf.Max(along, vertical - AnchorRadiusMeters);
     }
 
     /// <summary>
@@ -531,6 +562,11 @@ public sealed class AmbientSwarms : System.IDisposable
         noise.quality = ParticleSystemNoiseQuality.Medium;
         color.enabled = true;
 
+        // Every axis of a velocity group is set together, through the helpers below. Unity validates the three
+        // as a UNIT: give one a two-constant range and leave the others at their default single constant and
+        // it rejects the WHOLE module - logging "Particle Velocity curves must all be in the same mode" every
+        // frame and silently applying none of the motion. That is exactly what happened the first time.
+
         switch (profile.Kind)
         {
             case AmbientSwarmKind.Fireflies:
@@ -543,9 +579,9 @@ public sealed class AmbientSwarms : System.IDisposable
 
                 // A slow circle around the anchor with a slight inward pull, so they hold together as a
                 // cluster near one spot instead of dispersing the way a plain emitter does.
-                velocity.orbitalY = new ParticleSystem.MinMaxCurve(-0.22f, 0.22f);
+                Orbit(ps, -0.22f, 0.22f);
                 velocity.radial = new ParticleSystem.MinMaxCurve(-0.06f, 0.02f);
-                velocity.y = new ParticleSystem.MinMaxCurve(0.02f, 0.16f);   // they drift upward, gently
+                Lift(ps, 0.02f, 0.16f);                                      // they drift upward, gently
 
                 limit.enabled = true;
                 limit.limit = new ParticleSystem.MinMaxCurve(0.5f);
@@ -567,9 +603,9 @@ public sealed class AmbientSwarms : System.IDisposable
                 main.startLifetime = new ParticleSystem.MinMaxCurve(6f, 12f);
                 emission.rateOverTime = profile.Particles / 6f;
 
-                velocity.orbitalY = new ParticleSystem.MinMaxCurve(-0.5f, 0.5f);
+                Orbit(ps, -0.5f, 0.5f);
                 velocity.radial = new ParticleSystem.MinMaxCurve(-0.15f, 0.1f);
-                velocity.y = new ParticleSystem.MinMaxCurve(1f, Bob());       // the flutter
+                Flutter(ps, Bob());                                          // the bob, on all three axes
 
                 limit.enabled = true;
                 limit.limit = new ParticleSystem.MinMaxCurve(1.6f);
@@ -590,9 +626,9 @@ public sealed class AmbientSwarms : System.IDisposable
                 main.startSpeed = new ParticleSystem.MinMaxCurve(0f, 0.2f);
                 emission.rateOverTime = profile.Particles / 12f;
 
-                velocity.orbitalY = new ParticleSystem.MinMaxCurve(0.35f, 0.7f);   // all one way round
+                Orbit(ps, 0.35f, 0.7f);                                      // all one way round
                 velocity.radial = new ParticleSystem.MinMaxCurve(-0.05f, 0.05f);
-                velocity.y = new ParticleSystem.MinMaxCurve(-0.15f, 0.15f);
+                Lift(ps, -0.15f, 0.15f);
 
                 noise.strength = 0.25f;
                 noise.frequency = 0.1f;
@@ -606,8 +642,9 @@ public sealed class AmbientSwarms : System.IDisposable
                 main.startLifetime = new ParticleSystem.MinMaxCurve(1.2f, 3f);
                 emission.rateOverTime = profile.Particles / 2f;
 
-                velocity.orbitalY = new ParticleSystem.MinMaxCurve(-1.5f, 1.5f);
+                Orbit(ps, -1.5f, 1.5f);
                 velocity.radial = new ParticleSystem.MinMaxCurve(-0.4f, 0.2f);
+                Lift(ps, -0.3f, 0.3f);
 
                 limit.enabled = true;
                 limit.limit = new ParticleSystem.MinMaxCurve(2.5f);
@@ -621,6 +658,36 @@ public sealed class AmbientSwarms : System.IDisposable
                 color.color = FadeInOut();
                 break;
         }
+    }
+
+    // All three orbital axes together, in one mode. Only Y is ever non-zero: the swarm's transform is oriented
+    // to the surface, so local Y is the local up and orbiting it is "circling above this spot".
+    static void Orbit(ParticleSystem ps, float min, float max)
+    {
+        ParticleSystem.VelocityOverLifetimeModule v = ps.velocityOverLifetime;
+        v.orbitalX = new ParticleSystem.MinMaxCurve(0f, 0f);
+        v.orbitalY = new ParticleSystem.MinMaxCurve(min, max);
+        v.orbitalZ = new ParticleSystem.MinMaxCurve(0f, 0f);
+    }
+
+    // All three linear axes together, in one mode. Y is up because of that same orientation.
+    static void Lift(ParticleSystem ps, float min, float max)
+    {
+        ParticleSystem.VelocityOverLifetimeModule v = ps.velocityOverLifetime;
+        v.x = new ParticleSystem.MinMaxCurve(0f, 0f);
+        v.y = new ParticleSystem.MinMaxCurve(min, max);
+        v.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+    }
+
+    // A curve on the vertical needs curves on the other two as well, or the mode disagrees and the module is
+    // thrown away whole. The flat ones are genuinely zero, they are just spelled as curves.
+    static void Flutter(ParticleSystem ps, AnimationCurve vertical)
+    {
+        ParticleSystem.VelocityOverLifetimeModule v = ps.velocityOverLifetime;
+        AnimationCurve flat = AnimationCurve.Constant(0f, 1f, 0f);
+        v.x = new ParticleSystem.MinMaxCurve(1f, flat);
+        v.y = new ParticleSystem.MinMaxCurve(1f, vertical);
+        v.z = new ParticleSystem.MinMaxCurve(1f, flat);
     }
 
     // Ordinary appear-and-vanish, so nothing pops into existence at full brightness.
