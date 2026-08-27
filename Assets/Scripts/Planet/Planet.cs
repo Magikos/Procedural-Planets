@@ -65,6 +65,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     CreatureResidencyService _creatures;
     CreatureView _creatureView;
     ThreatRegistry _threats;
+    CreatureCorpseStore _corpses;
 
     static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
     static readonly int _seaLevelRadiusId = Shader.PropertyToID(ShaderGlobalIds.SeaLevelRadius);
@@ -109,6 +110,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         context.Register(_creatures);
         context.Register(_threats);
         context.Register(_creatureView);
+        context.Register(_corpses);
 
         // Harvest interactor (POC): picker + verb wired to this world's scatter cache, harvest store, and
         // inventory. The ScatterLibraryDto is NOT registered yet at world-service registration (it registers
@@ -176,6 +178,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _creatures ??= new CreatureResidencyService(transform, this, Logger);
         _creatureView ??= new CreatureView(transform);
         _threats ??= new ThreatRegistry();
+        _corpses ??= new CreatureCorpseStore(Logger);
         _scatterRenderer.Cache.SetHarvestStore(_harvestStore);
     }
 
@@ -339,6 +342,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         {
             _creatures.Tick(_observerCamera.transform.position, Time.deltaTime);
             _creatureView?.Sync(_creatures.Live, _creatures.Library);
+            _creatureView?.SyncCorpses(_corpses, _creatures.Library, _observerCamera.transform.position,
+                CreatureCorpseStore.KeepAliveMeters);
         }
     }
 
@@ -539,7 +544,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             _creatureView.Clear();
             // Same IBiomeProvider the terrain bake and scatter placement read, so a creature cannot disagree
             // with the ground about which biome it is standing in.
-            _creatures.Configure(Seed, _deltaLog, _colorGenerator, _threats, planet.PlanetRadius, seaLevelRadius);
+            _corpses.Configure(_deltaLog);
+            _creatures.Configure(Seed, _deltaLog, _colorGenerator, _threats, planet.PlanetRadius, seaLevelRadius,
+                _corpses);
             long scatterRendererMs = finalizeStep.ElapsedMilliseconds;
             finalizeStep.Restart();
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _shapeGenerator.ElevationMin, _shapeGenerator.ElevationMax));

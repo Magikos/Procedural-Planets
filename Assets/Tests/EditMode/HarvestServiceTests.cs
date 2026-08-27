@@ -128,7 +128,7 @@ namespace ProceduralPlanets.Tests
             Assert.AreEqual(0, _harvestedEvents, "no event on an already-dug stump");
         }
 
-        // --- creature strikes ------------------------------------------------
+        // --- creature strikes and carcass loot -------------------------------
 
         int _struckEvents;
         CreatureStruckEvent _lastStruck;
@@ -136,8 +136,9 @@ namespace ProceduralPlanets.Tests
         void OnStruck(CreatureStruckEvent e) { _struckEvents++; _lastStruck = e; }
 
         // An animal with health, standing in for the residency service. It owns its own health exactly as the
-        // real one does, so what is under test here is the choke point's credit-and-announce, not the arithmetic.
-        static Func<EntityId, int, Vector3, CreatureStrike> Animal(int health, string name, HarvestYield yield)
+        // real one does, so what is under test is the choke point's credit-and-announce, not the arithmetic.
+        // A killing blow yields NOTHING: the hide stays on the body.
+        static Func<EntityId, int, Vector3, CreatureStrike> Animal(int health, string name)
         {
             int remaining = health;
             return (_, damage, _) =>
@@ -146,44 +147,70 @@ namespace ProceduralPlanets.Tests
                 remaining -= Mathf.Max(1, damage);
                 return remaining > 0
                     ? CreatureStrike.Wounded(name, Vector3.one, remaining)
-                    : CreatureStrike.Fatal(name, Vector3.one, yield);
+                    : CreatureStrike.Fatal(name, Vector3.one);
+            };
+        }
+
+        // A body that gives its yield up once and then has nothing left.
+        static Func<EntityId, int, Vector3, CreatureStrike> Carcass(string name, HarvestYield yield)
+        {
+            bool taken = false;
+            return (_, _, _) =>
+            {
+                if (taken) return CreatureStrike.NothingLeft(name, Vector3.one);
+                taken = true;
+                return CreatureStrike.Looted(name, Vector3.one, yield);
             };
         }
 
         static HarvestService MakeHunter(Dictionary<string, int> inv,
-            Func<EntityId, int, Vector3, CreatureStrike> animal = null)
+            Func<EntityId, int, Vector3, CreatureStrike> target = null)
             => new HarvestService(
                 _ => true,
                 (_, _) => { },
                 (item, n) => { inv.TryGetValue(item, out int c); inv[item] = c + n; },
                 _ => default,
                 _ => false,
-                animal);
+                target);
+
+        static EntityId Anything => new(EntityId.DerivedOwner, 7);
 
         [Test]
-        public void Strike_WoundsWithoutGranting_ThenKillsAndGrantsExactlyOnce()
+        public void Strike_WoundsAndKillsWithoutGrantingAnything()
         {
             var inv = new Dictionary<string, int>();
-            HarvestService svc = MakeHunter(inv, Animal(3, "Placeholder Deer", new HarvestYield("Hide", 2)));
+            HarvestService svc = MakeHunter(inv, Animal(3, "Placeholder Deer"));
             EventBus<CreatureStruckEvent>.Listen(OnStruck);
 
-            var id = new EntityId(EntityId.DerivedOwner, 7);
+            Assert.AreEqual(HarvestOutcome.Hit, svc.TryStrike(Anything, Vector3.zero, ToolTier.Club).Outcome);
+            Assert.AreEqual(HarvestOutcome.Hit, svc.TryStrike(Anything, Vector3.zero, ToolTier.Club).Outcome);
 
-            Assert.AreEqual(HarvestOutcome.Hit, svc.TryStrike(id, Vector3.zero, ToolTier.Club).Outcome);
-            Assert.AreEqual(HarvestOutcome.Hit, svc.TryStrike(id, Vector3.zero, ToolTier.Club).Outcome);
-            Assert.AreEqual(0, inv.Count, "a wound credits nothing");
-
-            HarvestResult fatal = svc.TryStrike(id, Vector3.zero, ToolTier.Club);
+            HarvestResult fatal = svc.TryStrike(Anything, Vector3.zero, ToolTier.Club);
             Assert.AreEqual(HarvestOutcome.Felled, fatal.Outcome);
-            Assert.AreEqual(2, inv["Hide"]);
+            Assert.AreEqual(0, fatal.Yield.Count, "a killing blow leaves the hide on the body");
+            Assert.AreEqual(0, inv.Count, "nothing is credited until the carcass is looted");
+
             Assert.AreEqual(3, _struckEvents, "every blow is announced, wound or kill");
             Assert.IsTrue(_lastStruck.Killed);
+        }
 
-            // The corpse is not a second harvest. Without this a held interact key farms one deer forever.
+        [Test]
+        public void Loot_GrantsExactlyOnce_ThenTheCarcassHasNothingLeft()
+        {
+            var inv = new Dictionary<string, int>();
+            HarvestService svc = MakeHunter(inv, Carcass("Placeholder Deer", new HarvestYield("Hide", 2)));
+            EventBus<CreatureStruckEvent>.Listen(OnStruck);
+
+            HarvestResult took = svc.TryStrike(Anything, Vector3.zero, ToolTier.Club);
+            Assert.AreEqual(HarvestOutcome.Felled, took.Outcome);
+            Assert.AreEqual(2, inv["Hide"]);
+            Assert.AreEqual(1, _struckEvents);
+
+            // Without this a held interact key farms one carcass forever.
             Assert.AreEqual(HarvestOutcome.AlreadyHarvested,
-                svc.TryStrike(id, Vector3.zero, ToolTier.Club).Outcome);
-            Assert.AreEqual(2, inv["Hide"], "a dead animal does not yield twice");
-            Assert.AreEqual(3, _struckEvents);
+                svc.TryStrike(Anything, Vector3.zero, ToolTier.Club).Outcome);
+            Assert.AreEqual(2, inv["Hide"], "a looted carcass does not yield twice");
+            Assert.AreEqual(1, _struckEvents, "and it is not announced twice either");
         }
 
         [Test]
@@ -192,7 +219,7 @@ namespace ProceduralPlanets.Tests
             var inv = new Dictionary<string, int>();
             HarvestService svc = MakeHunter(inv);
             Assert.AreEqual(HarvestOutcome.NotHarvestable,
-                svc.TryStrike(new EntityId(EntityId.DerivedOwner, 7), Vector3.zero, ToolTier.Club).Outcome);
+                svc.TryStrike(Anything, Vector3.zero, ToolTier.Club).Outcome);
         }
     }
 }

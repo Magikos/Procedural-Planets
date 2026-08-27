@@ -50,12 +50,16 @@ public sealed class HarvestService
         if (_strikeCreature == null) return HarvestResult.NotHarvestable;
 
         CreatureStrike s = _strikeCreature(creatureId, tool.Damage, fromWorldPos);
-        if (!s.Hit) return HarvestResult.AlreadyHarvested;
+        if (!s.Hit || s.Outcome == CreatureStrikeOutcome.NothingLeft) return HarvestResult.AlreadyHarvested;
 
-        if (s.Killed && s.Yield.Count > 0) _grantItem(s.Yield.ItemId, s.Yield.Count);
+        // Granted on the outcome that CARRIES a yield, not on the kill. A killing blow leaves the hide on the
+        // body; taking it off the carcass is the separate action that credits it.
+        if (s.Yield.Count > 0) _grantItem(s.Yield.ItemId, s.Yield.Count);
         EventBus<CreatureStruckEvent>.Raise(new CreatureStruckEvent(
             creatureId.Value, s.Position, s.DisplayName, s.RemainingHealth, s.Killed, s.Yield));
-        return s.Killed ? HarvestResult.Felled(s.Yield) : HarvestResult.Hit;
+        return s.Outcome == CreatureStrikeOutcome.Wounded
+            ? HarvestResult.Hit
+            : HarvestResult.Felled(s.Yield);
     }
 
     public HarvestResult TryHarvest(in ScatterPick pick, in ToolTier tool)

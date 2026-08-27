@@ -33,8 +33,9 @@ sealed class DebugOverlayHud : IDisposable
     {
         _harvestFlashActive = true;
         _harvestFlashUntil = Time.unscaledTime + 2f;
-        _harvestFlashMessage = e.Killed
-            ? $"Killed the {e.DisplayName} (+{e.Yield.Count} {e.Yield.ItemId})"
+        _harvestFlashMessage =
+            e.Yield.Count > 0 ? $"Took {e.Yield.Count}x {e.Yield.ItemId} off the {e.DisplayName}"
+            : e.Killed ? $"Killed the {e.DisplayName}"
             : $"Hit the {e.DisplayName} - {e.RemainingHealth} left";
     }
 

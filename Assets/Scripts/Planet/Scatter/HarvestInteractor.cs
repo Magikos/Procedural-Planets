@@ -13,6 +13,7 @@ public sealed class HarvestInteractor
     readonly CreatureResidencyService _creatures;
     readonly ILogger _log;
     readonly List<ScatterHarvestStore.HarvestNode> _stumpScratch = new();
+    readonly List<CreatureCorpse> _corpseScratch = new();
     readonly List<Vector3> _positionScratch = new();
 
     public HarvestInteractor(ScatterPicker picker, HarvestService harvest, ScatterHarvestStore store,
@@ -40,22 +41,27 @@ public sealed class HarvestInteractor
         bool hasStump = TryPickStump(ray, reachMeters, maxPerpMeters, out ulong stumpId, out Vector3 stumpPos);
         bool hasCreature = TryPickCreature(ray, reachMeters, maxPerpMeters,
             out EntityId creatureId, out Vector3 creaturePos);
+        bool hasCorpse = TryPickCorpse(ray, reachMeters, maxPerpMeters,
+            out EntityId corpseId, out Vector3 corpsePos);
 
-        if (!hasTree && !hasStump && !hasCreature)
+        if (!hasTree && !hasStump && !hasCreature && !hasCorpse)
         {
             _log?.Log(LogLevel.Info, "Harvest",
-                "nothing harvestable in aim — put the crosshair on a tree, a stump base, or an animal");
+                "nothing harvestable in aim — put the crosshair on a tree, a stump base, an animal or a carcass");
             return false;
         }
 
         // Nearest to the ray ORIGIN wins, so a deer standing in front of a tree takes the blow. Ties go to the
-        // animal: it is the thing that walks away while you swing at the scenery behind it.
+        // animal, then the carcass: those are the things that reward acting NOW, and the scenery will wait.
         float treeD = hasTree ? (tree.Position - ray.origin).sqrMagnitude : float.MaxValue;
         float stumpD = hasStump ? (stumpPos - ray.origin).sqrMagnitude : float.MaxValue;
         float creatureD = hasCreature ? (creaturePos - ray.origin).sqrMagnitude : float.MaxValue;
+        float corpseD = hasCorpse ? (corpsePos - ray.origin).sqrMagnitude : float.MaxValue;
 
-        if (creatureD <= treeD && creatureD <= stumpD)
+        if (creatureD <= treeD && creatureD <= stumpD && creatureD <= corpseD)
             return Strike(creatureId, ray.origin);
+        if (corpseD <= treeD && corpseD <= stumpD)
+            return Strike(corpseId, ray.origin);
 
         bool dig = stumpD < treeD;
         HarvestResult r = dig
@@ -83,16 +89,45 @@ public sealed class HarvestInteractor
         HarvestResult r = _harvest.TryStrike(id, from, ToolTier.Club);
         switch (r.Outcome)
         {
+            // Felled covers both a killing blow and a carcass giving up its hide. The yield is what tells them
+            // apart: a kill leaves everything on the body, so it grants nothing.
+            case HarvestOutcome.Felled when r.Yield.Count > 0:
+                _log?.Log(LogLevel.Info, "Harvest", $"Took {r.Yield.Count}x {r.Yield.ItemId} off the carcass");
+                return true;
             case HarvestOutcome.Felled:
-                _log?.Log(LogLevel.Info, "Harvest", $"Killed it (+{r.Yield.Count} {r.Yield.ItemId})");
+                _log?.Log(LogLevel.Info, "Harvest", "Killed it — the carcass is on the ground, hit it again to take the hide");
                 return true;
             case HarvestOutcome.Hit:
                 _log?.Log(LogLevel.Info, "Harvest", "Hit it — it bolts");
                 return false;
             default:
-                _log?.Log(LogLevel.Info, "Harvest", "the animal is already gone");
+                _log?.Log(LogLevel.Info, "Harvest", "nothing left to take");
                 return false;
         }
+    }
+
+    bool TryPickCorpse(Ray ray, float reach, float perp, out EntityId id, out Vector3 pos)
+    {
+        id = EntityId.None;
+        pos = default;
+
+        CreatureCorpseStore corpses = _creatures?.Corpses;
+        if (corpses == null || corpses.Count == 0) return false;
+
+        corpses.CollectNear(ray.origin, reach, System.DateTimeOffset.UtcNow.ToUnixTimeSeconds(), _corpseScratch);
+        if (_corpseScratch.Count == 0) return false;
+
+        // Aimed at where it lies. A body is on the ground, so unlike a standing animal there is no height to
+        // correct for.
+        _positionScratch.Clear();
+        for (int i = 0; i < _corpseScratch.Count; i++) _positionScratch.Add(_corpseScratch[i].Position);
+
+        int idx = ScatterPickMath.NearestAlongRay(ray, _positionScratch, reach, perp, out _);
+        if (idx < 0) return false;
+
+        id = _corpseScratch[idx].Id;
+        pos = _corpseScratch[idx].Position;
+        return true;
     }
 
     bool TryPickStump(Ray ray, float reach, float perp, out ulong id, out Vector3 pos)

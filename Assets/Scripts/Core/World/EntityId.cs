@@ -38,6 +38,14 @@ public readonly struct EntityId : IEquatable<EntityId>, IComparable<EntityId>
     /// </summary>
     public const ushort DerivedOwner = 0xFFFF;
 
+    /// <summary>
+    /// Reserved for carcasses. They ARE minted rather than derived, so they would normally sit under
+    /// <see cref="HostOwner"/> - but a carcass shares the delta log's entity space with the seed-derived
+    /// creature slot it came from, and a slot key at generation zero is numerically the same as the
+    /// individual that died in it. A separate owner tag is what keeps the two apart.
+    /// </summary>
+    public const ushort CorpseOwner = 0xFFFE;
+
     public readonly ulong Value;
 
     public EntityId(ulong value) => Value = value;

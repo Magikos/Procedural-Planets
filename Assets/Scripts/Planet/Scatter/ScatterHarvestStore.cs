@@ -149,6 +149,13 @@ public sealed class ScatterHarvestStore
 
     void Ingest(in WorldDelta d)
     {
+        // Entity records are a SHARED space: a creature's slot record and a carcass land here too, tagged by
+        // owner. Without this guard a carcass replays as a phantom fallen log, and its derived counter drags
+        // the log allocator up with it.
+        if ((d.Kind == DeltaKind.EntitySpawned || d.Kind == DeltaKind.EntityRemoved) &&
+            new EntityId(d.Key).Owner != EntityId.HostOwner)
+            return;
+
         switch (d.Kind)
         {
             case DeltaKind.ScatterState:

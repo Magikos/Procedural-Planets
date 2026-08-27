@@ -599,5 +599,97 @@ namespace ProceduralPlanets.Tests
             Assert.AreEqual(home, CreatureTerritory.DriftToward(Vector3.zero, home, home, 0f));
             Assert.AreEqual(0f, CreatureTerritory.SurfaceDistance(Vector3.zero, Vector3.zero, home));
         }
+
+        // --- carcasses: decomposition is derived, never stored --------------
+
+        // A real timestamp, not a small number. Corpse ages are unix-epoch arithmetic, and the epoch needs 31
+        // bits while a float carries 24 - the same trap that made the respawn countdown read as a constant.
+        const long Now = 1_782_000_000L;
+
+        static CreatureCorpse Body(long diedUnix) =>
+            new(new EntityId(EntityId.CorpseOwner, 1), 0, Vector3.zero, Quaternion.identity, diedUnix, false);
+
+        [Test]
+        public void CorpseStage_FollowsElapsedTime_AndEndsAtGone()
+        {
+            CorpseDecay d = CorpseDecay.Default;
+
+            Assert.AreEqual(CorpseStage.Fresh, d.StageOf(Body(Now), Now));
+            Assert.AreEqual(CorpseStage.Fresh, d.StageOf(Body(Now - 59 * 60), Now));
+            Assert.AreEqual(CorpseStage.Bloated, d.StageOf(Body(Now - 3600), Now));
+            Assert.AreEqual(CorpseStage.Rotting, d.StageOf(Body(Now - 6 * 3600), Now));
+            Assert.AreEqual(CorpseStage.Bones, d.StageOf(Body(Now - 24 * 3600), Now));
+            Assert.AreEqual(CorpseStage.Gone, d.StageOf(Body(Now - 72 * 3600), Now));
+        }
+
+        [Test]
+        public void CorpseStage_IgnoresAClockThatRanBackwards()
+        {
+            // A save carried to a machine whose clock is behind must not report a negative age and read as
+            // a stage boundary crossed the wrong way.
+            Assert.AreEqual(CorpseStage.Fresh, CorpseDecay.Default.StageOf(Body(Now + 10_000), Now));
+        }
+
+        [Test]
+        public void CorpseTimeScale_CompressesTheWholeSchedule()
+        {
+            CorpseDecay fast = CorpseDecay.Default.WithTimeScale(3600f);   // one second is an hour
+
+            Assert.AreEqual(CorpseStage.Bloated, fast.StageOf(Body(Now - 1), Now));
+            Assert.AreEqual(CorpseStage.Bones, fast.StageOf(Body(Now - 24), Now));
+            Assert.AreEqual(CorpseStage.Gone, fast.StageOf(Body(Now - 72), Now));
+        }
+
+        [Test]
+        public void FliesArriveAfterAWhile_AndLeaveOnceItIsBones()
+        {
+            CorpseDecay d = CorpseDecay.Default;
+
+            Assert.IsFalse(d.HasFlies(Body(Now), Now), "not on a fresh kill");
+            Assert.IsTrue(d.HasFlies(Body(Now - 600), Now));
+            Assert.IsTrue(d.HasFlies(Body(Now - 12 * 3600), Now));
+            Assert.IsFalse(d.HasFlies(Body(Now - 30 * 3600), Now), "nothing left to eat");
+        }
+
+        [Test]
+        public void ASpentCarcassIsNotRemovedWhileTheObserverIsStandingOverIt()
+        {
+            var store = new CreatureCorpseStore();
+            store.SetTimeScale(100_000f);   // straight past Gone
+            EntityId id = store.Record(0, new Vector3(1000f, 0f, 0f), Quaternion.identity, Now - 10);
+
+            store.Tick(new Vector3(1000f, 0f, 0f), Now);
+            Assert.AreEqual(1, store.Count, "bones must not blink out from under the player");
+
+            store.Tick(new Vector3(1000f + CreatureCorpseStore.KeepAliveMeters + 1f, 0f, 0f), Now);
+            Assert.AreEqual(0, store.Count, "and they must go once nobody is there to see it");
+            Assert.IsFalse(store.TryGet(id, out _));
+        }
+
+        [Test]
+        public void ACarcassIsLootedOnce()
+        {
+            var store = new CreatureCorpseStore();
+            EntityId id = store.Record(0, Vector3.zero, Quaternion.identity, Now);
+
+            Assert.IsTrue(store.MarkLooted(id));
+            Assert.IsFalse(store.MarkLooted(id), "a second take finds nothing");
+
+            Assert.IsTrue(store.TryGet(id, out CreatureCorpse corpse));
+            Assert.IsTrue(corpse.Looted, "and the body remembers it, so it still rots and still draws flies");
+        }
+
+        [Test]
+        public void CarcassIdsNeverCollideWithACreatureSlot()
+        {
+            // Both live in the delta log's entity space. A slot key at generation zero is numerically the id
+            // of the individual that died in it, so only the owner tag keeps the two apart.
+            var store = new CreatureCorpseStore();
+            EntityId corpse = store.Record(0, Vector3.zero, Quaternion.identity, Now);
+
+            Assert.AreEqual(EntityId.CorpseOwner, corpse.Owner);
+            Assert.IsFalse(CreatureKey.IsCreature(corpse));
+            Assert.AreNotEqual(EntityId.HostOwner, corpse.Owner, "a fallen log must not ingest it");
+        }
     }
 }

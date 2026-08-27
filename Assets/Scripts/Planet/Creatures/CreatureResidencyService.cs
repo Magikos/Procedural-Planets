@@ -117,6 +117,7 @@ public sealed class CreatureResidencyService : IDisposable
     ISeedProvider _seeds;
     IBiomeProvider _biome;
     ThreatRegistry _threats = new();
+    CreatureCorpseStore _corpses;
     CreatureLibraryDto _library;
 
     // Both capabilities are stateless positional queries, so every creature shares one pair rather than
@@ -148,6 +149,9 @@ public sealed class CreatureResidencyService : IDisposable
     /// so a per-frame consumer does not re-resolve it.</summary>
     public CreatureLibraryDto Library => _library;
 
+    /// <summary>The carcasses this world is carrying. Null until Configure is given one.</summary>
+    public CreatureCorpseStore Corpses => _corpses;
+
     public int ResidentCount => _all.Count;
     public int LiveCount => _live.Count;
 
@@ -176,12 +180,13 @@ public sealed class CreatureResidencyService : IDisposable
     /// regenerated planet keep the old planet's wildlife.
     /// </summary>
     public void Configure(int seed, IWorldDeltaLog deltaLog, IBiomeProvider biome, ThreatRegistry threats,
-        float planetRadius, float seaLevelRadius)
+        float planetRadius, float seaLevelRadius, CreatureCorpseStore corpses = null)
     {
         _seed = seed;
         _delta = deltaLog;
         _biome = biome;
         _threats = threats ?? new ThreatRegistry();
+        _corpses = corpses;
         _planetRadius = planetRadius;
         _seaLevelRadius = seaLevelRadius;
         _center = _planetTransform != null ? _planetTransform.position : Vector3.zero;
@@ -231,6 +236,7 @@ public sealed class CreatureResidencyService : IDisposable
         float bubble = BubbleMeters;
         _observerPos = observerWorldPos;
         _threats.PruneExpired(now);
+        _corpses?.Tick(observerWorldPos, now);
 
         // The debug threat follows the camera while it lasts, so you can walk it at a herd.
         if (_debugThreatUntil > 0L)
@@ -565,6 +571,12 @@ public sealed class CreatureResidencyService : IDisposable
     /// population control: the record suppresses its slot until the species' expiry lapses, at which point the
     /// slot repopulates with the next generation on its own.
     /// </summary>
+    /// <remarks>
+    /// Two records, two purposes, two keys. The DEATH record is about the slot and decides when a new animal
+    /// arrives; the CARCASS is about the body and decides how long it lies there. They must not be one record:
+    /// a slot repopulates in minutes and a carcass lasts days, so a single record would either resurrect the
+    /// animal early or hold the slot empty for three days.
+    /// </remarks>
     public bool Kill(EntityId id)
     {
         if (!_configured || !CreatureKey.IsCreature(id)) return false;
@@ -574,20 +586,34 @@ public sealed class CreatureResidencyService : IDisposable
         CreatureSpeciesDto species = _library.At(r.SpeciesIndex);
         if (species == null) return false;
 
+        long now = NowUnixSeconds();
+
         // Replaces whatever the slot last said, including a displacement: the log keeps one live record per
         // slot, and a dead creature is not also out wandering.
         CreatureRecord record = CreatureRecord.Death(slotKey, r.SpeciesIndex, r.Generation, r.Position,
-            NowUnixSeconds(), species.RespawnSeconds);
+            now, species.RespawnSeconds);
         if (_delta != null) _delta.Append(CreatureRecordCodec.Encode(record));
         else _log?.Log(LogLevel.Warning, "Creature", "No delta log configured; the death will not persist.");
+
+        _corpses?.Record(r.SpeciesIndex, r.Position, LyingRotation(r), now);
 
         Retire(r);
         return true;
     }
 
+    // Face-down along the direction it was travelling. Its own forward is already tangent to the surface, so
+    // this cannot degenerate the way an arbitrary forward against the surface normal would.
+    Quaternion LyingRotation(Resident r)
+    {
+        Vector3 up = (r.Position - _center).normalized;
+        return CharacterMath.TryProjectOntoTangent(r.Forward, up, out Vector3 forward)
+            ? Quaternion.LookRotation(forward, up)
+            : Quaternion.LookRotation(CharacterMath.ArbitraryTangent(up), up);
+    }
+
     /// <summary>
-    /// Damage a creature. When its health runs out it dies down the SAME path <see cref="Kill"/> takes, so a
-    /// hunted animal and a console kill leave identical records and repopulate identically.
+    /// Damage a creature, or take the yield off a carcass — whichever the id names. One verb, because from
+    /// the player's side it is one action: hit the thing you are aiming at.
     /// </summary>
     /// <remarks>
     /// Grants nothing and raises nothing: the caller owns the inventory. Keeping the credit out of here is
@@ -595,7 +621,10 @@ public sealed class CreatureResidencyService : IDisposable
     /// </remarks>
     public CreatureStrike Strike(EntityId id, int damage, Vector3 fromWorldPos)
     {
-        if (!_configured || !CreatureKey.IsCreature(id)) return default;
+        if (!_configured) return default;
+        if (id.Owner == EntityId.CorpseOwner) return Loot(id);
+        if (!CreatureKey.IsCreature(id)) return default;
+
         EntityId slotKey = CreatureKey.SlotOf(id);
         if (!_bySlot.TryGetValue(slotKey.Value, out Resident r) || r.Id != id || !r.IsLive) return default;
 
@@ -610,10 +639,24 @@ public sealed class CreatureResidencyService : IDisposable
             return CreatureStrike.Wounded(species.DisplayName, r.Position, r.Health);
         }
 
-        // Read the position out BEFORE the kill: Kill retires the resident, and a corpse that reports the
-        // origin drops its loot at the centre of the planet.
+        // Read the position out BEFORE the kill: Kill retires the resident, and a report of the origin would
+        // put the body at the centre of the planet.
         Vector3 died = r.Position;
-        return Kill(id) ? CreatureStrike.Fatal(species.DisplayName, died, species.Yield) : default;
+
+        // No yield here. The hide is on the body now, and taking it is a second action against the carcass.
+        return Kill(id) ? CreatureStrike.Fatal(species.DisplayName, died) : default;
+    }
+
+    CreatureStrike Loot(EntityId corpseId)
+    {
+        if (_corpses == null || !_corpses.TryGet(corpseId, out CreatureCorpse corpse)) return default;
+
+        CreatureSpeciesDto species = _library.At(corpse.SpeciesIndex);
+        string name = species?.DisplayName ?? "carcass";
+
+        return _corpses.MarkLooted(corpseId)
+            ? CreatureStrike.Looted(name, corpse.Position, species?.Yield ?? default)
+            : CreatureStrike.NothingLeft(name, corpse.Position);
     }
 
     static long NowUnixSeconds() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -738,6 +781,83 @@ public sealed class CreatureResidencyService : IDisposable
         return true;
     }
 
+    [ConsoleCommand("loot", "Take the yield off the nearest carcass. Reports what it would grant - the " +
+        "inventory credit belongs to the harvest path, not here.", MonoTargetType.Registry)]
+    string LootCmd()
+    {
+        if (_corpses == null) return "no carcass store";
+
+        long now = NowUnixSeconds();
+        CreatureCorpse best = default;
+        float bestDistance = float.MaxValue;
+        bool found = false;
+        foreach (CreatureCorpse c in _corpses.All)
+        {
+            float d = CreatureTerritory.SurfaceDistance(_center, c.Position, _observerPos);
+            if (d >= bestDistance) continue;
+            bestDistance = d;
+            best = c;
+            found = true;
+        }
+        if (!found) return "no carcass in the world";
+
+        CreatureStrike s = Strike(best.Id, 1, _observerPos);
+        string stage = _corpses.StageOf(best, now).ToString();
+        return s.Outcome switch
+        {
+            CreatureStrikeOutcome.Looted =>
+                $"took {s.Yield.Count}x {s.Yield.ItemId} off the {s.DisplayName} ({stage}, {bestDistance:F0} m)",
+            CreatureStrikeOutcome.NothingLeft =>
+                $"that {s.DisplayName} has already been taken ({stage}, {bestDistance:F0} m)",
+            _ => "loot failed",
+        };
+    }
+
+    [ConsoleCommand("corpses", "Every carcass in the world: species, decomposition stage, age and whether it " +
+        "has been looted.", MonoTargetType.Registry)]
+    string CorpsesCmd()
+    {
+        if (_corpses == null) return "no carcass store";
+        if (_corpses.Count == 0) return "no carcasses";
+
+        long now = NowUnixSeconds();
+        CorpseDecay decay = _corpses.Decay;
+        var sb = new System.Text.StringBuilder();
+        sb.Append(_corpses.Count).Append(" carcass(es):");
+        foreach (CreatureCorpse c in _corpses.All)
+        {
+            CreatureSpeciesDto species = _library?.At(c.SpeciesIndex);
+            sb.Append("\n  ").Append(species?.DisplayName ?? "?")
+              .Append(' ').Append(decay.StageOf(c, now))
+              .Append("  age ").Append(FormatDuration(decay.AgeSeconds(c, now)))
+              .Append(c.Looted ? "  looted" : "  unlooted")
+              .Append("  ").Append(CreatureTerritory.SurfaceDistance(_center, c.Position, _observerPos).ToString("F0"))
+              .Append(" m");
+        }
+        return sb.ToString();
+    }
+
+    [ConsoleCommand("decay", "Multiply how fast carcasses decompose. A whole carcass life is three real days, " +
+        "so 500 or so is what makes the stages watchable inside one session.", MonoTargetType.Registry)]
+    string DecayCmd(float multiplier = 1f)
+    {
+        if (_corpses == null) return "no carcass store";
+        _corpses.SetTimeScale(multiplier);
+
+        CorpseDecay d = _corpses.Decay;
+        return $"decay x{d.TimeScale:0.##} - flies at {FormatDuration(d.FliesAfterSeconds / d.TimeScale)}, " +
+               $"bloated {FormatDuration(d.BloatedAfterSeconds / d.TimeScale)}, " +
+               $"rotting {FormatDuration(d.RottingAfterSeconds / d.TimeScale)}, " +
+               $"bones {FormatDuration(d.BonesAfterSeconds / d.TimeScale)}, " +
+               $"gone {FormatDuration(d.GoneAfterSeconds / d.TimeScale)}";
+    }
+
+    static string FormatDuration(float seconds) =>
+        seconds >= 86400f ? (seconds / 86400f).ToString("0.#") + "d"
+        : seconds >= 3600f ? (seconds / 3600f).ToString("0.#") + "h"
+        : seconds >= 60f ? (seconds / 60f).ToString("0.#") + "m"
+        : seconds.ToString("0.#") + "s";
+
     [ConsoleCommand("strike", "Hit the nearest live creature once, the way a tool does. No loot - that is the " +
         "harvest path; this only proves health and death.", MonoTargetType.Registry)]
     string StrikeCmd(int damage = 1)
@@ -751,7 +871,7 @@ public sealed class CreatureResidencyService : IDisposable
         if (!s.Hit) return "strike failed for " + id;
         Invalidate();
         return s.Killed
-            ? $"killed {id} {s.DisplayName} (would have yielded {s.Yield.Count}x {s.Yield.ItemId})"
+            ? $"killed {id} {s.DisplayName} - the carcass is on the ground. creature.loot takes the hide"
             : $"hit {id} {s.DisplayName}, {s.RemainingHealth} health left - it bolts for {AlarmSeconds}s";
     }
 
@@ -914,32 +1034,56 @@ public sealed class CreatureResidencyService : IDisposable
     }
 }
 
-/// <summary>
-/// The outcome of one blow. <see cref="Hit"/> false means there was nothing there to hit - a stale id, a
-/// creature that has already demoted, or one that died to an earlier blow this frame.
-/// </summary>
+
+/// <summary>What one blow did.</summary>
+public enum CreatureStrikeOutcome : byte
+{
+    /// <summary>Nothing there to hit — a stale id, or something that has already demoted.</summary>
+    Missed = 0,
+
+    Wounded = 1,
+
+    /// <summary>It died. The yield is NOT here: it stays on the body until someone takes it.</summary>
+    Killed = 2,
+
+    /// <summary>A carcass gave up its yield.</summary>
+    Looted = 3,
+
+    /// <summary>A carcass someone already took. Aimed at a real thing, so not a miss.</summary>
+    NothingLeft = 4,
+}
+
+/// <summary>The outcome of one blow, whether it landed on an animal or on a body.</summary>
 public readonly struct CreatureStrike
 {
-    public readonly bool Hit;
-    public readonly bool Killed;
+    public readonly CreatureStrikeOutcome Outcome;
     public readonly int RemainingHealth;
     public readonly string DisplayName;
     public readonly Vector3 Position;
     public readonly HarvestYield Yield;
 
-    CreatureStrike(bool killed, int remainingHealth, string displayName, Vector3 position, HarvestYield yield)
+    CreatureStrike(CreatureStrikeOutcome outcome, int remainingHealth, string displayName, Vector3 position,
+        HarvestYield yield)
     {
-        Hit = true;
-        Killed = killed;
+        Outcome = outcome;
         RemainingHealth = remainingHealth;
         DisplayName = displayName;
         Position = position;
         Yield = yield;
     }
 
-    public static CreatureStrike Wounded(string displayName, Vector3 position, int remainingHealth) =>
-        new(false, remainingHealth, displayName, position, default);
+    public bool Hit => Outcome != CreatureStrikeOutcome.Missed;
+    public bool Killed => Outcome == CreatureStrikeOutcome.Killed;
 
-    public static CreatureStrike Fatal(string displayName, Vector3 position, HarvestYield yield) =>
-        new(true, 0, displayName, position, yield);
+    public static CreatureStrike Wounded(string displayName, Vector3 position, int remainingHealth) =>
+        new(CreatureStrikeOutcome.Wounded, remainingHealth, displayName, position, default);
+
+    public static CreatureStrike Fatal(string displayName, Vector3 position) =>
+        new(CreatureStrikeOutcome.Killed, 0, displayName, position, default);
+
+    public static CreatureStrike Looted(string displayName, Vector3 position, HarvestYield yield) =>
+        new(CreatureStrikeOutcome.Looted, 0, displayName, position, yield);
+
+    public static CreatureStrike NothingLeft(string displayName, Vector3 position) =>
+        new(CreatureStrikeOutcome.NothingLeft, 0, displayName, position, default);
 }
