@@ -830,3 +830,41 @@ the field initializers all along, and nothing anywhere said so.
 
 Both are the same lesson as the velocity module, three times in one night: **a default that is never written
 down is a value nobody can see is wrong.**
+
+### The slot collision, and perching verified (2026-08-26, overnight)
+
+Adding the bird to the asset was not enough: the check still found **zero bird residents**. The cause is older
+than the birds and had been quietly wrong since the second species landed.
+
+**A slot key is `(face, level, cell, slot)` and carries no species.** There are no spare bits in the 48 for
+one — generation 9, slot 6, y 12, x 12, level 5, face 3, marker 1 fills it exactly. Every species counted its
+slots from zero, so they all addressed the same keys:
+
+| species | slots it asked for | slots it actually got |
+| --- | --- | --- |
+| Deer (3) | 0–2 | 0–2 |
+| Rabbit (6) | 0–5 | 3–5 only — the first three were already the deer's |
+| Bird (4) | 0–3 | **none** — all four taken |
+
+`ResolveSlot` finds the key occupied by an earlier species, sees a live resident at the right generation, and
+returns. Silently. So a third species could never exist, and the rabbit had never once had the six a territory
+is supposed to support — which also means the "Forest → 5 deer + 1 rabbit" measurement in section 13 was
+biome gating *plus* this, not biome gating alone.
+
+Each species now owns a cumulative run of slot numbers. The property that makes it safe is that **appending a
+species does not move any existing species' slots**, so saved records keep pointing at the same animals; the
+deer stay at 0–2 and the rabbit at 3–8, which happens to include the 3–5 it was already using. The cost, stated
+at the site: changing an earlier species' `PerTerritory` shifts every later species and orphans their records.
+Sixty-four slots per territory is the ceiling, thirteen are in use, and going over aliases silently rather than
+throwing — so it warns.
+
+**With that fixed, the bird exists**: 60 bird residents against 21 deer and 8 rabbits, and perching verified
+live — five live birds, four perched at 0.0 m and one at **0.9 m mid-descent**, which is the rate-limited climb
+working rather than snapping to its target.
+
+Two numbers left as taste rather than defect: the bird has no biome list and so settles nearly everywhere,
+which is why it outnumbers the deer three to one; and the perched fraction, which read as four in five at a
+0.35 landing chance and was dropped to 0.18.
+
+**Still unverified: butterflies.** Both ground positions the checks landed on were sand, which they correctly
+refuse, so no butterfly has ever been seen.
