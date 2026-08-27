@@ -96,9 +96,13 @@ public sealed class CreatureBrain : IInputProvider
         },
     };
 
-    /// <summary>How often a flier reconsiders landing, in 50 Hz ticks, and how likely it is each time.</summary>
+    /// <summary>
+    /// How often a flier reconsiders landing, in 50 Hz ticks, and how likely it is each time. Together with
+    /// PerchState.DwellTicks these set what fraction of birds are on the ground at any moment: at 0.35 it was
+    /// four in five, which reads as a flock of chickens rather than as birds.
+    /// </summary>
     const uint PerchDecisionTicks = 250;
-    const float PerchChance = 0.35f;
+    const float PerchChance = 0.18f;
 
     static bool WantsToLand(in CreatureContext c)
     {
