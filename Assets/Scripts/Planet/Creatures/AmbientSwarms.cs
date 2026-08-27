@@ -42,18 +42,41 @@ public sealed record AmbientSwarmProfile(
     float ScatterRadiusMeters,
     float ReturnAfterSeconds,
     float HeightMeters,
-    float AnchorDriftMps)
+    float AnchorDriftMps,
+    float FadeBand)
 {
     /// <summary>
-    /// Whether this kind is out, given how high the sun stands WHERE THE OBSERVER IS: the dot of the local up
-    /// against the sun direction, so 1 is overhead, 0 is the horizon and negative is night.
+    /// HOW MUCH of this kind is out, 0 to 1, given how high the sun stands WHERE THE OBSERVER IS: the dot of
+    /// the local up against the sun direction, so 1 is overhead, 0 is the horizon and negative is night.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// A ramp rather than a switch. As a boolean this turned every firefly in the world on at one instant of
+    /// dusk and off again at one instant of dawn, which reads as a bug however good the particles are. Inside
+    /// <see cref="FadeBand"/> of either edge the count is scaled, so they arrive a few at a time and thin out
+    /// the same way.
+    /// </para>
+    /// <para>
     /// Deliberately not a clock reading. On a sphere the global time of day says nothing about whether it is
-    /// dark here, and fireflies coming out at noon on the far side of the planet is exactly the bug that
-    /// would produce. This is the same quantity the terrain shader lights from.
+    /// dark here, and fireflies coming out at noon on the far side of the planet is exactly the bug that would
+    /// produce. This is the same quantity the terrain shader lights from.
+    /// </para>
     /// </remarks>
-    public bool ActiveAt(float localSun) => localSun >= MinLocalSun && localSun <= MaxLocalSun;
+    public float ActivityAt(float localSun)
+    {
+        if (localSun < MinLocalSun || localSun > MaxLocalSun) return 0f;
+        if (FadeBand <= 0f) return 1f;
+
+        // Distance inside whichever edge is nearer, as a fraction of the band. An edge at the extreme of the
+        // range is NOT a boundary - dot() cannot exceed 1 - so it gets no ramp. Without that exception the
+        // butterflies faded out at noon, which is the one moment they should be thickest.
+        float fromLow = MinLocalSun <= -1f ? 1f : (localSun - MinLocalSun) / FadeBand;
+        float fromHigh = MaxLocalSun >= 1f ? 1f : (MaxLocalSun - localSun) / FadeBand;
+        return Mathf.Clamp01(Mathf.Min(fromLow, fromHigh));
+    }
+
+    /// <summary>True while any of this kind should be out at all.</summary>
+    public bool ActiveAt(float localSun) => ActivityAt(localSun) > 0f;
 
     public bool LivesIn(BiomeType biome)
     {
@@ -70,14 +93,16 @@ public sealed record AmbientSwarmProfile(
             new Color(0.95f, 0.80f, 0.30f), Additive: false,
             MinLocalSun: 0.15f, MaxLocalSun: 1f,
             new[] { BiomeType.Grassland, BiomeType.Forest, BiomeType.Tropical, BiomeType.Savanna, BiomeType.Swamp },
-            ScatterRadiusMeters: 4f, ReturnAfterSeconds: 4f, HeightMeters: 0f, AnchorDriftMps: 0f),
+            ScatterRadiusMeters: 4f, ReturnAfterSeconds: 4f, HeightMeters: 0f, AnchorDriftMps: 0f,
+            FadeBand: 0.20f),
 
-        new(AmbientSwarmKind.Fireflies, "Fireflies", SwarmCount: 5, Particles: 22,
+        new(AmbientSwarmKind.Fireflies, "Fireflies", SwarmCount: 9, Particles: 18,
             SwarmRadiusMeters: 5f, ParticleSize: 0.12f, SpeedMps: 0.5f,
             new Color(0.75f, 1.00f, 0.35f), Additive: true,
             MinLocalSun: -1f, MaxLocalSun: 0.02f,
             new[] { BiomeType.Forest, BiomeType.Swamp, BiomeType.Tropical, BiomeType.Taiga, BiomeType.Grassland },
-            ScatterRadiusMeters: 3f, ReturnAfterSeconds: 6f, HeightMeters: 0f, AnchorDriftMps: 0f),
+            ScatterRadiusMeters: 3f, ReturnAfterSeconds: 6f, HeightMeters: 0f, AnchorDriftMps: 0f,
+            FadeBand: 0.22f),
 
         // No biome list and no daylight window: flies go wherever a body is, whenever there is one.
         new(AmbientSwarmKind.Flies, "Flies", SwarmCount: 0, Particles: 26,
@@ -85,7 +110,8 @@ public sealed record AmbientSwarmProfile(
             new Color(0.10f, 0.09f, 0.08f), Additive: false,
             MinLocalSun: -1f, MaxLocalSun: 1f,
             System.Array.Empty<BiomeType>(),
-            ScatterRadiusMeters: 6f, ReturnAfterSeconds: 8f, HeightMeters: 0f, AnchorDriftMps: 0f),
+            ScatterRadiusMeters: 6f, ReturnAfterSeconds: 8f, HeightMeters: 0f, AnchorDriftMps: 0f,
+            FadeBand: 0f),
 
         // Overhead, all day, anywhere, and crossing the sky rather than hovering. ScatterRadius 0 means they
         // are never startled: nothing on the ground reaches them, and a flock that panicked at a footstep
@@ -96,7 +122,7 @@ public sealed record AmbientSwarmProfile(
             MinLocalSun: -0.05f, MaxLocalSun: 1f,
             System.Array.Empty<BiomeType>(),
             ScatterRadiusMeters: 0f, ReturnAfterSeconds: 1f,
-            HeightMeters: 55f, AnchorDriftMps: 5f),
+            HeightMeters: 55f, AnchorDriftMps: 5f, FadeBand: 0.15f),
     };
 }
 
@@ -136,6 +162,7 @@ public sealed class AmbientSwarms : System.IDisposable
         public Vector3 Anchor;
         public ParticleSystem System;
         public Vector3 Heading;         // tangent it drifts along, for the kinds that cross the sky
+        public bool Retiring;           // no longer emitting, waiting for its last particle to fade
         public bool Scattered;
         public float SettleAtTime;      // unscaled time the scatter ends
     }
@@ -204,6 +231,7 @@ public sealed class AmbientSwarms : System.IDisposable
         SyncFlies(corpses, nowUnixSeconds);
         SyncAmbient(observerWorldPos, localSun);
         UpdateScatter(nowUnixSeconds);
+        SweepFaded();
     }
 
     // --- flies: anchored to what died ------------------------------------
@@ -229,8 +257,7 @@ public sealed class AmbientSwarms : System.IDisposable
                 swarm = Spawn(profile, c.Id.Value);
                 if (swarm == null) continue;
             }
-            swarm.Anchor = c.Position + (c.Position - _center).normalized * 0.4f;
-            swarm.System.transform.position = swarm.Anchor;
+            PlaceAt(swarm, c.Position + (c.Position - _center).normalized * 0.4f);
         }
 
         // A fly swarm whose body is gone or picked clean is destroyed rather than parked: the count is
@@ -238,7 +265,7 @@ public sealed class AmbientSwarms : System.IDisposable
         _retired.Clear();
         for (int i = 0; i < _swarms.Count; i++)
         {
-            if (_swarms[i].Kind != AmbientSwarmKind.Flies) continue;
+            if (_swarms[i].Kind != AmbientSwarmKind.Flies || _swarms[i].Retiring) continue;
             bool stillFed = false;
             for (int j = 0; j < _corpseScratch.Count && !stillFed; j++)
                 stillFed = _corpseScratch[j].Id.Value == _swarms[i].AnchorId;
@@ -256,34 +283,44 @@ public sealed class AmbientSwarms : System.IDisposable
             AmbientSwarmProfile profile = _profiles[p];
             if (profile.Kind == AmbientSwarmKind.Flies) continue;
 
-            bool active = profile.ActiveAt(localSun);
+            // How many of this kind the sun currently wants. Rounding a ramped count is what makes them
+            // arrive a few at a time: one swarm, then two, then the lot, and back down the same way.
+            int want = Mathf.RoundToInt(profile.SwarmCount * profile.ActivityAt(localSun));
 
             // Something 55 m up is a long way away before it is out of sight, so its keep radius grows with
             // its height. Without this a flock is retired and replaced every few seconds of drift.
             float keep = KeepAnchorMeters + profile.HeightMeters * 2f;
             float keepSqr = keep * keep;
 
-            // Out of hours, or left behind: retire rather than follow. A butterfly that jumps thirty metres to
-            // keep up with you is far more noticeable than one that simply is not there.
+            // Left behind: retire rather than follow. A butterfly that jumps thirty metres to keep up with you
+            // is far more noticeable than one that simply is not there.
             _retired.Clear();
+            int live = 0;
             for (int i = 0; i < _swarms.Count; i++)
             {
                 Swarm s = _swarms[i];
-                if (s.Kind != profile.Kind) continue;
-                if (!active || (s.Anchor - observerWorldPos).sqrMagnitude > keepSqr) _retired.Add(s);
+                if (s.Kind != profile.Kind || s.Retiring) continue;
+                if ((s.Anchor - observerWorldPos).sqrMagnitude > keepSqr) { _retired.Add(s); continue; }
+                live++;
+            }
+
+            // Then thin down to what the sun wants, oldest first, so the last few out are the last few in.
+            for (int i = 0; i < _swarms.Count && live > want; i++)
+            {
+                Swarm s = _swarms[i];
+                if (s.Kind != profile.Kind || s.Retiring || _retired.Contains(s)) continue;
+                _retired.Add(s);
+                live--;
             }
             RetireCollected();
 
-            if (!active) continue;
-
-            for (int have = CountOf(profile.Kind); have < profile.SwarmCount; have++)
+            for (int have = live; have < want; have++)
             {
                 if (!TryPlaceAmbientAnchor(profile, observerWorldPos, out Vector3 anchor)) break;
                 Swarm swarm = Spawn(profile, anchorId: 0UL);
                 if (swarm == null) break;
-                swarm.Anchor = anchor;
+                PlaceAt(swarm, anchor);
                 swarm.Heading = HeadingAt(anchor);
-                swarm.System.transform.position = anchor;
             }
 
             if (profile.AnchorDriftMps > 0f) Drift(profile);
@@ -302,15 +339,14 @@ public sealed class AmbientSwarms : System.IDisposable
         for (int i = 0; i < _swarms.Count; i++)
         {
             Swarm swarm = _swarms[i];
-            if (swarm.Kind != profile.Kind) continue;
+            if (swarm.Kind != profile.Kind || swarm.Retiring) continue;
 
             Vector3 moved = swarm.Anchor + swarm.Heading * step;
             Vector3 dir = (moved - _center).normalized;
             if (dir.sqrMagnitude < 1e-6f || !_sampler.TryGetSurfaceRadius(dir, out float radius)) continue;
 
-            swarm.Anchor = _center + dir * (Mathf.Max(radius, _seaLevelRadius) + profile.HeightMeters);
+            PlaceAt(swarm, _center + dir * (Mathf.Max(radius, _seaLevelRadius) + profile.HeightMeters));
             swarm.Heading = HeadingAt(swarm.Anchor, swarm.Heading);
-            swarm.System.transform.position = swarm.Anchor;
         }
     }
 
@@ -373,6 +409,7 @@ public sealed class AmbientSwarms : System.IDisposable
         for (int i = 0; i < _swarms.Count; i++)
         {
             Swarm swarm = _swarms[i];
+            if (swarm.Retiring) continue;
             AmbientSwarmProfile profile = ProfileOf(swarm.Kind);
 
             // Read through the WILDLIFE lens, so a swarm is startled by whatever a deer would be startled by.
@@ -410,6 +447,21 @@ public sealed class AmbientSwarms : System.IDisposable
         if (scattered) swarm.System.Emit(profile.Particles / 2);
     }
 
+    /// <summary>
+    /// Move a swarm and ORIENT it to the surface, so its local +Y is the local up. The particle motion is
+    /// authored in local space - rising, circling overhead - and without this every one of those axes is
+    /// wrong everywhere except the one point on the planet where local up happens to be world up.
+    /// </summary>
+    void PlaceAt(Swarm swarm, Vector3 anchor)
+    {
+        swarm.Anchor = anchor;
+        if (swarm.System == null) return;
+
+        Vector3 up = (anchor - _center).normalized;
+        Vector3 forward = CharacterMath.ArbitraryTangent(up);
+        swarm.System.transform.SetPositionAndRotation(anchor, Quaternion.LookRotation(forward, up));
+    }
+
     // --- particle systems --------------------------------------------------
 
     Swarm Spawn(AmbientSwarmProfile profile, ulong anchorId)
@@ -425,41 +477,24 @@ public sealed class AmbientSwarms : System.IDisposable
 
         ParticleSystem.MainModule main = ps.main;
         main.loop = true;
-        main.startLifetime = new ParticleSystem.MinMaxCurve(2.5f, 6f);
         main.startSpeed = new ParticleSystem.MinMaxCurve(profile.SpeedMps * 0.4f, profile.SpeedMps);
         main.startSize = new ParticleSystem.MinMaxCurve(profile.ParticleSize * 0.6f, profile.ParticleSize);
         main.startColor = profile.Color;
         main.maxParticles = profile.Particles * 3;
-
-        // World space, so a swarm does not slide when its anchor is nudged - and so the scatter burst leaves
-        // particles behind it instead of dragging them along.
-        main.simulationSpace = ParticleSystemSimulationSpace.World;
         main.gravityModifier = 0f;
 
-        ParticleSystem.EmissionModule emission = ps.emission;
-        emission.rateOverTime = profile.Particles / 4f;
+        // LOCAL space, so orbital velocity has a centre to orbit and so a drifting flock moves as one body.
+        // The swarm's transform is oriented to the surface at its anchor, which makes local +Y the local UP -
+        // without that, "rise slowly" and "circle overhead" both mean the wrong axis everywhere but one spot
+        // on the planet.
+        main.simulationSpace = ParticleSystemSimulationSpace.Local;
 
+        ParticleSystem.EmissionModule emission = ps.emission;
         ParticleSystem.ShapeModule shape = ps.shape;
         shape.shapeType = ParticleSystemShapeType.Sphere;
         shape.radius = profile.SwarmRadiusMeters;
 
-        // The flicker. For fireflies it is the whole effect; for the others it reads as wingbeat.
-        ParticleSystem.ColorOverLifetimeModule fade = ps.colorOverLifetime;
-        fade.enabled = true;
-        fade.color = new ParticleSystem.MinMaxGradient(new Gradient
-        {
-            colorKeys = new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
-            alphaKeys = new[]
-            {
-                new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.2f),
-                new GradientAlphaKey(0.7f, 0.7f), new GradientAlphaKey(0f, 1f),
-            },
-        });
-
-        ParticleSystem.NoiseModule noise = ps.noise;
-        noise.enabled = true;
-        noise.strength = profile.SpeedMps;
-        noise.frequency = profile.Kind == AmbientSwarmKind.Flies ? 2.5f : 0.6f;
+        ApplyMotion(ps, profile);
 
         var renderer = go.GetComponent<ParticleSystemRenderer>();
         renderer.renderMode = ParticleSystemRenderMode.Billboard;
@@ -473,6 +508,156 @@ public sealed class AmbientSwarms : System.IDisposable
         _swarms.Add(swarm);
         return swarm;
     }
+
+    /// <summary>
+    /// How one kind moves. A switch rather than six more numbers on the profile, because these are not four
+    /// settings of one behaviour — a firefly hovers and blinks, a butterfly bobs and wanders, a fly jitters,
+    /// a flock wheels. Sharing one emitter and one noise value is what made all four read as particles.
+    /// </summary>
+    static void ApplyMotion(ParticleSystem ps, AmbientSwarmProfile profile)
+    {
+        ParticleSystem.MainModule main = ps.main;
+        ParticleSystem.EmissionModule emission = ps.emission;
+        ParticleSystem.ShapeModule shape = ps.shape;
+        ParticleSystem.VelocityOverLifetimeModule velocity = ps.velocityOverLifetime;
+        ParticleSystem.LimitVelocityOverLifetimeModule limit = ps.limitVelocityOverLifetime;
+        ParticleSystem.NoiseModule noise = ps.noise;
+        ParticleSystem.ColorOverLifetimeModule color = ps.colorOverLifetime;
+        ParticleSystem.SizeOverLifetimeModule size = ps.sizeOverLifetime;
+
+        velocity.enabled = true;
+        velocity.space = ParticleSystemSimulationSpace.Local;
+        noise.enabled = true;
+        noise.quality = ParticleSystemNoiseQuality.Medium;
+        color.enabled = true;
+
+        switch (profile.Kind)
+        {
+            case AmbientSwarmKind.Fireflies:
+                // Long-lived, nearly still, and BLINKING. The blink is what stops it reading as a particle
+                // system: a dot that pulses on its own schedule is doing something, and randomised lifetimes
+                // put every one of them out of phase with the others.
+                main.startLifetime = new ParticleSystem.MinMaxCurve(5f, 11f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(0.02f, 0.12f);
+                emission.rateOverTime = profile.Particles / 7f;
+
+                // A slow circle around the anchor with a slight inward pull, so they hold together as a
+                // cluster near one spot instead of dispersing the way a plain emitter does.
+                velocity.orbitalY = new ParticleSystem.MinMaxCurve(-0.22f, 0.22f);
+                velocity.radial = new ParticleSystem.MinMaxCurve(-0.06f, 0.02f);
+                velocity.y = new ParticleSystem.MinMaxCurve(0.02f, 0.16f);   // they drift upward, gently
+
+                limit.enabled = true;
+                limit.limit = new ParticleSystem.MinMaxCurve(0.5f);
+                limit.dampen = 0.35f;                                        // hover rather than fly off
+
+                noise.strength = 0.35f;
+                noise.frequency = 0.18f;                                     // long, lazy wander
+                noise.octaveCount = 2;
+                noise.scrollSpeed = 0.12f;
+
+                color.color = Blink();
+                size.enabled = true;
+                size.size = BlinkSize();
+                break;
+
+            case AmbientSwarmKind.Butterflies:
+                // Erratic but going somewhere: a bobbing vertical, a wide wander, and a pull back in so they
+                // circle a patch instead of leaving it.
+                main.startLifetime = new ParticleSystem.MinMaxCurve(6f, 12f);
+                emission.rateOverTime = profile.Particles / 6f;
+
+                velocity.orbitalY = new ParticleSystem.MinMaxCurve(-0.5f, 0.5f);
+                velocity.radial = new ParticleSystem.MinMaxCurve(-0.15f, 0.1f);
+                velocity.y = new ParticleSystem.MinMaxCurve(1f, Bob());       // the flutter
+
+                limit.enabled = true;
+                limit.limit = new ParticleSystem.MinMaxCurve(1.6f);
+                limit.dampen = 0.2f;
+
+                noise.strength = 0.9f;
+                noise.frequency = 0.9f;
+                noise.octaveCount = 2;
+                noise.scrollSpeed = 0.5f;
+
+                color.color = FadeInOut();
+                break;
+
+            case AmbientSwarmKind.Birds:
+                // A wheeling flock: almost all orbit, almost no noise. Noise is what makes a flock look like
+                // litter blowing about.
+                main.startLifetime = new ParticleSystem.MinMaxCurve(14f, 26f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(0f, 0.2f);
+                emission.rateOverTime = profile.Particles / 12f;
+
+                velocity.orbitalY = new ParticleSystem.MinMaxCurve(0.35f, 0.7f);   // all one way round
+                velocity.radial = new ParticleSystem.MinMaxCurve(-0.05f, 0.05f);
+                velocity.y = new ParticleSystem.MinMaxCurve(-0.15f, 0.15f);
+
+                noise.strength = 0.25f;
+                noise.frequency = 0.1f;
+                noise.octaveCount = 1;
+
+                color.color = FadeInOut();
+                break;
+
+            default:
+                // Flies. Jitter IS the correct read here — the only kind that should look like noise.
+                main.startLifetime = new ParticleSystem.MinMaxCurve(1.2f, 3f);
+                emission.rateOverTime = profile.Particles / 2f;
+
+                velocity.orbitalY = new ParticleSystem.MinMaxCurve(-1.5f, 1.5f);
+                velocity.radial = new ParticleSystem.MinMaxCurve(-0.4f, 0.2f);
+
+                limit.enabled = true;
+                limit.limit = new ParticleSystem.MinMaxCurve(2.5f);
+                limit.dampen = 0.1f;
+
+                noise.strength = 1.8f;
+                noise.frequency = 3.5f;
+                noise.octaveCount = 2;
+                noise.scrollSpeed = 1.5f;
+
+                color.color = FadeInOut();
+                break;
+        }
+    }
+
+    // Ordinary appear-and-vanish, so nothing pops into existence at full brightness.
+    static ParticleSystem.MinMaxGradient FadeInOut() => new(new Gradient
+    {
+        colorKeys = new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+        alphaKeys = new[]
+        {
+            new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.15f),
+            new GradientAlphaKey(1f, 0.85f), new GradientAlphaKey(0f, 1f),
+        },
+    });
+
+    // Three pulses across a lifetime. Eight keys is Unity's limit for a gradient, and this spends all of them.
+    static ParticleSystem.MinMaxGradient Blink() => new(new Gradient
+    {
+        colorKeys = new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+        alphaKeys = new[]
+        {
+            new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.10f),
+            new GradientAlphaKey(0.06f, 0.28f), new GradientAlphaKey(1f, 0.45f),
+            new GradientAlphaKey(0.06f, 0.62f), new GradientAlphaKey(1f, 0.78f),
+            new GradientAlphaKey(0.06f, 0.92f), new GradientAlphaKey(0f, 1f),
+        },
+    });
+
+    // Swelling with the blink. A firefly's glow grows as well as brightens, and matching the two is most of
+    // what sells it as a light rather than as a dot being faded.
+    static ParticleSystem.MinMaxCurve BlinkSize() => new(1f, new AnimationCurve(
+        new Keyframe(0f, 0.35f), new Keyframe(0.10f, 1f), new Keyframe(0.28f, 0.45f),
+        new Keyframe(0.45f, 1f), new Keyframe(0.62f, 0.45f), new Keyframe(0.78f, 1f),
+        new Keyframe(0.92f, 0.45f), new Keyframe(1f, 0.3f)));
+
+    // A slow up-and-down over the whole life, which is the flutter without a per-particle wing simulation.
+    static AnimationCurve Bob() => new(
+        new Keyframe(0f, 0.2f), new Keyframe(0.2f, -0.5f), new Keyframe(0.45f, 0.6f),
+        new Keyframe(0.7f, -0.4f), new Keyframe(1f, 0.3f));
 
     Material EnsureMaterial(AmbientSwarmProfile profile)
     {
@@ -508,7 +693,7 @@ public sealed class AmbientSwarms : System.IDisposable
     {
         int n = 0;
         for (int i = 0; i < _swarms.Count; i++)
-            if (_swarms[i].Kind == kind) n++;
+            if (_swarms[i].Kind == kind && !_swarms[i].Retiring) n++;
         return n;
     }
 
@@ -516,19 +701,39 @@ public sealed class AmbientSwarms : System.IDisposable
     {
         if (anchorId == 0UL) return null;   // zero is the ambient swarms, which are anchored to nothing
         for (int i = 0; i < _swarms.Count; i++)
-            if (_swarms[i].AnchorId == anchorId) return _swarms[i];
+            if (_swarms[i].AnchorId == anchorId && !_swarms[i].Retiring) return _swarms[i];
         return null;
     }
 
+    /// <summary>
+    /// Stop a swarm emitting and let what is already in the air live out its lifetime. Destroying the object
+    /// outright deletes every particle in the same frame, which is the pop-out half of the problem the sun
+    /// ramp fixes the other half of.
+    /// </summary>
     void RetireCollected()
     {
         for (int i = 0; i < _retired.Count; i++)
         {
             Swarm swarm = _retired[i];
-            if (swarm.System != null) Object.Destroy(swarm.System.gameObject);
-            _swarms.Remove(swarm);
+            swarm.Retiring = true;
+            if (swarm.System != null) swarm.System.Stop(true, ParticleSystemStopBehavior.StopEmitting);
         }
         _retired.Clear();
+    }
+
+    // Destroy the retiring swarms whose last particle has faded. Cheap, and it is the only place a swarm
+    // object is actually deleted while the system is running.
+    void SweepFaded()
+    {
+        for (int i = _swarms.Count - 1; i >= 0; i--)
+        {
+            Swarm swarm = _swarms[i];
+            if (!swarm.Retiring) continue;
+            if (swarm.System != null && swarm.System.particleCount > 0) continue;
+
+            if (swarm.System != null) Object.Destroy(swarm.System.gameObject);
+            _swarms.RemoveAt(i);
+        }
     }
 
     void ClearSwarms()

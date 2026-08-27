@@ -712,6 +712,7 @@ namespace ProceduralPlanets.Tests
             Assert.IsTrue(butterflies.ActiveAt(1f));
             Assert.IsFalse(butterflies.ActiveAt(-0.5f), "not at night");
             Assert.IsFalse(butterflies.ActiveAt(0.02f), "nor at dusk");
+            Assert.AreEqual(1f, butterflies.ActivityAt(1f), "all of them at noon");
 
             Assert.IsTrue(fireflies.ActiveAt(-0.5f));
             Assert.IsTrue(fireflies.ActiveAt(0f), "the moment the sun touches the horizon");
@@ -733,6 +734,34 @@ namespace ProceduralPlanets.Tests
             AmbientSwarmProfile butterflies = Profile(AmbientSwarmKind.Butterflies);
             Assert.IsTrue(butterflies.LivesIn(BiomeType.Grassland));
             Assert.IsFalse(butterflies.LivesIn(BiomeType.Snow));
+        }
+
+        [Test]
+        public void FirefliesRampInAndOutRatherThanSwitching()
+        {
+            // The whole point: at one instant of dusk the count must not go from none to all of them.
+            AmbientSwarmProfile fireflies = Profile(AmbientSwarmKind.Fireflies);
+
+            Assert.AreEqual(0f, fireflies.ActivityAt(0.20f), "broad daylight");
+            Assert.AreEqual(0f, fireflies.ActivityAt(0.03f), "sun still just up");
+
+            float dusk = fireflies.ActivityAt(0f);
+            float later = fireflies.ActivityAt(-0.08f);
+            float night = fireflies.ActivityAt(-0.5f);
+
+            Assert.Greater(dusk, 0f, "a few of them the moment the sun touches the horizon");
+            Assert.Less(dusk, 1f, "but not all of them");
+            Assert.Greater(later, dusk, "more as it gets darker");
+            Assert.AreEqual(1f, night, "and the lot in full dark");
+        }
+
+        [Test]
+        public void AKindWithNoFadeBandIsAllOrNothing()
+        {
+            // Flies have no band on purpose: they are gated by a carcass, not by the sky.
+            AmbientSwarmProfile flies = Profile(AmbientSwarmKind.Flies);
+            Assert.AreEqual(1f, flies.ActivityAt(1f));
+            Assert.AreEqual(1f, flies.ActivityAt(-1f));
         }
     }
 }
