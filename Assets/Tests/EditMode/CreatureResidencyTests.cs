@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -762,6 +763,69 @@ namespace ProceduralPlanets.Tests
             AmbientSwarmProfile flies = Profile(AmbientSwarmKind.Flies);
             Assert.AreEqual(1f, flies.ActivityAt(1f));
             Assert.AreEqual(1f, flies.ActivityAt(-1f));
+        }
+
+        // --- slot space: species must not sit on each other -----------------
+
+        static CreatureSpeciesDto WithSlots(string name, int perTerritory) =>
+            new(name, perTerritory, 120f, 2.5f, 0.8f, 300f, 2f, 3000f, 1f, Color.white,
+                System.Array.Empty<BiomeType>(), CreatureFaction.Wildlife, 35f, 1, "Hide", 1, 0f);
+
+        static CreatureLibraryDto LibraryOf(params CreatureSpeciesDto[] species) => new(species, 300f);
+
+        [Test]
+        public void EverySpeciesGetsItsOwnRunOfSlotNumbers()
+        {
+            // A slot key carries no species, so species counting from zero all land on the same keys: the
+            // first one resolves, the rest find the slot taken. That is why the bird never spawned.
+            CreatureLibraryDto library = LibraryOf(
+                WithSlots("Deer", 3), WithSlots("Rabbit", 6), WithSlots("Bird", 4));
+
+            int[] bases = CreatureResidencyService.SlotBases(library);
+            CollectionAssert.AreEqual(new[] { 0, 3, 9 }, bases);
+
+            var used = new HashSet<int>();
+            for (int s = 0; s < library.Count; s++)
+                for (int i = 0; i < library.At(s).PerTerritory; i++)
+                    Assert.IsTrue(used.Add(bases[s] + i), $"species {s} slot {i} collides");
+
+            Assert.AreEqual(13, used.Count);
+            Assert.AreEqual(13, CreatureResidencyService.SlotsNeeded(library));
+        }
+
+        [Test]
+        public void AppendingASpeciesDoesNotMoveTheOnesAlreadySaved()
+        {
+            // The property the layout is chosen for: a saved death record keeps pointing at the same animal
+            // when a new species is added to the end of the library.
+            CreatureLibraryDto before = LibraryOf(WithSlots("Deer", 3), WithSlots("Rabbit", 6));
+            CreatureLibraryDto after = LibraryOf(WithSlots("Deer", 3), WithSlots("Rabbit", 6), WithSlots("Bird", 4));
+
+            int[] a = CreatureResidencyService.SlotBases(before);
+            int[] b = CreatureResidencyService.SlotBases(after);
+
+            Assert.AreEqual(a[0], b[0]);
+            Assert.AreEqual(a[1], b[1], "the rabbit's slots must not move when a bird is appended");
+        }
+
+        [Test]
+        public void AnEmptyOrZeroCountLibraryStillProducesUsableBases()
+        {
+            Assert.AreEqual(0, CreatureResidencyService.SlotBases(LibraryOf()).Length);
+            Assert.AreEqual(0, CreatureResidencyService.SlotsNeeded(LibraryOf()));
+
+            // A species nobody wants any of takes no slots, and does not shift the one after it.
+            CreatureLibraryDto library = LibraryOf(WithSlots("None", 0), WithSlots("Deer", 3));
+            CollectionAssert.AreEqual(new[] { 0, 0 }, CreatureResidencyService.SlotBases(library));
+            Assert.AreEqual(3, CreatureResidencyService.SlotsNeeded(library));
+        }
+
+        [Test]
+        public void TheWholeLibraryFitsInsideOneKeysSlotField()
+        {
+            // The real library, against the real key. Exceeding this is silent aliasing, not an exception.
+            Assert.LessOrEqual(CreatureResidencyService.SlotsNeeded(CreatureLibraryDto.Placeholder),
+                CreatureKey.MaxSlot + 1);
         }
     }
 }

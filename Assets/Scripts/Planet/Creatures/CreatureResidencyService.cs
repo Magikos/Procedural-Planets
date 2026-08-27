@@ -117,6 +117,10 @@ public sealed class CreatureResidencyService : IDisposable
     // changes, so a rejection is permanent and worth remembering - see the note in ResolveSlot.
     readonly HashSet<ulong> _barren = new();
 
+    // Where each species' slots start inside the territory's shared slot space. Rebuilt whenever the library
+    // changes; see BuildSlotBases for why species cannot simply all count from zero.
+    int[] _slotBase = System.Array.Empty<int>();
+
     IWorldDeltaLog _delta;
     ISeedProvider _seeds;
     IBiomeProvider _biome;
@@ -203,6 +207,7 @@ public sealed class CreatureResidencyService : IDisposable
         _threats.SetRelations(SettingsProvider.IsRegistered<FactionRelationsDto>()
             ? SettingsProvider.GetSettings<FactionRelationsDto>()
             : FactionRelationsDto.Default);
+        BuildSlotBases();
 
         _bySlot.Clear();
         _all.Clear();
@@ -219,6 +224,7 @@ public sealed class CreatureResidencyService : IDisposable
     {
         if (evt.DtoType != typeof(CreatureLibraryDto)) return;
         _library = SettingsProvider.GetSettings<CreatureLibraryDto>();
+        BuildSlotBases();
         // Barren slots are cached against the OLD species data. Retuning an altitude band or a biome list
         // makes a rejection stale, so the cache goes with the settings that produced it.
         _barren.Clear();
@@ -309,7 +315,7 @@ public sealed class CreatureResidencyService : IDisposable
                 if (dto == null || dto.PerTerritory <= 0) continue;
 
                 for (int slot = 0; slot < dto.PerTerritory; slot++)
-                    ResolveSlot(CreatureKey.Slot(face, CreatureTerritory.Level, cellX, cellY, slot),
+                    ResolveSlot(CreatureKey.Slot(face, CreatureTerritory.Level, cellX, cellY, _slotBase[species] + slot),
                         species, dto, planet, now);
             }
         }
@@ -691,6 +697,56 @@ public sealed class CreatureResidencyService : IDisposable
         return _corpses.MarkLooted(corpseId)
             ? CreatureStrike.Looted(name, corpse.Position, species?.Yield ?? default)
             : CreatureStrike.NothingLeft(name, corpse.Position);
+    }
+
+    /// <summary>
+    /// Give every species its own run of slot numbers inside a territory.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A slot key is (face, level, cell, slot) and carries NO species - there are no spare bits in the 48 for
+    /// one. So every species counting its slots from zero puts them all on the same keys: the first species
+    /// resolves slot 0, the second finds that key occupied and returns, and a third species whose count is
+    /// covered by the first two gets NOTHING. That is exactly what happened - the bird never spawned, and the
+    /// rabbit had only ever been getting the slots the deer's count did not reach.
+    /// </para>
+    /// <para>
+    /// Bases are cumulative, so APPENDING a species leaves every existing species' slot numbers untouched and
+    /// saved records keep pointing at the same animals. Changing an earlier species' PerTerritory shifts every
+    /// later species and orphans their records - that is the constraint this layout buys the simplicity with.
+    /// </para>
+    /// </remarks>
+    public static int[] SlotBases(CreatureLibraryDto library)
+    {
+        int count = library?.Count ?? 0;
+        var bases = new int[count];
+
+        int next = 0;
+        for (int i = 0; i < count; i++)
+        {
+            bases[i] = next;
+            next += Mathf.Max(0, library.At(i)?.PerTerritory ?? 0);
+        }
+        return bases;
+    }
+
+    /// <summary>Slots every species needs together. More than a key can hold means the last ones collide.</summary>
+    public static int SlotsNeeded(CreatureLibraryDto library)
+    {
+        int[] bases = SlotBases(library);
+        int count = library?.Count ?? 0;
+        return count == 0 ? 0 : bases[count - 1] + Mathf.Max(0, library.At(count - 1)?.PerTerritory ?? 0);
+    }
+
+    void BuildSlotBases()
+    {
+        _slotBase = SlotBases(_library);
+
+        int needed = SlotsNeeded(_library);
+        if (needed > CreatureKey.MaxSlot + 1)
+            _log?.Log(LogLevel.Warning, "Creature",
+                $"Species need {needed} slots per territory but a key holds {CreatureKey.MaxSlot + 1}; " +
+                "the last species will collide. Reduce PerTerritory or widen CreatureKey.SlotBits.");
     }
 
     static long NowUnixSeconds() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
