@@ -715,3 +715,33 @@ keep-alive rule, the id-space collision, and the sun-angle gate in both directio
 
 Not verified in play: any of the pixels. `creature.decay 500` compresses three days of rot into a few minutes,
 `creature.swarms` toggles the lot, and `creature.corpses` lists what is lying about.
+
+### First feedback on the swarms, 2026-08-26
+
+Bryan, on seeing them: fireflies pop in and out at dusk and dawn, and all four kinds read as a particle system
+rather than as animals. Both were true, and both had one cause each.
+
+**Popping was the boolean gate.** `ActiveAt(localSun)` returned true or false, so every firefly in the world
+switched on at one instant of dusk. It is a ramp now — `ActivityAt` returns 0..1 across a `FadeBand` either
+side of the threshold, and the swarm count is that fraction of the maximum. One appears, then two, then the
+lot, and back down the same way. Retirement was the other half: destroying the object deleted every particle
+in the same frame, so a swarm now stops emitting and lets what is in the air live out its lifetime.
+
+One trap fell out of it, caught by a test. **An edge at the extreme of the range is not a boundary.**
+`dot(up, sun)` cannot exceed 1, so ramping the butterflies' upper edge faded them out at noon — the one moment
+they should be thickest. Edges at ±1 get no ramp.
+
+**Reading as particles was one emitter shared by four animals.** All four used a sphere shape, a linear start
+speed and a single noise value, which is a fair description of a particle system. Motion is now per kind,
+because these are not four settings of one behaviour:
+
+| kind | motion |
+| --- | --- |
+| Fireflies | hover, drift upward, circle slowly, and **blink** — three pulses over a randomised 5–11 s lifetime, so every one is out of phase, and the glow swells with the pulse rather than only brightening |
+| Butterflies | bob on a vertical curve and wander wide, pulled back in so they work a patch instead of leaving it |
+| Birds | wheel — nearly all orbital, nearly no noise, because noise is what makes a flock look like litter blowing about |
+| Flies | keep the jitter. The one kind that *should* read as noise |
+
+That motion is authored in local space, which forced a fix that was latent from the start: **a swarm's
+transform is now oriented to the surface at its anchor.** Without it "rise slowly" and "circle overhead" name
+the wrong axis everywhere except the one point on the planet where local up happens to be world up.
