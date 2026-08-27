@@ -796,14 +796,26 @@ public sealed class CreatureResidencyService : IDisposable
           .Append(" residents=").Append(_all.Count)
           .Append(" live=").Append(_live.Count)
           .Append(" barren=").Append(_barren.Count)
+          .Append(" slotsUsed=").Append(SlotsNeeded(_library)).Append('/').Append(CreatureKey.MaxSlot + 1)
           .Append("\nlast plan: ").Append(_lastPlanCells).Append(" territories in ")
           .Append(_lastPlanMs.ToString("F2")).Append(" ms");
         for (int i = 0; i < _library.Count; i++)
         {
             CreatureSpeciesDto s = _library.At(i);
+
+            // The slot RANGE, not just the count. Species share one slot space and a collision produces no
+            // error at all - it just means a species silently never spawns - so the ranges have to be
+            // readable somewhere. They were not, which is how a whole species stayed missing.
+            int from = i < _slotBase.Length ? _slotBase[i] : 0;
+            int to = from + Mathf.Max(0, s.PerTerritory) - 1;
+
             sb.Append("\n  [").Append(i).Append("] ").Append(s.DisplayName)
-              .Append(" perTerritory=").Append(s.PerTerritory)
+              .Append(" slots=").Append(s.PerTerritory > 0 ? from + ".." + to : "none")
               .Append(" live=").Append(LiveOf(i))
+              .Append(" hp=").Append(s.MaxHealth)
+              .Append(" yield=").Append(s.YieldCount).Append('x').Append(s.YieldItemId)
+              .Append(" awareness=").Append(s.AwarenessMeters.ToString("F0")).Append('m')
+              .Append(s.CruiseAltitudeMeters > 0f ? " cruise=" + s.CruiseAltitudeMeters.ToString("F0") + "m" : "")
               .Append(" home=").Append(s.HomeRangeMeters.ToString("F0")).Append('m')
               .Append(" walk=").Append(s.WalkSpeedMps.ToString("F1"))
               .Append(" drift=").Append(s.DriftHomeSpeedMps.ToString("F2"))
