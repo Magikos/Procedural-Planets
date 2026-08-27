@@ -17,6 +17,7 @@ Shader "Hidden/SwarmParticles"
         _DstBlend("Dst Blend", Float) = 10     // OneMinusSrcAlpha
         _Softness("Edge Softness", Range(0.01, 1)) = 0.35
         _Intensity("Intensity", Float) = 1
+        [Toggle] _Wings("Two-lobed wing shape instead of a dot", Float) = 0
     }
 
     SubShader
@@ -38,6 +39,7 @@ Shader "Hidden/SwarmParticles"
 
             float _Softness;
             float _Intensity;
+            float _Wings;
 
             struct Attributes
             {
@@ -64,8 +66,18 @@ Shader "Hidden/SwarmParticles"
 
             half4 Frag(Varyings i) : SV_Target
             {
-                // Round, soft-edged, and brightest at the middle. A firefly is mostly its own halo.
-                float d = saturate(length(i.uv - 0.5) * 2.0);
+                float2 q = (i.uv - 0.5) * 2.0;      // -1..1 across the quad
+
+                // Round, soft-edged, brightest at the middle: a firefly is mostly its own halo.
+                float dot2 = saturate(length(q));
+
+                // Two overlapping lobes, which at this size is all it takes to stop reading as a bead. The
+                // particle's own rotation then flashes it edge-on and back, and that is the wingbeat.
+                float2 wing = float2(0.42, 0.0);
+                float2 radii = float2(0.62, 0.85);
+                float wings = min(length((q - wing) / radii), length((q + wing) / radii));
+
+                float d = lerp(dot2, saturate(wings), step(0.5, _Wings));
                 float alpha = 1.0 - smoothstep(1.0 - _Softness, 1.0, d);
                 if (alpha <= 0.001) discard;
 

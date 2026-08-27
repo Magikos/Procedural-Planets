@@ -622,6 +622,13 @@ public sealed class AmbientSwarms : System.IDisposable
                 noise.octaveCount = 2;
                 noise.scrollSpeed = 0.5f;
 
+                // The wingbeat: the two-lobed sprite spun about its own axis flashes edge-on and back. Each
+                // starts at its own angle and turns at its own rate, so a cluster never pulses in unison.
+                main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+                ParticleSystem.RotationOverLifetimeModule spin = ps.rotationOverLifetime;
+                spin.enabled = true;
+                spin.z = new ParticleSystem.MinMaxCurve(-6f, 6f);
+
                 color.color = FadeInOut();
                 break;
 
@@ -751,6 +758,10 @@ public sealed class AmbientSwarms : System.IDisposable
             : UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha));
         material.SetFloat("_Intensity", profile.Additive ? 2.2f : 1f);
         material.SetFloat("_Softness", profile.Additive ? 0.85f : 0.4f);
+
+        // A butterfly at this size is a bead unless its silhouette says otherwise. Two lobes plus the tumble
+        // below is the cheapest thing that reads as wings rather than as a dot.
+        material.SetFloat("_Wings", profile.Kind == AmbientSwarmKind.Butterflies ? 1f : 0f);
         _materials[key] = material;
         return material;
     }
