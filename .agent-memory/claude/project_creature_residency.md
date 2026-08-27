@@ -128,6 +128,25 @@ spot wedged nothing. Screenshot via `cam.Render()` into a RenderTexture then `En
 **Skipping this step is what let six defects ship**, including a species-slot collision that meant one of
 three species had never spawned. See [[feedback_camera_teleport_wedges_editor]].
 
+
+**TRAP — a slot key carries no species.** `CreatureKey.Slot(face, level, x, y, slot)` fills all 48 bits with
+generation 9 / slot 6 / y 12 / x 12 / level 5 / face 3 / marker 1, so there is no room for a species field.
+Every species counting its slots from zero addresses the SAME keys: the first species resolves, the rest find
+the slot occupied and return silently. Deer(3) took 0-2, Rabbit(6) got only 3-5, and Bird(4) got NOTHING — it
+had never spawned in any session. Fixed by giving each species a cumulative run of slot numbers
+(`CreatureResidencyService.SlotBases`). **Appending a species is save-safe; changing an earlier species'
+PerTerritory shifts every later one and orphans its records.** 64 slots per territory is the ceiling.
+
+**A species only exists if it is in the ASSET.** `CreatureLibraryDto.Placeholder` is a fallback used only when
+no library is registered, and `Assets/Resources/Settings/CreatureLibrary.asset` IS registered. Adding a species
+to the code placeholder alone does nothing at all. Adding it to the asset also makes Unity write out fields the
+asset had been silently defaulting — which is how the deer/rabbit awareness turned out to be 35, not the 45/25
+the code and the docs both claimed.
+
+**Perching and flight:** altitude lives in `FlightGrounding`, a wrapper that adds a height on top of the real
+grounding provider so the host can change it while the bird is flying. `CreatureBehaviour.Perch` only asks for
+stillness. Climb is a RATE — setting altitude straight to its target teleports a bird nine metres down.
+
 **Wait on the background timer's NOTIFICATION before querying Unity.** Querying immediately after launching a
 `sleep` measures nothing, and the unchanged clock reads like a stall that is not there.
 

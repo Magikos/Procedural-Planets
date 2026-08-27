@@ -25,7 +25,7 @@ Keep entries under ~200 chars; this file loads into every session.
 - [All-generated props direction](project_all_generated_props.md) — Replace every Synty scatter prop with generated geometry. FINAL GOAL NOT BUILT: bake generated meshes at build time.
 - [M0 foundations](project_m0_foundations.md) — 5-lane foundation slice. `Magikos.Game` ships with ZERO asmdef references, so "authority touches no camera/input" is a compile error.
 - [World delta log](project_world_delta_log.md) — Append-only save log + EntityId. GOTCHA: a ScatterId and an EntityId can be the SAME number; the keyspace must be split.
-- [Creature residency spine](project_creature_residency.md) — Life support is owned by OBSERVATION, not the spawner. Traps around derived keys and float expiry math.
+- [Creature residency spine](project_creature_residency.md) — Residency, hunting, carcasses, swarms, birds. Life support is owned by OBSERVATION. **A slot key carries no species — species need disjoint slot runs or one silently never spawns.** Also: a point light lights NOTHING here.
 - [Current work focus](project_current_focus.md) — Code-refactor arc complete; audit backlog closed; biome arc paused.
 - [Code refactor arc](project_code_refactor_arc.md) — Codebase-wide audit-first refactor on branch `code-refactor`; arc complete.
 - [Skill library](project_skill_library.md) — 16-skill library at .agent-skills/ with a README router. Load skills before project work.
