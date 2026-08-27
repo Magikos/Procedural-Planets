@@ -22,6 +22,12 @@ MonoBehaviour:
     MinAltitudeMeters: 2
     MaxAltitudeMeters: 3000
     Biomes: 0700000009000000040000000a000000i
+    Faction: 0
+    AwarenessMeters: 45
+    MaxHealth: 3
+    YieldItemId: Hide
+    YieldCount: 2
+    CruiseAltitudeMeters: 0
     BodyHeightMeters: 1.7
     BodyColor: {r: 0.45, g: 0.33, b: 0.22, a: 1}
   - DisplayName: Placeholder Rabbit
@@ -33,6 +39,29 @@ MonoBehaviour:
     MinAltitudeMeters: 2
     MaxAltitudeMeters: 2200
     Biomes: 06000000050000000800000003000000i
+    Faction: 0
+    AwarenessMeters: 25
+    MaxHealth: 1
+    YieldItemId: Hide
+    YieldCount: 1
+    CruiseAltitudeMeters: 0
     BodyHeightMeters: 0.45
     BodyColor: {r: 0.62, g: 0.58, b: 0.52, a: 1}
+  - DisplayName: Placeholder Bird
+    PerTerritory: 4
+    HomeRangeMeters: 200
+    WalkSpeedMps: 6
+    DriftHomeSpeedMps: 2.5
+    RespawnSeconds: 180
+    MinAltitudeMeters: 2
+    MaxAltitudeMeters: 4000
+    Biomes: 
+    Faction: 0
+    AwarenessMeters: 70
+    MaxHealth: 1
+    YieldItemId: Feathers
+    YieldCount: 2
+    CruiseAltitudeMeters: 9
+    BodyHeightMeters: 0.35
+    BodyColor: {r: 0.22, g: 0.2, b: 0.24, a: 1}
   ObserverBubbleMeters: 300
