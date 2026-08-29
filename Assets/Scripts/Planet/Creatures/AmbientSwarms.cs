@@ -96,7 +96,9 @@ public sealed record AmbientSwarmProfile(
             ScatterRadiusMeters: 4f, ReturnAfterSeconds: 4f, HeightMeters: 0f, AnchorDriftMps: 0f,
             FadeBand: 0.45f),
 
-        new(AmbientSwarmKind.Fireflies, "Fireflies", SwarmCount: 9, Particles: 18,
+        // FEW swarms, MANY particles each: the spread comes from the box volume in ApplyMotion, not from
+        // scattering more small clusters about. Nine clusters of eighteen read as nine globs.
+        new(AmbientSwarmKind.Fireflies, "Fireflies", SwarmCount: 4, Particles: 45,
             SwarmRadiusMeters: 5f, ParticleSize: 0.12f, SpeedMps: 0.5f,
             new Color(0.75f, 1.00f, 0.35f), Additive: true,
             MinLocalSun: -1f, MaxLocalSun: 0.02f,
@@ -154,6 +156,13 @@ public sealed class AmbientSwarms : System.IDisposable
 
     /// <summary>Metres past which an ambient swarm is left behind rather than followed.</summary>
     const float KeepAnchorMeters = 60f;
+
+    /// <summary>
+    /// The box a firefly field fills: wide and flat, because they belong across a clearing rather than in a
+    /// ball. Forty by forty by seven metres holding about forty-five insects puts them roughly six metres
+    /// apart - Bryan's "fifteen or twenty feet, ones and twos, not a giant glob".
+    /// </summary>
+    static readonly Vector3 FireflyVolumeMeters = new(40f, 7f, 40f);
 
     sealed class Swarm
     {
@@ -522,8 +531,18 @@ public sealed class AmbientSwarms : System.IDisposable
         swarm.Scattered = scattered;
         if (swarm.System == null) return;
 
+        // Shape-aware: a box emitter ignores `radius` entirely, so writing it would silently do nothing and a
+        // startled firefly field would never widen. The kinds that use a box grow by scale instead.
         ParticleSystem.ShapeModule shape = swarm.System.shape;
-        shape.radius = scattered ? profile.ScatterRadiusMeters : profile.SwarmRadiusMeters;
+        if (shape.shapeType == ParticleSystemShapeType.Box)
+        {
+            float grow = scattered ? profile.ScatterRadiusMeters / Mathf.Max(0.01f, profile.SwarmRadiusMeters) : 1f;
+            shape.scale = FireflyVolumeMeters * Mathf.Max(1f, grow);
+        }
+        else
+        {
+            shape.radius = scattered ? profile.ScatterRadiusMeters : profile.SwarmRadiusMeters;
+        }
 
         ParticleSystem.MainModule main = swarm.System.main;
         main.startSpeed = new ParticleSystem.MinMaxCurve(
@@ -651,10 +670,17 @@ public sealed class AmbientSwarms : System.IDisposable
                 main.startSpeed = new ParticleSystem.MinMaxCurve(0.02f, 0.12f);
                 emission.rateOverTime = BaseEmissionRate(profile);
 
-                // A slow circle around the anchor with a slight inward pull, so they hold together as a
-                // cluster near one spot instead of dispersing the way a plain emitter does.
-                Orbit(ps, -0.22f, 0.22f);
-                velocity.radial = new ParticleSystem.MinMaxCurve(-0.06f, 0.02f);
+                // A wide, flat BOX rather than a tight sphere. Fireflies are ones and twos spread across a
+                // clearing, not a ball of them orbiting a point - which is exactly what a 5 m sphere holding
+                // eighteen produced. At this volume the same headcount lands about six metres apart.
+                shape.shapeType = ParticleSystemShapeType.Box;
+                shape.scale = FireflyVolumeMeters;
+
+                // No orbit. Orbital velocity is angular, so at twenty metres out the same rate that gently
+                // circled a 5 m cluster whirls a particle at several metres a second. Spread out, the wander
+                // has to come from noise, and each insect drifts on its own.
+                Orbit(ps, -0.01f, 0.01f);
+                velocity.radial = new ParticleSystem.MinMaxCurve(-0.01f, 0.01f);
                 Lift(ps, 0.02f, 0.16f);                                      // they drift upward, gently
 
                 limit.enabled = true;
@@ -747,7 +773,7 @@ public sealed class AmbientSwarms : System.IDisposable
     /// </summary>
     static float BaseEmissionRate(AmbientSwarmProfile profile) => profile.Kind switch
     {
-        AmbientSwarmKind.Fireflies => profile.Particles / 7f,
+        AmbientSwarmKind.Fireflies => profile.Particles / 8f,   // mean lifetime ~8 s, so this holds ~Particles alive
         AmbientSwarmKind.Butterflies => profile.Particles / 6f,
         AmbientSwarmKind.Birds => profile.Particles / 12f,
         _ => profile.Particles / 2f,
