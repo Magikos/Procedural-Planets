@@ -1,8 +1,11 @@
 ---
 name: project_water_architecture_build
-description: 2026-08-17/19 water redesign — plan doc, W1-W5c shipped, per-body lake levels, and the gotchas each surfaced
-metadata:
+description: "2026-08-17/19 water redesign — plan doc, W1-W5c shipped, per-body lake levels, and the gotchas each surfaced"
+metadata: 
+  node_type: memory
   type: project
+  originSessionId: 9b891b08-5204-4996-a855-0a2e74630e19
+  modified: 2026-08-29T21:54:39.042Z
 ---
 
 Branch `harvest-vertical-slice`, committed through `2549d8e`. Plan:
@@ -85,6 +88,25 @@ first.
   `Service ISeedProvider not registered`.
 - Forcing daylight via `time.set-local` / `TrySetLocalTimeOfDay` frequently leaves the sun below the
   *chosen location's* horizon. Pick a lake by `dot(bodyDirection, _SunParams)` instead of fighting time.
+
+## 2026-08-29: "lake under the lake" was the CHARACTER, not the water
+
+Bryan's Lake1 screenshot — bed with caustics at the feet, a second water sheet higher up — was the same
+one rule again, this time in gameplay code. `character.spawn` grounded the capsule at **5001.00** =
+`IPlanet.LastSeaLevelRadius` (5000.15) + `FootOffset`, while lake #48's solved surface is **5041.26**. The
+player stood on an invisible planet-wide sea plane inside every raised lake. Ruled out first and not worth
+re-walking: a second body nearby, holes in the water mesh, dry terrain under the sea sphere, the
+`FarTerrainWaterlineMask` wash, prepass kind-decode. The free camera was never affected.
+
+Fix: `CharacterWaterFloor` (a `IWaterQueryService` + center pair) replaced the `float seaLevelRadius`
+argument on `PlanetSurfaceGrounding` and `PlanetRaycastGrounding`, so the floor is queried per position.
+Same swap in `PlanetCharacterController` (spawn clamp too), `CreatureResidencyService`, `AssetBenchService`
+— those three all passed the global radius. Verified: charRadius **5042.26**, bodyId 48, terrain 4992.15.
+267/267 EditMode tests pass, two of them new and locking this.
+
+**Where the global sea radius is still CORRECT** and must not be swapped: altitude reporting
+(`CreatureResidencyService` altitude, `ScaleReferenceMarkers`) and the AssetBench "you are over ocean"
+warning. The rule is about *grounding*, not about every use of the number.
 
 **Closed defects:** D4, D5, D6, D7, D8, D9, D10, D11. D5's re-encode is
 `round(shore01*511)*4 + kind` in `Includes/WaterVolumeData.hlsl` — 9 bits shore, 4 body kinds, exact in

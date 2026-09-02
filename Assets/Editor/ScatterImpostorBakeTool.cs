@@ -15,6 +15,12 @@ using UnityEngine;
 public static class ScatterImpostorBakeTool
 {
     const string AtlasFolder = "Assets/Resources/Settings/Scatter/ImpostorAtlases";
+    // Every folder an impostor atlas can land in. GeneratedImpostors is written by GeneratedImpostorBakeTool.
+    internal static readonly string[] AtlasFolders =
+    {
+        AtlasFolder,
+        "Assets/Resources/Settings/Scatter/GeneratedImpostors",
+    };
     const int OctGridN = 8;                 // matches ScatterImpostorFactory
     const float ImpostorMinMeshCull = 120f; // matches ScatterPrototypeDto.ImpostorMinMeshCull
 
@@ -86,7 +92,33 @@ public static class ScatterImpostorBakeTool
                   $"Atlases in {AtlasFolder}. Stop and re-enter Play to see the stored atlases used (no on-load bake).");
     }
 
-    [MenuItem("Tools/ProceduralPlanets/Impostors/Clear Source Library Atlases", false, 21)]
+    // Changing ScatterImpostorFactory.CoveragePreserveReference invalidates every atlas's preserve-coverage
+    // reference, which is a two-minute reimport rather than a fifteen-minute re-bake: the pixels are already
+    // correct. The shader's CardAlphaCutoff is a runtime value and needs neither.
+    [MenuItem("Tools/ProceduralPlanets/Impostors/Reimport Atlas Settings", false, 21)]
+    public static void ReimportAtlasSettings()
+    {
+        int count = 0;
+        try
+        {
+            foreach (string dir in AtlasFolders)
+            {
+                if (!Directory.Exists(dir)) continue;
+                string[] guids = AssetDatabase.FindAssets("t:Texture2D", new[] { dir });
+                for (int i = 0; i < guids.Length; i++)
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+                    EditorUtility.DisplayProgressBar("Reimporting atlases", path, (float)i / guids.Length);
+                    ConfigureAtlasImport(path, isNormal: path.EndsWith("_n.png"));
+                    count++;
+                }
+            }
+        }
+        finally { EditorUtility.ClearProgressBar(); }
+        Debug.Log($"[Impostor bake] reimported {count} atlas texture(s) preserving coverage at {ScatterImpostorFactory.CoveragePreserveReference:0.00}.");
+    }
+
+    [MenuItem("Tools/ProceduralPlanets/Impostors/Clear Source Library Atlases", false, 22)]
     public static void ClearAll()
     {
         string[] guids = AssetDatabase.FindAssets("t:ScatterPrototype");
@@ -150,7 +182,13 @@ public static class ScatterImpostorBakeTool
         // Averaging alpha down a mip chain thins a silhouette until it falls under the cutoff and dissolves.
         // Preserve-coverage rescales each mip's alpha to hold the same clipped area, at this shader's cutoff.
         imp.mipMapsPreserveCoverage = true;
-        imp.alphaTestReferenceValue = 0.5f; // ScatterImpostor.shader _Cutoff
+        imp.alphaTestReferenceValue = ScatterImpostorFactory.CoveragePreserveReference;
+        // Box averaging is what makes a card read as a smooth blob next to a mesh whose canopy is still
+        // ragged at the same size. Kaiser keeps more of the high frequency, and measured across all 61 cards
+        // at the 24 px size the card takes over at, it also holds MORE of the silhouette: the thinnest card
+        // goes 0.71 -> 0.74 of its mesh area, the median 0.894 -> 0.898, and the reeds stop overshooting
+        // (1.27 -> 1.24). Change this and every prebaked atlas needs a reimport, not just a rebake.
+        imp.mipmapFilter = TextureImporterMipFilter.KaiserFilter;
         imp.wrapMode = TextureWrapMode.Clamp;
         imp.filterMode = FilterMode.Trilinear; // crossfade between mips instead of stepping between them
         imp.anisoLevel = 4;                    // cards are seen at a grazing angle across the tree line

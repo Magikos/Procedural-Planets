@@ -11,7 +11,9 @@ using UnityEngine.Rendering;
 //
 // The scatter shaders read the transform via procedural:setup (_ScatterVisible[instanceID] -> master
 // index -> _ScatterMatrices). Distance-only cull (no frustum) keeps off-camera shadow casters, so the same
-// culled list is shadow-correct. LOD banding + the 15 m crossfade overlap mirror ScatterLodBatcher exactly.
+// culled list is shadow-correct. Band edges, the impostor takeover and the fade rule are not re-derived here:
+// they are SHARED with ScatterLodBatcher (BandNearFor / ImpostorNearFor / FadeStartFor) so the two draw
+// paths cannot disagree about where a tier starts, stops, or dithers.
 public sealed class ScatterGpuDraw : IDisposable
 {
     static readonly int _matricesId = Shader.PropertyToID("_ScatterMatrices");
@@ -31,8 +33,6 @@ public sealed class ScatterGpuDraw : IDisposable
     static readonly int _cCamPos = Shader.PropertyToID("_CamPos");
     static readonly int _cNear2 = Shader.PropertyToID("_Near2");
     static readonly int _cFar2 = Shader.PropertyToID("_Far2");
-
-    const float TransitionWidth = 40f; // must match ScatterLodBatcher — see the note there
 
     sealed class Band
     {
@@ -85,6 +85,8 @@ public sealed class ScatterGpuDraw : IDisposable
             var proto = library.Prototypes[p];
             if (!proto.CanRender) continue;
             var bands = new List<Band>();
+            var imp = impostors != null && p < impostors.Length ? impostors[p] : default;
+            float meshCull = proto.MeshCullDistance;
             for (int part = 0; part < proto.Parts.Length; part++)
             {
                 var pd = proto.Parts[part];
@@ -94,12 +96,13 @@ public sealed class ScatterGpuDraw : IDisposable
                 {
                     var mesh = pd.LodMeshes[lod];
                     if (mesh == null) continue;
-                    float far = pd.LodEndDistances[lod];
-                    float near = lod == 0 ? 0f : Mathf.Max(0f, pd.LodEndDistances[lod - 1] - TransitionWidth);
-                    bands.Add(MakeMeshBand(mesh, lod, near, far, pd.Material, pd.CastShadows, pd.ReceiveShadows, bounds));
+                    float far = ScatterLodBatcher.BandFarFor(lod, pd.LodEndDistances, meshCull);
+                    float near = ScatterLodBatcher.BandNearFor(lod, pd.LodEndDistances);
+                    if (near >= far) continue;
+                    float fadeStart = ScatterLodBatcher.FadeStartFor(lod, lodCount, far, imp);
+                    bands.Add(MakeMeshBand(mesh, lod, near, far, fadeStart, pd.Material, pd.CastShadows, pd.ReceiveShadows, bounds));
                 }
             }
-            var imp = impostors != null && p < impostors.Length ? impostors[p] : default;
             if (imp.Valid)
                 bands.Add(MakeImpostorBand(imp));
             if (bands.Count > 0)
@@ -107,10 +110,10 @@ public sealed class ScatterGpuDraw : IDisposable
         }
     }
 
-    Band MakeMeshBand(Mesh mesh, int lod, float near, float far, Material mat, bool cast, bool receive, Bounds bounds)
+    Band MakeMeshBand(Mesh mesh, int lod, float near, float far, float fadeStart, Material mat, bool cast, bool receive, Bounds bounds)
     {
         var mpb = new MaterialPropertyBlock();
-        mpb.SetFloat(_fadeStartId, far - TransitionWidth); // fade the outgoing LOD out over its last band
+        mpb.SetFloat(_fadeStartId, fadeStart);
         mpb.SetFloat(_fadeEndId, far);
         var rp = new RenderParams(mat)
         {
@@ -129,7 +132,7 @@ public sealed class ScatterGpuDraw : IDisposable
         var mpb = imp.Params.matProps ?? new MaterialPropertyBlock();
         var rp = imp.Params;
         rp.matProps = mpb;
-        float start = Mathf.Max(0f, imp.StartDistance - TransitionWidth);
+        float start = ScatterLodBatcher.ImpostorNearFor(imp);
         return new Band { Mesh = imp.Quad, Lod = -1, Near2 = start * start, Far2 = imp.EndDistance * imp.EndDistance, Rp = rp, Mpb = mpb };
     }
 

@@ -46,3 +46,42 @@ Related: [[reference_unity_mcp]] (rendering captures directly from the editor).
 ## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
 
 - [ffmpeg / watching video](reference_ffmpeg_video.md) — **I can't read video directly, but ffmpeg 9.0 IS installed** (2026-08-21, winget `Gyan.FFmpeg`) so a recording becomes frames I can read. **Bash shells started before the install need `export PATH="$PATH:/c/Users/Bryan/AppData/Local/Microsoft/WinGet/Links"`.** Probe first, sample at 1-2 fps, write to the scratchpad — a long clip at high fps burns context fast. For LOD/pop issues prefer capturing frames myself at labelled distances; video is for what I can't reproduce on demand.
+
+## 2026-08-29 — frame-diff CANNOT find pop-in. Two retractions prove it.
+
+Ranking frames by local diff magnitude finds the **nearest** objects, never the popping ones:
+diff scales with screen-space motion, and near-camera parallax is the largest motion in frame.
+Twice in one review I called a "pop at the player's feet" and twice a full-resolution extraction
+showed an ordinary object growing or sliding in under parallax — frames 38-47 and 181-190 of
+"Recording 2026-08-29 154956.mp4".
+
+A temporal second-difference detector, score = d(f) minus max of d(f-1) and d(f+1), does not fix
+it: validated against a recording with confirmed pops, it produced the same near-field profile.
+Drop duplicate frames first — a 30 fps capture of a ~20 fps game repeats every 3rd frame — or the
+neighbours are meaningless.
+
+**What decides it: a WIDE crop at FULL resolution, 8+ consecutive frames, no upscaling.**
+- Parallax: the object *grows* from small, or emerges from behind an occluder or a screen edge.
+- Real pop: the object appears at **full size in open space** in one frame and stays.
+
+A tight crop upscaled 4x fakes the second case. A grass tuft emerging past the player capsule read
+as "an agave rosette appearing solid in one frame" at 110 px / 4x, and as plain parallax at
+420 px / 1x. Never judge a pop from an upscaled crop.
+
+Frame size matters when choosing crop coordinates: this capture is **924x650**, not 1080p. Run
+`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 FILE` first.
+
+ffmpeg on this box: `-vsync` is rejected, use `-fps_mode passthrough`; `-start_number` must come
+**before** `-i` for an image-sequence input.
+
+### Scatter arrival ramp — wiring verified clean 2026-08-29
+
+`ScatterRenderer.FadeInSeconds = 0.6f` publishes `_ScatterFadeInSeconds` in `Configure()`.
+`_ScatterFadeInSeconds` is declared **outside** `CBUFFER_START(UnityPerMaterial)` in
+`FoliageLit.shader`, `Scatter.shader` and all three `ScatterImpostor.shader` passes, so the global
+reaches it (a per-material declaration would silently read 0 and disable the ramp — check this
+first if props ever appear unfaded). `ScatterDrawBuckets._born` stays in exact lockstep with
+`_matrices` through `Add`, the swap-remove in `RemoveBlock`, and the tile rebuild in
+`RemoveInstanceById`, so the `born.Count >= count` guard in `ScatterGpuDraw.DrawProto` never trips.
+Consequence: **a newly gathered instance dithers in over 0.6 s.** Anything that appears solid in
+one frame is therefore NOT a scatter birth — look elsewhere.

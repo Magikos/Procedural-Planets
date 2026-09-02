@@ -37,4 +37,14 @@ float PlanetNightAmbient(float nightAmbientIntensity)
     return max(nightAmbientIntensity, 0.035);
 }
 
+// Cast shadow for a lit surface, kept OUT of the ndl form-shading ramp. That ramp carries a high floor
+// so a prop's own dark side stays coloured instead of collapsing to a black dot; routing the cast shadow
+// through the same term let that floor leak into it, and a rock standing inside a tree's shadow held ~65%
+// of its lit brightness while the ground under it dropped to ~24%, which reads as no shadow on the rock.
+// shadedFloor is the surface's ambient level in full shadow; 0.25 matches what the terrain shader reaches.
+float PlanetCastShadow(float shadowAtten, float daylight, float shadedFloor)
+{
+    return lerp(shadedFloor, 1.0, lerp(1.0, shadowAtten, daylight));
+}
+
 #endif

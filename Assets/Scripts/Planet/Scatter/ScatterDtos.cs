@@ -147,8 +147,70 @@ public sealed record ScatterPrototypeDto(
     // cold fill (near-first ordering keeps the foreground fast; the far ring trickles in).
     const float ImpostorRangeMultiplier = 4.5f;
 
+    // Where the last mesh band starts dithering out, as a fraction of its cull. Proportional, not a fixed
+    // width: a 45 m flower cannot dither over the same 40 m a 250 m rock can without being half-transparent
+    // for most of the range it is visible at. ScatterLodBatcher.FadeStartFor uses the same fraction for a
+    // prototype with no impostor, so the mesh dissolves over the same relative window either way.
+    public const float MeshFadeFraction = 0.85f;
+
+    // The card has to take over while the mesh still resolves. Below ~36 px tall a mesh's own alpha-cutout
+    // silhouette is mip-dominated and stops agreeing with itself - a beach reed at 8 px covers 2.2x the area
+    // it does at 192 px, a dead tree at 17 px covers 0.55x - so whatever the card does, the swap steps.
+    // Measured card/mesh coverage at the swap over all 61 prototypes with a card: on the authored distance
+    // the ratio ran 0.80 / 1.08 / 1.13 (p10 / median / p90) with 13 prototypes stepping over 15%; handing
+    // over at a fixed 36 px it runs 0.98 / 1.00 / 1.00 with 2. The value is a measured minimum, not a round
+    // number - 32 px and 40 px both give 6-8 failures because a mesh's mip aliasing resonates with size.
+    // It also stops a 0.7 m wildflower being drawn as a mesh out to 120 m, where it is 5 px tall and costs a
+    // mesh draw to look like a smear.
+    const float MeshHandoverPixels = 36f;
+
+    // 1080 / (2 tan 30): screen pixels per metre of prop height, per metre of distance, at 1080p and a 60
+    // degree vertical FOV. The handover is a fixed DISTANCE derived from this, not a live screen
+    // measurement - gather radii and the GPU band buffers are built once at configure, so a per-frame size
+    // would rebuild them on every zoom. A taller screen only makes props hand over ABOVE 36 px, which is
+    // the safe way to be wrong.
+    const float ReferencePixelsPerMetre = 935f;
+
     public bool HasImpostor => CanRender && MaxCullDistance >= ImpostorMinMeshCull;
-    public float ImpostorStartDistance => MaxCullDistance * 0.85f; // cross-fade in over the mesh dither-out band
+
+    // Largest dimension of the union of the drawable parts' LOD0 bounds - what decides the prop's height on
+    // screen, and the same measure ScatterImpostorBaker frames its card by.
+    public float BoundsSizeMeters
+    {
+        get
+        {
+            Bounds b = default;
+            bool first = true;
+            foreach (var part in Parts)
+            {
+                if (!part.CanRender) continue;
+                Bounds pb = part.LodMeshes[0].bounds;
+                if (first) { b = pb; first = false; } else b.Encapsulate(pb);
+            }
+            if (first) return 0f;
+            Vector3 v = b.size;
+            return Mathf.Max(v.y, Mathf.Max(v.x, v.z));
+        }
+    }
+
+    // Where the mesh tier actually stops. A prototype with no card keeps its authored cull - shortening
+    // that would only delete the prop early. One with a card hands over at MeshHandoverPixels, and never
+    // later than the authored cull, so this can only ever REDUCE mesh draw distance.
+    public float MeshCullDistance
+    {
+        get
+        {
+            float authored = MaxCullDistance;
+            if (!HasImpostor) return authored;
+            float size = BoundsSizeMeters;
+            if (size <= 0f) return authored;
+            return Mathf.Min(authored, size * ReferencePixelsPerMetre / MeshHandoverPixels);
+        }
+    }
+    // The card takes over exactly where the mesh culls. It deliberately does NOT ramp in underneath the
+    // still-solid mesh: a card is a square billboard and a tree is not, so every threshold the ramp clips
+    // outside the mesh silhouette shows as a dithered ghost canopy beside the solid one for the whole band.
+    public float ImpostorStartDistance => MeshCullDistance;
     public float ImpostorEndDistance => HasImpostor ? MaxCullDistance * ImpostorRangeMultiplier : 0f;
 
     // How far the placement gather must reach for this prototype: its impostor end if it has one, else

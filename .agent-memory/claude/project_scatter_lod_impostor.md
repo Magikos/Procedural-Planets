@@ -102,3 +102,228 @@ no share key so the manifest cannot cache them.
 
 - [Octahedral tree impostors] — 2026-08-10 (in scatter-placement): far tree impostors now octahedral (angle-grid atlas + camera-facing cell sample + blend + ShadowCaster) — kills the top-down slab + distant tree shadows; LOD reach 3×→4.5× w/ long fade. Commit e185631
 - [Scatter LOD + impostor](project_scatter_lod_impostor.md) — 2026-07-27/28: shared ScatterLodBatcher (mesh LODs + far-field impostor tier, f6ef526); impostors DYNAMICALLY LIT/day-night-correct (91daf1f); empty-bake guard (e566e2d); contact-sheet validator (de8abc5); ScatterLodStrip workbench. **2026-08-17 speckled-horizon FIXED: an atlas has TWO mip settings and only the saved PNG's `.meta` importer matters** — all 104 had `enableMipMap: 0`, so runtime-baker fixes hit a path the planet never takes. Needs mipmapEnabled + `mipMapsPreserveCoverage`/`alphaTestReferenceValue 0.5` (shader `_Cutoff`) + Trilinear; fixing the bake tool alone leaves on-disk atlases broken. **2026-08-17 atlases now BAKED TO DISK** (`Tools > ProceduralPlanets > Bake Generated Impostor Atlases` + `GeneratedImpostorManifest`): finalize `scatterRenderer` **13,637 → 911 ms**. TRAP: the bake **must run in PLAY MODE** or foliage renders black and every tree bakes as a bare trunk (tool now refuses); and the staleness hash must be **per species**, not per prototype, or every variant still live-bakes. Meshes stay runtime-generated — measured 45 ms all trees / 150 ms all rocks, so caching them buys nothing. Gotchas: instanced billboards need GetObjectToWorldMatrix, URP manual-render RT clears black, Mathf.SmoothStep≠HLSL smoothstep
+
+**2026-08-27 — canopy "tiny holes" FIXED, and the rule generalises.** Bryan reported conifers pocked
+with a lattice of tiny holes. Cause: the mesh-LOD crossfade dithered the OUTGOING mesh LOD out over its
+last 40 m while the incoming LOD drew solid underneath. A screen-door only hides a swap while the
+successor tier **covers the same pixels**, and a coarser mesh LOD is a *decimation* of its predecessor —
+thinner canopy, so it does not cover. Dithering LOD n out therefore exposed LOD n+1's gaps as a regular
+Bayer lattice through every tree in the band. The impostor card is the only successor that does cover
+(it is baked from the mesh, so silhouettes match), so it is the only swap allowed to dither.
+`ScatterLodBatcher.FadeStartFor` is now the single owner of that rule; `ScatterGpuDraw` held a *duplicate*
+hardcoded `far - TransitionWidth` and now calls the helper. Pinned by
+`Assets/Tests/EditMode/ScatterLodFadeTests.cs`.
+**TRAP 1 — material-level probes on scatter are no-ops.** `ScatterGpuDraw.MakeMeshBand` sets `_FadeStart`
+/`_FadeEnd` on the band's `MaterialPropertyBlock`, and an MPB beats the material. Setting the value on the
+Material asset changes nothing; patch the band MPB by reflection instead.
+**TRAP 2 — generated foliage has no alpha map**, so albedo alpha is 1.0 and a `_Cutoff` probe (even 0.98)
+cannot change the image. Do not conclude "the capture pipeline is broken" from a no-op probe.
+Also note: `ScreenCapture.CaptureScreenshot` writes asynchronously, and a state change plus a capture in
+the same call captures the PREVIOUS frame — set state, capture in a separate call, then poll for file size.
+Follow-up DONE same day: the 40 m mesh-band overlap is gone. With intermediate LODs no longer fading it
+bought nothing and cost a double draw in every annulus. Mesh bands now partition exactly - band N starts
+where band N-1 culls - and both band tests are half-open [near, far), so there is no gap at the seam and
+no instance is drawn twice. The impostor keeps its overlap; it is the only tier that must be solid before
+its predecessor dithers. All three rules now live in ScatterLodBatcher as BandNearFor / ImpostorNearFor /
+FadeStartFor, and ScatterGpuDraw no longer holds its own TransitionWidth constant.
+Evidence: frozen-frame A/B at 294 m over a Taiga Pine, 184 mesh bands patched back to the old overlap by
+reflection between the two captures. Amplified difference is confined to tree silhouette edges (raw
+YMAX=16/255, YAVG=0.13) - the removed double draw. No seam, no canopy thinning, crowns solid in both.
+
+**2026-08-28 REGRESSION FROM THE ABOVE, and the rule that was over-applied.** Bryan: "you can see the
+firns and such apearing as I walk. So the LOD needs to be better." The hole fix made FadeStartFor return
+`far` for the last mesh LOD whenever the prototype has NO impostor. That makes `_FadeStart == _FadeEnd`,
+and the shader ramp `saturate((dist - _FadeStart) / max(1e-3, _FadeEnd - _FadeStart))` degenerates into a
+STEP: the prop appears whole in one frame at its cull instead of dissolving. 21 of 176 drawable
+prototypes have no card (HasImpostor needs MaxCullDistance >= 120): flowers 50-55 m, mushrooms 45 m,
+grasses 90 m, corals 90-110 m. Those are the "ferns".
+
+**Refined coverage rule.** A screen-door hides a swap only when what is behind the discarded pixels is
+what should be there. The impostor card qualifies (baked from the mesh). **The BACKGROUND also qualifies**
+- a prop with no card is supposed to be gone past its cull, so dissolving into the world IS the
+disappearance. Only a coarser mesh LOD fails, because it is a decimation with a thinner canopy. So: the
+last band ALWAYS fades - into the card if there is one, else over its own last 15%. Intermediate bands
+still swap hard. The 15% is `ScatterPrototypeDto.MeshFadeFraction = 0.85f`, the same constant
+ImpostorStartDistance uses, and it is a FRACTION on purpose: a 45 m flower cannot dither over the 40 m a
+250 m rock can without being half-transparent for most of its visible range.
+
+Evidence: live readback of every band MPB - before, 21 prototypes had a zero-width window; after,
+hardPopping=0 out of 176, e.g. Grassland Grass [76.5, 90], Taiga Flower Blue [46.8, 55], Forest Tree
+[340, 400]. Frozen-frame A/B at 18 m over taiga: difference is zero in the sky rows and peaks in the
+mid-ground (YAVG per 120-row strip: 0, 0.19, 0.62, 1.20, 0.67, 0.60), confined to ground clutter and
+correctly occluded by trunks and canopies. 264/264 EditMode tests pass.
+
+**TRAP 3 - a prototype's bands are per PART, not per LOD.** Every flower/mushroom/grass prototype has TWO
+bands, both `Lod=0`, same near/far: two drawable parts with one LOD each. Patching only "the last band"
+misses half the geometry. Enumerate all bands.
+**TRAP 4 - freeze time before any A/B.** With wind and the day cycle running, two captures one second
+apart differ over the WHOLE frame (YAVG 21.5) and swamp the signal. `Time.timeScale = 0f` drops the
+noise floor to exactly 0.
+**TRAP 5 - restating TRAP 2's timing in the RenderTexture path.** RenderMeshIndirect snapshots the MPB at
+submit, so a patch and a `cam.Render()` in the SAME execute_code call render the pre-patch state and diff
+to zero. Patch in one call, capture in the next.
+
+## 2026-08-28 — bare horizon canopies: SUB-PIXEL ALPHA TEST, not LOD at all
+
+Bryan: "Those trees on the horizon have no leaves in the LOD's". Distant broadleaf trees rendered as
+trunk-and-branch skeletons with a few isolated leaf specks. **It was not an LOD problem and not the
+impostor.** `scatter.lodview` tinted the bare trees GREEN = LOD0, i.e. full-detail geometry.
+
+**Mechanism.** Alpha-tested coverage does not accumulate across overlapping SUB-PIXEL primitives. While
+each leaf card is several pixels wide, overlapping cards fill each other's alpha holes and the canopy
+reads solid. Once a card is ~1 px, one card alone claims the pixel and the leaf texture's alpha coverage
+alone decides leaf-or-sky — the canopy speckles away. Generated trees build canopies from many small
+cards, so they hit this first and hardest.
+
+**Fix (`FoliageLit.shader`).** New `LeafCutoff(uv, lm)` helper relaxes the cutoff toward 0 as the sampled
+mip climbs: `_CutoffFadeMip` (default 4) start, `_CutoffFadeRange` (default 3) width. Mip level IS
+texels-per-pixel, so this is independent of FOV, prototype scale, and whether leaves come from one card
+texture or from a cell of a 4k atlas — no per-prototype tuning. The helper replaced three duplicated
+`lerp(0.0, _Cutoff + _LeafFall, lm)` clip sites (ForwardLit / ShadowCaster / DepthNormals).
+
+Evidence: same frozen camera, `_CutoffFadeMip` 99 (relax off) vs 4. Off = bare skeletons; on = full
+canopies. Near-field crop is visually unchanged — no fattened or blocky leaves. Whole-frame diff YAVG
+0.73, confined to the mid/far tree band; near field and sky are zero.
+
+**Corrections to earlier notes.** `FoliageMeadowCanopy._Cutoff` is **0.4**, not 0.98 — every FoliageLit
+material in the tree is 0.3–0.5. The leaf atlas mip chain is fine: measured coverage at cutoff 0.4 is
+45.1 % at mip 0 and 48.0 % at mip 6, essentially flat. Do not re-open "mip alpha decay".
+
+**Generated-tree band layout.** `TreeInjection.cs:288` gives every generated tree only
+`{ cull * 0.6f, cull }`, so a 500 m cull means LOD0 = 0–300 m and the impostor does not start until
+425 m. Anything wrong at 100–300 m is therefore LOD0 geometry, not a LOD swap — check the shader first.
+
+**Runtime `_Cutoff` probe.** Reach the bands by reflection:
+`Planet._scatterRenderer` → `ScatterRenderer._gpu` → `ScatterGpuDraw._protos[i].Bands[j].Mpb`, then
+`Mpb.SetFloat("_Cutoff", x)`. MPB overrides do apply to `UnityPerMaterial` floats here. Never write the
+material asset — 179 bands across 111 prototypes use FoliageLit, and restoring means
+`mpb.SetFloat(name, mat.GetFloat(name))`. TRAP 5 (patch and capture in separate calls) applies.
+
+## 2026-08-28 — see-through horizon trees: the mesh and the card CANNOT cross-dither
+
+Bryan: "Still some transparent leaves looking trees on the horizon". A regular lattice of sky pixels
+through the distant tree line. **Not the card, not the atlas, not the alpha cutoff.** It was the mesh tier
+and the impostor tier screen-dooring against each other.
+
+**Mechanism.** Both tiers clip against the same 4x4 Bayer table, opposite ways round: the mesh keeps
+thresholds ABOVE its fade, the card keeps thresholds BELOW its coverage. That is complete only if the two
+silhouettes agree PER PIXEL. They do not — the card is an octahedral billboard baked from the mesh, so
+where the card's baked alpha is below `_Cutoff` it draws nothing at any coverage, and the mesh has already
+dithered those thresholds away. Sky shows through.
+
+**Fix (`ScatterLodBatcher.FadeStartFor`).** Stop cross-dithering. A mesh band fades ONLY when the
+background is its successor (card-less props, `far * MeshFadeFraction` — the request-4 pop-in fix, kept).
+With a card the last mesh LOD holds full coverage to its cull; the card ramps 0 to 1 *underneath* it over
+`[ImpostorStartDistance, meshCull]` and is already opaque on the frame the mesh culls. `TransitionWidth`
+(40 m) is deleted — `ImpostorNearFor` is now just `StartDistance`, which is exactly where the factory bakes
+`_FadeInStart`, so the old lead-in only submitted quads the shader clipped at coverage 0.
+
+Evidence: live readback of the shipped path — 437 of 475 mesh bands solid, 38 dithering (the card-less
+grass/flower/mushroom/coral set), 155/155 card bands with band start == `_FadeInStart` and `_FadeInEnd` ==
+mesh cull. Frozen-frame taiga horizon crops read solid. 265/265 EditMode tests pass.
+
+**Ruled out by measurement, do not re-test.** Impostor `_Cutoff` 0.5 to 0.05 (YAVG 0.166, no visual
+change); the baked Conifer atlas and its alpha are clean; arrival ramp / frozen time (steady state);
+impostor far fade-out disabled (identical); part culls shorter than the prototype cull (none exist —
+multiPartProtos=111, every drawable part's last `LodEndDistances` == its prototype's `MaxCullDistance`);
+the card-less background dissolve alone (crop YAVG 0.00016); forcing card coverage to 1 everywhere
+(YAVG 0.034, holes persist — which is what PROVED the card is clipped there, not merely faint).
+
+**The ScatterImpostor ShadowCaster pass clips on `card.a - _Cutoff` only, never on coverage.** So a card
+casts a full shadow anywhere its band draws, fade or no fade. Harmless at 0.85x cull and beyond, but it is
+why the card band start is worth keeping tight.
+
+---
+
+## The handover is a SIZE, not a distance (2026-08-29, shipped)
+
+The remaining pop was never card quality. It was **when** the swap happens. `ImpostorStartDistance` was
+the authored `MaxCullDistance`, so each prop swapped at whatever on-screen size that distance implied —
+5 px for a 0.7 m wildflower whose cull was pushed to 120 m to clear `ImpostorMinMeshCull`, 40 px for a
+tree. **Below ~36 px a mesh's own alpha-cutout silhouette is mip-dominated and stops agreeing with
+itself**: a beach reed at 8 px covers 2.2x the area it does at 192 px, a dead tree at 17 px covers 0.55x.
+Whatever the card does, that swap steps.
+
+Fix: `ScatterPrototypeDto.MeshHandoverPixels = 36f` + `ReferencePixelsPerMetre = 935f` (1080/(2·tan30))
+→ `MeshCullDistance = min(authored, boundsSize · 935 / 36)`, and `ImpostorStartDistance => MeshCullDistance`.
+`ScatterLodBatcher.BandFarFor` and `ScatterGpuDraw.Configure` clip every mesh band to it, skipping bands
+that fall wholly past (`near >= far`) — without the clip mesh and card both draw in that gap.
+`ImpostorEndDistance` and `FarGatherRadius` still key off the AUTHORED cull, so visible range and gather
+cost are unchanged; only the mesh→card boundary moves inward. Average mesh cull drops to 47% of authored
+(22% of the area) — a large mesh-draw saving that came free with the fix.
+
+Measured `card/mesh` coverage at each prop's own swap, all 61 prototypes with a card, real renders:
+
+| handover | min | p10 | median | p90 | max | step>15% |
+|---|---|---|---|---|---|---|
+| authored distance (before) | 0.000 | 0.799 | 1.083 | 1.125 | 1.415 | 13/61 |
+| 32 px | 0.810 | 0.946 | 1.000 | 1.024 | 1.218 | 8/61 |
+| **36 px (shipped)** | **0.800** | **0.984** | **0.998** | **1.004** | **1.208** | **2/61** |
+| 40 px | 0.827 | 0.930 | 1.003 | 1.025 | 1.164 | 6/61 |
+
+36 is a **measured minimum, not a round number** — a direct 30/34/36/38/40/44/48 sweep gives rms error
+0.1224 / 0.0627 / 0.0552 / 0.0572 / 0.0579 / 0.1106 / 0.0981. The bad-count jitters because each mesh's
+mip aliasing resonates with size; rms is the stable metric and 36 is its floor. Don't "tidy" it to 32 or 40.
+
+**Accepted residue (2 of 61), both looked at by eye at 36 px and neither a pop:** TEM Grassland FlowerBush
+pop 0.800 (its MESH covers 1.235x its own truth at 36 px; the card is right at 0.988) and Lake Lily
+pop 1.208 (card 1.149 of truth; lily pads are seen near edge-on in game and the A/B is indistinguishable).
+
+**Closed by measurement, do not re-open.** (1) Mesh `_Cutoff` as the lever — swept 0.25→0.55 by MPB on
+all four then-offenders: reeds are already optimal at their authored 0.40 (0.971) and hypersensitive either
+side, Lake Lily is `_Cutoff = 0` so there is no alpha test to tune, LMHPOLY Beach Reed is completely
+insensitive (flat 0.826), TEM_Bush moves the WRONG way as cutoff rises (1.181 at 0.25 → 1.265 at 0.55);
+Forest Tree and Birch Tree controls are flat at ~0.985/0.992. (2) `mipMapsPreserveCoverage` on the MESH
+texture as the cause of TEM_Bush's bloat — disabling it on `TEM_Atlas_Vegetation_1A.png` moved mErr
+1.235 → 1.227, i.e. nothing. Reverted.
+
+Pinned by `ScatterLodFadeTests.MeshBandsPastTheHandover_AreSkipped_SoTheCardNeverDoublesWithTheMesh` and
+`AHandoverBeyondTheLadder_LeavesTheAuthoredBandsUntouched`. 10/10 pass.
+`Tools/ProceduralPlanets/Impostors/Validate`: 0 problems, 155/155 prototypes read a baked card.
+
+**Rig gotcha.** Any measurement rig must set `Shader.SetGlobalFloat(ShaderGlobalIds.FoliageBacklight, 1f)`
+and bind `_GrassInteractors` via `GrassInteractorFallback.Bind(ref gi)`, or FoliageLit draws nothing / the
+card reads dark. Camera at elevation 10°, yaw 20° — elevation 0 is a degenerate A/B rig.
+
+---
+
+## 2026-08-30 — bare far-shore trees: the shared atlas was baked from the SAPLING
+
+Bryan, with two lake screenshots: the far shore rendered as bare opaque trunks with isolated leaf specks
+while the near trees carried full canopies. **Not the shader, not the cutoff, not the handover.** The
+on-disk atlas for each species was baked from the WRONG variant.
+
+**Mechanism.** `TreeInjection` ladders variant ages `Mathf.Lerp(0.25f, 1f, variant / (variantCount - 1))`
+with `Variants = 3`, and all three declare the SAME `ImpostorShareKey`, so one card serves all of them
+(`ScatterImpostorBaker.FromPrebaked` re-frames it to each variant's own bounds). Both selectors took
+whichever prototype came FIRST: `GeneratedImpostorBakeTool` with `if (!byKey.ContainsKey(...))`, and
+`ScatterImpostorFactory._sharedCards` by plain library order. First in library order is variant 0 — the
+age-0.25 sapling. So every mature tree past its handover billboarded as a blown-up sapling.
+
+Measured, generated Broadleaf by age: 0.25 -> h 4.15 m, bounds 6.10 m, 168 foliage verts, **21 leaf
+clumps**; 0.625 -> 11.82 m / 17.21 / 816 / 102; 1.0 -> h 22.22 m, bounds 35.86 m, 2512 verts, **314 leaf
+clumps**. 15x the clumps and 5.4x the height, sharing one card. Live library spread per share key:
+Broadleaf 5.67 m -> 34.46 m (6.1x), Birch 3.82 -> 23.30, Palm 3.95 -> 23.54, Willow 4.36 -> 26.86.
+Rocks are barely affected (rock-Forest 2.43 -> 2.93).
+
+**Fix.** Both selectors now pick the LARGEST `BoundsSizeMeters` per share key — `ScatterRenderer.Configure`
+sorts prototypes biggest-first before calling `ScatterImpostorFactory.TryBuild`, and the bake tool keeps
+the max. They must agree or the disk atlas and the runtime fallback card disagree. Being wrong for the
+small variants is harmless: their card is never more than ~36 px tall.
+
+**The code fix alone changes nothing** — `GeneratedImpostorManifest.AppearanceHash` probes a fixed
+`Species(s, 0.5f)` seed 1, so it cannot detect "baked from the wrong variant" and the stale atlases keep
+validating. A rebake is mandatory: `Tools/ProceduralPlanets/Impostors/Bake Impostors (Generated Props)`,
+in PLAY MODE. 52 atlases, 0 skipped.
+
+Evidence: old vs new `Broadleaf.png` composited over grey — old cells are a twiggy sapling with ~20 leaf
+clumps, new cells are a dense mature crown with the trunk mostly hidden. Old `Birch.png` cells are a bare
+white stick with pale specks, which is Bryan's screenshot exactly. Atlas PNG size 2.1-2.8x (Broadleaf
+396,166 -> 1,108,230 B). In-game at 60 m over Forest the far treeline is solid canopy with no poles.
+
+**Resolved as NOT a defect, do not re-raise.** "Impostor start distances are wildly inconsistent between
+variants of the same species (9 m -> 500 m)" is just the age ladder feeding
+`MeshCullDistance = min(authored, size * 25.97)`.
+
+**Audit gap that let this ship.** `ScatterLodSilhouetteAudit` measures the LIBRARY ASSET, not the injected
+generated prototypes, and never compares card against mesh per share key. Fix that before trusting it.

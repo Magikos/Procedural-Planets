@@ -200,7 +200,8 @@ public sealed class CreatureResidencyService : IDisposable
         _center = _planetTransform != null ? _planetTransform.position : Vector3.zero;
         _seeds = ServiceLocator.Get<ISeedProvider>();
         _gravity = new RadialGravityProvider(_center);
-        _grounding = new PlanetSurfaceGrounding(_sampler, _center, _seaLevelRadius);
+        ServiceLocator.TryGet(out IWaterQueryService water);
+        _grounding = new PlanetSurfaceGrounding(_sampler, _center, new CharacterWaterFloor(water, _center));
         _library = SettingsProvider.IsRegistered<CreatureLibraryDto>()
             ? SettingsProvider.GetSettings<CreatureLibraryDto>()
             : CreatureLibraryDto.Placeholder;

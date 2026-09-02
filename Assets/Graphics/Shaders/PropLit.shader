@@ -108,6 +108,7 @@ Shader "Planet/PropLit"
                 float shade = lerp(0.5, 1.0, shadowAtten * cloudShadow);
 
                 half3 dayColor = albedo * lerp(0.72, 1.15, ndl * shade);
+                dayColor *= PlanetCastShadow(shadowAtten, daylight, 0.25);
                 half3 nightColor = albedo * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
                 half3 col = lerp(nightColor, dayColor, daylight);
                 col = MixFog(col, IN.fogFactor);

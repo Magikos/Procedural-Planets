@@ -20,6 +20,7 @@ MonoBehaviour:
   Weight: 0.78
   Clumpiness: 0.55
   PatchScaleMeters: 110
+  ShadePreference: 0
   MaxSlopeDegrees: 55
   SlopeFadeDegrees: 10
   ConformToSlope: 1

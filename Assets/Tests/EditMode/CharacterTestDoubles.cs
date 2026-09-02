@@ -30,6 +30,40 @@ namespace ProceduralPlanets.Tests
         }
     }
 
+    /// <summary>One body of a fixed surface radius, present only inside a cone around a chosen direction —
+    /// stubs <see cref="IWaterQueryService"/> so a lake can sit above the terrain in exactly one place.</summary>
+    sealed class FixedBodyWaterQuery : IWaterQueryService
+    {
+        readonly Vector3 _center;
+        readonly Vector3 _bodyDir;
+        readonly float _surfaceRadius;
+        readonly float _minDot;
+
+        public FixedBodyWaterQuery(Vector3 center, Vector3 bodyDir, float surfaceRadius, float minDot = 0.999f)
+        {
+            _center = center;
+            _bodyDir = bodyDir.normalized;
+            _surfaceRadius = surfaceRadius;
+            _minDot = minDot;
+        }
+
+        public bool TryGetWaterSurface(Vector3 worldPosition, out WaterSample sample)
+        {
+            sample = default;
+            Vector3 fromCenter = worldPosition - _center;
+            if (fromCenter.sqrMagnitude < 1e-8f) return false;
+            Vector3 dir = fromCenter.normalized;
+            if (Vector3.Dot(dir, _bodyDir) < _minDot) return false;
+
+            sample = new WaterSample(_center + dir * _surfaceRadius, dir,
+                _surfaceRadius - fromCenter.magnitude, 10f, 48, false);
+            return true;
+        }
+
+        public bool IsUnderwater(Vector3 worldPosition) =>
+            TryGetWaterSurface(worldPosition, out WaterSample s) && s.IsSubmerged;
+    }
+
     /// <summary>A sphere of fixed radius — stubs <see cref="IPlanetSurfaceSampler"/> for grounding tests.</summary>
     sealed class FixedRadiusSampler : IPlanetSurfaceSampler
     {

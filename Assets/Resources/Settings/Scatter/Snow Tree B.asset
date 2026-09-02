@@ -20,6 +20,7 @@ MonoBehaviour:
   Weight: 1.42
   Clumpiness: 0.7
   PatchScaleMeters: 260
+  ShadePreference: 0
   MaxSlopeDegrees: 30
   SlopeFadeDegrees: 6
   ConformToSlope: 0
@@ -48,5 +49,5 @@ MonoBehaviour:
   LodEndDistances: []
   CastShadows: 1
   ReceiveShadows: 1
-  BakedImpostorAtlas: {fileID: 2800000, guid: 96d81abb3fe42d649ae48b7f6ba130a9, type: 3}
-  BakedImpostorNormal: {fileID: 2800000, guid: 608275a1476bb5242b92193bf746d62c, type: 3}
+  BakedImpostorAtlas: {fileID: 2800000, guid: 6f64f9373ac5a7c4bb663c274d5da113, type: 3}
+  BakedImpostorNormal: {fileID: 2800000, guid: acc23047b702e094ab9a30b6db39d608, type: 3}

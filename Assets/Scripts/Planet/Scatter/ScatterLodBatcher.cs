@@ -22,13 +22,6 @@ public sealed class ScatterLodBatcher
     public static bool LodTintDebug;
     static readonly int _lodTintId = Shader.PropertyToID("_LodDebugTint");
 
-    // LOD crossfade: overlap adjacent bands by this width and dither the OUTGOING LOD out over its last
-    // TransitionWidth metres (via the material's existing _FadeStart/_FadeEnd screen-door), while the
-    // INCOMING LOD is already drawn solid underneath. Kills the hard mesh-swap pop at each band boundary.
-    // 40 m, not 15. The crossfade has to outlast the swap it hides: at a 60 m/s fly-through 15 m is 0.25 s,
-    // far too fast to mask a tree canopy changing between LODs, which is the "LOD -> detail" pop. 40 m gives
-    // ~0.67 s at that speed. Cost is a wider band where both LODs draw.
-    const float TransitionWidth = 40f;
     static readonly int _fadeStartId = Shader.PropertyToID("_FadeStart");
     static readonly int _fadeEndId = Shader.PropertyToID("_FadeEnd");
     static readonly Color[] _lodColors =
@@ -83,6 +76,7 @@ public sealed class ScatterLodBatcher
         if (_dist.Length < count) _dist = new float[Mathf.NextPowerOfTwo(count)];
         for (int i = 0; i < count; i++) _dist[i] = (positionsWS[i] - camPos).sqrMagnitude;
 
+        float meshCull = proto.MeshCullDistance;
         for (int part = 0; part < proto.Parts.Length; part++)
         {
             ScatterPartDto pd = proto.Parts[part];
@@ -94,11 +88,10 @@ public sealed class ScatterLodBatcher
             {
                 Mesh mesh = pd.LodMeshes[lod];
                 if (mesh == null) continue;
-                float far = pd.LodEndDistances[lod];
-                // Pull this band's start back into the previous band so both draw across the transition;
-                // the previous LOD is dithering out there while this one is solid (it fades at its own far).
-                float near = lod == 0 ? 0f : Mathf.Max(0f, pd.LodEndDistances[lod - 1] - TransitionWidth);
-                SetFade(rp, far - TransitionWidth, far);
+                float far = BandFarFor(lod, pd.LodEndDistances, meshCull);
+                float near = BandNearFor(lod, pd.LodEndDistances);
+                if (near >= far) continue;
+                SetFade(rp, FadeStartFor(lod, lodCount, far, impostor), far);
                 SetLodTint(rp, LodTintDebug ? _lodColors[Mathf.Min(lod, _lodColors.Length - 1)] : _tintOff);
                 DrawBand(rp, mesh, near * near, far * far, matrices, count);
             }
@@ -106,10 +99,10 @@ public sealed class ScatterLodBatcher
 
         if (impostor.Valid)
         {
-            // Impostor takes over at the last mesh LOD's cull (StartDistance); overlap so the mesh dithers
-            // out over the last TransitionWidth while the card is already solid underneath.
-            float start = Mathf.Max(0f, impostor.StartDistance - TransitionWidth);
-            SetFade(impostor.Params, impostor.EndDistance - TransitionWidth, impostor.EndDistance);
+            // The card's band begins where the last mesh band culls, so exactly one tier draws at any
+            // distance. Its fade lives on its material (_FadeIn*/_FadeOut*, baked by
+            // ScatterImpostorFactory), not in _FadeStart/_FadeEnd.
+            float start = ImpostorNearFor(impostor);
             SetLodTint(impostor.Params, LodTintDebug ? _impostorColor : _tintOff);
             DrawBand(impostor.Params, impostor.Quad,
                      start * start,
@@ -122,6 +115,40 @@ public sealed class ScatterLodBatcher
     {
         if (rp.matProps == null) return; // no property block on this part; skip the debug tint
         rp.matProps.SetColor(_lodTintId, c);
+    }
+
+    // Mesh bands partition the distance range exactly — this band starts where the previous one culls. Both
+    // band tests (DrawBand here, ScatterCull.compute on the GPU path) are half-open [near, far), so an exact
+    // partition leaves no gap at the seam and draws no instance twice.
+    public static float BandNearFor(int lod, float[] lodEndDistances) =>
+        lod == 0 ? 0f : lodEndDistances[lod - 1];
+
+    // The authored band end, clipped to where the card takes over. A prototype's handover is decided by its
+    // on-screen size (ScatterPrototypeDto.MeshCullDistance), not by the authored distance, so a band that
+    // lies wholly past it comes back with far <= near and the caller skips it. Without the clip the mesh
+    // and the card would both draw between the handover and the authored cull.
+    public static float BandFarFor(int lod, float[] lodEndDistances, float meshCull) =>
+        Mathf.Min(lodEndDistances[lod], meshCull);
+
+    // The card's band starts at the mesh cull, which is also where ScatterImpostorFactory bakes its
+    // coverage ramp to reach 1 — the card is opaque on the first frame it draws.
+    public static float ImpostorNearFor(in Impostor impostor) => impostor.StartDistance;
+
+    // A screen-door only hides a swap while whatever is BEHIND the dithered-away pixels is what should be
+    // there. Exactly one successor qualifies: the background, because a prop with no card is *supposed* to
+    // be gone past its cull, so dissolving into the world behind it is the disappearance and not an
+    // artifact. A coarser mesh LOD does not — it is a decimation of its predecessor with a thinner canopy,
+    // so dithering LOD n out exposes LOD n+1's gaps. Neither does the impostor card: both tiers screen-door
+    // against the same 4x4 Bayer table, and because the card's baked silhouette does not agree with the
+    // mesh's per pixel, the two clip the same thresholds and the sky shows through as a lattice of holes
+    // along the horizon tree line. So a mesh band fades only when the background is what comes next.
+    // Everywhere else it holds full coverage to its cull, and the card — opaque from the first frame it
+    // draws — takes over there with no dither on either side of the swap.
+    public static float FadeStartFor(int lod, int lodCount, float far, in Impostor impostor)
+    {
+        bool coveredByCard = impostor.Valid && impostor.StartDistance <= far;
+        if (coveredByCard || lod != lodCount - 1) return far;
+        return far * ScatterPrototypeDto.MeshFadeFraction;
     }
 
     static void SetFade(RenderParams rp, float start, float end)

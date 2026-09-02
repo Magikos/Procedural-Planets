@@ -1,6 +1,6 @@
 ---
 name: project_scatter_dusk_lighting
-description: Scatter "black dot/dash" causes are STAGE-SPECIFIC — noon=mesh shaded floor, dusk=grazing shadow strength, far ribbon=impostor (not a bug). Fixes + tunables, 2026-08-10.
+description: Scatter prop lighting defects - "black dot/dash" causes are STAGE-SPECIFIC, and form shading vs CAST shadow must be separate multiplies (2026-08-10, 2026-08-27).
 metadata:
   type: project
 ---
@@ -119,3 +119,34 @@ black holes in it. **On thin features, read debug channels as images; a frame-wi
 ## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
 
 - [Scatter dusk/black-dot lighting](project_scatter_dusk_lighting.md) — 2026-08-10 (branch scatter-placement): "black dots/dashes" are STAGE-SPECIFIC. Noon=mesh prop shaded floor (SyntyProps on **Scatter.shader**, bushes+rocks share it; floor 0.72→0.85 + SSAO→25%, commit 0795b36). Dusk=grazing-sun long shadows (**CelestialManager** fades `SunLight.shadowStrength` by viewer sun-elevation; `time.shadow-grazing`/`time.shadow-fade-elev`, commit 3865d2d). Far ribbon=impostors, NOT a bug (healthy olive card, dim-at-dusk is correct). Diagnosed via agent self-serve captures.
+
+---
+
+**2026-08-27 — "No shadow on this rock." A prop CAST shadow correctly and never RECEIVED one.**
+Bryan's phrasing was literal: no shadow *on* the rock. Proved by live A/B on an isolated boulder
+(all 630 scatter bands forced `ShadowCastingMode.Off`, then only the 135 rock bands back On): the
+boulder pixels were **identical** between "everything casts" and "nothing casts", while the terrain
+around them changed everywhere. It cast a clean shadow wedge; it received nothing.
+
+Cause: `Scatter.shader` routed the cast shadow through the SAME term as the form shading —
+`shade = lerp(0.35, 1.0, shadowAtten * cloudShadow)` feeding `albedo * lerp(0.6, 1.3, ndl * shade)`.
+Those floors exist so a prop's own dark side does not collapse to a black dot (the 2026-08-10 fix
+above), and they leaked straight into the cast shadow. A fully shadowed rock kept **65%** of its lit
+brightness while the terrain under it dropped to ~24%. **Form shading and cast shadow are two
+different things and must be two different multiplies.**
+
+`FoliageLit.shader` already had the separate multiply, which is why trees received shadow and rocks
+did not. That expression is now the shared `PlanetCastShadow(shadowAtten, daylight, shadedFloor)` in
+`Includes/PlanetSunLighting.hlsl`, called by **all four** lit surfaces: `Scatter.shader`,
+`ScatterImpostor.shader` (must match the mesh tier or the LOD handoff pops in shadow),
+`PropLit.shader` (its floors were worse — 0.5 and 0.72..1.15, so a shadowed character kept ~81%),
+and `FoliageLit.shader`. Measured after: shadowed boulder 75.9 -> 55.5 YAVG against ground-in-shadow
+53.8; sunlit ground unchanged at 126.3.
+
+Method notes for next time. `ScatterRenderer` is a **plain class**, not a MonoBehaviour — reach it
+via `Planet._scatterRenderer` by reflection, not `FindObjectOfType`. `RenderParams` lives in
+`UnityEngine`, not `UnityEngine.Rendering`. Restore hacked bands by calling
+`ScatterGpuDraw.Configure(_library, bounds, _impostors)`, reading `bounds` off any existing band's
+`Rp.worldBounds`. A shader `ImportAsset(ForceUpdate|ForceSynchronousImport)` took effect on the SAME
+call this time, so capture and diff instead of assuming the old ~75 s wait. `Import Error Code:(4)`
+in the console is unrelated noise; `ShaderUtil.GetShaderMessageCount` was 0.

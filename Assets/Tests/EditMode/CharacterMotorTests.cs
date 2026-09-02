@@ -115,6 +115,33 @@ namespace ProceduralPlanets.Tests
             Assert.Greater(Vector3.Dot(r.Normal, Vector3.up), 0.9999f, "planet normal is radial up");
         }
 
+        // --- The water floor is per body, not one global sea radius (the "lake under the lake" defect) ---
+
+        [Test]
+        public void PlanetGrounding_InsideRaisedLake_StandsOnThatLakeSurface()
+        {
+            const float terrain = 4990f;   // lake bed
+            const float lake = 5041.26f;   // that body's solved surface, 41 m above the global sea radius
+            var water = new FixedBodyWaterQuery(Vector3.zero, Vector3.up, lake);
+            var grounding = new PlanetSurfaceGrounding(
+                new FixedRadiusSampler(terrain), Vector3.zero, new CharacterWaterFloor(water, Vector3.zero));
+
+            Assert.IsTrue(grounding.TryGround(new Vector3(0, 5000f, 0), Vector3.down, 1f, out GroundResult r));
+            Assert.AreEqual(lake + 1f, r.Position.magnitude, 1e-2f, "grounded on the lake surface, not its bed");
+        }
+
+        [Test]
+        public void PlanetGrounding_OutsideAnyBody_GroundsOnTerrain()
+        {
+            const float terrain = 4990f;
+            var water = new FixedBodyWaterQuery(Vector3.zero, Vector3.up, 5041.26f);
+            var grounding = new PlanetSurfaceGrounding(
+                new FixedRadiusSampler(terrain), Vector3.zero, new CharacterWaterFloor(water, Vector3.zero));
+
+            Assert.IsTrue(grounding.TryGround(new Vector3(5000f, 0, 0), Vector3.left, 1f, out GroundResult r));
+            Assert.AreEqual(terrain + 1f, r.Position.magnitude, 1e-2f, "dry land is never lifted to a lake");
+        }
+
         // --- SurfaceCharacterController driven by fakes (no planet) ---
 
         static SurfaceCharacterController FlatDriver(float foot)

@@ -12,13 +12,10 @@ using UnityEngine;
 // to check. Run this instead of hoping to notice.
 public static class ScatterImpostorValidator
 {
-    const float ShaderCutoff = 0.5f;   // ScatterImpostor.shader _Cutoff default
+    // Deliberately NOT the shader's _Cutoff. The card clips above what the mip chain preserves so bilinear
+    // spread between rescaled texels cannot fatten the silhouette at range; see CardAlphaCutoff.
+    const float PreserveReference = ScatterImpostorFactory.CoveragePreserveReference;
     const int ExpectedGridN = 8;       // ScatterImpostorFactory.OctGridN
-    static readonly string[] AtlasFolders =
-    {
-        "Assets/Resources/Settings/Scatter/ImpostorAtlases",
-        "Assets/Resources/Settings/Scatter/GeneratedImpostors",
-    };
 
     [MenuItem("Tools/ProceduralPlanets/Impostors/Validate", false, 30)]
     public static void Validate()
@@ -52,7 +49,7 @@ public static class ScatterImpostorValidator
     static void CheckAtlasImportSettings(List<string> problems, List<string> notes)
     {
         int checked_ = 0;
-        foreach (string dir in AtlasFolders)
+        foreach (string dir in ScatterImpostorBakeTool.AtlasFolders)
         {
             if (!Directory.Exists(dir)) continue;
             foreach (string guid in AssetDatabase.FindAssets("t:Texture2D", new[] { dir }))
@@ -67,11 +64,14 @@ public static class ScatterImpostorValidator
                 // mip chain averages its alpha down past the cutoff.
                 if (!imp.mipmapEnabled) problems.Add($"{file}: mipmaps disabled (causes a speckled tree line).");
                 else if (!imp.mipMapsPreserveCoverage) problems.Add($"{file}: mipMapsPreserveCoverage off (silhouette thins away in the distance).");
-                else if (Mathf.Abs(imp.alphaTestReferenceValue - ShaderCutoff) > 0.01f)
-                    problems.Add($"{file}: alphaTestReferenceValue {imp.alphaTestReferenceValue:0.00} does not match the shader cutoff {ShaderCutoff:0.00}.");
+                else if (Mathf.Abs(imp.alphaTestReferenceValue - PreserveReference) > 0.01f)
+                    problems.Add($"{file}: alphaTestReferenceValue {imp.alphaTestReferenceValue:0.00} does not match the preserve reference {PreserveReference:0.00}.");
 
                 if (imp.filterMode != FilterMode.Trilinear)
                     notes.Add($"{file}: filterMode {imp.filterMode}, expected Trilinear (mip transitions will step).");
+
+                if (imp.mipmapFilter != TextureImporterMipFilter.KaiserFilter)
+                    notes.Add($"{file}: mipmapFilter {imp.mipmapFilter}, expected Kaiser (box averaging softens the card into a blob at the swap).");
 
                 var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
                 if (tex != null && tex.width % ExpectedGridN != 0)

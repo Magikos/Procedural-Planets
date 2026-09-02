@@ -3,7 +3,8 @@
     "rootNamespace": "",
     "references": [
         "ProceduralPlanets.Core",
-        "ProceduralPlanets.Planet"
+        "ProceduralPlanets.Planet",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [
         "Editor"

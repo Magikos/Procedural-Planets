@@ -43,6 +43,17 @@ public static class ScatterImpostorBaker
     // let the prototype hard-cull at its mesh range instead of drawing nothing.
     const float MinSilhouetteAlpha = 0.2f;
 
+    // Four texels of skirt at 128 px per cell: enough to survive mips 1-3, which is the range a card at the
+    // tree line actually samples. Below that a whole cell averages anyway.
+    const int ColorBleedPasses = 4;
+
+    // The atlas camera frames the prop slightly wider than its bounds so a diagonal view cannot clip the
+    // cell edge. The card quad has to span that FRAMED extent, not the mesh extent, or the card draws the
+    // margin smaller than the mesh it replaces. That was a uniform 0.898 area ratio at the swap across the
+    // whole library - a solid rock measured it as exactly as a tree, which is what gave it away as framing
+    // and not an alpha-cutoff problem. Both AtlasCard paths must use the same number as the camera.
+    const float FrameMargin = 1.04f;
+
     public static Card Bake(IReadOnlyList<Mesh> meshes, IReadOnlyList<Material> materials)
     {
         Bounds b = meshes[0].bounds;
@@ -144,7 +155,7 @@ public static class ScatterImpostorBaker
         Camera cam = camGO.AddComponent<Camera>();
         cam.cameraType = CameraType.Preview;   // black background (see Bake) — the luminance key depends on it
         cam.orthographic = true;
-        cam.orthographicSize = s * 0.52f;
+        cam.orthographicSize = s * FrameMargin * 0.5f;
         cam.aspect = 1f;
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = Color.black;
@@ -226,6 +237,8 @@ public static class ScatterImpostorBaker
             ap[k] = new Color(ap[k].r, ap[k].g, ap[k].b, a);
             np[k] = new Color(np[k].r, np[k].g, np[k].b, a); // same silhouette alpha on the normal atlas
         }
+        DilateColorIntoTransparent(ap, atlasPx, AtlasCellPx, ColorBleedPasses);
+        DilateColorIntoTransparent(np, atlasPx, AtlasCellPx, ColorBleedPasses);
         atlas.SetPixels(ap);
         normalAtlas.SetPixels(np);
         // Apply(true) builds the mip chain; without it the texture keeps mip 0 only and the allocation above
@@ -243,7 +256,48 @@ public static class ScatterImpostorBaker
         Object.DestroyImmediate(normalRt);
         Object.DestroyImmediate(root);
 
-        return new AtlasCard { Texture = atlas, NormalTexture = normalAtlas, WorldSize = s, CenterOffset = ctr.y, GridN = gridN, Valid = maxAlpha >= MinSilhouetteAlpha };
+        return new AtlasCard { Texture = atlas, NormalTexture = normalAtlas, WorldSize = s * FrameMargin, CenterOffset = ctr.y, GridN = gridN, Valid = maxAlpha >= MinSilhouetteAlpha };
+    }
+
+    // Every transparent texel is pure black (the bake background), so the mip chain averages the card's
+    // colour toward black exactly where its silhouette is thinnest — and a card at the tree line is always
+    // minified, so that reads as a dark fringe and forces a high alpha cutoff to hide it. Bleed the keyed
+    // colour outward into the transparent texels first: mip 0 is untouched because alpha is preserved, but
+    // every lower mip then averages real foliage colour, which is what lets the shader clip at a low cutoff
+    // and keep thin silhouettes. Bleeding stays inside each octahedral cell so one view angle never leaks
+    // colour into its neighbour.
+    static void DilateColorIntoTransparent(Color[] px, int size, int cellPx, int passes)
+    {
+        var filled = new bool[px.Length];
+        for (int i = 0; i < px.Length; i++) filled[i] = px[i].a > 0.01f;
+        var src = new Color[px.Length];
+        var srcFilled = new bool[px.Length];
+        for (int p = 0; p < passes; p++)
+        {
+            System.Array.Copy(px, src, px.Length);
+            System.Array.Copy(filled, srcFilled, filled.Length);
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                int k = y * size + x;
+                if (srcFilled[k]) continue;
+                int cx0 = x / cellPx * cellPx, cy0 = y / cellPx * cellPx;
+                float r = 0f, g = 0f, b = 0f;
+                int n = 0;
+                for (int dy = -1; dy <= 1; dy++)
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    int nx = x + dx, ny = y + dy;
+                    if (nx < cx0 || nx >= cx0 + cellPx || ny < cy0 || ny >= cy0 + cellPx) continue;
+                    int j = ny * size + nx;
+                    if (!srcFilled[j]) continue;
+                    r += src[j].r; g += src[j].g; b += src[j].b; n++;
+                }
+                if (n == 0) continue;
+                px[k] = new Color(r / n, g / n, b / n, px[k].a);
+                filled[k] = true;
+            }
+        }
     }
 
     // Wrap a PRE-BAKED atlas texture (from the editor bake tool) as an AtlasCard, recomputing the
@@ -258,7 +312,7 @@ public static class ScatterImpostorBaker
         float w = Mathf.Max(b.size.x, b.size.z);
         float h = Mathf.Max(b.size.y, 1e-3f);
         int gridN = Mathf.Max(1, atlas.width / AtlasCellPx);
-        return new AtlasCard { Texture = atlas, NormalTexture = normalAtlas, WorldSize = Mathf.Max(w, h), CenterOffset = b.center.y, GridN = gridN, Valid = true };
+        return new AtlasCard { Texture = atlas, NormalTexture = normalAtlas, WorldSize = Mathf.Max(w, h) * FrameMargin, CenterOffset = b.center.y, GridN = gridN, Valid = true };
     }
 
     // Hemi-octahedral decode: square uv in [0,1]^2 -> unit direction on the upper hemisphere (y = up).

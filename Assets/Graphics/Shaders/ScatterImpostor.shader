@@ -16,6 +16,7 @@ Shader "Scatter/Impostor"
         _GridN ("Octahedral grid frames per axis", Float) = 8
         _CenterOffset ("Billboard centre height above pivot (m)", Float) = 1
         _WorldSize ("Billboard square side (m)", Float) = 2
+        _LeafCard ("Whole-card leaf translucency (0/1)", Float) = 0
         _FadeInStart ("Fade-in start (m)", Float) = 340
         _FadeInEnd ("Fade-in end (m)", Float) = 400
         _FadeOutStart ("Fade-out start (m)", Float) = 1100
@@ -84,9 +85,27 @@ Shader "Scatter/Impostor"
                 world, outRight, outUp, outView, gridCoord);
         }
 
+        // A cell is 128 px and the card draws ~24 px tall the frame it takes over, so the hardware picks
+        // mip ~2.4 - a 16-32 px image magnified back up. That second round of filtering is why an unbiased
+        // card reads as a smooth blob beside a mesh whose canopy is still ragged at the same size.
+        // Half a level back is as far as this can go. Measured over all 61 cards at 24 px, -0.5 lifts every
+        // prop: edge energy against the last mesh LOD rises (worst case 0.57 -> 0.62) AND clipped area rises
+        // with it (conifers 0.844 -> 0.894, wildflowers 0.695 -> 0.713). Push to -1 and area inverts - the
+        // conifers fall to 0.794 and a distant pine trunk breaks into dashes, because the trunk is one texel
+        // of near-cutoff alpha that only survives by mipMapsPreserveCoverage rescaling it in the deeper mips.
+        // Sharpen past those mips and the rescale is gone. Fixing that means a thicker baked trunk, not a
+        // bigger bias.
+        #define CARD_MIP_BIAS (-0.5)
+
         // Bilinear blend of the 4 neighbour octahedral frames (weights from the fractional grid coord), so
         // the card cross-fades between baked angles as the camera orbits instead of snapping cell-to-cell.
         // Cell centres sit at integer+0.5 (the bake framed cell i at (i+0.5)/N), so shift by 0.5 first.
+        //
+        // Unweighted on purpose. A texel solid in one cell is often empty in its neighbour, and an empty
+        // texel is the bake background, so weighting colour by each cell's own alpha looks like the obvious
+        // correction. Measured across all 61 cards it moves the card/mesh luminance ratio by at most 0.003:
+        // the baker already dilates colour into the transparent texels, and neighbouring view angles agree
+        // almost everywhere they overlap. Not the reason a card reads dimmer than its mesh.
         half4 SampleOctBlended(TEXTURE2D_PARAM(atlas, atlasSampler), float2 gridCoord, float2 quadUv, float gridN)
         {
             float2 g = gridCoord - 0.5;
@@ -99,7 +118,7 @@ Shader "Scatter/Impostor"
                 float2 cell = clamp(baseC + float2(ci, cj), 0.0, gridN - 1.0);
                 float2 uv = (cell + quadUv) / gridN;
                 float w = (ci == 0 ? 1.0 - f.x : f.x) * (cj == 0 ? 1.0 - f.y : f.y);
-                c += SAMPLE_TEXTURE2D(atlas, atlasSampler, uv) * w;
+                c += SAMPLE_TEXTURE2D_BIAS(atlas, atlasSampler, uv, CARD_MIP_BIAS) * w;
             }
             return c;
         }
@@ -152,6 +171,7 @@ Shader "Scatter/Impostor"
                 float _GridN;
                 float _CenterOffset;
                 float _WorldSize;
+                float _LeafCard;
                 float _FadeInStart;
                 float _FadeInEnd;
                 float _FadeOutStart;
@@ -160,6 +180,11 @@ Shader "Scatter/Impostor"
                 // identical layout across a shader's passes.
                 float4 _LodDebugTint;
             CBUFFER_END
+
+            // Look knob, global rather than per-material so it can be dialled live alongside the mesh tier
+            // (see ShaderGlobalIds.Scatter). ScatterRenderer publishes it; unset reads 0 and the card simply
+            // loses its backlight.
+            float _FoliageBacklight;
 
             #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
                 StructuredBuffer<float4x4> _ScatterMatrices;
@@ -270,6 +295,22 @@ Shader "Scatter/Impostor"
                 // brighter as it crosses the mesh -> impostor handoff. These were 0.85 vs 0.6, which read as
                 // a prop changing shade as you walked toward it.
                 half3 dayColor = card.rgb * lerp(0.6, 1.28, ndl * shade);
+
+                // Leaf translucency, matching the mesh tier (FoliageLit). Without it a tree lost its canopy
+                // glow the frame it crossed into card range, which is a lighting pop in its own right - the
+                // card range is exactly where a backlit tree line is most of what you see. Whole-card and
+                // gated by _LeafCard because the atlas carries no leaf mask, so a trunk transmits too; at
+                // card range a trunk is a few pixels wide and it does not read.
+                float3 viewDir = normalize(_WorldSpaceCameraPos - IN.positionWS);
+                float back = pow(saturate(dot(viewDir, -sunDir)), 1.8);
+                float wrap = saturate(dot(N, -sunDir)) * 0.6 + 0.4;
+                half3 transmitTint = half3(1.08, 1.04, 0.86);
+                dayColor += card.rgb * transmitTint * (back * wrap * _FoliageBacklight * _LeafCard)
+                          * daylight * cloudShadow;
+                // Cast shadow on the WHOLE card, matching FoliageLit: the form shading above has a 0.6
+                // floor, so without this a shaded prop reads brighter as a card than as the mesh it
+                // replaced and lightens at the handover.
+                dayColor *= PlanetCastShadow(shadowAtten, daylight, 0.25);
                 half3 nightColor = card.rgb * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
                 // Linear, matching the mesh tier, the terrain and FoliageLit. See Scatter.shader for why the
                 // old sqrt easing left props lit under a sun that had already set.
@@ -312,6 +353,7 @@ Shader "Scatter/Impostor"
                 float _GridN;
                 float _CenterOffset;
                 float _WorldSize;
+                float _LeafCard;
                 float _FadeInStart;
                 float _FadeInEnd;
                 float _FadeOutStart;
@@ -418,6 +460,7 @@ Shader "Scatter/Impostor"
                 float _GridN;
                 float _CenterOffset;
                 float _WorldSize;
+                float _LeafCard;
                 float _FadeInStart;
                 float _FadeInEnd;
                 float _FadeOutStart;

@@ -197,12 +197,14 @@ Shader "Scatter/VertexColorLit"
                 float4 shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
                 half shadowAtten = MainLightRealtimeShadow(shadowCoord);
                 float cloudShadow = CloudShadowFactor(IN.positionWS, sunDir, localSun);
-                // Softer self-shadow + a shaded floor matched to the impostor card (ScatterImpostor uses
-                // 0.85..1.28) so a prop's dark side never collapses to a black dot and the mesh->impostor
+                // Form shading only: a soft self-shadow plus a shaded floor matched to the impostor card (which
+                // ramps 0.6..1.28) so a prop's dark side never collapses to a black dot and the mesh->impostor
                 // handoff has no brightness pop. Without a normal-up blend (rocks need true form) the floor
-                // is what keeps a shaded bush side coloured rather than near-black.
+                // is what keeps a shaded bush side coloured rather than near-black. The cast shadow is applied
+                // separately below, or this floor leaks into it and a shadowed prop stays bright.
                 float shade = lerp(0.35, 1.0, shadowAtten * cloudShadow);
                 half3 dayColor = albedo * lerp(0.6, 1.3, ndl * shade);
+                dayColor *= PlanetCastShadow(shadowAtten, daylight, 0.25);
                 half3 nightColor = albedo * PlanetNightAmbient(_NightAmbientIntensity) * 0.6;
                 // Blend to night on the SAME linear curve the terrain and FoliageLit use. This was once sqrt,
                 // to stop a dark-albedo prop collapsing to a black dot against still-lit ground. It overshot:

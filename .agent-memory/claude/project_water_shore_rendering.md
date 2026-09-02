@@ -938,6 +938,58 @@ unchanged; look-up Snell's window intact with its rim still heaving.
 **Still visible in the same shot and NOT this bug:** seabed scatter reads as black speckles - the
 dark-specks defect, same family as [[project_scatter_dusk_lighting]].
 
+## "I can see through the water" — the lake surface renders the sky (2026-08-29, IDENTIFIED, not fixed)
+
+Bryan's shot: pale sage expanse to a treed horizon, lily pads on it. Reproduced at
+`camera.teleport SeeThroughWater` (the character settles onto the lake, camRadius 5044.71, sea 5000).
+At ~1.8 m eye height the horizon is ~140 m out, so the whole expanse is ONE small lake, not ocean.
+
+**Owner: the water SURFACE pass (`Ocean.shader`). Not the volume, not atmosphere, not post, not backfaces.**
+Same mid-lake patch, 8-bit sRGB:
+
+| mode | RGB |
+|---|---|
+| `Off` (final) | 192, 205, 164 |
+| `WaterNoPost` 56 | 192, 204, 163 |
+| `AtmosphereBypass` 40 | 192, 204, 163 |
+| `SurfaceOnly` 25 | 195, 202, 160 |
+| `SurfaceRawOpaque` 53 (`layer.color`) | 194, 204, 164 |
+| `VolumeOnly` 24 | 106, 174, 179 |
+| sky just above horizon | 212, 207, 177 |
+
+**The lake surface lands within ~5% of the sky in front of it.** That is the whole artifact.
+
+Eliminations, each by capture: `SurfaceBackfacePink` 49 shows no pink — front faces, so NOT the `2704811`
+back-face defect. `TerrainSourcePink` 31 pinks only the shoreline strip, so the expanse is water, not
+terrain showing through. `Foam` 7 reads 0 away from the character, so foam is not the wash. `WaterNoPost`
+and `AtmosphereBypass` are identical to `Off`, so neither post nor atmosphere touches it.
+
+`WaterData` 11 is FLAT over the whole lake: `depth01` constant, `shore01` ~0.95, **`body01` = 0.000**.
+body01 = 0 is CORRECT — it is the lake marker (planet-wide `body` avg is 0.905, i.e. ocean).
+
+Two causes, both in `Assets/Graphics/Shaders/Ocean.shader`:
+
+1. **The lake colour is mostly sky.** `reflectionBlend` (~L714) is
+   `reflectFresnel * lerp(0.08, 0.72, daylight) * lerp(0.45, 1.0, body01)`. At a grazing view
+   `reflectFresnel` ~ 1, so a LAKE still takes ~0.32 of `EvaluateSkyReflection`. The far path adds more:
+   `surfacePathBlend` (~L730) stays 0.62 for lakes, and `farGraze` (~L728) is itself
+   `lerp(farBody, skyReflection, 0.35)`. `horizonColor` inside `EvaluateSkyReflection` is
+   (0.62, 0.60, 0.46) — the exact sage the lake shows. `lakeShallow` (0.20, 0.36, 0.24) never dominates.
+2. **The volume's lake body is hidden.** `Ocean.shader` ~L771 forces `nearAlpha = 0.9 * shoreAlpha` for
+   lakes; `SurfaceAlpha` 19 measures alpha ~0.97 across the lake. `WaterVolume.shader` ~L908 computes the
+   intended murky-green `lakeBody` and it never reaches the frame.
+
+So the two passes disagree: the volume renders an opaque green pond, the surface renders a sheet of sky
+over it, and the surface wins. **The fix branch is unchosen** — either gate the sky-reflection and far-path
+terms on `body01` the way alpha already is, or hand grazing lake pixels to the volume.
+
+Method notes worth keeping. Capture sets `Water Artifact`, `Water Surface Isolation`,
+`Water Surface Finish` and `Water Foam` bracket this whole stack. Fire them from ONE `execute_code` call —
+`CommandExecutor.ExecuteImmediate` for the setup commands, then an `async Awaitable` that awaits a delay and
+calls `DebugCaptureController.CaptureCurrentSetAsync` — so editor reload churn cannot interrupt mid-sequence.
+**Check the sidecar's `PlanetRadius` before trusting a batch**: a first run captured 14 frames of the
+loading overlay at 65% and only `PlanetRadius: 0.00` gave it away.
+
 ## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
 
 - [Water shore + horizon rendering](project_water_shore_rendering.md) — 9 fixes. **Lake "blocks" SOLVED: it was the GRASS water-fade, not biomes — 7 attempts in the wrong system.** Found by colour-coded elimination, read-only, no regenerates.

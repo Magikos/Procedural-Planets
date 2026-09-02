@@ -692,9 +692,11 @@ public sealed class AssetBenchService
         _seaLevel = _planet.LastSeaLevelRadius;
         _seaLevelHits = 0;
 
-        var analytic = new PlanetSurfaceGrounding(_sampler, _center, _seaLevel);
+        ServiceLocator.TryGet(out IWaterQueryService water);
+        var waterFloor = new CharacterWaterFloor(water, _center);
+        var analytic = new PlanetSurfaceGrounding(_sampler, _center, waterFloor);
         _grounding = _raycaster != null
-            ? new PlanetRaycastGrounding(_raycaster, _center, _seaLevel, analytic)
+            ? new PlanetRaycastGrounding(_raycaster, _center, waterFloor, analytic)
             : analytic;
 
         return true;

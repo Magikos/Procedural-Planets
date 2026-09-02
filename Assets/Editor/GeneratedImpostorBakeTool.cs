@@ -60,15 +60,22 @@ public static class GeneratedImpostorBakeTool
 
         Directory.CreateDirectory(OutputDir);
 
-        // One atlas per share key: the age/seed variants of a species differ by a few metres of silhouette,
-        // which is under a pixel at impostor range. A prototype that already carries a card needs nothing from
-        // us — that is the untouched Synty library, which ships its own atlases.
+        // One atlas per share key, baked from the BIGGEST variant of that key. The age variants of a species
+        // are not a few metres apart — a Broadleaf runs 4.15 m and 21 leaf clumps at age 0.25 against 22.22 m
+        // and 314 at age 1.0 — and the card carries the geometry it was baked from, re-framed to each
+        // variant's bounds. Baking the first one in library order baked the sapling, so every mature tree
+        // billboarded as a bare trunk with a handful of leaf specks. Must match the live-bake pick in
+        // ScatterRenderer.Configure, or the disk atlas and the runtime fallback card disagree.
+        // A prototype that already carries a card needs nothing from us — that is the untouched Synty
+        // library, which ships its own atlases.
         var byKey = new Dictionary<string, ScatterPrototypeDto>();
         foreach (ScatterPrototypeDto p in lib.Prototypes)
         {
             if (p == null || string.IsNullOrEmpty(p.ImpostorShareKey) || !p.HasImpostor) continue;
             if (p.BakedImpostorAtlas != null) continue;
-            if (!byKey.ContainsKey(p.ImpostorShareKey)) byKey[p.ImpostorShareKey] = p;
+            if (!byKey.TryGetValue(p.ImpostorShareKey, out ScatterPrototypeDto held)
+                || p.BoundsSizeMeters > held.BoundsSizeMeters)
+                byKey[p.ImpostorShareKey] = p;
         }
         if (byKey.Count == 0)
         {

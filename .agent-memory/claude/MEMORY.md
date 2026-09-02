@@ -6,6 +6,7 @@ Keep entries under ~200 chars; this file loads into every session.
 
 ## Feedback — how Bryan wants work done
 
+- [Never discard uncommitted work](feedback_never_discard_uncommitted_work.md) — `git checkout`/`restore`/`reset` destroyed prior-session work in this permanently-dirty tree. Park with a scratchpad copy or a path-scoped stash FIRST. A restore verified against a session summary MISSED a line for 9h — verify against `git diff`.
 - [Quality over cheap](feedback_quality_over_cheap.md) — "Do it properly, always my pick." Take the root-cause fix; never offer cheap-vs-proper as a question. Overrides lazy/minimal-diff defaults.
 - [Goal-first scoping](feedback_goal_first_scoping.md) — Prerequisites become tasks, never reasons to defer a goal. Scope docs discover work; they don't trim goals.
 - [Placeholder art while building](feedback_placeholder_art_while_building.md) — Placeholder ART yes, placeholder MECHANICS no. Never gate a mechanic on an art import.
@@ -34,13 +35,13 @@ Keep entries under ~200 chars; this file loads into every session.
 
 - [Scatter dither grain](project_scatter_dither_grain.md) — SOLVED: `_Bayer4x4` started at `0.0`, killing 1 px in 16 at zero fade. Traps: brightness metrics aren't exposure-invariant; RenderMeshIndirect snapshots the MPB at submit.
 - [Face-UV inverse defect](project_face_uv_inverse_defect.md) — `UnitSphereToCubeFace` looked like an inverse and wasn't. Three cube-face UV conventions exist in the tree and are NOT interchangeable — always round-trip-test a new one.
-- [Water shore + horizon rendering](project_water_shore_rendering.md) — Lake "blocks" were the GRASS water-fade, not biomes; 7 attempts went to the wrong system.
-- [Water architecture build](project_water_architecture_build.md) — ~92 lakes at their own spill heights. One rule explains every bug: a consumer asking where sea level is globally when it should ask where water is here.
+- [Water shore + horizon rendering](project_water_shore_rendering.md) — Lake "blocks" were the GRASS water-fade, not biomes. "See through the water" = Ocean SURFACE renders sky over a lake volume it hides.
+- [Water architecture build](project_water_architecture_build.md) — ~92 lakes at their own spill heights. One rule explains every bug: a consumer asking where sea level is globally when it should ask where water is here. Latest instance (2026-08-29): "lake under the lake" was character GROUNDING, not water.
 - [Water tech research](project_water_tech_research.md) — Our water is stronger than prior docs claim; "no waves on the sphere" is STALE. Lists dead ends so nobody re-searches.
 - [Ocean scatter — SHIPPED](project_ocean_scatter.md) — DO NOT repeat "scatter cannot place below the waterline"; it is FALSE. Altitude is signed, so a depth band is an ordinary altitude gate.
 - [Ocean wave approach](project_ocean_wave_approach.md) — Displace the existing mesh, NOT a camera-following patch.
-- [Scatter LOD + impostor](project_scatter_lod_impostor.md) — Atlases now baked to disk. TRAP: the bake must run in PLAY MODE, and an atlas's mip settings live in the saved PNG's `.meta`, not the baker.
-- [Scatter dusk/black-dot lighting](project_scatter_dusk_lighting.md) — "Black dots" are stage-specific: noon = prop shaded floor, dusk = grazing-sun shadows, far ribbon = impostors and NOT a bug.
+- [Scatter LOD + impostor](project_scatter_lod_impostor.md) — Canopy "tiny holes" were the mesh-LOD crossfade; BARE distant canopies were sub-pixel alpha test, not LOD. SEE-THROUGH horizon trees: mesh and card can NEVER cross-dither — silhouettes disagree per pixel. Atlas bakes must run in PLAY MODE. Mesh-to-card handover is a SIZE (36 px), not a distance. BARE far-shore trunks: one atlas serves every age variant and was baked from the SAPLING — bake the BIGGEST, then REBAKE.
+- [Scatter prop lighting](project_scatter_dusk_lighting.md) - "Black dots" are stage-specific. SOLVED 2026-08-27: props CAST shadow but never RECEIVED it. Form shading and cast shadow must be SEPARATE multiplies.
 - [Scatter clumping](project_scatter_clumping_direction.md) — Clumping authored on all 79 prototypes. GOTCHA: clumping COSTS ~30% headcount, so weights carry a compensation factor. Re-author ⇒ redo it.
 - [ShadePreference siting](project_shade_preference_siting.md) — Props can be sited relative to tree cover. The crossover is at −0.5, NOT 0. Measure against the shared openness field, not one prototype.
 - [Distant grass carpet](project_distant_grass_carpet.md) — The far grass "blanket" already exists but is disabled by a hard biome-edge gate. Lake1 is ARID, so the carpet won't green it.
@@ -66,7 +67,7 @@ Keep entries under ~200 chars; this file loads into every session.
 ## Tooling and environment
 
 - [Unity MCP — you can drive the editor](reference_unity_mcp.md) — MCP IS CONNECTED; don't ask Bryan to run what you can run. Auto-refresh is OFF, and HotReload WEDGES compilation when you add new .cs files — the fix is in this file.
-- [ffmpeg / watching video](reference_ffmpeg_video.md) — I can't read video, but ffmpeg IS installed, so a recording becomes frames. Sample at 1-2 fps into the scratchpad; high fps burns context fast.
+- [ffmpeg / watching video](reference_ffmpeg_video.md) — ffmpeg turns a recording into frames. GOTCHA: frame-diff CANNOT find pop-in — it ranks the NEAREST objects. Judge a pop only from a wide FULL-res crop.
 - [Test harness](project_test_harness.md) — EditMode tests exist and are used. Bryan asked for TDD, which overrides the old CLAUDE.md "no test framework" rule.
 - [Testing stance](project_testing_stance.md) — SUPERSEDED by CLAUDE.md: a test has to earn its place. Kept for history.
 - [Human-readable console params](project_human_readable_console_params.md) — Cloud/atmo/precip/weather commands converted to 0-1; convention promoted into pp-change-control §4.

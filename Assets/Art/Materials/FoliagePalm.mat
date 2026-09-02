@@ -36,9 +36,11 @@ Material:
     - _ColorNoiseLargeFreq: 0.59
     - _ColorNoiseSmallFreq: 4.44
     - _ColorNoiseStrength: 0.35
-    - _Cutoff: 0.4
-    - _FadeEnd: 150
-    - _FadeStart: 120
+    - _Cutoff: 0.98
+    - _CutoffFadeMip: 4
+    - _CutoffFadeRange: 3
+    - _FadeEnd: 6000
+    - _FadeStart: 5000
     - _ForceLeaf: 0
     - _InteractiveBend: 0
     - _LeafAOIntensity: 0.5

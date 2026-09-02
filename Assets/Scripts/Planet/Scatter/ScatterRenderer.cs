@@ -64,7 +64,21 @@ public sealed class ScatterRenderer : IDisposable
         int protoCount = _library.Prototypes.Length;
         _renderParams = new RenderParams[protoCount][];
         _impostors = new ScatterLodBatcher.Impostor[protoCount];
+        // Biggest prototype first. Prototypes sharing an ImpostorShareKey share ONE baked card, and whichever
+        // builds first is the one that gets baked. In library order that is variant 0 — the age-0.25 sapling,
+        // 21 leaf clumps against the mature tree's 314 — so every full-grown tree of the species billboarded
+        // as a blown-up sapling: bare trunk, a few leaf specks. Baking the biggest instead is wrong only for
+        // the small variants, whose card is never more than ~36 px tall.
+        var order = new int[protoCount];
+        var sizes = new float[protoCount];
         for (int i = 0; i < protoCount; i++)
+        {
+            order[i] = i;
+            var proto = _library.Prototypes[i];
+            sizes[i] = proto != null && proto.CanRender ? proto.BoundsSizeMeters : 0f;
+        }
+        Array.Sort(order, (a, b) => sizes[b].CompareTo(sizes[a]));
+        foreach (int i in order)
         {
             var p = _library.Prototypes[i];
             _renderParams[i] = new RenderParams[p.Parts.Length];

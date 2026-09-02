@@ -20,25 +20,28 @@ MonoBehaviour:
   Weight: 0.72
   Clumpiness: 0.4
   PatchScaleMeters: 40
+  ShadePreference: 0
   MaxSlopeDegrees: 20
   SlopeFadeDegrees: 6
+  ConformToSlope: 0
   HasMinAltitude: 0
   MinAltitudeMeters: 0
   HasMaxAltitude: 1
   MaxAltitudeMeters: 3
   MinWaterClearanceMeters: 0
+  OnWater: 0
   ScaleRange: {x: 0.7, y: 1.2}
   RandomYaw: 1
   Interaction: 0
+  StumpMesh: {fileID: 0}
+  StumpMaterial: {fileID: 0}
   Parts:
   - Name: Reeds
     Material: {fileID: 2100000, guid: 320809e0e65aba840b0af34b718a08cf, type: 2}
     LodMeshes:
-    - {fileID: 4663865959570489909, guid: 18b997c676e20544fb1bd0e51fe3a1fb, type: 3}
     - {fileID: 6559907416872072135, guid: 18b997c676e20544fb1bd0e51fe3a1fb, type: 3}
     - {fileID: 7164127797826947399, guid: 18b997c676e20544fb1bd0e51fe3a1fb, type: 3}
     LodEndDistances:
-    - 40
     - 90
     - 200
     CastShadows: 0
@@ -48,3 +51,5 @@ MonoBehaviour:
   LodEndDistances: []
   CastShadows: 1
   ReceiveShadows: 1
+  BakedImpostorAtlas: {fileID: 2800000, guid: f8228eb725a65a34487fc9f701c53ea7, type: 3}
+  BakedImpostorNormal: {fileID: 2800000, guid: d7ec7b1b573db0e409a137cf556cba3b, type: 3}

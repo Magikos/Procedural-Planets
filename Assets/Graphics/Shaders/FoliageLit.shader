@@ -18,6 +18,8 @@ Shader "Scatter/FoliageLit"
         _Smoothness ("Smoothness", Range(0,1)) = 0.08
         _Cutoff ("Leaf Alpha Cutoff", Range(0,1)) = 0.4
         _LeafFall ("Leaf Fall (0 full .. 1 bare)", Range(0,1)) = 0
+        _CutoffFadeMip ("Sub-pixel Cutoff Relax Start (mip)", Float) = 4
+        _CutoffFadeRange ("Sub-pixel Cutoff Relax Range (mips)", Float) = 3
         _LeafMaskLo ("Leaf Mask Low (vtx.B)", Range(0,1)) = 0.6
         _LeafMaskHi ("Leaf Mask High (vtx.B)", Range(0,1)) = 0.85
         _LeafNormalUp ("Leaf Normal Up-Blend (canopy softness)", Range(0,1)) = 0.6
@@ -52,11 +54,14 @@ Shader "Scatter/FoliageLit"
 
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
+            float4 _BaseMap_TexelSize;
             float4 _TrunkTint;
             float4 _SeasonColor;
             float _Smoothness;
             float _Cutoff;
             float _LeafFall;
+            float _CutoffFadeMip;
+            float _CutoffFadeRange;
             float _LeafMaskLo;
             float _LeafMaskHi;
             float _LeafNormalUp;
@@ -132,6 +137,24 @@ Shader "Scatter/FoliageLit"
         float LeafMask(float vtxBlue)
         {
             return smoothstep(_LeafMaskLo, _LeafMaskHi, vtxBlue);
+        }
+
+        // Trunk stays opaque; leaves cut out, and leaf-fall raises their cutoff toward bare.
+        //
+        // Alpha-tested coverage does not accumulate across overlapping SUB-PIXEL primitives. While the
+        // leaf cards are several pixels wide they overlap and fill each other's alpha holes, so a canopy
+        // reads solid. Once each card is about a pixel, one card alone claims the pixel and the leaf
+        // texture's alpha coverage alone decides leaf-or-sky - the canopy speckles away and the tree
+        // renders as a bare trunk-and-branch skeleton long before its impostor takes over. So relax the
+        // cutoff toward 0 as the sampled mip climbs. Mip level IS texels-per-pixel, which makes this
+        // independent of FOV, prototype scale, and whether the leaves come from one card texture or from
+        // a single cell of a 4k atlas.
+        float LeafCutoff(float2 uv, float lm)
+        {
+            float2 duv = max(abs(ddx(uv)), abs(ddy(uv))) * _BaseMap_TexelSize.zw;
+            float mip = 0.5 * log2(max(dot(duv, duv), 1e-12));
+            float shrink = saturate((mip - _CutoffFadeMip) / max(1e-3, _CutoffFadeRange));
+            return lerp(0.0, (_Cutoff + _LeafFall) * (1.0 - shrink), lm);
         }
 
         // Cheap 3D value noise (hash-based, smooth-interpolated) for per-leaf/per-region colour variation.
@@ -300,10 +323,8 @@ Shader "Scatter/FoliageLit"
                 half3 trunk = SAMPLE_TEXTURE2D(_TrunkMap, sampler_TrunkMap, IN.uv).rgb * _TrunkTint.rgb;
                 float lm = IN.leafMask;
 
-                // Trunk stays opaque; leaves cut out, and leaf-fall raises their cutoff toward bare.
-                float cutoff = lerp(0.0, _Cutoff + _LeafFall, lm);
                 float alpha = lerp(1.0, leaf.a, lm);
-                clip(alpha - cutoff);
+                clip(alpha - LeafCutoff(IN.uv, lm));
 
                 half3 albedo = lerp(trunk, leaf.rgb * _SeasonColor.rgb, lm);
                 // Per-leaf/region colour variation (Synty-style noise) on the leaves only, so the canopy
@@ -369,8 +390,8 @@ Shader "Scatter/FoliageLit"
                 dayColor += albedo * transmitTint * (back * wrap * _FoliageBacklight) * daylight * cloudShadow * lm;
                 // Cast shadow on the WHOLE plant so understory foliage under a tree visibly darkens — the
                 // soft leafShade above only gives canopy interior depth. Sunlit crowns (shadowAtten≈1) are
-                // untouched; the 0.4 floor keeps shaded plants coloured, matching the ground shadow.
-                dayColor *= lerp(0.25, 1.0, lerp(1.0, shadowAtten, daylight));
+                // untouched.
+                dayColor *= PlanetCastShadow(shadowAtten, daylight, 0.25);
                 float nightAmbient = PlanetNightAmbient(_NightAmbientIntensity);
                 half3 nightColor = albedo * nightAmbient * 0.6;
                 half3 col = lerp(nightColor, dayColor, daylight);
@@ -450,8 +471,7 @@ Shader "Scatter/FoliageLit"
             {
                 float lm = IN.leafMask;
                 half a = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
-                float cutoff = lerp(0.0, _Cutoff + _LeafFall, lm);
-                clip(lerp(1.0, a, lm) - cutoff);
+                clip(lerp(1.0, a, lm) - LeafCutoff(IN.uv, lm));
                 return 0;
             }
             ENDHLSL
@@ -523,8 +543,7 @@ Shader "Scatter/FoliageLit"
                 DistanceDither(IN.positionWS, IN.screenPos, IN.appear);
                 half4 leaf = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
                 float lm = IN.leafMask;
-                float cutoff = lerp(0.0, _Cutoff + _LeafFall, lm);
-                clip(lerp(1.0, leaf.a, lm) - cutoff);
+                clip(lerp(1.0, leaf.a, lm) - LeafCutoff(IN.uv, lm));
                 return half4(normalize(IN.normalWS), 0.0);
             }
             ENDHLSL

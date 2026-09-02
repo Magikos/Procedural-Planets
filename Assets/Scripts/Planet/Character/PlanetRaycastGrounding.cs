@@ -6,7 +6,7 @@ using UnityEngine;
 /// chunk mesh — grounding on the analytic radius sinks the character under the terrain you actually see.
 /// <see cref="IPlanetSurfaceRaycaster.TryRaycastSurface"/> hits the visible surface, so the character stands on
 /// exactly what's drawn. Falls back to an analytic grounding when a ray misses (a hole/edge). Normal stays
-/// radial (upright); a sea-level floor keeps the character on the water surface over ocean.
+/// radial (upright); a per-position water floor keeps the character on the surface of the body he is in.
 /// </summary>
 public sealed class PlanetRaycastGrounding : IGroundingProvider
 {
@@ -15,14 +15,14 @@ public sealed class PlanetRaycastGrounding : IGroundingProvider
     readonly IPlanetSurfaceRaycaster _raycaster;
     readonly IGroundingProvider _fallback;
     readonly Vector3 _center;
-    readonly float _seaLevelRadius;
+    readonly CharacterWaterFloor _water;
 
     public PlanetRaycastGrounding(
-        IPlanetSurfaceRaycaster raycaster, Vector3 center, float seaLevelRadius, IGroundingProvider fallback)
+        IPlanetSurfaceRaycaster raycaster, Vector3 center, CharacterWaterFloor water, IGroundingProvider fallback)
     {
         _raycaster = raycaster;
         _center = center;
-        _seaLevelRadius = seaLevelRadius;
+        _water = water;
         _fallback = fallback;
     }
 
@@ -42,7 +42,7 @@ public sealed class PlanetRaycastGrounding : IGroundingProvider
             Vector3 origin = worldPos + up * ProbeUp;
             if (_raycaster.TryRaycastSurface(new Ray(origin, -up), ProbeUp * 2f, out PlanetSurfaceRaycastHit hit))
             {
-                float radius = Mathf.Max(Vector3.Dot(hit.Point - _center, up), _seaLevelRadius);
+                float radius = Mathf.Max(Vector3.Dot(hit.Point - _center, up), _water.RadiusAt(worldPos, up));
                 result = new GroundResult(_center + up * (radius + footOffset), up);
                 return true;
             }

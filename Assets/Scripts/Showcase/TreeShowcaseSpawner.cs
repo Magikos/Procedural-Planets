@@ -30,8 +30,6 @@ public sealed class TreeShowcaseSpawner : MonoBehaviour
     static readonly int WindDirectionId = Shader.PropertyToID("_WindDirection");
     static readonly int WindStrength01Id = Shader.PropertyToID("_WindStrength01");
     static readonly int WindSpeedMpsId = Shader.PropertyToID("_WindSpeedMps");
-    static readonly int InteractorsId = Shader.PropertyToID("_GrassInteractors");
-    static readonly int InteractorCountId = Shader.PropertyToID("_GrassInteractorCount");
     ComputeBuffer _dummyInteractors;
     readonly System.Collections.Generic.Dictionary<Material, Material> _noFade = new();
     readonly System.Collections.Generic.List<Material> _spawnedMats = new();
@@ -39,11 +37,7 @@ public sealed class TreeShowcaseSpawner : MonoBehaviour
 
     void OnEnable()
     {
-        // FoliageLit declares the global _GrassInteractors StructuredBuffer; an unbound SRV silently drops every
-        // FoliageLit draw. Bind a 1-element dummy (count 0 => never read) so the trees render off the planet.
-        _dummyInteractors ??= new ComputeBuffer(1, sizeof(float) * 8, ComputeBufferType.Structured);
-        Shader.SetGlobalBuffer(InteractorsId, _dummyInteractors);
-        Shader.SetGlobalInt(InteractorCountId, 0);
+        GrassInteractorFallback.Bind(ref _dummyInteractors);
         Publish();
     }
 

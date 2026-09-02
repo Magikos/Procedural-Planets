@@ -49,5 +49,5 @@ MonoBehaviour:
   LodEndDistances: []
   CastShadows: 1
   ReceiveShadows: 1
-  BakedImpostorAtlas: {fileID: 0}
-  BakedImpostorNormal: {fileID: 0}
+  BakedImpostorAtlas: {fileID: 2800000, guid: 04f6d17869828d843944919d0a12b975, type: 3}
+  BakedImpostorNormal: {fileID: 2800000, guid: da19201a50e87184eb00d5298a2e8238, type: 3}
