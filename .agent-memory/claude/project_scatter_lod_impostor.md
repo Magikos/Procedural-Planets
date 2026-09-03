@@ -422,3 +422,50 @@ Still open, with numbers:
   per prototype at gridN 4 (512^2) is ~0.5 MB each, ~88 MB — cheaper than today, 16 angles not 64.
 - 21 prototypes have NO card at all (hard cull at mesh range), 78 have dead LODs, 3 corals render nothing
   at handover size (MESH_EMPTY) and 2 have empty cards.
+
+## 2026-09-03 — corrections that supersede two claims above
+
+**TRAP 2 above is REVERSED. The staleness hash is now PER PROTOTYPE, not per species.** The 2026-08-17
+note was right about its own design and wrong about the design that replaced it. `ImpostorShareKey` was
+carrying three unrelated jobs — grove grouping, atlas cache key, debug label — and because the ATLAS key
+was per species while the variants had different meshes, **135 of 176 prototypes drew a card baked from a
+different mesh.** `002_Forest-Rock`, a wide flat boulder, billboarded as the tall pointed wedge baked from
+a sibling; every mature Broadleaf billboarded as the age-0.25 sapling it shared a key with (4.15 m and 21
+leaf clumps against 22.22 m and 314). Split at `2d12833`:
+
+| member | role |
+| --- | --- |
+| `SpeciesKey` | grove grouping only, feeds `ClumpGroupSeed` |
+| `ImpostorKey` | atlas identity, `= DisplayName` (verified unique across all 176) |
+| `ImpostorSourceHash` | staleness, from this prototype's own LOD0 meshes + part tints |
+
+Both sides of the cache lookup now come from the FINISHED prototype, which is why the whole per-species
+probe apparatus could be deleted: three `ImpostorProbeHash` implementations, three `_probeHashes` caches,
+two `DestroyProbe` helpers, `PlantInjection.OwnsKey`, the bake tool's `IsRockKey`/`IsPlantKey` routing and
+its biggest-variant selection, `ScatterImpostorFactory._sharedCards`, and `ScatterRenderer`'s biggest-first
+ordering (which existed only because a shared LIVE bake was first-come). The probe only ever existed to
+paper over the per-species key.
+
+**Rocks no longer opt out.** Keeping the Synty card was wrong: the far card showed the Synty rock's colour
+while the near mesh is our generated stone, so a rock visibly changed shade as the mesh took over, and at
+dusk the two lighting paths diverged enough that the stale card read as glowing.
+
+**The atlas grid is `OctGridN = 4`, not 8** — 16 angles into a 512 px card instead of 64 into a 1024 px
+one. That is what pays for one atlas per prototype: ~154 MB of shared atlases becomes ~92 MB of correct
+ones. `ScatterImpostorBaker.FromPrebaked` INFERS gridN as `atlas.width / AtlasCellPx`, so atlases baked at
+the old grid still read correctly — **but `AtlasCellPx` has no such escape hatch and must never move**, or
+every existing atlas is silently misread. Three copies of `OctGridN` must agree:
+`ScatterImpostorFactory`, `ScatterImpostorBakeTool`, `GeneratedImpostorBakeTool`.
+
+**The importer reference is 0.4 and the shader cutoff is 0.5, and they are SUPPOSED to differ.** The
+2026-08-17 note saying `alphaTestReferenceValue` must match `_Cutoff` is wrong. Preserve-coverage holds the
+COUNT of texels over its reference, but the card is sampled bilinearly, so two rescaled neighbours
+interpolate across that threshold and the blob between them draws wider than the texels it came from — and
+that widening grows with mip level, which makes a card GAIN silhouette as it shrinks. Measured as
+coverage/height^2 at 192/48/24/12 px: at 0.4 the Taiga Pine runs 0.074 0.078 0.102 0.069 and even a solid
+rock climbs 0.398 -> 0.410; at 0.5 the pine holds 0.072 0.072 0.069 0.069 and the rock 0.395 0.396 0.396
+0.389. Flat is the point. **Past 0.6 it inverts and erodes instead** — that is the ceiling on any per-prop
+cutoff calibration.
+
+**The generated bake tool deletes orphan PNGs now**, but only after a clean full pass: a run that threw
+part way would treat everything it had not reached as an orphan.

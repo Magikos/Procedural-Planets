@@ -4,8 +4,9 @@ using UnityEditor;
 using UnityEngine;
 
 // Bakes the far-field impostor atlases for every GENERATED prop — trees, plants and rocks — to disk, so the
-// runtime stops re-baking them on every load. MEASURED: 418 ms and 26.8 MB per atlas, which was the whole
-// of the 7.6 s scatter-renderer phase.
+// runtime stops re-baking them on every load. Measured at gridN 8: 418 ms and 26.8 MB per atlas, which was
+// the whole of the 7.6 s scatter-renderer phase. gridN 4 renders a quarter of the angles into a quarter of
+// the bytes, so the figures below are that measurement scaled, not a fresh one.
 //
 // This is the bake to run. Its sibling, "Bake Impostors (Source Library)", bakes the untouched Synty meshes
 // instead; since injection now replaces every scatter prototype, those atlases only render with injection
@@ -168,7 +169,7 @@ public static class GeneratedImpostorBakeTool
         GeneratedImpostorManifest.ForgetCache();
 
         Debug.Log($"[GeneratedImpostorBake] Baked {baked} atlas(es), skipped {skipped}, deleted {deleted} orphan(s). " +
-                  $"Saves roughly {baked * 418 / 1000f:0.0} s and {baked * 26.8f:0} MB per load. " +
+                  $"Saves roughly {baked * 105 / 1000f:0.0} s and {baked * 6.7f:0} MB per load. " +
                   $"Manifest: {ManifestPath}");
     }
 

@@ -88,10 +88,10 @@ public static class ScatterValidation
             LoggerProvider.Log(LogLevel.Debug, "ScatterCheck", $"All {cached} impostor prototype(s) read a baked card.");
             return;
         }
-        // MEASURED 418 ms per atlas, so the cost estimate is honest rather than a vague "slower".
+        // 418 ms per atlas measured at gridN 8; gridN 4 renders a quarter of the angles, hence 105 ms.
         LoggerProvider.Log(LogLevel.Warning, "ScatterCheck",
             $"{missed.Count} impostor prototype(s) have no baked card and will bake at load " +
-            $"(about {missed.Count * 0.42f:0.0} s): {string.Join(", ", missed)}. " +
+            $"(about {missed.Count * 0.105f:0.0} s): {string.Join(", ", missed)}. " +
             "Fix with Tools > ProceduralPlanets > Impostors > Bake Impostors (Generated Props), from play mode.");
     }
 

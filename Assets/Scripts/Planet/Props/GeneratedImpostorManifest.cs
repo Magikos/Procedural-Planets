@@ -6,7 +6,7 @@ using UnityEngine;
 //
 // Why only the atlases: generating the meshes themselves is cheap — MEASURED at 45 ms for every tree variant
 // and 150 ms for every rock — so they stay runtime-generated and the edit-a-TreeDef-and-hit-play loop keeps
-// working. Baking the atlas is the expensive half, measured at 418 ms and 26.8 MB per share key, which was the
+// working. Baking the atlas is the expensive half, about 105 ms and 6.7 MB per atlas, which was the
 // whole of the 7.6 s scatter-renderer phase at load.
 //
 // Staleness is handled by storing the SHAPE HASH of the meshes each atlas was baked from. A prototype only
