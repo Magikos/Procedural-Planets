@@ -230,6 +230,7 @@ Shader "Scatter/Impostor"
                 float3 positionWS : TEXCOORD7;
                 float fogFactor : TEXCOORD8;
                 float appear : TEXCOORD9;   // arrival ramp; unity_InstanceID is vertex-stage only
+                float3 shadowSampleWS : TEXCOORD10;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -242,6 +243,21 @@ Shader "Scatter/Impostor"
                 float2 gridCoord;
                 OctBillboard(GetObjectToWorldMatrix(), IN.positionOS.xy, _GridN, _CenterOffset, _WorldSize,
                     world, right, up, view, gridCoord);
+
+                // One shadow sample per card, taken off the quad and toward the sun. The ShadowCaster pass
+                // draws a LIGHT-facing quad through the same centre, so the camera-facing quad this pass
+                // shades cuts through its own caster: everything on the far side of that intersection reads
+                // as shadowed, which paints a hard straight line across the card and drops a squat prop
+                // (rock, bush) about 30% darker than the mesh it just replaced. Measured: rock cards
+                // lum 0.718 of mesh with shadows on, 1.031 with them off. 112 of 155 cards start inside the
+                // 250 m shadow distance, so this lands in the handover band, not past it.
+                float4x4 objToWorld = GetObjectToWorldMatrix();
+                float3 cardOrigin = float3(objToWorld._m03, objToWorld._m13, objToWorld._m23);
+                float3 cardUp = normalize(float3(objToWorld._m01, objToWorld._m11, objToWorld._m21));
+                float cardScale = length(float3(objToWorld._m00, objToWorld._m10, objToWorld._m20));
+                float3 cardCenter = cardOrigin + cardUp * (_CenterOffset * cardScale);
+                float3 towardSun = PlanetSunDirection(_SunParams, cardUp);
+                OUT.shadowSampleWS = cardCenter + towardSun * (_WorldSize * cardScale * 0.6);
 
                 OUT.positionHCS = TransformWorldToHClip(world);
                 OUT.positionWS = world;
@@ -286,11 +302,19 @@ Shader "Scatter/Impostor"
                 float localSun = dot(planetNormal, sunDir);
                 float daylight = PlanetDaylightFromLocalSun(localSun);
                 half ndl = saturate(dot(N, sunDir));
-                half shadowAtten = MainLightRealtimeShadow(TransformWorldToShadowCoord(IN.positionWS));
+                half shadowAtten = MainLightRealtimeShadow(TransformWorldToShadowCoord(IN.shadowSampleWS));
                 float cloudShadow = CloudShadowFactor(IN.positionWS, sunDir, localSun);
                 // Shadow floor matches the mesh tier (Scatter.shader and FoliageLit both use 0.35). At 0.5 a
                 // shadowed prop LIGHTENED as it crossed into impostor range, which is a pop in its own right.
-                half shade = lerp(0.35, 1.0, shadowAtten * cloudShadow);
+                // The mesh tier self-shadows: a canopy darkens the trunk and the lower leaves, a boulder
+                // darkens its own underside. A single quad cannot, so an uncorrected card reads brighter
+                // than the mesh it replaced - measured over 155 cards at the handover size, mean luminance
+                // 1.137x the mesh (trees 1.20x, rocks and bushes 1.07x). This scales only the directional
+                // term, so a prop's shaded side stays where it is and only the lit side comes back down.
+                // ponytail: one constant for every species, calibrated on that mean. Per-prototype
+                // occlusion baked into an atlas channel if one species still pops at the handover.
+                const half cardSelfOcclusion = 0.70;
+                half shade = lerp(0.35, 1.0, shadowAtten * cloudShadow) * cardSelfOcclusion;
                 // Shaded floor matches Scatter.shader's mesh tier (0.6) so a prop's dark side does not step
                 // brighter as it crosses the mesh -> impostor handoff. These were 0.85 vs 0.6, which read as
                 // a prop changing shade as you walked toward it.

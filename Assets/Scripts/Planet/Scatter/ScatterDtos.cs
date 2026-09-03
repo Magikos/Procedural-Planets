@@ -135,11 +135,10 @@ public sealed record ScatterPrototypeDto(
         get { float m = 0f; foreach (var part in Parts) if (part.CanRender && part.MaxCullDistance > m) m = part.MaxCullDistance; return m; }
     }
 
-    // Far-field impostor policy, derived (not authored): a prototype whose mesh cull reaches
-    // >= ImpostorMinMeshCull gets a billboard tier past its mesh cull out to ImpostorRangeMultiplier x
-    // that cull. The cutoff sits just below the bush/rock cull band (120/250) so mid-size props reach far
-    // like trees; tiny ground clutter (flowers, mushrooms, grass at <=90) stays short-range. Kept here so
-    // gather (ScatterField) and draw (ScatterRenderer) agree on which prototypes reach far and how far.
+    // Far-field impostor policy, derived (not authored). This value splits the two reach classes rather than
+    // gating cards on or off: it sits just below the bush/rock cull band (120/250) so mid-size props reach far
+    // like trees, while ground clutter (flowers, mushrooms, grass at <=90) keeps its authored radius. Kept
+    // here so gather (ScatterField) and draw (ScatterRenderer) agree on which prototypes reach far and how far.
     const float ImpostorMinMeshCull = 120f;
     // Impostors reach this multiple of the mesh cull. The incremental tile cache makes far tiles cheap to
     // draw, so the tree line pushes well toward the horizon. Cost is the gather: FarGatherRadius scales
@@ -171,7 +170,36 @@ public sealed record ScatterPrototypeDto(
     // the safe way to be wrong.
     const float ReferencePixelsPerMetre = 935f;
 
-    public bool HasImpostor => CanRender && MaxCullDistance >= ImpostorMinMeshCull;
+    // Two classes of card, not one gate. FAR-REACHING props (mesh cull >= ImpostorMinMeshCull: trees, big
+    // rocks) get a card that pushes their silhouette ImpostorRangeMultiplier x past the mesh - that is what
+    // builds the tree line. GROUND CLUTTER (flowers, mushrooms, grass, coral) gets a card that only replaces
+    // the far part of its OWN authored band: same gather radius, same draw distance, but the mesh stops at
+    // MeshHandoverPixels instead of smearing out to a 6 px alpha-cutout blur. That is cheaper than the mesh it
+    // replaces, so the short-range exclusion this rule used to make was costing draws, not saving them.
+    bool FarReaching => MaxCullDistance >= ImpostorMinMeshCull;
+    public bool HasImpostor => CanRender && (FarReaching || MeshHandoverDistance < MaxCullDistance);
+
+    // Where a prop framed by these LOD0 meshes falls to MeshHandoverPixels tall. Public so the generated-prop
+    // injections can lay their LOD boundaries inside the band that actually draws: a tier authored past this
+    // never renders, because the card has already taken over.
+    public static float HandoverDistanceFor(params Mesh[] lod0Meshes)
+    {
+        Bounds b = default;
+        bool first = true;
+        foreach (Mesh m in lod0Meshes)
+        {
+            if (m == null) continue;
+            if (first) { b = m.bounds; first = false; } else b.Encapsulate(m.bounds);
+        }
+        if (first) return float.MaxValue;
+        Vector3 v = b.size;
+        return HandoverDistanceForSize(Mathf.Max(v.y, Mathf.Max(v.x, v.z)));
+    }
+
+    static float HandoverDistanceForSize(float sizeMeters) =>
+        sizeMeters > 0f ? sizeMeters * ReferencePixelsPerMetre / MeshHandoverPixels : float.MaxValue;
+
+    float MeshHandoverDistance => HandoverDistanceForSize(BoundsSizeMeters);
 
     // Largest dimension of the union of the drawable parts' LOD0 bounds - what decides the prop's height on
     // screen, and the same measure ScatterImpostorBaker frames its card by.
@@ -196,22 +224,14 @@ public sealed record ScatterPrototypeDto(
     // Where the mesh tier actually stops. A prototype with no card keeps its authored cull - shortening
     // that would only delete the prop early. One with a card hands over at MeshHandoverPixels, and never
     // later than the authored cull, so this can only ever REDUCE mesh draw distance.
-    public float MeshCullDistance
-    {
-        get
-        {
-            float authored = MaxCullDistance;
-            if (!HasImpostor) return authored;
-            float size = BoundsSizeMeters;
-            if (size <= 0f) return authored;
-            return Mathf.Min(authored, size * ReferencePixelsPerMetre / MeshHandoverPixels);
-        }
-    }
+    public float MeshCullDistance =>
+        HasImpostor ? Mathf.Min(MaxCullDistance, MeshHandoverDistance) : MaxCullDistance;
     // The card takes over exactly where the mesh culls. It deliberately does NOT ramp in underneath the
     // still-solid mesh: a card is a square billboard and a tree is not, so every threshold the ramp clips
     // outside the mesh silhouette shows as a dithered ghost canopy beside the solid one for the whole band.
     public float ImpostorStartDistance => MeshCullDistance;
-    public float ImpostorEndDistance => HasImpostor ? MaxCullDistance * ImpostorRangeMultiplier : 0f;
+    public float ImpostorEndDistance =>
+        !HasImpostor ? 0f : MaxCullDistance * (FarReaching ? ImpostorRangeMultiplier : 1f);
 
     // How far the placement gather must reach for this prototype: its impostor end if it has one, else
     // its mesh cull. 0 for placement-only prototypes (no drawable part).

@@ -113,7 +113,10 @@ public static class RockInjection
 
             float cull = p.Parts[0].MaxCullDistance;
             if (cull < 20f) cull = 140f;
-            float[] dist = rock.Lods.Length > 1 ? new[] { cull * 0.45f, cull } : new[] { cull };
+            // The last entry stays the authored cull (the card's reach is a multiple of it); the LOD0->LOD1
+            // boundary divides the HANDOVER distance, past which the card has taken over and no mesh tier draws.
+            float handover = Mathf.Min(cull, ScatterPrototypeDto.HandoverDistanceFor(rock.Lod0));
+            float[] dist = rock.Lods.Length > 1 ? new[] { handover * 0.45f, cull } : new[] { cull };
 
             string key = "rock-" + p.Biome;
             Texture2D bakedAtlas = null, bakedNormal = null;

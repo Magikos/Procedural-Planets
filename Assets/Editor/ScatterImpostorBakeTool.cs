@@ -22,7 +22,6 @@ public static class ScatterImpostorBakeTool
         "Assets/Resources/Settings/Scatter/GeneratedImpostors",
     };
     const int OctGridN = 8;                 // matches ScatterImpostorFactory
-    const float ImpostorMinMeshCull = 120f; // matches ScatterPrototypeDto.ImpostorMinMeshCull
 
     [MenuItem("Tools/ProceduralPlanets/Impostors/Bake Impostors (Source Library)", false, 20)]
     public static void BakeAll()
@@ -52,8 +51,11 @@ public static class ScatterImpostorBakeTool
 
                 var meshes = new List<Mesh>();
                 var mats = new List<Material>();
-                float maxCull = CollectImpostorParts(proto, meshes, mats);
-                if (meshes.Count == 0 || maxCull < ImpostorMinMeshCull) { skipped++; continue; }
+                CollectImpostorParts(proto, meshes, mats);
+                // The runtime decides which prototypes draw a card; asking it here is what keeps the baked set
+                // and the drawn set the same. A local copy of the rule is how ground clutter ended up with a
+                // hard cull edge and no atlas to bake into.
+                if (meshes.Count == 0 || !ScatterPrototypeDto.From(proto).HasImpostor) { skipped++; continue; }
 
                 ScatterImpostorBaker.AtlasCard card = ScatterImpostorBaker.BakeAtlas(meshes, mats, OctGridN);
                 if (!card.Valid)
@@ -139,9 +141,8 @@ public static class ScatterImpostorBakeTool
                   $"The .png files under {AtlasFolder} are left on disk.");
     }
 
-    static float CollectImpostorParts(ScatterPrototype proto, List<Mesh> meshes, List<Material> mats)
+    static void CollectImpostorParts(ScatterPrototype proto, List<Mesh> meshes, List<Material> mats)
     {
-        float maxCull = 0f;
         if (proto.Parts != null && proto.Parts.Length > 0)
         {
             foreach (ScatterPart part in proto.Parts)
@@ -150,18 +151,13 @@ public static class ScatterImpostorBakeTool
                     || part.LodMeshes.Length == 0 || part.LodMeshes[0] == null) continue;
                 meshes.Add(part.LodMeshes[0]);
                 mats.Add(part.Material);
-                if (part.LodEndDistances != null && part.LodEndDistances.Length > 0)
-                    maxCull = Mathf.Max(maxCull, part.LodEndDistances[part.LodEndDistances.Length - 1]);
             }
         }
         else if (proto.Material != null && proto.LodMeshes != null && proto.LodMeshes.Length > 0 && proto.LodMeshes[0] != null)
         {
             meshes.Add(proto.LodMeshes[0]);
             mats.Add(proto.Material);
-            if (proto.LodEndDistances != null && proto.LodEndDistances.Length > 0)
-                maxCull = Mathf.Max(maxCull, proto.LodEndDistances[proto.LodEndDistances.Length - 1]);
         }
-        return maxCull;
     }
 
     // internal: the generated-prop bake tool writes atlases too and must import them identically. Two copies

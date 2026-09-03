@@ -327,3 +327,98 @@ variants of the same species (9 m -> 500 m)" is just the age ladder feeding
 
 **Audit gap that let this ship.** `ScatterLodSilhouetteAudit` measures the LIBRARY ASSET, not the injected
 generated prototypes, and never compares card against mesh per share key. Fix that before trusting it.
+
+## The share key must cover MATERIAL, not just geometry (2026-09-02)
+
+**The concept every earlier round missed: an impostor is a LOD of a SPECIES GROUP, not of a tree.**
+`ImpostorShareKey` groups prototypes and ONE baked atlas serves the whole group, so anything group
+members differ by that the bake captures — geometry, scale, **and colour** — is lost. Every fix before
+this one picked a better *representative* (first-in-library-order, then biggest). That is still choosing
+which prototype to be wrong about. The grouping was the bug.
+
+The card bakes GEOMETRY AND MATERIAL. The leaf material comes from the SOURCE Synty prototype via
+`SyntyFoliage(p, species, def)`, not from the species, so one species key spanned several `_SeasonColor`
+tints. Measured before the fix: **Broadleaf 4 tints across 11 prototypes**, Poplar 3, Birch 3,
+flowerbush-Forest 2, flowerbush-Grassland 2. Broadleaf baked from `Golden Meadow Tree v2`, so the green
+`Meadow Tree`, `Swamp Tree B` and tropical `Palm Tree v1` all wore a GOLDEN card and changed colour at
+the handover ring. Across a far shore at roughly constant distance that ring draws a horizontal line —
+Bryan's "line across the trees" and his "pop-in" were the same defect.
+
+**Fix.** The `TreeInjection` share key is now `Species[-dead]@<foliage material name>`, and
+`ImpostorProbeHash` strips everything after the `@` before the species parse (an unparsed key returns an
+empty hash, the bake tool refuses to write it, and the species then live-bakes on every load forever).
+Key count 52 to 61, 23 of them material-keyed. `ScatterImpostor.shader` has NO tint/season property, so
+this could never have been corrected at draw time.
+
+## Poplar and Cypress were pencils; ParallelAlign is the crown-width lever (2026-09-02)
+
+Second, independent defect, found by measuring EVERY share key at once instead of one species per round.
+Sorted by mesh aspect (crown width / height) and card coverage, living Poplar (0.12 / 4.4%) and Cypress
+(0.19 / 4.8%) sat at the DEAD-tree floor (Broadleaf-dead 4.4%, Cypress-dead 4.6%, Acacia-dead 4.1%)
+against Broadleaf 0.98 / 35.7% and Willow 1.21 / 45.2%. The card was FAITHFUL — the mesh really was a
+3.24 m crown on a 28.02 m trunk. A card 36 px tall cannot show a real Lombardy poplar, so past its
+handover it read as a bare pole standing in a canopy.
+
+`TreeDef.ParallelAlign` (0 = along parent, 1 = perpendicular) is the width lever, NOT `Length` and NOT
+`GravityAlign`. At 0.22 the branches ran along the trunk, so doubling their length only made them longer:
+aspect 0.12 to 0.21. 0.55 overshot to 0.50. **0.35 lands on 0.32 at every age.** Cypress is a cone
+primitive instead: `ConeRadiusFrac` 0.1 to 0.17.
+
+After the rebake: Poplar 4.4% to 9.1-10.1% card coverage, Cypress 4.8% to 8.4%, both clear of the dead
+floor. The atlases show leafy green columns and proper conifer cones. In-game at the LastDebugCapture
+pose (seed 1691104419) the far shore is continuous canopy — no poles, no band.
+
+**Ruled out here, do not re-open.** Overbright leaf tints clipping in the LDR atlas: ScatterCheck warns
+`FoliageMeadowCanopy_Autumn` (1.55) and `_Golden` (1.60) exceed white, but measured clipping in those
+atlases is 0.00 percent (max channel 124-130 of 255). Not the line.
+
+**Gotchas for the next round.**
+- Grep `LodDebugTint`, NOT `_LodTint`. `_LodDebugTint` is declared in the CBUFFER only
+  (`ScatterImpostor.shader:181`, applied at `:318`; `FoliageLit.shader:80,407`; `Scatter.shader:28,222`),
+  never in a Properties block.
+- `ScatterDebugReporter.cs:63-69` prints AUTHORED impostor bands, not the DRAWN ones clipped by
+  `meshCull`. It misleads.
+- `ScatterRenderer` is a plain class service, not a MonoBehaviour — `FindObjectsByType` throws
+  "FindAllObjectsOfType: The type has to be derived from UnityEngine.Object."
+- To run a console command from Unity MCP `execute_code`, reflect `ServiceLocator.Get<IConsoleService>()`
+  and call `RunCommand`.
+- A Bash heredoc containing backticks is mangled by the shell wrapper before it lands. Write the file
+  with the Write tool, then append it with `cat`.
+- Still open, NOT a LOD defect: `Broadleaf@FoliageMeadowCanopy` cards are 12.8% covered against
+  `_Golden`'s 35.7%. Same species, different group maximum, so the green Broadleaf group's biggest
+  prototype is a genuinely sparser tree. The card matches its own mesh, but it reads trunk-heavy.
+
+## 2026-09-03 — sweep of all 176 prototypes: the card was self-shadowing
+
+`ScatterLodSweep` (on the LOD Bench) renders every tier of every prototype at the 36 px handover,
+extracts coverage from a black/white backdrop pair, and writes `Assets/Screenshots/LOD/`
+(176 strip PNGs + `lod_sweep.csv` + `lod_sweep_summary.txt`). Two defects it found:
+
+- **Cards self-shadowed.** `ScatterImpostor.shader`'s ShadowCaster draws a LIGHT-facing quad through the
+  prop centre; the ForwardLit pass shaded a CAMERA-facing quad and sampled the shadow map per fragment.
+  The two planes intersect, so everything past the intersection read as shadowed — a hard straight line
+  across the sprite and a big darkening. Measured: rock cards at lum 0.718 of their mesh, 1.031 with the
+  Sun's shadows off. FIX: one shadow sample per card, at the billboard centre pushed 0.6·worldSize toward
+  the sun. It does ship, it is not past the shadow distance: shadow distance is 250 m
+  (`Assets/Settings/PC_RPAsset.asset:57`) and 112 of 155 cards start inside it.
+- **Cards carry no self-occlusion.** A canopy shades its own trunk, a boulder its own underside; one quad
+  cannot. With the self-shadow gone, cards read 1.137x the mesh (trees 1.20, rocks/bushes 1.07). FIX:
+  `cardSelfOcclusion = 0.70` on the directional term only. After it: rocks 1.010, bushes 0.995,
+  grass 1.007, trees 1.150. `CARD:DARK` went 37 to 0, `ok` rows 39 to 48.
+- Trees keep +15% because their card COVERS 15% more than the airy mesh (cov 1.146) — a silhouette
+  problem, not a lighting one. Do not chase it with more brightness.
+
+Still open, with numbers:
+
+- Cards are 11% fat on average (cov 1.108, iou 0.627; 30 FAT, 28 SILHOUETTE). `_Cutoff` 0.5 to 0.65 lands
+  coverage at 0.995 but starves thin props (thin count 6 to 22, grass 0.86 to 0.73). Needs a per-prop
+  cutoff, not a global one. Note the atlas PNGs import with `mipMapsPreserveCoverage` at
+  `alphaTestReferenceValue = 0.4` while the shader clips at 0.5 — the two should agree.
+- **135 of 176 prototypes draw a card baked from a DIFFERENT mesh.** 77 share keys, 50 of which cover more
+  than one distinct generated mesh (every `rock-*` key holds 3 different rocks; `Pine@Gen Pine needles`
+  holds 8). `002_Forest-Rock.png` is the proof: a wide flat boulder whose card is a tall pointed wedge.
+  Sharing is NOT the average cause of low IoU though — solo-key cards score iou 0.527 vs shared 0.635.
+  Costing a split: 1024^2 DXT5 albedo+normal is ~2 MB per atlas, so 77 keys is ~154 MB today; one atlas
+  per prototype at gridN 4 (512^2) is ~0.5 MB each, ~88 MB — cheaper than today, 16 angles not 64.
+- 21 prototypes have NO card at all (hard cull at mesh range), 78 have dead LODs, 3 corals render nothing
+  at handover size (MESH_EMPTY) and 2 have empty cards.

@@ -204,8 +204,14 @@ public static class TreeInjection
         string hash = string.Empty;
         try
         {
-            bool dead = shareKey.EndsWith("-dead", StringComparison.Ordinal);
-            string name = dead ? shareKey.Substring(0, shareKey.Length - 5) : shareKey;
+            // Everything after '@' is the leaf MATERIAL half of the key. It must not reach the species parse
+            // — an unparsed key returns an empty hash, which the bake tool refuses to write, and the species
+            // then live-bakes on every load forever. This hash fingerprints generated GEOMETRY, and the leaf
+            // material never changes geometry, so two tints of one species share a hash by design.
+            int at = shareKey.IndexOf('@');
+            string geo = at >= 0 ? shareKey.Substring(0, at) : shareKey;
+            bool dead = geo.EndsWith("-dead", StringComparison.Ordinal);
+            string name = dead ? geo.Substring(0, geo.Length - 5) : geo;
             if (TreeDefLibrary.TryParseSpecies(name, out TreeDefLibrary.TreeSpecies s))
             {
                 TreeDef def = dead ? TreeDefLibrary.DeadSpecies(s, 0.5f) : TreeDefLibrary.Species(s, 0.5f);
@@ -285,7 +291,13 @@ public static class TreeInjection
 
             float cull = p.Parts[0].MaxCullDistance;
             if (cull < 50f) cull = 300f;
-            float[] dist = { cull * 0.6f, cull }; // hold full LOD0 canopy farther before the impostor takes over
+            // The LAST entry stays the authored cull, because the card's reach is a multiple of it. The
+            // LOD0->LOD1 boundary divides the HANDOVER distance instead: past that the card has taken over, so
+            // a boundary laid as a fraction of the cull put LOD1 wholly outside the drawn band - 78 prototypes
+            // were paying for a second bark and foliage mesh that could never render. 0.6 still holds the full
+            // LOD0 canopy for most of the band it is seen in.
+            float handover = Mathf.Min(cull, ScatterPrototypeDto.HandoverDistanceFor(t.Bark, t.Foliage));
+            float[] dist = { handover * 0.6f, cull };
 
             var barkPart = new ScatterPartDto(bark, t.BarkLods, Trim(dist, t.BarkLods.Length), true, true);
             // A dead tree has no foliage mesh at all; emitting an empty part would cost a draw band that renders
@@ -299,7 +311,13 @@ public static class TreeInjection
             // The Synty atlas cannot be kept — it is the wrong silhouette — so the far card comes from the
             // generated LOD0. Prefer a disk-baked one (418 ms + 26.8 MB per share key if baked live); a miss
             // or a stale hash just falls back to the live bake, which is slower and never wrong.
+            // The card bakes GEOMETRY AND MATERIAL, so the key has to cover both. Species alone let ONE atlas
+            // serve eleven Broadleaf prototypes carrying FOUR different _SeasonColor tints, because the leaf
+            // material comes from the SOURCE prototype and not from the species: the green Meadow Tree wore
+            // the card baked from the GOLDEN one and changed colour at the handover ring. Measured tints per
+            // key before this: Broadleaf 4, Poplar 3, Birch 3.
             string shareKey = species + (dead ? "-dead" : "");
+            if (foliagePart != null && foliage != null) shareKey += "@" + foliage.name;
             Texture2D bakedAtlas = null, bakedNormal = null;
             if (UseBakedImpostors)
                 GeneratedImpostorManifest.TryGet(shareKey, ImpostorProbeHash(shareKey), out bakedAtlas, out bakedNormal);
@@ -491,10 +509,14 @@ public static class TreeInjection
         return pair;
     }
 
+    // Element i is drawn out to r[i], so the LAST entry is the part's cull. A chain shorter than `dist` must
+    // not inherit an intermediate boundary as its cull: that would end the part - and with it the prototype's
+    // impostor reach, which is a multiple of the cull - well short of where it was authored to stop.
     static float[] Trim(float[] dist, int n)
     {
         var r = new float[Mathf.Max(1, n)];
         for (int i = 0; i < r.Length; i++) r[i] = dist[Mathf.Min(i, dist.Length - 1)];
+        r[r.Length - 1] = dist[dist.Length - 1];
         return r;
     }
 
