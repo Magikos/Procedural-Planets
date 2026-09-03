@@ -62,3 +62,34 @@ one already expresses it. The signed-altitude field had been there the whole tim
 ## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
 
 - [Ocean scatter — SHIPPED](project_ocean_scatter.md) — **DO NOT repeat the old "scatter cannot place below the waterline" claim; it is FALSE and this index line used to say it.** Altitude is SIGNED (`altitudeMeters = (localRadius - SeaRadiusLocal) * scale`), and `MinWaterClearance` only rejects when `> 0`, so a depth band is an ordinary altitude gate — no new system, no depth axis. 4 coral prototypes shipped 2026-08-12 at slots 69–72 with bands −30..−3 / −14..−2 / −26..−4 / −60..−22. **Re-verified 2026-08-17: 995 coral instances placed within 80 m of a Beach point.** Underwater foliage rendering already checked by Bryan ("looks fine") — `Scatter/FoliageLit` receives the underwater fog. Real remaining gap = general underwater water effects + reef colony density, NOT placement. Doc: docs/design/2026-08-12-ocean-scatter.md
+
+## 2026-09-03 — six more props, and why the reef had no far field
+
+Bryan asked for more ocean props. Six shipped at slots 80-85: Ocean Seagrass, Ocean Anemone,
+Ocean Anemone Purple, Ocean Brain Coral, Ocean Barrel Sponge, Ocean Kelp Deep. Depth bands
+overlap on purpose, the way the first four corals do, so the reef layers instead of banding.
+
+**The finding worth keeping: a branching skeleton keys almost no impostor card.** Every original
+reef prop is a branching form. Measured card coverage across them ran 0.0009-0.0044 against a
+forest tree's 0.0142, and six of ten ocean cards flagged EMPTY. Nothing on the seabed read at
+distance because nothing on the seabed was SOLID.
+
+Brain Coral is a solid dome for exactly that reason, and it worked: coverage 0.0274 mesh /
+0.0316 card, IoU 0.854. Barrel Sponge (an upright lump) scored IoU 0.950, the best of any ocean
+prop. Anemones 0.80-0.83. Seagrass 0.561. Deep Kelp still flags SILHOUETTE(0.43) — strand
+geometry, same as the existing Ocean Kelp at 0.46, and not fixable by re-authoring.
+
+**Reuse ladder held: zero new mesher code.** Seagrass and Deep Kelp classify into kinds that
+already existed. Anemone is one TreeDef. Brain Coral and Barrel Sponge are RockGenerator lumps —
+the trick the lily pad already used, so the Lily branch generalised into RockDefFor instead of
+growing a third copy.
+
+**Cull is the card-range switch, and it is a cliff.** ScatterPrototypeDto: FarReaching is
+MaxCullDistance >= ImpostorMinMeshCull (120), and ImpostorEndDistance multiplies by 4.5 only when
+FarReaching. So an authored cull of 119 gets no card extension at all and 120 gets 540 m. Brain
+Coral (130) and Barrel Sponge (120) were authored above the line deliberately.
+
+**Still open, not chased:** Ocean Coral Shallow (cull 90) and Ocean Coral Plate (110) sit under
+the line, so their cards end at 90 m / 110 m. Conversely a 0.52 m Ocean Coral draws a card out to
+540 m at about one pixel — pure FarGatherRadius cost for an EMPTY card. Both are tuning calls on
+the ORIGINAL four corals, not on the new six.
