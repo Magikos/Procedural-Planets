@@ -169,20 +169,17 @@ public static class PlantInjection
                 if (bloom != null) parts.Add(new ScatterPartDto(bloom, new[] { accentMesh }, dist, false, true));
             }
 
-            Texture2D bakedAtlas = null, bakedNormal = null;
-            if (UseBakedImpostors)
-                GeneratedImpostorManifest.TryGet(key, ImpostorProbeHash(key), out bakedAtlas, out bakedNormal);
-
-            return p with
+            var gen = p with
             {
                 DisplayName = variant == 0 ? p.DisplayName : $"{p.DisplayName} v{variant}",
                 SlotId = slot,
                 SpacingMeters = p.SpacingMeters * spacingScale,
                 Parts = parts.ToArray(),
-                BakedImpostorAtlas = bakedAtlas,
-                BakedImpostorNormal = bakedNormal,
-                ImpostorShareKey = key,
+                BakedImpostorAtlas = null,
+                BakedImpostorNormal = null,
+                SpeciesKey = key,
             };
+            return UseBakedImpostors ? GeneratedImpostorManifest.WithCachedAtlas(gen) : gen;
         }
         catch (Exception e)
         {
@@ -304,17 +301,6 @@ public static class PlantInjection
         return "default";
     }
 
-    // Fingerprint of a plant kind as the generator currently builds it, for the impostor atlas cache. Same
-    // contract as TreeInjection.ImpostorProbeHash: a fixed probe, hashed identically by the bake tool and the
-    // runtime, so a changed def or generator falls back to a live bake instead of a wrong silhouette.
-    static readonly Dictionary<string, string> _probeHashes = new();
-
-    // Does this share key belong to a plant? DERIVED FROM THE Kind ENUM, not a hand-written prefix list — the
-    // hand-written one silently rotted the moment six new kinds were added, so reed/cattail/coral/flower keys
-    // were routed to the TREE probe, which cannot parse them and returned an empty hash. An empty hash never
-    // matches, so those keys live-baked forever while the manifest looked fine.
-    // Shared by the real path and the impostor probe: if these two ever describe different pads, the cached
-    // card silently stops matching and the lily live-bakes on every load.
     static RockDef LilyPadDef() => new RockDef
     {
         Name = "Lily Pad", Size = 1.05f, AxisBias = new Vector3(1f, 0.035f, 1f),
@@ -322,88 +308,6 @@ public static class PlantInjection
         Color = new Color(0.24f, 0.42f, 0.20f),
     };
 
-    public static bool OwnsKey(string shareKey)
-    {
-        if (string.IsNullOrEmpty(shareKey)) return false;
-        int dash = shareKey.IndexOf('-');
-        if (dash <= 0) return false;
-        string kindWord = shareKey.Substring(0, dash);
-        if (kindWord == "flowerbush") return true; // the one key that is not a bare Kind name
-        foreach (Kind k in Enum.GetValues(typeof(Kind)))
-            if (k != Kind.None && string.Equals(k.ToString(), kindWord, StringComparison.OrdinalIgnoreCase))
-                return true;
-        return false;
-    }
-
-    public static string ImpostorProbeHash(string shareKey)
-    {
-        if (string.IsNullOrEmpty(shareKey)) return string.Empty;
-        if (_probeHashes.TryGetValue(shareKey, out string hit)) return hit;
-
-        string hash = string.Empty;
-        try
-        {
-            int dash = shareKey.IndexOf('-');
-            string kindWord = dash >= 0 ? shareKey.Substring(0, dash) : shareKey;
-            string suffix = dash >= 0 ? shareKey.Substring(dash + 1) : "";
-            BiomeType biome = Enum.TryParse(suffix, out BiomeType b) ? b : BiomeType.Grassland;
-
-            // The lily is the one kind whose mesh comes from the rock generator, not a TreeDef, so it needs its
-            // own probe branch. Without one it produced no hash and live-baked on every load.
-            if (kindWord == "lily")
-            {
-                RockDef padDef = LilyPadDef();
-                GeneratedRock pad = RockGenerator.Generate(padDef, 1);
-                var padMeshes = new List<Mesh>();
-                if (pad.Lod0 != null) padMeshes.Add(pad.Lod0);
-                hash = GeneratedImpostorManifest.AppearanceHash(padMeshes, padDef.Color);
-                foreach (Mesh m in pad.Lods) if (m != null) UnityEngine.Object.DestroyImmediate(m);
-                if (pad.Collider != null) UnityEngine.Object.DestroyImmediate(pad.Collider);
-                _probeHashes[shareKey] = hash;
-                return hash;
-            }
-
-            TreeDef def = kindWord switch
-            {
-                "grass" => TreeDefLibrary.GrassTuft(0.75f, LeafTint(biome, false, false)),
-                "flowerbush" => TreeDefLibrary.Bush(0.75f, LeafTint(biome, true, false), blooms: true),
-                "bush" => TreeDefLibrary.Bush(0.75f, LeafTint(biome, true, false)),
-                "flower" => TreeDefLibrary.Flower(0.75f, FlowerColor(suffix)),
-                "mushroom" => TreeDefLibrary.Mushroom(0.75f, MushroomCap(suffix)),
-                "reed" => TreeDefLibrary.Reed(0.75f, LeafTint(biome, false, false)),
-                "cattail" => TreeDefLibrary.Cattail(0.75f),
-                "kelp" => TreeDefLibrary.Kelp(0.75f),
-                "coral" => TreeDefLibrary.Coral(0.75f, CoralColor(suffix), suffix == "Deep" || suffix == "Shallow"),
-                _ => null,
-            };
-            if (def != null)
-            {
-                GeneratedTree probe = TreeGenerator.Generate(def, 1);
-                var meshes = new List<Mesh>();
-                if (probe.Bark != null) meshes.Add(probe.Bark);
-                if (probe.Foliage != null) meshes.Add(probe.Foliage);
-                hash = GeneratedImpostorManifest.AppearanceHash(meshes, def.BarkColor, def.LeafColor);
-                DestroyProbe(probe);
-            }
-        }
-        catch (Exception e)
-        {
-            LoggerProvider.LogException("PlantInject", e);
-        }
-        // Cache SUCCESS only. Caching an empty result poisons the rest of the domain, and the bake tool then
-        // writes that empty string into the manifest, where it can never match and the key live-bakes forever.
-        if (!string.IsNullOrEmpty(hash)) _probeHashes[shareKey] = hash;
-        return hash;
-    }
-
-    static void DestroyProbe(GeneratedTree t)
-    {
-        void Kill(Mesh m) { if (m != null) UnityEngine.Object.DestroyImmediate(m); }
-        if (t.BarkLods != null) foreach (Mesh m in t.BarkLods) Kill(m);
-        if (t.FoliageLods != null) foreach (Mesh m in t.FoliageLods) Kill(m);
-        Kill(t.Stump);
-        Kill(t.Log);
-    }
 
     static GameObject _gallery;
 

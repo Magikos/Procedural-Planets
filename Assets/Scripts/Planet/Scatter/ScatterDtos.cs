@@ -36,15 +36,15 @@ public sealed record ScatterPrototypeDto(
     Texture2D BakedImpostorNormal = null,
     Mesh StumpMesh = null,
     Material StumpMaterial = null,
-    string ImpostorShareKey = null,
+    string SpeciesKey = null,
     float Clumpiness = 0f,
     float PatchScaleMeters = 250f,
     float ShadePreference = 0f)
 {
-    // Which grove field this prototype draws from. Keyed on the SPECIES (ImpostorShareKey) rather than the
+    // Which grove field this prototype draws from. Keyed on the SPECIES (SpeciesKey) rather than the
     // prototype, so the per-instance variants of one species share one field — otherwise a grove of variant 0
     // lands in a clearing of variant 1 and the whole effect averages back out to uniform.
-    public uint ClumpGroupSeed => ScatterClumping.GroupSeedFor(ImpostorShareKey ?? DisplayName);
+    public uint ClumpGroupSeed => ScatterClumping.GroupSeedFor(SpeciesKey ?? DisplayName);
 
     // The trunk = the first drawable part (Synty scatter-tree convention). Used for stumps and fallen logs so
     // foliage (which splays flat when the tree lies down) is excluded.
@@ -219,6 +219,42 @@ public sealed record ScatterPrototypeDto(
             Vector3 v = b.size;
             return Mathf.Max(v.y, Mathf.Max(v.x, v.z));
         }
+    }
+
+    // Identity of this prototype's own impostor atlas, for the generated-prop disk cache. The DISPLAY NAME,
+    // not SpeciesKey: SpeciesKey groups the age and seed variants of a species into one grove field, and using
+    // it here made them share one card too - so a wide flat boulder billboarded as the tall pointed wedge
+    // baked from its sibling. 135 of 176 prototypes drew a card baked from a different mesh.
+    public string ImpostorKey => DisplayName;
+
+    // What a card baked from this prototype would LOOK like: LOD0 geometry plus each part's finished tint.
+    // Colour counts as much as shape - a card bakes appearance, so a retint over unchanged geometry would
+    // otherwise keep the old card and the prop would visibly change shade as the mesh took over.
+    public string ImpostorSourceHash
+    {
+        get
+        {
+            var meshes = new List<Mesh>();
+            var tints = new List<Color>();
+            foreach (ScatterPartDto part in Parts)
+            {
+                if (part == null || !part.CanRender) continue;
+                meshes.Add(part.LodMeshes[0]);
+                tints.Add(TintOf(part.Material));
+            }
+            return meshes.Count == 0 ? string.Empty
+                : GeneratedImpostorManifest.AppearanceHash(meshes, tints.ToArray());
+        }
+    }
+
+    // FoliageLit has no _BaseColor - its leaf tint is _SeasonColor - so asking for the wrong one would hash
+    // every canopy as white and miss a season retint entirely.
+    static Color TintOf(Material m)
+    {
+        if (m == null) return Color.clear;
+        if (m.HasProperty("_SeasonColor")) return m.GetColor("_SeasonColor");
+        if (m.HasProperty("_BaseColor")) return m.GetColor("_BaseColor");
+        return Color.white;
     }
 
     // Where the mesh tier actually stops. A prototype with no card keeps its authored cull - shortening

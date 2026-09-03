@@ -118,25 +118,21 @@ public static class RockInjection
             float handover = Mathf.Min(cull, ScatterPrototypeDto.HandoverDistanceFor(rock.Lod0));
             float[] dist = rock.Lods.Length > 1 ? new[] { handover * 0.45f, cull } : new[] { cull };
 
-            string key = "rock-" + p.Biome;
-            Texture2D bakedAtlas = null, bakedNormal = null;
-            if (UseBakedImpostors)
-                GeneratedImpostorManifest.TryGet(key, ImpostorProbeHash(key), out bakedAtlas, out bakedNormal);
-
-            return p with
+            var gen = p with
             {
                 DisplayName = variant == 0 ? p.DisplayName : $"{p.DisplayName} v{variant}",
                 SlotId = slot,
                 Parts = new[] { new ScatterPartDto(MatFor(p.Biome, def.Color), rock.Lods, dist, true, true) },
                 // The Synty atlas CANNOT be kept. Reusing it was wrong: the far card then shows the Synty
                 // rock's colour while the near mesh is our generated stone, so a rock visibly changes shade as
-                // you walk up to it and the mesh takes over — and at dusk the two lighting paths diverge enough
+                // you walk up to it and the mesh takes over - and at dusk the two lighting paths diverge enough
                 // that the stale card reads as glowing. Bake our own; the disk cache means it costs bake time,
                 // not load time.
-                BakedImpostorAtlas = bakedAtlas,
-                BakedImpostorNormal = bakedNormal,
-                ImpostorShareKey = key,
+                BakedImpostorAtlas = null,
+                BakedImpostorNormal = null,
+                SpeciesKey = "rock-" + p.Biome,
             };
+            return UseBakedImpostors ? GeneratedImpostorManifest.WithCachedAtlas(gen) : gen;
         }
         catch (Exception e)
         {
@@ -186,39 +182,6 @@ public static class RockInjection
     // Cleared by the impostor bake tool so it bakes from a library carrying no cards. See TreeInjection.
     public static bool UseBakedImpostors = true;
 
-    // Fingerprint of a biome's rock as the generator currently builds AND COLOURS it. Colour matters as much as
-    // shape here: the card bakes finished appearance, so a retint with an unchanged mesh would silently keep the
-    // old card and the rock would change shade as you approach it.
-    static readonly Dictionary<string, string> _probeHashes = new();
-
-    public static string ImpostorProbeHash(string shareKey)
-    {
-        if (string.IsNullOrEmpty(shareKey)) return string.Empty;
-        if (_probeHashes.TryGetValue(shareKey, out string hit)) return hit;
-
-        string hash = string.Empty;
-        try
-        {
-            int dash = shareKey.IndexOf('-');
-            string suffix = dash >= 0 ? shareKey.Substring(dash + 1) : "";
-            BiomeType biome = Enum.TryParse(suffix, out BiomeType b) ? b : BiomeType.Grassland;
-            RockDef def = DefFor(biome, 0);
-            GeneratedRock probe = RockGenerator.Generate(def, 1);
-            var meshes = new List<Mesh>();
-            if (probe.Lod0 != null) meshes.Add(probe.Lod0);
-            hash = GeneratedImpostorManifest.AppearanceHash(meshes, def.Color);
-            foreach (Mesh m in probe.Lods) if (m != null) UnityEngine.Object.DestroyImmediate(m);
-            if (probe.Collider != null) UnityEngine.Object.DestroyImmediate(probe.Collider);
-        }
-        catch (Exception e)
-        {
-            LoggerProvider.LogException("RockInject", e);
-        }
-        // Cache SUCCESS only. Caching an empty result poisons the rest of the domain, and the bake tool then
-        // writes that empty string into the manifest, where it can never match and the key live-bakes forever.
-        if (!string.IsNullOrEmpty(hash)) _probeHashes[shareKey] = hash;
-        return hash;
-    }
 
     static Material MatFor(BiomeType biome, Color c)
     {

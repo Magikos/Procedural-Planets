@@ -70,25 +70,27 @@ public static class ScatterValidation
             (bad.Count > 12 ? $" (+{bad.Count - 12} more)" : ""));
     }
 
-    // Keys that will bake at load. Correct but slow, and utterly silent without this.
+    // Prototypes that will bake a card at load. Correct but slow, and utterly silent without this.
     static void ReportImpostorCoverage(ScatterLibraryDto lib)
     {
         var missed = new SortedSet<string>();
         int cached = 0;
         foreach (ScatterPrototypeDto p in lib.Prototypes)
         {
-            if (p == null || !p.HasImpostor || string.IsNullOrEmpty(p.ImpostorShareKey)) continue;
+            // SpeciesKey is only set by injection, so this stays a report on GENERATED props. An untouched
+            // Synty prototype without a card is the source-library bake tool's business, not this one.
+            if (p == null || !p.HasImpostor || string.IsNullOrEmpty(p.SpeciesKey)) continue;
             if (p.BakedImpostorAtlas != null) cached++;
-            else missed.Add(p.ImpostorShareKey);
+            else missed.Add(p.ImpostorKey);
         }
         if (missed.Count == 0)
         {
             LoggerProvider.Log(LogLevel.Debug, "ScatterCheck", $"All {cached} impostor prototype(s) read a baked card.");
             return;
         }
-        // MEASURED 418 ms per key, so the cost estimate is honest rather than a vague "slower".
+        // MEASURED 418 ms per atlas, so the cost estimate is honest rather than a vague "slower".
         LoggerProvider.Log(LogLevel.Warning, "ScatterCheck",
-            $"{missed.Count} impostor key(s) have no baked card and will bake at load " +
+            $"{missed.Count} impostor prototype(s) have no baked card and will bake at load " +
             $"(about {missed.Count * 0.42f:0.0} s): {string.Join(", ", missed)}. " +
             "Fix with Tools > ProceduralPlanets > Impostors > Bake Impostors (Generated Props), from play mode.");
     }

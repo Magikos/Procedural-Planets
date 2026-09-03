@@ -37,7 +37,7 @@ public sealed class ScatterDebugReporter : IScatterDebugReport
             if (!p.HasImpostor) { meshOnly++; continue; }
             impostors++;
             if (p.BakedImpostorAtlas != null) cached++;
-            else liveKeys.Add(string.IsNullOrEmpty(p.ImpostorShareKey) ? (p.DisplayName ?? "?") : p.ImpostorShareKey);
+            else liveKeys.Add(p.DisplayName ?? "?");
         }
         sb.AppendLine($"Library: {lib.Prototypes.Length} prototypes, {impostors} with an impostor tier, " +
                       $"{meshOnly} mesh-only (those HARD CULL at mesh range instead of billboarding)");

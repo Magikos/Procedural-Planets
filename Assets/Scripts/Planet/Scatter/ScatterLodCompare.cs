@@ -338,7 +338,7 @@ public sealed class ScatterLodCompare : MonoBehaviour
         float sizeM = proto.BoundsSizeMeters;
         float dist = DistanceForPixels(sizeM, TargetPixels, Screen.height);
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"[{_index + 1}/{_protos.Length}] {proto.DisplayName}   key={proto.ImpostorShareKey ?? "-"}");
+        sb.AppendLine($"[{_index + 1}/{_protos.Length}] {proto.DisplayName}   key={proto.SpeciesKey ?? "-"}");
         sb.AppendLine($"LEFT: {(_pair ? "MODEL (LOD0)" : "off")}    RIGHT: {TierLabel(proto, _tierIdx)}   [{_tierIdx + 1}/{TierCount(proto)}]");
         sb.AppendLine($"held at {TargetPixels:0} px  =>  {dist:0.0} m   (prop {sizeM:0.0} m tall, magnified {Magnify}x)");
         sb.AppendLine(proto.HasImpostor

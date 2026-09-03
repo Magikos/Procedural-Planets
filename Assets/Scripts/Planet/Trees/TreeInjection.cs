@@ -151,20 +151,18 @@ public static class TreeInjection
             float cull = p.Parts[0].MaxCullDistance;
             if (cull < 20f) cull = 90f;
             float[] dist = { cull };
-            Texture2D fernAtlas = null, fernNormal = null;
-            if (UseBakedImpostors)
-                GeneratedImpostorManifest.TryGet("Fern", ImpostorProbeHash("Fern"), out fernAtlas, out fernNormal);
-            return p with
+            var gen = p with
             {
                 Parts = new[]
                 {
                     new ScatterPartDto(stem, new[] { t.Bark }, dist, false, true),
                     new ScatterPartDto(foliage, new[] { t.Foliage }, dist, false, true),
                 },
-                BakedImpostorAtlas = fernAtlas,
-                BakedImpostorNormal = fernNormal,
-                ImpostorShareKey = "Fern",
+                BakedImpostorAtlas = null,
+                BakedImpostorNormal = null,
+                SpeciesKey = "Fern",
             };
+            return UseBakedImpostors ? GeneratedImpostorManifest.WithCachedAtlas(gen) : gen;
         }
         catch (Exception e)
         {
@@ -187,61 +185,6 @@ public static class TreeInjection
         }
     }
 
-    // Fingerprint of a species AS THE GENERATOR CURRENTLY BUILDS IT, used to decide whether a disk-baked
-    // impostor atlas still describes it. Hashing the generated geometry rather than the TreeDef's fields means
-    // it also catches changes to the generator itself, which a def-only hash would miss — and a forgotten
-    // rebake after a generator change is exactly the silent wrong-silhouette bug worth spending 1 ms on.
-    //
-    // One fixed probe (mid age, seed 1) per key, cached for the domain: the defs cannot change without a
-    // recompile, which clears the statics anyway.
-    static readonly Dictionary<string, string> _probeHashes = new();
-
-    public static string ImpostorProbeHash(string shareKey)
-    {
-        if (string.IsNullOrEmpty(shareKey)) return string.Empty;
-        if (_probeHashes.TryGetValue(shareKey, out string hit)) return hit;
-
-        string hash = string.Empty;
-        try
-        {
-            // Everything after '@' is the leaf MATERIAL half of the key. It must not reach the species parse
-            // — an unparsed key returns an empty hash, which the bake tool refuses to write, and the species
-            // then live-bakes on every load forever. This hash fingerprints generated GEOMETRY, and the leaf
-            // material never changes geometry, so two tints of one species share a hash by design.
-            int at = shareKey.IndexOf('@');
-            string geo = at >= 0 ? shareKey.Substring(0, at) : shareKey;
-            bool dead = geo.EndsWith("-dead", StringComparison.Ordinal);
-            string name = dead ? geo.Substring(0, geo.Length - 5) : geo;
-            if (TreeDefLibrary.TryParseSpecies(name, out TreeDefLibrary.TreeSpecies s))
-            {
-                TreeDef def = dead ? TreeDefLibrary.DeadSpecies(s, 0.5f) : TreeDefLibrary.Species(s, 0.5f);
-                GeneratedTree probe = TreeGenerator.Generate(def, 1);
-                var meshes = new List<Mesh>();
-                if (probe.Bark != null) meshes.Add(probe.Bark);
-                if (probe.Foliage != null) meshes.Add(probe.Foliage);
-                hash = GeneratedImpostorManifest.AppearanceHash(meshes, def.BarkColor, def.LeafColor);
-                DestroyProbe(probe);
-            }
-        }
-        catch (Exception e)
-        {
-            LoggerProvider.LogException("TreeInject", e); // no hash -> no cache hit -> live bake, never wrong
-        }
-        // Cache SUCCESS only. Caching an empty result poisons the rest of the domain, and the bake tool then
-        // writes that empty string into the manifest, where it can never match and the key live-bakes forever.
-        if (!string.IsNullOrEmpty(hash)) _probeHashes[shareKey] = hash;
-        return hash;
-    }
-
-    // The probe exists only to be measured; leaving its meshes alive would leak one full tree per species.
-    static void DestroyProbe(GeneratedTree t)
-    {
-        void Kill(Mesh m) { if (m != null) UnityEngine.Object.DestroyImmediate(m); }
-        if (t.BarkLods != null) foreach (Mesh m in t.BarkLods) Kill(m);
-        if (t.FoliageLods != null) foreach (Mesh m in t.FoliageLods) Kill(m);
-        Kill(t.Stump);
-        Kill(t.Log);
-    }
 
     static int MaxSlot(ScatterLibraryDto lib)
     {
@@ -308,42 +251,27 @@ public static class TreeInjection
                 ? new ScatterPartDto(foliage, t.FoliageLods, Trim(dist, t.FoliageLods.Length), true, false)
                 : null;
 
-            // The Synty atlas cannot be kept — it is the wrong silhouette — so the far card comes from the
-            // generated LOD0. Prefer a disk-baked one (418 ms + 26.8 MB per share key if baked live); a miss
-            // or a stale hash just falls back to the live bake, which is slower and never wrong.
-            // The card bakes GEOMETRY AND MATERIAL, so the key has to cover both. Species alone let ONE atlas
-            // serve eleven Broadleaf prototypes carrying FOUR different _SeasonColor tints, because the leaf
-            // material comes from the SOURCE prototype and not from the species: the green Meadow Tree wore
-            // the card baked from the GOLDEN one and changed colour at the handover ring. Measured tints per
-            // key before this: Broadleaf 4, Poplar 3, Birch 3.
-            string shareKey = species + (dead ? "-dead" : "");
-            if (foliagePart != null && foliage != null) shareKey += "@" + foliage.name;
-            Texture2D bakedAtlas = null, bakedNormal = null;
-            if (UseBakedImpostors)
-                GeneratedImpostorManifest.TryGet(shareKey, ImpostorProbeHash(shareKey), out bakedAtlas, out bakedNormal);
-
-            // Keep the prototype's biome + placement rules; swap identity (slot/name), parts + stump, and the
-            // impostor card — once per species, since all variants declare the same ImpostorShareKey. Age now
-            // carries most of the size variance, so the per-instance ScaleRange only jitters around it instead
-            // of doubling the tree.
-            return p with
+            // Keep the prototype's biome + placement rules; swap identity (slot/name), parts and stump. The
+            // Synty atlas cannot be kept - it is the wrong silhouette - so the card comes from the generated
+            // LOD0, per prototype, and WithCachedAtlas attaches the disk-baked one when it still matches.
+            var gen = p with
             {
                 DisplayName = variant == 0 ? p.DisplayName : $"{p.DisplayName} v{variant}",
                 SlotId = slot,
                 SpacingMeters = p.SpacingMeters * spacingScale,
                 Parts = foliagePart != null ? new[] { barkPart, foliagePart } : new[] { barkPart },
+                // Age now carries most of the size variance, so the per-instance jitter only nudges around it
+                // instead of doubling the tree.
                 ScaleRange = variantCount > 1 ? new Vector2(0.85f, 1.2f) : new Vector2(0.6f, 1.45f),
                 StumpMesh = t.Stump,
                 StumpMaterial = bark,
-                BakedImpostorAtlas = bakedAtlas,
-                BakedImpostorNormal = bakedNormal,
-                // Keyed by SPECIES, not by source prototype: variants of one prototype are now different
-                // species, so a prototype-keyed atlas would have billboarded a cedar as a fir. Species-keying is
-                // also strictly cheaper — every Broadleaf in the world shares one bake instead of one per
-                // prototype. FromPrebaked re-frames the shared card to each variant's own bounds, so differing
-                // ages still billboard at their own size.
-                ImpostorShareKey = shareKey,
+                BakedImpostorAtlas = null,
+                BakedImpostorNormal = null,
+                // Grove grouping only. Every variant of a species draws from one clumping field, so a grove of
+                // variant 0 does not land in a clearing of variant 1 and average back out to uniform.
+                SpeciesKey = species + (dead ? "-dead" : ""),
             };
+            return UseBakedImpostors ? GeneratedImpostorManifest.WithCachedAtlas(gen) : gen;
         }
         catch (Exception e)
         {

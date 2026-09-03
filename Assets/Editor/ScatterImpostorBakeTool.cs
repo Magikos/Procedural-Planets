@@ -21,7 +21,7 @@ public static class ScatterImpostorBakeTool
         AtlasFolder,
         "Assets/Resources/Settings/Scatter/GeneratedImpostors",
     };
-    const int OctGridN = 8;                 // matches ScatterImpostorFactory
+    const int OctGridN = 4;                 // matches ScatterImpostorFactory
 
     [MenuItem("Tools/ProceduralPlanets/Impostors/Bake Impostors (Source Library)", false, 20)]
     public static void BakeAll()

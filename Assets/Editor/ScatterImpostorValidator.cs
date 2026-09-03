@@ -112,7 +112,7 @@ public static class ScatterImpostorValidator
             if (!p.HasImpostor) continue;
             impostors++;
             if (p.BakedImpostorAtlas != null) cached++;
-            else live.Add(string.IsNullOrEmpty(p.ImpostorShareKey) ? (p.DisplayName ?? "(unnamed)") : p.ImpostorShareKey);
+            else live.Add(p.DisplayName ?? "(unnamed)");
 
             // A card baked from a differently-sized mesh billboards at the wrong scale, which reads as a prop
             // that changes size as the impostor takes over.
@@ -120,7 +120,7 @@ public static class ScatterImpostorValidator
                 notes.Add($"'{p.DisplayName}' has an albedo atlas but no normal atlas; the far card will shade flat.");
         }
         if (live.Count > 0)
-            problems.Add($"{live.Count} impostor key(s) will bake at load (about {live.Count * 0.42f:0.0} s): {string.Join(", ", live)}.");
+            problems.Add($"{live.Count} impostor card(s) will bake at load (about {live.Count * 0.42f:0.0} s): {string.Join(", ", live)}.");
         notes.Add($"{cached}/{impostors} impostor prototype(s) read a baked card.");
     }
 }

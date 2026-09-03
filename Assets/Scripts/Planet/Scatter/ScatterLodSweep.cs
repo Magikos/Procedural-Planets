@@ -103,7 +103,7 @@ public sealed class ScatterLodSweep : MonoBehaviour
                 var row = new Row
                 {
                     Name = proto.DisplayName,
-                    Key = proto.ImpostorShareKey ?? "-",
+                    Key = proto.SpeciesKey ?? "-",
                     SizeM = proto.BoundsSizeMeters,
                     MeshCull = proto.MeshCullDistance,
                     CardStart = proto.HasImpostor ? proto.ImpostorStartDistance : 0f,

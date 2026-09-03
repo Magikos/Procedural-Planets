@@ -20,7 +20,7 @@ public sealed class GeneratedImpostorManifest : ScriptableObject
     [System.Serializable]
     public sealed class Entry
     {
-        public string Key;          // ImpostorShareKey the atlas was baked for
+        public string Key;          // ImpostorKey (the prototype display name) the atlas was baked for
         public string ShapeHash;    // hash of the LOD0 meshes at bake time
         public Texture2D Atlas;
         public Texture2D Normal;
@@ -46,24 +46,31 @@ public sealed class GeneratedImpostorManifest : ScriptableObject
 
     public static void ForgetCache() { _tried = false; _loaded = null; }
 
-    // Returns the cached atlas when `probeHash` still matches what was baked for this share key.
+    // Attaches the cached card this prototype was baked from, when the manifest still holds one whose
+    // appearance hash matches the meshes and tints the prototype now carries. A miss is not an error: the
+    // prototype keeps no card and ScatterImpostorFactory bakes it live - slower, never wrong.
     //
-    // The hash is PER SHARE KEY, not per prototype. Every age/seed variant of a species has different meshes,
-    // and they all deliberately share one card — so hashing a prototype's own meshes would match only the one
-    // variant that happened to be baked and send every other variant back to a live bake, which is most of the
-    // cost this cache exists to remove. The caller supplies a hash of a canonical probe for the species.
-    public static bool TryGet(string shareKey, string probeHash, out Texture2D atlas, out Texture2D normal)
+    // Both halves of the lookup come from the FINISHED prototype. That is the point: the atlas is per
+    // prototype, so nothing has to guess what a canonical variant of a species would have looked like.
+    public static ScatterPrototypeDto WithCachedAtlas(ScatterPrototypeDto p)
+    {
+        if (p == null || !TryGet(p.ImpostorKey, p.ImpostorSourceHash, out Texture2D atlas, out Texture2D normal))
+            return p;
+        return p with { BakedImpostorAtlas = atlas, BakedImpostorNormal = normal };
+    }
+
+    // Returns the cached atlas when `hash` still matches what was baked for this key.
+    public static bool TryGet(string key, string hash, out Texture2D atlas, out Texture2D normal)
     {
         atlas = null;
         normal = null;
-        if (string.IsNullOrEmpty(shareKey)) return false;
+        if (string.IsNullOrEmpty(key)) return false;
         GeneratedImpostorManifest m = Active;
         if (m?.Entries == null) return false;
 
-        string hash = probeHash;
         foreach (Entry e in m.Entries)
         {
-            if (e == null || e.Key != shareKey || e.Atlas == null) continue;
+            if (e == null || e.Key != key || e.Atlas == null) continue;
             if (e.ShapeHash != hash) return false; // stale: the def or the generator moved
             atlas = e.Atlas;
             normal = e.Normal;

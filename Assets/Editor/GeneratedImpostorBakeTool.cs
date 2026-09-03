@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 
 // Bakes the far-field impostor atlases for every GENERATED prop — trees, plants and rocks — to disk, so the
-// runtime stops re-baking them on every load. MEASURED: 418 ms and 26.8 MB per share key, which was the whole
+// runtime stops re-baking them on every load. MEASURED: 418 ms and 26.8 MB per atlas, which was the whole
 // of the 7.6 s scatter-renderer phase.
 //
 // This is the bake to run. Its sibling, "Bake Impostors (Source Library)", bakes the untouched Synty meshes
@@ -18,7 +18,7 @@ public static class GeneratedImpostorBakeTool
 {
     const string OutputDir = "Assets/Resources/Settings/Scatter/GeneratedImpostors";
     const string ManifestPath = "Assets/Resources/Settings/GeneratedImpostors.asset";
-    const int OctGridN = 8; // must match ScatterImpostorFactory.OctGridN or the runtime samples the wrong cells
+    const int OctGridN = 4; // must match ScatterImpostorFactory.OctGridN or the runtime samples the wrong cells
 
     [MenuItem("Tools/ProceduralPlanets/Impostors/Bake Impostors (Generated Props)", false, 10)]
     public static void Bake()
@@ -60,39 +60,38 @@ public static class GeneratedImpostorBakeTool
 
         Directory.CreateDirectory(OutputDir);
 
-        // One atlas per share key, baked from the BIGGEST variant of that key. The age variants of a species
-        // are not a few metres apart — a Broadleaf runs 4.15 m and 21 leaf clumps at age 0.25 against 22.22 m
-        // and 314 at age 1.0 — and the card carries the geometry it was baked from, re-framed to each
-        // variant's bounds. Baking the first one in library order baked the sapling, so every mature tree
-        // billboarded as a bare trunk with a handful of leaf specks. Must match the live-bake pick in
-        // ScatterRenderer.Configure, or the disk atlas and the runtime fallback card disagree.
+        // ONE ATLAS PER PROTOTYPE. Sharing a card across a species was wrong twice over: the age variants of a
+        // Broadleaf run 4.15 m and 21 leaf clumps at age 0.25 against 22.22 m and 314 at age 1.0, and every
+        // biome's three generated rocks are three different stones. Measured before the split: 135 of 176
+        // prototypes drew a card baked from a different mesh, and 002_Forest-Rock — a wide flat boulder —
+        // billboarded as a tall pointed wedge. 16 angles instead of 64 pays for the extra atlases: a 512 px
+        // atlas is a quarter the bytes of the 1024 px one it replaces.
         // A prototype that already carries a card needs nothing from us — that is the untouched Synty
         // library, which ships its own atlases.
-        var byKey = new Dictionary<string, ScatterPrototypeDto>();
+        var targets = new List<ScatterPrototypeDto>();
         foreach (ScatterPrototypeDto p in lib.Prototypes)
         {
-            if (p == null || string.IsNullOrEmpty(p.ImpostorShareKey) || !p.HasImpostor) continue;
+            if (p == null || string.IsNullOrEmpty(p.SpeciesKey) || !p.HasImpostor) continue;
             if (p.BakedImpostorAtlas != null) continue;
-            if (!byKey.TryGetValue(p.ImpostorShareKey, out ScatterPrototypeDto held)
-                || p.BoundsSizeMeters > held.BoundsSizeMeters)
-                byKey[p.ImpostorShareKey] = p;
+            targets.Add(p);
         }
-        if (byKey.Count == 0)
+        if (targets.Count == 0)
         {
-            Debug.LogWarning("[GeneratedImpostorBake] No generated prototypes declare an impostor share key.");
+            Debug.LogWarning("[GeneratedImpostorBake] No generated prototypes want an impostor card.");
             return;
         }
 
         var entries = new List<GeneratedImpostorManifest.Entry>();
+        var written = new HashSet<string>();
         int baked = 0, skipped = 0;
-        int i = 0;
+        bool complete = false;
         try
         {
-            foreach (KeyValuePair<string, ScatterPrototypeDto> kv in byKey)
+            for (int i = 0; i < targets.Count; i++)
             {
-                string key = kv.Key;
-                ScatterPrototypeDto proto = kv.Value;
-                EditorUtility.DisplayProgressBar("Baking generated impostors", key, i++ / (float)byKey.Count);
+                ScatterPrototypeDto proto = targets[i];
+                string key = proto.ImpostorKey;
+                EditorUtility.DisplayProgressBar("Baking generated impostors", key, i / (float)targets.Count);
 
                 var meshes = new List<Mesh>();
                 var materials = new List<Material>();
@@ -104,19 +103,13 @@ public static class GeneratedImpostorBakeTool
                 }
                 if (meshes.Count == 0) { skipped++; continue; }
 
-                // Per-KIND probe hash, not a hash of this prototype's meshes: every variant of the key has
-                // different geometry and they all share this one card, so the runtime must be able to accept it
-                // for all of them. Each injector owns its own probe, so route by the key's prefix — the same
-                // function has to run here and at load or the hash never matches.
-                string hash = IsRockKey(key) ? RockInjection.ImpostorProbeHash(key)
-                    : IsPlantKey(key) ? PlantInjection.ImpostorProbeHash(key)
-                    : TreeInjection.ImpostorProbeHash(key);
-
-                // An empty hash can never match at load, so the entry would be dead weight AND the key would
-                // silently live-bake forever while the manifest claimed to cover it. Refuse rather than write it.
+                // The prototype's OWN appearance, so bake time and load time compute the same value from the
+                // same object. The old per-species probe regenerated a canonical variant to hash instead, and
+                // every kind that probe could not parse returned an empty hash and live-baked forever.
+                string hash = proto.ImpostorSourceHash;
                 if (string.IsNullOrEmpty(hash))
                 {
-                    Debug.LogWarning($"[GeneratedImpostorBake] '{key}' produced no probe hash; skipping. " +
+                    Debug.LogWarning($"[GeneratedImpostorBake] '{key}' produced no appearance hash; skipping. " +
                                      "The atlas would never be matched at load.");
                     skipped++;
                     continue;
@@ -142,10 +135,12 @@ public static class GeneratedImpostorBakeTool
 
                 AssetDatabase.ImportAsset(atlasPath, ImportAssetOptions.ForceUpdate);
                 ScatterImpostorBakeTool.ConfigureAtlasImport(atlasPath);
+                written.Add(atlasPath);
                 if (hasNormal)
                 {
                     AssetDatabase.ImportAsset(normalPath, ImportAssetOptions.ForceUpdate);
                     ScatterImpostorBakeTool.ConfigureAtlasImport(normalPath, isNormal: true);
+                    written.Add(normalPath);
                 }
 
                 entries.Add(new GeneratedImpostorManifest.Entry
@@ -157,6 +152,7 @@ public static class GeneratedImpostorBakeTool
                 });
                 baked++;
             }
+            complete = true;
         }
         finally
         {
@@ -164,13 +160,30 @@ public static class GeneratedImpostorBakeTool
         }
 
         WriteManifest(entries);
+        // Only after a clean full pass. A run that threw part way holds a partial written set, so every atlas
+        // it had not reached yet would look like an orphan.
+        int deleted = complete ? DeleteOrphans(written) : 0;
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         GeneratedImpostorManifest.ForgetCache();
 
-        Debug.Log($"[GeneratedImpostorBake] Baked {baked} atlas(es), skipped {skipped}. " +
+        Debug.Log($"[GeneratedImpostorBake] Baked {baked} atlas(es), skipped {skipped}, deleted {deleted} orphan(s). " +
                   $"Saves roughly {baked * 418 / 1000f:0.0} s and {baked * 26.8f:0} MB per load. " +
                   $"Manifest: {ManifestPath}");
+    }
+
+    // Atlas PNGs this run did not write. Renaming a prototype or dropping a variant leaves its old atlas on
+    // disk referenced by nothing, and the folder had accumulated about thirty of them.
+    static int DeleteOrphans(HashSet<string> written)
+    {
+        int deleted = 0;
+        foreach (string guid in AssetDatabase.FindAssets("t:Texture2D", new[] { OutputDir }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (written.Contains(path)) continue;
+            if (AssetDatabase.DeleteAsset(path)) deleted++;
+        }
+        return deleted;
     }
 
     static void WriteManifest(List<GeneratedImpostorManifest.Entry> entries)
@@ -186,20 +199,13 @@ public static class GeneratedImpostorBakeTool
         EditorUtility.SetDirty(manifest);
     }
 
-    static bool IsRockKey(string key) => key.StartsWith("rock-", System.StringComparison.Ordinal);
-
-    // Ask PlantInjection rather than keeping a prefix list here. The list version rotted silently when six
-    // kinds were added: their keys fell through to the TREE probe, which returned an empty hash, and those
-    // props live-baked on every load while the manifest looked complete.
-    static bool IsPlantKey(string key) => PlantInjection.OwnsKey(key);
-
     static void DestroyCard(ScatterImpostorBaker.AtlasCard card)
     {
         if (card.Texture != null) Object.DestroyImmediate(card.Texture);
         if (card.NormalTexture != null) Object.DestroyImmediate(card.NormalTexture);
     }
 
-    // Share keys are species names today, but a key reaches a FILE PATH, so anything that is not clearly safe
+    // Keys are prototype display names, and a key reaches a FILE PATH, so anything that is not clearly safe
     // is replaced rather than trusted.
     static string Sanitize(string key)
     {

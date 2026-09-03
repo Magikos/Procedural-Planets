@@ -21,8 +21,10 @@ public static class ScatterImpostorFactory
     static readonly int _fadeOutStartId = Shader.PropertyToID("_FadeOutStart");
     static readonly int _fadeOutEndId = Shader.PropertyToID("_FadeOutEnd");
 
-    // Frames per axis in the hemi-octahedral atlas. 8 = 64 angles into a 1024² card (128² cells).
-    const int OctGridN = 8;
+    // Frames per axis in the hemi-octahedral atlas. 4 = 16 angles into a 512 px card (128 px cells).
+    // FromPrebaked INFERS this from atlas width, so an atlas baked at another gridN still reads correctly;
+    // AtlasCellPx does not have that escape hatch and must never move.
+    const int OctGridN = 4;
 
     // Parts drawn through this shader are foliage, so their card gets the leaf translucency the mesh
     // canopy already has. A rock or a structure card must not glow with the sun behind it.
@@ -43,14 +45,6 @@ public static class ScatterImpostorFactory
     // 0.396 0.389. Flat is the whole point - the card must read as the same prop at every distance it
     // covers. Past 0.6 it inverts and erodes instead.
     public const float CardAlphaCutoff = 0.5f;
-
-    // Prototypes sharing an ImpostorShareKey (the generated age/seed variants of one tree species) reuse one
-    // baked atlas instead of each paying 64 camera renders + two 1024² textures. FromPrebaked re-frames the
-    // shared texture to each prototype's own bounds, so a sapling variant still billboards at sapling size.
-    // Cached cards are session-lived and never owned by an impostor, so a world regenerate reuses them.
-    // ponytail: keyed by name only — change the variant count mid-session and the far card stays as first
-    // baked (a 300 m+ silhouette nuance). Key on the tree def if that ever reads wrong.
-    static readonly Dictionary<string, ScatterImpostorBaker.AtlasCard> _sharedCards = new();
 
     public static ScatterLodBatcher.Impostor TryBuild(ScatterPrototypeDto proto, Bounds worldBounds)
     {
@@ -73,23 +67,9 @@ public static class ScatterImpostorFactory
 
         // Prefer a pre-baked atlas (editor bake tool) to skip the on-load bake; fall back to baking live
         // for prototypes without one (runtime-placed / custom-saved structures).
-        string shareKey = proto.BakedImpostorAtlas == null ? proto.ImpostorShareKey : null;
-        bool shared = !string.IsNullOrEmpty(shareKey);
-        ScatterImpostorBaker.AtlasCard card;
-        if (proto.BakedImpostorAtlas != null)
-            card = ScatterImpostorBaker.FromPrebaked(proto.BakedImpostorAtlas, proto.BakedImpostorNormal, meshes);
-        else if (shared && _sharedCards.TryGetValue(shareKey, out ScatterImpostorBaker.AtlasCard hit) && hit.Texture != null)
-            card = ScatterImpostorBaker.FromPrebaked(hit.Texture, hit.NormalTexture, meshes);
-        else
-        {
-            card = ScatterImpostorBaker.BakeAtlas(meshes, materials, OctGridN);
-            if (shared && card.Valid)
-            {
-                card.Texture.hideFlags = HideFlags.HideAndDontSave;
-                if (card.NormalTexture != null) card.NormalTexture.hideFlags = HideFlags.HideAndDontSave;
-                _sharedCards[shareKey] = card;
-            }
-        }
+        ScatterImpostorBaker.AtlasCard card = proto.BakedImpostorAtlas != null
+            ? ScatterImpostorBaker.FromPrebaked(proto.BakedImpostorAtlas, proto.BakedImpostorNormal, meshes)
+            : ScatterImpostorBaker.BakeAtlas(meshes, materials, OctGridN);
         if (!card.Valid) return default;
 
         float start = proto.ImpostorStartDistance;
@@ -116,7 +96,7 @@ public static class ScatterImpostorFactory
         // Teardown destroys only the owned one (destroying the asset — or a card other prototypes still
         // share — corrupts it / throws).
         return new ScatterLodBatcher.Impostor(rp, BuildUnitQuad(), start, end,
-            ownsCard: proto.BakedImpostorAtlas == null && !shared);
+            ownsCard: proto.BakedImpostorAtlas == null);
     }
 
     // Unit centred quad (xy in [-0.5,0.5], uv [0,1]); the octahedral shader billboards + scales it by
