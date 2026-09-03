@@ -329,7 +329,9 @@ public static class TreeDefLibrary
         BarkColor = new Color(0.30f, 0.24f, 0.18f), LeafColor = new Color(0.13f, 0.26f, 0.16f),
         FoliageStyle = FoliageStyle.ConiferCone, TrunkTipScale = 0.05f, NeedleFoliage = true,
         TrunkGirthScale = 0.4f,
-        ConeBaseFrac = 0.16f, ConeRadiusFrac = 0.1f, ConeDroop = 0.35f, ConeTiers = 26,
+        // Same pole defect Poplar had, same cure: at ConeRadiusFrac 0.1 the cone was 0.19 wide per unit height
+        // and its card only 4.8% covered — a dead-tree silhouette on a living species.
+        ConeBaseFrac = 0.16f, ConeRadiusFrac = 0.17f, ConeDroop = 0.35f, ConeTiers = 26,
         Levels = new[]
         {
             new LevelRule { Label = "trunk", ParentLevel = -1, Length = new Vector2(9f, 12f), RadialSides = 5, Curve = 2f, Noise = 0.02f },
@@ -351,8 +353,17 @@ public static class TreeDefLibrary
         },
     };
 
-    // Lombardy poplar: a narrow DECIDUOUS column — leaf clumps, not needles. Branches stay short and sweep
-    // steeply upward so the crown hugs the trunk instead of spreading.
+    // Lombardy poplar: a narrow DECIDUOUS column — leaf clumps, not needles. Branches sweep steeply upward so
+    // the crown hugs the trunk instead of spreading.
+    //
+    // Kept columnar, but no longer a broom handle. At ParallelAlign 0.22 the crown was 3.24 m across a 28 m
+    // trunk — width/height 0.12, and an impostor card only 4.4% covered, the same silhouette this library
+    // bakes for DEAD trees, so past its handover it read as a bare pole standing in a canopy. A real Lombardy
+    // poplar IS that narrow; a card 36 px tall cannot show it.
+    //
+    // ParallelAlign is the lever, not Length or GravityAlign: at 0.22 the branches run along the trunk, so
+    // doubling their length only made them longer, not wider (0.12 -> 0.21). 0.35 gives 0.32 at every age,
+    // still a column against Broadleaf's 1.10 and Cypress's 0.32.
     public static TreeDef Poplar(float age = 1f) => new TreeDef
     {
         Name = "Poplar", MaxHeight = 28f, GlobalScale = 1.5f, Age = Mathf.Clamp01(age), // lombardy poplar 25-30 m
@@ -364,13 +375,13 @@ public static class TreeDefLibrary
             new LevelRule
             {
                 Label = "primary", ParentLevel = 0, Frequency = new Vector2(12, 16), ChildrenPerNode = 1,
-                Range = new Vector2(0.12f, 0.97f), ParallelAlign = 0.22f, GravityAlign = new Vector2(0.75f, 0.85f),
-                Length = new Vector2(2.3f, 1.6f), GirthScale = 0.3f, RadialSides = 3, Curve = 10f, Noise = 0.06f,
+                Range = new Vector2(0.12f, 0.97f), ParallelAlign = 0.35f, GravityAlign = new Vector2(0.38f, 0.46f),
+                Length = new Vector2(6.0f, 4.0f), GirthScale = 0.3f, RadialSides = 3, Curve = 10f, Noise = 0.06f,
             },
             new LevelRule
             {
-                Label = "leaves", ParentLevel = 1, IsLeaf = true, Frequency = new Vector2(4, 6),
-                Range = new Vector2(0.15f, 1f), LeafSize = 0.8f, LeafGroup = 0,
+                Label = "leaves", ParentLevel = 1, IsLeaf = true, Frequency = new Vector2(6, 9),
+                Range = new Vector2(0.15f, 1f), LeafSize = 1f, LeafGroup = 0,
             },
         },
     };
@@ -610,6 +621,26 @@ public static class TreeDefLibrary
                 Label = "tips", ParentLevel = 1, Frequency = new Vector2(2, 4), ChildrenPerNode = 2,
                 Range = new Vector2(0.4f, 1f), ParallelAlign = 0.5f, GravityAlign = new Vector2(0.7f, 0.8f),
                 Length = new Vector2(0.4f, 0.28f), GirthScale = 0.62f, RadialSides = 3, Curve = 26f, Noise = 0.22f,
+            },
+        },
+    };
+
+    // Anemone: a squat fleshy column crowned by a dense ring of tentacles. That is the flower shape with the
+    // stem all but gone and the petal count tripled — the ring IS the organism, so it reads as a land flower
+    // the moment a stalk shows under it.
+    public static TreeDef Anemone(float age = 1f, Color? tentacle = null) => new TreeDef
+    {
+        Name = "Anemone", MaxHeight = 0.5f, GlobalScale = 1f, Age = Mathf.Clamp01(age),
+        BarkColor = new Color(0.62f, 0.34f, 0.38f),
+        LeafColor = tentacle ?? new Color(0.88f, 0.48f, 0.54f),
+        TrunkGirthScale = 0.9f, TrunkTipScale = 0.85f, RootFlare = 0.3f,
+        Levels = new[]
+        {
+            new LevelRule { Label = "column", ParentLevel = -1, Length = new Vector2(0.16f, 0.26f), RadialSides = 6, Curve = 3f, Noise = 0.06f },
+            new LevelRule
+            {
+                Label = "tentacles", ParentLevel = 0, IsLeaf = true, Frequency = new Vector2(12, 18),
+                Range = new Vector2(0.7f, 1f), LeafSize = 0.3f, LeafGroup = 3,
             },
         },
     };

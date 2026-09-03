@@ -333,6 +333,30 @@ MonoBehaviour:
     ShapeHash: A29D674C
     Atlas: {fileID: 2800000, guid: 38059a7a82a32b540bad826c8b833100, type: 3}
     Normal: {fileID: 2800000, guid: 01e3654a4fc163849adf6f7b75b12c7e, type: 3}
+  - Key: Ocean Seagrass
+    ShapeHash: 227C7303
+    Atlas: {fileID: 2800000, guid: 2d4564235622020439b6e145862f6f37, type: 3}
+    Normal: {fileID: 2800000, guid: f6030e49598cc0740a90b015b9d4b877, type: 3}
+  - Key: Ocean Anemone
+    ShapeHash: 70C1CDA2
+    Atlas: {fileID: 2800000, guid: 080ea1106b333f74d834ae47bcf8e0be, type: 3}
+    Normal: {fileID: 2800000, guid: 34f27a1b64df72c488a60ea7758fe358, type: 3}
+  - Key: Ocean Anemone Purple
+    ShapeHash: 09FEA07F
+    Atlas: {fileID: 2800000, guid: 77cf4d575b3c5fd47b3b314ef798bf81, type: 3}
+    Normal: {fileID: 2800000, guid: b67d36df6e1976e42a953575263fb2d0, type: 3}
+  - Key: Ocean Brain Coral
+    ShapeHash: 3064B8F1
+    Atlas: {fileID: 2800000, guid: 5d5791be72f7b90429c851a271015270, type: 3}
+    Normal: {fileID: 2800000, guid: c9a6b3dbb34f4ae46ab47d5658628133, type: 3}
+  - Key: Ocean Barrel Sponge
+    ShapeHash: 7B1B1E0E
+    Atlas: {fileID: 2800000, guid: e825d076157e0fc458feb20aea8f4f73, type: 3}
+    Normal: {fileID: 2800000, guid: 0546b76a492401741ae0fdbd3d6b75a3, type: 3}
+  - Key: Ocean Kelp Deep
+    ShapeHash: 355D27EA
+    Atlas: {fileID: 2800000, guid: a3a7d08e73cb1d34ca19bf87fc6e201a, type: 3}
+    Normal: {fileID: 2800000, guid: c86fffc296ff87e4e920e228a429f607, type: 3}
   - Key: Forest Tree v1
     ShapeHash: E1D9B9FB
     Atlas: {fileID: 2800000, guid: 8c3c5569dcac2d74cb3dd23351764d97, type: 3}
@@ -597,6 +621,18 @@ MonoBehaviour:
     ShapeHash: 9A74B1CF
     Atlas: {fileID: 2800000, guid: 720dc932fb548b54992d8870ddbfd059, type: 3}
     Normal: {fileID: 2800000, guid: c8efd79fb2c23fc44bddb0656ac579de, type: 3}
+  - Key: Ocean Brain Coral v1
+    ShapeHash: 2242074B
+    Atlas: {fileID: 2800000, guid: bc385d3d76455284f8f0bd0e53aa7ba6, type: 3}
+    Normal: {fileID: 2800000, guid: b153a334aece9684e817be2d9247c87c, type: 3}
+  - Key: Ocean Barrel Sponge v1
+    ShapeHash: 2408E217
+    Atlas: {fileID: 2800000, guid: 239e759af55b5fd40a5877c435a5bd57, type: 3}
+    Normal: {fileID: 2800000, guid: ed9ab74a2447cde44bb1fce92006be86, type: 3}
+  - Key: Ocean Kelp Deep v1
+    ShapeHash: 98991508
+    Atlas: {fileID: 2800000, guid: fa660006c970a0349a17cbc911b5db19, type: 3}
+    Normal: {fileID: 2800000, guid: 6e321f1c26b6cf24a81e1d3f967b236e, type: 3}
   - Key: Forest Rock v1
     ShapeHash: 7F354F94
     Atlas: {fileID: 2800000, guid: 391a1e28ec617c942b31b270e8c9ca0a, type: 3}

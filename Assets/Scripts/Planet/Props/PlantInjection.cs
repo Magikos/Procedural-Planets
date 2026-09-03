@@ -20,7 +20,7 @@ public static class PlantInjection
     // Cleared by the impostor bake tool so it bakes from a library carrying no cards. See TreeInjection.
     public static bool UseBakedImpostors = true;
 
-    public enum Kind { None, Bush, Grass, Flower, Mushroom, Reed, Cattail, Lily, Coral, Kelp }
+    public enum Kind { None, Bush, Grass, Flower, Mushroom, Reed, Cattail, Lily, Coral, Kelp, Anemone, SeaDome, Sponge }
 
     // Variants per kind, scaled by how big the thing reads on screen. A chest-high bush earns a second shape;
     // a 20 cm flower drawn 4000 times per hectare does not, and each extra costs a scatter slot in every biome
@@ -31,6 +31,8 @@ public static class PlantInjection
         Kind.Reed => 2,
         Kind.Coral => 2,
         Kind.Kelp => 2,
+        Kind.SeaDome => 2,
+        Kind.Sponge => 2,
         _ => 1,
     };
 
@@ -100,6 +102,10 @@ public static class PlantInjection
         if (Has(n, "Cattail")) return Kind.Cattail;
         if (Has(n, "Reed")) return Kind.Reed;
         if (Has(n, "Lily")) return Kind.Lily;
+        if (Has(n, "Anemone")) return Kind.Anemone;
+        if (Has(n, "Sponge")) return Kind.Sponge;
+        // Before Coral: a brain coral is a solid dome, not the branching skeleton the Coral def builds.
+        if (Has(n, "Brain")) return Kind.SeaDome;
         if (Has(n, "Coral")) return Kind.Coral;
         if (Has(n, "Kelp") || Has(n, "Seaweed")) return Kind.Kelp;
         if (Has(n, "Mushroom")) return Kind.Mushroom;
@@ -121,15 +127,16 @@ public static class PlantInjection
             Mesh stemMesh, foliageMesh, accentMesh = null;
             Color stemTint, foliageTint;
 
-            if (kind == Kind.Lily)
+            RockDef? lumpDef = RockDefFor(kind);
+            if (lumpDef.HasValue)
             {
-                // A pad is a flat disc, which the ROCK generator already makes if you squash one axis. Building
-                // a disc primitive in the leaf mesher for a single prototype would be the wrong trade.
-                var pad = RockGenerator.Generate(LilyPadDef(), seed);
-                if (pad.Lod0 == null || pad.Lod0.vertexCount == 0) return null;
-                stemMesh = pad.Lod0;
+                // A pad, a brain-coral dome and a barrel sponge are all one squashed lump, which the ROCK
+                // generator already makes. A dome primitive in the leaf mesher would exist for three prototypes.
+                GeneratedRock lump = RockGenerator.Generate(lumpDef.Value, seed);
+                if (lump.Lod0 == null || lump.Lod0.vertexCount == 0) return null;
+                stemMesh = lump.Lod0;
                 foliageMesh = null;
-                stemTint = new Color(0.24f, 0.42f, 0.20f);
+                stemTint = lumpDef.Value.Color;
                 foliageTint = stemTint;
             }
             else
@@ -203,6 +210,7 @@ public static class PlantInjection
             Kind.Cattail => TreeDefLibrary.Cattail(age),
             Kind.Kelp => TreeDefLibrary.Kelp(age),
             Kind.Coral => TreeDefLibrary.Coral(age, CoralColor(n), Has(n, "Deep") || Has(n, "Shallow")),
+            Kind.Anemone => TreeDefLibrary.Anemone(age, AnemoneColor(n)),
             _ => TreeDefLibrary.Bush(age),
         };
     }
@@ -211,8 +219,9 @@ public static class PlantInjection
     // as wrong more clearly than not moving at all.
     static float WindFor(Kind kind) => kind switch
     {
-        Kind.Coral => 0f,
+        Kind.Coral or Kind.SeaDome or Kind.Sponge => 0f,
         Kind.Lily => 0f,
+        Kind.Anemone => 0.18f,
         Kind.Grass or Kind.Reed or Kind.Cattail => 0.22f,
         Kind.Kelp => 0.3f,
         _ => 0.14f,
@@ -269,6 +278,7 @@ public static class PlantInjection
             BiomeType.Taiga or BiomeType.Snow => new Color(0.19f, 0.35f, 0.20f),
             BiomeType.Tundra or BiomeType.IceBog => new Color(0.26f, 0.38f, 0.25f),
             BiomeType.Tropical => new Color(0.17f, 0.43f, 0.18f),
+            BiomeType.Ocean => new Color(0.19f, 0.38f, 0.24f), // seagrass reads bluer than any land blade
             _ => new Color(0.23f, 0.42f, 0.19f),
         };
         // A flowering bush stays GREEN. Tinting the whole canopy pink or yellow made a solid coloured blob,
@@ -301,11 +311,43 @@ public static class PlantInjection
         return "default";
     }
 
+    static Color AnemoneColor(string n) =>
+        Has(n, "Purple") ? new Color(0.68f, 0.42f, 0.80f)
+        : Has(n, "Green") ? new Color(0.42f, 0.74f, 0.50f)
+        : new Color(0.88f, 0.48f, 0.54f);
+
+    // The three kinds the rock generator builds instead of the tree generator.
+    static RockDef? RockDefFor(Kind kind) => kind switch
+    {
+        Kind.Lily => LilyPadDef(),
+        Kind.SeaDome => BrainCoralDef(),
+        Kind.Sponge => BarrelSpongeDef(),
+        _ => null,
+    };
+
     static RockDef LilyPadDef() => new RockDef
     {
         Name = "Lily Pad", Size = 1.05f, AxisBias = new Vector3(1f, 0.035f, 1f),
         Roughness = 0.22f, Subdivisions = 1, Buried = 0f,
         Color = new Color(0.24f, 0.42f, 0.20f),
+    };
+
+    // Brain coral: a SOLID dome, and solid is the point. Every other reef prop is a branching skeleton, so at
+    // card range they all key too little silhouette to read - measured coverage 0.0009-0.0033 against a forest
+    // tree's 0.0142. The dome is the reef's only far-field anchor.
+    static RockDef BrainCoralDef() => new RockDef
+    {
+        Name = "Brain Coral", Size = 1.6f, AxisBias = new Vector3(1f, 0.62f, 0.95f),
+        Roughness = 0.30f, Subdivisions = 1, Buried = 0.18f,
+        Color = new Color(0.80f, 0.60f, 0.42f),
+    };
+
+    // Barrel sponge: the same lump with the bias flipped upright.
+    static RockDef BarrelSpongeDef() => new RockDef
+    {
+        Name = "Barrel Sponge", Size = 1.3f, AxisBias = new Vector3(0.62f, 1.5f, 0.62f),
+        Roughness = 0.24f, Subdivisions = 1, Buried = 0.2f,
+        Color = new Color(0.56f, 0.32f, 0.44f),
     };
 
 
@@ -333,6 +375,7 @@ public static class PlantInjection
             ("Mushroom", TreeDefLibrary.Mushroom(1f)),
             ("Coral Head", TreeDefLibrary.Coral(1f, CoralColor(""), false)),
             ("Coral Finger", TreeDefLibrary.Coral(1f, CoralColor("Shallow"), true)),
+            ("Anemone", TreeDefLibrary.Anemone(1f, AnemoneColor(""))),
             ("Flower Yellow", TreeDefLibrary.Flower(1f, FlowerColor("Yellow"))),
             ("Flower Blue", TreeDefLibrary.Flower(1f, FlowerColor("Blue"))),
             ("Flower Red", TreeDefLibrary.Flower(1f, FlowerColor("Red"))),
