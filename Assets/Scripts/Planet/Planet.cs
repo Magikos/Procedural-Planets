@@ -63,10 +63,15 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     ScatterDebugReporter _scatterDebug;
     TreePreview _treePreview;
     CreatureResidencyService _creatures;
+    readonly System.Collections.Generic.List<WildlifeLandingSite> _landingSites = new();
+    readonly System.Collections.Generic.List<WildlifeLandingTarget> _landingSnapshots = new();
+    float _nextLandingSiteScan;
     CreatureView _creatureView;
     ThreatRegistry _threats;
     CreatureCorpseStore _corpses;
     AmbientSwarms _swarms;
+    FishPopulation _fish;
+    FishView _fishView;
     ICelestialTimeController _celestial;
 
     static readonly int _planetCenterId = Shader.PropertyToID(ShaderGlobalIds.PlanetCenter);
@@ -114,6 +119,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         context.Register(_creatureView);
         context.Register(_corpses);
         context.Register(_swarms);
+        context.Register(_fish);
 
         // Harvest interactor (POC): picker + verb wired to this world's scatter cache, harvest store, and
         // inventory. The ScatterLibraryDto is NOT registered yet at world-service registration (it registers
@@ -183,6 +189,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _threats ??= new ThreatRegistry();
         _corpses ??= new CreatureCorpseStore(Logger);
         _swarms ??= new AmbientSwarms(transform, Logger);
+        _fish ??= new FishPopulation(_waterQuery, _threats);
+        _fishView ??= new FishView(transform);
         _scatterRenderer.Cache.SetHarvestStore(_harvestStore);
     }
 
@@ -299,6 +307,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _scatterDebug = null; // world-scoped registration; the context drops it on teardown
         _swarms?.Dispose();
         _swarms = null;
+        _fish?.Dispose();
+        _fish = null;
+        _fishView?.Dispose();
+        _fishView = null;
         _celestial = null;
         _creatureView?.Dispose();
         _creatureView = null;
@@ -306,6 +318,9 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _threats = null;
         _creatures?.Dispose();
         _creatures = null;
+        _landingSites.Clear();
+        _landingSnapshots.Clear();
+        _nextLandingSiteScan = 0f;
         _climateMapGpuData?.Dispose();
         _climateMapGpuData = null;
         _surfaceProvider?.Dispose();
@@ -347,12 +362,29 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         // server would pass from a player's transform.
         if (_creatures != null)
         {
+            PublishLandingSites();
             _creatures.Tick(_observerCamera.transform.position, Time.deltaTime);
             _creatureView?.Sync(_creatures.Live, _creatures.Library);
             _creatureView?.SyncCorpses(_corpses, _creatures.Library, _observerCamera.transform.position,
                 CreatureCorpseStore.KeepAliveMeters);
             TickSwarms(_observerCamera.transform.position);
+            _fish.Tick(_observerCamera.transform.position, Time.deltaTime, System.DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            _fishView.Sync(_fish.Groups, Time.deltaTime);
         }
+    }
+
+    void PublishLandingSites()
+    {
+        if (Time.unscaledTime >= _nextLandingSiteScan)
+        {
+            GetComponentsInChildren(true, _landingSites);
+            _nextLandingSiteScan = Time.unscaledTime + 1f;
+        }
+        _landingSnapshots.Clear();
+        foreach (var site in _landingSites)
+            if (site != null && site.isActiveAndEnabled && site.transform.IsChildOf(transform))
+                _landingSnapshots.Add(site.Snapshot);
+        _creatures.LandingTargets.Publish(_landingSnapshots);
     }
 
     // How high the sun stands HERE, which on a sphere is the only meaningful answer to "is it night".
@@ -540,6 +572,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             await Awaitable.NextFrameAsync(ct);
             // After the last cancellable await: a cancelled generation never publishes readiness,
             // so scatter is only configured for a generation that actually reached this point.
+            _creatures?.FlushState();
             _deltaLog.Open(System.IO.Path.Combine(Application.persistentDataPath, "ProceduralPlanets"), "world-" + Seed);
             _harvestStore.Configure(Seed, _deltaLog);
             long harvestMs = finalizeStep.ElapsedMilliseconds;
@@ -564,12 +597,17 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             // The view is dropped with it: DestroyChildren already took its bodies, and a new world's
             // creatures are different animals in different places.
             _creatureView.Clear();
+            _fishView.Clear();
+            _fish.Configure(Seed, transform.position);
             // Same IBiomeProvider the terrain bake and scatter placement read, so a creature cannot disagree
             // with the ground about which biome it is standing in.
             _corpses.Configure(_deltaLog);
-            _swarms.Configure(this, _colorGenerator, _threats, transform.position, planet.PlanetRadius, seaLevelRadius);
+            _swarms.Configure(this, _colorGenerator, _threats, transform.position, planet.PlanetRadius, seaLevelRadius,
+                _scatter, _scatterRenderer.Cache);
             _creatures.Configure(Seed, _deltaLog, _colorGenerator, _threats, planet.PlanetRadius, seaLevelRadius,
                 _corpses);
+            _creatureView.ConfigureGrounding(new CreaturePoseGrounding(this,
+                new PlanetSurfaceGrounding(this, transform.position)));
             long scatterRendererMs = finalizeStep.ElapsedMilliseconds;
             finalizeStep.Restart();
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _shapeGenerator.ElevationMin, _shapeGenerator.ElevationMax));

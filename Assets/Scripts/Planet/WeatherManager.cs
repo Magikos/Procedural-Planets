@@ -15,6 +15,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
     IProgressReporter, IWorldServiceRegistrar, IWorldSettingsRegistrar, IWorldTeardown
 {
     static readonly Type[] RequiredSettings = { typeof(CloudDto) };
+    static readonly int CloudTypeTestId = Shader.PropertyToID(ShaderGlobalIds.WeatherCloudTypeTest);
     CloudDto _settings;
 
     [ConsoleCommand("diagnostics", "Write weather diagnostics file (F9 equivalent).")]
@@ -87,6 +88,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             return "weather force failed: WeatherCompute is not assigned";
 
         SettingsProvider.Update(_settings with { EnableWeatherEvolution = false });
+        Shader.SetGlobalFloat(CloudTypeTestId, 0f);
         return $"weather forced: condensation={c:F2} storm={s:F2} (evolution frozen)";
     }
 
@@ -124,6 +126,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
             return "weather test-pattern failed: WeatherCompute is not assigned";
 
         SettingsProvider.Update(_settings with { EnableWeatherEvolution = false });
+        Shader.SetGlobalFloat(CloudTypeTestId, 1f);
         return "weather test pattern written: stratus | cumulus | cumulonimbus bands (evolution frozen)";
     }
 
@@ -255,6 +258,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     void OnDisable()
     {
+        Shader.SetGlobalFloat(CloudTypeTestId, 0f);
         EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
         EventBus<DebugWeatherDiagnosticsRequestedEvent>.Unlisten(OnWeatherDiagnosticsRequested);
         EventBus<SettingsChangedEvent>.Unlisten(OnSettingsChanged);
@@ -268,6 +272,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         if (!TryResolveSettings())
             return;
 
+        if (_settings.EnableWeatherEvolution) Shader.SetGlobalFloat(CloudTypeTestId, 0f);
         if (_seaLevelRadius > 0f && prev != null && (_settings.WeatherResolution != prev.WeatherResolution
             || _settings.InitialCoverage != prev.InitialCoverage))
         {
@@ -427,6 +432,7 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
 
     async Awaitable GenerateWeatherGridAsync(CancellationToken externalToken = default)
     {
+        Shader.SetGlobalFloat(CloudTypeTestId, 0f);
         if (!TryResolveSettings())
             return;
 

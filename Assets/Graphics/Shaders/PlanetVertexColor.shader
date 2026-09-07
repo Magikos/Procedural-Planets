@@ -321,34 +321,9 @@ Shader "Planet/VertexColor"
                 return frac(p);
             }
 
-            float Hash31(float3 p)
-            {
-                p = frac(p * 0.1031);
-                p += dot(p, p.yzx + 33.33);
-                return frac((p.x + p.y) * p.z);
-            }
 
-            float ValueNoise3D(float3 p)
-            {
-                float3 i = floor(p);
-                float3 f = frac(p);
-                f = f * f * (3.0 - 2.0 * f);
 
-                float n000 = Hash31(i + float3(0.0, 0.0, 0.0));
-                float n100 = Hash31(i + float3(1.0, 0.0, 0.0));
-                float n010 = Hash31(i + float3(0.0, 1.0, 0.0));
-                float n110 = Hash31(i + float3(1.0, 1.0, 0.0));
-                float n001 = Hash31(i + float3(0.0, 0.0, 1.0));
-                float n101 = Hash31(i + float3(1.0, 0.0, 1.0));
-                float n011 = Hash31(i + float3(0.0, 1.0, 1.0));
-                float n111 = Hash31(i + float3(1.0, 1.0, 1.0));
 
-                float x00 = lerp(n000, n100, f.x);
-                float x10 = lerp(n010, n110, f.x);
-                float x01 = lerp(n001, n101, f.x);
-                float x11 = lerp(n011, n111, f.x);
-                return lerp(lerp(x00, x10, f.y), lerp(x01, x11, f.y), f.z);
-            }
 
             float3 BiomeSliceOffset(float slice)
             {
@@ -358,15 +333,19 @@ Shader "Planet/VertexColor"
                     Hash11(slice + 73.0)) * 97.0;
             }
 
+            // Captured before material branches so divergent pixels retain valid texture gradients.
+            static float3 biomePositionDx;
+            static float3 biomePositionDy;
+
             float3 TriplanarSampleAlbedoAtTiling(float3 worldPos, float3 bw, float slice, float tiling)
             {
                 float2 uvX = worldPos.yz * tiling;
                 float2 uvY = worldPos.xz * tiling;
                 float2 uvZ = worldPos.xy * tiling;
 
-                float3 cX = SAMPLE_TEXTURE2D_ARRAY(_BiomeAlbedoArray, sampler_BiomeAlbedoArray, uvX, slice).rgb;
-                float3 cY = SAMPLE_TEXTURE2D_ARRAY(_BiomeAlbedoArray, sampler_BiomeAlbedoArray, uvY, slice).rgb;
-                float3 cZ = SAMPLE_TEXTURE2D_ARRAY(_BiomeAlbedoArray, sampler_BiomeAlbedoArray, uvZ, slice).rgb;
+                float3 cX = SAMPLE_TEXTURE2D_ARRAY_GRAD(_BiomeAlbedoArray, sampler_BiomeAlbedoArray, uvX, slice, biomePositionDx.yz * tiling, biomePositionDy.yz * tiling).rgb;
+                float3 cY = SAMPLE_TEXTURE2D_ARRAY_GRAD(_BiomeAlbedoArray, sampler_BiomeAlbedoArray, uvY, slice, biomePositionDx.xz * tiling, biomePositionDy.xz * tiling).rgb;
+                float3 cZ = SAMPLE_TEXTURE2D_ARRAY_GRAD(_BiomeAlbedoArray, sampler_BiomeAlbedoArray, uvZ, slice, biomePositionDx.xy * tiling, biomePositionDy.xy * tiling).rgb;
 
                 return cX * bw.x + cY * bw.y + cZ * bw.z;
             }
@@ -437,9 +416,9 @@ Shader "Planet/VertexColor"
                 float2 uvY = worldPos.xz * tiling;
                 float2 uvZ = worldPos.xy * tiling;
 
-                float3 tnX = ScaleTangentNormal(UnpackNormal(SAMPLE_TEXTURE2D_ARRAY(_BiomeNormalArray, sampler_BiomeNormalArray, uvX, slice)), _BiomeNormalStrength);
-                float3 tnY = ScaleTangentNormal(UnpackNormal(SAMPLE_TEXTURE2D_ARRAY(_BiomeNormalArray, sampler_BiomeNormalArray, uvY, slice)), _BiomeNormalStrength);
-                float3 tnZ = ScaleTangentNormal(UnpackNormal(SAMPLE_TEXTURE2D_ARRAY(_BiomeNormalArray, sampler_BiomeNormalArray, uvZ, slice)), _BiomeNormalStrength);
+                float3 tnX = ScaleTangentNormal(UnpackNormal(SAMPLE_TEXTURE2D_ARRAY_GRAD(_BiomeNormalArray, sampler_BiomeNormalArray, uvX, slice, biomePositionDx.yz * tiling, biomePositionDy.yz * tiling)), _BiomeNormalStrength);
+                float3 tnY = ScaleTangentNormal(UnpackNormal(SAMPLE_TEXTURE2D_ARRAY_GRAD(_BiomeNormalArray, sampler_BiomeNormalArray, uvY, slice, biomePositionDx.xz * tiling, biomePositionDy.xz * tiling)), _BiomeNormalStrength);
+                float3 tnZ = ScaleTangentNormal(UnpackNormal(SAMPLE_TEXTURE2D_ARRAY_GRAD(_BiomeNormalArray, sampler_BiomeNormalArray, uvZ, slice, biomePositionDx.xy * tiling, biomePositionDy.xy * tiling)), _BiomeNormalStrength);
 
                 float3 absNormal = abs(worldNormal);
                 float3 rnX = BlendRnm(float3(worldNormal.zy, absNormal.x), tnX);
@@ -469,9 +448,9 @@ Shader "Planet/VertexColor"
                 float2 uvY = worldPos.xz * tiling;
                 float2 uvZ = worldPos.xy * tiling;
 
-                float3 cX = SAMPLE_TEXTURE2D_ARRAY(_BiomeArmArray, sampler_BiomeArmArray, uvX, slice).rgb;
-                float3 cY = SAMPLE_TEXTURE2D_ARRAY(_BiomeArmArray, sampler_BiomeArmArray, uvY, slice).rgb;
-                float3 cZ = SAMPLE_TEXTURE2D_ARRAY(_BiomeArmArray, sampler_BiomeArmArray, uvZ, slice).rgb;
+                float3 cX = SAMPLE_TEXTURE2D_ARRAY_GRAD(_BiomeArmArray, sampler_BiomeArmArray, uvX, slice, biomePositionDx.yz * tiling, biomePositionDy.yz * tiling).rgb;
+                float3 cY = SAMPLE_TEXTURE2D_ARRAY_GRAD(_BiomeArmArray, sampler_BiomeArmArray, uvY, slice, biomePositionDx.xz * tiling, biomePositionDy.xz * tiling).rgb;
+                float3 cZ = SAMPLE_TEXTURE2D_ARRAY_GRAD(_BiomeArmArray, sampler_BiomeArmArray, uvZ, slice, biomePositionDx.xy * tiling, biomePositionDy.xy * tiling).rgb;
 
                 return cX * bw.x + cY * bw.y + cZ * bw.z;
             }
@@ -499,12 +478,16 @@ Shader "Planet/VertexColor"
             // once and reuses the values to compute the weighted top-K triplanar contribution
             // for albedo, normal, and ARM. Three out-params avoid having to re-sample at the
             // 4-corner-blend level.
-            void CornerTriplanarWeightedPbr(int2 texel, float3 worldPos, float3 worldNormal, float3 bw,
-                out float3 albedo, out float3 normalWS, out float3 arm)
+            void ReadBiomeCorner(int2 texel, out float4 ids, out float4 weights)
             {
                 float2 uv = (texel + 0.5) * _BiomeMap_TexelSize.xy;
-                float4 idsF = SAMPLE_TEXTURE2D(_BiomeIds, sampler_BiomeIds, uv) * 255.0;
-                float4 w = SAMPLE_TEXTURE2D(_BiomeWeights, sampler_BiomeWeights, uv);
+                ids = SAMPLE_TEXTURE2D_LOD(_BiomeIds, sampler_BiomeIds, uv, 0) * 255.0;
+                weights = SAMPLE_TEXTURE2D_LOD(_BiomeWeights, sampler_BiomeWeights, uv, 0);
+            }
+
+            void CornerTriplanarWeightedPbr(float4 idsF, float4 w, float3 worldPos, float3 worldNormal, float3 bw,
+                out float3 albedo, out float3 normalWS, out float3 arm)
+            {
 
                 albedo  = float3(0, 0, 0);
                 normalWS = float3(0, 0, 0);
@@ -590,10 +573,33 @@ Shader "Planet/VertexColor"
                 float3 a00, a10, a01, a11;
                 float3 n00, n10, n01, n11;
                 float3 m00, m10, m01, m11;
-                CornerTriplanarWeightedPbr(t00, worldPos, worldNormal, bw, a00, n00, m00);
-                CornerTriplanarWeightedPbr(t10, worldPos, worldNormal, bw, a10, n10, m10);
-                CornerTriplanarWeightedPbr(t01, worldPos, worldNormal, bw, a01, n01, m01);
-                CornerTriplanarWeightedPbr(t11, worldPos, worldNormal, bw, a11, n11, m11);
+                float4 ids00, w00;
+                ReadBiomeCorner(t00, ids00, w00);
+                float4 ids10, w10;
+                ReadBiomeCorner(t10, ids10, w10);
+                float4 ids01, w01;
+                ReadBiomeCorner(t01, ids01, w01);
+                float4 ids11, w11;
+                ReadBiomeCorner(t11, ids11, w11);
+                CornerTriplanarWeightedPbr(ids00, w00, worldPos, worldNormal, bw, a00, n00, m00);
+                [branch] if (all(ids10 == ids00) && all(w10 == w00))
+                {
+                    a10 = a00; n10 = n00; m10 = m00;
+                }
+                else
+                    CornerTriplanarWeightedPbr(ids10, w10, worldPos, worldNormal, bw, a10, n10, m10);
+                [branch] if (all(ids01 == ids00) && all(w01 == w00))
+                {
+                    a01 = a00; n01 = n00; m01 = m00;
+                }
+                else
+                    CornerTriplanarWeightedPbr(ids01, w01, worldPos, worldNormal, bw, a01, n01, m01);
+                [branch] if (all(ids11 == ids00) && all(w11 == w00))
+                {
+                    a11 = a00; n11 = n00; m11 = m00;
+                }
+                else
+                    CornerTriplanarWeightedPbr(ids11, w11, worldPos, worldNormal, bw, a11, n11, m11);
 
                 float3 ax0 = lerp(a00, a10, f.x);
                 float3 ax1 = lerp(a01, a11, f.x);
@@ -842,17 +848,14 @@ Shader "Planet/VertexColor"
                 if (_GrassDebugLayerColors > 0.5)
                     return lerp(terrainAlbedo, float3(0.70, 0.0, 0.0), grassCoverage);
 
-                float3 axis = abs(eval.planetNormal.y) < 0.92 ? float3(0.0, 1.0, 0.0) : float3(1.0, 0.0, 0.0);
-                float3 tangentA = normalize(cross(axis, eval.planetNormal));
-                float3 tangentB = normalize(cross(eval.planetNormal, tangentA));
-                float2 fiberUv = float2(dot(eval.relPos, tangentA), dot(eval.relPos, tangentB));
+                float3 fiberUv = eval.relPos;
                 float noiseScale = max(_GrassFarOverlayNoiseScale, 0.0001);
                 float macro = ValueNoise3D(eval.relPos * noiseScale + eval.tint * 37.0);
                 float detail = ValueNoise3D(eval.relPos * (noiseScale * 3.0) + 19.0);
                 float fiber = ValueNoise3D(float3(
                     fiberUv.x * noiseScale * 0.42,
                     fiberUv.y * noiseScale * 2.35,
-                    11.0 + eval.tint.g * 23.0));
+                    fiberUv.z * noiseScale + 11.0 + eval.tint.g * 23.0));
                 float fiberRaw = fiber;
                 // The anisotropic fiber and fleck are near blade-texture detail; aligned to consistent world
                 // tangents they alias into directional weave/streaks at grazing distance (the fleck's fwidth
@@ -863,10 +866,11 @@ Shader "Planet/VertexColor"
                 fiber = lerp(0.5, fiber, texFade);
                 float breakup = lerp(macro * 0.65 + detail * 0.35, fiber, saturate(_GrassFarOverlayFiberStrength));
                 float patch = ValueNoise3D(eval.relPos * (noiseScale * 0.22) + eval.tint * 71.0 + 5.0);
-                float2 fleckUv = float2(fiberUv.x * 0.9, fiberUv.y * 3.0);
-                float fleckFilter = saturate(1.0 - max(fwidth(fleckUv.x), fwidth(fleckUv.y)) * 1.5);
+                float3 fleckUv = fiberUv * float3(0.9, 3.0, 1.0);
+                float3 fleckWidth = fwidth(fleckUv);
+                float fleckFilter = saturate(1.0 - max(max(fleckWidth.x, fleckWidth.y), fleckWidth.z) * 1.5);
                 float fleck = smoothstep(0.52, 0.88,
-                    ValueNoise3D(float3(fleckUv.x, fleckUv.y, 23.0 + eval.tint.r * 19.0)));
+                    ValueNoise3D(fleckUv + float3(0, 0, 23.0 + eval.tint.r * 19.0)));
                 float fleckRaw = fleck;
                 fleck = lerp(0.5, fleck, fleckFilter);
                 fleck = lerp(0.5, fleck, texFade);
@@ -1037,6 +1041,8 @@ Shader "Planet/VertexColor"
 
             half4 frag(Varyings input) : SV_Target
             {
+                biomePositionDx = ddx(input.positionWS);
+                biomePositionDy = ddy(input.positionWS);
                 if (_OceanDebugMode == DEBUG_TERRAIN_SOURCE_PINK)
                     return half4(1.0, 0.0, 1.0, 1.0);
 
@@ -1221,7 +1227,8 @@ Shader "Planet/VertexColor"
                 // rooted in the world instead of floating on the surface. The custom analytic sun still
                 // owns the shading; this only gates the DIRECT term, so shadowed ground falls to the same
                 // ambient floor grass/foliage use (never crushed to black), fading out at night.
-                float mainShadow = MainLightRealtimeShadow(TransformWorldToShadowCoord(input.positionWS));
+                float mainShadow = MainLightShadow(TransformWorldToShadowCoord(input.positionWS), input.positionWS,
+                    half4(1, 1, 1, 1), half4(0, 0, 0, 0));
                 float sunShadow = lerp(1.0, mainShadow, daylight);
                 float litDiffuse = terrainDiffuse * sunShadow;
                 float ao = surfaceArm.r;

@@ -6,9 +6,6 @@ using UnityEngine;
 /// <see cref="CreatureResidencyService"/> is authority code: a dedicated server runs the residency and has no
 /// renderer at all, so nothing about drawing may sit inside it.
 /// </summary>
-// ponytail: a capsule per creature, which is the whole of "one placeholder animal". Rigged meshes and
-// animation are explicitly out of the first slice (design doc section 12); the swap is this file only, because
-// the service hands over a pose and knows nothing about what draws it.
 public sealed class CreatureView : System.IDisposable
 {
     // A per-material property name, not a global: it cannot collide across shaders, so it stays here.
@@ -16,6 +13,8 @@ public sealed class CreatureView : System.IDisposable
 
     readonly Transform _parent;
     readonly Dictionary<ulong, Transform> _bodies = new();
+    readonly Dictionary<ulong, CreatureAnimationView> _animated = new();
+    readonly Dictionary<ulong, BirdAnimationView> _birds = new();
     readonly Dictionary<int, Material> _materials = new();
     readonly Dictionary<ulong, Transform> _corpseBodies = new();
     readonly Dictionary<int, Material> _corpseMaterials = new();
@@ -26,8 +25,10 @@ public sealed class CreatureView : System.IDisposable
     public CreaturePredatorVision PredatorVision { get; } = new();
 
     bool _visible = true;
+    IGroundingProvider _grounding;
 
     public CreatureView(Transform parent) => _parent = parent;
+    public void ConfigureGrounding(IGroundingProvider grounding) => _grounding = grounding;
 
     public bool Visible
     {
@@ -115,6 +116,17 @@ public sealed class CreatureView : System.IDisposable
                 _bodies[c.Id.Value] = body;
             }
             body.SetPositionAndRotation(c.Position, Quaternion.LookRotation(c.Forward, c.Up));
+            if (_animated.TryGetValue(c.Id.Value, out CreatureAnimationView animation))
+            {
+                animation.Resting = c.Behaviour == CreatureBehaviour.Rest;
+                animation.Sleeping = c.Behaviour == CreatureBehaviour.Sleep;
+                animation.Eating = c.Behaviour == CreatureBehaviour.Feed;
+                animation.Drinking = c.Behaviour == CreatureBehaviour.Drink;
+                animation.Tick(c.Velocity, c.Up, Time.deltaTime, _grounding);
+            }
+            if (_birds.TryGetValue(c.Id.Value, out BirdAnimationView bird))
+                bird.Tick(c.Behaviour == CreatureBehaviour.Perch && c.AltitudeMeters <= 0.01f,
+                    c.Behaviour == CreatureBehaviour.Flee, Time.deltaTime);
         }
 
         // A body whose creature is no longer live is destroyed, not hidden: demotion is unbounded in time, and
@@ -129,7 +141,11 @@ public sealed class CreatureView : System.IDisposable
         }
         for (int i = 0; i < _stale.Count; i++)
         {
-            if (_bodies.TryGetValue(_stale[i], out Transform body) && body != null)
+            if (_birds.Remove(_stale[i], out BirdAnimationView bird))
+                bird.Dispose();
+            else if (_animated.Remove(_stale[i], out CreatureAnimationView animation))
+                animation.Dispose();
+            else if (_bodies.TryGetValue(_stale[i], out Transform body) && body != null)
                 Object.Destroy(body.gameObject);
             _bodies.Remove(_stale[i]);
         }
@@ -137,6 +153,20 @@ public sealed class CreatureView : System.IDisposable
 
     Transform CreateBody(in CreatureResidencyService.LiveCreature c, CreatureSpeciesDto species, float height)
     {
+        if (species != null && species.CruiseAltitudeMeters > 0f)
+        {
+            var bird = new BirdAnimationView(_parent, c.Id.Value, height);
+            _birds.Add(c.Id.Value, bird);
+            bird.Root.gameObject.SetActive(_visible);
+            return bird.Root;
+        }
+        if (species?.Visuals != null)
+        {
+            var animation = new CreatureAnimationView(_parent, c.Id.Value, species.Visuals, height);
+            _animated.Add(c.Id.Value, animation);
+            animation.Root.gameObject.SetActive(_visible);
+            return animation.Root;
+        }
         var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         go.name = "Creature " + CreatureKey.Describe(c.Id);
         go.transform.SetParent(_parent, worldPositionStays: true);
@@ -228,8 +258,13 @@ public sealed class CreatureView : System.IDisposable
     /// </summary>
     public void Clear()
     {
+        foreach (BirdAnimationView bird in _birds.Values) bird.Dispose();
+        foreach (CreatureAnimationView animation in _animated.Values)
+            animation.Dispose();
         foreach (KeyValuePair<ulong, Transform> kv in _bodies)
-            if (kv.Value != null) Object.Destroy(kv.Value.gameObject);
+            if (!_animated.ContainsKey(kv.Key) && !_birds.ContainsKey(kv.Key) && kv.Value != null) Object.Destroy(kv.Value.gameObject);
+        _birds.Clear();
+        _animated.Clear();
         _bodies.Clear();
         foreach (KeyValuePair<int, Material> kv in _materials)
             if (kv.Value != null) Object.Destroy(kv.Value);

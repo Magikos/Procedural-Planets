@@ -10,22 +10,13 @@ public static class TreeGenerator
         var tree = new GeneratedTree();
         TreeSkeleton sk = TreeStructureGenerator.Generate(def, seed);
 
-        // LOD0/LOD1 differ mainly in bark ring sides; foliage stays full (leaves thinned by LOD read as bare
-        // trunks). The far billboard is the scatter impostor, baked from LOD0, so the mesh LODs never need to
-        // shed the canopy — the impostor is the perf tier.
-        tree.BarkLods = new[] { TreeTubeMesher.Build(sk, 0), TreeTubeMesher.Build(sk, 2) };
+        // Keep the standing silhouette until the scatter impostor takes over. Reducing bark sides changes
+        // trunk shading; rebuilding conifer tiers moves the foliage instead of simplifying the same surface.
+        tree.BarkLods = new[] { TreeTubeMesher.Build(sk, 0) };
         tree.FoliageLods = def.FoliageStyle == FoliageStyle.ConiferCone
-            ? new[]
-            {
-                TreeLeafMesher.BuildConiferCone(sk, seed, 1f, def.ConeTiers, 11, def.ConeBaseFrac, def.ConeRadiusFrac, def.ConeDroop),
-                // 3/4 tiers and 9 spokes, not 2/3 and 8. The old step dropped 52% of the cone (measured
-                // 1188 -> 576 verts on Taiga Pine) with scale left at 1, so the canopy went see-through at
-                // the LOD0->LOD1 boundary — a step no crossfade that short could hide. Unlike leaf cards, a
-                // cone cannot be compensated by scaling: widening it does not refill the gaps between spokes,
-                // so the only honest fix is to decimate less.
-                TreeLeafMesher.BuildConiferCone(sk, seed, 1f, Mathf.Max(4, def.ConeTiers * 3 / 4), 9, def.ConeBaseFrac, def.ConeRadiusFrac, def.ConeDroop),
-            }
-            : new[] { TreeLeafMesher.Build(sk, 1f, 1), TreeLeafMesher.Build(sk, 1.15f, 1) };
+            ? new[] { TreeLeafMesher.BuildConiferCone(sk, seed, 1f, def.ConeTiers, 11,
+                def.ConeBaseFrac, def.ConeRadiusFrac, def.ConeDroop) }
+            : new[] { TreeLeafMesher.Build(sk, 1f, 1) };
 
         // Accent tiers (blooms) build into their own mesh so they can carry a second material. Left null when
         // no tier asked for it, which is every species today except the flowering plants.

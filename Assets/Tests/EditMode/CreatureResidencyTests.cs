@@ -866,5 +866,116 @@ namespace ProceduralPlanets.Tests
                 Assert.AreEqual(1f, previous, 1e-3f, $"{kind} never reached full strength");
             }
         }
+
+        static void DestroySwarmTestRoot(GameObject root)
+        {
+            var materials = new HashSet<Material>();
+            foreach (ParticleSystemRenderer renderer in root.GetComponentsInChildren<ParticleSystemRenderer>())
+                materials.Add(renderer.sharedMaterial);
+            UnityEngine.Object.DestroyImmediate(root);
+            foreach (Material material in materials) UnityEngine.Object.DestroyImmediate(material);
+        }
+        sealed class InsectTestSurface : IPlanetSurfaceSampler
+        {
+            public bool TryGetSurfaceRadius(Vector3 direction, out float radius)
+            { radius = 5000f; return true; }
+        }
+
+        [Test]
+        public void ExistingFliesEscapeWithoutAddingABurst()
+        {
+            var root = new GameObject("Fly escape test");
+            try
+            {
+                const long now = 1788650000;
+                Vector3 corpsePosition = Vector3.up * 5000f;
+                var corpses = new CreatureCorpseStore();
+                corpses.Record(0, corpsePosition, Quaternion.identity, now - 180);
+                var threats = new ThreatRegistry();
+                var swarms = new AmbientSwarms(root.transform, profiles: new[] { Profile(AmbientSwarmKind.Flies) });
+                swarms.Configure(new InsectTestSurface(), null, threats, Vector3.zero, 5000f, 4900f);
+                swarms.Tick(corpsePosition, -1f, corpses, now);
+                ParticleSystem ps = root.GetComponentInChildren<ParticleSystem>();
+                Assert.IsNotNull(ps);
+                ps.Emit(new ParticleSystem.EmitParams { position = Vector3.zero, velocity = Vector3.zero }, 1);
+                int before = ps.particleCount;
+                threats.Report(ThreatRegistry.LocalPlayer, corpsePosition + Vector3.right * 2f, CreatureFaction.Player);
+                swarms.Tick(corpsePosition, -1f, corpses, now);
+                Assert.AreEqual(before, ps.particleCount, "escape must move the existing flies");
+                var particles = new ParticleSystem.Particle[ps.main.maxParticles];
+                int count = ps.GetParticles(particles);
+                Assert.Greater(count, 0);
+                Vector3 velocity = ps.transform.TransformDirection(particles[0].velocity);
+                Assert.Less(velocity.x, 0f, "the threat is to the right");
+                Assert.Greater(velocity.y, 0f, "flies must lift off");
+                Assert.IsFalse(ps.velocityOverLifetime.enabled, "orbit must not fight escape");
+            }
+            finally
+            {
+                DestroySwarmTestRoot(root);
+            }
+        }
+
+        [Test]
+        public void BirdsUseAnimatedModelsAndReleaseThemOnClear()
+        {
+            var root = new GameObject("Bird emission test");
+            try
+            {
+                AmbientSwarmProfile profile = Profile(AmbientSwarmKind.Birds);
+                using var swarms = new AmbientSwarms(root.transform, profiles: new[] { profile });
+                swarms.Configure(new InsectTestSurface(), null, null, Vector3.zero, 5000f, 4900f);
+                swarms.Tick(Vector3.up * 5002f, 1f, null, 0);
+                Assert.IsNull(root.GetComponentInChildren<ParticleSystem>());
+                Assert.That(root.GetComponentsInChildren<SkinnedMeshRenderer>().Length, Is.InRange(2, 48));
+                var graphs = new System.Collections.Generic.List<UnityEngine.Playables.PlayableGraph>();
+                foreach (var animator in root.GetComponentsInChildren<Animator>()) graphs.Add(animator.playableGraph);
+                swarms.Configure(null, null, null, Vector3.zero, 0f, 0f);
+                foreach (var graph in graphs) Assert.IsFalse(graph.IsValid(), "reconfiguration must release animation graphs");
+            }
+            finally
+            {
+                DestroySwarmTestRoot(root);
+            }
+        }
+
+        [Test]
+        public void FireflyPatchesStaySeparatedAndCappedAndStopEmittingAtDawn()
+        {
+            var root = new GameObject("Firefly spacing test");
+            try
+            {
+                var swarms = new AmbientSwarms(root.transform, profiles: new[] { Profile(AmbientSwarmKind.Fireflies) });
+                swarms.Configure(new InsectTestSurface(), null, null, Vector3.zero, 5000f, 4900f);
+                Vector3 observer = Vector3.up * 5002f;
+                for (int step = 0; step < 60; step++)
+                {
+                    swarms.Tick(observer, -1f, null, 0);
+                    foreach (ParticleSystem ps in root.GetComponentsInChildren<ParticleSystem>())
+                        ps.Simulate(0.5f, false, false);
+                }
+                ParticleSystem[] systems = root.GetComponentsInChildren<ParticleSystem>();
+                Assert.Greater(systems.Length, 1);
+                for (int i = 0; i < systems.Length; i++)
+                {
+                    Assert.LessOrEqual(systems[i].particleCount, 3, "the cap must hold after repeated emission");
+                    for (int j = 0; j < i; j++)
+                        Assert.GreaterOrEqual(CreatureTerritory.SurfaceDistance(Vector3.zero,
+                            systems[i].transform.position, systems[j].transform.position), 8f - 0.001f);
+                }
+                foreach (ParticleSystem ps in systems) ps.Emit(1);
+                swarms.Tick(observer, 1f, null, 0);
+                foreach (ParticleSystem ps in systems)
+                {
+                    Assert.IsFalse(ps.isEmitting, "dawn must stop new births");
+                    ps.Simulate(20f, false, false);
+                    Assert.AreEqual(0, ps.particleCount, "the existing insects must dissipate");
+                }
+            }
+            finally
+            {
+                DestroySwarmTestRoot(root);
+            }
+        }
     }
 }

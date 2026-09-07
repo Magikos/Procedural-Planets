@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Ocean Coral Shallow Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Ocean Coral Shallow
+  MeshOnlyVertexLimit: 400
   SlotId: 70
   SpacingMeters: 3.5
   Biome: 0

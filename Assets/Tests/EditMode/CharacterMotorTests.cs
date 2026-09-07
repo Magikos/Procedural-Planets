@@ -144,6 +144,28 @@ namespace ProceduralPlanets.Tests
 
         // --- SurfaceCharacterController driven by fakes (no planet) ---
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Driver_WithoutWaterFloor_FallsToSubmergedBed(bool raycastFallback)
+        {
+            const float bed = 4990f;
+            var analytic = new PlanetSurfaceGrounding(new FixedRadiusSampler(bed), Vector3.zero);
+            IGroundingProvider grounding = raycastFallback
+                ? new PlanetRaycastGrounding(null, Vector3.zero, default, analytic)
+                : analytic;
+            var seed = new CharacterPose(Vector3.up * 5042f, Up, Fwd);
+            var driver = new SurfaceCharacterController(
+                new RadialGravityProvider(Vector3.zero, 9.81f), grounding, 1f, seed);
+
+            driver.Tick(Vector2.zero, Fwd, 0f, 0.1f);
+            Assert.Less(driver.Pose.Position.y, seed.Position.y);
+            Assert.IsFalse(driver.Grounded);
+            for (int i = 0; i < 100; i++)
+                driver.Tick(Vector2.zero, Fwd, 0f, 0.1f);
+            Assert.AreEqual(bed + 1f, driver.Pose.Position.y, 0.01f);
+            Assert.IsTrue(driver.Grounded);
+        }
+
         static SurfaceCharacterController FlatDriver(float foot)
         {
             var seed = new CharacterPose(new Vector3(0, foot, 0), Up, Fwd);

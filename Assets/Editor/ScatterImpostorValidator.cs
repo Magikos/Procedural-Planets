@@ -15,7 +15,6 @@ public static class ScatterImpostorValidator
     // Deliberately NOT the shader's _Cutoff. The card clips above what the mip chain preserves so bilinear
     // spread between rescaled texels cannot fatten the silhouette at range; see CardAlphaCutoff.
     const float PreserveReference = ScatterImpostorFactory.CoveragePreserveReference;
-    const int ExpectedGridN = 8;       // ScatterImpostorFactory.OctGridN
 
     [MenuItem("Tools/ProceduralPlanets/Impostors/Validate", false, 30)]
     public static void Validate()
@@ -58,11 +57,18 @@ public static class ScatterImpostorValidator
                 if (AssetImporter.GetAtPath(path) is not TextureImporter imp) continue;
                 checked_++;
                 string file = Path.GetFileName(path);
+                if (!imp.sRGBTexture)
+                    problems.Add($"{file}: sRGB decoding disabled for a gamma-encoded bake (changes billboard lighting).");
 
                 // Unmipped cards minify ~16x at the tree line and point-sample against a hard alpha clip,
                 // which is the speckled horizon. Preserve-coverage stops the silhouette dissolving as the
                 // mip chain averages its alpha down past the cutoff.
                 if (!imp.mipmapEnabled) problems.Add($"{file}: mipmaps disabled (causes a speckled tree line).");
+                else if (imp.userData == "ScatterSurfaceData-v1")
+                {
+                    if (imp.mipMapsPreserveCoverage || imp.alphaIsTransparency)
+                        problems.Add($"{file}: surface data must not use coverage rescaling or transparency processing.");
+                }
                 else if (!imp.mipMapsPreserveCoverage) problems.Add($"{file}: mipMapsPreserveCoverage off (silhouette thins away in the distance).");
                 else if (Mathf.Abs(imp.alphaTestReferenceValue - PreserveReference) > 0.01f)
                     problems.Add($"{file}: alphaTestReferenceValue {imp.alphaTestReferenceValue:0.00} does not match the preserve reference {PreserveReference:0.00}.");
@@ -74,8 +80,8 @@ public static class ScatterImpostorValidator
                     notes.Add($"{file}: mipmapFilter {imp.mipmapFilter}, expected Kaiser (box averaging softens the card into a blob at the swap).");
 
                 var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                if (tex != null && tex.width % ExpectedGridN != 0)
-                    problems.Add($"{file}: {tex.width}px is not divisible by the {ExpectedGridN}x{ExpectedGridN} cell grid.");
+                if (tex != null && tex.width != tex.height)
+                    problems.Add($"{file}: the view atlas must be square.");
             }
         }
         notes.Add($"{checked_} atlas texture(s) checked.");
@@ -94,6 +100,11 @@ public static class ScatterImpostorValidator
             // An empty hash can never match at load, so the entry looks like coverage but provides none.
             if (string.IsNullOrEmpty(e.ShapeHash)) problems.Add($"Manifest '{e.Key}' has an empty hash; it can never match and will bake at load.");
             if (e.Atlas == null) problems.Add($"Manifest '{e.Key}' has no atlas texture.");
+            if (e.HasSurfaceData && (e.Normal == null || e.GridN < 2))
+                problems.Add($"Manifest '{e.Key}' lacks its surface texture or view grid.");
+            if (e.Atlas != null && e.GridN > 0 && e.Atlas.width % e.GridN != 0)
+                problems.Add($"Manifest '{e.Key}' has a view grid that does not divide its atlas.");
+
             if (!keys.Add(e.Key)) problems.Add($"Manifest has a duplicate key '{e.Key}'; the first wins and the rest are dead.");
         }
         notes.Add($"{manifest.Entries.Length} manifest entry(ies) checked.");

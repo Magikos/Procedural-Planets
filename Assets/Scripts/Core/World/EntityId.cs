@@ -46,6 +46,9 @@ public readonly struct EntityId : IEquatable<EntityId>, IComparable<EntityId>
     /// </summary>
     public const ushort CorpseOwner = 0xFFFE;
 
+    /// <summary>Reserved for the world's transient aquatic population; never mixed with land slots or carcasses.</summary>
+    public const ushort AquaticOwner = 0xFFFD;
+
     public readonly ulong Value;
 
     public EntityId(ulong value) => Value = value;

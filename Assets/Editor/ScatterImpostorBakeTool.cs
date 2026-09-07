@@ -73,6 +73,8 @@ public static class ScatterImpostorBakeTool
                 ConfigureAtlasImport(atlasPath);
 
                 proto.BakedImpostorAtlas = AssetDatabase.LoadAssetAtPath<Texture2D>(atlasPath);
+                proto.BakedImpostorGridN = card.GridN;
+                proto.BakedImpostorHasSurfaceData = card.HasSurfaceData;
 
                 if (card.NormalTexture != null)
                 {
@@ -80,7 +82,7 @@ public static class ScatterImpostorBakeTool
                     File.WriteAllBytes(normalPath, ImageConversion.EncodeToPNG(card.NormalTexture));
                     Object.DestroyImmediate(card.NormalTexture);
                     AssetDatabase.ImportAsset(normalPath, ImportAssetOptions.ForceUpdate);
-                    ConfigureAtlasImport(normalPath, isNormal: true);
+                    ConfigureAtlasImport(normalPath, card.HasSurfaceData);
                     proto.BakedImpostorNormal = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
                 }
                 EditorUtility.SetDirty(proto);
@@ -111,7 +113,7 @@ public static class ScatterImpostorBakeTool
                 {
                     string path = AssetDatabase.GUIDToAssetPath(guids[i]);
                     EditorUtility.DisplayProgressBar("Reimporting atlases", path, (float)i / guids.Length);
-                    ConfigureAtlasImport(path, isNormal: path.EndsWith("_n.png"));
+                    ConfigureAtlasImport(path);
                     count++;
                 }
             }
@@ -162,13 +164,16 @@ public static class ScatterImpostorBakeTool
 
     // internal: the generated-prop bake tool writes atlases too and must import them identically. Two copies
     // of these settings is exactly how the mip fix would get half-applied again.
-    internal static void ConfigureAtlasImport(string atlasPath, bool isNormal = false)
+    internal static void ConfigureAtlasImport(string atlasPath, bool? hasSurfaceData = null)
     {
         if (AssetImporter.GetAtPath(atlasPath) is not TextureImporter imp) return;
+        bool surfaceData = hasSurfaceData ?? imp.userData == "ScatterSurfaceData-v1";
+        imp.userData = surfaceData ? "ScatterSurfaceData-v1" : "";
         imp.textureType = TextureImporterType.Default;
         imp.alphaSource = TextureImporterAlphaSource.FromInput;
-        imp.alphaIsTransparency = true;
-        imp.sRGBTexture = !isNormal; // normals are linear data, not colour
+        imp.alphaIsTransparency = !surfaceData;
+        // Both bake targets write sRGB-encoded PNGs. Decode both when sampling, including the normal data.
+        imp.sRGBTexture = true;
         // Mips are REQUIRED here, not optional. A tree-line impostor covers a few screen pixels while its atlas
         // cell is 128px, so an unmipped card is minified ~16x and point-samples near-randomly; against the
         // shader's hard clip(card.a - _Cutoff) that noise becomes binary keep/discard, which is the speckled
@@ -177,7 +182,7 @@ public static class ScatterImpostorBakeTool
         imp.mipmapEnabled = true;
         // Averaging alpha down a mip chain thins a silhouette until it falls under the cutoff and dissolves.
         // Preserve-coverage rescales each mip's alpha to hold the same clipped area, at this shader's cutoff.
-        imp.mipMapsPreserveCoverage = true;
+        imp.mipMapsPreserveCoverage = !surfaceData;
         imp.alphaTestReferenceValue = ScatterImpostorFactory.CoveragePreserveReference;
         // Box averaging is what makes a card read as a smooth blob next to a mesh whose canopy is still
         // ragged at the same size. Kaiser keeps more of the high frequency, and measured across all 61 cards

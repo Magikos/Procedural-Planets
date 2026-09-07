@@ -66,14 +66,15 @@ public static class CreatureDebugCommands
         var sb = new System.Text.StringBuilder();
         sb.Append("sun ").Append(localSun.ToString("F2")).Append(' ').Append(DescribeSun(localSun))
           .Append("   biome ").Append(knowBiome ? biome.ToString() : "UNKNOWN")
-          .Append("   swarms ").Append(swarms.Enabled ? "on" : "OFF (creature.swarms true)");
+          .Append("   swarms ").Append(swarms.Enabled ? "on" : "OFF (creature.swarms true)")
+          .Append("   nearby flowers ").Append(swarms.NearbyFlowerCount);
 
         foreach (AmbientSwarmProfile p in swarms.Profiles)
         {
             int live = swarms.CountLive(p.Kind);
             sb.Append("\n  ").Append(p.DisplayName.PadRight(12))
               .Append(" live=").Append(live)
-              .Append(" particles=").Append(swarms.CountParticles(p.Kind));
+              .Append(" visible=").Append(swarms.CountParticles(p.Kind));
 
             if (swarms.TryNearest(p.Kind, here, out float metres, out float height))
             {
@@ -98,7 +99,9 @@ public static class CreatureDebugCommands
                 ? $"too bright - wants sun below {p.MaxLocalSun:F2}"
                 : $"too dark - wants sun above {p.MinLocalSun:F2}";
 
-        int want = Mathf.RoundToInt(p.SwarmCount * activity);
+        int want = p.CountAt(localSun);
+        if (p.Kind == AmbientSwarmKind.Bees && live == 0)
+            return "needs an available nearby flower in the live scatter cache";
         if (knowBiome && !p.LivesIn(biome))
             return $"not a {biome} species - wants {string.Join("/", p.Biomes)}";
         if (live < want) return $"wants {want} here, still settling";

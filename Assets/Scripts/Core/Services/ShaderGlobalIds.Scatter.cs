@@ -1,5 +1,8 @@
 public static partial class ShaderGlobalIds
 {
+    public const string WindFadeEnd = "_WindFadeEnd";
+    public const string ImpostorBakeDistance = "_ImpostorBakeDistance";
+    public const string ImpostorBakeSize = "_ImpostorBakeSize";
     // Set to 1 by ScatterImpostorBaker while it renders the octahedral atlas; the scatter/foliage mesh
     // shaders then output flat unlit albedo (no directional sun/shadow) so the impostor card can be
     // relit at runtime instead of freezing one sun angle into the bake.

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 543245edd60d9cf4c940dd6f81f20347, type: 3}
+  m_Name: WolfVisuals
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::CreatureVisualSettings
+  MalePrefab: {fileID: 7206041638113789538, guid: b387c560f9bf6d54a8e0ffd7f941473e, type: 3}
+  FemalePrefab: {fileID: 7206041638113789538, guid: b387c560f9bf6d54a8e0ffd7f941473e, type: 3}
+  Idle: {fileID: 2219115924650817687, guid: 85f195117dfa07046bd02a403f6a46c8, type: 3}
+  Walk: {fileID: -885065559211878170, guid: 85f195117dfa07046bd02a403f6a46c8, type: 3}
+  Run: {fileID: 8767879777178937521, guid: 85f195117dfa07046bd02a403f6a46c8, type: 3}
+  Eat: {fileID: 7400000, guid: 8eae961d62ba8994a8520c414f9efd58, type: 2}
+  Attack: {fileID: 1754276390031137892, guid: 85f195117dfa07046bd02a403f6a46c8, type: 3}
+  Death: {fileID: -3122770940472085880, guid: 85f195117dfa07046bd02a403f6a46c8, type: 3}
+  Rest: {fileID: 7400000, guid: 8ba598ed05f22424287949bd6e31b425, type: 2}
+  Sleep: {fileID: 7400000, guid: 532e9258a5e713047b2ff34bbad106a3, type: 2}
+  Drink: {fileID: 7400000, guid: 8eae961d62ba8994a8520c414f9efd58, type: 2}
+  AttackHitNormalized: 0.12
+  ModelHeightMeters: 1
+  WalkMetersPerSecond: 1
+  RunMetersPerSecond: 4

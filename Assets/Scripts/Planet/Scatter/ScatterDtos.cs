@@ -39,8 +39,35 @@ public sealed record ScatterPrototypeDto(
     string SpeciesKey = null,
     float Clumpiness = 0f,
     float PatchScaleMeters = 250f,
-    float ShadePreference = 0f)
+    float ShadePreference = 0f,
+    int BakedImpostorGridN = 0,
+    bool BakedImpostorHasSurfaceData = false)
 {
+    // Sparse props can retain their existing geometry instead of losing branches in an atlas.
+    public bool MeshOnly { get; init; }
+    public int MeshOnlyVertexLimit { get; init; }
+
+    // A reviewed vertex budget protects small, sparse shapes without extending expensive variants.
+    // Keep the original final range and mesh references; repeated application must not multiply the range.
+    public ScatterPrototypeDto ApplyMeshOnlyPolicy()
+    {
+        if (MeshOnly || MeshOnlyVertexLimit <= 0 || !CanRender) return this;
+        int vertices = 0;
+        foreach (var part in Parts)
+        {
+            if (!part.CanRender) continue;
+            if (part.LodMeshes.Length != 1 || part.LodEndDistances.Length != 1) return this;
+            vertices += part.LodMeshes[0].vertexCount;
+            if (vertices > MeshOnlyVertexLimit) return this;
+        }
+        if (vertices == 0) return this;
+        float end = HasImpostor ? ImpostorEndDistance : MaxCullDistance;
+        var parts = new ScatterPartDto[Parts.Length];
+        for (int i = 0; i < parts.Length; i++)
+            parts[i] = Parts[i].CanRender ? Parts[i] with { LodEndDistances = new[] { end } } : Parts[i];
+        return this with { MeshOnly = true, Parts = parts, BakedImpostorAtlas = null, BakedImpostorNormal = null };
+    }
+
     // Which grove field this prototype draws from. Keyed on the SPECIES (SpeciesKey) rather than the
     // prototype, so the per-instance variants of one species share one field — otherwise a grove of variant 0
     // lands in a clearing of variant 1 and the whole effect averages back out to uniform.
@@ -69,7 +96,8 @@ public sealed record ScatterPrototypeDto(
         p.HasMinAltitude, p.MinAltitudeMeters, p.HasMaxAltitude, p.MaxAltitudeMeters,
         p.MinWaterClearanceMeters, p.OnWater, p.ScaleRange, p.RandomYaw, p.Interaction,
         BuildParts(p), p.BakedImpostorAtlas, p.BakedImpostorNormal, p.StumpMesh, p.StumpMaterial,
-        null, p.Clumpiness, p.PatchScaleMeters, p.ShadePreference);
+        null, p.Clumpiness, p.PatchScaleMeters, p.ShadePreference, p.BakedImpostorGridN, p.BakedImpostorHasSurfaceData)
+        { MeshOnlyVertexLimit = Mathf.Max(0, p.MeshOnlyVertexLimit) };
 
     static ScatterPartDto[] BuildParts(ScatterPrototype p)
     {
@@ -177,7 +205,17 @@ public sealed record ScatterPrototypeDto(
     // MeshHandoverPixels instead of smearing out to a 6 px alpha-cutout blur. That is cheaper than the mesh it
     // replaces, so the short-range exclusion this rule used to make was costing draws, not saving them.
     bool FarReaching => MaxCullDistance >= ImpostorMinMeshCull;
-    public bool HasImpostor => CanRender && (FarReaching || MeshHandoverDistance < MaxCullDistance);
+    public bool HasImpostor
+    {
+        get
+        {
+            if (!CanRender || MeshOnly) return false;
+            Vector3 size = Lod0Bounds.size;
+            // Hemi-oct cells tilt flat water plants toward the viewer. Their mesh preserves the grazing silhouette.
+            if (size.y < Mathf.Max(size.x, size.z) * 0.1f) return false;
+            return FarReaching || MeshHandoverDistance < MaxCullDistance;
+        }
+    }
 
     // Where a prop framed by these LOD0 meshes falls to MeshHandoverPixels tall. Public so the generated-prop
     // injections can lay their LOD boundaries inside the band that actually draws: a tier authored past this
@@ -203,7 +241,7 @@ public sealed record ScatterPrototypeDto(
 
     // Largest dimension of the union of the drawable parts' LOD0 bounds - what decides the prop's height on
     // screen, and the same measure ScatterImpostorBaker frames its card by.
-    public float BoundsSizeMeters
+    Bounds Lod0Bounds
     {
         get
         {
@@ -215,9 +253,16 @@ public sealed record ScatterPrototypeDto(
                 Bounds pb = part.LodMeshes[0].bounds;
                 if (first) { b = pb; first = false; } else b.Encapsulate(pb);
             }
-            if (first) return 0f;
-            Vector3 v = b.size;
-            return Mathf.Max(v.y, Mathf.Max(v.x, v.z));
+            return b;
+        }
+    }
+
+    public float BoundsSizeMeters
+    {
+        get
+        {
+            Vector3 size = Lod0Bounds.size;
+            return Mathf.Max(size.y, Mathf.Max(size.x, size.z));
         }
     }
 

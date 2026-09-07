@@ -185,6 +185,15 @@ public class CloudRenderPass : ScriptableRenderPass
             if (resourceData.cameraDepthTexture.IsValid())
                 builder.UseTexture(resourceData.cameraDepthTexture, AccessFlags.Read);
 
+            // The water surface writes no depth, so the march needs _WaterVolumeData to know where a lake
+            // stops it, and a global is only bound in a pass that declares it.
+            //
+            // Not UseGlobalTexture(_WaterVolumeData): that THROWS in any frame the water prepass did not
+            // run - before the planet exists, and on preview and reflection cameras - because there is no
+            // handle registered to depend on. This declares whatever globals the frame does have, and the
+            // shader's own fallback covers the frames where water is not one of them.
+            builder.UseAllGlobalTextures(true);
+
             builder.AllowPassCulling(false);
 
             builder.SetRenderFunc(static (PassData data, RasterGraphContext ctx) =>

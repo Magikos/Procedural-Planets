@@ -11,6 +11,7 @@ Shader "Scatter/FoliageLit"
     // space dither fades instances near the cull distance, matching Scatter.shader.
     Properties
     {
+        [HideInInspector] [NonModifiableTextureData] _ScatterDitherNoise ("LOD Blue Noise", 2D) = "gray" {}
         _BaseMap ("Leaf Albedo (RGB) Alpha (A)", 2D) = "white" {}
         _TrunkMap ("Trunk / Bark Albedo", 2D) = "white" {}
         _TrunkTint ("Trunk / Core Tint", Color) = (1,1,1,1)
@@ -26,6 +27,7 @@ Shader "Scatter/FoliageLit"
         [Toggle] _ForceLeaf ("Force Leaf (moss / hanging beards)", Float) = 0
         _WindStrength ("Wind Strength (m)", Float) = 0
         _WindFreq ("Wind Frequency", Float) = 1.6
+        [HideInInspector] _WindFadeEnd ("Neutral Wind Distance", Float) = 0
         _FadeStart ("Fade Start Distance", Float) = 120
         _FadeEnd ("Fade End Distance", Float) = 150
 
@@ -50,7 +52,11 @@ Shader "Scatter/FoliageLit"
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Includes/PlanetWind.hlsl"
+        #include "Includes/VegetationMotion.hlsl"
         #include "Includes/GrassInteractors.hlsl" // same global _GrassInteractors buffer the grass uses
+        float _ImpostorAlbedoBake;
+        float _ImpostorNormalBake;
+        float3 _PlanetCenter;
 
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
@@ -67,6 +73,7 @@ Shader "Scatter/FoliageLit"
             float _LeafNormalUp;
             float _WindStrength;
             float _WindFreq;
+            float _WindFadeEnd;
             float _ForceLeaf;
             float _FadeStart;
             float _FadeEnd;
@@ -115,22 +122,15 @@ Shader "Scatter/FoliageLit"
         #endif
         }
 
-        // Level centres, not level floors — see the note in Scatter.shader.
-        static const float _Bayer4x4[16] = {
-            0.5/16, 8.5/16, 2.5/16, 10.5/16,
-            12.5/16, 4.5/16, 14.5/16, 6.5/16,
-            3.5/16, 11.5/16, 1.5/16, 9.5/16,
-            15.5/16, 7.5/16, 13.5/16, 5.5/16
-        };
+        #include "Includes/ScatterDither.hlsl"
 
-        void DistanceDither(float3 positionWS, float4 screenPos, float appear)
+        void DistanceDither(float4 screenPos, float appear)
         {
-            float dist = distance(positionWS, _WorldSpaceCameraPos);
+            float dist = distance(GetObjectToWorldMatrix()._m03_m13_m23, _WorldSpaceCameraPos);
             float fade = saturate((dist - _FadeStart) / max(1e-3, _FadeEnd - _FadeStart));
             fade = max(fade, 1.0 - appear);
-            float2 sp = (screenPos.xy / max(screenPos.w, 1e-4)) * _ScreenParams.xy;
-            int2 pix = int2(fmod(sp, 4.0));
-            clip(_Bayer4x4[pix.y * 4 + pix.x] - fade);
+            clip(ScatterDitherThreshold(screenPos) > fade ? 1.0 : -1.0);
+
         }
 
         // Blue vertex channel: ~0 on the trunk, ~1 on the leaves. Remap to a 0..1 leaf mask.
@@ -181,11 +181,11 @@ Shader "Scatter/FoliageLit"
         // Synty-style leaf colour variation: a large-frequency noise pushes whole regions warm/cool, a
         // small-frequency noise varies per-leaf brightness. Applied to leaves only (via leafMask outside),
         // so a canopy reads as many subtly different leaves instead of one flat colour.
-        half3 LeafColourVariation(half3 albedo, float3 positionWS)
+        half3 LeafColourVariation(half3 albedo, float3 positionOS)
         {
             if (_ColorNoiseStrength <= 0.001) return albedo;
-            float nL = FoliageNoise(positionWS * _ColorNoiseLargeFreq);
-            float nS = FoliageNoise(positionWS * _ColorNoiseSmallFreq);
+            float nL = FoliageNoise(positionOS * _ColorNoiseLargeFreq);
+            float nS = FoliageNoise(positionOS * _ColorNoiseSmallFreq);
             half3 tint = lerp(_ColorNoiseCool.rgb, _ColorNoiseWarm.rgb, nL); // warm/cool patches
             tint *= lerp(0.85, 1.15, nS);                                    // per-leaf brightness
             return lerp(albedo, albedo * tint, _ColorNoiseStrength);
@@ -195,13 +195,17 @@ Shader "Scatter/FoliageLit"
         // global interactor buffer the grass reads. _InteractiveBend is the plant's height in metres and
         // doubles as the on/off gate: 0 (trees, rocks) => rigid, no buffer read. Roots stay planted and
         // the bend grows toward the top (height fraction squared), so the plant folds instead of sliding.
-        float3 ApplyInteractorBend(float3 positionWS)
+        float3 ApplyInteractorBend(float3 positionWS, bool previous)
         {
             if (_InteractiveBend <= 1e-3) return positionWS;
-            float3 rootWS = mul(unity_ObjectToWorld, float4(0.0, 0.0, 0.0, 1.0)).xyz; // instance origin = base
-            float3 upWS = normalize(mul((float3x3)unity_ObjectToWorld, float3(0.0, 1.0, 0.0))); // plant up
+            float4x4 objectMatrix = GetObjectToWorldMatrix();
+            #if !defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+                if (previous) objectMatrix = UNITY_PREV_MATRIX_M;
+            #endif
+            float3 rootWS = objectMatrix._m03_m13_m23;
+            float3 upWS = normalize(mul((float3x3)objectMatrix, float3(0, 1, 0)));
             float heightFrac = saturate(dot(positionWS - rootWS, upWS) / _InteractiveBend);
-            float3 bend = SampleGrassInteractorBend(rootWS, upWS, _InteractiveBend * 0.6);
+            float3 bend = SampleGrassInteractorBend(rootWS, upWS, _InteractiveBend * 0.6, previous);
             return positionWS + bend * (heightFrac * heightFrac);
         }
 
@@ -213,16 +217,31 @@ Shader "Scatter/FoliageLit"
         //   branch  - medium per-branch sway (low spatial freq),
         //   flutter - fast small per-leaf shimmer (high spatial freq), thrown cross-wind for liveliness.
         // Spatial phases decorrelate neighbours so nothing sways in unison.
-        float3 ApplyWind(float3 positionWS, float leafMask)
+        float3 ApplyWind(float3 positionWS, float leafMask, bool previous)
         {
-            positionWS = ApplyInteractorBend(positionWS); // push before wind; both add on the tangent plane
+            if (_ImpostorAlbedoBake > 0.5 || _ImpostorNormalBake > 0.5) return positionWS;
+            previous = HasVegetationHistory(previous);
+            positionWS = ApplyInteractorBend(positionWS, previous); // push before wind; both add on the tangent plane
             float flex = leafMask * _WindStrength;
-            float strength = saturate(max(_WindStrength01, _WindSpeedMps * 0.06));
+            if (_WindFadeEnd > 0.0)
+            {
+                float3 cameraPosition = previous ? _VegetationPreviousCamera : _WorldSpaceCameraPos;
+                float dist = distance(GetObjectToWorldMatrix()._m03_m13_m23, cameraPosition);
+                flex *= 1.0 - smoothstep(_WindFadeEnd * 0.65, _WindFadeEnd, dist);
+            }
+            float strength = previous ? saturate(max(_VegetationPreviousTime.z, _VegetationPreviousWind.w * 0.06))
+                : saturate(max(_WindStrength01, _WindSpeedMps * 0.06));
             if (strength <= 1e-4 || flex <= 1e-5) return positionWS;
 
-            float3 dir = dot(_WindDirection, _WindDirection) > 1e-6 ? normalize(_WindDirection) : float3(1.0, 0.0, 0.0);
-            float3 side = normalize(cross(dir, float3(0.0, 1.0, 0.0)) + float3(1e-4, 0.0, 0.0));
-            float t = _Time.y * _WindFreq;
+            float3 radial = positionWS - _PlanetCenter;
+            float3 up = dot(radial, radial) > 1e-6 ? normalize(radial) : float3(0, 1, 0);
+            float3 wind = previous ? _VegetationPreviousWind.xyz : _WindDirection;
+            float3 dir = wind - up * dot(wind, up);
+            float tangentLength = length(dir);
+            if (tangentLength <= 1e-5) return positionWS;
+            dir /= tangentLength;
+            float3 side = cross(dir, up);
+            float t = (previous ? _VegetationPreviousTime.x : _Time.y) * _WindFreq;
             float ph  = dot(positionWS, float3(1.6, 0.4, 1.35)); // branch-scale spatial phase
             float phF = dot(positionWS, float3(9.3, 7.1, 11.7)); // leaf-scale spatial phase
 
@@ -233,6 +252,10 @@ Shader "Scatter/FoliageLit"
             float along = (lean + branch) * flex * strength;
             float crossAmt = flutter * flex * strength;
             return positionWS + dir * along + side * crossAmt;
+        }
+        float3 ApplyWind(float3 positionWS, float leafMask)
+        {
+            return ApplyWind(positionWS, leafMask, false);
         }
         ENDHLSL
 
@@ -263,10 +286,9 @@ Shader "Scatter/FoliageLit"
             // light does not drive it, so lighting foliage via GetMainLight left it ambient-only and
             // dark. Light foliage from _SunParams too so trees match the world and track day/night.
             float3 _SunParams;
-            float3 _PlanetCenter;
             float _NightAmbientIntensity;
-            float _ImpostorAlbedoBake; // 1 while the impostor baker renders: output flat albedo, no sun
-            float _ImpostorNormalBake; // 1 during the baker's normal pass: output view-space normal, no sun
+            float _ImpostorBakeDistance;
+            float _ImpostorBakeSize;
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
             TEXTURE2D(_TrunkMap); SAMPLER(sampler_TrunkMap);
@@ -317,7 +339,7 @@ Shader "Scatter/FoliageLit"
             half4 frag(Varyings IN, FRONT_FACE_TYPE cullFace : FRONT_FACE_SEMANTIC) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
-                DistanceDither(IN.positionWS, IN.screenPos, IN.appear);
+                DistanceDither(IN.screenPos, IN.appear);
 
                 half4 leaf = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
                 half3 trunk = SAMPLE_TEXTURE2D(_TrunkMap, sampler_TrunkMap, IN.uv).rgb * _TrunkTint.rgb;
@@ -329,7 +351,7 @@ Shader "Scatter/FoliageLit"
                 half3 albedo = lerp(trunk, leaf.rgb * _SeasonColor.rgb, lm);
                 // Per-leaf/region colour variation (Synty-style noise) on the leaves only, so the canopy
                 // reads as many subtly different leaves instead of one flat green mass.
-                albedo = lerp(albedo, LeafColourVariation(albedo, IN.positionWS), lm);
+                albedo = lerp(albedo, LeafColourVariation(albedo, TransformWorldToObject(IN.positionWS)), lm);
                 // Synty baked leaf AO (vertex colour G): darken occluded interior leaves toward the
                 // bright exposed crown. Leaf-only (lm) so the trunk (G=0) is not blackened.
                 float leafAO = lerp(1.0 - _LeafAOIntensity, 1.0, IN.leafAO);
@@ -346,10 +368,15 @@ Shader "Scatter/FoliageLit"
                 // Canopy softening: blend leaf normals toward world up so a dense canopy lights like a soft
                 // volume (bright crown, gently lit sides/underside) instead of dark per-card faces. Trunk
                 // (lm=0) keeps its true normal.
-                nrmWS = normalize(lerp(nrmWS, float3(0.0, 1.0, 0.0), _LeafNormalUp * lm));
+                nrmWS = normalize(lerp(nrmWS, normalize(TransformObjectToWorldDir(float3(0, 1, 0))), _LeafNormalUp * lm));
                 // Impostor normal pass: output the view-space (canopy-softened) normal so the runtime relights
                 // the card with real structure instead of a synthesized hemisphere.
-                if (_ImpostorNormalBake > 0.5) return half4(mul((float3x3)UNITY_MATRIX_V, nrmWS) * 0.5 + 0.5, 1.0);
+                if (_ImpostorNormalBake > 0.5)
+                {
+                    float depth = (TransformWorldToView(IN.positionWS).z + _ImpostorBakeDistance)
+                        / max(_ImpostorBakeSize, 0.001) + 0.5;
+                    return half4(PackNormalOctQuadEncode(mul((float3x3)UNITY_MATRIX_V, nrmWS)) * 0.5 + 0.5, saturate(depth), lm);
+                }
 
                 // Planet sun lighting (matches the terrain/grass, which shade from _SunParams). Diffuse
                 // only: albedo * a day level that ramps with the leaf normal facing the sun, blended to
@@ -365,7 +392,7 @@ Shader "Scatter/FoliageLit"
                 // than only being cast off them. cloudShadow is the same shared factor terrain/grass/water
                 // use, so drifting clouds darken the trees along with the rest of the world.
                 float4 shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
-                half shadowAtten = MainLightRealtimeShadow(shadowCoord);
+                half shadowAtten = MainLightShadow(shadowCoord, IN.positionWS, half4(1, 1, 1, 1), half4(0, 0, 0, 0));
                 float cloudShadow = CloudShadowFactor(IN.positionWS, sunDir, localSun);
                 // Leaves take only a soft self-shadow (never below ~0.5) so a dense canopy stays lush at
                 // eye level instead of collapsing to black where it shadows its own sides; the trunk keeps
@@ -445,6 +472,8 @@ Shader "Scatter/FoliageLit"
                 float4 positionHCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 float leafMask : TEXCOORD1;
+                float4 screenPos : TEXCOORD2;
+                float appear : TEXCOORD3;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -452,6 +481,7 @@ Shader "Scatter/FoliageLit"
             {
                 SVaryings OUT = (SVaryings)0;
                 UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
                 float leafMask = max(LeafMask(IN.color.b), _ForceLeaf);
                 float3 posWS = ApplyWind(TransformObjectToWorld(IN.positionOS.xyz), leafMask);
                 float3 nrmWS = TransformObjectToWorldNormal(IN.normalOS);
@@ -462,6 +492,8 @@ Shader "Scatter/FoliageLit"
                     hcs.z = max(hcs.z, UNITY_NEAR_CLIP_VALUE);
                 #endif
                 OUT.positionHCS = hcs;
+                OUT.screenPos = ComputeScreenPos(hcs);
+                OUT.appear = ScatterAppear();
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.leafMask = leafMask;
                 return OUT;
@@ -469,6 +501,8 @@ Shader "Scatter/FoliageLit"
 
             half4 shadowFrag(SVaryings IN) : SV_Target
             {
+                UNITY_SETUP_INSTANCE_ID(IN);
+                DistanceDither(IN.screenPos, IN.appear);
                 float lm = IN.leafMask;
                 half a = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
                 clip(lerp(1.0, a, lm) - LeafCutoff(IN.uv, lm));
@@ -495,57 +529,25 @@ Shader "Scatter/FoliageLit"
             #pragma target 4.5
             #pragma instancing_options procedural:setup
 
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Includes/FoliageDepthMotion.hlsl"
+            ENDHLSL
+        }
 
-            TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
-
-            struct DNAttributes
-            {
-                float4 positionOS : POSITION;
-                float3 normalOS : NORMAL;
-                float4 color : COLOR;
-                float2 uv : TEXCOORD0;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-            };
-
-            struct DNVaryings
-            {
-                float4 positionHCS : SV_POSITION;
-                float3 positionWS : TEXCOORD0;
-                float3 normalWS : TEXCOORD1;
-                float2 uv : TEXCOORD2;
-                float leafMask : TEXCOORD3;
-                float4 screenPos : TEXCOORD4;
-                float appear : TEXCOORD5;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-            };
-
-            DNVaryings dnVert(DNAttributes IN)
-            {
-                DNVaryings OUT = (DNVaryings)0;
-                UNITY_SETUP_INSTANCE_ID(IN);
-                UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
-                float leafMask = max(LeafMask(IN.color.b), _ForceLeaf);
-                float3 wsp = ApplyWind(TransformObjectToWorld(IN.positionOS.xyz), leafMask);
-                OUT.positionWS = wsp;
-                OUT.positionHCS = TransformWorldToHClip(wsp);
-                OUT.normalWS = TransformObjectToWorldNormal(IN.normalOS);
-                OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
-                OUT.leafMask = leafMask;
-                OUT.screenPos = ComputeScreenPos(OUT.positionHCS);
-                OUT.appear = ScatterAppear();
-                return OUT;
-            }
-
-            half4 dnFrag(DNVaryings IN) : SV_Target
-            {
-                UNITY_SETUP_INSTANCE_ID(IN);
-                DistanceDither(IN.positionWS, IN.screenPos, IN.appear);
-                half4 leaf = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
-                float lm = IN.leafMask;
-                clip(lerp(1.0, leaf.a, lm) - LeafCutoff(IN.uv, lm));
-                return half4(normalize(IN.normalWS), 0.0);
-            }
+        Pass
+        {
+            Name "MotionVectors"
+            Tags { "LightMode"="MotionVectors" }
+            Cull Off
+            ZWrite On
+            ColorMask RG
+            HLSLPROGRAM
+            #pragma target 4.5
+            #pragma vertex dnVert
+            #pragma fragment dnFrag
+            #pragma multi_compile_instancing
+            #pragma instancing_options procedural:setup
+            #define FOLIAGE_MOTION_PASS
+            #include "Includes/FoliageDepthMotion.hlsl"
             ENDHLSL
         }
     }

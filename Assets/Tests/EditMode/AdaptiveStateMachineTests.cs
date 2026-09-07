@@ -46,6 +46,38 @@ namespace ProceduralPlanets.Tests
             ResolveTo = (int _, in Ctx _) => Run.StateId,
         };
 
+        [Test]
+        public void StopReleasesOnceAndPreventsFurtherUpdates()
+        {
+            var machine = Machine();
+            var context = new Ctx { WantExitTo = global::StateId.None };
+            machine.Start(ref context, Idle.StateId);
+            machine.Stop(ref context);
+            machine.Stop(ref context);
+            machine.Tick(ref context);
+            Assert.AreEqual(1, context.ExitCount);
+            Assert.AreEqual(0, context.UpdateCount);
+            Assert.AreEqual(global::StateId.None, machine.CurrentId);
+            machine.Start(ref context, Run.StateId);
+            machine.Tick(ref context);
+            Assert.AreEqual(2, context.EnterCount);
+            Assert.AreEqual(1, context.UpdateCount);
+        }
+
+        [Test]
+        public void RestartReleasesPreviousStateButInvalidRestartLeavesItRunning()
+        {
+            var machine = Machine();
+            var context = new Ctx { WantExitTo = global::StateId.None };
+            machine.Start(ref context, Idle.StateId);
+            Assert.Throws<ArgumentOutOfRangeException>(() => machine.Start(ref context, 99));
+            Assert.AreEqual(0, context.ExitCount);
+            Assert.AreEqual(Idle.StateId, machine.CurrentId);
+            machine.Start(ref context, Run.StateId);
+            Assert.AreEqual(1, context.ExitCount);
+            Assert.AreEqual(2, context.EnterCount);
+        }
+
         // --- the fix that a creature freezing for a beat exposed ---------------
 
         [Test]

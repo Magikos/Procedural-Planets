@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Snow Rock Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Snow Rock
+  MeshOnlyVertexLimit: 240
   SlotId: 27
   SpacingMeters: 26
   Biome: 12

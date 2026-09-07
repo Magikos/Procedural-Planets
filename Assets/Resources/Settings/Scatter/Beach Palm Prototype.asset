@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Beach Palm Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Beach Palm
+  MeshOnlyVertexLimit: 150
   SlotId: 7
   SpacingMeters: 18
   Biome: 1

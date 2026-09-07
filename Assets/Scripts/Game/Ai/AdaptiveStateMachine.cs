@@ -148,9 +148,19 @@ public sealed class AdaptiveStateMachine<TContext>
     public void Start(ref TContext context, int id)
     {
         if (!Has(id)) throw new ArgumentOutOfRangeException(nameof(id), id, "no such state");
+        Stop(ref context);
         _state = _states[id];
         _current = _byFrom[id];
         _state.Enter(ref context);
+    }
+
+    /// <summary>Release the active state. Repeated stops and later ticks do nothing until Start.</summary>
+    public void Stop(ref TContext context)
+    {
+        IState<TContext> previous = _state;
+        _state = null;
+        _current = NoTransitions;
+        previous?.Exit(ref context);
     }
 
     public void Tick(ref TContext context)

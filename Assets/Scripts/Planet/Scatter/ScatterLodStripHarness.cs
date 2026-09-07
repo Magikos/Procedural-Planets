@@ -55,6 +55,7 @@ public sealed class ScatterLodStripHarness : MonoBehaviour
             mpb.SetFloat(_fadeEndId, cull);
             _partParams[j] = new RenderParams(part.Material)
             {
+                    motionVectorMode = UnityEngine.MotionVectorGenerationMode.Object,
                 shadowCastingMode = part.CastShadows ? ShadowCastingMode.On : ShadowCastingMode.Off,
                 receiveShadows = part.ReceiveShadows,
                 worldBounds = bounds,

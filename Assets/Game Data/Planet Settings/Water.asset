@@ -18,7 +18,7 @@ MonoBehaviour:
   ReferenceRadius: 5000
   ShallowDepth: 28
   DeepDepth: 360
-  ShoreFoamDepth: 2.5
+  ShoreFoamDepth: 0.65
   ShoreRange: 125
   WaveAmplitude: 3.4
   WaveScale: 480
@@ -48,7 +48,7 @@ MonoBehaviour:
   UnderwaterNightScale: 1
   UnderwaterShaftIntensity: 1
   RefractionStrength: 0.3
-  CausticIntensity: 0.42
-  CausticDepth: 115
+  CausticIntensity: 0.18
+  CausticDepth: 12
   CausticContrast: 1.35
-  CausticPrismStrength: 0.46
+  CausticPrismStrength: 0.12

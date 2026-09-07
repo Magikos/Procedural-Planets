@@ -223,6 +223,7 @@ public sealed class WaterVolumePrepassRenderPass : ScriptableRenderPass
 
         TextureDesc waterDesc = renderGraph.GetTextureDesc(source);
         waterDesc.name = "WaterVolumeData";
+        waterDesc.filterMode = FilterMode.Point;
         waterDesc.clearBuffer = true;
         waterDesc.clearColor = Color.clear;
         waterDesc.colorFormat = GraphicsFormat.R16G16B16A16_SFloat;
@@ -306,6 +307,8 @@ public sealed class WaterVolumeCompositeRenderPass : ScriptableRenderPass
 
             builder.UseTexture(source, AccessFlags.Read);
             builder.UseGlobalTexture(_waterVolumeDataId);
+            if (resourceData.mainShadowsTexture.IsValid())
+                builder.UseTexture(resourceData.mainShadowsTexture, AccessFlags.Read);
             builder.UseTexture(resourceData.cameraDepthTexture, AccessFlags.Read);
             builder.SetRenderAttachment(destination, 0, AccessFlags.Write);
             builder.AllowPassCulling(false);

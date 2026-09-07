@@ -1,10 +1,11 @@
 Shader "Scatter/VertexColorLit"
 {
     // Lit shader for scatter props. Synty low-poly bakes colour into vertex colours (the atlas is a
-    // single flat swatch), so albedo = vertexColor * baseMap. A screen-space 4x4 Bayer dither fades
+    // single flat swatch), so albedo = vertexColor * baseMap. A shared screen-space dither fades
     // instances out as they approach the cull distance, hiding the LOD/gather pop-in.
     Properties
     {
+        [HideInInspector] [NonModifiableTextureData] _ScatterDitherNoise ("LOD Blue Noise", 2D) = "gray" {}
         _BaseMap ("Base Map", 2D) = "white" {}
         _BaseColor ("Base Color", Color) = (1,1,1,1)
         _Smoothness ("Smoothness", Range(0,1)) = 0.1
@@ -68,27 +69,17 @@ Shader "Scatter/VertexColorLit"
         #endif
         }
 
-        // 4x4 Bayer matrix, normalised to the CENTRE of each of the 16 levels. The half-step offset is
-        // load-bearing: at 0.0/16 the lowest cell equals a zero fade, so clip(threshold - fade) discarded
-        // one pixel in every 16 on every instance at every distance, which read as a permanent grain.
-        static const float _Bayer4x4[16] = {
-            0.5/16, 8.5/16, 2.5/16, 10.5/16,
-            12.5/16, 4.5/16, 14.5/16, 6.5/16,
-            3.5/16, 11.5/16, 1.5/16, 9.5/16,
-            15.5/16, 7.5/16, 13.5/16, 5.5/16
-        };
+        #include "Includes/ScatterDither.hlsl"
 
         // Discards the fragment progressively as the instance nears the cull distance, and while it is still
         // fading in. Both are the same screen-door: `appear` 0 hides the instance completely, 1 shows it.
-        void DistanceDither(float3 positionWS, float4 screenPos, float appear)
+        void DistanceDither(float4 screenPos, float appear)
         {
-            float dist = distance(positionWS, _WorldSpaceCameraPos);
+            float dist = distance(GetObjectToWorldMatrix()._m03_m13_m23, _WorldSpaceCameraPos);
             float fade = saturate((dist - _FadeStart) / max(1e-3, _FadeEnd - _FadeStart)); // 0 near, 1 at cull
             fade = max(fade, 1.0 - appear);
-            float2 sp = (screenPos.xy / max(screenPos.w, 1e-4)) * _ScreenParams.xy;
-            int2 pix = int2(fmod(sp, 4.0));
-            float threshold = _Bayer4x4[pix.y * 4 + pix.x];
-            clip(threshold - fade); // fade > threshold -> discard
+            clip(ScatterDitherThreshold(screenPos) > fade ? 1.0 : -1.0);
+
         }
         ENDHLSL
 
@@ -120,6 +111,8 @@ Shader "Scatter/VertexColorLit"
             float3 _PlanetCenter;
             float _NightAmbientIntensity;
             float _ImpostorAlbedoBake; // 1 while the impostor baker renders: output flat albedo, no sun
+            float _ImpostorBakeDistance;
+            float _ImpostorBakeSize;
             float _ImpostorNormalBake; // 1 during the baker's normal pass: output view-space normal, no sun
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
@@ -167,7 +160,7 @@ Shader "Scatter/VertexColorLit"
             half4 frag(Varyings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
-                DistanceDither(IN.positionWS, IN.screenPos, IN.appear);
+                DistanceDither(IN.screenPos, IN.appear);
 
                 // Albedo = base map * tint. Vertex colour is intentionally NOT used as albedo:
                 // Synty low-poly stores a data mask there (blue), not display colour. With no base
@@ -184,7 +177,12 @@ Shader "Scatter/VertexColorLit"
                 float3 nrmWS = normalize(IN.normalWS);
                 // Impostor normal pass: output the view-space surface normal (encoded) so the runtime relights
                 // the card with the real surface instead of a synthesized hemisphere.
-                if (_ImpostorNormalBake > 0.5) return half4(mul((float3x3)UNITY_MATRIX_V, nrmWS) * 0.5 + 0.5, 1.0);
+                if (_ImpostorNormalBake > 0.5)
+                {
+                    float depth = (TransformWorldToView(IN.positionWS).z + _ImpostorBakeDistance)
+                        / max(_ImpostorBakeSize, 0.001) + 0.5;
+                    return half4(PackNormalOctQuadEncode(mul((float3x3)UNITY_MATRIX_V, nrmWS)) * 0.5 + 0.5, saturate(depth), 0.0);
+                }
                 float3 planetNormal = normalize(IN.positionWS - _PlanetCenter);
                 float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
                 float localSun = dot(planetNormal, sunDir);
@@ -195,7 +193,7 @@ Shader "Scatter/VertexColorLit"
                 // factor terrain/grass/water use, so tree/terrain shadows and drifting clouds both darken
                 // props.
                 float4 shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
-                half shadowAtten = MainLightRealtimeShadow(shadowCoord);
+                half shadowAtten = MainLightShadow(shadowCoord, IN.positionWS, half4(1, 1, 1, 1), half4(0, 0, 0, 0));
                 float cloudShadow = CloudShadowFactor(IN.positionWS, sunDir, localSun);
                 // Form shading only: a soft self-shadow plus a shaded floor matched to the impostor card (which
                 // ramps 0.6..1.28) so a prop's dark side never collapses to a black dot and the mesh->impostor
@@ -254,6 +252,8 @@ Shader "Scatter/VertexColorLit"
             struct SVaryings
             {
                 float4 positionHCS : SV_POSITION;
+                float4 screenPos : TEXCOORD0;
+                float appear : TEXCOORD1;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -261,6 +261,7 @@ Shader "Scatter/VertexColorLit"
             {
                 SVaryings OUT = (SVaryings)0;
                 UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
                 float3 posWS = TransformObjectToWorld(IN.positionOS.xyz);
                 float3 nrmWS = TransformObjectToWorldNormal(IN.normalOS);
                 float4 hcs = TransformWorldToHClip(ApplyShadowBias(posWS, nrmWS, _LightDirection));
@@ -270,10 +271,17 @@ Shader "Scatter/VertexColorLit"
                     hcs.z = max(hcs.z, UNITY_NEAR_CLIP_VALUE);
                 #endif
                 OUT.positionHCS = hcs;
+                OUT.screenPos = ComputeScreenPos(hcs);
+                OUT.appear = ScatterAppear();
                 return OUT;
             }
 
-            half4 shadowFrag(SVaryings IN) : SV_Target { return 0; }
+            half4 shadowFrag(SVaryings IN) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+                DistanceDither(IN.screenPos, IN.appear);
+                return 0;
+            }
             ENDHLSL
         }
 
@@ -328,7 +336,7 @@ Shader "Scatter/VertexColorLit"
             half4 dnFrag(DNVaryings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
-                DistanceDither(IN.positionWS, IN.screenPos, IN.appear);
+                DistanceDither(IN.screenPos, IN.appear);
                 return half4(normalize(IN.normalWS), 0);
             }
             ENDHLSL

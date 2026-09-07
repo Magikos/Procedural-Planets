@@ -82,6 +82,7 @@ public sealed class ScatterLodBatcher
             ScatterPartDto pd = proto.Parts[part];
             if (!pd.CanRender) continue;
             RenderParams rp = partParams[part];
+            rp.matProps?.SetFloat(ShaderGlobalIds.WindFadeEnd, impostor.Valid ? ImpostorNearFor(impostor) : 0f);
 
             int lodCount = Mathf.Min(pd.LodMeshes.Length, pd.LodEndDistances.Length);
             for (int lod = 0; lod < lodCount; lod++)
@@ -91,7 +92,7 @@ public sealed class ScatterLodBatcher
                 float far = BandFarFor(lod, pd.LodEndDistances, meshCull);
                 float near = BandNearFor(lod, pd.LodEndDistances);
                 if (near >= far) continue;
-                SetFade(rp, FadeStartFor(lod, lodCount, far, impostor), far);
+                SetFade(rp, FadeStartFor(lod, lodCount, far, impostor), FadeEndFor(far, impostor));
                 SetLodTint(rp, LodTintDebug ? _lodColors[Mathf.Min(lod, _lodColors.Length - 1)] : _tintOff);
                 DrawBand(rp, mesh, near * near, far * far, matrices, count);
             }
@@ -130,26 +131,18 @@ public sealed class ScatterLodBatcher
     public static float BandFarFor(int lod, float[] lodEndDistances, float meshCull) =>
         Mathf.Min(lodEndDistances[lod], meshCull);
 
-    // The card's band starts at the mesh cull, which is also where ScatterImpostorFactory bakes its
-    // coverage ramp to reach 1 — the card is opaque on the first frame it draws.
-    public static float ImpostorNearFor(in Impostor impostor) => impostor.StartDistance;
+    // Both render paths overlap the corrected card with its mesh over the same distance window.
+    public static float ImpostorNearFor(in Impostor impostor) =>
+        impostor.StartDistance * ScatterPrototypeDto.MeshFadeFraction;
 
-    // A screen-door only hides a swap while whatever is BEHIND the dithered-away pixels is what should be
-    // there. Exactly one successor qualifies: the background, because a prop with no card is *supposed* to
-    // be gone past its cull, so dissolving into the world behind it is the disappearance and not an
-    // artifact. A coarser mesh LOD does not — it is a decimation of its predecessor with a thinner canopy,
-    // so dithering LOD n out exposes LOD n+1's gaps. Neither does the impostor card: both tiers screen-door
-    // against the same 4x4 Bayer table, and because the card's baked silhouette does not agree with the
-    // mesh's per pixel, the two clip the same thresholds and the sky shows through as a lattice of holes
-    // along the horizon tree line. So a mesh band fades only when the background is what comes next.
-    // Everywhere else it holds full coverage to its cull, and the card — opaque from the first frame it
-    // draws — takes over there with no dither on either side of the swap.
     public static float FadeStartFor(int lod, int lodCount, float far, in Impostor impostor)
     {
-        bool coveredByCard = impostor.Valid && impostor.StartDistance <= far;
-        if (coveredByCard || lod != lodCount - 1) return far;
-        return far * ScatterPrototypeDto.MeshFadeFraction;
+        if (impostor.Valid && far > ImpostorNearFor(impostor)) return ImpostorNearFor(impostor);
+        return lod == lodCount - 1 ? far * ScatterPrototypeDto.MeshFadeFraction : far;
     }
+
+    public static float FadeEndFor(float far, in Impostor impostor) =>
+        impostor.Valid && far > ImpostorNearFor(impostor) ? impostor.StartDistance : far;
 
     static void SetFade(RenderParams rp, float start, float end)
     {

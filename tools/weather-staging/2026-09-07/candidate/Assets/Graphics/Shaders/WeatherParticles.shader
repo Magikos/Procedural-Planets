@@ -1,0 +1,387 @@
+Shader "Hidden/WeatherParticles"
+{
+HLSLINCLUDE
+
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+#include "Includes/Math.hlsl"
+#include "Includes/WeatherSampling.hlsl"
+#include "Includes/ClimateSampling.hlsl"
+
+TEXTURE2D(_CameraDepthTexture);
+SAMPLER(sampler_CameraDepthTexture);
+
+int _WeatherParticlesEnabled;
+int _WeatherParticleProof;
+float3 _PrecipitationPlanetCenter;
+float4 _PrecipitationRadii;
+float4 _PrecipitationColor;
+float4 _PrecipitationStormColor;
+float4 _WeatherParticleCommon;
+float4 _WeatherParticleCounts;
+float4 _WeatherParticleDustParams;
+float4 _WeatherParticleSnowParams;
+float4 _WeatherParticleDustColor;
+float4 _WeatherParticleSnowColor;
+float4 _PrecipitationVisualParams;
+float3 _WindDirection;
+float _WindSpeedMps;
+float _WindStrength01;
+float3 _SunParams;
+float _NightAmbientIntensity;
+float4 _WeatherLightningColor;
+
+struct ParticleVaryings
+{
+    float4 positionCS : SV_POSITION;
+    float4 screenPosition : TEXCOORD0;
+    float viewDepth : TEXCOORD1;
+    float edge : TEXCOORD2;
+    float along : TEXCOORD3;
+    float alpha : TEXCOORD4;
+    float storm : TEXCOORD5;
+    float lightning : TEXCOORD6;
+    float3 color : TEXCOORD7;
+};
+
+float ParticleHash11(float value)
+{
+    return Hash12(float2(value * 1.371 + 17.17, value * 0.719 + 43.11));
+}
+
+float2 ParticleHash21(float value)
+{
+    return float2(
+        ParticleHash11(value + 11.3),
+        ParticleHash11(value + 79.1));
+}
+
+float SceneDepthLinear(float2 uv)
+{
+    float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r;
+    return LinearEyeDepth(rawDepth, _ZBufferParams);
+}
+
+void RibbonCorner(uint corner, out float along, out float side)
+{
+    if (corner == 0u) { along = 0.0; side = -1.0; }
+    else if (corner == 1u) { along = 0.0; side = 1.0; }
+    else if (corner == 2u) { along = 1.0; side = -1.0; }
+    else if (corner == 3u) { along = 1.0; side = -1.0; }
+    else if (corner == 4u) { along = 0.0; side = 1.0; }
+    else { along = 1.0; side = 1.0; }
+}
+
+float ProfileCount(int profile)
+{
+    return profile == 0 ? _WeatherParticleCounts.x : _WeatherParticleCounts.z;
+}
+
+float ProfileProofVisibility(int profile)
+{
+    if (_WeatherParticleProof == 0)
+        return -1.0;
+    if (_WeatherParticleProof == 4)
+        return 1.0;
+    // Proof slots 1=Dust, 2=Rain, 3=Snow. Rain streaks live in RainParticles.shader;
+    // this shader only draws dust (profile 0) and snow (profile 2).
+    return _WeatherParticleProof == profile + 1 ? 1.0 : 0.0;
+}
+
+float3 SafeParticleNormalize(float3 value, float3 fallback)
+{
+    float lengthSquared = dot(value, value);
+    return lengthSquared > 0.000001 ? value * rsqrt(lengthSquared) : fallback;
+}
+
+ParticleVaryings WeatherParticleVertex(
+    uint vertexID,
+    uint instanceID,
+    int profile)
+{
+    ParticleVaryings output = (ParticleVaryings)0;
+    output.positionCS = float4(0, 0, 0, 1);
+
+    float3 cameraVector = _WorldSpaceCameraPos.xyz - _PrecipitationPlanetCenter;
+    float cameraRadius = length(cameraVector);
+    float3 cameraNormal = cameraRadius > 0.0001
+        ? cameraVector / cameraRadius
+        : float3(0.0, 1.0, 0.0);
+    float seaRadius = max(_PrecipitationRadii.w, 1.0);
+    float cameraAltitude = cameraRadius - seaRadius;
+    float precipitationBottomRadius = _PrecipitationRadii.x;
+    float precipitationTopRadius = max(
+        _PrecipitationRadii.y,
+        precipitationBottomRadius + 1.0);
+    float precipitationLayerThickness =
+        precipitationTopRadius - precipitationBottomRadius;
+
+    float radius = max(_WeatherParticleCommon.x, 1.0);
+    float maxCameraAltitude = max(_WeatherParticleCommon.y, 1.0);
+    float verticalRange = max(_WeatherParticleCommon.z, 1.0);
+    float systemVisible = _WeatherParticlesEnabled != 0 &&
+        cameraAltitude >= 0.0 &&
+        cameraAltitude <= maxCameraAltitude
+        ? 1.0
+        : 0.0;
+
+    // Each cube face owns a fixed lattice. Camera movement selects cells without changing them.
+    uint count = (uint)max(ProfileCount(profile), 1.0);
+    int face = (int)(instanceID / count);
+    float id = (float)(instanceID % count);
+    float gridWidth = ceil(sqrt((float)count));
+    float cellX = fmod(id, gridWidth);
+    float cellY = floor(id / gridWidth);
+    float3 faceUp = CubeFaceLocalUp(face);
+    float major = dot(cameraNormal, faceUp);
+    if (major <= 0.0) return output;
+    float3 axisA = faceUp.yzx;
+    float3 axisB = cross(faceUp, axisA);
+    float2 cameraChart = float2(dot(cameraNormal, axisA), dot(cameraNormal, axisB)) / major;
+    // A gnomonic chart expands angular distances by at most three within its owned face.
+    float spacing = 6.0 * radius / (seaRadius * gridWidth);
+    float2 cameraTile = floor(cameraChart / spacing);
+    float2 tile = cameraTile + float2(cellX, cellY) - floor(gridWidth * 0.5);
+    float tileSeed = tile.x * 173.0 + tile.y * 263.0 + profile * 719.0 + face * 1193.0;
+    float2 tileJitter = ParticleHash21(tileSeed);
+    float2 chart = (tile + tileJitter) * spacing;
+    if (any(abs(chart) > 1.0)) return output;
+    float3 normal = normalize(faceUp + axisA * chart.x + axisB * chart.y);
+
+    float3 reference = abs(normal.y) > 0.92
+        ? float3(1.0, 0.0, 0.0)
+        : float3(0.0, 1.0, 0.0);
+    float3 tangent = normalize(cross(reference, normal));
+    float3 wind = SafeParticleNormalize(
+        _WindDirection,
+        float3(1.0, 0.0, 0.0));
+    float3 windTangent = wind - normal * dot(wind, normal);
+    windTangent = SafeParticleNormalize(windTangent, tangent);
+
+    float4 weather = SampleWeather(normal);
+    float4 dynamics = SampleDynamics(normal);
+    float2 climate = SampleClimate01(normal);
+    float temperatureCelsius = ClimateTemperatureCelsius(climate.x);
+    float storm = saturate(weather.g);
+    float stormGate = WeatherThreshold(_PrecipitationParams.y,
+        min(1.0, _PrecipitationParams.y + _PrecipitationParams.z), storm);
+    float rainSignal = saturate(dynamics.b) * stormGate;
+    float snowPhase = WeatherSnowFraction(temperatureCelsius);
+
+    float proofVisibility = ProfileProofVisibility(profile);
+    float visibility;
+    float width;
+    float streakLength;
+    float fallSpeed;
+    float turbulence;
+    float3 color;
+    float profileOpacity;
+
+    if (profile == 0)
+    {
+        float dustDensity = _WeatherParticleDustParams.x +
+            _WindStrength01 * 0.32 +
+            storm * _WeatherParticleDustParams.y;
+        dustDensity *= lerp(1.0, 0.12, rainSignal);
+        dustDensity *= lerp(1.1, 0.62, climate.y);
+        visibility = saturate(dustDensity);
+        width = _WeatherParticleDustParams.w;
+        float streakFactor = smoothstep(2.0, 15.0, _WindSpeedMps);
+        streakLength = lerp(
+            width * 1.15,
+            _WeatherParticlePhaseParams.w,
+            streakFactor);
+        fallSpeed = 0.0;
+        turbulence = _WeatherParticleCommon.w *
+            lerp(0.35, 1.0, _WindStrength01) *
+            (1.0 + storm * 1.2);
+        color = _WeatherParticleDustColor.rgb;
+        profileOpacity = _WeatherParticleDustParams.z;
+    }
+    else
+    {
+        visibility = smoothstep(
+            _WeatherParticleSnowParams.x,
+            min(1.0, _WeatherParticleSnowParams.x + 0.38),
+            rainSignal) * snowPhase;
+        width = _WeatherParticleSnowParams.z;
+        streakLength = width * lerp(1.4, 2.8, _WindStrength01);
+        fallSpeed = _WeatherParticleSnowParams.w;
+        turbulence = 0.45 + _WindStrength01 * 0.65;
+        color = _WeatherParticleSnowColor.rgb;
+        profileOpacity = _WeatherParticleSnowParams.y;
+    }
+
+    if (proofVisibility >= 0.0)
+        visibility = proofVisibility;
+    // Probabilistic density gate: binary keep/discard. World-anchored — keyed
+    // on tileSeed so the same world tile is always either visible-or-not under
+    // identical weather, even after the camera-tile reassignment.
+    visibility = ParticleHash11(tileSeed + 7.0) <= visibility ? 1.0 : 0.0;
+
+    float travelRange = radius * 2.0;
+    float travelPhase = ParticleHash11(tileSeed + 31.0);
+    float travelDistance = frac(
+        travelPhase + _GameTime * max(_WindSpeedMps, 0.0) /
+        max(travelRange, 1.0)) * travelRange - radius;
+
+    float verticalPhase = ParticleHash11(tileSeed + 53.0);
+    float particleRadius;
+    float precipitationLayerFade = 1.0;
+    if (profile == 0)
+    {
+        // Select a fixed world layer; fade before selecting its neighbour.
+        float layer = floor(cameraRadius / verticalRange - verticalPhase + 0.5);
+        particleRadius = (layer + verticalPhase) * verticalRange;
+        particleRadius += sin(_GameTime * (0.35 + _WindStrength01) + tileSeed * 0.00037) * turbulence;
+        precipitationLayerFade = 1.0 - smoothstep(0.35, 0.5,
+            abs((layer + verticalPhase) * verticalRange - cameraRadius) / verticalRange);
+    }
+    else
+    {
+        // Snow stays within the cloud layer — slow, dispersed, tumbling.
+        float layerPosition01 = frac(
+            verticalPhase -
+            _GameTime * max(fallSpeed, 0.1) / precipitationLayerThickness);
+        particleRadius = lerp(
+            precipitationBottomRadius,
+            precipitationTopRadius,
+            layerPosition01);
+        precipitationLayerFade =
+            smoothstep(0.0, 0.06, layerPosition01) *
+            (1.0 - smoothstep(0.94, 1.0, layerPosition01));
+    }
+
+    float3 head = _PrecipitationPlanetCenter +
+        normal * particleRadius +
+        windTangent * travelDistance;
+    if (profile == 2)
+    {
+        head += tangent * sin(_GameTime * 0.9 + tileSeed * 0.00071) * turbulence;
+    }
+
+    float3 velocity = windTangent * max(_WindSpeedMps, profile == 0 ? 0.2 : 0.0) -
+        normal * fallSpeed;
+    float3 motionDirection = SafeParticleNormalize(velocity, windTangent);
+    float3 viewDirection = SafeParticleNormalize(
+        _WorldSpaceCameraPos.xyz - head,
+        -motionDirection);
+    float3 sideDirection = SafeParticleNormalize(
+        cross(viewDirection, motionDirection),
+        tangent);
+
+    uint segment = vertexID / 6u;
+    uint corner = vertexID - segment * 6u;
+    float cornerAlong;
+    float side;
+    RibbonCorner(corner, cornerAlong, side);
+    float along = (segment + cornerAlong) / 3.0;
+    float taper = sin(saturate(along) * 3.14159265);
+    taper = profile == 2 ? lerp(0.72, 1.0, taper) : max(taper, 0.08);
+    float curveScale = profile == 0 ? 0.18 : (profile == 2 ? 0.55 : 0.0);
+    float curve = sin(
+        along * 5.4 +
+        tileSeed * 0.00029 +
+        _GameTime * (0.8 + _WindStrength01 * 1.6)) *
+        turbulence * width * taper * curveScale;
+    float3 center = head - motionDirection * streakLength * (1.0 - along);
+    float3 worldPosition = center +
+        sideDirection * (side * width * taper + curve);
+
+    float angularDistance = acos(clamp(dot(normal, cameraNormal), -1.0, 1.0));
+    float edgeFade = saturate(1.0 - angularDistance * cameraRadius / radius);
+    edgeFade = smoothstep(0.0, 0.16, edgeFade);
+    float randomOpacity = lerp(
+        0.46,
+        1.0,
+        ParticleHash11(tileSeed + 89.0));
+
+    output.alpha = systemVisible * visibility * edgeFade * precipitationLayerFade *
+        randomOpacity * profileOpacity;
+    output.storm = storm;
+    output.lightning = WeatherLightning(normal, storm);
+    output.color = color;
+    output.positionCS = TransformWorldToHClip(worldPosition);
+    output.screenPosition = ComputeScreenPos(output.positionCS);
+    output.viewDepth = -TransformWorldToView(worldPosition).z;
+    output.edge = side;
+    output.along = along;
+    return output;
+}
+
+ParticleVaryings VertDust(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
+{
+    return WeatherParticleVertex(vertexID, instanceID, 0);
+}
+
+ParticleVaryings VertSnow(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
+{
+    return WeatherParticleVertex(vertexID, instanceID, 2);
+}
+
+float4 FragParticle(ParticleVaryings input) : SV_Target
+{
+    if (input.alpha <= 0.0001)
+        discard;
+
+    float2 uv = input.screenPosition.xy / max(input.screenPosition.w, 0.0001);
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+        discard;
+
+    float sceneDepth = SceneDepthLinear(uv);
+    if (input.viewDepth > sceneDepth + 0.15)
+        discard;
+
+    float softIntersection = saturate((sceneDepth - input.viewDepth) / 1.25);
+    float edgeFade = 1.0 - smoothstep(0.48, 1.0, abs(input.edge));
+    float endFade = smoothstep(0.0, 0.08, input.along) *
+        (1.0 - smoothstep(0.92, 1.0, input.along));
+    float alpha = input.alpha * edgeFade * endFade * softIntersection;
+    if (alpha <= 0.0001)
+        discard;
+
+    float3 cameraNormal = normalize(
+        _WorldSpaceCameraPos.xyz - _PrecipitationPlanetCenter);
+    float localSun = saturate((dot(cameraNormal, _SunParams.xyz) + 0.1) * 3.0);
+    float lightning = input.lightning * _WeatherLightningColor.a;
+    float light = _NightAmbientIntensity * 0.65 + localSun * 0.72 + 0.18;
+    float3 litColor = input.color * (light + lightning * 0.55) +
+        _WeatherLightningColor.rgb * lightning * 0.18;
+    return float4(litColor, saturate(alpha));
+}
+
+ENDHLSL
+
+    SubShader
+    {
+        Tags
+        {
+            "RenderPipeline" = "UniversalPipeline"
+            "Queue" = "Transparent"
+        }
+
+        Cull Off
+        ZWrite Off
+        ZTest Always
+        Blend SrcAlpha OneMinusSrcAlpha
+
+        Pass
+        {
+            Name "Dust"
+            HLSLPROGRAM
+            #pragma target 4.5
+            #pragma vertex VertDust
+            #pragma fragment FragParticle
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "Snow"
+            HLSLPROGRAM
+            #pragma target 4.5
+            #pragma vertex VertSnow
+            #pragma fragment FragParticle
+            ENDHLSL
+        }
+    }
+}

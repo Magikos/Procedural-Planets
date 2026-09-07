@@ -68,8 +68,9 @@ float MiePhase(float cosTheta, float g)
 TEXTURE2D(_BakedOpticalDepth);
 SAMPLER(sampler_BakedOpticalDepth);
 
-float2 SunOpticalDepth(float3 pos, float3 dirToSun)
+float2 SunOpticalDepth(float3 pos, float3 dirToSun, out float visibility)
 {
+    visibility = RaySphere(0, _SeaLevelRadius, pos, dirToSun).y > 0.0 ? 0.0 : 1.0;
     float height = length(pos) - _SeaLevelRadius;
     float height01 = saturate(height / (_AtmosphereRadius - _SeaLevelRadius));
 
@@ -80,7 +81,7 @@ float2 SunOpticalDepth(float3 pos, float3 dirToSun)
     float uvX = (1.0 - cosAngle) * 0.5;
 
     float2 od = SAMPLE_TEXTURE2D_LOD(_BakedOpticalDepth, sampler_BakedOpticalDepth, float2(uvX, height01), 0).rg;
-    return od;
+    return od * (2.0 * _AtmosphereRadius);
 }
 
 // --- Main ---
@@ -134,18 +135,18 @@ float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sc
         float densityR = RayleighDensity(height) * stepSize;
         float densityM = MieDensity(height) * stepSize;
 
-        viewRayleighOD += densityR;
-        viewMieOD += densityM;
+        float sunVisibility;
+        float2 sunOD = SunOpticalDepth(rayPos, dirToSun, sunVisibility);
 
-        float2 sunOD = SunOpticalDepth(rayPos, dirToSun);
+        float3 totalOD = _RayleighScattering * (viewRayleighOD + densityR * 0.5 + sunOD.x)
+                       + _MieScatteringCoeff * (viewMieOD + densityM * 0.5 + sunOD.y);
 
-        float3 totalOD = _RayleighScattering * (viewRayleighOD + sunOD.x)
-                       + _MieScatteringCoeff * (viewMieOD + sunOD.y);
-
-        float3 transmittance = exp(-totalOD);
+        float3 transmittance = exp(-totalOD) * sunVisibility;
 
         totalRayleigh += densityR * transmittance;
         totalMie += densityM * transmittance;
+        viewRayleighOD += densityR;
+        viewMieOD += densityM;
 
         rayPos += dir * stepSize;
     }
@@ -171,8 +172,9 @@ float3 CalculateScattering(float3 start, float3 dir, float sceneDepth, float3 sc
     if (_DebugMode == 4)
     {
         float3 midPos = origin + dir * (dstToAtmo + maxDst * 0.5);
-        float2 sunOD = SunOpticalDepth(midPos, dirToSun);
-        float3 sunT = exp(-_RayleighScattering * sunOD.x - _MieScatteringCoeff * sunOD.y);
+        float sunVisibility;
+        float2 sunOD = SunOpticalDepth(midPos, dirToSun, sunVisibility);
+        float3 sunT = exp(-_RayleighScattering * sunOD.x - _MieScatteringCoeff * sunOD.y) * sunVisibility;
         return sunT;
     }
 

@@ -16,10 +16,8 @@ public class WaterSettings : ScriptableObject
     [Header("Depth and shore")]
     public float ShallowDepth = 28f;
     public float DeepDepth = 360f;
-    [Tooltip("Water DEPTH in metres over which shore foam fades out. It used to be a distance-from-shore " +
-             "width, which could not follow a shoreline finer than the water mesh's triangles; foam is now " +
-             "measured against the depth buffer, so a couple of metres of water is the whole band.")]
-    public float ShoreFoamDepth = 2.5f;
+    [Tooltip("Water depth in metres covered by contact foam at shores and submerged objects.")]
+    public float ShoreFoamDepth = 0.65f;
     public float ShoreRange = 125f;
 
     [Tooltip("Water depth in metres at which the volume tint starts, and where it reaches full strength. " +
@@ -81,8 +79,8 @@ public class WaterSettings : ScriptableObject
     // reads the frozen DTO rather than the world settings service.
     [Header("Volume")]
     public float RefractionStrength = 0.30f;
-    public float CausticIntensity = 0.42f;
-    public float CausticDepth = 115f;
+    public float CausticIntensity = 0.18f;
+    public float CausticDepth = 12f;
     public float CausticContrast = 1.35f;
-    public float CausticPrismStrength = 0.46f;
+    public float CausticPrismStrength = 0.12f;
 }

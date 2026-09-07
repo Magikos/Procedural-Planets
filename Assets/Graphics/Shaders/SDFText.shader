@@ -158,8 +158,11 @@ Shader "Hidden/SDFText"
                 float4 outlineColor = _OutlineColor;
 
                 float4 result;
-                result.rgb = lerp(outlineColor.rgb, faceColor.rgb, faceOpacity);
-                result.a   = lerp(outlineColor.a * outlineOpacity, faceColor.a, faceOpacity);
+                float faceAlpha = faceColor.a * faceOpacity;
+                float outlineAlpha = outlineColor.a * outlineOpacity * (1.0 - faceAlpha);
+                result.a = faceAlpha + outlineAlpha;
+                result.rgb = (faceColor.rgb * faceAlpha + outlineColor.rgb * outlineAlpha)
+                    / max(result.a, 1e-6);
 
                 return result;
             }

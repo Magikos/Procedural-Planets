@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Ocean Kelp
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Ocean Kelp
+  MeshOnlyVertexLimit: 120
   SlotId: 79
   SpacingMeters: 7
   Biome: 0

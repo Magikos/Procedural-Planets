@@ -13,6 +13,7 @@ public static class ScatterImpostorFactory
     static readonly int _normalMapId = Shader.PropertyToID("_NormalMap");
     static readonly int _cutoffId = Shader.PropertyToID("_Cutoff");
     static readonly int _leafCardId = Shader.PropertyToID("_LeafCard");
+    static readonly int _cardBrightnessId = Shader.PropertyToID("_CardBrightness");
     static readonly int _gridNId = Shader.PropertyToID("_GridN");
     static readonly int _centerOffsetId = Shader.PropertyToID("_CenterOffset");
     static readonly int _worldSizeId = Shader.PropertyToID("_WorldSize");
@@ -21,10 +22,9 @@ public static class ScatterImpostorFactory
     static readonly int _fadeOutStartId = Shader.PropertyToID("_FadeOutStart");
     static readonly int _fadeOutEndId = Shader.PropertyToID("_FadeOutEnd");
 
-    // Frames per axis in the hemi-octahedral atlas. 4 = 16 angles into a 512 px card (128 px cells).
-    // FromPrebaked INFERS this from atlas width, so an atlas baked at another gridN still reads correctly;
-    // AtlasCellPx does not have that escape hatch and must never move.
-    const int OctGridN = 4;
+    // More directions within the same 512-pixel atlas budget. Cells still exceed the 36-pixel handover.
+    public const int OctGridN = 8;
+    public const int AtlasCellPixels = 64;
 
     // Parts drawn through this shader are foliage, so their card gets the leaf translucency the mesh
     // canopy already has. A rock or a structure card must not glow with the sun behind it.
@@ -55,9 +55,11 @@ public static class ScatterImpostorFactory
         var meshes = new List<Mesh>();
         var materials = new List<Material>();
         bool leafCard = false;
+        bool castShadows = false;
         foreach (ScatterPartDto part in proto.Parts)
         {
             if (part.LodMeshes.Length == 0 || part.LodMeshes[0] == null) continue;
+            castShadows |= part.CastShadows;
             meshes.Add(part.LodMeshes[0]);
             materials.Add(part.Material);
             leafCard |= part.Material != null && part.Material.shader != null
@@ -68,8 +70,8 @@ public static class ScatterImpostorFactory
         // Prefer a pre-baked atlas (editor bake tool) to skip the on-load bake; fall back to baking live
         // for prototypes without one (runtime-placed / custom-saved structures).
         ScatterImpostorBaker.AtlasCard card = proto.BakedImpostorAtlas != null
-            ? ScatterImpostorBaker.FromPrebaked(proto.BakedImpostorAtlas, proto.BakedImpostorNormal, meshes)
-            : ScatterImpostorBaker.BakeAtlas(meshes, materials, OctGridN);
+            ? ScatterImpostorBaker.FromPrebaked(proto.BakedImpostorAtlas, proto.BakedImpostorNormal, meshes, proto.BakedImpostorGridN, proto.BakedImpostorHasSurfaceData)
+            : ScatterImpostorBaker.BakeAtlas(meshes, materials, OctGridN, AtlasCellPixels);
         if (!card.Valid) return default;
 
         float start = proto.ImpostorStartDistance;
@@ -81,17 +83,18 @@ public static class ScatterImpostorFactory
         // Whole-card, because the atlas carries no leaf mask, so a tree's trunk pixels transmit light too.
         // ponytail: no mask, bake one into an atlas channel if a trunk ever reads wrong at card range.
         mat.SetFloat(_leafCardId, leafCard ? 1f : 0f);
+        mat.SetFloat(_cardBrightnessId, card.HasSurfaceData ? 1f : ScatterImpostorBaker.CardBrightnessOf(meshes));
         mat.SetFloat(_gridNId, card.GridN);
-        mat.SetFloat(_centerOffsetId, card.CenterOffset); // billboard centred on the tree centre
+        mat.SetFloat("_HasSurfaceData", card.HasSurfaceData ? 1f : 0f);
+        mat.SetVector(_centerOffsetId, card.CenterOffset);
         mat.SetFloat(_worldSizeId, card.WorldSize);       // square side (max of footprint / height)
-        // Opaque across the card's whole band. The 1 m ramp exists only to keep the shader's saturate off
-        // its own band edge; the card must never draw partly dithered while the mesh is still solid.
-        mat.SetFloat(_fadeInStartId, start - 1f);
+        mat.SetFloat(_fadeInStartId, start * ScatterPrototypeDto.MeshFadeFraction);
         mat.SetFloat(_fadeInEndId, start);
         mat.SetFloat(_fadeOutStartId, end * 0.6f); // long dither-out so the tree line thins into the distance
         mat.SetFloat(_fadeOutEndId, end);          // instead of a hard ~5% pop at the cull edge
 
-        var rp = new RenderParams(mat) { worldBounds = worldBounds, shadowCastingMode = ShadowCastingMode.On };
+        var rp = new RenderParams(mat) { worldBounds = worldBounds, motionVectorMode = MotionVectorGenerationMode.Object,
+            shadowCastingMode = castShadows ? ShadowCastingMode.On : ShadowCastingMode.Off };
         // A pre-baked atlas is a shared ASSET this impostor borrows; a live bake is a runtime texture it owns.
         // Teardown destroys only the owned one (destroying the asset — or a card other prototypes still
         // share — corrupts it / throws).

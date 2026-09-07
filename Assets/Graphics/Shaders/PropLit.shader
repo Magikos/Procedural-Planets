@@ -103,7 +103,8 @@ Shader "Planet/PropLit"
                 float ndl = saturate(dot(nrmWS, sunDir));
 
                 float4 shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
-                half shadowAtten = MainLightRealtimeShadow(shadowCoord);
+                half shadowAtten = MainLightShadow(shadowCoord, IN.positionWS,
+                    half4(1, 1, 1, 1), half4(0, 0, 0, 0));
                 float cloudShadow = CloudShadowFactor(IN.positionWS, sunDir, localSun);
                 float shade = lerp(0.5, 1.0, shadowAtten * cloudShadow);
 

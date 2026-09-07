@@ -4,9 +4,8 @@ using UnityEditor;
 using UnityEngine;
 
 // Bakes the far-field impostor atlases for every GENERATED prop — trees, plants and rocks — to disk, so the
-// runtime stops re-baking them on every load. Measured at gridN 8: 418 ms and 26.8 MB per atlas, which was
-// the whole of the 7.6 s scatter-renderer phase. gridN 4 renders a quarter of the angles into a quarter of
-// the bytes, so the figures below are that measurement scaled, not a fresh one.
+// runtime stops re-baking them on every load. The runtime factory defines the view grid and cell size;
+// the manifest records the grid because texture dimensions alone no longer identify the layout.
 //
 // This is the bake to run. Its sibling, "Bake Impostors (Source Library)", bakes the untouched Synty meshes
 // instead; since injection now replaces every scatter prototype, those atlases only render with injection
@@ -19,7 +18,7 @@ public static class GeneratedImpostorBakeTool
 {
     const string OutputDir = "Assets/Resources/Settings/Scatter/GeneratedImpostors";
     const string ManifestPath = "Assets/Resources/Settings/GeneratedImpostors.asset";
-    const int OctGridN = 4; // must match ScatterImpostorFactory.OctGridN or the runtime samples the wrong cells
+    const int OctGridN = ScatterImpostorFactory.OctGridN;
 
     [MenuItem("Tools/ProceduralPlanets/Impostors/Bake Impostors (Generated Props)", false, 10)]
     public static void Bake()
@@ -116,7 +115,7 @@ public static class GeneratedImpostorBakeTool
                     continue;
                 }
 
-                ScatterImpostorBaker.AtlasCard card = ScatterImpostorBaker.BakeAtlas(meshes, materials, OctGridN);
+                ScatterImpostorBaker.AtlasCard card = ScatterImpostorBaker.BakeAtlas(meshes, materials, OctGridN, ScatterImpostorFactory.AtlasCellPixels);
                 if (!card.Valid)
                 {
                     // Same case the empty-bake guard covers at runtime: too little silhouette to be worth a card.
@@ -140,7 +139,7 @@ public static class GeneratedImpostorBakeTool
                 if (hasNormal)
                 {
                     AssetDatabase.ImportAsset(normalPath, ImportAssetOptions.ForceUpdate);
-                    ScatterImpostorBakeTool.ConfigureAtlasImport(normalPath, isNormal: true);
+                    ScatterImpostorBakeTool.ConfigureAtlasImport(normalPath, card.HasSurfaceData);
                     written.Add(normalPath);
                 }
 
@@ -148,6 +147,8 @@ public static class GeneratedImpostorBakeTool
                 {
                     Key = key,
                     ShapeHash = hash,
+                    GridN = card.GridN,
+                    HasSurfaceData = card.HasSurfaceData,
                     Atlas = AssetDatabase.LoadAssetAtPath<Texture2D>(atlasPath),
                     Normal = hasNormal ? AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath) : null,
                 });
@@ -169,7 +170,6 @@ public static class GeneratedImpostorBakeTool
         GeneratedImpostorManifest.ForgetCache();
 
         Debug.Log($"[GeneratedImpostorBake] Baked {baked} atlas(es), skipped {skipped}, deleted {deleted} orphan(s). " +
-                  $"Saves roughly {baked * 105 / 1000f:0.0} s and {baked * 6.7f:0} MB per load. " +
                   $"Manifest: {ManifestPath}");
     }
 

@@ -24,6 +24,8 @@ public sealed class GeneratedImpostorManifest : ScriptableObject
         public string ShapeHash;    // hash of the LOD0 meshes at bake time
         public Texture2D Atlas;
         public Texture2D Normal;
+        public bool HasSurfaceData;
+        public int GridN; // zero keeps the legacy 128-pixel-cell layout
     }
 
     public Entry[] Entries = System.Array.Empty<Entry>();
@@ -54,14 +56,16 @@ public sealed class GeneratedImpostorManifest : ScriptableObject
     // prototype, so nothing has to guess what a canonical variant of a species would have looked like.
     public static ScatterPrototypeDto WithCachedAtlas(ScatterPrototypeDto p)
     {
-        if (p == null || !TryGet(p.ImpostorKey, p.ImpostorSourceHash, out Texture2D atlas, out Texture2D normal))
+        if (p == null || !p.HasImpostor || !TryGet(p.ImpostorKey, p.ImpostorSourceHash, out Texture2D atlas, out Texture2D normal, out int gridN, out bool hasSurfaceData))
             return p;
-        return p with { BakedImpostorAtlas = atlas, BakedImpostorNormal = normal };
+        return p with { BakedImpostorAtlas = atlas, BakedImpostorNormal = normal, BakedImpostorGridN = gridN, BakedImpostorHasSurfaceData = hasSurfaceData };
     }
 
     // Returns the cached atlas when `hash` still matches what was baked for this key.
-    public static bool TryGet(string key, string hash, out Texture2D atlas, out Texture2D normal)
+    public static bool TryGet(string key, string hash, out Texture2D atlas, out Texture2D normal, out int gridN, out bool hasSurfaceData)
     {
+        hasSurfaceData = false;
+        gridN = 0;
         atlas = null;
         normal = null;
         if (string.IsNullOrEmpty(key)) return false;
@@ -74,6 +78,8 @@ public sealed class GeneratedImpostorManifest : ScriptableObject
             if (e.ShapeHash != hash) return false; // stale: the def or the generator moved
             atlas = e.Atlas;
             normal = e.Normal;
+            gridN = e.GridN;
+            hasSurfaceData = e.HasSurfaceData;
             return true;
         }
         return false;

@@ -17,6 +17,7 @@ float _CloudNoiseScale;
 float _CloudWindAngle;
 float4 _CloudShapeWeights;
 float _CloudDensityThreshold;
+float _CloudDensityMultiplier;
 float _CloudShapeSharpness;
 float _CloudBottomFeather;
 float _CloudTopFeather;
@@ -59,7 +60,7 @@ float SampleCloudShadowDensity(float3 worldPos)
     // Same vertical profile as the sky march so shadow darkness tracks cloud height/type (D2):
     // identical climate-temperature convectivity + storm inputs.
     float height01 = saturate((radius - _CloudInnerRadius) / max(_CloudOuterRadius - _CloudInnerRadius, 0.0001));
-    float convectivity = smoothstep(0.2, 0.6, SampleClimate01(direction).x);
+    float convectivity = WeatherCloudConvectivity(direction, SampleClimate01(direction).x);
     float verticalProfile = CloudVerticalProfile(height01, convectivity, weather.g,
         _CloudBottomFeather, _CloudTopFeather, _CloudTopDensityBias);
 
@@ -67,12 +68,13 @@ float SampleCloudShadowDensity(float3 worldPos)
     float density = saturate((cloudShape - _CloudDensityThreshold) * _CloudShapeSharpness);
     float gloom = WeatherCloudGloom(direction, weather.g);
     float stormBoost = lerp(1.0, max(_CloudShadowParams.z, 0.5), gloom);
-    return density * condensation * stormBoost;
+    // Preserve the proxy's authored calibration at the default density (0.018 / metre).
+    return density * condensation * stormBoost * (_CloudDensityMultiplier / 0.018);
 }
 
 float CloudShadowFactor(float3 worldPos, float3 sunDir, float localSun)
 {
-    if (_WaterFocusMode > 0.5)
+    if (_WaterFocusMode > 0.5 || _CloudDensityMultiplier <= 0.0)
         return 1.0;
 
     if (_CloudWeatherResolution <= 0 || _CloudOuterRadius <= _CloudInnerRadius || _CloudShadowParams.x <= 0.0)

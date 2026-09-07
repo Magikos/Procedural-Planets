@@ -88,6 +88,7 @@ public sealed class ScatterRenderer : IDisposable
                 fadeProps.SetFloat(_fadeEndId, cull);
                 _renderParams[i][j] = new RenderParams(part.Material)
                 {
+                    motionVectorMode = UnityEngine.MotionVectorGenerationMode.Object,
                     shadowCastingMode = part.CastShadows ? ShadowCastingMode.On : ShadowCastingMode.Off,
                     receiveShadows = part.ReceiveShadows,
                     worldBounds = bounds,

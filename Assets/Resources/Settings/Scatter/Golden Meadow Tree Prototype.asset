@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Golden Meadow Tree Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Golden Meadow Tree
+  MeshOnlyVertexLimit: 350
   SlotId: 54
   SpacingMeters: 32
   Biome: 6

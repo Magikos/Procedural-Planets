@@ -33,41 +33,15 @@ public static class RockGenerator
     {
         int sub = Mathf.Clamp(def.Subdivisions, 0, 3);
         var rock = new GeneratedRock();
-        var lods = new Mesh[sub > 0 ? 2 : 1];
-        lods[0] = BuildShell(def, seed, sub, out float height, true);
-        for (int i = 1; i < lods.Length; i++)
-        {
-            lods[i] = BuildShell(def, seed, sub - i, out _, false);
-            // MATCH LOD0's extents. The coarse shell samples the same displacement field at fewer vertices, so
-            // it misses the outward bumps and comes out ~17% smaller — which reads as the rock popping smaller
-            // the moment you walk far enough away for the LOD to switch. Rescale rather than resample, so the
-            // silhouette keeps its size and only its facet count drops.
-            MatchExtents(lods[i], lods[0]);
-        }
-        rock.Lods = lods;
+        // Scatter rocks use only 80 triangles. Keep their authored shape until the billboard handover;
+        // resampling a coarser shell changes the silhouette, facet normals, and texture placement.
+        rock.Lods = new[] { BuildShell(def, seed, sub, out float height, true) };
         rock.Height = height;
-        // The collider is the coarsest shell, not LOD0: a player stands on a rock, they do not feel its facets,
+        // Keep a separate coarse collider hull; visual fidelity does not require detailed collision.
+        // A player stands on a rock, they do not feel its facets,
         // and cooking a 320-face hull per instance is the expensive half of the streamed-collider budget.
         rock.Collider = BuildShell(def, seed, 0, out _, false);
         return rock;
-    }
-
-    // Scale `mesh` about its base so its horizontal extents match `reference`. Y is scaled by the same factor
-    // so the rock keeps its proportions, and the base stays at y=0 so it does not lift off the ground.
-    static void MatchExtents(Mesh mesh, Mesh reference)
-    {
-        if (mesh == null || reference == null) return;
-        // Match the OVERALL extent, not just the horizontal one: a coarse shell loses height as well as width,
-        // and matching only x/z left the far LOD ~14% off on the diagonal.
-        float refE = reference.bounds.extents.magnitude, curE = mesh.bounds.extents.magnitude;
-        if (curE < 1e-4f) return;
-        float s = refE / curE;
-        if (Mathf.Abs(s - 1f) < 0.01f) return;
-
-        Vector3[] v = mesh.vertices;
-        for (int i = 0; i < v.Length; i++) v[i] = new Vector3(v[i].x * s, v[i].y * s, v[i].z * s);
-        mesh.SetVertices(v);
-        mesh.RecalculateBounds();
     }
 
     static Mesh BuildShell(RockDef def, int seed, int subdivisions, out float height, bool named)

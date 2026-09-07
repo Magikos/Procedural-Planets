@@ -43,6 +43,7 @@ Shader "Hidden/CloudBlur"
             float4 frag(v2f i) : SV_Target
             {
                 float4 c = SAMPLE_TEXTURE2D(_Source, sampler_Source, i.uv);
+                if (c.a <= 0.02) return c;
 
                 float strength = _CloudBlurParams.x > 0.0 ? saturate(_CloudBlurParams.x) : 0.9;
                 float radius = _CloudBlurParams.y > 0.0 ? _CloudBlurParams.y : 2.5;

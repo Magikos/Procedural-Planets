@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: CreatureLibrary
   m_EditorClassIdentifier: ProceduralPlanets.Planet::CreatureLibrary
   Species:
-  - DisplayName: Placeholder Deer
+  - Visuals: {fileID: 11400000, guid: 145f25f73a41e6f48beb345f9ac88ab9, type: 2}
+    DisplayName: Deer
     PerTerritory: 3
     HomeRangeMeters: 120
     WalkSpeedMps: 2.5
@@ -30,7 +31,8 @@ MonoBehaviour:
     CruiseAltitudeMeters: 0
     BodyHeightMeters: 1.7
     BodyColor: {r: 0.45, g: 0.33, b: 0.22, a: 1}
-  - DisplayName: Placeholder Rabbit
+  - Visuals: {fileID: 0}
+    DisplayName: Placeholder Rabbit
     PerTerritory: 6
     HomeRangeMeters: 45
     WalkSpeedMps: 3.2
@@ -47,7 +49,8 @@ MonoBehaviour:
     CruiseAltitudeMeters: 0
     BodyHeightMeters: 0.45
     BodyColor: {r: 0.62, g: 0.58, b: 0.52, a: 1}
-  - DisplayName: Placeholder Bird
+  - Visuals: {fileID: 0}
+    DisplayName: Placeholder Bird
     PerTerritory: 4
     HomeRangeMeters: 200
     WalkSpeedMps: 6

@@ -9,6 +9,7 @@ Obj/
 Logs/
 UserSettings/
 local-only/
+tools/weather-staging/
 
 # Graphify's own output directory (project root canonical location)
 graphify-out/

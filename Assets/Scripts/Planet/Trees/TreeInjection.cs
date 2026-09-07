@@ -108,6 +108,10 @@ public static class TreeInjection
     public static ScatterLibraryDto ApplyAll(ScatterLibraryDto source)
     {
         ScatterLibraryDto lib = RockInjection.Apply(PlantInjection.Apply(Apply(source)));
+        var prototypes = new ScatterPrototypeDto[lib.Prototypes.Length];
+        for (int i = 0; i < prototypes.Length; i++)
+            prototypes[i] = lib.Prototypes[i].ApplyMeshOnlyPolicy();
+        lib = new ScatterLibraryDto(prototypes);
         ScatterValidation.Run(lib);
         return lib;
     }
@@ -234,21 +238,16 @@ public static class TreeInjection
 
             float cull = p.Parts[0].MaxCullDistance;
             if (cull < 50f) cull = 300f;
-            // The LAST entry stays the authored cull, because the card's reach is a multiple of it. The
-            // LOD0->LOD1 boundary divides the HANDOVER distance instead: past that the card has taken over, so
-            // a boundary laid as a fraction of the cull put LOD1 wholly outside the drawn band - 78 prototypes
-            // were paying for a second bark and foliage mesh that could never render. 0.6 still holds the full
-            // LOD0 canopy for most of the band it is seen in.
-            float handover = Mathf.Min(cull, ScatterPrototypeDto.HandoverDistanceFor(t.Bark, t.Foliage));
-            float[] dist = { handover * 0.6f, cull };
+            // The billboard handles the far tier; keep the authored cull for its reach.
+            float[] dist = { cull };
 
-            var barkPart = new ScatterPartDto(bark, t.BarkLods, Trim(dist, t.BarkLods.Length), true, true);
+            var barkPart = new ScatterPartDto(bark, t.BarkLods, dist, true, true);
             // A dead tree has no foliage mesh at all; emitting an empty part would cost a draw band that renders
             // nothing and would confuse the impostor bake's bounds.
             bool hasFoliage = t.FoliageLods != null && t.FoliageLods.Length > 0
                               && t.FoliageLods[0] != null && t.FoliageLods[0].vertexCount > 0;
             var foliagePart = hasFoliage
-                ? new ScatterPartDto(foliage, t.FoliageLods, Trim(dist, t.FoliageLods.Length), true, false)
+                ? new ScatterPartDto(foliage, t.FoliageLods, dist, true, false)
                 : null;
 
             // Keep the prototype's biome + placement rules; swap identity (slot/name), parts and stump. The
@@ -435,17 +434,6 @@ public static class TreeInjection
             _mats[s] = pair;
         }
         return pair;
-    }
-
-    // Element i is drawn out to r[i], so the LAST entry is the part's cull. A chain shorter than `dist` must
-    // not inherit an intermediate boundary as its cull: that would end the part - and with it the prototype's
-    // impostor reach, which is a multiple of the cull - well short of where it was authored to stop.
-    static float[] Trim(float[] dist, int n)
-    {
-        var r = new float[Mathf.Max(1, n)];
-        for (int i = 0; i < r.Length; i++) r[i] = dist[Mathf.Min(i, dist.Length - 1)];
-        r[r.Length - 1] = dist[dist.Length - 1];
-        return r;
     }
 
     static Material Mat(string name, Color c)

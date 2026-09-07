@@ -1,6 +1,6 @@
 // Bakes sun-ray optical depth into a 2D LUT.
 // U = dot(normal, rayDir) remapped to [0,1]. V = height01 in atmosphere.
-// Output: float2(rayleighOD, mieOD) packed into RG channels.
+// RG stores optical depth divided by the atmosphere diameter; each channel is in [0,1].
 
 #pragma kernel Main
 #include "Includes/Math.hlsl"
@@ -54,18 +54,13 @@ void Main(uint2 id : SV_DispatchThreadID)
     {
         float height = length(samplePos) - _SeaLevelRadius;
 
-        // If ray goes below planet surface, return large value (blocked)
-        if (height < 0)
-        {
-            _Result[id.xy] = float4(1e6, 1e6, 0, 0);
-            return;
-        }
-
+        // Solid-planet occlusion is analytic at the receiver, separate from the filtered LUT.
+        height = max(height, 0.0);
         rayleighOD += exp(-height / _RayleighScaleHeight) * stepSize;
         mieOD += exp(-height / _MieScaleHeight) * stepSize;
 
         samplePos += dir * stepSize;
     }
 
-    _Result[id.xy] = float4(rayleighOD, mieOD, 0, 0);
+    _Result[id.xy] = float4(rayleighOD, mieOD, 0, 0) / (2.0 * _AtmosphereRadius);
 }

@@ -33,7 +33,6 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
     IPlanet _planet;
     IPlanetSurfaceSampler _sampler;
     IPlanetSurfaceRaycaster _raycaster;
-    IWaterQueryService _water;
     IInputProvider _input;
     ICameraRigContext _cameraRig;
     IFreeCameraService _freeCam;
@@ -98,7 +97,6 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         if (_sampler == null)
             ServiceLocator.TryGet(out _sampler);
         _threats = null;   // world-scoped: a new world has a new registry, so never keep the old one
-        _water = null;     // world-scoped for the same reason — a new world solves new bodies
 
         if (_spawned && _hasPlanet && TrySeedPose(out CharacterPose seed))
             RebuildDriver(seed);
@@ -218,20 +216,12 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         var gravity = new RadialGravityProvider(_center);
         // Ground on the VISIBLE mesh (raycast), falling back to the analytic surface if a ray misses — the
         // analytic radius can sit below the rendered terrain, which is why the capsule fell through.
-        CharacterWaterFloor water = WaterFloor();
-        var samplerGround = new PlanetSurfaceGrounding(_sampler, _center, water);
+        var samplerGround = new PlanetSurfaceGrounding(_sampler, _center);
         IGroundingProvider grounding = ResolveRaycaster() != null
-            ? new PlanetRaycastGrounding(_raycaster, _center, water, samplerGround)
+            ? new PlanetRaycastGrounding(_raycaster, _center, default, samplerGround)
             : samplerGround;
         _driver = new SurfaceCharacterController(gravity, grounding, FootOffset, seed);
         _child.SetPositionAndRotation(seed.Position, Quaternion.LookRotation(seed.Forward, seed.Up));
-    }
-
-    // Resolved on spawn and on regeneration only — the floor itself is queried per position, never the service.
-    CharacterWaterFloor WaterFloor()
-    {
-        if (_water == null) ServiceLocator.TryGet(out _water);
-        return new CharacterWaterFloor(_water, _center);
     }
 
     bool EnsurePlanet(out string err)
@@ -286,12 +276,6 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
             up = dir;
             groundPoint = _center + dir * r;
         }
-
-        // Never seed below the water HERE — in ocean or in a raised lake, stand on THAT body's surface. A
-        // global sea radius would seed 40 m under the surface of a lake that spilled above it.
-        float waterRadius = WaterFloor().RadiusAt(groundPoint, up);
-        if (waterRadius > 0f && Vector3.Dot(groundPoint - _center, up) < waterRadius)
-            groundPoint = _center + up * waterRadius;
 
         Vector3 pos = groundPoint + up * FootOffset;
         Vector3 fwd = camT != null && CharacterMath.TryProjectOntoTangent(camT.forward, up, out Vector3 f)

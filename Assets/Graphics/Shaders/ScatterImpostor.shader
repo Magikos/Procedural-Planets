@@ -5,18 +5,20 @@ Shader "Scatter/Impostor"
     // is camera-facing and kept upright; the fragment picks the atlas cell matching the view direction in
     // the tree's own frame, so the card reads as the tree from ANY angle — including straight down, where a
     // single front-view billboard would foreshorten to a slab. Lighting is applied here at runtime from the
-    // planet _SunParams sun + ambient the mesh uses (bright by day, dim at night), a synthesized canopy
-    // normal shading the card like a soft blob so the sun-facing side lights regardless of view.
+    // planet sun and ambient used by the mesh. Packed surface data supplies normals, depth and leaf mask
+    // for view reprojection, lighting and shadow reconstruction.
     Properties
     {
+        [HideInInspector] [NonModifiableTextureData] _ScatterDitherNoise ("LOD Blue Noise", 2D) = "gray" {}
         _BaseMap ("Octahedral Atlas (RGB albedo, A silhouette)", 2D) = "white" {}
         _NormalMap ("Octahedral Normal Atlas (view-space, encoded)", 2D) = "bump" {}
         _Cutoff ("Alpha Cutoff", Range(0,1)) = 0.5
-        _NormalBulge ("Canopy Normal Bulge", Range(0.2,2)) = 1.3
+        _HasSurfaceData ("Atlas contains packed normals, depth and leaf mask", Float) = 0
         _GridN ("Octahedral grid frames per axis", Float) = 8
-        _CenterOffset ("Billboard centre height above pivot (m)", Float) = 1
+        _CenterOffset ("Bake centre in object space (m)", Vector) = (0,1,0,0)
         _WorldSize ("Billboard square side (m)", Float) = 2
         _LeafCard ("Whole-card leaf translucency (0/1)", Float) = 0
+        _CardBrightness ("Card brightness trim vs its mesh", Range(0.5,1.5)) = 1.0
         _FadeInStart ("Fade-in start (m)", Float) = 340
         _FadeInEnd ("Fade-in end (m)", Float) = 400
         _FadeOutStart ("Fade-out start (m)", Float) = 1100
@@ -46,22 +48,21 @@ Shader "Scatter/Impostor"
         // the light for the shadow pass). Returns the quad world position for a unit centred quad vertex
         // (posOS.xy in [-0.5,0.5]) plus the basis and the continuous octahedral grid coordinate (frame = the
         // view direction resolved into the tree's object frame — matches the C# bake).
-        void OctBillboardToward(float4x4 m, float3 viewDirW, float2 posXY, float gridN, float centerOffset,
+        void OctBillboardToward(float4x4 m, float3 viewDirW, float2 posXY, float gridN, float3 centerOffset,
             float worldSize, out float3 world, out float3 outRight, out float3 outUp, out float3 outView,
             out float2 gridCoord)
         {
-            float3 origin = float3(m._m03, m._m13, m._m23);
             float3 up = normalize(float3(m._m01, m._m11, m._m21));       // surface normal (tree up)
             float3 objX = float3(m._m00, m._m10, m._m20);
             float scale = length(objX);
             objX = scale > 1e-6 ? objX / scale : float3(1, 0, 0);
 
-            float3 center = origin + up * (centerOffset * scale);
+            float3 center = mul(m, float4(centerOffset, 1.0)).xyz;
             float3 viewW = normalize(viewDirW);
-            float3 right = cross(up, viewW);
+            float3 right = cross(viewW, up);
             float rl = length(right);
             right = rl > 1e-3 ? right / rl : objX;                        // pole: tree's own x axis
-            float3 qUp = normalize(cross(viewW, right));                  // surface-up projected -> stays upright
+            float3 qUp = normalize(cross(right, viewW));                  // bake camera up
 
             float2 q = posXY * (worldSize * scale);
             world = center + right * q.x + qUp * q.y;
@@ -74,13 +75,10 @@ Shader "Scatter/Impostor"
         }
 
         // Camera-facing convenience wrapper: view direction = tree centre -> camera.
-        void OctBillboard(float4x4 m, float2 posXY, float gridN, float centerOffset, float worldSize,
+        void OctBillboard(float4x4 m, float2 posXY, float gridN, float3 centerOffset, float worldSize,
             out float3 world, out float3 outRight, out float3 outUp, out float3 outView, out float2 gridCoord)
         {
-            float3 origin = float3(m._m03, m._m13, m._m23);
-            float3 up = normalize(float3(m._m01, m._m11, m._m21));
-            float scale = length(float3(m._m00, m._m10, m._m20));
-            float3 center = origin + up * (centerOffset * scale);
+            float3 center = mul(m, float4(centerOffset, 1.0)).xyz;
             OctBillboardToward(m, _WorldSpaceCameraPos - center, posXY, gridN, centerOffset, worldSize,
                 world, outRight, outUp, outView, gridCoord);
         }
@@ -97,41 +95,90 @@ Shader "Scatter/Impostor"
         // bigger bias.
         #define CARD_MIP_BIAS (-0.5)
 
-        // Bilinear blend of the 4 neighbour octahedral frames (weights from the fractional grid coord), so
-        // the card cross-fades between baked angles as the camera orbits instead of snapping cell-to-cell.
-        // Cell centres sit at integer+0.5 (the bake framed cell i at (i+0.5)/N), so shift by 0.5 first.
-        //
-        // Unweighted on purpose. A texel solid in one cell is often empty in its neighbour, and an empty
-        // texel is the bake background, so weighting colour by each cell's own alpha looks like the obvious
-        // correction. Measured across all 61 cards it moves the card/mesh luminance ratio by at most 0.003:
-        // the baker already dilates colour into the transparent texels, and neighbouring view angles agree
-        // almost everywhere they overlap. Not the reason a card reads dimmer than its mesh.
-        half4 SampleOctBlended(TEXTURE2D_PARAM(atlas, atlasSampler), float2 gridCoord, float2 quadUv, float gridN)
+        // Reproject each baked view onto the current viewing ray. Sampling every view at the same UV
+        // moves thin trunks and branches during a turn, even when the atlas contains the correct mesh.
+        float2 SurfaceUv(TEXTURE2D_PARAM(surfaceAtlas, surfaceSampler), float2 gridCoord,
+            float2 cell, float2 quadUv, float gridN, float surfaceData)
+        {
+            if (surfaceData < 0.5) return quadUv;
+            float2 encoded = gridCoord / gridN * 2.0 - 1.0;
+            float2 p = float2(encoded.x + encoded.y, encoded.x - encoded.y) * 0.5;
+            float3 view = normalize(float3(p.x, 1.0 - abs(p.x) - abs(p.y), p.y));
+            float3 right = cross(view, float3(0, 1, 0));
+            right = dot(right, right) > 1e-6 ? normalize(right) : float3(1, 0, 0);
+            float3 up = normalize(cross(right, view));
+            float3 origin = right * (quadUv.x - 0.5) + up * (quadUv.y - 0.5);
+
+            encoded = (cell + 0.5) / gridN * 2.0 - 1.0;
+            p = float2(encoded.x + encoded.y, encoded.x - encoded.y) * 0.5;
+            float3 bakeView = normalize(float3(p.x, 1.0 - abs(p.x) - abs(p.y), p.y));
+            float3 bakeRight = cross(bakeView, float3(0, 1, 0));
+            if (dot(bakeRight, bakeRight) < 1e-6) bakeRight = cross(bakeView, float3(0, 0, 1));
+            bakeRight = normalize(bakeRight);
+            float3 bakeUp = normalize(cross(bakeRight, bakeView));
+            float2 uv = float2(dot(origin, bakeRight), dot(origin, bakeUp)) + 0.5;
+            float depth = SAMPLE_TEXTURE2D_BIAS(surfaceAtlas, surfaceSampler,
+                (cell + saturate(uv)) / gridN, CARD_MIP_BIAS).b - 0.5;
+            // Background depth is 1; it cannot define a ray/surface intersection.
+            if (depth >= 0.499) return saturate(uv);
+            float rayDistance = (depth - dot(origin, bakeView)) / max(dot(view, bakeView), 0.1);
+            float3 surface = origin + view * rayDistance;
+            return saturate(float2(dot(surface, bakeRight), dot(surface, bakeUp)) + 0.5);
+        }
+
+        struct ImpostorSurface
+        {
+            half4 colour;
+            float3 normalOS;
+            float3 surfaceOS;
+            float leafMask;
+        };
+
+        // All passes share the same reprojected samples. Read each normal/depth texel once after
+        // reprojection and reuse it for lighting and shadow placement.
+        ImpostorSurface SampleOctSurface(TEXTURE2D_PARAM(atlas, atlasSampler),
+            TEXTURE2D_PARAM(surfaceAtlas, surfaceSampler), float2 gridCoord,
+            float2 quadUv, float gridN, float surfaceData)
         {
             float2 g = gridCoord - 0.5;
             float2 baseC = floor(g);
             float2 f = saturate(g - baseC);
-            half4 c = 0;
+            ImpostorSurface result = (ImpostorSurface)0;
             [unroll] for (int cj = 0; cj < 2; cj++)
             [unroll] for (int ci = 0; ci < 2; ci++)
             {
                 float2 cell = clamp(baseC + float2(ci, cj), 0.0, gridN - 1.0);
-                float2 uv = (cell + quadUv) / gridN;
+                float2 uv = SurfaceUv(TEXTURE2D_ARGS(surfaceAtlas, surfaceSampler),
+                    gridCoord, cell, quadUv, gridN, surfaceData);
+                float2 atlasUv = (cell + uv) / gridN;
                 float w = (ci == 0 ? 1.0 - f.x : f.x) * (cj == 0 ? 1.0 - f.y : f.y);
-                c += SAMPLE_TEXTURE2D_BIAS(atlas, atlasSampler, uv, CARD_MIP_BIAS) * w;
+                half4 colour = SAMPLE_TEXTURE2D_BIAS(atlas, atlasSampler, atlasUv, CARD_MIP_BIAS);
+                result.colour += colour * w;
+                float surfaceWeight = w * colour.a;
+                float4 data = SAMPLE_TEXTURE2D_BIAS(surfaceAtlas, surfaceSampler, atlasUv, CARD_MIP_BIAS);
+                float3 n = surfaceData > 0.5 ? UnpackNormalOctQuadEncode(data.rg * 2.0 - 1.0)
+                    : data.rgb * 2.0 - 1.0;
+
+                float2 encoded = (cell + 0.5) / gridN * 2.0 - 1.0;
+                float2 p = float2(encoded.x + encoded.y, encoded.x - encoded.y) * 0.5;
+                float3 view = normalize(float3(p.x, 1.0 - abs(p.x) - abs(p.y), p.y));
+                float3 right = cross(float3(0, 1, 0), view);
+                if (dot(right, right) < 1e-6) right = cross(float3(0, 0, 1), view);
+                right = normalize(right);
+                float3 up = normalize(cross(view, right));
+                result.normalOS += (-right * n.x + up * n.y + view * n.z) * surfaceWeight;
+                result.surfaceOS += (-right * (uv.x - 0.5) + up * (uv.y - 0.5)
+                    + view * (data.b - 0.5)) * surfaceWeight;
+                result.leafMask += data.a * surfaceWeight;
             }
-            return c;
+            result.surfaceOS /= max(result.colour.a, 1e-6);
+            result.leafMask /= max(result.colour.a, 1e-6);
+            result.normalOS = dot(result.normalOS, result.normalOS) > 1e-6
+                ? normalize(result.normalOS) : float3(0, 1, 0);
+            return result;
         }
 
-        // Level centres, not level floors — see the note in Scatter.shader. Here the compare runs the other
-        // way (clip(coverage - threshold)), so a 0.0 cell instead KEEPS one pixel in 16 of a card that has
-        // faded to nothing.
-        static const float _Bayer4x4[16] = {
-            0.5/16, 8.5/16, 2.5/16, 10.5/16,
-            12.5/16, 4.5/16, 14.5/16, 6.5/16,
-            3.5/16, 11.5/16, 1.5/16, 9.5/16,
-            15.5/16, 7.5/16, 13.5/16, 5.5/16
-        };
+        #include "Includes/ScatterDither.hlsl"
 
         // Arrival ramp, shared with the mesh tiers. Folded into `coverage` rather than a DistanceDither,
         // because the impostor already dithers on its own fade-in/fade-out coverage. The buffers it reads are
@@ -154,11 +201,13 @@ Shader "Scatter/Impostor"
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #pragma multi_compile_fog
+            #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Includes/PlanetSunLighting.hlsl"
             #include "Includes/CloudShadows.hlsl"
 
             float3 _SunParams;
+            float3 _PlanetCenter;
             float _NightAmbientIntensity;
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
@@ -167,11 +216,12 @@ Shader "Scatter/Impostor"
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 float _Cutoff;
-                float _NormalBulge;
+                float _HasSurfaceData;
                 float _GridN;
-                float _CenterOffset;
+                float3 _CenterOffset;
                 float _WorldSize;
                 float _LeafCard;
+                float _CardBrightness;
                 float _FadeInStart;
                 float _FadeInEnd;
                 float _FadeOutStart;
@@ -224,7 +274,6 @@ Shader "Scatter/Impostor"
                 float2 gridCoord : TEXCOORD1; // continuous octahedral frame coordinate
                 float dist : TEXCOORD2;
                 float4 screenPos : TEXCOORD3;
-                float3 billRight : TEXCOORD4;
                 float3 billUp : TEXCOORD5;     // surface normal
                 float3 billFwd : TEXCOORD6;    // view direction
                 float3 positionWS : TEXCOORD7;
@@ -238,13 +287,14 @@ Shader "Scatter/Impostor"
             {
                 Varyings OUT = (Varyings)0;
                 UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
 
                 float3 world, right, up, view;
                 float2 gridCoord;
                 OctBillboard(GetObjectToWorldMatrix(), IN.positionOS.xy, _GridN, _CenterOffset, _WorldSize,
                     world, right, up, view, gridCoord);
 
-                // One shadow sample per card, taken off the quad and toward the sun. The ShadowCaster pass
+                // Legacy atlas fallback: one shadow sample off the quad and toward the sun. The ShadowCaster pass
                 // draws a LIGHT-facing quad through the same centre, so the camera-facing quad this pass
                 // shades cuts through its own caster: everything on the far side of that intersection reads
                 // as shadowed, which paints a hard straight line across the card and drops a squat prop
@@ -252,10 +302,9 @@ Shader "Scatter/Impostor"
                 // lum 0.718 of mesh with shadows on, 1.031 with them off. 112 of 155 cards start inside the
                 // 250 m shadow distance, so this lands in the handover band, not past it.
                 float4x4 objToWorld = GetObjectToWorldMatrix();
-                float3 cardOrigin = float3(objToWorld._m03, objToWorld._m13, objToWorld._m23);
                 float3 cardUp = normalize(float3(objToWorld._m01, objToWorld._m11, objToWorld._m21));
                 float cardScale = length(float3(objToWorld._m00, objToWorld._m10, objToWorld._m20));
-                float3 cardCenter = cardOrigin + cardUp * (_CenterOffset * cardScale);
+                float3 cardCenter = mul(objToWorld, float4(_CenterOffset, 1.0)).xyz;
                 float3 towardSun = PlanetSunDirection(_SunParams, cardUp);
                 OUT.shadowSampleWS = cardCenter + towardSun * (_WorldSize * cardScale * 0.6);
 
@@ -263,11 +312,9 @@ Shader "Scatter/Impostor"
                 OUT.positionWS = world;
                 OUT.uv = IN.uv;
                 OUT.gridCoord = gridCoord;
-                OUT.dist = distance(_WorldSpaceCameraPos, world);
+                OUT.dist = distance(_WorldSpaceCameraPos, GetObjectToWorldMatrix()._m03_m13_m23);
                 OUT.screenPos = ComputeScreenPos(OUT.positionHCS);
-                OUT.billRight = right;
                 OUT.billUp = up;
-                OUT.billFwd = view;
                 OUT.fogFactor = ComputeFogFactor(OUT.positionHCS.z);
                 OUT.appear = ScatterAppear();
                 return OUT;
@@ -275,45 +322,51 @@ Shader "Scatter/Impostor"
 
             half4 frag(Varyings IN) : SV_Target
             {
-                half4 card = SampleOctBlended(TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap), IN.gridCoord, IN.uv, _GridN);
+                UNITY_SETUP_INSTANCE_ID(IN);
+                ImpostorSurface sample = SampleOctSurface(TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap),
+                    TEXTURE2D_ARGS(_NormalMap, sampler_NormalMap), IN.gridCoord, IN.uv, _GridN, _HasSurfaceData);
+                half4 card = sample.colour;
                 clip(card.a - _Cutoff);
 
-                float fadeIn = saturate((IN.dist - _FadeInStart) / max(1e-3, _FadeInEnd - _FadeInStart));
-                float fadeOut = 1.0 - saturate((IN.dist - _FadeOutStart) / max(1e-3, _FadeOutEnd - _FadeOutStart));
-                float coverage = fadeIn * fadeOut * IN.appear;
+                float coverage = ScatterCardCoverage(IN.dist, float2(_FadeInStart, _FadeInEnd),
+                    float2(_FadeOutStart, _FadeOutEnd), IN.appear);
 
-                float2 sp = (IN.screenPos.xy / max(IN.screenPos.w, 1e-4)) * _ScreenParams.xy;
-                int2 pix = int2(fmod(sp, 4.0));
-                clip(coverage - _Bayer4x4[pix.y * 4 + pix.x]);
+                clip(coverage - ScatterDitherThreshold(IN.screenPos));
 
                 // Real surface normal from the baked view-space normal atlas, reconstructed to world space via
                 // the billboard basis (right/up/view) so the card shades with the tree's/rock's actual facets
                 // instead of a synthesized hemisphere. Unbaked materials default the atlas to flat (viewer-facing).
-                float3 nEnc = SampleOctBlended(TEXTURE2D_ARGS(_NormalMap, sampler_NormalMap), IN.gridCoord, IN.uv, _GridN).rgb;
-                float3 nv = nEnc * 2.0 - 1.0;
-                // Reconstruct through the SAME frame the bake captured in: view-space x=billRight,
-                // y=the camera up (cross(view,right), not the surface up), z=view. Using the surface up would
-                // mis-map the normal for non-horizontal (top-down) view cells.
-                float3 camUp = normalize(cross(IN.billFwd, IN.billRight));
-                float3 N = normalize(IN.billRight * nv.x + camUp * nv.y + IN.billFwd * nv.z);
+                float3 surfaceOS = sample.surfaceOS;
+                float leafMask = sample.leafMask;
+                float3 normalOS = sample.normalOS;
+                float3 N = TransformObjectToWorldNormal(normalOS);
 
-                float3 planetNormal = normalize(IN.billUp);
+                float3 planetNormal = normalize(IN.positionWS - _PlanetCenter);
                 float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
                 float localSun = dot(planetNormal, sunDir);
                 float daylight = PlanetDaylightFromLocalSun(localSun);
                 half ndl = saturate(dot(N, sunDir));
-                half shadowAtten = MainLightRealtimeShadow(TransformWorldToShadowCoord(IN.shadowSampleWS));
+                float scale = length(GetObjectToWorldMatrix()._m00_m10_m20);
+                // Depth reconstructs the receiver instead of sampling an artificially sunlit point.
+                float3 surfaceWS = TransformObjectToWorld(_CenterOffset + surfaceOS * _WorldSize);
+                // The receiver and caster reconstruct different sampled views. Allow one atlas texel
+                // of depth error so quantization does not turn a lit facet into its own shadow.
+                uint atlasWidth, atlasHeight;
+                _NormalMap.GetDimensions(atlasWidth, atlasHeight);
+                float depthTolerance = _WorldSize * scale * _GridN / max((float)atlasWidth, 1.0);
+                float3 shadowPosition = _HasSurfaceData > 0.5
+                    ? surfaceWS + sunDir * depthTolerance : IN.shadowSampleWS;
+                half shadowAtten = MainLightShadow(TransformWorldToShadowCoord(shadowPosition), shadowPosition,
+                    half4(1, 1, 1, 1), half4(0, 0, 0, 0));
                 float cloudShadow = CloudShadowFactor(IN.positionWS, sunDir, localSun);
                 // Shadow floor matches the mesh tier (Scatter.shader and FoliageLit both use 0.35). At 0.5 a
                 // shadowed prop LIGHTENED as it crossed into impostor range, which is a pop in its own right.
                 // The mesh tier self-shadows: a canopy darkens the trunk and the lower leaves, a boulder
                 // darkens its own underside. A single quad cannot, so an uncorrected card reads brighter
-                // than the mesh it replaced - measured over 155 cards at the handover size, mean luminance
-                // 1.137x the mesh (trees 1.20x, rocks and bushes 1.07x). This scales only the directional
-                // term, so a prop's shaded side stays where it is and only the lit side comes back down.
-                // ponytail: one constant for every species, calibrated on that mean. Per-prototype
-                // occlusion baked into an atlas channel if one species still pops at the handover.
-                const half cardSelfOcclusion = 0.70;
+                // than the mesh it replaced. This takes the library-wide part of that back off the
+                // directional term, so a prop's shaded side stays where it is and only its lit side comes
+                // down. What is left over is per-species; _CardBrightness below carries that.
+                half cardSelfOcclusion = _HasSurfaceData > 0.5 ? 1.0 : 0.70;
                 half shade = lerp(0.35, 1.0, shadowAtten * cloudShadow) * cardSelfOcclusion;
                 // Shaded floor matches Scatter.shader's mesh tier (0.6) so a prop's dark side does not step
                 // brighter as it crosses the mesh -> impostor handoff. These were 0.85 vs 0.6, which read as
@@ -329,8 +382,15 @@ Shader "Scatter/Impostor"
                 float back = pow(saturate(dot(viewDir, -sunDir)), 1.8);
                 float wrap = saturate(dot(N, -sunDir)) * 0.6 + 0.4;
                 half3 transmitTint = half3(1.08, 1.04, 0.86);
-                dayColor += card.rgb * transmitTint * (back * wrap * _FoliageBacklight * _LeafCard)
+                dayColor += card.rgb * transmitTint * (back * wrap * _FoliageBacklight * (_HasSurfaceData > 0.5 ? leafMask : _LeafCard))
                           * daylight * cloudShadow;
+                // Per-species trim onto the mesh the card replaces. What cardSelfOcclusion leaves behind is
+                // not a constant: over 185 props at the handover size, reeds and boulders sit within 3% of
+                // their mesh while conifers run 24-31% bright. The directional term cannot carry that - the
+                // 0.6 floor below caps how far it can pull a card down, and forcing it to 0.2 moved the
+                // library mean only 1.062 -> 0.950 - so this scales the whole lit colour instead. The value
+                // comes from the prop's own geometry: ScatterImpostorBaker.CardBrightnessOf.
+                dayColor *= _HasSurfaceData > 0.5 ? 1.0 : _CardBrightness;
                 // Cast shadow on the WHOLE card, matching FoliageLit: the form shading above has a 0.6
                 // floor, so without this a shaded prop reads brighter as a card than as the mesh it
                 // replaced and lightens at the handover.
@@ -339,6 +399,11 @@ Shader "Scatter/Impostor"
                 // Linear, matching the mesh tier, the terrain and FoliageLit. See Scatter.shader for why the
                 // old sqrt easing left props lit under a sun that had already set.
                 half3 col = lerp(nightColor, dayColor, saturate(daylight));
+                #if defined(_SCREEN_SPACE_OCCLUSION)
+                    float2 aoUV = IN.screenPos.xy / max(IN.screenPos.w, 1e-4);
+                    AmbientOcclusionFactor ao = GetScreenSpaceAmbientOcclusion(aoUV);
+                    col *= lerp(1.0, ao.indirectAmbientOcclusion, lerp(0.25, 0.5, _LeafCard));
+                #endif
                 col = lerp(col, _LodDebugTint.rgb, _LodDebugTint.a); // scatter.lodview: LOD-band colour
                 // Fog LAST, like the mesh tier. Without it a prop shed its aerial perspective the instant it
                 // crossed into impostor range — the tier that draws from 340 m to 2250 m, where fog matters most.
@@ -369,15 +434,17 @@ Shader "Scatter/Impostor"
 
             float3 _LightDirection;
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
+            TEXTURE2D(_NormalMap); SAMPLER(sampler_NormalMap);
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 float _Cutoff;
-                float _NormalBulge;
+                float _HasSurfaceData;
                 float _GridN;
-                float _CenterOffset;
+                float3 _CenterOffset;
                 float _WorldSize;
                 float _LeafCard;
+                float _CardBrightness;
                 float _FadeInStart;
                 float _FadeInEnd;
                 float _FadeOutStart;
@@ -423,6 +490,9 @@ Shader "Scatter/Impostor"
                 float4 positionHCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 float2 gridCoord : TEXCOORD1;
+                float4 screenPos : TEXCOORD2;
+                float dist : TEXCOORD3;
+                float appear : TEXCOORD4;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -430,30 +500,51 @@ Shader "Scatter/Impostor"
             {
                 Varyings OUT = (Varyings)0;
                 UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
 
                 // Face the light so the shadowmap sees the card; sample the cell for the light->tree view.
                 float3 world, right, up, view;
                 float2 gridCoord;
-                OctBillboardToward(GetObjectToWorldMatrix(), -_LightDirection, IN.positionOS.xy, _GridN,
+                OctBillboardToward(GetObjectToWorldMatrix(), _LightDirection, IN.positionOS.xy, _GridN,
                     _CenterOffset, _WorldSize, world, right, up, view, gridCoord);
 
                 OUT.uv = IN.uv;
                 OUT.gridCoord = gridCoord;
-                float4 hcs = TransformWorldToHClip(ApplyShadowBias(world, -_LightDirection, _LightDirection));
+                float4 hcs = TransformWorldToHClip(ApplyShadowBias(world, _LightDirection, _LightDirection));
                 #if UNITY_REVERSED_Z
                     hcs.z = min(hcs.z, UNITY_NEAR_CLIP_VALUE);
                 #else
                     hcs.z = max(hcs.z, UNITY_NEAR_CLIP_VALUE);
                 #endif
                 OUT.positionHCS = hcs;
+                OUT.screenPos = ComputeScreenPos(hcs);
+                OUT.dist = distance(_WorldSpaceCameraPos, GetObjectToWorldMatrix()._m03_m13_m23);
+                OUT.appear = ScatterAppear();
                 return OUT;
             }
 
-            half4 frag(Varyings IN) : SV_Target
+            float frag(Varyings IN) : SV_Depth
             {
-                half4 card = SampleOctBlended(TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap), IN.gridCoord, IN.uv, _GridN);
+                UNITY_SETUP_INSTANCE_ID(IN);
+                ImpostorSurface sample = SampleOctSurface(TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap),
+                    TEXTURE2D_ARGS(_NormalMap, sampler_NormalMap), IN.gridCoord, IN.uv, _GridN, _HasSurfaceData);
+                half4 card = sample.colour;
                 clip(card.a - _Cutoff);
-                return 0;
+                float coverage = ScatterCardCoverage(IN.dist, float2(_FadeInStart, _FadeInEnd),
+                    float2(_FadeOutStart, _FadeOutEnd), IN.appear);
+                clip(coverage - ScatterDitherThreshold(IN.screenPos));
+                if (_HasSurfaceData < 0.5) return IN.positionHCS.z;
+                float3 surfaceOS = sample.surfaceOS;
+                float leafMask = sample.leafMask;
+                float3 normalOS = sample.normalOS;
+                float3 surface = TransformObjectToWorld(_CenterOffset + surfaceOS * _WorldSize);
+                float4 hcs = TransformWorldToHClip(ApplyShadowBias(surface,
+                    TransformObjectToWorldNormal(normalOS), _LightDirection));
+                #if UNITY_REVERSED_Z
+                    return min(hcs.z / hcs.w, UNITY_NEAR_CLIP_VALUE);
+                #else
+                    return max(hcs.z / hcs.w, UNITY_NEAR_CLIP_VALUE);
+                #endif
             }
             ENDHLSL
         }
@@ -475,113 +566,25 @@ Shader "Scatter/Impostor"
             #pragma target 4.5
             #pragma instancing_options procedural:setup
 
-            TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
+            #include "Includes/ImpostorDepthMotion.hlsl"
+            ENDHLSL
+        }
 
-            CBUFFER_START(UnityPerMaterial)
-                float4 _BaseMap_ST;
-                float _Cutoff;
-                float _NormalBulge;
-                float _GridN;
-                float _CenterOffset;
-                float _WorldSize;
-                float _LeafCard;
-                float _FadeInStart;
-                float _FadeInEnd;
-                float _FadeOutStart;
-                float _FadeOutEnd;
-                // Must stay in every pass's UnityPerMaterial, in the same order: the SRP batcher requires an
-                // identical layout across a shader's passes.
-                float4 _LodDebugTint;
-            CBUFFER_END
-
-            #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
-                StructuredBuffer<float4x4> _ScatterMatrices;
-                StructuredBuffer<float4x4> _ScatterMatricesInv;
-                StructuredBuffer<uint> _ScatterVisible;
-                StructuredBuffer<float> _ScatterBorn;
-            #endif
-            float ScatterAppear()
-            {
-            #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
-                if (_ScatterFadeInSeconds <= 0.0) return 1.0;
-                return saturate((_Time.y - _ScatterBorn[_ScatterVisible[unity_InstanceID]]) / _ScatterFadeInSeconds);
-            #else
-                return 1.0;
-            #endif
-            }
-            void setup()
-            {
-            #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
-                uint idx = _ScatterVisible[unity_InstanceID];
-                unity_ObjectToWorld = _ScatterMatrices[idx];
-                unity_WorldToObject = _ScatterMatricesInv[idx];
-            #endif
-            }
-
-            struct Attributes
-            {
-                float4 positionOS : POSITION;
-                float2 uv : TEXCOORD0;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-            };
-
-            struct Varyings
-            {
-                float4 positionHCS : SV_POSITION;
-                float2 uv : TEXCOORD0;
-                float2 gridCoord : TEXCOORD1;
-                float dist : TEXCOORD2;
-                float4 screenPos : TEXCOORD3;
-                float3 billRight : TEXCOORD4;
-                float3 billUp : TEXCOORD5;
-                float3 billFwd : TEXCOORD6;
-                float appear : TEXCOORD8;
-                float3 positionWS : TEXCOORD7;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-            };
-
-            Varyings vert(Attributes IN)
-            {
-                Varyings OUT = (Varyings)0;
-                UNITY_SETUP_INSTANCE_ID(IN);
-
-                float3 world, right, up, view;
-                float2 gridCoord;
-                OctBillboard(GetObjectToWorldMatrix(), IN.positionOS.xy, _GridN, _CenterOffset, _WorldSize,
-                    world, right, up, view, gridCoord);
-
-                OUT.positionHCS = TransformWorldToHClip(world);
-                OUT.positionWS = world;
-                OUT.uv = IN.uv;
-                OUT.gridCoord = gridCoord;
-                OUT.dist = distance(_WorldSpaceCameraPos, world);
-                OUT.screenPos = ComputeScreenPos(OUT.positionHCS);
-                OUT.billRight = right;
-                OUT.billUp = up;
-                OUT.billFwd = view;
-                OUT.appear = ScatterAppear();
-                return OUT;
-            }
-
-            half4 frag(Varyings IN) : SV_Target
-            {
-                half4 card = SampleOctBlended(TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap), IN.gridCoord, IN.uv, _GridN);
-                clip(card.a - _Cutoff);
-
-                float fadeIn = saturate((IN.dist - _FadeInStart) / max(1e-3, _FadeInEnd - _FadeInStart));
-                float fadeOut = 1.0 - saturate((IN.dist - _FadeOutStart) / max(1e-3, _FadeOutEnd - _FadeOutStart));
-                float coverage = fadeIn * fadeOut * IN.appear;
-
-                float2 sp = (IN.screenPos.xy / max(IN.screenPos.w, 1e-4)) * _ScreenParams.xy;
-                int2 pix = int2(fmod(sp, 4.0));
-                clip(coverage - _Bayer4x4[pix.y * 4 + pix.x]);
-
-                float cx = IN.uv.x * 2.0 - 1.0;
-                float cy = IN.uv.y * 2.0 - 1.0;
-                float nz = sqrt(saturate(_NormalBulge - cx * cx - cy * cy));
-                float3 N = normalize(IN.billRight * cx + IN.billUp * cy + IN.billFwd * nz);
-                return half4(N, 0);
-            }
+        Pass
+        {
+            Name "MotionVectors"
+            Tags { "LightMode"="MotionVectors" }
+            Cull Off
+            ZWrite On
+            ColorMask RG
+            HLSLPROGRAM
+            #pragma target 4.5
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_instancing
+            #pragma instancing_options procedural:setup
+            #define IMPOSTOR_MOTION_PASS
+            #include "Includes/ImpostorDepthMotion.hlsl"
             ENDHLSL
         }
     }

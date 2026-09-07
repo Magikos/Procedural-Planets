@@ -164,35 +164,17 @@ float SamplePrecipitationDensity(float3 worldPos, out float rainRate)
     float bottomFade = smoothstep(0.0, max(_PrecipitationFadeParams.x, 0.0001), height01);
     float topFade = 1.0 - smoothstep(1.0 - saturate(_PrecipitationFadeParams.y), 1.0, height01);
 
-    float3 reference = abs(normal.y) > 0.92 ? float3(1.0, 0.0, 0.0) : float3(0.0, 1.0, 0.0);
-    float3 tangent = normalize(cross(reference, normal));
-    float3 bitangent = normalize(cross(normal, tangent));
-    float3 wind = dot(_WindDirection, _WindDirection) > 0.0001 ? normalize(_WindDirection) : float3(1.0, 0.0, 0.0);
-    float2 windTangent = float2(dot(wind, tangent), dot(wind, bitangent));
-
-    float3 weatherDirection = mul((float3x3)_CloudWeatherRotation, normal);
-    weatherDirection = dot(weatherDirection, weatherDirection) > 0.0001 ? normalize(weatherDirection) : normal;
-    int face;
-    float2 faceUv;
-    CubeFaceUv(weatherDirection, face, faceUv);
-
-    float faceOffset = (float)face * 613.17;
-    float2 local = (faceUv - 0.5) * bottomRadius * 2.0 + faceOffset;
-    local += windTangent * ((1.0 - height01) * _PrecipitationVisualParams.z * layerThickness);
-    // Noise coordinates move opposite feature motion, so subtract to advect toward +wind.
-    local -= windTangent * (_GameTime * _WindSpeedMps);
-
+    float3 windTangent = _WindDirection - normal * dot(_WindDirection, normal);
+    float3 advected = normal * bottomRadius + windTangent *
+        ((1.0 - height01) * _PrecipitationVisualParams.z * layerThickness - _GameTime * _WindSpeedMps);
+    float3 local = mul((float3x3)_CloudWeatherRotation, advected);
     float curtainScale = max(_PrecipitationVisualParams.x, 1.0);
-    float large = ValueNoise(local / curtainScale);
-    large = lerp(large, ValueNoise(local / (curtainScale * 0.43) + 19.7), 0.35);
+    float large = ValueNoise3D(local / curtainScale);
+    large = lerp(large, ValueNoise3D(local / (curtainScale * 0.43) + 19.7), 0.35);
     float curtain = smoothstep(0.22, 0.88, large);
-    // Anisotropic: low horizontal frequency, high vertical frequency scrolling downward
-    // with fall speed, so shafts streak vertically instead of reading as isotropic fog.
-    float2 streakUv = float2(
-        dot(local, float2(1.0, 0.37)) / max(curtainScale * 0.16, 8.0),
-        height01 * 2.2 - _GameTime * _PrecipitationVisualParams.w * 0.02);
-    float fineBreakup = ValueNoise(streakUv);
-    float heightBreakup = ValueNoise(float2(height01 * 43.0 + faceOffset * 0.007, dot(local, float2(0.013, 0.019))));
+    float fineBreakup = ValueNoise3D(local / max(curtainScale * 0.16, 8.0)
+        + normal * (height01 * 2.2 - _GameTime * _PrecipitationVisualParams.w * 0.02));
+    float heightBreakup = ValueNoise3D(local * 0.019 + normal * (height01 * 43.0));
 
     float stormWeight = lerp(0.6, 1.15, saturate(storm));
     return precipitation
@@ -348,13 +330,13 @@ ENDHLSL
                     return float4(sceneColor.rgb * 0.35 + debugColor * saturate(debugMask), sceneColor.a);
                 }
 
+                float averageStorm = weightedStorm / max(alpha, 0.0001);
+                float averageLightning = weightedLightning / max(alpha, 0.0001);
                 alpha = min(alpha, opacityCap);
                 alpha *= cameraAboveSea;
                 if (alpha <= 0.0001 && rainOpticalDepth <= 0.0001)
                     return NoPrecipitationContribution(sceneColor);
 
-                float averageStorm = weightedStorm / max(alpha, 0.0001);
-                float averageLightning = weightedLightning / max(alpha, 0.0001);
                 float rainLightning = averageLightning * _WeatherLightningColor.a;
                 float3 toCamera = normalize(rayOrigin - _PrecipitationPlanetCenter);
                 float localSun = saturate((dot(toCamera, _SunParams.xyz) + 0.1) * 3.0);

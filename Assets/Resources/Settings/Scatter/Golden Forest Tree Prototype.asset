@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Golden Forest Tree Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Golden Forest Tree
+  MeshOnlyVertexLimit: 200
   SlotId: 52
   SpacingMeters: 17
   Biome: 7

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 543245edd60d9cf4c940dd6f81f20347, type: 3}
+  m_Name: DeerVisuals
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::CreatureVisualSettings
+  MalePrefab: {fileID: 8778284284715550485, guid: da3b39eac47734946af176696f09aa47, type: 3}
+  FemalePrefab: {fileID: 4511377518832393530, guid: 2bdc15664d3aacf468b44a20c30083f0, type: 3}
+  Idle: {fileID: 7400006, guid: f54bd5cd272be07468fbfe13f6ac1c6f, type: 3}
+  Walk: {fileID: 7400002, guid: f54bd5cd272be07468fbfe13f6ac1c6f, type: 3}
+  Run: {fileID: 7400012, guid: f54bd5cd272be07468fbfe13f6ac1c6f, type: 3}
+  Eat: {fileID: 7400000, guid: 69a1c52e5d7411843832b7781e710843, type: 3}
+  Attack: {fileID: 7400016, guid: f54bd5cd272be07468fbfe13f6ac1c6f, type: 3}
+  Death: {fileID: 7400018, guid: f54bd5cd272be07468fbfe13f6ac1c6f, type: 3}
+  Rest: {fileID: 7400000, guid: 78f22a9b462ddbf4cb1e0d731b9b02b2, type: 2}
+  Sleep: {fileID: 7400000, guid: c2d9edb6634a913438e96a2678c3bb6a, type: 2}
+  Drink: {fileID: 7400000, guid: 69a1c52e5d7411843832b7781e710843, type: 3}
+  AttackHitNormalized: 0.12
+  ModelHeightMeters: 1.84
+  WalkMetersPerSecond: 1
+  RunMetersPerSecond: 4

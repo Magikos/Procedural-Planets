@@ -520,6 +520,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
             receiveShadows = true,
         };
         Graphics.RenderPrimitivesIndirect(renderParams, MeshTopology.Triangles, _argsBuffer, 1, 0);
+        VegetationMotionRenderFeature.RecordDraw(renderParams, _argsBuffer, _instancesBuffer);
     }
 
     public GrassNearFieldStats GetGrassNearFieldStats()

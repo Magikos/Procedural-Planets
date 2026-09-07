@@ -4,6 +4,7 @@
     "references": [
         "ProceduralPlanets.Core",
         "ProceduralPlanets.Planet",
+        "Magikos.Game",
         "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [

@@ -78,7 +78,9 @@ float WaterInterfaceFrontMask(float2 uv)
     float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r;
     float sceneForwardDepth = LinearEyeDepth(rawDepth, _ZBufferParams);
     float waterValid = step(0.0001, waterForwardDepth) * step(waterForwardDepth, sceneForwardDepth + 0.01);
-    return saturate(waterCoverage * waterValid);
+    // The interface ends the air path even when shallow water transmits the bed.
+    // Optical coverage belongs to the volume composite, not atmospheric distance.
+    return waterValid;
 }
 
 
@@ -122,7 +124,7 @@ float CompositeDepthScaled(float2 uv, float viewLength)
     float waterForwardDepth = waterData.r;
     float waterDepth = waterForwardDepth * viewLength;
     float waterValid = step(0.0001, waterForwardDepth) * step(waterDepth, sceneDepth + 0.01);
-    float interfaceMask = saturate(waterCoverage * waterValid);
+    float interfaceMask = waterValid;
     return lerp(sceneDepth, min(sceneDepth, waterDepth), interfaceMask);
 }
 
@@ -409,7 +411,8 @@ ENDHLSL
                 // Constant over the march, so out of the loop.
                 float3 waveAxisA, waveAxisB;
                 BuildPlanetWaveAxes(waveAxisA, waveAxisB);
-                WaterRippleParams shaftParams = EvaluateRippleParameters(depth01, body01);
+                WaterRippleParams shaftParams = EvaluateRippleParameters(depth01, body01,
+                    normalize(_WorldSpaceCameraPos.xyz - _PlanetCenter));
 
                 float3 accumulated = float3(0.0, 0.0, 0.0);
                 for (int step = 0; step < SHAFT_STEPS; step++)
@@ -434,10 +437,8 @@ ENDHLSL
                         shaftParams.scale, shaftParams.amplitude, shaftParams.timeScale,
                         shaftParams.waveEnergy, shaftParams.weatherEnergy, shaftParams.chaos01);
                     float2 entryGradient = entryRipple.gradientTS * 0.18 + entryRipple.detailGradientTS * 1.35;
-                    float3 entryTangentA = SafeNormalize(waveAxisA - entryFlat * dot(waveAxisA, entryFlat), waveAxisA);
-                    float3 entryTangentB = SafeNormalize(waveAxisB - entryFlat * dot(waveAxisB, entryFlat), waveAxisB);
                     float3 entryNormal = SafeNormalize(
-                        entryFlat - entryTangentA * entryGradient.x - entryTangentB * entryGradient.y, entryFlat);
+                        entryFlat - WaterGradientWS(entryGradient, waveAxisA, waveAxisB, entryFlat), entryFlat);
 
                     // How much more (or less) light crosses the surface here than across a flat one. First
                     // order in the tilt, and NOT clamped at 1 - the whole point is the bright half.
@@ -632,18 +633,14 @@ ENDHLSL
                     BuildPlanetWaveAxes(waveAxisA, waveAxisB);
                     float3 exitLocal = exitPointWS - _PlanetCenter;
                     float2 exitTS = float2(dot(exitLocal, waveAxisA), dot(exitLocal, waveAxisB));
-                    WaterRippleParams exitParams = EvaluateRippleParameters(exitData.g, exitBody01);
+                    WaterRippleParams exitParams = EvaluateRippleParameters(exitData.g, exitBody01, exitPlanetNormal);
                     WaterRippleField exitRipple = ComputeWaterRipple(exitTS, float2(1.0, 0.0), float2(0.0, 1.0),
                         exitParams.scale, exitParams.amplitude, exitParams.timeScale,
                         exitParams.waveEnergy, exitParams.weatherEnergy, exitParams.chaos01);
 
                     float2 chopGradientTS = exitRipple.gradientTS * 0.18 + exitRipple.detailGradientTS * 1.35;
-                    float3 chopTangentA = SafeNormalize(
-                        waveAxisA - exitPlanetNormal * dot(waveAxisA, exitPlanetNormal), waveAxisA);
-                    float3 chopTangentB = SafeNormalize(
-                        waveAxisB - exitPlanetNormal * dot(waveAxisB, exitPlanetNormal), waveAxisB);
                     float3 choppyNormal = SafeNormalize(
-                        swellNormal - chopTangentA * chopGradientTS.x - chopTangentB * chopGradientTS.y,
+                        swellNormal - WaterGradientWS(chopGradientTS, waveAxisA, waveAxisB, exitPlanetNormal),
                         swellNormal);
 
                     // Ice locks the surface flat, exactly as ComputeWaterVertexDisplacement does for the mesh.

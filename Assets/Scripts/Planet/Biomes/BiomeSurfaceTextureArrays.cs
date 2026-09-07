@@ -192,9 +192,24 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         int width = sample != null ? sample.width : FallbackSliceSize;
         int height = sample != null ? sample.height : FallbackSliceSize;
         TextureFormat format = sample != null ? sample.format : defaultFormat;
-        int mipCount = sample != null ? sample.mipmapCount : 1;
+        int mipCount = sample != null && sample.mipmapCount > 1
+            ? Mathf.FloorToInt(Mathf.Log(Mathf.Max(width, height), 2f)) + 1 : 1;
         int bankCount = secondarySelector != null ? 2 : 1;
         int arrayDepth = SliceCount * bankCount;
+
+        // Compressed arrays cannot receive CPU-authored fallback colours. Expand only when needed.
+        if (sample != null && UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsCompressedFormat(sample.graphicsFormat))
+        {
+            for (int bank = 0; bank < bankCount; bank++)
+            for (int slot = 0; slot < SliceCount; slot++)
+            {
+                BiomeDefinitionDto def = registry.GetDefinitionByIndex(slot);
+                Texture2D primary = selector(def);
+                Texture2D src = bank == 0 ? primary : secondarySelector(def) ?? primary;
+                if (src == null || src.width != width || src.height != height || src.format != sample.format || src.mipmapCount < mipCount)
+                    format = TextureFormat.RGBA32;
+            }
+        }
 
         Texture2DArray array;
         try
@@ -221,7 +236,9 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
             };
         }
 
-        Texture2D placeholder = BuildPlaceholder(width, height, format, isLinear, placeholderColor);
+        // Release CPU storage before GPU copies; Apply afterwards can overwrite copied pixels.
+        array.Apply(updateMipmaps: false, makeNoLongerReadable: true);
+        Texture2D placeholder = null;
         int matched = 0;
         int placeholderUsed = 0;
         try
@@ -235,19 +252,26 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
                     Texture2D src = bank == 0 ? primary : secondarySelector(def) ?? primary;
                     int arraySlice = slot + bank * SliceCount;
 
-                    if (src != null && src.width == width && src.height == height && src.format == format)
+                    if (src != null && src.width == width && src.height == height && src.mipmapCount >= mipCount
+                        && (src.format == format || format == TextureFormat.RGBA32))
                     {
-                        for (int mip = 0; mip < mipCount; mip++)
-                            Graphics.CopyTexture(src, 0, mip, array, arraySlice, mip);
+                        if (src.format == format)
+                            for (int mip = 0; mip < mipCount; mip++)
+                                Graphics.CopyTexture(src, 0, mip, array, arraySlice, mip);
+                        else
+                            CopyConvertedSlice(src, array, arraySlice);
                         matched++;
                     }
                     else
                     {
                         if (src != null)
                         {
-                            LoggerProvider.Get().Log(LogLevel.Warning, "BiomeSurfaceTextureArrays", $"{name} bank {bank} slot {slot} ({def?.Type}) texture '{src.name}' is {src.width}x{src.height} {src.format}, expected {width}x{height} {format}. Using placeholder.");
+                            LoggerProvider.Get().Log(LogLevel.Warning, "BiomeSurfaceTextureArrays", $"{name} bank {bank} slot {slot} ({def?.Type}) texture '{src.name}' is {src.width}x{src.height} {src.format} ({src.mipmapCount} mips), expected {width}x{height} {format} ({mipCount} mips). Using placeholder.");
                         }
-                        Graphics.CopyTexture(placeholder, 0, 0, array, arraySlice, 0);
+                        if (placeholder == null)
+                            placeholder = BuildPlaceholder(width, height, format, isLinear, placeholderColor, mipCount > 1);
+                        for (int mip = 0; mip < mipCount; mip++)
+                            Graphics.CopyTexture(placeholder, 0, mip, array, arraySlice, mip);
                         placeholderUsed++;
                     }
                 }
@@ -260,13 +284,41 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
 
         LoggerProvider.Get().Log(LogLevel.Info, "BiomeSurfaceTextureArrays", $"{name}: {width}x{height} {format}, {matched}/{arrayDepth} slices from source, {placeholderUsed} placeholder, {bankCount} bank(s). Reference texture: {(sample != null ? sample.name : "<none>")}.");
 
-        array.Apply(updateMipmaps: false, makeNoLongerReadable: true);
         return array;
     }
 
-    static Texture2D BuildPlaceholder(int width, int height, TextureFormat format, bool isLinear, Color32 color)
+    static void CopyConvertedSlice(Texture2D source, Texture2DArray destination, int slice)
     {
-        var tex = new Texture2D(width, height, format, mipChain: false, linear: isLinear)
+        var descriptor = new RenderTextureDescriptor(destination.width, destination.height)
+        {
+            graphicsFormat = destination.graphicsFormat,
+            depthBufferBits = 0,
+            msaaSamples = 1,
+            useMipMap = destination.mipmapCount > 1,
+            autoGenerateMips = false,
+        };
+        RenderTexture temporary = RenderTexture.GetTemporary(descriptor);
+        RenderTexture active = RenderTexture.active;
+        bool srgbWrite = GL.sRGBWrite;
+        try
+        {
+            GL.sRGBWrite = temporary.sRGB;
+            Graphics.Blit(source, temporary);
+            if (descriptor.useMipMap) temporary.GenerateMips();
+            for (int mip = 0; mip < destination.mipmapCount; mip++)
+                Graphics.CopyTexture(temporary, 0, mip, destination, slice, mip);
+        }
+        finally
+        {
+            GL.sRGBWrite = srgbWrite;
+            RenderTexture.active = active;
+            RenderTexture.ReleaseTemporary(temporary);
+        }
+    }
+
+    static Texture2D BuildPlaceholder(int width, int height, TextureFormat format, bool isLinear, Color32 color, bool mipChain)
+    {
+        var tex = new Texture2D(width, height, format, mipChain: mipChain, linear: isLinear)
         {
             name = "BiomeSurfacePlaceholder",
             wrapMode = TextureWrapMode.Repeat,
@@ -274,7 +326,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         var pixels = new Color32[width * height];
         for (int i = 0; i < pixels.Length; i++) pixels[i] = color;
         tex.SetPixels32(pixels);
-        tex.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+        tex.Apply(updateMipmaps: mipChain, makeNoLongerReadable: false);
         return tex;
     }
 
@@ -284,6 +336,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         for (int i = 0; i < count; i++)
         {
             var def = registry.GetDefinitionByIndex(i);
+            if (def == null) continue;
             Texture2D t = selector(def);
             if (t != null) return t;
         }

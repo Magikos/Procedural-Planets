@@ -100,7 +100,9 @@ public sealed class ScatterGpuDraw : IDisposable
                     float near = ScatterLodBatcher.BandNearFor(lod, pd.LodEndDistances);
                     if (near >= far) continue;
                     float fadeStart = ScatterLodBatcher.FadeStartFor(lod, lodCount, far, imp);
-                    bands.Add(MakeMeshBand(mesh, lod, near, far, fadeStart, pd.Material, pd.CastShadows, pd.ReceiveShadows, bounds));
+                    var band = MakeMeshBand(mesh, lod, near, far, fadeStart, ScatterLodBatcher.FadeEndFor(far, imp), pd.Material, pd.CastShadows, pd.ReceiveShadows, bounds);
+                    band.Mpb.SetFloat(ShaderGlobalIds.WindFadeEnd, imp.Valid ? ScatterLodBatcher.ImpostorNearFor(imp) : 0f);
+                    bands.Add(band);
                 }
             }
             if (imp.Valid)
@@ -110,13 +112,14 @@ public sealed class ScatterGpuDraw : IDisposable
         }
     }
 
-    Band MakeMeshBand(Mesh mesh, int lod, float near, float far, float fadeStart, Material mat, bool cast, bool receive, Bounds bounds)
+    Band MakeMeshBand(Mesh mesh, int lod, float near, float far, float fadeStart, float fadeEnd, Material mat, bool cast, bool receive, Bounds bounds)
     {
         var mpb = new MaterialPropertyBlock();
         mpb.SetFloat(_fadeStartId, fadeStart);
-        mpb.SetFloat(_fadeEndId, far);
+        mpb.SetFloat(_fadeEndId, fadeEnd);
         var rp = new RenderParams(mat)
         {
+            motionVectorMode = MotionVectorGenerationMode.Object,
             shadowCastingMode = cast ? ShadowCastingMode.On : ShadowCastingMode.Off,
             receiveShadows = receive,
             worldBounds = bounds,

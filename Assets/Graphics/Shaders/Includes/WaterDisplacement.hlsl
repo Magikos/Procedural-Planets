@@ -3,6 +3,7 @@
 
 #include "Math.hlsl"        // _GameTime
 #include "PlanetWind.hlsl"  // _WindDirection, _WindStrength01
+#include "WeatherSampling.hlsl"
 
 // The visible surface (Ocean.shader) and the volume prepass (WaterVolumePrepass.shader) rasterise the SAME
 // water mesh from the same vertex colours. When only one of them displaces, the prepass depth describes a
@@ -44,6 +45,12 @@ float2 SafeNormalize2(float2 value, float2 fallback)
     return lenSq > 0.000001 ? value * rsqrt(lenSq) : fallback;
 }
 
+float WaterWeatherEnergy(float3 direction)
+{
+    float storm = SampleWeather(direction).g;
+    return saturate(max(_WindStrength01, WeatherCloudGloom(direction, storm)));
+}
+
 // Wave-space basis. axisA follows the wind so swell travels downwind; axisB completes the pair. Both are
 // world-space and constant over the sphere, which is what makes the wave field continuous across faces.
 void BuildPlanetWaveAxes(out float3 axisA, out float3 axisB)
@@ -55,6 +62,13 @@ void BuildPlanetWaveAxes(out float3 axisA, out float3 axisB)
 
     axisA = windWS;
     axisB = SafeNormalize(cross(referenceAxis, axisA), float3(0.0, 0.0, 1.0));
+}
+
+float3 WaterGradientWS(float2 gradient, float3 axisA, float3 axisB, float3 planetNormal)
+{
+    // Preserve the projected axes' lengths. Normalizing them amplifies slopes near the wave poles.
+    float3 slope = axisA * gradient.x + axisB * gradient.y;
+    return slope - planetNormal * dot(slope, planetNormal);
 }
 
 // Single source of truth for the swell-energy gating components.
@@ -104,7 +118,7 @@ void ComputeOceanSwell(float3 positionWS, float3 planetNormal, float depth01, fl
 
     float openWater01, deepWater01, shoreFade;
     EvaluateSwellGating(depth01, shore01, body01, openWater01, deepWater01, shoreFade);
-    float wind01 = _WindStrength01;
+    float wind01 = WaterWeatherEnergy(planetNormal);
     float energy = saturate(0.5 + wind01 * 0.5) * deepWater01 * shoreFade;
     if (energy <= 0.001)
         return;
@@ -131,8 +145,7 @@ void ComputeOceanSwell(float3 positionWS, float3 planetNormal, float depth01, fl
     swellHeight = height;
 
     // Surface normal from the height gradient, projected into the local tangent plane.
-    float3 slopeWS = waveAxisA * gradientTS.x + waveAxisB * gradientTS.y;
-    slopeWS = slopeWS - planetNormal * dot(slopeWS, planetNormal);
+    float3 slopeWS = WaterGradientWS(gradientTS, waveAxisA, waveAxisB, planetNormal);
     swellNormal = SafeNormalize(planetNormal - slopeWS, planetNormal);
 }
 
@@ -154,10 +167,10 @@ struct WaterRippleParams
 //
 // These gates are deliberately NOT EvaluateSwellGating's. That one gates the vertex swell and reaches
 // further inshore; this one is the narrower detail gate, and Ocean.shader uses both, for different things.
-WaterRippleParams EvaluateRippleParameters(float depth01, float body01)
+WaterRippleParams EvaluateRippleParameters(float depth01, float body01, float3 direction)
 {
     WaterRippleParams params;
-    float wind01 = _WindStrength01;
+    float wind01 = WaterWeatherEnergy(direction);
     params.openWater01 = smoothstep(0.42, 0.88, body01);
     params.deepWater01 = smoothstep(0.035, 0.22, depth01);
     params.weatherEnergy = saturate(wind01 * 0.92 + params.openWater01 * 0.08);
@@ -238,7 +251,7 @@ WaterRippleField ComputeWaterRipple(float2 positionTS, float2 windTS, float2 cro
 
     float2 gradient;
     float swellStrength = amplitude * waveEnergy;
-    float detailStrength = amplitude * waveEnergy * lerp(0.62, 1.48, weatherEnergy);
+    float detailStrength = amplitude * waveEnergy * lerp(0.62, 1.48, weatherEnergy) * 0.1;
 
     field.height += EvaluateSurfaceWave(field.wavePos, windTS, scale * 1.18, timeScale * 0.18, swellStrength * 0.19, 0.00, gradient);
     field.gradientTS += gradient;
@@ -249,7 +262,8 @@ WaterRippleField ComputeWaterRipple(float2 positionTS, float2 windTS, float2 cro
     field.height += EvaluateSurfaceWave(field.wavePos, SafeNormalize2(windTS * -0.22 + crossTS * 0.98, crossTS), scale * 0.13, timeScale * -0.48, swellStrength * 0.018, 5.40, gradient);
     field.gradientTS += gradient;
 
-    field.detailScale = clamp(scale * lerp(0.038, 0.026, chaos01), 7.5, 26.0);
+    // Shore-height views need sub-metre ripples. Scale height with wavelength to preserve steepness.
+    field.detailScale = clamp(scale * lerp(0.0038, 0.0026, chaos01), 0.75, 2.6);
     field.detailHeight += EvaluateSurfaceWave(field.detailPos, SafeNormalize2(windTS * 0.54 + crossTS * 0.84, windTS), field.detailScale * 0.88, timeScale * 0.82, detailStrength * 0.028, 0.80, gradient);
     field.detailGradientTS += gradient;
     field.detailHeight += EvaluateSurfaceWave(field.detailPosCross, SafeNormalize2(windTS * -0.28 + crossTS * 0.96, crossTS), field.detailScale * 0.61, timeScale * -1.10, detailStrength * 0.020, 2.40, gradient);

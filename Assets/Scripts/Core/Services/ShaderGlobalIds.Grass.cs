@@ -1,5 +1,10 @@
 public static partial class ShaderGlobalIds
 {
+    public const string GrassInteractorsPrevious = "_GrassInteractorsPrevious";
+    public const string GrassInteractorPreviousCount = "_GrassInteractorPreviousCount";
+    public const string VegetationPreviousWind = "_VegetationPreviousWind";
+    public const string VegetationPreviousTime = "_VegetationPreviousTime";
+    public const string VegetationPreviousCamera = "_VegetationPreviousCamera";
     public const string GrassSurfaceAtlasResolution = "_GrassSurfaceAtlasResolution";
     public const string GrassSurfaceRadiusF0 = "_GrassSurfaceRadius_F0";
     public const string GrassSurfaceRadiusF1 = "_GrassSurfaceRadius_F1";

@@ -56,8 +56,13 @@ public readonly struct CreatureRecord
     /// <summary>What it was doing when it stopped being simulated. Meaningless when dead.</summary>
     public readonly CreatureBehaviour Behaviour;
 
+    /// <summary>-1 uses the species maximum, including records written before health was persisted.</summary>
+    public readonly int Health;
+    public readonly ActorNeeds Needs;
+
     CreatureRecord(EntityId slot, int speciesIndex, int generation, CreatureRecordState state,
-        Vector3 position, long unixSeconds, float respawnSeconds, CreatureBehaviour behaviour)
+        Vector3 position, long unixSeconds, float respawnSeconds, CreatureBehaviour behaviour, int health = -1,
+        ActorNeeds needs = default)
     {
         // Normalised, not asserted: handing this the individual's id is the natural mistake, and a key with
         // generation bits set would file the record where no lookup goes looking for it.
@@ -69,6 +74,8 @@ public readonly struct CreatureRecord
         UnixSeconds = unixSeconds;
         RespawnSeconds = respawnSeconds;
         Behaviour = behaviour;
+        Health = health;
+        Needs = needs;
     }
 
     public static CreatureRecord Death(EntityId slot, int speciesIndex, int generation, Vector3 diedAt,
@@ -77,9 +84,14 @@ public readonly struct CreatureRecord
             respawnSeconds, CreatureBehaviour.Wander);
 
     public static CreatureRecord Displacement(EntityId slot, int speciesIndex, int generation,
-        Vector3 position, long lastSimulatedUnixSeconds, CreatureBehaviour behaviour) =>
-        new(slot, speciesIndex, generation, CreatureRecordState.Displaced, position,
-            lastSimulatedUnixSeconds, 0f, behaviour);
+        Vector3 position, long lastSimulatedUnixSeconds, CreatureBehaviour behaviour, int health = -1,
+        ActorNeeds needs = default)
+    {
+        if (health != -1 && health <= 0)
+            throw new System.ArgumentOutOfRangeException(nameof(health), "living health must be positive or unspecified");
+        return new(slot, speciesIndex, generation, CreatureRecordState.Displaced, position,
+            lastSimulatedUnixSeconds, 0f, behaviour, health, needs);
+    }
 
     public bool IsDead => State == CreatureRecordState.Dead;
 
@@ -147,9 +159,10 @@ public static class CreatureRecordPolicy
 
     public static CreatureRecordAction Decide(
         float metresFromHome, float homeRangeMeters, CreatureBehaviour behaviour, int generation,
-        bool alreadyWritten, float metresSinceWritten, CreatureBehaviour writtenBehaviour)
+        bool alreadyWritten, float metresSinceWritten, CreatureBehaviour writtenBehaviour,
+        bool hasPersistentState = false, bool persistentStateChanged = false)
     {
-        bool notable = IsNotable(metresFromHome, homeRangeMeters, behaviour);
+        bool notable = hasPersistentState || IsNotable(metresFromHome, homeRangeMeters, behaviour);
 
         // Nothing to say, and no generation to protect: the seed covers this slot completely.
         if (!notable && generation == 0)
@@ -158,7 +171,7 @@ public static class CreatureRecordPolicy
         if (!alreadyWritten)
             return CreatureRecordAction.Write;
 
-        return behaviour != writtenBehaviour || metresSinceWritten >= RewriteMoveMeters
+        return persistentStateChanged || behaviour != writtenBehaviour || metresSinceWritten >= RewriteMoveMeters
             ? CreatureRecordAction.Write
             : CreatureRecordAction.Keep;
     }
@@ -182,14 +195,22 @@ public static class CreatureRecordCodec
     const byte PayloadFormat2 = 2;           // generation 4 | unix 8 | respawn 4 | behaviour 1
     const int PayloadBytes2 = 18;
 
+    const byte PayloadFormat3 = 3;
+    const int PayloadBytes3 = 22;
+    const byte PayloadFormat4 = 4;
+    const int PayloadBytes4 = 38;
+
     public static WorldDelta Encode(in CreatureRecord record)
     {
-        var payload = new byte[PayloadBytes2];
-        payload[0] = PayloadFormat2;
+        var payload = new byte[PayloadBytes4];
+        payload[0] = PayloadFormat4;
         System.BitConverter.GetBytes(record.Generation).CopyTo(payload, 1);
         System.BitConverter.GetBytes(record.UnixSeconds).CopyTo(payload, 5);
         System.BitConverter.GetBytes(record.RespawnSeconds).CopyTo(payload, 13);
         payload[17] = (byte)record.Behaviour;
+        System.BitConverter.GetBytes(record.Health).CopyTo(payload, 18);
+        System.BitConverter.GetBytes(record.Needs.Hunger).CopyTo(payload, 22);
+        System.BitConverter.GetBytes(record.Needs.Thirst).CopyTo(payload, 30);
 
         return new WorldDelta(0,
             record.IsDead ? DeltaKind.EntityRemoved : DeltaKind.EntityMoved,
@@ -218,6 +239,26 @@ public static class CreatureRecordCodec
 
         switch (payload[0])
         {
+            case PayloadFormat4 when payload.Length == PayloadBytes4:
+            case PayloadFormat3 when payload.Length == PayloadBytes3:
+                ActorNeeds needs = default;
+                if (payload[0] == PayloadFormat4)
+                {
+                    double hunger = System.BitConverter.ToDouble(payload, 22);
+                    double thirst = System.BitConverter.ToDouble(payload, 30);
+                    if (!ActorNeeds.IsLevel(hunger) || !ActorNeeds.IsLevel(thirst)) return false;
+                    needs = new ActorNeeds(hunger, thirst);
+                }
+                int health = System.BitConverter.ToInt32(payload, 18);
+                int generation = System.BitConverter.ToInt32(payload, 1);
+                if (generation < 0 || generation >= CreatureKey.GenerationWrap || delta.TypeIndex < 0 ||
+                    (delta.State != (byte)CreatureRecordState.Dead && delta.State != (byte)CreatureRecordState.Displaced) ||
+                    (delta.State == (byte)CreatureRecordState.Dead) != (delta.Kind == DeltaKind.EntityRemoved) ||
+                    (health != -1 && (health <= 0 || delta.State == (byte)CreatureRecordState.Dead)))
+                    return false;
+                record = Rebuild(delta, id, (CreatureRecordState)delta.State, (CreatureBehaviour)payload[17], health, needs);
+                return true;
+
             case PayloadFormat2 when payload.Length >= PayloadBytes2:
                 record = Rebuild(delta, id, (CreatureRecordState)delta.State, (CreatureBehaviour)payload[17]);
                 return true;
@@ -234,7 +275,7 @@ public static class CreatureRecordCodec
     }
 
     static CreatureRecord Rebuild(in WorldDelta delta, EntityId slot, CreatureRecordState state,
-        CreatureBehaviour behaviour)
+        CreatureBehaviour behaviour, int health = -1, ActorNeeds needs = default)
     {
         int generation = System.BitConverter.ToInt32(delta.Payload, 1);
         long unix = System.BitConverter.ToInt64(delta.Payload, 5);
@@ -242,6 +283,6 @@ public static class CreatureRecordCodec
 
         return state == CreatureRecordState.Dead
             ? CreatureRecord.Death(slot, delta.TypeIndex, generation, delta.Position, unix, respawn)
-            : CreatureRecord.Displacement(slot, delta.TypeIndex, generation, delta.Position, unix, behaviour);
+            : CreatureRecord.Displacement(slot, delta.TypeIndex, generation, delta.Position, unix, behaviour, health, needs);
     }
 }

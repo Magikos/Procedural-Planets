@@ -10,14 +10,15 @@ Shader "Hidden/WaterVolume"
         _Alpha ("Alpha", Range(0, 1)) = 0.35
         _VolumeDensity ("Volume Density", Range(0.1, 4)) = 1.65
         _RefractionStrength ("Refraction Strength", Range(0, 1)) = 0.38
-        _CausticIntensity ("Caustic Intensity", Range(0, 8)) = 0.42
-        _CausticDepth ("Caustic Depth", Float) = 115
+        _CausticIntensity ("Caustic Intensity", Range(0, 8)) = 0.18
+        _CausticDepth ("Caustic Depth", Float) = 12
         _CausticContrast ("Caustic Contrast", Range(0.25, 8)) = 1.35
         _CausticPrismStrength ("Caustic Prism Strength", Range(0, 2)) = 0.46
     }
 
     HLSLINCLUDE
-    #include "Includes/Common.hlsl"
+    #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+    #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
     #include "Includes/Math.hlsl"
     #include "Includes/DebugModes.hlsl"
     #include "Includes/CloudShadows.hlsl"
@@ -46,7 +47,7 @@ Shader "Hidden/WaterVolume"
     float _CausticPrismStrength;
 
     // Non-serialized caustic constants - tuned values, not material parameters.
-    static const float CAUSTIC_SCALE = 0.075;
+    static const float CAUSTIC_SCALE = 0.5;
     static const float CAUSTIC_SPEED = 1.05;
     float3 _PlanetCenter;
     float _SeaLevelRadius;
@@ -227,7 +228,21 @@ Shader "Hidden/WaterVolume"
         if (receiverRadius <= 0.0001)
             return 0.0;
 
-        float2 seaHit = RaySphere(_PlanetCenter, _SeaLevelRadius, _WorldSpaceCameraPos.xyz, rayDir);
+        float3 planetUp = fromCenter / receiverRadius;
+
+        // The water level along THIS sight line, not the ocean's. A lake perched above sea level lies
+        // outside the _SeaLevelRadius sphere entirely: the ray never entered it, seaHit.y stayed at zero,
+        // and the whole mask fell out - the far bank across a lake arrived with no attenuation at all, and
+        // the submersion term below could only ever be negative there.
+        //
+        // The shore field, not the tight water field: the receiver here is dry ground standing at the
+        // waterline, which the tight field deliberately stops short of. Over open ocean it returns the sea
+        // radius and every ocean shoreline behaves exactly as before.
+        float waterRadius = ShoreSurfaceRadiusAt(planetUp, _SeaLevelRadius);
+        if (waterRadius <= 0.0)
+            return 0.0;
+
+        float2 seaHit = RaySphere(_PlanetCenter, waterRadius, _WorldSpaceCameraPos.xyz, rayDir);
         if (seaHit.y <= 0.0 || seaHit.x >= MAX_FLOAT * 0.5)
             return 0.0;
 
@@ -244,7 +259,7 @@ Shader "Hidden/WaterVolume"
         // other - the sharp edge in the water at the horizon.
         float3 toCenter = _PlanetCenter - _WorldSpaceCameraPos.xyz;
         float closestApproach = length(toCenter - rayDir * dot(toCenter, rayDir));
-        float submersion = _SeaLevelRadius - closestApproach;
+        float submersion = waterRadius - closestApproach;
         float belowHorizon = smoothstep(0.0, max(_ShallowDepth, 2.0), submersion);
 
         // Soft, for the same reason: a step here cut the far shore's own waterline in a straight line
@@ -253,7 +268,6 @@ Shader "Hidden/WaterVolume"
                                * belowHorizon;
         float pathBeforeTerrain = smoothstep(max(_ShallowDepth * 0.08, 1.0), max(_ShallowDepth * 1.5, 18.0), seaPath);
 
-        float3 planetUp = fromCenter / receiverRadius;
         float grazingView = 1.0 - smoothstep(0.08, 0.55, abs(dot(rayDir, planetUp)));
         float lineOfSightWater = max(saturate(screenWaterCoverage), pathBeforeTerrain);
         return saturate(seaBeforeTerrain * pathBeforeTerrain * lineOfSightWater * lerp(0.40, 1.0, grazingView));
@@ -573,7 +587,7 @@ Shader "Hidden/WaterVolume"
 
         float3 refractedFromCenter = refractedReceiverWS - _PlanetCenter;
         float refractedRadius = length(refractedFromCenter);
-        float refractedWaterDepth = WaterSurfaceRadiusAt(refractedFromCenter / max(refractedRadius, 0.0001), _SeaLevelRadius) - refractedRadius;
+        float refractedWaterDepth = ShoreSurfaceRadiusAt(refractedFromCenter / max(refractedRadius, 0.0001), _SeaLevelRadius) - refractedRadius;
         float refractedUnderwater = smoothstep(0.05, 1.25, refractedWaterDepth);
         // The refracted ray leaves from the same surface point, so it shares the measured entry distance.
         float refractedWaterPath = WaterPathToReceiver(refractedRayDir, refractedDistance, surfaceRayDistance);
@@ -607,7 +621,7 @@ Shader "Hidden/WaterVolume"
     }
 
     CausticResult ComputeReceiverCaustics(float3 receiverWS, float3 rayDir, float receiverDistance, float screenWaterCoverage,
-        float surfaceRayDistance)
+        float surfaceRayDistance, bool evaluatePattern)
     {
         CausticResult result = EmptyCausticResult();
         if (_SeaLevelRadius <= 0.0)
@@ -619,7 +633,7 @@ Shader "Hidden/WaterVolume"
             return result;
 
         // Depth below the water standing over the RECEIVER, so caustics land on a raised lake bed too.
-        float waterDepth = WaterSurfaceRadiusAt(fromCenter / receiverRadius, _SeaLevelRadius) - receiverRadius;
+        float waterDepth = ShoreSurfaceRadiusAt(fromCenter / receiverRadius, _SeaLevelRadius) - receiverRadius;
         float receiverUnderwater = smoothstep(0.05, 1.25, waterDepth);
         if (receiverUnderwater <= 0.0)
             return result;
@@ -640,8 +654,10 @@ Shader "Hidden/WaterVolume"
         float localSun = smoothstep(0.025, 0.22, dot(planetUp, sunDir));
         float sunFacing = smoothstep(0.04, 0.55, dot(receiverNormal, sunDir));
         float sunShadow = CloudShadowFactor(receiverWS, sunDir, localSun);
+        float solidShadow = MainLightShadow(TransformWorldToShadowCoord(receiverWS), receiverWS,
+            half4(1, 1, 1, 1), half4(0, 0, 0, 0));
         float sunIntensity01 = saturate(_SunIntensity / 17.0);
-        float sunLight = localSun * sunFacing * sunShadow * sunIntensity01;
+        float sunLight = localSun * sunFacing * sunShadow * sunIntensity01 * solidShadow;
 
         float3 moonDir = dot(_MoonParams, _MoonParams) > 0.0001 ? normalize(_MoonParams) : float3(0.0, -1.0, 0.0);
         float localMoon = smoothstep(0.08, 0.34, dot(planetUp, moonDir));
@@ -672,7 +688,10 @@ Shader "Hidden/WaterVolume"
         // Replaces the old (single-channel pattern + gradient-direction prism color) approach.
         // chromaticPattern.rgb each carry their own version of the caustic - aligned where waves
         // focus uniformly, diverged where waves focus per-wavelength-of-light slightly differently.
-        float3 chromaticPattern = CausticChromaticPattern(receiverWS, planetUp);
+        float3 chromaticPattern = 0.0;
+        // Keep depth and body-light metadata even when surface patterns cannot contribute.
+        if (evaluatePattern && mask * depthFade * pathFade * light > 0.00001)
+            chromaticPattern = CausticChromaticPattern(receiverWS, planetUp);
         float pattern = (chromaticPattern.r + chromaticPattern.g + chromaticPattern.b) * (1.0 / 3.0);
         float shallow01 = saturate(waterDepth / max(_CausticDepth, 1.0));
 
@@ -728,7 +747,7 @@ Shader "Hidden/WaterVolume"
                 float receiverDistanceProof = LinearEyeDepth(rawDepthProof, _ZBufferParams) * viewLengthProof;
                 float3 receiverWSProof = _WorldSpaceCameraPos.xyz + rayDirProof * receiverDistanceProof;
                 CausticResult causticsProof = ComputeReceiverCaustics(receiverWSProof, rayDirProof, receiverDistanceProof, waterMaskProof,
-                    WaterSurfaceRayDistance(waterDataProof, viewLengthProof));
+                    WaterSurfaceRayDistance(waterDataProof, viewLengthProof), false);
                 waterMaskProof = max(waterMaskProof, causticsProof.mask);
             }
 
@@ -775,13 +794,13 @@ Shader "Hidden/WaterVolume"
         float4 waterData = SAMPLE_TEXTURE2D(_WaterVolumeData, sampler_WaterVolumeData, input.uv);
         float screenWaterCoverage = WaterVolumeCoverage(waterData);
         float liquidContribution = 1.0 - saturate(waterData.a);
-        float lake01 = WaterVolumeLakeMask(waterData);
         float receiverDistance = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
         float3 receiverWS = _WorldSpaceCameraPos.xyz + rayDir * receiverDistance;
 
         float surfaceRayDistance = WaterSurfaceRayDistance(waterData, viewLength);
-        CausticResult caustics = ComputeReceiverCaustics(receiverWS, rayDir, receiverDistance, screenWaterCoverage, surfaceRayDistance);
         float layerVisibility = VolumeLayerVisibility();
+        CausticResult caustics = ComputeReceiverCaustics(receiverWS, rayDir, receiverDistance,
+            screenWaterCoverage, surfaceRayDistance, causticDebug || layerVisibility * liquidContribution > 0.0);
         caustics.mask *= layerVisibility;
         caustics.contribution *= layerVisibility;
         caustics.prismContribution *= layerVisibility;
@@ -903,17 +922,8 @@ Shader "Hidden/WaterVolume"
         float3 fogColor = volumeTint * lerp(0.015, 0.62, volumeLight);
         waterBody = lerp(waterBody, fogColor, depthFog * 0.58);
         float3 color = waterBody * (1.0 - troughShadow) + caustics.contribution * 0.48 + caustics.prismContribution * 1.28;
-        // Murky inland lakes: the clear-ocean composite shows the bright refracted lakebed + caustics through
-        // shallow water. Override lake pixels (body01 -> 0) with an opaque green pond body so the bottom can't
-        // read through. Deeper/denser water darkens; day/night rides volumeLight. Gated to lake water only.
-        float3 lakeBody = lerp(float3(0.15, 0.46, 0.21), float3(0.05, 0.19, 0.10), saturate(depthFog + volumeOpacity * 0.4));
-        // Drive brightness by SUN light (0 at night) with only a faint moon lift, so the murky green
-        // darkens to near-black at night instead of self-glowing while the terrain is dark.
-        float lakeLight = saturate(caustics.sunLight * 1.25 + caustics.moonLight * 0.06);
-        lakeBody *= lerp(0.015, 1.15, lakeLight);
-        color = lerp(color, lakeBody, lake01 * saturate(screenWaterCoverage) * 0.97);
         color = FarTerrainWaterlineColor(color, farTerrainWaterlinePath, farTerrainWaterlineMask, volumeLight);
-        return float4(saturate(color), source.a);
+        return float4(color, source.a);
     }
     ENDHLSL
 
@@ -929,6 +939,8 @@ Shader "Hidden/WaterVolume"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma target 4.0
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
             ENDHLSL
         }
     }

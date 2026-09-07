@@ -97,6 +97,28 @@ float Hash13(float3 p)
     return frac((p.x + p.y) * p.z);
 }
 
+float ValueNoise3D(float3 p)
+{
+    float3 i = floor(p);
+    float3 f = frac(p);
+    f = f * f * (3.0 - 2.0 * f);
+
+    float n000 = Hash13(i + float3(0.0, 0.0, 0.0));
+    float n100 = Hash13(i + float3(1.0, 0.0, 0.0));
+    float n010 = Hash13(i + float3(0.0, 1.0, 0.0));
+    float n110 = Hash13(i + float3(1.0, 1.0, 0.0));
+    float n001 = Hash13(i + float3(0.0, 0.0, 1.0));
+    float n101 = Hash13(i + float3(1.0, 0.0, 1.0));
+    float n011 = Hash13(i + float3(0.0, 1.0, 1.0));
+    float n111 = Hash13(i + float3(1.0, 1.0, 1.0));
+
+    float x00 = lerp(n000, n100, f.x);
+    float x10 = lerp(n010, n110, f.x);
+    float x01 = lerp(n001, n101, f.x);
+    float x11 = lerp(n011, n111, f.x);
+    return lerp(lerp(x00, x10, f.y), lerp(x01, x11, f.y), f.z);
+}
+
 // Debug contribution heatmap. Encodes the luminance of delta relative to scale as a
 // colour gradient from black -> lowColor -> highColor -> white bloom.
 // Breakpoints are canonical (0.02 / 0.30 / 0.88) so intensity is comparable across passes.

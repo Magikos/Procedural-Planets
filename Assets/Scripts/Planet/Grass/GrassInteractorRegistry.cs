@@ -14,6 +14,8 @@ public static class GrassInteractorRegistry
 
     static readonly int InteractorsBufferId = Shader.PropertyToID(ShaderGlobalIds.GrassInteractors);
     static readonly int InteractorCountId = Shader.PropertyToID(ShaderGlobalIds.GrassInteractorCount);
+    static readonly int PreviousBufferId = Shader.PropertyToID(ShaderGlobalIds.GrassInteractorsPrevious);
+    static readonly int PreviousCountId = Shader.PropertyToID(ShaderGlobalIds.GrassInteractorPreviousCount);
 
     static readonly List<IGrassInteractor> InteractorsList = new();
     static readonly GrassInteractorGpu[] CpuBuffer = new GrassInteractorGpu[MaxInteractors];
@@ -22,6 +24,8 @@ public static class GrassInteractorRegistry
     static readonly List<IGrassInteractor> StaleSources = new();
 
     static ComputeBuffer _gpuBuffer;
+    static ComputeBuffer _previousBuffer;
+    static int _historyFrame = -1;
     static int _lastActiveCount;
     static int _lastActiveSourceCount;
     static int _lastReleaseSampleCount;
@@ -64,6 +68,8 @@ public static class GrassInteractorRegistry
         EnsureBuffer();
         Shader.SetGlobalBuffer(InteractorsBufferId, _gpuBuffer);
         Shader.SetGlobalInt(InteractorCountId, 0);
+        Shader.SetGlobalInt(PreviousCountId, 0);
+        _historyFrame = -1;
         SourceStates.Clear();
         ReleaseSamples.Clear();
         _lastActiveCount = 0;
@@ -118,6 +124,12 @@ public static class GrassInteractorRegistry
     internal static void UploadPerFrame()
     {
         EnsureBuffer();
+        if (_historyFrame != Time.frameCount)
+        {
+            if (_lastActiveCount > 0) _previousBuffer.SetData(CpuBuffer, 0, 0, _lastActiveCount);
+            Shader.SetGlobalInt(PreviousCountId, _lastActiveCount);
+            _historyFrame = Time.frameCount;
+        }
         float now = Time.unscaledTime;
         RemoveExpiredReleaseSamples(now);
 
@@ -202,6 +214,9 @@ public static class GrassInteractorRegistry
 
     internal static void DisposeBuffer()
     {
+        _previousBuffer?.Release();
+        _previousBuffer = null;
+        Shader.SetGlobalInt(PreviousCountId, 0);
         if (_gpuBuffer != null)
         {
             _gpuBuffer.Release();
@@ -223,6 +238,8 @@ public static class GrassInteractorRegistry
 
         // 32 bytes per element (two float4s) matches the HLSL struct.
         _gpuBuffer = new ComputeBuffer(MaxInteractors, sizeof(float) * 8);
+        _previousBuffer = new ComputeBuffer(MaxInteractors, sizeof(float) * 8);
+        Shader.SetGlobalBuffer(PreviousBufferId, _previousBuffer);
         Shader.SetGlobalBuffer(InteractorsBufferId, _gpuBuffer);
     }
 

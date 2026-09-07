@@ -1,56 +1,56 @@
 ---
 name: project_water_shore_rendering
-description: The 2026-08-22 shore/horizon rendering arc — what was fixed and how it was measured, plus the stepped-lakebed defect that is still open with its real mechanism.
+description: The 2026-08-22 shore/horizon rendering arc â€” what was fixed and how it was measured, plus the stepped-lakebed defect that is still open with its real mechanism.
 metadata:
   type: project
 ---
 
 **2026-08-22, branch `harvest-vertical-slice`.** Eight water fixes, all verified by capture. One defect still
-open. Commits `ed20191` → `726c6eb`.
+open. Commits `ed20191` â†’ `726c6eb`.
 
 ## The rule that explains most of this arc
 
 **A consumer asking where water is *globally* when it should ask where water is *here*.** Same rule as the
-W1–W6 arc. Every "check `_SeaLevelRadius` first" instinct paid off again.
+W1â€“W6 arc. Every "check `_SeaLevelRadius` first" instinct paid off again.
 
 ## Fixed, with the mechanism worth remembering
 
 - **Hard waterline + water lying on grass.** `WaterMeshBuilder` gave its inland overlap vertices a fake
   **8.25 m depth**. Coverage saturates by 6.5 m, so the overlap was fully opaque. Zero depth fixed both.
 - **Coverage had a distance short-circuit**, `max(depth01, shore01*0.45)`, crossing the ramp ~5 m out where
-  water is ~1 m deep. Depth alone now drives it, so the feather is slope-adaptive: 5 m → ~35 m on a 1:5.3 bank.
+  water is ~1 m deep. Depth alone now drives it, so the feather is slope-adaptive: 5 m â†’ ~35 m on a 1:5.3 bank.
 - **Ocean needs its own fade depth.** Removing its `+0.55` term outright made the seabed visible across whole
-  bays — an ocean shelf stays a few metres deep a long way out. Lake 6.5 m, ocean 1.5 m.
-- **Foam followed the WIND, not the shore.** `shorePulse` was a sine along wind with a 3× swing feeding a
+  bays â€” an ocean shelf stays a few metres deep a long way out. Lake 6.5 m, ocean 1.5 m.
+- **Foam followed the WIND, not the shore.** `shorePulse` was a sine along wind with a 3Ã— swing feeding a
   halftone *threshold*; every trough fell below it and vanished, so a gentle modulation became hard stripes.
-  Replaced with `saturate(noiseA + noiseB + gradient) * gradient` — **noise added inside the saturate, then
+  Replaced with `saturate(noiseA + noiseB + gradient) * gradient` â€” **noise added inside the saturate, then
   multiplied by the gradient**. That ordering is the whole trick: multiplying means foam cannot exist where
   there is no shore. Technique from Stylized Water 2.
-- **`_ShoreFoamDepth` was DEAD** — declared in the CBUFFER, never read. Repurposed as foam depth in metres
-  (32 → 2.5; 32 m of *depth* would blanket every shelf).
-- **Wave detail aliased into moire.** Analytic detail has no mip chain. Fade by resolvability — but measure the
+- **`_ShoreFoamDepth` was DEAD** â€” declared in the CBUFFER, never read. Repurposed as foam depth in metres
+  (32 â†’ 2.5; 32 m of *depth* would blanket every shelf).
+- **Wave detail aliased into moire.** Analytic detail has no mip chain. Fade by resolvability â€” but measure the
   **MINOR** footprint axis, not `fwidth`. `fwidth` is the major axis and at grazing angles flattens the entire
   sea to a mirror. Fade to a floor (0.32), never zero.
-- **Limb edge.** The atmosphere preserves 38–55 % of water's own colour so haze does not wash out detail, at
+- **Limb edge.** The atmosphere preserves 38â€“55 % of water's own colour so haze does not wash out detail, at
   *every* distance, while terrain had a companion fade water was excluded from (`nonWaterSceneMask`). Far water
   never met the sky in tone; a 1-px unantialiased silhouette between two tones reads as a staircase.
 - **Underwater bleached everything.** `FarTerrainWaterlineMask` derived its path from the analytic ocean sphere,
-  which cannot answer inside a raised lake — the camera is *under* a surface 30 m *above* global sea level, so
+  which cannot answer inside a raised lake â€” the camera is *under* a surface 30 m *above* global sea level, so
   it sits outside that sphere and the ray misses it. Submerged now short-circuits to distance-travelled.
 
-## GOTCHA — the depth buffer answers the wrong question
+## GOTCHA â€” the depth buffer answers the wrong question
 
 Per-pixel water depth from the depth buffer is right looking DOWN at a shore and wrong looking ALONG one: the
 first opaque hit behind a water pixel is land on the far side, so the column reads zero and water vanishes. It
 flips at the same view angle across the frame, drawing **a hard horizontal line partway up the sea**. Weight
-the measurement by bed distance (fade 40→160 m) and hand back to the mesh's baked depth beyond that. A gate on
-the *surface's* alpha has the same flaw and is unfixable — removed, with a comment so it is not retried.
+the measurement by bed distance (fade 40â†’160 m) and hand back to the mesh's baked depth beyond that. A gate on
+the *surface's* alpha has the same flaw and is unfixable â€” removed, with a comment so it is not retried.
 
 ## STILL OPEN: the stepped lake bed, and why five attempts failed
 
-Cell-shaped staircase at the Lake↔LakeShore edge. **Do not tune the biome blend weight for this.**
+Cell-shaped staircase at the Lakeâ†”LakeShore edge. **Do not tune the biome blend weight for this.**
 
-`BiomeMapBaker` is two passes. Pass 1 builds a high-res grid of **primary ids only** —
+`BiomeMapBaker` is two passes. Pass 1 builds a high-res grid of **primary ids only** â€”
 `ResolveFromLandBiomes(..., out primary, out _, out _)` **discards secondary and blend**. Pass 2 histograms a
 `KernelRadius` window over that grid to make the top-K ids/weights the shader samples. So
 `LakeShoreHandoff`'s blend **never reaches the screen**. Five attempts tuning it (`LakeShoreBlendHeight`,
@@ -58,22 +58,22 @@ Cell-shaped staircase at the Lake↔LakeShore edge. **Do not tune the biome blen
 resolvers) could not have changed a pixel. All reverted.
 
 **Measured, and it kills the LOD theory too:** every leaf is depth 4 (1536 of them, uniform). chunk 491 m,
-high-res texel 3.8 m, **kernel(12) = 46 m vs a 40.9 m mask cell — ratio 1.1**. Smoothing barely exceeds the
+high-res texel 3.8 m, **kernel(12) = 46 m vs a 40.9 m mask cell â€” ratio 1.1**. Smoothing barely exceeds the
 step, everywhere, at every distance. Distance only changes how many steps fit in frame.
 
-Candidates: widen `KernelRadius` (cost is `(2r+1)²`; r=24 is 3.8× on a phase that is already 19 s of a 38 s
-generation) or **jitter the pass-1 sample position** so pass 2 histograms a dithered edge — near-free and
+Candidates: widen `KernelRadius` (cost is `(2r+1)Â²`; r=24 is 3.8Ã— on a phase that is already 19 s of a 38 s
+generation) or **jitter the pass-1 sample position** so pass 2 histograms a dithered edge â€” near-free and
 matches the halftone/dither idiom already used for foam and scatter. Second looks right; unverified.
 
 ## Process lesson Bryan called out, and he was right
 
 Every fix that landed came from a measurement that **contradicted** my first instinct. Every failure came from
 finding a plausible mechanism and changing it before proving it was the active one. Read the consumer chain
-end-to-end *first* — one grep for `out _, out _` would have saved five regenerate cycles at ~8 min each.
+end-to-end *first* â€” one grep for `out _, out _` would have saved five regenerate cycles at ~8 min each.
 
 Cheap tools that worked: numeric transects via `IPlanetSurfaceRaycaster` + `WaterBodyMap.LevelAt`; calling
 `BiomeDto.Registry.Resolve` directly in the live world (read-only, no regenerate); `WaterOff` / `VolumeMask` /
-`SurfaceAlpha` / `AtmosphereBypass` to bisect which pass owns an artifact; ffmpeg 4× nearest-neighbour crops.
+`SurfaceAlpha` / `AtmosphereBypass` to bisect which pass owns an artifact; ffmpeg 4Ã— nearest-neighbour crops.
 
 ## Two git-hygiene bugs found: main did not compile from a clean clone
 
@@ -116,21 +116,21 @@ Cheap read-only tools that made this tractable: blit a non-readable atlas to a p
 `ReadPixels` it; `CoordinateConverter.UnitSphereToCubeFaceUvExact(dir, out face, out uv)` then `uv * 1008`
 gives the atlas texel; call `BiomeDto.Registry.Resolve` directly in the live world.
 
-## RETRACTION — the "bake is exonerated" finding above is WRONG
+## RETRACTION â€” the "bake is exonerated" finding above is WRONG
 
 The atlas read that produced it is invalid. Valid biome ids run **0..17** (gridCount 12: Ocean 0, Beach 1,
-grid 2..13, Mountain 14, Snowy 15, Lake 16, LakeShore 17). The bytes read out were **50, 71, 73** — all out of
+grid 2..13, Mountain 14, Snowy 15, Lake 16, LakeShore 17). The bytes read out were **50, 71, 73** â€” all out of
 range, all resolving to NULL through GetDefinitionByIndex. Graphics.Blit resampled or format-converted rather
 than handing back raw bytes, so both the ids AND the "weights ramp smoothly over ~110 m" reading are
 meaningless.
 
 **So the bake is NOT ruled out**, nor is anything that reading was used to argue. To read these atlases
-properly use AsyncGPUReadback, or CopyTexture into a matching-format readable texture — never Blit, which goes
+properly use AsyncGPUReadback, or CopyTexture into a matching-format readable texture â€” never Blit, which goes
 through a filtered and converted path.
 
 Still genuinely ruled out, on other evidence:
 - LOD. All 1536 leaves are depth 4, measured directly off the chunk tree.
-- The shader's 4-corner reconstruction, both the albedo and grass-overlay paths — textbook bilinear, read line
+- The shader's 4-corner reconstruction, both the albedo and grass-overlay paths â€” textbook bilinear, read line
   by line, no half-texel or truncation error.
 
 ## Attempt 7 (also failed), and what it DID establish
@@ -145,9 +145,9 @@ avoid the planet-wide grass-to-scrub regression the unscoped version caused. Tha
 Seven attempts have now changed the lake branch of the resolver, the level fields, the mask dilation and the
 bake's id choice, with zero effect on this artifact. The weight of evidence says **the boundary being drawn is
 probably not produced by the lake branch at all**. Next step is to identify which biome ids actually sit either
-side of it — reading the atlas CORRECTLY per above — before touching any more code. It may not be a lake edge.
+side of it â€” reading the atlas CORRECTLY per above â€” before touching any more code. It may not be a lake edge.
 
-## CORRECTED DIAGNOSIS — supersedes every "still open" section above
+## CORRECTED DIAGNOSIS â€” supersedes every "still open" section above
 
 Read the atlas properly (AsyncGPUReadback, not Blit) and the framing every earlier section used is wrong.
 
@@ -184,7 +184,7 @@ Second: a `Graphics.Blit` into a RenderTexture is NOT a measurement of texture c
 converts. It returned ids 50/71/73 where the real values were 16/11/17. Use `AsyncGPUReadback.Request(tex, 0,
 GraphicsFormat.R8G8B8A8_UNorm)` then `WaitForCompletion()`.
 
-## SOLVED — it was GRASS, not biomes. Supersedes every section above.
+## SOLVED â€” it was GRASS, not biomes. Supersedes every section above.
 
 Fixed in `52143a1`. The blocks around every lake were the grass carpet vanishing in cell-shaped patches,
 letting bare ground show through. **No part of the biome system was ever involved.**
@@ -870,7 +870,7 @@ Snell's window now visibly wave-lobed at wind 18 m/s (`v12_wind18_wide_d3.png`);
 chop is subtle because ripple amplitude is gated by wind.
 
 Measured, not guessed: mean `|tiltGain|` across the march is **0.03** at the authored 90 m swell. Focusing
-goes as surface CURVATURE and curvature as 1/wavelength², so a 90 m swell focuses ~300 m down while a 2 m
+goes as surface CURVATURE and curvature as 1/wavelengthÂ², so a 90 m swell focuses ~300 m down while a 2 m
 ripple focuses ~14 m down - which is why real caustics are sharp on a shallow bed. **Do NOT try to reuse
 `CausticPattern` per march step - it is 81 animated Voronoi cells per call (~970 per pixel at 10 steps).**
 
@@ -938,7 +938,7 @@ unchanged; look-up Snell's window intact with its rim still heaving.
 **Still visible in the same shot and NOT this bug:** seabed scatter reads as black speckles - the
 dark-specks defect, same family as [[project_scatter_dusk_lighting]].
 
-## "I can see through the water" — the lake surface renders the sky (2026-08-29, IDENTIFIED, not fixed)
+## "I can see through the water" â€” the lake surface renders the sky (2026-08-29, IDENTIFIED; FIXED 2026-09-02 - see "Opacity fell with view path" below)
 
 Bryan's shot: pale sage expanse to a treed horizon, lily pads on it. Reproduced at
 `camera.teleport SeeThroughWater` (the character settles onto the lake, camRadius 5044.71, sea 5000).
@@ -959,13 +959,13 @@ Same mid-lake patch, 8-bit sRGB:
 
 **The lake surface lands within ~5% of the sky in front of it.** That is the whole artifact.
 
-Eliminations, each by capture: `SurfaceBackfacePink` 49 shows no pink — front faces, so NOT the `2704811`
+Eliminations, each by capture: `SurfaceBackfacePink` 49 shows no pink â€” front faces, so NOT the `2704811`
 back-face defect. `TerrainSourcePink` 31 pinks only the shoreline strip, so the expanse is water, not
 terrain showing through. `Foam` 7 reads 0 away from the character, so foam is not the wash. `WaterNoPost`
 and `AtmosphereBypass` are identical to `Off`, so neither post nor atmosphere touches it.
 
 `WaterData` 11 is FLAT over the whole lake: `depth01` constant, `shore01` ~0.95, **`body01` = 0.000**.
-body01 = 0 is CORRECT — it is the lake marker (planet-wide `body` avg is 0.905, i.e. ocean).
+body01 = 0 is CORRECT â€” it is the lake marker (planet-wide `body` avg is 0.905, i.e. ocean).
 
 Two causes, both in `Assets/Graphics/Shaders/Ocean.shader`:
 
@@ -974,22 +974,238 @@ Two causes, both in `Assets/Graphics/Shaders/Ocean.shader`:
    `reflectFresnel` ~ 1, so a LAKE still takes ~0.32 of `EvaluateSkyReflection`. The far path adds more:
    `surfacePathBlend` (~L730) stays 0.62 for lakes, and `farGraze` (~L728) is itself
    `lerp(farBody, skyReflection, 0.35)`. `horizonColor` inside `EvaluateSkyReflection` is
-   (0.62, 0.60, 0.46) — the exact sage the lake shows. `lakeShallow` (0.20, 0.36, 0.24) never dominates.
+   (0.62, 0.60, 0.46) â€” the exact sage the lake shows. `lakeShallow` (0.20, 0.36, 0.24) never dominates.
 2. **The volume's lake body is hidden.** `Ocean.shader` ~L771 forces `nearAlpha = 0.9 * shoreAlpha` for
    lakes; `SurfaceAlpha` 19 measures alpha ~0.97 across the lake. `WaterVolume.shader` ~L908 computes the
    intended murky-green `lakeBody` and it never reaches the frame.
 
 So the two passes disagree: the volume renders an opaque green pond, the surface renders a sheet of sky
-over it, and the surface wins. **The fix branch is unchosen** — either gate the sky-reflection and far-path
+over it, and the surface wins. **The fix branch is unchosen** â€” either gate the sky-reflection and far-path
 terms on `body01` the way alpha already is, or hand grazing lake pixels to the volume.
 
 Method notes worth keeping. Capture sets `Water Artifact`, `Water Surface Isolation`,
-`Water Surface Finish` and `Water Foam` bracket this whole stack. Fire them from ONE `execute_code` call —
+`Water Surface Finish` and `Water Foam` bracket this whole stack. Fire them from ONE `execute_code` call â€”
 `CommandExecutor.ExecuteImmediate` for the setup commands, then an `async Awaitable` that awaits a delay and
-calls `DebugCaptureController.CaptureCurrentSetAsync` — so editor reload churn cannot interrupt mid-sequence.
+calls `DebugCaptureController.CaptureCurrentSetAsync` â€” so editor reload churn cannot interrupt mid-sequence.
 **Check the sidecar's `PlanetRadius` before trusting a batch**: a first run captured 14 frames of the
 loading overlay at 65% and only `PlanetRadius: 0.00` gave it away.
 
+## The horizon band over a perched lake: `FarTerrainWaterlineMask` is blind above the surface (2026-09-02, FIXED and VERIFIED)
+
+Bryan: "a weird water artifact at the horizon" â€” a lily-pad lake whose far band renders as sky, with a hard
+step where the near band's water tint stops, and a far bank that draws with no water in front of it.
+
+Reproduced at the same lake by rotating the character's private `_forward` by âˆ’70Â° (do NOT teleport: a long
+horizontal jump re-plans ~77k scatter tiles). Sun pinned with `time.set-local 0.40` + `time.freeze true` so a
+six-mode ladder is comparable. Column x=540, y 355â†’400, 8-bit sRGB, 2160Ã—771:
+
+| mode | y355 | y375 | y380 | y385 | y400 |
+|---|---|---|---|---|---|
+| `Off` | 199,176,129 | 174,158,118 | 154,144,108 | 129,137,99 | 129,148,100 |
+| `WaterData` 11 | 41,187,0 | 50,122,0 | 46,117,0 | 41,116,0 | 26,132,0 |
+| `VolumeOnly` 24 | 192,170,127 | 162,143,113 | 137,123,100 | **59,75,78** | 51,94,113 |
+| `SurfaceOnly` 25 | 139,140,86 | 117,124,77 | 117,124,77 | 135,136,69 | 121,125,76 |
+| `WaterOff` 26 | 0,0,0 | 0,0,0 | 0,0,0 | 130,114,0 | 80,51,16 |
+
+`WaterData` says water covers y355â€“400 with `body01` = 0 throughout (lake, correct). `VolumeOnly` is
+**sky-tan** down to y380 then snaps teal at y385 â€” a ~5 px hard step. `WaterOff` is black above y380, so the
+sight line exits to sky there: nothing is behind the water, and the volume put nothing in front of it. At
+x=1400 `TerrainSourcePink` 31 reads 254,0,188 (the far bank) while `VolumeOnly` reads 39,41,34 â€” far shore,
+no water in front.
+
+**Owner: `Assets/Graphics/Shaders/WaterVolume.shader`, `FarTerrainWaterlineMask` (~L200-260).** The volume
+composite is emptied for any pixel whose *receiver* is not itself underwater (`ComputeReceiverCaustics`
+~L622-625). `FarTerrainWaterlineMask` is the mitigation built for exactly that case, and it is keyed on the
+**global** sea sphere while this lake spills ~43 m above it:
+
+- L230 `RaySphere(_PlanetCenter, _SeaLevelRadius, ...)` then L231 `if (seaHit.y <= 0.0) return 0.0;`
+- L247 `submersion = _SeaLevelRadius - closestApproach` feeding `belowHorizon = smoothstep(...)`
+
+Measured live at Bryan's spot: `_SeaLevelRadius` 5000.00, camera radius **5045.01**, view-ray closest
+approach **5022.10**. The ray never enters the 5000 sphere, so L231 returns 0; and `submersion` = **âˆ’22.10**,
+so `belowHorizon` is 0 too. **Both terms are dead over any perched lake whenever the camera is above its
+surface.** The 2026-08-23 `847e867` fix made only the camera-*below*-surface branch (L219,
+`CameraSeaOffset() < 0`) lake-aware.
+
+**CORRECTION (same day).** I also claimed `WaterPathToReceiver` (~L173-198) shares the defect. It does
+**not**. It already prefers the prepass `surfaceRayDistance` and only falls back to the sphere when no water
+rasterised at that pixel, with a comment saying exactly that. `FarTerrainWaterlineMask` is the one site.
+
+The lake-aware helpers already exist and are cheap: `WaterLevelField.hlsl` `WaterSurfaceRadiusAt(dir,
+fallback)` and `CameraSeaOffset()` both sample the per-direction field. `ComputeReceiverCaustics` already
+calls `WaterSurfaceRadiusAt` at L622 â€” that is why the submerged bed still tints and the far band does not.
+
+Third instance of the arc's one rule: *a consumer asking where sea level is globally when it should ask where
+water is here.* Same defect family as "I can see through the water" â€” the `Ocean.shader` sky-sheet paints over
+the band the volume abandoned, so the two sites compound.
+
+**Instrument trap, and a claim to retract.** I reported `_ShallowDepth` / `_DeepDepth` as reading 0.00 live
+and wondered whether the `max(_ShallowDepth, 2.0)` guards were degrading. They are **per-material
+properties, not shader globals**, so `Shader.GetGlobalFloat` returns 0 for them and says nothing. The
+sidecar has the real values under `DepthFoam:` — shallow 28.0, deep 360.0. Read a material property off the
+material, never off the globals.
+
+**FIXED.** Both named sites are done. (a) landed as the `max(farOpacityCeiling, nearAlpha)` change recorded
+in the next section. (b) is one substitution at the top of `FarTerrainWaterlineMask`, hoisting `planetUp`
+above the ray test and feeding BOTH terms:
+
+```hlsl
+float waterRadius = ShoreSurfaceRadiusAt(planetUp, _SeaLevelRadius);
+if (waterRadius <= 0.0) return 0.0;
+float2 seaHit = RaySphere(_PlanetCenter, waterRadius, _WorldSpaceCameraPos.xyz, rayDir);
+...
+float submersion = waterRadius - closestApproach;
+```
+
+**Substituting the radius, not the prepass distance.** I had told Bryan the fix would read the prepass
+`surfaceRayDistance` the way `WaterPathToReceiver` does. It cannot: the prepass can supply where the sight
+line ENTERED water, but `submersion` needs the surface RADIUS, and no prepass channel carries it. One radius
+repairs the chord and the submersion together, needs no signature change, and keeps the sphere's smooth
+through-the-horizon behaviour that the section above says the mask exists to provide.
+
+**`ShoreSurfaceRadiusAt`, not `WaterSurfaceRadiusAt`.** The receiver here is dry ground standing AT the
+waterline, and the tight field deliberately stops one cell short of it (`WaterLevelField.hlsl` L47-49). The
+tight field would return the sentinel on exactly the far-bank pixels the mask is for.
+
+**Predicted per-row, from the live numbers** (lake `BodyId` 48, `IsOcean` False, surface radius 5041.26,
+camera radius 5044.45, `_SeaLevelRadius` 5000.00, `_ShallowDepth` 28):
+
+| row | closestApproach | submersion old | belowHorizon old | submersion new | belowHorizon new |
+|---|---|---|---|---|---|
+| 263 | 4997.5 | 2.5 | 0.022 | 43.7 | 1.000 |
+| 243 | 5030.7 | -30.7 | 0.000 | 10.6 | 0.320 |
+| 223 | 5044.2 | -44.2 | 0.000 | -3.0 | 0.000 |
+| 203 | 5036.4 | -36.4 | 0.000 | 4.9 | 0.081 |
+| 183 | 5006.0 | -6.0 | 0.000 | 35.3 | 1.000 |
+
+Dead across a band spanning the horizon and the far half of the lake, and 41 m short of the true submersion
+everywhere it was alive.
+
+**Measured, A/B in one play session** so the sun cannot drift (both captures `SunElevationDeg: 60.88`;
+`time.set-local 0.42` + `time.freeze true`, then edit the shader to `float waterRadius = _SeaLevelRadius;`,
+reimport, re-shoot, restore, reimport). Mean absolute RGB delta per row, x 80..420, 960x343:
+
+```
+y=342..246   0.001-0.004   sky and upper frame - noise floor, no shift
+y=234        0.014
+y=222        0.023
+y=210        0.034
+y=198        0.039   <- far bank / horizon band, the dead zone
+y=186..150   0.002-0.003
+y=138        0.031   <- second bank
+y=126..66    0.003-0.010
+y= 42        0.024
+y= 18        0.053
+y=  6        0.070   <- nearest water, longest chord under the surface
+```
+
+Change is confined to water and its far bank; sky is at the noise floor, so the mask does not leak upward and
+no new band appears.
+
+**Ocean is unchanged, by data not by argument.** Sampling `WaterBodyMap.ShoreLevelGrid` planet-wide (221184
+cells): 69479 carry the no-water sentinel and take the `_SeaLevelRadius` fallback, so those pixels are
+bit-identical to the old code. Of the 151705 levelled cells, 133106 sit within 5 m of the sea radius - ocean
+and ocean shore, offset by exactly `_WaterSurfaceOffset` = 0.15 m - and 18599 are perched, up to +148 m. **No
+cell is below the sea radius.** The substitution can therefore only ever ADD mask, never remove it, and it
+adds 0.15 m of radius at every ocean shoreline. That is why no ocean re-capture was needed.
+
+**Regression I introduced while fixing the clouds, and the rule it leaves.** `CloudRenderFeature` needs
+`_WaterVolumeData` bound, so I declared it with `builder.UseGlobalTexture(_waterVolumeDataId)`. That THREW -
+`ArgumentException: Trying to access resource of type Texture with an null resource index` - in every frame
+the water prepass early-returns: before the planet exists, and on preview and reflection cameras.
+**`UseGlobalTexture` throws when no handle is registered for that global this frame**, and there is no public
+way to ask (`RenderGraph.GetGlobal` / `IsGlobal` are `internal`). Use `builder.UseAllGlobalTextures(true)`,
+which iterates only the valid globals, and let the shader's own fallback cover the frames without water.
+`WaterVolumeRenderFeature`'s composite pass may keep its `UseGlobalTexture` because it is enqueued in the
+same frame as the prepass that publishes the handle.
+
+## Opacity fell with view path, and clouds drew on the lake (2026-09-02, FIXED and VERIFIED)
+
+Bryan, with a sidecar capture: *"I can still see through the lake, even see clouds on the horizon. The lake
+should be less transparent the longer the view arc, not less."* His model is right and the arc has recorded
+it before â€” *water is cumulative; the more water you look through, the more opaque it gets.*
+
+Two independent sites, neither of which is the volume defect above. Both found by reading the alpha
+arithmetic with the sidecar's own inputs (`CameraSample: shore=1.000, body=0.000`, `DepthFoam: deep=360`),
+not by capture â€” the numbers are deterministic once `body01 = 0`.
+
+**1. `Ocean.shader` â€” the far branch was BELOW the near branch for a lake.** The chain at ~L770-776 was:
+
+```hlsl
+nearAlpha = _Alpha * depthAlpha * shoreAlpha * bodyVisibility;
+nearAlpha = lerp(saturate(0.9 * shoreAlpha), nearAlpha, body01);   // murky-pond override: lake -> 0.9
+farAlpha  = farOpacityCeiling * lerp(0.74, 1.0, body01);           // ocean-authored discount: lake -> 0.725
+layer.alpha = lerp(lerp(nearAlpha, farAlpha, pathAlpha), ...);
+```
+
+`shoreVisibility = smoothstep(0.018, 0.18, shore01)` saturates to 1 across open lake water, so
+`shoreAlpha = 1` and **nearAlpha = 0.90**. At the horizon `fresnel -> 1`, so `farOpacityCeiling = 0.98` and
+**farAlpha = 0.98 * 0.74 = 0.725**. `pathAlpha -> 1` there. The lerp therefore ran **downhill, 0.90 -> 0.725**:
+the further you looked, the more transparent the lake got. Exactly Bryan's sentence, as arithmetic.
+
+The pond override (2026-08-29) raised the near value without touching the far one, which had been authored
+when both ends belonged to the ocean, where `nearAlpha` is small and 0.72-0.98 is a genuine rise. Fix:
+
+```hlsl
+float farAlpha = max(farOpacityCeiling, nearAlpha);
+```
+
+Extinction can only accumulate along a longer path, so the far branch must never sit under the near one for
+any body. Lake now runs 0.90 -> 0.98 with path; ocean is unchanged in behaviour.
+
+**2. `Cloud.shader` â€” the cloud march was not stopped by the lake.** This is what put cumulus *on the water*,
+and it is not a transparency effect at all. `EvaluateSkyReflection` is a smooth analytic gradient with no
+cloud term, so cloud SHAPES on the lake can never come from the surface reflection â€” they were composited.
+
+Render order settles it: water volume + surface at `BeforeRenderingTransparents`/Transparent, atmosphere at
+`BeforeRenderingPostProcessing`, clouds at `BeforeRenderingPostProcessing + 1..3`. **Clouds are last.** The
+water surface is `ZWrite Off`, so the cloud pass had one analytic occluder:
+
+```hlsl
+float2 oceanHit = RaySphere(_CloudPlanetCenter, _SeaLevelRadius, rayOrigin, rayDir);
+if (oceanHit.y > 0.0) sceneDepth = min(sceneDepth, oceanHit.x);
+```
+
+Global sea sphere again â€” fourth instance of the arc's one rule. Camera 5044.45, sphere 5000, grazing ray
+closest approach 5022.10: the ray never enters it, `oceanHit.y <= 0`, no clamp, and the march ran the full
+length and painted cloud onto the lake.
+
+Fixed by using the occluder that already exists. `WaterVolumePrepass` rasterises the real surface â€” every
+body, both sides of the waterline, swell displacement applied â€” and publishes it as the `_WaterVolumeData`
+global; channel **R is view-forward depth**, needing the same `* viewLength` the scene depth gets (the idiom
+is `WaterVolume.shader`'s `WaterSurfaceRayDistance`). Clouds now clamp on that where it exists and keep the
+sphere only as the fallback for open ocean past the edge of the mesh.
+
+**Render-graph gotcha:** a global texture must be declared with `builder.UseGlobalTexture(id)` in the
+consuming pass or it is not bound there. Added to the `CloudEffect` pass in `CloudRenderFeature.cs`. Missing
+it fails silently and *safely* â€” the sample returns 0, the code falls to the sphere branch, and the fix just
+does nothing. Check the fix actually took effect rather than assuming the edit landed.
+
+**Same trap for any future pass that must respect water**: the water surface writes no depth, so
+`_CameraDepthTexture` alone always says "sky" over water. `_WaterVolumeData.r` is the answer, and
+`Atmosphere.shader` already uses `step(0.0001, R)` as its is-there-water test.
+
+
+**Verified in play mode, 2026-09-02**, from Bryan's exact viewpoint â€” `camera.look-at 4451.98,-2303.18,-567.21`
+with his forward, reproducing his sidecar's `CameraSample: shore=1.000, body=0.000` and
+`DataRanges: shore avg=0.838, body avg=0.905` exactly. Mode 19 `SurfaceAlpha` writes R=alpha, G=viewPath, so
+the claim is measurable in-frame. Mean over open water (x 80..420), near row to horizon row:
+
+```
+y=  0  alpha 0.964  viewPath 0.676     <- nearest water
+y= 60  alpha 0.991  viewPath 0.693
+y=120  alpha 0.994  viewPath 0.695
+y=195  alpha 0.992  viewPath 0.695     <- at the far shore
+```
+
+Monotonic rise, and the horizon now sits at ~0.99 where the arithmetic says it used to land at 0.725. The
+matching `Off` capture shows no terrain through the lake and no cloud below the treeline.
+
+Two useful method notes. `camera.look-at <pos> <target>` reproduces a sidecar viewpoint exactly (position +
+forward), which is the cheap way to re-shoot someone else's capture; do it as a high hop then a descent, not
+one long horizontal jump. And `debug.screenshot` is an async console command, so `ExecuteImmediate` refuses
+it â€” drive `DebugCapturePipeline.CaptureCurrentModeAsync` through `DebugCaptureController._pipeline` instead.
+
 ## Index digest (verbatim, moved from MEMORY.md 2026-08-26)
 
-- [Water shore + horizon rendering](project_water_shore_rendering.md) — 9 fixes. **Lake "blocks" SOLVED: it was the GRASS water-fade, not biomes — 7 attempts in the wrong system.** Found by colour-coded elimination, read-only, no regenerates.
+- [Water shore + horizon rendering](project_water_shore_rendering.md) â€” 9 fixes. **Lake "blocks" SOLVED: it was the GRASS water-fade, not biomes â€” 7 attempts in the wrong system.** Found by colour-coded elimination, read-only, no regenerates.

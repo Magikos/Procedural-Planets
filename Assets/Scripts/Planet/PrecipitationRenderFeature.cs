@@ -232,12 +232,12 @@ public class PrecipitationRenderPass : ScriptableRenderPass
                 if (data.dustParticleCount > 0)
                 {
                     ctx.cmd.DrawProcedural(Matrix4x4.identity, data.weatherParticleMaterial, 0,
-                        MeshTopology.Triangles, 18, data.dustParticleCount, _propertyBlock);
+                        MeshTopology.Triangles, 18, data.dustParticleCount * 6, _propertyBlock);
                 }
                 if (data.snowParticleCount > 0)
                 {
                     ctx.cmd.DrawProcedural(Matrix4x4.identity, data.weatherParticleMaterial, 1,
-                        MeshTopology.Triangles, 18, data.snowParticleCount, _propertyBlock);
+                        MeshTopology.Triangles, 18, data.snowParticleCount * 6, _propertyBlock);
                 }
 
                 // Rain drops draw in RainParticlesAfterPostPass at

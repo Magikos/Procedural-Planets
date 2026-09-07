@@ -546,7 +546,7 @@ public sealed class AssetBenchService
         return true;
     }
 
-    static readonly string[] AlbedoProperties = { "_BaseMap", "_MainTex", "_BaseColorMap", "_Albedo", "_Diffuse" };
+    static readonly string[] AlbedoProperties = { "_BaseMap", "_MainTex", "_BaseColorMap", "_Albedo", "_Diffuse", "_TextureSample", "_MainTexture" };
 
     static void CopyAlbedo(Material source, Material destination)
     {
@@ -559,7 +559,13 @@ public sealed class AssetBenchService
             if (texture == null) continue;
 
             foreach (string target in AlbedoProperties)
-                if (destination.HasProperty(target)) { destination.SetTexture(target, texture); break; }
+                if (destination.HasProperty(target))
+                {
+                    destination.SetTexture(target, texture);
+                    destination.SetTextureScale(target, source.GetTextureScale(property));
+                    destination.SetTextureOffset(target, source.GetTextureOffset(property));
+                    break;
+                }
 
             break;
         }

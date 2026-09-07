@@ -101,5 +101,21 @@ namespace ProceduralPlanets.Tests
             }
             finally { Cleanup(a); Cleanup(b); }
         }
+
+        [Test]
+        public void ScatterRock_KeepsOneVisualMeshAndSeparateCoarseCollider()
+        {
+            RockDef def = Def();
+            def.Subdivisions = 1;
+            GeneratedRock rock = RockGenerator.Generate(def, 777);
+            try
+            {
+                Assert.AreEqual(1, rock.Lods.Length);
+                Assert.AreEqual(80, rock.Lod0.triangles.Length / 3);
+                Assert.AreEqual(20, rock.Collider.triangles.Length / 3);
+                Assert.AreNotSame(rock.Lod0, rock.Collider);
+            }
+            finally { Cleanup(rock); }
+        }
     }
 }

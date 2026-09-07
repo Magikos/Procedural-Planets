@@ -15,6 +15,7 @@ public sealed class CreatureLibrary : ScriptableObject
 [System.Serializable]
 public sealed class CreatureSpecies
 {
+    public CreatureVisualSettings Visuals;
     public string DisplayName = "Placeholder";
 
     [Tooltip("How many of this species one territory supports. This is the whole of birth: a territory's " +
@@ -50,9 +51,13 @@ public sealed class CreatureSpecies
     [Tooltip("Metres at which it notices a threat. A deer looks further than a rabbit.")]
     [Min(1f)] public float AwarenessMeters = 35f;
 
-    [Tooltip("Hits it takes to bring down. LIVE-ONLY: a wounded animal you walk away from is whole again " +
-             "when you come back, because health is the one thing about it that is not written down.")]
+    [Tooltip("Maximum health. Damage persists across unloading and save reloads.")]
     [Min(1)] public int MaxHealth = 3;
+
+    [Tooltip("Simulated seconds from satisfied to maximum hunger. Zero disables hunger growth.")]
+    [Min(0f)] public float HungerSeconds = 1800f;
+    [Tooltip("Simulated seconds from satisfied to maximum thirst. Zero disables thirst growth.")]
+    [Min(0f)] public float ThirstSeconds = 900f;
 
     [Tooltip("What killing it credits to the inventory - the same one a felled tree feeds.")]
     public string YieldItemId = "Hide";
@@ -85,6 +90,9 @@ public sealed record CreatureSpeciesDto(
     int YieldCount,
     float CruiseAltitudeMeters)
 {
+    public CreatureVisualDto Visuals { get; init; }
+    public float HungerSeconds { get; init; } = 1800f;
+    public float ThirstSeconds { get; init; } = 900f;
     /// <summary>True when a death of this species never lapses - the boss case, same code path as a deer.</summary>
     public bool NeverRespawns => RespawnSeconds <= 0f;
 
@@ -128,7 +136,14 @@ public sealed record CreatureSpeciesDto(
                 Mathf.Max(1, src.MaxHealth),
                 string.IsNullOrWhiteSpace(src.YieldItemId) ? "Hide" : src.YieldItemId,
                 Mathf.Max(0, src.YieldCount),
-                Mathf.Max(0f, src.CruiseAltitudeMeters));
+                Mathf.Max(0f, src.CruiseAltitudeMeters))
+            {
+                Visuals = src.Visuals != null ? src.Visuals.Snapshot() : null,
+                HungerSeconds = FiniteDuration(src.HungerSeconds),
+                ThirstSeconds = FiniteDuration(src.ThirstSeconds),
+            };
+
+    static float FiniteDuration(float value) => float.IsNaN(value) || float.IsInfinity(value) ? 0f : Mathf.Max(0f, value);
 }
 
 public sealed record CreatureLibraryDto(CreatureSpeciesDto[] Species, float ObserverBubbleMeters)

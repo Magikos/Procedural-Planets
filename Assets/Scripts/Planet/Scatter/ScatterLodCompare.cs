@@ -38,6 +38,9 @@ public sealed class ScatterLodCompare : MonoBehaviour
     int _sizeStep;
     bool _pair = true;
     bool _orbit;
+    bool _blink;
+    bool _transition;
+    string _find = "";
     float _yaw;
 
     const int MaxMeshLods = 8;
@@ -110,6 +113,7 @@ public sealed class ScatterLodCompare : MonoBehaviour
             if (!part.CanRender) continue;
             rps[i] = new RenderParams(part.Material)
             {
+                    motionVectorMode = UnityEngine.MotionVectorGenerationMode.Object,
                 shadowCastingMode = part.CastShadows ? ShadowCastingMode.On : ShadowCastingMode.Off,
                 receiveShadows = part.ReceiveShadows,
                 worldBounds = bounds,
@@ -182,7 +186,15 @@ public sealed class ScatterLodCompare : MonoBehaviour
     // ScatterLodSweep drives the same placement and draw code headlessly. It owns the camera and the render
     // target while it runs, so the interactive path stands down rather than fighting it for both.
     internal bool SweepActive { get; set; }
-    internal int ProtoCount => _protos.Length;
+    public int ProtoCount => _protos.Length;
+    public int SelectedIndex => _index;
+
+    public void SelectPrototype(int index)
+    {
+        if (_protos.Length == 0) return;
+        _index = (index % _protos.Length + _protos.Length) % _protos.Length;
+        _tierIdx = Current.HasImpostor ? CardIdx(Current) : 0;
+    }
     internal ScatterPrototypeDto ProtoAt(int i) => _protos[i];
     internal int CardTierOf(ScatterPrototypeDto proto) => CardIdx(proto);
     internal Camera BenchCamera => _cam;
@@ -225,12 +237,11 @@ public sealed class ScatterLodCompare : MonoBehaviour
     void ReadKeys()
     {
         Keyboard k = Keyboard.current;
-        if (k == null || _protos.Length == 0) return;
+        if (k == null || _protos.Length == 0 || GUI.GetNameOfFocusedControl() == "PrototypeSearch") return;
 
         int step = k.shiftKey.isPressed ? 10 : 1;
-        int len = _protos.Length;
-        if (k.rightArrowKey.wasPressedThisFrame) { _index = ((_index + step) % len + len) % len; ClampTier(); }
-        if (k.leftArrowKey.wasPressedThisFrame) { _index = ((_index - step) % len + len) % len; ClampTier(); }
+        if (k.rightArrowKey.wasPressedThisFrame) SelectPrototype(_index + step);
+        if (k.leftArrowKey.wasPressedThisFrame) SelectPrototype(_index - step);
 
         int tiers = TierCount(Current);
         if (k.upArrowKey.wasPressedThisFrame) _tierIdx = (_tierIdx + 1) % tiers;
@@ -240,6 +251,8 @@ public sealed class ScatterLodCompare : MonoBehaviour
             for (int i = 0; i < 4 && i < PixelHeights.Length; i++)
                 if (k[Key.Digit1 + i].wasPressedThisFrame) _sizeStep = i;
 
+        if (k.bKey.wasPressedThisFrame) { _blink = !_blink; _transition = false; _pair = false; }
+        if (k.tKey.wasPressedThisFrame) { _transition = !_transition; _blink = false; _pair = false; }
         if (k.pKey.wasPressedThisFrame) _pair = !_pair;
         if (k.oKey.wasPressedThisFrame) _orbit = !_orbit;
         if (k.rKey.wasPressedThisFrame) _yaw = 0f;
@@ -247,7 +260,6 @@ public sealed class ScatterLodCompare : MonoBehaviour
         if (k.minusKey.wasPressedThisFrame) Magnify = Mathf.Max(Magnify - 1, 1);
     }
 
-    void ClampTier() => _tierIdx = Mathf.Clamp(_tierIdx, 0, TierCount(Current) - 1);
 
 
     void Draw()
@@ -258,12 +270,22 @@ public sealed class ScatterLodCompare : MonoBehaviour
         float sizeM = proto.BoundsSizeMeters;
         float sep = _pair ? sizeM * 1.8f : 0f;
         PlaceCamera(_index, TargetPixels, Screen.height, _yaw);
+        if (_transition)
+        {
+            // Move through the production distance band, independently of screen resolution.
+            float boundary = proto.HasImpostor ? proto.ImpostorStartDistance : proto.MeshCullDistance;
+            float distance = boundary * Mathf.Lerp(0.65f, 1.2f, 0.5f - 0.5f * Mathf.Cos(Time.unscaledTime));
+            _cam.transform.position = _cam.transform.position.normalized * distance;
+            _cam.transform.LookAt(Lod0Bounds(proto).center, Vector3.up);
+        }
 
         // LEFT is always the LOD0 mesh - the model itself. Only the right side moves, so any difference you
         // see is the tier drifting from the source of truth and nothing else.
         Vector3 right = _cam.transform.right;
         if (_pair) DrawTier(_index, proto, 0, -right * sep * 0.5f);
-        DrawTier(_index, proto, _tierIdx, right * sep * 0.5f);
+        int tier = _transition ? AutoIdx(proto)
+            : _blink && Mathf.FloorToInt(Time.unscaledTime * 2f) % 2 == 0 ? 0 : _tierIdx;
+        DrawTier(_index, proto, tier, right * sep * 0.5f);
     }
 
     void DrawTier(int protoIndex, ScatterPrototypeDto proto, int idx, Vector3 offset)
@@ -319,6 +341,7 @@ public sealed class ScatterLodCompare : MonoBehaviour
 
     void OnGUI()
     {
+        if (SweepActive) return;
         ScatterPrototypeDto proto = Current;
         if (proto == null) return;
         EnsureRenderTexture();
@@ -346,8 +369,37 @@ public sealed class ScatterLodCompare : MonoBehaviour
             : "game: NO CARD - hard culls at mesh range");
         sb.Append("left/right prop   up/down tier   1-4 size   P model on-off   O orbit   R reset   +/- zoom   F sweep all");
 
-        GUI.Box(new Rect(8, 8, 640, 122), GUIContent.none);
+        GUI.Box(new Rect(8, 8, 680, 122), GUIContent.none);
         GUI.Label(new Rect(16, 12, 624, 114), sb.ToString(), _labelStyle);
+        GUILayout.BeginArea(new Rect(8, 138, 680, 140), GUI.skin.box);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Previous")) SelectPrototype(_index - 1);
+        if (GUILayout.Button("Next")) SelectPrototype(_index + 1);
+        GUI.SetNextControlName("PrototypeSearch");
+        _find = GUILayout.TextField(_find, GUILayout.Width(190));
+        if (GUILayout.Button("Find"))
+            for (int n = 1; n <= _protos.Length; n++)
+            {
+                int candidate = (_index + n) % _protos.Length;
+                if (_protos[candidate].DisplayName.IndexOf(_find, System.StringComparison.OrdinalIgnoreCase) < 0) continue;
+                SelectPrototype(candidate);
+                break;
+            }
+        GUILayout.EndHorizontal();
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Compare")) { _pair = true; _blink = false; _transition = false; }
+        if (GUILayout.Button("Blink (B)")) { _pair = false; _blink = true; _transition = false; }
+        if (GUILayout.Button("Walk transition (T)")) { _pair = false; _blink = false; _transition = true; }
+        if (GUILayout.Button("Capture all (F)")) GetComponent<ScatterLodSweep>()?.Run();
+        GUILayout.EndHorizontal();
+        GUILayout.BeginHorizontal();
+        _orbit = GUILayout.Toggle(_orbit, "Orbit");
+        _yaw = GUILayout.HorizontalSlider(_yaw % 360f, 0f, 360f);
+        GUILayout.Label($"{_yaw:0} degrees", GUILayout.Width(90));
+        GUILayout.EndHorizontal();
+        GUILayout.Label(_transition ? $"AUTO: camera {_cam.transform.position.magnitude:0.0} m from pivot"
+            : _blink ? "Blink: LOD0 and selected tier alternate at the same position" : "Left: LOD0. Right: selected tier.");
+        GUILayout.EndArea();
     }
 
     void EnsureRenderTexture()

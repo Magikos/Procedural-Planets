@@ -20,6 +20,10 @@ public sealed class ScatterLodSweep : MonoBehaviour
     public string OutputFolder = "Assets/Screenshots/LOD";
     public float HandoverPixels = 36f;
     public bool SaveImages = true;
+    public float CaptureYaw;
+    [Tooltip("Exact prototype names to capture. Empty captures the full library.")]
+    public string[] PrototypeNames = System.Array.Empty<string>();
+    public bool IsRunning => _running;
 
     const int RtSize = 384;
     const int Crop = 128;
@@ -32,7 +36,7 @@ public sealed class ScatterLodSweep : MonoBehaviour
 
     void Update()
     {
-        if (_running) return;
+        if (_running || GUI.GetNameOfFocusedControl() == "PrototypeSearch") return;
         Keyboard k = Keyboard.current;
         if (k != null && k.fKey.wasPressedThisFrame) Run();
     }
@@ -40,6 +44,7 @@ public sealed class ScatterLodSweep : MonoBehaviour
     public void Run()
     {
         if (_running) return;
+        _backdropSeen = 0;
         _running = true;
         RunSweep();
     }
@@ -62,6 +67,8 @@ public sealed class ScatterLodSweep : MonoBehaviour
         public float SizeM, MeshCull, CardStart, CardEnd;
         public bool HasCard, CardValid;
         public int LastMeshLod, MeshLodCount, DeadLods;
+        public float VertLayers;
+        public float CardBrightness;
         public List<Shot> Shots = new();
         public string Flags;
         public float Score;
@@ -96,9 +103,12 @@ public sealed class ScatterLodSweep : MonoBehaviour
             for (int i = 0; i < _bench.ProtoCount; i++)
             {
                 ScatterPrototypeDto proto = _bench.ProtoAt(i);
+                if (PrototypeNames != null && PrototypeNames.Length > 0
+                    && System.Array.IndexOf(PrototypeNames, proto.DisplayName) < 0) continue;
                 int cardTier = _bench.CardTierOf(proto);
                 int lastMesh = _bench.LastDrawnMeshLod(i);
                 bool cardValid = proto.HasImpostor && _bench.ImpostorOf(i).Valid;
+                List<Mesh> cardMeshes = CardMeshesOf(proto);
 
                 var row = new Row
                 {
@@ -113,6 +123,8 @@ public sealed class ScatterLodSweep : MonoBehaviour
                     LastMeshLod = lastMesh,
                     MeshLodCount = cardTier,
                     DeadLods = Mathf.Max(0, cardTier - 1 - lastMesh),
+                    VertLayers = ScatterImpostorBaker.VerticalLayersOf(cardMeshes),
+                    CardBrightness = ScatterImpostorBaker.CardBrightnessOf(cardMeshes),
                 };
 
                 for (int tier = 0; tier < cardTier; tier++)
@@ -193,7 +205,7 @@ public sealed class ScatterLodSweep : MonoBehaviour
                                int protoIndex, int tier, Color bg)
     {
         await Awaitable.NextFrameAsync();
-        _bench.PlaceCamera(protoIndex, HandoverPixels, RtSize, 0f);
+        _bench.PlaceCamera(protoIndex, HandoverPixels, RtSize, CaptureYaw);
         DrawBackdrop(cam, bg);
         _bench.DrawTierFor(protoIndex, tier);
         await Awaitable.EndOfFrameAsync();
@@ -288,9 +300,11 @@ public sealed class ScatterLodSweep : MonoBehaviour
         }
 
         var flags = new List<string>();
-        if (!row.HasCard) flags.Add("NO_CARD");
+        if (!row.HasCard) flags.Add("MESH_ONLY");
         else if (!row.CardValid) flags.Add("CARD_BUILD_FAILED");
-        if (reference.Coverage < 0.002f) flags.Add("MESH_EMPTY");
+        // Mesh-only rows need visible geometry. Ratio comparisons need a larger reference sample.
+        float minimumReference = row.HasCard ? 0.002f : 0.5f / (Crop * Crop);
+        if (reference.Coverage < minimumReference) flags.Add("MESH_EMPTY");
         if (row.DeadLods > 0) flags.Add($"DEAD_LODS({row.DeadLods})");
 
         float worst = 0f;
@@ -301,7 +315,7 @@ public sealed class ScatterLodSweep : MonoBehaviour
             if (sc > worst) worst = sc;
             if (s.Flags != "ok") flags.Add($"{s.Tier}:{s.Flags}");
         }
-        if (!row.HasCard || !row.CardValid) worst = Mathf.Max(worst, 3f);
+        if (row.HasCard && !row.CardValid) worst = Mathf.Max(worst, 3f);
         row.Score = worst;
         row.Flags = flags.Count == 0 ? "ok" : string.Join(" ", flags);
     }
@@ -403,16 +417,29 @@ public sealed class ScatterLodSweep : MonoBehaviour
         return sb.ToString();
     }
 
+    // The two columns a re-fit of the CardBrightnessOf constants reads alongside lumRatioVsLod0 and iouVsLod0.
+    // Same LOD0 meshes ScatterImpostorFactory hands the baker.
+    static readonly List<Mesh> _cardMeshes = new();
+
+    static List<Mesh> CardMeshesOf(ScatterPrototypeDto proto)
+    {
+        _cardMeshes.Clear();
+        foreach (ScatterPartDto part in proto.Parts)
+            if (part.LodMeshes.Length > 0 && part.LodMeshes[0] != null) _cardMeshes.Add(part.LodMeshes[0]);
+        return _cardMeshes;
+    }
+
     void WriteCsv(List<Row> rows)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("index,name,key,sizeM,meshCull,cardStart,cardEnd,hasCard,cardValid,lastMeshLod,meshLodCount,deadLods,tier,drawnInGame,coverage,covRatioVsLod0,iouVsLod0,luminance,lumRatioVsLod0,rgbDistVsLod0,tierFlags");
+        sb.AppendLine("index,name,key,sizeM,meshCull,cardStart,cardEnd,hasCard,cardValid,lastMeshLod,meshLodCount,deadLods,vertLayers,cardBrightness,tier,drawnInGame,coverage,covRatioVsLod0,iouVsLod0,luminance,lumRatioVsLod0,rgbDistVsLod0,tierFlags");
         for (int i = 0; i < rows.Count; i++)
         {
             Row r = rows[i];
             foreach (Shot s in r.Shots)
                 sb.AppendLine($"{i},{Csv(r.Name)},{Csv(r.Key)},{r.SizeM:0.00},{r.MeshCull:0},{r.CardStart:0},{r.CardEnd:0}," +
                               $"{r.HasCard},{r.CardValid},{r.LastMeshLod},{r.MeshLodCount},{r.DeadLods}," +
+                              $"{r.VertLayers:0.000},{r.CardBrightness:0.000}," +
                               $"{s.Tier},{s.Drawn},{s.Coverage:0.0000},{s.CovRatio:0.000},{s.Iou:0.000}," +
                               $"{s.Luminance:0.0000},{s.LumRatio:0.000},{s.RgbDist:0.0000},{Csv(s.Flags)}");
         }
@@ -433,7 +460,7 @@ public sealed class ScatterLodSweep : MonoBehaviour
             }
 
         var sb = new StringBuilder();
-        sb.AppendLine($"LOD ladder sweep - {rows.Count} prototypes, every tier scored against its own LOD0 at {HandoverPixels:0} px");
+        sb.AppendLine($"LOD ladder sweep - {rows.Count} prototypes, every tier scored against its own LOD0 at {HandoverPixels:0} px, yaw {CaptureYaw:0} degrees");
         sb.AppendLine();
         sb.AppendLine("flag counts:");
         var keys = new List<string>(counts.Keys);
@@ -446,7 +473,8 @@ public sealed class ScatterLodSweep : MonoBehaviour
         foreach (Row r in rows)
         {
             if (r.Flags == "ok") continue;
-            sb.AppendLine($"{r.Score,6:0.00}  {r.Name} | {r.Key} | size {r.SizeM:0.0} m | cull {r.MeshCull:0} m | {r.Flags}");
+            sb.AppendLine($"{r.Score,6:0.00}  {r.Name} | {r.Key} | size {r.SizeM:0.0} m | cull {r.MeshCull:0} m | " +
+                          $"layers {r.VertLayers:0.00} trim {r.CardBrightness:0.00} | {r.Flags}");
             foreach (Shot s in r.Shots)
                 sb.AppendLine($"          {s.Tier,-6} drawn={s.Drawn,-5} cov {s.CovRatio,5:0.00}  iou {s.Iou,5:0.00}  lum {s.LumRatio,5:0.00}  rgb {s.RgbDist,6:0.000}  {s.Flags}");
         }

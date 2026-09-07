@@ -11,6 +11,8 @@ HLSLINCLUDE
 
 TEXTURE2D(_CameraDepthTexture);
 SAMPLER(sampler_CameraDepthTexture);
+TEXTURE2D(_WaterVolumeData);
+SAMPLER(sampler_WaterVolumeData);
 TEXTURE2D(_Source);
 SAMPLER(sampler_Source);
 
@@ -191,7 +193,7 @@ CloudSample SampleCloud(float3 worldPos)
 
     // Cloud type is chosen by climate temperature (independent of density): warm air builds
     // cumulus, cold air layers into stratus. Storm still drives cumulonimbus.
-    float convectivity = smoothstep(0.2, 0.6, SampleClimate01(direction).x);
+    float convectivity = WeatherCloudConvectivity(direction, SampleClimate01(direction).x);
     float verticalProfile = CloudVerticalProfile(height01, convectivity, storm,
         _CloudBottomFeather, _CloudTopFeather, _CloudTopDensityBias);
 
@@ -301,8 +303,20 @@ ENDHLSL
 
                 float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, i.uv).r;
                 float sceneDepth = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
-                if (_SeaLevelRadius > 0.0)
+                // Water writes no depth, so without an explicit occluder the march runs straight through a
+                // lake and composites cloud onto its surface - clouds sitting on the water at the horizon.
+                // The prepass rasterised the real surface, every body and both sides of the waterline, so
+                // its distance wins wherever it exists. R is view-forward depth, scaled like scene depth.
+                float waterSurfaceDistance = SAMPLE_TEXTURE2D(_WaterVolumeData, sampler_WaterVolumeData, i.uv).r * viewLength;
+                if (waterSurfaceDistance > 0.0001)
                 {
+                    sceneDepth = min(sceneDepth, waterSurfaceDistance);
+                }
+                else if (_SeaLevelRadius > 0.0)
+                {
+                    // No water rasterised here. The analytic sphere still answers for open ocean past the
+                    // edge of the mesh; it cannot answer for a lake perched above sea level, which sits
+                    // outside the sphere entirely - but such a lake always rasterises where it covers.
                     float2 oceanHit = RaySphere(_CloudPlanetCenter, _SeaLevelRadius, rayOrigin, rayDir);
                     if (oceanHit.y > 0.0)
                         sceneDepth = min(sceneDepth, oceanHit.x);
@@ -440,8 +454,15 @@ ENDHLSL
                         debugSilverLining = max(debugSilverLining, saturate(silverLining));
                         debugRainRate = max(debugRainRate, rainRate);
 
-                        lightEnergy += cloud.density * stepSize * transmittance * lighting;
-                        transmittance *= exp(-cloud.density * stepSize * _CloudLightAbsorption);
+                        float segmentDensity = cloud.density * stepSize;
+                        float segmentOD = segmentDensity * _CloudLightAbsorption;
+                        float segmentT = exp(-segmentOD);
+                        // Series limit avoids cancellation and division by zero in thin segments.
+                        float segmentIntegral = segmentOD < 0.001
+                            ? segmentDensity * (1.0 - segmentOD * 0.5 + segmentOD * segmentOD / 6.0)
+                            : (1.0 - segmentT) / _CloudLightAbsorption;
+                        lightEnergy += segmentIntegral * transmittance * lighting;
+                        transmittance *= segmentT;
 
                         if (transmittance < 0.01)
                             break;
@@ -464,14 +485,12 @@ ENDHLSL
                             {
                                 float vfade = saturate(1.0 - belowBase / max(_CloudRainShaftParams.y, 1.0));
                                 float rainSigma = rainAmount * vfade * _CloudRainShaftParams.x * _CloudDensityMultiplier;
-                                // Cap per-step optical depth so a long high-altitude step (edge-on
-                                // through the whole veil) can't wall off to opaque white; keep it a
-                                // translucent grey curtain.
-                                float veilOD = min(rainSigma * stepSize, 0.25);
+                                float veilOD = rainSigma * stepSize;
                                 float rainLocalSun = smoothstep(-0.55, 0.35, dot(sampleNormal, _SunParams.xyz));
                                 float3 rainColor = _CloudAmbientSky.rgb * 0.28 * lerp(0.5, 1.0, rainLocalSun);
-                                lightEnergy += rainColor * veilOD * transmittance;
-                                transmittance *= exp(-veilOD);
+                                float veilT = exp(-veilOD);
+                                lightEnergy += rainColor * (1.0 - veilT) * transmittance;
+                                transmittance *= veilT;
                                 if (transmittance < 0.01)
                                     break;
                             }

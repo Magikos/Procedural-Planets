@@ -21,7 +21,7 @@ using UnityEngine;
 /// in by the host, because a dedicated server has player positions and no cameras.
 /// </para>
 /// <para>
-/// A creature that has never done anything notable costs zero bytes. Only a death reaches the delta log.
+/// Untouched creatures need no record. Displacement, behavior, damage, and death use the existing delta log.
 /// </para>
 /// </remarks>
 [CommandPrefix("creature")]
@@ -35,14 +35,21 @@ public sealed class CreatureResidencyService : IDisposable
         public readonly Vector3 Position;
         public readonly Vector3 Up;
         public readonly Vector3 Forward;
+        public readonly Vector3 Velocity;
+        public readonly CreatureBehaviour Behaviour;
+        public readonly float AltitudeMeters;
 
-        public LiveCreature(EntityId id, int speciesIndex, Vector3 position, Vector3 up, Vector3 forward)
+        public LiveCreature(EntityId id, int speciesIndex, Vector3 position, Vector3 up, Vector3 forward, Vector3 velocity = default,
+            CreatureBehaviour behaviour = CreatureBehaviour.Wander, float altitudeMeters = 0f)
         {
             Id = id;
             SpeciesIndex = speciesIndex;
             Position = position;
             Up = up;
             Forward = forward;
+            Velocity = velocity;
+            Behaviour = behaviour;
+            AltitudeMeters = altitudeMeters;
         }
     }
 
@@ -64,12 +71,17 @@ public sealed class CreatureResidencyService : IDisposable
         public SurfaceCharacterController Driver;   // non-null only while simulated
         public FlightGrounding Flight;              // non-null only for a flier, and only while simulated
         public CreatureBrain Brain;                 // rebuilt from Behaviour at promotion
+        public bool HasLandingTarget;
+        public Vector3 LandingTarget;
+        public ulong LandingSiteId;
+        public Vector3 TakeoffFrom;
+        public float TakeoffAltitude;
+        public double LandingScanSeconds;
         public uint Tick;
 
-        // ponytail: health is LIVE-only, so an animal you wound and then walk away from is whole when you
-        // return. The upgrade is one byte in the demotion record beside the behaviour, once a wounded animal
-        // is worth persisting.
         public int Health;
+        public ActorNeeds Needs;
+        public double SecondsSinceCheckpoint;
 
         // Being hit makes the attacker a threat for a while whatever the faction table says. Without it an
         // animal the friendly spell has disarmed stands still while you club it.
@@ -80,6 +92,8 @@ public sealed class CreatureResidencyService : IDisposable
         public bool Written;
         public Vector3 WrittenPosition;
         public CreatureBehaviour WrittenBehaviour;
+        public int WrittenHealth;
+        public ActorNeeds WrittenNeeds;
 
         public bool IsLive => Driver != null;
     }
@@ -102,6 +116,7 @@ public sealed class CreatureResidencyService : IDisposable
     readonly Transform _planetTransform;
     readonly IPlanetSurfaceSampler _sampler;
     readonly ILogger _log;
+    readonly Func<long> _unixClock;
 
     // A resident is kept once its territory has been visited, forever: it remembers where the creature was
     // left, which is what a later re-observation fast-forwards from. Dropping it would silently teleport the
@@ -132,6 +147,8 @@ public sealed class CreatureResidencyService : IDisposable
     // allocating its own on each promotion.
     IGravityProvider _gravity;
     IGroundingProvider _grounding;
+    BirdLandingGround _birdLandingGround;
+    public WildlifeLandingTargets LandingTargets { get; } = new();
 
     Vector3 _center;
     float _planetRadius;
@@ -139,7 +156,7 @@ public sealed class CreatureResidencyService : IDisposable
     int _seed;
     bool _configured;
 
-    float _nextPlanTime;
+    double _secondsSincePlan = double.PositiveInfinity;
 
     // Where the observer is now, and where the standing plan was built from. They are separate because
     // forcing a re-plan must not blind the console to where the player is standing.
@@ -163,23 +180,34 @@ public sealed class CreatureResidencyService : IDisposable
     public int ResidentCount => _all.Count;
     public int LiveCount => _live.Count;
 
-    public CreatureResidencyService(Transform planetTransform, IPlanetSurfaceSampler sampler, ILogger log)
+    public CreatureResidencyService(Transform planetTransform, IPlanetSurfaceSampler sampler, ILogger log,
+        Func<long> unixClock = null)
     {
         _planetTransform = planetTransform;
         _sampler = sampler;
         _log = log;
+        _unixClock = unixClock ?? (() => DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         EventBus<SettingsChangedEvent>.Listen(OnSettingsChanged);
         ConsoleRegistry.RegisterInstance(this);
     }
 
     public void Dispose()
     {
+        FlushState();
         EventBus<SettingsChangedEvent>.Unlisten(OnSettingsChanged);
         ConsoleRegistry.UnregisterInstance(typeof(CreatureResidencyService));
         _bySlot.Clear();
         _all.Clear();
         _live.Clear();
         _configured = false;
+        LandingTargets.Clear();
+    }
+
+    /// <summary>Checkpoint actor values before a clean save or shutdown.</summary>
+    public void FlushState()
+    {
+        if (!_configured) return;
+        foreach (Resident resident in _all) Remember(resident, resident.LastSimulatedUnix);
     }
 
     /// <summary>
@@ -191,6 +219,7 @@ public sealed class CreatureResidencyService : IDisposable
         float planetRadius, float seaLevelRadius, CreatureCorpseStore corpses = null)
     {
         _seed = seed;
+        LandingTargets.Clear();
         _delta = deltaLog;
         _biome = biome;
         _threats = threats ?? new ThreatRegistry();
@@ -198,10 +227,13 @@ public sealed class CreatureResidencyService : IDisposable
         _planetRadius = planetRadius;
         _seaLevelRadius = seaLevelRadius;
         _center = _planetTransform != null ? _planetTransform.position : Vector3.zero;
+        _threats.ConfigureTerrain(_sampler, _center);
         _seeds = ServiceLocator.Get<ISeedProvider>();
         _gravity = new RadialGravityProvider(_center);
         ServiceLocator.TryGet(out IWaterQueryService water);
         _grounding = new PlanetSurfaceGrounding(_sampler, _center, new CharacterWaterFloor(water, _center));
+        _birdLandingGround = new BirdLandingGround(_sampler, _center, seaLevelRadius,
+            new CharacterWaterFloor(water, _center));
         _library = SettingsProvider.IsRegistered<CreatureLibraryDto>()
             ? SettingsProvider.GetSettings<CreatureLibraryDto>()
             : CreatureLibraryDto.Placeholder;
@@ -233,7 +265,7 @@ public sealed class CreatureResidencyService : IDisposable
     }
 
     /// <summary>Force the next tick to re-resolve every territory in the bubble.</summary>
-    public void Invalidate() => _nextPlanTime = 0f;
+    public void Invalidate() => _secondsSincePlan = double.PositiveInfinity;
 
     /// <summary>
     /// Advance one frame. <paramref name="observerWorldPos"/> is a player position - the host resolves it, so
@@ -241,6 +273,8 @@ public sealed class CreatureResidencyService : IDisposable
     /// </summary>
     public void Tick(Vector3 observerWorldPos, float deltaTime)
     {
+        if (float.IsNaN(deltaTime) || float.IsInfinity(deltaTime) || deltaTime < 0f)
+            throw new ArgumentOutOfRangeException(nameof(deltaTime));
         if (!_configured) return;
 
         long now = NowUnixSeconds();
@@ -256,11 +290,12 @@ public sealed class CreatureResidencyService : IDisposable
             else { _threats.Withdraw(DebugThreatId); _debugThreatUntil = 0L; }
         }
 
-        if (Time.unscaledTime >= _nextPlanTime ||
+        _secondsSincePlan += deltaTime;
+        if (_secondsSincePlan >= PlanIntervalSeconds ||
             (observerWorldPos - _planAnchor).sqrMagnitude > PlanMoveMeters * PlanMoveMeters)
         {
             Plan(observerWorldPos, bubble, now);
-            _nextPlanTime = Time.unscaledTime + PlanIntervalSeconds;
+            _secondsSincePlan = 0d;
             _planAnchor = observerWorldPos;
         }
 
@@ -285,8 +320,11 @@ public sealed class CreatureResidencyService : IDisposable
             if (!r.IsLive)
                 continue;
 
+            Vector3 previous = r.Position;
             Simulate(r, deltaTime, now);
-            _live.Add(new LiveCreature(r.Id, r.SpeciesIndex, r.Position, r.Driver.Pose.Up, r.Forward));
+            Vector3 velocity = deltaTime > 0f ? (r.Position - previous) / deltaTime : Vector3.zero;
+            float altitude = BirdClearance(r, _library.At(r.SpeciesIndex));
+            _live.Add(new LiveCreature(r.Id, r.SpeciesIndex, r.Position, r.Driver.Pose.Up, r.Forward, velocity, r.Behaviour, altitude));
         }
     }
 
@@ -364,6 +402,7 @@ public sealed class CreatureResidencyService : IDisposable
         // lapsed death describing the previous occupant) starts a fresh animal at its home.
         bool resume = hasRecord && !record.IsDead && record.Generation == generation;
         Vector3 position = resume ? record.Position : home;
+        int health = resume && record.Health > 0 ? Mathf.Min(record.Health, species.MaxHealth) : species.MaxHealth;
 
         var resident = new Resident
         {
@@ -376,7 +415,13 @@ public sealed class CreatureResidencyService : IDisposable
             Forward = CharacterMath.ArbitraryTangent((position - _center).normalized),
             LastSimulatedUnix = resume ? record.UnixSeconds : now,
             Behaviour = resume ? record.Behaviour : CreatureBehaviour.Wander,
+            Health = health,
+            Needs = resume ? record.Needs : default,
             Written = resume,
+            WrittenPosition = position,
+            WrittenBehaviour = resume ? record.Behaviour : CreatureBehaviour.Wander,
+            WrittenHealth = health,
+            WrittenNeeds = resume ? record.Needs : default,
         };
         _bySlot[slotKey.Value] = resident;
         _all.Add(resident);
@@ -420,6 +465,8 @@ public sealed class CreatureResidencyService : IDisposable
 
     void Retire(Resident r)
     {
+        LandingTargets.Release(r.LandingSiteId, r.Id);
+        _threats.Withdraw(r.Id);
         r.Driver = null;
         _bySlot.Remove(r.Slot.Value);
         _all.Remove(r);
@@ -441,13 +488,22 @@ public sealed class CreatureResidencyService : IDisposable
             forward = CharacterMath.ArbitraryTangent(up);
         r.Forward = forward;
 
+
         // A flier is grounded through a wrapper that adds its altitude. Nothing below this line knows the
         // difference: the motor holds a body above whatever surface it is told about, and for a bird that
         // surface is simply higher up.
         IGroundingProvider grounding = _grounding;
         r.Flight = null;
+        r.HasLandingTarget = false;
+        r.LandingScanSeconds = 0f;
+        r.TakeoffAltitude = 0f;
         if (species.CruiseAltitudeMeters > 0f)
         {
+            if (r.Behaviour == CreatureBehaviour.Perch)
+            {
+                r.HasLandingTarget = _birdLandingGround.TryFind(r.Position, species.BodyHeightMeters, out r.LandingTarget);
+                if (!r.HasLandingTarget) r.Behaviour = CreatureBehaviour.Wander;
+            }
             r.Flight = new FlightGrounding(_grounding)
             {
                 AltitudeMeters = r.Behaviour == CreatureBehaviour.Perch ? 0f : species.CruiseAltitudeMeters,
@@ -466,8 +522,6 @@ public sealed class CreatureResidencyService : IDisposable
         // The brain is rebuilt from the remembered behaviour, never carried across the gap as a live object.
         // Without this an animal that was fleeing when you walked away is grazing when you come back.
         r.Brain = new CreatureBrain(_seeds.GetSeedForEntity(r.Id.Value), species, r.Behaviour);
-        r.Health = species.MaxHealth;
-        r.AlarmUntilUnix = 0L;
     }
 
     // Demotion drops the simulation, never the creature. What it was doing and where it was left are kept as
@@ -476,6 +530,13 @@ public sealed class CreatureResidencyService : IDisposable
     {
         r.LastSimulatedUnix = now;
         r.Behaviour = r.Brain?.Behaviour ?? r.Behaviour;
+        // Scene sockets are ephemeral. A returning bird resumes flight, not a stale branch reservation.
+        if (r.LandingSiteId != 0)
+        {
+            LandingTargets.Release(r.LandingSiteId, r.Id);
+            r.LandingSiteId = 0;
+            if (r.Behaviour == CreatureBehaviour.Perch) r.Behaviour = CreatureBehaviour.Wander;
+        }
         r.Driver = null;
         r.Brain = null;
         r.Flight = null;
@@ -491,12 +552,14 @@ public sealed class CreatureResidencyService : IDisposable
     /// wandered off and later drifted home stops costing anything. The exception is a slot whose generation
     /// has moved on - that counter lives nowhere else, so its record stays even when it says nothing else.
     /// </remarks>
-    void Remember(Resident r, long now)
+    void Remember(Resident r, long now, int? healthOverride = null)
     {
         if (_delta == null) return;
 
         CreatureSpeciesDto species = _library.At(r.SpeciesIndex);
         if (species == null) return;
+
+        int health = healthOverride ?? r.Health;
 
         CreatureRecordAction action = CreatureRecordPolicy.Decide(
             CreatureTerritory.SurfaceDistance(_center, r.Position, r.Home),
@@ -505,7 +568,9 @@ public sealed class CreatureResidencyService : IDisposable
             r.Generation,
             r.Written,
             Vector3.Distance(r.Position, r.WrittenPosition),
-            r.WrittenBehaviour);
+            r.WrittenBehaviour,
+            hasPersistentState: health != species.MaxHealth || !r.Needs.Equals(default(ActorNeeds)),
+            persistentStateChanged: health != r.WrittenHealth || !r.Needs.Equals(r.WrittenNeeds));
 
         switch (action)
         {
@@ -516,10 +581,13 @@ public sealed class CreatureResidencyService : IDisposable
 
             case CreatureRecordAction.Write:
                 _delta.Append(CreatureRecordCodec.Encode(CreatureRecord.Displacement(
-                    r.Slot, r.SpeciesIndex, r.Generation, r.Position, now, r.Behaviour)));
+                    r.Slot, r.SpeciesIndex, r.Generation, r.Position, now, r.Behaviour,
+                    health == species.MaxHealth ? -1 : health, r.Needs)));
                 r.Written = true;
                 r.WrittenPosition = r.Position;
                 r.WrittenBehaviour = r.Behaviour;
+                r.WrittenHealth = health;
+                r.WrittenNeeds = r.Needs;
                 break;
         }
     }
@@ -529,7 +597,11 @@ public sealed class CreatureResidencyService : IDisposable
         CreatureSpeciesDto species = _library.At(r.SpeciesIndex);
         if (species == null) return;
 
+        r.Needs = r.Needs.Advance(deltaTime, species.HungerSeconds, species.ThirstSeconds);
+
         Vector3 up = r.Driver.Pose.Up;
+        UpdateBirdLanding(r, species, deltaTime);
+        float actualAltitude = BirdClearance(r, species);
 
         // Perception, then decision, then movement - in that order, and the creature reaches for nothing
         // itself. What it may react to comes from the THREAT registry, which carries identities; the observer
@@ -543,8 +615,14 @@ public sealed class CreatureResidencyService : IDisposable
             Home = r.Home,
             DistanceToHome = CreatureTerritory.SurfaceDistance(_center, r.Position, r.Home),
             DeltaTime = deltaTime,
+            AltitudeMeters = actualAltitude,
+            HasLandingTarget = r.HasLandingTarget,
+            LandingTarget = r.LandingTarget,
             Tick = r.Tick,
             Species = species,
+            Needs = r.Needs,
+            Health = r.Health,
+            MaxHealth = species.MaxHealth,
         };
         if (_threats.TryFindThreat(r.Position, r.Id, species.Faction, species.AwarenessMeters, now,
                 out ThreatSource threat))
@@ -564,10 +642,38 @@ public sealed class CreatureResidencyService : IDisposable
         // Look.x is a turn RATE in degrees per second here. ActorIntent carries raw device units and leaves
         // the scaling to whatever hosts the actor; for an animal the host is this service.
         ActorIntent intent = r.Brain.Sample(r.Tick++);
+        if (r.Flight != null && r.LandingSiteId != 0)
+        {
+            if (r.Brain.Behaviour == CreatureBehaviour.Perch &&
+                LandingTargets.TryClaim(r.LandingSiteId, r.Id))
+            {
+                if (!r.Flight.HasSupport)
+                {
+                    r.Flight.SupportPoint = r.LandingTarget;
+                    r.Flight.HasSupport = true;
+                    r.Flight.AltitudeMeters = Mathf.Max(0f,
+                        Vector3.Dot(r.Position - r.LandingTarget, up) - FootOffset(species));
+                }
+            }
+            else if (r.Flight.HasSupport || r.Brain.Behaviour == CreatureBehaviour.Perch) ReleaseBirdSite(r, species);
+        }
         Vector3 turned = Quaternion.AngleAxis(intent.Look.x * deltaTime, up) * r.Forward;
         Vector3 forward = CharacterMath.TryProjectOntoTangent(turned, up, out Vector3 tangent)
             ? tangent
             : r.Forward;
+
+        // A shallow approach keeps forward motion while altitude converges on the selected site.
+        // Update the support before movement so takeoff does not spend another tick on the ground.
+        if (r.Flight != null)
+        {
+            float distance = Vector3.ProjectOnPlane(r.LandingTarget - r.Position, up).magnitude;
+            float target = r.Brain.Behaviour == CreatureBehaviour.Perch
+                ? Mathf.Min(species.CruiseAltitudeMeters, Mathf.Max(0f, distance - PerchState.ArrivalMeters) * 0.5f)
+                : Mathf.Max(species.CruiseAltitudeMeters, r.TakeoffAltitude);
+            if (r.TakeoffAltitude > 0f && Vector3.ProjectOnPlane(r.Position - r.TakeoffFrom, up).sqrMagnitude > 100f)
+                r.TakeoffAltitude = 0f;
+            r.Flight.AltitudeMeters = Mathf.MoveTowards(r.Flight.AltitudeMeters, target, ClimbSpeedMps * deltaTime);
+        }
 
         CharacterPose pose = r.Driver.Tick(
             intent.Move, forward, species.WalkSpeedMps * r.Brain.SpeedScale, deltaTime);
@@ -576,17 +682,96 @@ public sealed class CreatureResidencyService : IDisposable
         r.Behaviour = r.Brain.Behaviour;
         r.LastSimulatedUnix = now;
 
-        // Climb and descent are a RATE, not a jump. Setting the altitude straight to its target teleports a
-        // bird nine metres downward on the frame it decides to land.
-        if (r.Flight != null)
+        r.SecondsSinceCheckpoint += deltaTime;
+        if (r.SecondsSinceCheckpoint >= 30d)
         {
-            float target = r.Behaviour == CreatureBehaviour.Perch ? 0f : species.CruiseAltitudeMeters;
-            r.Flight.AltitudeMeters = Mathf.MoveTowards(r.Flight.AltitudeMeters, target, ClimbSpeedMps * deltaTime);
+            Remember(r, now);
+            r.SecondsSinceCheckpoint = 0d;
         }
 
         // A live animal is something other animals can react to. Costs nothing today (Wildlife ignores
         // Wildlife) and is what a predator will read when one exists.
         _threats.Report(r.Id, r.Position, species.Faction);
+    }
+
+    void UpdateBirdLanding(Resident r, CreatureSpeciesDto species, float dt)
+    {
+        if (r.Flight == null) return;
+        r.LandingScanSeconds -= Mathf.Max(0f, dt);
+        if (r.Behaviour != CreatureBehaviour.Perch && r.LandingSiteId != 0 &&
+            (!LandingTargets.TryGet(r.LandingSiteId, out var pending) ||
+             !ValidBirdSite(r, species, pending, true) ||
+             (pending.Position - r.LandingTarget).sqrMagnitude > 0.0001f))
+        {
+            r.LandingSiteId = 0;
+            r.HasLandingTarget = false;
+            r.LandingScanSeconds = 0d;
+        }
+        if (r.Behaviour == CreatureBehaviour.Perch)
+        {
+            if (r.LandingSiteId != 0)
+            {
+                r.HasLandingTarget = LandingTargets.TryGet(r.LandingSiteId, out var site) &&
+                    ValidBirdSite(r, species, site, false) &&
+                    (site.Position - r.LandingTarget).sqrMagnitude <= 0.0001f &&
+                    LandingTargets.TryClaim(r.LandingSiteId, r.Id);
+                if (!r.HasLandingTarget) ReleaseBirdSite(r, species);
+                return;
+            }
+            // A terrain edit or changed water level invalidates support even during a rest.
+            if (r.HasLandingTarget)
+                r.HasLandingTarget = _birdLandingGround.TryFind(r.LandingTarget,
+                    species.BodyHeightMeters, out r.LandingTarget);
+            return;
+        }
+        if (r.LandingScanSeconds > 0f) return;
+        r.LandingScanSeconds += Math.Floor(-r.LandingScanSeconds) + 1d;
+        r.LandingSiteId = 0;
+        if (LandingTargets.TryFind(r.Position, 25f, species.BodyHeightMeters, WildlifeLandingUse.Bird, r.Id,
+            out var candidate, site => ValidBirdSite(r, species, site, true)))
+        {
+            r.HasLandingTarget = true;
+            r.LandingSiteId = candidate.Id;
+            r.LandingTarget = candidate.Position;
+            return;
+        }
+        Vector3 ahead = r.Position + r.Forward * Mathf.Max(species.CruiseAltitudeMeters * 2f, species.WalkSpeedMps * 2f);
+        r.HasLandingTarget = _birdLandingGround.TryFind(ahead, species.BodyHeightMeters, out r.LandingTarget);
+    }
+
+    bool ValidBirdSite(Resident r, CreatureSpeciesDto species, WildlifeLandingTarget site, bool approaching)
+    {
+        Vector3 up = (site.Position - _center).normalized;
+        if (!site.IsValid || (site.Uses & WildlifeLandingUse.Bird) == 0 || site.Clearance < species.BodyHeightMeters ||
+            Vector3.Dot(site.Normal, up) < 0.8660254f ||
+            !_grounding.TryGround(site.Position, -up, 0f, out var floor)) return false;
+        // Grounding includes local lakes. The contact point must remain above both water and terrain.
+        if (Vector3.Dot(site.Position - floor.Position, up) < 0.1f ||
+            (site.Position - _center).magnitude <= _seaLevelRadius + 0.1f) return false;
+        return !approaching || Vector3.Dot(r.Position - site.Position, up) >= FootOffset(species);
+    }
+
+    float BirdClearance(Resident r, CreatureSpeciesDto species)
+    {
+        if (r.Flight == null) return 0f;
+        Vector3 up = r.Driver.Pose.Up;
+        if (r.Flight.HasSupport)
+            return Mathf.Abs(Vector3.Dot(r.Position - r.Flight.SupportPoint, up) - FootOffset(species));
+        return _grounding.TryGround(r.Position, -up, FootOffset(species), out var support)
+            ? Mathf.Max(0f, Vector3.Dot(r.Position - support.Position, up)) : float.PositiveInfinity;
+    }
+
+    void ReleaseBirdSite(Resident r, CreatureSpeciesDto species)
+    {
+        LandingTargets.Release(r.LandingSiteId, r.Id);
+        r.LandingSiteId = 0;
+        r.HasLandingTarget = false;
+        if (!r.Flight.HasSupport) return;
+        r.Flight.HasSupport = false;
+        r.Flight.AltitudeMeters = BirdClearance(r, species);
+        if (float.IsInfinity(r.Flight.AltitudeMeters)) r.Flight.AltitudeMeters = species.CruiseAltitudeMeters;
+        r.TakeoffFrom = r.Position;
+        r.TakeoffAltitude = r.Flight.AltitudeMeters + 3f;
     }
 
     // --- death ------------------------------------------------------------
@@ -601,8 +786,7 @@ public sealed class CreatureResidencyService : IDisposable
     }
 
     /// <summary>
-    /// Kill a creature. This is the one thing about a wild animal that costs storage, and it is also
-    /// population control: the record suppresses its slot until the species' expiry lapses, at which point the
+    /// Kill a creature. The record suppresses its slot until the species' expiry lapses, at which point the
     /// slot repopulates with the next generation on its own.
     /// </summary>
     /// <remarks>
@@ -672,10 +856,13 @@ public sealed class CreatureResidencyService : IDisposable
         CreatureSpeciesDto species = _library.At(r.SpeciesIndex);
         if (species == null) return default;
 
-        r.Health -= Mathf.Max(1, damage);
-        if (r.Health > 0)
+        int remainingHealth = r.Health - Mathf.Max(1, damage);
+        if (remainingHealth > 0)
         {
-            r.AlarmUntilUnix = NowUnixSeconds() + AlarmSeconds;
+            long now = NowUnixSeconds();
+            Remember(r, now, remainingHealth);
+            r.Health = remainingHealth;
+            r.AlarmUntilUnix = now + AlarmSeconds;
             r.AlarmFrom = fromWorldPos;
             return CreatureStrike.Wounded(species.DisplayName, r.Position, r.Health);
         }
@@ -750,7 +937,7 @@ public sealed class CreatureResidencyService : IDisposable
                 "the last species will collide. Reduce PerTerritory or widen CreatureKey.SlotBits.");
     }
 
-    static long NowUnixSeconds() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    long NowUnixSeconds() => _unixClock();
 
     // --- console ----------------------------------------------------------
 
@@ -848,6 +1035,9 @@ public sealed class CreatureResidencyService : IDisposable
             sb.Append('\n').Append(CreatureKey.Describe(r.Id))
               .Append(' ').Append(_library.At(r.SpeciesIndex)?.DisplayName ?? "?")
               .Append(r.IsLive ? " live " : " record ").Append(r.Behaviour)
+              .Append(" goal=").Append(r.Brain?.Objective.ToString() ?? "inactive")
+              .Append(" hunger=").Append(r.Needs.Hunger.ToString("F2"))
+              .Append(" thirst=").Append(r.Needs.Thirst.ToString("F2"))
               .Append(" d=").Append(DistanceFromObserver(r).ToString("F0")).Append('m')
               .Append(" fromHome=")
               .Append(CreatureTerritory.SurfaceDistance(_center, r.Position, r.Home).ToString("F0")).Append('m');
@@ -1205,9 +1395,20 @@ public sealed class FlightGrounding : IGroundingProvider
 
     /// <summary>Metres above the ground the body is held. Zero is perched.</summary>
     public float AltitudeMeters;
+    public bool HasSupport;
+    public Vector3 SupportPoint;
 
     public FlightGrounding(IGroundingProvider surface) => _surface = surface;
 
-    public bool TryGround(Vector3 worldPos, Vector3 downDir, float footOffset, out GroundResult result) =>
-        _surface.TryGround(worldPos, downDir, footOffset + Mathf.Max(0f, AltitudeMeters), out result);
+    public bool TryGround(Vector3 worldPos, Vector3 downDir, float footOffset, out GroundResult result)
+    {
+        if (!_surface.TryGround(worldPos, downDir, footOffset + Mathf.Max(0f, AltitudeMeters), out result)) return false;
+        if (HasSupport)
+        {
+            Vector3 up = result.Normal;
+            Vector3 contact = worldPos + up * (Vector3.Dot(SupportPoint - worldPos, up) + footOffset + Mathf.Max(0f, AltitudeMeters));
+            if (Vector3.Dot(contact - result.Position, up) > 0f) result = new GroundResult(contact, up);
+        }
+        return true;
+    }
 }

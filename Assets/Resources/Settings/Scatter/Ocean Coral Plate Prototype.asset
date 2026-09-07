@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Ocean Coral Plate Prototype
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Ocean Coral Plate
+  MeshOnlyVertexLimit: 400
   SlotId: 71
   SpacingMeters: 7
   Biome: 0

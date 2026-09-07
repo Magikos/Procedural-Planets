@@ -14,9 +14,8 @@ Shader "Hidden/WaterVolumePrepass"
         #include "Includes/WaterDisplacement.hlsl"
         #include "Includes/WaterLevelField.hlsl"
         #include "Includes/WaterVolumeData.hlsl"
+        #include "Includes/WaterDepth.hlsl"
 
-        TEXTURE2D(_CameraDepthTexture);
-        SAMPLER(sampler_CameraDepthTexture);
 
         // Global, so deliberately NOT in a per-material buffer - a material property of the same name would
         // shadow it and the shader would silently read a stale planet radius.
@@ -38,15 +37,6 @@ Shader "Hidden/WaterVolumePrepass"
             float forwardDepth : TEXCOORD1;
             float3 positionWS : TEXCOORD2;
         };
-
-        float SceneDepthValid(float rawDepth)
-        {
-            #if UNITY_REVERSED_Z
-                return step(0.0001, rawDepth);
-            #else
-                return 1.0 - step(0.9999, rawDepth);
-            #endif
-        }
 
         Varyings Vert(Attributes input)
         {
@@ -70,57 +60,13 @@ Shader "Hidden/WaterVolumePrepass"
             return output;
         }
 
-        // How deep the water is AT THIS PIXEL, measured against the depth buffer rather than read from the
-        // mesh's baked vertex depth.
-        //
-        // The water mesh cannot resolve a shoreline finer than its own triangles, so a vertex-baked depth
-        // quantises the whole shoreline feather to the mesh edges - which is why the feather used to snap to
-        // triangle contours no matter how it was tuned. The depth buffer knows exactly where the bed is under
-        // every pixel, so the feather now follows the real waterline and is independent of mesh resolution.
-        //
-        // Depth is taken at the BED's own direction, not by projecting the gap between the water pixel and
-        // the bed onto the water pixel's up.
-        //
-        // That projection is only right while the bed sits more or less directly under the water pixel. At a
-        // grazing angle the depth-buffer hit is hundreds of metres further along the ray, so it subtracts the
-        // radius of one place from the water height of another, and past a certain view angle the result
-        // flips sign and the column collapses to zero. The angle at which it flips is the same for every
-        // pixel across the frame, which draws it as a hard horizontal line partway up the sea - the sharp
-        // edge at the horizon.
-        //
-        // Asking the level field where the water surface is above the BED point removes the angle from the
-        // problem entirely. Same form the caustics already use in WaterVolume.shader.
-        // sceneValid also carries HOW FAR the bed is, because the depth buffer is only trustworthy for this
-        // question while the bed is close to the water pixel.
-        //
-        // The buffer answers "what is behind this pixel", not "what is under it". Looking down at a shore
-        // those coincide. Looking ALONG the water they do not: the first opaque hit behind a water pixel is
-        // land on the far side, hundreds of metres away and above the water, so the column reads zero and
-        // the volume decides there is no water. That happens at the same view angle right across the frame,
-        // which draws it as a hard horizontal line partway up the sea - the sharp edge at the horizon.
-        //
-        // So near the shore the measurement wins, giving the fine mesh-independent waterline, and across
-        // open water it hands back to the mesh's own baked depth, which is coarse but is right out there.
-        float MeasuredWaterColumn(Varyings input, out float sceneValid)
-        {
-            float2 screenUv = GetNormalizedScreenSpaceUV(input.positionCS);
-            float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, screenUv).r;
-
-            float3 sceneWS = ComputeWorldSpacePosition(screenUv, rawDepth, UNITY_MATRIX_I_VP);
-            float bedOffset = length(sceneWS - input.positionWS);
-            sceneValid = SceneDepthValid(rawDepth) * (1.0 - smoothstep(40.0, 160.0, bedOffset));
-
-            float3 fromCenter = sceneWS - _PlanetCenter;
-            float bedRadius = max(length(fromCenter), 0.0001);
-            float surfaceRadius = WaterSurfaceRadiusAt(fromCenter / bedRadius, _SeaLevelRadius);
-            return max(surfaceRadius - bedRadius, 0.0);
-        }
-
-
         float4 EncodeWaterVolumeData(Varyings input)
         {
             float sceneValid;
-            float measured01 = saturate(MeasuredWaterColumn(input, sceneValid) / max(_DeepDepth, 0.001));
+            float waterPath;
+            float column = MeasuredWaterColumn(input.positionWS, GetNormalizedScreenSpaceUV(input.positionCS),
+                _SeaLevelRadius, sceneValid, waterPath);
+            float measured01 = saturate(column / max(_DeepDepth, 0.001));
 
             // Open sky behind the water - the horizon - has no scene to measure against, and the reconstructed
             // position there is the far plane, which would read as immeasurably deep OR as zero depending on
@@ -136,32 +82,7 @@ Shader "Hidden/WaterVolumePrepass"
 
         float4 Frag(Varyings input) : SV_Target
         {
-            // Drop water that is showing the camera its UNDERSIDE.
-            //
-            // This pass draws Cull Off - it has to, because from below the surface the underside is the whole
-            // view - and ZWrite Off with the depth attachment bound read-only, so its own triangles never
-            // depth-test against each other. Whichever one rasterises LAST wins the pixel, and that is index
-            // order, not distance. At grazing the near ocean and the ocean past the horizon cover the same
-            // pixels, so in patches the forward depth recorded here is the FAR surface's. The atmosphere
-            // substitutes that distance for scene depth in CompositeDepthScaled and hazes those patches by
-            // the wrong amount - a hard-edged region of different haze lying on the sea, its boundary
-            // following triangle edges.
-            //
-            // On a convex sphere no back-facing water can legitimately be seen from above the surface, so
-            // the facing sign settles it, exactly as it does for the visible surface in Ocean.shader.
-            // Underwater nothing is discarded, which is what keeps Cull Off doing its real job.
-            float3 planetNormalWS = SafeNormalize(input.positionWS - _PlanetCenter, float3(0.0, 1.0, 0.0));
-            float3 toCameraWS = SafeNormalize(_WorldSpaceCameraPos.xyz - input.positionWS, planetNormalWS);
-            // ponytail: measured against the global sea sphere, not CameraSeaOffset()'s level field, so a
-            // camera over a lake perched above sea level reads as higher than it is. Tried and MEASURED as a
-            // non-fix on 2026-08-24: switching this to the field moved the missing-lake-disc mask from
-            // 0.0000 to 0.0005, i.e. nothing, and was reverted. That symptom is the depth test, not this
-            // (ZTest Always lights 26,065 of 31,046 pixels). Correct it when the clip band itself misbehaves,
-            // not in pursuit of a missing lake. Ceiling: the two water passes disagree by up to the lake
-            // spill height, which only matters once the 0.5/2.0 m band straddles a perched surface.
-            float cameraSeaOffset = length(_WorldSpaceCameraPos.xyz - _PlanetCenter) - _SeaLevelRadius;
-            float cameraAboveWater = saturate((cameraSeaOffset - 0.5) / 2.0);
-            clip(lerp(1.0, dot(toCameraWS, planetNormalWS), cameraAboveWater));
+            ClipWaterBackface(input.positionWS, _SeaLevelRadius);
 
             return EncodeWaterVolumeData(input);
         }

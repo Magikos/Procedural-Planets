@@ -138,6 +138,7 @@ sealed class GrassChunkRuntime : System.IDisposable
             receiveShadows = true,
         };
         Graphics.RenderPrimitivesIndirect(renderParams, MeshTopology.Triangles, _argsBuffer, 1, 0);
+        VegetationMotionRenderFeature.RecordDraw(renderParams, _argsBuffer, _bladeBuffer);
     }
 
     public void Dispose()

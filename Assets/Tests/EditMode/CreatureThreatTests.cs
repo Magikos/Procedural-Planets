@@ -279,6 +279,8 @@ namespace ProceduralPlanets.Tests
             Up = Vector3.up,
             Forward = Vector3.forward,
             Home = new Vector3(0f, 1000f, 0f),
+            HasLandingTarget = true,
+            LandingTarget = new Vector3(0f, 1000f, 0f),
             DeltaTime = 0.02f,
             Tick = tick,
             Species = species,
@@ -346,6 +348,22 @@ namespace ProceduralPlanets.Tests
         }
 
         [Test]
+        public void AFlierDoesNotUseGroundGrazingPausesWhileWandering()
+        {
+            int wandering = 0;
+            for (int seed = 0; seed < 50; seed++)
+            {
+                var brain = new CreatureBrain(seed, Flier, CreatureBehaviour.Wander);
+                brain.Observe(Calm(Flier, 0));
+                ActorIntent intent = brain.Sample(0);
+                if (brain.Behaviour != CreatureBehaviour.Wander) continue;
+                wandering++;
+                Assert.Greater(intent.Move.y, 0f);
+            }
+            Assert.Greater(wandering, 0);
+        }
+
+        [Test]
         public void FlightGroundingAddsItsAltitudeOnTop()
         {
             var flat = new FlatGrounding();
@@ -362,6 +380,181 @@ namespace ProceduralPlanets.Tests
             flight.AltitudeMeters = -50f;
             flight.TryGround(Vector3.zero, Vector3.down, 0.2f, out _);
             Assert.AreEqual(0.2f, flat.LastFootOffset, 1e-4f, "a negative altitude is clamped away");
+        }
+
+        [TestCase(30)]
+        [TestCase(50)]
+        [TestCase(120)]
+        public void PerchDurationUsesSecondsRatherThanFrameCount(int fps)
+        {
+            var brain = new CreatureBrain(7, Flier, CreatureBehaviour.Perch);
+            int frames = 0;
+            while (brain.Behaviour == CreatureBehaviour.Perch && frames <= fps * 13)
+            {
+                CreatureSenses senses = Calm(Flier, (uint)frames);
+                senses.DeltaTime = 1f / fps;
+                brain.Observe(senses);
+                brain.Sample((uint)frames++);
+            }
+            Assert.AreEqual(CreatureBehaviour.Wander, brain.Behaviour);
+            Assert.That((double)frames / fps, Is.InRange(12d - 0.0001d, 12d + 1d / fps + 0.0001d));
+        }
+
+        [Test]
+        public void PausedSimulationDoesNotUseIntentTicksAsElapsedTime()
+        {
+            var brain = new CreatureBrain(7, Flier, CreatureBehaviour.Perch);
+            for (uint tick = 0; tick < 10000; tick += 100)
+            {
+                CreatureSenses senses = Calm(Flier, tick);
+                senses.DeltaTime = 0f;
+                brain.Observe(senses);
+                brain.Sample(tick);
+            }
+            Assert.AreEqual(CreatureBehaviour.Perch, brain.Behaviour);
+        }
+
+        [Test]
+        public void DescentDoesNotConsumeTheBirdsRestPeriod()
+        {
+            var brain = new CreatureBrain(7, Flier, CreatureBehaviour.Perch);
+            for (uint frame = 0; frame < 1500; frame++)
+            {
+                CreatureSenses senses = Calm(Flier, frame);
+                senses.AltitudeMeters = 2f;
+                brain.Observe(senses);
+                brain.Sample(frame);
+            }
+            Assert.AreEqual(CreatureBehaviour.Perch, brain.Behaviour);
+            for (uint frame = 1500; frame < 2050; frame++)
+            {
+                brain.Observe(Calm(Flier, frame));
+                brain.Sample(frame);
+            }
+            Assert.AreEqual(CreatureBehaviour.Perch, brain.Behaviour, "only eleven seconds have passed on the ground");
+        }
+
+        [Test]
+        public void WanderDecisionsMatchAtEqualElapsedTimeAcrossFrameRates()
+        {
+            ActorIntent Run(int fps)
+            {
+                var brain = new CreatureBrain(123, Walker, CreatureBehaviour.Wander);
+                ActorIntent intent = default;
+                for (uint frame = 0; frame < fps * 9.5f; frame++)
+                {
+                    CreatureSenses senses = Calm(Walker, frame);
+                    senses.DeltaTime = 1f / fps;
+                    brain.Observe(senses);
+                    intent = brain.Sample(frame);
+                }
+                return intent;
+            }
+            ActorIntent at30 = Run(30), at120 = Run(120);
+            Assert.AreEqual(at30.Move, at120.Move);
+            Assert.AreEqual(at30.Look, at120.Look);
+        }
+
+        sealed class RidgeSurface : IPlanetSurfaceSampler
+        {
+            public bool Available = true;
+            public bool TryGetSurfaceRadius(Vector3 direction, out float radius)
+            {
+                radius = direction.x > 0.004f && direction.x < 0.008f ? 1005f : 1000f;
+                return Available;
+            }
+        }
+
+        [TestCase(0f)]
+        [TestCase(10000f)]
+        public void TerrainHidesNearestThreatWithoutHidingAnUnblockedThreat(float centerX)
+        {
+            var registry = Registry();
+            Vector3 center = new(centerX, 0f, 0f);
+            registry.ConfigureTerrain(new RidgeSurface(), center);
+            Vector3 observer = center + Vector3.up * 1001f;
+            registry.Report(Wolf, observer + Vector3.right * 10f, CreatureFaction.Predator);
+            Assert.IsFalse(registry.TryFindThreat(observer, OtherDeer, CreatureFaction.Wildlife, 50f, Now, out _));
+            var visible = new EntityId(EntityId.HostOwner, 101);
+            registry.Report(visible, observer + Vector3.forward * 20f, CreatureFaction.Predator);
+            Assert.IsTrue(registry.TryFindThreat(observer, OtherDeer, CreatureFaction.Wildlife, 50f, Now, out ThreatSource found));
+            Assert.AreEqual(visible, found.Id);
+        }
+
+        [Test]
+        public void MissingTerrainDoesNotGrantSightThroughUnloadedGround()
+        {
+            var registry = Registry();
+            registry.ConfigureTerrain(new RidgeSurface { Available = false }, Vector3.zero);
+            registry.Report(Wolf, new Vector3(10f, 1001f, 0f), CreatureFaction.Predator);
+            Assert.IsFalse(registry.TryFindThreat(Vector3.up * 1001f, OtherDeer,
+                CreatureFaction.Wildlife, 50f, Now, out _));
+        }
+
+        [Test]
+        public void BirdWithoutSafeSupportKeepsFlyingAndAbortsAnExistingLanding()
+        {
+            foreach (CreatureBehaviour start in new[] { CreatureBehaviour.Wander, CreatureBehaviour.Perch })
+            {
+                var brain = new CreatureBrain(7, Flier, start);
+                for (uint tick = 0; tick < 4000; tick++)
+                {
+                    CreatureSenses senses = Calm(Flier, tick);
+                    senses.HasLandingTarget = false;
+                    brain.Observe(senses);
+                    brain.Sample(tick);
+                    Assert.AreEqual(CreatureBehaviour.Wander, brain.Behaviour);
+                }
+            }
+        }
+
+        [Test]
+        public void BirdApproachesItsTargetAndDoesNotRestBeforeArrival()
+        {
+            var brain = new CreatureBrain(7, Flier, CreatureBehaviour.Perch);
+            ActorIntent intent = default;
+            for (uint tick = 0; tick < 1000; tick++)
+            {
+                CreatureSenses senses = Calm(Flier, tick);
+                senses.LandingTarget += Vector3.forward * 10f;
+                brain.Observe(senses);
+                intent = brain.Sample(tick);
+            }
+            Assert.AreEqual(CreatureBehaviour.Perch, brain.Behaviour);
+            Assert.Greater(intent.Move.y, 0f, "the approach must move toward the site");
+            brain.Observe(Calm(Flier, 1000));
+            intent = brain.Sample(1000);
+            Assert.AreEqual(0f, intent.Move.y, "arrival stops horizontal movement");
+            Assert.AreEqual(CreatureBehaviour.Perch, brain.Behaviour, "travel cannot consume the rest");
+        }
+
+        [TestCase(0f)]
+        [TestCase(10000f)]
+        public void BirdGroundSitesRejectWaterSlopesAndUnavailableSamples(float centerX)
+        {
+            Vector3 center = new(centerX, 0f, 0f);
+            var surface = new LandingSurface();
+            var landing = new BirdLandingGround(surface, center, 999f);
+            Assert.IsTrue(landing.TryFind(center + Vector3.up * 1010f, 0.35f, out Vector3 point));
+            Assert.Less(Vector3.Distance(point, center + Vector3.up * 1000f), 0.01f);
+            surface.Slope = 1f;
+            Assert.IsFalse(landing.TryFind(center + Vector3.up * 1010f, 0.35f, out _));
+            surface.Slope = 0f;
+            Assert.IsFalse(new BirdLandingGround(surface, center, 1001f)
+                .TryFind(center + Vector3.up * 1010f, 0.35f, out _));
+            surface.Available = false;
+            Assert.IsFalse(landing.TryFind(center + Vector3.up * 1010f, 0.35f, out _));
+        }
+
+        sealed class LandingSurface : IPlanetSurfaceSampler
+        {
+            public bool Available = true;
+            public float Slope;
+            public bool TryGetSurfaceRadius(Vector3 direction, out float radius)
+            {
+                radius = 1000f + direction.x * 1000f * Slope;
+                return Available;
+            }
         }
 
         sealed class FlatGrounding : IGroundingProvider

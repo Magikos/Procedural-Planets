@@ -72,6 +72,14 @@ public sealed class ThreatRegistry
     readonly List<ulong> _lapsed = new();
 
     FactionRelationsDto _relations = FactionRelationsDto.Default;
+    IPlanetSurfaceSampler _terrain;
+    Vector3 _planetCenter;
+
+    public void ConfigureTerrain(IPlanetSurfaceSampler terrain, Vector3 planetCenter)
+    {
+        _terrain = terrain;
+        _planetCenter = planetCenter;
+    }
 
     public IReadOnlyList<ThreatSource> Sources => _sources;
     public int DisguiseCount => _disguises.Count;
@@ -149,10 +157,8 @@ public sealed class ThreatRegistry
 
     /// <summary>
     /// The nearest thing within <paramref name="awarenessMeters"/> that <paramref name="observerFaction"/> is
-    /// afraid of. Distance only: line of sight would need raycasts against terrain that has no colliders.
+    /// afraid of, with terrain screening when a surface sampler is configured.
     /// </summary>
-    // ponytail: distance-only detection, so a creature notices a threat through a hill. An analytic horizon
-    // test against the surface sampler is the upgrade, and it is real work rather than a line.
     // ponytail: linear over every source per asking creature, so this is O(live x sources). Live is bubble-
     // bounded (tens) and sources are a player plus nearby animals, which is a few hundred checks a tick -
     // nothing. A spatial hash is the upgrade if either number grows by an order of magnitude.
@@ -170,11 +176,30 @@ public sealed class ThreatRegistry
             float sq = (s.Position - position).sqrMagnitude;
             if (sq > bestSq) continue;
             if (!_relations.IsThreat(observerFaction, SeenAs(s, nowUnixSeconds))) continue;
+            if (!HasTerrainSight(position, s.Position)) continue;
 
             bestSq = sq;
             threat = s;
             found = true;
         }
         return found;
+    }
+
+    // ponytail: one-metre samples, capped at 128 segments. Sub-metre ridges and non-heightfield
+    // obstacles need a world collision query; camera-visible mesh raycasts cannot provide that contract.
+    bool HasTerrainSight(Vector3 from, Vector3 to)
+    {
+        if (_terrain == null) return true;
+        from += (from - _planetCenter).normalized * 0.1f;
+        to += (to - _planetCenter).normalized * 0.1f;
+        int segments = Mathf.Clamp(Mathf.CeilToInt(Vector3.Distance(from, to)), 2, 128);
+        for (int i = 1; i < segments; i++)
+        {
+            Vector3 radial = Vector3.Lerp(from, to, (float)i / segments) - _planetCenter;
+            float distance = radial.magnitude;
+            if (distance < 0.001f || !_terrain.TryGetSurfaceRadius(radial / distance, out float radius) ||
+                distance < radius) return false;
+        }
+        return true;
     }
 }

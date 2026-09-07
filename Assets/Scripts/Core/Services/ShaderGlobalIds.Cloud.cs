@@ -1,5 +1,6 @@
 public static partial class ShaderGlobalIds
 {
+    public const string WeatherCloudTypeTest = "_WeatherCloudTypeTest";
     public const string CloudPlanetCenter = "_CloudPlanetCenter";
     public const string CloudInnerRadius = "_CloudInnerRadius";
     public const string CloudOuterRadius = "_CloudOuterRadius";
