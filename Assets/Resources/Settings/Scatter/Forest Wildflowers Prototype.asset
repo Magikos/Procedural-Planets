@@ -33,6 +33,8 @@ MonoBehaviour:
   ScaleRange: {x: 0.7, y: 1.15}
   RandomYaw: 1
   Interaction: 0
+  FoodUnits: 0.25
+  FoodRegrowSeconds: 1800
   StumpMesh: {fileID: 0}
   StumpMaterial: {fileID: 0}
   Parts:
@@ -51,5 +53,8 @@ MonoBehaviour:
   LodEndDistances: []
   CastShadows: 1
   ReceiveShadows: 1
+  MeshOnlyVertexLimit: 0
   BakedImpostorAtlas: {fileID: 2800000, guid: e008e3fdda4bf0747b2bc072dd01faf9, type: 3}
   BakedImpostorNormal: {fileID: 2800000, guid: 8b573579cec553b43bca27128a1719c6, type: 3}
+  BakedImpostorGridN: 0
+  BakedImpostorHasSurfaceData: 0

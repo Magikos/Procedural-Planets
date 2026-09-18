@@ -14,7 +14,7 @@ float _CloudInnerRadius;
 float _CloudOuterRadius;
 int _CloudWeatherResolution;
 float _CloudNoiseScale;
-float _CloudWindAngle;
+
 float4 _CloudShapeWeights;
 float _CloudDensityThreshold;
 float _CloudDensityMultiplier;
@@ -49,11 +49,7 @@ float SampleCloudShadowDensity(float3 worldPos)
 
     // Match Cloud.shader: advect the shape noise along the local windTangent so shadows track
     // the moving clouds.
-    float3 windAxis = cross(direction, _WindDirection);
-    float windAxisLen = length(windAxis);
-    float3 advectedPos = windAxisLen > 1e-5
-        ? RotateAroundAxis(fromCenter, windAxis / windAxisLen, -_CloudWindAngle) + _CloudPlanetCenter
-        : worldPos;
+    float3 advectedPos = _CloudPlanetCenter + SampleCloudFlow(direction) * radius;
     float3 shapePos = advectedPos * _CloudNoiseScale;
     float shapeFBM = WeightedCloudShadowNoise(SAMPLE_TEXTURE3D_LOD(_CloudShapeNoise, sampler_CloudShapeNoise, shapePos, 0), _CloudShapeWeights);
 

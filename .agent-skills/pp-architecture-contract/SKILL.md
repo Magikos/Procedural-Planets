@@ -246,7 +246,7 @@ new surface-edit features add a stamp type, not a new persistence path.
 | `ShaderGlobalIds` partial-class hub, names only | A global name is a process-wide singleton; the hub makes collisions visible at review time without centralizing the cached-ID hot path | CLAUDE.md "Shader globals" |
 | Stamps as source of truth, masks as caches | Wear/scorch textures are lossy bakes; only a replayable ledger supports regrow-over-time, format migration, and rebuild-after-bug | `.agent-memory` surface-edit record; `Rebuild*FromStamps` implementation |
 | Sanctioned single `RuntimeInitializeOnLoadMethod` | The loading overlay must exist before the first initializer can run — a bootstrap chicken-and-egg with exactly one egg allowed | CLAUDE.md boot rules + `LoadingManager.cs:13` |
-| No test framework near-term | Bryan's explicit stance; validation = in-game evidence (see pp-validation-and-evidence) | CLAUDE.md "Tests" |
+| Reuse the existing Unity test framework; add no second framework | Focused EditMode regressions complement runtime and visual evidence (see pp-validation-and-evidence) | CLAUDE.md "Tests", rechecked 2026-09-09 |
 
 ## 9. Known weak points — stated plainly (as of 2026-07-06)
 

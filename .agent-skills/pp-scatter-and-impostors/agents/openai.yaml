@@ -1,0 +1,4 @@
+interface:
+  display_name: "ProceduralPlanets Scatter and Impostors"
+  short_description: "Bake and verify scatter LOD and impostor changes"
+  default_prompt: "Use $pp-scatter-and-impostors for the requested project task and verify the result."

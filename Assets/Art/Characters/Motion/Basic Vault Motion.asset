@@ -1,0 +1,794 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12e933ea90e4d194cba7e431d33c6e06, type: 3}
+  m_Name: Basic Vault Motion
+  m_EditorClassIdentifier: Magikos.Game::ActorTraversalMotionAsset
+  Clip: {fileID: 1827226128182048838, guid: 5dd8ba1eb5484b2eaf647439f752d2b9, type: 3}
+  SupportContact: LeftHand
+  ReferenceEdge: {x: -0.20617414, y: 0.87913734, z: 1.0646394}
+  MaxHeightAdjustment: 0.2
+  MaxPlanarAdjustment: 0.7
+  Frames:
+  - Root: {x: 0, y: 0, z: 0}
+    CapsuleA: {x: 0.0026857818, y: 0.8947966, z: -0.010283376}
+    CapsuleB: {x: -0.006493021, y: 1.5866003, z: 0.026564445}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0
+  - Root: {x: -0.001485933, y: 0, z: 0.00032704975}
+    CapsuleA: {x: 0.0026857818, y: 0.89542997, z: -0.010283376}
+    CapsuleB: {x: -0.004829965, y: 1.5874342, z: 0.023944091}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.0005946359
+  - Root: {x: -0.0030369777, y: 0, z: 0.00068022404}
+    CapsuleA: {x: 0.0026857816, y: 0.89605993, z: -0.010283376}
+    CapsuleB: {x: -0.0030923598, y: 1.588255, z: 0.021222603}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.001236771
+  - Root: {x: -0.006876393, y: 0, z: 0.0014891792}
+    CapsuleA: {x: 0.0026857816, y: 0.8968209, z: -0.010283376}
+    CapsuleB: {x: 0.0026623458, y: 1.5893354, z: 0.016237406}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.0027075985
+  - Root: {x: -0.010762356, y: 0, z: 0.002456883}
+    CapsuleA: {x: 0.0026857816, y: 0.8975135, z: -0.010283376}
+    CapsuleB: {x: 0.008420747, y: 1.5902431, z: 0.011248295}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.00446706
+  - Root: {x: -0.015864924, y: 0, z: 0.003813441}
+    CapsuleA: {x: 0.0026857816, y: 0.89784163, z: -0.010283376}
+    CapsuleB: {x: 0.018775493, y: 1.590483, z: 0.009519537}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.006933529
+  - Root: {x: -0.021056898, y: 0, z: 0.0055128937}
+    CapsuleA: {x: 0.0026857816, y: 0.89802694, z: -0.010283376}
+    CapsuleB: {x: 0.029221438, y: 1.5903661, z: 0.008099003}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.010023443
+  - Root: {x: -0.02654044, y: 0, z: 0.007251163}
+    CapsuleA: {x: 0.0026857816, y: 0.8975587, z: -0.010283376}
+    CapsuleB: {x: 0.043569367, y: 1.5888935, z: 0.014333007}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.013183933
+  - Root: {x: -0.031908955, y: 0, z: 0.009485291}
+    CapsuleA: {x: 0.0026857816, y: 0.89690644, z: -0.010283376}
+    CapsuleB: {x: 0.059918944, y: 1.5865883, z: 0.022106482}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.017245984
+  - Root: {x: -0.035559665, y: 0, z: 0.012562095}
+    CapsuleA: {x: 0.0026857816, y: 0.89629614, z: -0.010283376}
+    CapsuleB: {x: 0.09045245, y: 1.5810208, z: 0.04480172}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.022840172
+  - Root: {x: -0.041730825, y: 0, z: 0.013656068}
+    CapsuleA: {x: 0.0026857816, y: 0.8951594, z: -0.010283376}
+    CapsuleB: {x: 0.12175761, y: 1.5723486, z: 0.06933345}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.024829213
+  - Root: {x: -0.044831116, y: 0, z: 0.01543752}
+    CapsuleA: {x: 0.0026857816, y: 0.8949487, z: -0.010283376}
+    CapsuleB: {x: 0.15436988, y: 1.5586979, z: 0.111800365}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.028068218
+  - Root: {x: -0.0483139, y: 0, z: 0.018159788}
+    CapsuleA: {x: 0.0026857816, y: 0.89541864, z: -0.010283377}
+    CapsuleB: {x: 0.18294455, y: 1.5427822, z: 0.15158835}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.033017796
+  - Root: {x: -0.04925515, y: 0, z: 0.020223942}
+    CapsuleA: {x: 0.0026857816, y: 0.8944676, z: -0.010283377}
+    CapsuleB: {x: 0.18957727, y: 1.5282004, z: 0.19075608}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.036770802
+  - Root: {x: -0.049577165, y: 0, z: 0.024285678}
+    CapsuleA: {x: 0.0026857816, y: 0.89268696, z: -0.010283377}
+    CapsuleB: {x: 0.19392584, y: 1.512883, z: 0.22408873}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.044155777
+  - Root: {x: -0.044980668, y: 0, z: 0.034115385}
+    CapsuleA: {x: 0.0026857816, y: 0.8854321, z: -0.010283377}
+    CapsuleB: {x: 0.18524873, y: 1.5012877, z: 0.24048232}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.062027972
+  - Root: {x: -0.038528904, y: 0, z: 0.04677653}
+    CapsuleA: {x: 0.0026857816, y: 0.8768295, z: -0.010283377}
+    CapsuleB: {x: 0.17542242, y: 1.4879467, z: 0.25697222}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.085048236
+  - Root: {x: -0.02638482, y: 0, z: 0.06804981}
+    CapsuleA: {x: 0.0026857816, y: 0.86382914, z: -0.010283373}
+    CapsuleB: {x: 0.16194506, y: 1.4701545, z: 0.2737812}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.12372693
+  - Root: {x: -0.012853477, y: 0, z: 0.091512986}
+    CapsuleA: {x: 0.0026857816, y: 0.8501816, z: -0.010283373}
+    CapsuleB: {x: 0.14731878, y: 1.4512837, z: 0.29011434}
+    Radius: 0.15
+    AnchorWeight: 0.00009648214
+    PlanarFitWeight: 0.16638725
+  - Root: {x: 0.0035099795, y: 0, z: 0.120649986}
+    CapsuleA: {x: 0.0026857818, y: 0.83529925, z: -0.010283373}
+    CapsuleB: {x: 0.13007672, y: 1.4310234, z: 0.30582193}
+    Radius: 0.15
+    AnchorWeight: 0.016748164
+    PlanarFitWeight: 0.2193636
+  - Root: {x: 0.020537842, y: 0, z: 0.15081403}
+    CapsuleA: {x: 0.0026857816, y: 0.820892, z: -0.010283381}
+    CapsuleB: {x: 0.111220926, y: 1.4108754, z: 0.32074997}
+    Radius: 0.15
+    AnchorWeight: 0.05902223
+    PlanarFitWeight: 0.27420732
+  - Root: {x: 0.03800397, y: 0, z: 0.18317546}
+    CapsuleA: {x: 0.0026857816, y: 0.80800575, z: -0.010283381}
+    CapsuleB: {x: 0.089328796, y: 1.3921022, z: 0.33478874}
+    Radius: 0.15
+    AnchorWeight: 0.12261963
+    PlanarFitWeight: 0.3330463
+  - Root: {x: 0.054826234, y: 0, z: 0.2154256}
+    CapsuleA: {x: 0.0026857816, y: 0.79714406, z: -0.010283381}
+    CapsuleB: {x: 0.06566921, y: 1.3751101, z: 0.34751534}
+    Radius: 0.15
+    AnchorWeight: 0.20324129
+    PlanarFitWeight: 0.3916829
+  - Root: {x: 0.06956743, y: 0, z: 0.2472634}
+    CapsuleA: {x: 0.0026857853, y: 0.790388, z: -0.010283381}
+    CapsuleB: {x: 0.03918542, y: 1.3622193, z: 0.35866812}
+    Radius: 0.15
+    AnchorWeight: 0.29658815
+    PlanarFitWeight: 0.44956982
+  - Root: {x: 0.08358187, y: 0, z: 0.2795398}
+    CapsuleA: {x: 0.0026857853, y: 0.785841, z: -0.010283381}
+    CapsuleB: {x: 0.008713752, y: 1.3507681, z: 0.3688461}
+    Radius: 0.15
+    AnchorWeight: 0.3983612
+    PlanarFitWeight: 0.5082542
+  - Root: {x: 0.09635209, y: 0, z: 0.31243777}
+    CapsuleA: {x: 0.0026857853, y: 0.78512824, z: -0.010283381}
+    CapsuleB: {x: -0.028587766, y: 1.3419938, z: 0.37753516}
+    Radius: 0.15
+    AnchorWeight: 0.5042614
+    PlanarFitWeight: 0.5680687
+  - Root: {x: 0.108627334, y: 0, z: 0.346888}
+    CapsuleA: {x: 0.0026857853, y: 0.7851179, z: -0.010283381}
+    CapsuleB: {x: -0.07057164, y: 1.3329077, z: 0.3827409}
+    Radius: 0.15
+    AnchorWeight: 0.60998946
+    PlanarFitWeight: 0.6307055
+  - Root: {x: 0.12050669, y: 0, z: 0.38353568}
+    CapsuleA: {x: 0.0026857853, y: 0.7862154, z: -0.010283381}
+    CapsuleB: {x: -0.11910573, y: 1.3235018, z: 0.38285846}
+    Radius: 0.15
+    AnchorWeight: 0.7112466
+    PlanarFitWeight: 0.69733757
+  - Root: {x: 0.13175769, y: 0, z: 0.42070743}
+    CapsuleA: {x: 0.0026857853, y: 0.78733504, z: -0.010283381}
+    CapsuleB: {x: -0.165502, y: 1.3139474, z: 0.37769702}
+    Radius: 0.15
+    AnchorWeight: 0.80373365
+    PlanarFitWeight: 0.7649226
+  - Root: {x: 0.14200898, y: 0, z: 0.45797548}
+    CapsuleA: {x: 0.0026857853, y: 0.7886653, z: -0.010283381}
+    CapsuleB: {x: -0.20839876, y: 1.3046904, z: 0.36848798}
+    Radius: 0.15
+    AnchorWeight: 0.8831516
+    PlanarFitWeight: 0.83268267
+  - Root: {x: 0.15129319, y: 0, z: 0.4938591}
+    CapsuleA: {x: 0.0026857853, y: 0.7939165, z: -0.010283381}
+    CapsuleB: {x: -0.24350613, y: 1.3000631, z: 0.35882276}
+    Radius: 0.15
+    AnchorWeight: 0.94520134
+    PlanarFitWeight: 0.8979256
+  - Root: {x: 0.15938544, y: 0, z: 0.5273839}
+    CapsuleA: {x: 0.0026857853, y: 0.80388284, z: -0.010283351}
+    CapsuleB: {x: -0.2701819, y: 1.301145, z: 0.35131556}
+    Radius: 0.15
+    AnchorWeight: 0.98558384
+    PlanarFitWeight: 0.9588798
+  - Root: {x: 0.16719727, y: 0, z: 0.5603974}
+    CapsuleA: {x: 0.0026857853, y: 0.82187694, z: -0.010283351}
+    CapsuleB: {x: -0.2913566, y: 1.3108772, z: 0.34563458}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.1745948, y: 0, z: 0.59251803}
+    CapsuleA: {x: 0.0026857853, y: 0.8478016, z: -0.010283351}
+    CapsuleB: {x: -0.30720958, y: 1.3290817, z: 0.34256035}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.18165934, y: 0, z: 0.62391734}
+    CapsuleA: {x: 0.0026857853, y: 0.880405, z: -0.010283351}
+    CapsuleB: {x: -0.3202025, y: 1.3538502, z: 0.3408416}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.18811114, y: 0, z: 0.6552435}
+    CapsuleA: {x: 0.0026857853, y: 0.91943306, z: -0.010283351}
+    CapsuleB: {x: -0.3306498, y: 1.3847101, z: 0.34045476}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.19423538, y: 0, z: 0.6860447}
+    CapsuleA: {x: 0.0026857853, y: 0.96160245, z: -0.010283351}
+    CapsuleB: {x: -0.3407418, y: 1.4179513, z: 0.33962154}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.2004061, y: 0, z: 0.7168535}
+    CapsuleA: {x: 0.0026857853, y: 1.0059757, z: -0.010283351}
+    CapsuleB: {x: -0.35036555, y: 1.4525852, z: 0.33839333}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.20621139, y: 0, z: 0.7473812}
+    CapsuleA: {x: 0.0026857853, y: 1.0509757, z: -0.010283351}
+    CapsuleB: {x: -0.36197138, y: 1.4867471, z: 0.33450913}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.21270135, y: 0, z: 0.7792799}
+    CapsuleA: {x: 0.0026857853, y: 1.0951828, z: -0.010283351}
+    CapsuleB: {x: -0.37475228, y: 1.5190926, z: 0.32857114}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.21946809, y: 0, z: 0.8119507}
+    CapsuleA: {x: 0.0026857853, y: 1.1382601, z: -0.010283351}
+    CapsuleB: {x: -0.3927797, y: 1.5476539, z: 0.31772757}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.22719598, y: 0, z: 0.8463568}
+    CapsuleA: {x: 0.0026857853, y: 1.1810218, z: -0.010283351}
+    CapsuleB: {x: -0.4134154, y: 1.573806, z: 0.30329245}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.23617017, y: 0, z: 0.8806806}
+    CapsuleA: {x: 0.0026857853, y: 1.219809, z: -0.010283351}
+    CapsuleB: {x: -0.44170383, y: 1.5914873, z: 0.28020293}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.24488835, y: 0, z: 0.9152593}
+    CapsuleA: {x: 0.0026857853, y: 1.2564703, z: -0.010283351}
+    CapsuleB: {x: -0.4721819, y: 1.6038167, z: 0.25078994}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.25898466, y: 0, z: 0.9552017}
+    CapsuleA: {x: 0.0026857853, y: 1.2872928, z: -0.010283351}
+    CapsuleB: {x: -0.51195145, y: 1.5962107, z: 0.20866305}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.27346468, y: 0, z: 0.99978834}
+    CapsuleA: {x: 0.0026857853, y: 1.3160048, z: -0.010283351}
+    CapsuleB: {x: -0.5496445, y: 1.5776141, z: 0.15732926}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.28695324, y: 0, z: 1.0500357}
+    CapsuleA: {x: 0.0026857853, y: 1.3307972, z: -0.010283351}
+    CapsuleB: {x: -0.57582587, y: 1.5512997, z: 0.10539985}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.2994325, y: 0, z: 1.102965}
+    CapsuleA: {x: 0.0026857853, y: 1.3401726, z: -0.010283351}
+    CapsuleB: {x: -0.59360504, y: 1.5209396, z: 0.05316198}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.3048179, y: 0, z: 1.1620377}
+    CapsuleA: {x: 0.0026857853, y: 1.3288095, z: -0.010283351}
+    CapsuleB: {x: -0.5997075, y: 1.4995184, z: 0.018495083}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.3084942, y: 0, z: 1.2243495}
+    CapsuleA: {x: 0.0026857853, y: 1.3102446, z: -0.010283351}
+    CapsuleB: {x: -0.60232687, y: 1.4809829, z: -0.01012969}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.3100881, y: 0, z: 1.2879994}
+    CapsuleA: {x: 0.0026857853, y: 1.2757835, z: -0.010283351}
+    CapsuleB: {x: -0.5985322, y: 1.4698241, z: -0.037238955}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.30994394, y: 0, z: 1.3532495}
+    CapsuleA: {x: 0.0026857853, y: 1.2341285, z: -0.010283351}
+    CapsuleB: {x: -0.59063405, y: 1.4579942, z: -0.06402469}
+    Radius: 0.15
+    AnchorWeight: 1
+    PlanarFitWeight: 1
+  - Root: {x: 0.30533904, y: 0, z: 1.4253689}
+    CapsuleA: {x: 0.0026857853, y: 1.1707764, z: -0.010283351}
+    CapsuleB: {x: -0.57117164, y: 1.4418647, z: -0.106371045}
+    Radius: 0.15
+    AnchorWeight: 0.99493635
+    PlanarFitWeight: 1
+  - Root: {x: 0.2968303, y: 0, z: 1.4981017}
+    CapsuleA: {x: 0.0026857853, y: 1.1007519, z: -0.010283351}
+    CapsuleB: {x: -0.5416689, y: 1.4215091, z: -0.15054035}
+    Radius: 0.15
+    AnchorWeight: 0.97528076
+    PlanarFitWeight: 1
+  - Root: {x: 0.29262796, y: 0, z: 1.5610127}
+    CapsuleA: {x: 0.0026857853, y: 1.0410737, z: -0.010283351}
+    CapsuleB: {x: -0.51275396, y: 1.4018586, z: -0.1804812}
+    Radius: 0.15
+    AnchorWeight: 0.94240093
+    PlanarFitWeight: 1
+  - Root: {x: 0.2869837, y: 0, z: 1.6218361}
+    CapsuleA: {x: 0.0026857853, y: 0.98246706, z: -0.010283351}
+    CapsuleB: {x: -0.4808541, y: 1.3805798, z: -0.20465481}
+    Radius: 0.15
+    AnchorWeight: 0.89799225
+    PlanarFitWeight: 1
+  - Root: {x: 0.287385, y: 0, z: 1.6663753}
+    CapsuleA: {x: 0.0026857853, y: 0.9412536, z: -0.010283351}
+    CapsuleB: {x: -0.46340457, y: 1.352807, z: -0.22815275}
+    Radius: 0.15
+    AnchorWeight: 0.84375006
+    PlanarFitWeight: 1
+  - Root: {x: 0.28721997, y: 0, z: 1.7093241}
+    CapsuleA: {x: 0.0026857853, y: 0.90176797, z: -0.010283351}
+    CapsuleB: {x: -0.4466112, y: 1.3242519, z: -0.24953628}
+    Radius: 0.15
+    AnchorWeight: 0.78136986
+    PlanarFitWeight: 1
+  - Root: {x: 0.28912663, y: 0, z: 1.743776}
+    CapsuleA: {x: 0.0026857853, y: 0.8701831, z: -0.010283351}
+    CapsuleB: {x: -0.43674883, y: 1.2896043, z: -0.27718294}
+    Radius: 0.15
+    AnchorWeight: 0.71254706
+    PlanarFitWeight: 1
+  - Root: {x: 0.2891098, y: 0, z: 1.7770355}
+    CapsuleA: {x: 0.0026857853, y: 0.8378591, z: -0.010283351}
+    CapsuleB: {x: -0.42453027, y: 1.2542951, z: -0.30441523}
+    Radius: 0.15
+    AnchorWeight: 0.63897717
+    PlanarFitWeight: 1
+  - Root: {x: 0.29062122, y: 0, z: 1.8052698}
+    CapsuleA: {x: 0.0026857853, y: 0.8127128, z: -0.010283351}
+    CapsuleB: {x: -0.41534528, y: 1.223545, z: -0.32699668}
+    Radius: 0.15
+    AnchorWeight: 0.5623554
+    PlanarFitWeight: 1
+  - Root: {x: 0.29135385, y: 0, z: 1.8326873}
+    CapsuleA: {x: 0.0026857853, y: 0.7863169, z: -0.010283351}
+    CapsuleB: {x: -0.40440056, y: 1.1924586, z: -0.3483218}
+    Radius: 0.15
+    AnchorWeight: 0.48437732
+    PlanarFitWeight: 1
+  - Root: {x: 0.29137534, y: 0, z: 1.8600107}
+    CapsuleA: {x: 0.0026857853, y: 0.76885056, z: -0.010283351}
+    CapsuleB: {x: -0.40152812, y: 1.1693536, z: -0.36015332}
+    Radius: 0.15
+    AnchorWeight: 0.40673834
+    PlanarFitWeight: 1
+  - Root: {x: 0.2913496, y: 0, z: 1.888367}
+    CapsuleA: {x: 0.0026857853, y: 0.75067633, z: -0.010283351}
+    CapsuleB: {x: -0.39828706, y: 1.14594, z: -0.3714366}
+    Radius: 0.15
+    AnchorWeight: 0.3311339
+    PlanarFitWeight: 1
+  - Root: {x: 0.28716356, y: 0, z: 1.9149661}
+    CapsuleA: {x: 0.0026857853, y: 0.7422859, z: -0.010283351}
+    CapsuleB: {x: -0.4021698, y: 1.1289426, z: -0.38120437}
+    Radius: 0.15
+    AnchorWeight: 0.25925928
+    PlanarFitWeight: 1
+  - Root: {x: 0.28201997, y: 0, z: 1.9422402}
+    CapsuleA: {x: 0.0026857853, y: 0.73320454, z: -0.010283351}
+    CapsuleB: {x: -0.40509427, y: 1.1118673, z: -0.3908298}
+    Radius: 0.15
+    AnchorWeight: 0.19281012
+    PlanarFitWeight: 1
+  - Root: {x: 0.27409422, y: 0, z: 1.9664966}
+    CapsuleA: {x: 0.0026857853, y: 0.73136544, z: -0.010283351}
+    CapsuleB: {x: -0.41240963, y: 1.1018704, z: -0.3964336}
+    Radius: 0.15
+    AnchorWeight: 0.13348168
+    PlanarFitWeight: 1
+  - Root: {x: 0.26553982, y: 0, z: 1.9908726}
+    CapsuleA: {x: 0.0026857853, y: 0.7291286, z: -0.010283351}
+    CapsuleB: {x: -0.41899085, y: 1.0923755, z: -0.40116477}
+    Radius: 0.15
+    AnchorWeight: 0.08296949
+    PlanarFitWeight: 1
+  - Root: {x: 0.2559068, y: 0, z: 2.0112922}
+    CapsuleA: {x: 0.0026857853, y: 0.72902423, z: -0.01028347}
+    CapsuleB: {x: -0.42611068, y: 1.090768, z: -0.39760685}
+    Radius: 0.15
+    AnchorWeight: 0.04296881
+    PlanarFitWeight: 1
+  - Root: {x: 0.24618071, y: 0, z: 2.0313792}
+    CapsuleA: {x: 0.0026857853, y: 0.729109, z: -0.01028347}
+    CapsuleB: {x: -0.43321705, y: 1.0897992, z: -0.3930273}
+    Radius: 0.15
+    AnchorWeight: 0.015175164
+    PlanarFitWeight: 1
+  - Root: {x: 0.23594444, y: 0, z: 2.0473704}
+    CapsuleA: {x: 0.0026857853, y: 0.7320781, z: -0.01028347}
+    CapsuleB: {x: -0.4402182, y: 1.098107, z: -0.37975657}
+    Radius: 0.15
+    AnchorWeight: 0.0012840033
+    PlanarFitWeight: 1
+  - Root: {x: 0.22563219, y: 0, z: 2.0628476}
+    CapsuleA: {x: 0.0026857853, y: 0.7355314, z: -0.01028347}
+    CapsuleB: {x: -0.44688547, y: 1.1078444, z: -0.36511493}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.21489957, y: 0, z: 2.0744867}
+    CapsuleA: {x: 0.0026857853, y: 0.74360305, z: -0.01028347}
+    CapsuleB: {x: -0.45266503, y: 1.131521, z: -0.34009898}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.2037963, y: 0, z: 2.085834}
+    CapsuleA: {x: 0.0026857853, y: 0.7520834, z: -0.01028347}
+    CapsuleB: {x: -0.45693034, y: 1.1562235, z: -0.31349027}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.19258395, y: 0, z: 2.0954297}
+    CapsuleA: {x: 0.0026857853, y: 0.7630975, z: -0.01028347}
+    CapsuleB: {x: -0.45685, y: 1.1902237, z: -0.2799226}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.18072574, y: 0, z: 2.1050878}
+    CapsuleA: {x: 0.0026857853, y: 0.77456, z: -0.01028347}
+    CapsuleB: {x: -0.45379728, y: 1.224498, z: -0.24532604}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.16900603, y: 0, z: 2.1147223}
+    CapsuleA: {x: 0.0026857853, y: 0.7871937, z: -0.01028347}
+    CapsuleB: {x: -0.44416195, y: 1.2634348, z: -0.20839131}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.15655816, y: 0, z: 2.1245182}
+    CapsuleA: {x: 0.0026857853, y: 0.80030656, z: -0.01028347}
+    CapsuleB: {x: -0.4304866, y: 1.3019054, z: -0.17183292}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.14459369, y: 0, z: 2.134678}
+    CapsuleA: {x: 0.0026857853, y: 0.81359637, z: -0.01028347}
+    CapsuleB: {x: -0.40940365, y: 1.3416727, z: -0.13761711}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.13200739, y: 0, z: 2.1452854}
+    CapsuleA: {x: 0.0026857853, y: 0.8267512, z: -0.01028347}
+    CapsuleB: {x: -0.38466305, y: 1.3793253, z: -0.10538721}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.12029942, y: 0, z: 2.1561308}
+    CapsuleA: {x: 0.0026857853, y: 0.8390298, z: -0.01028347}
+    CapsuleB: {x: -0.3558124, y: 1.4141381, z: -0.07858276}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.10813195, y: 0, z: 2.1679757}
+    CapsuleA: {x: 0.0026857853, y: 0.8509319, z: -0.01028347}
+    CapsuleB: {x: -0.325127, y: 1.4458809, z: -0.055117846}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.096924596, y: 0, z: 2.1810842}
+    CapsuleA: {x: 0.0026857853, y: 0.8608721, z: -0.01028347}
+    CapsuleB: {x: -0.2949016, y: 1.4721344, z: -0.037897825}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.085063525, y: 0, z: 2.1947932}
+    CapsuleA: {x: 0.0026857853, y: 0.8699246, z: -0.01028347}
+    CapsuleB: {x: -0.2652985, y: 1.49483, z: -0.024013996}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.07434635, y: 0, z: 2.2085195}
+    CapsuleA: {x: 0.0026857853, y: 0.8758891, z: -0.01028347}
+    CapsuleB: {x: -0.2401232, y: 1.5108507, z: -0.0147686}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.06505406, y: 0, z: 2.2226977}
+    CapsuleA: {x: 0.0026857853, y: 0.88009864, z: -0.01028347}
+    CapsuleB: {x: -0.21708266, y: 1.5232115, z: -0.0071730614}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.055543, y: 0, z: 2.2361543}
+    CapsuleA: {x: 0.0026857816, y: 0.8810174, z: -0.01028347}
+    CapsuleB: {x: -0.19943401, y: 1.5298265, z: -0.0004646778}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.04642326, y: 0, z: 2.2498722}
+    CapsuleA: {x: 0.0026857816, y: 0.88061273, z: -0.01028347}
+    CapsuleB: {x: -0.18309483, y: 1.5343201, z: 0.005627632}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.038195007, y: 0, z: 2.2631104}
+    CapsuleA: {x: 0.0026857816, y: 0.8779479, z: -0.01028347}
+    CapsuleB: {x: -0.16944978, y: 1.5356141, z: 0.012023687}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.030295905, y: 0, z: 2.276962}
+    CapsuleA: {x: 0.0026857816, y: 0.8746148, z: -0.01028347}
+    CapsuleB: {x: -0.15596145, y: 1.5359869, z: 0.018076658}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.023220878, y: 0, z: 2.2910686}
+    CapsuleA: {x: 0.0026857816, y: 0.8703389, z: -0.01028347}
+    CapsuleB: {x: -0.1429959, y: 1.5351431, z: 0.024366379}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.01638085, y: 0, z: 2.3050895}
+    CapsuleA: {x: 0.0026857816, y: 0.86549455, z: -0.01028347}
+    CapsuleB: {x: -0.12960407, y: 1.5335472, z: 0.029986382}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.010168437, y: 0, z: 2.3181336}
+    CapsuleA: {x: 0.0026857816, y: 0.86004907, z: -0.01028347}
+    CapsuleB: {x: -0.11600682, y: 1.5311213, z: 0.0351851}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.004024297, y: 0, z: 2.329606}
+    CapsuleA: {x: 0.0026857816, y: 0.85506123, z: -0.01028347}
+    CapsuleB: {x: -0.10300174, y: 1.5287902, z: 0.0385592}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.0016857127, y: 0, z: 2.338824}
+    CapsuleA: {x: 0.0026857818, y: 0.8506909, z: -0.01028347}
+    CapsuleB: {x: -0.09125051, y: 1.5266767, z: 0.04032421}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.007110715, y: 0, z: 2.3456585}
+    CapsuleA: {x: 0.0026857816, y: 0.84754705, z: -0.01028347}
+    CapsuleB: {x: -0.080917224, y: 1.5254545, z: 0.04036045}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.012326708, y: 0, z: 2.349738}
+    CapsuleA: {x: 0.0026857816, y: 0.8458783, z: -0.01028347}
+    CapsuleB: {x: -0.072457835, y: 1.5253737, z: 0.039085865}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.017101921, y: 0, z: 2.352778}
+    CapsuleA: {x: 0.0026857816, y: 0.8456552, z: -0.01028347}
+    CapsuleB: {x: -0.06612734, y: 1.5264463, z: 0.03681755}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.021312676, y: 0, z: 2.3549166}
+    CapsuleA: {x: 0.0026857816, y: 0.84686255, z: -0.01028347}
+    CapsuleB: {x: -0.061956607, y: 1.5286798, z: 0.034090042}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.024922078, y: 0, z: 2.357206}
+    CapsuleA: {x: 0.0026857816, y: 0.84915566, z: -0.01028347}
+    CapsuleB: {x: -0.059289142, y: 1.5318187, z: 0.031323195}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.027785141, y: 0, z: 2.359573}
+    CapsuleA: {x: 0.0026857816, y: 0.8520701, z: -0.01028347}
+    CapsuleB: {x: -0.057887826, y: 1.5354288, z: 0.028701305}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.029736903, y: 0, z: 2.360697}
+    CapsuleA: {x: 0.0026857816, y: 0.8543709, z: -0.01028347}
+    CapsuleB: {x: -0.05720361, y: 1.5382935, z: 0.026580095}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.031101977, y: 0, z: 2.3611534}
+    CapsuleA: {x: 0.0026857816, y: 0.8563938, z: -0.01028347}
+    CapsuleB: {x: -0.057035826, y: 1.5407858, z: 0.02487111}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.031512428, y: 0, z: 2.3602545}
+    CapsuleA: {x: 0.0026857816, y: 0.85760057, z: -0.01028347}
+    CapsuleB: {x: -0.05677178, y: 1.5423906, z: 0.02396655}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.03142629, y: 0, z: 2.358383}
+    CapsuleA: {x: 0.0026857834, y: 0.8583607, z: -0.01028347}
+    CapsuleB: {x: -0.056429565, y: 1.5435047, z: 0.02357769}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.030953052, y: 0, z: 2.3570335}
+    CapsuleA: {x: 0.0026857816, y: 0.8584052, z: -0.01028347}
+    CapsuleB: {x: -0.055924013, y: 1.5439067, z: 0.02340293}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.030278226, y: 0, z: 2.3559635}
+    CapsuleA: {x: 0.0026857816, y: 0.85802144, z: -0.01028347}
+    CapsuleB: {x: -0.05532001, y: 1.5438795, z: 0.023337364}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.029337354, y: 0, z: 2.3555794}
+    CapsuleA: {x: 0.0026857816, y: 0.85765505, z: -0.01028347}
+    CapsuleB: {x: -0.054422297, y: 1.5439095, z: 0.02336073}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.028252762, y: 0, z: 2.3555343}
+    CapsuleA: {x: 0.0026857816, y: 0.8572818, z: -0.01028347}
+    CapsuleB: {x: -0.053373974, y: 1.5439456, z: 0.023405552}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.02692947, y: 0, z: 2.3555608}
+    CapsuleA: {x: 0.0026857816, y: 0.85775137, z: -0.01028347}
+    CapsuleB: {x: -0.052011833, y: 1.5448501, z: 0.023512363}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.025478851, y: 0, z: 2.3556197}
+    CapsuleA: {x: 0.0026857816, y: 0.85856867, z: -0.01028347}
+    CapsuleB: {x: -0.05050813, y: 1.5461037, z: 0.02361989}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.023836374, y: 0, z: 2.3557448}
+    CapsuleA: {x: 0.0026857816, y: 0.85999644, z: -0.01028347}
+    CapsuleB: {x: -0.04863639, y: 1.5479853, z: 0.023742676}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.022098714, y: 0, z: 2.3559043}
+    CapsuleA: {x: 0.0026857816, y: 0.8616246, z: -0.01028347}
+    CapsuleB: {x: -0.04662241, y: 1.5500593, z: 0.023841858}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.02026784, y: 0, z: 2.3560462}
+    CapsuleA: {x: 0.0026857816, y: 0.86361605, z: -0.01028347}
+    CapsuleB: {x: -0.044191007, y: 1.5525029, z: 0.023950815}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.01839035, y: 0, z: 2.356191}
+    CapsuleA: {x: 0.0026857816, y: 0.865702, z: -0.01028347}
+    CapsuleB: {x: -0.041622486, y: 1.5550237, z: 0.024032831}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.01652715, y: 0, z: 2.3562534}
+    CapsuleA: {x: 0.0026857825, y: 0.86795104, z: -0.01028347}
+    CapsuleB: {x: -0.03860966, y: 1.5576956, z: 0.024169207}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.014652943, y: 0, z: 2.3563}
+    CapsuleA: {x: 0.0026857816, y: 0.8702339, z: -0.01028347}
+    CapsuleB: {x: -0.035476148, y: 1.5603738, z: 0.024290562}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.012827601, y: 0, z: 2.3563042}
+    CapsuleA: {x: 0.0026857816, y: 0.8726246, z: -0.01028347}
+    CapsuleB: {x: -0.032100853, y: 1.5631162, z: 0.024497986}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.010995058, y: 0, z: 2.3563035}
+    CapsuleA: {x: 0.0026857816, y: 0.875027, z: -0.01028347}
+    CapsuleB: {x: -0.02868064, y: 1.5658333, z: 0.024697304}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.00929486, y: 0, z: 2.3563325}
+    CapsuleA: {x: 0.002685782, y: 0.8774591, z: -0.01028347}
+    CapsuleB: {x: -0.025275797, y: 1.5685215, z: 0.024964333}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.0076005477, y: 0, z: 2.3563719}
+    CapsuleA: {x: 0.0026857816, y: 0.8798813, z: -0.01028347}
+    CapsuleB: {x: -0.021895746, y: 1.5711632, z: 0.025218725}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.00608923, y: 0, z: 2.3564425}
+    CapsuleA: {x: 0.002685782, y: 0.8822139, z: -0.01028347}
+    CapsuleB: {x: -0.018804468, y: 1.5736578, z: 0.025494814}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.0045863464, y: 0, z: 2.3565218}
+    CapsuleA: {x: 0.002685782, y: 0.8845183, z: -0.01028347}
+    CapsuleB: {x: -0.01578274, y: 1.5760949, z: 0.025753975}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.0033597767, y: 0, z: 2.3566315}
+    CapsuleA: {x: 0.0026857818, y: 0.8865946, z: -0.01028347}
+    CapsuleB: {x: -0.013319115, y: 1.5782583, z: 0.025976658}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.0021479984, y: 0, z: 2.3567467}
+    CapsuleA: {x: 0.0026857818, y: 0.88863516, z: -0.01028347}
+    CapsuleB: {x: -0.0109373, y: 1.5803678, z: 0.026182175}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.0013498246, y: 0, z: 2.3567922}
+    CapsuleA: {x: 0.0026857818, y: 0.8902912, z: -0.01028347}
+    CapsuleB: {x: -0.009285349, y: 1.5820614, z: 0.026299477}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.0005728386, y: 0, z: 2.3568347}
+    CapsuleA: {x: 0.0026857818, y: 0.8919157, z: -0.01028347}
+    CapsuleB: {x: -0.0076945154, y: 1.5837157, z: 0.026404858}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: -0.00027776253, y: 0, z: 2.3566804}
+    CapsuleA: {x: 0.0026857818, y: 0.89300025, z: -0.01028347}
+    CapsuleB: {x: -0.0070727095, y: 1.5848027, z: 0.026483297}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+  - Root: {x: 0.0000030288938, y: 0, z: 2.3565197}
+    CapsuleA: {x: 0.0026857818, y: 0.8940661, z: -0.01028347}
+    CapsuleB: {x: -0.0064835884, y: 1.5858694, z: 0.026560307}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1

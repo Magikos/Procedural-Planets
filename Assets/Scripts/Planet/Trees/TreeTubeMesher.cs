@@ -34,59 +34,48 @@ public static class TreeTubeMesher
 
     // A single capped tube from a centerline + per-point girth (used for the cut-set stump/log). The mesh is
     // built in local space with its pivot at centerline[0] (the base). Both ends are capped (cut surfaces).
-    public static Mesh BuildCappedTube(IReadOnlyList<Vector3> centerline, IReadOnlyList<float> girth, int sides)
+    public static Mesh BuildCappedTube(IReadOnlyList<Vector3> centerline, IReadOnlyList<float> girth, int sides, float vOffset = 0f)
     {
+        if (centerline == null || girth == null || centerline.Count != girth.Count)
+            throw new System.ArgumentException("Tube points and radii must match.");
         var verts = new List<Vector3>();
         var uvs = new List<Vector2>();
         var tris = new List<int>();
-        int rings = centerline.Count;
-        var mesh = new Mesh { name = "Tree cut tube" };
-        if (rings < 2) return mesh;
+        if (centerline.Count < 2) return new Mesh { name = "Empty tree cut" };
         sides = Mathf.Max(3, sides);
+        var branch = new TreeBranch { RadialSides = sides };
         Vector3 origin = centerline[0];
-        float vLen = 0f;
-
-        for (int i = 0; i < rings; i++)
+        for (int i = 0; i < centerline.Count; i++)
+        { branch.Centerline.Add(centerline[i] - origin); branch.Girth.Add(girth[i]); }
+        AddBranch(branch, 0, verts, uvs, tris);
+        for (int i = 0; i < uvs.Count; i++) uvs[i] += new Vector2(0, vOffset);
+        int sideIndices = tris.Count;
+        int stride = sides + 1;
+        void Cap(int ring, Vector3 center, bool top)
         {
-            Vector3 c = centerline[i] - origin;
-            Vector3 fwd = i < rings - 1 ? (centerline[i + 1] - centerline[i]) : (centerline[i] - centerline[i - 1]);
-            fwd = fwd.sqrMagnitude > 1e-8f ? fwd.normalized : Vector3.up;
-            Vector3 right = Vector3.Cross(fwd, Mathf.Abs(fwd.y) < 0.9f ? Vector3.up : Vector3.right).normalized;
-            Vector3 up = Vector3.Cross(right, fwd).normalized;
-            float g = girth[i];
-            if (i > 0) vLen += (centerline[i] - centerline[i - 1]).magnitude;
+            int first = verts.Count;
             for (int j = 0; j < sides; j++)
             {
-                float a = 2f * Mathf.PI * j / sides;
-                verts.Add(c + (Mathf.Cos(a) * right + Mathf.Sin(a) * up) * g);
-                uvs.Add(new Vector2(j / (float)sides, vLen));
+                verts.Add(verts[ring + j]);
+                float angle = 2f * Mathf.PI * j / sides;
+                uvs.Add(new Vector2(.5f + .5f * Mathf.Cos(angle), .5f + .5f * Mathf.Sin(angle)));
             }
-        }
-
-        for (int i = 0; i < rings - 1; i++)
-        {
-            int a = i * sides, b = a + sides;
+            int c = verts.Count; verts.Add(center); uvs.Add(Vector2.one * .5f);
             for (int j = 0; j < sides; j++)
             {
-                int j1 = (j + 1) % sides;
-                tris.Add(a + j); tris.Add(b + j); tris.Add(a + j1);
-                tris.Add(a + j1); tris.Add(b + j); tris.Add(b + j1);
+                tris.Add(c);
+                tris.Add(first + (top ? (j + 1) % sides : j));
+                tris.Add(first + (top ? j : (j + 1) % sides));
             }
         }
-
-        // Base cap (fan, faces down) + top cap (fan, faces up) — the cut surfaces.
-        int cBase = verts.Count; verts.Add(centerline[0] - origin); uvs.Add(new Vector2(0.5f, 0f));
-        for (int j = 0; j < sides; j++) { int j1 = (j + 1) % sides; tris.Add(cBase); tris.Add(j1); tris.Add(j); }
-        int last = (rings - 1) * sides;
-        int cTop = verts.Count; verts.Add(centerline[rings - 1] - origin); uvs.Add(new Vector2(0.5f, 1f));
-        for (int j = 0; j < sides; j++) { int j1 = (j + 1) % sides; tris.Add(cTop); tris.Add(last + j); tris.Add(last + j1); }
-
-        mesh.indexFormat = verts.Count > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16;
-        mesh.SetVertices(verts);
-        mesh.SetUVs(0, uvs);
-        mesh.SetTriangles(tris, 0);
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
+        Cap(0, Vector3.zero, false);
+        Cap((centerline.Count - 1) * stride, centerline[centerline.Count - 1] - origin, true);
+        var mesh = new Mesh { name = "Tree cut tube", indexFormat = verts.Count > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16 };
+        mesh.SetVertices(verts); mesh.SetUVs(0, uvs);
+        mesh.subMeshCount = 2;
+        mesh.SetTriangles(tris.GetRange(0, sideIndices), 0);
+        mesh.SetTriangles(tris.GetRange(sideIndices, tris.Count - sideIndices), 1);
+        mesh.RecalculateNormals(); mesh.RecalculateBounds();
         return mesh;
     }
 
@@ -143,7 +132,7 @@ public static class TreeTubeMesher
             uvs.Add(new Vector2(0.5f, 0f));
             for (int j = 0; j < sides; j++)
             {
-                tris.Add(center); tris.Add(ring0 + j + 1); tris.Add(ring0 + j);
+                tris.Add(center); tris.Add(ring0 + j); tris.Add(ring0 + j + 1);
             }
         }
     }

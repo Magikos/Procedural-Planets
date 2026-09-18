@@ -9,6 +9,7 @@
 // bodies at different heights, and interpolating two lake surfaces gives a level belonging to neither - and
 // .Load is what these computes already use for _ClimateMap.
 #include "WaterLevelProjection.hlsl"
+#include "VegetationHabitat.hlsl"
 
 Texture2DArray _GrassWaterLevelTex;
 int _GrassWaterLevelRes;
@@ -18,8 +19,11 @@ float _GrassWaterSurfaceOffset;
 // Local radius of the water surface above a direction, or the fallback where no field is published and
 // where no water stands. That fallback is the old global ocean radius, so behaviour is unchanged anywhere
 // the field has nothing to say.
+#include "RiverField.hlsl"
 float GrassWaterSurfaceRadiusAt(float3 direction, float fallbackRadius)
 {
+    float4 river = SampleRiver(direction);
+    if (river.w >= -.005 && river.z == 0) return river.x + _GrassWaterSurfaceOffset;
     if (_GrassWaterLevelRes <= 0)
         return fallbackRadius;
 
@@ -40,6 +44,7 @@ struct BiomeGrassParams
     float4 Tint;
     float4 TintDry;   // multiplier on Tint at moisture == 0; default (1,1,1,1) = no shift
     float4 TintLush;  // multiplier on Tint at moisture == 1; default (1,1,1,1) = no shift
+    float4 Habitat; // x = biome woodland potential
 };
 
 struct GrassBladeInstance

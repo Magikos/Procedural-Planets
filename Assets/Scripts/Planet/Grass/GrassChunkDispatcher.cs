@@ -55,6 +55,7 @@ sealed class GrassChunkDispatcher : System.IDisposable
     readonly float _distanceFadeStart;
     readonly float _cullDistanceJitter01;
     readonly float _waterRadius;
+    readonly float _habitatPlanetRadius;
     readonly int _seed;
     readonly ComputeShader _placementCompute;
     readonly int _placeKernel;
@@ -94,6 +95,7 @@ sealed class GrassChunkDispatcher : System.IDisposable
         _cullDistanceJitter01 = cullDistanceJitter01;
         _waterRadius = waterRadius;
         _seed = seed;
+        _habitatPlanetRadius = SettingsProvider.GetSettings<PlanetDto>().PlanetRadius;
 
         _bladePool = new GrassBladeBufferPool(maxBladeInstancesPerChunk, GrassChunkRuntime.BladeStride);
 
@@ -203,6 +205,7 @@ sealed class GrassChunkDispatcher : System.IDisposable
         _placementCompute.SetMatrix(PlanetLocalToWorldId, _planetTransform.localToWorldMatrix);
         _placementCompute.SetFloat(PlanetWorldScaleId, FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform));
         _placementCompute.SetFloat(WaterRadiusId, _waterRadius);
+        _placementCompute.SetFloat("_HabitatPlanetRadius", _habitatPlanetRadius);
         GrassWaterFieldBinding.Bind(_placementCompute, _placeKernel);
         _placementCompute.SetInt(SeedId, _seed);
         // Camera position falls back to planet origin so initial placement before first Tick produces blades.

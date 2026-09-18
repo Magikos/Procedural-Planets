@@ -18,7 +18,7 @@ public interface ICameraTeleportTarget : ICameraRigContext
 // persistence, and the F10-capture pose import. Hosts the camera.* teleport console commands as a
 // registry target. The live camera pose is read/written through ICameraTeleportTarget; this store
 // never touches the transform directly.
-[CommandPrefix("camera")]
+[CommandPrefix("camera", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly, Group = "Camera and character")]
 public sealed class CameraTeleportStore : ICameraTeleportRegistry, IDisposable
 {
     const string TeleportPlayerPrefsKey = "CameraTeleportLocations.v1";
@@ -62,26 +62,26 @@ public sealed class CameraTeleportStore : ICameraTeleportRegistry, IDisposable
         ConsoleRegistry.UnregisterInstance(typeof(CameraTeleportStore));
     }
 
-    [ConsoleCommand("teleport", "Teleport to LastDebugCapture or a saved camera location.", MonoTargetType.Registry)]
+    [ConsoleCommand("location.go", "Teleport to LastDebugCapture or a saved camera location.", MonoTargetType.Registry, Aliases = new[] { "camera.teleport" })]
     string TeleportCmd([CompletionSource(typeof(CameraTeleportNamesProvider))] string name)
     {
         if (!TryFindTeleport(name, out CameraTeleportLocation location))
-            return $"unknown camera teleport: '{name}'";
+            throw new ArgumentException($"unknown camera teleport: '{name}'");
 
         if (!_target.TryApply(location, out string error))
-            return error;
+            throw new InvalidOperationException(error);
 
         return $"camera teleported: {location.Name}";
     }
 
-    [ConsoleCommand("save-teleport", "Save or overwrite the current camera position and rotation under a name.", MonoTargetType.Registry)]
+    [ConsoleCommand("location.save", "Save or overwrite the current camera position and rotation under a name.", MonoTargetType.Registry, Aliases = new[] { "camera.save-teleport" })]
     string SaveTeleportCmd(string name)
     {
         name = NormalizeTeleportName(name);
         if (string.IsNullOrEmpty(name))
-            return "camera teleport name cannot be empty";
+            throw new ArgumentException("camera teleport name cannot be empty");
         if (IsReservedTeleportName(name))
-            return $"'{name}' is reserved";
+            throw new ArgumentException($"'{name}' is reserved");
 
         CameraTeleportLocation location = _target.CaptureLocation(name);
         int existing = FindSavedTeleportIndex(name);
@@ -99,19 +99,19 @@ public sealed class CameraTeleportStore : ICameraTeleportRegistry, IDisposable
         return $"camera teleport {(overwroteExisting ? "updated" : "saved")}: {name}";
     }
 
-    [ConsoleCommand("remove-teleport", "Remove a saved camera location.", MonoTargetType.Registry)]
+    [ConsoleCommand("location.remove", "Remove a saved camera location.", MonoTargetType.Registry, Aliases = new[] { "camera.remove-teleport" })]
     string RemoveTeleportCmd([CompletionSource(typeof(CameraTeleportNamesProvider))] string name)
     {
         name = NormalizeTeleportName(name);
         if (IsReservedTeleportName(name))
-            return $"'{name}' is reserved and cannot be removed";
+            throw new ArgumentException($"'{name}' is reserved and cannot be removed");
 
         int index = FindSavedTeleportIndex(name);
         if (index < 0)
         {
             if (TryFindBuiltInTeleport(name, out _))
-                return $"'{name}' is built in; save the name to override it";
-            return $"unknown camera teleport: '{name}'";
+                throw new ArgumentException($"'{name}' is built in; save the name to override it");
+            throw new ArgumentException($"unknown camera teleport: '{name}'");
         }
 
         string removed = _savedTeleports[index].Name;
@@ -120,7 +120,7 @@ public sealed class CameraTeleportStore : ICameraTeleportRegistry, IDisposable
         return $"camera teleport removed: {removed}";
     }
 
-    [ConsoleCommand("teleports", "List reserved, saved, and built-in camera locations.", MonoTargetType.Registry)]
+    [ConsoleCommand("location.list", "List reserved, saved, and built-in camera locations.", MonoTargetType.Registry, Aliases = new[] { "camera.teleports" })]
     string TeleportsCmd()
     {
         IReadOnlyList<string> names = GetTeleportNames();

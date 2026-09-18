@@ -7,7 +7,7 @@ using UnityEngine;
 /// Undo/redo are async and respect the console's CancellationToken plumbing — they appear
 /// as cancellable async commands in the console spinner UI.
 /// </summary>
-[CommandPrefix("action")]
+[CommandPrefix("action", Group = "World action history", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public static class ActionCommands
 {
     [ConsoleCommand("undo", "Undo the last world action (async, cancellable).")]

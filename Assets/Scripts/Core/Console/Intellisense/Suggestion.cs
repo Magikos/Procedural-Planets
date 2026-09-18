@@ -19,6 +19,8 @@ public readonly struct Suggestion
     /// For a param-value suggestion: "weather.state Clear".
     /// </summary>
     public readonly string CompletionText;
+    public readonly int CompletionCursor;
+    public readonly bool IsGroup;
 
     /// <summary>Start index of the matched substring within <see cref="DisplayText"/>.</summary>
     public readonly int MatchStart;
@@ -35,11 +37,15 @@ public readonly struct Suggestion
         string completionText,
         int matchStart,
         int matchLength,
-        ParameterData parameter = null)
+        ParameterData parameter = null,
+        int completionCursor = -1,
+        bool isGroup = false)
     {
         Command = command;
         DisplayText = displayText ?? "";
         CompletionText = completionText ?? "";
+        CompletionCursor = completionCursor < 0 ? CompletionText.Length : completionCursor;
+        IsGroup = isGroup;
         MatchStart = matchStart < 0 ? 0 : matchStart;
         MatchLength = matchLength < 0 ? 0 : matchLength;
         Parameter = parameter;

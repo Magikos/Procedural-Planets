@@ -1,6 +1,6 @@
 ---
 name: pp-change-control
-description: Use before risky or gated edits in this repo - classifying refactor/behavior/visual/experiment/audit work, deciding whether a fix is approved, tuning any visual constant or shader value, responding to audit findings, reverting an experiment, committing, staging, or touching another agent's dirty worktree changes. Keywords - findings-only, fix/defer/wontfix, capture-diff, caustics don't-touch, hand-tuned values, revert discipline. Not for how to capture evidence itself - see pp-validation-and-evidence.
+description: Use before risky or gated edits, change classification, visual tuning, audit fixes, experiment rollback, commits, or edits in a shared dirty worktree. Also use for Unity serialized field changes, asset moves, GUID/reference changes, and data migrations. Evidence capture belongs in pp-validation-and-evidence.
 ---
 
 # pp-change-control — how changes are gated in ProceduralPlanets
@@ -123,8 +123,17 @@ history of this and other reverts: pp-failure-archaeology.
 - Make focused edits: touch only files your task owns. Before staging anything, run
   `git status` and stage **only your own files**; another agent's work may be interleaved
   in the same directories.
-- Reverting your own experiment means restoring exactly the files you changed (e.g.
-  `git checkout -- <file>` per file, or hand-reverting hunks), never a tree-wide reset.
+- Reverting your own experiment means restoring only your changes, never a tree-wide reset.
+  Use task-specific originals or revert your hunks. A whole-file checkout is unsafe when earlier user edits share that file.
+
+## Unity asset and serialization migrations
+
+Read [the migration checks](references/unity-asset-migrations.md) before changing serialized names, types, identities, or asset paths.
+Classify the resulting behavior under §1; a source rename can still lose authored data.
+Record affected assets, value/reference mappings, regeneration needs, and recovery steps before mutation.
+Verify existing non-default values and references after Unity reload, not only fresh default instances.
+For importing selected vendor assets, use `pp-asset-integration`; it owns source selection and adoption checks.
+Migration work uses the existing authorization rules. This section adds no separate approval gate.
 
 ## 7. Commit conventions (derived from `git log`)
 
@@ -159,6 +168,7 @@ history of this and other reverts: pp-failure-archaeology.
 - [ ] If visual: capture the BEFORE state first (`debug.capture-set` + F10 — protocol in
       pp-validation-and-evidence).
 - [ ] `git status` — know which dirty files are yours vs. another agent's.
+- [ ] If serialized data or asset identity changes: record the migration mapping and recovery scope using the linked migration checks.
 
 **During**
 - [ ] Edit only files your task owns; no incidental cleanup beyond comment-pruning in
@@ -188,6 +198,10 @@ history of this and other reverts: pp-failure-archaeology.
 - **Debugging a rendering artifact (isolation method)** → pp-debugging-playbook.
 
 ## Provenance and maintenance
+
+Unity migration checks added 2026-09-09. Their reference links official Unity documentation
+and defines reload, reference-preservation, regeneration, and recovery evidence.
+Reverify `ProjectSettings/ProjectVersion.txt` before choosing version-specific migration APIs.
 
 Sources: `CLAUDE.md` (Audit workflow, Don't touch, Dead code, Comments sections);
 `docs/audit/2026-07-22-consolidated-code-audit.md` preamble and prior-audit

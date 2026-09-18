@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-[CommandPrefix("camera")]
+[CommandPrefix("camera", Group = "Camera and character", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTeleportTarget,
     IWorldServiceRegistrar, IFreeCameraService
 {
@@ -54,6 +54,8 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
     public float ElevationMax => _lastElevationMax;
 
     public bool InputSuspended { get; set; }
+    // Local fixtures can supply input without registering a second world service.
+    public IInputMapService InputOverride { get; set; }
 
     void Awake()
     {
@@ -97,6 +99,7 @@ public class FreeCameraController : MonoBehaviour, ICameraRigContext, ICameraTel
 
     IInputMapService GetInput()
     {
+        if (InputOverride != null) return InputOverride;
         if (_input != null)
             return _input;
 

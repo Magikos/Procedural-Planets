@@ -35,6 +35,7 @@ public sealed class PlanetChunk
 
     // ---- CPU mesh data (populated when a chunk job completes; step 5+) ---------------------
     public Vector3[] CpuVertices;
+    internal ChunkSurfaceQueries.TriangleBoundsIndex RaycastIndex;
     public Vector3[] CpuUnitSpherePoints;
     public float[] CpuElevations;
     public float[] CpuVertexRadii;        // |CpuVertices[i]| — bilinear surface sampler input

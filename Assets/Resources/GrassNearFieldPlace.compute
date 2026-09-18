@@ -412,6 +412,10 @@ void PlaceAndCullNearField(uint3 id : SV_DispatchThreadID)
         return;
     }
 
+    float cover = HabitatCover(dirWs, _NearFieldPlanetRadius * _NearFieldPlanetWorldScale,
+        (uint)_NearFieldSeed, saturate(dot(normalLocal, dirWs)), biome.Habitat.x);
+    density *= HabitatGrassKeep(cover);
+
     // Per-blade density roll (partial-density biomes thin probabilistically).
     if (Hash01(cellHash ^ 0x3c6ef372u) > density)
     {

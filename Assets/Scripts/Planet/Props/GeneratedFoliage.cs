@@ -3,7 +3,7 @@ using UnityEngine;
 
 // Shared material factory for generated props. TreeInjection and PlantInjection both need "a solid tinted
 // surface" (bark, stems) and "a tinted copy of a clean leaf texture" (canopies, blades), and two copies of
-// that logic would drift — the leaf substitution in particular encodes which Synty textures our whole-card
+// that logic would drift — the leaf substitution in particular encodes which source textures our whole-card
 // UVs can actually wear.
 //
 // Materials are cached by key and live for the domain: they are shared by every instance of a species, and
@@ -21,7 +21,7 @@ public static class GeneratedFoliage
     public static void Prime(Material cleanLeafBase) => _cleanLeafBase = cleanLeafBase;
 
     // A tinted copy of the clean leaf texture. Returns null when the library had no usable leaf material, which
-    // callers treat as "keep the Synty prop" rather than shipping an untextured blob.
+    // callers treat as "keep the source prop" rather than shipping an untextured blob.
     public static Material Leaf(string key, Color tint, float windStrength = -1f, float lift = 2f)
     {
         if (_cleanLeafBase == null) return null;

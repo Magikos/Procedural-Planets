@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: c15360b47c1de6a4c91a6bdd8fd93bd5
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 96826
+  packageName: Very Animation
+  packageVersion: 1.4.1
+  assetPath: Assets/VeryAnimation/Scripts/Timeline/VAAnimationTrack.cs
+  uploadId: 984870

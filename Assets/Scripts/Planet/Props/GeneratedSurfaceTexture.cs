@@ -7,13 +7,30 @@ using UnityEngine;
 //
 // Why generated rather than borrowed from a pack: the birch bark proved the point. A flat-tinted trunk reads as
 // plastic, and the one tree that looked right was the only one with a texture. Generating them keeps every
-// species consistent, avoids the palette-atlas problem that bites the Synty leaf textures, and costs almost
+// species consistent, avoids the palette-atlas problem that bites the source leaf textures, and costs almost
 // nothing — a handful of small textures, built once per session and shared by every instance.
 public static class GeneratedSurfaceTexture
 {
     public enum BarkStyle { Smooth, Furrowed, Plated, Birch, Ribbed, Fibrous }
 
     static readonly Dictionary<string, Texture2D> _cache = new();
+
+    public static Texture2D CutWood()
+    {
+        const string key = "cut-wood";
+        if (_cache.TryGetValue(key, out Texture2D hit) && hit != null) return hit;
+        const int size = 64;
+        var pixels = new Color[size * size];
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            float radius = new Vector2((x + .5f) / size - .5f, (y + .5f) / size - .5f).magnitude;
+            float ring = Mathf.Pow(.5f + .5f * Mathf.Sin(radius * 100f), 6f);
+            float value = 1f - ring * .18f;
+            pixels[y * size + x] = new Color(value, value, value, 1f);
+        }
+        return Store(key, pixels, size, size, "Wood growth rings");
+    }
 
     public static Texture2D Bark(BarkStyle style, int seed = 1)
     {

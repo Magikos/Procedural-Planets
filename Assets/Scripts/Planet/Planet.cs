@@ -2,7 +2,7 @@ using System.Threading;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-[CommandPrefix("planet")]
+[CommandPrefix("planet", Group = "World and surface", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurfaceRaycaster,
     IClimateSampler, IGrassRuntimeControl, IEarlyInitialize, ILateInitialize, IProgressReporter,
     IWorldServiceRegistrar, IWorldSettingsRegistrar, IWorldTeardown
@@ -38,6 +38,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     [SerializeField, HideInInspector] float _lastGeneratedRadius;
     [SerializeField, HideInInspector] float _lastSeaLevelRadius;
 
+    RiverRenderer _riverRenderer;
+    RiverCommands _riverCommands;
+    RiverGpu _riverGpu;
+    public RiverField Rivers => _shapeGenerator.Rivers;
     ShapeGenerator _shapeGenerator = new ShapeGenerator();
     ColorGenerator _colorGenerator = new ColorGenerator();
     ClimateMapGpuData _climateMapGpuData;
@@ -49,6 +53,7 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     ScatterField _scatter;
     ScatterRenderer _scatterRenderer;
     PlanetWaterSurface _waterSurface;
+    WaterCommands _waterCommands;
     WaterQueryService _waterQuery;
     PlanetTerrainMaterial _terrainMaterial;
     SurfaceEditController _surfaceEdits;
@@ -147,12 +152,18 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
                     {
                         ScatterLibraryDto lib = libraryFn();
                         return lib?.Prototypes != null && (uint)proto < (uint)lib.Prototypes.Length
-                            ? new ProtoHarvestInfo(lib.Prototypes[proto].Interaction, lib.Prototypes[proto].DisplayName)
+                            ? new ProtoHarvestInfo(lib.Prototypes[proto].Interaction, lib.Prototypes[proto].DisplayName,
+                                lib.Prototypes[proto].Tree?.ChopHp ?? 1,
+                                lib.Prototypes[proto].Tree is GeneratedTree tree
+                                    ? new HarvestYield("Wood", tree.IsSapling ? tree.WoodYield : 0) : null,
+                                lib.Prototypes[proto].Tree != null)
                             : default;
                     },
                     id => _harvestStore.RecordDug(id),
-                    (creature, damage, from) => _creatures.Strike(creature, damage, from));
-                _harvestInteractor = new HarvestInteractor(picker, harvest, _harvestStore, Logger, _creatures);
+                    (creature, damage, from) => _creatures.Strike(creature, damage, from),
+                    _harvestStore.RemainingHealth, _harvestStore.RecordDamage);
+                _harvestInteractor = new HarvestInteractor(picker, harvest, _harvestStore, Logger, _creatures,
+                    new TreeHarvestService(_harvestStore, libraryFn, (item, count) => _inventory.Add(item, count)));
             }
             context.Register(_harvestInteractor);
         }
@@ -168,8 +179,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         EnsureGrassCoordinator();
         _scatter ??= new ScatterField(transform, new AnalyticGroundSampler(_shapeGenerator), _colorGenerator);
         _scatterRenderer ??= new ScatterRenderer(_scatter, transform);
-        _waterSurface ??= new PlanetWaterSurface(transform);
         _waterQuery ??= new WaterQueryService(transform);
+        _waterSurface ??= new PlanetWaterSurface(transform, _waterQuery);
+        _waterCommands ??= new WaterCommands(_waterSurface);
+        _riverCommands ??= new RiverCommands(this);
         _terrainMaterial ??= new PlanetTerrainMaterial(Logger);
         _surfaceEdits ??= new SurfaceEditController(transform, Logger, () => _grass.InvalidateSurfaceMasks());
         _deltaLog ??= new WorldDeltaLog(Logger);
@@ -177,11 +190,13 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _inventory ??= new InventoryService();
         _stumpRenderer ??= new StumpRenderer(_harvestStore, transform,
             () => SettingsProvider.IsRegistered<ScatterLibraryDto>() ? SettingsProvider.GetSettings<ScatterLibraryDto>() : null);
-        _logRenderer ??= new LogRenderer(_harvestStore, transform);
+        _logRenderer ??= new LogRenderer(_harvestStore, transform,
+            () => SettingsProvider.IsRegistered<ScatterLibraryDto>() ? SettingsProvider.GetSettings<ScatterLibraryDto>() : null);
         _treeFall ??= new TreeFallSystem(transform,
             () => SettingsProvider.IsRegistered<ScatterLibraryDto>() ? SettingsProvider.GetSettings<ScatterLibraryDto>() : null,
-            _harvestStore);
-        _chopFx ??= new ChopFxSystem(transform);
+            _harvestStore, this);
+        _chopFx ??= new ChopFxSystem(transform,
+            () => SettingsProvider.IsRegistered<ScatterLibraryDto>() ? SettingsProvider.GetSettings<ScatterLibraryDto>() : null, _harvestStore);
         _scatterDebug ??= new ScatterDebugReporter();
         _treePreview ??= new TreePreview(transform);
         _creatures ??= new CreatureResidencyService(transform, this, Logger);
@@ -326,9 +341,18 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _surfaceProvider?.Dispose();
         _surfaceProvider = null;
         _perFaceProvider = null;
+        _riverRenderer?.Dispose();
+        _riverRenderer = null;
+        _riverGpu?.Dispose();
+        _riverGpu = null;
+        _waterQuery?.Reset();
+        _shapeGenerator.Rivers?.Dispose();
+        _shapeGenerator.Rivers = null;
         _deltaLog?.Dispose();   // flushes to the platter; a chop must survive a quit
         _deltaLog = null;
         _colorGenerator?.Dispose();
+        _waterCommands?.Dispose();
+        _riverCommands?.Dispose();
         _waterSurface?.Dispose();
         _terrainMaterial?.Dispose();
         GrassInteractorRegistry.DisposeBuffer();
@@ -352,6 +376,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         if (_observerCamera == null) return;
         _surfaceProvider.Tick(_observerCamera.transform.position, _observerCamera);
         _grass.Tick(_observerCamera);
+        using (FrameTimingCounters.Measure(FrameTimingSection.RiverPresentation))
+            _riverRenderer?.Tick(_observerCamera.transform.position);
         _scatterRenderer?.Render(_observerCamera);
         _stumpRenderer?.Render(_observerCamera);
         _logRenderer?.Render(_observerCamera);
@@ -362,14 +388,23 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         // server would pass from a player's transform.
         if (_creatures != null)
         {
-            PublishLandingSites();
-            _creatures.Tick(_observerCamera.transform.position, Time.deltaTime);
-            _creatureView?.Sync(_creatures.Live, _creatures.Library);
-            _creatureView?.SyncCorpses(_corpses, _creatures.Library, _observerCamera.transform.position,
-                CreatureCorpseStore.KeepAliveMeters);
-            TickSwarms(_observerCamera.transform.position);
-            _fish.Tick(_observerCamera.transform.position, Time.deltaTime, System.DateTimeOffset.UtcNow.ToUnixTimeSeconds());
-            _fishView.Sync(_fish.Groups, Time.deltaTime);
+            using (FrameTimingCounters.Measure(FrameTimingSection.CreatureSimulation))
+            {
+                PublishLandingSites();
+                _creatures.Tick(_observerCamera.transform.position, Time.deltaTime);
+            }
+            using (FrameTimingCounters.Measure(FrameTimingSection.CreaturePresentation))
+            {
+                _creatureView?.Sync(_creatures.Live, _creatures.Library, _observerCamera.transform.position, _observerCamera);
+                _creatureView?.SyncCorpses(_corpses, _creatures.Library, _observerCamera.transform.position,
+                    CreatureCorpseStore.KeepAliveMeters);
+            }
+            using (FrameTimingCounters.Measure(FrameTimingSection.AmbientWildlife))
+                TickSwarms(_observerCamera.transform.position);
+            using (FrameTimingCounters.Measure(FrameTimingSection.FishSimulation))
+                _fish.Tick(_observerCamera.transform.position, Time.deltaTime, System.DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            using (FrameTimingCounters.Measure(FrameTimingSection.FishPresentation))
+                _fishView.Sync(_fish.Groups, Time.deltaTime);
         }
     }
 
@@ -389,6 +424,37 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
 
     // How high the sun stands HERE, which on a sphere is the only meaningful answer to "is it night".
     // The global clock says nothing about the far side of the planet.
+    public bool TryGetRiverView(int index, bool waterfall, out CameraTeleportLocation location)
+    {
+        location = null;
+        if (index < 0 || Rivers == null) return false;
+        var data = Rivers.Data;
+        for (int i = 0; i < data.Segments.Length; i++)
+        {
+            var segment = data.Segments[i];
+            if (waterfall && segment.Shape.w == 0f) continue;
+            if (index-- > 0) continue;
+            Vector3 a = segment.A.xyz, b = segment.B.xyz;
+            Vector3 up = (a + b).normalized;
+            Vector3 side = Vector3.Cross(b - a, up).normalized;
+            Vector3 focus = (a * segment.A.w + b * segment.B.w) * .5f;
+            Vector3 local = waterfall
+                ? focus + (b - a).normalized * Mathf.Max(60f, (segment.A.w - segment.B.w) * 1.5f) + up * 10f
+                : focus + side * Mathf.Max(25f, segment.Shape.x * 4f) + up * 15f;
+            float ground = _shapeGenerator.GetScaledElevation(_shapeGenerator.SampleElevation(local.normalized));
+            if (local.magnitude < ground + 8f) local = local.normalized * (ground + 8f);
+            Vector3 position = transform.TransformPoint(local);
+            Vector3 target = transform.TransformPoint(focus);
+            location = new CameraTeleportLocation
+            {
+                Name = "River", Position = position, Rotation = Quaternion.LookRotation(target - position, transform.TransformDirection(up)),
+                RelativeToTarget = false, SurfaceView = true, PlanetRadius = data.PlanetRadius
+            };
+            return true;
+        }
+        return false;
+    }
+
     void TickSwarms(Vector3 observerWorldPos)
     {
         if (_swarms == null) return;
@@ -404,6 +470,8 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
     async Awaitable InitializeAsync(IProgressHandle progress, CancellationToken ct)
     {
         progress?.Report(0f, "Resetting planet...");
+        _fish?.Clear();
+        _fishView?.Clear();
         _grass.DisposeControllers();
         _scatter?.Reset();
         _scatterRenderer?.Reset();
@@ -417,6 +485,13 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         _surfaceProvider?.Dispose();
         _surfaceProvider = null;
         _perFaceProvider = null;
+        _riverRenderer?.Dispose();
+        _riverRenderer = null;
+        _riverGpu?.Dispose();
+        _riverGpu = null;
+        _waterQuery?.Reset();
+        _shapeGenerator.Rivers?.Dispose();
+        _shapeGenerator.Rivers = null;
         _waterSurface.NotifyChildrenDestroyed();
 
         PlanetDto planet = SettingsProvider.GetSettings<PlanetDto>();
@@ -505,22 +580,16 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             await InitializeAsync(new ProgressRangeHandle(_progressHandle, 0f, 0.1f), ct);
             long initializationMs = phaseTimer.ElapsedMilliseconds;
             phaseTimer.Restart();
-            _progressHandle.Report(0.1f, "Generating terrain...");
-            await GenerateMeshAsync(new ProgressRangeHandle(_progressHandle, 0.1f, 0.68f), ct);
-            long terrainMs = phaseTimer.ElapsedMilliseconds;
-            phaseTimer.Restart();
-            if (this == null) return;
-            _shapeGenerator.CommitElevationRange();
-
             // Identify the water bodies (WaterBodyMap) before the biome bake + scatter read them, so lakes
             // biome + scatter differently from the ocean. Pure heightfield sampling, so it runs off the main
             // thread; self-limiting (only small flood-fill components become lakes).
             var lakeGround = new AnalyticGroundSampler(_shapeGenerator);
+            _progressHandle.Report(0.1f, "Finding lakes...");
+            await Awaitable.NextFrameAsync(ct);
             float lakeBaseRadius = lakeGround.PlanetRadius;
             WaterBodyMap.Current = null; // a cancelled generate must not leave the previous world visible
-            await Awaitable.BackgroundThreadAsync();
-            WaterBodyMap waterBodies = WaterBodyMap.Build(lakeGround, lakeBaseRadius, BiomeConstants.OceanThreshold);
-            await Awaitable.MainThreadAsync();
+            WaterBodyMap waterBodies = await WaterBodyMap.BuildAsync(lakeGround, lakeBaseRadius, BiomeConstants.OceanThreshold, ct);
+            ct.ThrowIfCancellationRequested();
             if (this == null) return;
             WaterBodyMap.Current = waterBodies;
             if (waterBodies?.Bodies != null)
@@ -535,22 +604,37 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             long lakeMs = phaseTimer.ElapsedMilliseconds;
             phaseTimer.Restart();
 
-            _progressHandle.Report(0.78f, "Applying colors...");
-            await GenerateColorsAsync(new ProgressRangeHandle(_progressHandle, 0.78f, 0.12f), ct);
+            _progressHandle.Report(0.13f, "Building rivers...");
+            _shapeGenerator.Rivers = RiverGenerator.Build(waterBodies, lakeBaseRadius, ct, SettingsProvider.GetSettings<WaterDto>());
+            _riverGpu = new RiverGpu(_shapeGenerator.Rivers);
+            Logger.Log(LogLevel.Info, "Planet", $"Rivers: {_shapeGenerator.Rivers.SegmentCount} segments, {_shapeGenerator.Rivers.WaterfallCount} waterfalls.");
+            _progressHandle.Report(0.15f, "Generating terrain...");
+            await GenerateMeshAsync(new ProgressRangeHandle(_progressHandle, 0.15f, 0.30f), ct);
+            long terrainMs = phaseTimer.ElapsedMilliseconds;
+            phaseTimer.Restart();
+            if (this == null) return;
+            _shapeGenerator.CommitElevationRange();
+
+
+            _progressHandle.Report(0.48f, "Applying colors...");
+            await GenerateColorsAsync(new ProgressRangeHandle(_progressHandle, 0.48f, 0.27f), ct);
             long colorsMs = phaseTimer.ElapsedMilliseconds;
             phaseTimer.Restart();
             if (this == null) return;
-            _progressHandle.Report(0.9f, "Building climate map...");
-            await BuildClimateMapAsync(new ProgressRangeHandle(_progressHandle, 0.9f, 0.04f), ct);
+            _progressHandle.Report(0.75f, "Building climate map...");
+            await BuildClimateMapAsync(new ProgressRangeHandle(_progressHandle, 0.75f, 0.02f), ct);
             long climateMs = phaseTimer.ElapsedMilliseconds;
             phaseTimer.Restart();
-            _progressHandle.Report(0.94f, "Generating water...");
+            _progressHandle.Report(0.77f, "Generating water...");
             await _waterSurface.GenerateAsync(
                 _surfaceProvider?.GetFaceMeshSamplers(),
                 _colorGenerator.ClimateProvider,
                 PerFaceResolution,
-                new ProgressRangeHandle(_progressHandle, 0.94f, 0.06f),
+                new ProgressRangeHandle(_progressHandle, 0.77f, 0.1f),
                 ct);
+            _riverRenderer = SettingsProvider.GetSettings<PlanetDto>().HasOceans
+                ? new RiverRenderer(transform, _shapeGenerator.Rivers, SettingsProvider.GetSettings<WaterDto>(), WaterBodyMap.Current, _waterSurface.SurfaceMaterial)
+                : null;
             long waterMs = phaseTimer.ElapsedMilliseconds;
             phaseTimer.Restart();
             var finalizeStep = System.Diagnostics.Stopwatch.StartNew();
@@ -566,12 +650,10 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             _lastGeneratedRadius = scaledRadius;
             _lastSeaLevelRadius = seaLevelRadius;
             UploadCorePlanetShaderGlobals(seaLevelRadius);
-            _progressHandle.Report(1f, "Planet ready");
+            _progressHandle.Report(0.87f, "Restoring world state...");
             long shaderGlobalsMs = finalizeStep.ElapsedMilliseconds;
             finalizeStep.Restart();
             await Awaitable.NextFrameAsync(ct);
-            // After the last cancellable await: a cancelled generation never publishes readiness,
-            // so scatter is only configured for a generation that actually reached this point.
             _creatures?.FlushState();
             _deltaLog.Open(System.IO.Path.Combine(Application.persistentDataPath, "ProceduralPlanets"), "world-" + Seed);
             _harvestStore.Configure(Seed, _deltaLog);
@@ -589,10 +671,12 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             // describes cannot disagree.
             _waterQuery.Configure(WaterBodyMap.Current, new AnalyticGroundSampler(_shapeGenerator),
                 planet.PlanetRadius, planet.OceanLevel,
-                WaterMeshBuilder.SurfaceOffsetFor(planet.PlanetRadius));
+                WaterMeshBuilder.SurfaceOffsetFor(planet.PlanetRadius), _shapeGenerator.RiverData);
             long scatterMs = finalizeStep.ElapsedMilliseconds;
             finalizeStep.Restart();
-            _scatterRenderer.Configure();
+            await _scatterRenderer.ConfigureAsync(new ProgressRangeHandle(_progressHandle, 0.88f, 0.1f), ct);
+            _progressHandle.Report(0.98f, "Preparing wildlife...");
+            await Awaitable.NextFrameAsync(ct);
             // Creature residency reads the same log the harvest store does, so it configures after it opens.
             // The view is dropped with it: DestroyChildren already took its bodies, and a new world's
             // creatures are different animals in different places.
@@ -603,14 +687,17 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
             // with the ground about which biome it is standing in.
             _corpses.Configure(_deltaLog);
             _swarms.Configure(this, _colorGenerator, _threats, transform.position, planet.PlanetRadius, seaLevelRadius,
-                _scatter, _scatterRenderer.Cache);
+                _scatter, _scatterRenderer.Cache, _creatures.LandingTargets,
+                new CharacterWaterFloor(_waterQuery, transform.position));
             _creatures.Configure(Seed, _deltaLog, _colorGenerator, _threats, planet.PlanetRadius, seaLevelRadius,
-                _corpses);
+                _corpses, _scatter, _harvestStore);
             _creatureView.ConfigureGrounding(new CreaturePoseGrounding(this,
                 new PlanetSurfaceGrounding(this, transform.position)));
             long scatterRendererMs = finalizeStep.ElapsedMilliseconds;
             finalizeStep.Restart();
+            ct.ThrowIfCancellationRequested();
             EventBus<PlanetGeneratedEvent>.Raise(new PlanetGeneratedEvent(transform.position, scaledRadius, seaLevelRadius, _shapeGenerator.ElevationMin, _shapeGenerator.ElevationMax));
+            _progressHandle.Report(1f, "Planet ready");
             long generatedEventMs = finalizeStep.ElapsedMilliseconds;
             long finalizeMs = phaseTimer.ElapsedMilliseconds;
             Logger.Log(
@@ -906,14 +993,18 @@ public class Planet : MonoBehaviour, IPlanet, IPlanetSurfaceSampler, IPlanetSurf
         if (_shapeGenerator == null || _surfaceProvider == null || _waterSurface == null)
             return "planet.rebuild-water: no generated planet to rebuild against — run planet.generate first";
 
+        // River beds and outlets are one generated solution. Re-solving only its water would detach them.
+        if (Rivers != null && Rivers.SegmentCount > 0)
+        {
+            await GeneratePlanetAsync(ct);
+            return "planet.rebuild-water: regenerated terrain and water to preserve river outlet alignment";
+        }
         var timer = System.Diagnostics.Stopwatch.StartNew();
         var ground = new AnalyticGroundSampler(_shapeGenerator);
         float baseRadius = ground.PlanetRadius;
 
-        WaterBodyMap.Current = null;
-        await Awaitable.BackgroundThreadAsync();
-        WaterBodyMap rebuilt = WaterBodyMap.Build(ground, baseRadius, BiomeConstants.OceanThreshold);
-        await Awaitable.MainThreadAsync();
+        WaterBodyMap rebuilt = await WaterBodyMap.BuildAsync(ground, baseRadius, BiomeConstants.OceanThreshold, ct);
+        ct.ThrowIfCancellationRequested();
         if (this == null) return "planet.rebuild-water: planet destroyed mid-rebuild";
         WaterBodyMap.Current = rebuilt;
         long solveMs = timer.ElapsedMilliseconds;

@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 // Stage 3 (foliage) of the tree generator (plan 006): place a crossed pair of textured leaf cards at each sprout
-// and weld them into one foliage mesh. Rendered with the biome's Synty FoliageLit material, whose leaf-patch
+// and weld them into one foliage mesh. Rendered with the biome's source FoliageLit material, whose leaf-patch
 // _BaseMap alpha cuts the leaf silhouette — so cards read as leaves, not flat cardboard. Vertex color carries
 // FoliageLit's inputs: B = leaf mask (1 => treat as leaf), G = leaf AO (1 => exposed/bright). `leafScale` sizes
 // the clumps (LODs), `skip` drops sprouts for lower LODs. Deterministic per seed.
@@ -214,7 +214,6 @@ public static class TreeLeafMesher
             uvs.Add(new Vector2(0.5f, 1f)); uvs.Add(new Vector2(0f, 0f)); uvs.Add(new Vector2(1f, 0f));
             cols.Add(Leaf(0.5f)); cols.Add(Leaf(g0)); cols.Add(Leaf(g1));
             tris.Add(i0); tris.Add(i0 + 1); tris.Add(i0 + 2);
-            tris.Add(i0); tris.Add(i0 + 2); tris.Add(i0 + 1); // back face
         }
     }
 
@@ -258,6 +257,8 @@ public static class TreeLeafMesher
         var cols = new List<Color>();
         var tris = new List<int>();
 
+        tiers = Mathf.Max(2, tiers);
+        spokes = Mathf.Max(3, spokes);
         if (sk?.Trunk != null)
         {
             float h = Mathf.Max(1f, sk.Height);
@@ -300,8 +301,7 @@ public static class TreeLeafMesher
                     uvs.Add(new Vector2(0.5f, 1f)); uvs.Add(new Vector2(0f, 0f)); uvs.Add(new Vector2(1f, 0f));
                     cols.Add(cApex); cols.Add(cA); cols.Add(cB);
                     tris.Add(i0); tris.Add(i0 + 1); tris.Add(i0 + 2);
-                    tris.Add(i0); tris.Add(i0 + 2); tris.Add(i0 + 1); // back face
-                }
+                        }
             }
         }
 

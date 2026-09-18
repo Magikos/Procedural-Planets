@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 311023e2ee584f019a3a111231635d87, type: 3}
+  m_Name: BearAudio
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::CreatureAudioSettings
+  Calls:
+  - {fileID: 8300000, guid: 34649340cb3847948768dab87f0e1438, type: 3}
+  Alerts:
+  - {fileID: 8300000, guid: 249482eb37ff43979a59e6f57a37faa4, type: 3}
+  Attacks:
+  - {fileID: 8300000, guid: b2680c86eb394ed5aa0f36a9632c886e, type: 3}
+  Feeding: []
+  Volume: .7
+  NearDistance: 2
+  AudibleDistance: 100
+  MinimumCallSeconds: 40
+  MaximumCallSeconds: 85
+  AlertCooldownSeconds: 5
+  AttackCooldownSeconds: 1
+  FeedingIntervalSeconds: 8
+

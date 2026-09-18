@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c643e5978e138f4e97e64026cf45aad, type: 3}
+  m_Name: WolfCombat
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::CreatureCombatSettings
+  MaximumHealth: 90
+  Damage: 18
+  Reach: 1.4
+  HalfAngle: 40
+  Windup: 0.45
+  ActiveSeconds: 0.25
+  RecoverySeconds: 1.2
+  StaminaCost: 0.12
+  Wounds: 0.2
+  Bleeding: 0.15
+  SafeDelayHours: 0.25
+  HealthRecoveryHours: 24
+  WoundRecoveryHours: 12
+  ClotHours: 12
+  BleedDrainHours: 2

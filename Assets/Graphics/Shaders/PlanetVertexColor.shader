@@ -29,6 +29,8 @@ Shader "Planet/VertexColor"
         _SnowFullTemperature ("Snow Full Temperature", Range(0.0, 1.0)) = 0.28
         _SnowFadeEndTemperature ("Snow Fade End Temperature", Range(0.0, 1.0)) = 0.42
         _SnowTiling ("Snow Tiling", Range(0.001, 1.0)) = 0.09
+        _SnowSlopeStartDegrees ("Snow Shedding Start Degrees", Range(0.0, 90.0)) = 55.0
+        _SnowSlopeEndDegrees ("Snow Shedding End Degrees", Range(0.0, 90.0)) = 80.0
         _GrassFarOverlayStrength ("Grass Far Overlay Strength", Range(0.0, 1.0)) = 1.0
         _GrassFarOverlayStart ("Grass Far Overlay Start", Float) = 35.0
         _GrassFarOverlayEnd ("Grass Far Overlay End", Float) = 260.0
@@ -57,6 +59,7 @@ Shader "Planet/VertexColor"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
             #pragma multi_compile _ _ADDITIONAL_LIGHTS
             #pragma multi_compile_fog
             #pragma target 4.5
@@ -122,6 +125,8 @@ Shader "Planet/VertexColor"
                 float _SnowFullTemperature;
                 float _SnowFadeEndTemperature;
                 float _SnowTiling;
+                float _SnowSlopeStartDegrees;
+                float _SnowSlopeEndDegrees;
                 float _GrassFarOverlayStrength;
                 float _GrassFarOverlayStart;
                 float _GrassFarOverlayEnd;
@@ -670,7 +675,7 @@ Shader "Planet/VertexColor"
             GrassOverlayParams NormalizeGrassOverlayParams(GrassOverlayParams overlay, float totalParamWeight)
             {
                 overlay.density = saturate(overlay.density);
-                if (totalParamWeight > 0.0001)
+                if (totalParamWeight > 0.0)
                 {
                     float inv = rcp(totalParamWeight);
                     overlay.tint *= inv;
@@ -681,18 +686,19 @@ Shader "Planet/VertexColor"
                 return overlay;
             }
 
-            GrassOverlayParams CornerGrassOverlayParams(int2 texel)
+            GrassOverlayParams CornerGrassOverlayParams(int2 texel, out float totalParamWeight)
             {
                 float4 ids = LOAD_TEXTURE2D(_BiomeIds, texel);
                 float4 weights = LOAD_TEXTURE2D(_BiomeWeights, texel);
 
                 GrassOverlayParams overlay = EmptyGrassOverlayParams();
-                float totalParamWeight = 0.0;
+                totalParamWeight = 0.0;
                 AccumulateGrassOverlaySlot(ids.x, weights.x, overlay, totalParamWeight);
                 AccumulateGrassOverlaySlot(ids.y, weights.y, overlay, totalParamWeight);
                 AccumulateGrassOverlaySlot(ids.z, weights.z, overlay, totalParamWeight);
                 AccumulateGrassOverlaySlot(ids.w, weights.w, overlay, totalParamWeight);
-                return NormalizeGrassOverlayParams(overlay, totalParamWeight);
+                overlay.density = saturate(overlay.density);
+                return overlay;
             }
 
             GrassOverlayParams LerpGrassOverlayParams(GrassOverlayParams a, GrassOverlayParams b, float t)
@@ -721,14 +727,17 @@ Shader "Planet/VertexColor"
                 int2 t01 = clamp(base_ + int2(0, 1),  int2(0,0), int2(maxTexel));
                 int2 t11 = clamp(base_ + int2(1, 1),  int2(0,0), int2(maxTexel));
 
-                GrassOverlayParams p00 = CornerGrassOverlayParams(t00);
-                GrassOverlayParams p10 = CornerGrassOverlayParams(t10);
-                GrassOverlayParams p01 = CornerGrassOverlayParams(t01);
-                GrassOverlayParams p11 = CornerGrassOverlayParams(t11);
+                float w00, w10, w01, w11;
+                GrassOverlayParams p00 = CornerGrassOverlayParams(t00, w00);
+                GrassOverlayParams p10 = CornerGrassOverlayParams(t10, w10);
+                GrassOverlayParams p01 = CornerGrassOverlayParams(t01, w01);
+                GrassOverlayParams p11 = CornerGrassOverlayParams(t11, w11);
 
                 GrassOverlayParams px0 = LerpGrassOverlayParams(p00, p10, f.x);
                 GrassOverlayParams px1 = LerpGrassOverlayParams(p01, p11, f.x);
-                return LerpGrassOverlayParams(px0, px1, f.y);
+                // Empty corners reduce coverage, not the properties of the grass that remains.
+                float totalParamWeight = lerp(lerp(w00, w10, f.x), lerp(w01, w11, f.x), f.y);
+                return NormalizeGrassOverlayParams(LerpGrassOverlayParams(px0, px1, f.y), totalParamWeight);
             }
 
             GrassOverlayEval EmptyGrassOverlayEval()
@@ -819,7 +828,8 @@ Shader "Planet/VertexColor"
                 float2 chunkUv,
                 float3 positionWS,
                 float3 geometricNormalWS,
-                float3 terrainAlbedo)
+                float3 terrainAlbedo,
+                float surfaceExclusionMask)
             {
                 float4 surfaceState = SampleSurfaceState(chunkUv);
                 float pathWear = SamplePathWear(chunkUv);
@@ -842,7 +852,7 @@ Shader "Planet/VertexColor"
                 // Wide, gentle coverage ramp: a narrow ramp reads as a bright ring at biome borders
                 // (the soft biome blend maps a thin farWeight band to a visible spatial stripe).
                 float grassCoverage = smoothstep(0.0, 0.9, eval.farWeight);
-                grassCoverage *= 1.0 - pathMask;
+                grassCoverage *= (1.0 - pathMask) * (1.0 - saturate(surfaceExclusionMask));
                 if (grassCoverage <= 0.001)
                     return terrainAlbedo;
                 if (_GrassDebugLayerColors > 0.5)
@@ -857,26 +867,15 @@ Shader "Planet/VertexColor"
                     fiberUv.y * noiseScale * 2.35,
                     fiberUv.z * noiseScale + 11.0 + eval.tint.g * 23.0));
                 float fiberRaw = fiber;
-                // The anisotropic fiber and fleck are near blade-texture detail; aligned to consistent world
-                // tangents they alias into directional weave/streaks at grazing distance (the fleck's fwidth
-                // self-filter is not enough at shallow angles). Fade both to neutral with view distance so
-                // distant carpet reads as smooth grass (blades aren't resolvable there anyway); near keeps the
-                // texture. The isotropic macro/detail/patch terms don't streak, so they stay.
+                // Fade directional fiber detail with distance; broad grass variation remains.
                 float texFade = 1.0 - smoothstep(70.0, 200.0, length(positionWS - _WorldSpaceCameraPos));
                 fiber = lerp(0.5, fiber, texFade);
                 float breakup = lerp(macro * 0.65 + detail * 0.35, fiber, saturate(_GrassFarOverlayFiberStrength));
                 float patch = ValueNoise3D(eval.relPos * (noiseScale * 0.22) + eval.tint * 71.0 + 5.0);
-                float3 fleckUv = fiberUv * float3(0.9, 3.0, 1.0);
-                float3 fleckWidth = fwidth(fleckUv);
-                float fleckFilter = saturate(1.0 - max(max(fleckWidth.x, fleckWidth.y), fleckWidth.z) * 1.5);
-                float fleck = smoothstep(0.52, 0.88,
-                    ValueNoise3D(fleckUv + float3(0, 0, 23.0 + eval.tint.r * 19.0)));
-                float fleckRaw = fleck;
-                fleck = lerp(0.5, fleck, fleckFilter);
-                fleck = lerp(0.5, fleck, texFade);
+                // Broad noise varies coverage without the fine fleck modulation that
+                // previously exposed angular color patches on the terrain.
                 grassCoverage = saturate(grassCoverage
-                    * lerp(0.86, 1.08, patch)
-                    * lerp(0.58, 1.22, fleck));
+                    * lerp(0.86, 1.08, patch));
 
                 // Match the authored blade color pipeline so geometry and surface LOD share
                 // one material identity. Variation comes from grass fibers, never dirt albedo.
@@ -886,8 +885,7 @@ Shader "Planet/VertexColor"
                 float3 grassSurface = GradeGrassTint(eval.tint, _GrassSurfaceSaturation, 0.98);
                 float surfaceVariation = lerp(0.82, 1.04, breakup)
                     * lerp(0.98, 1.06, fiber)
-                    * lerp(0.84, 1.16, patch)
-                    * lerp(0.68, 1.30, fleck);
+                    * lerp(0.84, 1.16, patch);
                 grassSurface *= max(0.05, surfaceVariation);
                 grassSurface *= _GrassSurfaceBrightness;
 
@@ -898,11 +896,11 @@ Shader "Planet/VertexColor"
                     if (_GrassOverlayDebug < 3.5) return saturate(float3((eval.tint.g - eval.tint.r) * 3.0, grassCoverage, 0.0));
                     if (_GrassOverlayDebug < 4.5) return saturate(eval.density).xxx;      // raw grass density
                     if (_GrassOverlayDebug < 5.5) return saturate(eval.envCoverage).xxx;  // after smoothstep(toe,full)
-                    // 6: directional blade-texture (fiber+fleck) AFTER the distance fade -> RED where it still bands
+                    // 6: directional fiber AFTER the distance fade -> RED where it still bands
                     if (_GrassOverlayDebug < 6.5)
-                        return lerp(terrainAlbedo, float3(1.0, 0.0, 0.0), saturate((abs(fiber - 0.5) + abs(fleck - 0.5)) * 2.5) * grassCoverage);
+                        return lerp(terrainAlbedo, float3(1.0, 0.0, 0.0), saturate(abs(fiber - 0.5) * 2.5) * grassCoverage);
                     // 7: directional blade-texture BEFORE the fade (raw) -> RED = the full pattern source
-                    return lerp(terrainAlbedo, float3(1.0, 0.0, 0.0), saturate((abs(fiberRaw - 0.5) + abs(fleckRaw - 0.5)) * 2.5) * grassCoverage);
+                    return lerp(terrainAlbedo, float3(1.0, 0.0, 0.0), saturate(abs(fiberRaw - 0.5) * 2.5) * grassCoverage);
                 }
 
                 return lerp(terrainAlbedo, saturate(grassSurface), grassCoverage);
@@ -914,6 +912,14 @@ Shader "Planet/VertexColor"
                 float slope;
                 float snow;
             };
+
+            float SnowSlopeRetention(float slopeDegrees)
+            {
+                // Snow can rest on rocky slopes after vegetation has stopped growing.
+                float start = clamp(_SnowSlopeStartDegrees, 0.0, 89.99);
+                float end = clamp(max(_SnowSlopeEndDegrees, start + 0.01), start + 0.01, 90.0);
+                return 1.0 - smoothstep(start, end, slopeDegrees);
+            }
 
             TerrainOverrideMasks EvaluateTerrainOverrideMasks(
                 float3 positionWS,
@@ -947,6 +953,7 @@ Shader "Planet/VertexColor"
                     saturate(_SnowFullTemperature),
                     max(saturate(_SnowFadeEndTemperature), saturate(_SnowFullTemperature) + 0.001),
                     saturate(temperature01))) * enabled;
+                masks.snow *= SnowSlopeRetention(slopeDegrees);
                 return masks;
             }
 
@@ -1162,7 +1169,8 @@ Shader "Planet/VertexColor"
                 // so valid coverage remains grass at every geometry LOD.
                 #ifdef _BIOME_COLOR_MODE_TEXTURE
                     surfaceAlbedo = ApplyGrassSurfaceAlbedo(input.chunkUv,
-                        input.positionWS, geometricNormalWS, surfaceAlbedo);
+                        input.positionWS, geometricNormalWS, surfaceAlbedo,
+                        max(terrainOverrides.slope, terrainOverrides.snow));
                 #endif
 
                 if (_OceanDebugMode == DEBUG_TERRAIN_SELECTED_ALBEDO)
@@ -1208,6 +1216,13 @@ Shader "Planet/VertexColor"
                 }
 
                 float3 planetNormal = PlanetSafeNormalize(input.positionWS - _PlanetCenter, normalize(input.normalWS));
+                float2 surfaceWeather = SampleSurfaceWeather(planetNormal);
+                float snowUp = saturate(dot(normalize(geometricNormalWS), planetNormal));
+                float snowCover = surfaceWeather.y * snowUp
+                    * SnowSlopeRetention(acos(snowUp) * 57.2957795);
+                surfaceAlbedo *= lerp(1.0, 0.65, surfaceWeather.x);
+                surfaceAlbedo = lerp(surfaceAlbedo, float3(0.88,0.92,0.96), snowCover);
+                surfaceArm.g = lerp(surfaceArm.g, 0.18, surfaceWeather.x * (1 - snowCover));
                 float3 sunDir = PlanetSunDirection(_SunParams, planetNormal);
                 float localSun = dot(planetNormal, sunDir);
                 float daylight = PlanetDaylightFromLocalSun(localSun);
@@ -1246,10 +1261,7 @@ Shader "Planet/VertexColor"
                 // smoothness². Strength fades with cloud shadow + daylight + smoothness so wet
                 // / glossy surfaces shine and matte / cloudy areas don't.
                 float3 viewDirWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
-                float3 halfDir = normalize(sunDir + viewDirWS);
-                float NoH = saturate(dot(surfaceNormalWS, halfDir));
-                float specExp = lerp(2.0, 256.0, smoothness * smoothness);
-                float specMagnitude = pow(NoH, specExp) * smoothness;
+                float specMagnitude = PlanetSunSpecular(surfaceNormalWS, sunDir, viewDirWS, smoothness);
                 float3 specF0 = lerp(float3(0.04, 0.04, 0.04), surfaceAlbedo, metallic);
                 float3 specular = specF0 * specMagnitude * daylight * cloudShadow * mainShadow;
                 dayColor += specular;

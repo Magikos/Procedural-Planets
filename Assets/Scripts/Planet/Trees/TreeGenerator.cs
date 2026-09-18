@@ -1,19 +1,20 @@
 using UnityEngine;
 
-// Top-level tree generator (plan 006): one seeded TreeDef -> a GeneratedTree bundle (bark + foliage meshes,
-// cut-set, anchors, gameplay metadata). Hard-wired stage order (structure -> mesh -> leaves -> cut-set), no
-// node graph. Cut-set carving + LODs are filled by later stages; T2 produces the standing bark + foliage.
+// Builds standing meshes and harvest parts from one deterministic skeleton.
 public static class TreeGenerator
 {
-    public static GeneratedTree Generate(TreeDef def, int seed)
+    public static GeneratedTree Generate(TreeDef def, int seed, bool harvestParts = true)
     {
-        var tree = new GeneratedTree();
+        if (def == null) throw new System.ArgumentNullException(nameof(def));
+        if (!float.IsFinite(def.MaxHeight) || def.MaxHeight <= 0f || !float.IsFinite(def.Age))
+            throw new System.ArgumentException("Tree height must be positive and age must be finite.", nameof(def));
+        var tree = new GeneratedTree { SpeciesName = def.Name };
         TreeSkeleton sk = TreeStructureGenerator.Generate(def, seed);
 
         // Keep the standing silhouette until the scatter impostor takes over. Reducing bark sides changes
         // trunk shading; rebuilding conifer tiers moves the foliage instead of simplifying the same surface.
         tree.BarkLods = new[] { TreeTubeMesher.Build(sk, 0) };
-        tree.FoliageLods = def.FoliageStyle == FoliageStyle.ConiferCone
+        tree.FoliageLods = !def.Dead && def.FoliageStyle == FoliageStyle.ConiferCone
             ? new[] { TreeLeafMesher.BuildConiferCone(sk, seed, 1f, def.ConeTiers, 11,
                 def.ConeBaseFrac, def.ConeRadiusFrac, def.ConeDroop) }
             : new[] { TreeLeafMesher.Build(sk, 1f, 1) };
@@ -34,14 +35,10 @@ public static class TreeGenerator
         tree.LeafAnchors = new Vector3[n];
         for (int i = 0; i < n; i++) tree.LeafAnchors[i] = sk.Sprouts[i].Position;
 
-        // Rough gameplay metadata (tune later): a chop fells the tree low on the trunk; HP + wood scale with
-        // trunk size (a sapling is thin -> ~1 HP, little wood; an old tree is thick -> more hits, more wood).
-        tree.ChopFraction = 0.14f;
-        tree.ChopHp = Mathf.Max(1, Mathf.RoundToInt(sk.TrunkBaseGirth * 12f));
-        tree.WoodYield = Mathf.Max(1, Mathf.RoundToInt(sk.Height * sk.TrunkBaseGirth * 4f));
-
-        // Cut-set (stump + log) — carved from the trunk skeleton.
-        TreeCutSet.Carve(sk, tree.ChopFraction, out tree.Stump, out tree.Log);
+        if (harvestParts) TreeHarvestGeometry.Build(sk, tree);
+        if (harvestParts && !def.Dead && def.FoliageStyle == FoliageStyle.ConiferCone)
+            TreeHarvestGeometry.SplitConiferFoliage(tree);
+        if (harvestParts) TreeHarvestGeometry.BuildSupport(tree);
 
         return tree;
     }

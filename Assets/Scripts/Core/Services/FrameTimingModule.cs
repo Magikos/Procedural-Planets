@@ -12,6 +12,15 @@ public enum FrameTimingSection
     Clouds = 1,
     NearGrass = 2,
     ChunkGrass = 3,
+    CreatureSimulation = 4,
+    CreaturePresentation = 5,
+    ScatterPlanning = 6,
+    ScatterCommit = 7,
+    ScatterDraw = 8,
+    FishSimulation = 9,
+    FishPresentation = 10,
+    RiverPresentation = 11,
+    AmbientWildlife = 12,
 }
 
 public static class FrameTimingIds
@@ -46,9 +55,8 @@ public readonly struct FrameTimingStats
 // All callers are main-thread per-frame Update code, so Time.frameCount access is safe.
 public static class FrameTimingCounters
 {
-    const int SectionCount = 4;
+    static readonly int SectionCount = Enum.GetValues(typeof(FrameTimingSection)).Length;
     const int RollingWindowSize = 120;
-    const double MaxValidWholeFrameMs = 1000.0;
 
     static readonly long[] _currentTicks = new long[SectionCount];
     static readonly long[] _lastTicks = new long[SectionCount];
@@ -213,7 +221,6 @@ public static class FrameTimingCounters
     static double SanitizeWholeFrameMs(double value)
     {
         return value > 0.0
-            && value <= MaxValidWholeFrameMs
             && !double.IsNaN(value)
             && !double.IsInfinity(value)
                 ? value
@@ -266,10 +273,7 @@ public sealed class FrameTimingModule : IDebugModule, IDebugCaptureMetadataProvi
 
     string _cachedWholeFrame = "Frame: (gathering...)";
     string _cachedWholeWindow = "Rolling window: (gathering...)";
-    string _cachedSurfaceVisibility;
-    string _cachedClouds;
-    string _cachedNearGrass;
-    string _cachedChunkGrass;
+    readonly string[] _cachedSections = new string[Enum.GetValues(typeof(FrameTimingSection)).Length];
     string _cachedUninstrumentedCpu;
     float _nextRefreshTime;
 
@@ -286,10 +290,7 @@ public sealed class FrameTimingModule : IDebugModule, IDebugCaptureMetadataProvi
         sb.AppendLine("--- Frame Timing ---");
         sb.AppendLine(_cachedWholeFrame);
         sb.AppendLine(_cachedWholeWindow);
-        sb.AppendLine(_cachedSurfaceVisibility);
-        sb.AppendLine(_cachedClouds);
-        sb.AppendLine(_cachedNearGrass);
-        sb.AppendLine(_cachedChunkGrass);
+        foreach (string section in _cachedSections) sb.AppendLine(section);
         sb.AppendLine(_cachedUninstrumentedCpu);
     }
 
@@ -307,10 +308,7 @@ public sealed class FrameTimingModule : IDebugModule, IDebugCaptureMetadataProvi
         GUILayout.Space(6);
         GUILayout.Label($"Frame Timing ({FrameTimingCounters.WindowCapacity}-frame rolling window)");
         GUILayout.Label(_cachedWholeWindow);
-        GUILayout.Label(_cachedSurfaceVisibility);
-        GUILayout.Label(_cachedClouds);
-        GUILayout.Label(_cachedNearGrass);
-        GUILayout.Label(_cachedChunkGrass);
+        foreach (string section in _cachedSections) GUILayout.Label(section);
         GUILayout.Label(_cachedUninstrumentedCpu);
     }
 
@@ -322,10 +320,11 @@ public sealed class FrameTimingModule : IDebugModule, IDebugCaptureMetadataProvi
             $"Whole frame: CPU={FormatMs(cpu.LastMs)} GPU={FormatMs(gpu.LastMs)}";
         _cachedWholeWindow =
             $"Rolling: CPU {FormatWindow(cpu)}; GPU {FormatWindow(gpu)}";
-        _cachedSurfaceVisibility = $"Surface/terrain CPU: {FormatWindow(FrameTimingCounters.GetSectionStats(FrameTimingSection.SurfaceVisibility))}";
-        _cachedClouds = $"Clouds CPU:         {FormatWindow(FrameTimingCounters.GetSectionStats(FrameTimingSection.Clouds))}";
-        _cachedNearGrass = $"Near grass CPU:     {FormatWindow(FrameTimingCounters.GetSectionStats(FrameTimingSection.NearGrass))}";
-        _cachedChunkGrass = $"Chunk grass CPU:    {FormatWindow(FrameTimingCounters.GetSectionStats(FrameTimingSection.ChunkGrass))}";
+        for (int i = 0; i < _cachedSections.Length; i++)
+        {
+            var section = (FrameTimingSection)i;
+            _cachedSections[i] = $"{section} CPU: {FormatWindow(FrameTimingCounters.GetSectionStats(section))}";
+        }
         _cachedUninstrumentedCpu = $"Uninstrumented CPU: {FormatWindow(FrameTimingCounters.GetUninstrumentedCpuStats())}";
     }
 

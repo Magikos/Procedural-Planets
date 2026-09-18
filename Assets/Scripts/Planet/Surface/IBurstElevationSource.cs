@@ -11,4 +11,5 @@ public interface IBurstElevationSource
     NativeArray<byte> BuildDiagnosticCells(Allocator allocator);
     DiagnosticTerrainSettingsData DiagnosticData { get; }
     float PlanetRadius { get; }
+    RiverFieldData Rivers => default;
 }

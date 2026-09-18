@@ -1,0 +1,4 @@
+interface:
+  display_name: "ProceduralPlanets Creatures and Animation"
+  short_description: "Develop creature behavior and animation with evidence"
+  default_prompt: "Use $pp-creature-and-animation for the requested project task and verify the result."

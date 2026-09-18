@@ -5,6 +5,16 @@ metadata:
   type: project
 ---
 
+## Current-code correction — 2026-09-09
+
+The grid/cell policy described in the September 3 entry is historical.
+`Assets/Scripts/Planet/Scatter/ScatterImpostorFactory.cs` now sets `OctGridN = 8` and `AtlasCellPixels = 64`.
+`Assets/Editor/GeneratedImpostorBakeTool.cs` uses those factory constants.
+`Assets/Editor/ScatterImpostorBakeTool.cs` retains a 4-view grid per axis and the baker default cell size.
+Do not force both routes to the old shared policy. The new `pp-scatter-and-impostors` skill routes current checks.
+This is a source inspection, not a new bake or visual validation. Earlier measurements remain evidence for their recorded revisions.
+
+
 Scatter LOD system on branch `scatter-placement` (2026-07-27, updated 2026-07-28).
 
 **Architecture**

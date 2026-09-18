@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using System;
 
 /// <summary>
 /// Completion provider that returns all registered command aliases. Used by the
@@ -7,6 +9,5 @@ using System.Collections.Generic;
 /// </summary>
 public sealed class CommandNamesProvider : IConsoleCompletionProvider
 {
-    public IEnumerable<string> GetCompletions(string partialValue)
-        => CompletionRanker.Rank(ConsoleRegistry.Commands.Keys, partialValue);
+    public IEnumerable<string> GetCompletions(string partialValue) => CommandCatalog.HelpCompletions(partialValue);
 }

@@ -1,0 +1,156 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd8008cb45ca5034daa0a124445d0868, type: 3}
+  m_Name: Fishing
+  m_EditorClassIdentifier: Magikos.Game::ActorInteractionDefinition
+  Action: Fishing
+  Phases:
+  - Animation:
+      Name: Cast
+      Clip: {fileID: 7400000, guid: 3314a7ccf1f65954b8c18e9123a41265, type: 2}
+      StartNormalized: 0.55
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 2.7
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    RepeatUntilInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.7
+  - Animation:
+      Name: Wait
+      Clip: {fileID: 7400000, guid: 5af4125c1a3715d4a9e256112d13d59b, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.2
+    Seconds: 3.333334
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 1
+    RepeatUntilInput: 1
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.7
+  - Animation:
+      Name: Nibble
+      Clip: {fileID: 7400000, guid: 85709e87783d39048b4789c1152b882f, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 1.3333335
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    RepeatUntilInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.7
+  - Animation:
+      Name: Bite
+      Clip: {fileID: 7400000, guid: c8303c52a67ebde498e96e96c4351d9a, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.2
+    Seconds: 1.3333335
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 1
+    RepeatUntilInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.7
+  - Animation:
+      Name: Pull
+      Clip: {fileID: 7400000, guid: cf68149cfb309014bbd3ae90d0695a12, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.2
+    Seconds: 1
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 1
+    RepeatUntilInput: 1
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.7
+  - Animation:
+      Name: Catch
+      Clip: {fileID: 7400000, guid: 53b6f9b3085260040aac5342c87b8fd3, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 6.333334
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    RepeatUntilInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: Catch
+    MarkerProgress: 0.7
+  - Animation:
+      Name: Recover
+      Clip: {fileID: 7400000, guid: 6c43fc4944378204cb1fc5b9d8351188, type: 2}
+      StartNormalized: 0.72
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.3
+    Seconds: 1.7733335
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    RepeatUntilInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.7

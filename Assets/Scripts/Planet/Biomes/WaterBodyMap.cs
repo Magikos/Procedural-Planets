@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 public enum WaterBodyKind : byte
@@ -107,6 +108,7 @@ public sealed class WaterBodyMap
     int[] _neighbors;
 
     public WaterBodyCatalog Bodies { get; private set; }
+    public WaterSpillSolver.Drainage Drainage { get; private set; }
 
     // Cells the spill solve found underwater. Larger than the wet-cell count whenever basins above sea level
     // would hold water, which is the population W5b turns into raised lakes.
@@ -135,39 +137,57 @@ public sealed class WaterBodyMap
     // 1:1 across a seam, so this is expected to be 0; a non-zero count means a body could split at a seam.
     public int SeamAsymmetryCount { get; private set; }
 
-    public static WaterBodyMap Build(ISurfaceGroundSampler ground, float baseRadiusLocal, float oceanThreshold)
+    public static WaterBodyMap Build(ISurfaceGroundSampler ground, float baseRadiusLocal, float oceanThreshold, CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         if (ground == null || baseRadiusLocal <= 0f) return null;
         var m = new WaterBodyMap();
-        m.BuildInternal(ground, baseRadiusLocal, oceanThreshold);
+        m.BuildInternal(ground, baseRadiusLocal, oceanThreshold, ct);
+        ct.ThrowIfCancellationRequested();
         return m;
     }
 
-    void BuildInternal(ISurfaceGroundSampler ground, float baseRadiusLocal, float oceanThreshold)
+    public static async Awaitable<WaterBodyMap> BuildAsync(
+        ISurfaceGroundSampler ground, float baseRadiusLocal, float oceanThreshold, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Awaitable.BackgroundThreadAsync();
+        try
+        {
+            return Build(ground, baseRadiusLocal, oceanThreshold, ct);
+        }
+        finally
+        {
+            await Awaitable.MainThreadAsync();
+        }
+    }
+
+    void BuildInternal(ISurfaceGroundSampler ground, float baseRadiusLocal, float oceanThreshold, CancellationToken ct)
     {
         var elevation = new float[TotalCells];
         var wet = new bool[TotalCells];
         for (int i = 0; i < TotalCells; i++)
         {
+            if ((i & 255) == 0) ct.ThrowIfCancellationRequested();
             Vector3 dir = CellDirection(i);
             float elev = ground.TrySampleRadius(dir, out float rad) ? rad / baseRadiusLocal - 1f : 1f;
             elevation[i] = elev;
             wet[i] = elev < oceanThreshold;
         }
 
-        _neighbors = BuildNeighborTable();
+        _neighbors = BuildNeighborTable(ct);
 
         // The ocean is whatever the global level already floods in one large connected piece. It is only
         // needed as the drain the spill solve pours toward; the real bodies come out of the solved level.
-        bool[] oceanSeeds = FindOceanSeeds(wet);
-        bool[] submerged = ResolveLevels(oceanSeeds, elevation, oceanThreshold) ?? wet;
+        bool[] oceanSeeds = FindOceanSeeds(wet, ct);
+        bool[] submerged = ResolveLevels(oceanSeeds, elevation, oceanThreshold, ct) ?? wet;
 
-        Bodies = new WaterBodyCatalog(BuildBodiesFromLevel(submerged, oceanSeeds, elevation, oceanThreshold));
-        DilateShores(submerged);
-        SeamAsymmetryCount = CountAsymmetricSeams();
+        Bodies = new WaterBodyCatalog(BuildBodiesFromLevel(submerged, oceanSeeds, elevation, oceanThreshold, ct));
+        DilateShores(submerged, ct);
+        SeamAsymmetryCount = CountAsymmetricSeams(ct);
     }
 
-    bool[] FindOceanSeeds(bool[] wet)
+    bool[] FindOceanSeeds(bool[] wet, CancellationToken ct)
     {
         var seeds = new bool[TotalCells];
         var visited = new bool[TotalCells];
@@ -175,12 +195,14 @@ public sealed class WaterBodyMap
         var component = new List<int>(2048);
         for (int start = 0; start < TotalCells; start++)
         {
+            if ((start & 255) == 0) ct.ThrowIfCancellationRequested();
             if (!wet[start] || visited[start]) continue;
             component.Clear();
             stack.Push(start);
             visited[start] = true;
             while (stack.Count > 0)
             {
+                ct.ThrowIfCancellationRequested();
                 int c = stack.Pop();
                 component.Add(c);
                 for (int n = 0; n < 4; n++)
@@ -198,7 +220,7 @@ public sealed class WaterBodyMap
     // Bodies come from the solved level, not the global wet predicate, so a basin perched above sea level is
     // an ordinary body with an id, a catalog entry and a Lake/LakeShore mask - which is what makes the biome
     // bake put reeds and lilies on its shore instead of the forest that was there when it was dry ground.
-    List<WaterBody> BuildBodiesFromLevel(bool[] submerged, bool[] oceanSeeds, float[] elevation, float oceanThreshold)
+    List<WaterBody> BuildBodiesFromLevel(bool[] submerged, bool[] oceanSeeds, float[] elevation, float oceanThreshold, CancellationToken ct)
     {
         var bodies = new List<WaterBody>();
         var visited = new bool[TotalCells];
@@ -208,6 +230,7 @@ public sealed class WaterBodyMap
 
         for (int start = 0; start < TotalCells; start++)
         {
+            if ((start & 255) == 0) ct.ThrowIfCancellationRequested();
             if (!submerged[start] || visited[start]) continue;
             component.Clear();
             stack.Push(start);
@@ -218,6 +241,7 @@ public sealed class WaterBodyMap
             bool touchesOcean = false;
             while (stack.Count > 0)
             {
+                ct.ThrowIfCancellationRequested();
                 int c = stack.Pop();
                 component.Add(c);
                 dirSum += CellDirection(c);
@@ -254,33 +278,35 @@ public sealed class WaterBodyMap
     // Runs the spill solve and turns it into the level field plus the submerged set the bodies are built
     // from. Returns null when there is no ocean to drain toward, in which case every basin would fill to its
     // rim and the answer would be meaningless, so the caller falls back to the global wet predicate.
-    bool[] ResolveLevels(bool[] oceanSeeds, float[] elevation, float oceanThreshold)
+    bool[] ResolveLevels(bool[] oceanSeeds, float[] elevation, float oceanThreshold, CancellationToken ct)
     {
         bool anySeed = false;
         foreach (bool s in oceanSeeds) if (s) { anySeed = true; break; }
         if (!anySeed) return null;
 
-        float[] filled = WaterSpillSolver.Solve(elevation, _neighbors, oceanSeeds, oceanThreshold);
-        SubmergedBasinSizes = MeasureSubmergedBasins(filled, elevation);
-        DrainBasinsBelowMinimumArea(filled, elevation);
+        Drainage = WaterSpillSolver.SolveDrainage(elevation, _neighbors, oceanSeeds, oceanThreshold, ct);
+        float[] filled = (float[])Drainage.Filled.Clone();
+        SubmergedBasinSizes = MeasureSubmergedBasins(filled, elevation, ct);
+        DrainBasinsBelowMinimumArea(filled, elevation, ct);
 
         var submerged = new bool[TotalCells];
         SubmergedCellCount = 0;
         for (int i = 0; i < TotalCells; i++)
         {
+            if ((i & 255) == 0) ct.ThrowIfCancellationRequested();
             submerged[i] = filled[i] > elevation[i] + SpillDepthEpsilon;
             if (submerged[i]) SubmergedCellCount++;
         }
         _solvedWater = submerged;
-        _level = BuildLevelField(filled, elevation, LevelRings, guardAgainstFlooding: true);
-        _shoreLevel = BuildLevelField(filled, elevation, ShoreRings, guardAgainstFlooding: false);
+        _level = BuildLevelField(filled, elevation, LevelRings, guardAgainstFlooding: true, ct);
+        _shoreLevel = BuildLevelField(filled, elevation, ShoreRings, guardAgainstFlooding: false, ct);
         return submerged;
     }
 
     // Grow the lake surface onto surrounding dry land, exactly ShoreRings steps. Each ring is computed against
     // the PRE-ring mask into a to-mark list, then applied - writing into _mask while reading it would let the
     // shore flood across the whole scan in a single pass.
-    void DilateShores(bool[] wet)
+    void DilateShores(bool[] wet, CancellationToken ct)
     {
         var toMark = new List<int>(1024);
         for (int ring = 0; ring < ShoreRings; ring++)
@@ -289,6 +315,7 @@ public sealed class WaterBodyMap
             toMark.Clear();
             for (int i = 0; i < TotalCells; i++)
             {
+                if ((i & 255) == 0) ct.ThrowIfCancellationRequested();
                 if (_mask[i] != None || wet[i]) continue; // only unclaimed dry land
                 for (int n = 0; n < 4; n++)
                 {
@@ -306,19 +333,21 @@ public sealed class WaterBodyMap
     // Connected-component sizes of everything the spill solve put underwater, largest first. W5b builds its
     // bodies from this set instead of the global wet predicate, so this is what says whether a minimum-area
     // threshold is needed: procedural noise makes single-cell dimples that would otherwise all become ponds.
-    int[] MeasureSubmergedBasins(float[] filled, float[] elevation)
+    int[] MeasureSubmergedBasins(float[] filled, float[] elevation, CancellationToken ct)
     {
         var sizes = new List<int>();
         var visited = new bool[TotalCells];
         var stack = new Stack<int>(256);
         for (int start = 0; start < TotalCells; start++)
         {
+            if ((start & 255) == 0) ct.ThrowIfCancellationRequested();
             if (visited[start] || filled[start] <= elevation[start] + SpillDepthEpsilon) continue;
             visited[start] = true;
             stack.Push(start);
             int size = 0;
             while (stack.Count > 0)
             {
+                ct.ThrowIfCancellationRequested();
                 int c = stack.Pop();
                 size++;
                 for (int n = 0; n < 4; n++)
@@ -344,7 +373,7 @@ public sealed class WaterBodyMap
     // So a level only exists where water actually stands. Land keeps NoWater, and the water level is dilated
     // one ring onto the surrounding land so the shoreline can still be found between the last wet cell and
     // the first dry one - without that ring the coastline would quantise to the coarse grid.
-    float[] BuildLevelField(float[] filled, float[] elevation, int rings, bool guardAgainstFlooding)
+    float[] BuildLevelField(float[] filled, float[] elevation, int rings, bool guardAgainstFlooding, CancellationToken ct)
     {
         var level = new float[TotalCells];
         for (int i = 0; i < TotalCells; i++)
@@ -382,6 +411,7 @@ public sealed class WaterBodyMap
             float[] source = (float[])dilated.Clone();
             for (int i = 0; i < TotalCells; i++)
             {
+                if ((i & 255) == 0) ct.ThrowIfCancellationRequested();
                 if (source[i] != NoWater) continue;
                 float highest = NoWater;
                 for (int n = 0; n < 4; n++)
@@ -410,19 +440,21 @@ public sealed class WaterBodyMap
     // A basin smaller than MinBasinCells is terrain noise rather than a lake, so drop its level back to the
     // ground and it simply never becomes water. Measured on the reference world, 94 of 322 basins are a
     // single cell; the cut at 16 keeps about 92 lakes and at 8 about 139.
-    void DrainBasinsBelowMinimumArea(float[] filled, float[] elevation)
+    void DrainBasinsBelowMinimumArea(float[] filled, float[] elevation, CancellationToken ct)
     {
         var visited = new bool[TotalCells];
         var stack = new Stack<int>(256);
         var component = new List<int>(256);
         for (int start = 0; start < TotalCells; start++)
         {
+            if ((start & 255) == 0) ct.ThrowIfCancellationRequested();
             if (visited[start] || filled[start] <= elevation[start] + SpillDepthEpsilon) continue;
             component.Clear();
             visited[start] = true;
             stack.Push(start);
             while (stack.Count > 0)
             {
+                ct.ThrowIfCancellationRequested();
                 int c = stack.Pop();
                 component.Add(c);
                 for (int n = 0; n < 4; n++)
@@ -440,12 +472,15 @@ public sealed class WaterBodyMap
         }
     }
 
-    int[] BuildNeighborTable()
+    int[] BuildNeighborTable(CancellationToken ct)
     {
         var table = new int[TotalCells * 4];
         for (int i = 0; i < TotalCells; i++)
+        {
+            if ((i & 255) == 0) ct.ThrowIfCancellationRequested();
             for (int n = 0; n < 4; n++)
                 table[i * 4 + n] = Neighbor(i, n);
+        }
         return table;
     }
 
@@ -465,11 +500,12 @@ public sealed class WaterBodyMap
         return CellIndex(dir);
     }
 
-    int CountAsymmetricSeams()
+    int CountAsymmetricSeams(CancellationToken ct)
     {
         int bad = 0;
         for (int i = 0; i < TotalCells; i++)
         {
+            if ((i & 255) == 0) ct.ThrowIfCancellationRequested();
             int local = i % FaceCells;
             int x = local % Res, y = local / Res;
             if (x > 0 && x < Res - 1 && y > 0 && y < Res - 1) continue;
@@ -484,7 +520,7 @@ public sealed class WaterBodyMap
         return bad;
     }
 
-    static Vector3 CellDirection(int index)
+    public static Vector3 CellDirection(int index)
     {
         int face = index / FaceCells;
         int local = index - face * FaceCells;
@@ -503,6 +539,14 @@ public sealed class WaterBodyMap
     // Lake state at a local unit direction. Read-only after Build, safe from parallel bake threads.
     public byte Sample(Vector3 direction) => _mask[CellIndex(direction)];
 
+    public void SampleStateAndLevel(Vector3 direction, float fallbackLevel, out byte state, out float level)
+    {
+        int index = CellIndex(direction);
+        state = _mask[index];
+        level = _level == null ? fallbackLevel : _level[index];
+        if (level == NoWater) level = fallbackLevel;
+    }
+
     // Body id at a local unit direction; 0 when the cell is not below water.
     public ushort SampleBodyId(Vector3 direction) => _bodyId[CellIndex(direction)];
 
@@ -510,6 +554,7 @@ public sealed class WaterBodyMap
     // upload it to a Burst job. Indexed with WaterLevelGrid.Index(dir, Resolution); WaterLevelGrid.NoWater
     // marks cells where no water stands. Null when the solve did not run.
     public float[] LevelGrid => _level;
+    internal ushort[] BodyIdGrid => _bodyId;
 
     // The same solve carried further onto dry land, for asking "how high above the water is this ground"
     // rather than "is this ground wet". Grass fades out approaching water over a few metres of altitude, and

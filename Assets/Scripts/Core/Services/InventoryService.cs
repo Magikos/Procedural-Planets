@@ -23,4 +23,32 @@ public sealed class InventoryService
 
     public int Count(string itemId) => _items.TryGetValue(itemId, out int c) ? c : 0;
     public int DistinctItems => _items.Count;
+
+    // Validate the complete transaction before changing any count. Repeated item entries are summed.
+    public bool TryExchange(ItemQuantity[] costs, ItemQuantity[] results, bool apply = true)
+    {
+        if (costs == null || results == null || costs.Length == 0 || results.Length == 0) return false;
+        var next = new Dictionary<string, long>();
+        foreach (var item in costs)
+        {
+            if (string.IsNullOrWhiteSpace(item.Item) || item.Count <= 0) return false;
+            if (!next.TryGetValue(item.Item, out long value)) value = Count(item.Item);
+            value -= item.Count;
+            if (value < 0) return false;
+            next[item.Item] = value;
+        }
+        foreach (var item in results)
+        {
+            if (string.IsNullOrWhiteSpace(item.Item) || item.Count <= 0) return false;
+            if (!next.TryGetValue(item.Item, out long value)) value = Count(item.Item);
+            value += item.Count;
+            if (value > int.MaxValue) return false;
+            next[item.Item] = value;
+        }
+        if (apply)
+            foreach (var item in next)
+                if (item.Value == 0) _items.Remove(item.Key);
+                else _items[item.Key] = (int)item.Value;
+        return true;
+    }
 }

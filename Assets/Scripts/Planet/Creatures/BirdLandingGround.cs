@@ -44,6 +44,20 @@ public sealed class BirdLandingGround
         return true;
     }
 
+    public bool TryFindNear(Vector3 candidate, float bodyHeight, float radius, out Vector3 position)
+    {
+        position = default;
+        if (!float.IsFinite(radius) || radius < 0f) return false;
+        if (TryFind(candidate, bodyHeight, out position)) return true;
+        if (radius == 0f || !CharacterMath.IsFinite(candidate)) return false;
+        Vector3 up = (candidate - _center).normalized;
+        if (up.sqrMagnitude < .5f) return false;
+        Vector3 tangent = CharacterMath.ArbitraryTangent(up);
+        for (int i = 0; i < 8; i++)
+            if (TryFind(candidate + Quaternion.AngleAxis(i * 45f, up) * tangent * radius, bodyHeight, out position)) return true;
+        return false;
+    }
+
     bool TryDryPoint(Vector3 up, out Vector3 point)
     {
         point = default;

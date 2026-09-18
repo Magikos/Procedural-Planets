@@ -1,0 +1,11 @@
+@name Underwater Reference Capture
+@timeout 180
+@sidecar water.list Underwater
+@sidecar water.at
+@sidecar quality.get
+@sidecar planet.seed
+# The tester selects and saves the viewpoint before running this queued capture.
+debug.mode Off
+debug.capture-set "Current Mode Only"
+@wait frames 5
+debug.capture

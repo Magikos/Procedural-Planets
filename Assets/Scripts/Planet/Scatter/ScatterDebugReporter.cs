@@ -23,7 +23,7 @@ public sealed class ScatterDebugReporter : IScatterDebugReport
     void AppendUnsafe(StringBuilder sb)
     {
         ScatterLibraryDto lib = SettingsProvider.GetSettings<ScatterLibraryDto>();
-        // Injection state matters first: a prop that looks wrong may simply be the untouched Synty asset
+        // Injection state matters first: a prop that looks wrong may simply be the untouched source asset
         // because its injector is switched off, which is invisible in a screenshot.
         sb.AppendLine($"Injection: trees={OnOff(TreeInjection.Enabled)}(x{TreeInjection.Variants} variants) " +
                       $"plants={OnOff(PlantInjection.Enabled)}(per-kind variants) " +

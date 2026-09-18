@@ -3,7 +3,7 @@ using UnityEngine;
 
 // The generated tree skeleton (plan 006) — the abstract structure the mesher and cut-set carver consume. Built
 // once by TreeStructureGenerator; meshing is a separate stage. Trunk-vs-leaf is explicit here (Branch.IsTrunk +
-// the leaf Sprout list), which is the clean separation the Synty black-box meshes denied us.
+// the leaf Sprout list), which is the clean separation the source black-box meshes denied us.
 public sealed class TreeSkeleton
 {
     public readonly List<TreeBranch> Branches = new(); // flat list, all tiers
@@ -59,6 +59,7 @@ public sealed class TreeBranch
 
 public struct TreeSprout
 {
+    public TreeBranch Parent;
     public Vector3 Position; // surface anchor (particle emit point + cut-set data)
     public Vector3 Direction;
     public Vector3 Normal;

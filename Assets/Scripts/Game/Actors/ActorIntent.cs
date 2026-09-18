@@ -39,4 +39,8 @@ public enum ActorButtons : uint
 
     // planned: 16 and 32 are reserved for PrimaryCast/SecondaryCast, docs/design/2026-08-20-magikos-game-architecture.md
     LookHold = 64,
+    SwimUp = 128,
+    ToggleCrawl = 256,
+    Dodge = 512,
+    Cancel = 1024,
 }

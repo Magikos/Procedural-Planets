@@ -1,0 +1,4 @@
+interface:
+  display_name: "ProceduralPlanets Asset Integration"
+  short_description: "Adopt selected assets with verified Unity references"
+  default_prompt: "Use $pp-asset-integration to adopt the selected assets into ProceduralPlanets and verify the result."

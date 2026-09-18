@@ -20,7 +20,7 @@ using UnityEngine;
 public sealed class AssetBenchPromoter : EditorWindow
 {
     const string StagingRoot = "Assets/_Bench/";
-    const string DefaultDestinationRoot = "Assets/AssetPacks/";
+    const string DefaultDestinationRoot = "Assets/Art/";
 
     sealed class Move
     {

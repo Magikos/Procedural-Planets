@@ -13,6 +13,8 @@ public enum DeltaKind : byte
     EntityState = 7,      // imbue records, container contents, ritual progress
     PlayerState = 8,      // position, mana, bag - one per player
     TerrainDeform = 9,    // planned: digging and caves, docs/design/2026-08-20-magikos-game-architecture.md section 6.5
+    FoliageFood = 10,     // remaining edible stock, keyed by ScatterId; separate from harvest state
+    ScatterDamage = 11,  // remaining harvest health; independent of the removal override
 }
 
 /// <summary>

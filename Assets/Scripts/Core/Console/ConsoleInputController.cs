@@ -211,28 +211,36 @@ public sealed class ConsoleInputController
         int leftTicks = _leftRepeat.Update(
             input.ConsoleCursorLeft.WasPerformedThisFrame(),
             input.ConsoleCursorLeft.IsPressed());
-        for (int i = 0; i < leftTicks; i++) { _inputBuffer.MoveLeft(); _suggestionsSuppressed = true; }
+        for (int i = 0; i < leftTicks; i++) { _inputBuffer.MoveLeft(); ResetSuggestions(); }
 
         int rightTicks = _rightRepeat.Update(
             input.ConsoleCursorRight.WasPerformedThisFrame(),
             input.ConsoleCursorRight.IsPressed());
-        for (int i = 0; i < rightTicks; i++) { _inputBuffer.MoveRight(); _suggestionsSuppressed = true; }
+        for (int i = 0; i < rightTicks; i++) { _inputBuffer.MoveRight(); ResetSuggestions(); }
 
         if (input.ConsoleCursorHome.WasPerformedThisFrame())
         {
             _inputBuffer.MoveHome();
-            _suggestionsSuppressed = true;
+            ResetSuggestions();
         }
         if (input.ConsoleCursorEnd.WasPerformedThisFrame())
         {
             _inputBuffer.MoveEnd();
-            _suggestionsSuppressed = true;
+            ResetSuggestions();
         }
 
         if (input.ConsoleTab.WasPerformedThisFrame())
         {
             bool shift = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
-            if (shift) HandleShiftTab(); else AcceptSuggestion();
+            if (_inputBuffer.Length == 0 && _suggestions.Count == 0)
+            {
+                _suggestions = _intellisense.Update("");
+                _activeSuggestionIdx = 0;
+                _popupScrollOffset = 0;
+                _suggestionsSuppressed = false;
+            }
+            else if (shift) HandleShiftTab();
+            else AcceptSuggestion();
         }
 
         // Ctrl+V — paste clipboard into input buffer at cursor. Strips control chars so
@@ -277,9 +285,9 @@ public sealed class ConsoleInputController
         if (input.ConsolePageDown.WasPerformedThisFrame())
             _scrollOffset = Mathf.Max(0, _scrollOffset - 5);
 
-        if (!_suggestionsFrozen && !_suggestionsSuppressed)
+        if (_inputBuffer.Length > 0 && !_suggestionsFrozen && !_suggestionsSuppressed)
         {
-            _suggestions = _intellisense.Update(_inputBuffer.Text);
+            _suggestions = _intellisense.Update(_inputBuffer.Text, _inputBuffer.CursorPos);
             UpdatePopupScroll();
         }
     }
@@ -318,6 +326,7 @@ public sealed class ConsoleInputController
     /// </summary>
     void HandleSubmitKey()
     {
+        if (string.IsNullOrWhiteSpace(_inputBuffer.Text)) return;
         if (_suggestions.Count == 0)
         {
             SubmitInputLine();
@@ -347,14 +356,19 @@ public sealed class ConsoleInputController
     void AcceptSuggestion()
     {
         if (_suggestions.Count == 0) return;
-        // Auto-append a space so the next keystroke starts an argument naturally.
-        // Trailing whitespace is harmless on submit (string.IsNullOrWhiteSpace check) and
-        // the tokenizer ignores it, so this is safe even for zero-arg commands.
-        _inputBuffer.Set(_suggestions[_activeSuggestionIdx].CompletionText + " ");
+        var suggestion = _suggestions[Mathf.Clamp(_activeSuggestionIdx, 0, _suggestions.Count - 1)];
+        bool atEnd = !suggestion.IsGroup && suggestion.CompletionCursor == suggestion.CompletionText.Length;
+        _inputBuffer.Set(suggestion.CompletionText + (atEnd ? " " : ""));
+        _inputBuffer.MoveTo(suggestion.CompletionCursor + (atEnd ? 1 : 0));
         _suggestionsFrozen = false;
         _activeSuggestionIdx = 0;
-        _suggestionsSuppressed = true;
-        _suggestions = System.Array.Empty<Suggestion>();
+        // Move directly into the next parameter's choices after accepting a command or value.
+        // A completed final string still resolves to itself, so do not reopen that picker.
+        _suggestions = _intellisense.Update(_inputBuffer.Text, _inputBuffer.CursorPos);
+        _suggestionsSuppressed = suggestion.Parameter != null && _suggestions.Count > 0
+            && ReferenceEquals(_suggestions[0].Parameter, suggestion.Parameter);
+        if (_suggestionsSuppressed) _suggestions = System.Array.Empty<Suggestion>();
+        UpdatePopupScroll();
         _history.ResetCursor();
         _draftBeforeHistory = null;
     }
@@ -369,6 +383,7 @@ public sealed class ConsoleInputController
 
     void ResetSuggestions()
     {
+        if (_inputBuffer.Length == 0) _suggestions = System.Array.Empty<Suggestion>();
         _suggestionsFrozen = false;
         _activeSuggestionIdx = 0;
         _suggestionsSuppressed = false;
@@ -414,10 +429,16 @@ public sealed class ConsoleInputController
         string clipboard = GUIUtility.systemCopyBuffer;
         if (string.IsNullOrEmpty(clipboard)) return;
 
+        if (clipboard.IndexOfAny(new[] { '\r', '\n' }) >= 0)
+        {
+            _scrollback.Append("Multiline paste is not supported. Use script.run for command batches.", ConsoleMessageType.Warning);
+            return;
+        }
         var sb = new System.Text.StringBuilder(clipboard.Length);
         foreach (char c in clipboard)
         {
-            if (c >= 0x20 && c != 0x7F) sb.Append(c);
+            if (c == '\t') sb.Append(' ');
+            else if (c >= 0x20 && c != 0x7F) sb.Append(c);
         }
         if (sb.Length == 0) return;
 
@@ -482,7 +503,7 @@ public sealed class ConsoleInputController
     /// </summary>
     bool ShouldShowGhost(string typed)
     {
-        if (_suggestions.Count != 1) return false;
+        if (_inputBuffer.CursorPos != _inputBuffer.Length || _suggestions.Count != 1) return false;
         if (_suggestionsFrozen || _suggestionsSuppressed) return false;
         string completion = _suggestions[0].CompletionText;
         return completion.Length > typed.Length

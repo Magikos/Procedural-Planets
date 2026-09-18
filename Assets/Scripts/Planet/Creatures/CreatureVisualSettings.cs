@@ -14,6 +14,8 @@ public sealed class CreatureVisualSettings : ScriptableObject
     public AnimationClip Rest;
     public AnimationClip Sleep;
     public AnimationClip Drink;
+    public AnimationClip Stalk;
+    public AnimationClip Swim;
     [Range(0f, 1f)] public float AttackHitNormalized = 0.12f;
     [Min(0.1f)] public float ModelHeightMeters = 1.84f;
     [Min(0.1f)] public float WalkMetersPerSecond = 1f;
@@ -22,7 +24,7 @@ public sealed class CreatureVisualSettings : ScriptableObject
     public CreatureVisualDto Snapshot() => new(MalePrefab, FemalePrefab, Idle, Walk, Run,
         Mathf.Max(0.1f, ModelHeightMeters), Mathf.Max(0.1f, WalkMetersPerSecond),
         Mathf.Max(WalkMetersPerSecond + 0.1f, RunMetersPerSecond))
-        { Eat = Eat, Attack = Attack, Death = Death, Rest = Rest, Sleep = Sleep, Drink = Drink,
+        { Eat = Eat, Attack = Attack, Death = Death, Rest = Rest, Sleep = Sleep, Drink = Drink, Stalk = Stalk, Swim = Swim,
             AttackHitNormalized = Mathf.Clamp01(AttackHitNormalized) };
 }
 
@@ -36,5 +38,7 @@ public sealed record CreatureVisualDto(GameObject MalePrefab, GameObject FemaleP
     public AnimationClip Rest { get; init; }
     public AnimationClip Sleep { get; init; }
     public AnimationClip Drink { get; init; }
+    public AnimationClip Stalk { get; init; }
+    public AnimationClip Swim { get; init; }
     public float AttackHitNormalized { get; init; }
 }

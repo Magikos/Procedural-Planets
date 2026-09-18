@@ -74,7 +74,7 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
         if (_cachedController == null)
             ServiceLocator.TryGet(out _cachedController);
         if (ServiceLocator.IsAlive(_cachedController))
-            return true;
+            return _cachedController.IsReady;
 
         _cachedController = null;
         return false;

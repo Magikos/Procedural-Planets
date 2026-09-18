@@ -31,7 +31,7 @@ public static class ConsoleRegistry
 
     public static int Scan()
     {
-        _commands.Clear();
+        var commands = new Dictionary<string, CommandData>(StringComparer.OrdinalIgnoreCase);
         int added = 0;
 
 #if UNITY_EDITOR
@@ -42,7 +42,7 @@ public static class ConsoleRegistry
             if (type == null || !scannedTypes.Add(type))
                 continue;
 
-            added += ScanType(type);
+            added += ScanType(type, commands);
         }
 #else
 #pragma warning disable UAC0005
@@ -73,15 +73,17 @@ public static class ConsoleRegistry
             foreach (Type type in types)
             {
                 if (type == null) continue;
-                added += ScanType(type);
+                added += ScanType(type, commands);
             }
         }
 #endif
 
+        _commands.Clear();
+        foreach (var entry in commands) _commands.Add(entry.Key, entry.Value);
         return added;
     }
 
-    static int ScanType(Type type)
+    static int ScanType(Type type, Dictionary<string, CommandData> commands)
     {
         string prefix = type.GetCustomAttribute<CommandPrefixAttribute>()?.Prefix;
 
@@ -103,16 +105,19 @@ public static class ConsoleRegistry
             {
                 string alias = string.IsNullOrEmpty(prefix) ? attr.Alias : $"{prefix}.{attr.Alias}";
                 CommandData data = Build(alias, attr, method, type);
-                if (_commands.ContainsKey(alias))
+                CommandContract.Validate(data);
+                if (commands.ContainsKey(alias))
                 {
-                    LoggerProvider.Get().Log(
-                        LogLevel.Warning,
-                        "ConsoleRegistry",
-                        $"Duplicate command alias '{alias}'; keeping first registration and ignoring {type.FullName}.{method.Name}.");
-                    continue;
+                    throw new InvalidOperationException($"Duplicate console command or alias '{alias}' on {type.FullName}.{method.Name}.");
                 }
-                _commands[alias] = data;
+                commands[alias] = data;
                 added++;
+                foreach (string alternate in data.Aliases)
+                {
+                    if (string.IsNullOrWhiteSpace(alternate) || commands.ContainsKey(alternate))
+                        throw new InvalidOperationException($"Invalid or duplicate console alias '{alternate}'.");
+                    commands.Add(alternate, data);
+                }
             }
         }
 
@@ -151,7 +156,13 @@ public static class ConsoleRegistry
         return new CommandData
         {
             Alias = alias,
+            Group = declaringType.GetCustomAttribute<CommandPrefixAttribute>()?.Group,
             Description = attr.Description,
+            ReleasePolicy = attr.ReleasePolicy != ConsoleReleasePolicy.Unreviewed
+                ? attr.ReleasePolicy
+                : declaringType.GetCustomAttribute<CommandPrefixAttribute>()?.ReleasePolicy ?? ConsoleReleasePolicy.Unreviewed,
+            Aliases = attr.Aliases,
+            Example = attr.Example,
             TargetType = attr.TargetType,
             DeclaringType = declaringType,
             Method = method,

@@ -98,7 +98,7 @@ public sealed class ConsoleScriptNamesProvider : IConsoleCompletionProvider
     }
 }
 
-[CommandPrefix("script")]
+[CommandPrefix("script", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly, Group = "Console and scripts")]
 public static class ConsoleScriptCommands
 {
     [ConsoleCommand("list", "List available console command scripts.")]
@@ -115,13 +115,13 @@ public static class ConsoleScriptCommands
         return sb.ToString().TrimEnd();
     }
 
-    [ConsoleCommand("run", "Run a console command script from Resources/ConsoleScripts.")]
+    [ConsoleCommand("run", "Run a console command script from Resources/ConsoleScripts.", Aliases = new[] { "run-script" })]
     public static async Awaitable<string> Run(
         [CompletionSource(typeof(ConsoleScriptNamesProvider))] string name,
         CancellationToken cancellation = default)
     {
         if (!ConsoleScriptCatalog.TryFind(name, out ConsoleScriptDefinition script))
-            return $"unknown console script: '{name}'. Run script.list.";
+            throw new ArgumentException($"unknown console script: '{name}'. Run script.list.");
 
         ServiceLocator.TryGet<IConsoleService>(out var console);
         return await ConsoleScriptRunner.RunAsync(script, console, cancellation);
@@ -130,7 +130,6 @@ public static class ConsoleScriptCommands
 
 public static class ConsoleScriptAliasCommands
 {
-    [ConsoleCommand("run-script", "Run a console command script from Resources/ConsoleScripts.")]
     public static async Awaitable<string> RunScript(
         [CompletionSource(typeof(ConsoleScriptNamesProvider))] string name,
         CancellationToken cancellation = default)
@@ -176,10 +175,10 @@ public static class ConsoleScriptRunner
         CancellationToken cancellation)
     {
         if (script == null)
-            return "console script is null";
+            throw new ArgumentNullException(nameof(script));
 
         if (!TryParse(script, out List<Step> steps, out string parseError))
-            return parseError;
+            throw new ArgumentException(parseError, nameof(script));
 
         string runId = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
         var defers = new List<string>();
@@ -256,7 +255,7 @@ public static class ConsoleScriptRunner
         if (failed)
         {
             console?.PrintError($"script '{script.Name}' failed: {failure}");
-            return $"script '{script.Name}' failed after {executedCommands} command(s): {failure}";
+            throw new InvalidOperationException($"script '{script.Name}' failed after {executedCommands} command(s): {failure}");
         }
 
         console?.PrintLine($"script '{script.Name}' completed ({executedCommands} command(s))");

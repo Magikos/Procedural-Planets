@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd8008cb45ca5034daa0a124445d0868, type: 3}
+  m_Name: Sit
+  m_EditorClassIdentifier: Magikos.Game::ActorInteractionDefinition
+  Action: Sit
+  Phases:
+  - Animation:
+      Name: Turn toward seat
+      Clip: {fileID: 3094330708855449807, guid: 1824d4618e2464b4192d6586093e312e, type: 3}
+      StartNormalized: 0
+      EndNormalized: 0.05
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 1.2
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    Marker: 
+    MarkerProgress: 0.15
+  - Animation:
+      Name: Sit down
+      Clip: {fileID: 3094330708855449807, guid: 1824d4618e2464b4192d6586093e312e, type: 3}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 0.70000005
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    Marker: Seat
+    MarkerProgress: 0.15
+  - Animation:
+      Name: Seated
+      Clip: {fileID: 3094330708855449807, guid: fb20771c14d3a614d9cb9a8bfd52d6b3, type: 3}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.2
+    Seconds: 2
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 1
+    AllowMovement: 0
+    UseLocomotion: 0
+    Marker: 
+    MarkerProgress: 0.15
+  - Animation:
+      Name: Stand up
+      Clip: {fileID: 3094330708855449807, guid: f3c52eacd2163f3439014aef89728a61, type: 3}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 0.9333334
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    Marker: Stand
+    MarkerProgress: 0.15

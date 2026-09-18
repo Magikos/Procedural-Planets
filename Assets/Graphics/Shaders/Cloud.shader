@@ -8,6 +8,7 @@ HLSLINCLUDE
 #include "Includes/WeatherSampling.hlsl"
 #include "Includes/CloudDensity.hlsl"
 #include "Includes/ClimateSampling.hlsl"
+#include "Includes/WaterCamera.hlsl"
 
 TEXTURE2D(_CameraDepthTexture);
 SAMPLER(sampler_CameraDepthTexture);
@@ -61,7 +62,7 @@ float4 _CloudRainShaftParams; // x=strength (0=off), y=length metres below cloud
 float4 _WeatherLightningColor;
 
 // Animation
-float _CloudWindAngle;
+
 
 // Ray march
 int _CloudViewSteps;
@@ -183,11 +184,7 @@ CloudSample SampleCloud(float3 worldPos)
     // windTangent (the same convention as grass and weather particles) by rotating the sample
     // position back about cross(direction, windDir) by the accumulated wind angle. Sampling the
     // origin makes the detail flow toward +windTangent instead of staying pinned to world space.
-    float3 windAxis = cross(direction, _WindDirection);
-    float windAxisLen = length(windAxis);
-    float3 advectedPos = windAxisLen > 1e-5
-        ? RotateAroundAxis(fromCenter, windAxis / windAxisLen, -_CloudWindAngle) + _CloudPlanetCenter
-        : worldPos;
+    float3 advectedPos = _CloudPlanetCenter + SampleCloudFlow(direction) * radius;
     float3 shapePos = advectedPos * _CloudNoiseScale;
     float shapeFBM = WeightedNoise(SAMPLE_TEXTURE3D_LOD(_CloudShapeNoise, sampler_CloudShapeNoise, shapePos, 0), _CloudShapeWeights);
 
@@ -293,8 +290,9 @@ ENDHLSL
             float4 frag(v2f i) : SV_Target
             {
                 float4 sceneColor = SAMPLE_TEXTURE2D(_Source, sampler_Source, i.uv);
+                float aboveWater = 1.0 - WaterCameraImmersion(_WorldSpaceCameraPos.xyz);
 
-                if (_CloudWeatherResolution <= 0 || _CloudOuterRadius <= _CloudInnerRadius)
+                if (aboveWater <= 0.001 || _CloudWeatherResolution <= 0 || _CloudOuterRadius <= _CloudInnerRadius)
                     return float4(sceneColor.rgb, 0.0);
 
                 float viewLength = length(i.viewVector);
@@ -561,7 +559,7 @@ ENDHLSL
                 // hazed clouds block less). The pass reads this back from alpha, then restores
                 // alpha to 1 so downstream post-processing is unaffected.
                 float cloudOpacity = (1.0 - transmittance) * (1.0 - aerial);
-                return float4(result, cloudOpacity);
+                return float4(lerp(sceneColor.rgb, result, aboveWater), cloudOpacity * aboveWater);
             }
             ENDHLSL
         }

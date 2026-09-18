@@ -50,38 +50,23 @@ public static class ScatterGatherBurst
         if (diag.Enabled != 0)
             return DiagnosticTerrainEvaluator.Evaluate(p, diag, diagCells);
 
-        float elevation = 0f;
-        float firstLayerValue = 0f;
-        if (layers.Length > 0)
-        {
-            NoiseFilterData f0 = layers[0];
-            firstLayerValue = NoiseFilterEvaluator.Evaluate(ref f0, p);
-            if (f0.Enabled != 0) elevation = firstLayerValue;
-        }
-        for (int i = 1; i < layers.Length; i++)
-        {
-            NoiseFilterData fi = layers[i];
-            if (fi.Enabled == 0) continue;
-            float mask = fi.UseFirstLayerAsMask != 0 ? firstLayerValue : 1f;
-            elevation += NoiseFilterEvaluator.Evaluate(ref fi, p) * mask;
-        }
-        return elevation;
+        return NoiseFilterEvaluator.EvaluateLayers(layers, p);
     }
 
     // Local radius at an already-normalized unit direction (mirrors AnalyticGroundSampler.RadiusAt =
     // GetScaledElevation(SampleElevation)).
     static float RadiusAt(Vector3 unitDir, in NativeArray<NoiseFilterData> layers,
-        in DiagnosticTerrainSettingsData diag, in NativeArray<byte> diagCells, float planetRadius)
-        => planetRadius * (1f + SampleElevation(unitDir, layers, diag, diagCells));
+        in DiagnosticTerrainSettingsData diag, in NativeArray<byte> diagCells, float planetRadius, RiverFieldData rivers = default)
+        => planetRadius * (1f + rivers.Carve(unitDir, SampleElevation(unitDir, layers, diag, diagCells)));
 
     // Mirrors AnalyticGroundSampler.TrySampleRadius (normalizes the direction first).
     public static float SampleRadius(Vector3 dir, in NativeArray<NoiseFilterData> layers,
-        in DiagnosticTerrainSettingsData diag, in NativeArray<byte> diagCells, float planetRadius)
-        => RadiusAt(dir.normalized, layers, diag, diagCells, planetRadius);
+        in DiagnosticTerrainSettingsData diag, in NativeArray<byte> diagCells, float planetRadius, RiverFieldData rivers = default)
+        => RadiusAt(dir.normalized, layers, diag, diagCells, planetRadius, rivers);
 
     // Mirrors AnalyticGroundSampler.SampleNormalAt (two tangent probes -> surface triangle).
     public static Vector3 SampleNormalAt(Vector3 dirIn, float localRadius, in NativeArray<NoiseFilterData> layers,
-        in DiagnosticTerrainSettingsData diag, in NativeArray<byte> diagCells, float planetRadius)
+        in DiagnosticTerrainSettingsData diag, in NativeArray<byte> diagCells, float planetRadius, RiverFieldData rivers = default)
     {
         Vector3 dir = dirIn.normalized;
         float arc = NormalProbeMeters / localRadius;
@@ -91,8 +76,8 @@ public static class ScatterGatherBurst
         Vector3 dB = (dir + t2 * arc).normalized;
 
         Vector3 p0 = dir * localRadius;
-        Vector3 pA = dA * RadiusAt(dA, layers, diag, diagCells, planetRadius);
-        Vector3 pB = dB * RadiusAt(dB, layers, diag, diagCells, planetRadius);
+        Vector3 pA = dA * RadiusAt(dA, layers, diag, diagCells, planetRadius, rivers);
+        Vector3 pB = dB * RadiusAt(dB, layers, diag, diagCells, planetRadius, rivers);
         Vector3 n = Vector3.Cross(pA - p0, pB - p0).normalized;
         if (Vector3.Dot(n, dir) < 0f) n = -n;
         return n;

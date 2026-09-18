@@ -3,6 +3,13 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Planet/Settings/Water Settings")]
 public class WaterSettings : ScriptableObject
 {
+    [Header("Rivers (regenerate planet after changes)")]
+    public bool RiversEnabled = true;
+    [Range(.00005f, .01f)] public float RiverCatchmentFraction = .00045f;
+    [Min(1f)] public float RiverHalfWidth = 5f;
+    [Min(.25f)] public float RiverDepth = 2f;
+    [Min(1f)] public float WaterfallMinDrop = 8f;
+
     [Header("Body colour")]
     public Color ShallowBaseColor = new Color(0.20f, 0.76f, 0.82f, 1f);
     public Color DeepBaseColor = new Color(0.00f, 0.018f, 0.065f, 1f);
@@ -67,13 +74,25 @@ public class WaterSettings : ScriptableObject
     public float IceBreakupScale = 95f;
 
     [Header("Underwater")]
+    [Tooltip("Water-column colour shared by submerged objects and the view toward the surface.")]
+    public Color UnderwaterFogColor = new Color(0.03f, 0.14f, 0.20f, 1f);
+
+    [Min(1f), Tooltip("Distance in metres over which suspended particles transmit 37% of light, before water absorption.")]
+    public float UnderwaterVisibility = 45f;
+
+    [Min(1f), Tooltip("Width in metres of the soft sunlight bands beneath the surface.")]
+    public float UnderwaterShaftWidth = 8f;
+
+    [Range(0f, 1f), Tooltip("Strength of small surface ripples seen from underwater.")]
+    public float UnderwaterSurfaceDetail = 0.45f;
+
     [Tooltip("Multiplies the ambient light the water column falls to at night. 1 is the level derived from " +
              "the world's shared night ambient; raise it if midnight underwater reads too dark to play in.")]
     public float UnderwaterNightScale = 1f;
 
     [Tooltip("Strength of the underwater sun shafts. Their per-channel colour stays authored in " +
              "Atmosphere.shader, so this moves how strong they are without changing what colour they are.")]
-    public float UnderwaterShaftIntensity = 1f;
+    public float UnderwaterShaftIntensity = 3f;
 
     // Consumed by WaterVolumeRenderFeature, which runs for editor cameras with no active world and so
     // reads the frozen DTO rather than the world settings service.

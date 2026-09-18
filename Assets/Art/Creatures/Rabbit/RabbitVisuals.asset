@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 543245edd60d9cf4c940dd6f81f20347, type: 3}
+  m_Name: RabbitVisuals
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::CreatureVisualSettings
+  MalePrefab: {fileID: 6725149378558836264, guid: 472bba22a46af6c42b4bf205f2a452e4, type: 3}
+  FemalePrefab: {fileID: 6725149378558836264, guid: 472bba22a46af6c42b4bf205f2a452e4, type: 3}
+  Idle: {fileID: 7400000, guid: dea765a9967b7cc4a980a48c3a092d4d, type: 2}
+  Walk: {fileID: 7400000, guid: 6fab36277f6939447b0dffcb0e5ed0eb, type: 2}
+  Run: {fileID: 7400000, guid: 36d18ef929699c045aff81bd255f2790, type: 2}
+  Eat: {fileID: 7400000, guid: c88c9790ee5cee6499c1552ba7d801e2, type: 2}
+  Attack: {fileID: 0}
+  Death: {fileID: 7400000, guid: 0ebb1fab1cc6f694e8780f2e71d99a00, type: 2}
+  Rest: {fileID: 7400000, guid: f5265177b08dff04a9f1bf02573cb666, type: 2}
+  Sleep: {fileID: 7400000, guid: 50d48374d9c54e844b259b3fe79c7795, type: 2}
+  Drink: {fileID: 7400000, guid: f9243ec7f7fef6641a78faf3320477b4, type: 2}
+  Stalk: {fileID: 7400000, guid: 25218b19de5f2ad4c85f1771cb5f5eb7, type: 2}
+  AttackHitNormalized: 0.12
+  ModelHeightMeters: 0.25147143
+  WalkMetersPerSecond: 0.65
+  RunMetersPerSecond: 3.5

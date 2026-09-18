@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>World-owned aquatic simulation. Observation limits work; it never becomes a threat.</summary>
-[CommandPrefix("fish")]
+[CommandPrefix("fish", Group = "Vegetation and wildlife", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public sealed class FishPopulation : IDisposable
 {
     public sealed class Group
@@ -22,6 +22,9 @@ public sealed class FishPopulation : IDisposable
     uint _seed, _attempt;
     float _scan;
     bool _configured;
+    FishSimulationJobs _jobs;
+    float _pendingSeconds;
+    public int CompletedJobBatches => _jobs?.CompletedBatches ?? 0;
     public IReadOnlyList<Group> Groups { get; }
 
     public FishPopulation(IWaterQueryService water, ThreatRegistry threats)
@@ -46,21 +49,33 @@ public sealed class FishPopulation : IDisposable
     {
         if (!_configured || !CharacterMath.IsFinite(observer) || !CharacterMath.IsFinite(_center)) return;
         if (float.IsNaN(dt) || float.IsInfinity(dt) || dt < 0f || dt > 10f) throw new ArgumentOutOfRangeException(nameof(dt));
+        _pendingSeconds = Mathf.Min(_pendingSeconds + dt, .1f);
+        if (_water is WaterQueryService service) _jobs ??= new FishSimulationJobs(service);
+        if (_jobs != null && !_jobs.TryComplete()) return;
+        bool useJobs = _jobs != null && _jobs.Prepare();
+        float simulationDt = _pendingSeconds;
+        _pendingSeconds = 0f;
         for (int i = _groups.Count - 1; i >= 0; i--)
         {
             Group group = _groups[i];
-            if ((group.School.Positions[0] - observer).sqrMagnitude <= 180f * 180f)
-                group.School.Tick(dt, _threats, now);
+            if (!useJobs && (group.School.Positions[0] - observer).sqrMagnitude <= 180f * 180f)
+                // Bound runtime catch-up so a slow frame cannot multiply the next frame's water queries.
+                // School.Tick still supports explicit long steps for deterministic offline simulation.
+                group.School.Tick(simulationDt, _threats, now);
             if (!group.School.IsViable || (group.School.Positions[0] - observer).sqrMagnitude > 180f * 180f)
             {
                 _threats?.Withdraw(group.Id);
                 _groups.RemoveAt(i);
             }
-            else if (group.Species.Faction == CreatureFaction.Predator)
-                _threats?.Report(group.Id, group.School.Positions[0], group.Species.Faction);
+            else
+                _threats?.Report(group.Id, group.School.Positions[0], group.Species.Faction, group.Species.AvoidanceClass);
         }
         _scan -= dt;
-        if (_scan > 0f) return;
+        if (_scan > 0f)
+        {
+            if (useJobs) _jobs.Schedule(Groups, _threats, now, simulationDt);
+            return;
+        }
         _scan = 1f;
         int small = 0, sharks = 0;
         foreach (Group group in _groups)
@@ -72,6 +87,7 @@ public sealed class FishPopulation : IDisposable
             if (shark && sharks >= 1) continue;
             if (TrySpawn(observer, shark)) { if (shark) sharks++; else small++; }
         }
+        if (useJobs) _jobs.Schedule(Groups, _threats, now, simulationDt);
     }
 
     bool TrySpawn(Vector3 observer, bool shark)
@@ -105,6 +121,7 @@ public sealed class FishPopulation : IDisposable
 
     public void Clear()
     {
+        _jobs?.Dispose(); _jobs = null; _pendingSeconds = 0f;
         foreach (Group group in _groups) _threats?.Withdraw(group.Id);
         _groups.Clear();
         _configured = false;

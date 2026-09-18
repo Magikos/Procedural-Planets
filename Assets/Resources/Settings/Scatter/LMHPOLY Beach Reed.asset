@@ -24,8 +24,8 @@ MonoBehaviour:
   MaxSlopeDegrees: 30
   SlopeFadeDegrees: 5
   ConformToSlope: 0
-  HasMinAltitude: 0
-  MinAltitudeMeters: 0
+  HasMinAltitude: 1
+  MinAltitudeMeters: -0.8
   HasMaxAltitude: 1
   MaxAltitudeMeters: 3
   MinWaterClearanceMeters: 0

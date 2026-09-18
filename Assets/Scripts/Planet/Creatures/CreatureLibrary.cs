@@ -16,16 +16,26 @@ public sealed class CreatureLibrary : ScriptableObject
 public sealed class CreatureSpecies
 {
     public CreatureVisualSettings Visuals;
+    public CreatureAudioSettings Audio;
+    public BirdVisualKind BirdVisual;
+    public CreaturePerceptionSettings Perception;
+    public CreatureHabitat Habitat;
     public string DisplayName = "Placeholder";
 
     [Tooltip("How many of this species one territory supports. This is the whole of birth: a territory's " +
              "carrying capacity, derived from the seed.")]
     [Range(0, 63)] public int PerTerritory = 3;
+    [Tooltip("Extra stable slot numbers per territory. Keep existing counts unchanged to preserve saved animal identities.")]
+    public int[] AdditionalSlots = System.Array.Empty<int>();
 
     [Tooltip("Metres from its home point a creature wanders freely. Beyond it, it steers back.")]
     [Min(1f)] public float HomeRangeMeters = 120f;
 
     [Min(0f)] public float WalkSpeedMps = 2.5f;
+    [Tooltip("Maximum surface swimming speed. Applies to ground animals; birds keep their flight driver.")]
+    [Min(.1f)] public float SwimSpeedMps = 1.2f;
+    [Tooltip("Fraction of standing body height below water while swimming. The head remains above water.")]
+    [Range(.1f, .85f)] public float SwimWaterline = .7f;
 
     [Tooltip("Metres per second a creature closes on its home while nobody is watching. Also the rate a " +
              "re-observed creature is fast-forwarded home by.")]
@@ -48,8 +58,13 @@ public sealed class CreatureSpecies
              "means picking a faction rather than listing who it runs from.")]
     public CreatureFaction Faction = CreatureFaction.Wildlife;
 
+    [Tooltip("Circles discovered carcasses while airborne. Feeding uses the shared resource authority.")]
+    public bool Scavenger;
+
     [Tooltip("Metres at which it notices a threat. A deer looks further than a rabbit.")]
     [Min(1f)] public float AwarenessMeters = 35f;
+    [Tooltip("Seconds of quiet observation after losing a threat. Zero disables the pause.")]
+    [Min(0f)] public float VigilanceSeconds;
 
     [Tooltip("Maximum health. Damage persists across unloading and save reloads.")]
     [Min(1)] public int MaxHealth = 3;
@@ -58,6 +73,14 @@ public sealed class CreatureSpecies
     [Min(0f)] public float HungerSeconds = 1800f;
     [Tooltip("Simulated seconds from satisfied to maximum thirst. Zero disables thirst growth.")]
     [Min(0f)] public float ThirstSeconds = 900f;
+    public ResourceKind Diet = ResourceKind.Plants | ResourceKind.FreshWater;
+    [Min(0f)] public float ConsumeUnitsPerSecond = .12f;
+    [Tooltip("Seconds of continuous sprinting. Zero disables endurance for legacy species.")]
+    [Min(0f)] public float SprintSeconds;
+    [Min(1f)] public float AwakeSeconds = 3600f;
+    [Min(1f)] public float SleepRecoverySeconds = 120f;
+    [Min(1f)] public float RestRecoverySeconds = 20f;
+    [Min(1f)] public float WalkRecoverySeconds = 60f;
 
     [Tooltip("What killing it credits to the inventory - the same one a felled tree feeds.")]
     public string YieldItemId = "Hide";
@@ -68,6 +91,10 @@ public sealed class CreatureSpecies
     [Min(0f)] public float CruiseAltitudeMeters = 0f;
 
     [Min(0.1f)] public float BodyHeightMeters = 1.7f;
+    [Tooltip("Gameplay body mass. Zero derives mass from the legacy body height.")]
+    [Min(0f)] public float BodyMassKg;
+    [Tooltip("Largest prey mass divided by this creature's mass. Zero preserves the legacy height gate.")]
+    [Min(0f)] public float MaximumPreyMassRatio;
     public Color BodyColor = new(0.45f, 0.33f, 0.22f);
 }
 
@@ -91,8 +118,26 @@ public sealed record CreatureSpeciesDto(
     float CruiseAltitudeMeters)
 {
     public CreatureVisualDto Visuals { get; init; }
+    public float SwimSpeedMps { get; init; } = 1.2f;
+    public float SwimWaterline { get; init; } = .7f;
+    public SurfaceSwimProfile Swimming => new(BodyHeightMeters * (SwimWaterline - .5f),
+        BodyHeightMeters * SwimWaterline, BodyHeightMeters * .5f + .05f);
+    public CreatureAudioDto Audio { get; init; }
+    public BirdVisualKind BirdVisual { get; init; }
+    public ActorPerceptionProfile Perception { get; init; } = new();
+    public CreatureHabitatDto Habitat { get; init; }
+    public bool Scavenger { get; init; }
     public float HungerSeconds { get; init; } = 1800f;
     public float ThirstSeconds { get; init; } = 900f;
+    public ResourceKind Diet { get; init; } = ResourceKind.Plants | ResourceKind.FreshWater;
+    public float ConsumeUnitsPerSecond { get; init; } = .12f;
+    public ActorEnduranceProfile? Endurance { get; init; }
+    public float BodyMassKg { get; init; }
+    public float MaximumPreyMassRatio { get; init; }
+    public double EffectiveBodyMassKg => BodyMassKg > 0f ? BodyMassKg :
+        System.Math.Max(.1d, (double)BodyHeightMeters * BodyHeightMeters * BodyHeightMeters) * 20d;
+    public int[] AdditionalSlots { get; init; } = System.Array.Empty<int>();
+    public float VigilanceSeconds { get; init; }
     /// <summary>True when a death of this species never lapses - the boss case, same code path as a deer.</summary>
     public bool NeverRespawns => RespawnSeconds <= 0f;
 
@@ -139,11 +184,36 @@ public sealed record CreatureSpeciesDto(
                 Mathf.Max(0f, src.CruiseAltitudeMeters))
             {
                 Visuals = src.Visuals != null ? src.Visuals.Snapshot() : null,
+                SwimSpeedMps = Mathf.Max(.1f, NonNegative(src.SwimSpeedMps, nameof(src.SwimSpeedMps))),
+                SwimWaterline = Mathf.Clamp(NonNegative(src.SwimWaterline, nameof(src.SwimWaterline)), .1f, .85f),
+                Audio = src.Audio != null ? src.Audio.Snapshot() : null,
+                BirdVisual = src.BirdVisual,
+                Perception = src.Perception != null ? src.Perception.Snapshot() : new ActorPerceptionProfile(),
+                Habitat = src.Habitat?.Snapshot(),
+                Scavenger = src.Scavenger,
                 HungerSeconds = FiniteDuration(src.HungerSeconds),
                 ThirstSeconds = FiniteDuration(src.ThirstSeconds),
+                Diet = src.Diet,
+                ConsumeUnitsPerSecond = FiniteDuration(src.ConsumeUnitsPerSecond),
+                Endurance = EnduranceProfile(src),
+                BodyMassKg = NonNegative(src.BodyMassKg, nameof(src.BodyMassKg)),
+                MaximumPreyMassRatio = NonNegative(src.MaximumPreyMassRatio, nameof(src.MaximumPreyMassRatio)),
+                AdditionalSlots = src.AdditionalSlots == null ? System.Array.Empty<int>() : (int[])src.AdditionalSlots.Clone(),
+                VigilanceSeconds = FiniteDuration(src.VigilanceSeconds),
             };
 
     static float FiniteDuration(float value) => float.IsNaN(value) || float.IsInfinity(value) ? 0f : Mathf.Max(0f, value);
+
+    static float NonNegative(float value, string name) => float.IsFinite(value) && value >= 0f ? value :
+        throw new System.ArgumentOutOfRangeException(name);
+
+    static ActorEnduranceProfile? EnduranceProfile(CreatureSpecies src)
+    {
+        if (!float.IsFinite(src.SprintSeconds) || src.SprintSeconds < 0f)
+            throw new System.ArgumentOutOfRangeException(nameof(src.SprintSeconds));
+        return src.SprintSeconds == 0f ? null : new ActorEnduranceProfile(src.SprintSeconds, src.AwakeSeconds,
+            src.SleepRecoverySeconds, src.RestRecoverySeconds, src.WalkRecoverySeconds);
+    }
 }
 
 public sealed record CreatureLibraryDto(CreatureSpeciesDto[] Species, float ObserverBubbleMeters)
@@ -200,7 +270,7 @@ public sealed record CreatureLibraryDto(CreatureSpeciesDto[] Species, float Obse
             // The flier, and the whole of what makes it one: a cruise altitude. Everything else about it is an
             // ordinary resident - a slot, a home range, a death record, a carcass. It notices further than
             // anything on the ground, which is what being up there is for.
-            new CreatureSpeciesDto("Placeholder Bird", 4, 200f, 6f, 2.5f, 180f, 2f, 4000f, 0.35f,
+            new CreatureSpeciesDto("Eagle", 4, 200f, 6f, 2.5f, 180f, 2f, 4000f, 0.35f,
                 new Color(0.22f, 0.20f, 0.24f),
                 System.Array.Empty<BiomeType>(),
                 CreatureFaction.Wildlife, 70f, 1, "Feathers", 2, CruiseAltitude),

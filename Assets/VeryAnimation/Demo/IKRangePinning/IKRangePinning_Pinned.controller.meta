@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 2bc76ac04627b3e48bad639929b73ab0
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 96826
+  packageName: Very Animation
+  packageVersion: 1.4.1
+  assetPath: Assets/VeryAnimation/Demo/IKRangePinning/IKRangePinning_Pinned.controller
+  uploadId: 984870

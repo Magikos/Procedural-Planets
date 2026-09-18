@@ -1,0 +1,4 @@
+interface:
+  display_name: "ProceduralPlanets Asset Catalog"
+  short_description: "Find reusable assets in the Unity scratch project"
+  default_prompt: "Use $pp-asset-catalog to find suitable existing assets and verify their paths and reuse status."

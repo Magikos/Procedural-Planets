@@ -25,17 +25,14 @@ int _LightShaftSamples;
 int _PrecipitationDebugMode;
 int _OceanDebugMode;
 float _WaterVolumeEnabled;
-// Published by PlanetWaterSurface. See ShaderGlobalIds.WaterDeepColor for why it is not called _DeepColor.
-float4 _WaterDeepColor;
 // Published by CelestialManager; the shared night floor every lit surface uses. Tunable with `light.*`.
 // The moon pair comes from the same publisher, on the scale WaterVolume lights its caustics with.
 float _NightAmbientIntensity;
 float3 _MoonParams;
 float _MoonIntensity;
-// Published by PlanetWaterSurface from WaterDto; see ShaderGlobalIds.Water for why the underwater night
-// floor is a water setting rather than a share of _NightAmbientIntensity. Tunable with `water.set`.
-float _UnderwaterNightScale;
 float _UnderwaterShaftIntensity;
+float _UnderwaterShaftWidth;
+float _UnderwaterSurfaceDetail;
 
 float LightShaftNoise(float2 pixel)
 {
@@ -43,36 +40,21 @@ float LightShaftNoise(float2 pixel)
 }
 
 
-void AccumulateWaterInterface(float2 uv, float edgeWeight, inout float4 bestData, inout float bestCoverage)
+float4 SampleWaterInterface(float2 uv, out float waterCoverage)
 {
-    float4 candidate = SAMPLE_TEXTURE2D(_WaterInterfaceTexture, sampler_WaterInterfaceTexture, uv);
-    float candidateCoverage = WaterVolumeCoverage(candidate) * edgeWeight;
-    if (candidateCoverage > bestCoverage)
-    {
-        bestData = candidate;
-        bestCoverage = candidateCoverage;
-    }
-}
-
-float4 SampleWaterInterfaceDilated(float2 uv, out float waterCoverage)
-{
-    float2 texel = 1.0 / max(_ScreenParams.xy, float2(1.0, 1.0));
+    // The prepass and surface cover the same displaced triangles. Expanding coverage into sky
+    // suppresses atmospheric light outside the mesh and draws a dark line along the horizon.
     float4 waterData = SAMPLE_TEXTURE2D(_WaterInterfaceTexture, sampler_WaterInterfaceTexture, uv);
     waterCoverage = WaterVolumeCoverage(waterData);
-    AccumulateWaterInterface(uv + float2(texel.x, 0.0), 0.74, waterData, waterCoverage);
-    AccumulateWaterInterface(uv - float2(texel.x, 0.0), 0.74, waterData, waterCoverage);
-    AccumulateWaterInterface(uv + float2(0.0, texel.y), 0.74, waterData, waterCoverage);
-    AccumulateWaterInterface(uv - float2(0.0, texel.y), 0.74, waterData, waterCoverage);
     return waterData;
 }
-
 float WaterInterfaceFrontMask(float2 uv)
 {
     if (_WaterVolumeEnabled <= 0.5 || _OceanDebugMode == DEBUG_ATMOSPHERE_BYPASS || _OceanDebugMode == DEBUG_VOLUME_AFTER_ATMOSPHERE)
         return 0.0;
 
     float waterCoverage;
-    float4 waterData = SampleWaterInterfaceDilated(uv, waterCoverage);
+    float4 waterData = SampleWaterInterface(uv, waterCoverage);
     float waterForwardDepth = waterData.r;
 
     float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r;
@@ -120,7 +102,7 @@ float CompositeDepthScaled(float2 uv, float viewLength)
         return sceneDepth;
 
     float waterCoverage;
-    float4 waterData = SampleWaterInterfaceDilated(uv, waterCoverage);
+    float4 waterData = SampleWaterInterface(uv, waterCoverage);
     float waterForwardDepth = waterData.r;
     float waterDepth = waterForwardDepth * viewLength;
     float waterValid = step(0.0001, waterForwardDepth) * step(waterDepth, sceneDepth + 0.01);
@@ -326,95 +308,40 @@ ENDHLSL
             {
                 float3 cameraUp = normalize(_WorldSpaceCameraPos.xyz - _PlanetCenter);
                 float3 sunDir = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : cameraUp;
-                float daylight = smoothstep(-0.08, 0.20, dot(cameraUp, sunDir));
-                float viewUp = smoothstep(-0.35, 0.85, dot(viewDir, cameraUp));
-                // The authored deep-water colour, the same one the volume settles to, rather than a second
-                // copy of it. The copy that used to live here read (0.0, 0.020, 0.070) against an authored
-                // (0.008, 0.058, 0.133) - about half the brightness - so a far shore faded to something
-                // three to four times darker than the water around it instead of fading INTO it.
-                float3 deepWater = _WaterDeepColor.rgb;
-                float3 ambient = lerp(deepWater, float3(0.065, 0.300, 0.420), viewUp * 0.62 + daylight * 0.24);
-
-                // Colour and LIGHT LEVEL, kept apart. The old form lerped toward a "lit" colour whose night
-                // end was (0.012, 0.105, 0.165) - brighter than the authored deep colour in both green and
-                // blue - so midnight underwater came out a mid-blue however dark the world above it was.
-                // A night floor belongs in the light, not in the palette.
-                //
-                // Same floor Ocean.shader uses for its surface, so the water reads consistently from above
-                // and below and `light.*` moves both at once, plus the moon on the same scale the volume
-                // pass lights its caustics with. A moon below the horizon lights nothing.
-                //
-                // _UnderwaterNightScale then moves the submerged half on its own. The floor above is a share
-                // of a world-wide global, and being able to see underwater at midnight is a water art call
-                // that must not drag every lit surface on the planet with it. The moon stays outside the
-                // scale: it is light that is really there, not a readability floor.
                 float3 moonDir = dot(_MoonParams, _MoonParams) > 0.0001 ? normalize(_MoonParams) : cameraUp;
-                float moonlight = saturate(_MoonIntensity) * saturate(dot(cameraUp, moonDir));
-                float nightLevel = saturate((_NightAmbientIntensity * 0.10 + 0.015) * _UnderwaterNightScale + moonlight);
-                ambient *= lerp(nightLevel, 1.0, daylight);
-
-                // Forward scattering toward the sun. Water scatters strongly forward, so looking toward the
-                // sun underwater is markedly brighter than looking away from it at the same elevation.
-                // Without this term the column is one colour per elevation in every direction, which is what
-                // makes it read as a painted backdrop instead of a medium you are inside.
-                //
-                float cosSunWater;
-                float3 sunUnderwater = RefractedSunDirection(cameraUp, sunDir, cosSunWater);
-
-                // No sun term here. The directional part of the column - brighter toward the sun, dimmer
-                // away from it, dimmer with depth - is the march in UnderwaterSunShafts, which integrates it
-                // properly along the ray. A second hand-set copy of it here is the duplicated-override shape
-                // this whole file was restructured to remove.
-                return ambient;
+                float cameraDepth = max(-CameraSeaOffset(_WorldSpaceCameraPos.xyz, _PlanetCenter, _SeaLevelRadius), 0.0);
+                return UnderwaterAmbientColor(viewDir, cameraUp, cameraDepth,
+                    sunDir, _SunIntensity, moonDir, _MoonIntensity, _NightAmbientIntensity);
             }
 
-            // Sunlight in the column itself. Water scatters it sideways, so the beams between the surface
-            // and the seabed are visible from outside them - the underwater half of the effect the seabed
-            // caustics are the other half of.
-            //
-            // The bands come from the swell: where the surface tilts to face the sun, more light crosses it
-            // and the beam under that patch is brighter, and where it tilts away the beam thins. That is the
-            // same tilt the caustics focus with, so the two agree without sharing a pattern - which they
-            // could not do anyway, since CausticPattern is 81 animated Voronoi cells per call and this would
-            // need one per march step.
-            //
-            // Sampled where each step's SUN ray crosses the surface, not at the step itself. Anchoring the
-            // bands to the step would slide them with the camera instead of leaving them standing in the
-            // water under the waves that cast them.
+            // Project broad surface illumination into the column along the refracted sun direction.
+            // World-space entry points keep beams stationary when the camera moves.
             float3 UnderwaterSunShafts(float3 viewDir, float rayLength, float surfaceRadius,
-                float depth01, float body01, float dither)
+                float depth01, float body01, float freeze01, float dither)
             {
                 float3 cameraUp = normalize(_WorldSpaceCameraPos.xyz - _PlanetCenter);
                 float3 sunDir = dot(_SunParams, _SunParams) > 0.0001 ? normalize(_SunParams) : cameraUp;
-                float daylight = smoothstep(-0.02, 0.22, dot(cameraUp, sunDir));
-                if (daylight <= 0.001)
+                float daylight = smoothstep(-0.02, 0.22, dot(cameraUp, sunDir))
+                    * saturate(_SunIntensity / 17.0) * (1.0 - saturate(freeze01));
+                if (daylight <= 0.001 || _UnderwaterShaftIntensity <= 0.0 || rayLength <= 0.0)
                     return float3(0.0, 0.0, 0.0);
 
                 float cosSunWater;
                 float3 sunUnderwater = RefractedSunDirection(cameraUp, sunDir, cosSunWater);
-
-                // How much of the sunlight crossing the column scatters back to the eye per metre. Set by
-                // measurement, not by taste: the ambient term this replaced read (0.010, 0.038, 0.036) at
-                // 8 m down looking 70 degrees off vertical toward the sun, and this reproduces it there
-                // while now falling off with depth and path the way the ambient copy could not.
-                //
-                // The RATIO between the channels is the measurement and stays here; the magnitude rides
-                // _UnderwaterShaftIntensity, so tuning strength cannot accidentally recolour the shafts.
                 const float3 SHAFT_SCATTER = float3(0.0055, 0.0105, 0.0112);
-
-                // Beyond this the column has absorbed the shafts anyway, and marching further only spends
-                // steps where nothing is left to see.
-                const int SHAFT_STEPS = 10;
+                int SHAFT_STEPS = _WaterQuality.y > 0.0 ? (int)_WaterQuality.y : 24;
                 float marchLength = min(rayLength, 90.0);
                 float stepLength = marchLength / SHAFT_STEPS;
+                float3 extinction = UnderwaterExtinction();
+                float3 stepIntegral = (1.0 - exp(-extinction * stepLength)) / extinction;
 
-                // Constant over the march, so out of the loop.
                 float3 waveAxisA, waveAxisB;
                 BuildPlanetWaveAxes(waveAxisA, waveAxisB);
-                WaterRippleParams shaftParams = EvaluateRippleParameters(depth01, body01,
-                    normalize(_WorldSpaceCameraPos.xyz - _PlanetCenter));
-
+                WaterRippleParams shaftParams = EvaluateRippleParameters(depth01, body01, cameraUp);
+                float shaftWidth = max(_UnderwaterShaftWidth, 1.0);
+                float3 drift = waveAxisA * (_GameTime * shaftParams.timeScale * 0.20);
                 float3 accumulated = float3(0.0, 0.0, 0.0);
+                [loop]
                 for (int step = 0; step < SHAFT_STEPS; step++)
                 {
                     float travelled = (step + dither) * stepLength;
@@ -424,34 +351,16 @@ ENDHLSL
                         continue;
 
                     float sunPath = sampleDepth / max(cosSunWater, 0.15);
-                    float3 entryPoint = samplePos + sunUnderwater * sunPath;
-                    float3 entryFlat = SafeNormalize(entryPoint - _PlanetCenter, cameraUp);
-
-                    // The SHORT waves, not the swell. Focusing goes as surface curvature and curvature as
-                    // 1/wavelength squared, so the 90 m swell barely bands at all - measured mean |tiltGain|
-                    // 0.03 - while the metre-scale ripples do. Same field Ocean.shader shades with, so a
-                    // bright beam lands where the surface above it is actually tilted into the sun.
-                    float3 entryLocal = entryPoint - _PlanetCenter;
-                    float2 entryTS = float2(dot(entryLocal, waveAxisA), dot(entryLocal, waveAxisB));
-                    WaterRippleField entryRipple = ComputeWaterRipple(entryTS, float2(1.0, 0.0), float2(0.0, 1.0),
-                        shaftParams.scale, shaftParams.amplitude, shaftParams.timeScale,
-                        shaftParams.waveEnergy, shaftParams.weatherEnergy, shaftParams.chaos01);
-                    float2 entryGradient = entryRipple.gradientTS * 0.18 + entryRipple.detailGradientTS * 1.35;
-                    float3 entryNormal = SafeNormalize(
-                        entryFlat - WaterGradientWS(entryGradient, waveAxisA, waveAxisB, entryFlat), entryFlat);
-
-                    // How much more (or less) light crosses the surface here than across a flat one. First
-                    // order in the tilt, and NOT clamped at 1 - the whole point is the bright half.
-                    float tiltGain = dot(entryNormal, sunDir) - dot(entryFlat, sunDir);
-                    float beam = max(1.0 + tiltGain * 6.0, 0.0);
-
-                    float3 transmit = exp(-WATER_ABSORPTION
-                        * ((sunPath + travelled) / WATER_ABSORPTION_UNIT_METRES));
-                    accumulated += transmit * beam * stepLength;
+                    float3 entryLocal = samplePos + sunUnderwater * sunPath - _PlanetCenter;
+                    // Unresolved wave focusing uses a smooth envelope instead of metre-scale ripple slopes.
+                    // Broad bands remain visible after integration and still vary under an overhead sun.
+                    float pattern = ValueNoise3D((entryLocal + drift) / shaftWidth);
+                    float beam = lerp(0.18, 2.4, smoothstep(0.28, 0.74, pattern));
+                    beam = lerp(1.0, beam, shaftParams.waveEnergy);
+                    float3 transmit = UnderwaterTransmittance(sunPath + step * stepLength);
+                    accumulated += transmit * beam * stepIntegral;
                 }
 
-                // Forward-peaked, like the ambient term: a shaft is brightest seen nearly along itself and
-                // all but invisible looking straight down one.
                 float forward = saturate(dot(viewDir, sunUnderwater));
                 float phase = 0.25 + pow(forward, 3.0) * 1.75;
                 return accumulated * phase * daylight * SHAFT_SCATTER * _UnderwaterShaftIntensity;
@@ -475,6 +384,17 @@ ENDHLSL
 
             float4 AtmosphereFragment(v2f i) : SV_Target
             {
+                if (_OceanDebugMode == 0 && IsWaterPresentationCamera(_WorldSpaceCameraPos.xyz) && _WaterCameraSurface.z > 0.001)
+                {
+                    float2 wobble = float2(sin(i.uv.y * 48.0 + _GameTime * 7.0), sin(i.uv.x * 37.0 - _GameTime * 5.0));
+                    i.uv = clamp(i.uv + wobble * _WaterCameraSurface.z * 0.002, 0.001, 0.999);
+                    #if UNITY_UV_STARTS_AT_TOP
+                        float2 ndc = i.uv * 2.0 - 1.0;
+                    #else
+                        float2 ndc = float2(i.uv.x * 2.0 - 1.0, 1.0 - i.uv.y * 2.0);
+                    #endif
+                    i.viewVector = mul(unity_CameraToWorld, float4(mul(unity_CameraInvProjection, float4(ndc, 0, -1)).xyz, 0)).xyz;
+                }
                 float4 originalCol = SAMPLE_TEXTURE2D(_Source, sampler_Source, i.uv);
 
                 // DEBUG (global _SceneDepthDebug): visualize _CameraDepthTexture — the exact depth the
@@ -524,7 +444,7 @@ ENDHLSL
                 if (_OceanDebugMode == DEBUG_SHAPE_IS_PREPASS_DEPTH)
                 {
                     float coverage;
-                    float4 waterData = SampleWaterInterfaceDilated(i.uv, coverage);
+                    float4 waterData = SampleWaterInterface(i.uv, coverage);
                     // Same scale as ShapeIsCompositeDepth so the two are directly comparable. The first
                     // version used frac(d/40) on a distance of order a kilometre, which cycles about
                     // twenty-five times and aliases into noise at grazing - it hid the very structure it
@@ -541,7 +461,7 @@ ENDHLSL
                     float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, i.uv).r;
                     float sceneDepth = LinearEyeDepth(rawDepth, _ZBufferParams) * viewLength;
                     float coverage;
-                    float4 waterData = SampleWaterInterfaceDilated(i.uv, coverage);
+                    float4 waterData = SampleWaterInterface(i.uv, coverage);
                     float waterDepth = waterData.r * viewLength;
                     bool waterWins = waterData.r > 0.0001 && waterDepth < sceneDepth;
                     return float4(waterWins ? float3(1.0, 0.0, 0.0) : float3(0.0, 0.15, 0.9), 1.0);
@@ -610,11 +530,11 @@ ENDHLSL
                     // between near and far open water, so the error does not show the way a metric distance
                     // does. It would show inside a small lake seen across a shoreline; nothing does that yet.
                     float exitCoverage;
-                    float4 exitData = SampleWaterInterfaceDilated(i.uv, exitCoverage);
+                    float4 exitData = SampleWaterInterface(i.uv, exitCoverage);
                     float exitShore01;
                     uint exitKind;
                     DecodeWaterShoreKind(exitData.b, exitShore01, exitKind);
-                    float exitBody01 = exitKind == WATER_KIND_OCEAN ? 1.0 : 0.0;
+                    float exitBody01 = WaterKindIsOcean(exitKind) ? 1.0 : 0.0;
 
                     float3 exitPointWS = _WorldSpaceCameraPos.xyz + viewDir * min(pathToSurface, 200.0);
                     float3 exitPlanetNormal = SafeNormalize(exitPointWS - _PlanetCenter, camUp);
@@ -639,6 +559,9 @@ ENDHLSL
                         exitParams.waveEnergy, exitParams.weatherEnergy, exitParams.chaos01);
 
                     float2 chopGradientTS = exitRipple.gradientTS * 0.18 + exitRipple.detailGradientTS * 1.35;
+                    float3 microSlope = WaterMicroSlope(exitLocal, exitPlanetNormal, exitRipple.detailScale,
+                        exitParams.timeScale, pathToSurface);
+                    swellNormal = SafeNormalize(swellNormal + microSlope * saturate(_UnderwaterSurfaceDetail), swellNormal);
                     float3 choppyNormal = SafeNormalize(
                         swellNormal - WaterGradientWS(chopGradientTS, waveAxisA, waveAxisB, exitPlanetNormal),
                         swellNormal);
@@ -722,9 +645,6 @@ ENDHLSL
                         skyColor = originalCol.xyz;
                     }
 
-                    // ponytail: swell only - no fine ripple, no glint. The rim heaves with the waves but has
-                    // no small-scale chop on it. The ripple normal lives in Ocean.shader's fragment stage and
-                    // is not in the shared include; hoisting it there is the upgrade path.
                     float3 interfaceColor = lerp(mirrorColor, skyColor, window);
 
                     // Beer-Lambert over the water actually between the eye and the surface, on the same
@@ -732,14 +652,14 @@ ENDHLSL
                     // how water absorbs. Not saturated: the old cap floored blue transmission at 0.56 no
                     // matter how deep the camera was, which is a large part of why the surface read as
                     // flooded from any depth.
-                    float3 transmit = exp(-WATER_ABSORPTION * (pathToSurface / WATER_ABSORPTION_UNIT_METRES));
+                    float3 transmit = UnderwaterTransmittance(pathToSurface);
                     float3 result = interfaceColor * transmit + columnColor * (1.0 - transmit);
 
                     // Shafts live in the column between the eye and the surface, so they add on top of a
                     // composite that already accounts for that column's own glow.
                     float surfaceRadius = cameraRadius + depthBelowSurface;
                     float3 shafts = UnderwaterSunShafts(viewDir, pathToSurface, surfaceRadius,
-                        exitData.g, exitBody01, LightShaftNoise(i.uv * _ScreenParams.xy));
+                        exitData.g, exitBody01, exitData.a, LightShaftNoise(i.uv * _ScreenParams.xy));
                     result += shafts;
 
                     return float4(result, originalCol.w);
@@ -764,34 +684,8 @@ ENDHLSL
                 // flat black at night, instead of fading into the water.
                 //
                 // Air light shafts go with it - they are shafts through atmosphere. The underwater shafts
-                // that replace them are built against the water column instead, and are added here rather
-                // than blended, because they are light arriving on top of what the volume already drew.
+                // that replace them are built against the water column and applied after air-detail preservation.
                 float underwater01 = _WaterVolumeEnabled > 0.5 ? CameraUnderwater01() : 0.0;
-                color = lerp(color, originalCol.xyz, underwater01);
-
-                if (underwater01 > 0.001)
-                {
-                    float3 submergedFromCentre = _WorldSpaceCameraPos.xyz - _PlanetCenter;
-                    float submergedRadius = length(submergedFromCentre);
-                    float submergedSurfaceRadius = WaterSurfaceRadiusAt(
-                        submergedFromCentre / max(submergedRadius, 0.0001), _SeaLevelRadius);
-
-                    // The GEOMETRY's distance, not CompositeDepthScaled - that substitutes the water
-                    // surface's distance where the surface covers a pixel, which underwater is the thing
-                    // behind the camera's own head rather than the seabed the shaft ends on.
-                    float rawSceneDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, i.uv).r;
-                    float geometryDistance = LinearEyeDepth(rawSceneDepth, _ZBufferParams) * viewLength;
-
-                    float shaftCoverage;
-                    float4 shaftData = SampleWaterInterfaceDilated(i.uv, shaftCoverage);
-                    float shaftShore01;
-                    uint shaftKind;
-                    DecodeWaterShoreKind(shaftData.b, shaftShore01, shaftKind);
-
-                    color += UnderwaterSunShafts(viewDir, geometryDistance, submergedSurfaceRadius,
-                        shaftData.g, shaftKind == WATER_KIND_OCEAN ? 1.0 : 0.0,
-                        LightShaftNoise(i.uv * _ScreenParams.xy)) * underwater01;
-                }
 
                 // Raw shaft signal only, amplified so a faint contribution is still visible.
                 // Isolates whether CalculateLightShafts is producing anything at all, independent
@@ -869,6 +763,31 @@ ENDHLSL
                     terrainClarityEnd, terrainAtmosphereStart, sceneDepth);
                 color = lerp(color, originalCol.rgb, nonWaterSceneMask * terrainClarity);
 
+                // Underwater scattering must survive the air pass's local-detail preservation.
+                color = lerp(color, originalCol.xyz, underwater01);
+                if (underwater01 > 0.001)
+                {
+                    float3 submergedFromCentre = _WorldSpaceCameraPos.xyz - _PlanetCenter;
+                    float submergedRadius = length(submergedFromCentre);
+                    float submergedSurfaceRadius = WaterSurfaceRadiusAt(
+                        submergedFromCentre / max(submergedRadius, 0.0001), _SeaLevelRadius);
+
+                    // The GEOMETRY's distance, not CompositeDepthScaled - that substitutes the water
+                    // surface's distance where the surface covers a pixel, which underwater is the thing
+                    // behind the camera's own head rather than the seabed the shaft ends on.
+                    float rawSceneDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, i.uv).r;
+                    float geometryDistance = LinearEyeDepth(rawSceneDepth, _ZBufferParams) * viewLength;
+
+                    float shaftCoverage;
+                    float4 shaftData = SampleWaterInterface(i.uv, shaftCoverage);
+                    float shaftShore01;
+                    uint shaftKind;
+                    DecodeWaterShoreKind(shaftData.b, shaftShore01, shaftKind);
+
+                    color += UnderwaterSunShafts(viewDir, geometryDistance, submergedSurfaceRadius,
+                        shaftData.g, WaterKindIsOcean(shaftKind) ? 1.0 : 0.0, shaftData.a,
+                        LightShaftNoise(i.uv * _ScreenParams.xy)) * underwater01;
+                }
                 if (_OceanDebugMode == DEBUG_ATMOSPHERE_CONTRIBUTION)
                     return float4(ContributionHeat(color - originalCol.xyz, 8.0, float3(0.18, 0.48, 1.0), float3(1.0, 0.95, 0.22)), 1.0);
 

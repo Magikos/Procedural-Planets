@@ -198,6 +198,11 @@ public static class ScatterImpostorBaker
     // from any angle) and one render per cell. The billboard is centred on the tree centre (CenterOffset)
     // and made camera-facing at runtime, so the atlas cell for the view direction always shows a real angle.
     public static AtlasCard BakeAtlas(IReadOnlyList<Mesh> meshes, IReadOnlyList<Material> materials, int gridN, int cellPixels = AtlasCellPx)
+        => BakeAtlasAsync(meshes, materials, gridN, cellPixels, default, false).GetAwaiter().GetResult();
+
+    public static async Awaitable<AtlasCard> BakeAtlasAsync(IReadOnlyList<Mesh> meshes,
+        IReadOnlyList<Material> materials, int gridN, int cellPixels,
+        System.Threading.CancellationToken ct, bool yieldFrames = true)
     {
         using var state = new BakeState();
         if (gridN < 2) throw new System.ArgumentOutOfRangeException(nameof(gridN));
@@ -220,6 +225,7 @@ public static class ScatterImpostorBaker
         var camGO = new GameObject("c");
         camGO.transform.SetParent(root.transform, false);
         Camera cam = camGO.AddComponent<Camera>();
+        cam.enabled = false;
         cam.cameraType = CameraType.Preview;   // black background (see Bake) — the luminance key depends on it
         cam.orthographic = true;
         cam.orthographicSize = s * FrameMargin * 0.5f;
@@ -279,6 +285,17 @@ public static class ScatterImpostorBaker
             cam.backgroundColor = neutralNormalBg;
             cam.targetTexture = normalRt;
             cam.Render();
+            if (yieldFrames && i == gridN - 1)
+            {
+                root.SetActive(false);
+                state.RestoreGlobals();
+                await Awaitable.NextFrameAsync(ct);
+                root.SetActive(true);
+                RenderSettings.ambientMode = AmbientMode.Flat;
+                RenderSettings.ambientLight = Color.white;
+                Shader.SetGlobalFloat(ShaderGlobalIds.ImpostorBakeDistance, dist);
+                Shader.SetGlobalFloat(ShaderGlobalIds.ImpostorBakeSize, s * FrameMargin);
+            }
         }
         Shader.SetGlobalFloat(albedoBakeId, 0f);
         Shader.SetGlobalFloat(normalBakeId, 0f);
@@ -290,21 +307,32 @@ public static class ScatterImpostorBaker
 
         Color[] ap = atlas.GetPixels();
         Color[] np = normalAtlas.GetPixels();
-        for (int k = 0; k < ap.Length; k++)
+        root.SetActive(false);
+        state.RestoreGlobals();
+        if (yieldFrames) await Awaitable.BackgroundThreadAsync();
+        try
         {
-            // Coverage from geometry presence, not brightness: the background is pure black, so any pixel
-            // the tree rendered has some colour. Keying the silhouette off luminance dropped dark foliage
-            // (shadowed / dark-green leaves) as holes ("shot with a shotgun"); key off the max channel
-            // with a low floor so dark-but-present leaves stay a solid silhouette.
-            float cover = Mathf.Max(ap[k].r, Mathf.Max(ap[k].g, ap[k].b));
-            float t = Mathf.Clamp01((cover - 0.008f) / (0.03f - 0.008f));
-            float a = t * t * (3f - 2f * t);
-            if (a > maxAlpha) maxAlpha = a;
-            ap[k] = new Color(ap[k].r, ap[k].g, ap[k].b, a);
-            // Surface data keeps its depth and leaf mask; coverage comes from the colour atlas.
+            for (int k = 0; k < ap.Length; k++)
+            {
+                // Coverage from geometry presence, not brightness: the background is pure black, so any pixel
+                // the tree rendered has some colour. Keying the silhouette off luminance dropped dark foliage
+                // (shadowed / dark-green leaves) as holes ("shot with a shotgun"); key off the max channel
+                // with a low floor so dark-but-present leaves stay a solid silhouette.
+                float cover = Mathf.Max(ap[k].r, Mathf.Max(ap[k].g, ap[k].b));
+                float t = Mathf.Clamp01((cover - 0.008f) / (0.03f - 0.008f));
+                float a = t * t * (3f - 2f * t);
+                if (a > maxAlpha) maxAlpha = a;
+                ap[k] = new Color(ap[k].r, ap[k].g, ap[k].b, a);
+                // Surface data keeps its depth and leaf mask; coverage comes from the colour atlas.
+            }
+            DilateColorIntoTransparent(ap, atlasPx, cellPixels, ColorBleedPasses);
+            DilateColorIntoTransparent(np, atlasPx, cellPixels, ColorBleedPasses, ap);
         }
-        DilateColorIntoTransparent(ap, atlasPx, cellPixels, ColorBleedPasses);
-        DilateColorIntoTransparent(np, atlasPx, cellPixels, ColorBleedPasses, ap);
+        finally
+        {
+            if (yieldFrames) await Awaitable.MainThreadAsync();
+        }
+        ct.ThrowIfCancellationRequested();
         atlas.SetPixels(ap);
         normalAtlas.SetPixels(np);
         // Apply(true) builds the mip chain; without it the texture keeps mip 0 only and the allocation above
@@ -436,12 +464,17 @@ public static class ScatterImpostorBaker
             return resource;
         }
 
-        public void Dispose()
+        public void RestoreGlobals()
         {
             for (int i = 0; i < Globals.Length; i++) Shader.SetGlobalFloat(Globals[i], _savedGlobals[i]);
             RenderSettings.ambientMode = _ambientMode;
             RenderSettings.ambientLight = _ambientLight;
             RenderTexture.active = _active;
+        }
+
+        public void Dispose()
+        {
+            RestoreGlobals();
             for (int i = _owned.Count - 1; i >= 0; i--) Object.DestroyImmediate(_owned[i]);
             _emptyInteractors?.Release();
         }

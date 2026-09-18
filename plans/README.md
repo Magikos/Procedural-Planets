@@ -1,5 +1,41 @@
 # Plans index
 
+## Climbing and balance traversal — 2026-09-09
+
+[Design](../docs/design/2026-09-09-climbing-and-balance-traversal.md) and [validation queue](2026-09-09-climbing-and-balance-validation-queue.md).
+Status: designed, not implemented. Start with lateral ledge contacts, then vertical climbing, corners, and balance traversal.
+Another agent owns Unity. This is a written queue only; no imports, builds, tests, captures, or scheduled execution.
+
+## Rivers and waterfalls — 2026-09-09
+
+| Plan | Status | Next action |
+|---|---|---|
+| [011: Rivers and waterfalls](011-rivers-and-waterfalls.md) | IMPLEMENTED; river/terrain checks pass; console clipboard failure recorded | Review captures and generated river views; extend multi-seed and quality coverage. |
+
+Plan 011 extends the existing lake solver and water services. Bryan handed over Unity for implementation.
+See [implementation and evidence](../docs/design/2026-09-09-rivers-and-waterfalls.md).
+
+## Performance follow-up — 2026-09-08
+
+Plans written against `d1e0f62` plus uncommitted startup and ground-query repairs.
+Bryan approved implementation and handed over Unity. All four items are implemented or reconciled with existing code.
+Final validation passed 146 tests. See [results and limits](../docs/design/2026-09-08-performance-followup.md).
+Detailed handoff plans remain under `plans/`; the accepted implementation and evidence live in the linked `docs/design/` report.
+
+| Order | Plan | Status | Dependency |
+|---|---|---|---|
+| 1 | [007: Performance instrumentation](007-performance-instrumentation.md) | IMPLEMENTED; counters verified | None |
+| 2 | [008: Creature presentation budget](008-creature-presentation-budget.md) | RECONCILED; existing implementation tested; motion review remains | 007 for measured acceptance |
+| 3 | [009: Biome sliding histogram](009-biome-sliding-histogram.md) | IMPLEMENTED; parity and isolated performance verified | None |
+| 4 | [010: Combined water sampling](010-combined-water-sampling.md) | IMPLEMENTED; parity and isolated performance verified | 009; shared file and separate measurement |
+
+[Validation queue](2026-09-08-performance-validation-queue.md): written backlog only; no automatic Editor access or scheduled execution.
+009 can proceed independently of 008 after source ownership is coordinated. Run Editor validation serially.
+Do not add async layers to already parallel biome work. Defer Burst and compute migration until these changes have measured results.
+Missing impostor bakes and queue-container cleanup remain lower-priority follow-ups, outside these four plans.
+
+---
+
 Roadmap-variant plans (design/spike) produced by the `improve next` survey after the
 look/lighting polish arc + scatter GPU-indirect rewrite landed on `main`.
 

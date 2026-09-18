@@ -9,11 +9,12 @@ public sealed class WorkbenchFlyCamera : MonoBehaviour
     public float MoveSpeed = 12f;
     public float SprintMultiplier = 4f;
     public float LookSensitivity = 0.12f;
+    public bool RequireRightMouseToMove;
 
     float _yaw;
     float _pitch;
 
-    void Start()
+    void OnEnable()
     {
         Vector3 e = transform.eulerAngles;
         _yaw = e.y;
@@ -34,6 +35,7 @@ public sealed class WorkbenchFlyCamera : MonoBehaviour
             transform.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
         }
 
+        if (RequireRightMouseToMove && !mouse.rightButton.isPressed) return;
         float speed = MoveSpeed * (kb.leftShiftKey.isPressed ? SprintMultiplier : 1f);
         Vector3 move = Vector3.zero;
         if (kb.wKey.isPressed) move += transform.forward;

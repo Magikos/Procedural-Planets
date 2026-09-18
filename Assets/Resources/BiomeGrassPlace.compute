@@ -51,6 +51,7 @@ int _Seed;
 float4 _ChunkUvScaleOffset;
 float4x4 _PlanetLocalToWorld;
 float _PlanetWorldScale;
+float _HabitatPlanetRadius;
 float _WaterRadius;
 float3 _CameraPositionWs;
 float _MaxRenderDistance;
@@ -230,6 +231,10 @@ void PlaceAndCull(uint3 id : SV_DispatchThreadID)
     float3 laneNormalLocal = LoadNormal(laneCenterFaceUv);
     if (dot(laneNormalLocal, laneSphereNormal) < 0.0)
         laneNormalLocal = -laneNormalLocal;
+
+    float cover = HabitatCover(laneSphereNormal, _HabitatPlanetRadius * _PlanetWorldScale,
+        (uint)_Seed, saturate(dot(laneNormalLocal, laneSphereNormal)), biome.Habitat.x);
+    density *= HabitatGrassKeep(cover);
 
     float slopeDeg = acos(saturate(dot(laneNormalLocal, laneSphereNormal))) * 57.2957795;
     float maxSlope = saturate(biome.Placement.x / 90.0) * 90.0;

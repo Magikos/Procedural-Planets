@@ -1,0 +1,534 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!29 &1
+OcclusionCullingSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_OcclusionBakeSettings:
+    smallestOccluder: 5
+    smallestHole: 0.25
+    backfaceThreshold: 100
+  m_SceneGUID: 00000000000000000000000000000000
+  m_OcclusionCullingData: {fileID: 0}
+--- !u!104 &2
+RenderSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 10
+  m_Fog: 0
+  m_FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  m_FogMode: 3
+  m_FogDensity: 0.01
+  m_LinearFogStart: 0
+  m_LinearFogEnd: 300
+  m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
+  m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
+  m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
+  m_AmbientIntensity: 1
+  m_AmbientMode: 0
+  m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
+  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_HaloStrength: 0.5
+  m_FlareStrength: 1
+  m_FlareFadeSpeed: 3
+  m_HaloTexture: {fileID: 0}
+  m_SpotCookie: {fileID: 10001, guid: 0000000000000000e000000000000000, type: 0}
+  m_DefaultReflectionMode: 0
+  m_DefaultReflectionResolution: 128
+  m_ReflectionBounces: 1
+  m_ReflectionIntensity: 1
+  m_CustomReflection: {fileID: 0}
+  m_Sun: {fileID: 0}
+  m_UseRadianceAmbientProbe: 0
+--- !u!157 &3
+LightmapSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 13
+  m_BakeOnSceneLoad: 0
+  m_GISettings:
+    serializedVersion: 2
+    m_BounceScale: 1
+    m_IndirectOutputScale: 1
+    m_AlbedoBoost: 1
+    m_EnvironmentLightingMode: 0
+    m_EnableBakedLightmaps: 1
+    m_EnableRealtimeLightmaps: 0
+  m_LightmapEditorSettings:
+    serializedVersion: 12
+    m_Resolution: 2
+    m_BakeResolution: 40
+    m_AtlasSize: 1024
+    m_AO: 0
+    m_AOMaxDistance: 1
+    m_CompAOExponent: 1
+    m_CompAOExponentDirect: 0
+    m_ExtractAmbientOcclusion: 0
+    m_Padding: 2
+    m_LightmapParameters: {fileID: 0}
+    m_LightmapsBakeMode: 1
+    m_TextureCompression: 1
+    m_ReflectionCompression: 2
+    m_MixedBakeMode: 2
+    m_BakeBackend: 2
+    m_PVRSampling: 1
+    m_PVRDirectSampleCount: 32
+    m_PVRSampleCount: 512
+    m_PVRBounces: 2
+    m_PVREnvironmentSampleCount: 256
+    m_PVREnvironmentReferencePointCount: 2048
+    m_PVRFilteringMode: 1
+    m_PVRDenoiserTypeDirect: 2
+    m_PVRDenoiserTypeIndirect: 2
+    m_PVRDenoiserTypeAO: 2
+    m_PVRFilterTypeDirect: 0
+    m_PVRFilterTypeIndirect: 0
+    m_PVRFilterTypeAO: 0
+    m_PVREnvironmentMIS: 1
+    m_PVRCulling: 1
+    m_PVRFilteringGaussRadiusDirect: 1
+    m_PVRFilteringGaussRadiusIndirect: 1
+    m_PVRFilteringGaussRadiusAO: 1
+    m_PVRFilteringAtrousPositionSigmaDirect: 0.5
+    m_PVRFilteringAtrousPositionSigmaIndirect: 2
+    m_PVRFilteringAtrousPositionSigmaAO: 1
+    m_ExportTrainingData: 0
+    m_TrainingDataDestination: TrainingData
+    m_LightProbeSampleCountMultiplier: 4
+  m_LightingDataAsset: {fileID: 20201, guid: 0000000000000000f000000000000000, type: 0}
+  m_LightingSettings: {fileID: 0}
+--- !u!196 &4
+NavMeshSettings:
+  serializedVersion: 2
+  m_ObjectHideFlags: 0
+  m_BuildSettings:
+    serializedVersion: 3
+    agentTypeID: 0
+    agentRadius: 0.5
+    agentHeight: 2
+    agentSlope: 45
+    agentClimb: 0.4
+    ledgeDropHeight: 0
+    maxJumpAcrossDistance: 0
+    minRegionArea: 2
+    manualCellSize: 0
+    cellSize: 0.16666667
+    manualTileSize: 0
+    tileSize: 256
+    buildHeightMesh: 0
+    maxJobWorkers: 0
+    preserveTilesOutsideBounds: 0
+    debug:
+      m_Flags: 0
+  m_NavMeshData: {fileID: 0}
+--- !u!1 &237493584
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 237493587}
+  - component: {fileID: 237493586}
+  - component: {fileID: 237493585}
+  m_Layer: 0
+  m_Name: Main Camera
+  m_TagString: MainCamera
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!81 &237493585
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 237493584}
+  m_Enabled: 1
+--- !u!20 &237493586
+Camera:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 237493584}
+  m_Enabled: 1
+  serializedVersion: 2
+  m_ClearFlags: 2
+  m_BackGroundColor: {r: 0.16, g: 0.2, b: 0.24, a: 1}
+  m_projectionMatrixMode: 1
+  m_GateFitMode: 2
+  m_FOVAxisMode: 0
+  m_Iso: 200
+  m_ShutterSpeed: 0.005
+  m_Aperture: 16
+  m_FocusDistance: 10
+  m_FocalLength: 50
+  m_BladeCount: 5
+  m_Curvature: {x: 2, y: 11}
+  m_BarrelClipping: 0.25
+  m_Anamorphism: 0
+  m_SensorSize: {x: 36, y: 24}
+  m_LensShift: {x: 0, y: 0}
+  m_NormalizedViewPortRect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 1
+    height: 1
+  near clip plane: 0.3
+  far clip plane: 1000
+  field of view: 60
+  orthographic: 1
+  orthographic size: 2.4
+  m_Depth: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingPath: -1
+  m_TargetTexture: {fileID: 0}
+  m_TargetDisplay: 0
+  m_TargetEye: 3
+  m_HDR: 1
+  m_AllowMSAA: 1
+  m_AllowDynamicResolution: 0
+  m_ForceIntoRT: 0
+  m_OcclusionCulling: 1
+  m_StereoConvergence: 10
+  m_StereoSeparation: 0.022
+--- !u!4 &237493587
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 237493584}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.12477423, y: 0, z: 0, w: 0.9921852}
+  m_LocalPosition: {x: 0, y: 4, z: -9}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1073807848
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1073807850}
+  - component: {fileID: 1073807849}
+  m_Layer: 0
+  m_Name: Environment Sound Audition
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1073807849
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1073807848}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8dd45ca8892158f0aff9b3a1433cd2f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::SoundAudition
+  Candidates:
+  - Id: "ocean-a"
+    Title: "Ocean surf A"
+    Category: "Ocean"
+    Clip: {fileID: 8300000, guid: 6c56a3bbb0b8ed340bdb68e43e6678f4, type: 3}
+    Loop: 1
+    Environments: 1
+    Source: "D:\\Unity\\Explore Assets\\Assets\\Procedural Worlds\\Ambient Sounds\\Audio\\Sounds\\Ambient\\sfx-ambient-water_ocean_0-0_lp.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume. Looping is a review setting, not proof of a seamless edit."
+  - Id: "ocean-b"
+    Title: "Ocean surf B"
+    Category: "Ocean"
+    Clip: {fileID: 8300000, guid: 1909a7d8c1145f6c8839dc59d00a36a4, type: 3}
+    Loop: 1
+    Environments: 1
+    Source: "D:\\Unity\\Explore Assets\\Assets\\SurfaceData\\Demo\\Sounds\\waves_ambient.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume. Looping is a review setting, not proof of a seamless edit."
+  - Id: "stream-calm"
+    Title: "Calm stream"
+    Category: "Streams"
+    Clip: {fileID: 8300000, guid: c53a4a6945c657e48b91a17a80dc7b96, type: 3}
+    Loop: 1
+    Environments: 8
+    Source: "D:\\Unity\\Explore Assets\\Assets\\Farm Animal Sounds\\Bonus\\Stream Calm Loop 1.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume. Looping is a review setting, not proof of a seamless edit."
+  - Id: "stream-moderate"
+    Title: "Moderate stream"
+    Category: "Streams"
+    Clip: {fileID: 8300000, guid: d8e187fbd9bd57e99bff904a277c93ba, type: 3}
+    Loop: 1
+    Environments: 8
+    Source: "D:\\Unity\\Explore Assets\\Assets\\Farm Animal Sounds\\Bonus\\Stream Moderate Loop 1.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume. Looping is a review setting, not proof of a seamless edit."
+  - Id: "water-generic"
+    Title: "Water - lake candidate"
+    Category: "Lakes"
+    Clip: {fileID: 8300000, guid: 8c0e07d081235c8b8ad5359949240e70, type: 3}
+    Loop: 1
+    Environments: 8
+    Source: "D:\\Unity\\Explore Assets\\Assets\\Procedural Worlds\\Ambient Sounds\\Audio\\Sounds\\Ambient\\sfx-ambient-water_0-0_lp.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Decide whether this sounds like lake lapping or flowing water. Filename is ambiguous."
+  - Id: "wind-steady"
+    Title: "Steady wind"
+    Category: "Wind"
+    Clip: {fileID: 8300000, guid: 22815892c6845fae93154487c9053b13, type: 3}
+    Loop: 1
+    Environments: 15
+    Source: "D:\\Unity\\Explore Assets\\Assets\\Procedural Worlds\\Ambient Sounds\\Audio\\Sounds\\Ambient\\sfx-ambient-wind_0-0_lp.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume. Looping is a review setting, not proof of a seamless edit."
+  - Id: "wind-winter"
+    Title: "Winter wind"
+    Category: "Wind"
+    Clip: {fileID: 8300000, guid: 5446334dae985356b60312c0b666f527, type: 3}
+    Loop: 1
+    Environments: 0
+    Source: "D:\\Unity\\Explore Assets\\Assets\\UniStorm Weather System\\Sounds\\Wind\\Winter Wind.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume. Looping is a review setting, not proof of a seamless edit."
+  - Id: "wind-gust"
+    Title: "Wind gust"
+    Category: "Wind"
+    Clip: {fileID: 8300000, guid: 8346f7ab42375cbbad5d56b9868fb1ec, type: 3}
+    Loop: 0
+    Environments: 0
+    Source: "D:\\Unity\\Explore Assets\\Assets\\UniStorm Weather System\\Sounds\\Wind\\Gust 1.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume."
+  - Id: "cricket-a"
+    Title: "Crickets A"
+    Category: "Insects"
+    Clip: {fileID: 8300000, guid: a2664d1845ac59628961830c5d236f23, type: 3}
+    Loop: 1
+    Environments: 12
+    Source: "D:\\Unity\\Explore Assets\\Assets\\UniStorm Weather System\\Sounds\\Crickets\\Cricket 1.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume. Looping is a review setting, not proof of a seamless edit."
+  - Id: "cricket-b"
+    Title: "Crickets B"
+    Category: "Insects"
+    Clip: {fileID: 8300000, guid: f75680f9c5805692a0a6aff4f6307331, type: 3}
+    Loop: 1
+    Environments: 12
+    Source: "D:\\Unity\\Explore Assets\\Assets\\Procedural Worlds\\Ambient Sounds\\Audio\\Sounds\\Insects\\sfx-insects-cricket_3-0-lp.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume. Looping is a review setting, not proof of a seamless edit."
+  - Id: "cicada-pixabay"
+    Title: "Cicadas - BlenderTimer"
+    Category: "Insects"
+    Clip: {fileID: 8300000, guid: 50767e2c667c5319bd045aa6e7041a6a, type: 3}
+    Loop: 1
+    Environments: 2
+    Source: "C:\\Users\\Bryan\\Downloads\\blendertimer-cicada-419563.mp3"
+    SourceUrl: "https://pixabay.com/sound-effects/"
+    License: "User-supplied Pixabay download. Retain the recording page/license before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume. Looping is a review setting, not proof of a seamless edit."
+  - Id: "bird-sparrow"
+    Title: "Sparrow call"
+    Category: "Birds"
+    Clip: {fileID: 8300000, guid: 1d676a3639835442aeada92a73df6549, type: 3}
+    Loop: 0
+    Environments: 2
+    Source: "D:\\Unity\\Explore Assets\\Assets\\Procedural Worlds\\Ambient Sounds\\Audio\\Sounds\\Birds\\sfx-birds-sparrow_0-0.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume."
+  - Id: "bird-mixed"
+    Title: "Mixed bird calls"
+    Category: "Birds"
+    Clip: {fileID: 8300000, guid: 272bfa1ae23858919aa03d0aaeaefe66, type: 3}
+    Loop: 0
+    Environments: 10
+    Source: "D:\\Unity\\Explore Assets\\Assets\\Procedural Worlds\\Ambient Sounds\\Audio\\Sounds\\Birds\\sfx-birds-mixed_0-0.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume."
+  - Id: "frog"
+    Title: "Frog call"
+    Category: "Frogs"
+    Clip: {fileID: 8300000, guid: e4770219394b5ae69562c3321a0f8ea8, type: 3}
+    Loop: 0
+    Environments: 8
+    Source: "D:\\Unity\\Explore Assets\\Assets\\Procedural Worlds\\Ambient Sounds\\Audio\\Sounds\\Amphibians\\sfx-amphibian-frog_0-0.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume."
+  - Id: "rain-light"
+    Title: "Light rain"
+    Category: "Rain"
+    Clip: {fileID: 8300000, guid: 52af55d9f6df5851adbfeac1aea8032b, type: 3}
+    Loop: 1
+    Environments: 0
+    Source: "D:\\Unity\\Explore Assets\\Assets\\UniStorm Weather System\\Sounds\\Weather Effects\\Light Rain.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume. Looping is a review setting, not proof of a seamless edit."
+  - Id: "rain-heavy"
+    Title: "Heavy rain"
+    Category: "Rain"
+    Clip: {fileID: 8300000, guid: 29cbee877833515aae10335f2cf9fa52, type: 3}
+    Loop: 1
+    Environments: 0
+    Source: "D:\\Unity\\Explore Assets\\Assets\\UniStorm Weather System\\Sounds\\Weather Effects\\Heavy Rain 1.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume. Looping is a review setting, not proof of a seamless edit."
+  - Id: "thunder"
+    Title: "Thunder"
+    Category: "Thunder"
+    Clip: {fileID: 8300000, guid: edf3f10179dd54aab9873e70b02913e8, type: 3}
+    Loop: 0
+    Environments: 0
+    Source: "D:\\Unity\\Explore Assets\\Assets\\UniStorm Weather System\\Sounds\\Thunder\\Thunder 1.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume."
+  - Id: "forest"
+    Title: "Forest background"
+    Category: "Forest"
+    Clip: {fileID: 8300000, guid: 7210acc904c15a36ae7e084f0c0426f4, type: 3}
+    Loop: 1
+    Environments: 2
+    Source: "D:\\Unity\\Explore Assets\\Assets\\Farm Animal Sounds\\Bonus\\Forest Loop.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume. Looping is a review setting, not proof of a seamless edit."
+  - Id: "underwater"
+    Title: "Underwater background"
+    Category: "Underwater"
+    Clip: {fileID: 8300000, guid: 1186555f6f595bf4817a07d62b11685b, type: 3}
+    Loop: 1
+    Environments: 0
+    Source: "D:\\Unity\\Explore Assets\\Assets\\Fantacode Studios\\Swimming System\\Audio\\Underwater Sound Effect.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume. Looping is a review setting, not proof of a seamless edit."
+  - Id: "campfire"
+    Title: "Campfire"
+    Category: "Fire"
+    Clip: {fileID: 8300000, guid: 455d0a8ee94e561f8c0ef05e55f5d20c, type: 3}
+    Loop: 1
+    Environments: 0
+    Source: "D:\\Unity\\Explore Assets\\Assets\\SurfaceData\\Demo\\Sounds\\campfire.wav"
+    SourceUrl: ""
+    License: "Owned Asset Store pack. Verify included audio terms before production use."
+    ListenFor: "Check unwanted voices, traffic, distortion, and repetition. Compare at a similar perceived volume. Looping is a review setting, not proof of a seamless edit."
+  - Id: "missing-leaves"
+    Title: "Broadleaf rustle"
+    Category: "Foliage"
+    Clip: {fileID: 0}
+    Loop: 1
+    Environments: 0
+    Source: "Not selected yet"
+    SourceUrl: ""
+    License: "No recording yet"
+    ListenFor: "Find wind through broad leaves without loud birds or traffic."
+  - Id: "missing-pine"
+    Title: "Pine wind"
+    Category: "Foliage"
+    Clip: {fileID: 0}
+    Loop: 1
+    Environments: 0
+    Source: "Not selected yet"
+    SourceUrl: ""
+    License: "No recording yet"
+    ListenFor: "Find wind through pine needles, distinct from broadleaf rustle."
+  - Id: "missing-grass"
+    Title: "Grass movement"
+    Category: "Foliage"
+    Clip: {fileID: 0}
+    Loop: 1
+    Environments: 0
+    Source: "Not selected yet"
+    SourceUrl: ""
+    License: "No recording yet"
+    ListenFor: "Find nearby grass moving in light wind."
+  - Id: "missing-reeds"
+    Title: "Reed movement"
+    Category: "Foliage"
+    Clip: {fileID: 0}
+    Loop: 1
+    Environments: 0
+    Source: "Not selected yet"
+    SourceUrl: ""
+    License: "No recording yet"
+    ListenFor: "Find dry and wet reeds moving beside water."
+  - Id: "missing-lake-lapping"
+    Title: "Gentle lake lapping"
+    Category: "Lakes"
+    Clip: {fileID: 0}
+    Loop: 1
+    Environments: 0
+    Source: "Not selected yet"
+    SourceUrl: ""
+    License: "No recording yet"
+    ListenFor: "Find small shore waves without ocean roar or flowing stream noise."
+  - Id: "missing-rain-leaves"
+    Title: "Rain on leaves"
+    Category: "Rain"
+    Clip: {fileID: 0}
+    Loop: 1
+    Environments: 0
+    Source: "Not selected yet"
+    SourceUrl: ""
+    License: "No recording yet"
+    ListenFor: "Find close leaf impacts to layer over the general rain sound."
+  - Id: "missing-waterfall"
+    Title: "Distant waterfall"
+    Category: "Streams"
+    Clip: {fileID: 0}
+    Loop: 1
+    Environments: 0
+    Source: "Not selected yet"
+    SourceUrl: ""
+    License: "No recording yet"
+    ListenFor: "Find a steady distant waterfall without voices."
+--- !u!4 &1073807850
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1073807848}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1660057539 &9223372036854775807
+SceneRoots:
+  m_ObjectHideFlags: 0
+  m_Roots:
+  - {fileID: 1073807850}
+  - {fileID: 237493587}

@@ -1,40 +1,40 @@
+using System;
 using UnityEngine;
 
-// A felled tree tipping over (plan 005 Inc 3). Scripted, not physics — terrain chunks have no colliders, so a
-// rigidbody would have nothing to land on. Eases an accelerating rotation about a horizontal axis around the
-// base pivot; when it settles it hands its final transform to a persistent log record and removes itself, so
-// the LogRenderer draws the resting log seamlessly (no pop). A real rigidbody fall comes later.
+/// <summary>Moves the severed tree from its cut pivot to a terrain-supported resting pose.</summary>
 public sealed class FallingTree : MonoBehaviour
 {
-    Quaternion _from, _to;
-    float _fallDuration = 1.1f;
-    float _t;
-    System.Action<Vector3, Quaternion> _onSettled;
-    bool _settled;
+    Vector3 _fromPosition, _toPosition;
+    Quaternion _fromRotation, _toRotation;
+    float _duration, _elapsed;
+    Action _settled;
+    Func<bool> _valid;
+    Action<float> _moving;
 
-    // `up` = the surface radial at the tree; `axisSeed` varies the topple direction; `onSettled` receives the
-    // final (position, rotation) so the caller can create the persistent log.
-    public void Launch(Vector3 up, Vector3 axisSeed, float fallSeconds, System.Action<Vector3, Quaternion> onSettled)
+    public void Launch(Vector3 position, Quaternion rotation, float seconds, Action settled, Func<bool> valid = null,
+        Action<float> moving = null)
     {
-        _fallDuration = Mathf.Max(0.1f, fallSeconds);
-        _onSettled = onSettled;
-        _from = transform.rotation;
-
-        Vector3 axis = Vector3.Cross(up, axisSeed);
-        if (axis.sqrMagnitude < 1e-4f) axis = Vector3.Cross(up, Vector3.right);
-        _to = Quaternion.AngleAxis(82f, axis.normalized) * _from; // tip ~82 degrees onto the ground
+        _fromPosition = transform.position; _fromRotation = transform.rotation;
+        _toPosition = position; _toRotation = rotation;
+        _duration = Mathf.Max(0.1f, seconds); _settled = settled; _valid = valid; _moving = moving; _elapsed = 0f;
     }
 
-    void Update()
+    public void Advance(float seconds)
     {
-        _t += Time.deltaTime;
-        float f = Mathf.Clamp01(_t / _fallDuration);
-        transform.rotation = Quaternion.Slerp(_from, _to, f * f); // ease-in: accelerating topple
-        if (f >= 1f && !_settled)
-        {
-            _settled = true;
-            _onSettled?.Invoke(transform.position, transform.rotation);
-            Destroy(gameObject);
-        }
+        if (_valid != null && !_valid()) { Destroy(gameObject); return; }
+        _elapsed += Mathf.Max(0f, seconds);
+        float t = Mathf.Clamp01(_elapsed / _duration);
+        float rotation = t * t * (3f - 2f * t);
+        float release = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.4f, 1f, t));
+        transform.SetPositionAndRotation(Vector3.Lerp(_fromPosition, _toPosition, release),
+            Quaternion.Slerp(_fromRotation, _toRotation, rotation));
+        _moving?.Invoke(t);
+        if (t < 1f) return;
+        var callback = _settled; _settled = null;
+        callback?.Invoke();
+        gameObject.SetActive(false);
+        Destroy(gameObject);
     }
+
+    void Update() => Advance(Time.deltaTime);
 }

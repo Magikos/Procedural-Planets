@@ -18,6 +18,7 @@ public sealed class PerFaceSurfaceProvider : IPlanetSurfaceProvider
     readonly Planet.FaceRenderMask _renderMask;
 
     MeshFilter[] _meshFilters;
+    Mesh[] _meshes;
     TerrainFace[] _terrainFaces;
 
     // Phase A only: exposed so Planet's color and water gen can iterate face data without
@@ -42,24 +43,27 @@ public sealed class PerFaceSurfaceProvider : IPlanetSurfaceProvider
 
     public async Awaitable GenerateAsync(IProgressHandle progress, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         EnsureFaces();
 
         progress?.Report(0f, "Generating terrain...");
 
-        var filters = _shapeGenerator.BuildNoiseFilterData(Allocator.Persistent);
-        var diagnosticTerrainCells = _shapeGenerator.BuildDiagnosticTerrainCells(Allocator.Persistent);
+        NativeArray<NoiseFilterData> filters = default;
+        NativeArray<byte> diagnosticTerrainCells = default;
         var faceStates = new TerrainFaceJobState[_terrainFaces.Length];
         var handles = new NativeArray<JobHandle>(_terrainFaces.Length, Allocator.Temp);
         JobHandle combined;
         try
         {
+            filters = _shapeGenerator.BuildNoiseFilterData(Allocator.Persistent);
+            diagnosticTerrainCells = _shapeGenerator.BuildDiagnosticTerrainCells(Allocator.Persistent);
             for (int i = 0; i < _terrainFaces.Length; i++)
             {
                 faceStates[i] = _terrainFaces[i].ScheduleMeshDataJob(
                     filters,
                     diagnosticTerrainCells,
                     _shapeGenerator.DiagnosticTerrainData,
-                    _shapeGenerator.Settings.PlanetRadius);
+                    _shapeGenerator.Settings.PlanetRadius, _shapeGenerator.RiverData);
                 handles[i] = faceStates[i].Handle;
             }
             combined = JobHandle.CombineDependencies(handles);
@@ -68,31 +72,24 @@ public sealed class PerFaceSurfaceProvider : IPlanetSurfaceProvider
 
             while (!combined.IsCompleted)
             {
-                if (ct.IsCancellationRequested)
-                {
-                    combined.Complete();
-                    for (int i = 0; i < faceStates.Length; i++) faceStates[i].Dispose();
-                    diagnosticTerrainCells.Dispose();
-                    filters.Dispose();
-                    ct.ThrowIfCancellationRequested();
-                }
-                await Awaitable.NextFrameAsync();
+                await Awaitable.NextFrameAsync(ct);
             }
             combined.Complete();
+            ct.ThrowIfCancellationRequested();
+            for (int i = 0; i < _terrainFaces.Length; i++)
+                _terrainFaces[i].CompleteMeshDataJob(faceStates[i]);
         }
-        catch
+        finally
         {
             if (handles.IsCreated) handles.Dispose();
-            for (int i = 0; i < faceStates.Length; i++) faceStates[i].Dispose();
+            for (int i = 0; i < faceStates.Length; i++)
+            {
+                faceStates[i].Handle.Complete();
+                faceStates[i].Dispose();
+            }
             if (diagnosticTerrainCells.IsCreated) diagnosticTerrainCells.Dispose();
-            filters.Dispose();
-            throw;
+            if (filters.IsCreated) filters.Dispose();
         }
-
-        for (int i = 0; i < _terrainFaces.Length; i++)
-            _terrainFaces[i].CompleteMeshDataJob(faceStates[i]);
-        diagnosticTerrainCells.Dispose();
-        filters.Dispose();
 
         // EvaluateElevation isn't called per vertex anymore (Burst job bypasses it), so feed
         // the per-face elevation samples into ShapeGenerator's min/max envelope manually.
@@ -127,11 +124,17 @@ public sealed class PerFaceSurfaceProvider : IPlanetSurfaceProvider
         progress?.Report(0f, "Calculating biome colors...");
 
         await Awaitable.BackgroundThreadAsync();
+        try
+        {
+            System.Threading.Tasks.Parallel.For(0, _terrainFaces.Length,
+                new System.Threading.Tasks.ParallelOptions { CancellationToken = ct },
+                i => _terrainFaces[i].CalculateColors(biomeProvider));
+        }
+        finally
+        {
+            await Awaitable.MainThreadAsync();
+        }
         ct.ThrowIfCancellationRequested();
-        System.Threading.Tasks.Parallel.For(0, _terrainFaces.Length, i => _terrainFaces[i].CalculateColors(biomeProvider));
-        ct.ThrowIfCancellationRequested();
-
-        await Awaitable.MainThreadAsync();
         for (int i = 0; i < _terrainFaces.Length; i++)
             _terrainFaces[i].ApplyColors();
 
@@ -148,8 +151,23 @@ public sealed class PerFaceSurfaceProvider : IPlanetSurfaceProvider
 
     public void Dispose()
     {
-        // Face GameObjects are children of the planet Transform; Planet.DestroyChildren clears
-        // them on regen. Nothing to dispose here yet (jobs are completed in GenerateAsync).
+        if (_meshes != null)
+            foreach (var mesh in _meshes)
+                if (mesh != null)
+                {
+                    if (Application.isPlaying) Object.Destroy(mesh);
+                    else Object.DestroyImmediate(mesh);
+                }
+        if (_meshFilters != null)
+            foreach (var filter in _meshFilters)
+                if (filter != null)
+                {
+                    if (Application.isPlaying) Object.Destroy(filter.gameObject);
+                    else Object.DestroyImmediate(filter.gameObject);
+                }
+        _meshes = null;
+        _meshFilters = null;
+        _terrainFaces = null;
     }
 
     void EnsureFaces()
@@ -165,18 +183,21 @@ public sealed class PerFaceSurfaceProvider : IPlanetSurfaceProvider
             if (allValid) return;
         }
 
+        Dispose();
         _meshFilters = new MeshFilter[6];
+        _meshes = new Mesh[6];
         _terrainFaces = new TerrainFace[6];
 
         Vector3[] directions = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
         for (int i = 0; i < 6; i++)
         {
             GameObject meshObject = new GameObject("mesh");
-            meshObject.transform.parent = _planetTransform;
+            meshObject.transform.SetParent(_planetTransform, false);
 
             meshObject.AddComponent<MeshRenderer>().sharedMaterial = _faceMaterial;
             _meshFilters[i] = meshObject.AddComponent<MeshFilter>();
-            _meshFilters[i].sharedMesh = new Mesh();
+            _meshes[i] = new Mesh();
+            _meshFilters[i].sharedMesh = _meshes[i];
 
             _terrainFaces[i] = new TerrainFace(_shapeGenerator, _meshFilters[i].sharedMesh, _faceResolution, directions[i]);
 

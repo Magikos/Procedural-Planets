@@ -13,7 +13,7 @@ using UnityEngine;
 public static class ScatterValidation
 {
     // Above this an albedo multiplier is brighter than white and reads as self-lit once the sun is down.
-    // Slightly over 1 is tolerated because authored Synty canopies sit a little hot on purpose.
+    // Slightly over 1 is tolerated because authored source canopies sit a little hot on purpose.
     const float AlbedoWarnAbove = 1.05f;
 
     // Set by the impostor bake tool while it rebuilds. The tool deliberately clears every baked card so it can
@@ -29,6 +29,31 @@ public static class ScatterValidation
         ReportOverbrightMaterials(lib);
         ReportUndrawable(lib);
         ReportLodDiscontinuity(lib);
+        ReportInvalidMaterials(lib);
+    }
+
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+    public static void ReportInvalidMaterials(ScatterLibraryDto lib)
+    {
+        if (Suppressed || lib?.Prototypes == null) return;
+        foreach (ScatterPrototypeDto p in lib.Prototypes)
+        {
+            if (p?.Parts == null) continue;
+            for (int i = 0; i < p.Parts.Length; i++)
+            {
+                Material material = p.Parts[i]?.Material;
+                if (material != null && material.shader != null && material.shader.isSupported) continue;
+                string reason = material == null
+                    ? (ReferenceEquals(material, null) ? "missing material" : "destroyed material")
+                    : "missing or unsupported shader";
+                LoggerProvider.Log(LogLevel.Warning, "ScatterCheck",
+                    $"{p.DisplayName} ({p.SpeciesKey}), part {i}: {reason}.");
+            }
+            if (p.StumpMesh != null && p.StumpMaterial == null)
+                LoggerProvider.Log(LogLevel.Warning, "ScatterCheck",
+                    $"{p.DisplayName} ({p.SpeciesKey}): missing or destroyed stump material.");
+        }
     }
 
     // A far LOD that is a different SIZE from the near one pops as you cross the band. Found this way: the
@@ -78,7 +103,7 @@ public static class ScatterValidation
         foreach (ScatterPrototypeDto p in lib.Prototypes)
         {
             // SpeciesKey is only set by injection, so this stays a report on GENERATED props. An untouched
-            // Synty prototype without a card is the source-library bake tool's business, not this one.
+            // A source prototype without a card is the source-library bake tool's business, not this one.
             if (p == null || !p.HasImpostor || string.IsNullOrEmpty(p.SpeciesKey)) continue;
             if (p.BakedImpostorAtlas != null) cached++;
             else missed.Add(p.ImpostorKey);

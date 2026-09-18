@@ -1,7 +1,7 @@
 # Reusable agent systems
 
-Status: Foundation, persistent needs, and stable objective selection implemented and checked.
-Current next action: Connect actor-centered observations and source eligibility, then authoritative interaction outcomes.
+Status: Foundation, persistent needs, stable objectives, and the survival scene are implemented and checked. Bryan accepted the current scene provisionally.
+Current next action: Review the [expanded ecosystem fixture](2026-09-07-creature-ecosystem-prep.md), then connect persistent world authority. Preserve harvesting and corpse loot.
 Baseline: dirty working tree on `harvest-vertical-slice`, commit `1df21b2`. Preserve unrelated changes.
 
 ## Contract
@@ -109,3 +109,65 @@ The failing-write test uses a rejecting log adapter; it does not prove disk-fail
 - Live play-mode checks with explicit stepping: satisfied -> Roam; hungry -> Hunt/Stalk; thirst-prioritized -> FindWater; danger -> Escape/Flee.
   All four checks retained 0 hits while checking selection. Unity was left paused at the start of a hungry-wolf encounter.
 - No source consumption, navigation reachability, threat-memory delay, or multiplayer transport claim is made by these checks.
+
+## Survival scenario slice
+
+The current request adds feeding, drinking, rest, sleep, and a deer escape-speed control to WolfDeerEncounter.
+The earlier validation sections describe their respective snapshots; this section supersedes the fixture's earlier lack of consumption.
+
+- ActorResourceSource owns finite quantities and applies nutrition to ActorNeeds. Diet masks distinguish plants, meat, fresh water, and salt water.
+- The existing CreatureBrain/FSM adds Feed, Drink, Rest, and Sleep. Existing persisted behavior IDs remain unchanged; new IDs append at 7–10.
+- Feed and Drink approach the supplied source. The fixture validates current state, diet, availability, and range before consumption.
+- A living deer supplies a hunt target. Its death creates meat once. The animation never grants nutrition or damage.
+- Rest eligibility ends when hunger reaches 0.65 or thirst reaches 0.6. Six undisturbed seconds of rest permit sleep.
+- Threats interrupt rest, sleep, feeding, and drinking through the same emergency transition.
+- Available food scores above hunting at the same hunger. Ongoing feeding can continue below the initial search threshold.
+- Bite wind-up tracks a moving target with bounded turning and braking. The hit still requires current range and facing.
+- Death presentation removes lateral root travel so the carcass remains over its authority-owned source position.
+- Disposed views deactivate immediately before Unity's deferred destruction. Repeated paused resets no longer show duplicate models.
+
+The scene starts with wolf hunger 0.5, thirst 0.15, deer hunger 0.85, and thirst 0.65.
+Accelerated needs take 80/160 simulated seconds to grow from zero to one. These are fixture settings, not production species rates.
+The deer visits labeled plants and fresh water while the wolf rests, sleeps, wakes, stalks, and hunts.
+Default deer escape speed is 40% of 6 m/s. The wolf chase speed is 4 m/s. A wound applies a 0.7 speed multiplier.
+The inspector exposes these values. The "Test deer at 100%" button resets the scenario at full escape speed.
+"Reset survival scenario" resets needs and stock while retaining movement settings. RestartRequested uses that same reset.
+
+CreatureSurvivalClipAuthor authors ordinary editable clips using the existing rigs and LimbPoseSolver.
+Both species receive Rest/Sleep clips. The wolf receives a feeding clip; drinking currently reuses each species' feeding clip.
+Playables blend the poses. Rest disables procedural locomotion corrections while the authored folded-leg pose owns the skeleton.
+These are prototype poses, not finished animation art. No third-party runtime code or packages were imported.
+
+### Scope limits
+
+The source quantity model and behaviors are reusable. The encounter remains a local authority fixture.
+Known source positions stand in for perception. There is no vision occlusion, scent search, navigation graph, or reachability proof here.
+The full-speed test can escape a hunt, but it does not establish long-term survival or realistic awareness memory.
+Sleep follows a rest timer; fatigue, circadian timing, and sleep recovery are not implemented.
+World residency does not yet supply source observations or enable rest. Production corpse inventory and player harvesting remain unchanged.
+Before production consumption, connect existing corpse/item authorities so meat cannot be consumed twice or remove hide loot.
+Source depletion in this fixture resets with the scene. Persistent creature hunger/thirst from the previous slice remains intact.
+No networking runtime, pack behavior, blood trails, or production source persistence is claimed.
+
+### Survival validation
+
+- Final EditMode job `4366f937447e4a2bbce33658dca2b052`: **179/179 passed**, no skipped tests.
+- Earlier job `5622dcb0e4584ae399405732e1687769`: 178/178 passed before the bite correction and its regression check.
+- Tests cover stock conservation, incompatible diets, salt-water rejection, saturation, invalid quantities, sleep/wake, threat interruption,
+  source approach/depletion, carcass preference, and tracking only before the hit marker. Existing selected regressions still pass.
+- Test assembly build passed: 0 errors, 22 existing/analyzer warnings. Log: `local-only/animation-preflight/creature-survival-build.txt`.
+- Editor assembly build passed after restore: 0 errors, 43 existing/analyzer warnings. Log: `local-only/animation-preflight/creature-survival-editor-build.txt`.
+- The first editor build reported `error NETSDK1004: Assets file 'C:\Users\Bryan\Source\Repos\Magikorp\ProceduralPlanets\Temp\obj\ProceduralPlanets.Editor\project.assets.json' not found. Run a NuGet package restore to generate this file.`
+  Building with normal restore generated the missing assets file. No dependency was added.
+- The authoring tool initially reported missing ProceduralRigDefinition/LimbPoseSolver types. Adding the existing Magikos.Game assembly reference fixed compilation.
+- Live default run: rest at 3 s, sleep at 9 s, stalk at 12 s, wound by 24 s, death/feed by 30 s, rest by 39 s, sleep by 45 s.
+- Wolf hunger fell from about 0.88 before feeding to below 0.05. Meat fell from 1.50 to about 0.58. Two hits, zero misses.
+- Deer plant stock fell from 2.00 to about 0.92. Fresh water fell from 10.00 to about 9.59 before the hunt ended.
+- Full-speed run: deer health remained 2/2 through 60 simulated seconds; the wolf missed its bite. This is one controlled scenario.
+- The first live run exposed wind-up overshoot: range stayed near 1.35 m while bearing exceeded 95 degrees at impact.
+  Bounded wind-up tracking corrected that failure without accepting out-of-range or rear-facing hits.
+- Captures: `local-only/animation-preflight/survival-rest-close.png`, `survival-feeding.png` (before carcass alignment),
+  `survival-feeding-aligned.png`, and `survival-feeding-side.png` (after alignment).
+- Unity console: no `error CS` or `Exception` entries after final compilation and live checks.
+- Sleep pose comparison: `survival-sleep.png` and `survival-sleep-lowered.png`. The latter lowers the head toward the forelegs.
+- Unity was left playing and paused at 1 simulated second, with two active animal models and the default 40% deer escape speed.

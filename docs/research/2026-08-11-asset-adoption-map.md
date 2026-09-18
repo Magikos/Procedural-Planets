@@ -1549,3 +1549,42 @@ _Single-player for now; revisit only if multiplayer becomes a goal._
 **Horror / apocalypse / zombie** (~12), **AR/VR** (~5), **misc off-genre** (~30): Modular Burger Shop, Will's Room, Apocalypse Hospital, Horror Prison, THE CARNIVAL, Steampunk Western Carnival, Airstream Substance Showcase, Dice Pack, EndlessBook, MegaBook 2, Speech Recognition ×2, DeepVoice AI, Easy AR, Native Goodies for Android, Input.Touches, Mobile Tools.
 
 _Full per-asset disposition is in the triage table (§Download list and Appendix B, pending)._
+
+## 2026-09-10: Sidekick character and style trial
+
+Adopted one `SidekickCharacters/Characters/Starter/Starter_01` art export into `Assets/Art/Characters/Human/`.
+The saved Humanoid avatar uses existing project animation and procedural binding. Vendor scripts and shaders remain outside the project.
+Selected Fantasy Kingdom sword, shield, hat, cape, doorway, roof, and palette art support the dedicated fitting scene.
+The scene reuses current Polyperfect deer and wolf assets and the original POLYGON character.
+The gameplay default remains unchanged pending Bryan's visual choice. Legacy clothing conversion remains unproven beyond the recorded samples.
+See [Sidekick trial results](2026-09-10-sidekick-trial-results.md) for measured rig checks, accessory limitations, scene controls, and test evidence.
+
+The body fitting follow-up adopts 22 `SK_HUMN_BASE_01` human part meshes into `Human/BaseParts/`.
+`Human/BodyReview/` contains the bare-body prefab and five experimental POLYGON torso/arm conversions on the Sidekick skeleton.
+`SidekickBodyReview.unity` compares these actors with the original POLYGON hero and existing animals/building samples.
+The four body-shape sliders now drive native and converted parts together through baked POLYGON shape frames.
+The frame transfer uses the bare Sidekick surface; skin colour and neutral seam refinement remain open.
+
+### Sidekick full-body fitting extension — 2026-09-10
+
+Added an independent trial under `Assets/Art/Characters/Human/BodyReview/FullBody/`. It derives ten body meshes and 40 shape frames from existing adopted POLYGON and Sidekick art. No additional vendor import occurred. The new `SidekickFullBodyReview.unity` scene retains the original and upper-body comparisons. Gameplay adoption remains pending visual acceptance.
+
+### Second Sidekick outfit and skin matching — 2026-09-10
+
+Derived ten Outfit 02 meshes and 40 shape frames under `Assets/Art/Characters/Human/BodyReview/Outfit02/` from the existing imported Fantasy Hero model. No new vendor import occurred. `SidekickSkinAuthor` reuses the Sidekick material for exposed skin and preserves clothing UVs. `SidekickOutfitReview.unity` presents both outfits beside the source rig. Cross-pack and loose-clothing compatibility remain unproven.
+
+### Fantasy Kingdom character fitting trial — 2026-09-10
+
+Copied `Models/FantasyKingdom_Characters.fbx` from the owned Synty PolygonFantasyKingdom pack to `Assets/Art/Characters/Human/Review/`. Reused `Kingdom.mat`, `KingdomAtlas.png`, and the Sidekick skin material. No vendor code or new textures/shaders were imported. Local importer Hips mapping corrects the source Root assignment.
+
+Derived monk and peasant bodies under `Assets/Art/Characters/Human/BodyReview/Kingdom/`. The source combined heads are excluded from derived triangle lists; original references remain intact. Each candidate has four cached body shapes and uses the existing fitting algorithm. `SidekickKingdomReview.unity` compares source and Sidekick rigs. All 215 tests pass. Cloth dynamics and final visual acceptance remain open.
+
+### Sidekick accessory fitting trial — 2026-09-10
+
+Copied `SM_Prop_Bag_Explorer_01.fbx` and `SM_Item_Pouch_01.fbx` from the same Kingdom Models directory into the existing Review folder. Reused the priest hat, mage cape, material, and atlas. `SidekickAccessoryReview.unity` provides four attachment types on both rigs. No vendor scripts were imported. Rigid mounts need body-shape offsets; the cape needs independent motion and collision. The original monk front-panel overlap remains unresolved. Full findings and captures are listed in `2026-09-10-sidekick-trial-results.md`.
+
+Follow-up 2026-09-11: Sidekick backpacks and pouches now use baked body-shape mount offsets. `MageCapeCloth.asset` derives a denser mesh from the already imported mage cape for a native Unity Cloth trial. The accessory scene has shoulder pins and body capsule proxies on both rigs. Cloth currently supports neutral body proportions; other shapes use rigid skinning. No additional vendor imports occurred. Floor, accessory, and self-collision remain open.
+
+Further trial 2026-09-11: `SidekickAccessoryMotionReview.unity` uses the existing `BoneChainSpring` for capes, pouches, and separated backpack cups. Derived meshes under `BodyReview/AccessoryMotion/` preserve source assets. Robes omit covered shin skin and gain clearance; Sidekick hats sit lower. Tail Animator 2 and Magica Cloth 1.12.13 are locally available, but no vendor runtime was imported. All 229 EditMode tests pass. Walking improves, while extreme-motion cape contact remains unresolved; the live sweep recorded a maximum 0.860136 m contact error. This is review-only work, not gameplay adoption.
+
+Wardrobe coverage 2026-09-11: `SidekickWardrobeReview.unity` adds Rider, Soldier Male, Blacksmith Female, and Priest pairs plus a modular helmet. Mage remains a separate saved conversion. All derive from already imported FBX assets. No vendor imports occurred. The existing fit, cached shapes, and palette conversion were reused. Attachment-bone mappings were added for the helmet. The 312-combination live sweep found no invalid vertices; 235 distinct tests passed across the full and focused runs. Loose cloth and integrated hoods remain exceptions. See `2026-09-11-sidekick-wardrobe-matrix.md` for provisional fit classes and evidence.

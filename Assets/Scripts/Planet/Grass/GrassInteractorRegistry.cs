@@ -18,6 +18,7 @@ public static class GrassInteractorRegistry
     static readonly int PreviousCountId = Shader.PropertyToID(ShaderGlobalIds.GrassInteractorPreviousCount);
 
     static readonly List<IGrassInteractor> InteractorsList = new();
+    static readonly Dictionary<IGrassInteractor, (int Priority, int SlotLimit)> Policies = new();
     static readonly GrassInteractorGpu[] CpuBuffer = new GrassInteractorGpu[MaxInteractors];
     static readonly Dictionary<IGrassInteractor, SourceState> SourceStates = new();
     static readonly List<ReleaseSample> ReleaseSamples = new(MaxReleaseSamples);
@@ -84,12 +85,18 @@ public static class GrassInteractorRegistry
     public static int RetainedReleaseSampleCount => ReleaseSamples.Count;
     public static IReadOnlyList<IGrassInteractor> Interactors => InteractorsList;
 
-    public static void Register(IGrassInteractor interactor)
+    /// <summary>Higher priority wins. A lower slot limit leaves buffer space for other sources and release trails.</summary>
+    public static void Register(IGrassInteractor interactor, int priority = 0, int slotLimit = MaxInteractors)
     {
         if (IsMissing(interactor) || InteractorsList.Contains(interactor))
             return;
 
-        InteractorsList.Add(interactor);
+        slotLimit = Mathf.Clamp(slotLimit, 0, MaxInteractors);
+        int insertion = InteractorsList.Count;
+        for (int i = 0; i < InteractorsList.Count; i++)
+            if (Policies[InteractorsList[i]].Priority < priority) { insertion = i; break; }
+        InteractorsList.Insert(insertion, interactor);
+        Policies[interactor] = (priority, slotLimit);
         GrassInteractorSnapshot snap = GrassInteractorSnapshot.From(interactor);
         SourceStates[interactor] = new SourceState
         {
@@ -118,6 +125,7 @@ public static class GrassInteractorRegistry
         }
 
         InteractorsList.Remove(interactor);
+        Policies.Remove(interactor);
         SourceStates.Remove(interactor);
     }
 
@@ -179,7 +187,7 @@ public static class GrassInteractorRegistry
             UpdateReleaseTrail(state, snap, now);
             activeSources++;
 
-            if (gpuCount < MaxInteractors)
+            if (gpuCount < Policies[source].SlotLimit)
                 PackGpuSlot(ref gpuCount, snap.WorldPosition, snap.Radius, snap.Strength);
         }
 
@@ -187,6 +195,7 @@ public static class GrassInteractorRegistry
         {
             IGrassInteractor stale = StaleSources[i];
             InteractorsList.Remove(stale);
+            Policies.Remove(stale);
             SourceStates.Remove(stale);
         }
 

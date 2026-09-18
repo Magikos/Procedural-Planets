@@ -87,6 +87,10 @@ public sealed class SphericalWeatherGrid : IDisposable
     static readonly int _weatherReadId = Shader.PropertyToID("_WeatherRead");
     static readonly int _weatherWriteId = Shader.PropertyToID("_WeatherWrite");
     static readonly int _dynamicsReadId = Shader.PropertyToID("_DynamicsRead");
+    static readonly int _climateReadId = Shader.PropertyToID("_ClimateRead");
+    static readonly int _hasClimateId = Shader.PropertyToID("_HasClimate");
+    static readonly int _climateMapId = Shader.PropertyToID(ShaderGlobalIds.ClimateMap);
+    static readonly int _climateResolutionId = Shader.PropertyToID(ShaderGlobalIds.ClimateMapResolution);
     static readonly int _dynamicsWriteId = Shader.PropertyToID("_DynamicsWrite");
     static readonly int _resolutionId = Shader.PropertyToID("_Resolution");
     static readonly int _permutationsId = Shader.PropertyToID("_Permutations");
@@ -425,16 +429,69 @@ public sealed class SphericalWeatherGrid : IDisposable
         }
     }
 
+    RenderTexture _surfaceWeather;
+    RenderTexture _flowActive, _flowScratch;
+    static readonly int FlowMapId = Shader.PropertyToID(ShaderGlobalIds.CloudFlowMap);
+    static readonly int FlowEnabledId = Shader.PropertyToID(ShaderGlobalIds.CloudFlowEnabled);
+    static readonly int SurfaceMapId = Shader.PropertyToID(ShaderGlobalIds.WeatherSurfaceMap);
+    static readonly int SurfaceEnabledId = Shader.PropertyToID(ShaderGlobalIds.WeatherSurfaceEnabled);
+
+    public void AdvanceSurface(ComputeShader compute, float deltaTime, float windSpeed)
+    {
+        if (compute == null || deltaTime <= 0) return;
+        compute.SetInt(_resolutionId, Resolution);
+        int groups = Mathf.CeilToInt(Resolution / 8f);
+        if (_surfaceWeather == null)
+        {
+            _surfaceWeather = CreateWeatherTexture(Resolution, "SurfaceWeather", RenderTextureFormat.ARGBFloat);
+            int init = compute.FindKernel("CSInitSurface");
+            compute.SetTexture(init, "_SurfaceWeather", _surfaceWeather);
+            compute.Dispatch(init, groups, groups, 6);
+        }
+        int kernel = compute.FindKernel("CSSurfaceWeather");
+        Texture climate = Shader.GetGlobalTexture(_climateMapId);
+        bool hasClimate = climate != null && Shader.GetGlobalFloat(_climateResolutionId) > 0;
+        compute.SetTexture(kernel, _climateReadId, hasClimate ? climate : _dynamicsActiveTexture);
+        compute.SetInt(_hasClimateId, hasClimate ? 1 : 0);
+        compute.SetTexture(kernel, _weatherReadId, _activeTexture);
+        compute.SetTexture(kernel, _dynamicsReadId, _dynamicsActiveTexture);
+        compute.SetTexture(kernel, "_SurfaceWeather", _surfaceWeather);
+        compute.SetFloat(_deltaTimeId, deltaTime);
+        compute.SetFloat("_SurfaceWindSpeed", windSpeed);
+        compute.SetVector(ShaderGlobalIds.ClimateTemperatureRangeCelsius, Shader.GetGlobalVector(ShaderGlobalIds.ClimateTemperatureRangeCelsius));
+        compute.SetVector(ShaderGlobalIds.WeatherParticlePhaseParams, Shader.GetGlobalVector(ShaderGlobalIds.WeatherParticlePhaseParams));
+        compute.SetVector("_SurfacePrecipitationParams", Shader.GetGlobalVector(ShaderGlobalIds.PrecipitationParams));
+        compute.Dispatch(kernel, groups, groups, 6);
+        Shader.SetGlobalTexture(SurfaceMapId, _surfaceWeather);
+        Shader.SetGlobalFloat(SurfaceEnabledId, 1f);
+    }
+
     public bool Advance(ComputeShader compute, CloudDto settings, float deltaTime, Vector3 windDirection, float stepAngle)
     {
         if (compute == null || settings == null || !settings.EnableWeatherEvolution || deltaTime <= 0f)
             return false;
 
+        if (_flowActive == null)
+        {
+            _flowActive = CreateWeatherTexture(Resolution, "CloudFlow", RenderTextureFormat.ARGBFloat);
+            _flowScratch = CreateWeatherTexture(Resolution, "CloudFlowScratch", RenderTextureFormat.ARGBFloat);
+            int initFlow = compute.FindKernel("CSInitFlow");
+            compute.SetInt(_resolutionId, Resolution);
+            compute.SetTexture(initFlow, "_FlowWrite", _flowActive);
+            int flowGroups = Mathf.CeilToInt(Resolution / 8f);
+            compute.Dispatch(initFlow, flowGroups, flowGroups, 6);
+        }
         int kernel = compute.FindKernel("CSEvolveWeather");
+        compute.SetTexture(kernel, "_FlowRead", _flowActive);
+        compute.SetTexture(kernel, "_FlowWrite", _flowScratch);
         compute.SetTexture(kernel, _weatherReadId, _activeTexture);
         compute.SetTexture(kernel, _weatherWriteId, _scratchTexture);
         compute.SetTexture(kernel, _dynamicsReadId, _dynamicsActiveTexture);
         compute.SetTexture(kernel, _dynamicsWriteId, _dynamicsScratchTexture);
+        Texture climate = Shader.GetGlobalTexture(_climateMapId);
+        bool hasClimate = climate != null && Shader.GetGlobalFloat(_climateResolutionId) > 0f;
+        compute.SetTexture(kernel, _climateReadId, hasClimate ? climate : _dynamicsActiveTexture);
+        compute.SetInt(_hasClimateId, hasClimate ? 1 : 0);
         compute.SetInt(_resolutionId, Resolution);
         compute.SetFloat(_deltaTimeId, deltaTime);
         compute.SetFloat(_stormThresholdId, settings.StormThreshold);
@@ -459,6 +516,9 @@ public sealed class SphericalWeatherGrid : IDisposable
 
         int groups = Mathf.CeilToInt(Resolution / 8f);
         compute.Dispatch(kernel, groups, groups, 6);
+        (_flowActive, _flowScratch) = (_flowScratch, _flowActive);
+        Shader.SetGlobalTexture(FlowMapId, _flowActive);
+        Shader.SetGlobalFloat(FlowEnabledId, 1f);
         (_activeTexture, _scratchTexture) = (_scratchTexture, _activeTexture);
         (_dynamicsActiveTexture, _dynamicsScratchTexture) = (_dynamicsScratchTexture, _dynamicsActiveTexture);
         return true;
@@ -510,6 +570,11 @@ public sealed class SphericalWeatherGrid : IDisposable
 
     public void Dispose()
     {
+        Shader.SetGlobalFloat(SurfaceEnabledId, 0f);
+        Shader.SetGlobalFloat(FlowEnabledId, 0f);
+        ReleaseTexture(ref _flowActive);
+        ReleaseTexture(ref _flowScratch);
+        ReleaseTexture(ref _surfaceWeather);
         ReleaseTexture(ref _activeTexture);
         ReleaseTexture(ref _scratchTexture);
         ReleaseTexture(ref _dynamicsActiveTexture);
@@ -565,9 +630,9 @@ public sealed class SphericalWeatherGrid : IDisposable
         return face * resolution * resolution + x + y * resolution;
     }
 
-    static RenderTexture CreateWeatherTexture(int resolution, string name)
+    static RenderTexture CreateWeatherTexture(int resolution, string name, RenderTextureFormat format = RenderTextureFormat.ARGBHalf)
     {
-        var desc = new RenderTextureDescriptor(resolution, resolution, RenderTextureFormat.ARGBHalf, 0)
+        var desc = new RenderTextureDescriptor(resolution, resolution, format, 0)
         {
             dimension = TextureDimension.Tex2DArray,
             volumeDepth = 6,

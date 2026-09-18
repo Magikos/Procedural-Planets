@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CommandPrefix("light")]
+[CommandPrefix("light", Group = "Sky and weather", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public static class LightingDebugCommands
 {
     static readonly int _sunParamsId = Shader.PropertyToID(ShaderGlobalIds.SunParams);
@@ -9,29 +9,43 @@ public static class LightingDebugCommands
     static Vector3 _lastDirection;
 
     [ConsoleCommand("local-noon", "Aim the sun at the camera-facing planet region. Works with or without a CelestialManager.", MonoTargetType.Static)]
-    public static string LocalNoonCmd()
+    public static ConsoleCommandResult LocalNoonCmd()
     {
-        if (TryFindCelestial(out ICelestialTimeController celestial) && celestial.TrySetLocalTimeOfDay(0.5f))
+        if (TryFindCelestial(out CelestialManager celestial) && celestial.TrySetLocalTimeOfDay(0.5f))
         {
             celestial.SetTimeFrozen(true);
             Vector3 sunDirection = SafeNormalize(celestial.SunDirection, Vector3.up);
-            ApplySunDirection(sunDirection, GetPlanetCenter(), GetPlanetRadius(), "celestial");
-            return $"local noon via celestial time; sun=({sunDirection.x:F3},{sunDirection.y:F3},{sunDirection.z:F3})";
+            RecordDirection(sunDirection, "celestial");
+            return ConsoleCommandResult.Ok($"local noon via celestial time; sun=({sunDirection.x:F3},{sunDirection.y:F3},{sunDirection.z:F3})");
         }
 
         if (!TryGetCameraSunDirection(out Vector3 fallbackDirection, out string error))
-            return error;
+            return ConsoleCommandResult.Fail(error);
 
-        ApplySunDirection(fallbackDirection, GetPlanetCenter(), GetPlanetRadius(), "fallback-directional");
-        return $"local noon via directional light; sun=({fallbackDirection.x:F3},{fallbackDirection.y:F3},{fallbackDirection.z:F3})";
+        if (!TryApplySunDirection(fallbackDirection, "local-noon-direction", out error))
+            return ConsoleCommandResult.Fail(error);
+        if (celestial != null) celestial.SetTimeFrozen(true);
+        return ConsoleCommandResult.Ok($"local noon via sun direction; sun=({fallbackDirection.x:F3},{fallbackDirection.y:F3},{fallbackDirection.z:F3})");
     }
 
-    [ConsoleCommand("direction", "Set sun direction vector and upload _SunParams.", MonoTargetType.Static)]
-    public static string DirectionCmd(Vector3 direction)
+    [ConsoleCommand("direction", "Hold a finite, nonzero sun direction. Reset with light.direction-reset, setting time, or unfreezing time.", MonoTargetType.Static)]
+    public static ConsoleCommandResult DirectionCmd(Vector3 direction)
     {
-        Vector3 sunDirection = SafeNormalize(direction, Vector3.up);
-        ApplySunDirection(sunDirection, GetPlanetCenter(), GetPlanetRadius(), "manual-direction");
-        return $"sun direction: ({sunDirection.x:F3},{sunDirection.y:F3},{sunDirection.z:F3})";
+        if (!SunLighting.TryNormalizeDirection(direction, out Vector3 sunDirection))
+            return ConsoleCommandResult.Fail("Sun direction must be finite and nonzero.");
+        if (!TryApplySunDirection(sunDirection, "manual-direction", out string error))
+            return ConsoleCommandResult.Fail(error);
+        return ConsoleCommandResult.Ok($"sun direction: ({sunDirection.x:F3},{sunDirection.y:F3},{sunDirection.z:F3})");
+    }
+
+    [ConsoleCommand("direction-reset", "Restore the sun's daily orbit without changing the time freeze state.", MonoTargetType.Static)]
+    public static ConsoleCommandResult ResetDirectionCmd()
+    {
+        if (!TryFindCelestial(out CelestialManager celestial))
+            return ConsoleCommandResult.Fail("Sun direction reset requires a CelestialManager.");
+        celestial.ResetSunDirection();
+        RecordDirection(celestial.SunDirection, "celestial");
+        return ConsoleCommandResult.Ok("Sun direction follows the daily orbit.");
     }
 
     [ConsoleCommand("status", "Show active debug lighting path, sun vectors, and ambient fill.", MonoTargetType.Static)]
@@ -127,18 +141,25 @@ public static class LightingDebugCommands
         return 1000f;
     }
 
-    static void ApplySunDirection(Vector3 sunDirection, Vector3 center, float radius, string source)
+    static bool TryApplySunDirection(Vector3 sunDirection, string source, out string error)
     {
-        sunDirection = SafeNormalize(sunDirection, Vector3.up);
-        Light light = FindDirectionalLight();
-        if (light != null)
+        error = null;
+        if (TryFindCelestial(out CelestialManager celestial))
         {
-            Vector3 forward = -sunDirection;
-            light.transform.rotation = Quaternion.LookRotation(forward, StableUp(forward));
-            light.transform.position = center - sunDirection * Mathf.Max(radius * 10f, 1000f);
+            if (!celestial.TrySetSunDirection(sunDirection))
+            {
+                error = "Sun direction requires initialized celestial state and a finite, nonzero vector.";
+                return false;
+            }
         }
+        else
+            SunLighting.Apply(sunDirection, FindDirectionalLight(), GetPlanetCenter(), GetPlanetRadius());
+        RecordDirection(sunDirection, source);
+        return true;
+    }
 
-        Shader.SetGlobalVector(_sunParamsId, sunDirection);
+    static void RecordDirection(Vector3 sunDirection, string source)
+    {
         _lastSource = source;
         _lastDirection = sunDirection;
     }
@@ -164,6 +185,8 @@ public static class LightingDebugCommands
 
     static Light FindDirectionalLight()
     {
+        if (TryFindCelestial(out CelestialManager celestial) && celestial.SunLight != null)
+            return celestial.SunLight;
         Light[] lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Exclude);
         for (int i = 0; i < lights.Length; i++)
         {
@@ -172,14 +195,6 @@ public static class LightingDebugCommands
         }
 
         return null;
-    }
-
-    static Vector3 StableUp(Vector3 forward)
-    {
-        Vector3 up = Vector3.ProjectOnPlane(Vector3.up, forward);
-        if (up.sqrMagnitude < 0.0001f)
-            up = Vector3.ProjectOnPlane(Vector3.right, forward);
-        return SafeNormalize(up, Vector3.forward);
     }
 
     static Vector3 SafeNormalize(Vector3 value, Vector3 fallback)

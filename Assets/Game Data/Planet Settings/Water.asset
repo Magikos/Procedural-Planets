@@ -46,7 +46,11 @@ MonoBehaviour:
   IceNormalStrength: 0.35
   IceBreakupScale: 95
   UnderwaterNightScale: 1
-  UnderwaterShaftIntensity: 1
+  UnderwaterShaftIntensity: 3
+  UnderwaterFogColor: {r: 0.03, g: 0.14, b: 0.2, a: 1}
+  UnderwaterVisibility: 45
+  UnderwaterShaftWidth: 8
+  UnderwaterSurfaceDetail: 0.45
   RefractionStrength: 0.3
   CausticIntensity: 0.18
   CausticDepth: 12

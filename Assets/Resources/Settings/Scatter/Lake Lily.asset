@@ -14,21 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Lake Lily
   SlotId: 68
-  SpacingMeters: 12
+  SpacingMeters: 1.5
   Biome: 17
   BiomeBlendPower: 1
-  Weight: 1.34
-  Clumpiness: 0.95
-  PatchScaleMeters: 9
+  Weight: 1
+  Clumpiness: 1
+  PatchScaleMeters: 12
   ShadePreference: 0
   MaxSlopeDegrees: 80
   SlopeFadeDegrees: 5
   ConformToSlope: 0
-  HasMinAltitude: 0
-  MinAltitudeMeters: 0
-  HasMaxAltitude: 0
-  MaxAltitudeMeters: 0
+  HasMinAltitude: 1
+  MinAltitudeMeters: -2
+  HasMaxAltitude: 1
+  MaxAltitudeMeters: -0.15
   MinWaterClearanceMeters: 0
+  WaterHabitat: 2
+  MaxFlowSpeed: 0
   OnWater: 1
   ScaleRange: {x: 0.8, y: 1.3}
   RandomYaw: 1
@@ -41,7 +43,7 @@ MonoBehaviour:
     LodMeshes:
     - {fileID: 7289050942599412193, guid: 286f09a940eb2f84a944b9fb36f28684, type: 3}
     LodEndDistances:
-    - 140
+    - 630
     CastShadows: 1
     ReceiveShadows: 1
   Material: {fileID: 0}

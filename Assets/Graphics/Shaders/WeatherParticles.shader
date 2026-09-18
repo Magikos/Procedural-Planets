@@ -6,6 +6,7 @@ HLSLINCLUDE
 #include "Includes/Math.hlsl"
 #include "Includes/WeatherSampling.hlsl"
 #include "Includes/ClimateSampling.hlsl"
+#include "Includes/WaterCamera.hlsl"
 
 TEXTURE2D(_CameraDepthTexture);
 SAMPLER(sampler_CameraDepthTexture);
@@ -20,7 +21,6 @@ float4 _WeatherParticleCommon;
 float4 _WeatherParticleCounts;
 float4 _WeatherParticleDustParams;
 float4 _WeatherParticleSnowParams;
-float4 _WeatherParticlePhaseParams;
 float4 _WeatherParticleDustColor;
 float4 _WeatherParticleSnowColor;
 float4 _PrecipitationVisualParams;
@@ -124,6 +124,7 @@ ParticleVaryings WeatherParticleVertex(
         cameraAltitude <= maxCameraAltitude
         ? 1.0
         : 0.0;
+    systemVisible *= 1.0 - WaterCameraImmersion(_WorldSpaceCameraPos.xyz);
 
     // Each cube face owns a fixed lattice. Camera movement selects cells without changing them.
     uint count = (uint)max(ProfileCount(profile), 1.0);
@@ -166,11 +167,7 @@ ParticleVaryings WeatherParticleVertex(
     float stormGate = WeatherThreshold(_PrecipitationParams.y,
         min(1.0, _PrecipitationParams.y + _PrecipitationParams.z), storm);
     float rainSignal = saturate(dynamics.b) * stormGate;
-    float snowBlend = max(_WeatherParticlePhaseParams.y, 0.1);
-    float snowPhase = 1.0 - smoothstep(
-        _WeatherParticlePhaseParams.x - snowBlend,
-        _WeatherParticlePhaseParams.x + snowBlend,
-        temperatureCelsius);
+    float snowPhase = WeatherSnowFraction(temperatureCelsius);
 
     float proofVisibility = ProfileProofVisibility(profile);
     float visibility;

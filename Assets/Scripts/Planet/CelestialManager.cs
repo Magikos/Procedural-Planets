@@ -1,7 +1,7 @@
 using UnityEngine;
 
-[CommandPrefix("time")]
-public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldServiceRegistrar
+public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldServiceRegistrar,
+    IWorldSettingsRegistrar, IEarlyInitialize, IWorldTeardown
 {
     [Header("References")]
     public Light SunLight;
@@ -20,13 +20,26 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
     [Range(0f, 1f), Tooltip("Cast-shadow strength when the sun sits on the viewer's horizon. 1 = no fade; lower = softer grazing shadows. Distant shadows are kept — just lighter — so nothing reads as un-shadowed.")]
     public float ShadowGrazingStrength = 0.35f;
 
-    [Header("Moon")]
-    [Tooltip("How many days per full moon cycle")]
-    public float MoonCycleDays = 8f;
-    [Tooltip("Distance from planet center (auto-set from planet radius)")]
-    public float MoonOrbitRadius;
-    [Range(0f, 15f), Tooltip("Moon orbital plane tilt relative to sun")]
-    public float MoonInclination = 5f;
+    public float MoonOrbitRadius => _planetRadius * (_moonSettings?.Distance ?? 0f);
+    public float MoonCycleProgress => _moonCycleProgress;
+    public bool IsMoonPhaseHeld { get; private set; }
+    public MoonDto MoonSettingsSnapshot => _moonSettings;
+
+    static readonly System.Type[] RequiredSettings = { typeof(MoonDto) };
+    static readonly System.Type[] EarlyDeps = { typeof(SceneBootstrap) };
+    public System.Collections.Generic.IReadOnlyList<System.Type> RequiredSettingsTypes => RequiredSettings;
+    public System.Collections.Generic.IReadOnlyList<System.Type> EarlyDependencies => EarlyDeps;
+
+    MoonDto _moonSettings;
+    ISettingsService _settingsService;
+    CelestialCommands _commands;
+    Material _moonMaterial;
+    Material[][] _moonDefaultMaterials;
+    bool _initialized;
+    bool _appearanceDirty;
+    Vector3 _moonDirection;
+    Vector3 _sunDirection = Vector3.up;
+    Vector3? _sunDirectionOverride;
 
     [Header("State")]
     [Range(0f, 1f), Tooltip("Starting time of day: 0=midnight, 0.25=sunrise, 0.5=noon, 0.75=sunset")]
@@ -64,7 +77,8 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
 
     public float TimeOfDay => _timeOfDay;
     public bool IsTimeFrozen => FreezeTime;
-    public Vector3 SunDirection => SunLight != null ? -SunLight.transform.forward : Vector3.up;
+    public Vector3 SunDirection => _sunDirection;
+    public bool IsSunDirectionOverridden => _sunDirectionOverride.HasValue;
 
     public bool IsDayAt(Vector3 worldPosition)
     {
@@ -77,7 +91,7 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
     public float MoonPhase { get; private set; }
 
     /// <summary>0-7 discrete phase index.</summary>
-    public int MoonPhaseIndex => Mathf.FloorToInt((_moonCycleProgress % 1f) * 8f) % 8;
+    public int MoonPhaseIndex => MoonOrbit.PhaseIndex(_moonCycleProgress);
 
     /// <summary>0 at new moon, 1 at full moon. Useful for magic intensity.</summary>
     public float MoonFullness => (1f - MoonPhase) * 0.5f;
@@ -90,89 +104,141 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
         context.Register<ICelestialTimeController>(this);
     }
 
+    public void RegisterWorldSettings(ISettingsService settings)
+    {
+        if (settings.IsRegistered<MoonDto>()) return;
+        var source = Resources.Load<MoonSettings>("Settings/MoonSettings");
+        if (source == null) throw new System.InvalidOperationException("Moon settings require Resources/Settings/MoonSettings.asset.");
+        settings.Register(MoonDto.From(source));
+    }
+
     void OnEnable()
     {
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
+        EventBus<SettingsChangedEvent>.Listen(OnSettingsChanged);
+        _commands = new CelestialCommands(this);
     }
 
     void OnDisable()
     {
         EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
+        EventBus<SettingsChangedEvent>.Unlisten(OnSettingsChanged);
+        _commands?.Dispose();
+        _commands = null;
     }
 
-    void Start()
+    public async Awaitable EarlyInitialize(System.Threading.CancellationToken cancellationToken)
     {
-        _timeOfDay = StartTimeOfDay;
-        UpdateSun(0f);
-        UpdateMoon(0f);
-        UpdateAmbient();
-        UpdateMoonShaderGlobals();
+        _settingsService = SettingsProvider.Get();
+        _moonSettings = _settingsService.GetSettings<MoonDto>();
+        if (!_moonSettings.TryValidate(out string error)) throw new System.InvalidOperationException(error);
+        if (_moonSettings.Material == null) throw new System.InvalidOperationException("Moon settings require a material.");
+        if (PlanetCenter == null) PlanetCenter = ServiceLocator.Get<IPlanet>().Transform;
+        _moonCycleProgress = _moonSettings.StartPhase;
+        _timeOfDay = float.IsFinite(StartTimeOfDay) ? Mathf.Repeat(StartTimeOfDay, 1f) : 0.25f;
+        _initialized = true;
+        _appearanceDirty = true;
+        RefreshCelestials();
+        await Awaitable.NextFrameAsync(cancellationToken);
     }
 
     void OnPlanetGenerated(PlanetGeneratedEvent evt)
     {
-        Initialize();
+        _planetRadius = evt.PlanetRadius;
+        Shader.SetGlobalFloat(_starSeedId, ServiceLocator.Get<IPlanet>().Seed * 0.01f);
+        if (_initialized) RefreshCelestials();
     }
 
-    void Initialize()
+    void OnSettingsChanged(SettingsChangedEvent evt)
     {
-        if (PlanetCenter == null)
-        {
-            IPlanet planetService = ServiceLocator.Get<IPlanet>();
-            PlanetCenter = planetService.Transform;
-        }
-
-        if (PlanetCenter == null) return;
-
-        IPlanet planet = ServiceLocator.Get<IPlanet>();
-        if (planet == null || planet.LastGeneratedRadius <= 0f) return;
-
-        _planetRadius = planet.LastGeneratedRadius;
-        MoonOrbitRadius = _planetRadius * 3f;
-
-        Shader.SetGlobalFloat(_starSeedId, planet.Seed * 0.01f);
+        if (!_initialized || evt.DtoType != typeof(MoonDto)) return;
+        var next = _settingsService.GetSettings<MoonDto>();
+        if (!next.TryValidate(out string error)) throw new System.InvalidOperationException(error);
+        _moonSettings = next;
+        _appearanceDirty = true;
+        RefreshCelestials();
     }
 
     void Update()
     {
+        if (!_initialized) return;
         float dt = FreezeTime ? 0f : Time.deltaTime;
-        if (DayLengthSeconds > 0f)
-        {
-            UpdateSun(dt);
-            UpdateMoon(dt);
-        }
-        else
-        {
-            UpdateMoonVisibility();
-        }
-
+        UpdateSun(dt);
+        UpdateMoon(dt);
         UpdateAmbient();
         UpdateMoonShaderGlobals();
         FireEvents();
     }
 
+    void RefreshCelestials()
+    {
+        UpdateSun(0f);
+        UpdateMoon(0f);
+        UpdateAmbient();
+        UpdateMoonShaderGlobals();
+        FireEvents();
+    }
+
+    public bool TryApplyMoonSettings(MoonDto next, out string error)
+    {
+        error = "Moon settings are not initialized.";
+        if (!_initialized || next == null) return false;
+        if (!next.TryValidate(out error)) return false;
+        if (next.Material != _moonSettings.Material)
+        {
+            error = "The moon material cannot change during a world session.";
+            return false;
+        }
+        _settingsService.Update(next);
+        return true;
+    }
+
+    public bool TrySetMoonPhase(float progress)
+    {
+        if (!float.IsFinite(progress)) return false;
+        _moonCycleProgress = Mathf.Repeat(progress, 1f);
+        if (_initialized) RefreshCelestials();
+        return true;
+    }
+
+    public void SetMoonPhaseHeld(bool held) => IsMoonPhaseHeld = held;
+
     public void ToggleTimeFrozen()
     {
-        FreezeTime = !FreezeTime;
+        SetTimeFrozen(!FreezeTime);
     }
 
     public void SetTimeFrozen(bool frozen)
     {
         FreezeTime = frozen;
+        if (!frozen) ResetSunDirection();
+    }
+
+    public bool TrySetSunDirection(Vector3 direction)
+    {
+        if (!_initialized || !SunLighting.TryNormalizeDirection(direction, out var normalized)) return false;
+        _sunDirectionOverride = normalized;
+        RefreshCelestials();
+        return true;
+    }
+
+    public void ResetSunDirection()
+    {
+        _sunDirectionOverride = null;
+        if (_initialized) RefreshCelestials();
     }
 
     public void SetTimeOfDay(float timeOfDay)
     {
+        if (!float.IsFinite(timeOfDay)) throw new System.ArgumentOutOfRangeException(nameof(timeOfDay));
+        _sunDirectionOverride = null;
         _timeOfDay = Mathf.Repeat(timeOfDay, 1f);
-        UpdateSun(0f);
-        UpdateMoon(0f);
-        UpdateAmbient();
-        UpdateMoonShaderGlobals();
+        if (_initialized) RefreshCelestials();
     }
 
     public bool TrySetLocalTimeOfDay(float localTimeOfDay)
     {
-        if (PlanetCenter == null)
+        if (PlanetCenter == null || !float.IsFinite(localTimeOfDay))
             return false;
 
         Camera cam = GetViewCamera();
@@ -199,98 +265,15 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
         return true;
     }
 
-    // --- Console commands -------------------------------------------------
-
-    [ConsoleCommand("freeze", "Get or set sun freeze state. No-arg reads, true/false sets.", MonoTargetType.Single)]
-    string FreezeCmd(bool? frozen = null)
-    {
-        if (frozen == null) return $"sun frozen: {FreezeTime}";
-        SetTimeFrozen(frozen.Value);
-        return $"sun frozen: {FreezeTime}";
-    }
-
-    [ConsoleCommand("speed", "Get or set day length in real seconds.", MonoTargetType.Single)]
-    string SpeedCmd(float? value = null)
-    {
-        if (value == null) return $"day length: {DayLengthSeconds:F1}s";
-        DayLengthSeconds = Mathf.Max(0.1f, value.Value);
-        return $"day length: {DayLengthSeconds:F1}s";
-    }
-
-    [ConsoleCommand("shadow-grazing", "Get or set cast-shadow strength when the sun is on the viewer's horizon (0-1). Lower = softer grazing dawn/dusk shadows. Default 0.35.", MonoTargetType.Single)]
-    string ShadowGrazingCmd(float? value = null)
-    {
-        if (value == null) return $"grazing shadow strength: {ShadowGrazingStrength:F2}";
-        ShadowGrazingStrength = Mathf.Clamp01(value.Value);
-        return $"grazing shadow strength: {ShadowGrazingStrength:F2}";
-    }
-
-    [ConsoleCommand("shadow-fade-elev", "Get or set the sun elevation (deg) below which cast shadows start fading toward the grazing strength. Default 22.", MonoTargetType.Single)]
-    string ShadowFadeElevCmd(float? value = null)
-    {
-        if (value == null) return $"shadow fade elevation: {ShadowFadeElevationDeg:F1} deg";
-        ShadowFadeElevationDeg = Mathf.Max(0f, value.Value);
-        return $"shadow fade elevation: {ShadowFadeElevationDeg:F1} deg";
-    }
-
-    [ConsoleCommand("set-local", "Set time of day relative to the camera position (0=midnight, 0.25=sunrise, 0.5=noon, 0.75=sunset).", MonoTargetType.Single)]
-    string SetLocalCmd(float fraction)
-    {
-        if (PlanetCenter == null) return "no planet center set";
-        Camera cam = GetViewCamera();
-        if (cam == null) return "no camera available";
-
-        Vector3 camDir = (cam.transform.position - PlanetCenter.position).normalized;
-        if (camDir.sqrMagnitude < 0.0001f) return "camera at planet center — local time undefined";
-
-        // Un-tilt: the sun orbits in the world XY plane in the un-tilted frame.
-        Quaternion tilt = Quaternion.Euler(AxialTilt, 0f, 0f);
-        Vector3 untilted = Quaternion.Inverse(tilt) * -camDir;
-
-        // Project onto the sun's orbital plane (XY). At the poles, no projection exists → local time undefined.
-        Vector3 inPlane = new Vector3(untilted.x, untilted.y, 0f);
-        if (inPlane.sqrMagnitude < 0.0001f) return "camera is at a celestial pole — local time undefined";
-        inPlane.Normalize();
-
-        // Inverse of UpdateSun(): sunDir = (sin(2πT), -cos(2πT), 0); sun overhead when sunDir == camDir.
-        float tNoon = Mathf.Atan2(inPlane.x, -inPlane.y) / (2f * Mathf.PI);
-        if (tNoon < 0f) tNoon += 1f;
-
-        fraction = ((fraction % 1f) + 1f) % 1f;
-        SetTimeOfDay(tNoon + fraction - 0.5f);
-        return $"local time at camera: {fraction:F2} (global time-of-day = {_timeOfDay:F2})";
-    }
-
-    [ConsoleCommand("moon-phase", "Get or set discrete moon phase index (0-7). Wraps modulo 8.", MonoTargetType.Single)]
-    string MoonPhaseCmd(int? index = null)
-    {
-        if (index == null) return $"moon phase: {MoonPhaseIndex} (cycle progress {_moonCycleProgress:F2})";
-        int i = ((index.Value % 8) + 8) % 8;
-        _moonCycleProgress = (i + 0.5f) / 8f;  // place in middle of phase bucket
-        UpdateMoon(0f);
-        return $"moon phase: {MoonPhaseIndex}";
-    }
-
     void UpdateSun(float dt)
     {
-        _timeOfDay = (_timeOfDay + dt / DayLengthSeconds) % 1f;
+        _timeOfDay = MoonOrbit.Advance(_timeOfDay, dt, DayLengthSeconds, 1f);
 
-        float sunAngle = _timeOfDay * 360f;
         Vector3 center = PlanetCenter != null ? PlanetCenter.position : Vector3.zero;
-
-        Quaternion tilt = Quaternion.Euler(AxialTilt, 0f, 0f);
-        Vector3 sunDir = tilt * new Vector3(
-            Mathf.Sin(sunAngle * Mathf.Deg2Rad),
-            -Mathf.Cos(sunAngle * Mathf.Deg2Rad),
-            0f
-        );
-
-        if (SunLight != null)
-        {
-            SunLight.transform.position = center - sunDir * (_planetRadius > 0 ? _planetRadius * 10f : 1000f);
-            SunLight.transform.LookAt(center);
-            UpdateShadowStrength(sunDir, center);
-        }
+        _sunDirection = _sunDirectionOverride
+            ?? MoonOrbit.Frame(_timeOfDay, float.IsFinite(AxialTilt) ? AxialTilt : 0f) * Vector3.up;
+        SunLighting.Apply(_sunDirection, SunLight, center, _planetRadius);
+        if (SunLight != null) UpdateShadowStrength(-_sunDirection, center);
     }
 
     // Fade the Sun's cast-shadow strength as it grazes the viewer's local horizon. At dawn/dusk the shadows
@@ -310,36 +293,46 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
 
     void UpdateMoon(float dt)
     {
-        if (MoonTransform == null)
-            return;
-
-        if (MoonOrbitRadius <= 0f)
-        {
-            SetMoonVisible(false);
-            return;
-        }
-
-        float moonDayLength = DayLengthSeconds * MoonCycleDays;
-        if (moonDayLength <= 0f) return;
-
-        _moonCycleProgress = (_moonCycleProgress + dt / moonDayLength) % 1f;
-
-        float moonAngle = _moonCycleProgress * 360f;
+        if (_moonSettings == null) return;
+        _moonCycleProgress = MoonOrbit.Advance(_moonCycleProgress, IsMoonPhaseHeld ? 0f : dt,
+            DayLengthSeconds, _moonSettings.CycleDays);
+        _moonDirection = MoonOrbit.Direction(_timeOfDay, _moonCycleProgress,
+            float.IsFinite(AxialTilt) ? AxialTilt : 0f, _moonSettings.Inclination, _moonSettings.NodeAngle,
+            out Vector3 orbitNormal);
+        MoonPhase = Mathf.Clamp(Vector3.Dot(SunDirection, _moonDirection), -1f, 1f);
+        if (MoonTransform == null) return;
         Vector3 center = PlanetCenter != null ? PlanetCenter.position : Vector3.zero;
+        MoonTransform.SetPositionAndRotation(center + _moonDirection * MoonOrbitRadius,
+            Quaternion.LookRotation(-_moonDirection, orbitNormal));
+        SetMoonVisible(MoonOrbitRadius > 0f);
+        UpdateMoonVisualPosition();
+        UpdateMoonMaterial();
+    }
 
-        Quaternion inclination = Quaternion.Euler(MoonInclination, 0f, 0f);
-        Vector3 moonDir = inclination * new Vector3(
-            Mathf.Sin(moonAngle * Mathf.Deg2Rad),
-            0f,
-            Mathf.Cos(moonAngle * Mathf.Deg2Rad)
-        );
+    void LateUpdate()
+    {
+        if (_initialized && MoonTransform != null) UpdateMoonVisualPosition();
+    }
 
-        MoonTransform.position = center + moonDir * MoonOrbitRadius;
-        MoonTransform.LookAt(center);
-
-        Vector3 toMoon = (MoonTransform.position - center).normalized;
-        MoonPhase = Vector3.Dot(SunDirection, toMoon);
-        UpdateMoonVisibility();
+    void UpdateMoonVisualPosition()
+    {
+        float diameter = 2f * MoonOrbit.VisualRadius(MoonOrbitRadius, _moonSettings.Diameter);
+        Vector3 position = MoonTransform.position;
+        Camera camera = GetViewCamera();
+        if (camera != null)
+        {
+            Vector3 offset = position - camera.transform.position;
+            float scale = MoonOrbit.ProjectionScale(offset.magnitude, diameter * 0.5f, camera.farClipPlane);
+            position = camera.transform.position + offset * scale;
+            diameter *= scale;
+        }
+        if (_moonRenderers != null)
+            foreach (var renderer in _moonRenderers)
+                if (renderer != null)
+                {
+                    renderer.transform.position = position;
+                    renderer.transform.localScale = Vector3.one * diameter;
+                }
     }
 
     void CacheMoonRenderers()
@@ -358,9 +351,58 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
         _cachedMoonRoot = MoonTransform;
         _moonRenderers = MoonTransform.GetComponentsInChildren<Renderer>(true);
         _moonRendererDefaults = new bool[_moonRenderers.Length];
+        _moonDefaultMaterials = new Material[_moonRenderers.Length][];
         for (int i = 0; i < _moonRenderers.Length; i++)
+        {
             _moonRendererDefaults[i] = _moonRenderers[i] != null && _moonRenderers[i].enabled;
+            _moonDefaultMaterials[i] = _moonRenderers[i] != null ? _moonRenderers[i].sharedMaterials : null;
+        }
+        _appearanceDirty = true;
     }
+
+    static readonly int MoonSunId = Shader.PropertyToID("_MoonSunDirection");
+    static readonly int MoonTintId = Shader.PropertyToID("_BaseColor");
+    static readonly int MoonBrightnessId = Shader.PropertyToID("_Brightness");
+    static readonly int MoonDetailId = Shader.PropertyToID("_BumpScale");
+    static readonly int MoonEarthshineId = Shader.PropertyToID("_Earthshine");
+
+    void UpdateMoonMaterial()
+    {
+        if (_moonMaterial == null && _moonSettings.Material != null)
+        {
+            _moonMaterial = new Material(_moonSettings.Material) { name = "Moon (Runtime)" };
+            _appearanceDirty = true;
+        }
+        if (_moonMaterial == null) return;
+        if (_appearanceDirty)
+        {
+            foreach (var renderer in _moonRenderers)
+                if (renderer != null) renderer.sharedMaterial = _moonMaterial;
+            _moonMaterial.SetColor(MoonTintId, _moonSettings.Tint);
+            _moonMaterial.SetFloat(MoonBrightnessId, _moonSettings.Brightness);
+            _moonMaterial.SetFloat(MoonDetailId, _moonSettings.Detail);
+            _moonMaterial.SetFloat(MoonEarthshineId, _moonSettings.Earthshine);
+            _appearanceDirty = false;
+        }
+        _moonMaterial.SetVector(MoonSunId, SunDirection);
+    }
+
+    public void TeardownWorld()
+    {
+        _initialized = false;
+        _sunDirectionOverride = null;
+        if (_moonRenderers != null)
+            for (int i = 0; i < _moonRenderers.Length; i++)
+                if (_moonRenderers[i] != null) _moonRenderers[i].sharedMaterials = _moonDefaultMaterials[i];
+        if (_moonMaterial != null) Destroy(_moonMaterial);
+        _moonMaterial = null;
+        _commands?.Dispose();
+        _commands = null;
+        Shader.SetGlobalVector(_moonParamsId, Vector4.zero);
+        Shader.SetGlobalFloat(_moonIntensityId, 0f);
+    }
+
+    void OnDestroy() => TeardownWorld();
 
     void SetMoonVisible(bool visible)
     {
@@ -375,50 +417,6 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
         }
     }
 
-    void UpdateMoonVisibility()
-    {
-        if (MoonTransform == null)
-            return;
-
-        Camera viewCamera = GetViewCamera();
-        if (viewCamera == null || PlanetCenter == null || _planetRadius <= 0f)
-        {
-            SetMoonVisible(MoonOrbitRadius > 0f);
-            return;
-        }
-
-        Vector3 center = PlanetCenter.position;
-        Vector3 cameraOffset = viewCamera.transform.position - center;
-        float cameraRadius = cameraOffset.magnitude;
-        if (cameraRadius <= 0.0001f)
-        {
-            SetMoonVisible(false);
-            return;
-        }
-
-        Vector3 toMoon = MoonTransform.position - viewCamera.transform.position;
-        float moonDistance = toMoon.magnitude;
-        if (moonDistance <= 0.0001f)
-        {
-            SetMoonVisible(false);
-            return;
-        }
-
-        Vector3 moonDir = toMoon / moonDistance;
-        bool visible;
-        if (cameraRadius <= _planetRadius * 1.15f)
-        {
-            Vector3 localUp = cameraOffset / cameraRadius;
-            visible = Vector3.Dot(localUp, moonDir) > -0.025f;
-        }
-        else
-        {
-            visible = !RayIntersectsPlanet(viewCamera.transform.position, moonDir, moonDistance);
-        }
-
-        SetMoonVisible(visible);
-    }
-
     Camera GetViewCamera()
     {
         if (_cachedMainCamera != null && _cachedMainCamera.isActiveAndEnabled)
@@ -426,24 +424,6 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
 
         _cachedMainCamera = Camera.main;
         return _cachedMainCamera;
-    }
-
-    bool RayIntersectsPlanet(Vector3 rayOrigin, Vector3 rayDirection, float maxDistance)
-    {
-        Vector3 oc = rayOrigin - PlanetCenter.position;
-        float radius = Mathf.Max(_planetRadius, 0f);
-        float b = Vector3.Dot(oc, rayDirection);
-        float c = Vector3.Dot(oc, oc) - radius * radius;
-        float discriminant = b * b - c;
-        if (discriminant <= 0f)
-            return false;
-
-        float root = Mathf.Sqrt(discriminant);
-        float nearHit = -b - root;
-        float farHit = -b + root;
-        const float epsilon = 0.05f;
-        return (nearHit > epsilon && nearHit < maxDistance)
-            || (farHit > epsilon && farHit < maxDistance);
     }
 
     void FireEvents()
@@ -468,17 +448,7 @@ public class CelestialManager : MonoBehaviour, ICelestialTimeController, IWorldS
     {
         if (SunLight == null) return;
 
-        // Moon influence: how close is the moon to the anti-sun direction?
-        float moonInfluence = 0f;
-        if (MoonTransform != null && PlanetCenter != null)
-        {
-            Vector3 center = PlanetCenter.position;
-            Vector3 toMoon = (MoonTransform.position - center).normalized;
-            float alignment = Vector3.Dot(toMoon, SunDirection);
-            // Moon opposite sun (full moon) = alignment ~ -1 → influence = 1
-            // Moon same side as sun (new moon) = alignment ~ +1 → influence = 0
-            moonInfluence = Mathf.Clamp01(-alignment);
-        }
+        float moonInfluence = MoonTransform != null && PlanetCenter != null ? Mathf.Clamp01(-MoonPhase) : 0f;
 
         float intensity = Mathf.Lerp(AmbientMinIntensity, AmbientMaxIntensity, moonInfluence);
         Shader.SetGlobalFloat(_nightAmbientIntensityId, intensity);

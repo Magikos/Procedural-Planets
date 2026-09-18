@@ -3,7 +3,7 @@ using UnityEngine;
 
 // Builds the colored span list for the console input line: async spinner prefix, prompt,
 // syntax-highlighted typed text with cursor, ghost completion, and parameter-slot hints.
-// Reuses internal span lists so per-frame span building stays allocation-free.
+// Reuses span lists; argument hints share the command parser's source context.
 public sealed class ConsoleInputLineFormatter
 {
     readonly List<TextSpan> _inputSpans = new();
@@ -32,49 +32,24 @@ public sealed class ConsoleInputLineFormatter
         InsertCursorIntoSpans(_typedSpans, cursorPos, cursorOn ? Color.white : Color.clear);
         _inputSpans.AddRange(_typedSpans);
 
-        // Ghost completion and parameter hint only when the cursor is at the end of the line
-        // (mid-line editing makes inline hints visually confusing).
         bool atEnd = cursorPos == typed.Length;
-        if (!atEnd) return _inputSpans;
-
-        if (ghostActive)
+        if (ghostActive && atEnd)
         {
             string completion = suggestions[0].CompletionText;
             _inputSpans.Add(new TextSpan(theme.InputGhost, completion.Substring(typed.Length)));
             return _inputSpans;
         }
-
         if (typed.Length == 0 || pending) return _inputSpans;
-
-        // Param-slot ghost: show <type: name> for every remaining slot.
-        // The current in-progress slot (or the next slot to start) is omitted from the ghost —
-        // we don't redundantly hint at what the user is already typing.
         var tokens = CommandParser.Tokenize(typed);
-        if (tokens.Count == 0) return _inputSpans;
-        if (!ConsoleRegistry.TryGet(tokens[0], out var hintCmd)) return _inputSpans;
-        if (hintCmd.Parameters.Length == 0) return _inputSpans;
-
-        bool trailingSpace = char.IsWhiteSpace(typed[typed.Length - 1]);
-        // showFrom = first param slot to display as ghost.
-        //   "alias" / "alias " (alias-only)            → 0   (show every slot)
-        //   "alias 5" (mid-typing slot 0)              → 1   (slot 0 in-progress, show slot 1 onwards)
-        //   "alias 5 " (slot 0 done, starting slot 1)  → 1   (slot 1 about to start, show it + rest)
-        // Unified: showFrom = max(0, tokens.Count - 1).
-        int showFrom = tokens.Count - 1;
-        if (showFrom < 0) showFrom = 0;
-        if (showFrom >= hintCmd.Parameters.Length) return _inputSpans;
-
-        bool first = true;
-        for (int i = showFrom; i < hintCmd.Parameters.Length; i++)
+        if (tokens.Count == 0 || !ConsoleRegistry.TryGet(tokens[0], out var command)) return _inputSpans;
+        if (CommandParser.TryGetArgument(typed, cursorPos, command, out int index, out _, out _, out _))
         {
-            ParameterData p = hintCmd.Parameters[i];
-            bool needsLeadingSpace = !first || !trailingSpace;
-            string body = p.HasDefault
-                ? $"[{p.DisplayTypeName}: {p.Name}]"
-                : $"<{p.DisplayTypeName}: {p.Name}>";
-            Color color = p.HasDefault ? theme.InputHintOptional : theme.InputHintRequired;
-            _inputSpans.Add(new TextSpan(color, (needsLeadingSpace ? " " : "") + body));
-            first = false;
+            var parameter = command.Parameters[index];
+            string hint = parameter.HasDefault
+                ? $"[{parameter.Name}: {parameter.DisplayTypeName}, optional]"
+                : $"<{parameter.Name}: {parameter.DisplayTypeName}>";
+            if (!string.IsNullOrEmpty(parameter.Description)) hint += " " + parameter.Description;
+            _inputSpans.Add(new TextSpan(theme.InputHintOptional, "   " + hint));
         }
         return _inputSpans;
     }
@@ -129,9 +104,9 @@ public sealed class ConsoleInputLineFormatter
         int i = 0;
         while (i < text.Length)
         {
-            if (text[i] == '"')
+            if (text[i] is '"' or '\'')
             {
-                int end = text.IndexOf('"', i + 1);
+                int end = text.IndexOf(text[i], i + 1);
                 int len = (end < 0 ? text.Length : end + 1) - i;
                 spans.Add(new TextSpan(theme.InputString, text.Substring(i, len)));
                 i = end < 0 ? text.Length : end + 1;
@@ -139,7 +114,7 @@ public sealed class ConsoleInputLineFormatter
             else
             {
                 int start = i;
-                while (i < text.Length && text[i] != '"') i++;
+                while (i < text.Length && text[i] != '"' && text[i] != '\'') i++;
                 if (i > start)
                     spans.Add(new TextSpan(theme.InputValue, text.Substring(start, i - start)));
             }

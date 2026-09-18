@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "message": "Code executed successfully.",
+  "data": {
+    "result": "{\"rows\":[{\"run\":0,\"separateMs\":49.4485,\"combinedMs\":26.2266},{\"run\":1,\"separateMs\":40.4953,\"combinedMs\":20.7738},{\"run\":2,\"separateMs\":43.724900000000005,\"combinedMs\":21.5079}],\"checksumEqual\":true}",
+    "compiler": "roslyn"
+  }
+}

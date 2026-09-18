@@ -17,7 +17,7 @@ public enum TestEnumOption
 /// <c>Test&lt;System&gt;Commands.cs</c> files (e.g. <c>test.weather.*</c>, <c>test.grass.*</c>)
 /// colocated with the system being tested.
 /// </summary>
-[CommandPrefix("test.console")]
+[CommandPrefix("test.console", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly, Group = "Diagnostics and authoring")]
 public static class TestConsoleCommands
 {
     [ConsoleCommand("colors", "Print sample lines in each color type, plus inline markup.")]

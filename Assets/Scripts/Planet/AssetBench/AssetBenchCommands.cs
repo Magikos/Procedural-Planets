@@ -21,7 +21,7 @@ public sealed class BenchManifestNamesProvider : IConsoleCompletionProvider
 /// <see cref="CharacterCommands"/>: <c>bench.load</c> must work before any host instance exists, so it
 /// find-or-creates the single <see cref="AssetBenchHost"/>.
 /// </summary>
-[CommandPrefix("bench")]
+[CommandPrefix("bench", Group = "Diagnostics and authoring", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public static class AssetBenchCommands
 {
     const string ManifestFolder = "Settings/AssetBench";

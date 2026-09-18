@@ -27,5 +27,5 @@ MonoBehaviour:
   EnableFrozenWater: 1
   IceTint: {r: 0.62, g: 0.82, b: 0.88, a: 1}
   BiomeSettings: {fileID: 11400000, guid: ce38419e62833254b94ec0386401682b, type: 2}
-  PlanetMaterial: {fileID: 2100000, guid: 0c0c2029bb5cefd4688b7c29bd17a0bb, type: 2}
+  PlanetMaterial: {fileID: 2100000, guid: 68ea7f50d2dc40443a7bdd06bad86672, type: 2}
   WaterSettings: {fileID: 11400000, guid: 408f0c0b4a721664d87f31d7e0da239a, type: 2}

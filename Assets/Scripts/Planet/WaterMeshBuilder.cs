@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -143,8 +144,9 @@ public static class WaterMeshBuilder
     /// Computes water mesh data without touching any Unity Mesh API.
     /// Safe to call from a background thread. Pass the result to <see cref="Apply"/>.
     /// </summary>
-    public static MeshData Compute(IFaceMeshSampler[] faces, Settings settings, System.Action<float> onProgress = null)
+    public static MeshData Compute(IFaceMeshSampler[] faces, Settings settings, System.Action<float> onProgress = null, CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         var vertices = new List<Vector3>();
         var normals = new List<Vector3>();
         var colors = new List<Color>();
@@ -155,13 +157,14 @@ public static class WaterMeshBuilder
         {
             float deepDepth = Mathf.Max(settings.DeepDepth, 0.001f);
             float shoreRange = Mathf.Max(settings.ShoreRange, 0.001f);
-            GlobalWaterData waterData = BuildGlobalWaterData(faces, settings, ref stats);
+            GlobalWaterData waterData = BuildGlobalWaterData(faces, settings, ref stats, ct);
             onProgress?.Invoke(0.45f); // global water graph + classification done — the heaviest phase
             var originalVertexCache = new Dictionary<int, int>();
             var edgeVertexCache = new Dictionary<ulong, int>();
 
             for (int faceIndex = 0; faceIndex < faces.Length; faceIndex++)
             {
+                ct.ThrowIfCancellationRequested();
                 IFaceMeshSampler face = faces[faceIndex];
                 if (face?.UnitSpherePoints == null || face.Elevations == null)
                     continue;
@@ -179,7 +182,7 @@ public static class WaterMeshBuilder
                     normals,
                     colors,
                     triangles,
-                    ref stats);
+                    ref stats, ct);
 
                 onProgress?.Invoke(0.45f + 0.55f * (faceIndex + 1) / faces.Length);
             }
@@ -189,6 +192,7 @@ public static class WaterMeshBuilder
             if (c.b > 0.05f && c.b < 0.95f) stats.AmbiguousBodyVertices++;
 
         onProgress?.Invoke(1f);
+        ct.ThrowIfCancellationRequested();
         return new MeshData
         {
             Vertices = vertices,
@@ -235,7 +239,7 @@ public static class WaterMeshBuilder
         List<Vector3> normals,
         List<Color> colors,
         List<int> triangles,
-        ref BuildStats stats)
+        ref BuildStats stats, CancellationToken ct)
     {
         int resolution = face.Resolution;
         Vector3[] directions = face.UnitSpherePoints;
@@ -267,6 +271,7 @@ public static class WaterMeshBuilder
 
         for (int y = 0; y < resolution - 1; y++)
         {
+            ct.ThrowIfCancellationRequested();
             for (int x = 0; x < resolution - 1; x++)
             {
                 int i00 = x + y * resolution;
@@ -295,6 +300,7 @@ public static class WaterMeshBuilder
             int first = GetOrAddPoint(clipped[0]);
             for (int i = 1; i < count - 1; i++)
             {
+                if ((i & 255) == 0) ct.ThrowIfCancellationRequested();
                 triangles.Add(first);
                 triangles.Add(GetOrAddPoint(clipped[i]));
                 triangles.Add(GetOrAddPoint(clipped[i + 1]));
@@ -429,7 +435,7 @@ public static class WaterMeshBuilder
         }
     }
 
-    static GlobalWaterData BuildGlobalWaterData(IFaceMeshSampler[] faces, Settings settings, ref BuildStats stats)
+    static GlobalWaterData BuildGlobalWaterData(IFaceMeshSampler[] faces, Settings settings, ref BuildStats stats, CancellationToken ct)
     {
         var result = new GlobalWaterData { Faces = new FaceWaterData[faces.Length] };
         var globalIndicesByDirection = new Dictionary<DirectionKey, int>();
@@ -442,6 +448,7 @@ public static class WaterMeshBuilder
 
         for (int faceIndex = 0; faceIndex < faces.Length; faceIndex++)
         {
+            ct.ThrowIfCancellationRequested();
             IFaceMeshSampler face = faces[faceIndex];
             if (face?.UnitSpherePoints == null || face.Elevations == null)
                 continue;
@@ -462,6 +469,7 @@ public static class WaterMeshBuilder
 
             for (int i = 0; i < vertexCount; i++)
             {
+                if ((i & 255) == 0) ct.ThrowIfCancellationRequested();
                 var key = new DirectionKey(directions[i]);
                 if (!globalIndicesByDirection.TryGetValue(key, out int globalIndex))
                 {
@@ -524,7 +532,7 @@ public static class WaterMeshBuilder
         }
 
         bool[] wet = globalWet.ToArray();
-        var adjacency = BuildGlobalAdjacency(faces, result.Faces, wet.Length);
+        var adjacency = BuildGlobalAdjacency(faces, result.Faces, wet.Length, ct);
         var globalBodyFactor = new float[wet.Length];
         var globalEffectiveTemperature01 = globalTemperature01.ToArray();
         var globalShoreDistance = new int[wet.Length];
@@ -537,30 +545,32 @@ public static class WaterMeshBuilder
             settings,
             globalBodyFactor,
             globalEffectiveTemperature01,
-            ref stats);
+            ref stats, ct);
 
         // Unify with the biome/scatter lake authority: force any vertex WaterBodyMap tags as lake water to
         // bodyFactor 0, so a lake the biome map treats as a lake also RENDERS as a lake (murky green, still,
         // lake freeze schedule) instead of blue ocean. WaterBodyMap is built earlier in gen (Planet.cs), so it is
         // available here; null => keep the mesh's own size-based classification.
-        if (WaterBodyMap.Current != null)
+        if (settings.Levels != null)
             for (int i = 0; i < globalBodyFactor.Length; i++)
-                if (globalWet[i] && WaterBodyMap.Current.Sample(globalDirections[i]) == WaterBodyMap.Water)
+                if (globalWet[i] && settings.Levels.Sample(globalDirections[i]) == WaterBodyMap.Water)
                     globalBodyFactor[i] = 0f;
 
-        ComputeShoreDistance(wet, adjacency, globalShoreDistance);
+        ComputeShoreDistance(wet, adjacency, globalShoreDistance, ct);
 
         float[] levels = globalLevel.ToArray();
-        bool[] cover = BuildCoverSet(wet, adjacency, levels, globalBodyFactor, globalEffectiveTemperature01);
+        bool[] cover = BuildCoverSet(wet, adjacency, levels, globalBodyFactor, globalEffectiveTemperature01, ct);
 
         for (int faceIndex = 0; faceIndex < result.Faces.Length; faceIndex++)
         {
+            ct.ThrowIfCancellationRequested();
             FaceWaterData faceData = result.Faces[faceIndex];
             if (faceData.GlobalIndices == null)
                 continue;
 
             for (int i = 0; i < faceData.GlobalIndices.Length; i++)
             {
+                if ((i & 255) == 0) ct.ThrowIfCancellationRequested();
                 int globalIndex = faceData.GlobalIndices[i];
                 faceData.BodyFactor[i] = globalBodyFactor[globalIndex];
                 faceData.Temperature01[i] = globalEffectiveTemperature01[globalIndex];
@@ -593,7 +603,7 @@ public static class WaterMeshBuilder
     // straight cover-ring edges out into the ocean. All three are written in place, taken from the wet
     // neighbour with the highest level.
     static bool[] BuildCoverSet(bool[] wet, List<int>[] adjacency, float[] levels,
-        float[] bodyFactor, float[] temperature01)
+        float[] bodyFactor, float[] temperature01, CancellationToken ct)
     {
         var cover = (bool[])wet.Clone();
         for (int ring = 0; ring < CoverRings; ring++)
@@ -601,6 +611,7 @@ public static class WaterMeshBuilder
             bool[] source = (bool[])cover.Clone();
             for (int i = 0; i < cover.Length; i++)
             {
+                if ((i & 255) == 0) ct.ThrowIfCancellationRequested();
                 if (source[i]) continue;
                 List<int> neighbours = adjacency[i];
                 if (neighbours == null) continue;
@@ -622,12 +633,13 @@ public static class WaterMeshBuilder
         return cover;
     }
 
-    static List<int>[] BuildGlobalAdjacency(IFaceMeshSampler[] faces, FaceWaterData[] faceData, int globalVertexCount)
+    static List<int>[] BuildGlobalAdjacency(IFaceMeshSampler[] faces, FaceWaterData[] faceData, int globalVertexCount, CancellationToken ct)
     {
         var adjacency = new List<int>[globalVertexCount];
 
         for (int faceIndex = 0; faceIndex < faces.Length; faceIndex++)
         {
+            ct.ThrowIfCancellationRequested();
             IFaceMeshSampler face = faces[faceIndex];
             int[] globalIndices = faceData[faceIndex].GlobalIndices;
             if (face == null || globalIndices == null)
@@ -636,6 +648,7 @@ public static class WaterMeshBuilder
             int resolution = face.Resolution;
             for (int y = 0; y < resolution; y++)
             {
+                ct.ThrowIfCancellationRequested();
                 for (int x = 0; x < resolution; x++)
                 {
                     int index = x + y * resolution;
@@ -682,7 +695,7 @@ public static class WaterMeshBuilder
         Settings settings,
         float[] bodyFactor,
         float[] temperature01,
-        ref BuildStats stats)
+        ref BuildStats stats, CancellationToken ct)
     {
         int count = wet.Length;
         var visited = new bool[count];
@@ -695,6 +708,7 @@ public static class WaterMeshBuilder
 
         for (int i = 0; i < count; i++)
         {
+            if ((i & 255) == 0) ct.ThrowIfCancellationRequested();
             if (!wet[i] || visited[i])
                 continue;
 
@@ -706,6 +720,7 @@ public static class WaterMeshBuilder
 
             while (head < tail)
             {
+                ct.ThrowIfCancellationRequested();
                 int current = queue[head++];
                 component.Add(current);
                 List<int> neighbors = adjacency[current];
@@ -730,6 +745,7 @@ public static class WaterMeshBuilder
             float componentFreezeSum = 0f;
             for (int c = 0; c < component.Count; c++)
             {
+                if ((c & 255) == 0) ct.ThrowIfCancellationRequested();
                 int vertex = component[c];
                 float effectiveTemperature = Mathf.Lerp(componentTemperature, temperature01[vertex], factor);
                 bodyFactor[vertex] = factor;
@@ -787,7 +803,7 @@ public static class WaterMeshBuilder
         return 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(cold, warm, temperature01));
     }
 
-    static void ComputeShoreDistance(bool[] wet, List<int>[] adjacency, int[] distance)
+    static void ComputeShoreDistance(bool[] wet, List<int>[] adjacency, int[] distance, CancellationToken ct)
     {
         int count = wet.Length;
         var queue = new int[count];
@@ -796,6 +812,7 @@ public static class WaterMeshBuilder
 
         for (int i = 0; i < count; i++)
         {
+            if ((i & 255) == 0) ct.ThrowIfCancellationRequested();
             if (!wet[i] || !HasDryNeighbor(i))
                 continue;
 
@@ -805,6 +822,7 @@ public static class WaterMeshBuilder
 
         while (head < tail)
         {
+            ct.ThrowIfCancellationRequested();
             int current = queue[head++];
             int nextDistance = distance[current] + 1;
             List<int> neighbors = adjacency[current];

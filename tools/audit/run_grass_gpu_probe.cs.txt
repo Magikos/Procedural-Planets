@@ -1,0 +1,63 @@
+var results = new System.Collections.Generic.List<object>();
+var outputs = new System.Collections.Generic.Dictionary<string, UnityEngine.Vector4[]>();
+foreach (string variant in new[] { "Current", "Baseline" })
+{
+    var compute = UnityEngine.Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.ComputeShader>("Assets/Tests/GrassAuditProbe/" + variant + ".compute"));
+    var ids = new UnityEngine.Texture2D(2,2,UnityEngine.TextureFormat.RGBAFloat,false,true);
+    var weights = new UnityEngine.Texture2D(2,2,UnityEngine.TextureFormat.RGBAFloat,false,true);
+    var parameters = new UnityEngine.ComputeBuffer(2,80);
+    var output = new UnityEngine.ComputeBuffer(8,16);
+    try
+    {
+        parameters.SetData(new UnityEngine.Vector4[] {
+            new(1,.8f,.04f,.6f),new(40,5,.2f,1),new(.2f,.8f,.4f,1),new(.7f,.8f,.9f,1),new(.9f,1,.8f,1),
+            new(.25f,.4f,.02f,.2f),new(20,3,.4f,1),new(.6f,.4f,.2f,1),new(.8f,.7f,.6f,1),new(.6f,.8f,1,1)
+        });
+        int kernel=compute.FindKernel("Probe");
+        compute.SetBuffer(kernel,"_Params",parameters);
+        compute.SetBuffer(kernel,"_Result",output);
+        compute.SetTexture(kernel,"_BiomeIds",ids);
+        compute.SetTexture(kernel,"_BiomeWeights",weights);
+        compute.SetVector("_BiomeMap_TexelSize",new(.5f,.5f,2,2));
+        foreach (string scenario in new[] { "packed", "split", "unequal", "empty", "small" })
+        {
+            var idPixels=new UnityEngine.Color[4];
+            var weightPixels=new UnityEngine.Color[4];
+            for(int i=0;i<4;i++)
+            {
+                bool right=(i%2)==1;
+                idPixels[i]=new UnityEngine.Color(scenario=="unequal" && right ? 1f/255f : 0,0,0,0);
+                float weight=scenario=="packed" ?.5f:scenario=="empty" ?0:((scenario=="split" || scenario=="small") && right ?0:1);
+                weightPixels[i]=new UnityEngine.Color(weight,0,0,0);
+            }
+            ids.SetPixels(idPixels);ids.Apply();weights.SetPixels(weightPixels);weights.Apply();
+            compute.SetVector("_ProbeUv",new(scenario=="small" ?.749975f:.5f,.5f,0,0));
+            compute.Dispatch(kernel,1,1,1);
+            var values=new UnityEngine.Vector4[8];output.GetData(values);
+            outputs[variant+"/"+scenario]=values;
+            results.Add(new {variant,scenario,values=System.Array.ConvertAll(values,v=>new float[]{v.x,v.y,v.z,v.w})});
+        }
+    }
+    finally
+    {
+        parameters.Dispose();output.Dispose();
+        UnityEngine.Object.DestroyImmediate(ids);UnityEngine.Object.DestroyImmediate(weights);UnityEngine.Object.DestroyImmediate(compute);
+    }
+}
+var failures=new System.Collections.Generic.List<string>();
+void Equal(float actual,float expected,string label) { if(float.IsNaN(actual)||System.Math.Abs(actual-expected)>0.0001f) failures.Add(label+": expected "+expected+", got "+actual); }
+var packed=outputs["Current/packed"];var split=outputs["Current/split"];
+for(int i=0;i<7;i++) for(int j=0;j<4;j++) Equal(split[i][j],packed[i][j],"equivalence "+i+","+j);
+Equal(split[0].x,.5f,"density");Equal(split[1].x,40,"placement slope");Equal(split[5].y,40,"blanket slope");
+Equal(split[7].x,1,"placement keep at 30deg");Equal(split[7].y,1,"blanket keep at 30deg");
+Equal(outputs["Current/unequal"][1].x,36,"unequal placement slope");Equal(outputs["Current/unequal"][5].y,36,"unequal blanket slope");
+Equal(outputs["Current/empty"][0].x,0,"empty density");Equal(outputs["Current/empty"][1].x,0,"empty slope");
+Equal(outputs["Current/small"][1].x,40,"small-weight placement slope");Equal(outputs["Current/small"][5].y,40,"small-weight blanket slope");
+Equal(outputs["Baseline/split"][1].x,20,"baseline bug placement slope");Equal(outputs["Baseline/split"][5].y,20,"baseline bug blanket slope");
+Equal(outputs["Baseline/split"][7].x,0,"baseline placement rejects 30deg");Equal(outputs["Baseline/split"][7].y,0,"baseline blanket rejects 30deg");
+foreach(string scenario in new[]{"packed","split","unequal","empty","small"}) Equal(outputs["Current/"+scenario][0].x,outputs["Baseline/"+scenario][0].x,"density preserved "+scenario);
+var report=new {gpu=UnityEngine.SystemInfo.graphicsDeviceName,passed=failures.Count==0,failures,results};
+var json=Newtonsoft.Json.JsonConvert.SerializeObject(report,Newtonsoft.Json.Formatting.Indented);
+System.IO.Directory.CreateDirectory("local-only/grass-audit/2026-09-10");
+System.IO.File.WriteAllText("local-only/grass-audit/2026-09-10/gpu-results.json",json);
+return new {report.passed,report.gpu,failures,reportPath="local-only/grass-audit/2026-09-10/gpu-results.json"};

@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd8008cb45ca5034daa0a124445d0868, type: 3}
+  m_Name: Light campfire
+  m_EditorClassIdentifier: Magikos.Game::ActorInteractionDefinition
+  Action: Light campfire
+  Phases:
+  - Animation:
+      Name: Strike flint
+      Clip: {fileID: 1827226128182048838, guid: 9e5d93373adbcb940b5e987c501c3865, type: 3}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 7.3
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: LightCampfire
+    MarkerProgress: 0.65

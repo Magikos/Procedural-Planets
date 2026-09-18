@@ -43,6 +43,7 @@ public interface ICloudRuntime
 
 public interface IAtmosphereRuntime
 {
+    bool IsReady { get; }
 }
 
 public sealed class WorldContext : IWorldContext

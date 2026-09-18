@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CommandPrefix("path")]
+[CommandPrefix("path", Group = "World and surface", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public static class SurfacePathDebugCommands
 {
     static bool _strokeActive;
@@ -11,78 +11,78 @@ public static class SurfacePathDebugCommands
     public static string PaintCmd(float? radiusMeters = null, float? strength = null, float? regrowSeconds = null)
     {
         if (!TryGetPathBrush(out ISurfacePathBrushService brush, out string error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!TryGetCameraRay(out Ray ray, out error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!TryGetSurfaceDirection(ray, out Vector3 direction, out _, out error))
-            return error;
+            throw new System.InvalidOperationException(error);
 
         NormalizePaintArgs(radiusMeters, strength, regrowSeconds, 5f, out float radius, out float alpha, out float regrow);
         return brush.TryPaintSurfacePathBrushAtLocalDirection(direction, radius, alpha, regrow,
                 SurfacePathShape.SoftDisc, SurfacePathOperation.Paint, out string summary)
             ? summary
-            : summary;
+            : throw new System.InvalidOperationException(summary);
     }
 
     [ConsoleCommand("paint-here", "Paint and save a soft paved path mask under the camera. Args: radiusMeters strength01 regrowSeconds(0=permanent).", MonoTargetType.Static)]
     public static string PaintHereCmd(float? radiusMeters = null, float? strength = null, float? regrowSeconds = null)
     {
         if (!TryGetPathBrush(out ISurfacePathBrushService brush, out string error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!TryGetCameraTransform(out Transform cameraTransform, out error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!brush.TryGetSurfacePathLocalDirection(cameraTransform.position, out Vector3 direction))
-            return "path paint-here requires a camera away from the planet center";
+            throw new System.InvalidOperationException("path paint-here requires a camera away from the planet center");
 
         NormalizePaintArgs(radiusMeters, strength, regrowSeconds, 8f, out float radius, out float alpha, out float regrow);
         return brush.TryPaintSurfacePathBrushAtLocalDirection(direction, radius, alpha, regrow,
                 SurfacePathShape.SoftDisc, SurfacePathOperation.Paint, out string summary)
             ? summary
-            : summary;
+            : throw new System.InvalidOperationException(summary);
     }
 
     [ConsoleCommand("pattern-here", "Paint deterministic path test patterns under the camera. Args: sizeMeters strength01.", MonoTargetType.Static)]
     public static string PatternHereCmd(float? sizeMeters = null, float? strength = null)
     {
         if (!TryGetPathEdits(out SurfaceEditController edits, out string error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!TryGetPathBrush(out ISurfacePathBrushService brush, out error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!TryGetCameraTransform(out Transform cameraTransform, out error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!brush.TryGetSurfacePathLocalDirection(cameraTransform.position, out Vector3 direction))
-            return "path pattern-here requires a camera away from the planet center";
+            throw new System.InvalidOperationException("path pattern-here requires a camera away from the planet center");
 
         float size = Mathf.Clamp(sizeMeters ?? 220f, 16f, 1000f);
         float alpha = Mathf.Clamp01(strength ?? 1f);
         return edits.TryPaintPattern(direction, size, alpha, out string summary)
             ? summary
-            : summary;
+            : throw new System.InvalidOperationException(summary);
     }
 
-    [ConsoleCommand("stroke-start", "Start a saved path stroke at the terrain point under the camera aim.", MonoTargetType.Static)]
+    [ConsoleCommand("stroke.start", "Start a saved path stroke at the terrain point under the camera aim.", MonoTargetType.Static, Aliases = new[] { "path.stroke-start" })]
     public static string StrokeStartCmd()
     {
         if (!TryGetCameraRay(out Ray ray, out string error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!TryGetSurfaceDirection(ray, out _strokeDirection, out _strokeSurfaceRadius, out error))
-            return error;
+            throw new System.InvalidOperationException(error);
 
         _strokeActive = true;
         return "path stroke started";
     }
 
-    [ConsoleCommand("stroke-to", "Paint a saved path stroke from the previous point to the terrain point under camera aim. Args: radiusMeters strength01 regrowSeconds stepMeters.", MonoTargetType.Static)]
+    [ConsoleCommand("stroke.to", "Paint a saved path stroke from the previous point to the terrain point under camera aim. Args: radiusMeters strength01 regrowSeconds stepMeters.", MonoTargetType.Static, Aliases = new[] { "path.stroke-to" })]
     public static string StrokeToCmd(float? radiusMeters = null, float? strength = null, float? regrowSeconds = null, float? stepMeters = null)
     {
         if (!_strokeActive)
-            return "path stroke-to requires path.stroke-start first";
+            throw new System.InvalidOperationException("path stroke-to requires path.stroke-start first");
         if (!TryGetPathBrush(out ISurfacePathBrushService brush, out string error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!TryGetCameraRay(out Ray ray, out error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!TryGetSurfaceDirection(ray, out Vector3 endDirection, out float endSurfaceRadius, out error))
-            return error;
+            throw new System.InvalidOperationException(error);
 
         NormalizePaintArgs(radiusMeters, strength, regrowSeconds, 5f, out float radius, out float alpha, out float regrow);
         float step = Mathf.Clamp(stepMeters ?? Mathf.Max(radius * 0.75f, 0.5f), 0.25f, 100f);
@@ -105,7 +105,7 @@ public static class SurfacePathDebugCommands
         return $"path stroke painted {painted}/{segments + 1} stamp(s), step={step:F1}m";
     }
 
-    [ConsoleCommand("stroke-end", "End the active saved path stroke.", MonoTargetType.Static)]
+    [ConsoleCommand("stroke.end", "End the active saved path stroke.", MonoTargetType.Static, Aliases = new[] { "path.stroke-end" })]
     public static string StrokeEndCmd()
     {
         _strokeActive = false;
@@ -114,33 +114,33 @@ public static class SurfacePathDebugCommands
         return "path stroke ended";
     }
 
-    [ConsoleCommand("stroke-cancel", "Alias for path.stroke-end.", MonoTargetType.Static)]
+    [ConsoleCommand("stroke.cancel", "Alias for path.stroke-end.", MonoTargetType.Static, Aliases = new[] { "path.stroke-cancel" })]
     public static string StrokeCancelCmd() => StrokeEndCmd();
 
-    [ConsoleCommand("clear", "Clear runtime painted path masks without deleting saved path stamps.", MonoTargetType.Static)]
+    [ConsoleCommand("cache.clear", "Clear runtime painted path masks without deleting saved path stamps.", MonoTargetType.Static, Aliases = new[] { "path.clear" })]
     public static string ClearCmd()
     {
         if (!TryGetPathEdits(out SurfaceEditController edits, out string error))
-            return error;
+            throw new System.InvalidOperationException(error);
 
         int cleared = edits.ClearRuntimeMasks();
         return $"cleared path masks on {cleared} chunks";
     }
 
-    [ConsoleCommand("replay", "Clear runtime path masks, then replay saved path stamps.", MonoTargetType.Static)]
+    [ConsoleCommand("saved.replay", "Clear runtime path masks, then replay saved path stamps.", MonoTargetType.Static, Aliases = new[] { "path.replay" })]
     public static string ReplayCmd()
     {
         return TryGetPathEdits(out SurfaceEditController edits, out _)
             ? edits.ReplaySavedStamps()
-            : "path replay requires an active Planet";
+            : throw new System.InvalidOperationException("path replay requires an active Planet");
     }
 
-    [ConsoleCommand("clear-saved", "Delete saved path stamps and clear runtime path masks.", MonoTargetType.Static)]
+    [ConsoleCommand("saved.clear", "Delete saved path stamps and clear runtime path masks.", MonoTargetType.Static, Aliases = new[] { "path.clear-saved" })]
     public static string ClearSavedCmd()
     {
         return TryGetPathEdits(out SurfaceEditController edits, out _)
             ? edits.ClearSavedStamps()
-            : "path clear-saved requires an active Planet";
+            : throw new System.InvalidOperationException("path clear-saved requires an active Planet");
     }
 
     [ConsoleCommand("debug", "Toggle hot-pink path mask visualization.", MonoTargetType.Static)]
@@ -148,7 +148,7 @@ public static class SurfacePathDebugCommands
     {
         return TryGetPathEdits(out SurfaceEditController edits, out _)
             ? edits.SetDebug(enabled)
-            : "path debug requires an active Planet";
+            : throw new System.InvalidOperationException("path debug requires an active Planet");
     }
 
     [ConsoleCommand("debug-wear", "Toggle raw grayscale path-wear texture visualization.", MonoTargetType.Static)]
@@ -156,7 +156,7 @@ public static class SurfacePathDebugCommands
     {
         return TryGetPathEdits(out SurfaceEditController edits, out _)
             ? edits.SetDebugWear(enabled)
-            : "path debug-wear requires an active Planet";
+            : throw new System.InvalidOperationException("path debug-wear requires an active Planet");
     }
 
     [ConsoleCommand("regrow-refresh", "Get or set how often temporary path/scorch regrowth visibly replays. Args: seconds.", MonoTargetType.Static)]
@@ -164,7 +164,7 @@ public static class SurfacePathDebugCommands
     {
         return TryGetPathEdits(out SurfaceEditController edits, out _)
             ? edits.SetRegrowRefresh(seconds)
-            : "path regrow-refresh requires an active Planet";
+            : throw new System.InvalidOperationException("path regrow-refresh requires an active Planet");
     }
 
     [ConsoleCommand("regrow-now", "Force an immediate temporary path/scorch regrowth replay.", MonoTargetType.Static)]
@@ -172,7 +172,7 @@ public static class SurfacePathDebugCommands
     {
         return TryGetPathEdits(out SurfaceEditController edits, out _)
             ? edits.RefreshRegrowthNow()
-            : "path regrow-now requires an active Planet";
+            : throw new System.InvalidOperationException("path regrow-now requires an active Planet");
     }
 
     [ConsoleCommand("status", "Show path mask runtime support status.", MonoTargetType.Static)]
@@ -183,7 +183,7 @@ public static class SurfacePathDebugCommands
             : "path mask unavailable: no active Planet";
     }
 
-    [ConsoleCommand("mouse", "Get or set mouse path painting. Left-drag paints saved path stamps.", MonoTargetType.Static)]
+    [ConsoleCommand("mouse.enabled", "Get or set mouse path painting. Left-drag paints saved path stamps.", MonoTargetType.Static, Aliases = new[] { "path.mouse" })]
     public static string MouseCmd(bool? enabled = null)
     {
         SurfacePathMousePainter tool = SurfacePathMousePainter.Find();
@@ -202,7 +202,7 @@ public static class SurfacePathDebugCommands
         return tool.Status();
     }
 
-    [ConsoleCommand("mouse-brush", "Get or set mouse path brush. Args: radiusMeters strength01 regrowSeconds spacingMeters.", MonoTargetType.Static)]
+    [ConsoleCommand("mouse.brush", "Get or set mouse path brush. Args: radiusMeters strength01 regrowSeconds spacingMeters.", MonoTargetType.Static, Aliases = new[] { "path.mouse-brush" })]
     public static string MouseBrushCmd(float? radiusMeters = null, float? strength = null,
         float? regrowSeconds = null, float? spacingMeters = null)
     {
@@ -211,12 +211,12 @@ public static class SurfacePathDebugCommands
         return tool.Status();
     }
 
-    [ConsoleCommand("mouse-shape", "Get or set mouse path shape: soft-disc, hard-disc, square.", MonoTargetType.Static)]
+    [ConsoleCommand("mouse.shape", "Get or set mouse path shape: soft-disc, hard-disc, square.", MonoTargetType.Static, Aliases = new[] { "path.mouse-shape" })]
     public static string MouseShapeCmd(string shape = null)
     {
         SurfacePathMousePainter tool = SurfacePathMousePainter.GetOrCreate();
         if (!string.IsNullOrWhiteSpace(shape) && !tool.TrySetShape(shape))
-            return "path mouse-shape expects: soft-disc, hard-disc, square";
+            throw new System.InvalidOperationException("path mouse-shape expects: soft-disc, hard-disc, square");
         return tool.Status();
     }
 
@@ -319,58 +319,58 @@ public static class SurfacePathDebugCommands
     }
 }
 
-[CommandPrefix("scorch")]
+[CommandPrefix("scorch", Group = "World and surface", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public static class SurfaceScorchDebugCommands
 {
     [ConsoleCommand("paint", "Paint and save a soft scorched mask where the camera is aimed. Args: radiusMeters strength01 regrowSeconds(0=permanent).", MonoTargetType.Static)]
     public static string PaintCmd(float? radiusMeters = null, float? strength = null, float? regrowSeconds = null)
     {
         if (!TryGetPathEdits(out SurfaceEditController edits, out string error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!TryGetCameraRay(out Ray ray, out error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!TryGetSurfaceDirection(edits, ray, out Vector3 direction, out error))
-            return error;
+            throw new System.InvalidOperationException(error);
 
         NormalizePaintArgs(radiusMeters, strength, regrowSeconds, 10f, out float radius, out float alpha, out float regrow);
         return edits.TryPaintScorch(direction, radius, alpha, regrow,
                 SurfacePathShape.SoftDisc, SurfacePathOperation.Paint, saveStamp: true, out string summary)
             ? summary
-            : summary;
+            : throw new System.InvalidOperationException(summary);
     }
 
     [ConsoleCommand("paint-here", "Paint and save a soft scorched mask under the camera. Args: radiusMeters strength01 regrowSeconds(0=permanent).", MonoTargetType.Static)]
     public static string PaintHereCmd(float? radiusMeters = null, float? strength = null, float? regrowSeconds = null)
     {
         if (!TryGetPathEdits(out SurfaceEditController edits, out string error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!TryGetCameraTransform(out Transform cameraTransform, out error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!edits.TryGetSurfacePathLocalDirection(cameraTransform.position, out Vector3 direction))
-            return "scorch paint-here requires a camera away from the planet center";
+            throw new System.InvalidOperationException("scorch paint-here requires a camera away from the planet center");
 
         NormalizePaintArgs(radiusMeters, strength, regrowSeconds, 16f, out float radius, out float alpha, out float regrow);
         return edits.TryPaintScorch(direction, radius, alpha, regrow,
                 SurfacePathShape.SoftDisc, SurfacePathOperation.Paint, saveStamp: true, out string summary)
             ? summary
-            : summary;
+            : throw new System.InvalidOperationException(summary);
     }
 
     [ConsoleCommand("pattern-here", "Paint deterministic scorch test patterns under the camera. Args: sizeMeters strength01.", MonoTargetType.Static)]
     public static string PatternHereCmd(float? sizeMeters = null, float? strength = null)
     {
         if (!TryGetPathEdits(out SurfaceEditController edits, out string error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!TryGetCameraTransform(out Transform cameraTransform, out error))
-            return error;
+            throw new System.InvalidOperationException(error);
         if (!edits.TryGetSurfacePathLocalDirection(cameraTransform.position, out Vector3 direction))
-            return "scorch pattern-here requires a camera away from the planet center";
+            throw new System.InvalidOperationException("scorch pattern-here requires a camera away from the planet center");
 
         float size = Mathf.Clamp(sizeMeters ?? 220f, 16f, 1000f);
         float alpha = Mathf.Clamp01(strength ?? 1f);
         return edits.TryPaintScorchPattern(direction, size, alpha, out string summary)
             ? summary
-            : summary;
+            : throw new System.InvalidOperationException(summary);
     }
 
     [ConsoleCommand("clear", "Delete saved scorch stamps and replay remaining surface edits.", MonoTargetType.Static)]
@@ -378,7 +378,7 @@ public static class SurfaceScorchDebugCommands
     {
         return TryGetPathEdits(out SurfaceEditController edits, out _)
             ? edits.ClearSavedScorchStamps()
-            : "scorch clear requires an active Planet";
+            : throw new System.InvalidOperationException("scorch clear requires an active Planet");
     }
 
     [ConsoleCommand("replay", "Replay saved path and scorch stamps.", MonoTargetType.Static)]
@@ -386,7 +386,7 @@ public static class SurfaceScorchDebugCommands
     {
         return TryGetPathEdits(out SurfaceEditController edits, out _)
             ? edits.ReplaySavedStamps()
-            : "scorch replay requires an active Planet";
+            : throw new System.InvalidOperationException("scorch replay requires an active Planet");
     }
 
     [ConsoleCommand("status", "Show saved surface edit status, including scorch count.", MonoTargetType.Static)]
@@ -394,7 +394,7 @@ public static class SurfaceScorchDebugCommands
     {
         return TryGetPathEdits(out SurfaceEditController edits, out _)
             ? edits.Status()
-            : "scorch status requires an active Planet";
+            : throw new System.InvalidOperationException("scorch status requires an active Planet");
     }
 
     static bool TryGetPathEdits(out SurfaceEditController edits, out string error)

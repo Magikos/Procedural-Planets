@@ -1,14 +1,15 @@
 ---
 name: pp-validation-and-evidence
-description: Use when deciding whether a change is actually done, verified, or proven — "is it done", "does it work", before/after comparison, baseline capture, acceptance criteria, promotion to complete, perf-win claims, or when tempted to say "build succeeded" or "looks fine". Also when writing exit checks for a plan phase. Not for how to operate the capture/debug tools themselves — see pp-diagnostics-and-tooling. Not for who approves what — see pp-change-control.
+description: Use when deciding whether a change is done, verified, or proven; defining acceptance criteria; comparing captures or performance; or recording and replaying validation scenarios. Also use for plan-phase exit checks. Tool operation belongs in pp-diagnostics-and-tooling; approval rules belong in pp-change-control.
 ---
 
 # Validation and Evidence
 
-There is **no test framework** in this project. That is deliberate — never propose one
-(CLAUDE.md, "Tests"). Validation is evidence-based in-game verification: builds prove
-code health, captures prove pixels, counters prove numbers, and Bryan's eyes prove the
-look. A claim without the matching evidence tier is not a result; it is a hypothesis.
+The project has NUnit EditMode tests under `Assets/Tests/EditMode` (verified 2026-09-09).
+Use the existing Unity test runner for focused regressions. No framework installation is needed.
+Tests prove their asserted behavior. Builds prove code health, captures prove pixels,
+counters prove numbers, and Bryan's eyes approve the look.
+A claim without the matching evidence tier remains a hypothesis.
 
 Definitions used throughout:
 - **F10 capture set** — a named group of debug view modes; pressing F10 in play mode (or
@@ -26,7 +27,7 @@ Each claim type has a minimum evidence tier. Lower tiers never substitute for hi
 | Claim | Minimum evidence | Tools |
 |---|---|---|
 | "The C# compiles / no type errors" | Code-health build exit 0 | `dotnet build ProceduralPlanets.Planet.csproj` (then Core, serially) |
-| "Unity accepts it (shaders, assets, serialization)" | Unity import + compile with no new errors | Unity editor console (Bryan runs; agents do not launch Unity) |
+| "Unity accepts it (shaders, assets, serialization)" | Unity import + compile with no new errors | Unity editor console; coordinate Editor ownership before agent-driven validation |
 | "It runs / initializes / doesn't throw" | Fresh play-mode run, clean `Editor.log` slice | Editor.log; console output |
 | "Startup/generation got faster" | `Generation timings` line from a **fresh play run** (script reload is NOT startup proof) | `Planet.cs` logs `Generation timings: initialize=..., terrain=..., colors=..., climate=..., water=..., total=...ms` at Debug level, tag `Planet` |
 | "Behavior/placement is unchanged (refactor)" | Numeric invariance: same counts/stats on the same seed, before vs after | Sidecar stats blocks; `planet.seed`; see "Numeric invariance" below |
@@ -54,6 +55,16 @@ style; copy their exit-check form:
   HUD off" — cloud plan Phase 2.
 
 A phase without a written exit check is not a phase; it is drift.
+
+## Reusable validation scenarios
+
+Use a scenario record when a result must survive a restart, repeat run, or handoff.
+Keep the record in the owning plan's evidence section; link an existing record instead of duplicating it.
+Start from [the scenario template](templates/scenario-record.md) and omit fields unrelated to the claim.
+Record setup, reset behavior, seed, location, time, settings, exact actions, acceptance criteria, and evidence paths.
+Read [the replay procedure](references/scenario-replay.md) when creating or repeating a scenario.
+Unknown setup values remain unknown; they do not become defaults or successful checks.
+This record complements the existing capture protocol and tests. It does not require a new test framework or console command.
 
 ## Before/after capture protocol (runbook)
 
@@ -190,6 +201,11 @@ would be interactive proof-of-life, not a test framework.
 
 ## Provenance and maintenance
 
+Scenario records added 2026-09-09, based on the existing capture protocol and
+`docs/design/2026-09-07-agent-systems.md` survival validation and reset limits.
+Reverify scenario controls in the current fixture and console help before recording executable steps.
+Keep the scenario template and replay procedure consistent with the evidence ladder above.
+
 All claims verified against the repo on 2026-07-06, branch `code-refactor`. Re-verify with:
 
 - Exit-check exemplars: `docs/design/2026-07-04-cloud-visual-migration-plan.md` and
@@ -203,5 +219,5 @@ All claims verified against the repo on 2026-07-06, branch `code-refactor`. Re-v
 - Frame timing sections/window: `grep -n "FrameTimingSection\|RollingWindowSize" Assets/Scripts/Core/Services/FrameTimingModule.cs`.
 - Quality commands: `grep -n "ConsoleCommand" Assets/Scripts/Core/QualityController.cs` (lines ~173–203).
 - test.console commands: `grep -n "ConsoleCommand" Assets/Scripts/Core/Console/Commands/TestConsoleCommands.cs`.
-- No-test-framework rule and audit boundaries: `CLAUDE.md` ("Tests", "Audit workflow").
+- Existing-test-framework rule and audit boundaries: `CLAUDE.md` ("Tests", "Audit workflow").
 - Fresh-run / build-vs-visual doctrine background: `.agent-memory/codex/memory_summary.md` (additional background only; facts restated above).

@@ -3,68 +3,82 @@ using System.Text;
 
 public static class CommandParser
 {
-    /// <summary>
-    /// Tokenize a raw command line into whitespace-separated tokens with quoted-string support.
-    /// Both single and double quotes are honoured; tokens inside quotes preserve internal spaces.
-    /// </summary>
+    public readonly struct Token
+    {
+        public readonly string Value;
+        public readonly int Start;
+        public readonly int End;
+        public Token(string value, int start, int end) { Value = value; Start = start; End = end; }
+    }
+
     public static List<string> Tokenize(string line)
     {
-        var result = new List<string>();
+        var values = new List<string>();
+        foreach (var token in TokenizeSpans(line)) values.Add(token.Value);
+        return values;
+    }
+
+    // Source spans let completion replace an argument without rewriting its neighbours.
+    public static List<Token> TokenizeSpans(string line)
+    {
+        var result = new List<Token>();
         if (string.IsNullOrWhiteSpace(line)) return result;
-
-        var current = new StringBuilder();
-        char quote = '\0';
-        bool inQuote = false;
-
-        for (int i = 0; i < line.Length; i++)
+        int i = 0;
+        while (i < line.Length)
         {
-            char c = line[i];
-
-            if (inQuote)
+            if (char.IsWhiteSpace(line[i])) { i++; continue; }
+            int start = i;
+            char quote = line[i] is '\'' or '"' ? line[i++] : '\0';
+            int valueStart = i;
+            if (quote != '\0')
             {
-                if (c == quote)
-                {
-                    inQuote = false;
-                    // Empty quoted token still counts.
-                    result.Add(current.ToString());
-                    current.Clear();
-                }
-                else
-                {
-                    current.Append(c);
-                }
-                continue;
+                while (i < line.Length && line[i] != quote) i++;
+                string value = line.Substring(valueStart, i - valueStart);
+                if (i < line.Length) i++;
+                result.Add(new Token(value, start, i));
             }
-
-            if (c == '"' || c == '\'')
+            else
             {
-                if (current.Length > 0)
-                {
-                    result.Add(current.ToString());
-                    current.Clear();
-                }
-                inQuote = true;
-                quote = c;
-                continue;
+                while (i < line.Length && !char.IsWhiteSpace(line[i]) && line[i] != '\'' && line[i] != '"') i++;
+                result.Add(new Token(line.Substring(start, i - start), start, i));
             }
-
-            if (char.IsWhiteSpace(c))
-            {
-                if (current.Length > 0)
-                {
-                    result.Add(current.ToString());
-                    current.Clear();
-                }
-                continue;
-            }
-
-            current.Append(c);
         }
-
-        if (current.Length > 0)
-            result.Add(current.ToString());
-
         return result;
+    }
+
+    public static bool TryGetArgument(string text, int cursor, CommandData command,
+        out int parameterIndex, out int start, out int end, out string partial)
+    {
+        cursor = System.Math.Clamp(cursor, 0, text.Length);
+        var spans = TokenizeSpans(text);
+        var values = new List<string>();
+        foreach (var token in spans) values.Add(token.Value);
+        int tokenIndex = 1;
+        for (int i = 0; i < command.Parameters.Length; i++)
+        {
+            var parameter = command.Parameters[i];
+            start = tokenIndex < spans.Count ? spans[tokenIndex].Start : cursor;
+            bool tail = parameter.Type == typeof(string) && i == command.Parameters.Length - 1;
+            bool valid = true;
+            int consumed = 0;
+            if (tail) consumed = spans.Count - tokenIndex;
+            else valid = ConsoleArgumentParsers.TryParse(values, tokenIndex, parameter.Type, out _, out consumed, out _);
+            consumed = System.Math.Max(1, consumed);
+            int last = System.Math.Min(spans.Count - 1, tokenIndex + consumed - 1);
+            end = tail ? text.Length : tokenIndex < spans.Count ? spans[last].End : cursor;
+            if (cursor <= end || tail || !valid)
+            {
+                if (cursor < start) start = end = cursor;
+                parameterIndex = i;
+                partial = string.Join(" ", Tokenize(text.Substring(start, System.Math.Max(0, cursor - start))));
+                return true;
+            }
+            tokenIndex += consumed;
+        }
+        parameterIndex = -1;
+        start = end = cursor;
+        partial = "";
+        return false;
     }
 
     /// <summary>

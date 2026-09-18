@@ -1,0 +1,125 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1c31c5bdb5b4154a754cff5a36cad80, type: 3}
+  m_Name: Ladder Performances
+  m_EditorClassIdentifier: Magikos.Game::ActorAnimationPerformanceLibrary
+  Entries:
+  - Id: humanoid.ladder
+    Action: Ladder
+    RigFamily: Humanoid
+    Condition: 
+    LocomotionExitPhase: -1
+    MinProficiency: 0
+    MaxProficiency: 1
+    Phases:
+    - Name: MountBottom
+      Clip: {fileID: 7400000, guid: 99b9c0d5243494a4a95b9923b7dba072, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.18
+    - Name: MountTop
+      Clip: {fileID: 7400000, guid: 3bb8c0752b0cbd747aa7ca35cc94dbd0, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.18
+    - Name: Up
+      Clip: {fileID: 7400000, guid: 71555c11193577948b73dd1851ac4c9c, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.18
+    - Name: Down
+      Clip: {fileID: 7400000, guid: 6d2d28580adef8c46a51afe402df0d49, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.18
+    - Name: Idle
+      Clip: {fileID: -1713886645263758949, guid: 30623f31a49892a4e938e34d066c636a, type: 3}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.18
+    - Name: ExitBottom
+      Clip: {fileID: 7400000, guid: 106b5e362a259ad4f910a2859b8f7e16, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.18
+    - Name: ExitTop
+      Clip: {fileID: 7400000, guid: e5b4d7d0a1a10a24586d29e33184b1ae, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.18
+    - Name: ApproachStep
+      Clip: {fileID: 7400000, guid: 0467eaf1316acd9408df0ad2d7ef7a74, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.08
+    - Name: ExitTopMirrored
+      Clip: {fileID: 7400000, guid: d4c44f6b9b61b9b41bc52dffaea91c5e, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.18
+    - Name: MountTopMirrored
+      Clip: {fileID: 7400000, guid: 17b462bf64d084548a502c0e329899ce, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.18
+    - Name: ExitBottomMirrored
+      Clip: {fileID: 7400000, guid: 91d2fdcadab5315459e1c70243fe4225, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.18
+    - Name: SprintUp
+      Clip: {fileID: 7400000, guid: d43c4cb003522c44eab34d93a1633d9a, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.18
+    - Name: SprintUpRight
+      Clip: {fileID: 7400000, guid: c8340d0aca05af94988c17304e44479f, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.18
+    - Name: SlideStart
+      Clip: {fileID: 7400000, guid: b14ef90c47f524844a6fcbdd9d66c540, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.18
+    - Name: Slide
+      Clip: {fileID: 7400000, guid: 18c4d5cc7a77c9f4cb6c4367559b2406, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.18
+    - Name: SlideEnd
+      Clip: {fileID: 7400000, guid: cc2720e4fc84578478df5a707a380282, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.18
+    - Name: SprintTop
+      Clip: {fileID: 7400000, guid: 157b4d52c29558d428c71ac996c8b97a, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.1

@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "message": "Code executed successfully.",
+  "data": {
+    "result": "{\"actors\":22,\"dt\":0.0284561012,\"rows\":[{\"run\":0,\"fullAverageMs\":6.7904199999999957,\"fullP95Ms\":8.7024,\"budgetAverageMs\":2.1226075,\"budgetP95Ms\":3.4039,\"evaluated\":752,\"skipped\":1888},{\"run\":1,\"fullAverageMs\":6.7956883333333309,\"fullP95Ms\":8.9024,\"budgetAverageMs\":2.2616641666666668,\"budgetP95Ms\":3.4322000000000004,\"evaluated\":751,\"skipped\":1889},{\"run\":2,\"fullAverageMs\":6.8180208333333336,\"fullP95Ms\":9.0901,\"budgetAverageMs\":2.1847241666666672,\"budgetP95Ms\":3.4557,\"evaluated\":753,\"skipped\":1887}]}",
+    "compiler": "roslyn"
+  }
+}

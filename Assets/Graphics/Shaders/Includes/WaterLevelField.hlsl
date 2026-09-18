@@ -31,10 +31,13 @@ float _WaterSurfaceOffset;
 
 // The cube-face projection lives in its own file so the grass placement computes can share it.
 #include "WaterLevelProjection.hlsl"
+#include "RiverField.hlsl"
 
 // Water surface height in planet-radius units, or WATER_LEVEL_NO_WATER_MAX and below where none stands.
 float SampleWaterLevel(float3 direction)
 {
+    float4 river = SampleRiver(direction);
+    if (river.w >= -.005 && river.z == 0) return river.x / _WaterLevelBaseRadius - 1;
     if (_WaterLevelRes <= 0.0)
         return WATER_LEVEL_NO_WATER_MAX - 1.0;
 
@@ -107,10 +110,13 @@ float ShoreSurfaceRadiusAt(float3 direction, float fallbackSeaRadius)
 //
 // Taken as arguments rather than off globals because the callers do not agree on which globals they have
 // declared - Atmosphere, WaterVolume and Ocean each own a different subset.
+#include "WaterCamera.hlsl"
+
 float CameraSeaOffset(float3 cameraPositionWS, float3 planetCentre, float fallbackSeaRadius)
 {
     float3 fromCentre = cameraPositionWS - planetCentre;
     float radius = length(fromCentre);
+    if (IsWaterPresentationCamera(cameraPositionWS)) return radius - _WaterCameraSurface.x;
     return radius - WaterSurfaceRadiusAt(fromCentre / max(radius, 0.0001), fallbackSeaRadius);
 }
 
@@ -124,6 +130,7 @@ float CameraSeaOffset(float3 cameraPositionWS, float3 planetCentre, float fallba
 // One function with both correct halves; nothing here may go back to _SeaLevelRadius alone.
 float CameraSubmerged01(float3 cameraPositionWS, float3 planetCentre, float fallbackSeaRadius, float swellAmplitude)
 {
+    if (IsWaterPresentationCamera(cameraPositionWS)) return _WaterCameraSurface.y;
     float band = max(swellAmplitude, 1.5);
     float offset = CameraSeaOffset(cameraPositionWS, planetCentre, fallbackSeaRadius);
     return 1.0 - smoothstep(-band, band * 0.15, offset);

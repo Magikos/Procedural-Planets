@@ -10,7 +10,7 @@ using UnityEngine;
 // ScatterLibraryDto snapshots the new stumps.
 //
 // The cut is a horizontal planar clip at a fraction of the mesh height, with the top capped by a fan. It
-// assumes the FIRST part's LOD0 mesh is the trunk (Synty scatter-tree convention). If a tree's stump comes
+// assumes the FIRST part's LOD0 mesh is the trunk (source scatter-tree convention). If a tree's stump comes
 // out wrong, reassign StumpMesh by hand or adjust KeepFraction / the trunk-part pick.
 public static class TreeStumpGenerator
 {

@@ -13,6 +13,38 @@ namespace ProceduralPlanets.Tests
     {
         const int Protos = 3;
 
+        [Test]
+        public void TileCache_DropsWorkCommittedBetweenFilterAndPublish()
+        {
+            var previous = ConsoleRegistry.GetInstance(typeof(ScatterTileCache)) as ScatterTileCache;
+            var cache = new ScatterTileCache(null, null);
+            var type = typeof(ScatterTileCache);
+            const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            try
+            {
+                type.GetField("_protoCount", flags).SetValue(cache, 1);
+                type.GetField("_buckets", flags).SetValue(cache, new ScatterDrawBuckets(1));
+                var keyType = type.GetNestedType("WorkKey", System.Reflection.BindingFlags.NonPublic);
+                object key = System.Activator.CreateInstance(keyType, new object[] { 1L, 0 });
+                var next = (System.Collections.IList)type.GetField("_workNext", flags).GetValue(cache);
+                var itemType = next.GetType().GetGenericArguments()[0];
+                next.Add(System.Activator.CreateInstance(itemType, new[] { key, (object)1f }));
+                var instances = new List<ScatterInstance> { new(42, Vector3.zero, Quaternion.identity, 1, 0) };
+                var commit = type.GetMethod("Commit", flags);
+                commit.Invoke(cache, new object[] { key, instances });
+                type.GetMethod("ReplanPublish", flags).Invoke(cache, null);
+                Assert.AreEqual(0, cache.PendingPairCount);
+                commit.Invoke(cache, new object[] { key, instances });
+                Assert.AreEqual(1, cache.LiveInstanceCount, "A repeated result must not append the tile twice.");
+            }
+            finally
+            {
+                cache.Dispose();
+                if (previous != null) ConsoleRegistry.RegisterInstance(previous);
+                else ConsoleRegistry.UnregisterInstance(typeof(ScatterTileCache));
+            }
+        }
+
         sealed class Model
         {
             // tileId -> per-proto list of instance ids

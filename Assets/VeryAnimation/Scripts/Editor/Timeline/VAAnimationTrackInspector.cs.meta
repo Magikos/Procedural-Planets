@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: edea6d9ef7a04b1489cf4e1a7f6e22f0
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 96826
+  packageName: Very Animation
+  packageVersion: 1.4.1
+  assetPath: Assets/VeryAnimation/Scripts/Editor/Timeline/VAAnimationTrackInspector.cs
+  uploadId: 984870

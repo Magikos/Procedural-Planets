@@ -12,6 +12,7 @@ public sealed class ConsoleInputBuffer
 
     public string Text => _sb.ToString();
     public int Length => _sb.Length;
+    public void MoveTo(int position) => _cursor = System.Math.Clamp(position, 0, _sb.Length);
     public int CursorPos => _cursor;
 
     public void Insert(char c)

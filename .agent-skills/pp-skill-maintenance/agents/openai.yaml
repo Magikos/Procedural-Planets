@@ -1,0 +1,4 @@
+interface:
+  display_name: "ProceduralPlanets Skill Maintenance"
+  short_description: "Repair stale guidance and verify the project library"
+  default_prompt: "Use $pp-skill-maintenance for the requested project task and verify the result."

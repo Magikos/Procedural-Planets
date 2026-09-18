@@ -1,6 +1,6 @@
 ---
 name: pp-validation-and-evidence
-description: Use when deciding whether a change is actually done, verified, or proven — "is it done", "does it work", before/after comparison, baseline capture, acceptance criteria, promotion to complete, perf-win claims, or when tempted to say "build succeeded" or "looks fine". Also when writing exit checks for a plan phase. Not for how to operate the capture/debug tools themselves — see pp-diagnostics-and-tooling. Not for who approves what — see pp-change-control.
+description: Use when deciding whether a change is done, verified, or proven; defining acceptance criteria; comparing captures or performance; or recording and replaying validation scenarios. Also use for plan-phase exit checks. Tool operation belongs in pp-diagnostics-and-tooling; approval rules belong in pp-change-control.
 ---
 
 # pp-validation-and-evidence (discovery stub)

@@ -48,6 +48,12 @@ public sealed record PrecipitationDto(
     float DebugDotMaxRadius,
     float DebugDotOpacity)
 {
+    public float ColumnTopAltitude(CloudDto clouds) =>
+        Mathf.Max(BottomAltitude + 1f, (clouds?.BaseAltitude ?? 330f) + CloudBaseOverlap);
+
+    public float ParticleCeiling(CloudDto clouds) =>
+        Mathf.Max(0f, Mathf.Min(LocalMaxCameraAltitude, clouds?.BaseAltitude ?? 330f));
+
     public static PrecipitationDto From(PrecipitationController c) => new(
         c.RenderPrecipitation,
         c.Intensity,

@@ -7,6 +7,7 @@
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Core.Runtime",
         "Unity.InputSystem",
+        "Unity.Cinemachine",
         "Unity.Burst",
         "Unity.Mathematics",
         "Unity.Collections"

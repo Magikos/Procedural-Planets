@@ -7,6 +7,71 @@ namespace ProceduralPlanets.Tests
 {
     public sealed class ScatterRenderingRegressionTests
     {
+        [TestCase(true)]
+        [TestCase(false)]
+        public void TreeMaterialCache_ReplacesDestroyedMemberAndKeepsSurvivor(bool destroyBark)
+        {
+            var flags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic;
+            var method = typeof(TreeInjection).GetMethod("MatsFor", flags);
+            var cache = (System.Collections.IDictionary)typeof(TreeInjection).GetField("_mats", flags).GetValue(null);
+            var species = (TreeDefLibrary.TreeSpecies)int.MaxValue;
+            var def = TreeDefLibrary.Species(TreeDefLibrary.TreeSpecies.Broadleaf, 1f);
+            (Material bark, Material foliage) result = default;
+            try
+            {
+                result = ((Material, Material))method.Invoke(null, new object[] { species, def });
+                Material survivor = destroyBark ? result.foliage : result.bark;
+                Object.DestroyImmediate(destroyBark ? result.bark : result.foliage);
+                result = ((Material, Material))method.Invoke(null, new object[] { species, def });
+                Assert.IsTrue(result.bark != null && result.foliage != null);
+                Assert.AreSame(survivor, destroyBark ? result.foliage : result.bark);
+                var again = ((Material, Material))method.Invoke(null, new object[] { species, def });
+                Assert.AreEqual(result, again, "Healthy lookups must reuse both materials.");
+            }
+            finally
+            {
+                cache.Remove(species);
+                Object.DestroyImmediate(result.bark);
+                Object.DestroyImmediate(result.foliage);
+            }
+        }
+
+        [TestCase("CleanFoliage", "_cleanFallback")]
+        [TestCase("ConiferMat", "_coniferMats")]
+        public void TreeLeafCache_ReplacesDestroyedMaterial(string methodName, string cacheName)
+        {
+            var flags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic;
+            var method = typeof(TreeInjection).GetMethod(methodName, flags);
+            var cache = (System.Collections.IDictionary)typeof(TreeInjection).GetField(cacheName, flags).GetValue(null);
+            var baseField = typeof(TreeInjection).GetField("_cleanBase", flags);
+            var previousBase = baseField.GetValue(null);
+            var leafBase = new Material(Shader.Find("Scatter/FoliageLit"));
+            var species = (TreeDefLibrary.TreeSpecies)int.MaxValue;
+            var def = TreeDefLibrary.Species(TreeDefLibrary.TreeSpecies.Conifer, 1f);
+            Material material = null;
+            var ownedTextures = new List<Texture>();
+            try
+            {
+                baseField.SetValue(null, leafBase);
+                for (int cycle = 0; cycle < 3; cycle++)
+                {
+                    material = (Material)method.Invoke(null, new object[] { species, def });
+                    Assert.IsTrue(material != null);
+                    Assert.AreSame(material, method.Invoke(null, new object[] { species, def }));
+                    if (methodName == "ConiferMat") ownedTextures.Add(material.GetTexture("_BaseMap"));
+                    Object.DestroyImmediate(material);
+                }
+            }
+            finally
+            {
+                cache.Remove(species);
+                baseField.SetValue(null, previousBase);
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(leafBase);
+                foreach (Texture texture in ownedTextures) Object.DestroyImmediate(texture);
+            }
+        }
+
         [TestCase(0, 100, false)]
         [TestCase(200, 100, true)]
         [TestCase(200, 101, false)]

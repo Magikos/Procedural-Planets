@@ -1,4 +1,10 @@
 #pragma kernel RainUpdate
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+#include "../Graphics/Shaders/Includes/PrecipitationCollision.hlsl"
+#include "../Graphics/Shaders/Includes/ClimateSampling.hlsl"
+#include "../Graphics/Shaders/Includes/WeatherPhase.hlsl"
+float4 _WeatherParticleSnowParams;
+int _WeatherParticleProof;
 
 // Per-particle persistent state. The buffer survives across frames; this kernel
 // advances each particle by one timestep and handles respawn when a drop lands
@@ -35,21 +41,7 @@ float   _FallSpeedMps;         // constant downward speed (no gravity ramp).
 float   _DeltaTime;
 uint    _FrameSeed;            // perturbed per frame so respawn locations vary over time.
 uint    _ActiveCount;          // live particle count; dispatch rounds up to 64, so guard the pad lanes.
-
-uint HashUint(uint x)
-{
-    x ^= x >> 16;
-    x *= 0x7feb352du;
-    x ^= x >> 15;
-    x *= 0x846ca68bu;
-    x ^= x >> 16;
-    return x;
-}
-
-float Hash01(uint seed)
-{
-    return (HashUint(seed) & 0x00ffffffu) / 16777216.0;
-}
+uint    _ResetParticles;
 
 // Random unit vector. For respawn, we bias toward the camera-forward hemisphere
 // so most particles spawn where the camera can see them — wasted simulation on
@@ -99,15 +91,27 @@ void Respawn(inout Raindrop r, uint id, bool randomAltitude)
     float spawnAltitudeT = randomAltitude
         ? Hash01(seed * 0xc2b2ae35u)
         : (0.88 + Hash01(seed * 0xface5u) * 0.12);
-    float spawnRadius = lerp(_SeaRadius, _CloudBottomRadius, spawnAltitudeT);
+    float cameraRadius = length(_CameraPosition - _PlanetCenter);
+    float spawnBottom = max(_SeaRadius, cameraRadius - _CameraNearRadius);
+    float spawnTop = max(spawnBottom, min(_CloudBottomRadius, cameraRadius + _CameraNearRadius));
+    float spawnRadius = lerp(spawnBottom, spawnTop, spawnAltitudeT);
 
     // Offset the spawn position toward the camera. We want the particle within
     // the camera's near radius. Pick a horizontal distance proportional to the
     // near radius so the spawn distribution covers the visible disc.
-    float spawnHorizDist = Hash01(seed * 0xdeadbeefu) * _CameraNearRadius;
+    float verticalOffset = spawnRadius - cameraRadius;
+    float horizontalRadius = sqrt(max(0.0, _CameraNearRadius * _CameraNearRadius
+        - verticalOffset * verticalOffset));
+    float spawnHorizDist = sqrt(Hash01(seed * 0xdeadbeefu)) * horizontalRadius;
     float angularOffset = spawnHorizDist / max(_SeaRadius, 1.0);
     float3 cameraDir = normalize(_CameraPosition - _PlanetCenter);
-    float3 offsetDir = normalize(direction - cameraDir * dot(direction, cameraDir));
+    float3 offsetDir = direction - cameraDir * dot(direction, cameraDir);
+    if (dot(offsetDir, offsetDir) < 0.000001)
+    {
+        float3 reference = abs(cameraDir.y) < 0.9 ? float3(0, 1, 0) : float3(1, 0, 0);
+        offsetDir = cross(reference, cameraDir);
+    }
+    offsetDir = normalize(offsetDir);
     float3 spawnNormal = normalize(cameraDir * cos(angularOffset) + offsetDir * sin(angularOffset));
 
     r.Position = _PlanetCenter + spawnNormal * spawnRadius;
@@ -117,8 +121,17 @@ void Respawn(inout Raindrop r, uint id, bool randomAltitude)
     // exact speed evolves with the particle's slot id consistently.
     float3 downAtSpawn = normalize(_PlanetCenter - r.Position);
     float speedJitter = lerp(0.80, 1.20, Hash01(id * 0xfeedbeefu));
-    r.Velocity = downAtSpawn * _FallSpeedMps * speedJitter;
-    r.Life01 = 1.0;
+    float3 windHorizontal = _WindDirection - downAtSpawn * dot(_WindDirection, downAtSpawn);
+    r.Velocity = downAtSpawn * _FallSpeedMps * speedJitter
+        + windHorizontal * _WindSpeedMps * _WindCoupling;
+    // Reject births beneath shelter, including reseeding after camera motion.
+    float3 hit, hitNormal;
+    bool water;
+    float3 sky = _PlanetCenter + spawnNormal * max(_CloudBottomRadius, spawnRadius + 1);
+    r.Life01 = RainContact(sky, r.Position, _PlanetCenter, _SeaRadius, hit, hitNormal, water) ? 0 : 0.001;
+    float temperature = ClimateTemperatureCelsius(SampleClimate01(spawnNormal).x);
+    r.Pad = (Hash01(id * 0x1234567u) < WeatherSnowFraction(temperature)) || _WeatherParticleProof == 3 ? 1 : 0;
+    if (_WeatherParticleProof == 2) r.Pad = 0;
 }
 
 [numthreads(64, 1, 1)]
@@ -129,7 +142,13 @@ void RainUpdate(uint3 id : SV_DispatchThreadID)
 
     Raindrop r = _RainParticles[id.x];
 
-    bool needsInitialSpawn = r.Life01 <= 0.0001;
+    if (r.Life01 < 0)
+    {
+        r.Life01 = min(0, r.Life01 + _DeltaTime);
+        _RainParticles[id.x] = r;
+        return;
+    }
+    bool needsInitialSpawn = r.Life01 <= 0.0001 || _ResetParticles != 0;
     if (needsInitialSpawn)
     {
         // First-time spawn: random altitude so the system looks already-running.
@@ -154,24 +173,32 @@ void RainUpdate(uint3 id : SV_DispatchThreadID)
     // for the entire run. Without this, all drops fall in lockstep and the
     // buffer synchronizes into visible horizontal "bands" over time.
     float speedJitter = lerp(0.80, 1.20, Hash01(id.x * 0xfeedbeefu));
-    float dropFallSpeed = _FallSpeedMps * speedJitter;
+    float dropFallSpeed = (r.Pad > 0.5 ? max(_WeatherParticleSnowParams.w, 0.1) : _FallSpeedMps) * speedJitter;
 
     r.Velocity = downDir * dropFallSpeed
                + windHorizontal * _WindSpeedMps * _WindCoupling;
 
+    float3 previousPosition = r.Position;
     r.Position += r.Velocity * _DeltaTime;
+    r.Life01 = saturate(r.Life01 + _DeltaTime * 2.0);
 
     // Respawn checks.
     float currentDist = length(r.Position - _PlanetCenter);
     float distFromCamera = length(r.Position - _CameraPosition);
 
-    bool hitGround = currentDist < _SeaRadius;
+    float3 contact, contactNormal;
+    bool waterContact;
+    bool hitGround = RainContact(previousPosition, r.Position, _PlanetCenter, _SeaRadius,
+        contact, contactNormal, waterContact);
     bool driftedAway = distFromCamera > (_CameraNearRadius * 1.4);
 
     if (hitGround)
     {
         // Drop landed; new drop forms at the cloud top.
-        Respawn(r, id.x, false);
+        r.Position = contact + contactNormal * 0.025;
+        r.Velocity = contactNormal;
+        r.Life01 = -0.3;
+        r.Pad = r.Pad > 0.5 ? 4 : waterContact ? 2 : 3;
     }
     else if (driftedAway)
     {

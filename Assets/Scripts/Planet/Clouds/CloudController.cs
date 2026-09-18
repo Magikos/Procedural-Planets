@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CommandPrefix("cloud")]
+[CommandPrefix("cloud", Group = "Sky and weather", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public class CloudController : MonoBehaviour, ICloudRuntime, IWorldServiceRegistrar,
     IWorldSettingsRegistrar
 {

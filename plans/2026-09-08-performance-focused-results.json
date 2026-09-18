@@ -1,0 +1,196 @@
+{
+  "result": {
+    "success": true,
+    "message": "Test job status retrieved.",
+    "error": null,
+    "data": {
+      "job_id": "c536c8faa9014ad5b4ac8eac6239e968",
+      "status": "succeeded",
+      "mode": "EditMode",
+      "started_unix_ms": 1788891954890,
+      "finished_unix_ms": 1788891969306,
+      "last_update_unix_ms": 1788891969306,
+      "progress": {
+        "completed": 17,
+        "total": 17,
+        "current_test_full_name": null,
+        "current_test_started_unix_ms": 1788891967582,
+        "last_finished_test_full_name": "ProceduralPlanets.Tests.WaterBodyCombinedSampleTests.CombinedSamplePreservesStateAndFallback(True)",
+        "last_finished_unix_ms": 1788891969239,
+        "stuck_suspected": false,
+        "editor_is_focused": false,
+        "blocked_reason": null,
+        "failures_so_far": [],
+        "failures_capped": false
+      },
+      "error": null,
+      "result": {
+        "mode": "EditMode",
+        "summary": {
+          "total": 17,
+          "passed": 17,
+          "failed": 0,
+          "skipped": 0,
+          "durationSeconds": 7.9779866,
+          "resultState": "Passed"
+        },
+        "results": [
+          {
+            "name": "MaskedLayersPreserveLowerBodyAndZeroWeightRestoresBase(False)",
+            "fullName": "ProceduralPlanets.Tests.ActorAnimationGraphTests.MaskedLayersPreserveLowerBodyAndZeroWeightRestoresBase(False)",
+            "state": "Passed",
+            "durationSeconds": 0.0484345,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "MaskedLayersPreserveLowerBodyAndZeroWeightRestoresBase(True)",
+            "fullName": "ProceduralPlanets.Tests.ActorAnimationGraphTests.MaskedLayersPreserveLowerBodyAndZeroWeightRestoresBase(True)",
+            "state": "Passed",
+            "durationSeconds": 0.000759,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "SkippedEvaluationAdvancesBaseAndOverlayClocksIdentically",
+            "fullName": "ProceduralPlanets.Tests.ActorAnimationGraphTests.SkippedEvaluationAdvancesBaseAndOverlayClocksIdentically",
+            "state": "Passed",
+            "durationSeconds": 0.0049644,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "ParallelWorkersKeepIndependentHistograms",
+            "fullName": "ProceduralPlanets.Tests.BiomeMapBakerParityTests.ParallelWorkersKeepIndependentHistograms",
+            "state": "Passed",
+            "durationSeconds": 1.4779166,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "ReportMatchedSmoothingTimings",
+            "fullName": "ProceduralPlanets.Tests.BiomeMapBakerParityTests.ReportMatchedSmoothingTimings",
+            "state": "Passed",
+            "durationSeconds": 0.8577987,
+            "message": null,
+            "stackTrace": null,
+            "output": "Smoothing run 0: exhaustive=219.011ms optimized=62.090ms (8 chunks)\r\nSmoothing run 1: exhaustive=199.455ms optimized=59.126ms (8 chunks)\r\nSmoothing run 2: exhaustive=213.021ms optimized=69.097ms (8 chunks)\r\n"
+          },
+          {
+            "name": "SlidingWindowMatchesExhaustiveBytes(1,0)",
+            "fullName": "ProceduralPlanets.Tests.BiomeMapBakerParityTests.SlidingWindowMatchesExhaustiveBytes(1,0)",
+            "state": "Passed",
+            "durationSeconds": 0.301147,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "SlidingWindowMatchesExhaustiveBytes(4,1)",
+            "fullName": "ProceduralPlanets.Tests.BiomeMapBakerParityTests.SlidingWindowMatchesExhaustiveBytes(4,1)",
+            "state": "Passed",
+            "durationSeconds": 0.277493,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "SlidingWindowMatchesExhaustiveBytes(17,2)",
+            "fullName": "ProceduralPlanets.Tests.BiomeMapBakerParityTests.SlidingWindowMatchesExhaustiveBytes(17,2)",
+            "state": "Passed",
+            "durationSeconds": 0.2223539,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "SlidingWindowMatchesExhaustiveBytes(256,3)",
+            "fullName": "ProceduralPlanets.Tests.BiomeMapBakerParityTests.SlidingWindowMatchesExhaustiveBytes(256,3)",
+            "state": "Passed",
+            "durationSeconds": 0.2680878,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "SlidingWindowMatchesExhaustiveBytes(5,4)",
+            "fullName": "ProceduralPlanets.Tests.BiomeMapBakerParityTests.SlidingWindowMatchesExhaustiveBytes(5,4)",
+            "state": "Passed",
+            "durationSeconds": 0.2960205,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "NearAndMissingObserverKeepFullRateWithHysteresis",
+            "fullName": "ProceduralPlanets.Tests.CreaturePresentationCadenceTests.NearAndMissingObserverKeepFullRateWithHysteresis",
+            "state": "Passed",
+            "durationSeconds": 0.0049144,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "SkippedBirdSamplesRetainCurrentClipPoseWithoutCatchup",
+            "fullName": "ProceduralPlanets.Tests.CreaturePresentationCadenceTests.SkippedBirdSamplesRetainCurrentClipPoseWithoutCatchup",
+            "state": "Passed",
+            "durationSeconds": 0.2365019,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "StableIdentityStaggerHasNoStarvationOrCatchup",
+            "fullName": "ProceduralPlanets.Tests.CreaturePresentationCadenceTests.StableIdentityStaggerHasNoStarvationOrCatchup",
+            "state": "Passed",
+            "durationSeconds": 0.1018737,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "VisibilityActionTeleportAndLifecycleForceFreshPose",
+            "fullName": "ProceduralPlanets.Tests.CreaturePresentationCadenceTests.VisibilityActionTeleportAndLifecycleForceFreshPose",
+            "state": "Passed",
+            "durationSeconds": 0.0010436,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "EverySectionRecordsReportsAndResetsWithoutOverlap",
+            "fullName": "ProceduralPlanets.Tests.FrameTimingSectionTests.EverySectionRecordsReportsAndResetsWithoutOverlap",
+            "state": "Passed",
+            "durationSeconds": 0.004927,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "CombinedSamplePreservesStateAndFallback(False)",
+            "fullName": "ProceduralPlanets.Tests.WaterBodyCombinedSampleTests.CombinedSamplePreservesStateAndFallback(False)",
+            "state": "Passed",
+            "durationSeconds": 1.7837645,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          },
+          {
+            "name": "CombinedSamplePreservesStateAndFallback(True)",
+            "fullName": "ProceduralPlanets.Tests.WaterBodyCombinedSampleTests.CombinedSamplePreservesStateAndFallback(True)",
+            "state": "Passed",
+            "durationSeconds": 1.6580434,
+            "message": null,
+            "stackTrace": null,
+            "output": ""
+          }
+        ]
+      }
+    },
+    "hint": null
+  }
+}

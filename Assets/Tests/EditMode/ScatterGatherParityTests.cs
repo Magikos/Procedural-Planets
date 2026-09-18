@@ -99,9 +99,36 @@ namespace ProceduralPlanets.Tests
                 false, 0f, hasMaxAlt, maxAlt, 0f, false, new Vector2(1f, 1.6f), randomYaw,
                 ScatterInteraction.None, System.Array.Empty<ScatterPartDto>());
 
-        [Test]
-        public void BurstGather_MatchesManaged_AcrossBiomesAndTiles()
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        public void BurstGather_MatchesManaged_AcrossBiomesAndTiles(int scenario)
         {
+            if (scenario == 1)
+                for (int i = 0; i < _library.Prototypes.Length; i++)
+                    _library.Prototypes[i] = _library.Prototypes[i] with
+                    { Clumpiness = 0.9f, PatchScaleMeters = 35f + i * 100f, ShadePreference = i == 0 ? -1f : 0f, TreeAge = i == 1 ? 0.65f : -1f };
+            float[] levels = null;
+            byte[] kinds = null;
+            if (scenario == 2)
+            {
+                // Flat bed beneath a raised lake; face 3 is ocean despite coarse Forest membership.
+                _shape.Configure(new ShapeSettings { PlanetRadius = PlanetRadius,
+                    NoiseLayers = new[] { new ShapeSettings.NoiseLayer { Enabled = true,
+                        NoiseSettings = new NoiseSettings { Strength = 0f, Layers = 1, BaseRoughness = 1f } } } });
+                _shape.Initialize(WorldSeed);
+                _planetGo.transform.SetPositionAndRotation(new Vector3(80, -20, 150), Quaternion.Euler(20, 40, 10));
+                _planetGo.transform.localScale = Vector3.one * 2f;
+                _snap = PlanetTransformSnapshot.Capture(_planetGo.transform);
+                levels = new[] { 0.0002f, 0.0002f, 0.0002f, 0.0002f, 0.0002f, 0.0002f };
+                kinds = new byte[] { 1, 1, 1, 2, 1, 1 };
+                for (int i = 0; i < _library.Prototypes.Length; i++)
+                    _library.Prototypes[i] = _library.Prototypes[i] with
+                    { OnWater = true, WaterHabitat = ScatterWaterHabitat.LakeOnly,
+                      HasMinAltitude = true, MinAltitudeMeters = -2.2f,
+                      HasMaxAltitude = true, MaxAltitudeMeters = -0.15f,
+                      Clumpiness = 0.9f, PatchScaleMeters = 12f };
+            }
             // Tiles spanning the dir.x biome border on face 0, plus single-biome faces (2 = -x Grassland,
             // 3 = +x Forest), across all three prototypes (dense grass, sparse trees, reject-all desert).
             var pairs = new List<ScatterPairInput>();
@@ -121,7 +148,7 @@ namespace ProceduralPlanets.Tests
             // test compares. Per-basin levels are covered by the grid lookup being shared (WaterLevelGrid),
             // not duplicated, so there is no second implementation for parity to drift against.
             var ctx = new ScatterField.GatherContext(_library, _levels, WorldSeed, PlanetRadius, SeaRadiusLocal, HasOcean,
-                waterLevel: null, waterLevelRes: 0);
+                waterLevel: levels, waterLevelRes: levels == null ? 0 : 1, waterKinds: kinds);
             var managed = new List<ScatterInstance>[pairs.Count];
             int totalManaged = 0, emptyPairs = 0, densest = 0;
             for (int i = 0; i < pairs.Count; i++)
@@ -137,7 +164,9 @@ namespace ProceduralPlanets.Tests
 
             // --- Burst job over the same pairs ---
             // Length 1 and never read: WaterLevelRes 0 disables the lookup, but the container must exist.
-            var waterLevel = new NativeArray<float>(1, Allocator.TempJob);
+            using var riverField = new RiverField(System.Array.Empty<RiverSegment>(), PlanetRadius);
+            var waterLevel = new NativeArray<float>(levels ?? new float[1], Allocator.TempJob);
+            using var waterKinds = new NativeArray<byte>(kinds ?? new byte[1], Allocator.TempJob);
             var pairArr = new NativeArray<ScatterPairInput>(pairs.ToArray(), Allocator.TempJob);
             var noiseLayers = _shape.BuildNoiseFilterData(Allocator.TempJob);
             var diagCells = _shape.BuildDiagnosticTerrainCells(Allocator.TempJob);
@@ -150,6 +179,7 @@ namespace ProceduralPlanets.Tests
 
             var job = new ScatterGatherJob
             {
+                Rivers = riverField.Data,
                 Pairs = pairArr,
                 NoiseLayers = noiseLayers,
                 DiagCells = diagCells,
@@ -168,7 +198,9 @@ namespace ProceduralPlanets.Tests
                 // is 0 so the lookup is skipped and both paths fall back to SeaRadiusLocal, exactly as the
                 // managed reference above does — but the array still has to exist or scheduling throws.
                 WaterLevel = waterLevel,
-                WaterLevelRes = 0,
+                WaterLevelRes = levels == null ? 0 : 1,
+                HasWaterKinds = kinds == null ? (byte)0 : (byte)1,
+                WaterKinds = waterKinds,
                 Out = stream.AsWriter(),
             };
             job.Schedule(pairArr.Length, 1).Complete();
@@ -209,6 +241,12 @@ namespace ProceduralPlanets.Tests
                     foreach (var kv in mMap)
                     {
                         var m = kv.Value; var j = jMap[kv.Key];
+                        if (scenario == 2)
+                        {
+                            Assert.That(pairs[i].Face, Is.Not.EqualTo(3), "ocean candidate accepted as lake");
+                            float radius = (m.PositionWS - _planetGo.transform.position).magnitude;
+                            Assert.That(radius, Is.EqualTo((PlanetRadius * 1.0002f) * 2f + ScatterPlacementMath.OnWaterSurfaceOffsetMeters).Within(0.01f));
+                        }
                         // Position/rotation/scale are POST-acceptance (never feed a threshold), so they only
                         // need epsilon parity. Burst-compiled noise differs from the managed-IL reference by
                         // ~1-2 ULP, which at this 5000 m test radius is ~1 mm of position — hence a

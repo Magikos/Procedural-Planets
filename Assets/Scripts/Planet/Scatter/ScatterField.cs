@@ -7,7 +7,7 @@ using UnityEngine;
 // with biome-border density falloff. The reference authority later render/interaction slices
 // validate against. No rendering, no GameObjects. Plain class: Planet owns it, constructs it in
 // EnsureRuntimeOwners, Configures it after each successful generation, disposes it on teardown.
-[CommandPrefix("scatter")]
+[CommandPrefix("scatter", Group = "Vegetation and wildlife", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public sealed class ScatterField : IDisposable
 {
     const long CandidateBudget = 2_000_000; // preflight cap: bail before a fine-spacing prototype hangs the main thread
@@ -26,7 +26,12 @@ public sealed class ScatterField : IDisposable
     float _seaRadiusLocal;
     bool _hasOcean;
     bool _configured;
+    WaterBodyMap _waterKindMap;
+    WaterBodyCatalog _waterKindCatalog;
+    byte[] _waterKinds;
     int[] _levels; // fixed per prototype per generated world
+    PlacementRules[] _rules;
+    float[] _gatherRadii;
 
     public ScatterField(Transform planetTransform, ISurfaceGroundSampler ground, IBiomeProvider biome)
     {
@@ -51,19 +56,44 @@ public sealed class ScatterField : IDisposable
         _seaRadiusLocal = seaRadiusLocal;
         _hasOcean = hasOcean;
         _library = SettingsProvider.GetSettings<ScatterLibraryDto>();
+        ScatterValidation.ReportInvalidMaterials(_library);
         _library.EnsureValid();
 
         float scale = FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform);
         float worldRadius = baseRadiusLocal * scale;
         _levels = new int[_library.Prototypes.Length];
+        _rules = new PlacementRules[_levels.Length];
+        _gatherRadii = new float[_levels.Length];
         for (int i = 0; i < _levels.Length; i++)
+        {
             _levels[i] = ScatterQuadtree.LevelForSpacing(worldRadius, _library.Prototypes[i].SpacingMeters);
+            // Mesh bounds are Unity objects. Capture them before any background placement work.
+            _rules[i] = BuildRules(_library.Prototypes[i]);
+            _gatherRadii[i] = _library.Prototypes[i].FarGatherRadius;
+        }
         _configured = true;
     }
 
     public void Reset() => _configured = false;
 
-    public int Gather(Vector3 cameraPos, float regionRadiusMeters, int maxLevel, List<ScatterInstance> buffer)
+    /// <summary>Small authority query using the same background-safe placement core as the tile cache.</summary>
+    public async Awaitable<List<ScatterInstance>> GatherFoodAsync(Vector3 position, float radius)
+    {
+        var result = new List<ScatterInstance>();
+        if (!TryCaptureGatherContext(out var context)) return result;
+        var snapshot = PlanetTransformSnapshot.Capture(_planetTransform);
+        var ranges = new FaceSpaceCell[FaceSpaceCellRangeBuilder.MaxRanges];
+        try
+        {
+            await Awaitable.BackgroundThreadAsync();
+            GatherOffThread(context, snapshot, position, radius, ScatterId.MaxLevel, result, ranges, foodOnly: true);
+        }
+        finally { await Awaitable.MainThreadAsync(); }
+        if (!_configured || !ReferenceEquals(context.Library, _library) || context.WorldSeed != _worldSeed) result.Clear();
+        return result;
+    }
+
+    public int Gather(Vector3 cameraPos, float regionRadiusMeters, int maxLevel, List<ScatterInstance> buffer, bool foodOnly = false)
     {
         if (buffer == null) throw new ArgumentNullException(nameof(buffer));
         if (!(regionRadiusMeters > 0f) || float.IsInfinity(regionRadiusMeters))
@@ -73,7 +103,7 @@ public sealed class ScatterField : IDisposable
         if (TryCaptureGatherContext(out var ctx) &&
             EstimateCandidates(ctx, regionRadiusMeters, maxLevel, FaceSpaceCellRangeBuilder.GetUniformWorldScale(_planetTransform), perPrototypeCull: false) > CandidateBudget)
             throw new InvalidOperationException("scatter: region/spacing exceeds the candidate budget; tile the ROI into smaller queries.");
-        return GatherCoreSync(cameraPos, regionRadiusMeters, maxLevel, buffer, reversed: false, out _);
+        return GatherCoreSync(cameraPos, regionRadiusMeters, maxLevel, buffer, reversed: false, out _, foodOnly);
     }
 
     // Immutable snapshot of the per-generation config the gather reads. Captured on the main thread so
@@ -85,25 +115,32 @@ public sealed class ScatterField : IDisposable
         public readonly int[] Levels;
         public readonly int WorldSeed;
         public readonly float BaseRadiusLocal;
+        public readonly RiverFieldData Rivers;
         public readonly float SeaRadiusLocal;
         public readonly bool HasOcean;
+        public readonly PlacementRules[] Rules;
+        public readonly float[] GatherRadii;
 
         // Per-basin water levels; null falls back to the single SeaRadiusLocal everywhere.
         public readonly float[] WaterLevel;
         public readonly int WaterLevelRes;
+        public readonly byte[] WaterKinds;
 
         public GatherContext(ScatterLibraryDto library, int[] levels, int worldSeed,
             float baseRadiusLocal, float seaRadiusLocal, bool hasOcean,
-            float[] waterLevel, int waterLevelRes)
+            float[] waterLevel, int waterLevelRes, PlacementRules[] rules = null, float[] gatherRadii = null, RiverFieldData rivers = default, byte[] waterKinds = null)
         {
             Library = library; Levels = levels; WorldSeed = worldSeed;
             BaseRadiusLocal = baseRadiusLocal; SeaRadiusLocal = seaRadiusLocal; HasOcean = hasOcean;
-            WaterLevel = waterLevel; WaterLevelRes = waterLevelRes;
+            Rivers = rivers;
+            WaterLevel = waterLevel; WaterLevelRes = waterLevelRes; WaterKinds = waterKinds;
+            Rules = rules; GatherRadii = gatherRadii;
         }
 
         // Local-space radius of the water surface above a direction. Without this a lily pad on a lake
         // 97 m up would be placed at the global sea radius and end up buried under the hillside.
         public float SeaRadiusAt(Vector3 dir) =>
+            Rivers.Sample(dir, out var river, out float along, out _) && river.Shape.w == 0f ? river.Radius(along) :
             WaterLevelRes > 0
                 ? WaterLevelGrid.SeaRadius(WaterLevel[WaterLevelGrid.Index(dir, WaterLevelRes)], BaseRadiusLocal, SeaRadiusLocal)
                 : SeaRadiusLocal;
@@ -118,9 +155,20 @@ public sealed class ScatterField : IDisposable
         if (!_configured || _library == null || _levels == null) return false;
         // Resolution must read 0 when there is no grid: scatter configures before the first water build, and
         // a non-zero resolution beside a null grid is an invitation to index nothing.
-        float[] waterLevel = WaterBodyMap.Current?.LevelGrid;
+        var map = WaterBodyMap.Current;
+        float[] waterLevel = map?.LevelGrid;
+        if (!ReferenceEquals(map, _waterKindMap) || !ReferenceEquals(map?.Bodies, _waterKindCatalog))
+        {
+            _waterKindMap = map;
+            _waterKindCatalog = map?.Bodies;
+            _waterKinds = map == null ? null : new byte[map.BodyIdGrid.Length];
+            if (map != null)
+                for (int i = 0; i < _waterKinds.Length; i++)
+                    if (map.Bodies != null && map.Bodies.TryGet(map.BodyIdGrid[i], out var body))
+                        _waterKinds[i] = (byte)body.Kind;
+        }
         context = new GatherContext(_library, _levels, _worldSeed, _baseRadiusLocal, _seaRadiusLocal, _hasOcean,
-            waterLevel, waterLevel != null ? WaterBodyMap.Resolution : 0);
+            waterLevel, waterLevel != null ? WaterBodyMap.Resolution : 0, _rules, _gatherRadii, (_ground as IBurstElevationSource)?.Rivers ?? default, _waterKinds);
         return true;
     }
 
@@ -128,12 +176,12 @@ public sealed class ScatterField : IDisposable
     // the gather synchronously against the shared ranges buffer. The render path captures both on the
     // main thread and calls GatherCore on a background thread (see GatherOffThread).
     int GatherCoreSync(Vector3 cameraPos, float region, int maxLevel, List<ScatterInstance> buffer,
-        bool reversed, out ScatterGatherStats stats)
+        bool reversed, out ScatterGatherStats stats, bool foodOnly = false)
     {
         stats = default;
         if (!TryCaptureGatherContext(out GatherContext ctx)) return 0;
         return GatherCore(ctx, PlanetTransformSnapshot.Capture(_planetTransform), cameraPos, region, maxLevel,
-            buffer, reversed, perPrototypeCull: false, _ranges, out stats);
+            buffer, reversed, perPrototypeCull: false, _ranges, out stats, foodOnly);
     }
 
     // Placement-only prototypes (no drawable mesh) still get gathered for SP1/persistence near the
@@ -143,8 +191,11 @@ public sealed class ScatterField : IDisposable
 
     // How far to gather this prototype: its far draw radius (impostor end if it has an impostor tier,
     // else its mesh cull), or a tight cap for placement-only prototypes.
-    static float ProtoGatherRadius(ScatterPrototypeDto p, float fallback) =>
-        p.FarGatherRadius > 0f ? p.FarGatherRadius : Mathf.Min(fallback, PlacementOnlyGatherMeters);
+    static float ProtoGatherRadius(in GatherContext context, int index, float fallback)
+    {
+        float radius = context.GatherRadii != null ? context.GatherRadii[index] : context.Library.Prototypes[index].FarGatherRadius;
+        return radius > 0f ? radius : Mathf.Min(fallback, PlacementOnlyGatherMeters);
+    }
 
     // One core for both public gather and the diagnostic reverse traversal. `reversed` flips
     // prototype/cell/candidate order so scatter.verify can prove order-independence. Transform- and
@@ -153,7 +204,7 @@ public sealed class ScatterField : IDisposable
     // eval are both pure).
     internal int GatherCore(in GatherContext ctx, in PlanetTransformSnapshot snap, Vector3 cameraPos,
         float region, int maxLevel, List<ScatterInstance> buffer, bool reversed, bool perPrototypeCull,
-        FaceSpaceCell[] ranges, out ScatterGatherStats stats)
+        FaceSpaceCell[] ranges, out ScatterGatherStats stats, bool foodOnly = false)
     {
         stats = default;
         if (!ctx.IsValid) return 0;
@@ -176,6 +227,7 @@ public sealed class ScatterField : IDisposable
         {
             int pi = reversed ? protoCount - 1 - pk : pk;
             var proto = ctx.Library.Prototypes[pi];
+            if (foodOnly && proto.FoodUnits <= 0f) continue;
             int level = ctx.Levels[pi];
             if (level > maxLevel) continue;
             float cellUv = ScatterQuadtree.CellUvWidth(level);
@@ -183,12 +235,12 @@ public sealed class ScatterField : IDisposable
             // Render banding: each prototype gathers only out to its own far-cull distance, so a
             // fine-spacing prototype (dense bushes) never enumerates the far ring a coarse one (sparse
             // trees) needs. Diagnostics gather uniformly, so a count query means "everything within R".
-            float protoRegion = perPrototypeCull ? Mathf.Min(region, ProtoGatherRadius(proto, region)) : region;
+            float protoRegion = perPrototypeCull ? Mathf.Min(region, ProtoGatherRadius(ctx, pi, region)) : region;
             float pr2 = protoRegion * protoRegion;
 
             var result = FaceSpaceCellRangeBuilder.BuildRangesLocal(cameraPos, snap, ctx.BaseRadiusLocal, protoRegion, cellUv, 1, ranges);
             stats.CornerStraddle |= result.UncoveredCornerStraddle;
-            PlacementRules rules = BuildRules(proto);
+            PlacementRules rules = ctx.Rules != null ? ctx.Rules[pi] : BuildRules(proto);
 
             for (int rk = 0; rk < result.Count; rk++)
             {
@@ -235,7 +287,7 @@ public sealed class ScatterField : IDisposable
         if (level < tileLevel) return 0;
         float cellUv = ScatterQuadtree.CellUvWidth(level);
         float scale = snap.UniformScale;
-        PlacementRules rules = BuildRules(proto);
+        PlacementRules rules = ctx.Rules != null ? ctx.Rules[protoIndex] : BuildRules(proto);
 
         int shift = level - tileLevel;
         int span = 1 << shift;
@@ -300,15 +352,19 @@ public sealed class ScatterField : IDisposable
             biomeMemo = _biome.EvaluateBiome(cdir, celev);
             biomeMemoKey = biomeKey;
         }
-        float membership = MembershipFor(biomeMemo, proto.Biome);
+        bool riverHit = ctx.Rivers.Sample(dir, out var river, out float along, out _) && river.Shape.w == 0f;
+        float membership = riverHit && proto.WaterHabitat == ScatterWaterHabitat.Freshwater
+            ? 1f : MembershipFor(biomeMemo, proto.Biome);
         if (membership <= 0f) return false;
-
-        // OnWater prototypes (lily pads) float on the sea surface inside their biome's water cells, so they
-        // place at the sea radius with zero altitude and a flat (radial) normal instead of on the lakebed.
         bool onWater = proto.OnWater;
-        float seaRadiusHere = ctx.SeaRadiusAt(dir);
+        int waterIndex = ctx.WaterLevelRes > 0 ? WaterLevelGrid.Index(dir, ctx.WaterLevelRes) : 0;
+        float seaRadiusHere = riverHit ? river.Radius(along) : ctx.WaterLevelRes > 0
+            ? WaterLevelGrid.SeaRadius(ctx.WaterLevel[waterIndex], ctx.BaseRadiusLocal, ctx.SeaRadiusLocal) : ctx.SeaRadiusLocal;
+        var kind = ctx.WaterKinds != null && ctx.WaterLevelRes > 0 ? (WaterBodyKind)ctx.WaterKinds[waterIndex] : WaterBodyKind.None;
+        float altitudeMeters = (localRadius - seaRadiusHere) * scale;
+        if (!ScatterWaterPlacement.Passes(proto.WaterHabitat, kind, riverHit, river.Shape.z * scale,
+                proto.MaxFlowSpeed, onWater, altitudeMeters)) return false;
         float placeRadius = onWater ? seaRadiusHere + ScatterPlacementMath.OnWaterSurfaceOffsetMeters / scale : localRadius;
-        float altitudeMeters = onWater ? 0f : (localRadius - seaRadiusHere) * scale;
         if (!ScatterPlacementMath.PassesAltitudeWater(altitudeMeters, ctx.HasOcean, rules)) return false;
 
         Vector3 localNormal = onWater ? dir : _ground.SampleNormalAt(dir, localRadius);
@@ -317,7 +373,9 @@ public sealed class ScatterField : IDisposable
                             * Mathf.Pow(membership, proto.BiomeBlendPower)
                             * ScatterClumping.Keep(dir, ctx.BaseRadiusLocal * scale, proto.Clumpiness,
                                 proto.PatchScaleMeters, proto.ClumpGroupSeed, (uint)proto.Biome, slopeCos,
-                                proto.ShadePreference);
+                                proto.ShadePreference, (uint)ctx.WorldSeed,
+                                VegetationHabitat.BlendPotential((int)biomeMemo.PrimaryBiome, (int)biomeMemo.SecondaryBiome, biomeMemo.BlendWeight),
+                                proto.TreeAge, proto.WaterHabitat != ScatterWaterHabitat.Unrestricted);
 
         if (!ScatterPlacementMath.TryPlace(slotSeed, dir, localNormal, placeRadius, altitudeMeters, slopeCos,
                 densityKeep, ctx.HasOcean, rules, out Vector3 posLocal, out Quaternion rot, out float sc))
@@ -344,12 +402,12 @@ public sealed class ScatterField : IDisposable
     // then invokes this from Awaitable.BackgroundThreadAsync with its own ranges buffer (so it never
     // races the diagnostics' shared buffer). Budget-guards against a runaway fine-spacing gather.
     public int GatherOffThread(in GatherContext ctx, in PlanetTransformSnapshot snap, Vector3 cameraPos,
-        float region, int maxLevel, List<ScatterInstance> buffer, FaceSpaceCell[] ranges)
+        float region, int maxLevel, List<ScatterInstance> buffer, FaceSpaceCell[] ranges, bool foodOnly = false)
     {
         if (buffer == null || ranges == null || !ctx.IsValid) return 0;
         if (region <= 0f || float.IsInfinity(region) || maxLevel < 0 || maxLevel > ScatterId.MaxLevel) return 0;
         if (EstimateCandidates(ctx, region, maxLevel, snap.UniformScale, perPrototypeCull: true) > CandidateBudget) return 0;
-        return GatherCore(ctx, snap, cameraPos, region, maxLevel, buffer, reversed: false, perPrototypeCull: true, ranges, out _);
+        return GatherCore(ctx, snap, cameraPos, region, maxLevel, buffer, reversed: false, perPrototypeCull: !foodOnly, ranges, out _, foodOnly);
     }
 
     // World-facing wrapper for the diagnostic/anchor helpers: convert to local, sample the analytic
@@ -374,7 +432,7 @@ public sealed class ScatterField : IDisposable
         for (int i = 0; i < ctx.Library.Prototypes.Length; i++)
         {
             if (ctx.Levels[i] > maxLevel) continue;
-            float protoRegion = perPrototypeCull ? Mathf.Min(region, ProtoGatherRadius(ctx.Library.Prototypes[i], region)) : region;
+            float protoRegion = perPrototypeCull ? Mathf.Min(region, ProtoGatherRadius(ctx, i, region)) : region;
             float cellWorld = 2f * worldRadius * ScatterQuadtree.CellUvWidth(ctx.Levels[i]);
             long side = (long)(2f * protoRegion / Mathf.Max(cellWorld, 1e-4f)) + 2;
             total += side * side;

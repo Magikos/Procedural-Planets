@@ -1,0 +1,168 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd8008cb45ca5034daa0a124445d0868, type: 3}
+  m_Name: CollectChest
+  m_EditorClassIdentifier: Magikos.Game::ActorInteractionDefinition
+  Action: CollectChest
+  Phases:
+  - Animation:
+      Name: Collect from chest
+      Clip: {fileID: 1827226128182048838, guid: 4cf3ccc58b54f0f428f972e90c858e5f, type: 3}
+      StartNormalized: 0
+      EndNormalized: 0.65
+      Loop: 0
+      BlendSeconds: 0.15
+    Seconds: 2.8166666
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: Collect
+    MarkerProgress: 0.999
+  - Animation:
+      Name: Recover after collection
+      Clip: {fileID: 1827226128182048838, guid: 4cf3ccc58b54f0f428f972e90c858e5f, type: 3}
+      StartNormalized: 0.65
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.15
+    Seconds: 1.5166668
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0
+  - Animation:
+      Name: Lower to inspect
+      Clip: {fileID: 1827226128182048838, guid: 4cf3ccc58b54f0f428f972e90c858e5f, type: 3}
+      StartNormalized: 0
+      EndNormalized: 0.26
+      Loop: 0
+      BlendSeconds: 0.15
+    Seconds: 1.1266667
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0
+  - Animation:
+      Name: Look inside
+      Clip: {fileID: 7400000, guid: 8c234a74bdb226e4cae05b96ef71074a, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.15
+    Seconds: 3.1333334
+    RightHandWeight: 1
+    LeftHandWeight: 1
+    WaitForInput: 1
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: InspectionRim
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0
+  - Animation:
+      Name: Stand from inspection
+      Clip: {fileID: 1827226128182048838, guid: 4cf3ccc58b54f0f428f972e90c858e5f, type: 3}
+      StartNormalized: 0
+      EndNormalized: 0.26
+      Loop: 0
+      BlendSeconds: 0.15
+    Seconds: 1.1266667
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 1
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0
+  - Animation:
+      Name: Reach for lid
+      Clip: {fileID: 1827226128182048838, guid: 37a4a8fc1442e9e47b6253d82fae0351, type: 3}
+      StartNormalized: 0.64
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.15
+    Seconds: 0.8400001
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 1
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0
+  - Animation:
+      Name: Close lid
+      Clip: {fileID: 1827226128182048838, guid: 37a4a8fc1442e9e47b6253d82fae0351, type: 3}
+      StartNormalized: 0.57
+      EndNormalized: 0.64
+      Loop: 0
+      BlendSeconds: 0.05
+    Seconds: 0.16333333
+    RightHandWeight: 1
+    LeftHandWeight: 1
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 1
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: Close
+    MarkerProgress: 0
+  - Animation:
+      Name: Stand back
+      Clip: {fileID: 1827226128182048838, guid: 37a4a8fc1442e9e47b6253d82fae0351, type: 3}
+      StartNormalized: 0
+      EndNormalized: 0.57
+      Loop: 0
+      BlendSeconds: 0.15
+    Seconds: 1.33
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 1
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0

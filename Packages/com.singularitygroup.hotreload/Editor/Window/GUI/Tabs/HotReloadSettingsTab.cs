@@ -84,9 +84,6 @@ namespace SingularityGroup.HotReload.Editor {
                     GUILayout.Space(10);
                     if (!EditorCodePatcher.LoginNotRequired
                         && !currentState.registrationRequired
-                        // Delay showing login in settings to not confuse users that they need to login to use Free trial
-                        && (HotReloadPrefs.RateAppShown
-                            || PackageConst.IsAssetStoreBuild)
                        ) {
                         using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.SectionOuterBoxCompact)) {
                             using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.SectionInnerBoxWide)) {

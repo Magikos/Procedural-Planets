@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd8008cb45ca5034daa0a124445d0868, type: 3}
+  m_Name: Grind wildflowers
+  m_EditorClassIdentifier: Magikos.Game::ActorInteractionDefinition
+  Action: Grind wildflowers
+  Phases:
+  - Animation:
+      Name: Prepare mortar
+      Clip: {fileID: 7400000, guid: 8a258d18c9ffc5d44961532c9f8de32d, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 0.8333334
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    RepeatUntilInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: TakeTool
+    MarkerProgress: 0.1
+  - Animation:
+      Name: Grind
+      Clip: {fileID: 7400000, guid: e3279b46f204b8647b5f5046a42826ae, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 2.1666667
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    RepeatUntilInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: CraftComplete
+    MarkerProgress: 1
+  - Animation:
+      Name: Finish grinding
+      Clip: {fileID: 7400000, guid: 41f6e24bb8e60784b95768db2cd7c288, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 1.166667
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    RepeatUntilInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: ReturnTool
+    MarkerProgress: 0.9

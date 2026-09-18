@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 /// Console commands for the debug grass interactor sphere. Spawns / despawns the
 /// debug sphere and tunes its parameters live.
 /// </summary>
-[CommandPrefix("grass")]
+[CommandPrefix("grass", Group = "Vegetation and wildlife", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public static class GrassInteractorCommands
 {
     const float DefaultForwardDistance = 20f;

@@ -1,5 +1,9 @@
 public static partial class ShaderGlobalIds
 {
+    public const string WeatherSurfaceMap = "_WeatherSurfaceMap";
+    public const string WeatherSurfaceEnabled = "_WeatherSurfaceEnabled";
+    public const string CloudFlowMap = "_CloudFlowMap";
+    public const string CloudFlowEnabled = "_CloudFlowEnabled";
     public const string WeatherCloudTypeTest = "_WeatherCloudTypeTest";
     public const string CloudPlanetCenter = "_CloudPlanetCenter";
     public const string CloudInnerRadius = "_CloudInnerRadius";
@@ -51,7 +55,6 @@ public static partial class ShaderGlobalIds
     public const string WindSpeedMps = "_WindSpeedMps";
     public const string WindStrength01 = "_WindStrength01";
     public const string CloudWeatherRotation = "_CloudWeatherRotation";
-    public const string CloudWindAngle = "_CloudWindAngle";
 
     public const string WeatherLightningParams = "_WeatherLightningParams";
     public const string WeatherLightningColor = "_WeatherLightningColor";

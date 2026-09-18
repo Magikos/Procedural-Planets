@@ -54,7 +54,7 @@ public sealed class DefaultGrassQualitySettings : IGrassQualitySettings
 /// screen can call SetQualityLevel when the player changes quality at runtime.
 /// </summary>
 [DisallowMultipleComponent]
-[CommandPrefix("quality")]
+[CommandPrefix("quality", Group = "Diagnostics and authoring", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public class QualityController : MonoBehaviour
 {
     const string KeywordCloudQualityLow = "CLOUD_QUALITY_LOW";
@@ -76,6 +76,8 @@ public class QualityController : MonoBehaviour
     public static int AppliedQualityLevel { get; private set; } = -1;
     public static string AppliedQualityName { get; private set; } = "Unknown";
     public static string AppliedQualityTier { get; private set; } = "High";
+    public static WaterQualityProfile WaterProfile => WaterQualityProfile.ForTier(AppliedQualityTier);
+    static readonly int WaterQualityId = Shader.PropertyToID(ShaderGlobalIds.WaterQuality);
 
     void Awake()
     {
@@ -125,6 +127,9 @@ public class QualityController : MonoBehaviour
 
         IsCloudLowQualityEnabled = isLow;
         AppliedQualityTier = isLow ? "Low" : isMedium ? "Medium" : "High";
+        WaterQualityProfile water = WaterProfile;
+        QualitySettings.realtimeReflectionProbes = water.ProbeResolution > 0;
+        Shader.SetGlobalVector(WaterQualityId, new Vector4(water.ReflectionSteps, water.ShaftSteps, water.RippleLimit, water.ProbeResolution));
 
         // CLOUD_QUALITY_LOW caps raymarch steps and disables detail noise in Cloud.shader
         // and Precipitation.shader. Both shaders compile a variant for this keyword.

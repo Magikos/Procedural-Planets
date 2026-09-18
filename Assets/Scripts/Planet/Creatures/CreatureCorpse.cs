@@ -33,20 +33,31 @@ public readonly struct CreatureCorpse
 
     /// <summary>Its yield has already been taken. A looted carcass still rots and still draws flies.</summary>
     public readonly bool Looted;
+    /// <summary>Uneaten stock ceiling. Natural decay can lower this further; hide loot does not change it.</summary>
+    public readonly double MeatRemainingFraction;
+    public readonly ulong SourceActorId;
+    public ulong AppearanceIdentity => SourceActorId != 0 ? SourceActorId : Id.Value;
 
     public CreatureCorpse(EntityId id, int speciesIndex, Vector3 position, Quaternion rotation,
-        long diedUnixSeconds, bool looted)
+        long diedUnixSeconds, bool looted, double meatRemainingFraction = 1d, ulong sourceActorId = 0)
     {
+        if (!ActorNeeds.IsLevel(meatRemainingFraction))
+            throw new System.ArgumentOutOfRangeException(nameof(meatRemainingFraction));
         Id = id;
         SpeciesIndex = speciesIndex;
         Position = position;
         Rotation = rotation;
         DiedUnixSeconds = diedUnixSeconds;
         Looted = looted;
+        MeatRemainingFraction = meatRemainingFraction;
+        SourceActorId = sourceActorId;
     }
 
     public CreatureCorpse AsLooted() =>
-        new(Id, SpeciesIndex, Position, Rotation, DiedUnixSeconds, looted: true);
+        new(Id, SpeciesIndex, Position, Rotation, DiedUnixSeconds, looted: true, MeatRemainingFraction, SourceActorId);
+
+    public CreatureCorpse WithMeatFraction(double fraction) =>
+        new(Id, SpeciesIndex, Position, Rotation, DiedUnixSeconds, Looted, fraction, SourceActorId);
 }
 
 /// <summary>
@@ -88,6 +99,11 @@ public readonly struct CorpseDecay
         flies: 120f,
         timeScale: 1f);
 
+    // Gameplay schedule in simulation seconds. Legacy Unix records keep Default until clock migration.
+    public static readonly CorpseDecay GameDays = new(
+        bloated: 2f * 86400f, rotting: 5f * 86400f, bones: 21f * 86400f,
+        gone: 90f * 86400f, flies: 0.25f * 86400f, timeScale: 1f);
+
     public CorpseDecay WithTimeScale(float scale) => new(
         BloatedAfterSeconds, RottingAfterSeconds, BonesAfterSeconds, GoneAfterSeconds, FliesAfterSeconds, scale);
 
@@ -96,8 +112,12 @@ public readonly struct CorpseDecay
         Mathf.Max(0f, (nowUnixSeconds - corpse.DiedUnixSeconds) * TimeScale);
 
     public CorpseStage StageOf(in CreatureCorpse corpse, long nowUnixSeconds)
+        => StageAtAge(AgeSeconds(corpse, nowUnixSeconds));
+
+    /// <summary>Age supplied by the host, independent of wall-clock timestamps and debug time scale.</summary>
+    public CorpseStage StageAtAge(double age)
     {
-        float age = AgeSeconds(corpse, nowUnixSeconds);
+        ValidateAge(age);
         if (age >= GoneAfterSeconds) return CorpseStage.Gone;
         if (age >= BonesAfterSeconds) return CorpseStage.Bones;
         if (age >= RottingAfterSeconds) return CorpseStage.Rotting;
@@ -107,9 +127,27 @@ public readonly struct CorpseDecay
 
     /// <summary>Flies arrive once it has been dead a while and leave once it is down to bones.</summary>
     public bool HasFlies(in CreatureCorpse corpse, long nowUnixSeconds)
+        => HasFliesAtAge(AgeSeconds(corpse, nowUnixSeconds), 1d);
+
+    public bool HasFliesAtAge(double age, double meatFraction)
     {
-        float age = AgeSeconds(corpse, nowUnixSeconds);
-        return age >= FliesAfterSeconds && age < BonesAfterSeconds;
+        ValidateAge(age);
+        if (!ActorNeeds.IsLevel(meatFraction)) throw new System.ArgumentOutOfRangeException(nameof(meatFraction));
+        return age >= FliesAfterSeconds && age < BonesAfterSeconds && meatFraction > 0d;
+    }
+
+    public double NaturalMeatFraction(double age)
+    {
+        ValidateAge(age);
+        if (age >= BonesAfterSeconds) return 0d;
+        if (age <= RottingAfterSeconds) return 1d;
+        return 1d - (age - RottingAfterSeconds) / (BonesAfterSeconds - RottingAfterSeconds);
+    }
+
+    static void ValidateAge(double age)
+    {
+        if (double.IsNaN(age) || double.IsInfinity(age) || age < 0d)
+            throw new System.ArgumentOutOfRangeException(nameof(age));
     }
 }
 
@@ -139,8 +177,12 @@ public sealed class CreatureCorpseStore
     // docs/design/2026-08-20-magikos-game-architecture.md
     public const float KeepAliveMeters = 120f;
 
-    const byte PayloadFormat = 10;   // deliberately outside CreatureRecordCodec's formats: same delta space
-    const int PayloadBytes = 9;      // format 1 | died 8
+    const byte LegacyPayloadFormat = 10;
+    const byte NutritionPayloadFormat = 11;
+    const byte PayloadFormat = 12;   // deliberately outside CreatureRecordCodec's formats: same delta space
+    const int LegacyPayloadBytes = 9; // format 1 | died 8
+    const int NutritionPayloadBytes = 17;
+    const int PayloadBytes = 25;      // format 1 | died 8 | remaining fraction 8 | source actor 8
 
     readonly Dictionary<ulong, CreatureCorpse> _corpses = new();
     readonly EntityIdAllocator _ids = new(EntityId.CorpseOwner);
@@ -169,10 +211,10 @@ public sealed class CreatureCorpseStore
     public bool TryGet(EntityId id, out CreatureCorpse corpse) => _corpses.TryGetValue(id.Value, out corpse);
 
     /// <summary>Lay a body down where a creature died. Returns its id.</summary>
-    public EntityId Record(int speciesIndex, Vector3 position, Quaternion rotation, long diedUnixSeconds)
+    public EntityId Record(int speciesIndex, Vector3 position, Quaternion rotation, long diedUnixSeconds, ulong sourceActorId = 0)
     {
         EntityId id = _ids.Next();
-        Apply(Encode(new CreatureCorpse(id, speciesIndex, position, rotation, diedUnixSeconds, looted: false)));
+        Apply(Encode(new CreatureCorpse(id, speciesIndex, position, rotation, diedUnixSeconds, looted: false, sourceActorId: sourceActorId)));
         return id;
     }
 
@@ -185,6 +227,33 @@ public sealed class CreatureCorpseStore
     }
 
     public CorpseStage StageOf(in CreatureCorpse corpse, long nowUnixSeconds) => _decay.StageOf(corpse, nowUnixSeconds);
+
+    public double RemainingMeat(EntityId id, long nowUnixSeconds, double capacity)
+    {
+        ValidateQuantity(capacity);
+        if (!_corpses.TryGetValue(id.Value, out CreatureCorpse corpse)) return 0d;
+        return capacity * System.Math.Min(corpse.MeatRemainingFraction,
+            _decay.NaturalMeatFraction(_decay.AgeSeconds(corpse, nowUnixSeconds)));
+    }
+
+    /// <summary>Removes nutrition stock atomically through the delta log. The caller applies the returned nutrition.</summary>
+    public double ConsumeMeat(EntityId id, long nowUnixSeconds, double capacity, double requested)
+    {
+        ValidateQuantity(requested);
+        double remaining = RemainingMeat(id, nowUnixSeconds, capacity);
+        double consumed = System.Math.Min(remaining, requested);
+        if (consumed <= 0d) return 0d;
+        CreatureCorpse corpse = _corpses[id.Value];
+        // Persist the decay cap with the meal, so rebuilding cannot restore naturally lost meat.
+        Apply(Encode(corpse.WithMeatFraction(System.Math.Clamp((remaining - consumed) / capacity, 0d, 1d))));
+        return consumed;
+    }
+
+    static void ValidateQuantity(double value)
+    {
+        if (!double.IsFinite(value) || value < 0d)
+            throw new System.ArgumentOutOfRangeException(nameof(value));
+    }
 
     public void CollectNear(Vector3 worldPos, float radiusMeters, long nowUnixSeconds, List<CreatureCorpse> into)
     {
@@ -263,6 +332,8 @@ public sealed class CreatureCorpseStore
         var payload = new byte[PayloadBytes];
         payload[0] = PayloadFormat;
         System.BitConverter.GetBytes(corpse.DiedUnixSeconds).CopyTo(payload, 1);
+        System.BitConverter.GetBytes(corpse.MeatRemainingFraction).CopyTo(payload, 9);
+        System.BitConverter.GetBytes(corpse.SourceActorId).CopyTo(payload, 17);
 
         return new WorldDelta(0, DeltaKind.EntitySpawned, corpse.Id.Value, corpse.Position, corpse.Rotation,
             typeIndex: corpse.SpeciesIndex, state: (byte)(corpse.Looted ? 1 : 0), payload: payload);
@@ -271,10 +342,20 @@ public sealed class CreatureCorpseStore
     static bool TryDecode(in WorldDelta d, EntityId id, out CreatureCorpse corpse)
     {
         corpse = default;
-        if (d.Payload == null || d.Payload.Length < PayloadBytes || d.Payload[0] != PayloadFormat) return false;
+        if (d.Payload == null || d.Payload.Length < LegacyPayloadBytes) return false;
+        double meat = 1d;
+        ulong sourceActorId = 0;
+        if (d.Payload[0] == PayloadFormat || d.Payload[0] == NutritionPayloadFormat)
+        {
+            if (d.Payload.Length < (d.Payload[0] == PayloadFormat ? PayloadBytes : NutritionPayloadBytes)) return false;
+            meat = System.BitConverter.ToDouble(d.Payload, 9);
+            if (!ActorNeeds.IsLevel(meat)) return false;
+            if (d.Payload[0] == PayloadFormat) sourceActorId = System.BitConverter.ToUInt64(d.Payload, 17);
+        }
+        else if (d.Payload[0] != LegacyPayloadFormat) return false;
 
         corpse = new CreatureCorpse(id, d.TypeIndex, d.Position, d.Rotation,
-            System.BitConverter.ToInt64(d.Payload, 1), d.State != 0);
+            System.BitConverter.ToInt64(d.Payload, 1), d.State != 0, meat, sourceActorId);
         return true;
     }
 }

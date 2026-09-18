@@ -38,7 +38,7 @@ public static class TemperatureUnitPreferences
     }
 }
 
-[CommandPrefix("climate")]
+[CommandPrefix("climate", Group = "World and surface", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public static class ClimateCommands
 {
     [ConsoleCommand("status", "Show active latitude curves and climate contribution settings.")]

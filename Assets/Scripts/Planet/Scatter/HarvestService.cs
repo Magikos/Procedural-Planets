@@ -1,11 +1,8 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
-// The one verb choke point for harvesting (POC seam — see plans/003-harvest-vertical-slice.md §3b). Every
-// harvest routes through TryHarvest, which today one-shots the node: persist + remove-from-draw + grant yield
-// + raise events. Multi-hit chopping, axe-quality damage, fall animation, and log entities all slot in HERE
-// without touching callers. Dependencies are injected as delegates so this stays a pure orchestrator that the
-// player controller and tests wire independently.
+/// <summary>Commits harvest damage and resource effects independently of animation playback.</summary>
 public sealed class HarvestService
 {
     readonly Func<ScatterPick, bool> _persistHarvest; // record the fell; false if already harvested
@@ -14,14 +11,17 @@ public sealed class HarvestService
     readonly Func<int, ProtoHarvestInfo> _protoInfo; // prototype interaction + display name
     readonly Func<ulong, bool> _digStump;            // dig a stump (Stump -> Dug); false if no stump there
     readonly Func<EntityId, int, Vector3, CreatureStrike> _strikeCreature; // wound or kill an animal
+    readonly Func<ulong, int?> _readHealth;
+    readonly Action<ulong, int> _writeHealth;
 
-    // ponytail: node HP defaulted so one hit fells it. Multi-hit chopping adds a per-ScatterId hit accumulator
-    // consulted here — compare tool.Damage against remaining HP, raise HarvestHitEvent until it reaches 0.
-    const int DefaultNodeHp = 1;
+    // Partial damage is session-local. Hosts that reuse a service after world reset must clear it.
+    readonly Dictionary<ulong, int> _remainingHealth = new();
+    public void ResetProgress() => _remainingHealth.Clear();
 
     public HarvestService(Func<ScatterPick, bool> persistHarvest, Action<int, ulong> removeFromDraw,
         Action<string, int> grantItem, Func<int, ProtoHarvestInfo> protoInfo, Func<ulong, bool> digStump,
-        Func<EntityId, int, Vector3, CreatureStrike> strikeCreature = null)
+        Func<EntityId, int, Vector3, CreatureStrike> strikeCreature = null,
+        Func<ulong, int?> readHealth = null, Action<ulong, int> writeHealth = null)
     {
         _persistHarvest = persistHarvest;
         _removeFromDraw = removeFromDraw;
@@ -29,6 +29,7 @@ public sealed class HarvestService
         _protoInfo = protoInfo;
         _digStump = digStump;
         _strikeCreature = strikeCreature;
+        _readHealth = readHealth; _writeHealth = writeHealth;
     }
 
     // Dig up a stump (Stump -> Dug): it stops rendering and yields a little more wood. `tool` is the shovel
@@ -64,24 +65,40 @@ public sealed class HarvestService
 
     public HarvestResult TryHarvest(in ScatterPick pick, in ToolTier tool)
     {
+        if (tool.Damage <= 0) throw new ArgumentOutOfRangeException(nameof(tool), "Harvest damage must be positive.");
         ProtoHarvestInfo info = _protoInfo(pick.ProtoIndex);
         if (info.Interaction == ScatterInteraction.None)
             return HarvestResult.NotHarvestable;
 
-        if (tool.Damage < DefaultNodeHp)
+        float scale = ScatterHarvestStore.StoredScaleOr(pick.Scale);
+        int initialHp = info.ScaleWithInstance ? Math.Max(1, Mathf.CeilToInt(info.HitPoints * scale * scale)) : info.HitPoints;
+        int health;
+        if (_readHealth != null) health = _readHealth(pick.Id) ?? initialHp;
+        else if (!_remainingHealth.TryGetValue(pick.Id, out health)) health = initialHp;
+        if (health == 0) return HarvestResult.AlreadyHarvested;
+        int remaining = Math.Max(0, health - tool.Damage);
+        if (remaining > 0)
         {
+            if (_readHealth == null) _remainingHealth[pick.Id] = remaining;
+            _writeHealth?.Invoke(pick.Id, remaining);
             EventBus<HarvestHitEvent>.Raise(
-                new HarvestHitEvent(pick.Id, pick.ProtoIndex, pick.Position, DefaultNodeHp - tool.Damage));
+                new HarvestHitEvent(pick.Id, pick.ProtoIndex, pick.ImpactPoint ?? pick.Position, remaining, pick.ImpactPoint.HasValue));
             return HarvestResult.Hit;
         }
 
         // Persist BEFORE the event: the fall and stump systems read the felled instance's transform back out
         // of the record, so the record has to exist by the time they run.
         if (!_persistHarvest(pick))
+        {
             return HarvestResult.AlreadyHarvested;
+        }
+
+        if (_readHealth == null) _remainingHealth[pick.Id] = 0;
 
         _removeFromDraw(pick.ProtoIndex, pick.Id);
-        HarvestYield yield = ResolveYield(info);
+        HarvestYield yield = info.FellYield ?? ResolveYield(info);
+        if (info.ScaleWithInstance && yield.Count > 0)
+            yield = new HarvestYield(yield.ItemId, Math.Max(1, Mathf.RoundToInt(yield.Count * scale * scale * scale)));
         if (yield.Count > 0) _grantItem(yield.ItemId, yield.Count);
         EventBus<ScatterHarvestedEvent>.Raise(new ScatterHarvestedEvent(pick.Id, pick.ProtoIndex, pick.Position, yield));
         return HarvestResult.Felled(yield);
@@ -92,6 +109,7 @@ public sealed class HarvestService
     static HarvestYield ResolveYield(in ProtoHarvestInfo info) => info.Interaction switch
     {
         ScatterInteraction.Chop => new HarvestYield("Wood", 3),
+        ScatterInteraction.Mine => new HarvestYield("Stone", 3),
         ScatterInteraction.Collect => new HarvestYield(string.IsNullOrEmpty(info.DisplayName) ? "Plant" : info.DisplayName, 1),
         _ => default,
     };
@@ -102,8 +120,16 @@ public readonly struct ProtoHarvestInfo
 {
     public readonly ScatterInteraction Interaction;
     public readonly string DisplayName;
-    public ProtoHarvestInfo(ScatterInteraction interaction, string displayName)
-    { Interaction = interaction; DisplayName = displayName; }
+    public readonly int HitPoints;
+    public readonly HarvestYield? FellYield;
+    public readonly bool ScaleWithInstance;
+    public ProtoHarvestInfo(ScatterInteraction interaction, string displayName, int hitPoints = 1, HarvestYield? fellYield = null, bool scaleWithInstance = false)
+    {
+        if (hitPoints < 1) throw new ArgumentOutOfRangeException(nameof(hitPoints));
+        Interaction = interaction; DisplayName = displayName; HitPoints = hitPoints;
+        FellYield = fellYield;
+        ScaleWithInstance = scaleWithInstance;
+    }
 }
 
 public enum HarvestOutcome { NotHarvestable, Hit, AlreadyHarvested, Felled }

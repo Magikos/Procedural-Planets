@@ -45,6 +45,13 @@ public sealed record ScatterPrototypeDto(
 {
     // Sparse props can retain their existing geometry instead of losing branches in an atlas.
     public bool MeshOnly { get; init; }
+    public float TreeAge { get; init; } = -1f;
+    public GeneratedTree Tree { get; init; }
+    public Material CutMaterial { get; init; }
+    public ScatterWaterHabitat WaterHabitat { get; init; }
+    public float MaxFlowSpeed { get; init; } = 0.5f;
+    public float FoodUnits { get; init; }
+    public float FoodRegrowSeconds { get; init; }
     public int MeshOnlyVertexLimit { get; init; }
 
     // A reviewed vertex budget protects small, sparse shapes without extending expensive variants.
@@ -73,7 +80,7 @@ public sealed record ScatterPrototypeDto(
     // lands in a clearing of variant 1 and the whole effect averages back out to uniform.
     public uint ClumpGroupSeed => ScatterClumping.GroupSeedFor(SpeciesKey ?? DisplayName);
 
-    // The trunk = the first drawable part (Synty scatter-tree convention). Used for stumps and fallen logs so
+    // The trunk = the first drawable part (source scatter-tree convention). Used for stumps and fallen logs so
     // foliage (which splays flat when the tree lies down) is excluded.
     public ScatterPartDto TrunkPart
     {
@@ -97,7 +104,7 @@ public sealed record ScatterPrototypeDto(
         p.MinWaterClearanceMeters, p.OnWater, p.ScaleRange, p.RandomYaw, p.Interaction,
         BuildParts(p), p.BakedImpostorAtlas, p.BakedImpostorNormal, p.StumpMesh, p.StumpMaterial,
         null, p.Clumpiness, p.PatchScaleMeters, p.ShadePreference, p.BakedImpostorGridN, p.BakedImpostorHasSurfaceData)
-        { MeshOnlyVertexLimit = Mathf.Max(0, p.MeshOnlyVertexLimit) };
+        { WaterHabitat = p.WaterHabitat, MaxFlowSpeed = p.MaxFlowSpeed, MeshOnlyVertexLimit = Mathf.Max(0, p.MeshOnlyVertexLimit), FoodUnits = p.FoodUnits, FoodRegrowSeconds = p.FoodRegrowSeconds };
 
     static ScatterPartDto[] BuildParts(ScatterPrototype p)
     {
@@ -135,6 +142,8 @@ public sealed record ScatterPrototypeDto(
     // canopy never counts — only the trunk that actually meets the surface. 0 (no mesh) => no sink.
     public float GroundContactRadius()
     {
+        if (Tree?.TrunkRadii != null && Tree.TrunkRadii.Length > 0)
+            return Tree.TrunkRadii[0];
         float lowestMinY = float.MaxValue;
         float radius = 0f;
         foreach (var part in Parts)
@@ -360,9 +369,17 @@ public sealed record ScatterLibraryDto(ScatterPrototypeDto[] Prototypes)
             void Fail(string why) => throw new System.InvalidOperationException($"Scatter prototype '{who}': {why}");
 
             if (p == null) Fail("is null.");
+            if (!Finite(p.FoodUnits) || p.FoodUnits < 0 || !Finite(p.FoodRegrowSeconds) || p.FoodRegrowSeconds < 0)
+                Fail("food quantities and regrowth seconds must be finite and non-negative.");
             if (p.SlotId < 0 || p.SlotId > ScatterId.MaxSlot) Fail($"SlotId {p.SlotId} out of range 0-{ScatterId.MaxSlot}.");
             if (!seen.Add(p.SlotId)) Fail($"duplicate SlotId {p.SlotId}.");
 
+            if (!Finite(p.Clumpiness) || p.Clumpiness < 0f || p.Clumpiness > 1f) Fail("Clumpiness must be in 0..1.");
+            if (!Finite(p.PatchScaleMeters) || p.PatchScaleMeters <= 0f) Fail("PatchScaleMeters must be finite and positive.");
+            if (!Finite(p.ShadePreference) || p.ShadePreference < -1f || p.ShadePreference > 1f) Fail("ShadePreference must be in -1..1.");
+            if (!Finite(p.TreeAge) || p.TreeAge < -1f || p.TreeAge > 1f) Fail("TreeAge must be in -1..1.");
+            if ((byte)p.WaterHabitat > (byte)ScatterWaterHabitat.LakeOnly) Fail("WaterHabitat is invalid.");
+            if (!Finite(p.MaxFlowSpeed) || p.MaxFlowSpeed < 0f) Fail("MaxFlowSpeed must be finite and non-negative.");
             if (!Finite(p.SpacingMeters) || p.SpacingMeters <= 0f) Fail("SpacingMeters must be finite and positive.");
             if (!Finite(p.BiomeBlendPower) || p.BiomeBlendPower <= 0f) Fail("BiomeBlendPower must be finite and positive.");
             if (!Finite(p.Weight) || p.Weight < 0f) Fail("Weight must be finite and non-negative.");

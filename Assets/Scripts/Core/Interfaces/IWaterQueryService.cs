@@ -29,8 +29,11 @@ public readonly struct WaterSample
     /// <summary>True for the ocean, false for a lake. The distinction gameplay actually branches on.</summary>
     public readonly bool IsOcean;
 
+    /// <summary>World-space downstream current in metres per second. Zero in still water.</summary>
+    public readonly Vector3 Velocity;
+
     public WaterSample(Vector3 surfacePoint, Vector3 normal, float signedDepth, float bodyDepth,
-        ushort bodyId, bool isOcean)
+        ushort bodyId, bool isOcean, Vector3 velocity = default)
     {
         SurfacePoint = surfacePoint;
         Normal = normal;
@@ -38,6 +41,7 @@ public readonly struct WaterSample
         BodyDepth = bodyDepth;
         BodyId = bodyId;
         IsOcean = isOcean;
+        Velocity = velocity;
     }
 
     public bool IsSubmerged => SignedDepth > 0f;

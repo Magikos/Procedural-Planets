@@ -11,7 +11,7 @@ using UnityEngine;
 // lever is PER-INSTANCE NON-UNIFORM scale — a squashed boulder and a stretched one do not read as the same rock,
 // where a uniformly scaled one always does. That needs a 3-axis scale on ScatterInstance and matching CPU/Burst
 // packing, so it is deliberately not in this first pass.
-[CommandPrefix("rock")]
+[CommandPrefix("rock", Group = "Vegetation and wildlife", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public static class RockInjection
 {
     public static bool Enabled = true;
@@ -97,7 +97,7 @@ public static class RockInjection
 
     // Name-matched, like the fern path: the library has no "rock" interaction to key off (rocks are
     // Interaction.None, same as bushes and grass), and matching on the name keeps that rest of the library
-    // on its Synty meshes.
+    // on its source meshes.
     static bool IsRock(ScatterPrototypeDto p) =>
         p != null && p.Interaction == ScatterInteraction.None && p.Parts != null && p.Parts.Length > 0
         && (p.DisplayName ?? "").IndexOf("rock", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -109,7 +109,7 @@ public static class RockInjection
             RockDef def = DefFor(p.Biome, variant);
             int seed = (int)(StableHash(p.DisplayName ?? "rock", variant) % 900000) + 1;
             GeneratedRock rock = RockGenerator.Generate(def, seed);
-            if (rock.Lod0 == null || rock.Lod0.vertexCount == 0) return null; // keep Synty
+            if (rock.Lod0 == null || rock.Lod0.vertexCount == 0) return null; // keep the source prop
 
             float cull = p.Parts[0].MaxCullDistance;
             if (cull < 20f) cull = 140f;
@@ -121,7 +121,7 @@ public static class RockInjection
                 DisplayName = variant == 0 ? p.DisplayName : $"{p.DisplayName} v{variant}",
                 SlotId = slot,
                 Parts = new[] { new ScatterPartDto(MatFor(p.Biome, def.Color), rock.Lods, dist, true, true) },
-                // The Synty atlas CANNOT be kept. Reusing it was wrong: the far card then shows the Synty
+                // The source atlas CANNOT be kept. Reusing it was wrong: the far card then shows the source
                 // rock's colour while the near mesh is our generated stone, so a rock visibly changes shade as
                 // you walk up to it and the mesh takes over - and at dusk the two lighting paths diverge enough
                 // that the stale card reads as glowing. Bake our own; the disk cache means it costs bake time,

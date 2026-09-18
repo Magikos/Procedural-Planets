@@ -285,11 +285,11 @@ public sealed class ConsoleRenderer
     {
         const float PopupScrollbarWidth = 0.003f;
 
-        // Fixed-size popup window — visibleCount rows tall.
+        // One footer row describes the selected command below the visible results.
         int visibleCount = Mathf.Min(visibleSlots, suggestions.Count - scrollOffset);
         if (visibleCount <= 0) return;
 
-        Vector4 popupBounds = DrawPopupFrame(cmd, alpha, anchor, inputOrigin, lineH, visibleCount, Theme.PopupBackdrop);
+        Vector4 popupBounds = DrawPopupFrame(cmd, alpha, anchor, inputOrigin, lineH, visibleCount + 1, Theme.PopupBackdrop);
 
         // Text baseline for the first row, then per-row below.
         float textY = popupBounds.w - PopupPadY - TextEmSize * 0.6f;
@@ -423,6 +423,12 @@ public sealed class ConsoleRenderer
             if (end < text.Length)
                 _suggestionSpans.Add(new TextSpan(baseColor, text.Substring(end)));
         }
+        var selected = suggestions[Mathf.Clamp(activeIdx, 0, suggestions.Count - 1)];
+        string detail = selected.Parameter == null ? selected.Command.Description
+            : selected.Parameter.Description;
+        if (string.IsNullOrWhiteSpace(detail)) detail = selected.Command.Description;
+        _suggestionSpans.Add(new TextSpan(Theme.SuggInactive,
+            selected.IsGroup ? "\nChoose a command family. Tab opens it." : $"\n[{selected.Command.ReleasePolicy}] {detail}"));
     }
 
     public void Dispose()

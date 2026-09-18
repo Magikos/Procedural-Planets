@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1c31c5bdb5b4154a754cff5a36cad80, type: 3}
+  m_Name: Beam Performances
+  m_EditorClassIdentifier: Magikos.Game::ActorAnimationPerformanceLibrary
+  Entries:
+  - Id: beam-authored
+    Action: Beam
+    RigFamily: Humanoid
+    Condition: 
+    LocomotionExitPhase: -1
+    MinProficiency: 0
+    MaxProficiency: 1
+    Phases:
+    - Name: Forward_Start
+      Clip: {fileID: 7400000, guid: c0cc10d04066bdc458b6685c8ddd6453, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.15
+    - Name: Forward_Loop
+      Clip: {fileID: 7400000, guid: 619b3019aa8968a4285427fde2b5679b, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.15
+    - Name: Forward_End
+      Clip: {fileID: 7400000, guid: e13e0b766ff9a15418fa7b850ede1c7d, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.15
+    - Name: Back_Loop
+      Clip: {fileID: 7400000, guid: 92ecd7efc14e17242a01fb3601e10547, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.15
+    - Name: Back_End
+      Clip: {fileID: 7400000, guid: 19831b76d3561c94aa13510131651f5a, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.15
+    - Name: Idle
+      Clip: {fileID: 7400000, guid: 3d94c1bc276cbbb46a25c384d0f29964, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.15
+    - Name: Turn_180
+      Clip: {fileID: 7400000, guid: 11ef86731de154e4baacc31ad7693e81, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.15

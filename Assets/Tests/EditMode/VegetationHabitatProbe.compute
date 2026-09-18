@@ -1,0 +1,13 @@
+#pragma kernel Probe
+#include "../../Graphics/Shaders/Includes/VegetationHabitat.hlsl"
+StructuredBuffer<float4> Inputs;
+RWStructuredBuffer<float4> Outputs;
+int Seed;
+float Radius;
+[numthreads(64, 1, 1)]
+void Probe(uint3 id : SV_DispatchThreadID)
+{
+    float4 p = Inputs[id.x];
+    float cover = HabitatCover(normalize(p.xyz), Radius, (uint)Seed, 0.97, p.w);
+    Outputs[id.x] = float4(HabitatValueNoise(p.xyz, (uint)Seed), cover, HabitatGrassKeep(cover), 0);
+}

@@ -1,0 +1,14 @@
+#pragma kernel Probe
+#include "../../Graphics/Shaders/Includes/RiverField.hlsl"
+
+float4 _Probe;
+int _PreserveStandingBanks;
+RWStructuredBuffer<float4> _Result;
+
+[numthreads(1, 1, 1)]
+void Probe(uint3 id : SV_DispatchThreadID)
+{
+    float4 river = SampleRiver(_Probe.xyz);
+    _Result[0] = float4(river.x, river.w,
+        RiverBankBelow(_Probe.xyz, _Probe.w, _PreserveStandingBanks != 0) ? 1 : 0, 0);
+}

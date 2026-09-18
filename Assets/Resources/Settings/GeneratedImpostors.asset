@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::GeneratedImpostorManifest
   Entries:
   - Key: Forest Tree
-    ShapeHash: 44026220
+    ShapeHash: 27FD6969
     Atlas: {fileID: 2800000, guid: 016a8f9f3c6988349a6a17cbac59b5a5, type: 3}
     Normal: {fileID: 2800000, guid: cc036f83497af9847b3313b23146141f, type: 3}
     HasSurfaceData: 1
@@ -32,67 +32,73 @@ MonoBehaviour:
     HasSurfaceData: 1
     GridN: 8
   - Key: Meadow Tree
-    ShapeHash: 7BE7EF19
+    ShapeHash: 1D1E1E8C
     Atlas: {fileID: 2800000, guid: 386cd9f59e3d9d247ba39d81dfd2faac, type: 3}
     Normal: {fileID: 2800000, guid: 0edc77e2320d973438749c7e328abcde, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Birch Tree
-    ShapeHash: C207C9D2
+    ShapeHash: 7C472D8F
     Atlas: {fileID: 2800000, guid: d456776ce03c1c44699ecad2f7dce55b, type: 3}
     Normal: {fileID: 2800000, guid: 2ac407bdb9bc56346b8bce477918ff91, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Palm Tree
-    ShapeHash: AFB18C1D
+    ShapeHash: DFDC0396
     Atlas: {fileID: 2800000, guid: 85dad32feebc5af4d8925369bac70a04, type: 3}
     Normal: {fileID: 2800000, guid: aadce190d46f5dd45834edbd1a3a11f4, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Swamp Tree
-    ShapeHash: 36F1FD9D
+    ShapeHash: BF107FB9
     Atlas: {fileID: 2800000, guid: b044f00529f99394080282808509f69e, type: 3}
     Normal: {fileID: 2800000, guid: f117ffa7ed673d84fa2c57c0907ff61a, type: 3}
     HasSurfaceData: 1
     GridN: 8
+  - Key: Beach Palm
+    ShapeHash: 4BE1F592
+    Atlas: {fileID: 2800000, guid: 6f36c323f9a251347a3238a8982a29e7, type: 3}
+    Normal: {fileID: 2800000, guid: f55fe35379e46ff42a2c3059d9c0b40b, type: 3}
+    HasSurfaceData: 1
+    GridN: 8
   - Key: Desert Dead Tree
-    ShapeHash: 71497520
+    ShapeHash: A72FBB8F
     Atlas: {fileID: 2800000, guid: f2c184e34724a2046896400895c8e585, type: 3}
     Normal: {fileID: 2800000, guid: 6b7a4cfc505f2b24e8dc1d8509c40a64, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Savanna Tree
-    ShapeHash: DD941666
+    ShapeHash: 409108F0
     Atlas: {fileID: 2800000, guid: 384c702805e6b8a4aae62b3e89b77074, type: 3}
     Normal: {fileID: 2800000, guid: ceb9aab7439998b4db8d472edab4aaf8, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Scrub Dead Tree
-    ShapeHash: F16982B9
+    ShapeHash: 8BD01E33
     Atlas: {fileID: 2800000, guid: b2b70faf328cab844820697932ea8485, type: 3}
     Normal: {fileID: 2800000, guid: 5bd9d810ff1e33446a70115793bae82d, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Steppe Pine
-    ShapeHash: 64C08387
+    ShapeHash: E0211B6D
     Atlas: {fileID: 2800000, guid: e1ebc720fa33a2842b58d35290941625, type: 3}
     Normal: {fileID: 2800000, guid: e34b5fd8f8cd4e1418f6e5287a2a8187, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Taiga Pine
-    ShapeHash: 995C2689
+    ShapeHash: 2854B902
     Atlas: {fileID: 2800000, guid: 00ef83fd1e9e4a740b7f8dc32bb9afdc, type: 3}
     Normal: {fileID: 2800000, guid: 133dfff4e8e6f3d4db7d96533e714355, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Tundra Dead Tree
-    ShapeHash: DBB89DAE
+    ShapeHash: 267B93EC
     Atlas: {fileID: 2800000, guid: d7ac76963a2ff1e4698de8e30f67c2bc, type: 3}
     Normal: {fileID: 2800000, guid: fd9b1e9b61acf714d9749c7d09c242bb, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Snow Pine
-    ShapeHash: A17D956B
+    ShapeHash: B9929A73
     Atlas: {fileID: 2800000, guid: 6b2ec4ef7006310498f7534f1080576d, type: 3}
     Normal: {fileID: 2800000, guid: 3f969b2cdcd1792468ba52e00dce7419, type: 3}
     HasSurfaceData: 1
@@ -104,7 +110,7 @@ MonoBehaviour:
     HasSurfaceData: 1
     GridN: 8
   - Key: Mountain Pine
-    ShapeHash: C12ED26D
+    ShapeHash: EACFB257
     Atlas: {fileID: 2800000, guid: ef327954d58eb144e9db4209e4c9590a, type: 3}
     Normal: {fileID: 2800000, guid: d70def4d5de18e9448991562f042534b, type: 3}
     HasSurfaceData: 1
@@ -259,14 +265,20 @@ MonoBehaviour:
     Normal: {fileID: 2800000, guid: 2eb86179e1930464d9f8779ad5df4069, type: 3}
     HasSurfaceData: 1
     GridN: 8
+  - Key: Golden Forest Tree
+    ShapeHash: 063E0745
+    Atlas: {fileID: 2800000, guid: 426f538000e497046ba1aa9359c7896d, type: 3}
+    Normal: {fileID: 2800000, guid: f99d7fefb3c63cf46915f20489a5268b, type: 3}
+    HasSurfaceData: 1
+    GridN: 8
   - Key: Autumn Forest Tree
-    ShapeHash: E6B9503C
+    ShapeHash: C005B4E2
     Atlas: {fileID: 2800000, guid: de6e491fdebb93c4caf642ff7cd643dd, type: 3}
     Normal: {fileID: 2800000, guid: 5a5e5e76130be22468232f0e633b17ea, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Golden Meadow Tree
-    ShapeHash: 4042BBF5
+    ShapeHash: 6E931ADF
     Atlas: {fileID: 2800000, guid: 13070e932fed2834dac831965b832c2f, type: 3}
     Normal: {fileID: 2800000, guid: 9a7bf78c769b50943b9ae8834184f13e, type: 3}
     HasSurfaceData: 1
@@ -332,19 +344,19 @@ MonoBehaviour:
     HasSurfaceData: 1
     GridN: 8
   - Key: LMHPOLY Forest Mushroom Red
-    ShapeHash: 9DF4B23C
+    ShapeHash: 67946130
     Atlas: {fileID: 2800000, guid: 58d2c18311bfc1f4f91167dedc14ff0b, type: 3}
     Normal: {fileID: 2800000, guid: 80f8976c93f280045a7439bb584d769b, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: LMHPOLY Taiga Mushroom
-    ShapeHash: 7FF38AEA
+    ShapeHash: 2279A262
     Atlas: {fileID: 2800000, guid: de779d2ee2c83a54c829ddde52f71386, type: 3}
     Normal: {fileID: 2800000, guid: 6dadd43bb7b9cff41a42463b4b87dbc8, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: LMHPOLY Swamp Mushroom
-    ShapeHash: D5212BAF
+    ShapeHash: 7BBDC80E
     Atlas: {fileID: 2800000, guid: dd89d83b6bd407e4ca9f7923ac1e7983, type: 3}
     Normal: {fileID: 2800000, guid: 5f4daa4670a366047aa65f0bafdfbdb1, type: 3}
     HasSurfaceData: 1
@@ -380,7 +392,7 @@ MonoBehaviour:
     HasSurfaceData: 1
     GridN: 8
   - Key: Lake Cattails
-    ShapeHash: 3E7085C3
+    ShapeHash: B73FA365
     Atlas: {fileID: 2800000, guid: 93b61a552bac6104a9584ddaf0cb42fc, type: 3}
     Normal: {fileID: 2800000, guid: 78b877c5380bebf4fbf458cab34ea232, type: 3}
     HasSurfaceData: 1
@@ -404,25 +416,25 @@ MonoBehaviour:
     HasSurfaceData: 1
     GridN: 8
   - Key: Taiga Tree B
-    ShapeHash: FE8C8569
+    ShapeHash: 7995C12A
     Atlas: {fileID: 2800000, guid: 078eaf0589cfc104097015eea4e3ebf4, type: 3}
     Normal: {fileID: 2800000, guid: ce12fa319e56af14d9eed4763ed69958, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Snow Tree B
-    ShapeHash: ACB3F978
+    ShapeHash: 45F40075
     Atlas: {fileID: 2800000, guid: 9bedb45ccde392f4e962e51c60a7b2ff, type: 3}
     Normal: {fileID: 2800000, guid: 5e643dfcc953d314fa3b43745a53b70b, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Mountain Tree B
-    ShapeHash: 3824D029
+    ShapeHash: 61E02413
     Atlas: {fileID: 2800000, guid: 2131c53cbe133cc418a5add92849487c, type: 3}
     Normal: {fileID: 2800000, guid: 8f94df7d40a7f0445b033d45b6413782, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Steppe Tree B
-    ShapeHash: 3373A185
+    ShapeHash: 4B9BCFD4
     Atlas: {fileID: 2800000, guid: ca4176e87c047bb42a170251a8e1b24f, type: 3}
     Normal: {fileID: 2800000, guid: ec6f667a59a641a49ba6bbbc3efddf5f, type: 3}
     HasSurfaceData: 1
@@ -475,164 +487,176 @@ MonoBehaviour:
     Normal: {fileID: 2800000, guid: c86fffc296ff87e4e920e228a429f607, type: 3}
     HasSurfaceData: 1
     GridN: 8
+  - Key: Mountain Forage Grass
+    ShapeHash: 433E0B75
+    Atlas: {fileID: 2800000, guid: 63d993e370efa3047876775473f6a10d, type: 3}
+    Normal: {fileID: 2800000, guid: 3ac3f131eb061984baf7d834b470c27e, type: 3}
+    HasSurfaceData: 1
+    GridN: 8
+  - Key: Tundra Forage Grass
+    ShapeHash: 080B3B9B
+    Atlas: {fileID: 2800000, guid: b19f0e42780f7a047aefe0afd441116c, type: 3}
+    Normal: {fileID: 2800000, guid: f1818e2885ccd754ebdc77fc0f63d586, type: 3}
+    HasSurfaceData: 1
+    GridN: 8
+  - Key: Desert Forage Grass
+    ShapeHash: 58F81EF8
+    Atlas: {fileID: 2800000, guid: a28013e07bc25794ba29b31ec5c873d3, type: 3}
+    Normal: {fileID: 2800000, guid: 3ad3e66a731349e418b4ceb358ef4d4e, type: 3}
+    HasSurfaceData: 1
+    GridN: 8
   - Key: Forest Tree v1
-    ShapeHash: E1D9B9FB
+    ShapeHash: F192E8C8
     Atlas: {fileID: 2800000, guid: 8c3c5569dcac2d74cb3dd23351764d97, type: 3}
     Normal: {fileID: 2800000, guid: c170d11c7f059f04797973a94b8ce78b, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Forest Tree v2
-    ShapeHash: F14F5A58
+    ShapeHash: 498FA99A
     Atlas: {fileID: 2800000, guid: a25627461a0e24647a1119097a036ceb, type: 3}
     Normal: {fileID: 2800000, guid: 3de7d67b4c05ed745822cd60749dcc81, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Meadow Tree v1
-    ShapeHash: 10E165C4
+    ShapeHash: 0C5C22E6
     Atlas: {fileID: 2800000, guid: 9949e323b308a9940a9fa7585a173754, type: 3}
     Normal: {fileID: 2800000, guid: 88979d273d2dc76479252cd26d9ad043, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Meadow Tree v2
-    ShapeHash: 4479466B
+    ShapeHash: 87EF8605
     Atlas: {fileID: 2800000, guid: 5b6eb823e96581b42a29f5318e9ed15e, type: 3}
     Normal: {fileID: 2800000, guid: 4eb75f120a74fcd43bb9adeb70c8f8d5, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Birch Tree v1
-    ShapeHash: CDF2CE3F
+    ShapeHash: 345EB2BD
     Atlas: {fileID: 2800000, guid: 50c44d4d79b374d42bfaa18d45157971, type: 3}
     Normal: {fileID: 2800000, guid: b0406727858d7674a874faace78e590f, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Birch Tree v2
-    ShapeHash: E3733E71
+    ShapeHash: CBDB5B5A
     Atlas: {fileID: 2800000, guid: 09ca129fc04346b4197f391fbd2ebf54, type: 3}
     Normal: {fileID: 2800000, guid: bbd806bb5ca5dea449aeeb6c7eb45197, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Palm Tree v1
-    ShapeHash: F26FAB8D
+    ShapeHash: C7BEDD5D
     Atlas: {fileID: 2800000, guid: d66699e777f8d4b4bad143b2ca30f830, type: 3}
     Normal: {fileID: 2800000, guid: badb701d6e14a1e4dacda6695884866d, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Palm Tree v2
-    ShapeHash: 56757C49
+    ShapeHash: BD0DE17B
     Atlas: {fileID: 2800000, guid: 1bc502001d50daa4fa05322daee1d8d0, type: 3}
     Normal: {fileID: 2800000, guid: 314de482181635747ba859ee9d5d75e0, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Swamp Tree v1
-    ShapeHash: C19F9A37
+    ShapeHash: 19DA176A
     Atlas: {fileID: 2800000, guid: 9a1e609b18590d64b9f00d0df60bf06e, type: 3}
     Normal: {fileID: 2800000, guid: d1da2dc97acf34348a5c3d5fb1fcab79, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Swamp Tree v2
-    ShapeHash: F4567A9B
+    ShapeHash: AB4AD42F
     Atlas: {fileID: 2800000, guid: 47b3ab8d7c3ae184d866154be590c452, type: 3}
     Normal: {fileID: 2800000, guid: f02aac99081117b4f8c7519e35ae2bf0, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Beach Palm v1
-    ShapeHash: 90475721
+    ShapeHash: 11965312
     Atlas: {fileID: 2800000, guid: 41830bbfb2afc3246baa5928b7d446d3, type: 3}
     Normal: {fileID: 2800000, guid: 492a921d82a9b894c96059914cb3c31a, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: Beach Palm v2
-    ShapeHash: A7926B0B
-    Atlas: {fileID: 2800000, guid: 23753ec8a14fa81439f6f2e7d52cbf97, type: 3}
-    Normal: {fileID: 2800000, guid: 4704a857b1bf03d408f5d8c2d120336f, type: 3}
-    HasSurfaceData: 1
-    GridN: 8
   - Key: Desert Dead Tree v1
-    ShapeHash: D0B4056A
+    ShapeHash: 2FE1D005
     Atlas: {fileID: 2800000, guid: 10e610711e380174697f6b1da00aa031, type: 3}
     Normal: {fileID: 2800000, guid: 9bbac01a88cafbc4584eded405628eca, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Desert Dead Tree v2
-    ShapeHash: E170BA90
+    ShapeHash: 023BC41A
     Atlas: {fileID: 2800000, guid: 6da9c0c160b5fbe42a4239a14a63ae2d, type: 3}
     Normal: {fileID: 2800000, guid: 841438c629cf596418082f083069a0df, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Savanna Tree v1
-    ShapeHash: EF579565
+    ShapeHash: 28AEE032
     Atlas: {fileID: 2800000, guid: 2cba1d40c70a54643a50c04a2617894b, type: 3}
     Normal: {fileID: 2800000, guid: 7682f2e6c9b5c744197ed1e250fef25e, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Savanna Tree v2
-    ShapeHash: FD1488E1
+    ShapeHash: 6C4B9FB7
     Atlas: {fileID: 2800000, guid: c59a3adad42dc6849a169914539ea7ad, type: 3}
     Normal: {fileID: 2800000, guid: 390ae3de6dc074f438b28184528376a2, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Scrub Dead Tree v1
-    ShapeHash: A459C8E5
+    ShapeHash: 934F0B74
     Atlas: {fileID: 2800000, guid: c50c6edaa5e199b4daa2f2f18b34d632, type: 3}
     Normal: {fileID: 2800000, guid: 9c34fe8ff58276e4cb4eefba328fca33, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Scrub Dead Tree v2
-    ShapeHash: AEDDCE65
+    ShapeHash: 8098ECF0
     Atlas: {fileID: 2800000, guid: 3aafb0d2f28ece3419ec7804daa73ae1, type: 3}
     Normal: {fileID: 2800000, guid: fd46affd8dc3b4c448bfc6fa5e7c5d8f, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Steppe Pine v1
-    ShapeHash: 9568CDBD
+    ShapeHash: 7DC93873
     Atlas: {fileID: 2800000, guid: 7f25390a02d44e04e94dc2bc5abc4a10, type: 3}
     Normal: {fileID: 2800000, guid: b658a386757439b4aa48ae061f0e2668, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Steppe Pine v2
-    ShapeHash: AB747424
+    ShapeHash: 4B99676E
     Atlas: {fileID: 2800000, guid: 9c1a96a962003e840a5ff3a940ec2f95, type: 3}
     Normal: {fileID: 2800000, guid: 79eb3c7c271ec6844bc0bf7f72ea4ae2, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Taiga Pine v1
-    ShapeHash: F7C667CF
+    ShapeHash: 9DF61FF9
     Atlas: {fileID: 2800000, guid: 5fdaa48b1b95e5d448d9dea9b874ce23, type: 3}
     Normal: {fileID: 2800000, guid: 733bf78295ec70345b7e1edfabf7d60e, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Taiga Pine v2
-    ShapeHash: 86DD7A03
+    ShapeHash: 304451FA
     Atlas: {fileID: 2800000, guid: 17e816fd62aeed64ca10a101f0c4f9ca, type: 3}
     Normal: {fileID: 2800000, guid: da7472e2409f87a42a8147324c5c368a, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Tundra Dead Tree v1
-    ShapeHash: 64D1F3B1
+    ShapeHash: E4BA4D11
     Atlas: {fileID: 2800000, guid: 2135ad0aaad402b40965d9f595483f7e, type: 3}
     Normal: {fileID: 2800000, guid: 8b4d7e2226f81b840bc01cc9d6d896b4, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Tundra Dead Tree v2
-    ShapeHash: CF6311FD
+    ShapeHash: C1002AFB
     Atlas: {fileID: 2800000, guid: 2e916c22a22d34e4e8c4cb5516148319, type: 3}
     Normal: {fileID: 2800000, guid: 6ae18e4815bc311458555cc6032d29ae, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Snow Pine v1
-    ShapeHash: 576F6B40
+    ShapeHash: C32EE458
     Atlas: {fileID: 2800000, guid: 40fafed7597262c4f92ceaa448b60998, type: 3}
     Normal: {fileID: 2800000, guid: e5abc7e0a03d13c42a994a1de270a074, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Snow Pine v2
-    ShapeHash: 7E3BD61C
+    ShapeHash: 498B9CB4
     Atlas: {fileID: 2800000, guid: 29c142fa8c74ce44ea5f862b20199d6a, type: 3}
     Normal: {fileID: 2800000, guid: 9a90c340a0d7b084194e0600d4258f42, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: IceBog Dead Tree v1
-    ShapeHash: F93EE20C
+    ShapeHash: 190FED5E
     Atlas: {fileID: 2800000, guid: 81e101d570d3eb34fbcfe12112fe797d, type: 3}
     Normal: {fileID: 2800000, guid: 3fb6096ece037ed4c92953647704c4b0, type: 3}
     HasSurfaceData: 1
@@ -644,49 +668,55 @@ MonoBehaviour:
     HasSurfaceData: 1
     GridN: 8
   - Key: Mountain Pine v1
-    ShapeHash: 4494CB9A
+    ShapeHash: D275809B
     Atlas: {fileID: 2800000, guid: 7958e8d191787ec4789cba4db06631db, type: 3}
     Normal: {fileID: 2800000, guid: 197a92c87a66f39469a544cddac1d56b, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Mountain Pine v2
-    ShapeHash: 12E67EC9
+    ShapeHash: A5ABCCBB
     Atlas: {fileID: 2800000, guid: c6bbdceffc608b0448cf121b0e8e20b7, type: 3}
     Normal: {fileID: 2800000, guid: fa927603b05039a4ca1c67928eb8e549, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Golden Forest Tree v1
-    ShapeHash: B02EABA6
+    ShapeHash: 28B8B343
     Atlas: {fileID: 2800000, guid: 4f71e4e04ab9cfe43a4bf002f64a3ba1, type: 3}
     Normal: {fileID: 2800000, guid: 1635dcc43a327cf42bea4d3ed6bd3c37, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Golden Forest Tree v2
-    ShapeHash: 5A7FB789
+    ShapeHash: 0BCA90B8
     Atlas: {fileID: 2800000, guid: c879fe66c8135814a815524ab28f9697, type: 3}
     Normal: {fileID: 2800000, guid: 380315d329f648243835c6f4e596d509, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Autumn Forest Tree v1
-    ShapeHash: AFA6F92B
+    ShapeHash: B709E222
     Atlas: {fileID: 2800000, guid: 8e9399b70aff0bf4ea84ef23c7a49ebd, type: 3}
     Normal: {fileID: 2800000, guid: 23380304d965e044f992a5ec129b1a72, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Autumn Forest Tree v2
-    ShapeHash: 1D602B1F
+    ShapeHash: D35086BD
     Atlas: {fileID: 2800000, guid: 4ebe4dc722bf11c40ab924c7656e15fa, type: 3}
     Normal: {fileID: 2800000, guid: 287a412bc24b3c44a9cdea2f1995d92d, type: 3}
     HasSurfaceData: 1
     GridN: 8
+  - Key: Golden Meadow Tree v1
+    ShapeHash: 2A0C934F
+    Atlas: {fileID: 2800000, guid: cb4a8ca1500fa1445823e2daca490240, type: 3}
+    Normal: {fileID: 2800000, guid: c4b8acf686d87ef469bba2bfbb24babd, type: 3}
+    HasSurfaceData: 1
+    GridN: 8
   - Key: Golden Meadow Tree v2
-    ShapeHash: F7634FAF
+    ShapeHash: 932398DB
     Atlas: {fileID: 2800000, guid: eaec9306cb3e3d4458f5b95e333022c1, type: 3}
     Normal: {fileID: 2800000, guid: 4408667ac230d1b4c9bcdf2fe911554f, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Autumn Meadow Tree v1
-    ShapeHash: CD316E02
+    ShapeHash: 796172EC
     Atlas: {fileID: 2800000, guid: d4f0a5faaa66f3b4b896313fc06824b8, type: 3}
     Normal: {fileID: 2800000, guid: cdd60a50861d5f040bd0d02dff467d38, type: 3}
     HasSurfaceData: 1
@@ -698,55 +728,55 @@ MonoBehaviour:
     HasSurfaceData: 1
     GridN: 8
   - Key: Taiga Tree B v1
-    ShapeHash: 1691D3F8
+    ShapeHash: 852B4EFA
     Atlas: {fileID: 2800000, guid: 995f4dcbd85f0e240baa11bb78ec1441, type: 3}
     Normal: {fileID: 2800000, guid: a09995dfc1e34c944a7d99bfc7f12ebb, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Taiga Tree B v2
-    ShapeHash: 9AF1C70E
+    ShapeHash: EDEDDEB4
     Atlas: {fileID: 2800000, guid: dc5dabb58099edc478b3ad7d01d9bd10, type: 3}
     Normal: {fileID: 2800000, guid: e193da20e2e328349b0cdece46bd55ae, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Snow Tree B v1
-    ShapeHash: BD6E8D8A
+    ShapeHash: 62079B3A
     Atlas: {fileID: 2800000, guid: 1d493dcc78f6fb747b0a99f32de17d1b, type: 3}
     Normal: {fileID: 2800000, guid: b5bf3add235bacb419ffce98a1f33827, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Snow Tree B v2
-    ShapeHash: E873A9EA
+    ShapeHash: 4E2E95FA
     Atlas: {fileID: 2800000, guid: 8f9f88c7472dd1c44891cd91c3113274, type: 3}
     Normal: {fileID: 2800000, guid: cf6268585af91e04eae7ada6c6be68f0, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Mountain Tree B v1
-    ShapeHash: D49ACEFE
+    ShapeHash: E2355744
     Atlas: {fileID: 2800000, guid: 05379282db205a84583d92c28d812656, type: 3}
     Normal: {fileID: 2800000, guid: d4482ddd19885784d82c290ccd3a0b9b, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Mountain Tree B v2
-    ShapeHash: A2590DAD
+    ShapeHash: FF052BB3
     Atlas: {fileID: 2800000, guid: e36624f705d9c4f4ca9902d8971812d7, type: 3}
     Normal: {fileID: 2800000, guid: 85a5d68a64e733f40a18c8ba8ad5c3dc, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Steppe Tree B v1
-    ShapeHash: B7863B3B
+    ShapeHash: 5CB55A15
     Atlas: {fileID: 2800000, guid: a90ace7d30cf0144cbb2c745dc9539fc, type: 3}
     Normal: {fileID: 2800000, guid: 23878c088842e5c4f9339372faae08bb, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Steppe Tree B v2
-    ShapeHash: 01B4615A
+    ShapeHash: CD29ECE2
     Atlas: {fileID: 2800000, guid: ef2a3ad5c1f696f4c91836f8a5765375, type: 3}
     Normal: {fileID: 2800000, guid: a1fd7e1e347f06b4bae822125bf2fbe5, type: 3}
     HasSurfaceData: 1
     GridN: 8
   - Key: Tropical Tree B v1
-    ShapeHash: B6918D2B
+    ShapeHash: A257B602
     Atlas: {fileID: 2800000, guid: 51e18ce7a83787749b40235cee4daed6, type: 3}
     Normal: {fileID: 2800000, guid: 3bd629e5d8d371b40947b0e7063d6fd0, type: 3}
     HasSurfaceData: 1
@@ -758,7 +788,7 @@ MonoBehaviour:
     HasSurfaceData: 1
     GridN: 8
   - Key: Swamp Tree B v1
-    ShapeHash: 3D3C558D
+    ShapeHash: D9C8E11D
     Atlas: {fileID: 2800000, guid: bfda22498f51a1f4087bab210743bee2, type: 3}
     Normal: {fileID: 2800000, guid: b58748d1073f0c845a829afd6df8df03, type: 3}
     HasSurfaceData: 1

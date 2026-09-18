@@ -1,0 +1,129 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1c31c5bdb5b4154a754cff5a36cad80, type: 3}
+  m_Name: Authored Jump Performances
+  m_EditorClassIdentifier: Magikos.Game::ActorAnimationPerformanceLibrary
+  Entries:
+  - Id: humanoid.jump.basic
+    Action: Jump
+    RigFamily: Humanoid
+    Condition: 
+    LocomotionExitPhase: -1
+    MinProficiency: 0
+    MaxProficiency: 1
+    Phases:
+    - Name: Ascent
+      Clip: {fileID: 7400000, guid: 7fb66dfce8046224aa0276336a669513, type: 2}
+      StartNormalized: 0.22222222
+      EndNormalized: 0.42592594
+      Loop: 0
+      BlendSeconds: 0.16
+    - Name: Apex
+      Clip: {fileID: 7400000, guid: 7fb66dfce8046224aa0276336a669513, type: 2}
+      StartNormalized: 0.42592594
+      EndNormalized: 0.46296296
+      Loop: 0
+      BlendSeconds: 0.16
+    - Name: Descent
+      Clip: {fileID: 7400000, guid: 7fb66dfce8046224aa0276336a669513, type: 2}
+      StartNormalized: 0.46296296
+      EndNormalized: 0.6666667
+      Loop: 0
+      BlendSeconds: 0.16
+    - Name: Landing
+      Clip: {fileID: 7400000, guid: 7fb66dfce8046224aa0276336a669513, type: 2}
+      StartNormalized: 0.6666667
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.16
+  - Id: humanoid.jump.running
+    Action: Jump
+    RigFamily: Humanoid
+    Condition: Running
+    LocomotionExitPhase: 0.058333334
+    MinProficiency: 0
+    MaxProficiency: 1
+    Phases:
+    - Name: Ascent
+      Clip: {fileID: 7400000, guid: 5f29c3d2e4ada144785b33bd4947dd29, type: 2}
+      StartNormalized: 0.15999998
+      EndNormalized: 0.2668
+      Loop: 0
+      BlendSeconds: 0.12
+    - Name: Apex
+      Clip: {fileID: 7400000, guid: 5f29c3d2e4ada144785b33bd4947dd29, type: 2}
+      StartNormalized: 0.2668
+      EndNormalized: 0.27999997
+      Loop: 0
+      BlendSeconds: 0.12
+    - Name: Descent
+      Clip: {fileID: 7400000, guid: 5f29c3d2e4ada144785b33bd4947dd29, type: 2}
+      StartNormalized: 0.27999997
+      EndNormalized: 0.38679996
+      Loop: 0
+      BlendSeconds: 0.12
+    - Name: Landing
+      Clip: {fileID: 7400000, guid: 2c6d9eeefaf0c1f4a8ca87a0fc864055, type: 2}
+      StartNormalized: 0.725
+      EndNormalized: 0.85
+      Loop: 0
+      BlendSeconds: 0.1
+    - Name: LandingPrepare
+      Clip: {fileID: 7400000, guid: 2c6d9eeefaf0c1f4a8ca87a0fc864055, type: 2}
+      StartNormalized: 0.675
+      EndNormalized: 0.725
+      Loop: 0
+      BlendSeconds: 0.1
+    - Name: LandingStop
+      Clip: {fileID: 7400000, guid: 7fb66dfce8046224aa0276336a669513, type: 2}
+      StartNormalized: 0.6666667
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.16
+  - Id: humanoid.jump.stationary
+    Action: Jump
+    RigFamily: Humanoid
+    Condition: Stationary
+    LocomotionExitPhase: -1
+    MinProficiency: 0
+    MaxProficiency: 1
+    Phases:
+    - Name: Preparation
+      Clip: {fileID: 7400000, guid: cb33f62b9de4eef489ede1db075caa28, type: 2}
+      StartNormalized: 0
+      EndNormalized: 0.28
+      Loop: 0
+      BlendSeconds: 0.1
+    - Name: Ascent
+      Clip: {fileID: 7400000, guid: cb33f62b9de4eef489ede1db075caa28, type: 2}
+      StartNormalized: 0.28
+      EndNormalized: 0.38
+      Loop: 0
+      BlendSeconds: 0.1
+    - Name: Apex
+      Clip: {fileID: 7400000, guid: cb33f62b9de4eef489ede1db075caa28, type: 2}
+      StartNormalized: 0.38
+      EndNormalized: 0.42
+      Loop: 0
+      BlendSeconds: 0.1
+    - Name: Descent
+      Clip: {fileID: 7400000, guid: cb33f62b9de4eef489ede1db075caa28, type: 2}
+      StartNormalized: 0.42
+      EndNormalized: 0.54
+      Loop: 0
+      BlendSeconds: 0.1
+    - Name: Landing
+      Clip: {fileID: 7400000, guid: cb33f62b9de4eef489ede1db075caa28, type: 2}
+      StartNormalized: 0.54
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.1

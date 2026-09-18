@@ -14,9 +14,13 @@
 #pragma kernel CSTestPatternWeather
 #include "Includes/WeatherThreshold.hlsl"
 
+Texture2DArray<float4> _FlowRead;
+RWTexture2DArray<float4> _FlowWrite;
 Texture2DArray<float4> _WeatherRead;
 RWTexture2DArray<float4> _WeatherWrite;
 Texture2DArray<float4> _DynamicsRead;
+Texture2DArray<float2> _ClimateRead;
+int _HasClimate;
 RWTexture2DArray<float4> _DynamicsWrite;
 
 int _Resolution;
@@ -142,8 +146,10 @@ void CSEvolveWeather(uint3 id : SV_DispatchThreadID)
     float3 windAxis = cross(direction, _WindDirection);
     float windAxisLen = length(windAxis);
     float3 upwind = windAxisLen > 1e-5
-        ? RotateAroundAxis(direction, windAxis / windAxisLen, -_StepAngle)
+        ? RotateAroundAxis(direction, windAxis / windAxisLen, -_StepAngle * windAxisLen)
         : direction;
+    float3 flow = SampleDirection(_FlowRead, upwind).xyz;
+    _FlowWrite[pixel] = float4(dot(flow,flow) > 0.00001 ? normalize(flow) : direction, 1);
     float4 advectedWeather = SampleDirection(_WeatherRead, upwind);
     float4 advectedDynamics = SampleDirection(_DynamicsRead, upwind);
 
@@ -152,12 +158,14 @@ void CSEvolveWeather(uint3 id : SV_DispatchThreadID)
     float storm = saturate(advectedWeather.g);
     float humidity = saturate(advectedDynamics.r);
     float precipitationWater = saturate(advectedDynamics.g);
-    float moistureSupply = saturate(localDynamics.a);
+    float moistureSupply = _HasClimate != 0
+        ? saturate(_ClimateRead.SampleLevel(sampler_linear_clamp, float3(uv, id.z), 0).g)
+        : saturate(localDynamics.a);
 
-    // The stationary channel is a front potential map, not raw humidity. Evolving
-    // toward it keeps the authored cloud structure stable while still allowing
-    // cells to condense and dry over time.
-    float targetCondensation = saturate(source);
+    // Use the same moisture cost for cloud support and for growth consumption.
+    // A seeded front cannot sustain cloud after its available humidity dries out.
+    const float condensationHumidityCost = 0.18;
+    float targetCondensation = min(saturate(source), humidity / condensationHumidityCost);
     float condensationDeltaToTarget = targetCondensation - condensation;
     float growthRate = _MoistureSourceStrength * lerp(0.45, 1.0, targetCondensation);
     float dryingRate = _DryAirEvaporationRate * lerp(1.2, 0.55, targetCondensation);
@@ -184,7 +192,7 @@ void CSEvolveWeather(uint3 id : SV_DispatchThreadID)
     nextPrecipitationWater = saturate(nextPrecipitationWater - rainOut);
 
     float humidityRecovered = MoveTowards(humidity, moistureSupply, _HumidityRecoveryRate * _DeltaTime);
-    float humidityConsumed = max(nextCondensation - condensation, 0.0) * 0.18 + rainOut * 0.35;
+    float humidityConsumed = max(nextCondensation - condensation, 0.0) * condensationHumidityCost + rainOut * 0.35;
     float nextHumidity = saturate(humidityRecovered - humidityConsumed);
 
     float condensationDelta = nextCondensation - condensation;
@@ -355,4 +363,46 @@ void CSInitWeather(uint3 id : SV_DispatchThreadID)
     int3 pixel = int3(id.x, id.y, id.z);
     _WeatherWrite[pixel]  = float4(cellCondensation, cellStorm, source, 0.5);
     _DynamicsWrite[pixel] = float4(humidAir, initialPrecipitation, initialRainRate, humidAir);
+}
+
+#pragma kernel CSInitSurface
+#pragma kernel CSSurfaceWeather
+#include "Includes/WeatherPhase.hlsl"
+RWTexture2DArray<float4> _SurfaceWeather;
+float4 _ClimateTemperatureRangeCelsius;
+float4 _SurfacePrecipitationParams;
+float _SurfaceWindSpeed;
+
+[numthreads(8,8,1)]
+void CSInitSurface(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x < (uint)_Resolution && id.y < (uint)_Resolution && id.z < 6) _SurfaceWeather[id] = 0;
+}
+
+[numthreads(8,8,1)]
+void CSSurfaceWeather(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_Resolution || id.y >= (uint)_Resolution || id.z >= 6) return;
+    float2 uv = float2(EdgeSnappedUv(id.x, _Resolution), EdgeSnappedUv(id.y, _Resolution));
+    float2 climate = _HasClimate != 0 ? _ClimateRead.SampleLevel(sampler_linear_clamp, float3(uv,id.z), 0) : float2(0.5,0.5);
+    float temperature = lerp(_ClimateTemperatureRangeCelsius.x, _ClimateTemperatureRangeCelsius.y, climate.x);
+    float phase = WeatherSnowFraction(temperature);
+    float4 weather = _WeatherRead.Load(int4(id,0));
+    float rain = _DynamicsRead.Load(int4(id,0)).b * WeatherThreshold(_SurfacePrecipitationParams.y,
+        min(1.0, _SurfacePrecipitationParams.y + _SurfacePrecipitationParams.z), weather.g);
+    float4 state = _SurfaceWeather[id];
+    float melt = min(state.g, max(temperature,0) * 0.0002 * _DeltaTime);
+    float drying = (0.0004 + max(temperature,0) * 0.00006 + _SurfaceWindSpeed * 0.00008) * (1 - climate.y * 0.8);
+    state.r = saturate(state.r + (rain * (1 - phase) * 0.025 - drying) * _DeltaTime + melt);
+    state.g = saturate(state.g + rain * phase * 0.004 * _DeltaTime - melt);
+    _SurfaceWeather[id] = state;
+}
+
+#pragma kernel CSInitFlow
+[numthreads(8,8,1)]
+void CSInitFlow(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_Resolution || id.y >= (uint)_Resolution || id.z >= 6) return;
+    float2 uv = float2(EdgeSnappedUv(id.x,_Resolution), EdgeSnappedUv(id.y,_Resolution));
+    _FlowWrite[id] = float4(CubeFaceToUnitSphere(id.z,uv),1);
 }

@@ -87,7 +87,9 @@ void EvaluateSwellGating(float depth01, float shore01, float body01,
 float EvaluateSurfaceWave(float2 positionTS, float2 directionTS, float wavelength, float speed, float amplitude, float phase, out float2 gradientTS)
 {
     float k = 6.28318530718 / max(wavelength, 0.001);
-    float theta = dot(positionTS, directionTS) * k + _GameTime * speed + phase;
+    // Wind points toward travel. Keep crossing waves downwind too, including negative-X wave vectors.
+    float travelSign = directionTS.x < 0.0 ? -1.0 : 1.0;
+    float theta = dot(positionTS, directionTS) * k - _GameTime * abs(speed) * travelSign + phase;
     float waveSin = sin(theta);
     float waveCos = cos(theta);
     gradientTS = directionTS * (waveCos * amplitude * k);
@@ -220,9 +222,7 @@ struct WaterRippleField
 // ripple focuses about 14 m down - which is why caustics are sharp on a shallow bed, and why underwater
 // shafts band off these and not off the swell.
 //
-// scale and amplitude are PARAMETERS because Ocean.shader authors them as material properties. An
-// underwater consumer needs them as globals; promoting them is a separate change with a domain reload in
-// it, and is deliberately not folded in here.
+// EvaluateRippleParameters supplies the same scale and amplitude to every consumer.
 WaterRippleField ComputeWaterRipple(float2 positionTS, float2 windTS, float2 crossTS,
     float scale, float amplitude, float timeScale, float waveEnergy, float weatherEnergy, float chaos01)
 {
@@ -239,7 +239,7 @@ WaterRippleField ComputeWaterRipple(float2 positionTS, float2 windTS, float2 cro
 
     float2 detailDrift = windTS * (field.waveTime * scale * lerp(0.004, 0.018, weatherEnergy))
         + crossTS * (sin(field.waveTime * 0.31) * scale * lerp(0.004, 0.016, chaos01));
-    field.detailPos = positionTS + domainWarp * lerp(1.35, 2.85, chaos01) + detailDrift;
+    field.detailPos = positionTS + domainWarp * lerp(1.35, 2.85, chaos01) - detailDrift;
     float2 crossDrift = crossTS * (field.waveTime * scale * lerp(0.006, 0.028, weatherEnergy))
         + windTS * (sin(field.waveTime * 0.37 + 1.7) * scale * lerp(0.005, 0.020, chaos01));
     field.detailPosCross = positionTS - domainWarp * lerp(0.85, 2.25, chaos01) + crossDrift;
@@ -274,6 +274,20 @@ WaterRippleField ComputeWaterRipple(float2 positionTS, float2 windTS, float2 cro
     return field;
 }
 
+// Shared capillary detail for both sides of the interface. Fade features smaller than a pixel.
+float3 WaterMicroSlope(float3 localPosition, float3 planetNormal, float detailScale, float timeScale,
+    float distanceToSurface)
+{
+    float3 axisA, axisB;
+    BuildPlanetWaveAxes(axisA, axisB);
+    float microScale = max(detailScale * 0.12, 0.08);
+    float3 p = localPosition / microScale - axisA * (_GameTime * timeScale * 0.26);
+    float3 slope = float3(ValueNoise3D(p), ValueNoise3D(p + 19.1), ValueNoise3D(p + 43.7)) * 2.0 - 1.0;
+    slope -= planetNormal * dot(slope, planetNormal);
+    float footprint = 2.0 * distanceToSurface / max(abs(UNITY_MATRIX_P._m11) * _ScreenParams.y, 1.0);
+    return slope * (1.0 - smoothstep(microScale, microScale * 3.0, footprint));
+}
+
 // The whole vertex-stage displacement, including the freeze lock. Every shader that rasterises the water
 // mesh calls exactly this, so the surfaces cannot drift apart.
 float3 ComputeWaterVertexDisplacement(float3 positionWS, float3 planetNormalWS, float4 waterData,
@@ -286,6 +300,25 @@ float3 ComputeWaterVertexDisplacement(float3 positionWS, float3 planetNormalWS, 
     swellHeight *= liquidContribution;
     swellNormalWS = SafeNormalize(lerp(planetNormalWS, swellNormalWS, liquidContribution), planetNormalWS);
     return positionWS + planetNormalWS * swellHeight; // radial displacement -> real 3D waves on the mesh
+}
+
+// Match the visible surface and volume prepass, including the river-mouth swell ramp.
+float3 ComputeWaterMeshDisplacement(float3 positionWS, float3 up, float4 color, float2 blend,
+    out float4 waterData, out float3 normalWS, out float height)
+{
+    waterData = saturate(color);
+    float river = step(1.5, color.a);
+    float swellWeight = river > .5 ? smoothstep(0, .35, blend.x) : 1.0;
+    if (swellWeight == 0.0)
+    {
+        normalWS = up;
+        height = 0.0;
+        return positionWS;
+    }
+    float3 displaced = ComputeWaterVertexDisplacement(positionWS, up, waterData, normalWS, height);
+    height *= swellWeight;
+    normalWS = SafeNormalize(lerp(up, normalWS, swellWeight), up);
+    return lerp(positionWS, displaced, swellWeight);
 }
 
 #endif

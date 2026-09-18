@@ -1,6 +1,6 @@
 ---
 name: pp-change-control
-description: Use before risky or gated edits in this repo - classifying refactor/behavior/visual/experiment/audit work, deciding whether a fix is approved, tuning any visual constant or shader value, responding to audit findings, reverting an experiment, committing, staging, or touching another agent's dirty worktree changes. Keywords - findings-only, fix/defer/wontfix, capture-diff, caustics don't-touch, hand-tuned values, revert discipline. Not for how to capture evidence itself - see pp-validation-and-evidence.
+description: Use before risky or gated edits, change classification, visual tuning, audit fixes, experiment rollback, commits, or edits in a shared dirty worktree. Also use for Unity serialized field changes, asset moves, GUID/reference changes, and data migrations. Evidence capture belongs in pp-validation-and-evidence.
 ---
 
 # pp-change-control (discovery stub)

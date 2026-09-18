@@ -1,116 +1,54 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using UnityEngine;
 
-/// <summary>
-/// Produces a ranked list of <see cref="Suggestion"/> entries given the current input buffer.
-///
-/// Decision logic:
-/// <list type="bullet">
-///   <item>0 tokens or empty input → no suggestions.</item>
-///   <item>1 token, no trailing space → suggest command aliases containing that prefix.</item>
-///   <item>1 token + trailing space, or 2+ tokens → suggest parameter values for the
-///   current slot using the registered <see cref="IConsoleCompletionProvider"/>.</item>
-/// </list>
-///
-/// Enum-typed parameters receive an <see cref="EnumCompletionProvider"/> automatically.
-/// Custom providers are specified with <see cref="CompletionSourceAttribute"/> on the
-/// parameter and are instantiated once then cached.
-/// </summary>
 public sealed class IntellisenseEngine
 {
     // Pagination lives in the renderer / controller — engine returns the full ranked list.
-    // Caps are wide so even large enums or command registries fit without truncation in practice.
-    const int MaxSuggestions = 200;
+
     static readonly StringComparison Cmp = StringComparison.OrdinalIgnoreCase;
 
     readonly Dictionary<Type, IConsoleCompletionProvider> _providerCache = new();
-    readonly List<Suggestion> _results = new(MaxSuggestions + 1);
+    readonly List<Suggestion> _results = new();
 
-    /// <summary>
-    /// Recalculate suggestions from the current input buffer.
-    /// The cursor is assumed to be at the end of <paramref name="inputText"/>.
-    /// Returns a stable internal list — do not hold a reference across calls.
-    /// </summary>
-    public IReadOnlyList<Suggestion> Update(string inputText)
+    public IReadOnlyList<Suggestion> Update(string inputText, int cursor = -1)
     {
         _results.Clear();
-
-        if (string.IsNullOrEmpty(inputText))
-            return _results;
-
-        var tokens = CommandParser.Tokenize(inputText);
+        inputText ??= "";
+        cursor = cursor < 0 ? inputText.Length : Math.Clamp(cursor, 0, inputText.Length);
+        var tokens = CommandParser.TokenizeSpans(inputText);
         if (tokens.Count == 0)
-            return _results;
-
-        bool trailingSpace = char.IsWhiteSpace(inputText[inputText.Length - 1]);
-        bool inParamMode = tokens.Count > 1 || trailingSpace;
-
-        if (!inParamMode)
         {
-            SuggestAliases(tokens[0]);
+            foreach (var family in CommandCatalog.Families)
+            {
+                string completion = family.Key + ".";
+                _results.Add(new Suggestion(family.First(), $"{completion} ({family.Count()} commands)",
+                    completion, 0, 0, isGroup: true));
+            }
             return _results;
         }
-
-        // First token must resolve to a known command; fall back to alias suggestions if not.
-        if (!ConsoleRegistry.TryGet(tokens[0], out CommandData cmd))
+        if (tokens.Count == 0 || cursor <= tokens[0].End)
         {
-            SuggestAliases(tokens[0]);
+            int start = tokens.Count == 0 ? cursor : tokens[0].Start;
+            int end = tokens.Count == 0 ? cursor : tokens[0].End;
+            SuggestAliases(inputText.Substring(start, Math.Max(0, cursor - start)), inputText, start, end);
             return _results;
         }
-
-        // Determine which parameter slot the cursor is in and what partial text it carries.
-        // tokens[0] = alias; tokens[1..] = already-typed param values (last may be partial).
-        string partial;
-        int paramIndex;
-
-        if (trailingSpace)
-        {
-            // Cursor is after a space: starting a fresh parameter slot.
-            paramIndex = tokens.Count - 1;   // number of fully-completed param tokens
-            partial = "";
-        }
-        else
-        {
-            // Last token is the partial value being completed.
-            paramIndex = tokens.Count - 2;   // 0-indexed slot
-            partial = tokens[tokens.Count - 1];
-        }
-
-        if (paramIndex < 0 || paramIndex >= cmd.Parameters.Length)
+        if (!ConsoleRegistry.TryGet(tokens[0].Value, out var cmd) || !ConsoleCommandPolicy.CanExecute(cmd))
             return _results;
-
-        ParameterData param = cmd.Parameters[paramIndex];
-        IConsoleCompletionProvider provider = GetProvider(param);
-
-        if (provider == null)
+        if (!CommandParser.TryGetArgument(inputText, cursor, cmd, out int index, out int argStart, out int argEnd, out string partial))
             return _results;
-
-        // Build the input prefix that precedes the partial token.
-        int prefixCount = trailingSpace ? tokens.Count : tokens.Count - 1;
-        var sb = new StringBuilder(tokens[0]);
-        for (int i = 1; i < prefixCount; i++) { sb.Append(' '); sb.Append(tokens[i]); }
-        string prefix = sb.ToString();
-
+        var parameter = cmd.Parameters[index];
+        var provider = GetProvider(parameter);
+        if (provider == null) return _results;
         foreach (string completion in provider.GetCompletions(partial))
         {
-            if (_results.Count >= MaxSuggestions) break;
-
-            int matchStart = string.IsNullOrEmpty(partial)
-                ? 0
-                : completion.IndexOf(partial, Cmp);
-
-            _results.Add(new Suggestion(
-                cmd,
-                completion,
-                prefix + " " + FormatCompletionValue(completion, param),
-                matchStart < 0 ? 0 : matchStart,
-                partial.Length,
-                param));
+            string value = FormatCompletionValue(completion, parameter);
+            int match = completion.IndexOf(partial, Cmp);
+            _results.Add(new Suggestion(cmd, completion,
+                inputText.Substring(0, argStart) + value + inputText.Substring(argEnd),
+                Math.Max(0, match), match < 0 ? 0 : partial.Length, parameter, argStart + value.Length));
         }
-
         return _results;
     }
 
@@ -119,7 +57,7 @@ public sealed class IntellisenseEngine
         if (parameter?.Type != typeof(string) || string.IsNullOrEmpty(completion))
             return completion;
 
-        bool needsQuotes = completion.Any(char.IsWhiteSpace);
+        bool needsQuotes = completion.Any(char.IsWhiteSpace) || completion.Contains('"') || completion.Contains('\'');
         if (!needsQuotes)
             return completion;
 
@@ -137,34 +75,16 @@ public sealed class IntellisenseEngine
     // Alias suggestions
     // -------------------------------------------------------------------------
 
-    void SuggestAliases(string partial)
+    void SuggestAliases(string partial, string input, int start, int end)
     {
-        // Rank 0: alias starts with the typed prefix.
-        // Rank 1: alias contains the typed prefix anywhere.
-        // Within each rank, sort alphabetically.
-        var ranked = ConsoleRegistry.Commands.Values
-            .Select(cmd =>
-            {
-                if (cmd.Alias.StartsWith(partial, Cmp))
-                    return (cmd, rank: 0, matchStart: 0);
-                int idx = cmd.Alias.IndexOf(partial, Cmp);
-                if (idx >= 0)
-                    return (cmd, rank: 1, matchStart: idx);
-                return (cmd, rank: -1, matchStart: -1);
-            })
-            .Where(x => x.rank >= 0)
-            .OrderBy(x => x.rank)
-            .ThenBy(x => x.cmd.Alias)
-            .Take(MaxSuggestions);
-
-        foreach (var (cmd, _, matchStart) in ranked)
+        foreach (var entry in CommandCatalog.MatchNames(partial))
         {
-            _results.Add(new Suggestion(
-                cmd,
-                FormatSignatureDisplay(cmd),
-                cmd.Alias,
-                matchStart,
-                partial.Length));
+            int match = entry.alias.IndexOf(partial, Cmp);
+            string display = entry.alias == entry.cmd.Alias ? FormatSignatureDisplay(entry.cmd)
+                : entry.alias + " → " + entry.cmd.Alias;
+            _results.Add(new Suggestion(entry.cmd, display,
+                input.Substring(0, start) + entry.alias + input.Substring(end),
+                Math.Max(0, match), match < 0 ? 0 : partial.Length, null, start + entry.alias.Length));
         }
     }
 

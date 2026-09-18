@@ -125,6 +125,7 @@ public sealed class ChunkSurfaceGenerator
             UvExtent = chunk.UvHalfExtent * 2f,
             PlanetRadius = _shapeGenerator.Settings.PlanetRadius,
             EdgeFanMask = 0,
+            Rivers = _shapeGenerator.RiverData,
             Filters = _filters,
             DiagnosticTerrainCells = _diagnosticTerrainCells,
             DiagnosticTerrain = _shapeGenerator.DiagnosticTerrainData,

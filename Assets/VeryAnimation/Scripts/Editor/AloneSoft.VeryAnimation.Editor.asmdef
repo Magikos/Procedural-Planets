@@ -1,0 +1,45 @@
+{
+    "name": "AloneSoft.VeryAnimation.Editor",
+    "rootNamespace": "",
+    "references": [
+        "AloneSoft.VeryAnimation",
+        "Unity.Timeline",
+        "Unity.Timeline.Editor",
+        "Unity.Animation.Rigging",
+        "Unity.Animation.Rigging.Editor",
+        "Unity.Formats.Fbx.Runtime",
+        "Unity.Formats.Fbx.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.timeline",
+            "expression": "1.7",
+            "define": "VERYANIMATION_TIMELINE"
+        },
+        {
+            "name": "com.unity.animation.rigging",
+            "expression": "1.2",
+            "define": "VERYANIMATION_ANIMATIONRIGGING"
+        },
+        {
+            "name": "com.unity.formats.fbx",
+            "expression": "4.2",
+            "define": "VERYANIMATION_FBX"
+        },
+        {
+            "name": "com.unity.formats.fbx",
+            "expression": "5",
+            "define": "VERYANIMATION_FBX_5"
+        }
+    ],
+    "noEngineReferences": false
+}

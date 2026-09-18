@@ -660,3 +660,16 @@ Retrieved 2026-08-10 from the signed-in Unity Editor by calling `IAssetStoreClie
 ### 15.4 How to refresh this list
 
 Re-run the same call from a signed-in Editor. Or — better — run **Asset Inventory** (§9.2) in the scratch project: it does this plus indexes every file inside every package, with semantic and code search. It has never been run; there is no database anywhere on disk.
+
+### 15.5 Secondary-motion tools: targeted verification, 2026-09-11
+
+This pass checked the extracted scratch files, owned-product TSV, download cache, and existing project animation code. It did not open the scratch Editor or import vendor scripts.
+
+| Candidate | Verified local availability | Relevant finding |
+|---|---|---|
+| Tail Animator 2 | `D:/Unity/Explore Assets/Assets/FImpossible Creations/Plugins - Animating/Tail Animator/TailAnimator2.cs`; cached `FImpossible Creations/ScriptingAnimation/Tail Animator.unitypackage` | Bone-chain spring motion, stretch and angle limits, collisions, and wind support appear in source. Unity compatibility in this project is untested. |
+| Magica Cloth | `D:/Unity/Explore Assets/Assets/MagicaCloth`; cached `Magica Soft/ScriptingPhysics/Magica Cloth.unitypackage` | The extracted source identifies version **1.12.13**, not Magica Cloth 2. No current-project runtime validation occurred. |
+| Cloth Dynamics / Dynamic Bone | Owned-product TSV entries; no matching extracted C# paths or cached packages found in this targeted scan | Ownership does not establish local runtime availability. |
+| Existing `BoneChainSpring` | `Assets/Scripts/Game/Animation/BoneChainSpring.cs` | Already provides length constraints, damping, angle limits, arbitrary gravity, and contact support. Reused for the accessory motion review. |
+
+This corrects the older adoption-map download leads for Tail Animator and Magica Cloth: both are now extracted locally. The project review uses its existing solver rather than adding vendor runtime dependencies.

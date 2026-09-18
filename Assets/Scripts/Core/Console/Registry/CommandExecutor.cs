@@ -52,7 +52,9 @@ public static class CommandExecutor
                 object asyncResult = await ConsoleAwaitableUtility.AwaitResultAsync(
                     result.AwaitableResult,
                     cancellation);
-                result = result.WithOutput(asyncResult?.ToString());
+                result = asyncResult is ConsoleCommandResult outcome
+                    ? outcome.WithContext(commandLine, result.Alias)
+                    : result.WithOutput(asyncResult?.ToString());
             }
             catch (OperationCanceledException)
             {
@@ -66,7 +68,9 @@ public static class CommandExecutor
             }
         }
 
-        if (printOutput)
+        if (!result.Success)
+            PrintFailure(console, result);
+        else if (printOutput)
             PrintOutput(console, result);
 
         return result;
@@ -78,15 +82,10 @@ public static class CommandExecutor
     /// </summary>
     public static ConsoleCommandResult ExecuteImmediate(string commandLine)
     {
-        ConsoleCommandResult result = Invoke(commandLine, CancellationToken.None);
-        if (!result.Success)
-            return result;
-        return result.IsAsync
-            ? result.WithError($"{result.Alias}: async commands are not valid in immediate execution")
-            : result;
+        return Invoke(commandLine, CancellationToken.None, immediate: true);
     }
 
-    static ConsoleCommandResult Invoke(string commandLine, CancellationToken cancellation)
+    static ConsoleCommandResult Invoke(string commandLine, CancellationToken cancellation, bool immediate = false)
     {
         if (string.IsNullOrWhiteSpace(commandLine))
             return ConsoleCommandResult.Failed(commandLine, "", "empty command");
@@ -98,6 +97,11 @@ public static class CommandExecutor
         string alias = tokens[0];
         if (!ConsoleRegistry.TryGet(alias, out CommandData cmd))
             return ConsoleCommandResult.Failed(commandLine, alias, $"unknown command: '{alias}' - try 'help'");
+
+        if (!ConsoleCommandPolicy.CanExecute(cmd))
+            return ConsoleCommandResult.Failed(commandLine, alias, $"{alias}: not available in release ({cmd.ReleasePolicy})");
+        if (immediate && cmd.IsAsync)
+            return ConsoleCommandResult.Failed(commandLine, alias, $"{alias}: async commands are not valid in immediate execution");
 
         var argTokens = tokens.GetRange(1, tokens.Count - 1);
         if (!CommandParser.TryBind(cmd, argTokens, out object[] args, out string bindError))
@@ -167,6 +171,9 @@ public static class CommandExecutor
                 cmd.HasCancellationToken,
                 rawResult);
         }
+
+        if (rawResult is ConsoleCommandResult outcome)
+            return outcome.WithContext(commandLine, alias);
 
         return new ConsoleCommandResult(
             true,

@@ -205,7 +205,7 @@ sealed class GrassNearFieldController : System.IDisposable, IGrassNearFieldStats
         _material.SetFloat(BillboardEndId, _drawDistance);
         _material.SetFloat(CanopyColorStartId, _fullDensityDistance * 0.8f);
         _material.SetFloat(CanopyColorEndId, _drawDistance);
-        // Procedural carved-blade cards for the distant cluster-card LOD. The Synty grass assets
+        // Procedural carved-blade cards for the distant cluster-card LOD. The source grass assets
         // are meshes, not billboard alpha cutouts, so there is no valid grass-tuft texture to map
         // onto the cards; the textured-card path (_GrassCardStrength > 0 in Grass.shader) stays
         // available for a proper grass-billboard alpha if we add one later.

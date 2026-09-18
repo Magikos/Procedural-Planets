@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class ShapeGenerator : ITerrainProvider
 {
+    public RiverField Rivers { get; set; }
+    public RiverFieldData RiverData => Rivers?.Data ?? default;
     ShapeSettings _shapeSettings;
     INoiseFilter[] _noiseFilters;
     int _seed;
@@ -55,6 +57,9 @@ public class ShapeGenerator : ITerrainProvider
     // so consumers like scatter placement get the same LOD-independent surface the meshes are
     // built from without touching a streaming chunk or the elevation range.
     public float SampleElevation(Vector3 pointOnUnitSphere)
+        => RiverData.Carve(pointOnUnitSphere, SampleBaseElevation(pointOnUnitSphere));
+
+    public float SampleBaseElevation(Vector3 pointOnUnitSphere)
     {
         if (_diagnosticTerrain.Enabled != 0)
             return DiagnosticTerrainEvaluator.Evaluate(
@@ -70,11 +75,14 @@ public class ShapeGenerator : ITerrainProvider
             if (_shapeSettings.NoiseLayers[0].Enabled) { elevation = firstLayerValue; }
         }
 
+        float landMask = _noiseFilters.Length > 0
+            ? NoiseFilterEvaluator.FirstLayerMask(firstLayerValue, _shapeSettings.NoiseLayers[0].NoiseSettings.Strength)
+            : 0f;
         for (int i = 1; i < _noiseFilters.Length; i++)
         {
             if (!_shapeSettings.NoiseLayers[i].Enabled) continue;
 
-            float mask = _shapeSettings.NoiseLayers[i].UseFirstLayerAsMask ? firstLayerValue : 1;
+            float mask = _shapeSettings.NoiseLayers[i].UseFirstLayerAsMask ? landMask : 1;
             elevation += _noiseFilters[i].Evaluate(pointOnUnitSphere) * mask;
         }
 

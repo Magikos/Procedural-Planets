@@ -6,7 +6,7 @@ using Rng = Unity.Mathematics.Random;
 /// Drives short lightning pulses in active storm cells. Rendering stays in the
 /// cloud and precipitation shaders through global lightning parameters.
 /// </summary>
-[CommandPrefix("lightning")]
+[CommandPrefix("lightning", Group = "Sky and weather", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public class WeatherLightningController : MonoBehaviour
 {
     [Header("Timing")]
@@ -33,6 +33,7 @@ public class WeatherLightningController : MonoBehaviour
 
     IWeatherProvider _weather;
     ISeedProvider _seeds;
+    WeatherThunderPlayback _thunder;
     int _systemSeed;
     int _strikeIndex;
     Rng _rng = Rng.CreateFromIndex(0);
@@ -59,6 +60,7 @@ public class WeatherLightningController : MonoBehaviour
 
     void OnEnable()
     {
+        _thunder = new WeatherThunderPlayback();
         EventBus<PlanetGeneratedEvent>.Listen(OnPlanetGenerated);
         ScheduleNextStrike(1f, 3f);
         ClearLightning();
@@ -66,6 +68,8 @@ public class WeatherLightningController : MonoBehaviour
 
     void OnDisable()
     {
+        _thunder?.Dispose();
+        _thunder = null;
         EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
         ClearLightning();
     }
@@ -90,6 +94,7 @@ public class WeatherLightningController : MonoBehaviour
     {
         _planetCenter = evt.PlanetCenter;
         _hasPlanet = true;
+        _thunder?.Reset(_planetCenter, evt.SeaLevelRadius > 0f ? evt.SeaLevelRadius : evt.PlanetRadius);
         RefreshSeed();
     }
 
@@ -144,6 +149,11 @@ public class WeatherLightningController : MonoBehaviour
             ? _strikePower * Mathf.Lerp(0.25f, 0.55f, _rng.NextFloat())
             : 0f;
         float strikeRadius = (stormPosition - _planetCenter).magnitude;
+        if (SettingsProvider.IsRegistered<CloudDto>())
+        {
+            CloudDto clouds = SettingsProvider.GetSettings<CloudDto>();
+            strikeRadius += clouds.BaseAltitude + clouds.LayerThickness * 0.5f;
+        }
         Vector3 strikePosition = _planetCenter + _strikeDirection * strikeRadius;
         EventBus<WeatherLightningEvent>.Raise(new WeatherLightningEvent(
             strikePosition,

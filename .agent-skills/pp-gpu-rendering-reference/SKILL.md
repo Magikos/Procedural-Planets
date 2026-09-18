@@ -18,7 +18,7 @@ Deep dives in this directory:
 | [cube-sphere.md](cube-sphere.md) | 6-face cube→sphere math, the THREE UV conventions, area distortion, the historical cloud-seam pitfall, multi-face seam handling |
 | [clouds.md](clouds.md) | Volumetric cloud raymarch end-to-end: every lighting term and why it exists visually; quality tiers; cloud shadows |
 | [grass.md](grass.md) | GPU grass: compute placement, InterlockedAdd slot-claim + rollback, indirect draw, blade geometry, dither LOD, wind, interactors, three-layer LOD state |
-| [water-atmosphere-precipitation.md](water-atmosphere-precipitation.md) | Water surface/volume split + caustics don't-touch, atmosphere scattering, precipitation and particle shaders |
+| [water-atmosphere-precipitation.md](water-atmosphere-precipitation.md) | Water surface/volume split, fragile caustics, atmosphere scattering, precipitation and particle shaders |
 
 ## When NOT to use this
 

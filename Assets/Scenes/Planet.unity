@@ -259,6 +259,7 @@ GameObject:
   - component: {fileID: 200000003}
   - component: {fileID: 200000004}
   - component: {fileID: 200000005}
+  - component: {fileID: 200000006}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -410,6 +411,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 045c668c305007747951c8a1448661a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ProceduralPlanets.Planet::AtmosphereDiagnostics
+--- !u!81 &200000006
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200000000}
+  m_Enabled: 1
 --- !u!1 &300000000
 GameObject:
   m_ObjectHideFlags: 0
@@ -620,7 +629,7 @@ MonoBehaviour:
   MinViewSteps: 6
   StepScaleNearAltitude: 3000
   StepScaleFarAltitude: 25000
-  BottomAltitude: 25
+  BottomAltitude: 0
   CloudBaseOverlap: 45
   BottomFeather: 0.08
   TopFeather: 0.18
@@ -698,9 +707,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: ProceduralPlanets.Planet::RainParticleController
   ParticleCountSetting: 30000
-  CameraNearRadius: 300
+  CameraNearRadius: 60
   ForwardConeBias: 0.35
-  FallSpeedMps: 200
+  FallSpeedMps: 15
   WindCoupling: 0.2
   AltitudeFadeBand: 200
   StreakWidth: 0.012
@@ -786,6 +795,9 @@ MonoBehaviour:
   blendDistance: 0
   weight: 1
   sharedProfile: {fileID: 11400000, guid: 4b25d08b29a0354458304ec40180df3a, type: 2}
+  m_SceneObjectReference:
+    m_OverrideState: 0
+    m_Value: {fileID: 0}
 --- !u!4 &1204484381
 Transform:
   m_ObjectHideFlags: 0
@@ -812,7 +824,6 @@ GameObject:
   - component: {fileID: 1819645269}
   - component: {fileID: 1819645272}
   - component: {fileID: 1819645271}
-  - component: {fileID: 1819645270}
   m_Layer: 0
   m_Name: Visual
   m_TagString: Untagged
@@ -835,27 +846,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1954488840}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!135 &1819645270
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1819645268}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &1819645271
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -864,13 +854,13 @@ MeshRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1819645268}
   m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
   m_DynamicOccludee: 1
   m_StaticShadowCaster: 0
   m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
+  m_LightProbeUsage: 0
+  m_ReflectionProbeUsage: 0
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
   m_RayTracingAccelStructBuildFlagsOverride: 0
@@ -881,7 +871,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: 1abd5688a068f6c4daca26b8107dd673, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -979,9 +969,8 @@ MonoBehaviour:
   PlanetCenter: {fileID: 300000001}
   DayLengthSeconds: 120
   AxialTilt: 23.5
-  MoonCycleDays: 8
-  MoonOrbitRadius: 0
-  MoonInclination: 5
+  ShadowFadeElevationDeg: 22
+  ShadowGrazingStrength: 0.35
   StartTimeOfDay: 0.25
   FreezeTime: 0
   AmbientMaxIntensity: 0.15

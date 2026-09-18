@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "message": "Code executed successfully.",
+  "data": {
+    "result": "10000 measurement scopes: 0.7751 ms",
+    "compiler": "roslyn"
+  }
+}

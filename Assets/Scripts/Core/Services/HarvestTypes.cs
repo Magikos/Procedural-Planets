@@ -14,6 +14,7 @@ public readonly struct ToolTier
     // ponytail: hardcoded tools for the POC, chosen by what you aim at; replace with an equipped-tool lookup
     // + real tiers (and a "do you have this tool" gate) once inventory/equip exists.
     public static readonly ToolTier BasicAxe = new ToolTier("Basic Axe", 1);
+    public static readonly ToolTier BasicPickaxe = new ToolTier("Basic Pickaxe", 1);
     public static readonly ToolTier Shovel = new ToolTier("Shovel", 1);
     public static readonly ToolTier Club = new ToolTier("Club", 1);
 }
@@ -27,18 +28,16 @@ public readonly struct HarvestYield
 }
 
 // A node took harvest damage but is not yet felled (multi-hit chopping).
-//
-// planned: multi-hit chopping and its hit-particle / chop-SFX systems, docs/design/2026-08-12-next-roadmap.md.
-// Unreachable today rather than merely unsubscribed: HarvestService raises it only when tool.Damage is below
-// a node's HP, and every tool currently does exactly enough damage to fell in one swing.
+// A non-terminal strike, optionally carrying its actual world contact point.
 public readonly struct HarvestHitEvent : IGameEvent
 {
     public readonly ulong Id;
     public readonly int ProtoIndex;
     public readonly Vector3 WorldPos;
     public readonly int RemainingHp;
-    public HarvestHitEvent(ulong id, int protoIndex, Vector3 worldPos, int remainingHp)
-    { Id = id; ProtoIndex = protoIndex; WorldPos = worldPos; RemainingHp = remainingHp; }
+    public readonly bool HasImpactPoint;
+    public HarvestHitEvent(ulong id, int protoIndex, Vector3 worldPos, int remainingHp, bool hasImpactPoint = false)
+    { Id = id; ProtoIndex = protoIndex; WorldPos = worldPos; RemainingHp = remainingHp; HasImpactPoint = hasImpactPoint; }
 }
 
 // A node was harvested (felled). The HUD toast subscribes here, and future fall-animation / sound / VFX

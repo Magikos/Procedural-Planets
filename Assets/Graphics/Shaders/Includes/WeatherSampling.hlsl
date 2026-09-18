@@ -4,6 +4,13 @@
 // Shared weather map sampling helpers used by Cloud.shader and Precipitation.shader.
 // All required uniforms and resources are declared in this file.
 
+TEXTURE2D_ARRAY(_WeatherSurfaceMap);
+SAMPLER(sampler_WeatherSurfaceMap);
+float _WeatherSurfaceEnabled;
+TEXTURE2D_ARRAY(_CloudFlowMap);
+SAMPLER(sampler_CloudFlowMap);
+float _CloudFlowEnabled;
+
 // Declared here so all resource and uniform references in the function bodies below are in scope.
 TEXTURE2D_ARRAY(_CloudWeatherMap);
 SAMPLER(sampler_CloudWeatherMap);
@@ -11,11 +18,29 @@ TEXTURE2D_ARRAY(_WeatherDynamicsMap);
 SAMPLER(sampler_WeatherDynamicsMap);
 float4x4 _CloudWeatherRotation;
 float4 _PrecipitationParams;
+#include "WeatherPhase.hlsl"
 float _WeatherCloudTypeTest;
 
 #include "WeatherCubeFace.hlsl"
 #include "WeatherLightning.hlsl"
 #include "WeatherThreshold.hlsl"
+
+float3 SampleCloudFlow(float3 direction)
+{
+    if (_CloudFlowEnabled < 0.5) return direction;
+    int face = 0; float2 uv = 0;
+    CubeFaceUv(direction, face, uv);
+    float3 flow = SAMPLE_TEXTURE2D_ARRAY_LOD(_CloudFlowMap, sampler_CloudFlowMap, uv, face, 0).xyz;
+    return dot(flow,flow) > 0.00001 ? normalize(flow) : direction;
+}
+
+float2 SampleSurfaceWeather(float3 direction)
+{
+    if (_WeatherSurfaceEnabled < 0.5) return 0;
+    int face = 0; float2 uv = 0;
+    CubeFaceUv(direction, face, uv);
+    return SAMPLE_TEXTURE2D_ARRAY_LOD(_WeatherSurfaceMap, sampler_WeatherSurfaceMap, uv, face, 0).rg;
+}
 
 float WeatherCloudConvectivity(float3 direction, float temperature01)
 {

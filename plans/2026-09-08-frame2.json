@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "message": "Code executed successfully.",
+  "data": {
+    "result": "{\"frame\":6724,\"actors\":21,\"evaluated\":6,\"skipped\":15,\"scatter\":\"ScatterTileCache\",\"tiles\":4676,\"instances\":254045,\"queued\":0,\"cpu\":{\"LastMs\":20.1987,\"AverageMs\":24.184094166666657,\"P95Ms\":33.5781,\"SampleCount\":120},\"gpu\":{\"LastMs\":18.312192,\"AverageMs\":22.568618666666669,\"P95Ms\":28.711936,\"SampleCount\":111},\"sections\":{\"SurfaceVisibility\":{\"LastMs\":0.5279,\"AverageMs\":0.47918833333333322,\"P95Ms\":0.69480000000000008,\"SampleCount\":120},\"Clouds\":{\"LastMs\":0.0119,\"AverageMs\":0.016011666666666664,\"P95Ms\":0.0256,\"SampleCount\":120},\"NearGrass\":{\"LastMs\":0.0263,\"AverageMs\":0.030948333333333331,\"P95Ms\":0.058,\"SampleCount\":120},\"ChunkGrass\":{\"LastMs\":0.0001,\"AverageMs\":0.00012916666666666651,\"P95Ms\":0.0002,\"SampleCount\":120},\"CreatureSimulation\":{\"LastMs\":1.0603,\"AverageMs\":1.1597308333333338,\"P95Ms\":1.6979000000000002,\"SampleCount\":120},\"CreaturePresentation\":{\"LastMs\":2.6499,\"AverageMs\":1.9939691666666661,\"P95Ms\":3.7162,\"SampleCount\":120},\"ScatterPlanning\":{\"LastMs\":0.0,\"AverageMs\":0.0,\"P95Ms\":0.0,\"SampleCount\":120},\"ScatterCommit\":{\"LastMs\":0.0,\"AverageMs\":0.0,\"P95Ms\":0.0,\"SampleCount\":120},\"ScatterDraw\":{\"LastMs\":2.0085,\"AverageMs\":2.1718966666666666,\"P95Ms\":3.0757000000000003,\"SampleCount\":120}}}",
+    "compiler": "roslyn"
+  }
+}

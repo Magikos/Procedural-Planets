@@ -26,7 +26,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
     // Fallback slice size when no biome supplies any surface texture. Tiny so we don't
     // burn memory on the magenta path; the shader still gets a bindable array.
     const int FallbackSliceSize = 4;
-    const int GrassParamsStride = sizeof(float) * 20;
+    const int GrassParamsStride = sizeof(float) * 24;
 
     Texture2DArray _albedoArray;
     Texture2DArray _normalArray;
@@ -146,7 +146,7 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
             if (def == null) { data[slot] = default; continue; }
             var placement = GrassBiomePlacementConfig.From(def);
             var tint = GrassBiomeTintConfig.From(def);
-            data[slot] = PackGrassParams(placement, tint);
+            data[slot] = PackGrassParams(placement, tint, VegetationHabitat.WoodlandPotential(def.Type));
         }
 
         var buffer = new ComputeBuffer(SliceCount, GrassParamsStride, ComputeBufferType.Structured);
@@ -154,13 +154,14 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         return buffer;
     }
 
-    static BiomeGrassParamsGpu PackGrassParams(in GrassBiomePlacementConfig placement, in GrassBiomeTintConfig tint)
+    static BiomeGrassParamsGpu PackGrassParams(in GrassBiomePlacementConfig placement, in GrassBiomeTintConfig tint, float woodlandPotential)
     {
         Color t = tint.TintBase;
         Color d = tint.TintDryShift;
         Color l = tint.TintLushShift;
         return new BiomeGrassParamsGpu
         {
+            Habitat = new Vector4(woodlandPotential, 0f, 0f, 0f),
             Shape = new Vector4(placement.Density, placement.Height, placement.Width, placement.ClumpStrength),
             Placement = new Vector4(placement.MaxSlopeDegrees, placement.SlopeFadeDegrees, placement.MinWaterClearance, placement.BiomeBlendPower),
             Tint = new Vector4(t.r, t.g, t.b, t.a),
@@ -358,5 +359,6 @@ public sealed class BiomeSurfaceTextureArrays : System.IDisposable
         public Vector4 Tint;
         public Vector4 TintDry;
         public Vector4 TintLush;
+        public Vector4 Habitat;
     }
 }

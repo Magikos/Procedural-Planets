@@ -50,6 +50,16 @@ public static class TreeDefLibrary
     // gnarlier frame. Keeps the species' own structure, so a dead oak still reads as an oak.
     public static TreeDef AsDead(TreeDef def)
     {
+        if (def.FoliageStyle == FoliageStyle.ConiferCone)
+        {
+            float length = def.Trunk.Length.x;
+            def.Levels = new[] { def.Trunk, new LevelRule
+            {
+                Label = "dead boughs", ParentLevel = 0, Frequency = new Vector2(9, 15),
+                Range = new Vector2(def.ConeBaseFrac, .92f), Length = new Vector2(length * def.ConeRadiusFrac, .3f),
+                GirthScale = .22f, ParallelAlign = .9f, RadialSides = 4, Curve = 8f, Noise = .04f,
+            }};
+        }
         def.Dead = true;
         def.MaxHeight *= 0.8f;
         def.BarkColor = new Color(0.44f, 0.40f, 0.35f);
@@ -67,13 +77,6 @@ public static class TreeDefLibrary
         if (IsSucculent(s)) return Species(s, age);
 
         TreeDef def = Species(s, age);
-        // A CONE species (fir, cypress, cedar) carries its whole canopy as one cone mesh and declares NO branch
-        // tiers, so stripping the foliage leaves a bare tapered pole — a telegraph pole, not a dead tree. This
-        // was already known for IceBog, where Conifer was hand-excluded from the set; the same trap caught
-        // Cypress in Scrub. Handle it here so no biome can reintroduce it by adding a cone species.
-        if (def.FoliageStyle == FoliageStyle.ConiferCone)
-            def = Species(TreeSpecies.Broadleaf, age);
-
         return AsDead(def);
     }
 
@@ -154,7 +157,7 @@ public static class TreeDefLibrary
 
     public static TreeDef SampleBroadleaf(float age = 1f) => Broadleaf(age);
 
-    // Lush rounded canopy (Synty-style): a short thick trunk under a dense dome of big overlapping leaf cards,
+    // Lush rounded canopy (source-style): a short thick trunk under a dense dome of big overlapping leaf cards,
     // filled by two leaf tiers (outer on the twigs, inner on the primaries) so the crown reads solid, not spindly.
     public static TreeDef Broadleaf(float age = 1f) => new TreeDef
     {

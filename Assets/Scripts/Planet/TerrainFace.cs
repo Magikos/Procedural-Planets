@@ -43,13 +43,13 @@ public class TerrainFace : IFaceMeshSampler
     }
 
     // Schedules the Burst mesh-generation job for this face. The returned state owns the
-    // NativeArrays the job writes into; call CompleteMeshDataJob() to wait, copy out, and
-    // dispose. The caller-owned `filters` NativeArray is shared (read-only) across all faces.
+    // NativeArrays the job writes into. Call CompleteMeshDataJob() to wait and copy out,
+    // then dispose the state. The caller-owned filters are shared read-only across faces.
     public TerrainFaceJobState ScheduleMeshDataJob(
         NativeArray<NoiseFilterData> filters,
         NativeArray<byte> diagnosticTerrainCells,
         DiagnosticTerrainSettingsData diagnosticTerrain,
-        float planetRadius)
+        float planetRadius, RiverFieldData rivers = default)
     {
         int vertexCount = _resolution * _resolution;
         int triangleCount = (_resolution - 1) * (_resolution - 1) * 6;
@@ -70,6 +70,7 @@ public class TerrainFace : IFaceMeshSampler
             AxisA = new float3(_axisA.x, _axisA.y, _axisA.z),
             AxisB = new float3(_axisB.x, _axisB.y, _axisB.z),
             PlanetRadius = planetRadius,
+            Rivers = rivers,
             Filters = filters,
             DiagnosticTerrainCells = diagnosticTerrainCells,
             DiagnosticTerrain = diagnosticTerrain,
@@ -83,8 +84,7 @@ public class TerrainFace : IFaceMeshSampler
         return state;
     }
 
-    // Completes the scheduled job, copies its output into the managed mesh arrays expected by
-    // ApplyMeshData/CalculateColors, and disposes the job state.
+    // The caller retains ownership of the job state, including when copying throws.
     public void CompleteMeshDataJob(TerrainFaceJobState state)
     {
         state.Handle.Complete();
@@ -107,7 +107,6 @@ public class TerrainFace : IFaceMeshSampler
         for (int i = 0; i < vertexCount; i++)
             _vertexRadii[i] = _pendingVertices[i].magnitude;
 
-        state.Dispose();
     }
 
     // Bilinear sample of the per-vertex radius at face-UV (u, v in [0, 1]). Callers map a
@@ -199,6 +198,7 @@ public struct TerrainFaceMeshJob : IJobParallelFor
     public float3 AxisB;
     public float PlanetRadius;
 
+    public RiverFieldData Rivers;
     [ReadOnly] public NativeArray<NoiseFilterData> Filters;
     [ReadOnly] public NativeArray<byte> DiagnosticTerrainCells;
     public DiagnosticTerrainSettingsData DiagnosticTerrain;
@@ -222,7 +222,7 @@ public struct TerrainFaceMeshJob : IJobParallelFor
         float3 pointOnUnitCube = LocalUp + (percent.x - 0.5f) * 2f * AxisA + (percent.y - 0.5f) * 2f * AxisB;
         float3 pointOnUnitSphere = math.normalize(pointOnUnitCube);
 
-        float elevation = EvaluateElevation(pointOnUnitSphere);
+        float elevation = Rivers.Carve(pointOnUnitSphere, EvaluateElevation(pointOnUnitSphere));
 
         UnitSpherePoints[index] = pointOnUnitSphere;
         Elevations[index] = elevation;
@@ -245,21 +245,6 @@ public struct TerrainFaceMeshJob : IJobParallelFor
         if (DiagnosticTerrain.Enabled != 0)
             return DiagnosticTerrainEvaluator.Evaluate(point, DiagnosticTerrain, DiagnosticTerrainCells);
 
-        int count = Filters.Length;
-        if (count == 0) return 0f;
-
-        var first = Filters[0];
-        float firstLayerValue = NoiseFilterEvaluator.Evaluate(ref first, point);
-        float elevation = first.Enabled != 0 ? firstLayerValue : 0f;
-
-        for (int i = 1; i < count; i++)
-        {
-            var f = Filters[i];
-            if (f.Enabled == 0) continue;
-            float mask = f.UseFirstLayerAsMask != 0 ? firstLayerValue : 1f;
-            elevation += NoiseFilterEvaluator.Evaluate(ref f, point) * mask;
-        }
-
-        return elevation;
+        return NoiseFilterEvaluator.EvaluateLayers(Filters, point);
     }
 }

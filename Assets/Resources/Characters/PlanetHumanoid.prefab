@@ -1,0 +1,154 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5202911677953401373
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5730426134893750089}
+  - component: {fileID: 1049303294516064271}
+  m_Layer: 0
+  m_Name: PlanetHumanoid
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &5730426134893750089
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5202911677953401373}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1049303294516064271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5202911677953401373}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 053ae2884cb84243bc5fb8640d87ec50, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::PlanetHumanoidActor
+  CharacterPrefab: {fileID: 6963488175065664264, guid: 22a58fdc451fc1d4fad519615d877cb5, type: 3}
+  ShowControls: 0
+  TorsoTurnResponse: 0.25
+  EnableWater: 1
+  Idle: {fileID: 7400000, guid: fafac7f8e72144d48baa6afb8e305a43, type: 3}
+  Walk: {fileID: 7400000, guid: b7168cdc19c5e7643a933bb58c4fd7b6, type: 2}
+  Run: {fileID: 7400000, guid: eb807867a75e42f5a9b9e2d38afc4740, type: 3}
+  SurfaceIdle: {fileID: 1616652337918030695, guid: 3d8922c3e5264a099f36efb75ebb0014, type: 3}
+  SurfaceSwim: {fileID: 1616652337918030695, guid: 3d8922c3e5264a099f36efb75ebb0014, type: 3}
+  UnderwaterIdle: {fileID: -8725378669206676613, guid: dedb10bdd17441f7a0a0dda01f339686, type: 3}
+  UnderwaterSwim: {fileID: 4802347272033369482, guid: df48b5eb637941c2bcfb7c23d56fd5b0, type: 3}
+  SwimDirectional:
+  - {fileID: 3094330708855449807, guid: 0140069f9b3942baa85389d13bbf6d83, type: 3}
+  - {fileID: 3094330708855449807, guid: d37c3498e11c413a9d9470b2d474a96f, type: 3}
+  - {fileID: 3094330708855449807, guid: f53a3a7f96c94feb92d600926de9afe8, type: 3}
+  Wade: {fileID: 7400000, guid: 6d0b293a9406ab646bf293f6ad9468ad, type: 2}
+  WalkDiagonals:
+  - {fileID: 7400000, guid: 810e4c9f830cc144cac5e2c0ce9d1455, type: 2}
+  - {fileID: 7400000, guid: 734f3b70ea24d4a449d00e2f1ce92512, type: 2}
+  - {fileID: 7400000, guid: a3eb8735f966fc2429b0e4e98bb24414, type: 2}
+  - {fileID: 7400000, guid: 5f2fdd9317166d541bffe574335ed860, type: 2}
+  RunDirectionalClips:
+  - {fileID: 3094330708855449807, guid: 170eb8694c2f28e4080b789b627f6ce6, type: 3}
+  - {fileID: 3094330708855449807, guid: 257eb7fb2a8472f4f9302dd6a641828f, type: 3}
+  - {fileID: 3094330708855449807, guid: b7ff898919f115a4095d79af0129756f, type: 3}
+  - {fileID: 2782978674124798127, guid: 7ded478c86f5f3c47870819768dd67e3, type: 3}
+  - {fileID: -5427217110924004426, guid: f442f64bb1ac3994aa9ceb0ecebdc3c0, type: 3}
+  - {fileID: 2259105683091889024, guid: d4ea2ec9518f92442a0c1c2ab0dc9780, type: 3}
+  - {fileID: 791551332734995869, guid: 1fa469bdb64dcf443ad00e0663110f41, type: 3}
+  FastSurfaceSwim: {fileID: 3094330708855449807, guid: 3e039f01106b44a5bc90dfeddb84caa6, type: 3}
+  SwimSpeed: 1
+  FastSwimSpeed: 2.5
+  TraversalClips:
+  - {fileID: -617078898772606760, guid: ff06e1964c0046f9aa75f644604219db, type: 3}
+  - {fileID: -835924004244366135, guid: a5ab5c04958c46d19bd0e32b70b84ac1, type: 3}
+  - {fileID: -5618932357108216359, guid: 84ab3b09e3394574ab81374dd8d9680a, type: 3}
+  - {fileID: 7959247369071412352, guid: c066100664eb4b1e84c39e17e4527b89, type: 3}
+  - {fileID: 5539831331247536789, guid: f2b6777120594f51871a43868af2e63b, type: 3}
+  - {fileID: 1827226128182048838, guid: 5dd8ba1eb5484b2eaf647439f752d2b9, type: 3}
+  - {fileID: 7400000, guid: e6d457f28ce144789a799a5e0d5f477a, type: 3}
+  - {fileID: 8993902097722301239, guid: 26f337c507aa33543adf2520738a400d, type: 3}
+  - {fileID: 816009781345186911, guid: 92a1868aac584002abb1412da32ec4f8, type: 3}
+  VaultMotion: {fileID: 11400000, guid: f0da9e5e349b8794d9af64c3f7e92b43, type: 2}
+  StepUpMotion: {fileID: 11400000, guid: ab9372a09428b9a4997ec8d3d879ccc5, type: 2}
+  JumpGrabMotion: {fileID: 11400000, guid: ba68aa44670224d48b70d886e006a761, type: 2}
+  HangLeftMotion: {fileID: 11400000, guid: 792054c8b83a94244a8632711dc9759f, type: 2}
+  HangRightMotion: {fileID: 11400000, guid: ba09555f883ac8a4b8f6ec07c192257f, type: 2}
+  LedgeCornerMotions:
+  - {fileID: 11400000, guid: 1e47f2d91964e3941bad051648ffdfa8, type: 2}
+  - {fileID: 11400000, guid: d94a89beb98039c48a0c39d40dc0a75b, type: 2}
+  - {fileID: 11400000, guid: b477d8255964b4244b4212488083dcae, type: 2}
+  - {fileID: 11400000, guid: 1a00f8a079e736948b49d0c5598fd3bf, type: 2}
+  StairClips:
+  - {fileID: 7400000, guid: 0174d768c95f4eaba8e6915b1a865274, type: 3}
+  - {fileID: 7400000, guid: cb658ab1ae2c40ac9fd5486a09907e48, type: 3}
+  CrawlTransitions:
+  - {fileID: -8271182881704528321, guid: 3ec06d4c28044c5481e498ac31b6a05d, type: 3}
+  - {fileID: -8478382253641117530, guid: b9b9469254bb41d594e848504db1a436, type: 3}
+  CrawlBackward: {fileID: -2521992575900197623, guid: e2afceb6dfcb4772ba0bd36b842a71d0, type: 3}
+  CrawlSideways:
+  - {fileID: 7400000, guid: fa49dce3716ef394fb8a283c20dcbb90, type: 2}
+  - {fileID: 7400000, guid: 8eb88b3d7e75ee34bbcd407f27514df5, type: 2}
+  CrawlCycleDistances: {x: 0.9033507, y: 0.4855516, z: 0.51590866, w: 0.91136074}
+  DirectionalClips:
+  - {fileID: 7400000, guid: 9af8e7276429a6e49a224094c2024a04, type: 2}
+  - {fileID: 7400000, guid: 938f53dd89640574a88fb2849ca5513d, type: 2}
+  - {fileID: 7400000, guid: ea9ec553dcafb4f49ae83ebfc4e091a2, type: 2}
+  - {fileID: 7400000, guid: 9121ddf9c58f4a74b9b06409d1afae1a, type: 3}
+  - {fileID: 7400000, guid: 7a336cd65f3d4add9eca614549ac48d3, type: 3}
+  - {fileID: 7400000, guid: 5b6a3e75d3b448b8a0201c0ec9783850, type: 3}
+  Fall: {fileID: 1827226128182048838, guid: aa4d092938a9f664b886bb11f3772e7d, type: 3}
+  Performances: {fileID: 11400000, guid: 22b460192f93d96479d56cb671dbb5cd, type: 2}
+  LadderPerformances: {fileID: 11400000, guid: ffd8d3fefd1e53547a74d7c4215798ea, type: 2}
+  BeamPerformances: {fileID: 11400000, guid: 7f6f5338183be5047aec7ee8088f4519, type: 2}
+  LedgeWalkPerformances: {fileID: 11400000, guid: 8903706900ca555449561872cf2e452c, type: 2}
+  RopePerformances: {fileID: 11400000, guid: 5dae06a3997f05f4ba85a6cc08330132, type: 2}
+  Ropes: []
+  Beams: []
+  DodgeMotions:
+  - {fileID: 11400000, guid: be062274ca2d9d241a1693953e3acd9f, type: 2}
+  - {fileID: 11400000, guid: 1b0c91a6ff01f034ab31e955d41beb79, type: 2}
+  - {fileID: 11400000, guid: 1c4d6df1386ea054392a1385fa2ff994, type: 2}
+  - {fileID: 11400000, guid: 88c815c3c60dded4c92ac1ea837c7cfb, type: 2}
+  Ladders: []
+  Interactions:
+  - {fileID: 11400000, guid: 3e1840aa503095640bf1f3eda1afdb8b, type: 2}
+  Proficiency: 0
+  Crouch: 0
+  Crawl: 0
+  Stations: []
+  RequestJump: 0
+  Dive: 0
+  SwimUp: 0
+  FollowActor: 0
+  LookSensitivity: 0.12
+  CameraDistance: 4
+  WalkSpeed: 1.5585856
+  RunSpeed: 5.662317
+  JumpHeight: 0.75
+  StandingHopHeight: 0.3
+  WalkLoop: 0
+  Running: 0
+  Feet: 1
+  Gaze: 0
+  Reach: 0
+  LookTarget: {fileID: 0}
+  HandTarget: {fileID: 0}
+  Panel: {fileID: 0}

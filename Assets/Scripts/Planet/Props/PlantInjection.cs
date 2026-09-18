@@ -12,7 +12,7 @@ using UnityEngine;
 //
 // ponytail: the FERN path still lives in TreeInjection. It belongs here, but it works and moving it is a pure
 // refactor — do it when ferns next need a change, not as a drive-by.
-[CommandPrefix("plant")]
+[CommandPrefix("plant", Group = "Vegetation and wildlife", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public static class PlantInjection
 {
     public static bool Enabled = true;
@@ -142,15 +142,15 @@ public static class PlantInjection
             else
             {
                 TreeDef def = DefFor(kind, p, age);
-                GeneratedTree t = TreeGenerator.Generate(def, seed);
-                if (t.Bark == null || t.Bark.vertexCount == 0) return null; // keep Synty
+                GeneratedTree t = TreeGenerator.Generate(def, seed, harvestParts: false);
+                if (t.Bark == null || t.Bark.vertexCount == 0) return null; // keep the source prop
                 stemMesh = t.Bark;
                 foliageMesh = t.Foliage != null && t.Foliage.vertexCount > 0 ? t.Foliage : null;
                 accentMesh = t.Accent != null && t.Accent.vertexCount > 0 ? t.Accent : null;
                 stemTint = def.BarkColor;
                 foliageTint = def.LeafColor;
                 // Coral and lily are the only kinds with no foliage tier by design; anything else arriving
-                // bare means the generator failed, and a bare twig is worse than the Synty prop.
+                // bare means the generator failed, and a bare twig is worse than the source prop.
                 if (foliageMesh == null && kind != Kind.Coral) return null;
             }
 
@@ -159,7 +159,7 @@ public static class PlantInjection
             if (foliageMesh != null)
             {
                 foliage = GeneratedFoliage.Leaf(key, foliageTint, WindFor(kind), lift: 2.2f);
-                if (foliage == null) return null; // no clean leaf material to tint — keep the Synty prop
+                if (foliage == null) return null; // no clean leaf material to tint — keep the source prop
             }
 
             float cull = p.Parts[0].MaxCullDistance;
@@ -227,7 +227,7 @@ public static class PlantInjection
         _ => 0.14f,
     };
 
-    // The Synty flower prototypes name their colour, which is the only thing distinguishing them — so read it
+    // The source flower prototypes name their colour, which is the only thing distinguishing them — so read it
     // rather than inventing a palette that would not match the biome each was placed for.
     static Color FlowerColor(string n)
     {
@@ -391,7 +391,7 @@ public static class PlantInjection
         for (int i = 0; i < entries.Count; i++)
         {
             (string label, TreeDef def) = entries[i];
-            GeneratedTree t = TreeGenerator.Generate(def, s + i);
+            GeneratedTree t = TreeGenerator.Generate(def, s + i, harvestParts: false);
             if (t.Bark == null || t.Bark.vertexCount == 0) continue;
 
             var go = new GameObject(label);

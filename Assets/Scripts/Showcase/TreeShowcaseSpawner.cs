@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// Review cockpit for the generated-tree program (plan 006): one row per tree biome — the OLD Synty asset on the
+// Review cockpit for the generated-tree program (plan 006): one row per tree biome — the OLD source asset on the
 // left, then our generated tree across ages (sapling..old). It runs the real TreeInjection.Apply to grab the exact
 // in-world materials, so the showcase can't drift from what ships. Self-contained: it also publishes the planet
 // sun/wind globals + binds the grass-interactor buffer the FoliageLit trees need, so it works in any scene with
@@ -19,6 +19,7 @@ public sealed class TreeShowcaseSpawner : MonoBehaviour
     public int Seed = 12345;
     public bool BuildGround = true;
     public bool FrameCamera = true;   // snap Camera.main to view the whole table + fix its clip planes
+    public bool BuildOnStart = true;
 
     // Ages, then a DEAD column so the standing-snag variant is reviewed beside the living stages.
     static readonly float[] Ages = { 0.15f, 0.4f, 0.7f, 1f, 1f };
@@ -62,7 +63,7 @@ public sealed class TreeShowcaseSpawner : MonoBehaviour
 
     void Start()
     {
-        if (Application.isPlaying) Rebuild();
+        if (Application.isPlaying && BuildOnStart) Rebuild();
     }
 
     [ContextMenu("Rebuild")]
@@ -93,7 +94,7 @@ public sealed class TreeShowcaseSpawner : MonoBehaviour
 
             float z = -row * RowSpacing;
             SpawnOld(p, new Vector3(0f, 0f, z), $"{p.Biome} OLD\n{p.DisplayName}");
-            SpawnCapsule(new Vector3(4f, 0f, z), row == 0); // 2 m character beside the Synty original too
+            SpawnCapsule(new Vector3(4f, 0f, z), row == 0); // 2 m character beside the source original too
 
             // Materials from the injected prototype (same index) = exactly what the planet uses. A "* Dead Tree"
             // prototype injects a bark part ONLY, so its foliage material has to be borrowed — this row still
@@ -130,7 +131,7 @@ public sealed class TreeShowcaseSpawner : MonoBehaviour
     // Ground plane + soft ambient + a framed, un-clipped camera so the table is reviewable without hand-setup.
     void SetupStage(int rows)
     {
-        float xSpan = Ages.Length * ColSpacing;        // Synty original at 0 .. the DEAD column at Ages.Length*col
+        float xSpan = Ages.Length * ColSpacing;        // source original at 0 .. the DEAD column at Ages.Length*col
         float zSpan = Mathf.Max(1, rows - 1) * RowSpacing;
         Vector3 centerLocal = new Vector3(xSpan * 0.5f, 5f, -zSpan * 0.5f);
 

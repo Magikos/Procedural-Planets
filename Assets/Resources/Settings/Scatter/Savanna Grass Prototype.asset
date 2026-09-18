@@ -23,14 +23,20 @@ MonoBehaviour:
   ShadePreference: -0.6
   MaxSlopeDegrees: 32
   SlopeFadeDegrees: 6
+  ConformToSlope: 0
   HasMinAltitude: 0
   MinAltitudeMeters: 0
   HasMaxAltitude: 0
   MaxAltitudeMeters: 0
   MinWaterClearanceMeters: 0.05
+  OnWater: 0
   ScaleRange: {x: 0.9, y: 1.6}
   RandomYaw: 1
   Interaction: 0
+  FoodUnits: 0.35
+  FoodRegrowSeconds: 1800
+  StumpMesh: {fileID: 0}
+  StumpMaterial: {fileID: 0}
   Parts:
   - Name: Plant
     Material: {fileID: 2100000, guid: 133b741fe756de7439addf6bbbac5a4e, type: 2}
@@ -45,3 +51,8 @@ MonoBehaviour:
   LodEndDistances: []
   CastShadows: 1
   ReceiveShadows: 1
+  MeshOnlyVertexLimit: 0
+  BakedImpostorAtlas: {fileID: 0}
+  BakedImpostorNormal: {fileID: 0}
+  BakedImpostorGridN: 0
+  BakedImpostorHasSurfaceData: 0

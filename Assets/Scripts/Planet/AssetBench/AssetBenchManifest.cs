@@ -5,7 +5,7 @@ public sealed class AssetBenchEntry
 {
     public GameObject CandidatePrefab;
 
-    [Tooltip("The Synty comparand shown beside the candidate. Optional — leave empty to judge alone.")]
+    [Tooltip("The source comparand shown beside the candidate. Optional — leave empty to judge alone.")]
     public GameObject ReferencePrefab;
 
     public string Label;

@@ -26,6 +26,7 @@ public sealed class ScatterHarvestStore
         public float Scale;
         public int ProtoIndex;
         public HarvestState State;
+        public bool HasStoredTransform;
     }
 
     public struct LogRecord
@@ -35,12 +36,24 @@ public sealed class ScatterHarvestStore
         public Quaternion Rotation;
         public float Scale;
         public int ProtoIndex;
+        public uint RemovedBranches;
+        public uint RemovedSections;
+        public int[] SectionDamage;
+        public bool HasHarvestGeometry;
     }
 
     readonly ILogger _log;
     readonly Dictionary<ulong, HarvestNode> _nodes = new();
     readonly Dictionary<ulong, LogRecord> _logs = new();
+    readonly Dictionary<ulong, int> _damage = new();
+    public int? RemainingHealth(ulong id) => _nodes.ContainsKey(id) ? 0 : _damage.TryGetValue(id, out int hp) ? hp : null;
+    public void RecordDamage(ulong id, int remaining) => Apply(new WorldDelta(0, DeltaKind.ScatterDamage, id, typeIndex: Math.Max(0, remaining)));
     readonly EntityIdAllocator _entityIds = new();
+    readonly HashSet<ulong> _falling = new();
+    public int Revision { get; private set; }
+    public int WorldRevision { get; private set; }
+    public bool IsFalling(ulong id) => _falling.Contains(id);
+    public void SetFalling(ulong id, bool falling) { if (falling) _falling.Add(id); else _falling.Remove(id); Revision++; }
 
     IWorldDeltaLog _delta;
     int _seed;
@@ -55,6 +68,7 @@ public sealed class ScatterHarvestStore
         _seed = seed;
         _delta = deltaLog;
         _loaded = true;
+        WorldRevision++;
         Rebuild();
         ImportLegacySave();
     }
@@ -69,7 +83,7 @@ public sealed class ScatterHarvestStore
     {
         if (_nodes.ContainsKey(pick.Id)) return false;
         Apply(new WorldDelta(0, DeltaKind.ScatterState, pick.Id, pick.Position, pick.Rotation, pick.ProtoIndex,
-            (byte)HarvestState.Stump, pick.Scale));
+            (byte)HarvestState.Stump, pick.Scale, new byte[] { 1 }));
         return true;
     }
 
@@ -77,21 +91,17 @@ public sealed class ScatterHarvestStore
     {
         if (!_nodes.TryGetValue(id, out HarvestNode n) || n.State == HarvestState.Dug) return false;
         Apply(new WorldDelta(0, DeltaKind.ScatterState, id, n.Position, n.Rotation, n.ProtoIndex,
-            (byte)HarvestState.Dug, n.Scale));
+            (byte)HarvestState.Dug, n.Scale, n.HasStoredTransform ? new byte[] { 1 } : null));
         return true;
     }
 
     public bool TryGetStump(ulong id, out HarvestNode node) => _nodes.TryGetValue(id, out node);
 
-    // Records written before the felled transform was persisted carry no usable rotation: that writer stored
-    // Quaternion.identity, and a field absent from an older record reads back as all zeros. A scatter instance
-    // stands on the radial, so neither value is one it can actually have - both mean "unknown", and a consumer
-    // must fall back to aligning with the surface rather than laying the stump on its side.
     public static bool HasStoredRotation(in Quaternion rotation) =>
-        rotation.x * rotation.x + rotation.y * rotation.y + rotation.z * rotation.z + rotation.w * rotation.w > 1e-6f
-        && rotation != Quaternion.identity;
+        float.IsFinite(rotation.x) && float.IsFinite(rotation.y) && float.IsFinite(rotation.z) && float.IsFinite(rotation.w)
+        && rotation.x * rotation.x + rotation.y * rotation.y + rotation.z * rotation.z + rotation.w * rotation.w > 1e-6f;
 
-    public static float StoredScaleOr(float scale, float fallback = 1f) => scale > 0f ? scale : fallback;
+    public static float StoredScaleOr(float scale, float fallback = 1f) => float.IsFinite(scale) && scale > 0f ? scale : fallback;
 
     public void CollectStumps(List<HarvestNode> into)
     {
@@ -103,11 +113,46 @@ public sealed class ScatterHarvestStore
     // --- fallen logs (placed objects, harvestable for wood) ---
 
     /// <summary>Records a fallen log at its settled transform. Returns the new entity id.</summary>
-    public ulong RecordLog(Vector3 position, Quaternion rotation, float scale, int protoIndex)
+    public ulong RecordLog(Vector3 position, Quaternion rotation, float scale, int protoIndex, bool harvestGeometry = false)
     {
         EntityId id = _entityIds.Next();
-        Apply(new WorldDelta(0, DeltaKind.EntitySpawned, id.Value, position, rotation, protoIndex, scale: scale));
+        Apply(new WorldDelta(0, DeltaKind.EntitySpawned, id.Value, position, rotation, protoIndex, scale: scale,
+            payload: harvestGeometry ? EncodeLog(0, 0, null) : null));
         return id.Value;
+    }
+
+    public bool TryGetLog(ulong id, out LogRecord record) => _logs.TryGetValue(id, out record);
+
+    public bool UpdateLog(in LogRecord record)
+    {
+        if (!_logs.ContainsKey(record.Id)) return false;
+        Apply(new WorldDelta(0, DeltaKind.EntitySpawned, record.Id, record.Position, record.Rotation,
+            record.ProtoIndex, scale: record.Scale,
+            payload: EncodeLog(record.RemovedBranches, record.RemovedSections, record.SectionDamage)));
+        return true;
+    }
+
+    static byte[] EncodeLog(uint branches, uint sections, int[] damage)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream);
+        writer.Write((byte)1); writer.Write(branches); writer.Write(sections);
+        for (int i = 0; i < TreeHarvestGeometry.MaxSections; i++)
+            writer.Write(damage != null && i < damage.Length ? damage[i] : 0);
+        return stream.ToArray();
+    }
+
+    static void DecodeLog(byte[] payload, ref LogRecord record)
+    {
+        if (payload == null) return; // Existing saves contain bare logs.
+        if (payload.Length != 9 + TreeHarvestGeometry.MaxSections * sizeof(int) || payload[0] != 1)
+            throw new InvalidDataException("Unsupported fallen tree record.");
+        using var reader = new BinaryReader(new MemoryStream(payload));
+        reader.ReadByte();
+        record.RemovedBranches = reader.ReadUInt32(); record.RemovedSections = reader.ReadUInt32();
+        record.SectionDamage = new int[TreeHarvestGeometry.MaxSections];
+        for (int i = 0; i < record.SectionDamage.Length; i++) record.SectionDamage[i] = Math.Max(0, reader.ReadInt32());
+        record.HasHarvestGeometry = true;
     }
 
     public bool RemoveLog(ulong logId)
@@ -140,8 +185,10 @@ public sealed class ScatterHarvestStore
 
     void Rebuild()
     {
+        _falling.Clear();
         _nodes.Clear();
         _logs.Clear();
+        _damage.Clear();
         _entityIds.Reset();
         if (_delta == null) return;
         foreach (WorldDelta d in _delta.Snapshot()) Ingest(d);
@@ -149,6 +196,7 @@ public sealed class ScatterHarvestStore
 
     void Ingest(in WorldDelta d)
     {
+        Revision++;
         // Entity records are a SHARED space: a creature's slot record and a carcass land here too, tagged by
         // owner. Without this guard a carcass replays as a phantom fallen log, and its derived counter drags
         // the log allocator up with it.
@@ -158,6 +206,9 @@ public sealed class ScatterHarvestStore
 
         switch (d.Kind)
         {
+            case DeltaKind.ScatterDamage:
+                _damage[d.Key] = Math.Max(0, d.TypeIndex);
+                break;
             case DeltaKind.ScatterState:
                 _nodes[d.Key] = new HarvestNode
                 {
@@ -167,12 +218,14 @@ public sealed class ScatterHarvestStore
                     Scale = d.Scale,
                     ProtoIndex = d.TypeIndex,
                     State = (HarvestState)d.State,
+                    HasStoredTransform = d.Payload?.Length == 1 && d.Payload[0] == 1
+                        || d.Rotation != Quaternion.identity && HasStoredRotation(d.Rotation),
                 };
                 break;
 
             case DeltaKind.EntitySpawned:
                 _entityIds.Observe(new EntityId(d.Key));
-                _logs[d.Key] = new LogRecord
+                var record = new LogRecord
                 {
                     Id = d.Key,
                     Position = d.Position,
@@ -180,6 +233,8 @@ public sealed class ScatterHarvestStore
                     Scale = d.Scale,
                     ProtoIndex = d.TypeIndex,
                 };
+                DecodeLog(d.Payload, ref record);
+                _logs[d.Key] = record;
                 break;
 
             case DeltaKind.EntityRemoved:
@@ -215,7 +270,7 @@ public sealed class ScatterHarvestStore
                     foreach (LegacyNode ns in data.nodes)
                         if (ulong.TryParse(ns.id, out ulong id) && !_nodes.ContainsKey(id))
                         {
-                            Apply(new WorldDelta(0, DeltaKind.ScatterState, id, ns.position, Quaternion.identity,
+                            Apply(new WorldDelta(0, DeltaKind.ScatterState, id, ns.position, default,
                                 ns.proto, (byte)ns.state));
                             imported++;
                         }

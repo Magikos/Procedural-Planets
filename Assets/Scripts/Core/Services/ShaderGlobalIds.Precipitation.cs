@@ -1,5 +1,6 @@
 public static partial class ShaderGlobalIds
 {
+    public const string PrecipitationLocalRadius = "_PrecipitationLocalRadius";
     public const string PrecipitationEnabled = "_PrecipitationEnabled";
     public const string PrecipitationPlanetCenter = "_PrecipitationPlanetCenter";
     public const string PrecipitationRadii = "_PrecipitationRadii";

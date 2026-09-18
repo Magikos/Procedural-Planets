@@ -1,71 +1,51 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// Draws each fallen-log record (plan 005 Inc 4) as a PLACEHOLDER log — a brown elongated cylinder lying at the
-// settled rotation. The live tree mesh splays when flat (foliage cards + a branchy upper trunk), so a clean
-// placeholder stands in until the tree polish pass generates a proper per-tree fallen-log mesh. The log is
-// persistent (from records) and will be harvestable for wood.
-public sealed class LogRenderer : System.IDisposable
+/// <summary>Renders the remaining generated parts at their persistent transform.</summary>
+public sealed class LogRenderer : IDisposable
 {
-    static readonly Vector3 LogScale = new Vector3(0.35f, 1.4f, 0.35f); // long along the cylinder axis (Y), thin
-
     readonly ScatterHarvestStore _store;
-    readonly Transform _planetTransform;
+    readonly Func<ScatterLibraryDto> _library;
     readonly List<ScatterHarvestStore.LogRecord> _logs = new();
-    Mesh _mesh;
-    Material _material;
-    RenderParams _rp;
-    bool _ready;
+    int _revision = -1;
 
-    public LogRenderer(ScatterHarvestStore store, Transform planetTransform)
-    {
-        _store = store;
-        _planetTransform = planetTransform;
-
-        GameObject temp = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        _mesh = temp.GetComponent<MeshFilter>().sharedMesh; // built-in; survives the GO destroy
-        Collider col = temp.GetComponent<Collider>();
-        if (col != null) Object.Destroy(col);
-        if (Application.isPlaying) Object.Destroy(temp); else Object.DestroyImmediate(temp);
-
-        Shader shader = Shader.Find("Planet/PropLit") ?? Shader.Find("Universal Render Pipeline/Lit");
-        if (shader == null || _mesh == null) return;
-        _material = new Material(shader) { name = "Log placeholder", hideFlags = HideFlags.HideAndDontSave };
-        if (_material.HasProperty("_BaseColor")) _material.SetColor("_BaseColor", new Color(0.30f, 0.19f, 0.10f));
-        _rp = new RenderParams(_material)
-        {
-            worldBounds = new Bounds(_planetTransform.position, Vector3.one * 100000f),
-            shadowCastingMode = ShadowCastingMode.On,
-            receiveShadows = true,
-        };
-        _ready = true;
-    }
+    public LogRenderer(ScatterHarvestStore store, Transform planetTransform, Func<ScatterLibraryDto> library = null)
+    { _store = store; _library = library; }
 
     public void Render(Camera camera)
     {
-        if (!_ready || _store == null || camera == null) return;
-        _store.CollectLogs(_logs);
-        for (int i = 0; i < _logs.Count; i++)
+        if (_store == null || camera == null) return;
+        if (_revision != _store.Revision) { _store.CollectLogs(_logs); _revision = _store.Revision; }
+        var prototypes = _library?.Invoke()?.Prototypes;
+        if (prototypes == null) return;
+        foreach (var record in _logs)
         {
-            ScatterHarvestStore.LogRecord log = _logs[i];
-            float scale = ScatterHarvestStore.StoredScaleOr(log.Scale);
-            // The cylinder is centre-pivoted; shift it half a length along its (rotated) axis so the log lies
-            // from the felled tree's base outward instead of half-sinking into the stump.
-            Vector3 axis = log.Rotation * Vector3.up;
-            Vector3 pos = log.Position + axis * (LogScale.y * scale);
-            Graphics.RenderMesh(_rp, _mesh, 0, Matrix4x4.TRS(pos, log.Rotation, LogScale * scale));
+            if (_store.IsFalling(record.Id) || (uint)record.ProtoIndex >= (uint)prototypes.Length) continue;
+            var proto = prototypes[record.ProtoIndex];
+            var tree = proto.Tree;
+            if (tree == null) continue;
+            var matrix = Matrix4x4.TRS(record.Position, record.Rotation,
+                Vector3.one * ScatterHarvestStore.StoredScaleOr(record.Scale));
+            for (int i = 0; i < tree.LogSections.Length; i++)
+                if ((record.RemovedSections & (1u << i)) == 0) Draw(tree.LogSections[i], proto.TrunkMaterial, matrix, camera, proto.CutMaterial);
+            if (!record.HasHarvestGeometry) continue;
+            for (int i = 0; i < tree.BranchBark.Length; i++)
+            {
+                if ((record.RemovedBranches & (1u << i)) != 0) continue;
+                Draw(tree.BranchBark[i], proto.TrunkMaterial, matrix, camera);
+                Draw(tree.BranchFoliage[i], proto.Parts.Length > 1 ? proto.Parts[1].Material : proto.TrunkMaterial, matrix, camera);
+            }
         }
     }
 
-    public void Dispose()
+    static void Draw(Mesh mesh, Material material, Matrix4x4 matrix, Camera camera, Material cutMaterial = null)
     {
-        if (_material != null)
-        {
-            if (Application.isPlaying) Object.Destroy(_material);
-            else Object.DestroyImmediate(_material);
-            _material = null;
-        }
-        _ready = false;
+        if (mesh == null || mesh.vertexCount == 0 || material == null) return;
+        Graphics.DrawMesh(mesh, matrix, material, 0, camera, 0, null, ShadowCastingMode.On, true);
+        if (mesh.subMeshCount > 1) Graphics.DrawMesh(mesh, matrix, cutMaterial != null ? cutMaterial : material, 0, camera, 1, null, ShadowCastingMode.On, true);
     }
+
+    public void Dispose() { _logs.Clear(); }
 }

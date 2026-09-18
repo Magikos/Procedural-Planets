@@ -4,7 +4,7 @@ using UnityEngine;
 // camera-centered GrassNearFieldController, and the far terrain-blanket overlay baked into the
 // terrain material. Tracks the master/per-layer enable flags and drives altitude-based activation
 // of the near field. Planet forwards Configure/Tick/Dispose and the IGrassRuntimeControl surface.
-[CommandPrefix("grass")]
+[CommandPrefix("grass", Group = "Vegetation and wildlife", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 sealed class PlanetGrassCoordinator : IGrassNearFieldStatsProvider
 {
     readonly Transform _planetTransform;

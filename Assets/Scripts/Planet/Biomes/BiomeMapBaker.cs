@@ -21,23 +21,23 @@ public static class BiomeMapBaker
     public const int MapResolution = PlanetChunkTextures.BiomeMapResolution;
     public const int TopK = PlanetChunkTextures.TopK;
 
-    // High-res grid is 2x the output. Each output texel covers a 2x2 block of high-res cells,
+    // Both grids include the shared chunk endpoints. Output texels are two samples apart,
     // and a wider sample window gives biome boundaries enough distance to read as gradual
     // transitions instead of thin dark lines in DEBUG_BIOME_MAP_BLEND.
-    const int HighResolution = MapResolution * 2;       // 128 at MapResolution=64
+    const int SampleStride = 2;
+    const int HighResolution = (MapResolution - 1) * SampleStride + 1;
     const int KernelRadius = 12;                         // window = (2*r + 1)^2 = 25x25 = 625 samples (wider = softer biome borders)
-    const int KernelSamples = (KernelRadius * 2 + 1) * (KernelRadius * 2 + 1);
     const int PaddedResolution = HighResolution + KernelRadius * 2;
     const int TexelCount = MapResolution * MapResolution;
     const int HighResCount = PaddedResolution * PaddedResolution;
 
     [System.ThreadStatic] static int[] _tlsTopKCounts;
+    [System.ThreadStatic] static int[] _tlsColumnCounts;
+    [System.ThreadStatic] static byte[] _tlsSecondaryIds;
+    [System.ThreadStatic] static byte[] _tlsSecondaryWeights;
 
-    // Bake() runs under Parallel.For, so the two pass timers accumulate through Interlocked.
-    // The split exists because the caller only sees one aggregate mapBake number, and the two
-    // passes have unrelated costs: grid construction is ~35.5M assignment-field/lake samples
-    // per generation, smoothing is ~3.93B counter updates. Optimizing either one blind is a
-    // coin flip.
+    // Summed worker CPU time separates field sampling from histogram smoothing.
+    // These counters are not wall-clock generation time.
     static long _highResGridTicks;
     static long _topKTicks;
 
@@ -58,7 +58,8 @@ public static class BiomeMapBaker
         in BiomeLookupData lookup,
         IBiomeAssignmentField assignmentField,
         Color[] lutColors,
-        Color32[] blendedColors, Color32[] ids, Color32[] weights, byte[] tempHighRes)
+        Color32[] blendedColors, Color32[] ids, Color32[] weights, byte[] tempHighRes,
+        TerrainQuadtree[] terrain = null)
     {
         if (chunk == null || chunk.CpuElevations == null) return;
         if (chunk.CpuBiomeData == null && chunk.CpuBiomeData32 == null) return;
@@ -78,9 +79,16 @@ public static class BiomeMapBaker
         int activeBiomeCount = GetActiveBiomeCount(lookup, lutColors);
 
         long gridStart = System.Diagnostics.Stopwatch.GetTimestamp();
-        BuildHighResIdGrid(chunk, lookup, assignmentField, vertRes, tempHighRes);
+        if (_tlsSecondaryIds == null || _tlsSecondaryIds.Length != HighResCount)
+        {
+            _tlsSecondaryIds = new byte[HighResCount];
+            _tlsSecondaryWeights = new byte[HighResCount];
+        }
+        BuildHighResIdGrid(chunk, lookup, assignmentField, vertRes, tempHighRes,
+            _tlsSecondaryIds, _tlsSecondaryWeights, terrain);
         long topKStart = System.Diagnostics.Stopwatch.GetTimestamp();
-        SampleTopKPerTexel(tempHighRes, lutColors, activeBiomeCount, blendedColors, ids, weights);
+        SampleWeightedTopKPerTexel(tempHighRes, _tlsSecondaryIds, _tlsSecondaryWeights,
+            lutColors, activeBiomeCount, blendedColors, ids, weights);
         long bakeEnd = System.Diagnostics.Stopwatch.GetTimestamp();
 
         System.Threading.Interlocked.Add(ref _highResGridTicks, topKStart - gridStart);
@@ -104,31 +112,46 @@ public static class BiomeMapBaker
         in BiomeLookupData lookup,
         IBiomeAssignmentField assignmentField,
         int vertRes,
-        byte[] outIds)
+        byte[] outIds, byte[] secondaryIds, byte[] secondaryWeights, TerrainQuadtree[] terrain)
     {
+        WaterBodyMap water = WaterBodyMap.Current;
         for (int py = 0; py < PaddedResolution; py++)
         {
             float localV = (float)(py - KernelRadius) / (HighResolution - 1);
             for (int px = 0; px < PaddedResolution; px++)
             {
                 float localU = (float)(px - KernelRadius) / (HighResolution - 1);
-                Vector2 tm = BilinearSampleXY(chunk, vertRes, localU, localV);
+                Vector2 faceUv = chunk.UvCenter + new Vector2(
+                    (localU - 0.5f) * chunk.UvHalfExtent * 2f,
+                    (localV - 0.5f) * chunk.UvHalfExtent * 2f);
+                Vector3 direction = CoordinateConverter.CubeFaceToUnitSphere(chunk.FaceIndex, faceUv);
+                PlanetChunk source = chunk;
+                int sourceRes = vertRes;
+                float sampleU = localU, sampleV = localV;
+                if (terrain != null && (localU <= 0f || localU >= 1f || localV <= 0f || localV >= 1f))
+                {
+                    int face = chunk.FaceIndex;
+                    if (faceUv.x < 0f || faceUv.x > 1f || faceUv.y < 0f || faceUv.y > 1f)
+                        CoordinateConverter.UnitSphereToCubeFaceUvExact(direction, out face, out faceUv);
+                    source = terrain[face].FindLeafContaining(faceUv);
+                    sourceRes = (int)Mathf.Sqrt(source.CpuElevations.Length);
+                    sampleU = (faceUv.x - source.UvCenter.x) / (2f * source.UvHalfExtent) + 0.5f;
+                    sampleV = (faceUv.y - source.UvCenter.y) / (2f * source.UvHalfExtent) + 0.5f;
+                }
+                Vector2 tm = BilinearSampleXY(source, sourceRes, sampleU, sampleV);
                 float elevation = BilinearSample(
-                    chunk.CpuElevations, vertRes, localU, localV);
+                    source.CpuElevations, sourceRes, sampleU, sampleV);
 
                 byte primary;
+                byte secondary = 0;
+                float secondaryWeight = 0f;
                 if (assignmentField != null)
                 {
-                    Vector2 faceUv = chunk.UvCenter + new Vector2(
-                        (localU - 0.5f) * chunk.UvHalfExtent * 2f,
-                        (localV - 0.5f) * chunk.UvHalfExtent * 2f);
-                    Vector3 direction = CoordinateConverter.CubeFaceToUnitSphere(
-                        chunk.FaceIndex, faceUv);
                     byte landPrimary = assignmentField.EvaluatePrimaryId(direction);
-                    byte lakeState = WaterBodyMap.Current != null ? WaterBodyMap.Current.Sample(direction) : (byte)0;
-                    float waterLevel = WaterBodyMap.Current != null
-                        ? WaterBodyMap.Current.LevelAt(direction, BiomeConstants.OceanThreshold)
-                        : BiomeConstants.OceanThreshold;
+                    byte lakeState = 0;
+                    float waterLevel = BiomeConstants.OceanThreshold;
+                    if (water != null)
+                        water.SampleStateAndLevel(direction, waterLevel, out lakeState, out waterLevel);
                     BiomeLookupEvaluator.ResolveFromLandBiomes(
                         lookup,
                         tm.x,
@@ -139,8 +162,8 @@ public static class BiomeMapBaker
                         lakeState,
                         waterLevel,
                         out primary,
-                        out _,
-                        out _);
+                        out secondary,
+                        out secondaryWeight);
                 }
                 else
                 {
@@ -149,15 +172,21 @@ public static class BiomeMapBaker
                         out primary, out _, out _);
                 }
 
-                outIds[py * PaddedResolution + px] = primary;
+                int index = py * PaddedResolution + px;
+                outIds[index] = primary;
+                secondaryIds[index] = secondary;
+                secondaryWeights[index] = (byte)Mathf.RoundToInt(Mathf.Clamp01(secondaryWeight) * 255f);
             }
         }
     }
 
-    // Pass 2: per output texel, scan a kernel of the high-res id grid, count biome occurrences,
-    // pick top K, normalize weights, compute pre-blended color.
+    // Pass 2: maintain the weighted window histogram and write the strongest four biomes.
     static void SampleTopKPerTexel(byte[] hrIds, Color[] lutColors, int activeBiomeCount,
         Color32[] blendedColors, Color32[] ids, Color32[] weights)
+        => SampleWeightedTopKPerTexel(hrIds, null, null, lutColors, activeBiomeCount, blendedColors, ids, weights);
+
+    static void SampleWeightedTopKPerTexel(byte[] hrIds, byte[] secondaryIds, byte[] secondaryWeights,
+        Color[] lutColors, int activeBiomeCount, Color32[] blendedColors, Color32[] ids, Color32[] weights)
     {
         // Biome ids are bytes, but valid ids are normally contiguous [0, BiomeCount).
         // Keep the backing buffer at 256 for the fallback path while scanning only active ids.
@@ -168,34 +197,43 @@ public static class BiomeMapBaker
             _tlsTopKCounts = counts;
         }
 
+        // Cache each column's vertical histogram. Moving down updates two rows;
+        // moving right adds and removes two column histograms without rereading samples.
+        int columnSize = PaddedResolution * activeBiomeCount;
+        if (_tlsColumnCounts == null || _tlsColumnCounts.Length < columnSize)
+            _tlsColumnCounts = new int[columnSize];
+        var columns = _tlsColumnCounts;
+        System.Array.Clear(columns, 0, columnSize);
+        for (int y = 0; y <= KernelRadius * 2; y++)
+            for (int x = 0; x < PaddedResolution; x++)
+                AccumulateSample(y * PaddedResolution + x, x * activeBiomeCount, 1);
+
         for (int ty = 0; ty < MapResolution; ty++)
         {
-            // Map output texel (ty) to high-res center: each output texel covers 2 hr cells.
-            int hrCenterY = KernelRadius
-                + ty * (HighResolution / MapResolution)
-                + (HighResolution / MapResolution) / 2;
+            if (ty > 0)
+                for (int row = 0; row < SampleStride; row++)
+                    for (int x = 0; x < PaddedResolution; x++)
+                    {
+                        int departing = (ty - 1) * SampleStride + row;
+                        int entering = departing + KernelRadius * 2 + 1;
+                        AccumulateSample(departing * PaddedResolution + x, x * activeBiomeCount, -1);
+                        AccumulateSample(entering * PaddedResolution + x, x * activeBiomeCount, 1);
+                    }
+            System.Array.Clear(counts, 0, activeBiomeCount);
+            for (int x = 0; x <= KernelRadius * 2; x++)
+                for (int id = 0; id < activeBiomeCount; id++)
+                    counts[id] += columns[x * activeBiomeCount + id];
+
             for (int tx = 0; tx < MapResolution; tx++)
             {
-                int hrCenterX = KernelRadius
-                    + tx * (HighResolution / MapResolution)
-                    + (HighResolution / MapResolution) / 2;
-
-                System.Array.Clear(counts, 0, activeBiomeCount);
-
-                // Every texel scans exactly (2r+1)^2 samples from the padded grid. The grid
-                // already contains samples outside this chunk, so no edge clamping is needed.
-                for (int dy = -KernelRadius; dy <= KernelRadius; dy++)
-                {
-                    int hy = hrCenterY + dy;
-                    int rowBase = hy * PaddedResolution;
-                    for (int dx = -KernelRadius; dx <= KernelRadius; dx++)
+                if (tx > 0)
+                    for (int column = 0; column < SampleStride; column++)
                     {
-                        int hx = hrCenterX + dx;
-                        byte id = hrIds[rowBase + hx];
-                        if (id < activeBiomeCount)
-                            counts[id]++;
+                        int departing = ((tx - 1) * SampleStride + column) * activeBiomeCount;
+                        int entering = departing + (KernelRadius * 2 + 1) * activeBiomeCount;
+                        for (int id = 0; id < activeBiomeCount; id++)
+                            counts[id] += columns[entering + id] - columns[departing + id];
                     }
-                }
 
                 // Pick top K by count. Linear sweep over the active biome slots is cheaper
                 // than scanning the whole byte range for every texel.
@@ -233,6 +271,15 @@ public static class BiomeMapBaker
                 blended.a = 1f;
                 blendedColors[idx] = blended;
             }
+        }
+        void AccumulateSample(int index, int column, int sign)
+        {
+            byte primary = hrIds[index];
+            int secondaryWeight = secondaryWeights == null ? 0 : secondaryWeights[index];
+            if (primary < activeBiomeCount)
+                columns[column + primary] += sign * (255 - secondaryWeight);
+            if (secondaryWeight > 0 && secondaryIds[index] < activeBiomeCount)
+                columns[column + secondaryIds[index]] += sign * secondaryWeight;
         }
     }
 

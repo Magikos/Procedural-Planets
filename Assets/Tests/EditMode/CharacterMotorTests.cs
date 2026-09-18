@@ -10,6 +10,24 @@ namespace ProceduralPlanets.Tests
     {
         const float Tol = 1e-4f;
 
+        [TestCase(.75f)]
+        [TestCase(1.6f)]
+        public void ConfiguredJumpHeightControlsApexAndRunningDistance(float height)
+        {
+            var driver = FlatDriver(0f); driver.JumpHeight = height;
+            float apex = 0f; int frames = 0;
+            do
+            {
+                driver.Tick(Vector2.up, Vector3.forward, 4f, 1f / 120f, jump: frames == 0);
+                apex = Mathf.Max(apex, driver.Pose.Position.y);
+                frames++;
+            } while (!driver.Grounded && frames < 600);
+            Assert.Less(frames, 600);
+            Assert.AreEqual(height, apex, .04f);
+            float expectedDistance = 4f * 2f * Mathf.Sqrt(2f * height / 9.81f);
+            Assert.AreEqual(expectedDistance, driver.Pose.Position.z, .12f);
+        }
+
         static readonly Vector3 Up = Vector3.up;
         static readonly Vector3 Fwd = Vector3.forward;
 

@@ -43,7 +43,16 @@ public sealed record WaterDto(
     float CausticContrast,
     float CausticPrismStrength,
     float UnderwaterNightScale,
-    float UnderwaterShaftIntensity)
+    float UnderwaterShaftIntensity,
+    Color UnderwaterFogColor,
+    float UnderwaterVisibility,
+    float UnderwaterShaftWidth,
+    float UnderwaterSurfaceDetail,
+    bool RiversEnabled = true,
+    float RiverCatchmentFraction = .00045f,
+    float RiverHalfWidth = 5f,
+    float RiverDepth = 2f,
+    float WaterfallMinDrop = 8f)
 {
     public static WaterDto From(WaterSettings src)
     {
@@ -91,7 +100,12 @@ public sealed record WaterDto(
             src.CausticContrast,
             src.CausticPrismStrength,
             src.UnderwaterNightScale,
-            src.UnderwaterShaftIntensity);
+            src.UnderwaterShaftIntensity,
+            src.UnderwaterFogColor,
+            src.UnderwaterVisibility,
+            src.UnderwaterShaftWidth,
+            src.UnderwaterSurfaceDetail,
+            src.RiversEnabled, src.RiverCatchmentFraction, src.RiverHalfWidth, src.RiverDepth, src.WaterfallMinDrop);
     }
 
     /// <summary>Authored distances are relative to <see cref="ReferenceRadius"/>; scale them for this planet.</summary>

@@ -17,6 +17,7 @@ public sealed class WaterQueryService : IWaterQueryService
     readonly Transform _planetTransform;
 
     WaterBodyMap _bodies;
+    RiverFieldData _rivers;
     ISurfaceGroundSampler _ground;
     float _planetRadius;
     float _oceanLevel;
@@ -33,9 +34,11 @@ public sealed class WaterQueryService : IWaterQueryService
     // mesh's SurfaceOffset matters: the rendered surface sits that far above the solved level, and a query
     // that ignored it would report a boat floating a few centimetres inside its own hull.
     public void Configure(WaterBodyMap bodies, ISurfaceGroundSampler ground,
-        float planetRadius, float oceanLevel, float surfaceOffset)
+        float planetRadius, float oceanLevel, float surfaceOffset, RiverFieldData rivers = default)
     {
+        _readers.Complete(); _readers = default; Version++;
         _bodies = bodies;
+        _rivers = rivers;
         _ground = ground;
         _planetRadius = planetRadius;
         _oceanLevel = oceanLevel;
@@ -44,7 +47,9 @@ public sealed class WaterQueryService : IWaterQueryService
 
     public void Reset()
     {
+        _readers.Complete(); _readers = default; Version++;
         _bodies = null;
+        _rivers = default;
         _ground = null;
     }
 
@@ -53,43 +58,45 @@ public sealed class WaterQueryService : IWaterQueryService
         sample = default;
         if (!IsConfigured) return false;
 
-        Vector3 local = _planetTransform.InverseTransformPoint(worldPosition);
-        float localRadius = local.magnitude;
-        if (localRadius < 0.0001f) return false;
-        Vector3 dir = local / localRadius;
-
-        // NoWater resolves to the global ocean level, which is exactly how the mesh and shaders behave, so
-        // a position over dry land reports the ocean surface far below it and falls out as "not in water".
-        float level = _bodies.LevelAt(dir, _oceanLevel);
-        float surfaceRadius = _planetRadius * (1f + level) + _surfaceOffset;
-
-        ushort bodyId = _bodies.SampleBodyId(dir);
-        if (bodyId == 0) return false;
-
-        bool isOcean = _bodies.Bodies != null
-            && _bodies.Bodies.TryGet(bodyId, out WaterBody body)
-            && body.Kind == WaterBodyKind.Ocean;
-
-        float bedRadius = _ground != null && _ground.TrySampleRadius(dir, out float groundRadius)
-            ? groundRadius
-            : surfaceRadius;
-
-        float scale = LocalToWorldScale();
-        Vector3 surfacePoint = _planetTransform.TransformPoint(dir * surfaceRadius);
-        Vector3 normal = _planetTransform.TransformDirection(dir).normalized;
-
-        sample = new WaterSample(
-            surfacePoint,
-            normal,
-            (surfaceRadius - localRadius) * scale,
-            Mathf.Max(surfaceRadius - bedRadius, 0f) * scale,
-            bodyId,
-            isOcean);
-        return true;
+        return WaterQueryKernel.Sample(new Field(this), worldPosition, out sample);
     }
 
     public bool IsUnderwater(Vector3 worldPosition) =>
         TryGetWaterSurface(worldPosition, out WaterSample sample) && sample.IsSubmerged;
+
+
+    public int Version { get; private set; }
+    Unity.Jobs.JobHandle _readers;
+    public void RegisterReader(Unity.Jobs.JobHandle reader) => _readers = Unity.Jobs.JobHandle.CombineDependencies(_readers, reader);
+    public bool TryCreateJobSnapshot(out WaterQueryJobSnapshot snapshot)
+    {
+        snapshot = null;
+        if (!IsConfigured || _bodies.LevelGrid == null || _ground is not IBurstElevationSource source) return false;
+        snapshot = new WaterQueryJobSnapshot(_bodies, source, _planetRadius, _oceanLevel, _surfaceOffset, _planetTransform);
+        return true;
+    }
+    public void CaptureJobTransform(WaterQueryJobSnapshot snapshot) => snapshot.CaptureTransform(_planetTransform);
+
+    readonly struct Field : IWaterQueryField
+    {
+        readonly WaterQueryService _owner;
+        public Field(WaterQueryService owner) => _owner = owner;
+        public float Radius => _owner._planetRadius;
+        public float Offset => _owner._surfaceOffset;
+        public float Scale => _owner.LocalToWorldScale();
+        public Vector3 ToLocal(Vector3 point) => _owner._planetTransform.InverseTransformPoint(point);
+        public Vector3 ToWorld(Vector3 point) => _owner._planetTransform.TransformPoint(point);
+        public Vector3 Direction(Vector3 direction) => _owner._planetTransform.TransformDirection(direction);
+        public Vector3 Velocity(Vector3 velocity) => _owner._planetTransform.TransformVector(velocity);
+        public float Level(Vector3 direction) => _owner._bodies.LevelAt(direction, _owner._oceanLevel);
+        public ushort Body(Vector3 direction) => _owner._bodies.SampleBodyId(direction);
+        public bool Ocean(ushort body) => _owner._bodies.Bodies != null &&
+            _owner._bodies.Bodies.TryGet(body, out var info) && info.Kind == WaterBodyKind.Ocean;
+        public bool River(Vector3 direction, out RiverSegment river, out float along) =>
+            _owner._rivers.Sample(direction, out river, out along, out _);
+        public bool Ground(Vector3 direction, out float radius)
+        { radius = 0f; return _owner._ground != null && _owner._ground.TrySampleRadius(direction, out radius); }
+    }
 
     float LocalToWorldScale()
     {

@@ -47,6 +47,9 @@ public sealed record PlanetDto(
         DiagnosticTerrainLayout = DiagnosticTerrainLayout
     };
 
+    // These recipe layers use persistence 0.5: sum(0.5^i) = 2 * (1 - 0.5^layers).
+    static float OctaveAmplitudeSum(int layers) => 2f * (1f - Mathf.Pow(0.5f, layers));
+
     ShapeSettings.NoiseLayer[] BuildNoiseLayers()
     {
         var continent = new ShapeSettings.NoiseLayer
@@ -73,9 +76,10 @@ public sealed record PlanetDto(
             NoiseSettings = new NoiseSettings
             {
                 Filter = NoiseSettings.FilterType.Rigid,
-                Strength = Mathf.Lerp(0.1f, 0.6f, MountainHeight),
+                // Budget uplift as a fraction of radius, independent of octave count.
+                Strength = 0.06f * Mathf.Clamp01(MountainHeight) / OctaveAmplitudeSum(4),
                 Layers = 4,
-                BaseRoughness = Mathf.Lerp(1.8f, 3.5f, MountainDensity),
+                BaseRoughness = Mathf.Lerp(6f, 12f, MountainDensity),
                 Roughness = 3f,
                 Persistence = 0.5f,
                 Center = new Vector3(0, 0, 4.61f),
@@ -83,6 +87,7 @@ public sealed record PlanetDto(
             }
         };
 
+        int detailLayers = Mathf.Clamp((int)(TerrainRoughness * 4) + 1, 1, 5);
         var detail = new ShapeSettings.NoiseLayer
         {
             Enabled = TerrainRoughness > 0.05f,
@@ -90,8 +95,8 @@ public sealed record PlanetDto(
             NoiseSettings = new NoiseSettings
             {
                 Filter = NoiseSettings.FilterType.Simple,
-                Strength = Mathf.Lerp(0.005f, 0.03f, TerrainRoughness),
-                Layers = Mathf.Clamp((int)(TerrainRoughness * 4) + 1, 1, 5),
+                Strength = 0.005f * Mathf.Clamp01(TerrainRoughness) / OctaveAmplitudeSum(detailLayers),
+                Layers = detailLayers,
                 BaseRoughness = Mathf.Lerp(3f, 8f, TerrainRoughness),
                 Roughness = 2.5f,
                 Persistence = 0.5f,
@@ -103,3 +108,4 @@ public sealed record PlanetDto(
         return new[] { continent, mountains, detail };
     }
 }
+

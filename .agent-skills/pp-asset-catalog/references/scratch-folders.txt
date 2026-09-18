@@ -1,0 +1,131 @@
+_TerrainAutoUpgrade
+_Wyrms
+ARTnGAME
+AssetInventory
+ASTROFISH_GAMES
+Aura 2
+BitGem
+Blaze AI
+BodyPoser
+BOXOPHOBIC
+BruteForce
+BruteForce-GrassShader
+Character Controller Pro
+Character Movement Fundamentals
+Clothing Culler
+Colossal Game Music Collection
+CombatMagicSpells
+Conversa
+Conversation Gestures Pack
+Corals
+Damian Gonzalez
+DestroyIt
+Devdog
+Dialogue_Anims
+Distant Lands
+DTT
+DynamicPortals
+EasyGridBuilder Pro
+ECM2
+Editor Default Resources
+EndlessBook
+EverydayMotionPack
+ExplosiveLLC
+Fantacode Studios
+FANTASTIC - Nature Pack
+FANTASTIC - Seaside Town
+Fantastic Nature Pack
+Fantastic Seaside Town
+Fantasy Adventure Environment
+Fantasy Portal FX
+Fantasy RPG Icons Pack
+Fantasy_Map_Creator
+Farm Animal Sounds
+Female_Anim_Starter_Pack
+FImpossible Creations
+Flying_Mage_Volume2
+Fraktalia
+Frank Platformer 2
+Gizmos
+Grruzam Archer Animation
+HeroicFantasyCreaturesFullPackVol1
+HighlightPlus
+HighlightPlusBundle
+Hovl Studio
+IndieKit
+InfinityPBR
+InfinityPBR - Magic Pig Games
+Interactor
+KayKit
+Kevin Iglesias
+KriptoFX
+Kugon
+Layer Lab
+LMHPOLY
+Loot_Anim_Set
+Magic Pig Games (Infinity PBR)
+MagicaCloth
+MagicArsenal
+Malbers Animations
+MegaBook
+Merchants_Enemies_Townsfolk
+MeshCombineStudio
+MoCapCentral
+Monster Sounds Pack
+Monsters Ultimate Pack 02 Cute Series
+Monsters Ultimate Pack 09 Cute Series
+MultiTexture_URP
+NOT_Lonely
+NWH
+Obi
+One_Handed_Sword_Attacks_and_Finishers
+Opsive
+Particles
+Plawius-NonConvexCollider
+Plugins
+Polyart
+PolygonHorse
+Polygonmaker
+polyperfect
+POLYSTYLE_MedievalDungeons
+PostProcessing
+Prefabs
+Procedural Worlds
+QuanticBrains
+Quirky Series
+Real Footsteps
+Resources
+Scenes
+Script_Wizard_AnimSet
+Settings
+Simple_Activations
+SkeletonData
+Sleep_Anim_Pack
+Snowify
+Sprite Shaders Ultimate
+StealthFinishers_Knife_and_Hand
+Stylized Grass Shader
+StylizedDragonPack
+StylizedWater2
+SurfaceData
+Survival_Animations
+Synty
+Tactical_Hand_Signals
+TelePresent
+TextMesh Pro
+Toon Enchanted Meadow
+Toon Fantasy Nature
+Toon Harbor Pack
+TriForge Assets
+TutorialInfo
+UMotionEditor
+UMotionExamples
+UniStorm Weather System
+Universal_Traversal_Anims
+Vampire_Boss_Set
+Vefects
+Vendors_and_Customers
+VeryAnimation
+VolumetricFog2
+VolumetricFogBundle
+Waldemarst

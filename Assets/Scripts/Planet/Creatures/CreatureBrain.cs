@@ -23,15 +23,26 @@ public enum CreatureBehaviour : byte
     Sleep = 8,
     Feed = 9,
     Drink = 10,
+    Circle = 11,
+    Defend = 12,
+    Threaten = 13,
+    ReturnHome = 14,
+    Gather = 15,
+    Alert = 16,
+    Investigate = 17,
 }
 
-public enum CreatureObjective { Roam, Hunt, Escape, FindFood, FindWater, Rest }
+public enum CreatureObjective { Roam, Hunt, Escape, FindFood, FindWater, Rest, InvestigateCarrion, Defend, ReturnHome, Investigate, Vigilance }
 
 public struct CreatureResourceTarget
 {
+    // Resource keys retain their own identity space; a scatter key is not an EntityId.
+    public ulong SourceKey;
+    public ResourceKind Kind;
     public EntityId Id;
     public Vector3 Position;
     public bool Available;
+    public float Uncertainty;
 }
 
 /// <summary>
@@ -48,6 +59,9 @@ public struct CreatureSenses
     public Vector3 Forward;
     public Vector3 Home;
     public float DistanceToHome;
+    public EntityId HomeId;
+    public Vector3 RestPosition;
+    public bool HasHomeSite, HomeSafe, AtHome, GatherAtHome, SeparatedFromGroup, HomeSheltered;
     public float DeltaTime;
     public float AltitudeMeters;
     public bool HasLandingTarget;
@@ -55,20 +69,38 @@ public struct CreatureSenses
     public uint Tick;
 
     public bool HasThreat;
+    public bool PerceptionLimited, DirectPrey, DirectThreat;
+    public float PreyUncertainty, ThreatUncertainty;
+    public bool HasInterest, InvestigateInterest;
+    public Vector3 InterestPosition;
+    public EntityId InterestId;
     public Vector3 ThreatPosition;
     public float ThreatDistance;
+    public EntityId ThreatId;
+    public bool HasDisposition, CanDefend, EscapeBlocked, CanThreaten, ThreatProvoked;
+    public float Fear, Confidence, Courage;
     public bool HasPrey;
+    public bool PreyUnreachable, ThreatUnreachable, GroupHuntCommitted;
+    public bool HasPursuitGoal, AttackLaneBlocked;
+    public Vector3 PursuitGoal;
     public bool PreyAlert;
     public Vector3 PreyPosition;
     public EntityId PreyId;
     public ActorNeeds Needs;
-    public int Health;
+    public double Health;
     public int MaxHealth;
+    public ActorAttackDefinition Attack;
+    public bool CanAttack, NeedsHealing;
     public float AttackDuration;
     public float AttackHitTime;
     public CreatureResourceTarget Food, Water;
+    public CreatureResourceTarget Carrion;
     public bool CanRest;
     public bool CanSleep;
+    public bool NeedsRecovery;
+    public bool NeedsSleep;
+    /// <summary>Quiet observation after the last threat is lost. Zero disables it.</summary>
+    public float VigilanceSeconds;
 
     public CreatureSpeciesDto Species;
 }
@@ -100,7 +132,13 @@ public struct CreatureContext
     public double HuntStartedSeconds, HuntCooldownUntil;
     public EntityId HuntTarget;
     public uint AttackSequence;
-    public bool HitConsumed, HitRequested;
+    public bool HitConsumed, HitRequested, PursuitStarted;
+    public double AttackReadyAt, ThreatYieldUntil;
+    public EntityId YieldThreat;
+    public EntityId ExaminedInterest;
+    public double InterestCooldownUntil;
+    public double VigilanceUntil;
+    public Vector3 LastThreatPosition;
 }
 
 /// <summary>
@@ -114,10 +152,29 @@ public sealed class CreatureBrain : IInputProvider
     static readonly IState<CreatureContext>[] States = { new WanderState(), new FleeState(), new PerchState(),
         new StalkState(), new ChaseState(), new AttackState(), new RecoverState(),
         new CreatureRestState(false), new CreatureRestState(true),
-        new CreatureConsumeState(false), new CreatureConsumeState(true) };
+        new CreatureConsumeState(false), new CreatureConsumeState(true), new CreatureCircleState(), new CreatureDefendState(), new CreatureThreatenState(),
+        new CreatureHomeState(false), new CreatureHomeState(true), new CreatureInvestigateState(false), new CreatureInvestigateState(true) };
 
     static readonly StateTransition<CreatureContext>[] Transitions =
     {
+        new()
+        {
+            From = (int)CreatureBehaviour.Wander,
+            Condition = (in CreatureContext c) => c.Objective is CreatureObjective.Investigate or CreatureObjective.Vigilance,
+            ResolveTo = (int _, in CreatureContext _) => (int)CreatureBehaviour.Alert,
+        },
+        new()
+        {
+            From = (int)CreatureBehaviour.Wander,
+            Condition = (in CreatureContext c) => c.Objective == CreatureObjective.ReturnHome,
+            ResolveTo = (int _, in CreatureContext c) => (int)(c.Senses.AtHome && c.Senses.GatherAtHome ? CreatureBehaviour.Gather : CreatureBehaviour.ReturnHome),
+        },
+        new()
+        {
+            From = (int)CreatureBehaviour.Wander,
+            Condition = (in CreatureContext c) => c.Objective == CreatureObjective.InvestigateCarrion,
+            ResolveTo = (int _, in CreatureContext _) => (int)CreatureBehaviour.Circle,
+        },
         new()
         {
             From = (int)CreatureBehaviour.Wander,
@@ -137,16 +194,38 @@ public sealed class CreatureBrain : IInputProvider
             Condition = (in CreatureContext c) => c.Objective == CreatureObjective.Hunt,
             ResolveTo = (int _, in CreatureContext _) => (int)CreatureBehaviour.Stalk,
         },
-        // Fear overrides whatever the animal was doing, from any state. The target is constant today; the
-        // seam is what lets a predator resolve to Hunt or Flee from the same condition later.
+        new()
+        {
+            From = StateId.None,
+            Condition = (in CreatureContext c) => c.Objective == CreatureObjective.Defend,
+            ResolveTo = (int state, in CreatureContext c) => state is (int)CreatureBehaviour.Defend or
+                (int)CreatureBehaviour.Attack or (int)CreatureBehaviour.Recover or (int)CreatureBehaviour.Threaten
+                ? StateId.None : c.Senses.CanThreaten && !c.Senses.ThreatProvoked && c.Senses.ThreatDistance > 2f
+                    ? (int)CreatureBehaviour.Threaten : (int)CreatureBehaviour.Defend,
+        },
         new()
         {
             From = StateId.None,
             Condition = (in CreatureContext c) => c.Objective == CreatureObjective.Escape,
             ResolveTo = (int _, in CreatureContext _) => (int)CreatureBehaviour.Flee,
         },
+        new()
+        {
+            From = StateId.None,
+            Condition = (in CreatureContext c) => (c.Senses.NeedsRecovery || c.Senses.NeedsSleep) &&
+                !c.Senses.HasThreat && !c.Senses.CanRest && c.Senses.HasLandingTarget &&
+                (c.Senses.Species?.CruiseAltitudeMeters ?? 0f) > 0f && !CreatureConsumeState.HasTarget(c),
+            ResolveTo = (int state, in CreatureContext _) => state == (int)CreatureBehaviour.Perch
+                ? StateId.None : (int)CreatureBehaviour.Perch,
+        },
+        new()
+        {
+            From = (int)CreatureBehaviour.Perch,
+            Condition = (in CreatureContext c) => c.Objective == CreatureObjective.Rest && c.Senses.CanRest,
+            ResolveTo = (int _, in CreatureContext _) => (int)CreatureBehaviour.Rest,
+        },
 
-        // Only a flier ever lands, and only from an unbothered wander. Everything on the ground is already
+        // Optional landing starts from an unbothered wander. Everything on the ground is already
         // where perching would put it, so the condition tests the one thing that makes a species a flier.
         new()
         {
@@ -173,7 +252,7 @@ public sealed class CreatureBrain : IInputProvider
 
     readonly AdaptiveStateMachine<CreatureContext> _machine;
     readonly UtilityDecision<(CreatureObjective, EntityId)> _decision = new(0.12f, 2d);
-    readonly UtilityCandidate<(CreatureObjective, EntityId)>[] _candidates = new UtilityCandidate<(CreatureObjective, EntityId)>[6];
+    readonly UtilityCandidate<(CreatureObjective, EntityId)>[] _candidates = new UtilityCandidate<(CreatureObjective, EntityId)>[10];
     CreatureContext _context;
     uint _lastPerchDecision = uint.MaxValue;
 
@@ -192,15 +271,25 @@ public sealed class CreatureBrain : IInputProvider
     /// <summary>Speed multiplier the current behaviour asked for, read by the host after <see cref="Sample"/>.</summary>
     public float SpeedScale => _context.SpeedScale;
     public bool HitRequested => _context.HitRequested;
+    public void ConfirmHit() => _context.HitConsumed = true;
     public uint AttackSequence => _context.AttackSequence;
     public float AttackTime => (float)(_context.SimulationSeconds - _context.StateEnteredSeconds);
     public CreatureObjective Objective => _context.Objective;
+    public Vector3 VigilancePosition => _context.LastThreatPosition;
+    public EntityId ObjectiveTarget => _decision.HasChoice ? _decision.Choice.Item2 : default;
 
     public void ReportHuntFailure(double retrySeconds = 5d)
     {
         if (double.IsNaN(retrySeconds) || double.IsInfinity(retrySeconds) || retrySeconds < 0d)
             throw new System.ArgumentOutOfRangeException(nameof(retrySeconds));
         _decision.Reject((CreatureObjective.Hunt, _context.Senses.PreyId), _context.SimulationSeconds + retrySeconds);
+    }
+
+    public void ReportNavigationFailure(double retrySeconds = 15d)
+    {
+        if (!double.IsFinite(retrySeconds) || retrySeconds < 0d)
+            throw new System.ArgumentOutOfRangeException(nameof(retrySeconds));
+        _decision.Reject((_context.Objective, ObjectiveTarget), _context.SimulationSeconds + retrySeconds);
     }
 
     public void ClearHuntFailure(EntityId target) => _decision.ForgetFailure((CreatureObjective.Hunt, target));
@@ -216,6 +305,12 @@ public sealed class CreatureBrain : IInputProvider
         _context.HitRequested = false;
 
         _context.SimulationSeconds += Mathf.Max(0f, _context.Senses.DeltaTime);
+        if (_context.Senses.HasThreat && _context.Senses.VigilanceSeconds > 0f &&
+            float.IsFinite(_context.Senses.VigilanceSeconds))
+        {
+            _context.VigilanceUntil = _context.SimulationSeconds + _context.Senses.VigilanceSeconds;
+            _context.LastThreatPosition = _context.Senses.ThreatPosition;
+        }
         SelectObjective();
         uint decision = (uint)(_context.SimulationSeconds / PerchDecisionSeconds);
         _context.PerchDecisionDue = decision != _lastPerchDecision;
@@ -237,22 +332,58 @@ public sealed class CreatureBrain : IInputProvider
         var senses = _context.Senses;
         float hunger = (float)senses.Needs.Hunger, thirst = (float)senses.Needs.Thirst;
         float health = senses.MaxHealth > 0 ? Mathf.Clamp01((float)senses.Health / senses.MaxHealth) : 1f;
+        float resolve = senses.HasDisposition ? senses.Confidence + senses.Courage * .25f - senses.Fear * .35f : 0f;
+        bool cornered = senses.EscapeBlocked || senses.NeedsRecovery &&
+            senses.ThreatDistance <= (_context.Objective == CreatureObjective.Defend ? 6f : 2.5f);
+        bool yielding = _context.SimulationSeconds < _context.ThreatYieldUntil && senses.ThreatId == _context.YieldThreat;
+        bool defend = !yielding && !senses.ThreatUnreachable && senses.HasThreat && senses.HasDisposition && senses.CanDefend && senses.ThreatDistance <= 6f;
+        bool panic = senses.HasDisposition && (senses.Fear >= .85f || health <= .35f) && !cornered;
+        bool contestedHunt = !yielding && !senses.PreyUnreachable && !senses.ThreatUnreachable && senses.HasThreat && senses.ThreatId == senses.PreyId && senses.HasPrey &&
+            senses.HasDisposition && resolve >= .45f && !panic && !cornered;
         _candidates[0] = new((CreatureObjective.Roam, default), 0.1f);
         bool feeding = _context.Objective == CreatureObjective.FindFood && senses.Food.Available;
         bool drinking = _context.Objective == CreatureObjective.FindWater && senses.Water.Available;
         _candidates[1] = new((CreatureObjective.FindFood, senses.Food.Id),
-            senses.Food.Available ? 0.55f + hunger * 0.5f : hunger * 0.6f, hunger >= (feeding ? 0.05f : 0.5f));
+            senses.Food.Available ? 1f + hunger * 0.5f + CriticalNeedBonus(hunger) - ResourceTravelCost(senses.Food, senses) : hunger * 0.6f,
+            hunger >= (feeding ? 0.05f : 0.5f));
         _candidates[2] = new((CreatureObjective.FindWater, senses.Water.Id),
-            senses.Water.Available ? 0.55f + thirst * 0.55f : thirst * 0.65f, thirst >= (drinking ? 0.05f : 0.5f));
-        _candidates[3] = new((CreatureObjective.Hunt, senses.PreyId), hunger * (0.35f + health * 0.65f),
-            hunger >= 0.5f && senses.HasPrey && CreatureHunt.Distance(_context) <= 20f &&
-            _context.SimulationSeconds >= _context.HuntCooldownUntil);
-        _candidates[4] = new((CreatureObjective.Escape, default), 1f, senses.HasThreat, emergency: true);
-        _candidates[5] = new((CreatureObjective.Rest, default), 0.55f,
-            senses.CanRest && hunger < 0.65f && thirst < 0.6f);
+            senses.Water.Available ? 1f + thirst * 0.55f + CriticalNeedBonus(thirst) - ResourceTravelCost(senses.Water, senses) : thirst * 0.65f,
+            thirst >= (drinking ? 0.05f : 0.5f));
+        _candidates[3] = new((CreatureObjective.Hunt, senses.PreyId), contestedHunt ? 1.25f + resolve + hunger * .25f : senses.GroupHuntCommitted ? 1.15f : hunger * (0.35f + health * 0.65f),
+            !senses.PreyUnreachable && !senses.NeedsRecovery && !senses.NeedsSleep && (!senses.HasDisposition || resolve >= .35f - hunger * .1f) &&
+            hunger >= (senses.GroupHuntCommitted ? .35f : .5f) && senses.HasPrey && Vector3.Distance(senses.Position, senses.PreyPosition) <= 20f &&
+            _context.SimulationSeconds >= _context.HuntCooldownUntil, emergency: contestedHunt);
+        _candidates[4] = new((CreatureObjective.Escape, senses.ThreatId), 1.5f,
+            senses.HasThreat && !(defend && cornered), emergency: true);
+        bool tired = senses.NeedsRecovery || senses.NeedsSleep || senses.NeedsHealing && hunger < .8f && thirst < .8f;
+        bool returnHome = senses.HasHomeSite && senses.HomeSafe && !senses.NeedsRecovery &&
+            (senses.GatherAtHome || !senses.AtHome && (tired || hunger < .5f && thirst < .5f || senses.SeparatedFromGroup ||
+                _context.Objective == CreatureObjective.ReturnHome && hunger < .8f && thirst < .8f));
+        _candidates[5] = new((CreatureObjective.Rest, default), tired ? 1.3f : 0.55f,
+            senses.CanRest && !returnHome && (tired || hunger < 0.65f && thirst < 0.6f));
+        _candidates[6] = new((CreatureObjective.InvestigateCarrion, senses.Carrion.Id), 0.4f,
+            senses.Species is { Scavenger: true, CruiseAltitudeMeters: > 0f } && senses.Carrion.Available);
+        _candidates[7] = new((CreatureObjective.Defend, senses.ThreatId), 1f + resolve,
+            defend && !panic, emergency: true);
+        _candidates[8] = new((CreatureObjective.ReturnHome, senses.HomeId),
+            senses.GatherAtHome ? 1.2f : tired ? 1.4f : senses.HomeSheltered ? .95f : .85f, returnHome);
+        bool vigilant = !senses.HasThreat && senses.VigilanceSeconds > 0f &&
+            (senses.Species?.CruiseAltitudeMeters ?? 0f) <= 0f &&
+            _context.SimulationSeconds < _context.VigilanceUntil && hunger < .9f && thirst < .9f;
+        _candidates[9] = vigilant ? new((CreatureObjective.Vigilance, default), 1.65f) : new((CreatureObjective.Investigate, senses.InterestId), 1.65f,
+            senses.HasInterest && !senses.HasThreat && !(senses.HasPrey && senses.DirectPrey && hunger >= .5f) &&
+            !senses.NeedsRecovery && !senses.NeedsSleep && !(hunger >= .9f && senses.Food.Available || thirst >= .9f && senses.Water.Available) &&
+            (_context.ExaminedInterest != senses.InterestId || _context.SimulationSeconds >= _context.InterestCooldownUntil));
+        var previous = _context.Objective;
         _decision.Select(_candidates, _context.SimulationSeconds);
         _context.Objective = _decision.Choice.Item1;
+        // A retreat ends this attempt. A changing matchup must not immediately restart the same fight.
+        if (previous == CreatureObjective.Hunt && _context.Objective == CreatureObjective.Escape)
+            _context.HuntCooldownUntil = System.Math.Max(_context.HuntCooldownUntil, _context.SimulationSeconds + 10d);
     }
+    static float ResourceTravelCost(CreatureResourceTarget target, CreatureSenses senses) =>
+        Mathf.Min(.9f, Vector3.ProjectOnPlane(target.Position - senses.Position, senses.Up).magnitude * .012f);
+    static float CriticalNeedBonus(float need) => Mathf.Clamp01((need - .8f) / .2f) * .3f;
 }
 
 /// <summary>Graze, drift, and stay near home. The life of an animal nobody is bothering.</summary>
@@ -310,7 +441,7 @@ sealed class FleeState : IState<CreatureContext>
     /// radius, so "no threat this tick" means the animal has outrun it or lost it.
     /// </summary>
     public int EvaluateExit(in CreatureContext c) =>
-        c.Senses.HasThreat ? StateId.None : (int)CreatureBehaviour.Wander;
+        c.Objective == CreatureObjective.Escape ? StateId.None : (int)CreatureBehaviour.Wander;
 
     public void Update(ref CreatureContext c)
     {

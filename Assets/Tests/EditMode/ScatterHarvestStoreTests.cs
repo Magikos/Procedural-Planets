@@ -120,10 +120,8 @@ namespace ProceduralPlanets.Tests
         [Test]
         public void RecordWithoutAStoredRotation_FallsBackRatherThanLyingOnItsSide()
         {
-            // Everything written before the transform was persisted stored Quaternion.identity, and a field
-            // absent from an older record reads back as all zeros. A scatter instance stands on the radial,
-            // so neither is a rotation it can have - the renderers must treat both as "unknown".
-            Assert.IsFalse(ScatterHarvestStore.HasStoredRotation(Quaternion.identity));
+            // Identity is a valid upright tree at the north pole; only an absent/invalid rotation falls back.
+            Assert.IsTrue(ScatterHarvestStore.HasStoredRotation(Quaternion.identity));
             Assert.IsFalse(ScatterHarvestStore.HasStoredRotation(new Quaternion(0f, 0f, 0f, 0f)));
             Assert.IsTrue(ScatterHarvestStore.HasStoredRotation(Quaternion.Euler(0f, 90f, 0f)));
 

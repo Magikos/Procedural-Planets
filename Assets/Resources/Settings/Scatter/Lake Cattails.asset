@@ -14,25 +14,29 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
   DisplayName: Lake Cattails
   SlotId: 64
-  SpacingMeters: 4
+  SpacingMeters: 2.5
   Biome: 18
   BiomeBlendPower: 1
   Weight: 1.2
-  Clumpiness: 0.4
-  PatchScaleMeters: 40
+  Clumpiness: 0.9
+  PatchScaleMeters: 14
   ShadePreference: 0
   MaxSlopeDegrees: 45
   SlopeFadeDegrees: 5
   ConformToSlope: 0
-  HasMinAltitude: 0
-  MinAltitudeMeters: 0
+  HasMinAltitude: 1
+  MinAltitudeMeters: -0.6
   HasMaxAltitude: 1
-  MaxAltitudeMeters: 3
+  MaxAltitudeMeters: 0.35
   MinWaterClearanceMeters: 0
+  WaterHabitat: 1
+  MaxFlowSpeed: 0.4
   OnWater: 0
   ScaleRange: {x: 0.42, y: 0.55}
   RandomYaw: 1
   Interaction: 0
+  FoodUnits: 0.5
+  FoodRegrowSeconds: 1800
   StumpMesh: {fileID: 0}
   StumpMaterial: {fileID: 0}
   Parts:
@@ -51,5 +55,8 @@ MonoBehaviour:
   LodEndDistances: []
   CastShadows: 1
   ReceiveShadows: 1
+  MeshOnlyVertexLimit: 0
   BakedImpostorAtlas: {fileID: 2800000, guid: 42bd518bc311e7d43998375ea16b18df, type: 3}
   BakedImpostorNormal: {fileID: 2800000, guid: dcdf978170832234c9174789bf389a39, type: 3}
+  BakedImpostorGridN: 0
+  BakedImpostorHasSurfaceData: 0

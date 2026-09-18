@@ -13,19 +13,45 @@
 //
 // Cells that drain to the ocean end with filled == their own elevation, so `filled > elevation` is exactly
 // the submerged set and the difference is the water depth.
+using System.Threading;
+
 public static class WaterSpillSolver
 {
     // elevation, neighbors (4 per cell, -1 for none) and seeds are all indexed by global cell id.
     // Returns the filled surface height per cell, in the same elevation units as the input.
-    public static float[] Solve(float[] elevation, int[] neighbors, bool[] seeds, float seedLevel)
+    public static float[] Solve(float[] elevation, int[] neighbors, bool[] seeds, float seedLevel, CancellationToken ct = default)
+        => SolveDrainage(elevation, neighbors, seeds, seedLevel, ct).Filled;
+
+    public sealed class Drainage
     {
+        public float[] Filled;
+        public float[] Elevation;
+        public int[] Receiver;
+        public int[] Order;
+    }
+
+    public static Drainage SolveDrainage(float[] elevation, int[] neighbors, bool[] seeds, float seedLevel, CancellationToken ct = default)
+    {
+        if (elevation == null || neighbors == null || seeds == null || neighbors.Length != elevation.Length * 4 || seeds.Length != elevation.Length)
+            throw new System.ArgumentException("Drainage arrays must describe the same four-neighbor grid.");
+        if (!float.IsFinite(seedLevel)) throw new System.ArgumentOutOfRangeException(nameof(seedLevel));
+        ct.ThrowIfCancellationRequested();
         int count = elevation.Length;
         var filled = new float[count];
-        for (int i = 0; i < count; i++) filled[i] = float.MaxValue;
+        var receiver = new int[count];
+        var settled = new bool[count];
+        var order = new System.Collections.Generic.List<int>(count);
+        for (int i = 0; i < count; i++)
+        {
+            if (!float.IsFinite(elevation[i])) throw new System.ArgumentException("Terrain elevations must be finite.");
+            filled[i] = float.MaxValue;
+            receiver[i] = -1;
+        }
 
         var heap = new MinHeap(count / 4 + 16);
         for (int i = 0; i < count; i++)
         {
+            if ((i & 255) == 0) ct.ThrowIfCancellationRequested();
             if (!seeds[i]) continue;
             filled[i] = seedLevel;
             heap.Push(i, seedLevel);
@@ -33,25 +59,31 @@ public static class WaterSpillSolver
 
         while (heap.TryPop(out int cell, out float cellLevel))
         {
+            ct.ThrowIfCancellationRequested();
             // A cell can be pushed more than once; the stale entries have a higher key than the value that
             // finally stuck, so skipping them here is what keeps the heap from re-expanding settled regions.
-            if (cellLevel > filled[cell]) continue;
+            if (cellLevel > filled[cell] || settled[cell]) continue;
+            settled[cell] = true;
+            order.Add(cell);
 
             int baseIndex = cell * 4;
             for (int n = 0; n < 4; n++)
             {
                 int next = neighbors[baseIndex + n];
                 if (next < 0) continue;
+                if (next >= count) throw new System.ArgumentException("Drainage neighbor is outside the grid.");
+                if (settled[next] || seeds[next]) continue;
 
                 float candidate = elevation[next] > cellLevel ? elevation[next] : cellLevel;
                 if (candidate >= filled[next]) continue;
 
                 filled[next] = candidate;
+                receiver[next] = cell;
                 heap.Push(next, candidate);
             }
         }
 
-        return filled;
+        return new Drainage { Filled = filled, Elevation = (float[])elevation.Clone(), Receiver = receiver, Order = order.ToArray() };
     }
 
     // Binary min-heap keyed by float. Unity's runtime profile predates System.Collections.Generic
@@ -78,7 +110,7 @@ public static class WaterSpillSolver
             while (i > 0)
             {
                 int parent = (i - 1) >> 1;
-                if (_keys[parent] <= _keys[i]) break;
+                if (!Less(i, parent)) break;
                 Swap(parent, i);
                 i = parent;
             }
@@ -102,8 +134,8 @@ public static class WaterSpillSolver
                     if (left >= _count) break;
                     int smallest = left;
                     int right = left + 1;
-                    if (right < _count && _keys[right] < _keys[left]) smallest = right;
-                    if (_keys[i] <= _keys[smallest]) break;
+                    if (right < _count && Less(right, left)) smallest = right;
+                    if (!Less(smallest, i)) break;
                     Swap(i, smallest);
                     i = smallest;
                 }
@@ -120,6 +152,8 @@ public static class WaterSpillSolver
             _items = newItems;
             _keys = newKeys;
         }
+
+        bool Less(int a, int b) => _keys[a] < _keys[b] || (_keys[a] == _keys[b] && _items[a] < _items[b]);
 
         void Swap(int a, int b)
         {

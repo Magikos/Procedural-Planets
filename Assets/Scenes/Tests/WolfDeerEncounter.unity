@@ -148,17 +148,60 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ad8cc5f643a4b14d921d9e47afc9e32, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ProceduralPlanets.Planet::PredatorEncounterPrototype
+  HomeSitesEnabled: 1
+  PackDenPosition: {x: -14, y: 0, z: -9}
+  SoloRestPosition: {x: 19, y: 0, z: -15}
+  GatherWaitSeconds: 8
+  ResourceMemorySeconds: 90
+  Scenario: 0
+  DeerPerception: {fileID: 11400000, guid: b82a85f37fa421242ac2f113b6d748df, type: 2}
+  WolfPerception: {fileID: 11400000, guid: f1968d3787ae17640ae176e47dc1388a, type: 2}
+  PerceptionLight: 1
+  ShowPerception: 1
   WolfVisuals: {fileID: 11400000, guid: 490388ecc295c86489fadfce94326257, type: 2}
   DeerVisuals: {fileID: 11400000, guid: 145f25f73a41e6f48beb345f9ac88ab9, type: 2}
+  WolfCombat: {fileID: 11400000, guid: 8c7a82922b2ea3c4ab2919db19a53709, type: 2}
+  DeerCombat: {fileID: 11400000, guid: 5d3f281bac10cfd44a74b878313247c0, type: 2}
+  BloodTexture: {fileID: 2800000, guid: e8629de501e850640a18121c619d1e11, type: 3}
+  WolfWarning: {fileID: 8300000, guid: 7c879227b0bb452a8fbbbce61db799eb, type: 3}
+  Ecosystem: 1
+  DeerCount: 8
+  PackWolfCount: 3
+  IncludeSoloWolf: 1
+  PackSupportEnabled: 1
+  PackSupportRadius: 12
   WolfHunger: 0.5
   WolfThirst: 0.15
   DeerHunger: 0.85
-  DeerThirst: 0.65
+  DeerThirst: 0.3
   HungerSeconds: 80
   ThirstSeconds: 160
   ConsumeUnitsPerSecond: 0.12
+  DayLengthSeconds: 120
+  StarvationGraceDays: 1
+  ThirstGraceDays: 0.25
+  StarvationFatalDays: 3
+  ThirstFatalDays: 1.5
   AllowSleep: 1
-  DeerMoveSpeed: 0.4
+  FoodAvailable: 1
+  WaterAvailable: 1
+  DeerSprintSeconds: 8
+  WolfSprintSeconds: 22
+  AwakeSeconds: 360
+  SleepRecoverySeconds: 60
+  InitialFatigue: 0
+  InitialStamina: 1
+  DeerCourage: 0.35
+  WolfCourage: 0.65
+  DeerStrength: 1
+  WolfStrength: 1.5
+  FirstDeerCornered: 0
+  FliesAfterDays: 0.25
+  BloatedAfterDays: 2
+  RottingAfterDays: 5
+  BonesAfterDays: 21
+  GoneAfterDays: 90
+  DeerMoveSpeed: 1
   DeerFullRunSpeed: 6
   WolfRunSpeed: 4
   WoundedSpeed: 0.7
@@ -167,6 +210,8 @@ MonoBehaviour:
   TargetAvailable: 1
   InterruptWolf: 0
   RestartRequested: 0
+  FollowCamera: 1
+  NavigationObstacles: 1
   Status: 
 --- !u!4 &795351528
 Transform:

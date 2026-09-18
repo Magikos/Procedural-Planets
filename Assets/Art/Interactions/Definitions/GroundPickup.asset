@@ -1,0 +1,92 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd8008cb45ca5034daa0a124445d0868, type: 3}
+  m_Name: GroundPickup
+  m_EditorClassIdentifier: Magikos.Game::ActorInteractionDefinition
+  Action: GroundPickup
+  Phases:
+  - Animation:
+      Name: Reach for item
+      Clip: {fileID: 1827226128182048838, guid: 79a8afe1ead460d428a84ff9503da065, type: 3}
+      StartNormalized: 0
+      EndNormalized: 0.55
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 0.67833334
+    RightHandWeight: 1
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.15
+  - Animation:
+      Name: Lift item
+      Clip: {fileID: 1827226128182048838, guid: 79a8afe1ead460d428a84ff9503da065, type: 3}
+      StartNormalized: 0.55
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 0.555
+    RightHandWeight: 1
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: Pickup
+    MarkerProgress: 0.15
+  - Animation:
+      Name: Stand with item
+      Clip: {fileID: 1827226128182048838, guid: 33691e1bdf8ae184fb8aa6e5b316ac5d, type: 3}
+      StartNormalized: 0.4
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.3
+    Seconds: 0.74
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.5
+  - Animation:
+      Name: Carry item
+      Clip: {fileID: 1827226128182048838, guid: 7a06bf4b549f0d740b68ed43f762de7d, type: 3}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.2
+    Seconds: 2.0000002
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 1
+    AllowMovement: 1
+    UseLocomotion: 1
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.15

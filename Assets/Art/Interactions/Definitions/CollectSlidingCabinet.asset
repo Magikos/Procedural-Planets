@@ -1,0 +1,130 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd8008cb45ca5034daa0a124445d0868, type: 3}
+  m_Name: CollectSlidingCabinet
+  m_EditorClassIdentifier: Magikos.Game::ActorInteractionDefinition
+  Action: CollectSlidingCabinet
+  Phases:
+  - Animation:
+      Name: Collect from cabinet
+      Clip: {fileID: 1827226128182048838, guid: ce4bcbc0ce73dda4d97c59382e007947, type: 3}
+      StartNormalized: 0.45
+      EndNormalized: 0.72
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 1.2600002
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: Collect
+    MarkerProgress: 0.15
+  - Animation:
+      Name: Recover after collection
+      Clip: {fileID: 1827226128182048838, guid: ce4bcbc0ce73dda4d97c59382e007947, type: 3}
+      StartNormalized: 0.72
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 1.3066666
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.15
+  - Animation:
+      Name: Inspect cabinet
+      Clip: {fileID: 1827226128182048838, guid: ce4bcbc0ce73dda4d97c59382e007947, type: 3}
+      StartNormalized: 0
+      EndNormalized: 0.04
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 0.3
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 1
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.15
+  - Animation:
+      Name: Reach for open panel
+      Clip: {fileID: 1827226128182048838, guid: ce4bcbc0ce73dda4d97c59382e007947, type: 3}
+      StartNormalized: 0.34
+      EndNormalized: 0.45
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 0.5133333
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 1
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.15
+  - Animation:
+      Name: Slide panel closed
+      Clip: {fileID: 1827226128182048838, guid: ce4bcbc0ce73dda4d97c59382e007947, type: 3}
+      StartNormalized: 0.16
+      EndNormalized: 0.34
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 0.8400001
+    RightHandWeight: 1
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 1
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: Close
+    MarkerProgress: 0.15
+  - Animation:
+      Name: Release panel
+      Clip: {fileID: 1827226128182048838, guid: ce4bcbc0ce73dda4d97c59382e007947, type: 3}
+      StartNormalized: 0
+      EndNormalized: 0.16
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 0.7466667
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 1
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.15

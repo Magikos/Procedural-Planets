@@ -5,6 +5,11 @@ public sealed class CommandData
 {
     public string Alias;
     public string Description;
+    public ConsoleReleasePolicy ReleasePolicy;
+    public string[] Aliases = Array.Empty<string>();
+    public string Example = "";
+    public string Family => Alias.Contains('.') ? Alias.Substring(0, Alias.IndexOf('.')) : "console";
+    public string Group;
     public MonoTargetType TargetType;
     public Type DeclaringType;
     public MethodInfo Method;

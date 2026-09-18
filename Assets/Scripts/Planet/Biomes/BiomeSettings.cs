@@ -19,7 +19,7 @@ public class BiomeSettings : ScriptableObject
     public float MoistureNoiseStrength = 0.35f;
 
     [Range(0f, 10f), Tooltip("Normalized temperature removed per unit of land elevation above the biome registry ocean threshold.")]
-    public float AltitudeTemperatureDrop;
+    public float AltitudeTemperatureDrop = 2.5f;
 
     [Range(16, 512), Tooltip("Samples baked from each climate curve before worker-thread terrain generation.")]
     public int ClimateLutResolution = 256;

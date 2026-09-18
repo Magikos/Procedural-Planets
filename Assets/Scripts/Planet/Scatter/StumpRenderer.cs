@@ -69,6 +69,7 @@ public sealed class StumpRenderer : System.IDisposable
             ScatterHarvestStore.HarvestNode node = _stumps[i];
             Mesh mesh = _placeholderMesh;
             Material mat = _placeholderMaterial;
+            Material cutMaterial = null;
             bool authored = false;
             if (library?.Prototypes != null && (uint)node.ProtoIndex < (uint)library.Prototypes.Length)
             {
@@ -77,6 +78,7 @@ public sealed class StumpRenderer : System.IDisposable
                 {
                     mesh = proto.StumpMesh;
                     mat = proto.StumpMaterial ?? proto.TrunkMaterial ?? _placeholderMaterial;
+                    cutMaterial = proto.CutMaterial;
                     authored = true;
                 }
             }
@@ -84,7 +86,7 @@ public sealed class StumpRenderer : System.IDisposable
 
             Vector3 up = node.Position - center;
             up = up.sqrMagnitude > 1e-6f ? up.normalized : Vector3.up;
-            Quaternion rot = ScatterHarvestStore.HasStoredRotation(node.Rotation)
+            Quaternion rot = node.HasStoredTransform && ScatterHarvestStore.HasStoredRotation(node.Rotation)
                 ? node.Rotation
                 : Quaternion.FromToRotation(Vector3.up, up);
             float instanceScale = ScatterHarvestStore.StoredScaleOr(node.Scale);
@@ -93,6 +95,7 @@ public sealed class StumpRenderer : System.IDisposable
             Vector3 pos = authored ? node.Position : node.Position + up * (PlaceholderScale.y * instanceScale);
             Vector3 scale = (authored ? Vector3.one : PlaceholderScale) * instanceScale;
             Graphics.RenderMesh(Rp(mat), mesh, 0, Matrix4x4.TRS(pos, rot, scale));
+            if (mesh.subMeshCount > 1) Graphics.RenderMesh(Rp(cutMaterial != null ? cutMaterial : mat), mesh, 1, Matrix4x4.TRS(pos, rot, scale));
         }
     }
 

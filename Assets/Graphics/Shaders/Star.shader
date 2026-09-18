@@ -4,6 +4,7 @@ HLSLINCLUDE
 
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Includes/Math.hlsl"
+#include "Includes/PlanetSunLighting.hlsl"
 
 float _StarSeed;
 float _StarDensity;
@@ -92,28 +93,7 @@ float3 SunDisc(float3 dir)
 
 float PlanetSkyVisibility(float3 dir)
 {
-    if (_SeaLevelRadius <= 0.0)
-        return 1.0;
-
-    float3 offset = _WorldSpaceCameraPos.xyz - _PlanetCenter;
-    float cameraRadius = length(offset);
-    float3 rayDir = normalize(dir);
-
-    if (cameraRadius <= _SeaLevelRadius * 1.002)
-    {
-        float3 localNormal = cameraRadius > 0.0001 ? offset / cameraRadius : float3(0.0, 1.0, 0.0);
-        float horizonDot = dot(localNormal, rayDir);
-        return smoothstep(-0.018, 0.032, horizonDot);
-    }
-
-    float2 planetHit = RaySphere(_PlanetCenter, _SeaLevelRadius, _WorldSpaceCameraPos.xyz, rayDir);
-    float rayHitsPlanet = step(0.0001, planetHit.y) * step(0.0, planetHit.x);
-    float rayForward = dot(offset, rayDir);
-    float closestSq = max(dot(offset, offset) - rayForward * rayForward, 0.0);
-    float horizonClearance = sqrt(closestSq) - _SeaLevelRadius;
-    float horizonSoftness = max(_SeaLevelRadius * 0.00035, 0.35);
-    float horizonVisibility = smoothstep(-horizonSoftness, horizonSoftness, horizonClearance);
-    return lerp(1.0, horizonVisibility, rayHitsPlanet);
+    return PlanetHorizonVisibility(_WorldSpaceCameraPos.xyz - _PlanetCenter, _SeaLevelRadius, normalize(dir));
 }
 
 float StarVisibility(float3 dir)

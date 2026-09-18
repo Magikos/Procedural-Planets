@@ -1,11 +1,23 @@
 public static partial class ShaderGlobalIds
 {
+    public const string WaterQuality = "_WaterQuality";
+    public const string WaterCameraPosition = "_WaterCameraPosition";
+    public const string WaterCameraSurface = "_WaterCameraSurface";
+    public const string WaterRippleCount = "_WaterRippleCount";
+    public const string WaterRippleOrigins = "_WaterRippleOrigins";
+    public const string WaterRippleNormals = "_WaterRippleNormals";
+    public const string WaterRippleParams = "_WaterRippleParams";
+    public const string WaterReflectionCube = "_WaterReflectionCube";
+    public const string WaterReflectionPreviousCube = "_WaterReflectionPreviousCube";
+    public const string WaterReflectionBlend = "_WaterReflectionBlend";
+    public const string WaterReflectionOrigin = "_WaterReflectionOrigin";
     public const string OceanDebugMode = "_OceanDebugMode";
     public const string DebugSuppressWeatherPasses = "_DebugSuppressWeatherPasses";
     public const string WaterFocusMode = "_WaterFocusMode";
     public const string OceanFocusMode = "_OceanFocusMode";
     public const string WaterVolumeEnabled = "_WaterVolumeEnabled";
     public const string WaterVolumeData = "_WaterVolumeData";
+    public const string WaterSurfaceDepth = "_WaterSurfaceDepth";
     public const string WaterInterfaceTexture = "_WaterInterfaceTexture";
     public const string FrozenWaterBodies = "_FrozenWaterBodies";
     public const string PartiallyFrozenWaterBodies = "_PartiallyFrozenWaterBodies";
@@ -56,25 +68,11 @@ public static partial class ShaderGlobalIds
     public const string WaterEdgeFadeEnd = "_WaterEdgeFadeEnd";
     public const string WaterEdgeFadeEndOcean = "_WaterEdgeFadeEndOcean";
 
-    // The colour deep water settles to, as PlanetWaterSurface computes it from PlanetDto.WaterColor and
-    // WaterDto.DeepBaseColor. The water shaders get it as the material's own _DeepColor; this global exists
-    // so Atmosphere.shader can reach the same value, because it renders the view THROUGH the water from
-    // below and had its own hardcoded copy that had drifted to roughly half the authored brightness.
-    //
-    // Deliberately NOT named _DeepColor: a material property of the same name shadows the global wherever
-    // that material is bound, which is exactly how the wave parameters went wrong before.
-    public const string WaterDeepColor = "_WaterDeepColor";
-
-    // The two magnitudes in Atmosphere.shader's submerged composite. Published by PlanetWaterSurface from
-    // WaterDto; nothing else reads them.
-    //
-    // UnderwaterNightScale multiplies the ambient floor the water column falls to after dark. It exists so
-    // that floor can move without _NightAmbientIntensity, which lights every surface on the planet at once:
-    // how readable the water is at midnight is a water art call, not a world-wide one.
-    //
-    // UnderwaterShaftIntensity scales the sun-shaft scattering coefficient. Only the magnitude - the
-    // per-channel ratio stays an authored constant in the shader, so the shafts keep their colour and the
-    // knob moves the one axis a person actually wants.
+    // Shared underwater optics, published from WaterDto by PlanetWaterSurface.
     public const string UnderwaterNightScale = "_UnderwaterNightScale";
     public const string UnderwaterShaftIntensity = "_UnderwaterShaftIntensity";
+    public const string UnderwaterFogColor = "_UnderwaterFogColor";
+    public const string UnderwaterVisibility = "_UnderwaterVisibility";
+    public const string UnderwaterShaftWidth = "_UnderwaterShaftWidth";
+    public const string UnderwaterSurfaceDetail = "_UnderwaterSurfaceDetail";
 }

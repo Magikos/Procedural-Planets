@@ -9,60 +9,32 @@ using UnityEngine;
 //   NoiseData.Evaluate  Burst-compatible instance method; float-based.
 //   Noise         managed back-compat wrapper preserving the original Vector3 API.
 //
-// Behavioural note: ported from double to float for SIMD/Burst. Output differs from
-// the original by ~1e-6 magnitude on the same seed and is not bit-identical.
+// The full-seed shuffle replaces the original eight-bit seed fold for every caller.
+// Existing seeds intentionally generate different worlds; no legacy mode is retained.
 
 public unsafe struct NoiseData
 {
     public const int PermutationSize = 256;
     public fixed int Permutation[PermutationSize * 2];
 
-    static readonly int[] Source = {
-        151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142,
-        8, 99, 37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203,
-        117, 35, 11, 32, 57, 177, 33, 88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165,
-        71, 134, 139, 48, 27, 166, 77, 146, 158, 231, 83, 111, 229, 122, 60, 211, 133, 230, 220, 105, 92, 41,
-        55, 46, 245, 40, 244, 102, 143, 54, 65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89,
-        18, 169, 200, 196, 135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250,
-        124, 123, 5, 202, 38, 147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189,
-        28, 42, 223, 183, 170, 213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9,
-        129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228, 251, 34,
-        242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107, 49, 192, 214, 31,
-        181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254, 138, 236, 205, 93, 222, 114,
-        67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180
-    };
-
     public static NoiseData Create(int seed)
     {
         NoiseData data;
-        if (seed != 0)
+        for (int i = 0; i < PermutationSize; i++) data.Permutation[i] = i;
+
+        // Hash the full seed and shuffle step so signed seeds and seed zero retain all their bits.
+        for (int i = PermutationSize - 1; i > 0; i--)
         {
-            byte b0 = (byte)(seed & 0xff);
-            byte b1 = (byte)((seed >> 8) & 0xff);
-            byte b2 = (byte)((seed >> 16) & 0xff);
-            byte b3 = (byte)((seed >> 24) & 0xff);
-            for (int i = 0; i < PermutationSize; i++)
-            {
-                int v = Source[i] ^ b0;
-                v ^= b1;
-                v ^= b2;
-                v ^= b3;
-                data.Permutation[i] = v;
-                data.Permutation[i + PermutationSize] = v;
-            }
+            uint value = math.hash(new uint2(unchecked((uint)seed), (uint)i));
+            int j = (int)(value % (uint)(i + 1));
+            int entry = data.Permutation[i];
+            data.Permutation[i] = data.Permutation[j];
+            data.Permutation[j] = entry;
         }
-        else
-        {
-            for (int i = 0; i < PermutationSize; i++)
-            {
-                int v = Source[i];
-                data.Permutation[i] = v;
-                data.Permutation[i + PermutationSize] = v;
-            }
-        }
+        for (int i = 0; i < PermutationSize; i++)
+            data.Permutation[i + PermutationSize] = data.Permutation[i];
         return data;
     }
-
     const float F3 = 1f / 3f;
     const float G3 = 1f / 6f;
 

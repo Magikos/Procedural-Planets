@@ -30,6 +30,7 @@ public static class GrassWaterFieldBinding
         if (compute == null)
             return;
 
+        RiverGpu.Bind(compute, kernel);
         Texture levelTex = Shader.GetGlobalTexture(LevelTexGlobalId);
         int resolution = levelTex != null
             ? Mathf.RoundToInt(Shader.GetGlobalFloat(LevelResGlobalId))

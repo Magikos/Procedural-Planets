@@ -118,19 +118,20 @@ public sealed class WaterVolumeRenderFeature : ScriptableRendererFeature
             return true;
         }
 
-        GameObject water = GameObject.Find("Water");
-        if (water == null)
+        foreach (var surface in WaterSurfaceRegistry.Snapshot)
         {
-            meshFilter = null;
-            meshRenderer = null;
-            return false;
+            if (surface == null) continue;
+            var renderer = surface.GetComponent<MeshRenderer>();
+            if (renderer == null || !IsRendererActive(renderer)) continue;
+            _cachedFilter = surface;
+            _cachedRenderer = renderer;
+            meshFilter = surface;
+            meshRenderer = renderer;
+            return true;
         }
-
-        _cachedFilter = water.GetComponent<MeshFilter>();
-        _cachedRenderer = water.GetComponent<MeshRenderer>();
-        meshFilter = _cachedFilter;
-        meshRenderer = _cachedRenderer;
-        return meshFilter != null && meshRenderer != null && IsRendererActive(meshRenderer);
+        meshFilter = null;
+        meshRenderer = null;
+        return false;
     }
 
     static bool IsRendererActive(Renderer renderer)
@@ -178,6 +179,7 @@ public sealed class WaterVolumePrepassRenderPass : ScriptableRenderPass
 {
     static readonly int _waterVolumeDataId = Shader.PropertyToID(ShaderGlobalIds.WaterVolumeData);
     static readonly int _waterInterfaceTextureId = Shader.PropertyToID(ShaderGlobalIds.WaterInterfaceTexture);
+    static readonly int _waterSurfaceDepthId = Shader.PropertyToID(ShaderGlobalIds.WaterSurfaceDepth);
     const int WaterPrepassPass = 0;
 
     Material _prepassMaterial;
@@ -187,7 +189,7 @@ public sealed class WaterVolumePrepassRenderPass : ScriptableRenderPass
     public WaterVolumePrepassRenderPass()
     {
         renderPassEvent = RenderPassEvent.BeforeRenderingTransparents;
-        ConfigureInput(ScriptableRenderPassInput.Depth);
+        ConfigureInput(ScriptableRenderPassInput.Depth | ScriptableRenderPassInput.Color);
     }
 
     public void Setup(Material prepassMaterial, Mesh mesh, Matrix4x4 localToWorld)
@@ -201,6 +203,7 @@ public sealed class WaterVolumePrepassRenderPass : ScriptableRenderPass
     {
         internal Material material;
         internal Mesh mesh;
+        internal MeshFilter[] surfaces;
         internal Matrix4x4 localToWorld;
     }
 
@@ -229,23 +232,36 @@ public sealed class WaterVolumePrepassRenderPass : ScriptableRenderPass
         waterDesc.colorFormat = GraphicsFormat.R16G16B16A16_SFloat;
         TextureHandle waterData = renderGraph.CreateTexture(waterDesc);
 
+        // Select the nearest displaced water face without overwriting the terrain depth.
+        TextureDesc depthDesc = waterDesc;
+        depthDesc.name = "WaterSurfaceDepth";
+        depthDesc.colorFormat = GraphicsFormat.None;
+        depthDesc.depthBufferBits = DepthBits.Depth32;
+        TextureHandle waterDepth = renderGraph.CreateTexture(depthDesc);
+
         using (var builder = renderGraph.AddRasterRenderPass<PrepassData>("WaterVolumePrepass", out var passData))
         {
             passData.material = _prepassMaterial;
             passData.mesh = _mesh;
+            passData.surfaces = WaterSurfaceRegistry.Snapshot;
             passData.localToWorld = _localToWorld;
 
             builder.UseTexture(resourceData.cameraDepthTexture, AccessFlags.Read);
             builder.SetRenderAttachment(waterData, 0, AccessFlags.Write);
-            builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
+            builder.SetRenderAttachmentDepth(waterDepth, AccessFlags.Write);
             builder.SetGlobalTextureAfterPass(waterData, _waterInterfaceTextureId);
             builder.SetGlobalTextureAfterPass(waterData, _waterVolumeDataId);
+            builder.SetGlobalTextureAfterPass(waterDepth, _waterSurfaceDepthId);
             builder.AllowGlobalStateModification(true);
             builder.AllowPassCulling(false);
 
             builder.SetRenderFunc(static (PrepassData data, RasterGraphContext ctx) =>
             {
-                ctx.cmd.DrawMesh(data.mesh, data.localToWorld, data.material, 0, WaterPrepassPass);
+                foreach (var surface in data.surfaces)
+                {
+                    if (surface == null || !surface.gameObject.activeInHierarchy || surface.sharedMesh == null) continue;
+                    ctx.cmd.DrawMesh(surface.sharedMesh, surface.transform.localToWorldMatrix, data.material, 0, WaterPrepassPass);
+                }
             });
         }
     }

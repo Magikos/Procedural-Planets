@@ -50,13 +50,14 @@ Shader "Hidden/WaterVolume"
     static const float CAUSTIC_SCALE = 0.5;
     static const float CAUSTIC_SPEED = 1.05;
     float3 _PlanetCenter;
+    #define PLANET_CENTER_DECLARED
+    #include "Includes/WaterDisplacement.hlsl"
     float _SeaLevelRadius;
-    // Sizes the band over which the camera counts as submerged - see CameraSubmerged01.
-    float _SwellAmplitude;
     float3 _SunParams;
     float _SunIntensity;
     float3 _MoonParams;
     float _MoonIntensity;
+    float _NightAmbientIntensity;
     int _OceanDebugMode;
 
     struct Attributes
@@ -458,15 +459,20 @@ Shader "Hidden/WaterVolume"
         return patternX * weights.x + patternY * weights.y + patternZ * weights.z;
     }
 
-    float2 BottomDistortionField(float3 worldPos)
+    float2 BottomDistortionField(float3 worldPos, float depth01, float body01)
     {
-        float3 local = (worldPos - _PlanetCenter) * 0.0125;
-        float time = _GameTime * 0.42;
-        float wave0 = sin(dot(local.xy, float2(1.37, 0.61)) + time * 1.18);
-        float wave1 = sin(dot(local.yz, float2(-0.74, 1.52)) - time * 0.91);
-        float wave2 = sin(dot(local.zx, float2(1.91, -0.83)) + time * 0.67);
-        float wave3 = sin(dot(local.xy + local.zz, float2(-1.12, 1.76)) - time * 1.31);
-        return float2(wave0 + wave2 * 0.55, wave1 - wave3 * 0.45) * 0.46;
+        float3 local = worldPos - _PlanetCenter;
+        float3 up = SafeNormalize(local, float3(0.0, 1.0, 0.0));
+        float3 axisA, axisB;
+        BuildPlanetWaveAxes(axisA, axisB);
+        WaterRippleParams p = EvaluateRippleParameters(depth01, body01, up);
+        float2 positionTS = float2(dot(local, axisA), dot(local, axisB));
+        WaterRippleField ripple = ComputeWaterRipple(positionTS, float2(1.0, 0.0), float2(0.0, 1.0),
+            p.scale, p.amplitude, p.timeScale, p.waveEnergy, p.weatherEnergy, p.chaos01);
+        float3 slope = WaterGradientWS(ripple.gradientTS * 0.18 + ripple.detailGradientTS * 1.35, axisA, axisB, up);
+        slope += WaterMicroSlope(local, up, ripple.detailScale, p.timeScale,
+            distance(worldPos, _WorldSpaceCameraPos.xyz)) * 0.12 * sqrt(p.waveEnergy);
+        return mul((float3x3)UNITY_MATRIX_V, slope).xy * 4.0;
     }
 
     float VolumeOpticalDepth(CausticResult caustics)
@@ -571,9 +577,15 @@ Shader "Hidden/WaterVolume"
         if (baseMask <= 0.0)
             return result;
 
-        float2 field = BottomDistortionField(receiverWS);
+        float4 surfaceData = SAMPLE_TEXTURE2D(_WaterVolumeData, sampler_WaterVolumeData, uv);
+        float3 interfaceWS = surfaceRayDistance > 0.0
+            ? _WorldSpaceCameraPos.xyz + normalize(receiverWS - _WorldSpaceCameraPos.xyz) * surfaceRayDistance
+            : receiverWS;
+        float2 field = BottomDistortionField(interfaceWS, surfaceData.g, 1.0 - WaterVolumeLakeMask(surfaceData));
+        baseMask *= 1.0 - saturate(surfaceData.a);
         float shallowStrength = lerp(1.0, 0.45, saturate(caustics.waterDepth / max(_CausticDepth, 1.0)));
-        float pixelStrength = _RefractionStrength * lerp(2.0, 7.0, pathRamp) * shallowStrength * baseMask * debugScale;
+        float pixelStrength = _RefractionStrength * lerp(3.0, 18.0, pathRamp) * (_ScreenParams.y / 720.0)
+            * shallowStrength * baseMask * debugScale;
         float2 offsetUv = field * pixelStrength / max(_ScreenParams.xy, float2(1.0, 1.0));
         float2 refractedUv = clamp(uv + offsetUv, float2(0.001, 0.001), float2(0.999, 0.999));
 
@@ -923,6 +935,21 @@ Shader "Hidden/WaterVolume"
         waterBody = lerp(waterBody, fogColor, depthFog * 0.58);
         float3 color = waterBody * (1.0 - troughShadow) + caustics.contribution * 0.48 + caustics.prismContribution * 1.28;
         color = FarTerrainWaterlineColor(color, farTerrainWaterlinePath, farTerrainWaterlineMask, volumeLight);
+        float submerged = CameraUnderwater01();
+        if (submerged > 0.0 && caustics.waterPath > 0.0)
+        {
+            float3 cameraUp = SafeNormalize3(_WorldSpaceCameraPos.xyz - _PlanetCenter, float3(0.0, 1.0, 0.0));
+            float3 sunDir = SafeNormalize3(_SunParams, cameraUp);
+            float3 moonDir = SafeNormalize3(_MoonParams, cameraUp);
+            float3 ambient = UnderwaterAmbientColor(rayDir, cameraUp, max(-CameraSeaOffset(), 0.0),
+                sunDir, _SunIntensity, moonDir, _MoonIntensity, _NightAmbientIntensity);
+            float3 transmit = UnderwaterTransmittance(caustics.waterPath);
+            // Receiver light travels through the same column as the surface window.
+            float3 receiverColor = baseColor * (1.0 - troughShadow)
+                + caustics.contribution * 0.48 + caustics.prismContribution * 1.28;
+            float3 underwaterColor = receiverColor * transmit + ambient * (1.0 - transmit);
+            color = lerp(color, underwaterColor, submerged);
+        }
         return float4(color, source.a);
     }
     ENDHLSL

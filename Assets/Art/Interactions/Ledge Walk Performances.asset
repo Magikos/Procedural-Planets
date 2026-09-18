@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1c31c5bdb5b4154a754cff5a36cad80, type: 3}
+  m_Name: Ledge Walk Performances
+  m_EditorClassIdentifier: Magikos.Game::ActorAnimationPerformanceLibrary
+  Entries:
+  - Id: ledge-walk-authored
+    Action: LedgeWalk
+    RigFamily: Humanoid
+    Condition: 
+    LocomotionExitPhase: -1
+    MinProficiency: 0
+    MaxProficiency: 1
+    Phases:
+    - Name: Forward_Start
+      Clip: {fileID: 7400000, guid: d2a1f6e9721ad76448234def8af4e82c, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.15
+    - Name: Forward_Loop
+      Clip: {fileID: 7400000, guid: 410c82b114ef5234298373f51a52c151, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.15
+    - Name: Forward_End
+      Clip: {fileID: 7400000, guid: 18fbe418e303cb7478d128d241da7f2a, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.15
+    - Name: Back_Loop
+      Clip: {fileID: 7400000, guid: 7c4bc798a1f65ad49b998968cbf5c116, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.15
+    - Name: Back_End
+      Clip: {fileID: 7400000, guid: 528b3cbbd4ec39842a8670cc92609535, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.15
+    - Name: Idle
+      Clip: {fileID: 7400000, guid: c1018b5a385186249967bc623d9e2a8d, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.15
+    - Name: Turn_180
+      Clip: {fileID: 7400000, guid: 699770d9f6cff7d4a95f7b6af54df747, type: 2}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.15

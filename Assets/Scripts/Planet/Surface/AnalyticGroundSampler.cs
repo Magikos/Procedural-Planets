@@ -69,5 +69,7 @@ public sealed class AnalyticGroundSampler : ISurfaceGroundSampler, IBurstElevati
 
     public DiagnosticTerrainSettingsData DiagnosticData => _shape.DiagnosticTerrainData;
 
+    public RiverFieldData Rivers => _shape.RiverData;
+
     public float PlanetRadius => _shape.Settings.PlanetRadius;
 }

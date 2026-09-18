@@ -47,6 +47,10 @@ public static class ScatterImpostorFactory
     public const float CardAlphaCutoff = 0.5f;
 
     public static ScatterLodBatcher.Impostor TryBuild(ScatterPrototypeDto proto, Bounds worldBounds)
+        => TryBuildAsync(proto, worldBounds, default, false).GetAwaiter().GetResult();
+
+    public static async Awaitable<ScatterLodBatcher.Impostor> TryBuildAsync(ScatterPrototypeDto proto,
+        Bounds worldBounds, System.Threading.CancellationToken ct, bool yieldFrames = true)
     {
         if (!proto.HasImpostor) return default;
         Shader shader = Shader.Find("Scatter/Impostor");
@@ -71,7 +75,7 @@ public static class ScatterImpostorFactory
         // for prototypes without one (runtime-placed / custom-saved structures).
         ScatterImpostorBaker.AtlasCard card = proto.BakedImpostorAtlas != null
             ? ScatterImpostorBaker.FromPrebaked(proto.BakedImpostorAtlas, proto.BakedImpostorNormal, meshes, proto.BakedImpostorGridN, proto.BakedImpostorHasSurfaceData)
-            : ScatterImpostorBaker.BakeAtlas(meshes, materials, OctGridN, AtlasCellPixels);
+            : await ScatterImpostorBaker.BakeAtlasAsync(meshes, materials, OctGridN, AtlasCellPixels, ct, yieldFrames);
         if (!card.Valid) return default;
 
         float start = proto.ImpostorStartDistance;

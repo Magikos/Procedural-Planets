@@ -150,12 +150,12 @@ public class PrecipitationRenderPass : ScriptableRenderPass
     Material _material;
     Material _weatherParticleMaterial;
     int _dustParticleCount;
-    int _snowParticleCount;
     bool _drawLocalParticles;
 
     public PrecipitationRenderPass()
     {
-        renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+        // Composite the rain column after atmosphere and clouds, which would otherwise wash it out.
+        renderPassEvent = (RenderPassEvent)((int)RenderPassEvent.BeforeRenderingPostProcessing + 4);
         ConfigureInput(ScriptableRenderPassInput.Depth);
         requiresIntermediateTexture = true;
         _propertyBlock = new MaterialPropertyBlock();
@@ -171,7 +171,6 @@ public class PrecipitationRenderPass : ScriptableRenderPass
         _weatherParticleMaterial = weatherParticleMaterial;
         _drawLocalParticles = controller != null && controller.ShouldRenderLocalParticles(camera);
         _dustParticleCount = _drawLocalParticles ? Mathf.Max(0, controller.DustParticleCount) : 0;
-        _snowParticleCount = _drawLocalParticles ? Mathf.Max(0, controller.SnowParticleCount) : 0;
     }
 
     private class PassData
@@ -181,7 +180,6 @@ public class PrecipitationRenderPass : ScriptableRenderPass
         internal TextureHandle source;
         internal bool drawLocalParticles;
         internal int dustParticleCount;
-        internal int snowParticleCount;
     }
 
     public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
@@ -209,7 +207,6 @@ public class PrecipitationRenderPass : ScriptableRenderPass
             passData.source = source;
             passData.drawLocalParticles = _drawLocalParticles;
             passData.dustParticleCount = _dustParticleCount;
-            passData.snowParticleCount = _snowParticleCount;
 
             builder.UseTexture(source, AccessFlags.Read);
             builder.SetRenderAttachment(destination, 0, AccessFlags.Write);
@@ -233,11 +230,6 @@ public class PrecipitationRenderPass : ScriptableRenderPass
                 {
                     ctx.cmd.DrawProcedural(Matrix4x4.identity, data.weatherParticleMaterial, 0,
                         MeshTopology.Triangles, 18, data.dustParticleCount * 6, _propertyBlock);
-                }
-                if (data.snowParticleCount > 0)
-                {
-                    ctx.cmd.DrawProcedural(Matrix4x4.identity, data.weatherParticleMaterial, 1,
-                        MeshTopology.Triangles, 18, data.snowParticleCount * 6, _propertyBlock);
                 }
 
                 // Rain drops draw in RainParticlesAfterPostPass at

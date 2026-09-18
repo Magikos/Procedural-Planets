@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 8c2298bf9c1950347b9ff4bd73a350ee
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 96826
+  packageName: Very Animation
+  packageVersion: 1.4.1
+  assetPath: Assets/VeryAnimation/Demo/TimelineAddtiveTrack/Timeline_KnownIssues.playable
+  uploadId: 984870

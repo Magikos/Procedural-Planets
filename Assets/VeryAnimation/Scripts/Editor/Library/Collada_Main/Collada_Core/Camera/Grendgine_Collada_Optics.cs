@@ -1,0 +1,23 @@
+﻿using System.Xml;
+using System.Xml.Serialization;
+
+namespace VeryAnimation.grendgine_collada
+{
+    [System.SerializableAttribute()]
+    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true)]
+    public partial class Grendgine_Collada_Optics
+    {
+
+        [XmlElement(ElementName = "technique_common")]
+        public Grendgine_Collada_Technique_Common_Optics Technique_Common { get; set; }
+
+        [XmlElement(ElementName = "technique")]
+        public Grendgine_Collada_Technique[] Technique { get; set; }
+
+        [XmlElement(ElementName = "extra")]
+        public Grendgine_Collada_Extra[] Extra { get; set; }
+
+
+    }
+}
+

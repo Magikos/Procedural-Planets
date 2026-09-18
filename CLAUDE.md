@@ -81,6 +81,37 @@ The committed skill library is [.agent-skills/](.agent-skills/) (16 skills, buil
 
 ---
 
+## Art assets: ours, not the vendor's
+
+No vendor package is installed to obtain an asset. Take the file out of
+`D:/Unity/Explore Assets` and copy it in. If it is not there, install the pack
+**in that scratch project**, then copy the file from it. Nothing vendor-shaped
+enters this repo: no package, no vendor directory structure, no vendor scripts,
+shaders, controllers, demos, or presets.
+
+The filename loses the vendor too. `SM_Chr_Monk_01.fbx` and
+`PolygonFantasyHero_Texture_01_A.png` are vendor names, not ours. Rename to the
+project convention — `Thing_NN` — and carry the `.meta` with the file so the GUID
+survives and every serialized reference stays intact.
+
+Layout is **domain-first**, not kind-first. A deer's mesh, texture, material,
+clips, and prefab belong together in `Art/Creatures/Deer`, because
+`Models/Creatures/Deer` holds one sixth of a deer. The top-level domains are
+`Audio`, `Characters`, `Creatures`, `Effects`, `Interactions`, `Materials`,
+`Props`, `Vegetation`. A folder under `Characters/` that names a role is named
+for the role, not for the pack that supplied it.
+
+Every set folder carries a `SOURCE.md` written in our words: what was taken, from
+which pack and path, what was changed to fit our systems, and what was
+deliberately not imported. That file is the provenance record — not the
+`AssetOrigin` block Unity writes into a `.meta`.
+
+We are sourcing material and adapting it to our systems, or updating our systems
+from the source. Optimise the layout for easy maintenance and maximum
+flexibility.
+
+---
+
 ## Async, background, and compute
 
 - **Awaitable only.** No coroutines (`IEnumerator`). No `async void`. No `Task.Run`.

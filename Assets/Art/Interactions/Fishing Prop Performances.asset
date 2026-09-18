@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1c31c5bdb5b4154a754cff5a36cad80, type: 3}
+  m_Name: Fishing Prop Performances
+  m_EditorClassIdentifier: Magikos.Game::ActorAnimationPerformanceLibrary
+  Entries:
+  - Id: fishing-prop
+    Action: FishingProp
+    RigFamily: Prop
+    Condition: 
+    LocomotionExitPhase: -1
+    MinProficiency: 0
+    MaxProficiency: 1
+    Phases:
+    - Name: Cast
+      Clip: {fileID: 1827226128182048838, guid: 8872227d68a3a5048baa6d95947ca54f, type: 3}
+      StartNormalized: 0.55
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    - Name: Wait
+      Clip: {fileID: 1827226128182048838, guid: 8702e9aad2c72df4da90befa88aac40d, type: 3}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.2
+    - Name: Nibble
+      Clip: {fileID: 1827226128182048838, guid: 1079f2d2f0d9e524cb33651f0fe5512b, type: 3}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    - Name: Bite
+      Clip: {fileID: 1827226128182048838, guid: bbce9828fbf8086449efc9f553924c5d, type: 3}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.2
+    - Name: Pull
+      Clip: {fileID: 1827226128182048838, guid: 810e1fa7afef07c49a49f7adebfa2b48, type: 3}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 1
+      BlendSeconds: 0.2
+    - Name: Catch
+      Clip: {fileID: 1827226128182048838, guid: 1435dc8cd5617a8439d4038536ccaef2, type: 3}
+      StartNormalized: 0
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    - Name: Recover
+      Clip: {fileID: 1827226128182048838, guid: 1435dc8cd5617a8439d4038536ccaef2, type: 3}
+      StartNormalized: 0.72
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.3

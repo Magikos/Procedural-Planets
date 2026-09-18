@@ -32,6 +32,7 @@ public struct PlanetChunkMeshJob : IJobParallelFor
     public float PlanetRadius;
     public byte EdgeFanMask;           // bits ESNW — see EdgeBit* constants
 
+    public RiverFieldData Rivers;
     [ReadOnly] public NativeArray<NoiseFilterData> Filters;
     [ReadOnly] public NativeArray<byte> DiagnosticTerrainCells;
     public DiagnosticTerrainSettingsData DiagnosticTerrain;
@@ -109,7 +110,7 @@ public struct PlanetChunkMeshJob : IJobParallelFor
 
         float3 pointOnUnitCube = FaceLocalUp + u_local * FaceAxisA + v_local * FaceAxisB;
         spherePoint = math.normalize(pointOnUnitCube);
-        elevation = EvaluateElevation(spherePoint);
+        elevation = Rivers.Carve(spherePoint, EvaluateElevation(spherePoint));
         worldPos = spherePoint * (PlanetRadius * (1f + elevation));
     }
 
@@ -118,22 +119,7 @@ public struct PlanetChunkMeshJob : IJobParallelFor
         if (DiagnosticTerrain.Enabled != 0)
             return DiagnosticTerrainEvaluator.Evaluate(point, DiagnosticTerrain, DiagnosticTerrainCells);
 
-        int count = Filters.Length;
-        if (count == 0) return 0f;
-
-        var first = Filters[0];
-        float firstLayerValue = NoiseFilterEvaluator.Evaluate(ref first, point);
-        float elevation = first.Enabled != 0 ? firstLayerValue : 0f;
-
-        for (int i = 1; i < count; i++)
-        {
-            var f = Filters[i];
-            if (f.Enabled == 0) continue;
-            float mask = f.UseFirstLayerAsMask != 0 ? firstLayerValue : 1f;
-            elevation += NoiseFilterEvaluator.Evaluate(ref f, point) * mask;
-        }
-
-        return elevation;
+        return NoiseFilterEvaluator.EvaluateLayers(Filters, point);
     }
 }
 

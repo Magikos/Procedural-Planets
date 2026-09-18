@@ -21,11 +21,14 @@ public struct ScatterProtoParams
     public int Biome;             // (int)BiomeType
     public float SpacingMeters;
     public float BiomeBlendPower;
-    public byte OnWater;          // 1 = float on the sea surface inside water cells
+    public byte OnWater;          // 1 = anchor on water; altitude gates still use the bed
     public float Clumpiness;      // 0 = uniform placement, unchanged
     public float PatchScaleMeters;
     public uint ClumpGroupSeed;   // per SPECIES, so a species' variants share one grove field
     public float ShadePreference; // <0 prefers open ground, >0 prefers dense wood
+    public float TreeAge;
+    public ScatterWaterHabitat WaterHabitat;
+    public float MaxFlowSpeed;
     public PlacementRulesBurst Rules;
 
     public static ScatterProtoParams From(ScatterPrototypeDto p) => new ScatterProtoParams
@@ -39,6 +42,7 @@ public struct ScatterProtoParams
         PatchScaleMeters = p.PatchScaleMeters,
         ClumpGroupSeed = p.ClumpGroupSeed,
         ShadePreference = p.ShadePreference,
+        TreeAge = p.TreeAge, WaterHabitat = p.WaterHabitat, MaxFlowSpeed = p.MaxFlowSpeed,
         Rules = new PlacementRulesBurst
         {
             Weight = p.Weight,
@@ -66,6 +70,7 @@ public struct ScatterGatherJob : IJobParallelFor
     const int BiomeSampleLevel = 9;
 
     [ReadOnly] public NativeArray<ScatterPairInput> Pairs;
+    public RiverFieldData Rivers;
     [ReadOnly] public NativeArray<NoiseFilterData> NoiseLayers;
     [ReadOnly] public NativeArray<byte> DiagCells;
     public DiagnosticTerrainSettingsData DiagData;
@@ -81,6 +86,8 @@ public struct ScatterGatherJob : IJobParallelFor
     // ScatterField.GatherContext.SeaRadiusAt - same helper, same argument order.
     [ReadOnly] public NativeArray<float> WaterLevel;
     public int WaterLevelRes;
+    [ReadOnly] public NativeArray<byte> WaterKinds;
+    public byte HasWaterKinds;
     public float PlanetRadius;
     public float Scale;
     public byte HasOcean;
@@ -119,7 +126,7 @@ public struct ScatterGatherJob : IJobParallelFor
         Vector2 uv = ScatterQuadtree.CandidateUv(x, y, cellUv, slotSeed);
         Vector3 dir = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(face, uv);
 
-        float localRadius = ScatterGatherBurst.SampleRadius(dir, NoiseLayers, DiagData, DiagCells, PlanetRadius);
+        float localRadius = ScatterGatherBurst.SampleRadius(dir, NoiseLayers, DiagData, DiagCells, PlanetRadius, Rivers);
         // Tile path: roiSqr = +inf in the managed reference, so no ROI clip here.
 
         int sampleLevel = level < BiomeSampleLevel ? level : BiomeSampleLevel;
@@ -131,27 +138,31 @@ public struct ScatterGatherJob : IJobParallelFor
             if (!Biome.TryGetValue(biomeKey, out memo)) memo = default;
             memoKey = biomeKey;
         }
-        float membership = ScatterGatherBurst.Membership(memo, pp.Biome);
+        bool riverHit = Rivers.Sample(dir, out var river, out float along, out _) && river.Shape.w == 0f;
+        float membership = riverHit && pp.WaterHabitat == ScatterWaterHabitat.Freshwater
+            ? 1f : ScatterGatherBurst.Membership(memo, pp.Biome);
         if (membership <= 0f) return false;
-
-        // OnWater prototypes (lily pads) float on the sea surface inside their biome's water cells, so they
-        // place at the sea radius with zero altitude and a flat (radial) normal instead of on the lakebed.
         bool onWater = pp.OnWater != 0;
-        float seaRadiusHere = WaterLevelRes > 0
-            ? WaterLevelGrid.SeaRadius(WaterLevel[WaterLevelGrid.Index(dir, WaterLevelRes)], BaseRadiusLocal, SeaRadiusLocal)
-            : SeaRadiusLocal;
+        int waterIndex = WaterLevelRes > 0 ? WaterLevelGrid.Index(dir, WaterLevelRes) : 0;
+        float seaRadiusHere = riverHit ? river.Radius(along) : WaterLevelRes > 0
+            ? WaterLevelGrid.SeaRadius(WaterLevel[waterIndex], BaseRadiusLocal, SeaRadiusLocal) : SeaRadiusLocal;
+        var kind = HasWaterKinds != 0 && WaterLevelRes > 0 ? (WaterBodyKind)WaterKinds[waterIndex] : WaterBodyKind.None;
+        float altitudeMeters = (localRadius - seaRadiusHere) * Scale;
+        if (!ScatterWaterPlacement.Passes(pp.WaterHabitat, kind, riverHit, river.Shape.z * Scale,
+                pp.MaxFlowSpeed, onWater, altitudeMeters)) return false;
         float placeRadius = onWater ? seaRadiusHere + ScatterPlacementMath.OnWaterSurfaceOffsetMeters / Scale : localRadius;
-        float altitudeMeters = onWater ? 0f : (localRadius - seaRadiusHere) * Scale;
         if (!ScatterGatherBurst.PassesAltitudeWater(altitudeMeters, HasOcean != 0, pp.Rules)) return false;
 
-        Vector3 localNormal = onWater ? dir : ScatterGatherBurst.SampleNormalAt(dir, localRadius, NoiseLayers, DiagData, DiagCells, PlanetRadius);
+        Vector3 localNormal = onWater ? dir : ScatterGatherBurst.SampleNormalAt(dir, localRadius, NoiseLayers, DiagData, DiagCells, PlanetRadius, Rivers);
         float slopeCos = onWater ? 1f : Mathf.Clamp01(Vector3.Dot(localNormal, dir));
         // Must stay bit-identical to the managed path in ScatterField — same helper, same argument order.
         float densityKeep = ScatterQuadtree.AreaKeep(uv, cellUv, pp.SpacingMeters, BaseRadiusLocal * Scale)
                             * Mathf.Pow(membership, pp.BiomeBlendPower)
                             * ScatterClumping.Keep(dir, BaseRadiusLocal * Scale, pp.Clumpiness,
                                 pp.PatchScaleMeters, pp.ClumpGroupSeed, (uint)pp.Biome, slopeCos,
-                                pp.ShadePreference);
+                                pp.ShadePreference, (uint)WorldSeed,
+                                VegetationHabitat.BlendPotential(memo.PrimaryBiome, memo.SecondaryBiome, memo.BlendWeight),
+                                pp.TreeAge, pp.WaterHabitat != ScatterWaterHabitat.Unrestricted);
 
         if (!ScatterGatherBurst.TryPlace(slotSeed, dir, localNormal, placeRadius, altitudeMeters, slopeCos,
                 densityKeep, HasOcean != 0, pp.Rules, out Vector3 posLocal, out Quaternion rot, out float sc))

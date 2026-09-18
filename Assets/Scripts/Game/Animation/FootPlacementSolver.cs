@@ -16,6 +16,11 @@ public sealed class FootPlacementSolver
     bool _stepping;
     float _stepTime;
     Vector3 _stepStart, _stepEnd;
+    Vector3 _lastContact;
+    bool _hasLastContact;
+    Vector3 _previousFrame;
+    bool _hasFrame;
+    bool _lockStance;
     const float StepDuration = 0.25f;
     public float Error { get; private set; }
     public bool Planted => _planted;
@@ -49,6 +54,8 @@ public sealed class FootPlacementSolver
     {
         _planted = _needsSwing = false;
         _stepping = false;
+        _hasLastContact = false;
+        _hasFrame = false;
         _stepTime = 0f;
         _weight = _anchorBlend = 0f;
         _correction = _normal = Vector3.zero;
@@ -61,21 +68,26 @@ public sealed class FootPlacementSolver
     float ReachWeight(float height) => 1f - Mathf.SmoothStep(0f, 1f,
         Mathf.InverseLerp(_maxCorrection * 0.8f, _maxCorrection, Mathf.Abs(height)));
 
-    public float BodyOffset(IGroundingProvider ground, Vector3 up, float phase, float moving, float running)
+    public float BodyOffset(IGroundingProvider ground, Vector3 up, float phase, float moving, float running, float? contactWeight = null)
     {
         if (ground == null || !ground.TryGround(_contact.position, -up, _sole, out GroundResult hit) ||
             !CharacterMath.IsFinite(hit.Position)) return 0f;
-        float offset = Vector3.Dot(hit.Position - _contact.position, up);
-        float stance = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.25f, 0.8f, Contact(phase, moving, running)));
+        Vector3 support = _lockStance && _planted ? _anchor : hit.Position;
+        float offset = Vector3.Dot(support - _contact.position, up);
+        float stance = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.25f, 0.8f, contactWeight ?? Contact(phase, moving, running)));
         return Mathf.Min(0f, offset) * stance * ReachWeight(offset);
     }
 
     public void Tick(IGroundingProvider ground, Vector3 up, float phase, float moving, float running, float dt,
-        bool allowStep = false, float turnRate = 0f)
+        bool allowStep = false, float turnRate = 0f, float? contactWeight = null, bool lockStance = false,
+        bool preserveAnimatedTravel = false)
     {
         if (dt <= 0f) return;
+        _lockStance = lockStance;
         Vector3 animated = _contact.position;
-        float contact = Contact(phase, moving, running);
+        Vector3 travel = _hasFrame ? Vector3.ProjectOnPlane(_frame.position - _previousFrame, up) / dt : Vector3.zero;
+        _previousFrame = _frame.position; _hasFrame = true;
+        float contact = contactWeight ?? Contact(phase, moving, running);
         float blend = 1f - Mathf.Exp(-20f * dt);
         if (_normal.sqrMagnitude < 1e-8f) _normal = up;
         if (ground == null || !ground.TryGround(animated, -up, _sole, out GroundResult hit) ||
@@ -90,6 +102,16 @@ public sealed class FootPlacementSolver
             _normal = Vector3.Slerp(_normal, up, blend);
             ApplyCorrection(animated, up, dt);
             return;
+        }
+        Vector3 groundPoint = hit.Position;
+        // Lift the swing foot toward the next tread before its ankle reaches the riser.
+        if (contact < .65f && travel.sqrMagnitude > .01f &&
+            ground.TryGround(animated + Vector3.ClampMagnitude(travel * .12f, _maxCorrection), -up, _sole, out var ahead) &&
+            CharacterMath.IsFinite(ahead.Position) && CharacterMath.IsFinite(ahead.Normal))
+        {
+            float rise = Vector3.Dot(ahead.Position - hit.Position, up);
+            if (rise > .02f && rise <= _maxCorrection)
+                hit = new GroundResult(hit.Position + up * (rise + .025f * (1f - contact)), ahead.Normal);
         }
         float height = Vector3.Dot(animated - hit.Position, up);
         float reach = ReachWeight(height);
@@ -107,7 +129,8 @@ public sealed class FootPlacementSolver
             _stepping = true;
             _planted = false;
             _stepTime = 0f;
-            _stepStart = _contact.position;
+            // Clip evaluation restores the authored pose before this solve. Start from the displayed foot instead.
+            _stepStart = _hasLastContact ? _lastContact : _contact.position;
             Vector3 predicted = _frame.position + Quaternion.AngleAxis(turnRate * StepDuration, up) *
                 (hit.Position - _frame.position);
             _stepEnd = ground.TryGround(predicted, -up, _sole, out GroundResult landing) &&
@@ -117,7 +140,7 @@ public sealed class FootPlacementSolver
         {
             _stepTime += dt;
             float t = Mathf.Clamp01(_stepTime / StepDuration);
-            Vector3 predicted = _frame.position + Quaternion.AngleAxis(turnRate * (StepDuration - _stepTime), up) *
+            Vector3 predicted = _frame.position + Quaternion.AngleAxis(turnRate * Mathf.Max(0f, StepDuration - _stepTime), up) *
                 (hit.Position - _frame.position);
             bool supported = ground.TryGround(predicted, -up, _sole, out GroundResult landing) &&
                 CharacterMath.IsFinite(landing.Position) && CharacterMath.IsFinite(landing.Normal);
@@ -143,6 +166,10 @@ public sealed class FootPlacementSolver
             }
             return;
         }
+        // Authored travel does not use a world-space anchor. Keep that dormant target current
+        // so stopping cannot pull a foot back to an earlier gait contact. Keep displayed offsets
+        // and contact state intact; idle replanting and explicit stance locks retain their behavior.
+        if (preserveAnimatedTravel && moving >= .1f && !lockStance) _anchor = hit.Position;
         if (contact < 0.25f) { _planted = false; _needsSwing = false; }
         if (_planted && (Vector3.Distance(_anchor, hit.Position) > _maxCorrection || reach <= 0f))
         {
@@ -159,15 +186,19 @@ public sealed class FootPlacementSolver
         _weight = Mathf.Lerp(_weight, contact * reach, blend);
         Vector3 target = Vector3.Lerp(hit.Position, _anchor, _anchorBlend);
         Vector3 desired = (target - animated) * _weight;
+        // Ordinary authored locomotion owns horizontal travel. Terrain IK may adjust height,
+        // but must not hold that trajectory behind the motor or turn a strafe into a crossover.
+        if (preserveAnimatedTravel && moving >= .1f && !lockStance)
+            desired = Vector3.Project(desired, up);
         // Penetration adds vertical correction only. Crossing zero height must not switch all IK to full weight.
         desired += up * Mathf.Max(0f, -height - Vector3.Dot(desired, up)) * reach;
         _correction = Vector3.Lerp(_correction, desired, blend);
         Vector3 normal = Vector3.RotateTowards(up, hit.Normal.normalized, 35f * Mathf.Deg2Rad, 0f);
         _normal = Vector3.Slerp(_normal, normal, blend);
-        ApplyCorrection(animated, up, dt);
+        ApplyCorrection(animated, up, dt, _lockStance ? groundPoint : null);
     }
 
-    void ApplyCorrection(Vector3 animated, Vector3 up, float dt)
+    void ApplyCorrection(Vector3 animated, Vector3 up, float dt, Vector3? groundPoint = null)
     {
         for (int i = 0; i < _bones.Length; i++) _animatedPose[i] = _bones[i].localRotation;
         Quaternion rotation = Quaternion.Slerp(Quaternion.identity, Quaternion.FromToRotation(up, _normal), _weight);
@@ -179,10 +210,15 @@ public sealed class FootPlacementSolver
         {
             Vector3 animatedBend = Vector3.ProjectOnPlane(_bones[1].position - _bones[0].position,
                 _bones[2].position - _bones[0].position);
-            // Follow the clip's knee/elbow plane. The authored fallback resolves a fully straight pose only.
-            if (animatedBend.sqrMagnitude > 0.000001f) pole = animatedBend;
+            // A nearly straight knee has an unstable bend plane. Blend toward the rig's pole before that singularity.
+            float legLength = Vector3.Distance(_bones[0].position, _bones[1].position) +
+                Vector3.Distance(_bones[1].position, _bones[2].position);
+            float confidence = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.01f, .08f, animatedBend.magnitude / legLength));
+            if (animatedBend.sqrMagnitude > 0.000001f) pole = Vector3.Slerp(pole.normalized, animatedBend.normalized, confidence);
         }
-        if (_correction.sqrMagnitude >= 1e-10f || _weight >= 0.0001f)
+        // Contact weight alone is not a correction. An identity solve can still redirect
+        // a nearly straight authored knee toward the rig's fallback pole.
+        if (_correction.sqrMagnitude >= 1e-10f || Quaternion.Angle(rotation, Quaternion.identity) >= .001f)
             _limb.Solve(endTarget, 1f, _jointLimit, rotation * _limb.Tip.rotation, pole);
         for (int i = 0; i < _bones.Length; i++)
         {
@@ -193,6 +229,27 @@ public sealed class FootPlacementSolver
             _offsets[i] = Quaternion.RotateTowards(_offsets[i], smooth, 180f * dt);
         }
         for (int i = 0; i < _bones.Length; i++) _bones[i].localRotation = _animatedPose[i] * _offsets[i];
+        if (_lockStance && _planted && _anchorBlend >= .999f && _weight >= .99f)
+        {
+            // Once contact has settled, rotation damping must not move a planted endpoint with the actor.
+            Vector3 contactOffset = _contact.position - _limb.Tip.position;
+            _limb.Solve(_anchor - contactOffset, 1f, _jointLimit, _limb.Tip.rotation, pole);
+            for (int i = 0; i < _bones.Length; i++)
+                _offsets[i] = Quaternion.Inverse(_animatedPose[i]) * _bones[i].localRotation;
+        }
+        if (groundPoint.HasValue)
+        {
+            float penetration = Vector3.Dot(groundPoint.Value - _contact.position, up);
+            if (penetration > .001f && penetration <= _maxCorrection)
+            {
+                // Rotation damping must not leave a supporting foot inside a tread.
+                _limb.Solve(_limb.Tip.position + up * penetration, 1f, _jointLimit, _limb.Tip.rotation, pole);
+                for (int i = 0; i < _bones.Length; i++)
+                    _offsets[i] = Quaternion.Inverse(_animatedPose[i]) * _bones[i].localRotation;
+            }
+        }
         Error = Vector3.Distance(_contact.position, target);
+        _lastContact = _contact.position;
+        _hasLastContact = true;
     }
 }

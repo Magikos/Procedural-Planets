@@ -13,7 +13,7 @@ public enum AmbientSwarmKind : byte
     /// <summary>Anchored to a carcass rather than to the ground, and only while there is something to eat.</summary>
     Flies = 2,
 
-    /// <summary>A flock overhead, drifting across the sky. Decoration only - the huntable bird is a resident.</summary>
+    /// <summary>Transient solo birds and flocks. Huntable birds remain persistent residents.</summary>
     Birds = 3,
 
     Bees = 4,
@@ -127,9 +127,7 @@ public sealed record AmbientSwarmProfile(
             ScatterRadiusMeters: 6f, ReturnAfterSeconds: 8f, HeightMeters: 0f, AnchorDriftMps: 0f,
             FadeBand: 0f),
 
-        // Overhead, all day, anywhere, and crossing the sky rather than hovering. ScatterRadius 0 means they
-        // are never startled: nothing on the ground reaches them, and a flock that panicked at a footstep
-        // eighty metres below would read as a bug rather than as wildlife.
+        // Flock cruise height. Individual birds also land and use their own threat awareness in simulation.
         new(AmbientSwarmKind.Birds, "Birds", SwarmCount: 2, Particles: 11,
             SwarmRadiusMeters: 14f, ParticleSize: 0.55f, SpeedMps: 2.2f,
             new Color(0.20f, 0.19f, 0.22f), Additive: false,
@@ -141,7 +139,7 @@ public sealed record AmbientSwarmProfile(
 }
 
 /// <summary>
-/// Local wildlife without persistent population records. Pollinators keep individual flight state.
+/// Particle ambience and wildlife presentation. AmbientWildlifeSimulation owns birds and pollinators.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -190,7 +188,7 @@ public sealed partial class AmbientSwarms : System.IDisposable
     readonly Transform _parent;
     readonly List<Swarm> _swarms = new();
     readonly Dictionary<int, Material> _materials = new();
-    readonly List<CreatureCorpse> _corpseScratch = new();
+    readonly List<(ulong id, Vector3 position, Vector3 up)> _corpseScratch = new();
     readonly List<Swarm> _retired = new();
     readonly AmbientSwarmProfile[] _profiles;
     readonly ILogger _log;
@@ -212,14 +210,15 @@ public sealed partial class AmbientSwarms : System.IDisposable
         _profiles = profiles ?? AmbientSwarmProfile.Defaults;
     }
 
-    public int SwarmCount => _swarms.Count + _insects.Count + _birdFlocks.Count;
+    public int SwarmCount => _swarms.Count + CountInsects(AmbientSwarmKind.Bees, true) +
+        CountInsects(AmbientSwarmKind.Butterflies, true) + (_wildlife?.FlockCount ?? 0);
 
     /// <summary>The profiles this instance is running, so a readout can say what each kind WANTS.</summary>
     public AmbientSwarmProfile[] Profiles => _profiles;
 
     /// <summary>How many of a kind are up and emitting. Excludes the ones fading out.</summary>
     public int CountLive(AmbientSwarmKind kind) => kind == AmbientSwarmKind.Birds
-        ? _birdFlocks.Count : CountOf(kind) + CountInsects(kind, false);
+        ? (_wildlife?.FlockCount ?? 0) : CountOf(kind) + CountInsects(kind, false);
 
     /// <summary>
     /// The biome under a world position, evaluated through the SAME provider placement uses.
@@ -248,8 +247,9 @@ public sealed partial class AmbientSwarms : System.IDisposable
     public int CountParticles(AmbientSwarmKind kind)
     {
         int n = 0;
-        if (kind == AmbientSwarmKind.Birds)
-            foreach (var flock in _birdFlocks) n += flock.Birds.Count;
+        if (kind == AmbientSwarmKind.Birds && _wildlife != null)
+            foreach (var pose in _wildlife.Poses)
+                if (pose.Kind == kind) n++;
         for (int i = 0; i < _swarms.Count; i++)
             if (_swarms[i].Kind == kind && _swarms[i].System != null) n += _swarms[i].System.particleCount;
         return n + CountInsects(kind, true);
@@ -265,16 +265,10 @@ public sealed partial class AmbientSwarms : System.IDisposable
         heightMeters = 0f;
         bool found = false;
 
-        foreach (Insect insect in _insects)
-        {
-            if (insect.Kind != kind || insect.Retiring) continue;
-            found |= ConsiderNearest(from, insect.Position, ref metres, ref heightMeters);
-        }
-
-        if (kind == AmbientSwarmKind.Birds)
-            foreach (var flock in _birdFlocks)
-                foreach (var bird in flock.Birds)
-                    found |= ConsiderNearest(from, bird.Root.position, ref metres, ref heightMeters);
+        if (_wildlife != null)
+            foreach (var pose in _wildlife.Poses)
+                if (pose.Kind == kind && !pose.Retiring)
+                    found |= ConsiderNearest(from, pose.Position, ref metres, ref heightMeters);
 
         for (int i = 0; i < _swarms.Count; i++)
         {
@@ -308,7 +302,8 @@ public sealed partial class AmbientSwarms : System.IDisposable
 
     public void Configure(IPlanetSurfaceSampler sampler, IBiomeProvider biome, ThreatRegistry threats,
         Vector3 center, float planetRadius, float seaLevelRadius,
-        ScatterField scatterField = null, ScatterTileCache scatterCache = null)
+        ScatterField scatterField = null, ScatterTileCache scatterCache = null,
+        WildlifeLandingTargets landingTargets = null, CharacterWaterFloor water = default)
     {
         ClearSwarms();
         _sampler = sampler;
@@ -320,6 +315,8 @@ public sealed partial class AmbientSwarms : System.IDisposable
         _flowerField = scatterField;
         _flowerCache = scatterCache;
         _configured = sampler != null && planetRadius > 0f;
+        _wildlife = _configured ? new AmbientWildlifeSimulation(sampler, threats, landingTargets, center,
+            seaLevelRadius, TryPlaceAmbientAnchor, _profiles, water) : null;
         if (_configured) LoadButterflyArt();
 
         if (!_configured)
@@ -329,14 +326,14 @@ public sealed partial class AmbientSwarms : System.IDisposable
     /// <summary>
     /// One tick. <paramref name="localSun"/> is dot(local up, sun direction) at the observer; corpses may be null.
     /// </summary>
-    public void Tick(Vector3 observerWorldPos, float localSun, CreatureCorpseStore corpses, long nowUnixSeconds)
+    public void Tick(Vector3 observerWorldPos, float localSun, CreatureCorpseStore corpses, long nowUnixSeconds,
+        float? deltaTime = null)
     {
         if (!_configured || !_enabled || _parent == null) return;
 
         SyncFlies(corpses, observerWorldPos, nowUnixSeconds);
         SyncAmbient(observerWorldPos, localSun);
-        TickInsects(observerWorldPos, localSun, nowUnixSeconds);
-        TickBirdFlocks(observerWorldPos, localSun, nowUnixSeconds);
+        TickWildlife(observerWorldPos, localSun, nowUnixSeconds, deltaTime ?? Time.deltaTime);
         UpdateScatter(nowUnixSeconds);
         ConfineFireflies();
         SweepFaded();
@@ -346,44 +343,38 @@ public sealed partial class AmbientSwarms : System.IDisposable
 
     void SyncFlies(CreatureCorpseStore corpses, Vector3 observerWorldPos, long nowUnixSeconds)
     {
-        AmbientSwarmProfile profile = ProfileOf(AmbientSwarmKind.Flies);
         _corpseScratch.Clear();
-
         if (corpses != null)
-        {
-            // Bounded by the same radius the BODY is drawn within. Without it every carcass in the save keeps
-            // a live particle system, and a cloud of flies hangs in the air a quarter of a kilometre away with
-            // nothing underneath it, because the body it belongs to is out of draw range.
             foreach (CreatureCorpse c in corpses.All)
                 if (corpses.Decay.HasFlies(c, nowUnixSeconds) &&
                     KeptDistance(c.Position, observerWorldPos) <= CreatureCorpseStore.KeepAliveMeters)
-                    _corpseScratch.Add(c);
-        }
+                    _corpseScratch.Add((c.Id.Value, c.Position, (c.Position - _center).normalized));
+        SyncCorpseFlies(_corpseScratch);
+    }
 
-        for (int i = 0; i < _corpseScratch.Count; i++)
+    /// <summary>Present authority-selected corpse anchors on any surface. No resource decisions occur here.</summary>
+    public void SyncCorpseFlies(IReadOnlyList<(ulong id, Vector3 position, Vector3 up)> anchors)
+    {
+        if (!_enabled || _parent == null) return;
+        var profile = ProfileOf(AmbientSwarmKind.Flies);
+        for (int i = 0; i < anchors.Count; i++)
         {
-            CreatureCorpse c = _corpseScratch[i];
-            Swarm swarm = FindByAnchorId(c.Id.Value);
-            if (swarm == null)
-            {
-                swarm = Spawn(profile, c.Id.Value);
-                if (swarm == null) continue;
-            }
-            PlaceAt(swarm, c.Position + (c.Position - _center).normalized * 0.4f);
+            var anchor = anchors[i];
+            var swarm = FindByAnchorId(anchor.id) ?? Spawn(profile, anchor.id);
+            if (swarm == null || swarm.System == null) continue;
+            swarm.Anchor = anchor.position + anchor.up * .4f;
+            swarm.System.transform.SetPositionAndRotation(swarm.Anchor,
+                Quaternion.LookRotation(CharacterMath.ArbitraryTangent(anchor.up), anchor.up));
         }
-
-        // A fly swarm whose body is gone or picked clean is destroyed rather than parked: the count is
-        // unbounded in time otherwise, one dead swarm per animal the player has ever killed.
         _retired.Clear();
-        for (int i = 0; i < _swarms.Count; i++)
+        foreach (var swarm in _swarms)
         {
-            if (_swarms[i].Kind != AmbientSwarmKind.Flies || _swarms[i].Retiring) continue;
-            bool stillFed = false;
-            for (int j = 0; j < _corpseScratch.Count && !stillFed; j++)
-                stillFed = _corpseScratch[j].Id.Value == _swarms[i].AnchorId;
-            if (!stillFed) _retired.Add(_swarms[i]);
+            if (swarm.Kind != AmbientSwarmKind.Flies || swarm.Retiring) continue;
+            bool found = false;
+            for (int i = 0; i < anchors.Count; i++) if (anchors[i].id == swarm.AnchorId) { found = true; break; }
+            if (!found) _retired.Add(swarm);
         }
-        RetireCollected();
+        RetireCollected(); SweepFaded();
     }
 
     // --- ambient: anchored near whoever is watching ----------------------
@@ -976,10 +967,12 @@ public sealed partial class AmbientSwarms : System.IDisposable
 
     void ClearSwarms()
     {
-        foreach (var flock in _birdFlocks) flock.Dispose();
-        _birdFlocks.Clear();
-        _flockSequence = 0;
-        _insects.Clear();
+        _wildlife?.Clear();
+        foreach (var bird in _birdViews.Values) bird.Dispose();
+        _birdViews.Clear();
+        _visibleBirds.Clear();
+        _staleBirds.Clear();
+        _flowerTargets.Clear();
         _flowers.Clear();
         _nextFlowerScan = 0f;
         for (int i = 0; i < _swarms.Count; i++)

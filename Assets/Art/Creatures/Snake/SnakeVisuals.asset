@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 543245edd60d9cf4c940dd6f81f20347, type: 3}
+  m_Name: SnakeVisuals
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::CreatureVisualSettings
+  MalePrefab: {fileID: 124041137305914503, guid: d95674f5284d796499663a6d60728dd8, type: 3}
+  FemalePrefab: {fileID: 124041137305914503, guid: d95674f5284d796499663a6d60728dd8, type: 3}
+  Idle: {fileID: 7400000, guid: 084e4decf02022e44a12d3370345d8c1, type: 2}
+  Walk: {fileID: 7400000, guid: 00a21ce7842cf72428d7a5f81cd0c791, type: 2}
+  Run: {fileID: 7400000, guid: 00a21ce7842cf72428d7a5f81cd0c791, type: 2}
+  Eat: {fileID: 7400000, guid: 50b96d24225001242a5b545b13c61f7c, type: 2}
+  Attack: {fileID: 7400000, guid: 428756a73d39e5f4d9ff10165e380dc9, type: 2}
+  Death: {fileID: 7400000, guid: f54a7140f731e3f45b543683116f96d8, type: 2}
+  Rest: {fileID: 7400000, guid: ca27688a7e22e5e47946d4c3a6b6e3fd, type: 2}
+  Sleep: {fileID: 7400000, guid: b8b4e0d28be94f24ab8cec8c945ee26b, type: 2}
+  Drink: {fileID: 7400000, guid: 50b96d24225001242a5b545b13c61f7c, type: 2}
+  Stalk: {fileID: 7400000, guid: 00a21ce7842cf72428d7a5f81cd0c791, type: 2}
+  AttackHitNormalized: 0.12
+  ModelHeightMeters: 0.31436518
+  WalkMetersPerSecond: 0.6
+  RunMetersPerSecond: 1.2

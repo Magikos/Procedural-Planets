@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// Samples the local player's devices into an <see cref="ActorIntent"/>. This is the only place the character
@@ -18,13 +19,21 @@ public sealed class LocalPlayerInput : IInputProvider
 
     public ActorIntent Sample(uint tick)
     {
-        if (_input == null)
+        if (_input == null || !_input.GameplayEnabled || LookBlocked())
             return new ActorIntent(Vector2.zero, Vector2.zero, ActorButtons.None, tick);
 
         ActorButtons buttons = ActorButtons.None;
         if (_input.Sprint.IsPressed()) buttons |= ActorButtons.Sprint;
         if (_input.Crouch.IsPressed()) buttons |= ActorButtons.Crouch;
         if (_input.Jump.WasPressedThisFrame()) buttons |= ActorButtons.Jump;
+        if (_input.Jump.IsPressed()) buttons |= ActorButtons.SwimUp;
+        var keyboard = Keyboard.current;
+        if (keyboard != null)
+        {
+            if (keyboard.zKey.wasPressedThisFrame) buttons |= ActorButtons.ToggleCrawl;
+            if (keyboard.qKey.wasPressedThisFrame) buttons |= ActorButtons.Dodge;
+            if (keyboard.escapeKey.wasPressedThisFrame) buttons |= ActorButtons.Cancel;
+        }
 
         bool looking = _input.LookHold.IsPressed() && _input.GameplayEnabled && !LookBlocked();
         if (looking) buttons |= ActorButtons.LookHold;

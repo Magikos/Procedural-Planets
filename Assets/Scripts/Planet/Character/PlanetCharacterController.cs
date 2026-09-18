@@ -1,28 +1,10 @@
 using UnityEngine;
 
-/// <summary>
-/// The thin player/planet HOST for the walking-character MVP. It owns only the Unity/player concerns: the
-/// local input provider, a mouse-look third-person camera, grass, and a separate movable child GameObject. All
-/// surface math lives in the actor-agnostic <see cref="SurfaceCharacterController"/>; this host resolves the
-/// planet-specific providers, feeds look-relative intent into the driver, and applies the returned pose to the
-/// child. It never moves its own transform.
-///
-/// Controls (fly-camera style): mouse looks, character faces the look direction, W/S forward/back, A/D strafe,
-/// Space jump, Left-Shift sprint, Left-Ctrl crouch.
-/// </summary>
+/// <summary>Planet player lifecycle, input, and world services for the shared humanoid actor.</summary>
 [DisallowMultipleComponent]
 public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
 {
-    const float FootOffset = 1f;        // capsule primitive half-height (origin is its center)
-    const float WalkSpeed = 5f;
-    const float SprintMult = 2f;
-    const float CrouchMult = 0.45f;
-    const float LookSensitivity = 0.12f;
-    const float MinPitch = -70f;
-    const float MaxPitch = 75f;
-    const float CamDistance = 5.5f;
-    const float CamLookHeight = 1.3f;
-    const float StartPitch = 12f;
+    const float FootOffset = 0f;
     const float GrassBendRadius = 2.2f;
     const float GrassBendStrength = 0.8f;
     const float GrassReleaseSeconds = 0.6f;
@@ -36,11 +18,14 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
     IInputProvider _input;
     ICameraRigContext _cameraRig;
     IFreeCameraService _freeCam;
+    IWaterQueryService _water;
     ThreatRegistry _threats;
 
-    SurfaceCharacterController _driver;
-    Transform _child;
-    Material _propMaterial;
+    PlanetHumanoidActor _humanoid;
+    SurfaceCharacterController _driver => _humanoid != null ? _humanoid.Motor : null;
+    Transform _child => _humanoid != null ? _humanoid.Actor : null;
+    public PlanetHumanoidActor Actor => _humanoid;
+    public bool IsSpawned => _spawned;
 
     uint _tick;
 
@@ -49,8 +34,6 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
     bool _hasPlanet;
     bool _spawned;
 
-    Vector3 _forward = Vector3.forward; // character horizontal facing (tangent unit)
-    float _pitch;                       // camera pitch (degrees)
     bool _cursorLocked;
 
     // --- IGrassInteractor (boot-safe: Register runs before the first spawn creates the child) ---
@@ -71,16 +54,12 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
     {
         GrassInteractorRegistry.Unregister(this);
         EventBus<PlanetGeneratedEvent>.Unlisten(OnPlanetGenerated);
-        SetCursorLocked(false);
-        SuspendFreeCamera(false);
+        Despawn();
     }
 
     void OnDestroy()
     {
-        if (_child != null)
-            Destroy(_child.gameObject);
-        if (_propMaterial != null)
-            Destroy(_propMaterial);
+        if (_humanoid != null) Destroy(_humanoid.gameObject);
     }
 
     void OnApplicationFocus(bool hasFocus)
@@ -94,8 +73,9 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         _center = evt.PlanetCenter;
         _radius = evt.PlanetRadius;
         _hasPlanet = _radius > 0f;
-        if (_sampler == null)
-            ServiceLocator.TryGet(out _sampler);
+        ServiceLocator.TryGet(out _sampler);
+        ServiceLocator.TryGet(out _raycaster);
+        ServiceLocator.TryGet(out _water);
         _threats = null;   // world-scoped: a new world has a new registry, so never keep the old one
 
         if (_spawned && _hasPlanet && TrySeedPose(out CharacterPose seed))
@@ -107,37 +87,22 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         if (!_spawned || _driver == null || _child == null)
             return;
 
-        Vector3 up = _driver.Pose.Up;
         ActorIntent intent = _input != null ? _input.Sample(_tick++) : default;
-
-        // Look only while HOLDING right-mouse (like the free camera) — the cursor is captured only during the
-        // hold and released the instant you let go, so it can never trap the mouse (e.g. to open the console).
         SetCursorLocked(intent.Held(ActorButtons.LookHold));
-        if (intent.Look.sqrMagnitude > 0.0001f)
-        {
-            _forward = Quaternion.AngleAxis(intent.Look.x * LookSensitivity, up) * _forward;
-            _pitch = Mathf.Clamp(_pitch - intent.Look.y * LookSensitivity, MinPitch, MaxPitch);
-        }
-        if (CharacterMath.TryProjectOntoTangent(_forward, up, out Vector3 fp))
-            _forward = fp;
-
-        float speed = WalkSpeed;
-        if (intent.Held(ActorButtons.Sprint)) speed *= SprintMult;
-        if (intent.Held(ActorButtons.Crouch)) speed *= CrouchMult;
+        bool wasAttached = _humanoid.Ladder.Active || _humanoid.LadderApproaching || _humanoid.Beam.Active || _humanoid.Rope.Active;
+        _humanoid.Step(Time.deltaTime, intent);
+        bool attached = _humanoid.Ladder.Active || _humanoid.LadderApproaching || _humanoid.Beam.Active || _humanoid.Rope.Active;
 
         // Harvest the aimed scatter instance on Interact. Rare event, so resolve the interactor per press
         // (always the active world's) rather than caching a ref that would go stale on regen.
-        if (intent.Held(ActorButtons.Interact))
+        if (intent.Held(ActorButtons.Interact) && !wasAttached && !attached)
         {
             Transform cam = ResolveCameraRig()?.CameraTransform;
             if (cam != null && ServiceLocator.TryGet(out HarvestInteractor harvest))
                 harvest.TryHarvestLookedAt(new Ray(cam.position, cam.forward), HarvestReach, HarvestPerp);
         }
 
-        CharacterPose pose = _driver.Tick(
-            intent.Move, _forward, speed, Time.deltaTime, intent.Held(ActorButtons.Jump));
-        _forward = pose.Forward;
-        _child.SetPositionAndRotation(pose.Position, Quaternion.LookRotation(pose.Forward, pose.Up));
+        CharacterPose pose = _driver.Pose;
 
         // A spawned player is a THREAT-bearing entity, which the free camera deliberately is not: wildlife
         // reacts to identities, and a debug camera has none. This is the only thing that makes deer run.
@@ -152,13 +117,8 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         if (cam == null)
             return;
 
-        Vector3 up = _child.up;
-        Vector3 fwd = _child.forward;
-        Vector3 right = Vector3.Cross(up, fwd);
-        Vector3 viewDir = Quaternion.AngleAxis(_pitch, right) * fwd; // pitch tilts the orbit up/down
-        Vector3 focus = _child.position + up * CamLookHeight;
-        cam.position = focus - viewDir * CamDistance;
-        cam.rotation = Quaternion.LookRotation(viewDir, up);
+        _humanoid.ThirdPersonCamera.Follow(cam.GetComponent<Camera>(), _driver.Pose,
+            _humanoid.View.CameraFocusHeight, _humanoid.CameraDistance, Time.deltaTime);
     }
 
     // Screen-center crosshair: the harvest ray is the camera's forward (screen centre), NOT the mouse cursor,
@@ -178,35 +138,48 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
 
     // --- Spawn / despawn (driven by the static CharacterCommands) ---------
 
-    public string Spawn()
+    public ConsoleCommandResult Spawn()
     {
-        if (!EnsurePlanet(out string err))
-            return err;
+        if (!EnsurePlanet(out string err)) return ConsoleCommandResult.Fail(err);
         if (!TrySeedPose(out CharacterPose seed))
-            return "no surface under the view — aim at the planet and retry";
-
-        EnsureChild();
-        _forward = seed.Forward;
-        _pitch = StartPitch;
-        RebuildDriver(seed);
-        _child.gameObject.SetActive(true);
-        _spawned = true;
-        SuspendFreeCamera(true);
-        return "character spawned; WASD walk, HOLD right-mouse to look, Space jump, Shift sprint, Ctrl crouch; `character.despawn` to exit";
+            return ConsoleCommandResult.Fail("no surface under the view — aim at the planet and retry");
+        var prefab = Resources.Load<PlanetHumanoidActor>("Characters/PlanetHumanoid");
+        if (prefab == null)
+            return ConsoleCommandResult.Fail("Planet humanoid prefab is missing: Resources/Characters/PlanetHumanoid");
+        if (_humanoid == null)
+        {
+            _humanoid = Instantiate(prefab, transform);
+            _humanoid.name = "Planet player";
+        }
+        try
+        {
+            RebuildDriver(seed);
+            if (_driver == null || _child == null)
+                throw new System.InvalidOperationException("Planet humanoid animation assets are incomplete.");
+            _spawned = true;
+            SuspendFreeCamera(true);
+            return ConsoleCommandResult.Ok("character spawned; WASD move, RMB look, Space jump/swim up, Shift run, Ctrl crouch/dive; character.despawn restores free flight");
+        }
+        catch (System.Exception exception)
+        {
+            _humanoid.gameObject.SetActive(false);
+            _spawned = false;
+            _threats?.Withdraw(ThreatRegistry.LocalPlayer);
+            SetCursorLocked(false);
+            SuspendFreeCamera(false);
+            return ConsoleCommandResult.Fail("Character initialization failed: " + exception.Message);
+        }
     }
 
     public string Despawn()
     {
-        if (!_spawned)
-            return "character not spawned";
+        bool wasSpawned = _spawned;
         _spawned = false;
-        if (_child != null)
-            _child.gameObject.SetActive(false);
-        // Stop frightening the wildlife the moment the player stops existing.
-        ResolveThreats()?.Withdraw(ThreatRegistry.LocalPlayer);
+        if (_humanoid != null) _humanoid.gameObject.SetActive(false);
+        _threats?.Withdraw(ThreatRegistry.LocalPlayer);
         SetCursorLocked(false);
         SuspendFreeCamera(false);
-        return "character despawned; free-fly restored";
+        return wasSpawned ? "character despawned; free-fly restored" : "character not spawned";
     }
 
     // --- Composition / lifecycle -----------------------------------------
@@ -220,8 +193,15 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         IGroundingProvider grounding = ResolveRaycaster() != null
             ? new PlanetRaycastGrounding(_raycaster, _center, default, samplerGround)
             : samplerGround;
-        _driver = new SurfaceCharacterController(gravity, grounding, FootOffset, seed);
-        _child.SetPositionAndRotation(seed.Position, Quaternion.LookRotation(seed.Forward, seed.Up));
+        ServiceLocator.TryGet(out _water);
+        _humanoid.gameObject.SetActive(false);
+        _humanoid.Configure(seed, gravity, grounding, new CharacterSwimmingWater(_water));
+        _humanoid.Ladders = FindObjectsByType<LadderInteraction>(FindObjectsSortMode.None);
+        _humanoid.Beams = FindObjectsByType<BeamInteraction>(FindObjectsSortMode.None);
+        _humanoid.Ropes = FindObjectsByType<RopeInteraction>(FindObjectsSortMode.None);
+        _humanoid.gameObject.SetActive(true);
+        if (_child != null && _child.GetComponent<WaterInteractor>() == null)
+            _child.gameObject.AddComponent<WaterInteractor>();
     }
 
     bool EnsurePlanet(out string err)
@@ -233,6 +213,11 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
         if (_sampler == null || _planet == null)
         {
             err = "no planet services — generate a planet first";
+            return false;
+        }
+        if (_planet.IsGenerating)
+        {
+            err = "planet is generating; wait until generation completes";
             return false;
         }
         if (_planet.LastGeneratedRadius <= 0f)
@@ -283,31 +268,6 @@ public sealed class PlanetCharacterController : MonoBehaviour, IGrassInteractor
             : CharacterMath.ArbitraryTangent(up);
         seed = new CharacterPose(pos, up, fwd);
         return seed.IsFinite;
-    }
-
-    void EnsureChild()
-    {
-        if (_child != null)
-            return;
-
-        var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        go.name = "Character (MVP)";
-        // No physics against terrain — the primitive's collider is unwanted (chunks have no colliders either).
-        Collider col = go.GetComponent<Collider>();
-        if (col != null)
-            Destroy(col);
-
-        // Planet-aware lit material so the capsule darkens on the night side (the planet body occludes the
-        // sun). Default URP Lit takes the raw directional sun and stays bright on the far hemisphere.
-        Shader propShader = Shader.Find("Planet/PropLit");
-        if (propShader != null)
-        {
-            _propMaterial = new Material(propShader) { name = "PropLit (runtime)" };
-            var renderer = go.GetComponent<Renderer>();
-            if (renderer != null)
-                renderer.sharedMaterial = _propMaterial;
-        }
-        _child = go.transform;
     }
 
     void SetCursorLocked(bool locked)

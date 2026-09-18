@@ -11,19 +11,21 @@ public sealed class HarvestInteractor
     readonly HarvestService _harvest;
     readonly ScatterHarvestStore _store;
     readonly CreatureResidencyService _creatures;
+    readonly TreeHarvestService _trees;
     readonly ILogger _log;
     readonly List<ScatterHarvestStore.HarvestNode> _stumpScratch = new();
     readonly List<CreatureCorpse> _corpseScratch = new();
     readonly List<Vector3> _positionScratch = new();
 
     public HarvestInteractor(ScatterPicker picker, HarvestService harvest, ScatterHarvestStore store,
-        ILogger log = null, CreatureResidencyService creatures = null)
+        ILogger log = null, CreatureResidencyService creatures = null, TreeHarvestService trees = null)
     {
         _picker = picker;
         _harvest = harvest;
         _store = store;
         _log = log;
         _creatures = creatures;
+        _trees = trees;
     }
 
     // Returns true if something was harvested (felled, dug, or killed) this call.
@@ -43,8 +45,11 @@ public sealed class HarvestInteractor
             out EntityId creatureId, out Vector3 creaturePos);
         bool hasCorpse = TryPickCorpse(ray, reachMeters, maxPerpMeters,
             out EntityId corpseId, out Vector3 corpsePos);
+        ulong logId = 0;
+        Vector3 logPos = default;
+        bool hasLog = _trees != null && _trees.TryPick(ray, reachMeters, maxPerpMeters, out logId, out logPos);
 
-        if (!hasTree && !hasStump && !hasCreature && !hasCorpse)
+        if (!hasTree && !hasStump && !hasCreature && !hasCorpse && !hasLog)
         {
             _log?.Log(LogLevel.Info, "Harvest",
                 "nothing harvestable in aim — put the crosshair on a tree, a stump base, an animal or a carcass");
@@ -53,15 +58,24 @@ public sealed class HarvestInteractor
 
         // Nearest to the ray ORIGIN wins, so a deer standing in front of a tree takes the blow. Ties go to the
         // animal, then the carcass: those are the things that reward acting NOW, and the scenery will wait.
-        float treeD = hasTree ? (tree.Position - ray.origin).sqrMagnitude : float.MaxValue;
+        float treeD = hasTree ? ((tree.ImpactPoint ?? tree.Position) - ray.origin).sqrMagnitude : float.MaxValue;
         float stumpD = hasStump ? (stumpPos - ray.origin).sqrMagnitude : float.MaxValue;
         float creatureD = hasCreature ? (creaturePos - ray.origin).sqrMagnitude : float.MaxValue;
         float corpseD = hasCorpse ? (corpsePos - ray.origin).sqrMagnitude : float.MaxValue;
+        float logD = hasLog ? (logPos - ray.origin).sqrMagnitude : float.MaxValue;
 
-        if (creatureD <= treeD && creatureD <= stumpD && creatureD <= corpseD)
+        if (hasCreature && creatureD <= treeD && creatureD <= stumpD && creatureD <= corpseD && creatureD <= logD)
             return Strike(creatureId, ray.origin);
-        if (corpseD <= treeD && corpseD <= stumpD)
+        if (hasCorpse && corpseD <= treeD && corpseD <= stumpD && corpseD <= logD)
             return Strike(corpseId, ray.origin);
+
+        if (hasLog && logD <= treeD && logD <= stumpD)
+        {
+            HarvestResult result = _trees.Strike(logId, logPos, ToolTier.BasicAxe);
+            _log?.Log(LogLevel.Info, "Harvest", result.Yield.Count > 0
+                ? $"Harvested {result.Yield.Count} wood" : "Chopped fallen tree");
+            return result.Outcome == HarvestOutcome.Felled;
+        }
 
         bool dig = stumpD < treeD;
         HarvestResult r = dig

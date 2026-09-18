@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd8008cb45ca5034daa0a124445d0868, type: 3}
+  m_Name: Stir cooking pot
+  m_EditorClassIdentifier: Magikos.Game::ActorInteractionDefinition
+  Action: Stir cooking pot
+  Phases:
+  - Animation:
+      Name: Kneel at fire
+      Clip: {fileID: 1827226128182048838, guid: b6246d947c95e77428d5ff2a152a36c3, type: 3}
+      StartNormalized: 0
+      EndNormalized: 0.25
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 2.7500002
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.15
+  - Animation:
+      Name: Stir cooking pot
+      Clip: {fileID: 1827226128182048838, guid: b6246d947c95e77428d5ff2a152a36c3, type: 3}
+      StartNormalized: 0.25
+      EndNormalized: 0.75
+      Loop: 1
+      BlendSeconds: 0.2
+    Seconds: 5.5000005
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 1
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.15
+  - Animation:
+      Name: Stand from fire
+      Clip: {fileID: 1827226128182048838, guid: b6246d947c95e77428d5ff2a152a36c3, type: 3}
+      StartNormalized: 0.75
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 2.7500002
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.15

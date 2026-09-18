@@ -238,6 +238,11 @@ public sealed class ConsoleAsyncRunner
         try
         {
             result = await ConsoleAwaitableUtility.AwaitResultAsync(p.Awaitable);
+            if (result is ConsoleCommandResult outcome)
+            {
+                error = outcome.Success ? null : outcome.Error;
+                result = outcome.Output;
+            }
         }
         catch (OperationCanceledException)
         {

@@ -1,0 +1,509 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12e933ea90e4d194cba7e431d33c6e06, type: 3}
+  m_Name: Ledge travel Right motion
+  m_EditorClassIdentifier: Magikos.Game::ActorTraversalMotionAsset
+  Clip: {fileID: 7400000, guid: 37e085041148cfb43bee469d1280fe58, type: 2}
+  ElevatedLanding: 0
+  SupportContact: LeftHand
+  ReferenceEdge: {x: 0.008607738, y: 1.6880013, z: 0.1315659}
+  MaxHeightAdjustment: 0.2
+  MaxPlanarAdjustment: 0.7
+  Frames:
+  - Root: {x: 0, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.628578, z: -0.023820303}
+    CapsuleB: {x: -0.006394133, y: 1.028578, z: -0.023820303}
+    PoseOffset: {x: 0, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0
+    RootYawDegrees: 0
+  - Root: {x: 0.0005087899, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.631444, z: -0.023963764}
+    CapsuleB: {x: -0.006394133, y: 1.031444, z: -0.023963764}
+    PoseOffset: {x: 0.0005087899, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.016666668
+    RootYawDegrees: 0
+  - Root: {x: 0.0010262155, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.63429385, z: -0.024105389}
+    CapsuleB: {x: -0.006394133, y: 1.0342939, z: -0.024105389}
+    PoseOffset: {x: 0.0010262155, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.033333335
+    RootYawDegrees: 0
+  - Root: {x: 0.0024420172, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.63913995, z: -0.024951847}
+    CapsuleB: {x: -0.006394133, y: 1.03914, z: -0.024951847}
+    PoseOffset: {x: 0.0024420172, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.05
+    RootYawDegrees: 0
+  - Root: {x: 0.0038797834, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.64391714, z: -0.025790552}
+    CapsuleB: {x: -0.006394133, y: 1.0439172, z: -0.025790552}
+    PoseOffset: {x: 0.0038797834, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.06666667
+    RootYawDegrees: 0
+  - Root: {x: 0.0062002717, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.6505735, z: -0.026713315}
+    CapsuleB: {x: -0.006394133, y: 1.0505735, z: -0.026713315}
+    PoseOffset: {x: 0.0062002717, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.083333336
+    RootYawDegrees: 0
+  - Root: {x: 0.008526199, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.65714693, z: -0.02762741}
+    CapsuleB: {x: -0.006394133, y: 1.0571469, z: -0.02762741}
+    PoseOffset: {x: 0.008526199, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.1
+    RootYawDegrees: 0
+  - Root: {x: 0.011650023, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.6655335, z: -0.02843653}
+    CapsuleB: {x: -0.006394133, y: 1.0655335, z: -0.02843653}
+    PoseOffset: {x: 0.011650023, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.11666667
+    RootYawDegrees: 0
+  - Root: {x: 0.014770776, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.67386425, z: -0.029240564}
+    CapsuleB: {x: -0.006394133, y: 1.0738642, z: -0.029240564}
+    PoseOffset: {x: 0.014770776, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.13333334
+    RootYawDegrees: 0
+  - Root: {x: 0.01871946, y: 0, z: 0}
+    CapsuleA: {x: -0.006394134, y: 0.6836843, z: -0.030085452}
+    CapsuleB: {x: -0.006394134, y: 1.0836843, z: -0.030085452}
+    PoseOffset: {x: 0.01871946, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.15
+    RootYawDegrees: 0
+  - Root: {x: 0.022657145, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.6934689, z: -0.030931234}
+    CapsuleB: {x: -0.006394133, y: 1.0934689, z: -0.030931234}
+    PoseOffset: {x: 0.022657145, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.16666667
+    RootYawDegrees: 0
+  - Root: {x: 0.027274007, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.70443714, z: -0.031935938}
+    CapsuleB: {x: -0.006394133, y: 1.1044371, z: -0.031935938}
+    PoseOffset: {x: 0.027274007, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.18333334
+    RootYawDegrees: 0
+  - Root: {x: 0.031878002, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.7153874, z: -0.032944117}
+    CapsuleB: {x: -0.006394133, y: 1.1153874, z: -0.032944117}
+    PoseOffset: {x: 0.031878002, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.2
+    RootYawDegrees: 0
+  - Root: {x: 0.037133954, y: 0, z: 0}
+    CapsuleA: {x: -0.006394135, y: 0.7271263, z: -0.033903014}
+    CapsuleB: {x: -0.006394135, y: 1.1271263, z: -0.033903014}
+    PoseOffset: {x: 0.037133954, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.21666667
+    RootYawDegrees: 0
+  - Root: {x: 0.042378247, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.73886365, z: -0.03486503}
+    CapsuleB: {x: -0.006394133, y: 1.1388637, z: -0.03486503}
+    PoseOffset: {x: 0.042378247, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.23333333
+    RootYawDegrees: 0
+  - Root: {x: 0.048190065, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.7509607, z: -0.035568114}
+    CapsuleB: {x: -0.006394133, y: 1.1509607, z: -0.035568114}
+    PoseOffset: {x: 0.048190065, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.25
+    RootYawDegrees: 0
+  - Root: {x: 0.05399622, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.76307523, z: -0.03627039}
+    CapsuleB: {x: -0.006394133, y: 1.1630752, z: -0.03627039}
+    PoseOffset: {x: 0.05399622, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.26666668
+    RootYawDegrees: 0
+  - Root: {x: 0.060213912, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.7748951, z: -0.03713533}
+    CapsuleB: {x: -0.006394133, y: 1.174895, z: -0.03713533}
+    PoseOffset: {x: 0.060213912, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.28333333
+    RootYawDegrees: 0
+  - Root: {x: 0.06642187, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.78673744, z: -0.037981384}
+    CapsuleB: {x: -0.006394133, y: 1.1867374, z: -0.037981384}
+    PoseOffset: {x: 0.06642187, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.3
+    RootYawDegrees: 0
+  - Root: {x: 0.07307671, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.7976928, z: -0.03924159}
+    CapsuleB: {x: -0.006394133, y: 1.1976928, z: -0.03924159}
+    PoseOffset: {x: 0.07307671, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.31666666
+    RootYawDegrees: 0
+  - Root: {x: 0.07970944, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.8086658, z: -0.04044661}
+    CapsuleB: {x: -0.006394133, y: 1.2086658, z: -0.04044661}
+    PoseOffset: {x: 0.07970944, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.33333334
+    RootYawDegrees: 0
+  - Root: {x: 0.086776994, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.8184543, z: -0.041681707}
+    CapsuleB: {x: -0.006394133, y: 1.2184544, z: -0.041681707}
+    PoseOffset: {x: 0.086776994, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.35
+    RootYawDegrees: 0
+  - Root: {x: 0.09382125, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.8282556, z: -0.042830594}
+    CapsuleB: {x: -0.006394133, y: 1.2282556, z: -0.042830594}
+    PoseOffset: {x: 0.09382125, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.36666667
+    RootYawDegrees: 0
+  - Root: {x: 0.101180784, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.83668625, z: -0.04402434}
+    CapsuleB: {x: -0.006394133, y: 1.2366862, z: -0.04402434}
+    PoseOffset: {x: 0.101180784, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.38333333
+    RootYawDegrees: 0
+  - Root: {x: 0.10852814, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.8451253, z: -0.045114346}
+    CapsuleB: {x: -0.006394133, y: 1.2451253, z: -0.045114346}
+    PoseOffset: {x: 0.10852814, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.4
+    RootYawDegrees: 0
+  - Root: {x: 0.116061, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.8517241, z: -0.046038724}
+    CapsuleB: {x: -0.006394133, y: 1.2517241, z: -0.046038724}
+    PoseOffset: {x: 0.116061, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.41666666
+    RootYawDegrees: 0
+  - Root: {x: 0.1235922, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.85832655, z: -0.046858095}
+    CapsuleB: {x: -0.006394133, y: 1.2583265, z: -0.046858095}
+    PoseOffset: {x: 0.1235922, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.43333334
+    RootYawDegrees: 0
+  - Root: {x: 0.13121045, y: 0, z: 0}
+    CapsuleA: {x: -0.0063941255, y: 0.8623359, z: -0.04736735}
+    CapsuleB: {x: -0.0063941255, y: 1.2623359, z: -0.04736735}
+    PoseOffset: {x: 0.13121045, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.45
+    RootYawDegrees: 0
+  - Root: {x: 0.13883469, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.8663471, z: -0.047781046}
+    CapsuleB: {x: -0.006394133, y: 1.266347, z: -0.047781046}
+    PoseOffset: {x: 0.13883469, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.46666667
+    RootYawDegrees: 0
+  - Root: {x: 0.1468606, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.8668426, z: -0.047914065}
+    CapsuleB: {x: -0.006394133, y: 1.2668426, z: -0.047914065}
+    PoseOffset: {x: 0.1468606, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.48333332
+    RootYawDegrees: 0
+  - Root: {x: 0.15489061, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.8673279, z: -0.04797318}
+    CapsuleB: {x: -0.006394133, y: 1.2673279, z: -0.04797318}
+    PoseOffset: {x: 0.15489061, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.5
+    RootYawDegrees: 0
+  - Root: {x: 0.16541332, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.8634378, z: -0.04786633}
+    CapsuleB: {x: -0.006394133, y: 1.2634377, z: -0.04786633}
+    PoseOffset: {x: 0.16541332, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.51666665
+    RootYawDegrees: 0
+  - Root: {x: 0.17593381, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.85955495, z: -0.0477499}
+    CapsuleB: {x: -0.006394133, y: 1.259555, z: -0.0477499}
+    PoseOffset: {x: 0.17593381, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.53333336
+    RootYawDegrees: 0
+  - Root: {x: 0.190378, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.8505564, z: -0.047568988}
+    CapsuleB: {x: -0.006394133, y: 1.2505563, z: -0.047568988}
+    PoseOffset: {x: 0.190378, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.55
+    RootYawDegrees: 0
+  - Root: {x: 0.20480885, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.84157205, z: -0.047395784}
+    CapsuleB: {x: -0.006394133, y: 1.241572, z: -0.047395784}
+    PoseOffset: {x: 0.20480885, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.56666666
+    RootYawDegrees: 0
+  - Root: {x: 0.2219256, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.82804066, z: -0.04718416}
+    CapsuleB: {x: -0.006394133, y: 1.2280407, z: -0.04718416}
+    PoseOffset: {x: 0.2219256, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.5833333
+    RootYawDegrees: 0
+  - Root: {x: 0.23902808, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.81452745, z: -0.04690631}
+    CapsuleB: {x: -0.006394133, y: 1.2145275, z: -0.04690631}
+    PoseOffset: {x: 0.23902808, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.6
+    RootYawDegrees: 0
+  - Root: {x: 0.2574708, y: 0, z: 0}
+    CapsuleA: {x: -0.006394118, y: 0.79874325, z: -0.046551965}
+    CapsuleB: {x: -0.006394118, y: 1.1987432, z: -0.046551965}
+    PoseOffset: {x: 0.2574708, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.6166667
+    RootYawDegrees: 0
+  - Root: {x: 0.2758891, y: 0, z: 0}
+    CapsuleA: {x: -0.006394118, y: 0.7829878, z: -0.04604072}
+    CapsuleB: {x: -0.006394118, y: 1.1829878, z: -0.04604072}
+    PoseOffset: {x: 0.2758891, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.6333333
+    RootYawDegrees: 0
+  - Root: {x: 0.29401034, y: 0, z: 0}
+    CapsuleA: {x: -0.006394118, y: 0.7667633, z: -0.045399323}
+    CapsuleB: {x: -0.006394118, y: 1.1667633, z: -0.045399323}
+    PoseOffset: {x: 0.29401034, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.65
+    RootYawDegrees: 0
+  - Root: {x: 0.31208068, y: 0, z: 0}
+    CapsuleA: {x: -0.006394118, y: 0.75058717, z: -0.044557728}
+    CapsuleB: {x: -0.006394118, y: 1.1505872, z: -0.044557728}
+    PoseOffset: {x: 0.31208068, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.6666667
+    RootYawDegrees: 0
+  - Root: {x: 0.3285874, y: 0, z: 0}
+    CapsuleA: {x: -0.006394148, y: 0.7357682, z: -0.043775156}
+    CapsuleB: {x: -0.006394148, y: 1.1357682, z: -0.043775156}
+    PoseOffset: {x: 0.3285874, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.68333334
+    RootYawDegrees: 0
+  - Root: {x: 0.34504485, y: 0, z: 0}
+    CapsuleA: {x: -0.006394148, y: 0.7210042, z: -0.042841904}
+    CapsuleB: {x: -0.006394148, y: 1.1210042, z: -0.042841904}
+    PoseOffset: {x: 0.34504485, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.7
+    RootYawDegrees: 0
+  - Root: {x: 0.3596136, y: 0, z: 0}
+    CapsuleA: {x: -0.006394148, y: 0.7095219, z: -0.04192872}
+    CapsuleB: {x: -0.006394148, y: 1.1095219, z: -0.04192872}
+    PoseOffset: {x: 0.3596136, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.71666664
+    RootYawDegrees: 0
+  - Root: {x: 0.37416548, y: 0, z: 0}
+    CapsuleA: {x: -0.006394148, y: 0.69807214, z: -0.040959466}
+    CapsuleB: {x: -0.006394148, y: 1.0980722, z: -0.040959466}
+    PoseOffset: {x: 0.37416548, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.73333335
+    RootYawDegrees: 0
+  - Root: {x: 0.3877473, y: 0, z: 0}
+    CapsuleA: {x: -0.006394118, y: 0.6896369, z: -0.04017006}
+    CapsuleB: {x: -0.006394118, y: 1.0896369, z: -0.04017006}
+    PoseOffset: {x: 0.3877473, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.75
+    RootYawDegrees: 0
+  - Root: {x: 0.40134066, y: 0, z: 0}
+    CapsuleA: {x: -0.006394118, y: 0.68121094, z: -0.03936866}
+    CapsuleB: {x: -0.006394118, y: 1.081211, z: -0.03936866}
+    PoseOffset: {x: 0.40134066, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.76666665
+    RootYawDegrees: 0
+  - Root: {x: 0.41545194, y: 0, z: 0}
+    CapsuleA: {x: -0.006394118, y: 0.6743472, z: -0.03850235}
+    CapsuleB: {x: -0.006394118, y: 1.0743473, z: -0.03850235}
+    PoseOffset: {x: 0.41545194, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.78333336
+    RootYawDegrees: 0
+  - Root: {x: 0.42959297, y: 0, z: 0}
+    CapsuleA: {x: -0.006394148, y: 0.6674511, z: -0.037652485}
+    CapsuleB: {x: -0.006394148, y: 1.0674511, z: -0.037652485}
+    PoseOffset: {x: 0.42959297, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.8
+    RootYawDegrees: 0
+  - Root: {x: 0.44385678, y: 0, z: 0}
+    CapsuleA: {x: -0.006394118, y: 0.6621023, z: -0.03628974}
+    CapsuleB: {x: -0.006394118, y: 1.0621023, z: -0.03628974}
+    PoseOffset: {x: 0.44385678, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.81666666
+    RootYawDegrees: 0
+  - Root: {x: 0.45818788, y: 0, z: 0}
+    CapsuleA: {x: -0.006394148, y: 0.65667236, z: -0.034949783}
+    CapsuleB: {x: -0.006394148, y: 1.0566723, z: -0.034949783}
+    PoseOffset: {x: 0.45818788, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.8333333
+    RootYawDegrees: 0
+  - Root: {x: 0.4716875, y: 0, z: 0}
+    CapsuleA: {x: -0.006394118, y: 0.6524773, z: -0.032993678}
+    CapsuleB: {x: -0.006394118, y: 1.0524774, z: -0.032993678}
+    PoseOffset: {x: 0.4716875, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.85
+    RootYawDegrees: 0
+  - Root: {x: 0.48529124, y: 0, z: 0}
+    CapsuleA: {x: -0.006394118, y: 0.6481838, z: -0.03103667}
+    CapsuleB: {x: -0.006394118, y: 1.0481838, z: -0.03103667}
+    PoseOffset: {x: 0.48529124, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.8666667
+    RootYawDegrees: 0
+  - Root: {x: 0.4975149, y: 0, z: 0}
+    CapsuleA: {x: -0.006394118, y: 0.6446936, z: -0.029326484}
+    CapsuleB: {x: -0.006394118, y: 1.0446936, z: -0.029326484}
+    PoseOffset: {x: 0.4975149, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.8833333
+    RootYawDegrees: 0
+  - Root: {x: 0.509809, y: 0, z: 0}
+    CapsuleA: {x: -0.006394148, y: 0.6411508, z: -0.027617456}
+    CapsuleB: {x: -0.006394148, y: 1.0411508, z: -0.027617456}
+    PoseOffset: {x: 0.509809, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.9
+    RootYawDegrees: 0
+  - Root: {x: 0.5198895, y: 0, z: 0}
+    CapsuleA: {x: -0.006394148, y: 0.63837934, z: -0.026659561}
+    CapsuleB: {x: -0.006394148, y: 1.0383793, z: -0.026659561}
+    PoseOffset: {x: 0.5198895, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.9166667
+    RootYawDegrees: 0
+  - Root: {x: 0.52999747, y: 0, z: 0}
+    CapsuleA: {x: -0.006394148, y: 0.6355835, z: -0.025713164}
+    CapsuleB: {x: -0.006394148, y: 1.0355835, z: -0.025713164}
+    PoseOffset: {x: 0.52999747, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.93333334
+    RootYawDegrees: 0
+  - Root: {x: 0.5370336, y: 0, z: 0}
+    CapsuleA: {x: -0.006394148, y: 0.63361245, z: -0.025043942}
+    CapsuleB: {x: -0.006394148, y: 1.0336125, z: -0.025043942}
+    PoseOffset: {x: 0.5370336, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.95
+    RootYawDegrees: 0
+  - Root: {x: 0.5440787, y: 0, z: 0}
+    CapsuleA: {x: -0.006394148, y: 0.63162816, z: -0.024382498}
+    CapsuleB: {x: -0.006394148, y: 1.0316281, z: -0.024382498}
+    PoseOffset: {x: 0.5440787, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.96666664
+    RootYawDegrees: 0
+  - Root: {x: 0.547311, y: 0, z: 0}
+    CapsuleA: {x: -0.006394148, y: 0.6304776, z: -0.024110628}
+    CapsuleB: {x: -0.006394148, y: 1.0304776, z: -0.024110628}
+    PoseOffset: {x: 0.547311, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 0.98333335
+    RootYawDegrees: 0
+  - Root: {x: 0.5505442, y: 0, z: 0}
+    CapsuleA: {x: -0.006394133, y: 0.628578, z: -0.023820303}
+    CapsuleB: {x: -0.006394133, y: 1.028578, z: -0.023820303}
+    PoseOffset: {x: 0.5505442, y: 0, z: 0}
+    Radius: 0.15
+    AnchorWeight: 0
+    PlanarFitWeight: 1
+    RootYawDegrees: 0

@@ -239,7 +239,7 @@ public sealed class GrassDebugModule : IDebugModule, IDebugCaptureMetadataProvid
 
 }
 
-[CommandPrefix("grass")]
+[CommandPrefix("grass", Group = "Vegetation and wildlife", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public static class GrassCommands
 {
     [ConsoleCommand("status", "Show master and per-layer grass runtime state.")]

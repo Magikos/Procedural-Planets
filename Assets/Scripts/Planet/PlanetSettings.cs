@@ -21,7 +21,7 @@ public class PlanetSettings : ScriptableObject
     [Range(0f, 1f), Tooltip("How deep the ocean basins are")]
     public float OceanDepth = 0.3f;
 
-    [Range(0f, 1f), Tooltip("Height of mountain peaks")]
+    [Range(0f, 1f), Tooltip("Mountain uplift budget: up to 6% of planet radius at 1, before the land mask. Added above continental terrain.")]
     public float MountainHeight = 0.5f;
 
     [Range(0f, 1f), Tooltip("How many mountains appear")]

@@ -6,6 +6,8 @@ HLSLINCLUDE
 #include "Includes/Math.hlsl"
 #include "Includes/DebugModes.hlsl"
 #include "Includes/WeatherSampling.hlsl"
+#include "Includes/ClimateSampling.hlsl"
+#include "Includes/WaterCamera.hlsl"
 
 TEXTURE2D(_CameraDepthTexture);
 SAMPLER(sampler_CameraDepthTexture);
@@ -15,6 +17,7 @@ SAMPLER(sampler_Source);
 int _CloudWeatherResolution;
 
 int _PrecipitationEnabled;
+float _PrecipitationLocalRadius;
 float3 _PrecipitationPlanetCenter;
 float4 _PrecipitationRadii;
 float4 _PrecipitationFadeParams;
@@ -61,10 +64,12 @@ float PrecipitationSeaRadius()
 
 float PrecipitationCameraAboveSea()
 {
+    if (IsWaterPresentationCamera(_WorldSpaceCameraPos.xyz))
+        return 1.0 - WaterCameraImmersion(_WorldSpaceCameraPos.xyz);
     float seaRadius = PrecipitationSeaRadius();
     float cameraRadius = length(_WorldSpaceCameraPos.xyz - _PrecipitationPlanetCenter);
     // Keep precipitation completely off below the waterline, then fade it in above the surface.
-    return smoothstep(0.0, 12.0, cameraRadius - seaRadius);
+    return smoothstep(0.0, 1.0, cameraRadius - seaRadius);
 }
 
 float4 NoPrecipitationContribution(float4 sceneColor)
@@ -147,9 +152,8 @@ float SamplePrecipitationSignal(float3 worldPos, out float storm, out float rain
     return rainRate * cloudSupport * _PrecipitationParams.x;
 }
 
-float SamplePrecipitationDensity(float3 worldPos, out float rainRate)
+float SamplePrecipitationDensity(float3 worldPos, out float rainRate, out float storm)
 {
-    float storm;
     float height01;
     float precipitation = SamplePrecipitationSignal(worldPos, storm, rainRate, height01);
     if (precipitation <= 0.0001)
@@ -165,24 +169,19 @@ float SamplePrecipitationDensity(float3 worldPos, out float rainRate)
     float topFade = 1.0 - smoothstep(1.0 - saturate(_PrecipitationFadeParams.y), 1.0, height01);
 
     float3 windTangent = _WindDirection - normal * dot(_WindDirection, normal);
-    float3 advected = normal * bottomRadius + windTangent *
-        ((1.0 - height01) * _PrecipitationVisualParams.z * layerThickness - _GameTime * _WindSpeedMps);
+    float3 advected = SampleCloudFlow(normal) * bottomRadius + windTangent *
+        ((1.0 - height01) * _PrecipitationVisualParams.z * layerThickness);
     float3 local = mul((float3x3)_CloudWeatherRotation, advected);
     float curtainScale = max(_PrecipitationVisualParams.x, 1.0);
     float large = ValueNoise3D(local / curtainScale);
     large = lerp(large, ValueNoise3D(local / (curtainScale * 0.43) + 19.7), 0.35);
     float curtain = smoothstep(0.22, 0.88, large);
-    float fineBreakup = ValueNoise3D(local / max(curtainScale * 0.16, 8.0)
-        + normal * (height01 * 2.2 - _GameTime * _PrecipitationVisualParams.w * 0.02));
-    float heightBreakup = ValueNoise3D(local * 0.019 + normal * (height01 * 43.0));
 
     float stormWeight = lerp(0.6, 1.15, saturate(storm));
     return precipitation
         * bottomFade
         * topFade
         * lerp(0.36, 1.0, curtain)
-        * lerp(0.82, 1.08, fineBreakup)
-        * lerp(0.76, 1.06, heightBreakup)
         * stormWeight;
 }
 
@@ -276,12 +275,12 @@ ENDHLSL
                 int steps = min(max(_PrecipitationViewSteps, 4), PRECIPITATION_MAX_STEPS);
                 float stepSize = (endDistance - startDistance) / steps;
                 float2 pixel = floor(i.uv * _ScreenParams.xy);
-                float pixelJitter = Hash12(pixel);
-                float3 samplePos = rayOrigin + rayDir * (startDistance + stepSize * lerp(0.2, 0.8, pixelJitter));
+                float3 samplePos = rayOrigin + rayDir * (startDistance + stepSize * 0.5);
 
                 float alpha = 0.0;
                 float weightedStorm = 0.0;
                 float weightedLightning = 0.0;
+                float weightedSnow = 0.0;
                 float debugMask = 0.0;
                 float peakRain = 0.0;
                 float rainOpticalDepth = 0.0;
@@ -296,10 +295,12 @@ ENDHLSL
                     if (s >= steps)
                         break;
 
-                    float stepJitter = (Hash12(pixel + float2(s * 19.19, s * 47.23)) - 0.5) * stepSize * 0.52;
+                    // Keep every jittered sample inside its own ray segment at shell boundaries.
+                    float stepJitter = (Hash12(pixel + float2(s * 19.19, s * 47.23)) - 0.5) * stepSize * 0.8;
                     float3 jitteredSamplePos = samplePos + rayDir * stepJitter;
                     float rainRate;
-                    float density = SamplePrecipitationDensity(jitteredSamplePos, rainRate);
+                    float storm;
+                    float density = SamplePrecipitationDensity(jitteredSamplePos, rainRate, storm);
                     debugMask = max(debugMask, density);
                     if (density > 0.0001)
                     {
@@ -308,17 +309,20 @@ ENDHLSL
                         rainOpticalDepth += density * stepSize;
 
                         float3 normal = normalize(jitteredSamplePos - _PrecipitationPlanetCenter);
-                        float storm = SampleWeather(normal).g;
                         float lightning = WeatherLightning(normal, storm);
                         float distanceFade = saturate(1.0 - (length(jitteredSamplePos - rayOrigin) / max(_PrecipitationRadii.z, 1.0)) * 0.35);
-                        float sampleAlpha = saturate(density * stepSize * 0.0048 * lerp(0.5, 1.6, rainRate) * distanceFade);
+                        // Integrate extinction instead of clamping each ray step.
+                        float sampleAlpha = 1.0 - exp(-density * stepSize * 0.0048 * lerp(0.5, 1.6, rainRate) * distanceFade);
+                        if (_PrecipitationLocalRadius > 0)
+                            sampleAlpha *= smoothstep(_PrecipitationLocalRadius * 0.6,
+                                _PrecipitationLocalRadius, length(jitteredSamplePos - rayOrigin));
                         sampleAlpha *= 1.0 - alpha;
                         alpha += sampleAlpha;
                         weightedStorm += storm * sampleAlpha;
+                        weightedSnow += WeatherSnowFraction(ClimateTemperatureCelsius(SampleClimate01(normal).x)) * sampleAlpha;
                         weightedLightning += lightning * sampleAlpha;
 
-                        if (alpha > opacityCap)
-                            break;
+                        // Continue integrating fog even when the visible veil reaches its cap.
                     }
 
                     samplePos += rayDir * stepSize;
@@ -332,6 +336,7 @@ ENDHLSL
 
                 float averageStorm = weightedStorm / max(alpha, 0.0001);
                 float averageLightning = weightedLightning / max(alpha, 0.0001);
+                float averageSnow = weightedSnow / max(alpha, 0.0001);
                 alpha = min(alpha, opacityCap);
                 alpha *= cameraAboveSea;
                 if (alpha <= 0.0001 && rainOpticalDepth <= 0.0001)
@@ -343,6 +348,7 @@ ENDHLSL
                 float stormDim = lerp(1.0, 0.28, saturate(averageStorm));
                 float light = _NightAmbientIntensity * 0.45 + localSun * 0.85 * stormDim + 0.12 + rainLightning * 0.65;
                 float3 rainColor = lerp(_PrecipitationColor.rgb, _PrecipitationStormColor.rgb, saturate(averageStorm));
+                rainColor = lerp(rainColor, float3(0.85,0.9,0.95), saturate(averageSnow));
                 float3 fogColor = rainColor * light;
 
                 // Rain-volume fog, applied to the scene BEFORE the curtain composite so
@@ -353,7 +359,9 @@ ENDHLSL
                 sceneColor.rgb = lerp(sceneColor.rgb, fogColor, fogAmount * cameraAboveSea);
 
                 float cameraRadius = length(rayOrigin - _PrecipitationPlanetCenter);
-                float inColumn = step(bottomRadius, cameraRadius) * step(cameraRadius, topRadius);
+                float cameraHeight = saturate((cameraRadius - bottomRadius) / max(topRadius - bottomRadius, 1.0));
+                float inColumn = smoothstep(0.0, max(_PrecipitationFadeParams.x, 0.0001), cameraHeight)
+                    * (1.0 - smoothstep(1.0 - max(_PrecipitationFadeParams.y, 0.0001), 1.0, cameraHeight));
                 float localStorm = saturate(SampleWeather(toCamera).g);
                 float localStormGate = smoothstep(_PrecipitationParams.y,
                     min(1.0, _PrecipitationParams.y + _PrecipitationParams.z), localStorm);

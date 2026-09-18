@@ -1,7 +1,7 @@
 # Water, Atmosphere, Precipitation — layers and pass order
 
 Part of `pp-gpu-rendering-reference`. Verified against the working tree 2026-07-06.
-The water mesh and prepass sections were reverified against the dirty tree 2026-08-17.
+The water mesh and prepass sections were reverified against the dirty tree 2026-09-10.
 Primary files: `Assets/Graphics/Shaders/Ocean.shader`, `WaterVolume.shader`,
 `WaterVolumePrepass.shader`, `Assets/Scripts/Planet/WaterVolumeRenderFeature.cs`,
 `Assets/Scripts/Planet/WaterMeshBuilder.cs`,
@@ -19,13 +19,33 @@ artifact saga was won by isolating stages, not tuning):
 | Layer | Shader | What it owns |
 |---|---|---|
 | Surface | `Planet/Ocean` (`Ocean.shader`), a normal transparent-queue mesh draw | The top sheet only: vertex swell displacement, fragment wave-normal detail, foam (shore/whitecap/wake), sun glitter, freeze/ice |
-| Volume | `Hidden/WaterVolume` fullscreen composite via `WaterVolumeRenderFeature` | Everything *through* the water: underwater fog/absorption, bottom-refraction distortion, far-terrain waterline tinting, and **caustics** |
+| Volume | `Hidden/WaterVolume` fullscreen composite via `WaterVolumeRenderFeature` | Receiver fog/absorption, bottom-refraction distortion, far-terrain waterline tinting, and **caustics** |
+| Submerged interface | `Hidden/Atmosphere` | Snell's window, surface reflection, and underwater sunlight shafts |
+
+As of 2026-09-07, the two submerged consumers share `UnderwaterTransmittance` and
+`UnderwaterAmbientColor` in `WaterVolumeData.hlsl`. `WaterDto` supplies fog color,
+particle visibility distance, shaft width, night scale, and shaft intensity.
+The reference-look implementation has Unity captures and passing console regression tests recorded in
+[`2026-09-07-underwater-reference-and-test-queue.md`](../../docs/design/2026-09-07-underwater-reference-and-test-queue.md).
+
+The surface extension uses the same wind-driven micro-ripple helper for Ocean, Atmosphere,
+and bottom distortion. Ocean traces nearby visible opaque geometry for reflections, with
+a sky fallback for misses. The prepass requests native opaque color and depth inputs.
+Both sides use the shared displacement field; fully submerged views suppress the top sheet.
+
+The interaction follow-up adds `WaterPresentationController`, bounded wake rings, pooled entry splashes,
+and a native listener low-pass filter. `WaterCamera.hlsl` shares smoothed moving-surface immersion
+with all weather passes so raised lakes suppress rain, snow, and cloud overlays underwater.
+High/Medium quality use a native time-sliced reflection probe for nearby off-screen geometry.
+Low disables that probe and reduces reflection, shaft, and ring budgets through `WaterQualityProfile`.
+See [interaction and quality validation](../../docs/design/2026-09-07-water-interactions-and-quality.md)
+for ownership, controls, measured budgets, and known approximation limits.
 
 The Ocean pass comment states the contract: "WaterVolume owns underwater
 fog/refraction/caustics. This pass adds only the top sheet color so the layer can be
-validated by itself." `ZWrite Off` on both — grass and terrain provide the depth the
-volume pass reads (and clouds do an explicit ocean-sphere test precisely because water
-is absent from the depth buffer, [clouds.md](clouds.md) §2).
+validated by itself." Ocean keeps `ZWrite Off`. Since 2026-09-08, the prepass writes a
+private `Depth32` water buffer. Grass and terrain still provide the camera depth that
+the volume pass reads. Ocean rejects faces behind the nearest water depth.
 
 ### The mesh and its vertex-color data channel
 
@@ -37,6 +57,18 @@ pattern). Its load-bearing output is **vertex color as a data channel**:
 vertex stage and the volume prepass decode exactly this layout. Change all consumers
 when this contract changes. The current builder emits one water mesh. `BuildStats`
 (bodies, frozen bodies, max depth) feed the water debug module.
+
+Horizontal river meshes share `PlanetWaterSurface.SurfaceMaterial`. Their colour alpha is 2,
+which identifies river geometry; `ComputeWaterMeshDisplacement` clamps the temperature input.
+The helper suppresses large swell upstream and ramps it into receiving tails.
+Both visible and prepass shaders call that helper. Waterfall sheets use `Planet/River` separately.
+Directional river ripples modify the shared surface normal, not its base tint.
+
+The standing-water prepass excludes higher lake cover within lower river banks through
+`RiverBankBelow`. Where the solved field contains standing water, only the channel excludes it.
+The visible Ocean pass rejects pixels without a prepass owner. Segment projection and width
+helpers are shared with `SampleRiver`; the exclusion uses radius before reach smoothing.
+See `docs/design/2026-09-10-river-bank-overlap.md` for validation and the remaining lake-cover fringe.
 
 ### Ocean.shader in brief
 
@@ -59,17 +91,31 @@ etc.) are the stage-ownership proof tools.
 
 1. **Prepass** (`Hidden/WaterVolumePrepass`): draws the water mesh into an off-screen
    `R16G16B16A16_SFloat` target ("WaterVolumeData"). It encodes
-   `(forwardDepth, depth01, shoreBody, freezeFactor)`, where
-   `shoreBody = shore01 * 0.45 + body01 * 0.55`. The pass publishes the target as
+   `(forwardDepth, depth01, packedShoreKind, freezeFactor)`, where
+   `packedShoreKind = round(shore01 * 511) * 4 + kind`. The pass publishes the target as
    `_WaterVolumeData` and `_WaterInterfaceTexture`.
+   A private depth attachment selects the nearest displaced face. The prepass rejects
+   fragments behind opaque scene depth explicitly. It publishes `_WaterSurfaceDepth`
+   for the Ocean pass, without changing camera depth. This replaces radial backface clipping.
+   Ocean compares the sampled device depth with fragment `SV_POSITION.z`. Do not compare
+   linearized device depth with eye depth rebuilt from interpolated world position:
+   that precision mismatch cut valid horizon pixels in the 2026-09-08 shore regression.
 2. **Composite** (`Hidden/WaterVolume`): fullscreen triangle that reads scene color +
    depth + the prepass target and rewrites `cameraColor`.
 
 The current dirty tree has no `WaterVolumeLip` mesh or relaxed prepass. The feature draws
-only the primary water mesh. Boundary coverage therefore depends on clipped shoreline
-vertices and the packed prepass data. `WaterVolume.shader` and `Atmosphere.shader` both
-derive coverage from `max(waterData.g, waterData.b)`. Change the shoreline depth stamp
-and the `shoreBody` packing as one contract. The composite still has a no-depth
+the primary water mesh and registered horizontal river meshes, including receiving tails.
+Tail fragments require standing water at the receiving height. Packed kind bit 0 selects
+lake/ocean optics; bit 1 identifies river geometry. Ocean rejects the other geometry type
+selected by the prepass, preventing river/lake double composition. Gameplay body identity is unchanged.
+`MeasuredWaterColumn` measures radial separation from the visible surface to the opaque receiver.
+It does not sample standing-shore levels, which cannot describe elevated rivers.
+Boundary coverage therefore depends on the visible depth and packed prepass data.
+`WaterVolume.shader` and `Atmosphere.shader` both
+derive coverage from depth through `WaterVolumeCoverage`, using the decoded kind to select the fade distance.
+Atmosphere samples exact interface coverage. Neighbor dilation previously suppressed
+sky lighting outside the water mesh and drew a dark horizon outline.
+Change the shoreline depth stamp and packed kind as one contract. The composite has a debug-only no-depth
 underwater fallback (`UnderwaterNoDepthColor`) and an orbital fade
 (`VolumeLayerVisibility`).
 
@@ -138,9 +184,12 @@ raymarch (`PRECIPITATION_MAX_STEPS` 48, or 8 under `CLOUD_QUALITY_LOW`) through 
 `SamplePrecipitationSignal` reads the weather cube map: rain rate = `dynamics.b` gated
 by a storm smoothstep on `weather.g` **and** cloud support `smoothstep(0.58, 0.9,
 weather.r)` — no rain out of clear sky, by construction. Visual shaping
-(`SamplePrecipitationDensity`): value-noise curtains, wind-sheared sample position
-(more shear near the ground), and an anisotropic streak noise scrolling downward so
-shafts read vertical, not foggy. The march clips against the sea-horizon sphere so
+(`SamplePrecipitationDensity`): two broad value-noise scales and a wind-sheared sample
+position (more shear near the ground). Fine radial noise was removed on 2026-09-08
+because the step budget could not resolve its horizontal layers. Per-step opacity uses
+exponential extinction. The march integrates the full fog column instead of stopping
+at the curtain opacity cap. Each jittered sample stays inside its ray segment.
+The march clips against the sea-horizon sphere so
 distant rain can't render behind the planet's curve, and
 `PrecipitationCameraAboveSea()` kills the whole effect underwater. Runs at
 `BeforeRenderingPostProcessing`.
@@ -167,6 +216,11 @@ sprinkle. Crucially it draws in `RainParticlesAfterPostPass` at
 **`AfterRenderingPostProcessing`** — the pass comment records why: atmosphere composites
 colored haze at `BeforeRenderingPostProcessing`, and drops drawn before it got washed
 out at sunset. Rain streaks composite LAST, on top of the final atmospheric color.
+As of 2026-09-08, they explicitly apply daylight, storm dimming, and lightning.
+Visibility uses a smooth rank threshold, a broad distance fade, and a half-second
+birth fade. Rain and persistent snow share the altitude fade. The curtain's local
+exclusion radius shrinks with that fade. Water crossings use `WaterPresentationController`
+immersion instead of a binary still-water cutoff. Impacts remain fixed at collision contacts.
 
 ## 4. Pass order across water / atmosphere / clouds / precipitation
 

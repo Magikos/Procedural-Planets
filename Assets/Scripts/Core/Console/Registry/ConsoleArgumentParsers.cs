@@ -17,6 +17,12 @@ public static class ConsoleArgumentParsers
         new EnumParser(),
     };
 
+    public static bool Supports(Type type)
+    {
+        type = Nullable.GetUnderlyingType(type) ?? type;
+        return _parsers.Exists(parser => parser.CanParse(type));
+    }
+
     public static bool TryParse(IReadOnlyList<string> tokens, int startIndex, Type type,
         out object value, out int consumed, out string error)
     {

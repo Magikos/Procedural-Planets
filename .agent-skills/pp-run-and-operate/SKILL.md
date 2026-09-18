@@ -9,6 +9,8 @@ Everything here is verified against code on branch `code-refactor` as of 2026-07
 
 **Two ways to run.** (1) Bryan drives — hand him an exact, paste-ready sequence and interpret the `F10-*` PNG+sidecar pairs that come back. His F10 path gives rich per-module diagnostics/sidecars you can't get otherwise, so it's still the way for anything needing sidecar state. (2) **Agent self-serve via the Unity MCP `execute_code` tool** — an agent CAN enter play, drive the console, freeze time, and render its own PNGs without Bryan (recipe below). Use self-serve to reproduce a view and eyeball/measure pixels; use Bryan's F10 when you need sidecar diagnostics or his final visual sign-off. Build success (`dotnet build`) is a code-health check only — never claim runtime or visual correctness without in-game evidence (see pp-validation-and-evidence).
 
+Before adding or changing commands, read [the command authoring rules](../../docs/design/console-command-authoring.md). Registry and build validation enforce the declaration contract.
+
 ## Agent self-serve capture (Unity MCP `execute_code`) — verified 2026-08-10
 
 `mcp__unity__execute_code` with `compiler: codedom` runs C# **in the live editor**. This lets an agent reproduce a saved viewpoint and shoot its own screenshots solo. The recipe that works:
@@ -51,7 +53,7 @@ Example request:
 
 ## Run checklist from a cold editor
 
-1. Open the project in Unity **6000.6.0a7** (see pp-build-and-env for install traps).
+1. Open the project with the Editor version in `ProjectSettings/ProjectVersion.txt` (see pp-build-and-env for install traps).
 2. Open `Assets/Scenes/Planet.unity` — the only scene in build settings (`ProjectSettings/EditorBuildSettings.asset`, index 0).
 3. Press Play. A loading overlay paints first, then the planet generates. Wait for the overlay to fade before issuing commands.
 4. Sanity check: press F6 — a debug HUD appears. Press `` ` `` — the console opens; type `help` for the full command list, `planet.status` for the active recipe.

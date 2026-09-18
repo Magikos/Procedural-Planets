@@ -7,7 +7,7 @@ using UnityEngine;
 /// <c>SceneBootstrap</c> lives in the lower Core assembly which cannot reference this Planet-assembly host —
 /// so a static factory command is the clean creation path.)
 /// </summary>
-[CommandPrefix("character")]
+[CommandPrefix("character", Group = "Camera and character", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public static class CharacterCommands
 {
     static PlanetCharacterController _host;
@@ -26,8 +26,8 @@ public static class CharacterCommands
         return _host;
     }
 
-    [ConsoleCommand("spawn", "Spawn the walking character at the camera's ground point (WASD to walk).", MonoTargetType.Static)]
-    public static string SpawnCmd() => Host().Spawn();
+    [ConsoleCommand("spawn", "Spawn the humanoid player at the camera's ground point (WASD to move).", MonoTargetType.Static)]
+    public static ConsoleCommandResult SpawnCmd() => Host().Spawn();
 
     [ConsoleCommand("despawn", "Despawn the character and restore the free-fly camera.", MonoTargetType.Static)]
     public static string DespawnCmd() => Host().Despawn();

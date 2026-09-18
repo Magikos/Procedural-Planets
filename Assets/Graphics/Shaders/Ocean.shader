@@ -57,14 +57,27 @@ Shader "Planet/Ocean"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareOpaqueTexture.hlsl"
             #include "Includes/DebugModes.hlsl"
             #include "Includes/CloudShadows.hlsl"
+            #include "Includes/WaterSurfaceLighting.hlsl"
             #include "Includes/WaterLevelField.hlsl"
             #include "Includes/WaterVolumeData.hlsl"
+            TEXTURE2D_X_FLOAT(_WaterSurfaceDepth);
+            SAMPLER(sampler_WaterSurfaceDepth);
+            TEXTURE2D(_WaterInterfaceTexture);
+            SAMPLER(sampler_WaterInterfaceTexture);
+            float _WaterVolumeEnabled;
             // Global; never inside UnityPerMaterial, or a same-named material property shadows it.
             float _SeaLevelRadius;
             #include "Includes/WaterDisplacement.hlsl"
             #include "Includes/WaterDepth.hlsl"
+            #include "Includes/WaterInteractions.hlsl"
+            TEXTURECUBE(_WaterReflectionCube);
+            SAMPLER(sampler_WaterReflectionCube);
+            TEXTURECUBE(_WaterReflectionPreviousCube);
+            float _WaterReflectionBlend;
+            float4 _WaterReflectionOrigin;
 
             #define FORCE_WATER_LAYER_PROOF 0
             #define SHOW_SURFACE_IN_OFF 1
@@ -74,6 +87,9 @@ Shader "Planet/Ocean"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float4 color : COLOR;
+                float4 flow : TEXCOORD0;
+                float2 blend : TEXCOORD1;
+                float4 tangentOS : TANGENT;
             };
 
             struct Varyings
@@ -83,6 +99,9 @@ Shader "Planet/Ocean"
                 float3 normalWS : TEXCOORD1;
                 float4 waterData : TEXCOORD2;
                 float swellHeight : TEXCOORD3; // vertex-evaluated swell, surfaced for WaveSwell debug
+                float4 currentWS : TEXCOORD4;
+                float2 flowUV : TEXCOORD6;
+                float river : TEXCOORD5;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -110,6 +129,7 @@ Shader "Planet/Ocean"
 
 
             float3 _SunParams;
+            float _SunIntensity;
             float _NightAmbientIntensity;
             int _OceanDebugMode;
 
@@ -318,9 +338,10 @@ Shader "Planet/Ocean"
 
             float DetailResolve(float2 samplePos, float shortestWavelength)
             {
-                // Procedural waves have no mip chain. Suppress frequencies above the pixel's sampling limit.
+                // Reflected highlights need more samples than the underlying sinusoid.
+                // Fade before narrow glints alias into alternating rows.
                 float footprint = max(max(length(ddx(samplePos)), length(ddy(samplePos))), 1e-5);
-                return smoothstep(2.0, 4.0, shortestWavelength / footprint);
+                return smoothstep(4.0, 12.0, shortestWavelength / footprint);
             }
 
             float SurfaceCellPattern(float3 positionWS, float3 normalWS, float scale, float time, float chaos01)
@@ -421,6 +442,10 @@ Shader "Planet/Ocean"
 
                 rippleNormalWS = SafeNormalize(normalWS
                     - WaterGradientWS(normalGradient, waveAxisA, waveAxisB, normalWS), normalWS);
+                rippleNormalWS = SafeNormalize(rippleNormalWS + WaterMicroSlope(localPosition, normalWS,
+                    detailScale, timeScale, distance(positionWS, _WorldSpaceCameraPos.xyz))
+                    * (_WaveNormalStrength * 0.045 * sqrt(surfaceMask)
+                        * DetailResolve(positionTS, max(detailScale * 0.12, 0.08))), normalWS);
                 signedWaveHeight = clamp(height / max(amplitude * 0.62, 0.001), -1.0, 1.0) * surfaceMask;
                 waveSlope = saturate(length(normalGradient) + cellPattern * surfaceMask * 0.015);
                 rippleSignal = lerp(0.5, saturate(max(0.5 + detailHeight / max(amplitude * 0.12, 0.001), cellPattern)), surfaceMask);
@@ -458,7 +483,7 @@ Shader "Planet/Ocean"
 
                 float foamSaturation = saturate(shoreFoam + crestFoam);
                 // World-space breakup stays small enough to resolve around character-sized contacts.
-                float2 foamUv = positionTS * 4.0 + float2(waveTime * 0.17, -waveTime * 0.11);
+                float2 foamUv = (positionTS - windTS * waveTime * lerp(0.08, 0.65, wind01)) * 4.0;
                 float foamThreshold = FoamThresholdMask(foamUv);
                 float foamAa = max(fwidth(foamThreshold), 0.035);
                 foamAmount = smoothstep(foamThreshold - foamAa, foamThreshold + foamAa, foamSaturation)
@@ -487,25 +512,64 @@ Shader "Planet/Ocean"
                     || (_OceanDebugMode >= DEBUG_TERRAIN_COAST_MASK && _OceanDebugMode <= DEBUG_TERRAIN_OVERRIDE_COMPOSITE);
             }
 
-            // Sky colour along the reflected ray. The previous constant could never match the real
-            // sky, so grazing water read as flat paint against a warm horizon. Collapses to the
-            // night constant at daylight 0 - the distant-water night floor below depends on that.
-            float3 EvaluateSkyReflection(float3 reflectDir, float3 upWS, float3 sunDir, float daylight)
+            // Trace only visible opaque geometry. Misses and screen edges retain the sky reflection.
+            float3 ReflectScene(float3 surfaceWS, float3 rayDir, float3 upWS, float3 skyColor, float fresnel)
             {
-                float upness = saturate(dot(reflectDir, upWS));
-                float sunAlign = saturate(dot(reflectDir, sunDir));
-                // Palette tracks the sky this atmosphere actually renders: teal above, warm gold near
-                // the horizon. A neutral-grey horizon reflects as wet sand, not water.
-                float3 zenithColor = float3(0.26, 0.44, 0.60);
-                float3 horizonColor = float3(0.62, 0.60, 0.46);
-                float3 dayColor = lerp(horizonColor, zenithColor, pow(upness, 0.55));
-                dayColor += float3(0.40, 0.26, 0.09) * pow(sunAlign, 8.0) * 0.60;
-                float4 weather = SampleWeather(upWS);
-                float gloom = WeatherCloudGloom(upWS, weather.g);
-                float cloudCover = saturate(max(weather.r, gloom));
-                float cloudLuma = dot(dayColor, float3(0.2126, 0.7152, 0.0722));
-                dayColor = lerp(dayColor, cloudLuma.xxx * (1.0 - gloom * 0.5), cloudCover);
-                return lerp(float3(0.010, 0.018, 0.030), dayColor, daylight);
+                float traceWeight = smoothstep(0.025, 0.05, fresnel)
+                    * smoothstep(0.01, 0.06, dot(rayDir, upWS))
+                    * (1.0 - smoothstep(240.0, 300.0, distance(surfaceWS, _WorldSpaceCameraPos.xyz)));
+                if (traceWeight <= 0.0)
+                    return skyColor;
+
+                float3 origin = surfaceWS + upWS * 0.15;
+                float previousT = 0.0;
+                float previousDelta = -1.0;
+                int reflectionSteps = _WaterQuality.x > 0.0 ? (int)_WaterQuality.x : 20;
+                [loop] for (int i = 0; i < reflectionSteps; i++)
+                {
+                    float sampleIndex = (i + 1) * (20.0 / reflectionSteps);
+                    float t = 0.5 * sampleIndex * sampleIndex;
+                    float3 sampleWS = origin + rayDir * t;
+                    float4 clip = TransformWorldToHClip(sampleWS);
+                    if (clip.w <= 0.0) break;
+                    float2 uv = ComputeScreenPos(clip).xy / clip.w;
+                    if (any(uv <= 0.002) || any(uv >= 0.998)) break;
+                    float rawDepth = SampleSceneDepth(uv);
+                    float sceneEye = LinearEyeDepth(rawDepth, _ZBufferParams);
+                    float rayEye = -TransformWorldToView(sampleWS).z;
+                    float delta = rayEye - sceneEye;
+                    if (delta >= 0.0 && previousDelta < 0.0)
+                    {
+                        float low = previousT;
+                        float high = t;
+                        // The widest march interval is about 47 m on Low. Eight refinements
+                        // keep its residual below the 0.3 m confidence threshold as the camera moves.
+                        [unroll] for (int refine = 0; refine < 8; refine++)
+                        {
+                            float mid = (low + high) * 0.5;
+                            sampleWS = origin + rayDir * mid;
+                            clip = TransformWorldToHClip(sampleWS);
+                            uv = ComputeScreenPos(clip).xy / clip.w;
+                            rawDepth = SampleSceneDepth(uv);
+                            delta = -TransformWorldToView(sampleWS).z - LinearEyeDepth(rawDepth, _ZBufferParams);
+                            if (delta > 0.0) high = mid; else low = mid;
+                        }
+                        float3 hitWS = ComputeWorldSpacePosition(uv, rawDepth, UNITY_MATRIX_I_VP);
+                        float hitHeight = dot(hitWS - surfaceWS, upWS);
+                        float confidence = (1.0 - smoothstep(0.3, 2.0, abs(delta)))
+                            * smoothstep(0.05, 0.5, hitHeight);
+                        float edge = min(min(uv.x, uv.y), min(1.0 - uv.x, 1.0 - uv.y));
+                        confidence *= traceWeight * smoothstep(0.01, 0.08, edge)
+                            * (1.0 - smoothstep(120.0, 200.0, high));
+                        // The opaque copy has no mip chain; an explicit LOD avoids derivatives in this divergent trace.
+                        float2 colorUv = ClampAndScaleUVForBilinear(UnityStereoTransformScreenSpaceTex(uv), _CameraOpaqueTexture_TexelSize.xy);
+                        float3 reflectedColor = SAMPLE_TEXTURE2D_X_LOD(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, colorUv, 0).rgb;
+                        return lerp(skyColor, reflectedColor, confidence);
+                    }
+                    previousT = t;
+                    previousDelta = delta;
+                }
+                return skyColor;
             }
 
             float ShoreGradient(float3 positionWS, float column, float sceneValid)
@@ -541,7 +605,7 @@ Shader "Planet/Ocean"
                 float body01,
                 float waterTemperature01,
                 float swellHeight,
-                float2 screenUV)
+                float2 screenUV, float4 currentWS, float2 flowUV)
             {
                 SurfaceLayer layer;
                 // Weather and planet coordinates use radial up. Only lighting follows the moving swell normal.
@@ -556,7 +620,7 @@ Shader "Planet/Ocean"
                 // Root cause remains the vertex-colour packing in WaterMeshBuilder.
                 float dataEdge = saturate(length(fwidth(waterData)) * 16.0);
                 float dataContinuity = lerp(1.0, 0.78, smoothstep(0.35, 1.0, dataEdge));
-                float depthBlend = SurfaceDepthBlend(depth01);
+
                 float shoreVisibility = smoothstep(0.018, 0.18, shore01);
                 float3 rippleNormalWS;
                 float signedWaveHeight;
@@ -570,10 +634,23 @@ Shader "Planet/Ocean"
                 float crestFoam;
                 float sceneValid;
                 float waterPathMeters;
-                float waterColumn = MeasuredWaterColumn(positionWS, screenUV, _SeaLevelRadius, sceneValid, waterPathMeters);
+                float waterColumn = MeasuredWaterColumn(positionWS, screenUV, sceneValid, waterPathMeters);
+                depth01 = lerp(depth01, saturate(waterColumn / max(_DeepDepth, .001)), sceneValid);
+                float depthBlend = SurfaceDepthBlend(depth01);
                 float shoreGradient = ShoreGradient(positionWS, waterColumn, sceneValid);
                 ComputeSurfaceWaves(positionWS, normalWS, depth01, shore01, shoreGradient, body01, swellHeight, rippleNormalWS, signedWaveHeight, waveSlope, rippleSignal, waveProof, waveEnergy, storm01, foamAmount, shoreFoam, crestFoam);
-                rippleNormalWS = SafeNormalize(rippleNormalWS + swellNormalWS - normalWS, normalWS);
+                // A directional perturbation on the shared water, with continuous downstream UVs.
+                // The current disappears into the receiving body's existing wind waves without tinting it.
+                float phase = (flowUV.y - _GameTime * max(_WaveSpeed, .001) * 2.0) * .75;
+                float currentSlope = (cos(phase + sin(flowUV.x * .3) * .5) * .045
+                    + cos(phase * 1.73 - flowUV.x * .2) * .025) * currentWS.w * _WaterMotionStrength;
+                rippleNormalWS = SafeNormalize(rippleNormalWS + swellNormalWS - normalWS
+                    - currentWS.xyz * currentSlope, normalWS);
+                float3 interactionSlope;
+                float interactionFoam;
+                WaterInteractionEffects(positionWS, interactionSlope, interactionFoam);
+                rippleNormalWS = SafeNormalize(rippleNormalWS - interactionSlope, rippleNormalWS);
+                foamAmount = saturate(foamAmount + interactionFoam);
                 float freezeFactor = EvaluateFreezeFactor(waterTemperature01, body01);
                 float iceContribution = EvaluateIceContribution(positionWS, normalWS, freezeFactor);
                 float liquidContribution = 1.0 - iceContribution;
@@ -603,7 +680,7 @@ Shader "Planet/Ocean"
                 float3 sunDir = SafeNormalize(_SunParams, normalWS);
                 float localSun = dot(normalWS, sunDir);
                 float rippleSun = saturate(dot(rippleNormalWS, sunDir));
-                float daylight = smoothstep(-0.08, 0.18, localSun);
+                float daylight = PlanetDaylightFromLocalSun(localSun);
                 float shadow = CloudShadowFactor(positionWS, sunDir, localSun);
                 shadow *= MainLightShadow(TransformWorldToShadowCoord(positionWS), positionWS,
                     half4(1, 1, 1, 1), half4(0, 0, 0, 0));
@@ -617,19 +694,39 @@ Shader "Planet/Ocean"
                 float3 waterColor = lerp(shallowColor, deepColor, depthBlend);
 
                 float nightLight = saturate(_NightAmbientIntensity * 0.10 + 0.015);
-                float dayLight = 0.46 + rippleSun * 0.54;
-                float lightAmount = lerp(nightLight, dayLight, daylight);
-                lightAmount *= lerp(1.0, shadow, daylight * 0.45);
+                float lightAmount = WaterSurfaceLight(rippleSun, daylight, shadow, _NightAmbientIntensity);
 
                 float3 reflectDir = reflect(-viewDir, rippleNormalWS);
                 float3 skyReflection = EvaluateSkyReflection(reflectDir, normalWS, sunDir, daylight);
+                if (_WaterReflectionOrigin.w > 0.0)
+                {
+                    float3 fromProbe = positionWS - _WaterReflectionOrigin.xyz;
+                    // A color cube has no geometry depth. Projecting it onto the capture's far plane
+                    // magnifies nearby banks into false silhouettes. Keep its angular lookup intact.
+                    float3 captured = SAMPLE_TEXTURECUBE_LOD(_WaterReflectionCube, sampler_WaterReflectionCube, reflectDir, 1.0).rgb;
+                    // The capture clears sky to black. Atmospheric sky remains owned by the shared fallback.
+                    float geometry = smoothstep(0.003, 0.02, max(captured.r, max(captured.g, captured.b)));
+                    float3 probeColor = lerp(skyReflection, captured, geometry);
+                    if (_WaterReflectionBlend < 1.0)
+                    {
+                        float3 previous = SAMPLE_TEXTURECUBE_LOD(_WaterReflectionPreviousCube,
+                            sampler_WaterReflectionCube, reflectDir, 1.0).rgb;
+                        float previousGeometry = smoothstep(0.003, 0.02, max(previous.r, max(previous.g, previous.b)));
+                        probeColor = lerp(lerp(skyReflection, previous, previousGeometry), probeColor, _WaterReflectionBlend);
+                    }
+                    // The local capture cannot describe distant water or rays into the seabed.
+                    float probeWeight = (1.0 - smoothstep(175.0, 350.0, length(fromProbe)))
+                        * smoothstep(0.0, 0.08, dot(reflectDir, normalWS));
+                    skyReflection = lerp(skyReflection, probeColor, _WaterReflectionOrigin.w * probeWeight);
+                }
 
                 float3 litColor = waterColor * lightAmount;
                 // Reflection needs true Schlick (F0 0.02, ^5). The shared `fresnel` above uses ^3.2 for
                 // the alpha/glint paths, which is far broader - reusing it here reflects mid-angles as
                 // hard as grazing ones and washes the body colour out entirely.
                 float reflectFresnel = 0.02 + 0.98 * pow(1.0 - viewFacing, 5.0);
-                float reflectionBlend = reflectFresnel * lerp(0.08, 0.72, daylight) * lerp(0.45, 1.0, body01);
+                skyReflection = ReflectScene(positionWS, reflectDir, normalWS, skyReflection, reflectFresnel);
+                float reflectionBlend = reflectFresnel;
                 float rippleContrast = (rippleSignal - 0.5) * 2.0;
                 float waveShade = clamp(signedWaveHeight * 0.055 + rippleContrast * 0.072 + (rippleSun - saturate(localSun)) * 0.15, -0.12, 0.16);
                 litColor *= 1.0 + waveShade * daylight * lerp(0.50, 1.0, body01);
@@ -640,11 +737,7 @@ Shader "Planet/Ocean"
                 // open ocean (where surfacePathBlend ~ 1) stayed ~half-lit at night = the dark-side glow.
                 float farLight = lerp(nightLight, 0.76, daylight);
                 float3 farBase = farWaterColor * farLight;
-                // Lerp rather than sum, so raising the sky share cannot blow out the body colour and
-                // daylight 0 still collapses farGraze to the same night floor as farBase.
-                float3 farBody = farWaterColor * lerp(nightLight, 0.90, daylight);
-                float3 farGraze = lerp(farBody, skyReflection, lerp(0.35, 0.72, body01) * daylight);
-                float3 farSurfaceColor = lerp(farBase, farGraze, saturate(reflectFresnel * lerp(0.55, 0.85, body01)));
+                float3 farSurfaceColor = lerp(farBase, skyReflection, reflectFresnel);
                 float surfacePathBlend = smoothstep(0.10, 0.76, viewPath) * lerp(0.62, 0.98, body01);
                 layer.color = lerp(baseSurfaceColor, farSurfaceColor, surfacePathBlend);
                 layer.nearColor = baseSurfaceColor;
@@ -658,7 +751,7 @@ Shader "Planet/Ocean"
                 float glintPower = clamp(_SunGlitterPower * 0.22, 72.0, 640.0);
                 float broadGlint = pow(nDotH, 72.0) * 0.16;
                 float sharpGlint = pow(nDotH, glintPower);
-                float glintSunMask = daylight * shadow * smoothstep(0.02, 0.24, localSun);
+                float glintSunMask = daylight * shadow * smoothstep(0.02, 0.24, localSun) * saturate(_SunIntensity / 17.0);
                 float glintViewMask = lerp(0.28, 1.0, saturate(fresnel * 1.4 + viewPath * 0.35));
                 // A flat, calm surface still reflects the sun. The half-vector selects the reflecting facets.
                 float glint = (broadGlint + sharpGlint) * glintSunMask * glintViewMask * _SunGlitterIntensity * dataContinuity * liquidContribution;
@@ -699,11 +792,9 @@ Shader "Planet/Ocean"
                     / max(layer.alpha, 0.0001);
                 // Atmosphere owns the underwater refraction window and total internal reflection.
                 // Keep this opaque top sheet from painting over that view from below.
-                if (signedViewFacing < 0.0)
-                    layer.alpha *= 1.0 - CameraSubmerged01(_WorldSpaceCameraPos.xyz, _PlanetCenter,
-                        _SeaLevelRadius, _SwellAmplitude);
+                layer.alpha *= 1.0 - CameraSubmerged01(_WorldSpaceCameraPos.xyz, _PlanetCenter,
+                    _SeaLevelRadius, _SwellAmplitude);
 
-                ClipWaterBackface(positionWS, _SeaLevelRadius);
                 layer.depthBlend = depthBlend;
                 layer.shoreVisibility = shoreVisibility;
                 layer.fresnel = fresnel;
@@ -739,21 +830,44 @@ Shader "Planet/Ocean"
                 float3 objectNormalWS = TransformObjectToWorldNormal(input.normalOS);
                 float3 planetNormalWS = SafeNormalize(positionWS - _PlanetCenter, objectNormalWS);
 
-                float4 waterData = saturate(input.color);
+                float4 waterData;
                 float swellHeight;
                 float3 swellNormal;
-                positionWS = ComputeWaterVertexDisplacement(positionWS, planetNormalWS, waterData, swellNormal, swellHeight);
+                positionWS = ComputeWaterMeshDisplacement(positionWS, planetNormalWS, input.color, input.blend, waterData, swellNormal, swellHeight);
 
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.positionWS = positionWS;
                 output.normalWS = swellNormal; // swell-following normal; fragment perturbs it with fine detail
                 output.waterData = waterData;
                 output.swellHeight = swellHeight;
+                output.river = input.color.a > 1.5 ? 1.0 : 0.0;
+                float3 side = TransformObjectToWorldDir(input.tangentOS.xyz);
+                float3 current = cross(planetNormalWS, side);
+                float currentWeight = 1.0 - smoothstep(0, 1, input.blend.x);
+                output.currentWS = float4(current, currentWeight * output.river * saturate(input.flow.z));
+                output.flowUV = input.flow.xy;
                 return output;
             }
 
             half4 frag(Varyings input) : SV_Target
             {
+                float2 surfaceUV = GetNormalizedScreenSpaceUV(input.positionCS);
+                float nearestWater = SAMPLE_TEXTURE2D_X(_WaterSurfaceDepth, sampler_WaterSurfaceDepth, surfaceUV).r;
+                if (_WaterVolumeEnabled > .5)
+                {
+                    float tolerance = max(abs(nearestWater) * .000001, 1e-12);
+                    #if UNITY_REVERSED_Z
+                        clip(input.positionCS.z - nearestWater + tolerance);
+                    #else
+                        clip(nearestWater - input.positionCS.z + tolerance);
+                    #endif
+                    // The prepass chooses one surface. Do not alpha-compose the same water twice.
+                    float4 front = SAMPLE_TEXTURE2D(_WaterInterfaceTexture, sampler_WaterInterfaceTexture, surfaceUV);
+                    clip(front.r - .0001);
+                    float shore; uint kind;
+                    DecodeWaterShoreKind(front.b, shore, kind);
+                    clip(WaterKindIsRiver(kind) == (input.river > .5) ? 1 : -1);
+                }
                 if (IsVolumeOwnedMode())
                     return half4(0.0, 0.0, 0.0, 0.0);
 
@@ -776,7 +890,7 @@ Shader "Planet/Ocean"
                     body01,
                     waterTemperature01,
                     input.swellHeight,
-                    input.positionCS.xy / max(_ScaledScreenParams.xy, float2(1.0, 1.0)));
+                    input.positionCS.xy / max(_ScaledScreenParams.xy, float2(1.0, 1.0)), input.currentWS, input.flowUV);
 
                 if (_OceanDebugMode == DEBUG_WATER_DEPTH)
                     return half4(lerp(float3(0.55, 1.0, 0.92), float3(0.0, 0.025, 0.16), layer.depthBlend), 1.0);

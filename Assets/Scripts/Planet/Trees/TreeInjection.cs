@@ -5,7 +5,7 @@ using UnityEngine;
 // Replaces the scatter library's TREE prototypes (Interaction == Chop) with generated trees (plan 006). The
 // species is chosen from the prototype's Biome (TreeDefLibrary.HasTree), so each biome grows the right tree.
 // Applied at boot (Planet.RegisterWorldSettings) so play shows generated trees with no console step; `tree.inject
-// off` reverts to Synty at runtime. Heavily guarded — any failure keeps the original Synty prototype, and a
+// off` reverts to the source prop at runtime. Heavily guarded — any failure keeps the original source prototype, and a
 // top-level catch keeps scatter working.
 //
 // Per-instance variety: instanced draw is one mesh per batch, so varied geometry comes from expanding each
@@ -24,13 +24,14 @@ public static class TreeInjection
 
     // The impostor bake tool clears this while it rebuilds, so it bakes from a library whose generated trees
     // carry NO card. Without it the tool would see the atlases it baked last time, mistake them for prebaked
-    // Synty cards, and skip every tree — i.e. it could bake once and never again.
+    // source cards, and skip every tree — i.e. it could bake once and never again.
     public static bool UseBakedImpostors = true;
 
     static readonly Dictionary<TreeDefLibrary.TreeSpecies, (Material bark, Material foliage)> _mats = new();
     static readonly Dictionary<TreeDefLibrary.TreeSpecies, Material> _cleanFallback = new();
     static readonly Dictionary<TreeDefLibrary.TreeSpecies, Material> _coniferMats = new();
-    static Material _cleanBase; // a clean leaf-image FoliageLit material (not a Synty palette atlas)
+    static Material _cleanBase; // a clean leaf-image FoliageLit material (not a palette atlas)
+    static Material _cutWood;
 
     public static ScatterLibraryDto Apply(ScatterLibraryDto lib)
     {
@@ -127,7 +128,7 @@ public static class TreeInjection
 
     // Ferns are Collect, not Chop, so the tree path never saw them. They are the one non-tree plant the
     // generator already produces, and matching them by name keeps the rest of the Collect library (flowers,
-    // mushrooms, reeds) on its Synty meshes.
+    // mushrooms, reeds) on its source meshes.
     static bool IsFern(ScatterPrototypeDto p) =>
         p != null && p.Interaction != ScatterInteraction.Chop && p.Parts != null && p.Parts.Length > 0
         && (p.DisplayName ?? "").IndexOf("fern", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -141,15 +142,15 @@ public static class TreeInjection
         {
             int seed = (int)(StableHash(p.DisplayName ?? "fern", 0) % 900000) + 1;
             TreeDef def = TreeDefLibrary.Species(TreeDefLibrary.TreeSpecies.Fern, 1f);
-            GeneratedTree t = TreeGenerator.Generate(def, seed);
+            GeneratedTree t = TreeGenerator.Generate(def, seed, harvestParts: false);
             if (t.Bark == null || t.Bark.vertexCount == 0) return null;
             if (t.Foliage == null || t.Foliage.vertexCount == 0) return null;
 
-            // NOT the prototype's own material: the Synty ferns wear Leaf_Palm_01, a 3-cell frond atlas, and the
+            // NOT the prototype's own material: the source ferns wear Leaf_Palm_01, a 3-cell frond atlas, and the
             // blade primitive maps UV 0..1 across the WHOLE texture — so every frond would show all three cells
             // squashed together. A tinted single-leaf texture is the only thing whole-card UVs can wear.
             Material foliage = CleanFoliage(TreeDefLibrary.TreeSpecies.Fern, def);
-            if (foliage == null) return null; // no clean leaf material to tint — keep the Synty fern
+            if (foliage == null) return null; // no clean leaf material to tint — keep the source fern
             (Material stem, Material _) = MatsFor(TreeDefLibrary.TreeSpecies.Fern, def);
 
             float cull = p.Parts[0].MaxCullDistance;
@@ -198,6 +199,10 @@ public static class TreeInjection
         return max;
     }
 
+    // Rotate age assignment independently of species selection without changing slot allocation.
+    public static int AgeStage(string name, int variant, int count) =>
+        count <= 1 ? 0 : (variant + (int)(StableHash(name ?? "tree", 719) % (uint)count)) % count;
+
     static ScatterPrototypeDto TryReplace(ScatterPrototypeDto p, int variant, int variantCount, int slot, float spacingScale, int ordinalInBiome)
     {
         try
@@ -215,26 +220,25 @@ public static class TreeInjection
                 species = TreeDefLibrary.SpeciesForPrototype(p.Biome, ordinalInBiome + variant);
 
             int seed = (int)(StableHash(p.DisplayName ?? "tree", variant) % 900000) + 1;
-            // One variant -> the old per-TYPE age. Several -> ladder them sapling..old so a stand of one
-            // species mixes real age shapes (the generator scales height/girth/branch tiers/leaf size by age),
-            // not just seeds.
+            // Preserve the species/slot pool. A separate age permutation prevents every primary species
+            // from being the youngest; habitat suitability then favours the appropriate existing shape.
             float age = variantCount <= 1
                 ? 0.3f + (seed % 100) / 100f * 0.7f
-                : Mathf.Lerp(0.25f, 1f, variant / (float)(variantCount - 1));
+                : ForestAge(AgeStage(p.DisplayName, variant, variantCount), variantCount);
             // The library's "* Dead Tree" prototypes are bare standing snags; generating a leafy tree for them
             // loses that biome's dead look entirely.
             bool dead = (p.DisplayName ?? "").IndexOf("dead", StringComparison.OrdinalIgnoreCase) >= 0;
             TreeDef def = dead ? TreeDefLibrary.DeadSpecies(species, age) : TreeDefLibrary.Species(species, age);
             GeneratedTree t = TreeGenerator.Generate(def, seed);
-            if (t.Bark == null || t.Bark.vertexCount == 0) return null; // keep Synty
+            if (t.Bark == null || t.Bark.vertexCount == 0) return null; // keep the source prop
 
             (Material bark, Material foliageFallback) = MatsFor(species, def);
             // Conifer cone is solid dark-green geometry (VertexColorLit); other species reuse the prototype's own
-            // Synty leaf-patch material so each biome gets its correct leaf look (our cards carry the vtx.B leaf
+            // source leaf-patch material so each biome gets its correct leaf look (our cards carry the vtx.B leaf
             // mask it expects). Palette-atlas materials (pine's Generic_*) get a clean tinted leaf substitute.
             Material foliage = def.NeedleFoliage
                 ? ConiferMat(species, def)
-                : SyntyFoliage(p, species, def) ?? foliageFallback;
+                : SourceFoliage(p, species, def) ?? foliageFallback;
 
             float cull = p.Parts[0].MaxCullDistance;
             if (cull < 50f) cull = 300f;
@@ -251,12 +255,16 @@ public static class TreeInjection
                 : null;
 
             // Keep the prototype's biome + placement rules; swap identity (slot/name), parts and stump. The
-            // Synty atlas cannot be kept - it is the wrong silhouette - so the card comes from the generated
+            // source atlas cannot be kept - it is the wrong silhouette - so the card comes from the generated
             // LOD0, per prototype, and WithCachedAtlas attaches the disk-baked one when it still matches.
             var gen = p with
             {
                 DisplayName = variant == 0 ? p.DisplayName : $"{p.DisplayName} v{variant}",
                 SlotId = slot,
+                TreeAge = age,
+                Tree = t,
+                CutMaterial = CutWoodMaterial(),
+                Clumpiness = 1f,
                 SpacingMeters = p.SpacingMeters * spacingScale,
                 Parts = foliagePart != null ? new[] { barkPart, foliagePart } : new[] { barkPart },
                 // Age now carries most of the size variance, so the per-instance jitter only nudges around it
@@ -275,11 +283,22 @@ public static class TreeInjection
         catch (Exception e)
         {
             LoggerProvider.LogException("TreeInject", e);
-            return null; // keep Synty
+            return null; // keep the source prop
         }
     }
 
-    static Material SyntyFoliage(ScatterPrototypeDto p, TreeDefLibrary.TreeSpecies s, TreeDef def)
+    public static float ForestAge(int stage, int count) => count <= 1 ? 1f
+        : stage == 0 ? 0.25f : Mathf.Lerp(0.8f, 1f, (stage - 1f) / Mathf.Max(1, count - 2));
+
+    static Material CutWoodMaterial()
+    {
+        if (_cutWood != null) return _cutWood;
+        _cutWood = Mat("Fresh cut wood", new Color(.7f, .52f, .32f));
+        if (_cutWood.HasProperty("_BaseMap")) _cutWood.SetTexture("_BaseMap", GeneratedSurfaceTexture.CutWood());
+        return _cutWood;
+    }
+
+    static Material SourceFoliage(ScatterPrototypeDto p, TreeDefLibrary.TreeSpecies s, TreeDef def)
     {
         Material picked = PickFoliageMaterial(MatsOf(p));
         if (picked != null && !IsPaletteAtlas(picked) && !IsWrongCellAtlas(picked, s))
@@ -308,7 +327,7 @@ public static class TreeInjection
         return mats;
     }
 
-    // Textures our whole-card [0,1] UVs can't use: palette/gradient atlases (Synty "Generic_*"), biome palette
+    // Textures our whole-card [0,1] UVs can't use: palette/gradient atlases ("Generic_*"), biome palette
     // sheets ("..._Texture_NN", e.g. FoliageDead), and multi-leaf atlases (pohutukawa). Only the clean single-patch
     // leaf textures (leafPatch_*) and the palm frond atlas (handled per-cell) survive; substitute for the rest.
     public static bool IsPaletteAtlas(Material m)
@@ -331,11 +350,11 @@ public static class TreeInjection
         return null;
     }
 
-    // A tinted copy of a known clean leaf material, for species whose Synty material is a palette atlas (conifer).
+    // A tinted copy of a known clean leaf material, for species whose source material is a palette atlas (conifer).
     static Material CleanFoliage(TreeDefLibrary.TreeSpecies s, TreeDef def)
     {
         if (_cleanBase == null) return null;
-        if (!_cleanFallback.TryGetValue(s, out Material m))
+        if (!_cleanFallback.TryGetValue(s, out Material m) || m == null)
         {
             m = new Material(_cleanBase) { name = $"Gen {def.Name} leaf" };
             // FoliageLit exposes _SeasonColor, not _BaseColor, so the old _BaseColor line was a silent no-op and
@@ -374,7 +393,7 @@ public static class TreeInjection
     // foliage, not a flat block. _BaseColor carries the dark-green tint.
     static Material ConiferMat(TreeDefLibrary.TreeSpecies s, TreeDef def)
     {
-        if (!_coniferMats.TryGetValue(s, out Material m))
+        if (!_coniferMats.TryGetValue(s, out Material m) || m == null)
         {
             Shader sh = Shader.Find("Scatter/FoliageLit") ?? Shader.Find("Scatter/VertexColorLit");
             m = new Material(sh) { name = $"Gen {def.Name} needles" };
@@ -422,7 +441,9 @@ public static class TreeInjection
 
     static (Material, Material) MatsFor(TreeDefLibrary.TreeSpecies s, TreeDef def)
     {
-        if (!_mats.TryGetValue(s, out (Material bark, Material foliage) pair))
+        // Static caches survive Play sessions when domain reload is disabled; Unity objects may not.
+        _mats.TryGetValue(s, out (Material bark, Material foliage) pair);
+        if (pair.bark == null)
         {
             Material bark = Mat($"Gen {def.Name} bark", def.BarkColor);
             // EVERY species gets a bark texture, not just birch. Trunk UVs tile per metre, so a small wrapped
@@ -430,9 +451,11 @@ public static class TreeInjection
             // were the single biggest reason they looked like plastic next to the birch.
             if (bark.HasProperty("_BaseMap"))
                 bark.SetTexture("_BaseMap", GeneratedSurfaceTexture.Bark(BarkStyleFor(s)));
-            pair = (bark, Mat($"Gen {def.Name} foliage", def.LeafColor));
-            _mats[s] = pair;
+            pair.bark = bark;
         }
+        if (pair.foliage == null)
+            pair.foliage = Mat($"Gen {def.Name} foliage", def.LeafColor);
+        _mats[s] = pair;
         return pair;
     }
 

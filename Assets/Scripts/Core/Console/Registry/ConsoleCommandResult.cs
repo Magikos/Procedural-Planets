@@ -36,6 +36,14 @@ public readonly struct ConsoleCommandResult
     public bool HasOutput => !string.IsNullOrEmpty(Output);
     public bool HasError => !string.IsNullOrEmpty(Error);
 
+    public static ConsoleCommandResult Ok(string output = "") =>
+        new(true, "", "", output, "", "", false, false, null);
+
+    public static ConsoleCommandResult Fail(string error) => Failed("", "", error);
+
+    internal ConsoleCommandResult WithContext(string commandLine, string alias) =>
+        new(Success, commandLine, alias, Output, Error, Usage, IsAsync, IsCancellable, AwaitableResult);
+
     internal ConsoleCommandResult WithOutput(string output)
     {
         return new ConsoleCommandResult(

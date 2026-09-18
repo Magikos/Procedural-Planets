@@ -13,6 +13,98 @@ namespace ProceduralPlanets.Tests
         static EntityId Slot => CreatureKey.Slot(2, CreatureTerritory.Level, 8, 8, 0);
 
         [Test]
+        public void LakeBedsRejectNewLandHomesWithoutErasingSavedResidents()
+        {
+            using var emptyLog = new WorldDeltaLog();
+            using (var flooded = new Fixture(emptyLog, water: new DeepLake()))
+            {
+                flooded.Service.Tick(Observer, 0f);
+                Assert.AreEqual(0, flooded.Service.LiveCount, "Sea altitude alone must not allow homes below inland lake surfaces.");
+            }
+            using var savedLog = new WorldDeltaLog();
+            EntityId saved;
+            using (var dry = new Fixture(savedLog))
+            {
+                dry.Advance(15f);
+                saved = dry.Service.Live[0].Id;
+                dry.Service.FlushState();
+            }
+            using (var flooded = new Fixture(savedLog, water: new DeepLake()))
+            {
+                flooded.Service.Tick(Observer, 0f);
+                Assert.AreEqual(0, flooded.Service.LiveCount, "A saved position must not become an underwater home.");
+            }
+            using (var dryAgain = new Fixture(savedLog))
+            {
+                dryAgain.Service.Tick(Observer, 0f);
+                bool retained = false;
+                foreach (var animal in dryAgain.Service.Live) retained |= animal.Id == saved;
+                Assert.IsTrue(retained, "The saved identity must return when its habitat is valid again.");
+            }
+        }
+
+        [Test]
+        public void LandMovementAvoidsCasualDeepWaterButAllowsEmergencySwimming()
+        {
+            var water = new DeepLake();
+            Assert.IsFalse(CreatureWaterAvoidance.CanEnter(water, Observer, Observer + Vector3.right, false));
+            Assert.IsTrue(CreatureWaterAvoidance.CanEnter(water, Observer, Observer + Vector3.right, true));
+            water.Ocean = true;
+            Assert.IsFalse(CreatureWaterAvoidance.CanEnter(water, Observer, Observer + Vector3.right, false));
+            Assert.IsTrue(CreatureWaterAvoidance.CanEnter(water, Observer, Observer + Vector3.right, true));
+            Assert.IsTrue(CreatureWaterAvoidance.IsDeep(water, Observer));
+        }
+
+        sealed class DeepLake : IWaterQueryService
+        {
+            public bool Ocean;
+            public bool TryGetWaterSurface(Vector3 position, out WaterSample sample)
+            { sample = new WaterSample(position.normalized * 1003f, position.normalized, 3f, 3f, 1, Ocean); return true; }
+            public bool IsUnderwater(Vector3 position) => true;
+        }
+
+        [Test]
+        public void SavedResidentSurvivesAZeroDensityHabitatChange()
+        {
+            using var log = new WorldDeltaLog();
+            EntityId id;
+            using (var fixture = new Fixture(log))
+            {
+                fixture.Advance(15f);
+                Assert.Greater(fixture.Service.LiveCount, 0);
+                id = fixture.Service.Live[0].Id;
+                fixture.Service.FlushState();
+            }
+            using (var fixture = new Fixture(log, new CreatureHabitatDto(0f, 0f, 0f, 0f, false)))
+            {
+                fixture.Service.Tick(Observer, 0f);
+                bool found = false;
+                foreach (var animal in fixture.Service.Live) found |= animal.Id == id;
+                Assert.IsTrue(found, "Habitat tuning must not erase a recorded living animal.");
+                fixture.Service.FlushState();
+                Assert.AreEqual(15d / 1800d, Read(log, id).Needs.Hunger, 1e-9);
+            }
+        }
+
+        [Test]
+        public void StatusReportsValidatedPopulationWithoutCountingRejectedSlots()
+        {
+            using var log = new WorldDeltaLog();
+            using var fixture = new Fixture(log);
+            var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            var library = new CreatureLibraryDto(new[]
+            {
+                CreatureLibraryDto.Placeholder.At(0) with { PerTerritory = 1, AdditionalSlots = new[] { 32, 32, 64 } },
+            }, 150f);
+            typeof(CreatureResidencyService).GetField("_library", flags).SetValue(fixture.Service, library);
+            typeof(CreatureResidencyService).GetMethod("BuildSlotBases", flags).Invoke(fixture.Service, null);
+            string status = (string)typeof(CreatureResidencyService).GetMethod("StatusCmd", flags).Invoke(fixture.Service, null);
+            StringAssert.Contains("slotsUsed=2/64", status);
+            StringAssert.Contains("slots=0,32 legacy=0..0 additional=32", status);
+            StringAssert.Contains("residents=0 live=0", status);
+        }
+
+        [Test]
         public void NeedsPersistWithoutGrowingDuringAbsenceOrReload()
         {
             using var log = new WorldDeltaLog();
@@ -211,7 +303,7 @@ namespace ProceduralPlanets.Tests
             public long Now = 1788770000;
             public readonly CreatureResidencyService Service;
             readonly GameObject _planet = new("Persistence test planet");
-            public Fixture(IWorldDeltaLog log)
+            public Fixture(IWorldDeltaLog log, CreatureHabitatDto habitat = null, IWaterQueryService water = null)
             {
                 var surface = new Sphere();
                 Service = new CreatureResidencyService(_planet.transform, surface, null, () => Now);
@@ -220,10 +312,13 @@ namespace ProceduralPlanets.Tests
                     MaxHealth = 5, PerTerritory = 1, WalkSpeedMps = 0f, DriftHomeSpeedMps = 0f,
                     RespawnSeconds = 10f, MinAltitudeMeters = 0f, MaxAltitudeMeters = 200f,
                     Biomes = Array.Empty<BiomeType>(),
+                    Habitat = habitat,
                 };
                 Set("_library", new CreatureLibraryDto(new[] { species }, 150f));
                 Set("_slotBase", new[] { 0 });
+                Set("_speciesSlots", new[] { new[] { 0 } });
                 Set("_delta", log);
+                Set("_homeWater", water);
                 Set("_seeds", new SeedProvider(20260826));
                 Set("_planetRadius", 1000f);
                 Set("_seaLevelRadius", 900f);

@@ -10,7 +10,7 @@ using UnityEngine.Rendering;
 /// Owns planet-scale weather state. The CPU seeds the initial cube-sphere weather
 /// grid, then runtime evolution is dispatched to a GPU ping-pong texture.
 /// </summary>
-[CommandPrefix("weather")]
+[CommandPrefix("weather", Group = "Sky and weather", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigurator, ILateInitialize,
     IProgressReporter, IWorldServiceRegistrar, IWorldSettingsRegistrar, IWorldTeardown
 {
@@ -75,21 +75,22 @@ public class WeatherManager : MonoBehaviour, IWeatherProvider, IWeatherConfigura
         return $"weather evolution frozen: {value.Value}";
     }
 
-    [ConsoleCommand("force", "Force the ENTIRE weather grid to one uniform condensation/storm value (each 0-1), for deterministic test scenes - removes noise-pattern coverage variance. Also freezes evolution (weather.freeze true) so the forced state holds steady; weather.freeze false resumes normal drift. Storm defaults to 0.", MonoTargetType.Single)]
-    string ForceCmd(float condensation, float? storm = null)
+    [ConsoleCommand("force", "Force the ENTIRE weather grid to one uniform condensation/storm value (each 0-1), for deterministic test scenes - removes noise-pattern coverage variance. Also freezes evolution (weather.freeze true) so the forced state holds steady; weather.freeze false resumes normal drift. Storm and optional rain rate default to 0.", MonoTargetType.Single)]
+    string ForceCmd(float condensation, float? storm = null, float rain = 0f)
     {
         if (_grid == null) return "weather grid not ready";
 
         float c = Mathf.Clamp01(condensation);
         float s = Mathf.Clamp01(storm ?? 0f);
         var weatherValue = new Vector4(c, s, c, 0.5f);
-        var dynamicsValue = new Vector4(c, 0f, 0f, c);
+        float precipitation = Mathf.Clamp01(rain);
+        var dynamicsValue = new Vector4(c, precipitation, precipitation, c);
         if (!_grid.ForceUniform(WeatherCompute, weatherValue, dynamicsValue))
             return "weather force failed: WeatherCompute is not assigned";
 
         SettingsProvider.Update(_settings with { EnableWeatherEvolution = false });
         Shader.SetGlobalFloat(CloudTypeTestId, 0f);
-        return $"weather forced: condensation={c:F2} storm={s:F2} (evolution frozen)";
+        return $"weather forced: condensation={c:F2} storm={s:F2} rain={precipitation:F2} (evolution frozen)";
     }
 
     [ConsoleCommand("coverage", "Get or set overall cloud coverage, 0-1 (the InitialCoverage seed). Lower = clearer skies with scattered clouds and only occasional storms; higher = overcast with storms everywhere. Changing it reseeds the whole grid. Default 0.48.", MonoTargetType.Single)]

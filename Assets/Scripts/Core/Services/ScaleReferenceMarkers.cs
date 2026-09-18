@@ -31,7 +31,7 @@ public interface IScaleReferenceDebugStatsProvider
 /// sampled terrain surface the gameplay camera uses instead of a broad planet sphere.
 /// </summary>
 [DisallowMultipleComponent]
-[CommandPrefix("scale")]
+[CommandPrefix("scale", Group = "Camera and character", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public sealed class ScaleReferenceMarkers : MonoBehaviour, IScaleReferenceDebugStatsProvider,
     IWorldServiceRegistrar
 {

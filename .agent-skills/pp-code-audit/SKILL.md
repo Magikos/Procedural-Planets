@@ -15,7 +15,7 @@ product-source edits.
 - Open every audit with: **Findings only — no code changed.**
 - Bryan decides `fix`, `defer`, or `wontfix` per finding before implementation.
 - Preserve current behavior. Mark any recommendation that may change runtime or visuals.
-- Do not propose a test framework. Use the project's build, Unity, runtime, capture, and
+- Do not propose a new test framework. Use existing EditMode tests and the project's build, Unity, runtime, capture, and
   counter evidence ladder from `pp-validation-and-evidence`.
 - Caustics are editable (the old don't-touch rule was lifted 2026-08-11, CLAUDE.md "Ocean shader /
   caustics"). They remain fragile: recommend changes deliberately, and require that the water still

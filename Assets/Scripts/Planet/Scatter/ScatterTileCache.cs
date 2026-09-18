@@ -17,7 +17,7 @@ using UnityEngine;
 // Threading mirrors the old renderer: one sequential background worker gathers into worker-local lists
 // from an immutable context + transform snapshot; the cache (tiles + draw buckets) is only ever mutated
 // on the main thread. An epoch guards commits so a result produced for a previous world is dropped.
-[CommandPrefix("scatter")]
+[CommandPrefix("scatter", Group = "Vegetation and wildlife", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public sealed class ScatterTileCache
 {
     // A (tile, prototype) unit of work / readiness.
@@ -48,6 +48,7 @@ public sealed class ScatterTileCache
 
         public bool IsReady(int p) => (_ready[p >> 6] & (1UL << (p & 63))) != 0;
         public void MarkReady(int p) => _ready[p >> 6] |= 1UL << (p & 63);
+        public void CopyReady(ulong[] destination, int offset) => _ready.CopyTo(destination, offset);
     }
 
     const float ReevalMoveMeters = 40f;    // re-plan the required tile set only after this much camera travel
@@ -55,12 +56,12 @@ public sealed class ScatterTileCache
     const int MaxPairsPerBatch = 1024;     // Burst path: pairs per parallel dispatch (larger amortises schedule/await)
     const int JobInnerBatch = 4;           // IJobParallelFor inner batch size
     const int CommitInstancesPerFrame = 20000; // Burst path: cap main-thread commit per frame; spread the rest
+    const double CommitBudgetMs = 2;
     const long DrainBudgetMs = 200;        // one worker invocation keeps draining batches up to this wall time
 
     readonly ScatterField _field;
     readonly Transform _planetTransform;
     readonly ILogger _log = LoggerProvider.Get();
-    readonly FaceSpaceCell[] _ranges = new FaceSpaceCell[FaceSpaceCellRangeBuilder.MaxRanges];
 
     readonly Dictionary<long, TileEntry> _tiles = new();
     readonly HashSet<WorkKey> _inFlight = new();                 // pairs the worker is actively gathering
@@ -85,6 +86,7 @@ public sealed class ScatterTileCache
     bool _configured;
     int _epoch;
     bool _working;
+    float _nextProgressLog;
     Vector3 _lastReevalPos = FarAway;
 
     // Burst gather inputs (only when the ground sampler is an IBurstElevationSource). Per-world constants
@@ -99,6 +101,8 @@ public sealed class ScatterTileCache
     // world replaces it and an unchanged one does not re-copy 221k floats every batch.
     NativeArray<float> _waterLevel;
     float[] _waterLevelSource;
+    NativeArray<byte> _waterKinds;
+    byte[] _waterKindsSource;
 
     NativeArray<float> EnsureWaterLevel(ScatterField.GatherContext ctx)
     {
@@ -116,6 +120,15 @@ public sealed class ScatterTileCache
             ? new NativeArray<float>(ctx.WaterLevel, Allocator.Persistent)
             : new NativeArray<float>(1, Allocator.Persistent);
         return _waterLevel;
+    }
+    NativeArray<byte> EnsureWaterKinds(ScatterField.GatherContext ctx)
+    {
+        if (ReferenceEquals(ctx.WaterKinds, _waterKindsSource) && _waterKinds.IsCreated) return _waterKinds;
+        if (_waterKinds.IsCreated) _waterKinds.Dispose();
+        _waterKindsSource = ctx.WaterKinds;
+        _waterKinds = ctx.WaterKinds != null ? new NativeArray<byte>(ctx.WaterKinds, Allocator.Persistent)
+            : new NativeArray<byte>(1, Allocator.Persistent);
+        return _waterKinds;
     }
     bool _nativeAllocated;
     bool _burstReady;
@@ -246,6 +259,8 @@ public sealed class ScatterTileCache
         if (_protoParams.IsCreated) _protoParams.Dispose();
         if (_waterLevel.IsCreated) _waterLevel.Dispose();
         _waterLevelSource = null;
+        if (_waterKinds.IsCreated) _waterKinds.Dispose();
+        _waterKindsSource = null;
         _nativeAllocated = false;
         _burstReady = false;
     }
@@ -256,10 +271,7 @@ public sealed class ScatterTileCache
     {
         if (!_configured) return;
 
-        // The re-plan costs ~30 ms at 176 prototypes and 16.5k tiles, spread evenly across five stages with
-        // no single hotspot left to optimise. It only fires every ReevalMoveMeters — about once a second at
-        // flying speed — so there are ~60 idle frames to spread it over. Running one stage per frame turns a
-        // 30 ms stall into a worst case of the largest single stage.
+        // Planning owns its snapshot until publication. The gather keeps draining the previous plan.
         if (_replanStage == ReplanStage.Idle
             && (cameraPos - _lastReevalPos).sqrMagnitude > ReevalMoveMeters * ReevalMoveMeters)
         {
@@ -273,7 +285,7 @@ public sealed class ScatterTileCache
         if (!_working && _work.Count > 0) _ = RunWorkerAsync();
     }
 
-    enum ReplanStage { Idle, Evict, Candidates, SortTiles, Filter, Publish }
+    enum ReplanStage { Idle, Evict, Capture, Working }
 
     ReplanStage _replanStage = ReplanStage.Idle;
     ScatterField.GatherContext _replanCtx;
@@ -281,6 +293,17 @@ public sealed class ScatterTileCache
     Vector3 _replanAnchor;
     Vector3 _replanCameraPos;
     int _replanEpoch;
+    int _replanTileLevel, _replanProtoCount, _readyWords;
+    float _replanRadius;
+    int[] _replanProtoIndex;
+    float[] _replanProtoRadius;
+    readonly Dictionary<long, int> _readyOffsets = new();
+    ulong[] _readySnapshot = Array.Empty<ulong>();
+    readonly HashSet<WorkKey> _replanInFlight = new();
+    readonly FaceSpaceCell[] _ranges = new FaceSpaceCell[FaceSpaceCellRangeBuilder.MaxRanges];
+    public int CompletedPlanCount { get; private set; }
+    public double LastPlanWorkerMilliseconds { get; private set; }
+    public int LastPlanWorkerThreadId { get; private set; }
     // The new plan is built here and swapped in at Publish, so the worker keeps draining the previous plan
     // instead of seeing a half-built one.
     readonly List<(WorkKey key, float dist)> _workNext = new();
@@ -303,16 +326,75 @@ public sealed class ScatterTileCache
 
     void StepReplan()
     {
-        // A world change invalidates everything the in-flight plan captured.
+        // A running worker must retain exclusive ownership of its scratch buffers, even after Reset.
+        if (_replanStage == ReplanStage.Working) return;
+        using var timing = FrameTimingCounters.Measure(FrameTimingSection.ScatterPlanning);
         if (_replanEpoch != _epoch || !_configured) { _replanStage = ReplanStage.Idle; return; }
 
         switch (_replanStage)
         {
-            case ReplanStage.Evict:      ReplanEvict();      _replanStage = ReplanStage.Candidates; break;
-            case ReplanStage.Candidates: ReplanCandidates(); _replanStage = ReplanStage.SortTiles;  break;
-            case ReplanStage.SortTiles:  ReplanSortTiles();  _replanStage = ReplanStage.Filter;     break;
-            case ReplanStage.Filter:     ReplanFilter();     _replanStage = ReplanStage.Publish;    break;
-            case ReplanStage.Publish:    ReplanPublish();    _replanStage = ReplanStage.Idle;       break;
+            case ReplanStage.Evict: ReplanEvict(); _replanStage = ReplanStage.Capture; break;
+            case ReplanStage.Capture:
+                CapturePlan();
+                _replanStage = ReplanStage.Working;
+                _ = BuildPlanAsync();
+                break;
+        }
+    }
+
+    void CapturePlan()
+    {
+        _replanTileLevel = _tileLevel;
+        _replanRadius = _globalMaxRadius;
+        _replanProtoCount = _sortedProtoCount;
+        // Configure replaces these arrays; it never mutates a previously published prototype table.
+        _replanProtoIndex = _sortedProtoIndex;
+        _replanProtoRadius = _sortedProtoRadius;
+        _readyWords = (_protoCount + 63) >> 6;
+        int needed = _tiles.Count * _readyWords;
+        if (_readySnapshot.Length < needed) _readySnapshot = new ulong[Math.Max(needed, _readySnapshot.Length * 2)];
+        _readyOffsets.Clear();
+        int offset = 0;
+        foreach (var tile in _tiles)
+        {
+            _readyOffsets.Add(tile.Key, offset);
+            tile.Value.CopyReady(_readySnapshot, offset);
+            offset += _readyWords;
+        }
+        _replanInFlight.Clear();
+        _replanInFlight.UnionWith(_inFlight);
+    }
+
+    async Awaitable BuildPlanAsync()
+    {
+        try
+        {
+            await Awaitable.BackgroundThreadAsync();
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            int workerThread = System.Environment.CurrentManagedThreadId;
+            ReplanCandidates();
+            ReplanSortTiles();
+            ReplanFilter();
+            double elapsed = timer.Elapsed.TotalMilliseconds;
+            await Awaitable.MainThreadAsync();
+            if (_replanEpoch != _epoch || !_configured) return;
+            using var timing = FrameTimingCounters.Measure(FrameTimingSection.ScatterPlanning);
+            ReplanPublish();
+            CompletedPlanCount++;
+            LastPlanWorkerMilliseconds = elapsed;
+            LastPlanWorkerThreadId = workerThread;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception e)
+        {
+            await Awaitable.MainThreadAsync();
+            _lastReevalPos = FarAway; // Retry instead of stranding the previous plan after a failed capture.
+            _log.Log(LogLevel.Warning, "Scatter", $"tile planning failed: {e}");
+        }
+        finally
+        {
+            await Awaitable.MainThreadAsync();
+            _replanStage = ReplanStage.Idle;
         }
     }
 
@@ -351,12 +433,12 @@ public sealed class ScatterTileCache
         // prototype loop repeated the same distance math _protoCount times — at 109 prototypes that was the
         // whole cost of the re-plan, and it is what made this stall grow when tree variants raised the count.
         _workNext.Clear();
-        float cellUv = ScatterQuadtree.CellUvWidth(_tileLevel);
+        float cellUv = ScatterQuadtree.CellUvWidth(_replanTileLevel);
 
         _scratchTiles.Clear();
         var maxRange = FaceSpaceCellRangeBuilder.BuildRangesLocal(
-            cameraPos, snap, ctx.BaseRadiusLocal, _globalMaxRadius, cellUv, 1, _ranges);
-        int tilesPerAxis = 1 << _tileLevel;
+            cameraPos, snap, ctx.BaseRadiusLocal, _replanRadius, cellUv, 1, _ranges);
+        int tilesPerAxis = 1 << _replanTileLevel;
         for (int rk = 0; rk < maxRange.Count; rk++)
         {
             FaceSpaceCell cell = _ranges[rk];
@@ -365,12 +447,12 @@ public sealed class ScatterTileCache
             {
                 int tx = cell.PageOriginCellUV.x + dx, ty = cell.PageOriginCellUV.y + dy;
                 if ((uint)tx >= (uint)tilesPerAxis || (uint)ty >= (uint)tilesPerAxis) continue;
-                float dist = TileCenterDistance(cell.FaceIndex, tx, ty, snap, ctx.BaseRadiusLocal, anchorWS);
-                if (dist > _globalMaxRadius) continue; // clip the conservative square range to the widest disc
+                float dist = TileCenterDistance(cell.FaceIndex, tx, ty, snap, ctx.BaseRadiusLocal, anchorWS, _replanTileLevel);
+                if (dist > _replanRadius) continue; // clip the conservative square range to the widest disc
                 long tileId = PackTile(cell.FaceIndex, tx, ty);
                 // Resolve the entry once per tile rather than once per (tile, prototype).
-                _tiles.TryGetValue(tileId, out TileEntry entry);
-                _scratchTiles.Add((tileId, dist, entry));
+                int offset = _readyOffsets.TryGetValue(tileId, out int found) ? found : -1;
+                _scratchTiles.Add((tileId, dist, offset));
             }
         }
 
@@ -390,18 +472,18 @@ public sealed class ScatterTileCache
 
     void ReplanFilter()
     {
-        int protoLimit = _sortedProtoCount;
+        int protoLimit = _replanProtoCount;
         for (int i = 0; i < _scratchTiles.Count; i++)
         {
-            (long tileId, float dist, TileEntry entry) = _scratchTiles[i];
-            while (protoLimit > 0 && _sortedProtoRadius[protoLimit - 1] < dist) protoLimit--;
+            (long tileId, float dist, int offset) = _scratchTiles[i];
+            while (protoLimit > 0 && _replanProtoRadius[protoLimit - 1] < dist) protoLimit--;
             if (protoLimit == 0) break; // nothing reaches this far, and every later tile is further still
             for (int k = 0; k < protoLimit; k++)
             {
-                int p = _sortedProtoIndex[k];
-                if (entry != null && entry.IsReady(p)) continue;
+                int p = _replanProtoIndex[k];
+                if (offset >= 0 && (_readySnapshot[offset + (p >> 6)] & (1UL << (p & 63))) != 0) continue;
                 var key = new WorkKey(tileId, p);
-                if (_inFlight.Contains(key)) continue; // the worker is already gathering this pair
+                if (_replanInFlight.Contains(key)) continue; // the worker is already gathering this pair
                 _workNext.Add((key, dist));
             }
         }
@@ -409,15 +491,17 @@ public sealed class ScatterTileCache
 
     void ReplanPublish()
     {
-        // Nearest first: fill the visible frontier before prefetch tiles.
-        _workNext.Sort(static (a, b) => a.dist.CompareTo(b.dist));
+        // Filter already walks nearest-first. Results can commit between Filter and Publish.
         _work.Clear();
-        _work.AddRange(_workNext);
+        foreach (var item in _workNext)
+            if (!_inFlight.Contains(item.key)
+                && (!_tiles.TryGetValue(item.key.Tile, out var entry) || !entry.IsReady(item.key.Proto)))
+                _work.Add(item);
         _workNext.Clear();
     }
 
     readonly List<long> _scratchEvict = new();
-    readonly List<(long tile, float dist, TileEntry entry)> _scratchTiles = new();
+    readonly List<(long tile, float dist, int offset)> _scratchTiles = new();
     readonly List<WorkKey> _batch = new();
     readonly List<List<ScatterInstance>> _batchResults = new();
 
@@ -443,7 +527,12 @@ public sealed class ScatterTileCache
                 _batch.Clear();
                 int maxTake = _burstReady ? MaxPairsPerBatch : MaxPairsPerTick;
                 int take = Mathf.Min(maxTake, _work.Count);
-                for (int i = 0; i < take; i++) { _batch.Add(_work[i].key); _inFlight.Add(_work[i].key); }
+                for (int i = 0; i < take; i++)
+                {
+                    var key = _work[i].key;
+                    if (_tiles.TryGetValue(key.Tile, out var entry) && entry.IsReady(key.Proto)) continue;
+                    if (_inFlight.Add(key)) _batch.Add(key);
+                }
                 _work.RemoveRange(0, take);
                 if (_batch.Count == 0) break;
 
@@ -473,9 +562,12 @@ public sealed class ScatterTileCache
             }
             while (_work.Count > 0 && wall.ElapsedMilliseconds < DrainBudgetMs);
 
-            if (totalPairs > 0)
+            if (totalPairs > 0 && Time.unscaledTime >= _nextProgressLog)
+            {
+                _nextProgressLog = Time.unscaledTime + 5f;
                 _log.Log(LogLevel.Debug, "Scatter",
                     $"tiles +{totalPairs} pairs {wall.ElapsedMilliseconds} ms | live {LiveTileCount} tiles {LiveInstanceCount} inst, {_work.Count} queued {_inFlight.Count} inflight");
+            }
         }
         catch (OperationCanceledException) { /* teardown mid-await */ }
         catch (Exception e)
@@ -484,6 +576,7 @@ public sealed class ScatterTileCache
         }
         finally
         {
+            await Awaitable.MainThreadAsync();
             // Release any batch still in-flight (early return / exception) so those pairs are retried on the
             // next reeval; committed batches already cleared themselves out of _inFlight and _batch above.
             for (int i = 0; i < _batch.Count; i++) _inFlight.Remove(_batch[i]);
@@ -521,8 +614,10 @@ public sealed class ScatterTileCache
 
             // Managed biome (Voronoi + climate) can't run in Burst — evaluate the coarse cells this batch
             // needs off the main thread, exactly the memo the serial gather already pays.
+            var ground = _field.Ground;
+            var biome = _field.Biome;
             await Awaitable.BackgroundThreadAsync();
-            ScatterBiomePrecompute.Build(pairs, take, tileLevel, _field.Ground, _field.Biome, ctx.BaseRadiusLocal, biomeMap);
+            ScatterBiomePrecompute.Build(pairs, take, tileLevel, ground, biome, ctx.BaseRadiusLocal, biomeMap);
             await Awaitable.MainThreadAsync();
             if (epoch != _epoch || !_configured) return false;
 
@@ -530,6 +625,7 @@ public sealed class ScatterTileCache
             var job = new ScatterGatherJob
             {
                 Pairs = pairs,
+                Rivers = (_field.Ground as IBurstElevationSource)?.Rivers ?? default,
                 NoiseLayers = _noiseLayers,
                 DiagCells = _diagCells,
                 DiagData = _diagData,
@@ -542,18 +638,21 @@ public sealed class ScatterTileCache
                 SeaRadiusLocal = ctx.SeaRadiusLocal,
                 WaterLevel = EnsureWaterLevel(ctx),
                 WaterLevelRes = ctx.WaterLevelRes,
+                WaterKinds = EnsureWaterKinds(ctx),
+                HasWaterKinds = ctx.WaterKinds != null ? (byte)1 : (byte)0,
                 PlanetRadius = _planetRadius,
                 Scale = snap.UniformScale,
                 HasOcean = ctx.HasOcean ? (byte)1 : (byte)0,
                 Out = stream.AsWriter(),
             };
-            // Complete on the main thread (Unity forbids completing a job from a worker thread). Doing it
-            // inline instead of yielding a full frame per batch drains at job speed (~7x faster), which keeps
-            // the stream from being outrun; the short job wait is the main-thread cost, and the commit below
-            // spreads across frames.
             _pending = job.Schedule(take, JobInnerBatch);
             _hasPending = true;
             JobHandle.ScheduleBatchedJobs();
+            while (!_pending.IsCompleted)
+            {
+                await Awaitable.NextFrameAsync();
+                if (epoch != _epoch || !_configured) return false;
+            }
             _pending.Complete();
             _hasPending = false;
 
@@ -564,6 +663,7 @@ public sealed class ScatterTileCache
             // crosses the cap, so the main thread never commits more than ~CommitInstancesPerFrame at once.
             var reader = stream.AsReader();
             int sinceYield = 0;
+            var commitTimer = System.Diagnostics.Stopwatch.StartNew();
             for (int i = 0; i < take; i++)
             {
                 var list = _batchResults[i];
@@ -573,17 +673,20 @@ public sealed class ScatterTileCache
                 reader.EndForEachIndex();
                 Commit(_batch[i], list);
                 sinceYield += list.Count;
-                if (sinceYield >= CommitInstancesPerFrame && i + 1 < take)
+                if ((sinceYield >= CommitInstancesPerFrame || commitTimer.Elapsed.TotalMilliseconds >= CommitBudgetMs)
+                    && i + 1 < take)
                 {
                     sinceYield = 0;
                     await Awaitable.NextFrameAsync();
                     if (epoch != _epoch || !_configured) return false;
+                    commitTimer.Restart();
                 }
             }
             return true;
         }
         finally
         {
+            await Awaitable.MainThreadAsync();
             if (_hasPending) { _pending.Complete(); _hasPending = false; }
             if (pairs.IsCreated) pairs.Dispose();
             if (biomeMap.IsCreated) biomeMap.Dispose();
@@ -593,6 +696,7 @@ public sealed class ScatterTileCache
 
     void Commit(WorkKey key, List<ScatterInstance> instances)
     {
+        using var timing = FrameTimingCounters.Measure(FrameTimingSection.ScatterCommit);
         UnpackTile(key.Tile, out int face, out int tx, out int ty);
         if (!_tiles.TryGetValue(key.Tile, out var entry))
         {
@@ -600,6 +704,7 @@ public sealed class ScatterTileCache
             _tiles[key.Tile] = entry;
         }
         int p = key.Proto;
+        if (entry.IsReady(p)) return;
         entry.MarkReady(p);
         // `instances` is the worker's scratch list, consumed synchronously here; the buckets keep the
         // baked matrix + world position per instance, keyed by tile so eviction can remove just this slice.
@@ -642,9 +747,9 @@ public sealed class ScatterTileCache
         return true;
     }
 
-    float TileCenterDistance(int face, int tx, int ty, in PlanetTransformSnapshot snap, float baseRadiusLocal, Vector3 anchorWS)
+    static float TileCenterDistance(int face, int tx, int ty, in PlanetTransformSnapshot snap, float baseRadiusLocal, Vector3 anchorWS, int tileLevel)
     {
-        int n = 1 << _tileLevel;
+        int n = 1 << tileLevel;
         Vector2 uv = new Vector2((tx + 0.5f) / n, (ty + 0.5f) / n);
         Vector3 dir = FaceSpaceCellRangeBuilder.CubeFaceToUnitSphere(face, uv);
         Vector3 centerWS = snap.TransformPoint(dir * baseRadiusLocal);
@@ -652,5 +757,5 @@ public sealed class ScatterTileCache
     }
 
     float TileDistance(TileEntry e, in PlanetTransformSnapshot snap, float baseRadiusLocal, Vector3 anchorWS)
-        => TileCenterDistance(e.Face, e.Tx, e.Ty, snap, baseRadiusLocal, anchorWS);
+        => TileCenterDistance(e.Face, e.Tx, e.Ty, snap, baseRadiusLocal, anchorWS, _tileLevel);
 }

@@ -1,0 +1,11 @@
+{
+    "version": 1,
+    "sourcePart": "SM_Chr_Rider_01",
+    "revision": "v1",
+    "inputHash": "6cc991b82ea4a6ae48a9baa06f180b26",
+    "outputHash": "37ee7453ab64f99a291a5bd21f1957d9",
+    "requiresSeparateHeadgear": false,
+    "requiresClothReview": false,
+    "candidatePrefab": "Assets/Art/Characters/Human/Converted/SM_Chr_Rider_01_v1/SM_Chr_Rider_01_Sidekick.prefab",
+    "originalPrefab": "Assets/Art/Characters/Human/Converted/SM_Chr_Rider_01_v1/SM_Chr_Rider_01_Original.prefab"
+}

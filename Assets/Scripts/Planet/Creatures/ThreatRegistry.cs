@@ -7,12 +7,14 @@ public readonly struct ThreatSource
     public readonly EntityId Id;
     public readonly Vector3 Position;
     public readonly CreatureFaction Faction;
+    public readonly string AvoidanceClass;
 
-    public ThreatSource(EntityId id, Vector3 position, CreatureFaction faction)
+    public ThreatSource(EntityId id, Vector3 position, CreatureFaction faction, string avoidanceClass = null)
     {
         Id = id;
         Position = position;
         Faction = faction;
+        AvoidanceClass = avoidanceClass;
     }
 }
 
@@ -88,10 +90,10 @@ public sealed class ThreatRegistry
         _relations = relations ?? FactionRelationsDto.Default;
 
     /// <summary>Add or move a threat-bearing entity. Called every tick by whatever owns the entity.</summary>
-    public void Report(EntityId id, Vector3 position, CreatureFaction faction)
+    public void Report(EntityId id, Vector3 position, CreatureFaction faction, string avoidanceClass = null)
     {
         if (id.IsNone) return;
-        var source = new ThreatSource(id, position, faction);
+        var source = new ThreatSource(id, position, faction, avoidanceClass);
         for (int i = 0; i < _sources.Count; i++)
         {
             if (_sources[i].Id != id) continue;
@@ -163,7 +165,7 @@ public sealed class ThreatRegistry
     // bounded (tens) and sources are a player plus nearby animals, which is a few hundred checks a tick -
     // nothing. A spatial hash is the upgrade if either number grows by an order of magnitude.
     public bool TryFindThreat(Vector3 position, EntityId self, CreatureFaction observerFaction,
-        float awarenessMeters, long nowUnixSeconds, out ThreatSource threat)
+        float awarenessMeters, long nowUnixSeconds, out ThreatSource threat, string waryOutsideClass = null)
     {
         threat = default;
         float bestSq = awarenessMeters * awarenessMeters;
@@ -175,7 +177,10 @@ public sealed class ThreatRegistry
             if (s.Id == self) continue;   // an animal reports itself; it must not frighten itself
             float sq = (s.Position - position).sqrMagnitude;
             if (sq > bestSq) continue;
-            if (!_relations.IsThreat(observerFaction, SeenAs(s, nowUnixSeconds))) continue;
+            bool feared = _relations.IsThreat(observerFaction, SeenAs(s, nowUnixSeconds));
+            bool unfamiliar = !string.IsNullOrEmpty(waryOutsideClass) && s.AvoidanceClass != waryOutsideClass &&
+                !(_disguises.TryGetValue(s.Id.Value, out var disguise) && disguise.Active(nowUnixSeconds));
+            if (!feared && !unfamiliar) continue;
             if (!HasTerrainSight(position, s.Position)) continue;
 
             bestSq = sq;
@@ -187,7 +192,13 @@ public sealed class ThreatRegistry
 
     // ponytail: one-metre samples, capped at 128 segments. Sub-metre ridges and non-heightfield
     // obstacles need a world collision query; camera-visible mesh raycasts cannot provide that contract.
-    bool HasTerrainSight(Vector3 from, Vector3 to)
+    public bool IsHostile(CreatureFaction observer, in ThreatSource source, long nowUnixSeconds) =>
+        _relations.Of(observer, SeenAs(source, nowUnixSeconds)) == FactionRelation.Hostile;
+
+    public bool IsFeared(CreatureFaction observer, in ThreatSource source, long nowUnixSeconds) =>
+        _relations.IsThreat(observer, SeenAs(source, nowUnixSeconds));
+
+    public bool HasTerrainSight(Vector3 from, Vector3 to)
     {
         if (_terrain == null) return true;
         from += (from - _planetCenter).normalized * 0.1f;

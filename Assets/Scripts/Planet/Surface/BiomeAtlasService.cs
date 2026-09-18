@@ -73,7 +73,8 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
         PlanetChunk chunk,
         in BiomeLookupData lookup,
         IBiomeAssignmentField assignmentField,
-        Color[] lutColors)
+        Color[] lutColors,
+        TerrainQuadtree[] terrain = null)
     {
         if (chunk == null) return;
         int texelCount = PlanetChunkTextures.BiomeMapResolution * PlanetChunkTextures.BiomeMapResolution;
@@ -92,7 +93,7 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
             chunk.PendingBiomeBlendedColorPixels,
             chunk.PendingBiomeIdsPixels,
             chunk.PendingBiomeWeightsPixels,
-            _tlsBakeHighResBuffer);
+            _tlsBakeHighResBuffer, terrain);
     }
 
     // Step 5b: upload the 3 baked Color32 buffers to their GPU textures. Leaf pending arrays
@@ -280,9 +281,39 @@ public sealed class BiomeAtlasService : IBiomeAtlasService, IMemoryReporter
         });
 
         ct.ThrowIfCancellationRequested();
+        SynchronizeFaceEdges(results, atlasResolution);
         await Awaitable.MainThreadAsync();
         return results;
     }
+
+    // A cube edge has two differently oriented filter footprints. Give its duplicated
+    // texels one owner; ascending face order also propagates the owner through corners.
+    static void SynchronizeFaceEdges(FaceAtlasPixels[] faces, int resolution)
+    {
+        for (int face = 0; face < 6; face++)
+        for (int edge = 0; edge < 4; edge++)
+        {
+            var neighbor = CubeFaceTopology.GetNeighbor(face, (CubeEdge)edge);
+            if (neighbor.NeighborFace < face) continue;
+            for (int i = 0; i < resolution; i++)
+            {
+                int j = neighbor.EdgeParamReversed ? resolution - 1 - i : i;
+                int source = EdgeIndex((CubeEdge)edge, i, resolution);
+                int target = EdgeIndex(neighbor.NeighborEdge, j, resolution);
+                faces[neighbor.NeighborFace].Blended[target] = faces[face].Blended[source];
+                faces[neighbor.NeighborFace].Ids[target] = faces[face].Ids[source];
+                faces[neighbor.NeighborFace].Weights[target] = faces[face].Weights[source];
+            }
+        }
+    }
+
+    static int EdgeIndex(CubeEdge edge, int i, int resolution) => edge switch
+    {
+        CubeEdge.East => i * resolution + resolution - 1,
+        CubeEdge.West => i * resolution,
+        CubeEdge.North => i,
+        _ => (resolution - 1) * resolution + i
+    };
 
 #if UNITY_EDITOR
     // Regression oracle for generation-path optimization: a same-seed planet must produce

@@ -7,7 +7,7 @@ using UnityEngine;
 // runtime stops re-baking them on every load. The runtime factory defines the view grid and cell size;
 // the manifest records the grid because texture dimensions alone no longer identify the layout.
 //
-// This is the bake to run. Its sibling, "Bake Impostors (Source Library)", bakes the untouched Synty meshes
+// This is the bake to run. Its sibling, "Bake Impostors (Source Library)", bakes the untouched source meshes
 // instead; since injection now replaces every scatter prototype, those atlases only render with injection
 // switched off, so that one is a fallback rather than part of the normal loop.
 //
@@ -66,7 +66,7 @@ public static class GeneratedImpostorBakeTool
         // prototypes drew a card baked from a different mesh, and 002_Forest-Rock — a wide flat boulder —
         // billboarded as a tall pointed wedge. 16 angles instead of 64 pays for the extra atlases: a 512 px
         // atlas is a quarter the bytes of the 1024 px one it replaces.
-        // A prototype that already carries a card needs nothing from us — that is the untouched Synty
+        // A prototype that already carries a card needs nothing from us — that is the untouched source
         // library, which ships its own atlases.
         var targets = new List<ScatterPrototypeDto>();
         foreach (ScatterPrototypeDto p in lib.Prototypes)

@@ -688,6 +688,8 @@ public sealed class SurfaceEditStamp
     public float strength;
     public long createdUnixSeconds;
     public float regrowSeconds;
+    public Vector3 surfaceNormal;
+    public double createdGameSeconds;
 
     /// <summary>Key of the delta record this stamp came from. Not part of the stamp; it addresses the record.</summary>
     [System.NonSerialized] public ulong recordId;
@@ -704,6 +706,7 @@ public static class SurfaceEditStampCodec
 {
     public const string PathKind = "path";
     public const string ScorchKind = "scorch";
+    public const string BloodKind = "blood";
 
     public const byte StatePresent = 0;
     public const byte StateRemoved = 1;
@@ -713,9 +716,13 @@ public static class SurfaceEditStampCodec
 
     public static WorldDelta Encode(ulong recordId, SurfaceEditStamp stamp)
     {
-        var payload = new byte[PayloadBytes1];
-        payload[0] = PayloadFormat1;
-        payload[1] = (byte)(stamp.kind == ScorchKind ? 1 : 0);
+        if (stamp == null || (stamp.kind != PathKind && stamp.kind != ScorchKind && stamp.kind != BloodKind))
+            throw new System.ArgumentException("Unsupported surface stamp kind.", nameof(stamp));
+        bool blood = stamp.kind == BloodKind;
+        if (blood && !ValidBlood(stamp)) throw new System.ArgumentException("Invalid blood stamp geometry or game time.", nameof(stamp));
+        var payload = new byte[blood ? 48 : PayloadBytes1];
+        payload[0] = blood ? (byte)2 : PayloadFormat1;
+        payload[1] = (byte)(blood ? 2 : stamp.kind == ScorchKind ? 1 : 0);
         payload[2] = (byte)ParseShape(stamp.shape);
         payload[3] = (byte)(stamp.operation == "erase" ? SurfacePathOperation.Erase : SurfacePathOperation.Paint);
         System.BitConverter.GetBytes(stamp.strokeId).CopyTo(payload, 4);
@@ -723,6 +730,13 @@ public static class SurfaceEditStampCodec
         System.BitConverter.GetBytes(stamp.strength).CopyTo(payload, 12);
         System.BitConverter.GetBytes(stamp.createdUnixSeconds).CopyTo(payload, 16);
         System.BitConverter.GetBytes(stamp.regrowSeconds).CopyTo(payload, 24);
+        if (blood)
+        {
+            System.BitConverter.GetBytes(stamp.surfaceNormal.x).CopyTo(payload, 28);
+            System.BitConverter.GetBytes(stamp.surfaceNormal.y).CopyTo(payload, 32);
+            System.BitConverter.GetBytes(stamp.surfaceNormal.z).CopyTo(payload, 36);
+            System.BitConverter.GetBytes(stamp.createdGameSeconds).CopyTo(payload, 40);
+        }
         return new WorldDelta(0, DeltaKind.SurfaceStamp, recordId, stamp.direction,
             state: StatePresent, payload: payload);
     }
@@ -735,13 +749,14 @@ public static class SurfaceEditStampCodec
     {
         stamp = null;
         byte[] payload = delta.Payload;
-        if (payload == null || payload.Length < PayloadBytes1 || payload[0] != PayloadFormat1)
+        if (payload == null || payload.Length < PayloadBytes1 ||
+            !(payload[0] == PayloadFormat1 && payload[1] <= 1 || payload[0] == 2 && payload[1] == 2 && payload.Length >= 48))
             return false;
 
         stamp = new SurfaceEditStamp
         {
             recordId = delta.Key,
-            kind = payload[1] == 1 ? ScorchKind : PathKind,
+            kind = payload[1] == 2 ? BloodKind : payload[1] == 1 ? ScorchKind : PathKind,
             shape = ShapeId((SurfacePathShape)payload[2]),
             operation = OperationId((SurfacePathOperation)payload[3]),
             strokeId = System.BitConverter.ToInt32(payload, 4),
@@ -751,11 +766,26 @@ public static class SurfaceEditStampCodec
             createdUnixSeconds = System.BitConverter.ToInt64(payload, 16),
             regrowSeconds = System.BitConverter.ToSingle(payload, 24),
         };
+        if (payload[0] == 2)
+        {
+            stamp.surfaceNormal = new Vector3(System.BitConverter.ToSingle(payload, 28),
+                System.BitConverter.ToSingle(payload, 32), System.BitConverter.ToSingle(payload, 36));
+            stamp.createdGameSeconds = System.BitConverter.ToDouble(payload, 40);
+            if (!ValidBlood(stamp)) { stamp = null; return false; }
+        }
         return true;
     }
 
     // The provider reads these as strings, so the wire form is a byte and the in-memory form stays what
     // ChunkedSurfaceProvider already compares against.
+    static bool ValidBlood(SurfaceEditStamp stamp) =>
+        float.IsFinite(stamp.direction.x) && float.IsFinite(stamp.direction.y) && float.IsFinite(stamp.direction.z) &&
+        float.IsFinite(stamp.surfaceNormal.sqrMagnitude) && stamp.surfaceNormal.sqrMagnitude > .0001f &&
+        float.IsFinite(stamp.radiusMeters) && stamp.radiusMeters > 0f &&
+        float.IsFinite(stamp.strength) && stamp.strength >= 0f && stamp.strength <= 1f &&
+        float.IsFinite(stamp.regrowSeconds) && stamp.regrowSeconds > 0f &&
+        !double.IsNaN(stamp.createdGameSeconds) && !double.IsInfinity(stamp.createdGameSeconds) && stamp.createdGameSeconds >= 0d;
+
     public static string ShapeId(SurfacePathShape shape) => shape switch
     {
         SurfacePathShape.HardDisc => "hard-disc",

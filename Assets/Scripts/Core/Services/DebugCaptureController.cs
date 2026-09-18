@@ -2,7 +2,7 @@ using System.Threading;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-[CommandPrefix("debug")]
+[CommandPrefix("debug", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly, Group = "Diagnostics and authoring")]
 public class DebugCaptureController : MonoBehaviour, IDebugCaptureModeContext
 {
     [Header("Debug Runtime")]
@@ -273,7 +273,7 @@ public class DebugCaptureController : MonoBehaviour, IDebugCaptureModeContext
         return $"profiling mode: {(Application.targetFrameRate >= ProfilingFrameRate ? "ON" : "OFF")} (target={Application.targetFrameRate})";
     }
 
-    [ConsoleCommand("precipitation", "Toggle precipitation rendering (P key equivalent).", MonoTargetType.Single)]
+    [ConsoleCommand("precipitation", "Toggle precipitation rendering.", MonoTargetType.Single)]
     string PrecipitationCmd()
     {
         TogglePrecipitationRendering();
@@ -281,7 +281,7 @@ public class DebugCaptureController : MonoBehaviour, IDebugCaptureModeContext
         return c != null ? $"precipitation render: {(c.PrecipitationRenderingEnabled ? "ON" : "OFF")}" : "no precipitation controller";
     }
 
-    [ConsoleCommand("cycle-capture-set", "Advance to the next F10 capture set.", MonoTargetType.Single)]
+    [ConsoleCommand("capture.next-set", "Advance to the next F10 capture set.", MonoTargetType.Single, Aliases = new[] { "debug.cycle-capture-set" })]
     string CycleCaptureSetCmd()
     {
         CycleF10CaptureSet();
@@ -303,7 +303,7 @@ public class DebugCaptureController : MonoBehaviour, IDebugCaptureModeContext
         return $"debug mode: {def.Name} ({def.Id})";
     }
 
-    [ConsoleCommand("capture-set", "Get or set active F10 capture set by name.", MonoTargetType.Single)]
+    [ConsoleCommand("capture.set", "Get or set active F10 capture set by name.", MonoTargetType.Single, Aliases = new[] { "debug.capture-set" })]
     string CaptureSetCmd([CompletionSource(typeof(DebugCaptureSetNamesProvider))] string name = null)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -315,7 +315,7 @@ public class DebugCaptureController : MonoBehaviour, IDebugCaptureModeContext
         return $"capture set: {set.Name}";
     }
 
-    [ConsoleCommand("capture", "Trigger F10 capture using current set. Closes console during capture so it stays out of screenshots, then reopens.", MonoTargetType.Single)]
+    [ConsoleCommand("capture.run", "Trigger F10 capture using current set. Closes console during capture so it stays out of screenshots, then reopens.", MonoTargetType.Single, Aliases = new[] { "debug.capture" })]
     async Awaitable CaptureCmd(CancellationToken ct)
     {
         bool reopenConsole = false;
@@ -346,7 +346,7 @@ public class DebugCaptureController : MonoBehaviour, IDebugCaptureModeContext
         await _pipeline.CaptureCurrentSetAsync(ct);
     }
 
-    [ConsoleCommand("screenshot", "Capture a screenshot of only the current debug mode (set via debug.mode), ignoring the active capture set. Optional label is inserted into the filename to help track what a batch of captures was testing. Closes console during capture, then reopens.", MonoTargetType.Single)]
+    [ConsoleCommand("capture.screenshot", "Capture a screenshot of only the current debug mode (set via debug.mode), ignoring the active capture set. Optional label is inserted into the filename to help track what a batch of captures was testing. Closes console during capture, then reopens.", MonoTargetType.Single, Aliases = new[] { "debug.screenshot" })]
     async Awaitable ScreenshotCmd(string label = null, CancellationToken ct = default)
     {
         bool reopenConsole = false;
@@ -372,7 +372,7 @@ public class DebugCaptureController : MonoBehaviour, IDebugCaptureModeContext
         }
     }
 
-    [ConsoleCommand("screenshot-high", "High-res screenshot of the current debug mode (2x supersample, up to 3840px) for fine detail like thin biome stripes or cloud grain. Optional label goes into the filename. Closes console during capture, then reopens.", MonoTargetType.Single)]
+    [ConsoleCommand("capture.screenshot-high", "High-res screenshot of the current debug mode (2x supersample, up to 3840px) for fine detail like thin biome stripes or cloud grain. Optional label goes into the filename. Closes console during capture, then reopens.", MonoTargetType.Single, Aliases = new[] { "debug.screenshot-high" })]
     async Awaitable ScreenshotHighCmd(string label = null, CancellationToken ct = default)
     {
         bool reopenConsole = false;

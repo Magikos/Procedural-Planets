@@ -33,6 +33,8 @@ MonoBehaviour:
   ScaleRange: {x: 0.8, y: 1.3}
   RandomYaw: 1
   Interaction: 0
+  FoodUnits: 2
+  FoodRegrowSeconds: 1800
   StumpMesh: {fileID: 0}
   StumpMaterial: {fileID: 0}
   Parts:

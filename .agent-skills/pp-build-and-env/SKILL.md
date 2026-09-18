@@ -14,26 +14,28 @@ This skill gets a zero-context engineer from `git clone` to a working editor + c
 - Measuring (debug modes, counters, frame timing, graphify queries as a diagnostic) → **pp-diagnostics-and-tooling**
 - Whether you're allowed to make a change at all → **pp-change-control**
 
-## Exact versions (as of 2026-07-06)
+## Versions and owning sources
+
+Editor and manifest values rechecked 2026-09-09. Resolve machine-local tools before use.
 
 | Thing | Version | Source of truth |
 |---|---|---|
-| Unity Editor | **6000.6.0a7** (revision `240d06e2411b`) — an **ALPHA** build | `ProjectSettings/ProjectVersion.txt` |
-| URP + Shader Graph | 17.6.0 | `Packages/manifest.json` |
+| Unity Editor | **6000.7.0a5** (revision `a15235a53881`) — an **ALPHA** build | `ProjectSettings/ProjectVersion.txt` |
+| URP + Shader Graph | 17.7.0 | `Packages/manifest.json` |
 | Input System | 1.19.0 | `Packages/manifest.json` |
-| dotnet SDK | 9.0.315 | `dotnet --version` |
-| graphify CLI | 0.8.39 (Python, pip-installed, on PATH) | `graphify --version` |
+| dotnet SDK | Resolve the installed SDK | `dotnet --version` |
+| graphify CLI | Resolve the installed CLI and interpreter | `graphify --version` |
 
-**The alpha version matters.** Unity ties `Library/` serialization, package resolution, and script compilation to the exact editor version. Opening with a different 6000.x build forces a reimport and can silently change behavior; alpha builds also don't appear in Unity Hub's default install list — install via Hub's Archive/alpha channel or the deep link `unityhub://6000.6.0a7/240d06e2411b` (deep-link format is the standard Hub convention; the revision hash is verified from `ProjectVersion.txt`). UNVERIFIED: whether Unity still serves this alpha for download — if it's gone, escalate to Bryan before "upgrading" the project yourself; a version bump is a real change that needs his review.
+**The alpha version matters.** Use the Editor version and revision recorded in `ProjectSettings/ProjectVersion.txt`. Check availability before selecting an install; do not reuse an old alpha download link. Opening with another version can change import behavior.
 
 Other notes:
-- `com.unity.test-framework` 1.8.0 is in the manifest because Unity ships it by default. Project policy: **no test framework work** — don't propose tests (see CLAUDE.md).
+- The project uses NUnit EditMode tests in `Assets/Tests/EditMode` (verified 2026-09-09). Use the existing test framework for focused regressions; no framework installation is needed.
 - HotReload lives as an *embedded package* at `Packages/com.singularitygroup.hotreload/` (tracked in git, auto-included because it sits in `Packages/` with a `package.json` — it is deliberately absent from `manifest.json` dependencies).
 
 ## From-scratch checklist
 
 1. `git clone` → checkout `code-refactor` (the active branch; `main` is the PR target). A **dirty working tree is normal and sacred** on Bryan's machine — active work lives uncommitted. Never reset/clean it.
-2. Install **exactly Unity 6000.6.0a7** through Unity Hub (see alpha note above). Include the Windows build support module you need; the project targets standalone Windows.
+2. Install **exactly Unity 6000.7.0a5** through Unity Hub (see alpha note above). Include the Windows build support module you need; the project targets standalone Windows.
 3. Install dotnet SDK 9.x (`dotnet --version` should report 9.0.3xx).
 4. Open the project folder in Unity Hub. **First import is long** (full `Library/` build: shader compilation, texture import — expect many minutes). Do not kill the editor mid-import.
 5. In the editor, open `Assets/Scenes/Planet.unity` (the main scene; `Assets/Scenes/Tests/` holds `Clouds.unity`, `Grass.unity`, `Water.unity` isolation scenes).
@@ -161,7 +163,7 @@ Memory can be stale; revalidate dates/branches before acting on it. It is backgr
 
 1. **Parallel dotnet builds** — Core + Planet built simultaneously lock the same intermediate DLL and fail. Happened repeatedly during the 2026-05 water-artifact work; every time, the serial rerun passed. Always rerun serially before reporting a compile regression.
 2. **~~`Assembly-CSharp.csproj` is permanently broken~~ — RESOLVED 2026-08-12.** The old story: it references deleted `Assets/Plugins/Shapes/...` sources and had been failing since 2026-05-21. The actual cause was a **stale generated artifact**, not a missing dependency — 33 of 39 csprojs referenced deleted sources. Deleting `*.csproj`/`*.sln` (gitignored, untracked) and regenerating produced 6 clean projects with zero missing references, and `Assembly-CSharp.csproj` correctly no longer exists because every script lives in an asmdef. **Do not import Shapes to "fix" this.** See "csproj files are disposable" above.
-3. **Wrong Unity version** — anything other than 6000.6.0a7 triggers reimport and unreviewed behavioral drift. The alpha is a deliberate pin; don't upgrade unilaterally.
+3. **Wrong Unity version** — anything other than 6000.7.0a5 triggers reimport and unreviewed behavioral drift. The alpha is a deliberate pin; don't upgrade unilaterally.
 4. **"It compiles" declared as "it works"** — the costliest historical failures (water artifact saga, grass-blanket fight) involved changes that compiled fine and looked wrong. Compile is step zero; see **pp-validation-and-evidence**.
 5. **Editing generated csprojs or third-party dirs** — Unity overwrites the former; the latter are not ours (and the caustics don't-touch rule in CLAUDE.md is the precedent for how badly "harmless" touches go).
 6. **Treating the dirty working tree as mess to clean** — uncommitted changes on `code-refactor` ARE the active work. No `git reset`, `git clean`, `git checkout --` without Bryan's explicit instruction.

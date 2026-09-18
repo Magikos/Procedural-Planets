@@ -3,17 +3,6 @@ using UnityEngine;
 
 public sealed partial class AmbientSwarms
 {
-    sealed class Insect
-    {
-        public AmbientSwarmKind Kind;
-        public Vector3 Position, From, Target, Forward;
-        public ulong FlowerId;
-        public uint Seed;
-        public int ArtVariant;
-        public float Travel, Duration, Rest, Age, Alpha;
-        public bool Retiring;
-    }
-
     readonly struct Flower
     {
         public readonly ulong Id;
@@ -25,7 +14,6 @@ public sealed partial class AmbientSwarms
     }
 
     const int FlowerLimit = 64;
-    readonly List<Insect> _insects = new();
     readonly List<Flower> _flowers = new();
     readonly MaterialPropertyBlock _insectProperties = new();
     static readonly int TintId = Shader.PropertyToID("_Tint");
@@ -60,7 +48,8 @@ public sealed partial class AmbientSwarms
     int CountInsects(AmbientSwarmKind kind, bool includeRetiring)
     {
         int count = 0;
-        foreach (Insect insect in _insects)
+        if (_wildlife == null || !IsPollinator(kind)) return count;
+        foreach (var insect in _wildlife.Poses)
             if (insect.Kind == kind && (includeRetiring || !insect.Retiring)) count++;
         return count;
     }
@@ -133,122 +122,26 @@ public sealed partial class AmbientSwarms
         }
     }
 
-    bool ChooseLanding(Insect insect, AmbientSwarmProfile profile, Vector3 observer)
-    {
-        uint draw = ScatterHash.Mix(++insect.Seed);
-        for (int i = 0; i < _flowers.Count; i++)
-        {
-            Flower flower = _flowers[(int)((draw + (uint)i) % (uint)_flowers.Count)];
-            if (flower.Id == insect.FlowerId) continue;
-            bool occupied = false;
-            foreach (Insect other in _insects)
-                if (other != insect && !other.Retiring && other.FlowerId == flower.Id) { occupied = true; break; }
-            if (occupied) continue;
-            insect.FlowerId = flower.Id;
-            insect.Target = flower.Position + (flower.Position - _center).normalized * 0.035f;
-            BeginFlight(insect, profile);
-            return true;
-        }
-        if (profile.Kind == AmbientSwarmKind.Bees) return false;
-        if (!TryPlaceAmbientAnchor(profile, observer, out Vector3 anchor)) return false;
-        Vector3 up = (anchor - _center).normalized;
-        if (!_sampler.TryGetSurfaceRadius(up, out float radius)) return false;
-        insect.FlowerId = 0;
-        insect.Target = _center + up * (radius + 0.035f);
-        BeginFlight(insect, profile);
-        return true;
-    }
+    readonly List<WildlifeLandingTarget> _flowerTargets = new();
 
-    static void BeginFlight(Insect insect, AmbientSwarmProfile profile)
+    void TickWildlife(Vector3 observer, float localSun, long nowUnixSeconds, float dt)
     {
-        insect.From = insect.Position;
-        insect.Travel = 0f;
-        insect.Duration = Mathf.Max(1f, Vector3.Distance(insect.From, insect.Target) / profile.SpeedMps);
-        insect.Rest = 0f;
-    }
-
-    void TickInsects(Vector3 observer, float localSun, long nowUnixSeconds)
-    {
+        if (_wildlife == null) return;
         if (Time.time >= _nextFlowerScan)
         {
             ScanFlowers(observer);
             _nextFlowerScan = Time.time + 1f;
-            foreach (Insect insect in _insects)
-            {
-                if (insect.FlowerId == 0) continue;
-                bool found = false;
-                foreach (Flower flower in _flowers)
-                    if (flower.Id == insect.FlowerId) { found = true; break; }
-                if (!found && !ChooseLanding(insect, ProfileOf(insect.Kind), observer)) insect.Retiring = true;
-            }
+            _flowerTargets.Clear();
+            foreach (Flower flower in _flowers)
+                _flowerTargets.Add(new WildlifeLandingTarget(flower.Id, flower.Position,
+                    (flower.Position - _center).normalized, 0.3f, WildlifeLandingUse.Butterfly | WildlifeLandingUse.Bee));
+            _wildlife.PublishFlowers(_flowerTargets);
         }
-
-        foreach (AmbientSwarmProfile profile in _profiles)
-        {
-            if (!IsPollinator(profile.Kind)) continue;
-            int want = profile.CountAt(localSun);
-            int live = 0;
-            foreach (Insect insect in _insects)
-            {
-                if (insect.Kind != profile.Kind || insect.Retiring) continue;
-                if (KeptDistance(insect.Position, observer) > KeepAnchorMeters || live >= want) insect.Retiring = true;
-                else live++;
-            }
-            // One arrival per kind per tick, with opacity ramped independently of population decisions.
-            if (live < want && TryPlaceAmbientAnchor(profile, observer, out Vector3 anchor) &&
-                KeptDistance(anchor, observer) <= KeepAnchorMeters)
-            {
-                var insect = new Insect { Kind = profile.Kind, Position = anchor, Seed = ScatterHash.Mix(_draw++),
-                    ArtVariant = (int)(_draw % 4), Forward = HeadingAt(anchor) };
-                if (ChooseLanding(insect, profile, observer)) _insects.Add(insect);
-            }
-        }
-
-        for (int i = _insects.Count - 1; i >= 0; i--)
-        {
-            Insect insect = _insects[i];
-            AmbientSwarmProfile profile = ProfileOf(insect.Kind);
-            float dt = Time.deltaTime;
-            insect.Age += dt;
-            insect.Alpha = Mathf.MoveTowards(insect.Alpha, insect.Retiring ? 0f : 1f, dt * 0.5f);
-            if (insect.Retiring && insect.Alpha <= 0f) { _insects.RemoveAt(i); continue; }
-            bool threatened = _threats != null && _threats.TryFindThreat(insect.Position, EntityId.None,
-                CreatureFaction.Wildlife, profile.ScatterRadiusMeters, nowUnixSeconds, out _);
-            if (insect.Rest > 0f)
-            {
-                insect.Rest -= dt;
-                if (threatened || insect.Rest <= 0f)
-                    if (!ChooseLanding(insect, profile, observer)) insect.Retiring = true;
-            }
-            else
-            {
-                insect.Travel = Mathf.Min(1f, insect.Travel + dt / insect.Duration);
-                float t = insect.Travel;
-                Vector3 up = (insect.Position - _center).normalized;
-                Vector3 side = Vector3.Cross(up, insect.Target - insect.From).normalized;
-                float arc = Mathf.Sin(t * Mathf.PI);
-                float flutter = insect.Kind == AmbientSwarmKind.Bees ? 0.06f : 0.3f;
-                Vector3 next = Vector3.Lerp(insect.From, insect.Target, t) + up * arc * 1.2f +
-                    side * (Mathf.Sin(insect.Age * 5f + insect.Seed % 31) * flutter * arc);
-                Vector3 direction = (next - _center).normalized;
-                if (!_sampler.TryGetSurfaceRadius(direction, out float floor))
-                {
-                    insect.Retiring = true;
-                    DrawInsect(insect, profile);
-                    continue;
-                }
-                next = _center + direction * Mathf.Max((next - _center).magnitude, Mathf.Max(floor, _seaLevelRadius) + 0.035f);
-                if (CharacterMath.TryProjectOntoTangent(next - insect.Position, up, out Vector3 heading))
-                    insect.Forward = Vector3.Slerp(insect.Forward, heading, 1f - Mathf.Exp(-6f * dt));
-                insect.Position = next;
-                if (t >= 1f)
-                    insect.Rest = Mathf.Lerp(2f, 6f, ScatterHash.To01(ScatterHash.Mix(++insect.Seed)));
-            }
-            DrawInsect(insect, profile);
-        }
+        _wildlife.Tick(observer, localSun, nowUnixSeconds, dt);
+        SyncWildlifeViews(dt);
     }
 
-    void DrawInsect(Insect insect, AmbientSwarmProfile profile)
+    void DrawInsect(AmbientWildlifePose insect, AmbientSwarmProfile profile)
     {
         Material material = EnsureMaterial(profile);
         if (material == null) return;
@@ -267,7 +160,7 @@ public sealed partial class AmbientSwarms
         Vector3 forward = Vector3.ProjectOnPlane(insect.Forward, up).normalized;
         if (forward.sqrMagnitude < 0.001f) forward = CharacterMath.ArbitraryTangent(up);
         float rate = insect.Kind == AmbientSwarmKind.Bees ? 35f : 9f;
-        float angle = insect.Rest > 0f ? 1.2f + Mathf.Sin(insect.Age * 1.5f) * 0.1f
+        float angle = insect.Resting ? 1.2f + Mathf.Sin(insect.Age * 1.5f) * 0.1f
             : Mathf.Sin(insect.Age * rate * Mathf.PI * 2f + insect.Seed % 31) * 1.1f;
         Color tint = profile.Color;
         bool textured = insect.Kind == AmbientSwarmKind.Butterflies && _butterflyMesh != null &&
@@ -284,7 +177,7 @@ public sealed partial class AmbientSwarms
             tint = Color.white;
             angle = 0f;
             _insectProperties.SetTexture(ButterflyAtlasId, _butterflyTextures[insect.ArtVariant]);
-            float frame = insect.Rest > 0f ? 0f : Mathf.Floor(Mathf.Repeat(insect.Age * rate + insect.ArtVariant * 0.25f, 1f) * 8f);
+            float frame = insect.Resting ? 0f : Mathf.Floor(Mathf.Repeat(insect.Age * rate + insect.ArtVariant * 0.25f, 1f) * 8f);
             _insectProperties.SetFloat(ButterflyFrameId, frame);
             // The source body's long axis is tilted thirty degrees in its mesh coordinates.
             rotation *= Quaternion.Euler(30f, 0f, 0f);

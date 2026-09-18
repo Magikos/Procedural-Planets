@@ -17,17 +17,32 @@ public sealed class CreatureView : System.IDisposable
     readonly Dictionary<ulong, BirdAnimationView> _birds = new();
     readonly Dictionary<int, Material> _materials = new();
     readonly Dictionary<ulong, Transform> _corpseBodies = new();
+    readonly Dictionary<ulong, CreatureCarcassView> _carcasses = new();
     readonly Dictionary<int, Material> _corpseMaterials = new();
     readonly List<CreatureCorpse> _corpseScratch = new();
     readonly List<ulong> _stale = new();
+    readonly HashSet<ulong> _present = new();
+    readonly CreatureAudioPlayback _audio;
+    readonly CreatureGrassInteraction _grass = new();
 
     /// <summary>The find-the-wildlife debug view. Off costs nothing: it is not even hooked to the pipeline.</summary>
     public CreaturePredatorVision PredatorVision { get; } = new();
 
     bool _visible = true;
+    readonly ActorPoseCadence _poseCadence = new();
+    readonly Plane[] _poseFrustum = new Plane[6];
+    public bool PresentationBudgetEnabled { get; set; } = true;
+    public int PoseEvaluationsLastFrame { get; private set; }
+    public int PoseSkipsLastFrame { get; private set; }
     IGroundingProvider _grounding;
 
-    public CreatureView(Transform parent) => _parent = parent;
+    public CreatureView(Transform parent)
+    {
+        _parent = parent;
+        _audio = new CreatureAudioPlayback(parent);
+    }
+    public CreatureAudioPlayback Audio => _audio;
+    public bool GrassInteractionEnabled { get; set; } = true;
     public void ConfigureGrounding(IGroundingProvider grounding) => _grounding = grounding;
 
     public bool Visible
@@ -37,7 +52,11 @@ public sealed class CreatureView : System.IDisposable
         {
             if (_visible == value) return;
             _visible = value;
+            _poseCadence.Clear();
+            if (!value) { _audio.Dispose(); _grass.Dispose(); }
             foreach (KeyValuePair<ulong, Transform> kv in _bodies)
+                if (kv.Value != null) kv.Value.gameObject.SetActive(value);
+            foreach (KeyValuePair<ulong, Transform> kv in _corpseBodies)
                 if (kv.Value != null) kv.Value.gameObject.SetActive(value);
         }
     }
@@ -59,17 +78,37 @@ public sealed class CreatureView : System.IDisposable
         {
             long now = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             corpses.CollectNear(observerWorldPos, radiusMeters, now, _corpseScratch);
+            int creationBudget = 2, settlingBudget = 2;
 
             for (int i = 0; i < _corpseScratch.Count; i++)
             {
                 CreatureCorpse c = _corpseScratch[i];
                 CorpseStage stage = corpses.StageOf(c, now);
-                float height = library?.At(c.SpeciesIndex)?.BodyHeightMeters ?? 1f;
+                var species = library?.At(c.SpeciesIndex);
+                float height = species?.BodyHeightMeters ?? 1f;
 
                 if (!_corpseBodies.TryGetValue(c.Id.Value, out Transform body) || body == null)
                 {
-                    body = CreateCorpse(c);
+                    if (!_visible || creationBudget-- <= 0) continue;
+                    if (species?.Visuals?.MalePrefab != null && species.CruiseAltitudeMeters <= 0f)
+                    {
+                        var carcass = new CreatureCarcassView(_parent, c, species, _grounding);
+                        _carcasses[c.Id.Value] = carcass;
+                        body = carcass.Root;
+                    }
+                    else body = CreateCorpse(c);
                     _corpseBodies[c.Id.Value] = body;
+                }
+
+                body.gameObject.SetActive(_visible && stage != CorpseStage.Gone);
+                if (_carcasses.TryGetValue(c.Id.Value, out var realCarcass))
+                {
+                    double meat = System.Math.Min(c.MeatRemainingFraction,
+                        corpses.Decay.NaturalMeatFraction(corpses.Decay.AgeSeconds(c, now)));
+                    bool advance = _visible && !realCarcass.Settled && settlingBudget > 0;
+                    if (advance) settlingBudget--;
+                    realCarcass.Sync(meat, stage, advance);
+                    continue;
                 }
 
                 // Lying down: the capsule's long axis goes along the surface rather than up it. Stage shrinks
@@ -83,32 +122,43 @@ public sealed class CreatureView : System.IDisposable
             }
         }
 
+        _present.Clear();
+        for (int i = 0; i < _corpseScratch.Count; i++) _present.Add(_corpseScratch[i].Id.Value);
         _stale.Clear();
         foreach (KeyValuePair<ulong, Transform> kv in _corpseBodies)
         {
-            bool stillThere = false;
-            for (int i = 0; i < _corpseScratch.Count && !stillThere; i++)
-                stillThere = _corpseScratch[i].Id.Value == kv.Key;
-            if (!stillThere) _stale.Add(kv.Key);
+            if (!_present.Contains(kv.Key)) _stale.Add(kv.Key);
         }
         for (int i = 0; i < _stale.Count; i++)
         {
-            if (_corpseBodies.TryGetValue(_stale[i], out Transform body) && body != null)
+            if (_carcasses.TryGetValue(_stale[i], out var carcass))
+            { carcass.Dispose(); _carcasses.Remove(_stale[i]); }
+            else if (_corpseBodies.TryGetValue(_stale[i], out Transform body) && body != null)
                 Object.Destroy(body.gameObject);
             _corpseBodies.Remove(_stale[i]);
         }
     }
 
-    public void Sync(IReadOnlyList<CreatureResidencyService.LiveCreature> live, CreatureLibraryDto library)
+    public void Sync(IReadOnlyList<CreatureResidencyService.LiveCreature> live, CreatureLibraryDto library,
+        Vector3? listenerPosition = null, Camera observerCamera = null)
     {
         PredatorVision.Sync(live, library);
         if (_parent == null) return;
 
+        _present.Clear();
+        bool hasObserver = PresentationBudgetEnabled && observerCamera != null;
+        if (hasObserver) GeometryUtility.CalculateFrustumPlanes(observerCamera, _poseFrustum);
+        Vector3 observerPosition = hasObserver ? observerCamera.transform.position : Vector3.zero;
+        _poseCadence.BeginFrame(Time.deltaTime);
+        PoseEvaluationsLastFrame = PoseSkipsLastFrame = 0;
+        _grass.Begin(listenerPosition ?? Vector3.zero, _visible && listenerPosition.HasValue && GrassInteractionEnabled);
         for (int i = 0; i < live.Count; i++)
         {
             CreatureResidencyService.LiveCreature c = live[i];
+            _present.Add(c.Id.Value);
             CreatureSpeciesDto species = library?.At(c.SpeciesIndex);
             float height = species?.BodyHeightMeters ?? 1.7f;
+            _grass.Consider(c, species);
 
             if (!_bodies.TryGetValue(c.Id.Value, out Transform body) || body == null)
             {
@@ -116,31 +166,48 @@ public sealed class CreatureView : System.IDisposable
                 _bodies[c.Id.Value] = body;
             }
             body.SetPositionAndRotation(c.Position, Quaternion.LookRotation(c.Forward, c.Up));
+            bool inView = hasObserver && GeometryUtility.TestPlanesAABB(_poseFrustum,
+                new Bounds(c.Position, Vector3.one * Mathf.Max(1f, height * 3f)));
+            int action = (int)c.Behaviour * 16 + (c.Swimming ? 1 : 0) + (c.SupportPoint.HasValue ? 2 : 0) +
+                (c.AttackTime.HasValue ? 4 : 0) + (c.AltitudeMeters <= .01f ? 8 : 0);
+            bool evaluatePose = _poseCadence.ShouldEvaluate(c.Id.Value, c.Position,
+                hasObserver ? Vector3.Distance(c.Position, observerPosition) : 0f, inView, hasObserver, action, c.AttackTime.HasValue);
+            if (evaluatePose) PoseEvaluationsLastFrame++; else PoseSkipsLastFrame++;
+            if (_visible && listenerPosition.HasValue)
+                _audio.Tick(c.Id.Value, body, species?.Audio,
+                    c.Behaviour == CreatureBehaviour.Feed && c.Velocity.sqrMagnitude >= .0004f
+                        ? CreatureBehaviour.Investigate : c.Behaviour, listenerPosition.Value, Time.deltaTime);
             if (_animated.TryGetValue(c.Id.Value, out CreatureAnimationView animation))
             {
                 animation.Resting = c.Behaviour == CreatureBehaviour.Rest;
+                animation.Swimming = c.Swimming;
+                animation.SwimWaterline = species.SwimWaterline;
                 animation.Sleeping = c.Behaviour == CreatureBehaviour.Sleep;
-                animation.Eating = c.Behaviour == CreatureBehaviour.Feed;
-                animation.Drinking = c.Behaviour == CreatureBehaviour.Drink;
-                animation.Tick(c.Velocity, c.Up, Time.deltaTime, _grounding);
+                animation.Eating = c.Behaviour == CreatureBehaviour.Feed && c.Velocity.sqrMagnitude < .0004f;
+                animation.Drinking = c.Behaviour == CreatureBehaviour.Drink && c.Velocity.sqrMagnitude < .0004f;
+                animation.Stalking = c.Behaviour == CreatureBehaviour.Stalk;
+                animation.AttackTime = c.AttackTime;
+                animation.LookTarget = c.LookTarget;
+                animation.Tick(c.Velocity, c.Up, Time.deltaTime, _grounding, evaluatePose);
             }
             if (_birds.TryGetValue(c.Id.Value, out BirdAnimationView bird))
-                bird.Tick(c.Behaviour == CreatureBehaviour.Perch && c.AltitudeMeters <= 0.01f,
-                    c.Behaviour == CreatureBehaviour.Flee, Time.deltaTime);
+                bird.Tick((c.Behaviour is CreatureBehaviour.Perch or CreatureBehaviour.Rest or CreatureBehaviour.Sleep
+                    or CreatureBehaviour.Feed or CreatureBehaviour.Drink) && c.AltitudeMeters <= 0.01f,
+                    c.Behaviour == CreatureBehaviour.Flee, Time.deltaTime, c.Up, _grounding, c.Behaviour, c.SupportPoint, evaluatePose);
         }
 
+        _grass.End();
         // A body whose creature is no longer live is destroyed, not hidden: demotion is unbounded in time, and
         // a pool of hidden capsules would grow with every territory the player has ever walked through.
         _stale.Clear();
         foreach (KeyValuePair<ulong, Transform> kv in _bodies)
         {
-            bool stillLive = false;
-            for (int i = 0; i < live.Count && !stillLive; i++)
-                stillLive = live[i].Id.Value == kv.Key;
-            if (!stillLive) _stale.Add(kv.Key);
+            if (!_present.Contains(kv.Key)) _stale.Add(kv.Key);
         }
         for (int i = 0; i < _stale.Count; i++)
         {
+            _audio.Forget(_stale[i]);
+            _poseCadence.Forget(_stale[i]);
             if (_birds.Remove(_stale[i], out BirdAnimationView bird))
                 bird.Dispose();
             else if (_animated.Remove(_stale[i], out CreatureAnimationView animation))
@@ -155,7 +222,7 @@ public sealed class CreatureView : System.IDisposable
     {
         if (species != null && species.CruiseAltitudeMeters > 0f)
         {
-            var bird = new BirdAnimationView(_parent, c.Id.Value, height);
+            var bird = new BirdAnimationView(_parent, c.Id.Value, height, species.Scavenger, species.BirdVisual);
             _birds.Add(c.Id.Value, bird);
             bird.Root.gameObject.SetActive(_visible);
             return bird.Root;
@@ -207,8 +274,7 @@ public sealed class CreatureView : System.IDisposable
         _ => 0.5f,
     };
 
-    // ponytail: colour per stage on the placeholder capsule. Real carcass meshes replace this file's shapes
-    // wholesale, the same way they replace the standing capsules.
+    // Missing presentation assets retain a stage-colored placeholder.
     Material EnsureCorpseMaterial(CorpseStage stage, int speciesIndex, CreatureSpeciesDto species)
     {
         // Keyed by species AND stage. Keying on the stage alone would give a rotting rabbit the deer material
@@ -258,6 +324,10 @@ public sealed class CreatureView : System.IDisposable
     /// </summary>
     public void Clear()
     {
+        _poseCadence.Clear();
+        _grass.Dispose();
+        _audio.Dispose();
+        _present.Clear();
         foreach (BirdAnimationView bird in _birds.Values) bird.Dispose();
         foreach (CreatureAnimationView animation in _animated.Values)
             animation.Dispose();
@@ -270,8 +340,10 @@ public sealed class CreatureView : System.IDisposable
             if (kv.Value != null) Object.Destroy(kv.Value);
         _materials.Clear();
 
+        foreach (var carcass in _carcasses.Values) carcass.Dispose();
         foreach (KeyValuePair<ulong, Transform> kv in _corpseBodies)
-            if (kv.Value != null) Object.Destroy(kv.Value.gameObject);
+            if (!_carcasses.ContainsKey(kv.Key) && kv.Value != null) Object.Destroy(kv.Value.gameObject);
+        _carcasses.Clear();
         _corpseBodies.Clear();
         foreach (KeyValuePair<int, Material> kv in _corpseMaterials)
             if (kv.Value != null) Object.Destroy(kv.Value);

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 5896f101e7712f2418fe68177206989f
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 96826
+  packageName: Very Animation
+  packageVersion: 1.4.1
+  assetPath: Assets/VeryAnimation/Shader/Editor/OnionSkin.shader
+  uploadId: 984870

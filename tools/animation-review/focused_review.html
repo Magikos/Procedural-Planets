@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Animation review — current results</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#111922;color:#edf3f8}
+body{max-width:1180px;margin:28px auto;padding:0 20px}h1{margin-bottom:8px}h2{margin:8px 0}
+p{line-height:1.5}.muted{color:#b4c3d2}.status{color:#ffd38a}a{color:#8fd2ff}
+button,select,textarea{font:inherit;border:1px solid #52677a;border-radius:7px;background:#223345;color:inherit;padding:9px}
+button{cursor:pointer}button:hover,button[aria-current=true]{background:#355b79;border-color:#9dd8ff}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0}.layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(290px,1fr);gap:26px}
+video{display:block;width:100%;max-height:62vh;background:black;border-radius:8px;object-fit:contain}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0}label{display:block;margin:12px 0 6px}
+textarea{box-sizing:border-box;width:100%;min-height:82px;resize:vertical}#feedback{min-height:145px;font-size:13px}
+output{font-variant-numeric:tabular-nums}details{margin:25px 0}.panel{background:#192633;padding:18px;border-radius:10px}
+@media(max-width:760px){.layout{grid-template-columns:1fr}body{padding:0 12px}video{max-height:58vh}}
+</style>
+<h1>Review the current animation</h1>
+<p class="muted">One action at a time. These videos show the runtime result only — the former C column.</p>
+<nav id="actions" aria-label="Actions in this review round"></nav>
+<h2 id="title"></h2><p id="status" class="status"></p><p id="question"></p>
+<div class="layout">
+ <div>
+  <div id="scenarioRow" class="row"><label for="scenario">Situation</label><select id="scenario"></select></div>
+  <div class="row"><label for="version">Version</label><select id="version"></select><label for="angle">View</label>
+   <select id="angle"><option value="side">Side</option><option value="rear">Rear three-quarter</option></select></div>
+  <p id="versionNote" class="muted"></p>
+  <video id="motion" controls preload="metadata" playsinline></video>
+  <div class="row"><button id="previous">← Frame</button><button id="next">Frame →</button>
+   <label for="speed">Speed</label><select id="speed"><option value="1">1×</option><option value="0.5">½×</option><option value="0.25">¼×</option></select>
+   <output id="clock" aria-live="off">Frame 0 · 0.000 s</output></div>
+  <div class="row"><button id="focus">Go to reported issue</button><button id="restart">Restart action</button></div>
+  <p class="muted">Previous versions are optional comparisons, not extra items to approve. Changing versions pauses playback.</p>
+ </div>
+ <div class="panel">
+  <h2>Report what looks wrong</h2>
+  <p>Pause at the problem. Mark a moment or an interval, describe it, then copy the feedback into our chat.</p>
+  <div class="row"><button id="markStart">Mark start / moment</button><button id="markEnd">Mark end</button><button id="clearMarks">Clear marks</button></div>
+  <output id="marks">No marked interval</output>
+  <label for="verdict">Your verdict</label><select id="verdict"><option>Needs work</option><option>Looks good</option><option>Unsure</option></select>
+  <label for="observed">What looks wrong?</label><textarea id="observed" placeholder="Example: the legs swap in mid-air."></textarea>
+  <label for="expected">What should happen?</label><textarea id="expected" placeholder="Example: both feet come forward before landing."></textarea>
+  <label for="feedback">Feedback with the exact capture reference</label><textarea id="feedback" readonly></textarea>
+  <button id="copy">Copy feedback</button><p id="copyStatus" role="status"></p>
+  <p class="muted">Nothing is submitted automatically. Copy your feedback before closing or reloading this page.</p>
+ </div>
+</div>
+<details><summary>Earlier reviews and diagnosis</summary>
+ <p><a href="live-feedback-review.md">Current findings and remaining defects</a> · <a href="diagnostics.html">Current A/B/C diagnostics</a> · <a href="index-approved-set.html">Accepted previous review set</a> · <a href="feedback-round4-review.md">Previous findings</a> · <a href="index-pre-hybrid-review.html">Previous review, including chest</a> · <a href="index-first-review.html">Original broad bundle</a></p>
+ <p id="captureReference"></p>
+ <p>Frames start at zero and identify the retained PNG files. The video includes burned-in frame numbers.
+ Browser marks use playback time. The full animation audit remains open.</p>
+</details>
+<script id="review-data" type="application/json">__REVIEW_QUEUE__</script>
+<script>
+const items=JSON.parse(document.getElementById('review-data').textContent);
+const $=id=>document.getElementById(id), video=$('motion'), drafts=new Map();
+const scenarios=it=>it.scenarios||[{id:'complete',title:'Complete action',versions:it.versions}];
+let item=items[0], scenario=scenarios(item)[0], version=scenario.versions[0], start=null, end=null, displayedFrame=0;
+const key=()=>item.id+'|'+scenario.id+'|'+version.capture+'|'+$('angle').value;
+function frame(){return Math.max(0,Math.min(version.frames-1,Math.floor(video.currentTime*30+0.0001)));}
+function save(){drafts.set(key(),{start,end,observed:$('observed').value,expected:$('expected').value,verdict:$('verdict').value});}
+function restore(){const d=drafts.get(key())||{};start=d.start??null;end=d.end??null;
+ $('observed').value=d.observed||'';$('expected').value=d.expected||'';$('verdict').value=d.verdict||'Needs work';update();}
+function update(){
+ const first=start??displayedFrame,last=end??first,lo=Math.min(first,last),hi=Math.max(first,last);
+ $('clock').textContent=`Frame ${displayedFrame} · ${(displayedFrame/30).toFixed(3)} s`;
+ $('marks').textContent=start===null?'No marked interval':`Marked frames ${lo}–${hi}`;
+ $('feedback').value=`${item.id} — ${item.title}\nSituation: ${scenario.id} — ${scenario.title}\n${version.label} | ${version.capture}\nRuntime C | ${$('angle').value} view | frames ${lo}–${hi} | video ${(lo/30).toFixed(3)}–${(hi/30).toFixed(3)} s\nVerdict: ${$('verdict').value}\nObserved: ${$('observed').value}\nExpected: ${$('expected').value}`;
+}
+function load(){video.pause();displayedFrame=0;$('versionNote').textContent=version.note;
+ video.src=encodeURIComponent(version.capture)+'/runtime-'+$('angle').value+'.mp4';video.load();
+ $('captureReference').textContent=`${item.id} · ${version.label} · ${version.capture} · ${version.frames} capture frames`;
+ $('focus').hidden=version.focus===undefined;$('copyStatus').textContent='';restore();}
+function chooseScenario(index){scenario=scenarios(item)[index];version=scenario.versions[0];
+ $('version').replaceChildren(...scenario.versions.map((v,i)=>{const o=document.createElement('option');o.value=i;o.textContent=v.label;return o;}));load();}
+function choose(index){save();item=items[index];$('title').textContent=item.id+' · '+item.title;
+ $('status').textContent=item.status;$('question').textContent=item.question;
+ $('scenarioRow').hidden=scenarios(item).length===1;
+ $('scenario').replaceChildren(...scenarios(item).map((s,i)=>{const o=document.createElement('option');o.value=i;o.textContent=s.title;return o;}));
+ [...$('actions').children].forEach((b,i)=>b.setAttribute('aria-current',String(i===index)));chooseScenario(0);}
+items.forEach((it,i)=>{const b=document.createElement('button');b.textContent=it.title;b.onclick=()=>choose(i);$('actions').append(b);});
+$('scenario').onchange=()=>{save();chooseScenario(Number($('scenario').value));};
+$('version').onchange=()=>{save();version=scenario.versions[Number($('version').value)];load();};
+let lastAngle=$('angle').value;
+$('angle').onchange=()=>{const selected=$('angle').value;$('angle').value=lastAngle;save();$('angle').value=selected;lastAngle=selected;load();};
+function seek(n){video.pause();video.currentTime=(Math.max(0,Math.min(version.frames-1,n))+.001)/30;}
+$('previous').onclick=()=>seek(frame()-1);$('next').onclick=()=>seek(frame()+1);
+$('focus').onclick=()=>seek(Math.floor((version.focus||0)*30));$('restart').onclick=()=>seek(0);
+$('speed').onchange=()=>video.playbackRate=Number($('speed').value);
+video.onloadedmetadata=()=>{video.playbackRate=Number($('speed').value);update();};
+video.ontimeupdate=()=>{displayedFrame=frame();update();};video.onseeked=()=>{displayedFrame=frame();update();};
+$('markStart').onclick=()=>{video.pause();start=frame();end=null;save();update();};
+$('markEnd').onclick=()=>{video.pause();end=frame();if(start===null)start=end;save();update();};
+$('clearMarks').onclick=()=>{start=end=null;save();update();};
+for(const id of ['observed','expected','verdict'])$(id).oninput=()=>{save();update();};
+$('copy').onclick=async()=>{video.pause();displayedFrame=frame();update();
+ try{await navigator.clipboard.writeText($('feedback').value);$('copyStatus').textContent='Copied. Paste this into our chat.';}
+ catch{$('feedback').focus();$('feedback').select();$('copyStatus').textContent='Feedback selected. Press Ctrl+C, then paste it into our chat.';}};
+choose(0);
+</script>
+</html>

@@ -47,10 +47,11 @@ MonoBehaviour:
   TintPercent: 0
   BiomeOffset: {x: 7384, y: 5102, z: 3964}
   SurfaceAlbedo: {fileID: 2800000, guid: ccff32160f2e0674c8030da6f9288cd5, type: 3}
-  SurfaceSecondaryAlbedo: {fileID: 2800000, guid: ef7d5130ddd34d2488e713d9e6f23bd8, type: 3}
+  SurfaceSecondaryAlbedo: {fileID: 2800000, guid: 6064e4e3e79a3a1408ee2059beaa066b, type: 3}
   SurfaceNormal: {fileID: 2800000, guid: c60716c65ddc3d6408ec501cdb314c97, type: 3}
   SurfaceARM: {fileID: 2800000, guid: 85c6334c10b1f044aa36482840cf99cd, type: 3}
   SurfaceTiling: 1
+  SurfaceAlbedoTint: {r: 1, g: 1, b: 1, a: 1}
   GrassDensity: 0.8
   GrassTintBase: {r: 0.3, g: 0.5, b: 0.25, a: 1}
   GrassTintDryShift: {r: 1, g: 1, b: 1, a: 1}

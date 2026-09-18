@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5d631ada5a220a04bbfec4209d317046
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 96826
+  packageName: Very Animation
+  packageVersion: 1.4.1
+  assetPath: Assets/VeryAnimation/Demo/TimelineAddtiveTrack/Timeline.playable
+  uploadId: 984870

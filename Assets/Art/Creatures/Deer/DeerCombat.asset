@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c643e5978e138f4e97e64026cf45aad, type: 3}
+  m_Name: DeerCombat
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::CreatureCombatSettings
+  MaximumHealth: 100
+  MeatYield: 4.5
+  Damage: 12
+  Reach: 1.6
+  HalfAngle: 35
+  Windup: 0.65
+  ActiveSeconds: 0.3
+  RecoverySeconds: 1.8
+  StaminaCost: 0.18
+  Wounds: 0.12
+  Bleeding: 0.06
+  SafeDelayHours: 0.25
+  HealthRecoveryHours: 24
+  WoundRecoveryHours: 12
+  ClotHours: 12
+  BleedDrainHours: 2

@@ -368,8 +368,8 @@ What this recipe adds is the instrument-matching discipline:
 ## Recipe 7 — Determinism / invariance check
 
 **Reach for this when** a refactor **must not change behavior** (extractions, include
-unification, dead-code deletion) and there is no test framework to lean on (deliberate
-project stance). Use the system's own aggregate statistics as a behavioral checksum.
+unification, dead-code deletion). Use the system's own aggregate statistics as a behavioral checksum,
+alongside relevant existing EditMode tests. Current test policy is in pp-validation-and-evidence and CLAUDE.md "Tests".
 
 ### Steps
 

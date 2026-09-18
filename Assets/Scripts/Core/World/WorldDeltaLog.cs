@@ -128,6 +128,8 @@ public sealed class WorldDeltaLog : IWorldDeltaLog, System.IDisposable
         DeltaKind.SurfaceStamp => 2,
         DeltaKind.PlayerState => 3,
         DeltaKind.TerrainDeform => 4,
+        DeltaKind.FoliageFood => 6,
+        DeltaKind.ScatterDamage => 7,
         DeltaKind.EntitySpawned or DeltaKind.EntityMoved
             or DeltaKind.EntityRemoved or DeltaKind.EntityState => 5,
         _ => 0,

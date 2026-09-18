@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd8008cb45ca5034daa0a124445d0868, type: 3}
+  m_Name: Gather berries
+  m_EditorClassIdentifier: Magikos.Game::ActorInteractionDefinition
+  Action: Gather berries
+  Phases:
+  - Animation:
+      Name: Gather
+      Clip: {fileID: 7400000, guid: 0ac88403ea830b141b8ac942cba03f26, type: 2}
+      StartNormalized: 0
+      EndNormalized: 0.45
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 2.25
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    RepeatUntilInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: HarvestImpact
+    MarkerProgress: 0.58
+  - Animation:
+      Name: Recover
+      Clip: {fileID: 7400000, guid: 0ac88403ea830b141b8ac942cba03f26, type: 2}
+      StartNormalized: 0.8
+      EndNormalized: 1
+      Loop: 0
+      BlendSeconds: 0.2
+    Seconds: 1
+    RightHandWeight: 0
+    LeftHandWeight: 0
+    WaitForInput: 0
+    RepeatUntilInput: 0
+    AllowMovement: 0
+    UseLocomotion: 0
+    ContactSet: 
+    ReverseAnimation: 0
+    GripRadius: 0
+    ForwardLeanDegrees: 0
+    Marker: 
+    MarkerProgress: 0.5

@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -54,8 +55,9 @@ public sealed class ScatterRenderer : IDisposable
     static readonly int _fadeInSecondsId = Shader.PropertyToID(ShaderGlobalIds.ScatterFadeInSeconds);
     public static float FadeInSeconds = 0.6f;
 
-    public void Configure()
+    public async Awaitable ConfigureAsync(IProgressHandle progress, CancellationToken ct)
     {
+        _configured = false;
         Shader.SetGlobalFloat(_foliageBacklightId, DefaultFoliageBacklight);
         Shader.SetGlobalFloat(_fadeInSecondsId, FadeInSeconds);
         DestroyImpostors(); // a previous world's baked cards/materials/quads
@@ -64,14 +66,22 @@ public sealed class ScatterRenderer : IDisposable
         int protoCount = _library.Prototypes.Length;
         _renderParams = new RenderParams[protoCount][];
         _impostors = new ScatterLodBatcher.Impostor[protoCount];
+        var frameBudget = System.Diagnostics.Stopwatch.StartNew();
         for (int i = 0; i < protoCount; i++)
         {
+            ct.ThrowIfCancellationRequested();
+            progress?.Report((float)i / protoCount, $"Preparing scatter {i + 1}/{protoCount}...");
+            if (i == 0 || frameBudget.Elapsed.TotalMilliseconds >= 4)
+            {
+                await Awaitable.NextFrameAsync(ct);
+                frameBudget.Restart();
+            }
             var p = _library.Prototypes[i];
             _renderParams[i] = new RenderParams[p.Parts.Length];
             if (!p.CanRender) continue;
             // Bake the far-field billboard for coarse prototypes (trees); default for the rest. One-shot
             // at Configure (loading), so the per-frame draw just bands the prebuilt impostor.
-            _impostors[i] = ScatterImpostorFactory.TryBuild(p, bounds);
+            _impostors[i] = await ScatterImpostorFactory.TryBuildAsync(p, bounds, ct);
             for (int j = 0; j < p.Parts.Length; j++)
             {
                 var part = p.Parts[j];
@@ -99,6 +109,7 @@ public sealed class ScatterRenderer : IDisposable
         _cache.Configure();
         _gpu.Configure(_library, bounds, _impostors);
         _configured = true;
+        progress?.Report(1f, "Scatter ready");
     }
 
     public void Reset()
@@ -120,6 +131,7 @@ public sealed class ScatterRenderer : IDisposable
         Vector3 camPos = camera.transform.position;
         _cache.Update(camPos);
         if (!DrawEnabled) return;
+        using var timing = FrameTimingCounters.Measure(FrameTimingSection.ScatterDraw);
         for (int p = 0; p < _library.Prototypes.Length; p++)
         {
             var proto = _library.Prototypes[p];

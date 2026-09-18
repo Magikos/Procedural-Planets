@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82335c1a876af6d4bb0bed686af05d87, type: 3}
+  m_Name: Cook meat
+  m_EditorClassIdentifier: ProceduralPlanets.Core::CraftingRecipe
+  Costs:
+  - Item: Raw meat
+    Count: 1
+  Results:
+  - Item: Cooked meat
+    Count: 1

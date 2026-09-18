@@ -832,6 +832,57 @@ namespace ProceduralPlanets.Tests
         }
 
         [Test]
+        public void AdditionalSlotsExpandPopulationWithoutMovingLegacyAddresses()
+        {
+            var library = LibraryOf(
+                WithSlots("Deer", 3) with { AdditionalSlots = new[] { 32, 33, 34, 35 } },
+                WithSlots("Rabbit", 6) with { AdditionalSlots = new[] { 40, 41, 42, 43, 44, 45 } },
+                WithSlots("Bird", 4), WithSlots("Wolf", 2), WithSlots("Fox", 2));
+            var slots = CreatureResidencyService.ResolveSpeciesSlots(library);
+            CollectionAssert.AreEqual(new[] { 0, 1, 2, 32, 33, 34, 35 }, slots[0]);
+            CollectionAssert.AreEqual(new[] { 3, 4, 5, 6, 7, 8, 40, 41, 42, 43, 44, 45 }, slots[1]);
+            CollectionAssert.AreEqual(new[] { 9, 10, 11, 12 }, slots[2]);
+            CollectionAssert.AreEqual(new[] { 13, 14 }, slots[3]);
+            CollectionAssert.AreEqual(new[] { 15, 16 }, slots[4]);
+        }
+
+        [Test]
+        public void InvalidAdditionalSlotsAreDiagnosedAndCannotAliasAnotherCreature()
+        {
+            var diagnostics = new List<string>();
+            var library = LibraryOf(
+                WithSlots("Deer", 3) with { AdditionalSlots = new[] { 3, 32, 32, -1, CreatureKey.MaxSlot + 1 } },
+                WithSlots("Rabbit", 6) with { AdditionalSlots = new[] { 32, 40 } });
+            var slots = CreatureResidencyService.ResolveSpeciesSlots(library, diagnostics.Add);
+            CollectionAssert.AreEqual(new[] { 0, 1, 2, 32 }, slots[0]);
+            CollectionAssert.AreEqual(new[] { 3, 4, 5, 6, 7, 8, 40 }, slots[1]);
+            Assert.AreEqual(5, diagnostics.Count);
+            Assert.IsTrue(diagnostics.TrueForAll(message => message.Contains("skipped")));
+        }
+
+        [Test]
+        public void LegacyOverflowIsSkippedInsteadOfWrappingSlotKeys()
+        {
+            var diagnostics = new List<string>();
+            var library = LibraryOf(WithSlots("First", CreatureKey.MaxSlot), WithSlots("Second", 3));
+            var slots = CreatureResidencyService.ResolveSpeciesSlots(library, diagnostics.Add);
+            Assert.AreEqual(CreatureKey.MaxSlot, slots[0].Length);
+            CollectionAssert.AreEqual(new[] { CreatureKey.MaxSlot }, slots[1]);
+            Assert.AreEqual(1, diagnostics.Count);
+        }
+
+        [Test]
+        public void AdditionalOnlySpeciesAndSnapshotCopiesAreSupported()
+        {
+            var source = new CreatureSpecies { PerTerritory = 0, AdditionalSlots = new[] { 40 }, VigilanceSeconds = 4f };
+            var snapshot = CreatureSpeciesDto.From(source);
+            source.AdditionalSlots[0] = 41;
+            source.VigilanceSeconds = 1f;
+            Assert.AreEqual(4f, snapshot.VigilanceSeconds);
+            CollectionAssert.AreEqual(new[] { 40 }, CreatureResidencyService.ResolveSpeciesSlots(LibraryOf(snapshot))[0]);
+        }
+
+        [Test]
         public void TheFireflyFadeIsWideEnoughToTakeRealSecondsOnAShortDay()
         {
             // A day here is 120 s (CelestialManager.DayLengthSeconds), so the sun sweeps dot(up,sun) at roughly
@@ -925,7 +976,7 @@ namespace ProceduralPlanets.Tests
                 AmbientSwarmProfile profile = Profile(AmbientSwarmKind.Birds);
                 using var swarms = new AmbientSwarms(root.transform, profiles: new[] { profile });
                 swarms.Configure(new InsectTestSurface(), null, null, Vector3.zero, 5000f, 4900f);
-                swarms.Tick(Vector3.up * 5002f, 1f, null, 0);
+                swarms.Tick(Vector3.up * 5002f, 1f, null, 0, deltaTime: 1f / 30f);
                 Assert.IsNull(root.GetComponentInChildren<ParticleSystem>());
                 Assert.That(root.GetComponentsInChildren<SkinnedMeshRenderer>().Length, Is.InRange(2, 48));
                 var graphs = new System.Collections.Generic.List<UnityEngine.Playables.PlayableGraph>();

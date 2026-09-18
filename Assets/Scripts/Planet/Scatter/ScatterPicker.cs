@@ -39,18 +39,20 @@ public readonly struct ScatterPick
 
     /// <summary>Uniform: placement scales scatter by one factor, never per axis.</summary>
     public readonly float Scale;
+    public readonly Vector3? ImpactPoint;
 
-    public ScatterPick(ulong id, int protoIndex, Vector3 position, Quaternion rotation, float scale)
+    public ScatterPick(ulong id, int protoIndex, Vector3 position, Quaternion rotation, float scale, Vector3? impactPoint = null)
     {
         Id = id;
         ProtoIndex = protoIndex;
         Position = position;
         Rotation = rotation;
         Scale = scale;
+        ImpactPoint = impactPoint;
     }
 
-    public static ScatterPick FromMatrix(ulong id, int protoIndex, in Matrix4x4 draw) =>
-        new(id, protoIndex, draw.GetPosition(), draw.rotation, draw.lossyScale.x);
+    public static ScatterPick FromMatrix(ulong id, int protoIndex, in Matrix4x4 draw, Vector3? impactPoint = null) =>
+        new(id, protoIndex, draw.GetPosition(), draw.rotation, draw.lossyScale.x, impactPoint);
 }
 
 // Finds the nearest HARVESTABLE scatter instance (Interaction != None) along a camera ray, across every
@@ -79,6 +81,17 @@ public sealed class ScatterPicker
         for (int p = 0; p < library.Prototypes.Length; p++)
         {
             if (library.Prototypes[p].Interaction == ScatterInteraction.None) continue;
+            GeneratedTree tree = library.Prototypes[p].Tree;
+            if (tree != null)
+            {
+                var matrices = _cache.Matrices(p);
+                for (int j = 0; j < matrices.Count; j++)
+                {
+                    if (!TryPickTrunk(tree, matrices[j], ray, reachMeters, maxPerpMeters, out float distance) || distance >= bestT) continue;
+                    bestT = distance; pick = ScatterPick.FromMatrix(_cache.Ids(p)[j], p, matrices[j], ray.GetPoint(distance)); found = true;
+                }
+                continue;
+            }
             var positions = _cache.Positions(p);
             int i = ScatterPickMath.NearestAlongRay(ray, positions, reachMeters, maxPerpMeters, out float t);
             if (i < 0 || t >= bestT) continue;
@@ -89,5 +102,22 @@ public sealed class ScatterPicker
             found = true;
         }
         return found;
+    }
+
+    public static bool TryPickTrunk(GeneratedTree tree, Matrix4x4 matrix, Ray ray, float reach, float tolerance, out float distance)
+    {
+        distance = float.MaxValue;
+        float scale = matrix.lossyScale.x;
+        if (scale <= 0f || Vector3.Distance(matrix.GetPosition(), ray.origin) > tree.Height * scale + reach) return false;
+        Matrix4x4 inverse = matrix.inverse;
+        var localRay = new Ray(inverse.MultiplyPoint3x4(ray.origin), inverse.MultiplyVector(ray.direction));
+        for (int i = 1; i < tree.TrunkPoints.Length; i++)
+        {
+            var bounds = new Bounds(tree.TrunkPoints[i - 1], Vector3.zero);
+            bounds.Encapsulate(tree.TrunkPoints[i]);
+            bounds.Expand(2f * (Mathf.Max(tree.TrunkRadii[i - 1], tree.TrunkRadii[i]) + tolerance / scale));
+            if (bounds.IntersectRay(localRay, out float hit) && hit * scale <= reach) distance = Mathf.Min(distance, hit * scale);
+        }
+        return distance < float.MaxValue;
     }
 }

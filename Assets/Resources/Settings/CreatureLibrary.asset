@@ -14,57 +14,535 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProceduralPlanets.Planet::CreatureLibrary
   Species:
   - Visuals: {fileID: 11400000, guid: 145f25f73a41e6f48beb345f9ac88ab9, type: 2}
+    Audio: {fileID: 11400000, guid: bd17e51ff21a485d8dca6f7b0f2d6faf, type: 2}
+    BirdVisual: 0
+    Perception: {fileID: 11400000, guid: b82a85f37fa421242ac2f113b6d748df, type: 2}
+    Habitat:
+      BiomeWeights: []
+      DensityPerSquareKm: 25
+      MaximumSlope: 35
+      FreshWaterMultiplier: 1.8
+      DryLandMultiplier: 1
+      PreferFreshWater: 1
     DisplayName: Deer
     PerTerritory: 3
+    AdditionalSlots: 20000000210000002200000023000000i
     HomeRangeMeters: 120
     WalkSpeedMps: 2.5
+    SwimSpeedMps: 1.2
+    SwimWaterline: 0.7
     DriftHomeSpeedMps: 0.8
     RespawnSeconds: 300
     MinAltitudeMeters: 2
     MaxAltitudeMeters: 3000
-    Biomes: 0700000009000000040000000a000000i
+    Biomes: 0700000009000000040000000a00000006000000050000000800000012000000i
     Faction: 0
+    Scavenger: 0
     AwarenessMeters: 45
+    VigilanceSeconds: 3
     MaxHealth: 3
+    HungerSeconds: 1800
+    ThirstSeconds: 900
+    Diet: 5
+    ConsumeUnitsPerSecond: 0.12
+    SprintSeconds: 15
+    AwakeSeconds: 1800
+    SleepRecoverySeconds: 180
+    RestRecoverySeconds: 20
+    WalkRecoverySeconds: 60
     YieldItemId: Hide
     YieldCount: 2
     CruiseAltitudeMeters: 0
     BodyHeightMeters: 1.7
+    BodyMassKg: 80
+    MaximumPreyMassRatio: 0
     BodyColor: {r: 0.45, g: 0.33, b: 0.22, a: 1}
-  - Visuals: {fileID: 0}
-    DisplayName: Placeholder Rabbit
+  - Visuals: {fileID: 11400000, guid: 27b758484c2435b4e8cb0c92c9de69b2, type: 2}
+    Audio: {fileID: 11400000, guid: 027ab66ec9734e44a8bdd67062998ee7, type: 2}
+    BirdVisual: 0
+    Perception: {fileID: 11400000, guid: b82a85f37fa421242ac2f113b6d748df, type: 2}
+    Habitat:
+      BiomeWeights:
+      - Biome: 2
+        Weight: 0.15
+      - Biome: 11
+        Weight: 0.35
+      DensityPerSquareKm: 60
+      MaximumSlope: 40
+      FreshWaterMultiplier: 1.5
+      DryLandMultiplier: 1
+      PreferFreshWater: 1
+    DisplayName: Rabbit
     PerTerritory: 6
+    AdditionalSlots: 28000000290000002a0000002b0000002c0000002d000000i
     HomeRangeMeters: 45
     WalkSpeedMps: 3.2
+    SwimSpeedMps: 1.2
+    SwimWaterline: 0.7
     DriftHomeSpeedMps: 1.2
     RespawnSeconds: 120
     MinAltitudeMeters: 2
     MaxAltitudeMeters: 2200
-    Biomes: 06000000050000000800000003000000i
+    Biomes: 0600000005000000080000000300000012000000020000000b00000007000000i
     Faction: 0
+    Scavenger: 0
     AwarenessMeters: 25
+    VigilanceSeconds: 4
     MaxHealth: 1
+    HungerSeconds: 1800
+    ThirstSeconds: 900
+    Diet: 5
+    ConsumeUnitsPerSecond: 0.12
+    SprintSeconds: 8
+    AwakeSeconds: 1800
+    SleepRecoverySeconds: 180
+    RestRecoverySeconds: 20
+    WalkRecoverySeconds: 60
     YieldItemId: Hide
     YieldCount: 1
     CruiseAltitudeMeters: 0
     BodyHeightMeters: 0.45
+    BodyMassKg: 2
+    MaximumPreyMassRatio: 0
     BodyColor: {r: 0.62, g: 0.58, b: 0.52, a: 1}
   - Visuals: {fileID: 0}
-    DisplayName: Placeholder Bird
+    Audio: {fileID: 0}
+    BirdVisual: 0
+    Perception: {fileID: 0}
+    Habitat:
+      BiomeWeights: []
+      DensityPerSquareKm: 12
+      MaximumSlope: 45
+      FreshWaterMultiplier: 1.2
+      DryLandMultiplier: 1
+      PreferFreshWater: 1
+    DisplayName: Eagle
     PerTerritory: 4
+    AdditionalSlots: 
     HomeRangeMeters: 200
     WalkSpeedMps: 6
+    SwimSpeedMps: 1.2
+    SwimWaterline: 0.7
     DriftHomeSpeedMps: 2.5
     RespawnSeconds: 180
     MinAltitudeMeters: 2
     MaxAltitudeMeters: 4000
     Biomes: 
     Faction: 0
+    Scavenger: 1
     AwarenessMeters: 70
+    VigilanceSeconds: 0
     MaxHealth: 1
+    HungerSeconds: 1800
+    ThirstSeconds: 900
+    Diet: 6
+    ConsumeUnitsPerSecond: 0.12
+    SprintSeconds: 60
+    AwakeSeconds: 1800
+    SleepRecoverySeconds: 180
+    RestRecoverySeconds: 20
+    WalkRecoverySeconds: 60
     YieldItemId: Feathers
     YieldCount: 2
     CruiseAltitudeMeters: 9
     BodyHeightMeters: 0.35
+    BodyMassKg: 4
+    MaximumPreyMassRatio: 0
     BodyColor: {r: 0.22, g: 0.2, b: 0.24, a: 1}
+  - Visuals: {fileID: 0}
+    Audio: {fileID: 0}
+    BirdVisual: 0
+    Perception: {fileID: 0}
+    Habitat:
+      BiomeWeights: []
+      DensityPerSquareKm: 3
+      MaximumSlope: 45
+      FreshWaterMultiplier: 1
+      DryLandMultiplier: 1
+      PreferFreshWater: 0
+    DisplayName: Vulture
+    PerTerritory: 2
+    AdditionalSlots: 
+    HomeRangeMeters: 250
+    WalkSpeedMps: 7
+    SwimSpeedMps: 1.2
+    SwimWaterline: 0.7
+    DriftHomeSpeedMps: 2.5
+    RespawnSeconds: 300
+    MinAltitudeMeters: 2
+    MaxAltitudeMeters: 4000
+    Biomes: 
+    Faction: 0
+    Scavenger: 1
+    AwarenessMeters: 100
+    VigilanceSeconds: 0
+    MaxHealth: 2
+    HungerSeconds: 1800
+    ThirstSeconds: 900
+    Diet: 6
+    ConsumeUnitsPerSecond: 0.12
+    SprintSeconds: 60
+    AwakeSeconds: 1800
+    SleepRecoverySeconds: 180
+    RestRecoverySeconds: 20
+    WalkRecoverySeconds: 60
+    YieldItemId: Feathers
+    YieldCount: 2
+    CruiseAltitudeMeters: 24
+    BodyHeightMeters: 0.65
+    BodyMassKg: 7
+    MaximumPreyMassRatio: 0
+    BodyColor: {r: 0.22, g: 0.18, b: 0.15, a: 1}
+  - Visuals: {fileID: 11400000, guid: 490388ecc295c86489fadfce94326257, type: 2}
+    Audio: {fileID: 11400000, guid: 3ab5575f6ae94ca7b13817336a006b52, type: 2}
+    BirdVisual: 0
+    Perception: {fileID: 11400000, guid: f1968d3787ae17640ae176e47dc1388a, type: 2}
+    Habitat:
+      BiomeWeights: []
+      DensityPerSquareKm: 8
+      MaximumSlope: 45
+      FreshWaterMultiplier: 1.5
+      DryLandMultiplier: 1
+      PreferFreshWater: 1
+    DisplayName: Wolf
+    PerTerritory: 0
+    AdditionalSlots: 0f0000001000000011000000i
+    HomeRangeMeters: 180
+    WalkSpeedMps: 2.5
+    SwimSpeedMps: 1.2
+    SwimWaterline: 0.7
+    DriftHomeSpeedMps: 0.8
+    RespawnSeconds: 600
+    MinAltitudeMeters: 2
+    MaxAltitudeMeters: 2800
+    Biomes: 070000000900000006000000050000000800000012000000i
+    Faction: 1
+    Scavenger: 0
+    AwarenessMeters: 60
+    VigilanceSeconds: 0
+    MaxHealth: 5
+    HungerSeconds: 1800
+    ThirstSeconds: 900
+    Diet: 6
+    ConsumeUnitsPerSecond: 0.12
+    SprintSeconds: 30
+    AwakeSeconds: 1800
+    SleepRecoverySeconds: 180
+    RestRecoverySeconds: 20
+    WalkRecoverySeconds: 60
+    YieldItemId: Hide
+    YieldCount: 2
+    CruiseAltitudeMeters: 0
+    BodyHeightMeters: 1
+    BodyMassKg: 40
+    MaximumPreyMassRatio: 3
+    BodyColor: {r: 0.45, g: 0.33, b: 0.22, a: 1}
+  - Visuals: {fileID: 11400000, guid: 85d40dbf97a3a2c40be9b04a270c4485, type: 2}
+    Audio: {fileID: 11400000, guid: 9f3c344397eb4a67a8025716812e163a, type: 2}
+    BirdVisual: 0
+    Perception: {fileID: 11400000, guid: b82a85f37fa421242ac2f113b6d748df, type: 2}
+    Habitat:
+      BiomeWeights: []
+      DensityPerSquareKm: 10
+      MaximumSlope: 35
+      FreshWaterMultiplier: 2
+      DryLandMultiplier: 1
+      PreferFreshWater: 1
+    DisplayName: Boar
+    PerTerritory: 0
+    AdditionalSlots: 120000001300000014000000i
+    HomeRangeMeters: 90
+    WalkSpeedMps: 1.8
+    SwimSpeedMps: 1.2
+    SwimWaterline: 0.7
+    DriftHomeSpeedMps: 0.8
+    RespawnSeconds: 600
+    MinAltitudeMeters: 2
+    MaxAltitudeMeters: 2800
+    Biomes: 070000000900000006000000050000000800000012000000i
+    Faction: 0
+    Scavenger: 0
+    AwarenessMeters: 40
+    VigilanceSeconds: 0
+    MaxHealth: 6
+    HungerSeconds: 1800
+    ThirstSeconds: 900
+    Diet: 5
+    ConsumeUnitsPerSecond: 0.12
+    SprintSeconds: 18
+    AwakeSeconds: 1800
+    SleepRecoverySeconds: 180
+    RestRecoverySeconds: 20
+    WalkRecoverySeconds: 60
+    YieldItemId: Hide
+    YieldCount: 2
+    CruiseAltitudeMeters: 0
+    BodyHeightMeters: 0.95
+    BodyMassKg: 70
+    MaximumPreyMassRatio: 0
+    BodyColor: {r: 0.45, g: 0.33, b: 0.22, a: 1}
+  - Visuals: {fileID: 11400000, guid: 21e4bd940b7a38d42a90cafdf7a3b1c2, type: 2}
+    Audio: {fileID: 0}
+    BirdVisual: 0
+    Perception: {fileID: 11400000, guid: f1968d3787ae17640ae176e47dc1388a, type: 2}
+    Habitat:
+      BiomeWeights: []
+      DensityPerSquareKm: 8
+      MaximumSlope: 40
+      FreshWaterMultiplier: 1.5
+      DryLandMultiplier: 1
+      PreferFreshWater: 1
+    DisplayName: Fox
+    PerTerritory: 0
+    AdditionalSlots: 1500000016000000i
+    HomeRangeMeters: 90
+    WalkSpeedMps: 2.2
+    SwimSpeedMps: 1.2
+    SwimWaterline: 0.7
+    DriftHomeSpeedMps: 0.8
+    RespawnSeconds: 600
+    MinAltitudeMeters: 2
+    MaxAltitudeMeters: 2800
+    Biomes: 070000000900000006000000050000000800000012000000i
+    Faction: 1
+    Scavenger: 0
+    AwarenessMeters: 40
+    VigilanceSeconds: 0
+    MaxHealth: 2
+    HungerSeconds: 1800
+    ThirstSeconds: 900
+    Diet: 6
+    ConsumeUnitsPerSecond: 0.12
+    SprintSeconds: 18
+    AwakeSeconds: 1800
+    SleepRecoverySeconds: 180
+    RestRecoverySeconds: 20
+    WalkRecoverySeconds: 60
+    YieldItemId: Hide
+    YieldCount: 1
+    CruiseAltitudeMeters: 0
+    BodyHeightMeters: 0.65
+    BodyMassKg: 7
+    MaximumPreyMassRatio: 0.7
+    BodyColor: {r: 0.45, g: 0.33, b: 0.22, a: 1}
+  - Visuals: {fileID: 11400000, guid: 12e3774d12ae8d24cab2ce33499b7f42, type: 2}
+    Audio: {fileID: 11400000, guid: fdcb00555d8b4bdd8bcda272a1fe05f2, type: 2}
+    BirdVisual: 0
+    Perception: {fileID: 11400000, guid: f1968d3787ae17640ae176e47dc1388a, type: 2}
+    Habitat:
+      BiomeWeights: []
+      DensityPerSquareKm: 1.5
+      MaximumSlope: 45
+      FreshWaterMultiplier: 2
+      DryLandMultiplier: 1
+      PreferFreshWater: 1
+    DisplayName: Bear
+    PerTerritory: 0
+    AdditionalSlots: 18000000i
+    HomeRangeMeters: 160
+    WalkSpeedMps: 1.5
+    SwimSpeedMps: 1.2
+    SwimWaterline: 0.7
+    DriftHomeSpeedMps: 0.8
+    RespawnSeconds: 1800
+    MinAltitudeMeters: 2
+    MaxAltitudeMeters: 3000
+    Biomes: 07000000090000000e00000012000000i
+    Faction: 1
+    Scavenger: 0
+    AwarenessMeters: 40
+    VigilanceSeconds: 1
+    MaxHealth: 12
+    HungerSeconds: 1800
+    ThirstSeconds: 900
+    Diet: 7
+    ConsumeUnitsPerSecond: 0.12
+    SprintSeconds: 18
+    AwakeSeconds: 1800
+    SleepRecoverySeconds: 180
+    RestRecoverySeconds: 20
+    WalkRecoverySeconds: 60
+    YieldItemId: Hide
+    YieldCount: 1
+    CruiseAltitudeMeters: 0
+    BodyHeightMeters: 1.65
+    BodyMassKg: 200
+    MaximumPreyMassRatio: 2
+    BodyColor: {r: 0.45, g: 0.33, b: 0.22, a: 1}
+  - Visuals: {fileID: 11400000, guid: e249b710be53f8a4b9d16b7d05f27ed6, type: 2}
+    Audio: {fileID: 11400000, guid: fdcb00555d8b4bdd8bcda272a1fe05f2, type: 2}
+    BirdVisual: 0
+    Perception: {fileID: 11400000, guid: f1968d3787ae17640ae176e47dc1388a, type: 2}
+    Habitat:
+      BiomeWeights: []
+      DensityPerSquareKm: 1
+      MaximumSlope: 40
+      FreshWaterMultiplier: 1
+      DryLandMultiplier: 1
+      PreferFreshWater: 0
+    DisplayName: PolarBear
+    PerTerritory: 0
+    AdditionalSlots: 19000000i
+    HomeRangeMeters: 160
+    WalkSpeedMps: 1.5
+    SwimSpeedMps: 1.2
+    SwimWaterline: 0.7
+    DriftHomeSpeedMps: 0.8
+    RespawnSeconds: 1800
+    MinAltitudeMeters: 2
+    MaxAltitudeMeters: 3000
+    Biomes: 0b000000i
+    Faction: 1
+    Scavenger: 0
+    AwarenessMeters: 40
+    VigilanceSeconds: 1
+    MaxHealth: 14
+    HungerSeconds: 1800
+    ThirstSeconds: 900
+    Diet: 6
+    ConsumeUnitsPerSecond: 0.12
+    SprintSeconds: 18
+    AwakeSeconds: 1800
+    SleepRecoverySeconds: 180
+    RestRecoverySeconds: 20
+    WalkRecoverySeconds: 60
+    YieldItemId: Hide
+    YieldCount: 1
+    CruiseAltitudeMeters: 0
+    BodyHeightMeters: 1.7
+    BodyMassKg: 250
+    MaximumPreyMassRatio: 2
+    BodyColor: {r: 0.45, g: 0.33, b: 0.22, a: 1}
+  - Visuals: {fileID: 11400000, guid: 603ea8628be8c6741a2339468cf0e5fe, type: 2}
+    Audio: {fileID: 11400000, guid: e86f0fa594154e74812cc067ed36af20, type: 2}
+    BirdVisual: 0
+    Perception: {fileID: 11400000, guid: b82a85f37fa421242ac2f113b6d748df, type: 2}
+    Habitat:
+      BiomeWeights: []
+      DensityPerSquareKm: 15
+      MaximumSlope: 60
+      FreshWaterMultiplier: 1.1
+      DryLandMultiplier: 1
+      PreferFreshWater: 1
+    DisplayName: Goat
+    PerTerritory: 0
+    AdditionalSlots: 1a0000001b0000001c000000i
+    HomeRangeMeters: 90
+    WalkSpeedMps: 2
+    SwimSpeedMps: 1.2
+    SwimWaterline: 0.7
+    DriftHomeSpeedMps: 0.8
+    RespawnSeconds: 600
+    MinAltitudeMeters: 2
+    MaxAltitudeMeters: 4500
+    Biomes: 0e0000000b0000000800000005000000i
+    Faction: 0
+    Scavenger: 0
+    AwarenessMeters: 35
+    VigilanceSeconds: 3
+    MaxHealth: 4
+    HungerSeconds: 1800
+    ThirstSeconds: 900
+    Diet: 5
+    ConsumeUnitsPerSecond: 0.12
+    SprintSeconds: 16
+    AwakeSeconds: 1800
+    SleepRecoverySeconds: 180
+    RestRecoverySeconds: 20
+    WalkRecoverySeconds: 60
+    YieldItemId: Hide
+    YieldCount: 1
+    CruiseAltitudeMeters: 0
+    BodyHeightMeters: 1.05
+    BodyMassKg: 35
+    MaximumPreyMassRatio: 0
+    BodyColor: {r: 0.45, g: 0.33, b: 0.22, a: 1}
+  - Visuals: {fileID: 11400000, guid: 742a261da03d8cc448eb839177fd6d6a, type: 2}
+    Audio: {fileID: 11400000, guid: b1cae523bbdb4a69b047c71588f19533, type: 2}
+    BirdVisual: 0
+    Perception: {fileID: 11400000, guid: f1968d3787ae17640ae176e47dc1388a, type: 2}
+    Habitat:
+      BiomeWeights: []
+      DensityPerSquareKm: 12
+      MaximumSlope: 35
+      FreshWaterMultiplier: 1
+      DryLandMultiplier: 1
+      PreferFreshWater: 0
+    DisplayName: Snake
+    PerTerritory: 0
+    AdditionalSlots: 1d0000001e0000001f000000i
+    HomeRangeMeters: 160
+    WalkSpeedMps: 0.6
+    SwimSpeedMps: 1.2
+    SwimWaterline: 0.15
+    DriftHomeSpeedMps: 0.8
+    RespawnSeconds: 1800
+    MinAltitudeMeters: 2
+    MaxAltitudeMeters: 3000
+    Biomes: 020000000500000003000000i
+    Faction: 1
+    Scavenger: 0
+    AwarenessMeters: 40
+    VigilanceSeconds: 1
+    MaxHealth: 1
+    HungerSeconds: 1800
+    ThirstSeconds: 7200
+    Diet: 6
+    ConsumeUnitsPerSecond: 0.12
+    SprintSeconds: 8
+    AwakeSeconds: 1800
+    SleepRecoverySeconds: 180
+    RestRecoverySeconds: 20
+    WalkRecoverySeconds: 60
+    YieldItemId: Hide
+    YieldCount: 1
+    CruiseAltitudeMeters: 0
+    BodyHeightMeters: 0.18
+    BodyMassKg: 3
+    MaximumPreyMassRatio: 1
+    BodyColor: {r: 0.45, g: 0.33, b: 0.22, a: 1}
+  - Visuals: {fileID: 0}
+    Audio: {fileID: 11400000, guid: 5058cf22b6340dd4ab9d5796330f211e, type: 2}
+    BirdVisual: 3
+    Perception: {fileID: 0}
+    Habitat:
+      BiomeWeights: []
+      DensityPerSquareKm: 18
+      MaximumSlope: 35
+      FreshWaterMultiplier: 1.5
+      DryLandMultiplier: 1
+      PreferFreshWater: 1
+    DisplayName: Seagull
+    PerTerritory: 0
+    AdditionalSlots: 2e0000002f000000i
+    HomeRangeMeters: 160
+    WalkSpeedMps: 6
+    SwimSpeedMps: 1.2
+    SwimWaterline: 0.7
+    DriftHomeSpeedMps: 2
+    RespawnSeconds: 600
+    MinAltitudeMeters: 0.2
+    MaxAltitudeMeters: 1500
+    Biomes: 0100000012000000i
+    Faction: 0
+    Scavenger: 1
+    AwarenessMeters: 55
+    VigilanceSeconds: 0
+    MaxHealth: 2
+    HungerSeconds: 2400
+    ThirstSeconds: 1800
+    Diet: 14
+    ConsumeUnitsPerSecond: 0.08
+    SprintSeconds: 60
+    AwakeSeconds: 1800
+    SleepRecoverySeconds: 180
+    RestRecoverySeconds: 20
+    WalkRecoverySeconds: 60
+    YieldItemId: Feathers
+    YieldCount: 1
+    CruiseAltitudeMeters: 12
+    BodyHeightMeters: 0.4
+    BodyMassKg: 1
+    MaximumPreyMassRatio: 0
+    BodyColor: {r: 0.45, g: 0.33, b: 0.22, a: 1}
   ObserverBubbleMeters: 300

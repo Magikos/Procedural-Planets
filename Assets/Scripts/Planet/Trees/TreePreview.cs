@@ -6,7 +6,7 @@ using UnityEngine;
 // per-biome look can be tuned in one glance (and prints the biome->species map). Console-only, registered by
 // Planet. Uses the same Scatter/VertexColorLit + per-species _BaseColor the injected planet trees use, so the
 // gallery reads like the world. All meshes orient to the local surface up.
-[CommandPrefix("tree")]
+[CommandPrefix("tree", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly, Group = "Vegetation and wildlife")]
 public sealed class TreePreview : System.IDisposable
 {
     readonly Transform _planetTransform;
@@ -34,7 +34,7 @@ public sealed class TreePreview : System.IDisposable
         ConsoleRegistry.RegisterInstance(this);
     }
 
-    [ConsoleCommand("gen", "Generate a preview tree of the current species/age in front of the camera. Optional seed.", MonoTargetType.Registry)]
+    [ConsoleCommand("preview.generate", "Generate a preview tree of the current species/age in front of the camera. Optional seed.", MonoTargetType.Registry, Aliases = new[] { "tree.gen" })]
     string GenCmd(int? seed = null)
     {
         var cam = Camera.main;
@@ -60,22 +60,24 @@ public sealed class TreePreview : System.IDisposable
                $"stump {(tree.Stump ? tree.Stump.vertexCount : 0)}v, log {(tree.Log ? tree.Log.vertexCount : 0)}v";
     }
 
-    [ConsoleCommand("age", "Set preview tree age 0..1 (sapling..old), then re-run tree.gen.", MonoTargetType.Registry)]
+    [ConsoleCommand("preview.age", "Set preview tree age 0..1 (sapling..old), then re-run tree.gen.", MonoTargetType.Registry, Aliases = new[] { "tree.age" })]
     string AgeCmd(float age)
     {
         _age = Mathf.Clamp01(age);
         return $"tree age = {_age:F2} (0=sapling, 1=old). Run tree.gen to see it.";
     }
 
-    [ConsoleCommand("species", "Set preview species, then re-run tree.gen. Run with a bad name to list them.", MonoTargetType.Registry)]
-    string SpeciesCmd(string name)
+    [ConsoleCommand("preview.species", "Set preview species, then re-run tree.gen. Omit the name to list choices.", MonoTargetType.Registry, Aliases = new[] { "tree.species" })]
+    string SpeciesCmd([CompletionSource(typeof(TreeSpeciesNamesProvider))] string name = null)
     {
-        if (!TreeDefLibrary.TryParseSpecies(name, out _species))
-            return $"tree: unknown species '{name}'. Options: {string.Join(", ", TreeDefLibrary.AllSpecies)}.";
+        if (string.IsNullOrWhiteSpace(name)) return $"tree species = {_species}. Options: {string.Join(", ", TreeDefLibrary.AllSpecies)}.";
+        if (!TreeDefLibrary.TryParseSpecies(name, out var species))
+            throw new System.ArgumentException($"tree: unknown species '{name}'. Options: {string.Join(", ", TreeDefLibrary.AllSpecies)}.");
+        _species = species;
         return $"tree species = {_species}. Run tree.gen to see it.";
     }
 
-    [ConsoleCommand("gallery", "Grid every generated species x age (sapling..old) near the player + print the biome map. Optional seed.", MonoTargetType.Registry)]
+    [ConsoleCommand("preview.gallery", "Grid every generated species x age (sapling..old) near the player + print the biome map. Optional seed.", MonoTargetType.Registry, Aliases = new[] { "tree.gallery" })]
     string GalleryCmd(int? seed = null)
     {
         var cam = Camera.main;
@@ -248,7 +250,7 @@ public sealed class TreePreview : System.IDisposable
         return found;
     }
 
-    // First clean (non-palette) leaf material in the library, as a fallback for species whose Synty material is a
+    // First clean (non-palette) leaf material in the library, as a fallback for species whose source material is a
     // palette atlas. Asset ref — never destroy.
     Material CleanLeaf()
     {

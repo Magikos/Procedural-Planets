@@ -13,6 +13,7 @@ float SampleClimateMoisture(int face, float2 faceUv)
 BiomeGrassParams GetGrassParams(uint id)
 {
     BiomeGrassParams p;
+    p.Habitat = 0.0;
     p.Shape = 0.0;
     p.Placement = 0.0;
     p.Tint = 0.0;
@@ -23,17 +24,18 @@ BiomeGrassParams GetGrassParams(uint id)
     return p;
 }
 
-BiomeGrassParams BlendGrassParams(float4 idsPacked, float4 weightsPacked, out float density)
+BiomeGrassParams AccumulateGrassParams(float4 idsPacked, float4 weightsPacked, out float totalParamWeight)
 {
     BiomeGrassParams blended;
+    blended.Habitat = 0.0;
     blended.Shape = 0.0;
     blended.Placement = 0.0;
     blended.Tint = 0.0;
     blended.TintDry = 0.0;
     blended.TintLush = 0.0;
 
-    density = 0.0;
-    float totalParamWeight = 0.0;
+    float density = 0.0;
+    totalParamWeight = 0.0;
 
     [unroll]
     for (uint i = 0u; i < 4u; i++)
@@ -48,6 +50,8 @@ BiomeGrassParams BlendGrassParams(float4 idsPacked, float4 weightsPacked, out fl
         float blendPower = max(p.Placement.w, 0.001);
         density += grassDensity * pow(weight, blendPower);
 
+        blended.Habitat.x += p.Habitat.x * weight;
+        blended.Habitat.y += weight;
         float paramWeight = weight * grassDensity;
         if (paramWeight <= 0.0001)
             continue;
@@ -68,7 +72,12 @@ BiomeGrassParams BlendGrassParams(float4 idsPacked, float4 weightsPacked, out fl
     blended.TintDry.a = 1.0;
     blended.TintLush.a = 1.0;
 
-    if (totalParamWeight > 0.0001)
+    return blended;
+}
+
+BiomeGrassParams NormalizeGrassParams(BiomeGrassParams blended, float totalParamWeight)
+{
+    if (totalParamWeight > 0.0)
     {
         float inv = rcp(totalParamWeight);
         blended.Shape.y *= inv;
@@ -80,12 +89,14 @@ BiomeGrassParams BlendGrassParams(float4 idsPacked, float4 weightsPacked, out fl
         blended.TintLush.rgb *= inv;
     }
 
+    blended.Habitat.x /= max(blended.Habitat.y, 0.0001);
     return blended;
 }
 
 BiomeGrassParams LerpGrassParams(BiomeGrassParams a, BiomeGrassParams b, float t)
 {
     BiomeGrassParams result;
+    result.Habitat = lerp(a.Habitat, b.Habitat, t);
     result.Shape = lerp(a.Shape, b.Shape, t);
     result.Placement = lerp(a.Placement, b.Placement, t);
     result.Tint = lerp(a.Tint, b.Tint, t);
@@ -102,18 +113,20 @@ BiomeGrassParams BlendGrassParamCorners(
     float2 f,
     out float density)
 {
-    float cornerDensity;
-    BiomeGrassParams p00 = BlendGrassParams(ids00, weights00, cornerDensity);
-    BiomeGrassParams p10 = BlendGrassParams(ids10, weights10, cornerDensity);
-    BiomeGrassParams p01 = BlendGrassParams(ids01, weights01, cornerDensity);
-    BiomeGrassParams p11 = BlendGrassParams(ids11, weights11, cornerDensity);
+    float w00, w10, w01, w11;
+    BiomeGrassParams p00 = AccumulateGrassParams(ids00, weights00, w00);
+    BiomeGrassParams p10 = AccumulateGrassParams(ids10, weights10, w10);
+    BiomeGrassParams p01 = AccumulateGrassParams(ids01, weights01, w01);
+    BiomeGrassParams p11 = AccumulateGrassParams(ids11, weights11, w11);
 
     BiomeGrassParams px0 = LerpGrassParams(p00, p10, f.x);
     BiomeGrassParams px1 = LerpGrassParams(p01, p11, f.x);
     BiomeGrassParams result = LerpGrassParams(px0, px1, f.y);
     density = saturate(result.Shape.x);
     result.Shape.x = density;
-    return result;
+    // Empty corners reduce coverage, not the properties of the grass that remains.
+    float totalParamWeight = lerp(lerp(w00, w10, f.x), lerp(w01, w11, f.x), f.y);
+    return NormalizeGrassParams(result, totalParamWeight);
 }
 
 #endif

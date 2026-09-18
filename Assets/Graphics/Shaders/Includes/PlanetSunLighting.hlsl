@@ -12,6 +12,32 @@ float3 PlanetSunDirection(float3 sunParams, float3 fallback)
     return PlanetSafeNormalize(sunParams, fallback);
 }
 
+float PlanetSunSpecular(float3 normal, float3 sunDir, float3 viewDir, float smoothness)
+{
+    float3 halfDir = PlanetSafeNormalize(sunDir + viewDir, float3(0.0, 0.0, 0.0));
+    float NoH = saturate(dot(normal, halfDir));
+    float exponent = lerp(2.0, 256.0, smoothness * smoothness);
+    return pow(NoH, exponent) * smoothness * saturate(dot(normal, sunDir));
+}
+
+float PlanetHorizonVisibility(float3 offset, float radius, float3 rayDir)
+{
+    if (radius <= 0.0) return 1.0;
+    float cameraRadius = length(offset);
+    if (cameraRadius <= radius * 1.002)
+    {
+        float3 localNormal = cameraRadius > 0.0001 ? offset / cameraRadius : float3(0.0, 1.0, 0.0);
+        return smoothstep(-0.018, 0.032, dot(localNormal, rayDir));
+    }
+
+    float rayForward = dot(offset, rayDir);
+    if (rayForward >= 0.0) return 1.0;
+    float closestSq = max(dot(offset, offset) - rayForward * rayForward, 0.0);
+    float horizonClearance = sqrt(closestSq) - radius;
+    float horizonSoftness = max(radius * 0.00035, 0.35);
+    return smoothstep(-horizonSoftness, horizonSoftness, horizonClearance);
+}
+
 float PlanetDaylightFromLocalSun(float localSun)
 {
     return smoothstep(-0.08, 0.18, localSun);

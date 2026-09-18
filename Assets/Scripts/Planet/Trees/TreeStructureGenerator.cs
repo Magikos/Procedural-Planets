@@ -10,6 +10,7 @@ public static class TreeStructureGenerator
     {
         var sk = new TreeSkeleton();
         if (def?.Levels == null || def.Levels.Length == 0) return sk;
+        Validate(def);
 
         // Don't perturb the game's global RNG stream.
         Random.State prev = Random.state;
@@ -19,7 +20,7 @@ public static class TreeStructureGenerator
             // Height is set by normalising to def.MaxHeight at the end, so age drives it through this curve
             // instead of a factor baked into the lengths. Superlinear: a sapling is a fraction of the mature
             // tree (age .25 -> ~15%), not a half-size copy of it.
-            float ageHeight = Mathf.Lerp(0.06f, 1f, Mathf.Pow(def.Age, 1.6f));
+            float ageHeight = Mathf.Lerp(0.06f, 1f, Mathf.Pow(Mathf.Clamp01(def.Age), 1.6f));
             float ageGirth = Mathf.Lerp(0.30f, 0.82f, def.Age);
             float ageFreq = Mathf.Lerp(0.35f, 1f, def.Age);
             // Leaves shrink with age too, else a sapling wears adult-size cards and reads as a shrunk old tree
@@ -85,6 +86,7 @@ public static class TreeStructureGenerator
                                 Vector3 ldir = (Vector3.Slerp(fwd, outward, 0.6f) + Vector3.up * 0.25f).normalized;
                                 sk.Sprouts.Add(new TreeSprout
                                 {
+                                    Parent = parent,
                                     Position = pos + outward * girth,
                                     Direction = ldir,
                                     Normal = Vector3.Slerp(outward, Vector3.up, 0.5f).normalized,
@@ -130,6 +132,23 @@ public static class TreeStructureGenerator
         return sk;
     }
 
+    static void Validate(TreeDef def)
+    {
+        if (!float.IsFinite(def.GlobalScale) || def.GlobalScale <= 0f || !float.IsFinite(def.MaxHeight) || def.MaxHeight <= 0f
+            || !float.IsFinite(def.Age) || !float.IsFinite(def.TrunkGirthScale) || def.TrunkGirthScale <= 0f)
+            throw new System.ArgumentException("Tree dimensions must be finite and positive.", nameof(def));
+        for (int i = 0; i < def.Levels.Length; i++)
+        {
+            var rule = def.Levels[i];
+            if (rule == null || (i > 0 && (rule.ParentLevel < 0 || rule.ParentLevel >= i))
+                || !float.IsFinite(rule.Length.x) || !float.IsFinite(rule.Length.y)
+                || rule.Length.x < 0f || rule.Length.y < 0f
+                || !float.IsFinite(rule.Frequency.x) || !float.IsFinite(rule.Frequency.y)
+                || rule.Frequency.x < 0f || rule.Frequency.y < 0f)
+                throw new System.ArgumentException("Tree levels require valid dimensions and an earlier parent.", nameof(def));
+        }
+    }
+
     // The recursion builds the tree in proportion units; this is what puts it in METRES. Scaling the finished
     // skeleton (rather than pre-multiplying the lengths) keeps every authored ratio and the segment density
     // exactly as tuned, and makes def.MaxHeight the single legible size knob.
@@ -145,7 +164,7 @@ public static class TreeStructureGenerator
 
         float f = targetHeight / natural;
         // Leaf clumps grow sublinearly with the tree: a 30 m oak carries finer foliage relative to its crown
-        // than a 10 m one, which is what keeps a big tree from reading as one inflated blob (Synty POLYGON
+        // than a 10 m one, which is what keeps a big tree from reading as one inflated blob (the source library's
         // crowns are many modest masses, not one giant facet). See docs/research/tree-references.
         float leafF = Mathf.Pow(f, 0.65f);
 

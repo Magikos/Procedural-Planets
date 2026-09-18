@@ -8,7 +8,7 @@ using UnityEngine;
 /// Written after "I flew around Grassland and never saw a creature" turned out to be unanswerable from the
 /// console: the residency was working and the animals were there, but nothing could take you to one.
 /// </remarks>
-[CommandPrefix("creature")]
+[CommandPrefix("creature", Group = "Vegetation and wildlife", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public static class CreatureDebugCommands
 {
     [ConsoleCommand("vision", "Predator view: dull the world to blue and ring every creature in a hot colour, through terrain.",

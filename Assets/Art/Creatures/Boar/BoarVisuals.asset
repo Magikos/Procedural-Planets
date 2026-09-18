@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 543245edd60d9cf4c940dd6f81f20347, type: 3}
+  m_Name: BoarVisuals
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::CreatureVisualSettings
+  MalePrefab: {fileID: 7503933614808378882, guid: 447959d8261e46e41abbf8d58ac37d3c, type: 3}
+  FemalePrefab: {fileID: 7503933614808378882, guid: 447959d8261e46e41abbf8d58ac37d3c, type: 3}
+  Idle: {fileID: 7400000, guid: 466a0b17d9da7a7499f97d2ec018e173, type: 3}
+  Walk: {fileID: 7400006, guid: 466a0b17d9da7a7499f97d2ec018e173, type: 3}
+  Run: {fileID: 7400012, guid: 466a0b17d9da7a7499f97d2ec018e173, type: 3}
+  Eat: {fileID: 7400000, guid: a510f65cdba83bb4ebe7dc672f8b4548, type: 2}
+  Attack: {fileID: 7400016, guid: 466a0b17d9da7a7499f97d2ec018e173, type: 3}
+  Death: {fileID: 7400018, guid: 466a0b17d9da7a7499f97d2ec018e173, type: 3}
+  Rest: {fileID: 7400000, guid: 86b295df1c72c9940be9fbafb7f1a5fb, type: 2}
+  Sleep: {fileID: 7400000, guid: 0a227f133cad74540810bdda16c9257c, type: 2}
+  Drink: {fileID: 7400000, guid: 52ae5aa3a79948245b169e1948384996, type: 2}
+  Stalk: {fileID: 7400000, guid: d8125f1609eeb4544b0efff7c52c60b2, type: 2}
+  AttackHitNormalized: 0.12
+  ModelHeightMeters: 0.7515546
+  WalkMetersPerSecond: 1
+  RunMetersPerSecond: 4.5

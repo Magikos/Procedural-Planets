@@ -1,5 +1,6 @@
 #ifndef WATER_VOLUME_DATA_INCLUDED
 #define WATER_VOLUME_DATA_INCLUDED
+float4 _WaterQuality; // reflection steps, shaft steps, ripple capacity, cubemap resolution
 
 // The volume prepass RT layout, in one place. Three shaders touch it - WaterVolumePrepass writes it,
 // WaterVolume and Atmosphere read it - and nothing else can tell you when they disagree, because a
@@ -35,9 +36,43 @@
 // Snell's window, and the same number bends the ray back out through the surface.
 #define WATER_IOR 1.333
 
+float4 _UnderwaterFogColor;
+float _UnderwaterVisibility;
+float _UnderwaterNightScale;
+
+// Suspended particles remove contrast in addition to the water's spectral absorption.
+float3 UnderwaterExtinction()
+{
+    return WATER_ABSORPTION / WATER_ABSORPTION_UNIT_METRES
+        + 1.0 / max(_UnderwaterVisibility, 1.0);
+}
+
+float3 UnderwaterTransmittance(float pathMetres)
+{
+    return exp(-UnderwaterExtinction() * max(pathMetres, 0.0));
+}
+
+// The surface window and submerged receivers must converge to the same column radiance.
+float3 UnderwaterAmbientColor(float3 viewDir, float3 cameraUp, float cameraDepth,
+    float3 sunDir, float sunIntensity, float3 moonDir, float moonIntensity, float nightAmbient)
+{
+    float daylight = smoothstep(-0.08, 0.20, dot(cameraUp, sunDir)) * saturate(sunIntensity / 17.0);
+    float moonlight = saturate(moonIntensity) * saturate(dot(cameraUp, moonDir));
+    float nightLevel = saturate((nightAmbient * 0.10 + 0.015) * _UnderwaterNightScale + moonlight);
+    float viewUp = smoothstep(-0.35, 0.85, dot(viewDir, cameraUp));
+    float depthLight = exp(-max(cameraDepth, 0.0) / max(_UnderwaterVisibility * 3.0, 1.0));
+    return max(_UnderwaterFogColor.rgb, 0.0) * lerp(0.50, 1.65, viewUp)
+        * lerp(nightLevel, 1.0, daylight) * depthLight;
+}
+
 #define WATER_KIND_LAKE   0u
 #define WATER_KIND_OCEAN  1u
-// 2 and 3 are reserved for river and waterfall (W13 / W14).
+#define WATER_KIND_RIVER  2u
+#define WATER_KIND_RIVER_OCEAN 3u
+// Bit 0 selects the receiving body's optics; bit 1 identifies river geometry.
+// This is presentation metadata, not the gameplay body's freshwater classification.
+bool WaterKindIsOcean(uint kind) { return (kind & 1u) != 0u; }
+bool WaterKindIsRiver(uint kind) { return (kind & 2u) != 0u; }
 
 #define WATER_SHORE_QUANT 511.0
 
@@ -78,7 +113,7 @@ float WaterVolumeCoverage(float4 data)
     float shore01;
     uint kind;
     DecodeWaterShoreKind(data.b, shore01, kind);
-    float fadeEnd = kind == WATER_KIND_OCEAN ? _WaterEdgeFadeEndOcean : _WaterEdgeFadeEnd;
+    float fadeEnd = WaterKindIsOcean(kind) ? _WaterEdgeFadeEndOcean : _WaterEdgeFadeEnd;
     return smoothstep(_WaterEdgeFadeStart, fadeEnd, saturate(data.g));
 }
 
@@ -87,7 +122,7 @@ float WaterVolumeLakeMask(float4 data)
     float shore01;
     uint kind;
     DecodeWaterShoreKind(data.b, shore01, kind);
-    return kind == WATER_KIND_LAKE ? 1.0 : 0.0;
+    return WaterKindIsOcean(kind) ? 0.0 : 1.0;
 }
 
 #endif

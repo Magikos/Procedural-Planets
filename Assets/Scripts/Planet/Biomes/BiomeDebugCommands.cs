@@ -4,7 +4,7 @@ using UnityEngine;
 /// Console diagnostics for the biome terrain-material blend. Static (no instance state): the toggles are
 /// shader globals published via <see cref="Shader.SetGlobalFloat"/>.
 /// </summary>
-[CommandPrefix("biome")]
+[CommandPrefix("biome", Group = "World and surface", ReleasePolicy = ConsoleReleasePolicy.DevelopmentOnly)]
 public static class BiomeDebugCommands
 {
     static readonly int _forceSameMaterialId = Shader.PropertyToID(ShaderGlobalIds.BiomeDebugForceSameMaterial);

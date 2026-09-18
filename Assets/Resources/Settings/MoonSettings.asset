@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d4f333ba581b1743a6bbc3564ee0563, type: 3}
+  m_Name: MoonSettings
+  m_EditorClassIdentifier: ProceduralPlanets.Planet::MoonSettings
+  CycleDays: 8
+  StartPhase: 0.5
+  Inclination: 5
+  NodeAngle: 0
+  Distance: 3
+  Diameter: 9.03
+  Brightness: 1
+  Detail: 1
+  Earthshine: 0.01
+  Tint: {r: 1, g: 1, b: 1, a: 1}
+  Material: {fileID: 2100000, guid: 1abd5688a068f6c4daca26b8107dd673, type: 2}

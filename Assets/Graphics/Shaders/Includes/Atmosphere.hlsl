@@ -1,7 +1,7 @@
 #pragma once
 
-// Atmosphere v3 - Rayleigh + Mie scattering with brute-force sun ray marching
-// No LUT. Sea level as density origin.
+// Rayleigh and Mie scattering use a baked sun optical-depth lookup table.
+// Sea level is the density origin.
 
 // --- Uniforms ---
 float3 _SunParams;          // Directional sun (normalized direction)

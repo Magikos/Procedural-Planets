@@ -1,4 +1,5 @@
 using Unity.Burst;
+using Unity.Collections;
 using Unity.Mathematics;
 
 // Blittable per-layer noise data + settings for Burst jobs. Embeds the full simplex
@@ -47,6 +48,27 @@ public struct NoiseFilterData
 [BurstCompile]
 public static class NoiseFilterEvaluator
 {
+    // A layer mask is dimensionless coverage, not signed radius-relative displacement.
+    public static float FirstLayerMask(float elevation, float strength)
+        => strength > 0f ? math.saturate(elevation / strength) : 0f;
+
+    public static float EvaluateLayers(NativeArray<NoiseFilterData> layers, float3 point)
+    {
+        if (layers.Length == 0) return 0f;
+        var first = layers[0];
+        float firstValue = Evaluate(ref first, point);
+        float elevation = first.Enabled != 0 ? firstValue : 0f;
+        float landMask = FirstLayerMask(firstValue, first.Strength);
+        for (int i = 1; i < layers.Length; i++)
+        {
+            var layer = layers[i];
+            if (layer.Enabled == 0) continue;
+            float mask = layer.UseFirstLayerAsMask != 0 ? landMask : 1f;
+            elevation += Evaluate(ref layer, point) * mask;
+        }
+        return elevation;
+    }
+
     public static float Evaluate(ref NoiseFilterData f, float3 point)
     {
         return f.FilterType == 1 ? EvaluateRigid(ref f, point) : EvaluateSimple(ref f, point);

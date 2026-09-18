@@ -4,9 +4,9 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 #include "WaterLevelField.hlsl"
 
-// Both the surface and its prepass must measure the same shore. The broad, filtered shore field gives
-// the height at the bed; the point-sampled wet-cell field cannot describe a sub-cell shoreline.
-float MeasuredWaterColumn(float3 surfaceWS, float2 screenUv, float seaRadius,
+// Both passes measure from the visible surface. The standing-water field does not describe an
+// elevated river, and interpolating it across a mouth creates a false shoreline inside the channel.
+float MeasuredWaterColumn(float3 surfaceWS, float2 screenUv,
     out float sceneValid, out float waterPath)
 {
     float rawDepth = SampleSceneDepth(screenUv);
@@ -26,22 +26,12 @@ float MeasuredWaterColumn(float3 surfaceWS, float2 screenUv, float seaRadius,
     sceneValid *= 1.0 - smoothstep(40.0, 160.0, bedOffset);
     float3 fromCenter = sceneWS - _PlanetCenter;
     float bedRadius = max(length(fromCenter), 0.0001);
-    float column = ShoreSurfaceRadiusAt(fromCenter / bedRadius, seaRadius) - bedRadius;
+    float column = length(surfaceWS - _PlanetCenter) - bedRadius;
 
     // Sky and a dry far bank are not a submerged receiver. Neither can supply transmitted bottom colour.
     if (column > 0.0)
         waterPath = bedOffset;
     return column;
-}
-
-void ClipWaterBackface(float3 surfaceWS, float seaRadius)
-{
-    float3 cameraOffset = _WorldSpaceCameraPos.xyz - _PlanetCenter;
-    float cameraRadius = max(length(cameraOffset), 0.0001);
-    float surfaceRadius = ShoreSurfaceRadiusAt(cameraOffset / cameraRadius, seaRadius);
-    // Use this body's level, including perched lakes. Below it the underside must remain visible.
-    if (cameraRadius - surfaceRadius > 0.5)
-        clip(dot(_WorldSpaceCameraPos.xyz - surfaceWS, surfaceWS - _PlanetCenter));
 }
 
 #endif

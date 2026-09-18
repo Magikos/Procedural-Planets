@@ -83,5 +83,112 @@ namespace ProceduralPlanets.Tests
         { Up = Vector3.up, Forward = Vector3.forward, DeltaTime = .1f, Needs = new ActorNeeds(hunger, thirst) };
         static void Tick(CreatureBrain brain, CreatureSenses senses, int count)
         { for (uint i = 0; i < count; i++) { brain.Observe(senses); brain.Sample(i); } }
+
+        [Test]
+        public void LostThreatCausesBoundedVigilanceBeforeFeeding()
+        {
+            var brain = new CreatureBrain(2, null, CreatureBehaviour.Wander);
+            var senses = Senses(.8d, .1d);
+            senses.VigilanceSeconds = 4f;
+            senses.Food = new CreatureResourceTarget { Available = true, Position = Vector3.forward };
+            senses.HasThreat = true;
+            senses.ThreatPosition = Vector3.forward * 10f;
+            Tick(brain, senses, 1);
+            Assert.AreEqual(CreatureBehaviour.Flee, brain.Behaviour);
+            senses.HasThreat = false;
+            Tick(brain, senses, 3);
+            Assert.AreEqual(CreatureBehaviour.Alert, brain.Behaviour);
+            Assert.AreEqual(CreatureObjective.Vigilance, brain.Objective);
+            Assert.AreEqual(senses.ThreatPosition, brain.VigilancePosition);
+            brain.Observe(senses);
+            Assert.AreEqual(0f, brain.Sample(5).Move.y);
+            Tick(brain, senses, 50);
+            Assert.AreEqual(CreatureBehaviour.Feed, brain.Behaviour);
+        }
+
+        [Test]
+        public void RenewedThreatInterruptsVigilanceAndRestartsQuietTime()
+        {
+            var brain = new CreatureBrain(2, null, CreatureBehaviour.Wander);
+            var senses = Senses(.8d, .1d);
+            senses.VigilanceSeconds = 4f;
+            senses.HasThreat = true;
+            Tick(brain, senses, 1);
+            senses.HasThreat = false;
+            Tick(brain, senses, 30);
+            Assert.AreEqual(CreatureBehaviour.Alert, brain.Behaviour);
+            senses.HasThreat = true;
+            Tick(brain, senses, 1);
+            Assert.AreEqual(CreatureBehaviour.Flee, brain.Behaviour);
+            senses.HasThreat = false;
+            Tick(brain, senses, 20);
+            Assert.AreEqual(CreatureBehaviour.Alert, brain.Behaviour);
+        }
+
+        [TestCase(0f, .8d)]
+        [TestCase(4f, .95d)]
+        public void DisabledVigilanceOrCriticalHungerAllowsFeeding(float seconds, double hunger)
+        {
+            var brain = new CreatureBrain(2, null, CreatureBehaviour.Wander);
+            var senses = Senses(hunger, .1d);
+            senses.VigilanceSeconds = seconds;
+            senses.HasThreat = true;
+            senses.Food = new CreatureResourceTarget { Available = true, Position = Vector3.forward };
+            Tick(brain, senses, 1);
+            senses.HasThreat = false;
+            Tick(brain, senses, 3);
+            Assert.AreEqual(CreatureBehaviour.Feed, brain.Behaviour);
+        }
+
+        [Test]
+        public void RabbitUsesSharedRestSleepAndThreatInterruption()
+        {
+            var rabbit = CreatureLibraryDto.Placeholder.At(1);
+            var brain = new CreatureBrain(7, rabbit, CreatureBehaviour.Wander);
+            var senses = Senses(.2d, .2d);
+            senses.Species = rabbit;
+            senses.CanRest = senses.CanSleep = senses.NeedsSleep = true;
+            Tick(brain, senses, 70);
+            Assert.AreEqual(CreatureBehaviour.Sleep, brain.Behaviour);
+            senses.HasThreat = true;
+            senses.ThreatPosition = Vector3.back * 4f;
+            brain.Observe(senses);
+            Assert.Greater(brain.Sample(71).Move.y, 0f);
+            Assert.AreEqual(CreatureBehaviour.Flee, brain.Behaviour);
+        }
+
+        [Test]
+        public void GroundVigilanceDoesNotStopAnAirborneBird()
+        {
+            var bird = CreatureLibraryDto.Placeholder.At(2);
+            var brain = new CreatureBrain(7, bird, CreatureBehaviour.Wander);
+            var senses = Senses(.2d, .2d);
+            senses.Species = bird;
+            senses.VigilanceSeconds = 4f;
+            senses.HasThreat = true;
+            Tick(brain, senses, 1);
+            senses.HasThreat = false;
+            Tick(brain, senses, 3);
+            Assert.AreEqual(CreatureBehaviour.Wander, brain.Behaviour);
+            brain.Observe(senses);
+            Assert.Greater(brain.Sample(5).Move.y, 0f);
+        }
+
+        [Test]
+        public void BiteTracksDuringWindupAndCommitsAtHitTime()
+        {
+            var brain = new CreatureBrain(2, null, CreatureBehaviour.Attack);
+            var senses = Senses(.8d, .1d);
+            senses.HasPrey = true; senses.PreyPosition = new Vector3(.3f, 0f, 1f);
+            senses.AttackDuration = 1f; senses.AttackHitTime = .4f;
+            brain.Observe(senses);
+            Assert.Greater(brain.Sample(0).Look.x, 0f);
+            senses.DeltaTime = .4f;
+            brain.Observe(senses);
+            var hit = brain.Sample(1);
+            Assert.IsTrue(brain.HitRequested);
+            Assert.AreEqual(0f, hit.Look.x);
+            Assert.AreEqual(0f, hit.Move.y);
+        }
     }
 }

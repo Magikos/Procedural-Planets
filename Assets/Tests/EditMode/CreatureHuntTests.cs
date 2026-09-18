@@ -64,7 +64,7 @@ namespace ProceduralPlanets.Tests
             var senses = Senses(8);
             senses.PreyAlert = true;
             senses.DeltaTime = 1f;
-            for (uint tick = 0; tick < 22; tick++)
+            for (uint tick = 0; tick < 23; tick++)
             {
                 brain.Observe(senses); brain.Sample(tick);
                 Assert.IsFalse(brain.HitRequested);

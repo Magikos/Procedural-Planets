@@ -1,0 +1,11 @@
+{
+    "version": 1,
+    "sourcePart": "SM_Chr_Priest_01",
+    "revision": "v1",
+    "inputHash": "cb3dd4b182f8925570fe258e6dc1341f",
+    "outputHash": "7e1a9b28b67036ba2c74bc693e33160b",
+    "requiresSeparateHeadgear": false,
+    "requiresClothReview": true,
+    "candidatePrefab": "Assets/Art/Characters/Human/Converted/SM_Chr_Priest_01_v1/SM_Chr_Priest_01_Sidekick.prefab",
+    "originalPrefab": "Assets/Art/Characters/Human/Converted/SM_Chr_Priest_01_v1/SM_Chr_Priest_01_Original.prefab"
+}
