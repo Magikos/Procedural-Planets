@@ -56,6 +56,7 @@ Keep entries under ~200 chars; this file loads into every session.
 - [Surface props + lighting](project_surface_props_lighting.md) — `Planet/PropLit` is the reusable planet-aware prop shader for ALL surface objects and NPCs, not URP Lit. Floating scatter is ORIENTATION, not height.
 - [Scatter biome buildout](project_scatter_biome_buildout.md) — All 14 land biomes have scatter. FoliageLit rules and the per-biome slot convention live here.
 - [Lake biome](project_lake_biome.md) — Lakes are their own biome (Lake/LakeShore) vs ocean, flood-filled at generation.
+- [Scatter ShapeSeed trap](project_scatter_shape_seed.md) — A prototype's DisplayName SEEDS its generated geometry. Renaming one regrows a different plant and orphans its impostor card. Pin the old name's FNV-1a in ShapeSeed first.
 - [Custom tree generator](project_tree_generator.md) — Procedural trees with per-instance variety; variants share one impostor atlas. Also: `Scatter/FoliageLit` has NO `_BaseColor` — its leaf tint is `_SeasonColor`.
 
 ## Performance
