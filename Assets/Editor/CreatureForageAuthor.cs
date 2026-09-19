@@ -22,12 +22,12 @@ public static class CreatureForageAuthor
         foreach (var entry in new[]
         {
             ("Grassland Grass Prototype", .35f), ("Steppe Grass Prototype", .35f), ("Savanna Grass Prototype", .35f),
-            ("TEM Forest Grass", .35f), ("TEM Swamp Grass", .35f), ("IceBog Reeds Prototype", .5f),
+            ("Forest Grass", .35f), ("Swamp Grass", .35f), ("IceBog Reeds Prototype", .5f),
             ("Swamp Reeds Prototype", .5f), ("Lake Cattails", .5f), ("Lake Reeds", .5f), ("Lake Wildflowers", .25f),
             ("Forest Wildflowers Prototype", .25f), ("Grassland Wildflowers Prototype", .25f),
-            ("LMHPOLY Forest Flower White", .25f), ("LMHPOLY Taiga Flower Blue", .25f),
-            ("LMHPOLY Steppe Flower White", .25f), ("LMHPOLY Steppe Flower Purple", .25f),
-            ("LMHPOLY Savanna Flower Yellow", .25f), ("LMHPOLY Tropical Flower Pink", .25f),
+            ("Forest Flower White", .25f), ("Taiga Flower Blue", .25f),
+            ("Steppe Flower White", .25f), ("Steppe Flower Purple", .25f),
+            ("Savanna Flower Yellow", .25f), ("Tropical Flower Pink", .25f),
         })
         {
             var prototype = AssetDatabase.LoadAssetAtPath<ScatterPrototype>(Folder + entry.Item1 + ".asset")

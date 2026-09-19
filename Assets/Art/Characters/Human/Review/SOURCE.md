@@ -1,18 +1,18 @@
 # Style review art
 
-- SM_Wep_Sword_01: D:/Unity/Explore Assets/Assets/Synty/PolygonFantasyKingdom/Models/SM_Wep_Sword_01.fbx -> Assets/Art/Characters/Human/Review/SM_Wep_Sword_01.fbx
-- SM_Wep_Shield_01: D:/Unity/Explore Assets/Assets/Synty/PolygonFantasyKingdom/Models/SM_Wep_Shield_01.fbx -> Assets/Art/Characters/Human/Review/SM_Wep_Shield_01.fbx
-- SM_Chr_Attach_Priest_Hat_01: D:/Unity/Explore Assets/Assets/Synty/PolygonFantasyKingdom/Models/SM_Chr_Attach_Priest_Hat_01.fbx -> Assets/Art/Characters/Human/Review/SM_Chr_Attach_Priest_Hat_01.fbx
-- SM_Bld_House_Wall_Door_01: D:/Unity/Explore Assets/Assets/Synty/PolygonFantasyKingdom/Models/SM_Bld_House_Wall_Door_01.fbx -> Assets/Art/Characters/Human/Review/SM_Bld_House_Wall_Door_01.fbx
-- SM_Bld_House_Roof_Thatch_01: D:/Unity/Explore Assets/Assets/Synty/PolygonFantasyKingdom/Models/SM_Bld_House_Roof_Thatch_01.fbx -> Assets/Art/Characters/Human/Review/SM_Bld_House_Roof_Thatch_01.fbx
-- FantasyKingdom_Capes: D:/Unity/Explore Assets/Assets/Synty/PolygonFantasyKingdom/Models/FantasyKingdom_Capes.fbx -> Assets/Art/Characters/Human/Review/FantasyKingdom_Capes.fbx
+- Sword_01: D:/Unity/Explore Assets/Assets/Synty/PolygonFantasyKingdom/Models/SM_Wep_Sword_01.fbx -> Assets/Art/Characters/Human/Review/Sword_01.fbx
+- Shield_01: D:/Unity/Explore Assets/Assets/Synty/PolygonFantasyKingdom/Models/SM_Wep_Shield_01.fbx -> Assets/Art/Characters/Human/Review/Shield_01.fbx
+- PriestHat_01: D:/Unity/Explore Assets/Assets/Synty/PolygonFantasyKingdom/Models/SM_Chr_Attach_Priest_Hat_01.fbx -> Assets/Art/Characters/Human/Review/PriestHat_01.fbx
+- HouseWallDoor_01: D:/Unity/Explore Assets/Assets/Synty/PolygonFantasyKingdom/Models/SM_Bld_House_Wall_Door_01.fbx -> Assets/Art/Characters/Human/Review/HouseWallDoor_01.fbx
+- HouseRoofThatch_01: D:/Unity/Explore Assets/Assets/Synty/PolygonFantasyKingdom/Models/SM_Bld_House_Roof_Thatch_01.fbx -> Assets/Art/Characters/Human/Review/HouseRoofThatch_01.fbx
+- Townsfolk_Capes: D:/Unity/Explore Assets/Assets/Synty/PolygonFantasyKingdom/Models/FantasyKingdom_Capes.fbx -> Assets/Art/Characters/Human/Review/Townsfolk_Capes.fbx
 
 Townsfolk palette: Textures/Alts/PolygonFantasyKingdom_01_A.png. Materials use Planet/PropLit.
 
 Accessory follow-up (2026-09-10):
 
-- `SM_Prop_Bag_Explorer_01.fbx`: copied from the same Fantasy Townsfolk Models directory. Source GUID `9ab6ef79b1e051b4b89872558a64fc35`.
-- `SM_Item_Pouch_01.fbx`: copied from the same directory. Source GUID `08c367eca6f5ad1409c894dd50e43c7c`.
+- `BagExplorer_01.fbx` (source `SM_Prop_Bag_Explorer_01.fbx`): copied from the same Fantasy Townsfolk Models directory. Source GUID `9ab6ef79b1e051b4b89872558a64fc35`.
+- `Pouch_01.fbx` (source `SM_Item_Pouch_01.fbx`): copied from the same directory. Source GUID `08c367eca6f5ad1409c894dd50e43c7c`.
 - Both models use the existing Townsfolk material and atlas. No vendor scripts or additional textures were imported.
 - `Assets/Scenes/Tests/HumanAccessoryReview.unity` attaches the priest hat, explorer backpack, pouch, and mage cape to each comparison actor.
 - Rigid attachments preserve their neutral fit relative to Head, Hips, or UpperChest. They do not run through the clothing surface-fit or blend-shape bake.

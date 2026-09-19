@@ -22,7 +22,7 @@ public static class HumanBookShelfAuthor
             if (wood.HasProperty("_BaseColor")) wood.SetColor("_BaseColor", wood.color);
             AssetDatabase.CreateAsset(wood, woodPath);
         }
-        var model = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Interactions/RoundOne/SM_Prop_Shelf_01.fbx");
+        var model = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Interactions/RoundOne/Shelf_01.fbx");
         foreach (Transform child in shelf.transform.Cast<Transform>().ToArray())
         {
             if (child.name == "Shelf board")

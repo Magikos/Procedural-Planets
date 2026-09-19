@@ -14252,7 +14252,7 @@ GameObject:
   - component: {fileID: 783363381}
   - component: {fileID: 783363380}
   m_Layer: 0
-  m_Name: SM_Bld_House_Roof_Thatch_01
+  m_Name: HouseRoofThatch_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -23512,7 +23512,7 @@ GameObject:
   - component: {fileID: 972341043}
   - component: {fileID: 972341042}
   m_Layer: 0
-  m_Name: SM_Bld_House_Wall_Door_01
+  m_Name: HouseWallDoor_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -24072,7 +24072,7 @@ GameObject:
   - component: {fileID: 1021253596}
   - component: {fileID: 1021253595}
   m_Layer: 0
-  m_Name: SyntyHero(Clone)
+  m_Name: Source Hero(Clone)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -5388,7 +5388,7 @@ GameObject:
   - component: {fileID: 346113106}
   - component: {fileID: 346113105}
   m_Layer: 0
-  m_Name: SM_Item_Bottle_01
+  m_Name: Bottle_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5621,7 +5621,7 @@ GameObject:
   - component: {fileID: 351450628}
   - component: {fileID: 351450627}
   m_Layer: 0
-  m_Name: SM_Prop_Chest_01
+  m_Name: Chest_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7111,7 +7111,7 @@ GameObject:
   - component: {fileID: 553172718}
   - component: {fileID: 553172717}
   m_Layer: 0
-  m_Name: SM_Item_Book_01
+  m_Name: Book_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7891,7 +7891,7 @@ GameObject:
   - component: {fileID: 648622319}
   - component: {fileID: 648622318}
   m_Layer: 0
-  m_Name: SM_Prop_Chair_Wood_01
+  m_Name: ChairWood_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8944,7 +8944,7 @@ GameObject:
   - component: {fileID: 802608428}
   - component: {fileID: 802608427}
   m_Layer: 0
-  m_Name: SM_Item_Book_01
+  m_Name: Book_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -9818,7 +9818,7 @@ GameObject:
   - component: {fileID: 911684979}
   - component: {fileID: 911684978}
   m_Layer: 0
-  m_Name: SM_Item_Key_01
+  m_Name: Key_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -10894,7 +10894,7 @@ GameObject:
   - component: {fileID: 1016705519}
   - component: {fileID: 1016705518}
   m_Layer: 0
-  m_Name: SM_Item_Book_01
+  m_Name: Book_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -12064,7 +12064,7 @@ GameObject:
   - component: {fileID: 1161686197}
   - component: {fileID: 1161686196}
   m_Layer: 0
-  m_Name: SM_Item_Mug_Tankard_01
+  m_Name: MugTankard_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -18183,7 +18183,7 @@ GameObject:
   - component: {fileID: 1560873049}
   - component: {fileID: 1560873048}
   m_Layer: 0
-  m_Name: SM_Bld_Castle_Door_Single_01
+  m_Name: CastleDoorSingle_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -19074,7 +19074,7 @@ GameObject:
   - component: {fileID: 1624471920}
   - component: {fileID: 1624471919}
   m_Layer: 0
-  m_Name: SM_Prop_Crate_Wood_01
+  m_Name: CrateWood_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -21933,7 +21933,7 @@ GameObject:
   - component: {fileID: 2000255710}
   - component: {fileID: 2000255709}
   m_Layer: 0
-  m_Name: SM_Prop_Table_Wood_04
+  m_Name: TableWood_04
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -22076,7 +22076,7 @@ GameObject:
   - component: {fileID: 2001407634}
   - component: {fileID: 2001407633}
   m_Layer: 0
-  m_Name: SM_Item_Book_01
+  m_Name: Book_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -22469,7 +22469,7 @@ GameObject:
   - component: {fileID: 2034919922}
   - component: {fileID: 2034919921}
   m_Layer: 0
-  m_Name: SM_Item_Book_01
+  m_Name: Book_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

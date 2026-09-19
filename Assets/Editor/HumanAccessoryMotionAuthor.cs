@@ -158,7 +158,7 @@ public static class HumanAccessoryMotionAuthor
 
     static void RefineRobe(Animator actor)
     {
-        var reference = AssetDatabase.LoadAssetAtPath<GameObject>(HumanTownsfolkReviewAuthor.Folder + "/SM_Chr_Monk_01_Original.prefab")
+        var reference = AssetDatabase.LoadAssetAtPath<GameObject>(HumanTownsfolkReviewAuthor.Folder + "/Monk_01_Original.prefab")
             .GetComponentsInChildren<SkinnedMeshRenderer>().Single();
         var source = reference.sharedMesh;
         var skin = actor.GetComponentsInChildren<SkinnedMeshRenderer>().Single(r => r.name == "SM_Chr_Monk_01" || r.name == "SOURCE / SM_Chr_Monk_01");

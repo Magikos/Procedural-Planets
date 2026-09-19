@@ -73,7 +73,7 @@ public static class HumanoidRunningJumpAuthor
         var entry = library.Entries.Single(item => item.Id == "humanoid.jump.running");
         var landing = entry.Phases.Single(phase => phase.Name == "Landing");
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-            "Assets/Art/Characters/Human/Converted/SM_Chr_Rider_01_v2/SM_Chr_Rider_01_Fit.prefab");
+            "Assets/Art/Characters/Human/Converted/Rider_01_v2/Rider_01_Fit.prefab");
         var run = AssetDatabase.LoadAllAssetsAtPath(Folder + "Animations/Run Forward.fbx").OfType<AnimationClip>()
             .First(clip => !clip.name.StartsWith("__preview__", StringComparison.Ordinal));
         using var jumpReference = new AuthoredAnimationReference(prefab, landing.Clip, false);

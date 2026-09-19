@@ -1,5 +1,14 @@
 # Motion phase and asset research — 2026-09-09
 
+> Renamed since this was written (2026-09-18). The names below are the originals
+> and stay as the record of what was done on the date in the filename. Current
+> equivalents: `Assets/Art/Characters/SyntyHero/` is `Assets/Art/Characters/Human/`;
+> `Sidekick*` types, scenes and menu paths are `Human*`; a baked `*_Sidekick.prefab`
+> is `*_Fit.prefab`; our copies of source art drop the vendor prefix, so
+> `SM_Chr_Rider_01.fbx` is `Rider_01.fbx` and `SM_Prop_Chest_01.fbx` is `Chest_01.fbx`.
+> A bare `SM_*` or `SK_HUMN_*` still names a sub-mesh inside a source FBX and is
+> unchanged. "Synty Sidekick Characters" is a pack name and is also unchanged.
+
 Scope: read-only source and asset inspection on the dirty working tree above `d1e0f62`. No Unity control, import, source edits, or visual acceptance occurred.
 
 ## 1. Highest payoff: replace elapsed jump sampling with physical phase selection

@@ -11,8 +11,15 @@ public static class HumanStyleReviewAuthor
     public const string ScenePath = "Assets/Scenes/Tests/HumanStyleReview.unity";
     const string Folder = HumanTrialAuthor.Folder + "/Review";
     const string SourcePack = "D:/Unity/Explore Assets/Assets/Synty/PolygonFantasyKingdom/";
-    static readonly string[] Models = { "SM_Wep_Sword_01", "SM_Wep_Shield_01", "SM_Chr_Attach_Priest_Hat_01",
-        "SM_Bld_House_Wall_Door_01", "SM_Bld_House_Roof_Thatch_01", "Townsfolk_Capes" };
+    // Left: the filename inside the source pack. Right: what we call our copy.
+    static readonly (string Source, string Ours)[] Models =
+    {
+        ("SM_Wep_Sword_01", "Sword_01"), ("SM_Wep_Shield_01", "Shield_01"),
+        ("SM_Chr_Attach_Priest_Hat_01", "PriestHat_01"),
+        ("SM_Bld_House_Wall_Door_01", "HouseWallDoor_01"),
+        ("SM_Bld_House_Roof_Thatch_01", "HouseRoofThatch_01"),
+        ("FantasyKingdom_Capes", "Townsfolk_Capes"),
+    };
 
     [MenuItem("Tools/Actors/Human/Create Style Review Scene")]
     public static void Build()
@@ -23,7 +30,9 @@ public static class HumanStyleReviewAuthor
         HumanTrialAuthor.Import();
         Directory.CreateDirectory(Folder);
         var paths = new Dictionary<string, string>();
-        foreach (string model in Models) paths[model] = HumanTrialAuthor.CopyArt(SourcePack + "Models/" + model + ".fbx", Folder + "/" + model + ".fbx");
+        foreach (var model in Models)
+            paths[model.Ours] = HumanTrialAuthor.CopyArt(SourcePack + "Models/" + model.Source + ".fbx",
+                Folder + "/" + model.Ours + ".fbx");
         string atlas = HumanTrialAuthor.CopyArt(SourcePack + "Textures/Alts/PolygonFantasyKingdom_01_A.png", Folder + "/TownsfolkAtlas.png");
         AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
         foreach (string path in paths.Values)
@@ -65,9 +74,9 @@ public static class HumanStyleReviewAuthor
             obj.transform.localPosition = offset; obj.transform.localRotation = Quaternion.Euler(rotation);
             attachments.Add(obj); obj.SetActive(false);
         }
-        Attach(Models[0], HumanBodyBones.RightHand, Vector3.zero, Vector3.zero, "Sword / placement trial");
-        Attach(Models[1], HumanBodyBones.LeftHand, Vector3.zero, Vector3.zero, "Shield / placement trial");
-        Attach(Models[2], HumanBodyBones.Head, Vector3.zero, Vector3.zero, "Priest hat / shape trial");
+        Attach(Models[0].Ours, HumanBodyBones.RightHand, Vector3.zero, Vector3.zero, "Sword / placement trial");
+        Attach(Models[1].Ours, HumanBodyBones.LeftHand, Vector3.zero, Vector3.zero, "Shield / placement trial");
+        Attach(Models[2].Ours, HumanBodyBones.Head, Vector3.zero, Vector3.zero, "Priest hat / shape trial");
 
         var cape = Model("Townsfolk_Capes", new Vector3(-4f, 1.7f, 2f));
         cape.name = "Legacy capes / original rig reference";
@@ -88,8 +97,8 @@ public static class HumanStyleReviewAuthor
             host.AnimalIdles[i] = visuals != null ? visuals.Idle : throw new InvalidOperationException("Missing animal visual settings.");
             animator.runtimeAnimatorController = null; animator.applyRootMotion = false;
         }
-        var door = Model("SM_Bld_House_Wall_Door_01", new Vector3(0f, 0f, 4f));
-        var roof = Model("SM_Bld_House_Roof_Thatch_01", new Vector3(6f, 1.5f, 4f));
+        var door = Model("HouseWallDoor_01", new Vector3(0f, 0f, 4f));
+        var roof = Model("HouseRoofThatch_01", new Vector3(6f, 1.5f, 4f));
         host.Accessories = attachments.ToArray();
         Label("FITTED", new Vector3(-1.4f, 2.4f, 0f)); Label("SOURCE", new Vector3(1.4f, 2.4f, 0f));
         Label("PROJECT DEER", new Vector3(-3.5f, 1.9f, -1.5f), .055f); Label("PROJECT WOLF", new Vector3(3.5f, 1.6f, -1.5f), .055f);

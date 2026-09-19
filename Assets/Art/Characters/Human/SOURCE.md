@@ -24,8 +24,9 @@ onto this skeleton. Each carries its own `SOURCE.md`.
 The humanoid animation clips this kit retargets live in `../Animations`. The
 clothing and baseline body live in `../Baseline`.
 
-Open: the vendor vocabulary is gone from every filename and serialized name here,
-but two mesh-name prefixes remain. `SK_HUMN_BASE_01_*` under `BaseParts` is a
-plain rename. `SM_Chr_*` is not: it is also the sub-mesh name inside the source
-FBX, and the converter derives our output filenames from it at bake time, so
-retiring it needs a source-part to role-name map in the converter first.
+The vendor vocabulary is gone from every filename and serialized name here. Two
+source-side names remain and are not ours to change. `SK_HUMN_BASE_01_*` is the
+sub-mesh name inside each `BaseParts` FBX. `SM_Chr_*` is both the sub-mesh name
+inside a source character FBX and the key the converter looks a part up by;
+`HumanOutfitConverter.RoleName` maps that key to the name we write, so nothing we
+generate carries the prefix.

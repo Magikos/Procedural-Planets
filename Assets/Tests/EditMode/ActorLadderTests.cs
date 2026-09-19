@@ -98,7 +98,7 @@ namespace ProceduralPlanets.Tests
             const string folder = "Assets/Art/Characters/";
             // These motion assets are baked for the review scene's converted rider.
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Art/Characters/Human/Converted/SM_Chr_Rider_01_v2/SM_Chr_Rider_01_Fit.prefab");
+                "Assets/Art/Characters/Human/Converted/Rider_01_v2/Rider_01_Fit.prefab");
             var original = AssetDatabase.LoadAllAssetsAtPath(folder + "Animations/Ladder/Ladder Final Step.FBX")
                 .OfType<AnimationClip>().First(clip => !clip.name.StartsWith("__", StringComparison.Ordinal));
             var adapted = AssetDatabase.LoadAssetAtPath<AnimationClip>(folder + "Animations/Ladder/Ladder Final Step.anim");
@@ -501,7 +501,7 @@ namespace ProceduralPlanets.Tests
             Assert.IsNotNull(target.TopExitMotion); Assert.IsNotNull(target.TopMountMotion);
             Assert.IsNotNull(target.BottomMountMotion);
             actor.CharacterPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Art/Characters/Human/Converted/SM_Chr_Rider_01_v2/SM_Chr_Rider_01_Fit.prefab");
+                "Assets/Art/Characters/Human/Converted/Rider_01_v2/Rider_01_Fit.prefab");
             actor.Idle = Load("HumanoidIdle"); actor.Walk = Load("HumanoidWalk"); actor.Run = Load("HumanoidRun");
             actor.LadderPerformances = AssetDatabase.LoadAssetAtPath<ActorAnimationPerformanceLibrary>(folder + "Motion/Ladder Performances.asset");
             Assert.IsNotNull(actor.LadderPerformances, "Author the ladder review library before its production regression.");

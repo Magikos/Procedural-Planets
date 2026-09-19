@@ -13,10 +13,10 @@ namespace ProceduralPlanets.Tests
     [TestFixture("Assets/Art/Characters/Human/BodyReview/SourcePartsBody.prefab", 22)]
     [TestFixture("Assets/Art/Characters/Human/BodyReview/FullBody/FullSourceBody.prefab", 20)]
     [TestFixture("Assets/Art/Characters/Human/BodyReview/Outfit02/Outfit02Body.prefab", 20)]
-    [TestFixture("Assets/Art/Characters/Human/BodyReview/Townsfolk/SM_Chr_Monk_01_Fit.prefab", 11)]
-    [TestFixture("Assets/Art/Characters/Human/BodyReview/Townsfolk/SM_Chr_Monk_01_Original.prefab", 1)]
-    [TestFixture("Assets/Art/Characters/Human/BodyReview/Townsfolk/SM_Chr_Peasant_Male_01_Fit.prefab", 11)]
-    [TestFixture("Assets/Art/Characters/Human/BodyReview/Townsfolk/SM_Chr_Peasant_Male_01_Original.prefab", 1)]
+    [TestFixture("Assets/Art/Characters/Human/BodyReview/Townsfolk/Monk_01_Fit.prefab", 11)]
+    [TestFixture("Assets/Art/Characters/Human/BodyReview/Townsfolk/Monk_01_Original.prefab", 1)]
+    [TestFixture("Assets/Art/Characters/Human/BodyReview/Townsfolk/Peasant_Male_01_Fit.prefab", 11)]
+    [TestFixture("Assets/Art/Characters/Human/BodyReview/Townsfolk/Peasant_Male_01_Original.prefab", 1)]
     public sealed class HumanoidAnimationTests
     {
         const string Folder = "Assets/Art/Characters";

@@ -186,7 +186,7 @@ GameObject:
   - component: {fileID: 158223544}
   - component: {fileID: 158223543}
   m_Layer: 0
-  m_Name: '[62] TEM Grassland FlowerBush'
+  m_Name: '[62] Grassland FlowerBush'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -410,7 +410,7 @@ GameObject:
   - component: {fileID: 260134442}
   - component: {fileID: 260134441}
   m_Layer: 0
-  m_Name: '[55] LMHPOLY Taiga Flower Blue'
+  m_Name: '[55] Taiga Flower Blue'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -465,7 +465,7 @@ GameObject:
   - component: {fileID: 315318986}
   - component: {fileID: 315318985}
   m_Layer: 0
-  m_Name: '[48] LMHPOLY Grassland Flower Red'
+  m_Name: '[48] Grassland Flower Red'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -944,7 +944,7 @@ GameObject:
   - component: {fileID: 544025558}
   - component: {fileID: 544025557}
   m_Layer: 0
-  m_Name: '[51] LMHPOLY Steppe Flower White'
+  m_Name: '[51] Steppe Flower White'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1167,7 +1167,7 @@ GameObject:
   - component: {fileID: 626526531}
   - component: {fileID: 626526530}
   m_Layer: 0
-  m_Name: '[52] LMHPOLY Steppe Flower Purple'
+  m_Name: '[52] Steppe Flower Purple'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1558,7 +1558,7 @@ GameObject:
   - component: {fileID: 741145648}
   - component: {fileID: 741145647}
   m_Layer: 0
-  m_Name: '[59] LMHPOLY Beach Reed'
+  m_Name: '[59] Beach Reed'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1614,7 +1614,7 @@ GameObject:
   - component: {fileID: 750848087}
   - component: {fileID: 750848086}
   m_Layer: 0
-  m_Name: '[60] TEM Forest Grass'
+  m_Name: '[60] Forest Grass'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1669,7 +1669,7 @@ GameObject:
   - component: {fileID: 791879456}
   - component: {fileID: 791879455}
   m_Layer: 0
-  m_Name: '[61] TEM Swamp Grass'
+  m_Name: '[61] Swamp Grass'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2052,7 +2052,7 @@ GameObject:
   - component: {fileID: 941455937}
   - component: {fileID: 941455936}
   m_Layer: 0
-  m_Name: '[54] LMHPOLY Forest Flower White'
+  m_Name: '[54] Forest Flower White'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2777,7 +2777,7 @@ GameObject:
   - component: {fileID: 1141317388}
   - component: {fileID: 1141317387}
   m_Layer: 0
-  m_Name: '[56] LMHPOLY Forest Mushroom Red'
+  m_Name: '[56] Forest Mushroom Red'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3391,7 +3391,7 @@ GameObject:
   - component: {fileID: 1465650915}
   - component: {fileID: 1465650914}
   m_Layer: 0
-  m_Name: '[58] LMHPOLY Swamp Mushroom'
+  m_Name: '[58] Swamp Mushroom'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3558,7 +3558,7 @@ GameObject:
   - component: {fileID: 1507570241}
   - component: {fileID: 1507570240}
   m_Layer: 0
-  m_Name: '[53] LMHPOLY Tropical Flower Pink'
+  m_Name: '[53] Tropical Flower Pink'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3613,7 +3613,7 @@ GameObject:
   - component: {fileID: 1538382032}
   - component: {fileID: 1538382031}
   m_Layer: 0
-  m_Name: '[47] LMHPOLY Grassland Flower Blue'
+  m_Name: '[47] Grassland Flower Blue'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3893,7 +3893,7 @@ GameObject:
   - component: {fileID: 1612718333}
   - component: {fileID: 1612718332}
   m_Layer: 0
-  m_Name: '[57] LMHPOLY Taiga Mushroom'
+  m_Name: '[57] Taiga Mushroom'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4353,7 +4353,7 @@ GameObject:
   - component: {fileID: 1945264486}
   - component: {fileID: 1945264485}
   m_Layer: 0
-  m_Name: '[50] LMHPOLY Savanna Flower Yellow'
+  m_Name: '[50] Savanna Flower Yellow'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4408,7 +4408,7 @@ GameObject:
   - component: {fileID: 2000449393}
   - component: {fileID: 2000449392}
   m_Layer: 0
-  m_Name: '[49] LMHPOLY Grassland Flower Yellow'
+  m_Name: '[49] Grassland Flower Yellow'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4463,7 +4463,7 @@ GameObject:
   - component: {fileID: 2010051697}
   - component: {fileID: 2010051696}
   m_Layer: 0
-  m_Name: '[63] TEM Forest FlowerBush'
+  m_Name: '[63] Forest FlowerBush'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

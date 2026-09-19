@@ -26,7 +26,7 @@ It supplies the replaceable `Collect from chest` phase between inspection and cl
 Reusable sequence assets live in `../Definitions`.
 The control fixture adds `Activate_Wall_LargeLever_Pull.FBX` and `Activate_Wall_LargeLever_PushUp.FBX` from `Simple_Activations/Animations`.
 Source GUIDs remain intact. Both use their included Humanoid skeleton, disable material import, and lock horizontal root motion and root rotation.
-The equipment rack reuses the tabletop inspection clips and the already imported `Assets/Art/Characters/Human/Review/SM_Wep_Sword_01.fbx` model.
+The equipment rack reuses the tabletop inspection clips and the already imported `Assets/Art/Characters/Human/Review/Sword_01.fbx` model.
 The lever and rack supports are review geometry built from Unity primitives.
 The push-button fixture adds `Activate_Wall_ButtonPush.FBX` from the same Simple Activations folder. Its source GUID is preserved; it uses its own Humanoid avatar, disables materials, and locks horizontal root motion and root rotation.
 The wheel fixture adds `Activate_Wall_WheelValve_Open.FBX` and `Activate_Wall_WheelValve_Close.FBX` with the same importer policy and preserved source GUIDs. The quarter-turn review wheel uses primitive rim segments and spokes; the character clips remain artist-authored.
@@ -63,7 +63,7 @@ Imported `Survival_TreeChop_Start.FBX`, `Survival_TreeChop_Horizontal_Loop.FBX`,
 
 `Tree Prepare axe.anim`, `Tree Chop.anim`, and `Tree Finish chopping.anim` are independent editable copies. Their durations are 1.6667, 2, and 1.3333 seconds. No per-animation generator is required. The `Chop tree` definition owns impact timing and repeated-work behavior.
 
-`../RoundOne/Axe_Mesh.FBX` comes from the same pack under `Models/Axe/`; the fixture uses the project material `HarvestWood.mat`. No vendor scripts or controllers were imported.
+`../RoundOne/Axe_01.fbx`, the pack's `Axe_Mesh.FBX`, comes from the same pack under `Models/Axe/`; the fixture uses the project material `HarvestWood.mat`. No vendor scripts or controllers were imported.
 
 ### Chopping correction — 2026-09-15
 
@@ -75,7 +75,7 @@ The demo attaches the axe to `hand_l`, not `hand_r`. HeldToolGrip stores primary
 
 Imported Survival_PickAxe_LowHeight.FBX and Survival_PickAxe_MediumHeight.FBX from D:/Unity/Explore Assets/Assets/Survival_Animations/Animations with original GUIDs. Both use the existing Chopping Source Avatar.fbx (vendor T_pose). Mine LowHeight.anim and Mine MediumHeight.anim are editable extracted clips at their native 2.5-second duration; no authoring generator owns them. Only LowHeight is wired and rendered.
 
-PickAxe_Mesh.FBX comes from the same pack's Models/Axe folder. The review uses its MeshFilter.sharedMesh directly, excluding the exported CATRig/Circle hierarchy. The demo identifies the left hand as the driving hand. The shared HeldToolGrip supplies physical palm and supporting-handle contacts.
+`../RoundOne/PickAxe_01.fbx`, the pack's PickAxe_Mesh.FBX, comes from the same pack's Models/Axe folder. The review uses its MeshFilter.sharedMesh directly, excluding the exported CATRig/Circle hierarchy. The demo identifies the left hand as the driving hand. The shared HeldToolGrip supplies physical palm and supporting-handle contacts.
 
 Mining currently reuses editable Tree Prepare axe.anim and Tree Finish chopping.anim for entry and recovery. No source FBX bytes were edited.
 

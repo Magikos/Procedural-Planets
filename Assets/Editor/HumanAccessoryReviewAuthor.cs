@@ -18,14 +18,14 @@ public static class HumanAccessoryReviewAuthor
             throw new InvalidOperationException("Stop Play mode and preserve scene edits before creating the accessory review.");
         if (File.Exists(ScenePath)) throw new IOException("Accessory review already exists. Preserve fitted scene changes.");
         var material = AssetDatabase.LoadAssetAtPath<Material>(Art + "Townsfolk.mat");
-        var models = new[] { "SM_Chr_Attach_Priest_Hat_01", "SM_Prop_Bag_Explorer_01", "SM_Item_Pouch_01", "Townsfolk_Capes" }
+        var models = new[] { "PriestHat_01", "BagExplorer_01", "Pouch_01", "Townsfolk_Capes" }
             .ToDictionary(n => n, n => AssetDatabase.LoadAssetAtPath<GameObject>(Art + n + ".fbx"));
         if (material == null || models.Values.Any(p => p == null)) throw new InvalidOperationException("Missing accessory review art.");
 
         var scene = EditorSceneManager.OpenScene(HumanTownsfolkReviewAuthor.ScenePath);
         var host = UnityEngine.Object.FindAnyObjectByType<HumanStyleReview>();
         var attachments = new List<GameObject>();
-        var paths = new[] { "SM_Chr_Monk_01_Original", "SM_Chr_Monk_01_Fit", "SM_Chr_Peasant_Male_01_Fit", "SM_Chr_Peasant_Male_01_Original" };
+        var paths = new[] { "Monk_01_Original", "Monk_01_Fit", "Peasant_Male_01_Fit", "Peasant_Male_01_Original" };
         foreach (var old in host.Accessories) if (old != null) UnityEngine.Object.DestroyImmediate(old);
         for (int i = 0; i < paths.Length; i++)
         {
@@ -61,9 +61,9 @@ public static class HumanAccessoryReviewAuthor
             }
 
             var head = actor.transform.InverseTransformPoint(animator.GetBoneTransform(HumanBodyBones.Head).position);
-            Attach("SM_Chr_Attach_Priest_Hat_01", "Priest hat", HumanBodyBones.Head, head + new Vector3(0, .12f, 0), true);
-            Attach("SM_Prop_Bag_Explorer_01", "Explorer backpack", HumanBodyBones.UpperChest, new Vector3(-.06f, .97f, -.22f), i >= 2);
-            Attach("SM_Item_Pouch_01", "Belt pouch", HumanBodyBones.Hips, new Vector3(.24f, .8f, .06f), true);
+            Attach("PriestHat_01", "Priest hat", HumanBodyBones.Head, head + new Vector3(0, .12f, 0), true);
+            Attach("BagExplorer_01", "Explorer backpack", HumanBodyBones.UpperChest, new Vector3(-.06f, .97f, -.22f), i >= 2);
+            Attach("Pouch_01", "Belt pouch", HumanBodyBones.Hips, new Vector3(.24f, .8f, .06f), true);
             Attach("Townsfolk_Capes", "Mage cape (no cloth simulation)", HumanBodyBones.UpperChest, new Vector3(0, 1.36f, -.1f), i < 2);
         }
         host.Accessories = attachments.ToArray();
@@ -86,7 +86,7 @@ public static class HumanAccessoryReviewAuthor
         // Keep the back cameras clear while retaining building samples in the style comparison.
         foreach (var root in scene.GetRootGameObjects())
         {
-            if (root.name.StartsWith("SM_Bld_")) root.transform.position += Vector3.right * 8;
+            if (root.name.StartsWith("House")) root.transform.position += Vector3.right * 8;
             if (root.name == "Neutral backdrop") root.transform.position += Vector3.forward * 7;
         }
         host.SelectView(0);

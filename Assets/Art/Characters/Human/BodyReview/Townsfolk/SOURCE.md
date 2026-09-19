@@ -8,7 +8,7 @@ The FBX copy matches the source hash. Its original GUID had no collision in this
 
 The local importer enables readable meshes and Humanoid animation, preserves transforms, and disables material and clip imports. Its hips mapping corrects the source metadata from `Root` to `Hips`. The source file and source metadata remain unchanged.
 
-The trial selects `SM_Chr_Monk_01` and `SM_Chr_Peasant_Male_01`. Each original prefab retains one complete source renderer. Each fitted prefab retains ten native head/facial renderers and one derived body renderer. The monk mesh has 4,264 vertices; the peasant mesh has 4,143 vertices. Each stores `SkeletonFit` plus four generated body shapes.
+The trial selects the source sub-meshes `SM_Chr_Monk_01` and `SM_Chr_Peasant_Male_01`, saved here as `Monk_01_*` and `Peasant_Male_01_*`. Each original prefab retains one complete source renderer. Each fitted prefab retains ten native head/facial renderers and one derived body renderer. The monk mesh has 4,264 vertices; the peasant mesh has 4,143 vertices. Each stores `SkeletonFit` plus four generated body shapes.
 
 These are combined characters, not modular outfits. `HumanTownsfolkReviewAuthor.RemoveHead` excludes triangles that touch a vertex with more than 50% combined Head/Eyes/Eyebrows/Jaw weight. It retains vertex indices for correspondence with the source. Unreferenced head vertices remain in the derived mesh but do not render. This boundary is reviewed for these two characters, not a universal head separator.
 

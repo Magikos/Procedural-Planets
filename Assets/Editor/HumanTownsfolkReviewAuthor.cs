@@ -83,7 +83,7 @@ public static class HumanTownsfolkReviewAuthor
             var animator = source.GetComponent<Animator>();
             animator.avatar = AssetDatabase.LoadAllAssetsAtPath(ModelPath).OfType<Avatar>().Single(a => a.isValid && a.isHuman);
             animator.applyRootMotion = false; animator.runtimeAnimatorController = null; animator.fireEvents = false;
-            PrefabUtility.SaveAsPrefabAsset(source, outputFolder + "/" + part + "_Original.prefab");
+            PrefabUtility.SaveAsPrefabAsset(source, outputFolder + "/" + HumanOutfitConverter.RoleName(part) + "_Original.prefab");
             bodyMesh = RemoveHead(skin, preserveMageHood); skin.sharedMesh = bodyMesh;
 
             target = (GameObject)UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(HumanFullBodyReviewAuthor.PrefabPath), scene);
@@ -97,7 +97,7 @@ public static class HumanTownsfolkReviewAuthor
             HumanBodyReviewAuthor.ConvertPart(skin, target.transform, bones, map, outputFolder);
             HumanBodyShapeAuthor.BakeParts(target, true, 1);
             HumanSkinAuthor.Apply(target, source);
-            PrefabUtility.SaveAsPrefabAsset(target, outputFolder + "/" + part + "_Fit.prefab");
+            PrefabUtility.SaveAsPrefabAsset(target, outputFolder + "/" + HumanOutfitConverter.RoleName(part) + "_Fit.prefab");
         }
         finally
         {

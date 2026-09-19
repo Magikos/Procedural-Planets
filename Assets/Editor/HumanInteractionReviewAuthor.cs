@@ -87,14 +87,14 @@ public static class HumanInteractionReviewAuthor
             text.anchor = TextAnchor.MiddleCenter; text.transform.position = position;
         }
 
-        var chest = Prop("SM_Prop_Chest_01", "01 / Chest", new Vector3(-3.5f, 0, 2), 1.3f, new Vector3(0, 180, 0));
+        var chest = Prop("Chest_01", "01 / Chest", new Vector3(-3.5f, 0, 2), 1.3f, new Vector3(0, 180, 0));
         var lid = chest.GetComponentsInChildren<Transform>().Single(t => t.name == "SM_Prop_Chest_01_Lid");
         var latch = chest.GetComponentsInChildren<Transform>().Single(t => t.name == "SM_Prop_Chest_01_Latch");
         Target("Chest", "Low latch reach. Preview the lid and inspect hand clearance.", latch, latch.position,
             new Vector3(-3.7f, 0, .95f), lid, new Vector3(-105, 0, 0));
         Label("CHEST / LOW REACH", new Vector3(-3.5f, 1.5f, 2.1f));
 
-        var door = Prop("SM_Bld_Castle_Door_Single_01", "02 / Door", new Vector3(0, 0, 3));
+        var door = Prop("CastleDoorSingle_01", "02 / Door", new Vector3(0, 0, 3));
         var doorHinge = door.transform.GetChild(0);
         Target("Door", "Standing handle reach. Preview the door swing from both sides.", doorHinge,
             new Vector3(-.32f, 1.18f, 2.83f), new Vector3(-.52f, 0, 2.43f), doorHinge, new Vector3(0, -90, 0));
@@ -106,35 +106,35 @@ public static class HumanInteractionReviewAuthor
         }
         Label("DOOR / STANDING REACH", new Vector3(0, 2.85f, 3));
 
-        var table = Prop("SM_Prop_Table_Wood_04", "03 / Table", new Vector3(3.4f, 0, 2), 1f, new Vector3(0, 90, 0));
+        var table = Prop("TableWood_04", "03 / Table", new Vector3(3.4f, 0, 2), 1f, new Vector3(0, 90, 0));
         float top = table.GetComponentsInChildren<Renderer>().Max(r => r.bounds.max.y);
-        var mug = Prop("SM_Item_Mug_Tankard_01", "Table / Tankard", new Vector3(2.7f, top, 1.55f));
-        var bottle = Prop("SM_Item_Bottle_01", "Table / Bottle", new Vector3(3.45f, top, 2.1f), .65f);
-        var book = Prop("SM_Item_Book_01", "Table / Book", new Vector3(4.05f, top, 1.8f), 1f, new Vector3(0, 0, 90));
+        var mug = Prop("MugTankard_01", "Table / Tankard", new Vector3(2.7f, top, 1.55f));
+        var bottle = Prop("Bottle_01", "Table / Bottle", new Vector3(3.45f, top, 2.1f), .65f);
+        var book = Prop("Book_01", "Table / Book", new Vector3(4.05f, top, 1.8f), 1f, new Vector3(0, 0, 90));
         foreach (var item in new[] { mug, bottle, book })
         {
             var bounds = item.GetComponentInChildren<Renderer>().bounds;
             Target(item.name, "Table-height reach. Compare grip size and reach across the tabletop.", item.transform,
                 bounds.center, new Vector3(bounds.center.x - .2f, 0, 1.2f), pickup: item.transform);
         }
-        var key = Prop("SM_Item_Key_01", "Table / Key", new Vector3(3.35f, top, 1.67f), .65f, new Vector3(90, 0, 0));
+        var key = Prop("Key_01", "Table / Key", new Vector3(3.35f, top, 1.67f), .65f, new Vector3(90, 0, 0));
         Target("Small key", "Small-object precision target.", key.transform, key.GetComponentInChildren<Renderer>().bounds.center,
             new Vector3(3.15f, 0, 1.2f), diameter: .025f, pickup: key.transform);
         Label("TABLE / PICKUP HEIGHTS", new Vector3(3.4f, 1.8f, 2.4f));
 
-        var groundItem = Prop("SM_Item_Book_01", "04 / Ground item", new Vector3(-3.5f, 0, -2), 1f, new Vector3(0, 0, 90));
+        var groundItem = Prop("Book_01", "04 / Ground item", new Vector3(-3.5f, 0, -2), 1f, new Vector3(0, 0, 90));
         Target("Ground item", "Ground pickup target. Compare standing and crouched reach before adding a bend motion.",
             groundItem.transform, groundItem.GetComponentInChildren<Renderer>().bounds.center, new Vector3(-3.7f, 0, -2.65f), pickup: groundItem.transform);
         Label("GROUND / BEND AND PICKUP", new Vector3(-3.5f, .7f, -1.6f));
 
-        var crate = Prop("SM_Prop_Crate_Wood_01", "05 / Carry crate", new Vector3(0, 0, -2), .55f);
+        var crate = Prop("CrateWood_01", "05 / Carry crate", new Vector3(0, 0, -2), .55f);
         var leftGrip = new GameObject("Carry crate left contact").transform;
         leftGrip.SetParent(crate.transform); leftGrip.position = new Vector3(-.30f, .16f, -2.08f);
         Target("Carry crate", "Two-hand pickup and carrying fixture.", crate.transform, new Vector3(.30f, .16f, -2.08f),
             new Vector3(0, 0, -2.95f), pickup: crate.transform, leftContact: leftGrip);
         Label("CRATE / TWO-HAND CARRY", new Vector3(0, 1.2f, -1.7f));
 
-        var chair = Prop("SM_Prop_Chair_Wood_01", "06 / Chair", new Vector3(3.5f, 0, -2));
+        var chair = Prop("ChairWood_01", "06 / Chair", new Vector3(3.5f, 0, -2));
         Target("Chair", "Seat-height and approach fixture for sitting interactions.", chair.transform,
             new Vector3(3.5f, .5f, -2), new Vector3(3.3f, 0, -2.9f));
         Label("CHAIR / SEATED INTERACTION", new Vector3(3.5f, 1.5f, -1.7f));

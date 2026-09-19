@@ -210,7 +210,7 @@ public static class HumanInteractionDefinitionsAuthor
             Part("Rack left post", rack, new Vector3(-.8f, .6f, 0f), new Vector3(.1f, 1.2f, .1f));
             Part("Rack right post", rack, new Vector3(.8f, .6f, 0f), new Vector3(.1f, 1.2f, .1f));
             Part("Rack support", rack, new Vector3(.07f, .73f, -.4f), new Vector3(1.7f, .12f, .15f));
-            var model = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Characters/Human/Review/SM_Wep_Sword_01.fbx");
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Characters/Human/Review/Sword_01.fbx");
             if (model == null) throw new InvalidOperationException("The reviewed sword model is required.");
             for (int slot = 0; slot < 2; slot++)
             {

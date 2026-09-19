@@ -12,6 +12,10 @@ These are candidates, not shipped motion. They were imported to compare against 
 authored ladder climb and have not been adopted. The accepted ladder baseline is
 revision 7 (V29), which does not use them.
 
-Open: the two FBXs still carry the pack's filenames.
+The two FBXs keep the pack's filenames on purpose. Every clip in the ladder tree
+is source-named, and an animation FBX's filename is also the AnimationClip
+sub-asset name that controller states and our baked `Motion.asset` bind to.
+Renaming two of several hundred buys no consistency and risks those bindings.
+The animation tree gets one rename pass of its own or none at all.
 
 Not imported: no pack scripts, controllers, demo scenes, or avatars.

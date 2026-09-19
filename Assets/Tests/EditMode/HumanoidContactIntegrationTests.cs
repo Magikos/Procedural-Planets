@@ -7,7 +7,7 @@ using UnityEngine.Playables;
 namespace ProceduralPlanets.Tests
 {
     [TestFixture("Assets/Art/Characters/Baseline/Baseline.prefab", .3f)]
-    [TestFixture("Assets/Art/Characters/Human/Converted/SM_Chr_Rider_01_v2/SM_Chr_Rider_01_Fit.prefab", .35f)]
+    [TestFixture("Assets/Art/Characters/Human/Converted/Rider_01_v2/Rider_01_Fit.prefab", .35f)]
     public sealed class HumanoidContactIntegrationTests
     {
         readonly string _prefabPath;

@@ -17,7 +17,8 @@ public static class HumanWardrobeReviewAuthor
         if (EditorApplication.isPlaying) throw new InvalidOperationException("Stop Play mode before building outfits.");
         if (index < 0 || index >= Parts.Length) throw new ArgumentOutOfRangeException(nameof(index));
         string part = Parts[index];
-        if (File.Exists(Folder + "/" + part + "_Original.prefab") || File.Exists(Folder + "/" + part + "_Fit.prefab"))
+        string role = HumanOutfitConverter.RoleName(part);
+        if (File.Exists(Folder + "/" + role + "_Original.prefab") || File.Exists(Folder + "/" + role + "_Fit.prefab"))
             throw new IOException("Wardrobe outfit already exists: " + part);
         Directory.CreateDirectory(Folder); AssetDatabase.Refresh();
         HumanTownsfolkReviewAuthor.Build(part, Folder);
@@ -28,7 +29,7 @@ public static class HumanWardrobeReviewAuthor
     {
         string path = Folder + "/SoldierHelmet_Fit.prefab";
         if (EditorApplication.isPlaying || File.Exists(path)) throw new InvalidOperationException("Stop Play mode and preserve the existing helmet trial.");
-        var target = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(Folder + "/" + Parts[1] + "_Fit.prefab"));
+        var target = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(Folder + "/" + HumanOutfitConverter.RoleName(Parts[1]) + "_Fit.prefab"));
         var source = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(HumanoidAuthor.Folder + "/ModularCharacters.fbx"));
         try
         {
@@ -61,11 +62,11 @@ public static class HumanWardrobeReviewAuthor
             throw new InvalidOperationException("Stop Play mode and preserve scene edits before creating the wardrobe scene.");
         foreach (var part in Parts)
             foreach (string suffix in new[] { "_Original", "_Fit" })
-                if (AssetDatabase.LoadAssetAtPath<GameObject>(Folder + "/" + part + suffix + ".prefab") == null)
+                if (AssetDatabase.LoadAssetAtPath<GameObject>(Folder + "/" + HumanOutfitConverter.RoleName(part) + suffix + ".prefab") == null)
                     throw new InvalidOperationException("Build all wardrobe outfits first.");
         var scene = EditorSceneManager.OpenScene(HumanTownsfolkReviewAuthor.ScenePath);
         GameObject.Find("Neutral backdrop").transform.position = new Vector3(0, 4, 22);
-        GameObject.Find("SM_Bld_House_Wall_Door_01").transform.position = new Vector3(-7, 0, 4);
+        GameObject.Find("HouseWallDoor_01").transform.position = new Vector3(-7, 0, 4);
         var host = UnityEngine.Object.FindFirstObjectByType<HumanStyleReview>();
         foreach (var actor in host.Characters) UnityEngine.Object.DestroyImmediate(actor.gameObject);
         foreach (var label in UnityEngine.Object.FindObjectsByType<TextMesh>(FindObjectsSortMode.None)) UnityEngine.Object.DestroyImmediate(label.gameObject);
@@ -78,7 +79,7 @@ public static class HumanWardrobeReviewAuthor
             for (int side = 0; side < 2; side++)
             {
                 string suffix = side == 0 ? "_Original" : "_Fit";
-                var actor = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(Folder + "/" + Parts[i] + suffix + ".prefab"));
+                var actor = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(Folder + "/" + HumanOutfitConverter.RoleName(Parts[i]) + suffix + ".prefab"));
                 actor.name = Parts[i] + suffix;
                 actor.transform.SetPositionAndRotation(new Vector3(side == 0 ? -1.2f : 1.2f, 0, i * 5), Quaternion.Euler(0, 180, 0));
                 actors.Add(actor.GetComponent<Animator>());

@@ -1,0 +1,11 @@
+{
+    "version": 1,
+    "sourcePart": "SM_Chr_Rider_01",
+    "revision": "v1",
+    "inputHash": "54304b139813721774702dab7377c353",
+    "outputHash": "5f142c15c0a6f921ab1b6a22c0a2875e",
+    "requiresSeparateHeadgear": false,
+    "requiresClothReview": false,
+    "candidatePrefab": "Assets/Art/Characters/Human/Converted/Rider_01_v1/Rider_01_Fit.prefab",
+    "originalPrefab": "Assets/Art/Characters/Human/Converted/Rider_01_v1/Rider_01_Original.prefab"
+}

@@ -8108,7 +8108,7 @@ GameObject:
   - component: {fileID: 410767251}
   - component: {fileID: 410767250}
   m_Layer: 0
-  m_Name: SM_Chr_Soldier_Male_01_Fit
+  m_Name: Soldier_Male_01_Fit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8941,7 +8941,7 @@ GameObject:
   - component: {fileID: 453422874}
   - component: {fileID: 453422873}
   m_Layer: 0
-  m_Name: SM_Chr_Priest_01_Fit
+  m_Name: Priest_01_Fit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -17884,7 +17884,7 @@ GameObject:
   - component: {fileID: 783363381}
   - component: {fileID: 783363380}
   m_Layer: 0
-  m_Name: SM_Bld_House_Roof_Thatch_01
+  m_Name: HouseRoofThatch_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -19619,7 +19619,7 @@ GameObject:
   - component: {fileID: 886740636}
   - component: {fileID: 886740635}
   m_Layer: 0
-  m_Name: SM_Chr_Rider_01_Fit
+  m_Name: Rider_01_Fit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -28058,7 +28058,7 @@ GameObject:
   - component: {fileID: 957116184}
   - component: {fileID: 957116183}
   m_Layer: 0
-  m_Name: SM_Chr_Priest_01_Original
+  m_Name: Priest_01_Original
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -28282,7 +28282,7 @@ GameObject:
   - component: {fileID: 972341043}
   - component: {fileID: 972341042}
   m_Layer: 0
-  m_Name: SM_Bld_House_Wall_Door_01
+  m_Name: HouseWallDoor_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -37658,7 +37658,7 @@ GameObject:
   - component: {fileID: 1474399503}
   - component: {fileID: 1474399502}
   m_Layer: 0
-  m_Name: SM_Chr_Blacksmith_Female_01_Original
+  m_Name: Blacksmith_Female_01_Original
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -40178,7 +40178,7 @@ GameObject:
   - component: {fileID: 1618363250}
   - component: {fileID: 1618363249}
   m_Layer: 0
-  m_Name: SM_Chr_Soldier_Male_01_Original
+  m_Name: Soldier_Male_01_Original
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -45226,7 +45226,7 @@ GameObject:
   - component: {fileID: 1848532410}
   - component: {fileID: 1848532409}
   m_Layer: 0
-  m_Name: SM_Chr_Rider_01_Original
+  m_Name: Rider_01_Original
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -48136,7 +48136,7 @@ GameObject:
   - component: {fileID: 1983259279}
   - component: {fileID: 1983259278}
   m_Layer: 0
-  m_Name: SM_Chr_Blacksmith_Female_01_Fit
+  m_Name: Blacksmith_Female_01_Fit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

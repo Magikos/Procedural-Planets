@@ -1,0 +1,11 @@
+{
+    "version": 1,
+    "sourcePart": "SM_Chr_Mage_01",
+    "revision": "hood_v1",
+    "inputHash": "57f0c990293e9129f04cc6edf86553c4",
+    "outputHash": "12b26f08c507a03e485cdb9eba94bb7d",
+    "requiresSeparateHeadgear": true,
+    "requiresClothReview": true,
+    "candidatePrefab": "Assets/Art/Characters/Human/Converted/Mage_01_hood_v1/Mage_01_Fit.prefab",
+    "originalPrefab": "Assets/Art/Characters/Human/Converted/Mage_01_hood_v1/Mage_01_Original.prefab"
+}

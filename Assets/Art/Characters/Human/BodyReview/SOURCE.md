@@ -1,7 +1,7 @@
 # Body fitting experiment
 
 Source base parts: `D:/Unity/Explore Assets/Assets/Synty/SidekickCharacters/Resources/Meshes/Species/Humans/`.
-The 22 `SK_HUMN_BASE_01_*_HU01.fbx` files in `../BaseParts/` retain source GUIDs.
+The 22 body-part FBXs in `../BaseParts/` are renamed copies and retain source GUIDs.
 They include the head, facial parts, torso, hips, arms, hands, legs, and feet.
 The base hips include underwear. The imported meshes retain their native body blend shapes.
 

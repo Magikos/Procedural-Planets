@@ -13,7 +13,7 @@ namespace ProceduralPlanets.Tests
         [Test]
         public void CupPartitionKeepsEveryBackpackTriangleExactlyOnce()
         {
-            var original = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Characters/Human/Review/SM_Prop_Bag_Explorer_01.fbx").GetComponentInChildren<MeshFilter>().sharedMesh;
+            var original = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Characters/Human/Review/BagExplorer_01.fbx").GetComponentInChildren<MeshFilter>().sharedMesh;
             var bag = AssetDatabase.LoadAssetAtPath<Mesh>(Folder + "BackpackWithoutCup.asset");
             var cup = AssetDatabase.LoadAssetAtPath<Mesh>(Folder + "HangingCup.asset");
             Assert.AreEqual(original.triangles.Length, bag.triangles.Length + cup.triangles.Length);
@@ -27,7 +27,7 @@ namespace ProceduralPlanets.Tests
         [TestCase("Fit")]
         public void RobeRefinementKeepsFeetAndCachedBodyShapes(string rig)
         {
-            string name = "SM_Chr_Monk_01_" + rig;
+            string name = "Monk_01_" + rig;
             var reference = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Characters/Human/BodyReview/Townsfolk/" + name + ".prefab")
                 .GetComponentsInChildren<SkinnedMeshRenderer>().Single(r => r.name.Contains("SM_Chr_Monk_01"));
             var source = reference.sharedMesh;

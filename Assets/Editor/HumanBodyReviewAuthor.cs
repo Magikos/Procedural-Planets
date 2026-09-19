@@ -23,7 +23,7 @@ public static class HumanBodyReviewAuthor
         AssetDatabase.Refresh();
         var scene = EditorSceneManager.OpenScene(HumanStyleReviewAuthor.ScenePath);
         var host = UnityEngine.Object.FindFirstObjectByType<HumanStyleReview>();
-        var source = host.Characters[1];
+        var sourceActor = host.Characters[1];
         UnityEngine.Object.DestroyImmediate(host.Characters[0].gameObject);
         foreach (var root in scene.GetRootGameObjects())
             if (root.name.Contains("Legacy") || root.GetComponent<TextMesh>() != null)
@@ -55,8 +55,8 @@ public static class HumanBodyReviewAuthor
         PrefabUtility.SaveAsPrefabAsset(hybrid, Folder + "/SourcePartsBody.prefab");
         bare.transform.SetPositionAndRotation(new Vector3(-2.4f, 0, 0), Quaternion.Euler(0, 180, 0));
         hybrid.transform.SetPositionAndRotation(Vector3.zero, Quaternion.Euler(0, 180, 0));
-        source.transform.SetPositionAndRotation(new Vector3(2.4f, 0, 0), Quaternion.Euler(0, 180, 0));
-        host.Characters = new[] { bare.GetComponent<Animator>(), hybrid.GetComponent<Animator>(), source };
+        sourceActor.transform.SetPositionAndRotation(new Vector3(2.4f, 0, 0), Quaternion.Euler(0, 180, 0));
+        host.Characters = new[] { bare.GetComponent<Animator>(), hybrid.GetComponent<Animator>(), sourceActor };
         var controls = host.gameObject.AddComponent<HumanBodyReview>();
         controls.NativeParts = bare.GetComponentsInChildren<SkinnedMeshRenderer>().Concat(hybrid.GetComponentsInChildren<SkinnedMeshRenderer>().Where(r => !r.name.StartsWith("SOURCE"))).ToArray();
         controls.ConvertedParts = hybrid.GetComponentsInChildren<SkinnedMeshRenderer>().Where(r => r.name.StartsWith("SOURCE")).ToArray();

@@ -80,8 +80,14 @@ public sealed class HumanOutfitConverter : EditorWindow
             throw new ArgumentException("Select a valid Townsfolk character name.", nameof(part));
         if (string.IsNullOrEmpty(revision) || !Regex.IsMatch(revision, @"\A[A-Za-z0-9_-]{1,32}\z"))
             throw new ArgumentException("Revision must contain 1–32 letters, digits, underscores, or hyphens.", nameof(revision));
-        return Root + "/" + part + "_" + revision;
+        return Root + "/" + RoleName(part) + "_" + revision;
     }
+
+    // The source sub-mesh name is the lookup key and cannot be renamed. Our own assets
+    // drop its prefix, so every name we write goes through here and every name we read
+    // the source by does not.
+    public static string RoleName(string part) =>
+        part != null && part.StartsWith("SM_Chr_", StringComparison.Ordinal) ? part.Substring(7) : part;
 
     public static Receipt Convert(string part, string revision, bool separateHeadgear, bool looseCloth)
     {
@@ -103,15 +109,15 @@ public sealed class HumanOutfitConverter : EditorWindow
         try
         {
             HumanTownsfolkReviewAuthor.Build(part, staging, workingScene, separateHeadgear && part == "SM_Chr_Mage_01");
-            ValidatePrefab(staging + "/" + part + "_Fit.prefab");
+            ValidatePrefab(staging + "/" + RoleName(part) + "_Fit.prefab");
             string error = AssetDatabase.MoveAsset(staging, folder);
             if (!string.IsNullOrEmpty(error)) throw new IOException("Cannot publish conversion: " + error);
             var result = new Receipt
             {
                 sourcePart = part, revision = revision, inputHash = input,
                 requiresSeparateHeadgear = separateHeadgear, requiresClothReview = looseCloth,
-                candidatePrefab = folder + "/" + part + "_Fit.prefab",
-                originalPrefab = folder + "/" + part + "_Original.prefab"
+                candidatePrefab = folder + "/" + RoleName(part) + "_Fit.prefab",
+                originalPrefab = folder + "/" + RoleName(part) + "_Original.prefab"
             };
             AssetDatabase.SaveAssets();
             result.outputHash = OutputHash(result);
@@ -137,8 +143,8 @@ public sealed class HumanOutfitConverter : EditorWindow
         catch (Exception ex) { throw new IOException("Cannot read the conversion receipt. Preserve it and choose a new revision.", ex); }
         if (result == null || result.version != 1 || result.sourcePart != part || result.revision != revision
             || result.inputHash != input || result.requiresSeparateHeadgear != headgear || result.requiresClothReview != cloth
-            || result.candidatePrefab != folder + "/" + part + "_Fit.prefab"
-            || result.originalPrefab != folder + "/" + part + "_Original.prefab")
+            || result.candidatePrefab != folder + "/" + RoleName(part) + "_Fit.prefab"
+            || result.originalPrefab != folder + "/" + RoleName(part) + "_Original.prefab")
             throw new IOException("Conversion inputs changed. Preserve the existing output and choose a new revision.");
         ValidatePrefab(result.candidatePrefab);
         if (result.outputHash != OutputHash(result))

@@ -8,13 +8,13 @@ namespace ProceduralPlanets.Tests
 {
     public sealed class HumanTownsfolkTests
     {
-        [TestCase("SM_Chr_Monk_01")]
-        [TestCase("SM_Chr_Peasant_Male_01")]
-        public void CombinedBodyKeepsClothingAndRemovesOriginalHead(string part)
+        [TestCase("Monk_01")]
+        [TestCase("Peasant_Male_01")]
+        public void CombinedBodyKeepsClothingAndRemovesOriginalHead(string role)
         {
             const string folder = "Assets/Art/Characters/Human/BodyReview/Townsfolk/";
-            var original = AssetDatabase.LoadAssetAtPath<GameObject>(folder + part + "_Original.prefab").GetComponentsInChildren<SkinnedMeshRenderer>().Single();
-            var candidate = AssetDatabase.LoadAssetAtPath<GameObject>(folder + part + "_Fit.prefab");
+            var original = AssetDatabase.LoadAssetAtPath<GameObject>(folder + role + "_Original.prefab").GetComponentsInChildren<SkinnedMeshRenderer>().Single();
+            var candidate = AssetDatabase.LoadAssetAtPath<GameObject>(folder + role + "_Fit.prefab");
             var skin = candidate.GetComponentsInChildren<SkinnedMeshRenderer>().Single(r => r.name.StartsWith("SOURCE / "));
             Assert.AreEqual(11, candidate.GetComponentsInChildren<SkinnedMeshRenderer>().Length);
             Assert.Less(skin.sharedMesh.triangles.Length, original.sharedMesh.triangles.Length);

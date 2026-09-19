@@ -74,7 +74,7 @@ namespace ProceduralPlanets.Tests
         [Test]
         public void AuthoredWaterPlantsPreserveBedDepthBandsAfterImport()
         {
-            foreach (string name in new[] { "Lake Lily", "Lake Reeds", "Lake Cattails", "IceBog Reeds Prototype", "Swamp Reeds Prototype", "LMHPOLY Beach Reed" })
+            foreach (string name in new[] { "Lake Lily", "Lake Reeds", "Lake Cattails", "IceBog Reeds Prototype", "Swamp Reeds Prototype", "Beach Reed" })
             {
                 var source = Resources.Load<ScatterPrototype>("Settings/Scatter/" + name);
                 Assert.That(source, Is.Not.Null, name);

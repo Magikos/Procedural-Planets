@@ -1123,7 +1123,7 @@ GameObject:
   - component: {fileID: 114080102}
   - component: {fileID: 114080101}
   m_Layer: 0
-  m_Name: SM_Chr_Peasant_Male_01_Original
+  m_Name: Peasant_Male_01_Original
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1179,7 +1179,7 @@ GameObject:
   - component: {fileID: 116877651}
   - component: {fileID: 116877650}
   m_Layer: 0
-  m_Name: SM_Chr_Monk_01_Fit
+  m_Name: Monk_01_Fit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -25164,7 +25164,7 @@ GameObject:
   - component: {fileID: 783363381}
   - component: {fileID: 783363380}
   m_Layer: 0
-  m_Name: SM_Bld_House_Roof_Thatch_01
+  m_Name: HouseRoofThatch_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -34002,7 +34002,7 @@ GameObject:
   - component: {fileID: 972341043}
   - component: {fileID: 972341042}
   m_Layer: 0
-  m_Name: SM_Bld_House_Wall_Door_01
+  m_Name: HouseWallDoor_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -36912,7 +36912,7 @@ GameObject:
   - component: {fileID: 1233549006}
   - component: {fileID: 1233549005}
   m_Layer: 0
-  m_Name: SM_Chr_Monk_01_Original
+  m_Name: Monk_01_Original
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -39272,7 +39272,7 @@ GameObject:
   - component: {fileID: 1456515993}
   - component: {fileID: 1456515992}
   m_Layer: 0
-  m_Name: SM_Chr_Peasant_Male_01_Fit
+  m_Name: Peasant_Male_01_Fit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

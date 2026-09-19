@@ -1,0 +1,11 @@
+{
+    "version": 1,
+    "sourcePart": "SM_Chr_Priest_01",
+    "revision": "v1",
+    "inputHash": "239e0b165e8b21e3a09e10e5ef7f43c2",
+    "outputHash": "a03eca9f3d38e196312b2611d45e4281",
+    "requiresSeparateHeadgear": false,
+    "requiresClothReview": true,
+    "candidatePrefab": "Assets/Art/Characters/Human/Converted/Priest_01_v1/Priest_01_Fit.prefab",
+    "originalPrefab": "Assets/Art/Characters/Human/Converted/Priest_01_v1/Priest_01_Original.prefab"
+}

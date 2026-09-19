@@ -2,7 +2,7 @@
 
 Created 2026-09-11 in `HumanAccessoryMotionReview.unity`. The previous accessory scene remains unchanged for comparison.
 
-- `BackpackWithoutCup.asset` and `HangingCup.asset` partition the existing `Review/SM_Prop_Bag_Explorer_01.fbx`. Connected mesh islands isolate the cup, fittings, and hanging strap. Every source triangle belongs to exactly one result. Vertex indices and UVs remain intact; bounds use the retained triangles.
+- `BackpackWithoutCup.asset` and `HangingCup.asset` partition the existing `Review/BagExplorer_01.fbx`. Connected mesh islands isolate the cup, fittings, and hanging strap. Every source triangle belongs to exactly one result. Vertex indices and UVs remain intact; bounds use the retained triangles.
 - The cup assembly moves from the backpack's side to its rear. Its upper strap supplies the swing pivot. The backpack body does not change shape.
 - Pouches move 35 mm toward the body. Their existing body-shape offsets remain active. A pivot at the pouch neck provides independent motion.
 - Fitted hats move down 45 mm. Source hat positions remain unchanged.

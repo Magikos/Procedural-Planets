@@ -9,16 +9,16 @@ namespace ProceduralPlanets.Tests
     {
         const string Folder = "Assets/Art/Characters/Human/BodyReview/Wardrobe/";
 
-        [TestCase("SM_Chr_Rider_01")]
-        [TestCase("SM_Chr_Soldier_Male_01")]
-        [TestCase("SM_Chr_Blacksmith_Female_01")]
-        [TestCase("SM_Chr_Mage_01")]
-        [TestCase("SM_Chr_Priest_01")]
-        public void WardrobePreservesGarmentTrianglesAndCachesFourShapes(string part)
+        [TestCase("Rider_01")]
+        [TestCase("Soldier_Male_01")]
+        [TestCase("Blacksmith_Female_01")]
+        [TestCase("Mage_01")]
+        [TestCase("Priest_01")]
+        public void WardrobePreservesGarmentTrianglesAndCachesFourShapes(string role)
         {
-            var source = AssetDatabase.LoadAssetAtPath<GameObject>(Folder + part + "_Original.prefab")
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>(Folder + role + "_Original.prefab")
                 .GetComponentsInChildren<SkinnedMeshRenderer>().Single();
-            var candidate = AssetDatabase.LoadAssetAtPath<GameObject>(Folder + part + "_Fit.prefab");
+            var candidate = AssetDatabase.LoadAssetAtPath<GameObject>(Folder + role + "_Fit.prefab");
             var skin = candidate.GetComponentsInChildren<SkinnedMeshRenderer>().Single(r => r.name.StartsWith("SOURCE / "));
             var mesh = skin.sharedMesh;
             Assert.AreEqual(source.sharedMesh.vertexCount, mesh.vertexCount);
@@ -54,10 +54,10 @@ namespace ProceduralPlanets.Tests
         [Test]
         public void ReviewedMageHoodKeepsClothAboveTheHeadCut()
         {
-            var old = AssetDatabase.LoadAssetAtPath<GameObject>(Folder + "SM_Chr_Mage_01_Fit.prefab")
+            var old = AssetDatabase.LoadAssetAtPath<GameObject>(Folder + "Mage_01_Fit.prefab")
                 .GetComponentsInChildren<SkinnedMeshRenderer>().Single(r => r.name.StartsWith("SOURCE / ")).sharedMesh;
             var current = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Art/Characters/Human/Converted/SM_Chr_Mage_01_hood_v1/SM_Chr_Mage_01_Fit.prefab")
+                "Assets/Art/Characters/Human/Converted/Mage_01_hood_v1/Mage_01_Fit.prefab")
                 .GetComponentsInChildren<SkinnedMeshRenderer>().Single(r => r.name.StartsWith("SOURCE / ")).sharedMesh;
             Assert.Greater(current.triangles.Length, old.triangles.Length, "Hood cloth must survive the head cut.");
             Assert.AreEqual(5, current.blendShapeCount);
