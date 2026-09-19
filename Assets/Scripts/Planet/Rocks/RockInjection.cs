@@ -107,7 +107,7 @@ public static class RockInjection
         try
         {
             RockDef def = DefFor(p.Biome, variant);
-            int seed = (int)(StableHash(p.DisplayName ?? "rock", variant) % 900000) + 1;
+            int seed = (int)(ScatterPrototypeDto.MixSeed(p.ShapeSeedBase("rock"), variant) % 900000) + 1;
             GeneratedRock rock = RockGenerator.Generate(def, seed);
             if (rock.Lod0 == null || rock.Lod0.vertexCount == 0) return null; // keep the source prop
 
@@ -201,17 +201,5 @@ public static class RockInjection
         foreach (ScatterPrototypeDto p in lib.Prototypes)
             if (p != null && p.SlotId > max) max = p.SlotId;
         return max;
-    }
-
-    // FNV-1a: string.GetHashCode is randomised per process, which would regrow every rock differently each run.
-    static uint StableHash(string s, int salt)
-    {
-        unchecked
-        {
-            uint h = 2166136261u;
-            foreach (char c in s) { h ^= c; h *= 16777619u; }
-            h ^= (uint)salt; h *= 16777619u;
-            return h;
-        }
     }
 }

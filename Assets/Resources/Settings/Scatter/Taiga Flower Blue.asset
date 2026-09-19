@@ -10,9 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
-  m_Name: LMHPOLY Taiga Flower Blue
+  m_Name: Taiga Flower Blue
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
-  DisplayName: LMHPOLY Taiga Flower Blue
+  DisplayName: Taiga Flower Blue
+  ShapeSeed: -894181941
   SlotId: 49
   SpacingMeters: 3.2
   Biome: 9

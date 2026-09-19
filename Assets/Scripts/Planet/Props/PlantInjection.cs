@@ -121,7 +121,7 @@ public static class PlantInjection
         {
             string name = p.DisplayName ?? kind.ToString();
             string key = ShareKey(p, kind);
-            int seed = (int)(StableHash(name, variant) % 900000) + 1;
+            int seed = (int)(ScatterPrototypeDto.MixSeed(p.ShapeSeedBase(kind.ToString()), variant) % 900000) + 1;
             float age = VariantsFor(kind) <= 1 ? 0.85f : Mathf.Lerp(0.6f, 1f, variant / (float)(VariantsFor(kind) - 1));
 
             Mesh stemMesh, foliageMesh, accentMesh = null;
@@ -455,17 +455,6 @@ public static class PlantInjection
             }
         }
         return $"{status} — run `planet.generate` to apply.";
-    }
-
-    static uint StableHash(string s, int salt)
-    {
-        unchecked
-        {
-            uint h = 2166136261u;
-            foreach (char c in s) { h ^= c; h *= 16777619u; }
-            h ^= (uint)salt; h *= 16777619u;
-            return h;
-        }
     }
 
     static int MaxSlot(ScatterLibraryDto lib)

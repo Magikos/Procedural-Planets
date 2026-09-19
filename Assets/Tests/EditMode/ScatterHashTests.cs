@@ -104,5 +104,40 @@ namespace ProceduralPlanets.Tests
             for (int s = 0; s <= ScatterId.MaxSlot; s++)
                 Assert.IsTrue(seen.Add(ScatterHash.Slot(node, s)), $"slot {s} seed collided");
         }
+
+        // --- Generated-shape seed: the same persistence contract, one layer up ---
+
+        // Every generated plant, tree and rock grows from a seed, and that seed used to be the hash of
+        // DisplayName alone. Retiring a vendor prefix from seventeen labels therefore regrew seventeen
+        // species as different plants and orphaned their baked impostor cards. ShapeSeed pins the shape so
+        // a label can be corrected without touching the world.
+        static ScatterPrototypeDto Proto(string name, int shapeSeed) => new ScatterPrototypeDto(
+            DisplayName: name, SlotId: 0, SpacingMeters: 8f, Biome: BiomeType.Grassland,
+            BiomeBlendPower: 1f, Weight: 1f, MaxSlopeDegrees: 35f, SlopeFadeDegrees: 5f,
+            ConformToSlope: 0f, HasMinAltitude: false, MinAltitudeMeters: 0f,
+            HasMaxAltitude: false, MaxAltitudeMeters: 0f, MinWaterClearanceMeters: 0.05f,
+            OnWater: false, ScaleRange: new UnityEngine.Vector2(0.85f, 1.2f), RandomYaw: true,
+            Interaction: ScatterInteraction.None,
+            Parts: System.Array.Empty<ScatterPartDto>()) { ShapeSeed = shapeSeed };
+
+        [Test]
+        public void ShapeSeedBase_SurvivesARename()
+        {
+            const int pinned = -1876968651;
+            Assert.AreEqual(Proto("Vendor Prefix Beach Reed", pinned).ShapeSeedBase("reed"),
+                            Proto("Beach Reed", pinned).ShapeSeedBase("reed"));
+            Assert.AreNotEqual(Proto("Vendor Prefix Beach Reed", 0).ShapeSeedBase("reed"),
+                               Proto("Beach Reed", 0).ShapeSeedBase("reed"));
+        }
+
+        [Test]
+        public void ShapeSeedBase_FallsBackToTheNameHash_AndPinsItsConstants()
+        {
+            // Golden FNV-1a over "Beach Reed", then the variant-1 mix. A changed constant here moves every
+            // generated prop that has no ShapeSeed.
+            Assert.AreEqual(3029126616u, Proto("Beach Reed", 0).ShapeSeedBase("reed"));
+            Assert.AreEqual(313003163u, ScatterPrototypeDto.MixSeed(3029126616u, 1));
+            Assert.AreEqual(Proto(null, 0).ShapeSeedBase("reed"), Proto("reed", 0).ShapeSeedBase("x"));
+        }
     }
 }

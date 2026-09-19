@@ -140,7 +140,7 @@ public static class TreeInjection
     {
         try
         {
-            int seed = (int)(StableHash(p.DisplayName ?? "fern", 0) % 900000) + 1;
+            int seed = (int)(ScatterPrototypeDto.MixSeed(p.ShapeSeedBase("fern"), 0) % 900000) + 1;
             TreeDef def = TreeDefLibrary.Species(TreeDefLibrary.TreeSpecies.Fern, 1f);
             GeneratedTree t = TreeGenerator.Generate(def, seed, harvestParts: false);
             if (t.Bark == null || t.Bark.vertexCount == 0) return null;
@@ -176,21 +176,6 @@ public static class TreeInjection
         }
     }
 
-    // FNV-1a, NOT string.GetHashCode/HashCode.Combine: .NET randomises string hashing per PROCESS, so those
-    // gave every session a different tree for the same world seed. Trees are world content — they have to be
-    // reproducible across runs, or a saved world regrows differently and impostor atlases can never be cached.
-    static uint StableHash(string s, int salt)
-    {
-        unchecked
-        {
-            uint h = 2166136261u;
-            foreach (char c in s) { h ^= c; h *= 16777619u; }
-            h ^= (uint)salt; h *= 16777619u;
-            return h;
-        }
-    }
-
-
     static int MaxSlot(ScatterLibraryDto lib)
     {
         int max = -1;
@@ -200,8 +185,8 @@ public static class TreeInjection
     }
 
     // Rotate age assignment independently of species selection without changing slot allocation.
-    public static int AgeStage(string name, int variant, int count) =>
-        count <= 1 ? 0 : (variant + (int)(StableHash(name ?? "tree", 719) % (uint)count)) % count;
+    public static int AgeStage(uint seedBase, int variant, int count) =>
+        count <= 1 ? 0 : (variant + (int)(ScatterPrototypeDto.MixSeed(seedBase, 719) % (uint)count)) % count;
 
     static ScatterPrototypeDto TryReplace(ScatterPrototypeDto p, int variant, int variantCount, int slot, float spacingScale, int ordinalInBiome)
     {
@@ -219,12 +204,12 @@ public static class TreeInjection
                 // means a single stand mixes species, not just ages.
                 species = TreeDefLibrary.SpeciesForPrototype(p.Biome, ordinalInBiome + variant);
 
-            int seed = (int)(StableHash(p.DisplayName ?? "tree", variant) % 900000) + 1;
+            int seed = (int)(ScatterPrototypeDto.MixSeed(p.ShapeSeedBase("tree"), variant) % 900000) + 1;
             // Preserve the species/slot pool. A separate age permutation prevents every primary species
             // from being the youngest; habitat suitability then favours the appropriate existing shape.
             float age = variantCount <= 1
                 ? 0.3f + (seed % 100) / 100f * 0.7f
-                : ForestAge(AgeStage(p.DisplayName, variant, variantCount), variantCount);
+                : ForestAge(AgeStage(p.ShapeSeedBase("tree"), variant, variantCount), variantCount);
             // The library's "* Dead Tree" prototypes are bare standing snags; generating a leafy tree for them
             // loses that biome's dead look entirely.
             bool dead = (p.DisplayName ?? "").IndexOf("dead", StringComparison.OrdinalIgnoreCase) >= 0;

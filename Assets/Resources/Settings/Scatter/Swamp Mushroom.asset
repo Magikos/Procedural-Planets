@@ -10,40 +10,36 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
-  m_Name: TEM Forest FlowerBush
+  m_Name: Swamp Mushroom
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
-  DisplayName: TEM Forest FlowerBush
-  SlotId: 63
-  SpacingMeters: 12
-  Biome: 7
+  DisplayName: Swamp Mushroom
+  ShapeSeed: 1140654838
+  SlotId: 60
+  SpacingMeters: 8
+  Biome: 10
   BiomeBlendPower: 1
-  Weight: 0.568
-  Clumpiness: 0.7
-  PatchScaleMeters: 70
-  ShadePreference: 0
-  MaxSlopeDegrees: 32
+  Weight: 1.449
+  Clumpiness: 0.9
+  PatchScaleMeters: 18
+  ShadePreference: 0.8
+  MaxSlopeDegrees: 30
   SlopeFadeDegrees: 5
-  ConformToSlope: 0.6
+  ConformToSlope: 0
   HasMinAltitude: 0
   MinAltitudeMeters: 0
   HasMaxAltitude: 0
   MaxAltitudeMeters: 0
   MinWaterClearanceMeters: 0.05
-  OnWater: 0
-  ScaleRange: {x: 0.8, y: 1.3}
+  ScaleRange: {x: 0.7, y: 1.3}
   RandomYaw: 1
   Interaction: 0
-  FoodUnits: 2
-  FoodRegrowSeconds: 1800
-  StumpMesh: {fileID: 0}
-  StumpMaterial: {fileID: 0}
   Parts:
   - Name: Plant
-    Material: {fileID: 2100000, guid: 1efe8c5411149bf4681029338bad593a, type: 2}
+    Material: {fileID: 2100000, guid: 2918e8f0e001df849bd8094695013da1, type: 2}
     LodMeshes:
-    - {fileID: 5768953223585578692, guid: 26b0f5f4d9e136948abd6617f85c16e8, type: 3}
+    - {fileID: 4300000, guid: 1647e0ec007dd5448bc873f22d7fc801, type: 3}
     LodEndDistances:
-    - 120
+    - 45
     CastShadows: 1
     ReceiveShadows: 1
   Material: {fileID: 0}
@@ -51,5 +47,3 @@ MonoBehaviour:
   LodEndDistances: []
   CastShadows: 1
   ReceiveShadows: 1
-  BakedImpostorAtlas: {fileID: 2800000, guid: 95750ec777ed8df4c883dd928d6fc895, type: 3}
-  BakedImpostorNormal: {fileID: 2800000, guid: 126179a486279704a95fc4ed6509a0d7, type: 3}

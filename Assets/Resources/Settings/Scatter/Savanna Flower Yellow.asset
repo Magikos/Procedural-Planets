@@ -10,17 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
-  m_Name: LMHPOLY Forest Mushroom Red
+  m_Name: Savanna Flower Yellow
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
-  DisplayName: LMHPOLY Forest Mushroom Red
-  SlotId: 58
-  SpacingMeters: 7
-  Biome: 7
+  DisplayName: Savanna Flower Yellow
+  ShapeSeed: 2017117177
+  SlotId: 44
+  SpacingMeters: 3.2
+  Biome: 3
   BiomeBlendPower: 1
-  Weight: 1.61
+  Weight: 2.093
   Clumpiness: 0.9
-  PatchScaleMeters: 18
-  ShadePreference: 0.8
+  PatchScaleMeters: 28
+  ShadePreference: -0.9
   MaxSlopeDegrees: 30
   SlopeFadeDegrees: 5
   ConformToSlope: 0
@@ -29,16 +30,21 @@ MonoBehaviour:
   HasMaxAltitude: 0
   MaxAltitudeMeters: 0
   MinWaterClearanceMeters: 0.05
-  ScaleRange: {x: 0.7, y: 1.3}
+  OnWater: 0
+  ScaleRange: {x: 0.6, y: 1.1}
   RandomYaw: 1
   Interaction: 0
+  FoodUnits: 0.25
+  FoodRegrowSeconds: 1800
+  StumpMesh: {fileID: 0}
+  StumpMaterial: {fileID: 0}
   Parts:
   - Name: Plant
-    Material: {fileID: 2100000, guid: 2918e8f0e001df849bd8094695013da1, type: 2}
+    Material: {fileID: 2100000, guid: 730f368a336ff6e4084a30f962780fc7, type: 2}
     LodMeshes:
-    - {fileID: 4300000, guid: a2636a1eb60a76c41bf081fa4a3f7955, type: 3}
+    - {fileID: 4300000, guid: ef30db24a89f3d841a19a410e7b4f184, type: 3}
     LodEndDistances:
-    - 45
+    - 50
     CastShadows: 1
     ReceiveShadows: 1
   Material: {fileID: 0}
@@ -46,3 +52,8 @@ MonoBehaviour:
   LodEndDistances: []
   CastShadows: 1
   ReceiveShadows: 1
+  MeshOnlyVertexLimit: 0
+  BakedImpostorAtlas: {fileID: 0}
+  BakedImpostorNormal: {fileID: 0}
+  BakedImpostorGridN: 0
+  BakedImpostorHasSurfaceData: 0

@@ -10,32 +10,39 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
-  m_Name: LMHPOLY Grassland Flower Blue
+  m_Name: Forest Flower White
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
-  DisplayName: LMHPOLY Grassland Flower Blue
-  SlotId: 37
+  DisplayName: Forest Flower White
+  ShapeSeed: 1808979729
+  SlotId: 48
   SpacingMeters: 3.2
-  Biome: 6
+  Biome: 7
   BiomeBlendPower: 1
   Weight: 2.093
   Clumpiness: 0.9
   PatchScaleMeters: 28
-  ShadePreference: -0.9
+  ShadePreference: -0.2
   MaxSlopeDegrees: 30
   SlopeFadeDegrees: 5
+  ConformToSlope: 0
   HasMinAltitude: 0
   MinAltitudeMeters: 0
   HasMaxAltitude: 0
   MaxAltitudeMeters: 0
   MinWaterClearanceMeters: 0.05
+  OnWater: 0
   ScaleRange: {x: 0.6, y: 1.1}
   RandomYaw: 1
   Interaction: 0
+  FoodUnits: 0.25
+  FoodRegrowSeconds: 1800
+  StumpMesh: {fileID: 0}
+  StumpMaterial: {fileID: 0}
   Parts:
   - Name: Plant
     Material: {fileID: 2100000, guid: 730f368a336ff6e4084a30f962780fc7, type: 2}
     LodMeshes:
-    - {fileID: 4300000, guid: 48811c976d3dd5f4eb4518df166d679c, type: 3}
+    - {fileID: 4300000, guid: 8b9ae50f934fee742a3ee5421b8fc425, type: 3}
     LodEndDistances:
     - 55
     CastShadows: 1
@@ -45,3 +52,8 @@ MonoBehaviour:
   LodEndDistances: []
   CastShadows: 1
   ReceiveShadows: 1
+  MeshOnlyVertexLimit: 0
+  BakedImpostorAtlas: {fileID: 0}
+  BakedImpostorNormal: {fileID: 0}
+  BakedImpostorGridN: 0
+  BakedImpostorHasSurfaceData: 0

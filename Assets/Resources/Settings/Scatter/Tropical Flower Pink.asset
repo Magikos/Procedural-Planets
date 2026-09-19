@@ -10,17 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 20d63fb14052c1a4a967ae5654bd2b99, type: 3}
-  m_Name: LMHPOLY Steppe Flower White
+  m_Name: Tropical Flower Pink
   m_EditorClassIdentifier: ProceduralPlanets.Planet::ScatterPrototype
-  DisplayName: LMHPOLY Steppe Flower White
-  SlotId: 45
+  DisplayName: Tropical Flower Pink
+  ShapeSeed: -185047443
+  SlotId: 47
   SpacingMeters: 3.2
-  Biome: 8
+  Biome: 4
   BiomeBlendPower: 1
   Weight: 2.093
   Clumpiness: 0.9
   PatchScaleMeters: 28
-  ShadePreference: -0.9
+  ShadePreference: -0.2
   MaxSlopeDegrees: 30
   SlopeFadeDegrees: 5
   ConformToSlope: 0
@@ -30,7 +31,7 @@ MonoBehaviour:
   MaxAltitudeMeters: 0
   MinWaterClearanceMeters: 0.05
   OnWater: 0
-  ScaleRange: {x: 0.6, y: 1.1}
+  ScaleRange: {x: 0.6, y: 1.2}
   RandomYaw: 1
   Interaction: 0
   FoodUnits: 0.25
@@ -41,7 +42,7 @@ MonoBehaviour:
   - Name: Plant
     Material: {fileID: 2100000, guid: 730f368a336ff6e4084a30f962780fc7, type: 2}
     LodMeshes:
-    - {fileID: 4300000, guid: 8b9ae50f934fee742a3ee5421b8fc425, type: 3}
+    - {fileID: 4300000, guid: 8df84b062b3f75c41aba17945c4c69bc, type: 3}
     LodEndDistances:
     - 50
     CastShadows: 1

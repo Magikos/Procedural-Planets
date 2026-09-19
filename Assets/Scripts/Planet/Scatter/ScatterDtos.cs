@@ -43,6 +43,10 @@ public sealed record ScatterPrototypeDto(
     int BakedImpostorGridN = 0,
     bool BakedImpostorHasSurfaceData = false)
 {
+    // Zero means "seed the shape from DisplayName", which is how every prototype started. A non-zero value
+    // pins the shape so a rename cannot re-roll it. See ShapeSeedBase.
+    public int ShapeSeed { get; init; }
+
     // Sparse props can retain their existing geometry instead of losing branches in an atlas.
     public bool MeshOnly { get; init; }
     public float TreeAge { get; init; } = -1f;
@@ -104,7 +108,7 @@ public sealed record ScatterPrototypeDto(
         p.MinWaterClearanceMeters, p.OnWater, p.ScaleRange, p.RandomYaw, p.Interaction,
         BuildParts(p), p.BakedImpostorAtlas, p.BakedImpostorNormal, p.StumpMesh, p.StumpMaterial,
         null, p.Clumpiness, p.PatchScaleMeters, p.ShadePreference, p.BakedImpostorGridN, p.BakedImpostorHasSurfaceData)
-        { WaterHabitat = p.WaterHabitat, MaxFlowSpeed = p.MaxFlowSpeed, MeshOnlyVertexLimit = Mathf.Max(0, p.MeshOnlyVertexLimit), FoodUnits = p.FoodUnits, FoodRegrowSeconds = p.FoodRegrowSeconds };
+        { WaterHabitat = p.WaterHabitat, MaxFlowSpeed = p.MaxFlowSpeed, MeshOnlyVertexLimit = Mathf.Max(0, p.MeshOnlyVertexLimit), FoodUnits = p.FoodUnits, FoodRegrowSeconds = p.FoodRegrowSeconds, ShapeSeed = p.ShapeSeed };
 
     static ScatterPartDto[] BuildParts(ScatterPrototype p)
     {
@@ -280,6 +284,31 @@ public sealed record ScatterPrototypeDto(
     // it here made them share one card too - so a wide flat boulder billboarded as the tall pointed wedge
     // baked from its sibling. 135 of 176 prototypes drew a card baked from a different mesh.
     public string ImpostorKey => DisplayName;
+
+    // Where a generator's random seed comes from. The plant, tree and rock injectors all grow a prototype
+    // from a seed, and that seed used to be the hash of DisplayName alone - so retiring a vendor prefix from
+    // a label silently regrew seventeen species as different plants and orphaned their baked impostor cards.
+    // ShapeSeed pins the value across such a rename; zero keeps the original name-derived seed.
+    //
+    // FNV-1a, NOT string.GetHashCode/HashCode.Combine: .NET randomises string hashing per PROCESS, so those
+    // gave every session a different shape for the same world seed. Props are world content.
+    public uint ShapeSeedBase(string fallback)
+    {
+        if (ShapeSeed != 0) return unchecked((uint)ShapeSeed);
+        string s = DisplayName ?? fallback ?? "";
+        unchecked
+        {
+            uint h = 2166136261u;
+            foreach (char c in s) { h ^= c; h *= 16777619u; }
+            return h;
+        }
+    }
+
+    // One seed base yields many independent seeds, one per salt: the variant index, an age rotation, and so on.
+    public static uint MixSeed(uint seedBase, int salt)
+    {
+        unchecked { return (seedBase ^ (uint)salt) * 16777619u; }
+    }
 
     // What a card baked from this prototype would LOOK like: LOD0 geometry plus each part's finished tint.
     // Colour counts as much as shape - a card bakes appearance, so a retint over unchanged geometry would

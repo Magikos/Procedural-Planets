@@ -289,103 +289,103 @@ MonoBehaviour:
     Normal: {fileID: 2800000, guid: 6e793dce3634d3b4a8964a5bbe385b4b, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: LMHPOLY Grassland Flower Blue
+  - Key: Grassland Flower Blue
     ShapeHash: AB6EFB4A
     Atlas: {fileID: 2800000, guid: 8521cde9f61b55b4d83bf8667065e424, type: 3}
     Normal: {fileID: 2800000, guid: 44fad84ad1ecedb4abcb63ef6c33f1bf, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: LMHPOLY Grassland Flower Red
+  - Key: Grassland Flower Red
     ShapeHash: 0E536AD4
     Atlas: {fileID: 2800000, guid: e3c7d1fab87060944ab3bf4fbbbad564, type: 3}
     Normal: {fileID: 2800000, guid: ad318132e0bcf2247867e6bd8f4454d4, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: LMHPOLY Grassland Flower Yellow
+  - Key: Grassland Flower Yellow
     ShapeHash: 28D0BC83
     Atlas: {fileID: 2800000, guid: d9c0b0b0ac6f15549919b093f48fd25a, type: 3}
     Normal: {fileID: 2800000, guid: e0401dae58342694f9dd0db06fa4fe1c, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: LMHPOLY Savanna Flower Yellow
+  - Key: Savanna Flower Yellow
     ShapeHash: 7C3ADA05
     Atlas: {fileID: 2800000, guid: cd0cb68c6af9ecc4ebf0ee3fa7096272, type: 3}
     Normal: {fileID: 2800000, guid: 91c1e22aa8db44f4bb80152a23bb13a4, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: LMHPOLY Steppe Flower White
+  - Key: Steppe Flower White
     ShapeHash: 9AB62C16
     Atlas: {fileID: 2800000, guid: 5878693a2563fa548a76a1c195cfd165, type: 3}
     Normal: {fileID: 2800000, guid: 3aee8ef211c0e1e4e836bb90b94230df, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: LMHPOLY Steppe Flower Purple
+  - Key: Steppe Flower Purple
     ShapeHash: CD395285
     Atlas: {fileID: 2800000, guid: 023c9693b23f76041b84d552d9462892, type: 3}
     Normal: {fileID: 2800000, guid: 2750b8cf271689b41bcef87990cb699c, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: LMHPOLY Tropical Flower Pink
+  - Key: Tropical Flower Pink
     ShapeHash: 7E4346D0
     Atlas: {fileID: 2800000, guid: d460c7480d4c3ad42a80bd0f1b22f276, type: 3}
     Normal: {fileID: 2800000, guid: bc2cc6b162ebdf14eaf7e856c6d3162c, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: LMHPOLY Forest Flower White
+  - Key: Forest Flower White
     ShapeHash: CDE7A7DC
     Atlas: {fileID: 2800000, guid: 34212d1c2960e5845a4462ea6ead1327, type: 3}
     Normal: {fileID: 2800000, guid: 9e7019aa3c9ed8143bd3fb0bb21f9b02, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: LMHPOLY Taiga Flower Blue
+  - Key: Taiga Flower Blue
     ShapeHash: DAD64AF1
     Atlas: {fileID: 2800000, guid: a109851320d8aeb409d4f49b72c3c136, type: 3}
     Normal: {fileID: 2800000, guid: fd78ecbb5ec44514eb6f35ea8632b641, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: LMHPOLY Forest Mushroom Red
+  - Key: Forest Mushroom Red
     ShapeHash: 67946130
     Atlas: {fileID: 2800000, guid: 58d2c18311bfc1f4f91167dedc14ff0b, type: 3}
     Normal: {fileID: 2800000, guid: 80f8976c93f280045a7439bb584d769b, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: LMHPOLY Taiga Mushroom
+  - Key: Taiga Mushroom
     ShapeHash: 2279A262
     Atlas: {fileID: 2800000, guid: de779d2ee2c83a54c829ddde52f71386, type: 3}
     Normal: {fileID: 2800000, guid: 6dadd43bb7b9cff41a42463b4b87dbc8, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: LMHPOLY Swamp Mushroom
+  - Key: Swamp Mushroom
     ShapeHash: 7BBDC80E
     Atlas: {fileID: 2800000, guid: dd89d83b6bd407e4ca9f7923ac1e7983, type: 3}
     Normal: {fileID: 2800000, guid: 5f4daa4670a366047aa65f0bafdfbdb1, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: LMHPOLY Beach Reed
+  - Key: Beach Reed
     ShapeHash: 149CDCF8
     Atlas: {fileID: 2800000, guid: 9c4804832b70edb4694750b3f1dc9727, type: 3}
     Normal: {fileID: 2800000, guid: dc198ab5706016d478d5c5e697c0d82c, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: TEM Forest Grass
+  - Key: Forest Grass
     ShapeHash: B367747B
     Atlas: {fileID: 2800000, guid: f15fc2f711a49e34aa2dc5be933f4c6b, type: 3}
     Normal: {fileID: 2800000, guid: 7f9670217cb0833498e964e837511739, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: TEM Swamp Grass
+  - Key: Swamp Grass
     ShapeHash: 992B59F6
     Atlas: {fileID: 2800000, guid: 72e96a9eb2e3a1144890836dd72c6096, type: 3}
     Normal: {fileID: 2800000, guid: fa36f0ae21939a445a9651e73b76bbbf, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: TEM Grassland FlowerBush
+  - Key: Grassland FlowerBush
     ShapeHash: 9573A071
     Atlas: {fileID: 2800000, guid: 2eac05d4758772b47a14751fe7c11931, type: 3}
     Normal: {fileID: 2800000, guid: 27c51c99cfd4b3a439d7fe0c45833ad3, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: TEM Forest FlowerBush
+  - Key: Forest FlowerBush
     ShapeHash: 1CFE4097
     Atlas: {fileID: 2800000, guid: ba8ec76cbbe22ff4a97d54881e2dab04, type: 3}
     Normal: {fileID: 2800000, guid: 17a380f46ee1e52439cad7f5dafd0670, type: 3}
@@ -841,19 +841,19 @@ MonoBehaviour:
     Normal: {fileID: 2800000, guid: 9233a272c1de5104ab997b0126d37732, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: LMHPOLY Beach Reed v1
+  - Key: Beach Reed v1
     ShapeHash: 1D02559C
     Atlas: {fileID: 2800000, guid: e78360e78825876498650aeee21fe4e6, type: 3}
     Normal: {fileID: 2800000, guid: 103b375a6511796448cddbebe4fd9cd3, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: TEM Grassland FlowerBush v1
+  - Key: Grassland FlowerBush v1
     ShapeHash: 6345D9DE
     Atlas: {fileID: 2800000, guid: 09cdf103b228d3141b6f2850171f440a, type: 3}
     Normal: {fileID: 2800000, guid: 19fe1d3d0121d144490b534cb0a06806, type: 3}
     HasSurfaceData: 1
     GridN: 8
-  - Key: TEM Forest FlowerBush v1
+  - Key: Forest FlowerBush v1
     ShapeHash: 66F81427
     Atlas: {fileID: 2800000, guid: 7a1c92f8b9ad5b54d8ba1393cf59fb28, type: 3}
     Normal: {fileID: 2800000, guid: 0ab438de253835c4faa5f30ab5fed2f4, type: 3}

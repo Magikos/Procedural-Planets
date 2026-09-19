@@ -8,6 +8,11 @@ public sealed class ScatterPrototype : ScriptableObject
 {
     public string DisplayName = "Prototype";
 
+    // The generators seed a prototype's shape from its name, so renaming one regrows it as a different
+    // plant, tree or rock. Set this to keep the shape a rename would otherwise re-roll; zero keeps the
+    // name-derived seed. See ScatterPrototypeDto.ShapeSeedBase.
+    [HideInInspector] public int ShapeSeed;
+
     [Header("Identity (persistence key — never reuse or reorder)")]
     [Tooltip("Immutable id packed into every instance id (persistence key). Unique per library, 0..ScatterId.MaxSlot.")]
     [Range(0, ScatterId.MaxSlot)] public int SlotId = 0;
