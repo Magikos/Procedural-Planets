@@ -5,29 +5,30 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static WingmanInspector.WingmanUtility;
 
 namespace WingmanInspector {
 
     public class WingmanPersistentData : ScriptableObject {
 
-        public readonly WingmanClipboard Clipboard = new WingmanClipboard();
-        [SerializeField] private List<long> indexLookUp = new List<long>();
+        public readonly WingmanClipboard clipboard = new WingmanClipboard();
+        [SerializeField] private List<WingmanId> indexLookUp = new List<WingmanId>();
         [SerializeField] private List<string> searchFields = new List<string>();
         [SerializeField] private List<SelectionData> selectedCompIds = new List<SelectionData>();
         [SerializeField] private List<LockedInspectorRestoreState> lockedInspectorRestoreStates = new List<LockedInspectorRestoreState>();
         
         [Serializable]
         private class SelectionData {
-            public List<long> selectionList = new List<long>();
+            public List<WingmanId> selectionList = new List<WingmanId>();
         }
         
         [Serializable]
         private class LockedInspectorRestoreState {
-            public long inspectorInstanceId;
+            public WingmanId inspectorInstanceId;
             public Object inspectingObject;
         }
 
-        public List<long> SelectedCompIds(Object obj) {
+        public List<WingmanId> SelectedCompIds(Object obj) {
             if (GetObjectIndex(obj, out int index)) {
                 return selectedCompIds[index].selectionList;
             }
@@ -48,7 +49,7 @@ namespace WingmanInspector {
         }
 
         public void AddDataForContainer(Object obj) {
-            long id = obj.GetId();
+            WingmanId id = GetWingmanId(obj);
 
             // BinarySearch returns index if found in list, or negative bitwise compliment of index if not found
             int index = indexLookUp.BinarySearch(id);
@@ -63,7 +64,7 @@ namespace WingmanInspector {
         public void SetDataForLockedInspector(EditorWindow inspectorWindow, Object inspectingObject) {
             int entryIndex = -1;
             for (int i = 0; i < lockedInspectorRestoreStates.Count; i++) {
-                if (lockedInspectorRestoreStates[i].inspectorInstanceId == inspectorWindow.GetId()) {
+                if (lockedInspectorRestoreStates[i].inspectorInstanceId == GetWingmanId(inspectorWindow)) {
                     entryIndex = i;
                     break;
                 }
@@ -71,7 +72,7 @@ namespace WingmanInspector {
 
             if (entryIndex == -1) {
                 LockedInspectorRestoreState newState = new LockedInspectorRestoreState();
-                newState.inspectorInstanceId = inspectorWindow.GetId();
+                newState.inspectorInstanceId = GetWingmanId(inspectorWindow);
                 newState.inspectingObject = inspectingObject;
                 lockedInspectorRestoreStates.Add(newState);
                 return;
@@ -82,7 +83,7 @@ namespace WingmanInspector {
 
         public Object GetRestoredObjectForInspectorWindow(EditorWindow inspectorWindow) {
             foreach (LockedInspectorRestoreState state in lockedInspectorRestoreStates) {
-                if (state.inspectorInstanceId == inspectorWindow.GetId()) {
+                if (state.inspectorInstanceId == GetWingmanId(inspectorWindow)) {
                     return state.inspectingObject;
                 }
             }
@@ -98,7 +99,7 @@ namespace WingmanInspector {
         }
         
         private bool GetObjectIndex(Object obj, out int index) {
-            index = indexLookUp.BinarySearch(obj.GetId());
+            index = indexLookUp.BinarySearch(GetWingmanId(obj));
             return index >= 0;
         }
         

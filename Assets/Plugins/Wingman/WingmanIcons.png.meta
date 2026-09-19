@@ -145,6 +145,6 @@ AssetOrigin:
   serializedVersion: 1
   productId: 303181
   packageName: "Wingman - Your Inspector\u2019s Best Friend"
-  packageVersion: 1.3.1
-  assetPath: Assets/Wingman/WingmanIcons.png
-  uploadId: 903696
+  packageVersion: 1.4.0
+  assetPath: Assets/Plugins/Wingman/WingmanIcons.png
+  uploadId: 941412

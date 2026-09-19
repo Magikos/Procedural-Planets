@@ -123,3 +123,8 @@ graphify-out/
 # truth and were accumulating as permanent untracked noise (29 of them by 2026-08-25, 8 made that day).
 *.bak
 *.bak.meta
+
+# UMotion's demo content (Robot Kyle art, exported sample clips) - 48 MB we never ship.
+# The editor itself is tracked; only the examples are skipped.
+Assets/UMotionExamples/
+Assets/UMotionExamples.meta

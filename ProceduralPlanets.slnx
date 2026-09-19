@@ -1,11 +1,12 @@
 ﻿<Solution>
-  <Project Path="AloneSoft.VeryAnimation.Editor.csproj" />
   <Project Path="ProceduralPlanets.Tests.EditMode.csproj" />
   <Project Path="Magikos.Game.csproj" />
   <Project Path="ProceduralPlanets.Planet.csproj" />
   <Project Path="ProceduralPlanets.Core.csproj" />
   <Project Path="ProceduralPlanets.Editor.csproj" />
+  <Project Path="UMotionSourceEditor.csproj" />
   <Project Path="Wingman.csproj" />
-  <Project Path="AloneSoft.VeryAnimation.csproj" />
   <Project Path="ProceduralPlanets.Sampling.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="UMotionSourceApplication.csproj" />
 </Solution>

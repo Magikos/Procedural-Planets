@@ -8,23 +8,24 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
+using static WingmanInspector.WingmanUtility;
 
 namespace WingmanInspector {
 
     public class WingmanContainer {
 
-        public static GUIStyle BoldLabelStyle;
-        public static float SearchBarHeight;
-        public static WingmanPersistentData PersistentData;
-        public static Texture TextureAtlas;
-        public static Texture AllIcon;
-        public static Texture XIcon;
+        public static GUIStyle boldLabelStyle;
+        public static float searchBarHeight;
+        public static WingmanPersistentData persistentData;
+        public static Texture textureAtlas;
+        public static Texture allIcon;
+        public static Texture xIcon;
         
-        public static GUIStyle LeftToolBarGuiStyle;
-        public static GUIContent CopyToolBarGuiContent;
+        public static GUIStyle leftToolBarGuiStyle;
+        public static GUIContent copyToolBarGuiContent;
         
-        public static GUIStyle RightToolBarGuiStyle;
-        public static GUIContent PasteToolBarGuiContent;
+        public static GUIStyle rightToolBarGuiStyle;
+        public static GUIContent pasteToolBarGuiContent;
 
         private const string AllButtonName = "All";
         private const float DragThreshold = 12f;
@@ -43,8 +44,8 @@ namespace WingmanInspector {
         private static Vector2 iconSize = new Vector2(12, 12);
         private static Vector2 toolBarIconSize = new Vector2(12, 12);
         
-        public readonly EditorWindow InspectorWindow;
-        public bool IsFocused;
+        public readonly EditorWindow inspectorWindow;
+        public bool isFocused;
         
         public enum ShortcutOperation { Nothing, ToggleComponent }
         private ShortcutOperation activeShortcutToPerform;
@@ -57,9 +58,9 @@ namespace WingmanInspector {
         private IMGUIContainer pinnedDividerContainer;
         private ScrollView inspectorScrollView;
 
-        private List<long> selectedCompIds;
-        private List<long> validCompIds = new List<long>();
-        private List<long> prevValidCompIds = new List<long>();
+        private List<WingmanId> selectedCompIds;
+        private List<WingmanId> validCompIds = new List<WingmanId>();
+        private List<WingmanId> prevValidCompIds = new List<WingmanId>();
         private Dictionary<int, Component> compFromIndex = new Dictionary<int, Component>();
         private HashSet<string> noMultiEditVisualElements = new HashSet<string>();
         
@@ -85,15 +86,15 @@ namespace WingmanInspector {
         private bool isDragging;
         private bool dragHandlerSet;
         private bool canStartDrag;
-        private long dragId;
+        private WingmanId dragId;
         private Vector2 initialDragMousePos;
 
         public WingmanContainer(EditorWindow window) {
-            InspectorWindow = window;
+            inspectorWindow = window;
             lockedPropertyInfo = window.GetType().GetProperty("isLocked", BindingFlags.Public | BindingFlags.Instance);
             inspectorWasLocked = InspectorIsLocked();
-            inspectorScrollView = (ScrollView)InspectorWindow.rootVisualElement.Q(null, InspectorScrollClassName);
-            SetContainerSelectionToObject(inspectorWasLocked ? PersistentData.GetRestoredObjectForInspectorWindow(window) : Selection.activeObject);
+            inspectorScrollView = (ScrollView)inspectorWindow.rootVisualElement.Q(null, InspectorScrollClassName);
+            SetContainerSelectionToObject(inspectorWasLocked ? persistentData.GetRestoredObjectForInspectorWindow(window) : Selection.activeObject);
         }
         
         public void PerformShortcutOperation(ShortcutOperation shortcut) {
@@ -146,13 +147,13 @@ namespace WingmanInspector {
             
             searchResults.Clear();
             RefreshNoMultiInspectVisualsSet();
-            PersistentData.AddDataForContainer(inspectingObject);
-            selectedCompIds = PersistentData.SelectedCompIds(inspectingObject);
+            persistentData.AddDataForContainer(inspectingObject);
+            selectedCompIds = persistentData.SelectedCompIds(inspectingObject);
             
             if (HasTextInSearchField()) {
                 PerformSearch();
                 if (!HasSearchResults()) {
-                    PersistentData.SetSearchString(inspectingObject, string.Empty);
+                    persistentData.SetSearchString(inspectingObject, string.Empty);
                 }
             }
         }
@@ -163,7 +164,7 @@ namespace WingmanInspector {
             if (!InspectingObjectIsValid()) return;
             if (Settings.TransOnlyDisable && OnlyHasTransform()) return;
 
-            editorListVisual ??= InspectorWindow.rootVisualElement.Q(null, InspectorListClassName);
+            editorListVisual ??= inspectorWindow.rootVisualElement.Q(null, InspectorListClassName);
             if (editorListVisual == null) return;
             
             if (performSearchFlag && EditorApplication.timeSinceStartup - timeOfLastSearchUpdate > TimeAfterLastKeyPressToSearch) {
@@ -215,7 +216,7 @@ namespace WingmanInspector {
 #endif
         }
         
-#if UNITY_6000_4_OR_NEWER
+#if UNITY_6000_3_OR_NEWER
 
         public void OnHierarchyGUI() {
             if (DragAndDrop.GetGenericData(DragAndDropKey) is not bool initiatedDrag || !initiatedDrag) return;
@@ -255,14 +256,14 @@ namespace WingmanInspector {
 
         private void DrawWingmanGui() {
             Rect reservedRect = miniMapGuiContainer.contentRect;
-            IsFocused = reservedRect.Contains(Event.current.mousePosition);
+            isFocused = reservedRect.Contains(Event.current.mousePosition);
 
             if (!InspectingObjectIsValid()) return;
             
             bool showCopyPasteOnly = Settings.TransOnlyKeepCopyPaste && OnlyHasTransform();
             if (!Settings.HideToolbar || showCopyPasteOnly) {
                 DrawToolBar(reservedRect, showCopyPasteOnly);
-                reservedRect = ShiftRectStartVertically(reservedRect, SearchBarHeight + SearchCompListSpace);
+                reservedRect = ShiftRectStartVertically(reservedRect, searchBarHeight + SearchCompListSpace);
             }
 
             List<Component> comps = GetAllVisibleComponents();
@@ -276,7 +277,7 @@ namespace WingmanInspector {
             validCompIds.Clear();
             for (int i = 0; i < comps.Count; i++) {
                 compFromIndex.Add(i, comps[i]);
-                validCompIds.Add(comps[i].GetId());
+                validCompIds.Add(GetWingmanId(comps[i]));
             }
             
             // Check for resizing the container
@@ -298,27 +299,28 @@ namespace WingmanInspector {
             
             // Set variables for next method call
             prevValidCompIds.Clear();
-            foreach (int validCompId in validCompIds) {
+            foreach (WingmanId validCompId in validCompIds) {
                 prevValidCompIds.Add(validCompId);
-            }
-            lastCompCount = newCompCount;
-            lastRowCount = newRowCount;
-            
-            GetScrollViewDimensions(reservedRect, newRowCount, out Rect innerScrollRect, out Rect outerScrollRect);
-            List<Rect> buttonPlacements = GetButtonPlacements(innerScrollRect, comps, buttonWidths);
+                
+                lastCompCount = newCompCount;
+                lastRowCount = newRowCount;
+                
+                GetScrollViewDimensions(reservedRect, newRowCount, out Rect innerScrollRect, out Rect outerScrollRect);
+                List<Rect> buttonPlacements = GetButtonPlacements(innerScrollRect, comps, buttonWidths);
 
-            CheckToShowContextMenu(comps, buttonPlacements);
-            CheckForShortcutOperations(comps, buttonPlacements);
+                CheckToShowContextMenu(comps, buttonPlacements);
+                CheckForShortcutOperations(comps, buttonPlacements);
+                
+                if (showCopyPasteOnly) return;
+                
+                UpdateDragAndDrop();
+                
+                EditorGUI.BeginChangeCheck();
+                DrawPreviewScrollView(buttonPlacements, comps, innerScrollRect, outerScrollRect);
             
-            if (showCopyPasteOnly) return;
-            
-            UpdateDragAndDrop();
-            
-            EditorGUI.BeginChangeCheck();
-            DrawPreviewScrollView(buttonPlacements, comps, innerScrollRect, outerScrollRect);
-            
-            if (EditorGUI.EndChangeCheck() || compsGotAdjusted) {
-                UpdateComponentVisibility();
+                if (EditorGUI.EndChangeCheck() || compsGotAdjusted) {
+                    UpdateComponentVisibility();
+                }
             }
         }
 
@@ -327,19 +329,18 @@ namespace WingmanInspector {
             
             // Handle the All button
             { 
-                const int allButtonId = -1;
+                bool draggingAll = false;
                 bool prevAllButtonToggle = AllIsSelected() && !HasTextInSearchField();
                 Rect allButtonRect = placementRects[0];
                 
                 if (allButtonRect.Contains(Event.current.mousePosition) && Event.current.type == EventType.MouseDown) {
                     canStartDrag = true;
-                    dragId = allButtonId;
+                    dragId = WingmanId.None();
+                    draggingAll = !prevAllButtonToggle;
                     ClearSearchOnComponentButtonPress();
                 }
                 
-                bool draggingAll = dragId == allButtonId && !prevAllButtonToggle;
-
-                if (DrawToggleButton(allButtonRect, AllIcon, AllButtonName, prevAllButtonToggle, true, draggingAll)) {
+                if (DrawToggleButton(allButtonRect, allIcon, AllButtonName, prevAllButtonToggle, true, draggingAll)) {
                     selectedCompIds.Clear();
                     rangeModifierPivot = 0;
                 }
@@ -352,7 +353,7 @@ namespace WingmanInspector {
             for (int i = 0; i < comps.Count; i++) {
                 Component comp = comps[i];
                 Rect buttonRect = placementRects[i + 1];
-                long compId = comp.GetId();
+                WingmanId compId = GetWingmanId(comp);
                 
                 if (buttonRect.Contains(Event.current.mousePosition)) {
                     if (Event.current.type == EventType.MouseDown && Event.current.button == 0) {
@@ -361,7 +362,7 @@ namespace WingmanInspector {
                     }
                 }
                 
-                string compName = comp.GetType().Name;
+                string compName = GetComponentName(comp);
                 GUIContent content = EditorGUIUtility.ObjectContent(comp, comp.GetType());
                 
                 bool displayCompAsEnabled = true;
@@ -429,7 +430,7 @@ namespace WingmanInspector {
         
         private void ClearSearchOnComponentButtonPress() {
             if (HasTextInSearchField()) {
-                PersistentData.SetSearchString(inspectingObject, string.Empty);
+                persistentData.SetSearchString(inspectingObject, string.Empty);
                 searchResults.Clear();
                 GUI.changed = true;
                 RemoveSearchGui();
@@ -459,21 +460,21 @@ namespace WingmanInspector {
             
             GUI.color = restoreGuiColor;
             
-            Vector2 iconPos = new Vector2(placement.position.x + BoldLabelStyle.margin.right, 0f);
+            Vector2 iconPos = new Vector2(placement.position.x + boldLabelStyle.margin.right, 0f);
             Rect iconRect = CenterRectVertically(placement, new(iconPos, iconSize));
             GUI.DrawTexture(iconRect, icon);
             
-            Vector2 labelSize = BoldLabelStyle.CalcSize(new GUIContent(label));
+            Vector2 labelSize = boldLabelStyle.CalcSize(new GUIContent(label));
             Vector2 labelPos = new Vector2(iconRect.xMax, 0f);
             Rect labelRect = new Rect(labelPos, labelSize);
             labelRect = CenterRectVertically(placement, labelRect);
-            GUI.Label(labelRect, label, BoldLabelStyle);
+            GUI.Label(labelRect, label, boldLabelStyle);
 
             return toggled;
         }
         
         private void OnButtonToggleOn(int compIndex, bool multiSelectModifier, bool rangeSelectModifier) {
-            long compId = ComponentIdFromIndex(compIndex);
+            WingmanId compId = ComponentIdFromIndex(compIndex);
             
             if (multiSelectModifier && !rangeSelectModifier) {
                 rangeModifierPivot = compIndex;
@@ -498,7 +499,7 @@ namespace WingmanInspector {
         }
         
         private void OnButtonToggleOff(int compIndex, bool multiSelectModifier, bool rangeSelectModifier) {
-            long compId = ComponentIdFromIndex(compIndex);
+            WingmanId compId = ComponentIdFromIndex(compIndex);
             
             if (rangeSelectModifier && selectedCompIds.Count <= 1) return;
             
@@ -548,7 +549,7 @@ namespace WingmanInspector {
         private void AddRangeToSelected(int compIndex) {
             (int min, int max) = rangeModifierPivot < compIndex ? (rangeModifierPivot, compIndex) : (compIndex, rangeModifierPivot);
             for (int i = min; i <= max; i++) {
-                long id = ComponentIdFromIndex(i);
+                WingmanId id = ComponentIdFromIndex(i);
                 if (!selectedCompIds.Contains(id)) {
                     selectedCompIds.Add(id);
                 }
@@ -556,7 +557,7 @@ namespace WingmanInspector {
         }
         
         private void DrawToolBar(Rect placementRect, bool showCopyPasteOnly) {
-            placementRect.height = SearchBarHeight;
+            placementRect.height = searchBarHeight;
             
             float fullWidth = placementRect.width;
             float xStartPos = placementRect.position.x;
@@ -585,7 +586,7 @@ namespace WingmanInspector {
             crossPlacement = CenterRectVertically(placementRect, crossPlacement);
             
             // Handle X input before drawing search field because it eats the input of overlayed elements
-            string searchText = PersistentData.SearchString(inspectingObject);
+            string searchText = persistentData.SearchString(inspectingObject);
             bool showX = searchText != string.Empty;
             bool pressedX = false;
             if (showX) {
@@ -617,22 +618,22 @@ namespace WingmanInspector {
             if (showX) {
                 Color prevColor = GUI.color;
                 GUI.color = new Vector4(prevColor.r, prevColor.g, prevColor.b, 0.7f);
-                GUI.Button(crossPlacement, XIcon, GUIStyle.none);
+                GUI.Button(crossPlacement, xIcon, GUIStyle.none);
                 GUI.color = prevColor;
             }
             
-            if (prevSearchLen != searchText.Length) {
+            if (searchText != null && prevSearchLen != searchText.Length) {
                 performSearchFlag = true;
                 timeOfLastSearchUpdate = EditorApplication.timeSinceStartup;
             }
 
-            PersistentData.SetSearchString(inspectingObject, searchText);
+            persistentData.SetSearchString(inspectingObject, searchText);
         }
         
         private bool DrawToolBarButton(Rect placement, bool copy) {
             placement.width = ToolBarButtonWidth;
             
-            bool pressed = GUI.Button(placement, copy ? CopyToolBarGuiContent : PasteToolBarGuiContent, copy ? LeftToolBarGuiStyle : RightToolBarGuiStyle);
+            bool pressed = GUI.Button(placement, copy ? copyToolBarGuiContent : pasteToolBarGuiContent, copy ? leftToolBarGuiStyle : rightToolBarGuiStyle);
 
             Rect iconRect = placement;
             iconRect.size = toolBarIconSize;
@@ -641,11 +642,11 @@ namespace WingmanInspector {
 
             if (EditorGUIUtility.isProSkin) {
                 Rect uvRect = copy ? new Rect(0f, 0.5f, 0.5f, 0.5f) : new Rect(0f, 0f, 0.5f, 0.5f);
-                GUI.DrawTextureWithTexCoords(iconRect, TextureAtlas, uvRect);
+                GUI.DrawTextureWithTexCoords(iconRect, textureAtlas, uvRect);
             }
             else {
                 Rect uvRect = copy ? new Rect(0.5f, 0.5f, 0.5f, 0.5f) : new Rect(0.5f, 0f, 0.5f, 0.5f);
-                GUI.DrawTextureWithTexCoords(iconRect, TextureAtlas, uvRect);
+                GUI.DrawTextureWithTexCoords(iconRect, textureAtlas, uvRect);
             }
 
             return pressed;
@@ -663,20 +664,32 @@ namespace WingmanInspector {
             }
             
             List<Component> selComps = new List<Component>(selectedCompIds.Count);
-            foreach (long compId in selectedCompIds) {
+            foreach (WingmanId compId in selectedCompIds) {
                 selComps.Add(ComponentFromId(compId));
             }
             return selComps;
         }
         
         private class ComponentSearchResults {
-            public Component Comp;
-            public SerializedObject SerializedComponent;
-            public List<SerializedProperty> Fields = new List<SerializedProperty>();
+            public Component comp;
+            public SerializedObject serializedComponent;
+            public List<List<SearchResult>> searchResultBranches = new();
+        }
+        
+        private class SearchResult { 
+            public SearchTransform searchTrans;
+            public bool showChildren;
+            public int indentLevel;
+            public SerializedProperty Property => searchTrans.property;
+        }
+        
+        public class SearchTransform {
+            public SerializedProperty property;
+            public List<SearchTransform> children; 
         }
         
         private void PerformSearch() {
-            string searchText = PersistentData.SearchString(inspectingObject);
+            string searchText = persistentData.SearchString(inspectingObject);
             if (string.IsNullOrWhiteSpace(searchText)) {
                 searchResults.Clear();
                 return;
@@ -688,35 +701,119 @@ namespace WingmanInspector {
             searchResults.Clear();
             
             foreach (Component comp in comps) {
-                ComponentSearchResults results = null;
+                ComponentSearchResults compResults = null;
                 SerializedObject serializedComponent = new SerializedObject(comp);
-                List<SerializedProperty> fields = GetComponentFields(serializedComponent);
                 
-                if (fields == null) continue;
+                List<SearchTransform> compSearches = GetComponentSearches(serializedComponent);
+                if (compSearches == null) continue;
                 
-                foreach (SerializedProperty field in fields) {
-                    if (FuzzyMatch(field.displayName, searchText)) {
-                        searchResults ??= new List<ComponentSearchResults>();
-                        results ??= new() {
-                            Comp = comp, 
-                            SerializedComponent = serializedComponent 
-                        };
-                        results.Fields.Add(field);
-                    }
+                foreach (SearchTransform search in compSearches) {
+                    List<SearchResult> branch = new List<SearchResult>();
+                    if (!BuildSearchBranch(search, searchText, branch)) continue;
+                    
+                    compResults ??= new ComponentSearchResults {
+                        comp = comp, 
+                        serializedComponent = serializedComponent,
+                    };
+                    compResults.searchResultBranches.Add(branch);
                 }
 
-                if (results != null) {
-                    searchResults.Add(results);
+                if (compResults != null) {
+                    searchResults.Add(compResults);
                 }
             }
         }
         
+        private List<SearchTransform> GetComponentSearches(SerializedObject serializedComponent) {
+            SerializedProperty iter = serializedComponent.GetIterator();
+            if (iter == null || !iter.NextVisible(true)) {
+                return null;
+            }
+            
+            List<SearchTransform> roots = new List<SearchTransform>();
+            
+            do {
+                roots.Add(TraverseProperty(iter));
+            }
+            while (iter.NextVisible(enterChildren: false));
+            
+            return roots;
+        }
+        
+        private SearchTransform TraverseProperty(SerializedProperty curProperty) {
+            SearchTransform curSearchTransform = new SearchTransform() {
+                property = curProperty.Copy(),
+                children = new List<SearchTransform>(),
+            };
+            
+            if (PropertyIsPureArray(curProperty)) {
+                for (int i = 0; i < curProperty.arraySize; i++) {
+                    SerializedProperty elm = curProperty.GetArrayElementAtIndex(i);
+                    if (elm.hasVisibleChildren) {
+                        SearchTransform child = TraverseProperty(elm);
+                        curSearchTransform.children.Add(child);
+                    }
+                }
+                return curSearchTransform;
+            }
+
+            if (!curProperty.hasVisibleChildren) {
+                return curSearchTransform; 
+            }
+
+            // Enter children
+            SerializedProperty childIter = curProperty.Copy();
+            bool hasChild = childIter.NextVisible(enterChildren: true);
+
+            while (hasChild) {
+                // Stop when we've left this property's subtree
+                if (childIter.depth <= curProperty.depth) break;
+
+                // Only process direct children
+                if (childIter.depth == curProperty.depth + 1) {
+                    SearchTransform child = TraverseProperty(childIter);
+                    curSearchTransform.children.Add(child);
+                }
+
+                hasChild = childIter.NextVisible(enterChildren: false);
+            }
+            
+            return curSearchTransform;
+        }
+        
+        private bool BuildSearchBranch(SearchTransform propTrans, string searchString, List<SearchResult> branch, int indentLevel = 0) {
+            string searchOn = searchString.Contains('.') ? propTrans.property.propertyPath : propTrans.property.displayName;
+            
+            if (FuzzyMatch(searchOn, searchString)) {
+                branch.Add(new() {
+                    searchTrans = propTrans,
+                    showChildren = propTrans.property.hasVisibleChildren,
+                    indentLevel = indentLevel,
+                });
+                return true;
+            }
+            
+            int insertIndex = branch.Count;
+            bool addedSelf = false;
+            
+            foreach (SearchTransform child in propTrans.children) {
+                bool matchedOnChild = BuildSearchBranch(child, searchString, branch, indentLevel + 1);
+                if (!matchedOnChild || addedSelf) continue;
+                
+                branch.Insert(insertIndex, new() {
+                    searchTrans = propTrans,
+                    showChildren = false,
+                    indentLevel = indentLevel,
+                });
+                addedSelf = true;
+            } 
+            
+            return addedSelf;
+        }
+        
         private bool FuzzyMatch(string stringToSearch, string pattern) {
             const int adjacencyBonus = 5;      
-            const int separatorBonus = 10;      
-            const int camelBonus = 10;           
-
-            const int leadingLetterPenalty = -5;  
+            const int leadingLetterPenalty = -5;
             const int maxLeadingLetterPenalty = -9;
             const int unmatchedLetterPenalty = -1;
 
@@ -726,20 +823,17 @@ namespace WingmanInspector {
             int strIdx = 0;
             int strLength = stringToSearch.Length;
             bool prevMatched = false;
-            bool prevLower = false;
-            bool prevSeparator = true;                   
 
             char? bestLetter = null;
             char? bestLower = null;
             int bestLetterScore = 0;
 
             while (strIdx != strLength) {
-                char? patternChar = patternIdx != patternLength ? pattern[patternIdx] as char? : null;
+                char? patternChar = patternIdx != patternLength ? pattern[patternIdx] : null;
                 char strChar = stringToSearch[strIdx];
 
-                char? patternLower = patternChar != null ? char.ToLower((char)patternChar) as char? : null;
+                char? patternLower = patternChar != null ? char.ToLower((char)patternChar) : null;
                 char strLower = char.ToLower(strChar);
-                char strUpper = char.ToUpper(strChar);
 
                 bool nextMatch = patternChar != null && patternLower == strLower;
                 bool rematch = bestLetter != null && bestLower == strLower;
@@ -765,14 +859,6 @@ namespace WingmanInspector {
                         newScore += adjacencyBonus;
                     }
 
-                    if (prevSeparator) {
-                        newScore += separatorBonus;
-                    }
-
-                    if (prevLower && strChar == strUpper && strLower != strUpper) {
-                        newScore += camelBonus;
-                    }
-
                     if (nextMatch) {
                         ++patternIdx;
                     }
@@ -794,9 +880,6 @@ namespace WingmanInspector {
                     prevMatched = false;
                 }
 
-                prevLower = strChar == strLower && strLower != strUpper;
-                prevSeparator = strChar == '_' || strChar == ' ';
-
                 ++strIdx;
             }
 
@@ -808,19 +891,19 @@ namespace WingmanInspector {
             return patternIdx == patternLength && score >= idealScore;
         }
 
-#if UNITY_6000_4_OR_NEWER
+#if UNITY_6000_3_OR_NEWER
         private DragAndDropVisualMode HierarchyDropHandler(EntityId dropTargetEntityId, HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform) {
             Object dropTargetObject = EditorUtility.EntityIdToObject(dropTargetEntityId);
-            return SharedHierarchyDropHandler(dropTargetObject, dropMode, parentForDraggedObjects, perform);
+            return SharedHierarchyDropHandler(dropTargetObject, dropMode, perform);
         }
 #else
         private DragAndDropVisualMode HierarchyDropHandler(int dropTargetInstanceID, HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform) {
             Object dropTargetObject = EditorUtility.InstanceIDToObject(dropTargetInstanceID);
-            return SharedHierarchyDropHandler(dropTargetObject, dropMode, parentForDraggedObjects, perform);
+            return SharedHierarchyDropHandler(dropTargetObject, dropMode, perform);
         }
 #endif
 
-        private DragAndDropVisualMode SharedHierarchyDropHandler(Object dropTargetObject, HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform) {
+        private DragAndDropVisualMode SharedHierarchyDropHandler(Object dropTargetObject, HierarchyDropFlags dropMode, bool perform) {
             bool copying = dropMode == HierarchyDropFlags.DropUpon;
             bool creating = dropMode == HierarchyDropFlags.DropBetween || dropMode == HierarchyDropFlags.None;
             
@@ -890,7 +973,7 @@ namespace WingmanInspector {
             }
         }
 
-        private bool CompareComponentIds(List<long> list0, List<long> list1) {
+        private bool CompareComponentIds(List<WingmanId> list0, List<WingmanId> list1) {
             if (list0.Count != list1.Count) {
                 return false;
             }
@@ -916,21 +999,67 @@ namespace WingmanInspector {
             
             ToggleAllComponentVisibility(false);
             
-            foreach (ComponentSearchResults result in searchResults) {
-                EditorGUILayout.InspectorTitlebar(true, result.Comp, false);
+            foreach (ComponentSearchResults componentSearchResult in searchResults) {
+                // Refresh the components representation, which refreshes each serialized property
+                // we aggregated during the search. This is also needed for undo/redo and prefab reverts
+                componentSearchResult.serializedComponent.Update();
                 
+                EditorGUILayout.InspectorTitlebar(true, componentSearchResult.comp, false);
                 EditorGUI.indentLevel++;
-                foreach (SerializedProperty property in result.Fields) {
-                    EditorGUI.BeginChangeCheck();
-                    EditorGUILayout.PropertyField(property, true);
-                    if (EditorGUI.EndChangeCheck()) {
-                        result.SerializedComponent.ApplyModifiedProperties();
-                    }
-                }
-                EditorGUI.indentLevel--;
                 
+                EditorGUI.BeginChangeCheck();
+                foreach (List<SearchResult> branch in componentSearchResult.searchResultBranches) { 
+                    DrawComponentSearchBranch(branch);
+                }
+                if (EditorGUI.EndChangeCheck()) {
+                    componentSearchResult.serializedComponent.ApplyModifiedProperties();
+                }
+                
+                EditorGUI.indentLevel--;
                 EditorGUILayout.Space();
             }
+        }
+        
+        private void DrawComponentSearchBranch(List<SearchResult> searchBranch) {
+            int baseIndentLevel = EditorGUI.indentLevel;
+            
+            foreach (SearchResult searchResult in searchBranch) {
+                EditorGUI.indentLevel = baseIndentLevel + searchResult.indentLevel;
+                
+                SerializedProperty prop = searchResult.Property;
+                
+                bool prevIsExpanded = prop.isExpanded; 
+                if (prop.hasVisibleChildren && !prop.isExpanded) {
+                    prop.isExpanded = true;
+                }
+                
+                bool onlyDrawArrayHeader = PropertyIsPureArray(prop) && !searchResult.showChildren;
+                if (onlyDrawArrayHeader) {
+                    const float arraySizeFieldWidth = 50f;
+                    Rect rect = EditorGUILayout.GetControlRect();
+                    Rect arrFoldoutRect = new Rect(rect.x, rect.y, rect.width - arraySizeFieldWidth, rect.height);
+                    Rect arrSizeRect    = new Rect(rect.x + rect.width - arraySizeFieldWidth, rect.y, arraySizeFieldWidth, rect.height);
+                    
+                    EditorGUI.Foldout(arrFoldoutRect, true, prop.displayName);
+                    
+                    // For whatever reason Unity having an indent level messes with the array size position
+                    // so we temporarily set it to 0 while we draw our own array size 
+                    int postSizeIndent = EditorGUI.indentLevel;
+                    EditorGUI.indentLevel = 0;
+                    EditorGUI.BeginDisabledGroup(true);
+                    EditorGUI.IntField(arrSizeRect, prop.arraySize, EditorStyles.numberField);
+                    EditorGUI.EndDisabledGroup();
+                    EditorGUI.indentLevel = postSizeIndent;
+                }
+                else {
+                    // Sometimes bitable data types have empty space as children? So this is a work around.
+                    bool showChildren = prop.propertyType is SerializedPropertyType.Generic ? searchResult.showChildren : false;
+                    EditorGUILayout.PropertyField(prop, showChildren);
+                    prop.isExpanded = prevIsExpanded;
+                }
+            }
+            
+            EditorGUI.indentLevel = baseIndentLevel;
         }
         
         private void UpdateComponentVisibility() {
@@ -945,7 +1074,7 @@ namespace WingmanInspector {
                 
                 int compIndex = i - startIndex - skippedCount;
                 if (compFromIndex.TryGetValue(compIndex, out Component comp)) {
-                    bool showComp = selectedCompIds.Count <= 0 || selectedCompIds.Contains(comp.GetId());
+                    bool showComp = selectedCompIds.Count <= 0 || selectedCompIds.Contains(GetWingmanId(comp));
                     editorListVisual[i].style.display = showComp ? DisplayStyle.Flex : DisplayStyle.None;
                 }
             }
@@ -995,7 +1124,7 @@ namespace WingmanInspector {
         }
 
         private bool SearchResultsAreStale() {
-            return searchResults != null && searchResults.Count > 0 && !searchResults[0].Comp;
+            return searchResults != null && searchResults.Count > 0 && !searchResults[0].comp;
         }
 
         private bool OnlyHasTransform() {
@@ -1029,32 +1158,15 @@ namespace WingmanInspector {
             float[] buttonWidths = new float[comps.Count + 1];
             buttonWidths[0] = GetButtonWidth(AllButtonName);
             for (int i = 1; i < buttonWidths.Length; i++) {
-                buttonWidths[i] = GetButtonWidth(comps[i - 1].GetType().Name);
+                buttonWidths[i] = GetButtonWidth(GetComponentName(comps[i - 1]));
             }
             return buttonWidths;
         }
         
         private float GetButtonWidth(string text) {
-            float totalPadding = BoldLabelStyle.margin.right * 2f;
-            Vector2 guiSize = BoldLabelStyle.CalcSize(new GUIContent(text));
+            float totalPadding = boldLabelStyle.margin.right * 2f;
+            Vector2 guiSize = boldLabelStyle.CalcSize(new GUIContent(text));
             return iconSize.x + guiSize.x + totalPadding;
-        }
-        
-        private List<SerializedProperty> GetComponentFields(SerializedObject serializedComponent) {
-            SerializedProperty iter = serializedComponent.GetIterator();
-
-            if (iter == null || !iter.NextVisible(true)) {
-                return null;
-            }
-
-            List<SerializedProperty> fields = new List<SerializedProperty>();
-            
-            do {
-                fields.Add(iter.Copy());
-            }
-            while (iter.NextVisible(false));
-            
-            return fields;
         }
         
         private Rect CenterRectVertically(Rect parent, Rect child) {
@@ -1145,11 +1257,11 @@ namespace WingmanInspector {
             return comp is ParticleSystemRenderer;
         }
 
-        private long ComponentIdFromIndex(int index) {
-            return compFromIndex[index].GetId();
+        private WingmanId ComponentIdFromIndex(int index) {
+            return GetWingmanId(compFromIndex[index]);
         }
 
-        private Component ComponentFromId(long compId) {
+        private Component ComponentFromId(WingmanId compId) {
             int index = 0;
             for (int i = 0; i < validCompIds.Count; i++) {
                 if (validCompIds[i] == compId) {
@@ -1164,7 +1276,7 @@ namespace WingmanInspector {
         }
 
         public bool InspectorIsLocked() {
-            return (bool)lockedPropertyInfo.GetValue(InspectorWindow);
+            return (bool)lockedPropertyInfo.GetValue(inspectorWindow);
         }
 
         private void CheckForLockStatusChange() {
@@ -1172,7 +1284,7 @@ namespace WingmanInspector {
 
             bool wasJustLocked = currentlyLocked && !inspectorWasLocked;
             if (wasJustLocked) {
-                PersistentData.SetDataForLockedInspector(InspectorWindow, inspectingObject);
+                persistentData.SetDataForLockedInspector(inspectorWindow, inspectingObject);
             }
             
             bool wasJustUnlocked = !currentlyLocked && inspectorWasLocked;
@@ -1203,14 +1315,14 @@ namespace WingmanInspector {
         }
 
         private bool HasTextInSearchField() {
-            return !string.IsNullOrWhiteSpace(PersistentData.SearchString(inspectingObject));
+            return !string.IsNullOrWhiteSpace(persistentData.SearchString(inspectingObject));
         }
 
         private float CalculateMiniMapHeight() {
-            float searchBarAndPadding = SearchBarHeight + SearchCompListSpace;
+            float searchBarAndPadding = searchBarHeight + SearchCompListSpace;
             
             if (Settings.TransOnlyKeepCopyPaste && OnlyHasTransform()) {
-                return SearchBarHeight;
+                return searchBarHeight;
             }
             
             float[] buttonWidths = GetButtonWidths(GetAllVisibleComponents());
@@ -1229,6 +1341,12 @@ namespace WingmanInspector {
         
         private bool InspectingObjectIsValid() {
             return inspectingObject && inspectingObject is GameObject && inspectingAssetType is not AssetType.NotImportant;
+        }
+        
+        // Use this instead of property.isArray
+        private bool PropertyIsPureArray(SerializedProperty property) {
+            // Strings have the isArray field set to true but we don't want to treat them as arrays
+            return property.isArray && property.propertyType != SerializedPropertyType.String;    
         }
         
         // Add all visual elements to the noMultiEditVisualElements set so we know which components are not
@@ -1270,11 +1388,11 @@ namespace WingmanInspector {
 
             if (compUnderCursor) {
                 menu.AddSeparator("");
-                string compName = compUnderCursor.GetType().Name;
+                string compName = GetComponentName(compUnderCursor);
                 
                 // Copy component
                 menu.AddItem(new GUIContent($"Copy { compName }"), false, () => {
-                    PersistentData.Clipboard.CopyComponents(new() { compUnderCursor });
+                    persistentData.clipboard.CopyComponents(new() { compUnderCursor });
                 });
                 
                 // Open component as script
@@ -1317,17 +1435,17 @@ namespace WingmanInspector {
         }
 
         private void CopySelectedToClipboard() {
-            PersistentData.Clipboard.CopyComponents(GetComponentsFromSelection());
+            persistentData.clipboard.CopyComponents(GetComponentsFromSelection());
         }
 
         private void PasteFromClipboard() {
             if (InspectorIsLocked()) {
-                (inspectingObject as GameObject).PasteComponents(PersistentData.Clipboard.Copies);
+                (inspectingObject as GameObject).PasteComponents(persistentData.clipboard.Copies);
                 return;
             }
             
             foreach (GameObject gameObject in Selection.gameObjects) {
-                gameObject.PasteComponents(PersistentData.Clipboard.Copies);
+                gameObject.PasteComponents(persistentData.clipboard.Copies);
             }
         }
         
@@ -1395,6 +1513,15 @@ namespace WingmanInspector {
                 miniMapGuiContainer.style.marginTop = 0f;
             }
         }
+        
+        private string GetComponentName(Component comp) {
+            #if COMPONENT_NAMES
+                return Sisus.ComponentNames.ComponentExtensions.GetName(comp);
+            #else
+                return comp.GetType().Name;
+            #endif
+        }
+        
     }
 }
 #endif
